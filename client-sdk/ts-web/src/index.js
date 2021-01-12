@@ -16,8 +16,8 @@ function deserializeResponseCBOR(u8) {
     return cbor.decode(buf);
 }
 
-const statusMD = new grpc.web.MethodDescriptor(
-    '/oasis-core.NodeController/GetStatus',
+const md = new grpc.web.MethodDescriptor(
+    '/oasis-core.Staking/Delegations',
     grpc.web.MethodType.UNARY,
     Object,
     Object,
@@ -28,13 +28,16 @@ const statusMD = new grpc.web.MethodDescriptor(
 const base = 'http://localhost:42280';
 const oc = new grpc.web.GrpcWebClientBase();
 
-function status(request) {
-    return oc.unaryCall(base + statusMD.name, request, null, statusMD);
+function invoke(request) {
+    return oc.unaryCall(base + md.name, request, null, md);
 }
 
 (async function () {
     try {
-        const response = await status({});
+        const response = await invoke({
+            owner: new Uint8Array([0,127,77,70,174,39,53,254,142,111,175,175,146,245,62,236,64,75,136,212,47]),
+            height: 1920228,
+        });
         console.log(response);
     } catch (e) {
         console.error(e);
