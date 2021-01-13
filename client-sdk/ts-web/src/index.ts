@@ -1,21 +1,7 @@
-import cbor from 'cbor-js';
-import grpcWeb from 'grpc-web';
+import * as cborg from 'cborg';
+import * as grpcWeb from 'grpc-web';
 
 import * as types from './types';
-
-function serializeRequestCBOR(req: any) {
-    return new Uint8Array(cbor.encode(req));
-}
-
-function deserializeResponseCBOR(u8: Uint8Array) {
-    let buf: ArrayBuffer;
-    if (u8.byteOffset === 0 && u8.byteLength === u8.buffer.byteLength) {
-        buf = u8.buffer;
-    } else {
-        buf = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
-    }
-    return cbor.decode(buf);
-}
 
 function createMethodDescriptorSimple<REQ, RESP>(serviceName: string, methodName: string) {
     return new grpcWeb.MethodDescriptor<REQ, RESP>(
@@ -23,8 +9,8 @@ function createMethodDescriptorSimple<REQ, RESP>(serviceName: string, methodName
         grpcWeb.MethodType.UNARY,
         Object,
         Object,
-        serializeRequestCBOR,
-        deserializeResponseCBOR,
+        cborg.encode,
+        cborg.decode,
     );
 }
 

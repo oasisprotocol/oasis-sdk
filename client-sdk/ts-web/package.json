@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "cbor-js": "^0.1.0",
+    "cborg": "^1.0.2",
     "grpc-web": "^1.2.1"
   },
   "devDependencies": {
