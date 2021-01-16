@@ -2,7 +2,9 @@
 import * as cborg from 'cborg';
 import * as grpcWeb from 'grpc-web';
 
+import * as quantity from './quantity';
 import * as types from './types';
+export {quantity, types}
 
 function createMethodDescriptorSimple<REQ, RESP>(serviceName: string, methodName: string) {
     // @ts-expect-error missing declaration
