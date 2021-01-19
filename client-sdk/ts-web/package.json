@@ -4,6 +4,7 @@
   ],
   "main": "src/index.ts",
   "dependencies": {
+    "bech32": "^1.1.4",
     "cborg": "^1.0.2",
     "grpc-web": "^1.2.1"
   },
