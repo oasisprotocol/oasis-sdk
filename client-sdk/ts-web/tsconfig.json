@@ -3,6 +3,6 @@
         "outDir": "./dist/",
         "noImplicitAny": true,
         "module": "CommonJS",
-        "target": "ES6"
+        "target": "ES2018"
     }
 }

@@ -2,10 +2,14 @@
 import * as cborg from 'cborg';
 import * as grpcWeb from 'grpc-web';
 
-import * as address from './address';
-import * as quantity from './quantity';
+export * as address from './address';
+export * as genesis from './genesis';
+export * as hash from './hash';
+export * as quantity from './quantity';
+export * as signature from './signature';
+export * as consensus from './consensus';
 import * as types from './types';
-export {address, quantity, types}
+export {types};
 
 function createMethodDescriptorSimple<REQ, RESP>(serviceName: string, methodName: string) {
     // @ts-expect-error missing declaration
@@ -64,7 +68,7 @@ const methodDescriptorConsensusGetBlock = createMethodDescriptorSimple<bigint, t
 const methodDescriptorConsensusGetTransactions = createMethodDescriptorSimple<bigint, Uint8Array[]>('Consensus', 'GetTransactions');
 const methodDescriptorConsensusGetTransactionsWithResults = createMethodDescriptorSimple<bigint, types.ConsensusTransactionsWithResults>('Consensus', 'GetTransactionsWithResults');
 const methodDescriptorConsensusGetUnconfirmedTransactions = createMethodDescriptorSimple<void, Uint8Array[]>('Consensus', 'GetUnconfirmedTransactions');
-const methodDescriptorConsensusGetGenesisDocument = createMethodDescriptorSimple<void, types.NotModeled>('Consensus', 'GetGenesisDocument');
+const methodDescriptorConsensusGetGenesisDocument = createMethodDescriptorSimple<void, types.GenesisDocument>('Consensus', 'GetGenesisDocument');
 const methodDescriptorConsensusGetStatus = createMethodDescriptorSimple<void, types.NotModeled>('Consensus', 'GetStatus');
 // WatchBlocks not modeled
 const methodDescriptorConsensusLightGetLightBlock = createMethodDescriptorSimple<bigint, types.NotModeled>('ConsensusLight', 'GetLightBlock');

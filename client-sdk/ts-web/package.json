@@ -6,7 +6,9 @@
   "dependencies": {
     "bech32": "^1.1.4",
     "cborg": "^1.0.2",
-    "grpc-web": "^1.2.1"
+    "grpc-web": "^1.2.1",
+    "js-sha512": "^0.8.0",
+    "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
     "ts-loader": "^8.0.14",
