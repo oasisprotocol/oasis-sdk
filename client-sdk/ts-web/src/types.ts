@@ -1,8 +1,23 @@
 export type NotModeled = Object;
 
+export interface ConsensusError extends Map<string, any> {
+    get(key: 'module'): string;
+    get(key: 'code'): number;
+    get(key: 'message'): string;
+}
+
+export interface ConsensusEvent extends Map<string, any> {
+    // fields not modeled
+}
+
 export interface ConsensusFee extends Map<string, any> {
     get(key: 'amount'): Uint8Array;
     get(key: 'gas'): bigint;
+}
+
+export interface ConsensusResult extends Map<string, any> {
+    get(key: 'error'): ConsensusError;
+    get(key: 'events'): ConsensusEvent[];
 }
 
 export interface ConsensusTransaction extends Map<string, any> {
@@ -14,7 +29,7 @@ export interface ConsensusTransaction extends Map<string, any> {
 
 export interface ConsensusTransactionsWithResults extends Map<string, any> {
     get(key: 'transactions'): Uint8Array[];
-    get(key: 'results'): NotModeled[];
+    get(key: 'results'): ConsensusResult[];
 }
 
 export interface GenesisDocument extends Map<string, any> {
