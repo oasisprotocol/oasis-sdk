@@ -1,5 +1,17 @@
 export type NotModeled = Object;
 
+export interface ConsensusFee extends Map<string, any> {
+    get(key: 'amount'): Uint8Array;
+    get(key: 'gas'): bigint;
+}
+
+export interface ConsensusTransaction extends Map<string, any> {
+    get(key: 'nonce'): bigint;
+    get(key: 'fee'): ConsensusFee;
+    get(key: 'method'): string;
+    get(key: 'body'): any;
+}
+
 export interface ConsensusTransactionsWithResults extends Map<string, any> {
     get(key: 'transactions'): Uint8Array[];
     get(key: 'results'): NotModeled[];

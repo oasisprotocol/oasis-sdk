@@ -14,10 +14,10 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
                 height: 1920228,
             });
             for (const [fromAddr, delegation] of response) {
-                console.log(
-                    'from', oasisBridge.address.toString(fromAddr),
-                    'shares', oasisBridge.quantity.toBigInt(delegation.get('shares')),
-                );
+                console.log({
+                    from: oasisBridge.address.toString(fromAddr),
+                    shares: oasisBridge.quantity.toBigInt(delegation.get('shares')),
+                });
             }
         }
 
@@ -34,11 +34,15 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             for (let i = 0; i < transactions.length; i++) {
                 const signedTransaction = oasisBridge.signature.deserializeSigned(transactions[i]);
                 const transaction = await oasisBridge.consensus.signedTransactionOpen(signedTransaction, chainContext);
-                console.log(
-                    'signer', signedTransaction.get('signature').get('public_key'),
-                    'transaction', transaction,
-                    'result', results[i],
-                );
+                console.log({
+                    signer: signedTransaction.get('signature').get('public_key'),
+                    nonce: transaction.get('nonce'),
+                    feeAmount: oasisBridge.quantity.toBigInt(transaction.get('fee').get('amount')),
+                    feeGas: transaction.get('fee').get('gas'),
+                    method: transaction.get('method'),
+                    body: transaction.get('body'),
+                    result: results[i],
+                });
             }
         }
     } catch (e) {
