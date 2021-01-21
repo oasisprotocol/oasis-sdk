@@ -11,7 +11,7 @@ export function combineChainContext(context: string, chainContext: string) {
 }
 
 async function prepareSignerMessage(context: string, message: Uint8Array) {
-    return hash.hash(misc.concatU8(misc.u8FromStr(context), message));
+    return hash.hash(misc.concat(misc.fromString(context), message));
 }
 
 export async function signedOpenRaw(signed: types.SignatureSigned, context: string) {

@@ -1,6 +1,6 @@
 const HEX_DIGITS = '0123456789abcdef';
 
-export function hexFromU8(u8: Uint8Array) {
+export function toHex(u8: Uint8Array) {
     let hex = '';
     for (const b of u8) {
         hex += HEX_DIGITS[b >>> 4] + HEX_DIGITS[b & 0xf];
@@ -8,7 +8,7 @@ export function hexFromU8(u8: Uint8Array) {
     return hex;
 }
 
-export function u8FromHex(hex: string) {
+export function fromHex(hex: string) {
     let byteLength = hex.length >> 1;
     const u8 = new Uint8Array(byteLength);
     for (let i = 0; i < byteLength; i++) {
@@ -17,11 +17,11 @@ export function u8FromHex(hex: string) {
     return u8;
 }
 
-export function u8FromStr(str: string) {
+export function fromString(str: string) {
     return new TextEncoder().encode(str);
 }
 
-export function concatU8(...parts: Uint8Array[]) {
+export function concat(...parts: Uint8Array[]) {
     let length = 0;
     for (const part of parts) {
         length += part.length;

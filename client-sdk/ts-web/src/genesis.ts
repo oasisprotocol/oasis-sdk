@@ -6,5 +6,5 @@ import * as misc from './misc';
 import * as types from './types';
 
 export async function chainContext(doc: types.GenesisDocument) {
-    return misc.hexFromU8(await hash.hash(cborg.encode(doc)));
+    return misc.toHex(await hash.hash(cborg.encode(doc)));
 }
