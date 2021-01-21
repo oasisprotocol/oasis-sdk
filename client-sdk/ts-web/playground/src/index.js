@@ -35,7 +35,7 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
                 const signedTransaction = oasisBridge.signature.deserializeSigned(transactions[i]);
                 const transaction = await oasisBridge.consensus.signedTransactionOpen(signedTransaction, chainContext);
                 console.log({
-                    signer: signedTransaction.get('signature').get('public_key'),
+                    from: oasisBridge.address.toString(await oasisBridge.staking.addressFromPublicKey(signedTransaction.get('signature').get('public_key'))),
                     nonce: transaction.get('nonce'),
                     feeAmount: oasisBridge.quantity.toBigInt(transaction.get('fee').get('amount')),
                     feeGas: transaction.get('fee').get('gas'),

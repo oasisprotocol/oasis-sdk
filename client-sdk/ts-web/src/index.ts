@@ -7,6 +7,7 @@ export * as genesis from './genesis';
 export * as hash from './hash';
 export * as quantity from './quantity';
 export * as signature from './signature';
+export * as staking from './staking';
 export * as consensus from './consensus';
 import * as types from './types';
 export {types};
