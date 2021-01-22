@@ -1,16 +1,15 @@
-// @ts-expect-error missing declaration
-import * as cborg from 'cborg';
 import * as grpcWeb from 'grpc-web';
 
 export * as address from './address';
+export * as consensus from './consensus';
 export * as genesis from './genesis';
 export * as hash from './hash';
+import * as misc from './misc';
 export * as quantity from './quantity';
 export * as signature from './signature';
 export * as staking from './staking';
-export * as consensus from './consensus';
 import * as types from './types';
-export {types};
+export {misc, types};
 
 function createMethodDescriptorSimple<REQ, RESP>(serviceName: string, methodName: string) {
     // @ts-expect-error missing declaration
@@ -20,8 +19,8 @@ function createMethodDescriptorSimple<REQ, RESP>(serviceName: string, methodName
         MethodType.UNARY,
         Object,
         Object,
-        cborg.encode,
-        (data: Uint8Array) => cborg.decode(data, {useMaps: true}),
+        misc.toCBOR,
+        misc.fromCBOR,
     );
 }
 
