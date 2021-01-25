@@ -51,8 +51,8 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
 
         // Try sending a transaction.
         {
-            const src = oasisBridge.signature.NaclSigner.fromRandom();
-            const dst = oasisBridge.signature.NaclSigner.fromRandom();
+            const src = oasisBridge.signature.EllipticSigner.fromRandom();
+            const dst = oasisBridge.signature.EllipticSigner.fromRandom();
             console.log('src', src, 'dst', dst);
 
             const genesis = await client.consensusGetGenesisDocument();
