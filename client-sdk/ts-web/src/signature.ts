@@ -8,13 +8,18 @@ export function combineChainContext(context: string, chainContext: string) {
     return `${context} for chain ${chainContext}`;
 }
 
-async function prepareSignerMessage(context: string, message: Uint8Array) {
-    return hash.hash(misc.concat(misc.fromString(context), message));
+export async function prepareSignerMessage(context: string, message: Uint8Array) {
+    return await hash.hash(misc.concat(misc.fromString(context), message));
 }
 
 export interface Signer {
     public(): Uint8Array;
     sign(message: Uint8Array): Promise<Uint8Array>;
+}
+
+export interface ContextSigner {
+    public(): Uint8Array;
+    sign(context: string, message: Uint8Array): Promise<Uint8Array>;
 }
 
 const ED25519 = new elliptic.eddsa('ed25519');
@@ -32,11 +37,10 @@ export async function openSigned(context: string, signed: types.SignatureSigned)
     return untrustedRawValue;
 }
 
-export async function signSigned(signer: Signer, context: string, rawValue: Uint8Array) {
-    const message = await prepareSignerMessage(context, rawValue);
+export async function signSigned(signer: ContextSigner, context: string, rawValue: Uint8Array) {
     const signature: types.SignatureSignature = new Map();
     signature.set('public_key', signer.public());
-    signature.set('signature', await signer.sign(message));
+    signature.set('signature', await signer.sign(context, rawValue));
     const signed: types.SignatureSigned = new Map();
     signed.set('untrusted_raw_value', rawValue);
     signed.set('signature', signature);
@@ -45,6 +49,25 @@ export async function signSigned(signer: Signer, context: string, rawValue: Uint
 
 export function deserializeSigned(raw: Uint8Array): types.SignatureSigned {
     return misc.fromCBOR(raw);
+}
+
+export class BlindContextSigner implements ContextSigner {
+
+    signer: Signer;
+
+    constructor(signer: Signer) {
+        this.signer = signer;
+    }
+
+    public(): Uint8Array {
+        return this.signer.public();
+    }
+
+    async sign(context: string, message: Uint8Array): Promise<Uint8Array> {
+        const signerMessage = await prepareSignerMessage(context, message);
+        return await this.signer.sign(signerMessage);
+    }
+
 }
 
 export class EllipticSigner implements Signer {

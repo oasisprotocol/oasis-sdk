@@ -91,7 +91,7 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             transaction.fee.gas = gas;
             console.log('transaction', transaction);
 
-            const signedTransaction = await oasisBridge.consensus.signSignedTransaction(src, chainContext, transaction);
+            const signedTransaction = await oasisBridge.consensus.signSignedTransaction(new oasisBridge.signature.BlindContextSigner(src), chainContext, transaction);
             console.log('singed transaction', signedTransaction);
             console.log('hash', await oasisBridge.consensus.hashSignedTransaction(signedTransaction));
 

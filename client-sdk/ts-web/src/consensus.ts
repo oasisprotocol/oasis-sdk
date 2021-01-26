@@ -11,7 +11,7 @@ export async function openSignedTransaction(chainContext: string, signed: types.
     return misc.fromCBOR(await signature.openSigned(context, signed));
 }
 
-export async function signSignedTransaction(signer: signature.Signer, chainContext: string, transaction: types.NotModeled) {
+export async function signSignedTransaction(signer: signature.ContextSigner, chainContext: string, transaction: types.NotModeled) {
     const context = signature.combineChainContext(TRANSACTION_SIGNATURE_CONTEXT, chainContext);
     return await signature.signSigned(signer, context, misc.toCBOR(transaction));
 }
