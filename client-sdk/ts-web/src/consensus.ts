@@ -3,6 +3,7 @@ import * as misc from './misc';
 import * as signature from './signature';
 import * as types from './types';
 
+export const HEIGHT_LATEST = 0n;
 export const TRANSACTION_SIGNATURE_CONTEXT = 'oasis-core/consensus: tx';
 
 export async function openSignedTransaction(chainContext: string, signed: types.SignatureSigned): Promise<types.ConsensusTransaction> {

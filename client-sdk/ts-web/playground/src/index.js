@@ -12,7 +12,7 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             console.log('delegations to', toAddr);
             const response = await client.stakingDelegations({
                 owner: oasisBridge.address.fromString(toAddr),
-                height: 1920228,
+                height: 1920228n,
             });
             for (const [fromAddr, delegation] of response) {
                 console.log({
@@ -27,9 +27,8 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             const genesis = await client.consensusGetGenesisDocument();
             const chainContext = await oasisBridge.genesis.chainContext(genesis);
             console.log('chain context', chainContext);
-            const height = 1383018;
+            const height = 1383018n;
             console.log('height', height);
-            // @ts-expect-error height is wrong type, but cborg breaks on small bigint
             const response = await client.consensusGetTransactionsWithResults(height);
             const transactions = response.get('transactions');
             const results = response.get('results');
@@ -61,7 +60,7 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
 
             const account = await client.stakingAccount({
                 owner: await oasisBridge.staking.addressFromPublicKey(src.public()),
-                height: 0, // todo: extract HeightLatest constant
+                height: oasisBridge.consensus.HEIGHT_LATEST,
             });
             console.log('account', account);
             let nonce = 0;
@@ -74,13 +73,13 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             const transaction = {
                 nonce: nonce,
                 fee: {
-                    amount: oasisBridge.quantity.fromBigInt(BigInt(0)),
-                    gas: 0,
+                    amount: oasisBridge.quantity.fromBigInt(0n),
+                    gas: 0n,
                 },
                 method: 'staking.Transfer',
                 body: {
                     to: await oasisBridge.staking.addressFromPublicKey(dst.public()),
-                    amount: oasisBridge.quantity.fromBigInt(BigInt(0)),
+                    amount: oasisBridge.quantity.fromBigInt(0n),
                 }
             };
 
@@ -89,7 +88,6 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
                 transaction: transaction,
             });
             console.log('gas', gas);
-            // @ts-expect-error gas is wrong type, but cborg breaks on small bigint
             transaction.fee.gas = gas;
             console.log('transaction', transaction);
 
@@ -103,7 +101,8 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
                 if ('message' in e && e.message === 'Incomplete response') {
                     // This is normal. grpc-web freaks out if the response is `== null`, which it
                     // always is for a void method.
-                    // todo: fix this upstream
+                    // todo: unhack this when they release with our change
+                    // https://github.com/grpc/grpc-web/pull/1025
                 } else {
                     throw e;
                 }
