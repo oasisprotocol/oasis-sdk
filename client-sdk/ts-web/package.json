@@ -1,6 +1,7 @@
 {
     "workspaces": [
         "core",
+        "rt",
         "signer-ledger"
     ]
 }
