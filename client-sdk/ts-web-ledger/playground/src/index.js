@@ -6,7 +6,7 @@ import * as oasisBridgeLedger from './../..';
 
 async function play() {
     try {
-        const signer = await oasisBridgeLedger.LedgerContextSigner.fromWebUSB();
+        const signer = await oasisBridgeLedger.LedgerContextSigner.fromWebUSB(0);
 
         // Try Ledger signing.
         {

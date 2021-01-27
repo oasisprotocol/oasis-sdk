@@ -5,10 +5,6 @@ import OasisApp from '@oasisprotocol/ledger';
 
 import * as oasisBridge from '../../ts-web';
 
-// Value from
-// https://github.com/oasisprotocol/ledger-js/blob/v0.1.0/vue_example/components/LedgerExample.vue#L46
-export const PATH = [44, 474, 0, 0, 0];
-
 interface Response {
     return_code: number;
     error_message: string;
@@ -31,10 +27,12 @@ function successOrThrow(response: Response, message: string) {
 export class LedgerContextSigner implements oasisBridge.signature.ContextSigner {
 
     app: OasisApp;
+    path: number[];
     publicKey: Uint8Array;
 
-    constructor(app: OasisApp, publicKey: Uint8Array) {
+    constructor(app: OasisApp, path: number[], publicKey: Uint8Array) {
         this.app = app;
+        this.path = path;
         this.publicKey = publicKey;
     }
 
@@ -43,15 +41,17 @@ export class LedgerContextSigner implements oasisBridge.signature.ContextSigner 
     }
 
     async sign(context: string, message: Uint8Array): Promise<Uint8Array> {
-        const response = successOrThrow(await this.app.sign(PATH, context, bufFromU8(message)), 'ledger sign');
+        const response = successOrThrow(await this.app.sign(this.path, context, bufFromU8(message)), 'ledger sign');
         return u8FromBuf(response.signature);
     }
 
-    static async fromWebUSB() {
+    static async fromWebUSB(keyNumber: number) {
         const transport = await TransportWebUSB.create();
         const app = new OasisApp(transport);
-        const publicKeyResponse = successOrThrow(await app.publicKey(PATH), 'ledger public key');
-        return new LedgerContextSigner(app, u8FromBuf(publicKeyResponse.pk));
+        // Specification forthcoming. See https://github.com/oasisprotocol/oasis-core/pull/3656.
+        const path = [44, 474, 0, 0, keyNumber];
+        const publicKeyResponse = successOrThrow(await app.publicKey(path), 'ledger public key');
+        return new LedgerContextSigner(app, path, u8FromBuf(publicKeyResponse.pk));
     }
 
 }
