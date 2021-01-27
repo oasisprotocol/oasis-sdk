@@ -10,7 +10,7 @@ async function play() {
 
         // Try Ledger signing.
         {
-            const dst = oasisBridge.signature.EllipticSigner.fromRandom();
+            const dst = oasisBridge.signature.EllipticSigner.fromRandom('this key is not important');
             const dstAddr = await oasisBridge.staking.addressFromPublicKey(dst.public());
             console.log('dst addr', oasisBridge.address.toString(dstAddr));
 

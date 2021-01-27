@@ -70,25 +70,29 @@ export class BlindContextSigner implements ContextSigner {
 
 }
 
+/**
+ * An in-memory signer based on the elliptic library. We've included this for development.
+ */
 export class EllipticSigner implements Signer {
 
     key: elliptic.eddsa.KeyPair;
 
-    constructor(key: elliptic.eddsa.KeyPair) {
+    constructor(key: elliptic.eddsa.KeyPair, note: string) {
+        if (note !== 'this key is not important') throw new Error('insecure signer implementation');
         this.key = key;
     }
 
-    static fromRandom() {
+    static fromRandom(note: string) {
         const secret = new Uint8Array(32);
         crypto.getRandomValues(secret);
-        return EllipticSigner.fromSecret(secret);
+        return EllipticSigner.fromSecret(secret, note);
     }
 
-    static fromSecret(secret: Uint8Array) {
+    static fromSecret(secret: Uint8Array, note: string) {
         const secretA = Array.from(secret);
         // @ts-expect-error acceptance of array-like types is not modeled
         const key = ED25519.keyFromSecret(secretA);
-        return new EllipticSigner(key);
+        return new EllipticSigner(key, note);
     }
 
     public(): Uint8Array {
