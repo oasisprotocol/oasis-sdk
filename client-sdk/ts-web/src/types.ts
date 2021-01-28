@@ -1,4 +1,4 @@
-export type NotModeled = Object;
+export type NotModeled = {[key: string]: any};
 
 export interface ConsensusError extends Map<string, any> {
     get(key: 'module'): string;

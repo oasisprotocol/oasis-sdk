@@ -64,9 +64,7 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             });
             console.log('account', account);
             let nonce = 0;
-            // @ts-expect-error account not modeled
             if (account.has('general') && account.get('general').has('nonce')) {
-                // @ts-expect-error account not modeled
                 nonce = account.get('general').get('nonce');
             }
 
