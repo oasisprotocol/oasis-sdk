@@ -1,10 +1,13 @@
 {
+  "name": "@oasisprotocol/bridge-ledger",
+  "version": "0.0.1",
   "files": [
     "src"
   ],
   "main": "src/index.ts",
   "dependencies": {
     "@ledgerhq/hw-transport-webusb": "^5.41.0",
+    "@oasisprotocol/bridge": "^0.0.1",
     "@oasisprotocol/ledger": "^0.1.0"
   },
   "devDependencies": {

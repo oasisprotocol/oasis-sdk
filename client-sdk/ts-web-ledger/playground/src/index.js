@@ -1,7 +1,6 @@
 // @ts-check
 
-// todo: need a way to add this as a dep for published version
-import * as oasisBridge from './../../../ts-web';
+import * as oasisBridge from '@oasisprotocol/bridge';
 import * as oasisBridgeLedger from './../..';
 
 async function play() {
