@@ -58,7 +58,7 @@ const methodDescriptorStakingGetEvents = createMethodDescriptorSimple<types.long
 // enclaverpc not modeled
 
 // consensus
-const methodDescriptorConsensusSubmitTx = createMethodDescriptorSimple<types.NotModeled, void>('Consensus', 'SubmitTx');
+const methodDescriptorConsensusSubmitTx = createMethodDescriptorSimple<types.SignatureSigned, void>('Consensus', 'SubmitTx');
 const methodDescriptorConsensusStateToGenesis = createMethodDescriptorSimple<types.longnum, types.NotModeled>('Consensus', 'StateToGenesis');
 const methodDescriptorConsensusEstimateGas = createMethodDescriptorSimple<types.NotModeled, types.longnum>('Consensus', 'EstimateGas');
 const methodDescriptorConsensusGetSignerNonce = createMethodDescriptorSimple<types.NotModeled, types.longnum>('Consensus', 'GetSignerNonce');
@@ -126,7 +126,7 @@ export class OasisNodeClient {
     stakingGetEvents(height: types.longnum) { return this.callSimple(methodDescriptorStakingGetEvents, height); }
 
     // consensus
-    consensusSubmitTx(tx: types.NotModeled) { return this.callSimple(methodDescriptorConsensusSubmitTx, tx); }
+    consensusSubmitTx(tx: types.SignatureSigned) { return this.callSimple(methodDescriptorConsensusSubmitTx, tx); }
     consensusStateToGenesis(height: types.longnum) { return this.callSimple(methodDescriptorConsensusStateToGenesis, height); }
     consensusEstimateGas(req: types.NotModeled) { return this.callSimple(methodDescriptorConsensusEstimateGas, req); }
     consensusGetSignerNonce(req: types.NotModeled) { return this.callSimple(methodDescriptorConsensusGetSignerNonce, req); }
