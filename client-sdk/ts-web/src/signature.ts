@@ -25,26 +25,24 @@ export interface ContextSigner {
 const ED25519 = new elliptic.eddsa('ed25519');
 
 export async function openSigned(context: string, signed: types.SignatureSigned) {
-    const untrustedRawValue = signed.get('untrusted_raw_value');
-    const signature = signed.get('signature');
-    const signerMessage = await prepareSignerMessage(context, untrustedRawValue);
+    const signerMessage = await prepareSignerMessage(context, signed.untrusted_raw_value);
     const signerMessageA = Array.from(signerMessage);
-    const signatureA = Array.from(signature.get('signature'));
-    const publicKeyA = Array.from(signature.get('public_key'));
+    const signatureA = Array.from(signed.signature.signature);
+    const publicKeyA = Array.from(signed.signature.public_key);
     // @ts-expect-error acceptance of array-like types is not modeled
     const sigOk = ED25519.verify(signerMessageA, signatureA, publicKeyA);
     if (!sigOk) throw new Error('signature verification failed');
-    return untrustedRawValue;
+    return signed.untrusted_raw_value;
 }
 
-export async function signSigned(signer: ContextSigner, context: string, rawValue: Uint8Array) {
-    const signature: types.SignatureSignature = new Map();
-    signature.set('public_key', signer.public());
-    signature.set('signature', await signer.sign(context, rawValue));
-    const signed: types.SignatureSigned = new Map();
-    signed.set('untrusted_raw_value', rawValue);
-    signed.set('signature', signature);
-    return signed;
+export async function signSigned(signer: ContextSigner, context: string, rawValue: Uint8Array): Promise<types.SignatureSigned> {
+    return {
+        untrusted_raw_value: rawValue,
+        signature: {
+            public_key: signer.public(),
+            signature: await signer.sign(context, rawValue),
+        },
+    };
 }
 
 export function deserializeSigned(raw: Uint8Array): types.SignatureSigned {

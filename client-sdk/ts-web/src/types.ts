@@ -1,51 +1,51 @@
 export type NotModeled = {[key: string]: any};
 
-export interface ConsensusError extends Map<string, any> {
-    get(key: 'module'): string;
-    get(key: 'code'): number;
-    get(key: 'message'): string;
+export interface ConsensusError {
+    module: string;
+    code: number;
+    message: string;
 }
 
-export interface ConsensusEvent extends Map<string, any> {
-    // fields not modeled
+export interface ConsensusEvent {
+    [key: string]: any; // fields not modeled
 }
 
-export interface ConsensusFee extends Map<string, any> {
-    get(key: 'amount'): Uint8Array;
-    get(key: 'gas'): bigint;
+export interface ConsensusFee {
+    amount: Uint8Array;
+    gas: bigint;
 }
 
-export interface ConsensusResult extends Map<string, any> {
-    get(key: 'error'): ConsensusError;
-    get(key: 'events'): ConsensusEvent[];
+export interface ConsensusResult {
+    error: ConsensusError;
+    events: ConsensusEvent[];
 }
 
-export interface ConsensusTransaction extends Map<string, any> {
-    get(key: 'nonce'): bigint;
-    get(key: 'fee'): ConsensusFee;
-    get(key: 'method'): string;
-    get(key: 'body'): any;
+export interface ConsensusTransaction {
+    nonce: bigint;
+    fee: ConsensusFee;
+    method: string;
+    body: any;
 }
 
-export interface ConsensusTransactionsWithResults extends Map<string, any> {
-    get(key: 'transactions'): Uint8Array[];
-    get(key: 'results'): ConsensusResult[];
+export interface ConsensusTransactionsWithResults {
+    transactions: Uint8Array[];
+    results: ConsensusResult[];
 }
 
-export interface GenesisDocument extends Map<string, any> {
-    // fields not modeled
+export interface GenesisDocument {
+    [key: string]: any; // fields not modeled
 }
 
-export interface SignatureSignature extends Map<string, any> {
-    get(key: 'public_key'): Uint8Array;
-    get(key: 'signature'): Uint8Array;
+export interface SignatureSignature {
+    public_key: Uint8Array;
+    signature: Uint8Array;
 }
 
-export interface SignatureSigned extends Map<string, any> {
-    get(key: 'untrusted_raw_value'): Uint8Array;
-    get(key: 'signature'): SignatureSignature;
+export interface SignatureSigned {
+    untrusted_raw_value: Uint8Array;
+    signature: SignatureSignature;
 }
 
-export interface StakingDelegation extends Map<string, any> {
-    get(key: 'shares'): Uint8Array;
+export interface StakingDelegation {
+    shares: Uint8Array;
 }

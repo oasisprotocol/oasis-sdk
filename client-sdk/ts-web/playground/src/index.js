@@ -17,7 +17,7 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             for (const [fromAddr, delegation] of response) {
                 console.log({
                     from: oasisBridge.address.toString(fromAddr),
-                    shares: oasisBridge.quantity.toBigInt(delegation.get('shares')),
+                    shares: oasisBridge.quantity.toBigInt(delegation.shares),
                 });
             }
         }
@@ -30,20 +30,15 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             const height = 1383018n;
             console.log('height', height);
             const response = await client.consensusGetTransactionsWithResults(height);
-            const transactions = response.get('transactions');
-            const results = response.get('results');
-            for (let i = 0; i < transactions.length; i++) {
-                const signedTransaction = oasisBridge.signature.deserializeSigned(transactions[i]);
+            for (let i = 0; i < response.transactions.length; i++) {
+                const signedTransaction = oasisBridge.signature.deserializeSigned(response.transactions[i]);
                 const transaction = await oasisBridge.consensus.openSignedTransaction(chainContext, signedTransaction);
                 console.log({
                     hash: await oasisBridge.consensus.hashSignedTransaction(signedTransaction),
-                    from: oasisBridge.address.toString(await oasisBridge.staking.addressFromPublicKey(signedTransaction.get('signature').get('public_key'))),
-                    nonce: transaction.get('nonce'),
-                    feeAmount: oasisBridge.quantity.toBigInt(transaction.get('fee').get('amount')),
-                    feeGas: transaction.get('fee').get('gas'),
-                    method: transaction.get('method'),
-                    body: transaction.get('body'),
-                    result: results[i],
+                    from: oasisBridge.address.toString(await oasisBridge.staking.addressFromPublicKey(signedTransaction.signature.public_key)),
+                    transaction: transaction,
+                    feeAmount: oasisBridge.quantity.toBigInt(transaction.fee.amount),
+                    result: response.results[i],
                 });
             }
         }
@@ -63,13 +58,10 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
                 height: oasisBridge.consensus.HEIGHT_LATEST,
             });
             console.log('account', account);
-            let nonce = 0;
-            if (account.has('general') && account.get('general').has('nonce')) {
-                nonce = account.get('general').get('nonce');
-            }
 
+            /** @type {oasisBridge.types.ConsensusTransaction} */
             const transaction = {
-                nonce: nonce,
+                nonce: account.general?.nonce ?? 0,
                 fee: {
                     amount: oasisBridge.quantity.fromBigInt(0n),
                     gas: 0n,
@@ -96,7 +88,7 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             try {
                 await client.consensusSubmitTx(signedTransaction);
             } catch (e) {
-                if ('message' in e && e.message === 'Incomplete response') {
+                if (e.message === 'Incomplete response') {
                     // This is normal. grpc-web freaks out if the response is `== null`, which it
                     // always is for a void method.
                     // todo: unhack this when they release with our change

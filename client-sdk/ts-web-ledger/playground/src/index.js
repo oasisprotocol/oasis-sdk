@@ -21,6 +21,7 @@ async function play() {
             const chainContext = 'test';
             console.log('chain context', chainContext);
 
+            /** @type {oasisBridge.types.ConsensusTransaction} */
             const transaction = {
                 nonce: 123n,
                 fee: {
