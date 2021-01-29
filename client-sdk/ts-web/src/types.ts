@@ -1,5 +1,12 @@
 export type NotModeled = {[key: string]: any};
 
+/**
+ * These represent int64 and uint64. We accept both number (for small integer values) and bignum
+ * (up to min/max value). We output inconsistently (number if it fits in number; integer size is
+ * lost in serialization; apologies), so you should perhaps cast to bigint for consistency.
+ */
+export type longnum = number | bigint;
+
 export interface ConsensusError {
     module: string;
     code: number;
@@ -12,7 +19,7 @@ export interface ConsensusEvent {
 
 export interface ConsensusFee {
     amount: Uint8Array;
-    gas: bigint;
+    gas: longnum;
 }
 
 export interface ConsensusResult {
@@ -21,7 +28,7 @@ export interface ConsensusResult {
 }
 
 export interface ConsensusTransaction {
-    nonce: bigint;
+    nonce: longnum;
     fee: ConsensusFee;
     method: string;
     body: any;
