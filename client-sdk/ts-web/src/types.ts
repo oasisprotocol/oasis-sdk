@@ -8,9 +8,9 @@ export type NotModeled = {[key: string]: any};
 export type longnum = number | bigint;
 
 export interface ConsensusError {
-    module: string;
-    code: number;
-    message: string;
+    module?: string;
+    code?: number;
+    message?: string;
 }
 
 export interface ConsensusEvent {
@@ -29,9 +29,9 @@ export interface ConsensusResult {
 
 export interface ConsensusTransaction {
     nonce: longnum;
-    fee: ConsensusFee;
+    fee?: ConsensusFee;
     method: string;
-    body: any;
+    body?: any;
 }
 
 export interface ConsensusTransactionsWithResults {
