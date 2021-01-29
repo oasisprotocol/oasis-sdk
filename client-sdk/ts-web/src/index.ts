@@ -39,11 +39,11 @@ const methodDescriptorStakingTokenValueExponent = createMethodDescriptorSimple<v
 const methodDescriptorStakingTotalSupply = createMethodDescriptorSimple<types.longnum, Uint8Array>('Staking', 'TotalSupply');
 const methodDescriptorStakingCommonPool = createMethodDescriptorSimple<types.longnum, Uint8Array>('Staking', 'CommonPool');
 const methodDescriptorStakingLastBlockFees = createMethodDescriptorSimple<types.longnum, Uint8Array>('Staking', 'LastBlockFees');
-const methodDescriptorStakingThreshold = createMethodDescriptorSimple<types.NotModeled, Uint8Array>('Staking', 'Threshold');
+const methodDescriptorStakingThreshold = createMethodDescriptorSimple<types.StakingThresholdQuery, Uint8Array>('Staking', 'Threshold');
 const methodDescriptorStakingAddresses = createMethodDescriptorSimple<types.longnum, Uint8Array[]>('Staking', 'Addresses');
-const methodDescriptorStakingAccount = createMethodDescriptorSimple<types.NotModeled, types.NotModeled>('Staking', 'Account');
-const methodDescriptorStakingDelegations = createMethodDescriptorSimple<types.NotModeled, Map<Uint8Array, types.StakingDelegation>>('Staking', 'Delegations');
-const methodDescriptorStakingDebondingDelegations = createMethodDescriptorSimple<types.NotModeled, Map<Uint8Array, types.NotModeled[]>>('Staking', 'DebondingDelegations');
+const methodDescriptorStakingAccount = createMethodDescriptorSimple<types.StakingOwnerQuery, types.StakingAccount>('Staking', 'Account');
+const methodDescriptorStakingDelegations = createMethodDescriptorSimple<types.StakingOwnerQuery, Map<Uint8Array, types.StakingDelegation>>('Staking', 'Delegations');
+const methodDescriptorStakingDebondingDelegations = createMethodDescriptorSimple<types.StakingOwnerQuery, Map<Uint8Array, types.StakingDebondingDelegation[]>>('Staking', 'DebondingDelegations');
 const methodDescriptorStakingStateToGenesis = createMethodDescriptorSimple<types.longnum, types.NotModeled>('Staking', 'StateToGenesis');
 const methodDescriptorStakingConsensusParameters = createMethodDescriptorSimple<types.longnum, types.NotModeled>('Staking', 'ConsensusParameters');
 const methodDescriptorStakingGetEvents = createMethodDescriptorSimple<types.longnum, types.NotModeled[]>('Staking', 'GetEvents');
@@ -59,9 +59,9 @@ const methodDescriptorStakingGetEvents = createMethodDescriptorSimple<types.long
 
 // consensus
 const methodDescriptorConsensusSubmitTx = createMethodDescriptorSimple<types.SignatureSigned, void>('Consensus', 'SubmitTx');
-const methodDescriptorConsensusStateToGenesis = createMethodDescriptorSimple<types.longnum, types.NotModeled>('Consensus', 'StateToGenesis');
-const methodDescriptorConsensusEstimateGas = createMethodDescriptorSimple<types.NotModeled, types.longnum>('Consensus', 'EstimateGas');
-const methodDescriptorConsensusGetSignerNonce = createMethodDescriptorSimple<types.NotModeled, types.longnum>('Consensus', 'GetSignerNonce');
+const methodDescriptorConsensusStateToGenesis = createMethodDescriptorSimple<types.longnum, types.GenesisDocument>('Consensus', 'StateToGenesis');
+const methodDescriptorConsensusEstimateGas = createMethodDescriptorSimple<types.ConsensusEstimateGasRequest, types.longnum>('Consensus', 'EstimateGas');
+const methodDescriptorConsensusGetSignerNonce = createMethodDescriptorSimple<types.ConsensusGetSignerNonceRequest, types.longnum>('Consensus', 'GetSignerNonce');
 const methodDescriptorConsensusGetEpoch = createMethodDescriptorSimple<types.longnum, types.longnum>('Consensus', 'GetEpoch');
 const methodDescriptorConsensusWaitEpoch = createMethodDescriptorSimple<types.longnum, void>('Consensus', 'WaitEpoch');
 const methodDescriptorConsensusGetBlock = createMethodDescriptorSimple<types.longnum, types.NotModeled>('Consensus', 'GetBlock');
@@ -116,11 +116,11 @@ export class OasisNodeClient {
     stakingTotalSupply(height: types.longnum) { return this.callSimple(methodDescriptorStakingTotalSupply, height); }
     stakingCommonPool(height: types.longnum) { return this.callSimple(methodDescriptorStakingCommonPool, height); }
     stakingLastBlockFees(height: types.longnum) { return this.callSimple(methodDescriptorStakingLastBlockFees, height); }
-    stakingThreshold(query: types.NotModeled) { return this.callSimple(methodDescriptorStakingThreshold, query); }
+    stakingThreshold(query: types.StakingThresholdQuery) { return this.callSimple(methodDescriptorStakingThreshold, query); }
     stakingAddresses(height: types.longnum) { return this.callSimple(methodDescriptorStakingAddresses, height); }
-    stakingAccount(query: types.NotModeled) { return this.callSimple(methodDescriptorStakingAccount, query); }
-    stakingDelegations(query: types.NotModeled) { return this.callSimple(methodDescriptorStakingDelegations, query); }
-    stakingDebondingDelegations(query: types.NotModeled) { return this.callSimple(methodDescriptorStakingDebondingDelegations, query); }
+    stakingAccount(query: types.StakingOwnerQuery) { return this.callSimple(methodDescriptorStakingAccount, query); }
+    stakingDelegations(query: types.StakingOwnerQuery) { return this.callSimple(methodDescriptorStakingDelegations, query); }
+    stakingDebondingDelegations(query: types.StakingOwnerQuery) { return this.callSimple(methodDescriptorStakingDebondingDelegations, query); }
     stakingStateToGenesis(height: types.longnum) { return this.callSimple(methodDescriptorStakingStateToGenesis, height); }
     stakingConsensusParameters(height: types.longnum) { return this.callSimple(methodDescriptorStakingConsensusParameters, height); }
     stakingGetEvents(height: types.longnum) { return this.callSimple(methodDescriptorStakingGetEvents, height); }
@@ -128,8 +128,8 @@ export class OasisNodeClient {
     // consensus
     consensusSubmitTx(tx: types.SignatureSigned) { return this.callSimple(methodDescriptorConsensusSubmitTx, tx); }
     consensusStateToGenesis(height: types.longnum) { return this.callSimple(methodDescriptorConsensusStateToGenesis, height); }
-    consensusEstimateGas(req: types.NotModeled) { return this.callSimple(methodDescriptorConsensusEstimateGas, req); }
-    consensusGetSignerNonce(req: types.NotModeled) { return this.callSimple(methodDescriptorConsensusGetSignerNonce, req); }
+    consensusEstimateGas(req: types.ConsensusEstimateGasRequest) { return this.callSimple(methodDescriptorConsensusEstimateGas, req); }
+    consensusGetSignerNonce(req: types.ConsensusGetSignerNonceRequest) { return this.callSimple(methodDescriptorConsensusGetSignerNonce, req); }
     consensusGetEpoch(height: types.longnum) { return this.callSimple(methodDescriptorConsensusGetEpoch, height); }
     consensusWaitEpoch(epoch: types.longnum) { return this.callSimple(methodDescriptorConsensusWaitEpoch, epoch); }
     consensusGetBlock(height: types.longnum) { return this.callSimple(methodDescriptorConsensusGetBlock, height); }

@@ -11,8 +11,8 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             const toAddr = 'oasis1qpl5634wyu6larn047he9af7a3qyhzx59u0mquw7';
             console.log('delegations to', toAddr);
             const response = await client.stakingDelegations({
-                owner: oasisBridge.address.fromString(toAddr),
                 height: 1920228n,
+                owner: oasisBridge.address.fromString(toAddr),
             });
             for (const [fromAddr, delegation] of response) {
                 console.log({
@@ -54,8 +54,8 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             console.log('chain context', chainContext);
 
             const account = await client.stakingAccount({
-                owner: await oasisBridge.staking.addressFromPublicKey(src.public()),
                 height: oasisBridge.consensus.HEIGHT_LATEST,
+                owner: await oasisBridge.staking.addressFromPublicKey(src.public()),
             });
             console.log('account', account);
 

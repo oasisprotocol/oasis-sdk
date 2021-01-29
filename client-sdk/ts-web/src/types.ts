@@ -13,6 +13,11 @@ export interface ConsensusError {
     message?: string;
 }
 
+export interface ConsensusEstimateGasRequest {
+    signer: Uint8Array;
+    transaction: ConsensusTransaction;
+}
+
 export interface ConsensusEvent {
     [key: string]: any; // fields not modeled
 }
@@ -20,6 +25,11 @@ export interface ConsensusEvent {
 export interface ConsensusFee {
     amount: Uint8Array;
     gas: longnum;
+}
+
+export interface ConsensusGetSignerNonceRequest {
+    account_address: Uint8Array;
+    height: longnum;
 }
 
 export interface ConsensusResult {
@@ -53,6 +63,68 @@ export interface SignatureSigned {
     signature: SignatureSignature;
 }
 
+export interface StakingAccount {
+    general?: StakingGeneralAccount;
+    escrow?: StakingEscrowAccount;
+}
+
+export interface StakingCommissionRateBoundStep {
+    start?: longnum;
+    rate_min?: Uint8Array;
+    rate_max?: Uint8Array;
+}
+
+export interface StakingCommissionRateStep {
+    start?: longnum;
+    rate?: Uint8Array;
+}
+
+export interface StakingCommissionSchedule {
+    rates?: StakingCommissionRateStep[];
+    bounds?: StakingCommissionRateBoundStep[];
+}
+
+export interface StakingDebondingDelegation {
+    shares: Uint8Array;
+    debond_end: longnum;
+}
+
 export interface StakingDelegation {
     shares: Uint8Array;
+}
+
+export interface StakingEscrowAccount {
+    active?: StakingSharePool;
+    debonding?: StakingSharePool;
+    commission_schedule?: StakingCommissionSchedule;
+    stake_accumulator?: StakingStakeAccumulator;
+}
+
+export interface StakingGeneralAccount {
+    balance?: Uint8Array;
+    nonce?: longnum;
+}
+
+export interface StakingOwnerQuery {
+    height: longnum;
+    owner: Uint8Array;
+}
+
+export interface StakingSharePool {
+    balance?: Uint8Array;
+    total_shares?: Uint8Array;
+}
+
+export interface StakingStakeAccumulator {
+    claims?: {[claim: string]: StakingStakeThreshold[]}
+}
+
+export interface StakingStakeThreshold {
+    global?: number;
+    const?: Uint8Array;
+}
+
+export interface StakingThresholdQuery {
+    height: longnum;
+    kind: number;
 }
