@@ -1,8 +1,8 @@
 // @ts-check
 
-import * as oasisBridge from './../..';
+import * as oasis from './../..';
 
-const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
+const client = new oasis.OasisNodeClient('http://localhost:42280');
 
 (async function () {
     try {
@@ -12,12 +12,12 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             console.log('delegations to', toAddr);
             const response = await client.stakingDelegations({
                 height: 1920228n,
-                owner: oasisBridge.address.fromString(toAddr),
+                owner: oasis.address.fromString(toAddr),
             });
             for (const [fromAddr, delegation] of response) {
                 console.log({
-                    from: oasisBridge.address.toString(fromAddr),
-                    shares: oasisBridge.quantity.toBigInt(delegation.shares),
+                    from: oasis.address.toString(fromAddr),
+                    shares: oasis.quantity.toBigInt(delegation.shares),
                 });
             }
         }
@@ -25,19 +25,19 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
         // Try verifying transaction signatures.
         {
             const genesis = await client.consensusGetGenesisDocument();
-            const chainContext = await oasisBridge.genesis.chainContext(genesis);
+            const chainContext = await oasis.genesis.chainContext(genesis);
             console.log('chain context', chainContext);
             const height = 1383018n;
             console.log('height', height);
             const response = await client.consensusGetTransactionsWithResults(height);
             for (let i = 0; i < response.transactions.length; i++) {
-                const signedTransaction = oasisBridge.signature.deserializeSigned(response.transactions[i]);
-                const transaction = await oasisBridge.consensus.openSignedTransaction(chainContext, signedTransaction);
+                const signedTransaction = oasis.signature.deserializeSigned(response.transactions[i]);
+                const transaction = await oasis.consensus.openSignedTransaction(chainContext, signedTransaction);
                 console.log({
-                    hash: await oasisBridge.consensus.hashSignedTransaction(signedTransaction),
-                    from: oasisBridge.address.toString(await oasisBridge.staking.addressFromPublicKey(signedTransaction.signature.public_key)),
+                    hash: await oasis.consensus.hashSignedTransaction(signedTransaction),
+                    from: oasis.address.toString(await oasis.staking.addressFromPublicKey(signedTransaction.signature.public_key)),
                     transaction: transaction,
-                    feeAmount: oasisBridge.quantity.toBigInt(transaction.fee.amount),
+                    feeAmount: oasis.quantity.toBigInt(transaction.fee.amount),
                     result: response.results[i],
                 });
             }
@@ -45,31 +45,31 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
 
         // Try sending a transaction.
         {
-            const src = oasisBridge.signature.EllipticSigner.fromRandom('this key is not important');
-            const dst = oasisBridge.signature.EllipticSigner.fromRandom('this key is not important');
+            const src = oasis.signature.EllipticSigner.fromRandom('this key is not important');
+            const dst = oasis.signature.EllipticSigner.fromRandom('this key is not important');
             console.log('src', src, 'dst', dst);
 
             const genesis = await client.consensusGetGenesisDocument();
-            const chainContext = await oasisBridge.genesis.chainContext(genesis);
+            const chainContext = await oasis.genesis.chainContext(genesis);
             console.log('chain context', chainContext);
 
             const account = await client.stakingAccount({
-                height: oasisBridge.consensus.HEIGHT_LATEST,
-                owner: await oasisBridge.staking.addressFromPublicKey(src.public()),
+                height: oasis.consensus.HEIGHT_LATEST,
+                owner: await oasis.staking.addressFromPublicKey(src.public()),
             });
             console.log('account', account);
 
-            /** @type {oasisBridge.types.ConsensusTransaction} */
+            /** @type {oasis.types.ConsensusTransaction} */
             const transaction = {
                 nonce: account.general?.nonce ?? 0,
                 fee: {
-                    amount: oasisBridge.quantity.fromBigInt(0n),
+                    amount: oasis.quantity.fromBigInt(0n),
                     gas: 0n,
                 },
                 method: 'staking.Transfer',
                 body: {
-                    to: await oasisBridge.staking.addressFromPublicKey(dst.public()),
-                    amount: oasisBridge.quantity.fromBigInt(0n),
+                    to: await oasis.staking.addressFromPublicKey(dst.public()),
+                    amount: oasis.quantity.fromBigInt(0n),
                 }
             };
 
@@ -81,9 +81,9 @@ const client = new oasisBridge.OasisNodeClient('http://localhost:42280');
             transaction.fee.gas = gas;
             console.log('transaction', transaction);
 
-            const signedTransaction = await oasisBridge.consensus.signSignedTransaction(new oasisBridge.signature.BlindContextSigner(src), chainContext, transaction);
+            const signedTransaction = await oasis.consensus.signSignedTransaction(new oasis.signature.BlindContextSigner(src), chainContext, transaction);
             console.log('singed transaction', signedTransaction);
-            console.log('hash', await oasisBridge.consensus.hashSignedTransaction(signedTransaction));
+            console.log('hash', await oasis.consensus.hashSignedTransaction(signedTransaction));
 
             try {
                 await client.consensusSubmitTx(signedTransaction);

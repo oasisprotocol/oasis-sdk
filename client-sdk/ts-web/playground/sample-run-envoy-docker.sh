@@ -1,7 +1,7 @@
 #!/bin/sh -eux
 docker run \
     -it \
-    --name obtsenvoy \
+    --name sdktsenvoy \
     --rm \
     -e ENVOY_UID=1000 \
     -e ENVOY_GID=1000 \

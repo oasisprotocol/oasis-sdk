@@ -3,7 +3,7 @@ import TransportWebUSB from '@ledgerhq/hw-transport-webusb';
 // @ts-expect-error missing declaration
 import OasisApp from '@oasisprotocol/ledger';
 
-import * as oasisBridge from '@oasisprotocol/bridge';
+import * as oasis from '@oasisprotocol/client';
 
 interface Response {
     return_code: number;
@@ -24,7 +24,7 @@ function successOrThrow(response: Response, message: string) {
     return response;
 }
 
-export class LedgerContextSigner implements oasisBridge.signature.ContextSigner {
+export class LedgerContextSigner implements oasis.signature.ContextSigner {
 
     app: OasisApp;
     path: number[];

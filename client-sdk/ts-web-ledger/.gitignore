@@ -1,2 +1,6 @@
 /node_modules
+# It would be complicated to add exclusions for our links:
+# > It is not possible to re-include a file if a parent directory of that file is excluded.
+# We'd have to go back and forth on each level of directories leading up to our scoped packages. So
+# instead `git add -f` them.
 /playground/dist/main.js

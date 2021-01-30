@@ -1,46 +1,46 @@
 // @ts-check
 
-import * as oasisBridge from '@oasisprotocol/bridge';
-import * as oasisBridgeLedger from './../..';
+import * as oasis from '@oasisprotocol/client';
+import * as oasisLedger from './../..';
 
 async function play() {
     try {
-        const signer = await oasisBridgeLedger.LedgerContextSigner.fromWebUSB(0);
+        const signer = await oasisLedger.LedgerContextSigner.fromWebUSB(0);
 
         // Try Ledger signing.
         {
-            const dst = oasisBridge.signature.EllipticSigner.fromRandom('this key is not important');
-            const dstAddr = await oasisBridge.staking.addressFromPublicKey(dst.public());
-            console.log('dst addr', oasisBridge.address.toString(dstAddr));
+            const dst = oasis.signature.EllipticSigner.fromRandom('this key is not important');
+            const dstAddr = await oasis.staking.addressFromPublicKey(dst.public());
+            console.log('dst addr', oasis.address.toString(dstAddr));
 
             const signerPub = signer.public();
             console.log('ledger public key', signerPub);
-            console.log('ledger staking address', oasisBridge.address.toString(await oasisBridge.staking.addressFromPublicKey(signerPub)));
+            console.log('ledger staking address', oasis.address.toString(await oasis.staking.addressFromPublicKey(signerPub)));
 
             // Dummy value.
             const chainContext = 'test';
             console.log('chain context', chainContext);
 
-            /** @type {oasisBridge.types.ConsensusTransaction} */
+            /** @type {oasis.types.ConsensusTransaction} */
             const transaction = {
                 nonce: 123n,
                 fee: {
-                    amount: oasisBridge.quantity.fromBigInt(150n),
+                    amount: oasis.quantity.fromBigInt(150n),
                     gas: 1300n,
                 },
                 method: 'staking.Transfer',
                 body: {
                     to: dstAddr,
-                    amount: oasisBridge.quantity.fromBigInt(0n),
+                    amount: oasis.quantity.fromBigInt(0n),
                 }
             };
             console.log('transaction', transaction);
 
-            const signedTransaction = await oasisBridge.consensus.signSignedTransaction(signer, chainContext, transaction);
+            const signedTransaction = await oasis.consensus.signSignedTransaction(signer, chainContext, transaction);
             console.log('signed transaction', signedTransaction);
-            console.log('hash', await oasisBridge.consensus.hashSignedTransaction(signedTransaction));
+            console.log('hash', await oasis.consensus.hashSignedTransaction(signedTransaction));
 
-            console.log('reopened', oasisBridge.consensus.openSignedTransaction(chainContext, signedTransaction));
+            console.log('reopened', oasis.consensus.openSignedTransaction(chainContext, signedTransaction));
         }
     } catch (e) {
         console.error(e);
