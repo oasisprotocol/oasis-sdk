@@ -27,6 +27,7 @@ export interface ConsensusEstimateGasRequest {
 }
 
 export interface ConsensusEvent {
+    staking?: StakingEvent;
     [key: string]: any; // fields not modeled
 }
 
@@ -85,6 +86,17 @@ export interface StakingAccount {
     escrow?: StakingEscrowAccount;
 }
 
+export interface StakingAddEscrowEvent {
+    owner: Uint8Array;
+    escrow: Uint8Array;
+    amount: Uint8Array;
+}
+
+export interface StakingBurnEvent {
+    owner: Uint8Array;
+    amount: Uint8Array;
+}
+
 export interface StakingCommissionRateBoundStep {
     start?: longnum;
     rate_min?: Uint8Array;
@@ -117,6 +129,20 @@ export interface StakingEscrowAccount {
     stake_accumulator?: StakingStakeAccumulator;
 }
 
+export interface StakingEscrowEvent {
+    add?: StakingAddEscrowEvent;
+    take?: StakingTakeEscrowEvent;
+    reclaim?: StakingReclaimEscrowEvent;
+}
+
+export interface StakingEvent {
+    height?: longnum;
+    tx_hash?: Uint8Array;
+    transfer?: StakingTransferEvent;
+    burn?: StakingBurnEvent;
+    escrow?: StakingEscrowEvent;
+}
+
 export interface StakingGeneralAccount {
     balance?: Uint8Array;
     nonce?: longnum;
@@ -125,6 +151,12 @@ export interface StakingGeneralAccount {
 export interface StakingOwnerQuery {
     height: longnum;
     owner: Uint8Array;
+}
+
+export interface StakingReclaimEscrowEvent {
+    owner: Uint8Array;
+    escrow: Uint8Array;
+    amount: Uint8Array;
 }
 
 export interface StakingSharePool {
@@ -141,9 +173,20 @@ export interface StakingStakeThreshold {
     const?: Uint8Array;
 }
 
+export interface StakingTakeEscrowEvent {
+    owner: Uint8Array;
+    amount: Uint8Array;
+}
+
 export interface StakingThresholdQuery {
     height: longnum;
     kind: number;
+}
+
+export interface StakingTransferEvent {
+    from: Uint8Array;
+    to: Uint8Array;
+    amount: Uint8Array;
 }
 
 export interface StorageGetPrefixesRequest {

@@ -6,10 +6,14 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
 
 (async function () {
     try {
-        // Block has a variety of different types.
+        // Block and events have a variety of different types.
         {
-            const block = await client.consensusGetBlock(oasis.consensus.HEIGHT_LATEST);
+            const height = 1383018n;
+            console.log('height', height);
+            const block = await client.consensusGetBlock(height);
             console.log('block', block);
+            const stakingEvents = await client.stakingGetEvents(height);
+            console.log('staking events', stakingEvents);
         }
 
         // Try map with non-string keys.

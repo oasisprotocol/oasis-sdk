@@ -46,7 +46,7 @@ const methodDescriptorStakingDelegations = createMethodDescriptorSimple<types.St
 const methodDescriptorStakingDebondingDelegations = createMethodDescriptorSimple<types.StakingOwnerQuery, Map<Uint8Array, types.StakingDebondingDelegation[]>>('Staking', 'DebondingDelegations');
 const methodDescriptorStakingStateToGenesis = createMethodDescriptorSimple<types.longnum, types.NotModeled>('Staking', 'StateToGenesis');
 const methodDescriptorStakingConsensusParameters = createMethodDescriptorSimple<types.longnum, types.NotModeled>('Staking', 'ConsensusParameters');
-const methodDescriptorStakingGetEvents = createMethodDescriptorSimple<types.longnum, types.NotModeled[]>('Staking', 'GetEvents');
+const methodDescriptorStakingGetEvents = createMethodDescriptorSimple<types.longnum, types.StakingEvent[]>('Staking', 'GetEvents');
 // WatchEvents not modeled
 
 // keymanager not modeled
