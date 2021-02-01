@@ -50,6 +50,11 @@ export interface ConsensusLightBlock {
     meta: Uint8Array;
 }
 
+export interface ConsensusLightParameters {
+    height: longnum;
+    meta: Uint8Array;
+}
+
 export interface ConsensusResult {
     error: ConsensusError;
     events: ConsensusEvent[];
@@ -68,6 +73,7 @@ export interface ConsensusTransactionsWithResults {
 }
 
 export interface GenesisDocument {
+    staking: StakingGenesis;
     [key: string]: any; // fields not modeled
 }
 
@@ -121,6 +127,33 @@ export interface StakingCommissionSchedule {
     bounds?: StakingCommissionRateBoundStep[];
 }
 
+export interface StakingCommissionScheduleRules {
+    rate_change_interval?: longnum;
+    rate_bound_lead?: longnum;
+    max_rate_steps?: number;
+    max_bound_steps?: number;
+}
+
+export interface StakingConsensusParameters {
+    thresholds?: Map<number, Uint8Array>;
+    debonding_interval?: longnum;
+    reward_schedule?: StakingRewardStep[];
+    signing_reward_threshold_numerator?: longnum;
+    signing_reward_threshold_denominator?: longnum;
+    commission_schedule_rules?: StakingCommissionScheduleRules;
+    slashing?: Map<number, StakingSlash>;
+    gas_costs?: {[op: string]: longnum};
+    min_delegation: Uint8Array;
+    disable_transfers?: boolean;
+    disable_delegation?: boolean;
+    undisable_transfers_from?: Map<Uint8Array, boolean>;
+    fee_split_weight_propose: Uint8Array;
+    fee_split_weight_vote: Uint8Array;
+    fee_split_weight_next_propose: Uint8Array;
+    reward_factor_epoch_signed: Uint8Array;
+    reward_factor_block_proposed: Uint8Array;
+}
+
 export interface StakingDebondingDelegation {
     shares: Uint8Array;
     debond_end: longnum;
@@ -161,6 +194,18 @@ export interface StakingGeneralAccount {
     nonce?: longnum;
 }
 
+export interface StakingGenesis {
+    params: StakingConsensusParameters;
+    token_symbol: string;
+    token_value_exponent: number;
+    total_supply: Uint8Array;
+    common_pool: Uint8Array;
+    last_block_fees: Uint8Array;
+    ledger?: Map<Uint8Array, StakingAccount>;
+    delegations?: Map<Uint8Array, Map<Uint8Array, StakingDelegation>>;
+    debonding_delegations?: Map<Uint8Array, Map<Uint8Array, StakingDebondingDelegation[]>>;
+}
+
 export interface StakingOwnerQuery {
     height: longnum;
     owner: Uint8Array;
@@ -177,9 +222,19 @@ export interface StakingReclaimEscrowEvent {
     amount: Uint8Array;
 }
 
+export interface StakingRewardStep {
+    until: longnum;
+    scale: Uint8Array;
+}
+
 export interface StakingSharePool {
     balance?: Uint8Array;
     total_shares?: Uint8Array;
+}
+
+export interface StakingSlash {
+    amount: Uint8Array;
+    freeze_interval: longnum;
 }
 
 export interface StakingStakeAccumulator {

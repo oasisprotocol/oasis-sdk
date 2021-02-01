@@ -44,8 +44,8 @@ const methodDescriptorStakingAddresses = createMethodDescriptorSimple<types.long
 const methodDescriptorStakingAccount = createMethodDescriptorSimple<types.StakingOwnerQuery, types.StakingAccount>('Staking', 'Account');
 const methodDescriptorStakingDelegations = createMethodDescriptorSimple<types.StakingOwnerQuery, Map<Uint8Array, types.StakingDelegation>>('Staking', 'Delegations');
 const methodDescriptorStakingDebondingDelegations = createMethodDescriptorSimple<types.StakingOwnerQuery, Map<Uint8Array, types.StakingDebondingDelegation[]>>('Staking', 'DebondingDelegations');
-const methodDescriptorStakingStateToGenesis = createMethodDescriptorSimple<types.longnum, types.NotModeled>('Staking', 'StateToGenesis');
-const methodDescriptorStakingConsensusParameters = createMethodDescriptorSimple<types.longnum, types.NotModeled>('Staking', 'ConsensusParameters');
+const methodDescriptorStakingStateToGenesis = createMethodDescriptorSimple<types.longnum, types.StakingGenesis>('Staking', 'StateToGenesis');
+const methodDescriptorStakingConsensusParameters = createMethodDescriptorSimple<types.longnum, types.StakingConsensusParameters>('Staking', 'ConsensusParameters');
 const methodDescriptorStakingGetEvents = createMethodDescriptorSimple<types.longnum, types.StakingEvent[]>('Staking', 'GetEvents');
 // WatchEvents not modeled
 
@@ -72,7 +72,7 @@ const methodDescriptorConsensusGetGenesisDocument = createMethodDescriptorSimple
 const methodDescriptorConsensusGetStatus = createMethodDescriptorSimple<void, types.NotModeled>('Consensus', 'GetStatus');
 // WatchBlocks not modeled
 const methodDescriptorConsensusLightGetLightBlock = createMethodDescriptorSimple<types.longnum, types.ConsensusLightBlock>('ConsensusLight', 'GetLightBlock');
-const methodDescriptorConsensusLightGetParameters = createMethodDescriptorSimple<types.longnum, types.NotModeled>('ConsensusLight', 'GetParameters');
+const methodDescriptorConsensusLightGetParameters = createMethodDescriptorSimple<types.longnum, types.ConsensusLightParameters>('ConsensusLight', 'GetParameters');
 const methodDescriptorConsensusLightStateSyncGet = createMethodDescriptorSimple<types.StorageGetRequest, types.StorageProofResponse>('ConsensusLight', 'StateSyncGet');
 const methodDescriptorConsensusLightStateSyncGetPrefixes = createMethodDescriptorSimple<types.StorageGetPrefixesRequest, types.StorageProofResponse>('ConsensusLight', 'StateSyncGetPrefixes');
 const methodDescriptorConsensusLightStateSyncIterate = createMethodDescriptorSimple<types.StorageIterateRequest, types.StorageProofResponse>('ConsensusLight', 'StateSyncIterate');

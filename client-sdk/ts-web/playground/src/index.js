@@ -35,6 +35,7 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
         // Try verifying transaction signatures.
         {
             const genesis = await client.consensusGetGenesisDocument();
+            console.log('genesis', genesis);
             const chainContext = await oasis.genesis.chainContext(genesis);
             console.log('chain context', chainContext);
             const height = 1383018n;
