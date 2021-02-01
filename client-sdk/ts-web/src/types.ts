@@ -92,6 +92,14 @@ export interface StakingAddEscrowEvent {
     amount: Uint8Array;
 }
 
+export interface StakingAmendCommissionSchedule {
+    amendment: StakingCommissionSchedule;
+}
+
+export interface StakingBurn {
+    amount: Uint8Array;
+}
+
 export interface StakingBurnEvent {
     owner: Uint8Array;
     amount: Uint8Array;
@@ -120,6 +128,11 @@ export interface StakingDebondingDelegation {
 
 export interface StakingDelegation {
     shares: Uint8Array;
+}
+
+export interface StakingEscrow {
+    account: Uint8Array;
+    amount: Uint8Array;
 }
 
 export interface StakingEscrowAccount {
@@ -153,6 +166,11 @@ export interface StakingOwnerQuery {
     owner: Uint8Array;
 }
 
+export interface StakingReclaimEscrow {
+    account: Uint8Array;
+    shares: Uint8Array;
+}
+
 export interface StakingReclaimEscrowEvent {
     owner: Uint8Array;
     escrow: Uint8Array;
@@ -181,6 +199,11 @@ export interface StakingTakeEscrowEvent {
 export interface StakingThresholdQuery {
     height: longnum;
     kind: number;
+}
+
+export interface StakingTransfer {
+    to: Uint8Array;
+    amount: Uint8Array;
 }
 
 export interface StakingTransferEvent {

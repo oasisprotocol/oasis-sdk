@@ -69,6 +69,11 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
             });
             console.log('account', account);
 
+            /** @type {oasis.types.StakingTransfer} */
+            const body = {
+                to: await oasis.staking.addressFromPublicKey(dst.public()),
+                amount: oasis.quantity.fromBigInt(0n),
+            };
             /** @type {oasis.types.ConsensusTransaction} */
             const transaction = {
                 nonce: account.general?.nonce ?? 0,
@@ -77,10 +82,7 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
                     gas: 0n,
                 },
                 method: 'staking.Transfer',
-                body: {
-                    to: await oasis.staking.addressFromPublicKey(dst.public()),
-                    amount: oasis.quantity.fromBigInt(0n),
-                }
+                body: body,
             };
 
             const gas = await client.consensusEstimateGas({
