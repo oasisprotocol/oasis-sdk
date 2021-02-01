@@ -85,7 +85,7 @@ const methodDescriptorNodeControllerWaitSync = createMethodDescriptorSimple<void
 const methodDescriptorNodeControllerIsSynced = createMethodDescriptorSimple<void, boolean>('NodeController', 'IsSynced');
 const methodDescriptorNodeControllerWaitReady = createMethodDescriptorSimple<void, void>('NodeController', 'WaitReady');
 const methodDescriptorNodeControllerIsReady = createMethodDescriptorSimple<void, boolean>('NodeController', 'IsReady');
-const methodDescriptorNodeControllerUpgradeBinary = createMethodDescriptorSimple<types.NotModeled, void>('NodeController', 'UpgradeBinary');
+const methodDescriptorNodeControllerUpgradeBinary = createMethodDescriptorSimple<types.UpgradeDescriptor, void>('NodeController', 'UpgradeBinary');
 const methodDescriptorNodeControllerCancelUpgrade = createMethodDescriptorSimple<void, void>('NodeController', 'CancelUpgrade');
 const methodDescriptorNodeControllerGetStatus = createMethodDescriptorSimple<void, types.NotModeled>('NodeController', 'GetStatus');
 
@@ -153,7 +153,7 @@ export class OasisNodeClient {
     nodeControllerIsSynced() { return this.callSimple(methodDescriptorNodeControllerIsSynced, undefined); }
     nodeControllerWaitReady() { return this.callSimple(methodDescriptorNodeControllerWaitReady, undefined); }
     nodeControllerIsReady() { return this.callSimple(methodDescriptorNodeControllerIsReady, undefined); }
-    nodeControllerUpgradeBinary(descriptor: types.NotModeled) { return this.callSimple(methodDescriptorNodeControllerUpgradeBinary, descriptor); }
+    nodeControllerUpgradeBinary(descriptor: types.UpgradeDescriptor) { return this.callSimple(methodDescriptorNodeControllerUpgradeBinary, descriptor); }
     nodeControllerCancelUpgrade() { return this.callSimple(methodDescriptorNodeControllerCancelUpgrade, undefined); }
     nodeControllerGetStatus() { return this.callSimple(methodDescriptorNodeControllerGetStatus, undefined); }
 

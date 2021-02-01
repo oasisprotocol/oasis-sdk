@@ -183,3 +183,10 @@ export interface StorageTreeID {
     root: StorageRoot;
     position: Uint8Array;
 }
+
+export interface UpgradeDescriptor {
+    name: string;
+    method: string;
+    identifier: string;
+    epoch: longnum;
+}
