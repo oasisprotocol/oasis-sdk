@@ -30,6 +30,10 @@ export interface ConsensusEvent {
     [key: string]: any; // fields not modeled
 }
 
+export interface ConsensusEvidence {
+    meta: Uint8Array;
+}
+
 export interface ConsensusFee {
     amount: Uint8Array;
     gas: longnum;
@@ -38,6 +42,11 @@ export interface ConsensusFee {
 export interface ConsensusGetSignerNonceRequest {
     account_address: Uint8Array;
     height: longnum;
+}
+
+export interface ConsensusLightBlock {
+    height: longnum;
+    meta: Uint8Array;
 }
 
 export interface ConsensusResult {
@@ -137,8 +146,40 @@ export interface StakingThresholdQuery {
     kind: number;
 }
 
+export interface StorageGetPrefixesRequest {
+    tree: StorageTreeID;
+    prefixes: Uint8Array[];
+    limit: number;
+}
+
+export interface StorageGetRequest {
+    tree: StorageTreeID;
+    key: Uint8Array;
+    include_siblings?: boolean;
+}
+
+export interface StorageIterateRequest {
+    tree: StorageTreeID;
+    key: Uint8Array;
+    prefetch: number;
+}
+
+export interface StorageProof {
+    untrusted_root: Uint8Array;
+    entries: Uint8Array[];
+}
+
+export interface StorageProofResponse {
+    proof: StorageProof;
+}
+
 export interface StorageRoot {
     ns: Uint8Array;
     version: longnum;
     hash: Uint8Array;
+}
+
+export interface StorageTreeID {
+    root: StorageRoot;
+    position: Uint8Array;
 }

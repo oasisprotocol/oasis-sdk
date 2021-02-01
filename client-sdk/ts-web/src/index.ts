@@ -71,13 +71,13 @@ const methodDescriptorConsensusGetUnconfirmedTransactions = createMethodDescript
 const methodDescriptorConsensusGetGenesisDocument = createMethodDescriptorSimple<void, types.GenesisDocument>('Consensus', 'GetGenesisDocument');
 const methodDescriptorConsensusGetStatus = createMethodDescriptorSimple<void, types.NotModeled>('Consensus', 'GetStatus');
 // WatchBlocks not modeled
-const methodDescriptorConsensusLightGetLightBlock = createMethodDescriptorSimple<types.longnum, types.NotModeled>('ConsensusLight', 'GetLightBlock');
+const methodDescriptorConsensusLightGetLightBlock = createMethodDescriptorSimple<types.longnum, types.ConsensusLightBlock>('ConsensusLight', 'GetLightBlock');
 const methodDescriptorConsensusLightGetParameters = createMethodDescriptorSimple<types.longnum, types.NotModeled>('ConsensusLight', 'GetParameters');
-const methodDescriptorConsensusLightStateSyncGet = createMethodDescriptorSimple<types.NotModeled, types.NotModeled>('ConsensusLight', 'StateSyncGet');
-const methodDescriptorConsensusLightStateSyncGetPrefixes = createMethodDescriptorSimple<types.NotModeled, types.NotModeled>('ConsensusLight', 'StateSyncGetPrefixes');
-const methodDescriptorConsensusLightStateSyncIterate = createMethodDescriptorSimple<types.NotModeled, types.NotModeled>('ConsensusLight', 'StateSyncIterate');
-const methodDescriptorConsensusLightSubmitTxNoWait = createMethodDescriptorSimple<types.NotModeled, void>('ConsensusLight', 'SubmitTxNoWait');
-const methodDescriptorConsensusLightSubmitEvidence = createMethodDescriptorSimple<types.NotModeled, void>('ConsensusLight', 'SubmitEvidence');
+const methodDescriptorConsensusLightStateSyncGet = createMethodDescriptorSimple<types.StorageGetRequest, types.StorageProofResponse>('ConsensusLight', 'StateSyncGet');
+const methodDescriptorConsensusLightStateSyncGetPrefixes = createMethodDescriptorSimple<types.StorageGetPrefixesRequest, types.StorageProofResponse>('ConsensusLight', 'StateSyncGetPrefixes');
+const methodDescriptorConsensusLightStateSyncIterate = createMethodDescriptorSimple<types.StorageIterateRequest, types.StorageProofResponse>('ConsensusLight', 'StateSyncIterate');
+const methodDescriptorConsensusLightSubmitTxNoWait = createMethodDescriptorSimple<types.SignatureSigned, void>('ConsensusLight', 'SubmitTxNoWait');
+const methodDescriptorConsensusLightSubmitEvidence = createMethodDescriptorSimple<types.ConsensusEvidence, void>('ConsensusLight', 'SubmitEvidence');
 
 // control
 const methodDescriptorNodeControllerRequestShutdown = createMethodDescriptorSimple<void, void>('NodeController', 'RequestShutdown');
@@ -141,11 +141,11 @@ export class OasisNodeClient {
 
     consensusLightGetLightBlock(height: types.longnum) { return this.callSimple(methodDescriptorConsensusLightGetLightBlock, height); }
     consensusLightGetParameters(height: types.longnum) { return this.callSimple(methodDescriptorConsensusLightGetParameters, height); }
-    consensusLightStateSyncGet(request: types.NotModeled) { return this.callSimple(methodDescriptorConsensusLightStateSyncGet, request); }
-    consensusLightStateSyncGetPrefixes(request: types.NotModeled) { return this.callSimple(methodDescriptorConsensusLightStateSyncGetPrefixes, request); }
-    consensusLightStateSyncIterate(request: types.NotModeled) { return this.callSimple(methodDescriptorConsensusLightStateSyncIterate, request); }
-    consensusLightSubmitTxNoWait(tx: types.NotModeled) { return this.callSimple(methodDescriptorConsensusLightSubmitTxNoWait, tx); }
-    consensusLightSubmitEvidence(evidence: types.NotModeled) { return this.callSimple(methodDescriptorConsensusLightSubmitEvidence, evidence); }
+    consensusLightStateSyncGet(request: types.StorageGetRequest) { return this.callSimple(methodDescriptorConsensusLightStateSyncGet, request); }
+    consensusLightStateSyncGetPrefixes(request: types.StorageGetPrefixesRequest) { return this.callSimple(methodDescriptorConsensusLightStateSyncGetPrefixes, request); }
+    consensusLightStateSyncIterate(request: types.StorageIterateRequest) { return this.callSimple(methodDescriptorConsensusLightStateSyncIterate, request); }
+    consensusLightSubmitTxNoWait(tx: types.SignatureSigned) { return this.callSimple(methodDescriptorConsensusLightSubmitTxNoWait, tx); }
+    consensusLightSubmitEvidence(evidence: types.ConsensusEvidence) { return this.callSimple(methodDescriptorConsensusLightSubmitEvidence, evidence); }
 
     // control
     nodeControllerRequestShudown() { return this.callSimple(methodDescriptorNodeControllerRequestShutdown, undefined); }
