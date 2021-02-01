@@ -6,6 +6,12 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
 
 (async function () {
     try {
+        // Block has a variety of different types.
+        {
+            const block = await client.consensusGetBlock(oasis.consensus.HEIGHT_LATEST);
+            console.log('block', block);
+        }
+
         // Try map with non-string keys.
         {
             const toAddr = 'oasis1qpl5634wyu6larn047he9af7a3qyhzx59u0mquw7';

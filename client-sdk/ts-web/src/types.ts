@@ -7,6 +7,14 @@ export type NotModeled = {[key: string]: any};
  */
 export type longnum = number | bigint;
 
+export interface ConsensusBlock {
+    height: longnum;
+    hash: Uint8Array;
+    time: longnum;
+    state_root: StorageRoot;
+    meta: any;
+}
+
 export interface ConsensusError {
     module?: string;
     code?: number;
@@ -127,4 +135,10 @@ export interface StakingStakeThreshold {
 export interface StakingThresholdQuery {
     height: longnum;
     kind: number;
+}
+
+export interface StorageRoot {
+    ns: Uint8Array;
+    version: longnum;
+    hash: Uint8Array;
 }
