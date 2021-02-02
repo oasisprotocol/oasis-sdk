@@ -60,6 +60,21 @@ export interface ConsensusResult {
     events: ConsensusEvent[];
 }
 
+export interface ConsensusStatus {
+    consensus_version: string;
+    backend: string;
+    features: number;
+    node_peers: string[];
+    latest_height: longnum;
+    latest_hash: Uint8Array;
+    latest_time: longnum;
+    latest_state_root: StorageRoot;
+    genesis_height: longnum;
+    last_retained_height: longnum;
+    last_retained_hash: Uint8Array;
+    is_validator: boolean;
+}
+
 export interface ConsensusTransaction {
     nonce: longnum;
     fee?: ConsensusFee;
@@ -70,6 +85,38 @@ export interface ConsensusTransaction {
 export interface ConsensusTransactionsWithResults {
     transactions: Uint8Array[];
     results: ConsensusResult[];
+}
+
+export interface ControlIdentityStatus {
+    node: Uint8Array;
+    p2p: Uint8Array;
+    consensus: Uint8Array;
+    tls: Uint8Array[];
+}
+
+export interface ControlRegistrationStatus {
+    last_registration: longnum;
+    descriptor?: NotModeled;
+}
+
+export interface ControlRuntimeStatus {
+    descriptor: NotModeled;
+    latest_round: longnum;
+    latest_hash: Uint8Array;
+    latest_time: longnum;
+    latest_state_root: StorageRoot;
+    genesis_round: longnum;
+    genesis_hash: Uint8Array;
+    committee: NotModeled;
+    storage: NotModeled;
+}
+
+export interface ControlStatus {
+    software_version: string;
+    identity: ControlIdentityStatus;
+    consensus: ConsensusStatus;
+    runtimes: Map<Uint8Array, ControlRuntimeStatus>;
+    registration: ControlRegistrationStatus;
 }
 
 export interface GenesisDocument {

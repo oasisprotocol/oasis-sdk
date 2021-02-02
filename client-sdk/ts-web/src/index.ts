@@ -90,7 +90,7 @@ const methodDescriptorConsensusGetTransactions = createMethodDescriptorSimple<ty
 const methodDescriptorConsensusGetTransactionsWithResults = createMethodDescriptorSimple<types.longnum, types.ConsensusTransactionsWithResults>('Consensus', 'GetTransactionsWithResults');
 const methodDescriptorConsensusGetUnconfirmedTransactions = createMethodDescriptorSimple<void, Uint8Array[]>('Consensus', 'GetUnconfirmedTransactions');
 const methodDescriptorConsensusGetGenesisDocument = createMethodDescriptorSimple<void, types.GenesisDocument>('Consensus', 'GetGenesisDocument');
-const methodDescriptorConsensusGetStatus = createMethodDescriptorSimple<void, types.NotModeled>('Consensus', 'GetStatus');
+const methodDescriptorConsensusGetStatus = createMethodDescriptorSimple<void, types.ConsensusStatus>('Consensus', 'GetStatus');
 // WatchBlocks not modeled
 const methodDescriptorConsensusLightGetLightBlock = createMethodDescriptorSimple<types.longnum, types.ConsensusLightBlock>('ConsensusLight', 'GetLightBlock');
 const methodDescriptorConsensusLightGetParameters = createMethodDescriptorSimple<types.longnum, types.ConsensusLightParameters>('ConsensusLight', 'GetParameters');
@@ -108,7 +108,7 @@ const methodDescriptorNodeControllerWaitReady = createMethodDescriptorSimple<voi
 const methodDescriptorNodeControllerIsReady = createMethodDescriptorSimple<void, boolean>('NodeController', 'IsReady');
 const methodDescriptorNodeControllerUpgradeBinary = createMethodDescriptorSimple<types.UpgradeDescriptor, void>('NodeController', 'UpgradeBinary');
 const methodDescriptorNodeControllerCancelUpgrade = createMethodDescriptorSimple<void, void>('NodeController', 'CancelUpgrade');
-const methodDescriptorNodeControllerGetStatus = createMethodDescriptorSimple<void, types.NotModeled>('NodeController', 'GetStatus');
+const methodDescriptorNodeControllerGetStatus = createMethodDescriptorSimple<void, types.ControlStatus>('NodeController', 'GetStatus');
 
 export class OasisNodeClient {
 
