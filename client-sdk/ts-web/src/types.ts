@@ -77,6 +77,94 @@ export interface GenesisDocument {
     [key: string]: unknown; // fields not modeled
 }
 
+export interface RoothashBlock {
+    header: RoothashHeader;
+}
+
+export interface RoothashHeader {
+    version: number;
+    namespace: Uint8Array;
+    round: longnum;
+    timestamp: longnum;
+    header_type: number;
+    previous_hash: Uint8Array;
+    io_root: Uint8Array;
+    state_root: Uint8Array;
+    messages: RoothashMessage[];
+    storage_signatures: SignatureSignature[];
+}
+
+// these will be decoded into Map until we define a message
+export type RoothashMessage = Map<never, never>;
+
+export interface RuntimeClientGetBlockByHashRequest {
+    runtime_id: Uint8Array;
+    block_hash: Uint8Array;
+}
+
+export interface RuntimeClientGetBlockRequest {
+    runtime_id: Uint8Array;
+    round: longnum;
+}
+
+export interface RuntimeClientGetTxByBlockHashRequest {
+    runtime_id: Uint8Array;
+    block_hash: Uint8Array;
+    index: number;
+}
+
+export interface RuntimeClientGetTxRequest {
+    runtime_id: Uint8Array;
+    round: longnum;
+    index: number;
+}
+
+export interface RuntimeClientGetTxsRequest {
+    runtime_id: Uint8Array;
+    round: longnum;
+    io_root: Uint8Array;
+}
+
+export interface RuntimeClientQuery {
+    round_min: longnum;
+    round_max: longnum;
+    conditions: RuntimeClientQueryCondition[];
+    limit: longnum;
+}
+
+export interface RuntimeClientQueryCondition {
+    key: Uint8Array;
+    values: Uint8Array[];
+}
+
+export interface RuntimeClientQueryTxRequest {
+    runtime_id: Uint8Array;
+    key: Uint8Array;
+    value: Uint8Array;
+}
+
+export interface RuntimeClientQueryTxsRequest {
+    runtime_id: Uint8Array;
+    query: RuntimeClientQuery;
+}
+
+export interface RuntimeClientSubmitTxRequest {
+    runtime_id: Uint8Array;
+    data: Uint8Array;
+}
+
+export interface RuntimeClientTxResult {
+    block: RoothashBlock;
+    index: number;
+    input: Uint8Array;
+    output: Uint8Array;
+}
+
+export interface RuntimeClientWaitBlockIndexedRequest {
+    runtime_id: Uint8Array;
+    round: longnum;
+}
+
 export interface SignatureSignature {
     public_key: Uint8Array;
     signature: Uint8Array;

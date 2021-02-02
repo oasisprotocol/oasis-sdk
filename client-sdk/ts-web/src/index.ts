@@ -6,6 +6,7 @@ export * as genesis from './genesis';
 export * as hash from './hash';
 import * as misc from './misc';
 export * as quantity from './quantity';
+export * as roothash from './roothash';
 export * as signature from './signature';
 export * as staking from './staking';
 export * as storage from './storage';
@@ -63,16 +64,16 @@ const methodDescriptorStorageGetCheckpoints = createMethodDescriptorSimple<types
 // GetCheckpointChunk not modeled
 
 // runtime/client
-const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorSimple<types.NotModeled, Uint8Array>('RuntimeClient', 'SubmitTx');
-const methodDescriptorRuntimeClientGetGenesisBlock = createMethodDescriptorSimple<Uint8Array, types.NotModeled>('RuntimeClient', 'GetGenesisBlock');
-const methodDescriptorRuntimeClientGetBlock = createMethodDescriptorSimple<types.NotModeled, types.NotModeled>('RuntimeClient', 'GetBlock');
-const methodDescriptorRuntimeClientGetBlockByHash = createMethodDescriptorSimple<types.NotModeled, types.NotModeled>('RuntimeClient', 'GetBlockByHash');
-const methodDescriptorRuntimeClientGetTx = createMethodDescriptorSimple<types.NotModeled, types.NotModeled>('RuntimeClient', 'GetTx');
-const methodDescriptorRuntimeClientGetTxByBlockHash = createMethodDescriptorSimple<types.NotModeled, types.NotModeled>('RuntimeClient', 'GetTxByBlockHash');
-const methodDescriptorRuntimeClientGetTxs = createMethodDescriptorSimple<types.NotModeled, Uint8Array[]>('RuntimeClient', 'GetTxs');
-const methodDescriptorRuntimeClientQueryTx = createMethodDescriptorSimple<types.NotModeled, types.NotModeled>('RuntimeClient', 'QueryTx');
-const methodDescriptorRuntimeClientQueryTxs = createMethodDescriptorSimple<types.NotModeled, types.NotModeled[]>('RuntimeClient', 'QueryTxs');
-const methodDescriptorRuntimeClientWaitBlockIndexed = createMethodDescriptorSimple<types.NotModeled, void>('RuntimeClient', 'WaitBlockIndexed');
+const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorSimple<types.RuntimeClientSubmitTxRequest, Uint8Array>('RuntimeClient', 'SubmitTx');
+const methodDescriptorRuntimeClientGetGenesisBlock = createMethodDescriptorSimple<Uint8Array, types.RoothashBlock>('RuntimeClient', 'GetGenesisBlock');
+const methodDescriptorRuntimeClientGetBlock = createMethodDescriptorSimple<types.RuntimeClientGetBlockRequest, types.RoothashBlock>('RuntimeClient', 'GetBlock');
+const methodDescriptorRuntimeClientGetBlockByHash = createMethodDescriptorSimple<types.RuntimeClientGetBlockByHashRequest, types.RoothashBlock>('RuntimeClient', 'GetBlockByHash');
+const methodDescriptorRuntimeClientGetTx = createMethodDescriptorSimple<types.RuntimeClientGetTxRequest, types.RuntimeClientTxResult>('RuntimeClient', 'GetTx');
+const methodDescriptorRuntimeClientGetTxByBlockHash = createMethodDescriptorSimple<types.RuntimeClientGetTxByBlockHashRequest, types.RuntimeClientTxResult>('RuntimeClient', 'GetTxByBlockHash');
+const methodDescriptorRuntimeClientGetTxs = createMethodDescriptorSimple<types.RuntimeClientGetTxsRequest, Uint8Array[]>('RuntimeClient', 'GetTxs');
+const methodDescriptorRuntimeClientQueryTx = createMethodDescriptorSimple<types.RuntimeClientQueryTxRequest, types.RuntimeClientTxResult>('RuntimeClient', 'QueryTx');
+const methodDescriptorRuntimeClientQueryTxs = createMethodDescriptorSimple<types.RuntimeClientQueryTxsRequest, types.RuntimeClientTxResult[]>('RuntimeClient', 'QueryTxs');
+const methodDescriptorRuntimeClientWaitBlockIndexed = createMethodDescriptorSimple<types.RuntimeClientWaitBlockIndexedRequest, void>('RuntimeClient', 'WaitBlockIndexed');
 // WatchBlocks not modeled
 
 // enclaverpc not modeled
@@ -154,16 +155,16 @@ export class OasisNodeClient {
     storageGetCheckpoints(request: types.StorageGetCheckpointsRequest) { return this.callSimple(methodDescriptorStorageGetCheckpoints, request); }
 
     // runtime/client
-    runtimeClientSubmitTx(request: types.NotModeled) { return this.callSimple(methodDescriptorRuntimeClientSubmitTx, request); }
+    runtimeClientSubmitTx(request: types.RuntimeClientSubmitTxRequest) { return this.callSimple(methodDescriptorRuntimeClientSubmitTx, request); }
     runtimeClientGetGenesisBlock(runtimeID: Uint8Array) { return this.callSimple(methodDescriptorRuntimeClientGetGenesisBlock, runtimeID); }
-    runtimeClientGetBlock(request: types.NotModeled) { return this.callSimple(methodDescriptorRuntimeClientGetBlock, request); }
-    runtimeClientGetBlockByHash(request: types.NotModeled) { return this.callSimple(methodDescriptorRuntimeClientGetBlockByHash, request); }
-    runtimeClientGetTx(request: types.NotModeled) { return this.callSimple(methodDescriptorRuntimeClientGetTx, request); }
-    runtimeClientGetTxByBlockHash(request: types.NotModeled) { return this.callSimple(methodDescriptorRuntimeClientGetTxByBlockHash, request); }
-    runtimeClientGetTxs(request: types.NotModeled) { return this.callSimple(methodDescriptorRuntimeClientGetTxs, request); }
-    runtimeClientQueryTx(request: types.NotModeled) { return this.callSimple(methodDescriptorRuntimeClientQueryTx, request); }
-    runtimeClientQueryTxs(request: types.NotModeled) { return this.callSimple(methodDescriptorRuntimeClientQueryTxs, request); }
-    runtimeClientWaitBlockIndexed(request: types.NotModeled) { return this.callSimple(methodDescriptorRuntimeClientWaitBlockIndexed, request); }
+    runtimeClientGetBlock(request: types.RuntimeClientGetBlockRequest) { return this.callSimple(methodDescriptorRuntimeClientGetBlock, request); }
+    runtimeClientGetBlockByHash(request: types.RuntimeClientGetTxByBlockHashRequest) { return this.callSimple(methodDescriptorRuntimeClientGetBlockByHash, request); }
+    runtimeClientGetTx(request: types.RuntimeClientGetTxRequest) { return this.callSimple(methodDescriptorRuntimeClientGetTx, request); }
+    runtimeClientGetTxByBlockHash(request: types.RuntimeClientGetTxByBlockHashRequest) { return this.callSimple(methodDescriptorRuntimeClientGetTxByBlockHash, request); }
+    runtimeClientGetTxs(request: types.RuntimeClientGetTxsRequest) { return this.callSimple(methodDescriptorRuntimeClientGetTxs, request); }
+    runtimeClientQueryTx(request: types.RuntimeClientQueryTxRequest) { return this.callSimple(methodDescriptorRuntimeClientQueryTx, request); }
+    runtimeClientQueryTxs(request: types.RuntimeClientQueryTxsRequest) { return this.callSimple(methodDescriptorRuntimeClientQueryTxs, request); }
+    runtimeClientWaitBlockIndexed(request: types.RuntimeClientWaitBlockIndexedRequest) { return this.callSimple(methodDescriptorRuntimeClientWaitBlockIndexed, request); }
 
     // consensus
     consensusSubmitTx(tx: types.SignatureSigned) { return this.callSimple(methodDescriptorConsensusSubmitTx, tx); }
