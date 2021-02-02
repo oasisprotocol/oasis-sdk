@@ -28,7 +28,8 @@ export interface ConsensusEstimateGasRequest {
 
 export interface ConsensusEvent {
     staking?: StakingEvent;
-    [key: string]: unknown; // fields not modeled
+    registry?: NotModeled;
+    roothash?: NotModeled;
 }
 
 export interface ConsensusEvidence {
@@ -120,8 +121,19 @@ export interface ControlStatus {
 }
 
 export interface GenesisDocument {
+    height: longnum;
+    genesis_time: longnum;
+    chain_id: string;
+    epochtime: NotModeled;
+    registry: NotModeled;
+    roothash: NotModeled;
     staking: StakingGenesis;
-    [key: string]: unknown; // fields not modeled
+    keymanager: NotModeled;
+    scheduler: NotModeled;
+    beacon: NotModeled;
+    consensus: NotModeled;
+    halt_epoch: longnum;
+    extra_data: {[key: string]: Uint8Array};
 }
 
 export interface RoothashBlock {
