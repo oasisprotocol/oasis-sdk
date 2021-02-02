@@ -8,7 +8,7 @@ import * as oasis from '@oasisprotocol/client';
 interface Response {
     return_code: number;
     error_message: string;
-    [index: string]: any;
+    [index: string]: unknown;
 }
 
 function u8FromBuf(buf: Buffer) {
@@ -42,7 +42,7 @@ export class LedgerContextSigner implements oasis.signature.ContextSigner {
 
     async sign(context: string, message: Uint8Array): Promise<Uint8Array> {
         const response = successOrThrow(await this.app.sign(this.path, context, bufFromU8(message)), 'ledger sign');
-        return u8FromBuf(response.signature);
+        return u8FromBuf(response.signature as Buffer);
     }
 
     static async fromWebUSB(keyNumber: number) {
@@ -51,7 +51,7 @@ export class LedgerContextSigner implements oasis.signature.ContextSigner {
         // Specification forthcoming. See https://github.com/oasisprotocol/oasis-core/pull/3656.
         const path = [44, 474, 0, 0, keyNumber];
         const publicKeyResponse = successOrThrow(await app.publicKey(path), 'ledger public key');
-        return new LedgerContextSigner(app, path, u8FromBuf(publicKeyResponse.pk));
+        return new LedgerContextSigner(app, path, u8FromBuf(publicKeyResponse.pk as Buffer));
     }
 
 }

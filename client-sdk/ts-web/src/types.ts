@@ -1,4 +1,4 @@
-export type NotModeled = {[key: string]: any};
+export type NotModeled = {[key: string]: unknown};
 
 /**
  * These represent int64 and uint64. We accept both number (for small integer values) and bignum
@@ -12,7 +12,7 @@ export interface ConsensusBlock {
     hash: Uint8Array;
     time: longnum;
     state_root: StorageRoot;
-    meta: any;
+    meta: unknown;
 }
 
 export interface ConsensusError {
@@ -28,7 +28,7 @@ export interface ConsensusEstimateGasRequest {
 
 export interface ConsensusEvent {
     staking?: StakingEvent;
-    [key: string]: any; // fields not modeled
+    [key: string]: unknown; // fields not modeled
 }
 
 export interface ConsensusEvidence {
@@ -64,7 +64,7 @@ export interface ConsensusTransaction {
     nonce: longnum;
     fee?: ConsensusFee;
     method: string;
-    body?: any;
+    body?: unknown;
 }
 
 export interface ConsensusTransactionsWithResults {
@@ -74,7 +74,7 @@ export interface ConsensusTransactionsWithResults {
 
 export interface GenesisDocument {
     staking: StakingGenesis;
-    [key: string]: any; // fields not modeled
+    [key: string]: unknown; // fields not modeled
 }
 
 export interface SignatureSignature {

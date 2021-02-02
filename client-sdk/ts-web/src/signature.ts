@@ -35,18 +35,18 @@ export async function openSigned(context: string, signed: types.SignatureSigned)
     return signed.untrusted_raw_value;
 }
 
-export async function signSigned(signer: ContextSigner, context: string, rawValue: Uint8Array): Promise<types.SignatureSigned> {
+export async function signSigned(signer: ContextSigner, context: string, rawValue: Uint8Array) {
     return {
         untrusted_raw_value: rawValue,
         signature: {
             public_key: signer.public(),
             signature: await signer.sign(context, rawValue),
         },
-    };
+    } as types.SignatureSigned;
 }
 
-export function deserializeSigned(raw: Uint8Array): types.SignatureSigned {
-    return misc.fromCBOR(raw);
+export function deserializeSigned(raw: Uint8Array) {
+    return misc.fromCBOR(raw) as types.SignatureSigned;
 }
 
 export class BlindContextSigner implements ContextSigner {

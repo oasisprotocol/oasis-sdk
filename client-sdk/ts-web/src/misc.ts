@@ -6,7 +6,7 @@ const HEX_DIGITS = '0123456789abcdef';
 // oasis-core routinely uses maps with non-string keys, e.g. in a staking Delegations response. We
 // can't pick and choose which CBOR maps to decode into objects and which to decode in to Maps, so
 // walk through the data after decoding and find any string-keys-only and recreate them as objects.
-function objsFromMaps(v: any): any {
+function objsFromMaps(v: unknown): unknown {
     if (v instanceof Map) {
         let keysCompatible = true;
         for (const key of v.keys()) {
@@ -17,7 +17,7 @@ function objsFromMaps(v: any): any {
         }
         if (v.size > 0 && keysCompatible) {
             // Recreate as an object.
-            const o: {[key: string]: any} = {};
+            const o: {[key: string]: unknown} = {};
             for (const [key, val] of v) {
                 o[key] = objsFromMaps(val);
             }
@@ -42,8 +42,8 @@ function objsFromMaps(v: any): any {
     }
 }
 
-export function toCBOR(v: any): Uint8Array {
-    return cborg.encode(v);
+export function toCBOR(v: unknown) {
+    return cborg.encode(v) as Uint8Array;
 }
 
 export function fromCBOR(u8: Uint8Array) {
