@@ -21,6 +21,7 @@ static_resources:
                   prefix: '/oasis-core'
                 route:
                   cluster: oasis_node_grpc
+                  timeout: 0s
                   max_stream_duration:
                     grpc_timeout_header_max: 0s
               - match:

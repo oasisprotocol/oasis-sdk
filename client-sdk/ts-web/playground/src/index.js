@@ -112,6 +112,37 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
             }
             console.log('sent');
         }
+
+        // Try server streaming.
+        {
+            console.log('watching consensus blocks for 30s');
+            await new Promise((resolve, reject) => {
+                const blocks = client.consensusWatchBlocks();
+                const cancel = setTimeout(() => {
+                    console.log('time\'s up, cancelling');
+                    blocks.cancel();
+                    resolve();
+                }, 30_000);
+                blocks.on('error', (e) => {
+                    clearTimeout(cancel);
+                    reject(e);
+                });
+                blocks.on('status', (status) => {
+                    console.log('status', status);
+                });
+                blocks.on('metadata', (metadata) => {
+                    console.log('metadata', metadata);
+                });
+                blocks.on('data', (block) => {
+                    console.log('block', block);
+                });
+                blocks.on('end', () => {
+                    clearTimeout(cancel);
+                    resolve();
+                });
+            });
+            console.log('done watching');
+        }
     } catch (e) {
         console.error(e);
     }

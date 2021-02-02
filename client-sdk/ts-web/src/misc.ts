@@ -43,6 +43,8 @@ function objsFromMaps(v: unknown): unknown {
 }
 
 export function toCBOR(v: unknown) {
+    // oasis-core uses a special case to marshal `nil` to an empty byte string.
+    if (v == null) return new Uint8Array();
     return cborg.encode(v) as Uint8Array;
 }
 
