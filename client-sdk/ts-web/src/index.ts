@@ -51,7 +51,15 @@ const methodDescriptorStakingGetEvents = createMethodDescriptorSimple<types.long
 
 // keymanager not modeled
 
-// storage not modeled
+// storage
+const methodDescriptorStorageSyncGet = createMethodDescriptorSimple<types.StorageGetRequest, types.StorageProofResponse>('Storage', 'SyncGet');
+const methodDescriptorStorageSyncGetPrefixes = createMethodDescriptorSimple<types.StorageGetPrefixesRequest, types.StorageProofResponse>('Storage', 'SyncGetPrefixes');
+const methodDescriptorStorageSyncIterate = createMethodDescriptorSimple<types.StorageIterateRequest, types.StorageProofResponse>('Storage', 'SyncIterate');
+const methodDescriptorStorageApply = createMethodDescriptorSimple<types.NotModeled, types.NotModeled[]>('Storage', 'Apply');
+const methodDescriptorStorageApplyBatch = createMethodDescriptorSimple<types.NotModeled, types.NotModeled[]>('Storage', 'ApplyBatch');
+const methodDescriptorStorageGetCheckpoints = createMethodDescriptorSimple<types.NotModeled, types.NotModeled[]>('Storage', 'GetCheckpoints');
+// GetDiff not modeled
+// GetCheckpointChunk not modeled
 
 // runtime/client
 const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorSimple<types.NotModeled, Uint8Array>('RuntimeClient', 'SubmitTx');
@@ -135,6 +143,14 @@ export class OasisNodeClient {
     stakingStateToGenesis(height: types.longnum) { return this.callSimple(methodDescriptorStakingStateToGenesis, height); }
     stakingConsensusParameters(height: types.longnum) { return this.callSimple(methodDescriptorStakingConsensusParameters, height); }
     stakingGetEvents(height: types.longnum) { return this.callSimple(methodDescriptorStakingGetEvents, height); }
+
+    // storage
+    storageSyncGet(request: types.StorageGetRequest) { return this.callSimple(methodDescriptorStorageSyncGet, request); }
+    storageSyncGetPrefixes(request: types.StorageGetPrefixesRequest) { return this.callSimple(methodDescriptorStorageSyncGetPrefixes, request); }
+    storageSyncIterate(request: types.StorageIterateRequest) { return this.callSimple(methodDescriptorStorageSyncIterate, request); }
+    storageApply(request: types.NotModeled) { return this.callSimple(methodDescriptorStorageApply, request); }
+    storageApplyBatch(request: types.NotModeled) { return this.callSimple(methodDescriptorStorageApplyBatch, request); }
+    storageGetCheckpoints(request: types.NotModeled) { return this.callSimple(methodDescriptorStorageGetCheckpoints, request); }
 
     // runtime/client
     runtimeClientSubmitTx(request: types.NotModeled) { return this.callSimple(methodDescriptorRuntimeClientSubmitTx, request); }
