@@ -67,7 +67,7 @@ const methodDescriptorStakingDebondingDelegations = createMethodDescriptorUnary<
 const methodDescriptorStakingStateToGenesis = createMethodDescriptorUnary<types.longnum, types.StakingGenesis>('Staking', 'StateToGenesis');
 const methodDescriptorStakingConsensusParameters = createMethodDescriptorUnary<types.longnum, types.StakingConsensusParameters>('Staking', 'ConsensusParameters');
 const methodDescriptorStakingGetEvents = createMethodDescriptorUnary<types.longnum, types.StakingEvent[]>('Staking', 'GetEvents');
-// WatchEvents not modeled
+const methodDescriptorStakingWatchEvents = createMethodDescriptorServerStreaming<void, types.StakingEvent>('Staking', 'WatchEvents');
 
 // keymanager not modeled
 
@@ -78,8 +78,8 @@ const methodDescriptorStorageSyncIterate = createMethodDescriptorUnary<types.Sto
 const methodDescriptorStorageApply = createMethodDescriptorUnary<types.StorageApplyRequest, types.SignatureSigned[]>('Storage', 'Apply');
 const methodDescriptorStorageApplyBatch = createMethodDescriptorUnary<types.StorageApplyBatchRequest, types.SignatureSigned[]>('Storage', 'ApplyBatch');
 const methodDescriptorStorageGetCheckpoints = createMethodDescriptorUnary<types.StorageGetCheckpointsRequest, types.StorageMetadata[]>('Storage', 'GetCheckpoints');
-// GetDiff not modeled
-// GetCheckpointChunk not modeled
+const methodDescriptorStorageGetDiff = createMethodDescriptorServerStreaming<types.StorageGetDiffRequest, types.StorageSyncChunk>('Storage', 'GetDiff');
+const methodDescriptorStorageGetCheckpointChunk = createMethodDescriptorServerStreaming<types.StorageChunkMetadata, Uint8Array>('Storage', 'GetCheckpointChunk');
 
 // runtime/client
 const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorUnary<types.RuntimeClientSubmitTxRequest, Uint8Array>('RuntimeClient', 'SubmitTx');
@@ -92,7 +92,7 @@ const methodDescriptorRuntimeClientGetTxs = createMethodDescriptorUnary<types.Ru
 const methodDescriptorRuntimeClientQueryTx = createMethodDescriptorUnary<types.RuntimeClientQueryTxRequest, types.RuntimeClientTxResult>('RuntimeClient', 'QueryTx');
 const methodDescriptorRuntimeClientQueryTxs = createMethodDescriptorUnary<types.RuntimeClientQueryTxsRequest, types.RuntimeClientTxResult[]>('RuntimeClient', 'QueryTxs');
 const methodDescriptorRuntimeClientWaitBlockIndexed = createMethodDescriptorUnary<types.RuntimeClientWaitBlockIndexedRequest, void>('RuntimeClient', 'WaitBlockIndexed');
-// WatchBlocks not modeled
+const methodDescriptorRuntimeClientWatchBlocks = createMethodDescriptorServerStreaming<Uint8Array, types.RoothashAnnotatedBlock>('RuntimeClient', 'WatchBlocks');
 
 // enclaverpc not modeled
 
@@ -174,6 +174,7 @@ export class OasisNodeClient {
     stakingStateToGenesis(height: types.longnum) { return this.callUnary(methodDescriptorStakingStateToGenesis, height); }
     stakingConsensusParameters(height: types.longnum) { return this.callUnary(methodDescriptorStakingConsensusParameters, height); }
     stakingGetEvents(height: types.longnum) { return this.callUnary(methodDescriptorStakingGetEvents, height); }
+    stakingWatchEvents() { return this.callServerStreaming(methodDescriptorStakingWatchEvents, undefined); }
 
     // storage
     storageSyncGet(request: types.StorageGetRequest) { return this.callUnary(methodDescriptorStorageSyncGet, request); }
@@ -182,6 +183,8 @@ export class OasisNodeClient {
     storageApply(request: types.StorageApplyRequest) { return this.callUnary(methodDescriptorStorageApply, request); }
     storageApplyBatch(request: types.StorageApplyBatchRequest) { return this.callUnary(methodDescriptorStorageApplyBatch, request); }
     storageGetCheckpoints(request: types.StorageGetCheckpointsRequest) { return this.callUnary(methodDescriptorStorageGetCheckpoints, request); }
+    storageGetDiff(request: types.StorageGetDiffRequest) { return this.callServerStreaming(methodDescriptorStorageGetDiff, request); }
+    storageGetCheckpointChunk(chunk: types.StorageChunkMetadata) { return this.callServerStreaming(methodDescriptorStorageGetCheckpointChunk, chunk); }
 
     // runtime/client
     runtimeClientSubmitTx(request: types.RuntimeClientSubmitTxRequest) { return this.callUnary(methodDescriptorRuntimeClientSubmitTx, request); }
@@ -194,6 +197,7 @@ export class OasisNodeClient {
     runtimeClientQueryTx(request: types.RuntimeClientQueryTxRequest) { return this.callUnary(methodDescriptorRuntimeClientQueryTx, request); }
     runtimeClientQueryTxs(request: types.RuntimeClientQueryTxsRequest) { return this.callUnary(methodDescriptorRuntimeClientQueryTxs, request); }
     runtimeClientWaitBlockIndexed(request: types.RuntimeClientWaitBlockIndexedRequest) { return this.callUnary(methodDescriptorRuntimeClientWaitBlockIndexed, request); }
+    runtimeClientWatchBlocks(runtimeID: Uint8Array) { return this.callServerStreaming(methodDescriptorRuntimeClientWatchBlocks, runtimeID); }
 
     // consensus
     consensusSubmitTx(tx: types.SignatureSigned) { return this.callUnary(methodDescriptorConsensusSubmitTx, tx); }

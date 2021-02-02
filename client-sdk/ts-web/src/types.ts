@@ -136,6 +136,11 @@ export interface GenesisDocument {
     extra_data: {[key: string]: Uint8Array};
 }
 
+export interface RoothashAnnotatedBlock {
+    consensus_height: longnum;
+    block: RoothashBlock;
+}
+
 export interface RoothashBlock {
     header: RoothashHeader;
 }
@@ -436,10 +441,23 @@ export interface StorageApplyBatchRequest {
     ops: StorageApplyOp[];
 }
 
+export interface StorageChunkMetadata {
+    version: number;
+    root: StorageRoot;
+    index: longnum;
+    digest: Uint8Array;
+}
+
 export interface StorageGetCheckpointsRequest {
     version: number;
     namespace: Uint8Array;
     root_version?: longnum;
+}
+
+export interface StorageGetDiffRequest {
+    start_root: StorageRoot;
+    end_root: StorageRoot;
+    options: StorageSyncOptions;
 }
 
 export interface StorageGetPrefixesRequest {
@@ -486,6 +504,16 @@ export interface StorageRoot {
     ns: Uint8Array;
     version: longnum;
     hash: Uint8Array;
+}
+
+export interface StorageSyncChunk {
+    final: boolean;
+    writelog: StorageLogEntry[];
+}
+
+export interface StorageSyncOptions {
+    offset_key: Uint8Array;
+    limit: longnum;
 }
 
 export interface StorageTreeID {
