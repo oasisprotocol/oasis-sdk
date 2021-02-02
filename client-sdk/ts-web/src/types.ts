@@ -267,6 +267,34 @@ export interface StakingTransferEvent {
     amount: Uint8Array;
 }
 
+export interface StorageApplyOp {
+    src_round: longnum;
+    src_root: Uint8Array;
+    dst_root: Uint8Array;
+    writelog: StorageLogEntry[];
+}
+
+export interface StorageApplyRequest {
+    namespace: Uint8Array;
+    src_round: longnum;
+    src_root: Uint8Array;
+    dst_round: longnum;
+    dst_root: Uint8Array;
+    writelog: StorageLogEntry[];
+}
+
+export interface StorageApplyBatchRequest {
+    namespace: Uint8Array;
+    dst_round: longnum;
+    ops: StorageApplyOp[];
+}
+
+export interface StorageGetCheckpointsRequest {
+    version: number;
+    namespace: Uint8Array;
+    root_version?: longnum;
+}
+
 export interface StorageGetPrefixesRequest {
     tree: StorageTreeID;
     prefixes: Uint8Array[];
@@ -285,6 +313,12 @@ export interface StorageIterateRequest {
     prefetch: number;
 }
 
+export interface StorageMetadata {
+    version: longnum;
+    root: StorageRoot;
+    chunks: Uint8Array[];
+}
+
 export interface StorageProof {
     untrusted_root: Uint8Array;
     entries: Uint8Array[];
@@ -292,6 +326,13 @@ export interface StorageProof {
 
 export interface StorageProofResponse {
     proof: StorageProof;
+}
+
+export interface StorageReceiptBody {
+    version: number;
+    ns: Uint8Array;
+    round: longnum;
+    roots: Uint8Array[];
 }
 
 export interface StorageRoot {
@@ -304,6 +345,11 @@ export interface StorageTreeID {
     root: StorageRoot;
     position: Uint8Array;
 }
+
+export type StorageLogEntry = [
+    key: Uint8Array,
+    value: Uint8Array,
+];
 
 export interface UpgradeDescriptor {
     name: string;

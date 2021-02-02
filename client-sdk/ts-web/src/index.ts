@@ -8,6 +8,7 @@ import * as misc from './misc';
 export * as quantity from './quantity';
 export * as signature from './signature';
 export * as staking from './staking';
+export * as storage from './storage';
 import * as types from './types';
 export {misc, types};
 
@@ -55,9 +56,9 @@ const methodDescriptorStakingGetEvents = createMethodDescriptorSimple<types.long
 const methodDescriptorStorageSyncGet = createMethodDescriptorSimple<types.StorageGetRequest, types.StorageProofResponse>('Storage', 'SyncGet');
 const methodDescriptorStorageSyncGetPrefixes = createMethodDescriptorSimple<types.StorageGetPrefixesRequest, types.StorageProofResponse>('Storage', 'SyncGetPrefixes');
 const methodDescriptorStorageSyncIterate = createMethodDescriptorSimple<types.StorageIterateRequest, types.StorageProofResponse>('Storage', 'SyncIterate');
-const methodDescriptorStorageApply = createMethodDescriptorSimple<types.NotModeled, types.NotModeled[]>('Storage', 'Apply');
-const methodDescriptorStorageApplyBatch = createMethodDescriptorSimple<types.NotModeled, types.NotModeled[]>('Storage', 'ApplyBatch');
-const methodDescriptorStorageGetCheckpoints = createMethodDescriptorSimple<types.NotModeled, types.NotModeled[]>('Storage', 'GetCheckpoints');
+const methodDescriptorStorageApply = createMethodDescriptorSimple<types.StorageApplyRequest, types.SignatureSigned[]>('Storage', 'Apply');
+const methodDescriptorStorageApplyBatch = createMethodDescriptorSimple<types.StorageApplyBatchRequest, types.SignatureSigned[]>('Storage', 'ApplyBatch');
+const methodDescriptorStorageGetCheckpoints = createMethodDescriptorSimple<types.StorageGetCheckpointsRequest, types.StorageMetadata[]>('Storage', 'GetCheckpoints');
 // GetDiff not modeled
 // GetCheckpointChunk not modeled
 
@@ -148,9 +149,9 @@ export class OasisNodeClient {
     storageSyncGet(request: types.StorageGetRequest) { return this.callSimple(methodDescriptorStorageSyncGet, request); }
     storageSyncGetPrefixes(request: types.StorageGetPrefixesRequest) { return this.callSimple(methodDescriptorStorageSyncGetPrefixes, request); }
     storageSyncIterate(request: types.StorageIterateRequest) { return this.callSimple(methodDescriptorStorageSyncIterate, request); }
-    storageApply(request: types.NotModeled) { return this.callSimple(methodDescriptorStorageApply, request); }
-    storageApplyBatch(request: types.NotModeled) { return this.callSimple(methodDescriptorStorageApplyBatch, request); }
-    storageGetCheckpoints(request: types.NotModeled) { return this.callSimple(methodDescriptorStorageGetCheckpoints, request); }
+    storageApply(request: types.StorageApplyRequest) { return this.callSimple(methodDescriptorStorageApply, request); }
+    storageApplyBatch(request: types.StorageApplyBatchRequest) { return this.callSimple(methodDescriptorStorageApplyBatch, request); }
+    storageGetCheckpoints(request: types.StorageGetCheckpointsRequest) { return this.callSimple(methodDescriptorStorageGetCheckpoints, request); }
 
     // runtime/client
     runtimeClientSubmitTx(request: types.NotModeled) { return this.callSimple(methodDescriptorRuntimeClientSubmitTx, request); }
