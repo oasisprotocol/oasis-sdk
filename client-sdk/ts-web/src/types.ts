@@ -106,7 +106,7 @@ export interface ConsensusEstimateGasRequest {
 export interface ConsensusEvent {
     staking?: StakingEvent;
     registry?: RegistryEvent;
-    roothash?: NotModeled;
+    roothash?: RoothashEvent;
 }
 
 export interface ConsensusEvidence {
@@ -203,7 +203,7 @@ export interface GenesisDocument {
     chain_id: string;
     epochtime: NotModeled;
     registry: RegistryGenesis;
-    roothash: NotModeled;
+    roothash: RoothashGenesis;
     staking: StakingGenesis;
     keymanager: NotModeled;
     scheduler: NotModeled;
@@ -367,6 +367,38 @@ export interface RoothashAnnotatedBlock {
 
 export interface RoothashBlock {
     header: RoothashHeader;
+}
+
+export interface RoothashConsensusParameters {
+    gas_costs?: {[op: string]: longnum};
+    debug_do_not_suspend_runtimes?: boolean;
+    debug_bypass_stake?: boolean;
+}
+
+export interface RoothashEvent {
+    height?: longnum;
+    tx_hash?: Uint8Array;
+    runtime_id: Uint8Array;
+    executor_committed?: RoothashExecutorCommittedEvent;
+    execution_discrepancy?: RoothashExecutionDiscrepancyDetectedEvent;
+    finalized?: RoothashFinalizedEvent;
+}
+
+export interface RoothashExecutionDiscrepancyDetectedEvent {
+    timeout: boolean;
+}
+
+export interface RoothashExecutorCommittedEvent {
+    commit: SignatureSigned;
+}
+
+export interface RoothashFinalizedEvent {
+    round: longnum;
+}
+
+export interface RoothashGenesis {
+    params: RoothashConsensusParameters;
+    runtime_states?: Map<Uint8Array, RegistryRuntimeGenesis>;
 }
 
 export interface RoothashHeader {
