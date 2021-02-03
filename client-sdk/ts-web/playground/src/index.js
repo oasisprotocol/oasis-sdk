@@ -6,6 +6,11 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
 
 (async function () {
     try {
+        // Get something with addresses.
+        {
+            console.log('nodes', await client.registryGetNodes(oasis.consensus.HEIGHT_LATEST));
+        }
+
         // Block and events have a variety of different types.
         {
             const height = 1383018n;

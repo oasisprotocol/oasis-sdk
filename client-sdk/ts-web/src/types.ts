@@ -7,6 +7,83 @@ export type NotModeled = {[key: string]: unknown};
  */
 export type longnum = number | bigint;
 
+export interface CommonAddress {
+    IP: Uint8Array;
+    Port: number;
+    Zone: string;
+}
+
+export interface CommonCapabilities {
+    tee?: CommonCapabilityTEE;
+}
+
+export interface CommonCapabilityTEE {
+    hardware: number;
+    rak: Uint8Array;
+    attestation: Uint8Array;
+}
+
+export interface CommonConsensusAddress {
+    id: Uint8Array;
+    address: CommonAddress;
+}
+
+export interface CommonConsensusInfo {
+    id: Uint8Array;
+    addresses: CommonConsensusAddress[];
+}
+
+export interface CommonEntity extends CommonVersioned {
+    id: Uint8Array;
+    nodes?: Uint8Array[];
+    allow_entity_signed_nodes: boolean;
+}
+
+export interface CommonNode extends CommonVersioned {
+    id: Uint8Array;
+    entity_id: Uint8Array;
+    expiration: longnum;
+    tls: CommonTLSInfo;
+    p2p: CommonP2PInfo;
+    consensus: CommonConsensusInfo;
+    beacon?: unknown;
+    runtimes: CommonRuntime[];
+    roles: number;
+}
+
+export interface CommonP2PInfo {
+    id: Uint8Array;
+    addresses: CommonAddress[];
+}
+
+export interface CommonRuntime {
+    id: Uint8Array;
+    version: CommonVersion;
+    capabilities: CommonCapabilities;
+    extra_info: Uint8Array;
+}
+
+export interface CommonTLSAddresses {
+    pub_key: Uint8Array;
+    addresses: CommonAddress;
+}
+
+export interface CommonTLSInfo {
+    pub_key: Uint8Array;
+    next_pub_key?: Uint8Array;
+    addresses: CommonAddress[];
+}
+
+export interface CommonVersion {
+    major?: number;
+    minor?: number;
+    patch?: number;
+}
+
+export interface CommonVersioned {
+    v: number;
+}
+
 export interface ConsensusBlock {
     height: longnum;
     hash: Uint8Array;
@@ -28,7 +105,7 @@ export interface ConsensusEstimateGasRequest {
 
 export interface ConsensusEvent {
     staking?: StakingEvent;
-    registry?: NotModeled;
+    registry?: RegistryEvent;
     roothash?: NotModeled;
 }
 
@@ -97,11 +174,11 @@ export interface ControlIdentityStatus {
 
 export interface ControlRegistrationStatus {
     last_registration: longnum;
-    descriptor?: NotModeled;
+    descriptor?: CommonNode;
 }
 
 export interface ControlRuntimeStatus {
-    descriptor: NotModeled;
+    descriptor: RegistryRuntime;
     latest_round: longnum;
     latest_hash: Uint8Array;
     latest_time: longnum;
@@ -125,7 +202,7 @@ export interface GenesisDocument {
     genesis_time: longnum;
     chain_id: string;
     epochtime: NotModeled;
-    registry: NotModeled;
+    registry: RegistryGenesis;
     roothash: NotModeled;
     staking: StakingGenesis;
     keymanager: NotModeled;
@@ -134,6 +211,153 @@ export interface GenesisDocument {
     consensus: NotModeled;
     halt_epoch: longnum;
     extra_data: {[key: string]: Uint8Array};
+}
+
+export type RegistryAnyNodeRuntimeAdmissionPolicy = Map<never, never>;
+
+export interface RegistryConsensusAddressQuery {
+    height: longnum;
+    address: Uint8Array;
+}
+
+export interface RegistryConsensusParameters {
+    debug_allow_unroutable_addresses?: boolean;
+    debug_allow_test_runtimes?: boolean;
+    debug_allow_entity_signed_node_registration?: boolean;
+    debug_bypass_stake?: boolean;
+    disable_runtime_registration?: boolean;
+    disable_km_runtime_registration?: boolean;
+    gas_costs?: {[op: string]: longnum};
+    max_node_expiration?: longnum;
+}
+
+export interface RegistryEntityEvent {
+    entity: CommonEntity;
+    is_registration: boolean;
+}
+
+export interface RegistryEntityWhitelistRuntimeAdmissionPolicy {
+    entities: Map<Uint8Array, boolean>;
+}
+
+export interface RegistryEvent {
+    height?: longnum;
+    tx_hash?: Uint8Array;
+    runtime?: RegistryRuntimeEvent;
+    entity?: RegistryEntityEvent;
+    node?: RegistryNodeEvent;
+    node_unfrozen?: RegistryNodeUnfrozenEvent;
+}
+
+export interface RegistryExecutorParameters {
+    group_size: longnum;
+    group_backup_size: longnum;
+    allowed_stragglers: longnum;
+    round_timeout: longnum;
+}
+
+export interface RegistryGenesis {
+    params: RegistryConsensusParameters;
+    entities?: SignatureSigned[];
+    runtimes?: SignatureSigned[];
+    suspended_runtimes?: SignatureSigned[];
+    nodes?: SignatureMultiSigned[];
+    node_statuses?: Map<Uint8Array, RegistryNodeStatus>;
+}
+
+export interface RegistryGetRuntimesQuery {
+    height: longnum;
+    include_suspended: boolean;
+}
+
+export interface RegistryIDQuery {
+    height: longnum;
+    id: Uint8Array;
+}
+
+export interface RegistryNamespaceQuery {
+    height: longnum;
+    id: Uint8Array;
+}
+
+export interface RegistryNodeEvent {
+    node: CommonNode;
+    is_registration: boolean;
+}
+
+export interface RegistryNodeList {
+    nodes: CommonNode[];
+}
+
+export interface RegistryNodeStatus {
+    expiration_processed: boolean;
+    freeze_end_time: longnum;
+}
+
+export interface RegistryNodeUnfrozenEvent {
+    node_id: Uint8Array;
+}
+
+export interface RegistryRuntime extends CommonVersioned {
+    id: Uint8Array;
+    entity_id: Uint8Array;
+    genesis: RegistryRuntimeGenesis;
+    kind: number;
+    tee_hardware: number;
+    versions: RegistryVersionInfo;
+    key_manager?: Uint8Array;
+    executor?: RegistryExecutorParameters;
+    txn_scheduler?: RegistryTxnSchedulerParameters;
+    storage?: RegistryStorageParameters;
+    admission_policy: RegistryRuntimeAdmissionPolicy;
+    staking?: RegistryRuntimeStakingParameters;
+}
+
+export interface RegistryRuntimeAdmissionPolicy {
+    any_node?: RegistryAnyNodeRuntimeAdmissionPolicy;
+    entity_whitelist?: RegistryEntityWhitelistRuntimeAdmissionPolicy;
+}
+
+export interface RegistryRuntimeEvent {
+    runtime: RegistryRuntime;
+}
+
+export interface RegistryRuntimeGenesis {
+    state_root: Uint8Array;
+    state: StorageLogEntry[];
+    storage_receipts: SignatureSignature[];
+    round: longnum;
+}
+
+export interface RegistryRuntimeStakingParameters {
+    thresholds?: Map<number, Uint8Array>;
+}
+
+export interface RegistryStorageParameters {
+    group_size: longnum;
+    min_write_replication: longnum;
+    max_apply_write_log_entries: longnum;
+    max_apply_ops: longnum;
+    checkpoint_interval: longnum;
+    checkpoint_num_kept: longnum;
+    checkpoint_chunk_size: longnum;
+}
+
+export interface RegistryTxnSchedulerParameters {
+    algorithm: string;
+    batch_flush_timeout: longnum;
+    max_batch_size: longnum;
+    max_batch_size_bytes: longnum;
+    propose_batch_timeout: longnum;
+}
+
+export interface RegistryUnfreezeNode {
+    node_id: Uint8Array;
+}
+
+export interface RegistryVersionInfo {
+    version: CommonVersion;
+    tee?: Uint8Array;
 }
 
 export interface RoothashAnnotatedBlock {
@@ -227,6 +451,11 @@ export interface RuntimeClientTxResult {
 export interface RuntimeClientWaitBlockIndexedRequest {
     runtime_id: Uint8Array;
     round: longnum;
+}
+
+export interface SignatureMultiSigned {
+    untrusted_raw_value: Uint8Array;
+    signatures: SignatureSignature[];
 }
 
 export interface SignatureSignature {

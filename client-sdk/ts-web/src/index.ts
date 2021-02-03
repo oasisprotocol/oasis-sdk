@@ -1,11 +1,13 @@
 import * as grpcWeb from 'grpc-web';
 
 export * as address from './address';
+export * as common from './common';
 export * as consensus from './consensus';
 export * as genesis from './genesis';
 export * as hash from './hash';
 import * as misc from './misc';
 export * as quantity from './quantity';
+export * as registry from './registry';
 export * as roothash from './roothash';
 export * as signature from './signature';
 export * as staking from './staking';
@@ -51,7 +53,21 @@ function createMethodDescriptorServerStreaming<REQ, RESP>(serviceName: string, m
 
 // scheduler not modeled
 
-// registry not modeled
+// registry
+const methodDescriptorRegistryGetEntity = createMethodDescriptorUnary<types.RegistryIDQuery, types.CommonEntity>('Registry', 'GetEntity');
+const methodDescriptorRegistryGetEntities = createMethodDescriptorUnary<types.longnum, types.CommonEntity[]>('Registry', 'GetEntities');
+const methodDescriptorRegistryGetNode = createMethodDescriptorUnary<types.RegistryIDQuery, types.CommonNode>('Registry', 'GetNode');
+const methodDescriptorRegistryGetNodeByConsensusAddress = createMethodDescriptorUnary<types.RegistryConsensusAddressQuery, types.CommonNode>('Registry', 'GetNodeByConsensusAddress');
+const methodDescriptorRegistryGetNodeStatus = createMethodDescriptorUnary<types.RegistryIDQuery, types.CommonNode>('Registry', 'GetNodeStatus');
+const methodDescriptorRegistryGetNodes = createMethodDescriptorUnary<types.longnum, types.CommonNode[]>('Registry', 'GetNodes');
+const methodDescriptorRegistryGetRuntime = createMethodDescriptorUnary<types.RegistryNamespaceQuery, types.RegistryRuntime>('Registry', 'GetRuntime');
+const methodDescriptorRegistryGetRuntimes = createMethodDescriptorUnary<types.RegistryGetRuntimesQuery, types.RegistryRuntime[]>('Registry', 'GetRuntimes');
+const methodDescriptorRegistryStateToGenesis = createMethodDescriptorUnary<types.longnum, types.RegistryGenesis>('Registry', 'StateToGenesis');
+const methodDescriptorRegistryGetEvents = createMethodDescriptorUnary<types.longnum, types.RegistryEvent[]>('Registry', 'GetEvents');
+const methodDescriptorRegistryWatchEntities = createMethodDescriptorServerStreaming<void, types.RegistryEntityEvent>('Registry', 'WatchEntities');
+const methodDescriptorRegistryWatchNodes = createMethodDescriptorServerStreaming<void, types.RegistryNodeEvent>('Registry', 'WatchNodes');
+const methodDescriptorRegistryWatchNodeList = createMethodDescriptorServerStreaming<void, types.RegistryNodeList>('Registry', 'WatchNodeList');
+const methodDescriptorRegistryWatchRuntimes = createMethodDescriptorServerStreaming<void, types.RegistryRuntime>('Registry', 'WatchRuntimes');
 
 // staking
 const methodDescriptorStakingTokenSymbol = createMethodDescriptorUnary<void, string>('Staking', 'TokenSymbol');
@@ -159,6 +175,22 @@ export class OasisNodeClient {
     /\s*{\s*StreamName:\s*method(\w+)\.ShortName\(\),[^}]+},/g
     '???$1(arg: void) { return this.callServerStreaming(methodDescriptor???$1, arg); }\n'
     */
+
+    // registry
+    registryGetEntity(query: types.RegistryIDQuery) { return this.callUnary(methodDescriptorRegistryGetEntity, query); }
+    registryGetEntities(height: types.longnum) { return this.callUnary(methodDescriptorRegistryGetEntities, height); }
+    registryGetNode(query: types.RegistryIDQuery) { return this.callUnary(methodDescriptorRegistryGetNode, query); }
+    registryGetNodeByConsensusAddress(query: types.RegistryConsensusAddressQuery) { return this.callUnary(methodDescriptorRegistryGetNodeByConsensusAddress, query); }
+    registryGetNodeStatus(query: types.RegistryIDQuery) { return this.callUnary(methodDescriptorRegistryGetNodeStatus, query); }
+    registryGetNodes(height: types.longnum) { return this.callUnary(methodDescriptorRegistryGetNodes, height); }
+    registryGetRuntime(query: types.RegistryNamespaceQuery) { return this.callUnary(methodDescriptorRegistryGetRuntime, query); }
+    registryGetRuntimes(query: types.RegistryGetRuntimesQuery) { return this.callUnary(methodDescriptorRegistryGetRuntimes, query); }
+    registryStateToGenesis(height: types.longnum) { return this.callUnary(methodDescriptorRegistryStateToGenesis, height); }
+    registryGetEvents(height: types.longnum) { return this.callUnary(methodDescriptorRegistryGetEvents, height); }
+    registryWatchEntities() { return this.callServerStreaming(methodDescriptorRegistryWatchEntities, undefined); }
+    registryWatchNodes() { return this.callServerStreaming(methodDescriptorRegistryWatchNodes, undefined); }
+    registryWatchNodeList() { return this.callServerStreaming(methodDescriptorRegistryWatchNodeList, undefined); }
+    registryWatchRuntimes() { return this.callServerStreaming(methodDescriptorRegistryWatchRuntimes, undefined); }
 
     // staking
     stakingTokenSymbol() { return this.callUnary(methodDescriptorStakingTokenSymbol, undefined); }
