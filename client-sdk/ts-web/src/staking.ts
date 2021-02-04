@@ -3,6 +3,12 @@ import * as address from './address';
 const CONTEXT_IDENTIFIER = 'oasis-core/address: staking';
 const CONTEXT_VERSION = 0;
 
+export const METHOD_TRANSFER = 'staking.Transfer';
+export const METHOD_BURN = 'staking.Burn';
+export const METHOD_ADD_ESCROW = 'staking.AddEscrow';
+export const METHOD_RECLAIM_ESCROW = 'staking.ReclaimEscrow';
+export const METHOD_AMEND_COMMISSION_SCHEDULE = 'staking.AmendCommissionSchedule';
+
 export const KIND_ENTITY = 0;
 export const KIND_NODE_VALIDATOR = 1;
 export const KIND_NODE_COMPUTE = 2;

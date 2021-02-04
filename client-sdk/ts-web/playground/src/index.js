@@ -87,7 +87,7 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
                     amount: oasis.quantity.fromBigInt(0n),
                     gas: 0n,
                 },
-                method: 'staking.Transfer',
+                method: oasis.staking.METHOD_TRANSFER,
                 body: body,
             };
 

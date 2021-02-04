@@ -1,3 +1,6 @@
+export const METHOD_EXECUTOR_COMMIT = 'roothash.ExecutorCommit';
+export const METHOD_PROPOSER_TIMEOUT = 'roothash.ExecutorProposerTimeout';
+
 export const GAS_OP_COMPUTE_COMMIT = 'compute_commit';
 export const GAS_OP_PROPOSER_TIMEOUT = 'proposer_timeout';
 
