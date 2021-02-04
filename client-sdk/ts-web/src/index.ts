@@ -54,7 +54,11 @@ function createMethodDescriptorServerStreaming<REQ, RESP>(serviceName: string, m
 'const methodDescriptor???$1 = createMethodDescriptorServerStreaming<void, void>('???', '$1');\n'
 */
 
-// scheduler not modeled
+// scheduler
+const methodDescriptorSchedulerGetValidators = createMethodDescriptorUnary<types.longnum, types.SchedulerValidator[]>('Scheduler', 'GetValidators');
+const methodDescriptorSchedulerGetCommittees = createMethodDescriptorUnary<types.SchedulerGetCommitteesRequest, types.SchedulerCommittee[]>('Scheduler', 'GetCommittees');
+const methodDescriptorSchedulerStateToGenesis = createMethodDescriptorUnary<types.longnum, types.SchedulerGenesis>('Scheduler', 'StateToGenesis');
+const methodDescriptorSchedulerWatchCommittees = createMethodDescriptorServerStreaming<void, types.SchedulerCommittee>('Scheduler', 'WatchCommittees');
 
 // registry
 const methodDescriptorRegistryGetEntity = createMethodDescriptorUnary<types.RegistryIDQuery, types.CommonEntity>('Registry', 'GetEntity');
@@ -178,6 +182,12 @@ export class OasisNodeClient {
     /\s*{\s*StreamName:\s*method(\w+)\.ShortName\(\),[^}]+},/g
     '???$1(arg: void) { return this.callServerStreaming(methodDescriptor???$1, arg); }\n'
     */
+
+    // scheduler
+    schedulerGetValidators(height: types.longnum) { return this.callUnary(methodDescriptorSchedulerGetValidators, height); }
+    schedulerGetCommittees(request: types.SchedulerGetCommitteesRequest) { return this.callUnary(methodDescriptorSchedulerGetCommittees, request); }
+    schedulerStateToGenesis(height: types.longnum) { return this.callUnary(methodDescriptorSchedulerStateToGenesis, height); }
+    schedulerWatchCommittees() { return this.callServerStreaming(methodDescriptorSchedulerWatchCommittees, undefined); }
 
     // registry
     registryGetEntity(query: types.RegistryIDQuery) { return this.callUnary(methodDescriptorRegistryGetEntity, query); }

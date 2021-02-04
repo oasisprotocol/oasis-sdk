@@ -15,5 +15,6 @@ export const GAS_OP_UPDATEKEY_MANAGER = 'update_keymanager';
 export const KIND_INVALID = 0;
 export const KIND_COMPUTE = 1;
 export const KIND_KEY_MANAGER = 2;
+export const MAX_COMMITTEE_KIND = 3;
 
 export const LATEST_RUNTIME_DESCRIPTOR_VERSION = 1;

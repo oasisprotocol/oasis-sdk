@@ -226,7 +226,7 @@ export interface GenesisDocument {
     roothash: RoothashGenesis;
     staking: StakingGenesis;
     keymanager: NotModeled;
-    scheduler: NotModeled;
+    scheduler: SchedulerGenesis;
     beacon: NotModeled;
     consensus: ConsensusGenesis;
     halt_epoch: longnum;
@@ -503,6 +503,41 @@ export interface RuntimeClientTxResult {
 export interface RuntimeClientWaitBlockIndexedRequest {
     runtime_id: Uint8Array;
     round: longnum;
+}
+
+export interface SchedulerCommittee {
+    kind: number;
+    members: SchedulerCommitteeNode[];
+    runtime_id: Uint8Array;
+    valid_for: longnum;
+}
+
+export interface SchedulerCommitteeNode {
+    role: number;
+    public_key: Uint8Array;
+}
+
+export interface SchedulerConsensusParameters {
+    min_validators: number;
+    max_validators: number;
+    max_validators_per_entity: number;
+    debug_bypass_stake?: boolean;
+    debug_static_validators?: boolean;
+    reward_factor_epoch_election_any: Uint8Array;
+}
+
+export interface SchedulerGenesis {
+    params: SchedulerConsensusParameters;
+}
+
+export interface SchedulerGetCommitteesRequest {
+    height: longnum;
+    runtime_id: Uint8Array;
+}
+
+export interface SchedulerValidator {
+    id: Uint8Array;
+    voting_power: longnum;
 }
 
 export interface SignatureMultiSigned {
