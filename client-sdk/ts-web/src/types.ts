@@ -33,6 +33,11 @@ export interface CommonConsensusInfo {
     addresses: CommonConsensusAddress[];
 }
 
+export interface CommonEnclaveIdentity {
+    mr_enclave: Uint8Array;
+    mr_signer: Uint8Array;
+}
+
 export interface CommonEntity extends CommonVersioned {
     id: Uint8Array;
     nodes?: Uint8Array[];
@@ -231,6 +236,31 @@ export interface GenesisDocument {
     consensus: ConsensusGenesis;
     halt_epoch: longnum;
     extra_data: {[key: string]: Uint8Array};
+}
+
+export interface KeyManagerEnclavePolicySGX {
+    may_query: Map<Uint8Array, CommonEnclaveIdentity[]>;
+    may_replicate: CommonEnclaveIdentity[];
+}
+
+export interface KeyManagerPolicySGX {
+    serial: number;
+    id: Uint8Array;
+    enclaves: Map<CommonEnclaveIdentity, KeyManagerEnclavePolicySGX>;
+}
+
+export interface KeyManagerSignedPolicySGX {
+    policy: KeyManagerPolicySGX;
+    signatures: SignatureSignature[];
+}
+
+export interface KeyManagerStatus {
+    id: Uint8Array;
+    is_initialized: boolean;
+    is_secure: boolean;
+    checksum: Uint8Array;
+    nodes: Uint8Array[];
+    policy: KeyManagerSignedPolicySGX;
 }
 
 export type RegistryAnyNodeRuntimeAdmissionPolicy = Map<never, never>;

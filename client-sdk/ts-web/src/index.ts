@@ -92,7 +92,9 @@ const methodDescriptorStakingConsensusParameters = createMethodDescriptorUnary<t
 const methodDescriptorStakingGetEvents = createMethodDescriptorUnary<types.longnum, types.StakingEvent[]>('Staking', 'GetEvents');
 const methodDescriptorStakingWatchEvents = createMethodDescriptorServerStreaming<void, types.StakingEvent>('Staking', 'WatchEvents');
 
-// keymanager not modeled
+// keymanager
+const methodDescriptorKeyManagerGetStatus = createMethodDescriptorUnary<types.RegistryNamespaceQuery, types.KeyManagerStatus>('KeyManager', 'GetStatus');
+const methodDescriptorKeyManagerGetStatuses = createMethodDescriptorUnary<types.longnum, types.KeyManagerStatus[]>('KeyManager', 'GetStatuses');
 
 // storage
 const methodDescriptorStorageSyncGet = createMethodDescriptorUnary<types.StorageGetRequest, types.StorageProofResponse>('Storage', 'SyncGet');
@@ -220,6 +222,10 @@ export class OasisNodeClient {
     stakingConsensusParameters(height: types.longnum) { return this.callUnary(methodDescriptorStakingConsensusParameters, height); }
     stakingGetEvents(height: types.longnum) { return this.callUnary(methodDescriptorStakingGetEvents, height); }
     stakingWatchEvents() { return this.callServerStreaming(methodDescriptorStakingWatchEvents, undefined); }
+
+    // keymanager
+    keyManagerGetStatus(query: types.RegistryNamespaceQuery) { return this.callUnary(methodDescriptorKeyManagerGetStatus, query); }
+    keyManagerGetStatuses(height: types.longnum) { return this.callUnary(methodDescriptorKeyManagerGetStatuses, height); }
 
     // storage
     storageSyncGet(request: types.StorageGetRequest) { return this.callUnary(methodDescriptorStorageSyncGet, request); }
