@@ -222,6 +222,12 @@ export interface ControlStatus {
     registration: ControlRegistrationStatus;
 }
 
+export interface EnclaveRPCCallEnclaveRequest {
+    runtime_id: Uint8Array;
+    endpoint: string;
+    payload: Uint8Array;
+}
+
 export interface GenesisDocument {
     height: longnum;
     genesis_time: longnum;
