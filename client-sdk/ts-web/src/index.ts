@@ -11,6 +11,7 @@ import * as misc from './misc';
 export * as quantity from './quantity';
 export * as registry from './registry';
 export * as roothash from './roothash';
+export * as scheduler from './scheduler';
 export * as signature from './signature';
 export * as staking from './staking';
 export * as storage from './storage';

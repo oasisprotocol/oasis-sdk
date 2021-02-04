@@ -6,6 +6,9 @@ import * as types from './types';
 export const HEIGHT_LATEST = 0n;
 export const TRANSACTION_SIGNATURE_CONTEXT = 'oasis-core/consensus: tx';
 
+export const FEATURE_SERVICES = 1 << 0;
+export const FEATURE_FULL_NODE = 1 << 1;
+
 export async function openSignedTransaction(chainContext: string, signed: types.SignatureSigned) {
     const context = signature.combineChainContext(TRANSACTION_SIGNATURE_CONTEXT, chainContext);
     return misc.fromCBOR(await signature.openSigned(context, signed)) as types.ConsensusTransaction;

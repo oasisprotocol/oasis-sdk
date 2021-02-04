@@ -118,6 +118,11 @@ export interface ConsensusFee {
     gas: longnum;
 }
 
+export interface ConsensusGenesis {
+    backend: string;
+    params: ConsensusParameters;
+}
+
 export interface ConsensusGetSignerNonceRequest {
     account_address: Uint8Array;
     height: longnum;
@@ -131,6 +136,21 @@ export interface ConsensusLightBlock {
 export interface ConsensusLightParameters {
     height: longnum;
     meta: Uint8Array;
+}
+
+export interface ConsensusParameters {
+    timeout_commit: longnum;
+    skip_timeout_commit: boolean;
+    empty_block_interval: longnum;
+    max_tx_size: longnum;
+    max_block_size: longnum;
+    max_block_gas: longnum;
+    max_evidence_num: number;
+    state_checkpoint_interval: longnum;
+    state_checkpoint_num_kept?: longnum;
+    state_checkpoint_chunk_size?: longnum;
+    gas_costs?: {[op: string]: longnum};
+    public_key_blacklist?: Uint8Array[];
 }
 
 export interface ConsensusResult {
@@ -185,8 +205,8 @@ export interface ControlRuntimeStatus {
     latest_state_root: StorageRoot;
     genesis_round: longnum;
     genesis_hash: Uint8Array;
-    committee: NotModeled;
-    storage: NotModeled;
+    committee: WorkerCommonStatus;
+    storage: WorkerStorageStatus;
 }
 
 export interface ControlStatus {
@@ -208,7 +228,7 @@ export interface GenesisDocument {
     keymanager: NotModeled;
     scheduler: NotModeled;
     beacon: NotModeled;
-    consensus: NotModeled;
+    consensus: ConsensusGenesis;
     halt_epoch: longnum;
     extra_data: {[key: string]: Uint8Array};
 }
@@ -792,4 +812,18 @@ export interface UpgradeDescriptor {
     method: string;
     identifier: string;
     epoch: longnum;
+}
+
+export interface WorkerCommonStatus {
+    latest_round: longnum;
+    latest_height: longnum;
+    last_committee_update_height: longnum;
+    executor_role: number;
+    storage_role: number;
+    is_txn_scheduler: boolean;
+    peers: string[];
+}
+
+export interface WorkerStorageStatus {
+    last_finalized_round: longnum;
 }
