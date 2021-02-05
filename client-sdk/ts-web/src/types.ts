@@ -7,6 +7,14 @@ export type NotModeled = {[key: string]: unknown};
  */
 export type longnum = number | bigint;
 
+export interface BeaconConsensusParameters {
+    debug_deterministic?: boolean;
+}
+
+export interface BeaconGenesis {
+    params: BeaconConsensusParameters;
+}
+
 export interface CommonAddress {
     IP: Uint8Array;
     Port: number;
@@ -228,17 +236,27 @@ export interface EnclaveRPCCallEnclaveRequest {
     payload: Uint8Array;
 }
 
+export interface EpochTimeConsensusParameters {
+    interval: longnum;
+    debug_mock_backend?: boolean;
+}
+
+export interface EpochTimeGenesis {
+    params: EpochTimeConsensusParameters;
+    base: longnum;
+}
+
 export interface GenesisDocument {
     height: longnum;
     genesis_time: longnum;
     chain_id: string;
-    epochtime: NotModeled;
+    epochtime: EpochTimeGenesis;
     registry: RegistryGenesis;
     roothash: RoothashGenesis;
     staking: StakingGenesis;
-    keymanager: NotModeled;
+    keymanager: KeyManagerGenesis;
     scheduler: SchedulerGenesis;
-    beacon: NotModeled;
+    beacon: BeaconGenesis;
     consensus: ConsensusGenesis;
     halt_epoch: longnum;
     extra_data: {[key: string]: Uint8Array};
@@ -247,6 +265,10 @@ export interface GenesisDocument {
 export interface KeyManagerEnclavePolicySGX {
     may_query: Map<Uint8Array, CommonEnclaveIdentity[]>;
     may_replicate: CommonEnclaveIdentity[];
+}
+
+export interface KeyManagerGenesis {
+    statuses?: KeyManagerStatus[];
 }
 
 export interface KeyManagerPolicySGX {
