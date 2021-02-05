@@ -9,6 +9,10 @@ export const TRANSACTION_SIGNATURE_CONTEXT = 'oasis-core/consensus: tx';
 export const FEATURE_SERVICES = 1 << 0;
 export const FEATURE_FULL_NODE = 1 << 1;
 
+export const GAS_OP_TX_BYTE = 'tx_byte';
+
+export const TENDERMINT_BACKEND_NAME = 'tendermint';
+
 export const MODULE_NAME = 'consensus';
 export const CODE_NO_COMMITTED_BLOCKS = 1;
 export const CODE_OVERSIZED_TX = 2;
