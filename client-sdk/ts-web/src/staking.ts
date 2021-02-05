@@ -25,6 +25,17 @@ export const GAS_OP_ADD_ESCROW = 'add_escrow';
 export const GAS_OP_RECLAIM_ESCROW = 'reclaim_escrow';
 export const GAS_OP_AMEND_COMMISSION_SCHEDULE = 'amend_commission_schedule';
 
+export const MODULE_NAME = 'staking';
+export const CODE_INVALID_ARGUMENT = 1;
+export const CODE_INVALID_SIGNATURE = 2;
+export const CODE_INSUFFICIENT_BALANCE = 3;
+export const CODE_INSUFFICIENT_STAKE = 4;
+export const CODE_FORBIDDEN = 5;
+export const CODE_INVALID_THRESHOLD = 6;
+
+export const TOKEN_MODULE_NAME = 'staking/token';
+export const CODE_INVALID_TOKEN_VALUE_EXPONENT = 1;
+
 export async function addressFromPublicKey(pk: Uint8Array) {
     return await address.fromPublicKey(CONTEXT_IDENTIFIER, CONTEXT_VERSION, pk);
 }

@@ -18,3 +18,24 @@ export const KIND_KEY_MANAGER = 2;
 export const MAX_COMMITTEE_KIND = 3;
 
 export const LATEST_RUNTIME_DESCRIPTOR_VERSION = 1;
+
+export const MODULE_NAME = 'registry';
+export const CODE_INVALID_ARGUMENT = 1;
+export const CODE_INVALID_SIGNATURE = 2;
+export const CODE_BAD_ENTITY_FOR_NODE = 3;
+export const CODE_BAD_ENTITY_FOR_RUNTIME = 4;
+export const CODE_NO_ENCLAVE_FOR_RUNTIME = 5;
+export const CODE_BAD_ENCLAVE_IDENTITY = 6;
+export const CODE_BAD_CAPABILITIES_TEE_HARDWARE = 7;
+export const CODE_TEE_HARDWARE_MISMATCH = 8;
+export const CODE_NO_SUCH_ENTITY = 9;
+export const CODE_NO_SUCH_NODE = 10;
+export const CODE_NO_SUCH_RUNTIME = 11;
+export const CODE_INCORRECT_TX_SIGNER = 12;
+export const CODE_NODE_EXPIRED = 13;
+export const CODE_NODE_CANNOT_BE_UNFROZEN = 14;
+export const CODE_ENTITY_HAS_NODES = 15;
+export const CODE_FORBIDDEN = 16;
+export const CODE_NODE_UPDATE_NOT_ALLOWED = 17;
+export const CODE_RUNTIME_UPDATE_NOT_ALLOWED = 18;
+export const CODE_ENTITY_HAS_RUNTIMES = 19;

@@ -1,8 +1,10 @@
 import * as grpcWeb from 'grpc-web';
 
 export * as address from './address';
+export * as beacon from './beacon';
 export * as common from './common';
 export * as consensus from './consensus';
+export * as control from './control';
 export * as epochtimeMock from './epochtime_mock';
 export * as genesis from './genesis';
 export * as hash from './hash';
@@ -11,11 +13,14 @@ import * as misc from './misc';
 export * as quantity from './quantity';
 export * as registry from './registry';
 export * as roothash from './roothash';
+export * as runtime from './runtime';
 export * as scheduler from './scheduler';
 export * as signature from './signature';
 export * as staking from './staking';
 export * as storage from './storage';
 import * as types from './types';
+export * as upgrade from './upgrade';
+export * as worker from './worker';
 export {misc, types};
 
 function createMethodDescriptorUnary<REQ, RESP>(serviceName: string, methodName: string) {
