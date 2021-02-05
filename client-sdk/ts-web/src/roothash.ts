@@ -1,3 +1,10 @@
+import * as misc from './misc';
+import * as signature from './signature';
+import * as types from './types';
+
+export const EXECUTOR_SIGNATURE_CONTEXT = 'oasis-core/roothash: executor commitment';
+export const COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT = 'oasis-core/roothash: compute results header';
+
 export const METHOD_EXECUTOR_COMMIT = 'roothash.ExecutorCommit';
 export const METHOD_PROPOSER_TIMEOUT = 'roothash.ExecutorProposerTimeout';
 
@@ -35,3 +42,13 @@ export const CODE_INVALID_MESSAGES = 13;
 export const CODE_BAD_STORAGE_RECEIPTS = 14;
 export const CODE_TIMEOUT_NOT_CORRECT_ROUND = 15;
 export const CODE_NODE_IS_SCHEDULER = 16;
+
+export async function openExecutorCommitment(chainContext: string, signed: types.SignatureSigned) {
+    const context = signature.combineChainContext(EXECUTOR_SIGNATURE_CONTEXT, chainContext);
+    return misc.fromCBOR(await signature.openSigned(context, signed)) as types.RoothashComputeBody;
+}
+
+export async function signExecutorCommitment(signer: signature.ContextSigner, chainContext: string, computeBody: types.RoothashComputeBody) {
+    const context = signature.combineChainContext(EXECUTOR_SIGNATURE_CONTEXT, chainContext);
+    return await signature.signSigned(signer, context, misc.toCBOR(computeBody));
+}

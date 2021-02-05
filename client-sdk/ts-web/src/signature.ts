@@ -49,6 +49,33 @@ export function deserializeSigned(raw: Uint8Array) {
     return misc.fromCBOR(raw) as types.SignatureSigned;
 }
 
+export async function openMultiSigned(context: string, multiSigned: types.SignatureMultiSigned) {
+    const signerMessage = await prepareSignerMessage(context, multiSigned.untrusted_raw_value);
+    const signerMessageA = Array.from(signerMessage);
+    for (const signature of multiSigned.signatures) {
+        const signatureA = Array.from(signature.signature);
+        const publicKeyA = Array.from(signature.public_key);
+        // @ts-expect-error acceptance of array-like types is not modeled
+        const sigOk = ED25519.verify(signerMessageA, signatureA, publicKeyA);
+        if (!sigOk) throw new Error('signature verification failed');
+    }
+    return multiSigned.untrusted_raw_value;
+}
+
+export async function signMultiSigned(signers: ContextSigner[], context: string, rawValue: Uint8Array) {
+    const signatures = [] as types.SignatureSignature[];
+    for (const signer of signers) {
+        signatures.push({
+            public_key: signer.public(),
+            signature: await signer.sign(context, rawValue),
+        });
+    }
+    return {
+        untrusted_raw_value: rawValue,
+        signatures: signatures,
+    } as types.SignatureMultiSigned;
+}
+
 export class BlindContextSigner implements ContextSigner {
 
     signer: Signer;

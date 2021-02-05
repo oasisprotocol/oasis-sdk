@@ -447,6 +447,23 @@ export interface RoothashBlock {
     header: RoothashHeader;
 }
 
+export interface RoothashComputeBody {
+    header: RoothashComputeResultsHeader;
+    storage_signatures: SignatureSignature[];
+    rak_sig: Uint8Array;
+    txn_sched_sig: SignatureSignature;
+    input_root: Uint8Array;
+    input_storage_sigs: SignatureSignature;
+}
+
+export interface RoothashComputeResultsHeader {
+    round: longnum;
+    previous_hash: Uint8Array;
+    io_root: Uint8Array;
+    state_root: Uint8Array;
+    messages: RoothashMessage[];
+}
+
 export interface RoothashConsensusParameters {
     gas_costs?: {[op: string]: longnum};
     debug_do_not_suspend_runtimes?: boolean;

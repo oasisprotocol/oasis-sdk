@@ -1,3 +1,14 @@
+import * as misc from './misc';
+import * as signature from './signature';
+import * as types from './types';
+
+export const REGISTER_ENTITY_SIGNATURE_CONTEXT = 'oasis-core/registry: register entity';
+export const REGISTER_GENESIS_ENTITY_SIGNATURE_CONTEXT = REGISTER_ENTITY_SIGNATURE_CONTEXT;
+export const REGISTER_NODE_SIGNATURE_CONTEXT = 'oasis-core/registry: register node';
+export const REGISTER_GENESIS_NODE_SIGNATURE_CONTEXT = REGISTER_NODE_SIGNATURE_CONTEXT;
+export const REGISTER_RUNTIME_SIGNATURE_CONTEXT = 'oasis-core/registry: register runtime';
+export const REGISTER_GENESIS_RUNTIME_SIGNATURE_CONTEXT = REGISTER_RUNTIME_SIGNATURE_CONTEXT;
+
 export const METHOD_REGISTER_ENTITY = 'registry.RegisterEntity';
 export const METHOD_DEREGISTER_ENTITY = 'registry.DeregisterEntity';
 export const METHOD_REGISTER_NODE = 'registry.RegisterNode';
@@ -39,3 +50,11 @@ export const CODE_FORBIDDEN = 16;
 export const CODE_NODE_UPDATE_NOT_ALLOWED = 17;
 export const CODE_RUNTIME_UPDATE_NOT_ALLOWED = 18;
 export const CODE_ENTITY_HAS_RUNTIMES = 19;
+
+export async function openSignedRuntime(context: string, signed: types.SignatureSigned) {
+    return misc.fromCBOR(await signature.openSigned(context, signed)) as types.RegistryRuntime;
+}
+
+export async function signSignedRuntime(signer: signature.ContextSigner, context: string, runtime: types.RegistryRuntime) {
+    return await signature.signSigned(signer, context, misc.toCBOR(runtime));
+}
