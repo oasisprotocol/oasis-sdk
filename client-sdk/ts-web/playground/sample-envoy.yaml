@@ -18,12 +18,22 @@ static_resources:
               domains: ['*']
               routes:
               - match:
-                  prefix: '/oasis-core'
+                  safe_regex:
+                    google_re2:
+                      max_program_size: 933
+                    # You'd normally not permit NodeController/RequestShutdown, for example.
+                    regex: '/oasis-core\.(Scheduler/(GetValidators|GetCommittees|StateToGenesis|WatchCommittees)|Registry/(GetEntity|GetEntities|GetNode|GetNodeByConsensusAddress|GetNodeStatus|GetNodes|GetRuntime|GetRuntimes|StateToGenesis|GetEvents|WatchEntities|WatchNodes|WatchNodeList|WatchRuntimes)|Staking/(TokenSymbol|TokenValueExponent|TotalSupply|CommonPool|LastBlockFees|Threshold|Addresses|Account|Delegations|DebondingDelegations|StateToGenesis|ConsensusParameters|GetEvents|WatchEvents)|KeyManager/(GetStatus|GetStatuses)|Storage/(SyncGet|SyncGetPrefixes|SyncIterate|Apply|ApplyBatch|GetCheckpoints|GetDiff|GetCheckpointChunk)|RuntimeClient/(SubmitTx|GetGenesisBlock|GetBlock|GetBlockByHash|GetTx|GetTxByBlockHash|GetTxs|QueryTx|QueryTxs|WaitBlockIndexed|WatchBlocks)|EnclaveRPC/(CallEnclave)|Consensus/(SubmitTx|StateToGenesis|EstimateGas|GetSignerNonce|GetEpoch|WaitEpoch|GetBlock|GetTransactions|GetTransactionsWithResults|GetUnconfirmedTransactions|GetGenesisDocument|GetStatus|WatchBlocks)|ConsensusLight/(GetLightBlock|GetParameters|StateSyncGet|StateSyncGetPrefixes|StateSyncIterate|SubmitTxNoWait|SubmitEvidence)|NodeController/(RequestShutdown|WaitSync|IsSynced|WaitReady|IsReady|UpgradeBinary|CancelUpgrade|GetStatus))'
                 route:
                   cluster: oasis_node_grpc
                   timeout: 0s
                   max_stream_duration:
                     grpc_timeout_header_max: 0s
+              - match:
+                  prefix: '/oasis-core'
+                direct_response:
+                  status: 404
+                  body:
+                    inline_string: 'You have to list every method you use in the envoy matcher.'
               - match:
                   prefix: '/'
                 route:
