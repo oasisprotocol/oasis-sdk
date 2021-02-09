@@ -1,3 +1,4 @@
+/dist
 /node_modules
 # It would be complicated to add exclusions for our links:
 # > It is not possible to re-include a file if a parent directory of that file is excluded.

@@ -2,9 +2,9 @@
   "name": "@oasisprotocol/client",
   "version": "0.0.1",
   "files": [
-    "src"
+    "dist"
   ],
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "dependencies": {
     "bech32": "^1.1.4",
     "cborg": "^1.0.4",
