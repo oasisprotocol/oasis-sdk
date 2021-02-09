@@ -1,0 +1,25 @@
+# Build.
+target/
+**/*.rs.bk
+*.a
+*.o
+*.so
+**/generated
+/dist/
+/__pycache__/
+hfuzz_target
+hfuzz_workspace
+.gitlint-rules/__pycache__/
+
+# IDE.
+.idea/*
+
+# Temporary files.
+*.swp
+
+# Coverage files.
+coverage-e2e-*.txt
+
+# Built binaries.
+examples/user-witness-flow/main
+

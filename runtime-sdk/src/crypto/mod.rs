@@ -1,0 +1,3 @@
+//! Cryptography.
+
+pub mod signature;
