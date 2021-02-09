@@ -1,4 +1,4 @@
-module github.com/oasisprotocol/oasis-bridge/client-sdk/go
+module github.com/oasisprotocol/oasis-sdk/client-sdk/go
 
 go 1.15
 

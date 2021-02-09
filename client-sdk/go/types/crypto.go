@@ -6,9 +6,9 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
-	"github.com/oasisprotocol/oasis-bridge/client-sdk/go/crypto/signature"
-	"github.com/oasisprotocol/oasis-bridge/client-sdk/go/crypto/signature/ed25519"
-	"github.com/oasisprotocol/oasis-bridge/client-sdk/go/crypto/signature/secp256k1"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 )
 
 var (

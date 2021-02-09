@@ -3,9 +3,9 @@ package testing
 import (
 	memorySigner "github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/memory"
 
-	"github.com/oasisprotocol/oasis-bridge/client-sdk/go/crypto/signature"
-	"github.com/oasisprotocol/oasis-bridge/client-sdk/go/crypto/signature/ed25519"
-	"github.com/oasisprotocol/oasis-bridge/client-sdk/go/types"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 // TestKey is a key used for testing.

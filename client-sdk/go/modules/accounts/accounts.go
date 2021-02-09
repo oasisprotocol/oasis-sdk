@@ -3,8 +3,8 @@ package accounts
 import (
 	"context"
 
-	"github.com/oasisprotocol/oasis-bridge/client-sdk/go/client"
-	"github.com/oasisprotocol/oasis-bridge/client-sdk/go/types"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 const (

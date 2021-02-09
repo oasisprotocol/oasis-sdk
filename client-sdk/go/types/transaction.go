@@ -7,7 +7,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
-	"github.com/oasisprotocol/oasis-bridge/client-sdk/go/crypto/signature"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 )
 
 // TODO: Signature context: oasis-runtime-sdk/tx: v0 for chain H(<consensus-chain-context> || <runtime-id>)

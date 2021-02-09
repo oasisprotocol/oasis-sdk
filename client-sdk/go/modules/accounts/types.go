@@ -1,7 +1,7 @@
 package accounts
 
 import (
-	"github.com/oasisprotocol/oasis-bridge/client-sdk/go/types"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 // NonceQuery are the arguments for the accounts.Nonce query.

@@ -13,7 +13,7 @@ import (
 	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	coreClient "github.com/oasisprotocol/oasis-core/go/runtime/client/api"
 
-	"github.com/oasisprotocol/oasis-bridge/client-sdk/go/types"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 const RoundLatest = coreClient.RoundLatest
