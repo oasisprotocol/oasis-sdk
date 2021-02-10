@@ -5,6 +5,10 @@
     "dist"
   ],
   "main": "dist/index.js",
+  "scripts": {
+    "prepare": "tsc",
+    "playground": "cd playground && webpack s -c webpack.config.js"
+  },
   "dependencies": {
     "bech32": "^1.1.4",
     "cborg": "^1.0.4",
