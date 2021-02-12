@@ -13,7 +13,7 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
 
         // Block and events have a variety of different types.
         {
-            const height = 1383018n;
+            const height = 2385080n;
             console.log('height', height);
             const block = await client.consensusGetBlock(height);
             console.log('block', block);
@@ -26,7 +26,7 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
             const toAddr = 'oasis1qpl5634wyu6larn047he9af7a3qyhzx59u0mquw7';
             console.log('delegations to', toAddr);
             const response = await client.stakingDelegations({
-                height: 1920228n,
+                height: oasis.consensus.HEIGHT_LATEST,
                 owner: oasis.address.fromString(toAddr),
             });
             for (const [fromAddr, delegation] of response) {
@@ -43,7 +43,7 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
             console.log('genesis', genesis);
             const chainContext = await oasis.genesis.chainContext(genesis);
             console.log('chain context', chainContext);
-            const height = 1383018n;
+            const height = 2385080n;
             console.log('height', height);
             const response = await client.consensusGetTransactionsWithResults(height);
             for (let i = 0; i < response.transactions.length; i++) {
