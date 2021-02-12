@@ -11,11 +11,11 @@ async function play() {
         {
             const dst = oasis.signature.EllipticSigner.fromRandom('this key is not important');
             const dstAddr = await oasis.staking.addressFromPublicKey(dst.public());
-            console.log('dst addr', oasis.address.toString(dstAddr));
+            console.log('dst addr', oasis.staking.addressToBech32(dstAddr));
 
             const signerPub = signer.public();
             console.log('ledger public key', signerPub);
-            console.log('ledger staking address', oasis.address.toString(await oasis.staking.addressFromPublicKey(signerPub)));
+            console.log('ledger staking address', oasis.staking.addressToBech32(await oasis.staking.addressFromPublicKey(signerPub)));
 
             // Dummy value.
             const chainContext = 'test';

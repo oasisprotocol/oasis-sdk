@@ -1,7 +1,9 @@
 import * as address from './address';
 
-const CONTEXT_IDENTIFIER = 'oasis-core/address: staking';
-const CONTEXT_VERSION = 0;
+export const ADDRESS_V0_CONTEXT_IDENTIFIER = 'oasis-core/address: staking';
+export const ADDRESS_V0_CONTEXT_VERSION = 0;
+
+export const ADDRESS_PREFIX = 'oasis';
 
 export const METHOD_TRANSFER = 'staking.Transfer';
 export const METHOD_BURN = 'staking.Burn';
@@ -37,5 +39,13 @@ export const TOKEN_MODULE_NAME = 'staking/token';
 export const CODE_INVALID_TOKEN_VALUE_EXPONENT = 1;
 
 export async function addressFromPublicKey(pk: Uint8Array) {
-    return await address.fromPublicKey(CONTEXT_IDENTIFIER, CONTEXT_VERSION, pk);
+    return await address.fromPublicKey(ADDRESS_V0_CONTEXT_IDENTIFIER, ADDRESS_V0_CONTEXT_VERSION, pk);
+}
+
+export function addressToBech32(addr: Uint8Array) {
+    return address.toBech32(ADDRESS_PREFIX, addr);
+}
+
+export function addressFromBech32(str: string) {
+    return address.fromBech32(ADDRESS_PREFIX, str);
 }

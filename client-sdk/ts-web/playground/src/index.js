@@ -27,11 +27,11 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
             console.log('delegations to', toAddr);
             const response = await client.stakingDelegations({
                 height: oasis.consensus.HEIGHT_LATEST,
-                owner: oasis.address.fromString(toAddr),
+                owner: oasis.staking.addressFromBech32(toAddr),
             });
             for (const [fromAddr, delegation] of response) {
                 console.log({
-                    from: oasis.address.toString(fromAddr),
+                    from: oasis.staking.addressToBech32(fromAddr),
                     shares: oasis.quantity.toBigInt(delegation.shares),
                 });
             }
@@ -51,7 +51,7 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
                 const transaction = await oasis.consensus.openSignedTransaction(chainContext, signedTransaction);
                 console.log({
                     hash: await oasis.consensus.hashSignedTransaction(signedTransaction),
-                    from: oasis.address.toString(await oasis.staking.addressFromPublicKey(signedTransaction.signature.public_key)),
+                    from: oasis.staking.addressToBech32(await oasis.staking.addressFromPublicKey(signedTransaction.signature.public_key)),
                     transaction: transaction,
                     feeAmount: oasis.quantity.toBigInt(transaction.fee.amount),
                     result: response.results[i],
