@@ -1,3 +1,4 @@
+import * as oasis from '@oasisprotocol/client';
 import * as elliptic from 'elliptic';
 
 export interface Signer {
@@ -5,14 +6,39 @@ export interface Signer {
     sign(message: Uint8Array): Promise<Uint8Array>;
 }
 
+export interface ContextSigner {
+    public(): Uint8Array;
+    sign(context: string, message: Uint8Array): Promise<Uint8Array>;
+}
+
 const SECP256K1 = new elliptic.ec('secp256k1');
 
-export async function placeholderVerify(message: Uint8Array, signature: Uint8Array, publicKey: Uint8Array) {
-    const messageA = Array.from(message);
+export async function verify(context: string, message: Uint8Array, signature: Uint8Array, publicKey: Uint8Array) {
+    const signerMessage = await oasis.signature.prepareSignerMessage(context, message);
+    const signerMessageA = Array.from(signerMessage);
     const signatureA = Array.from(signature);
     const publicKeyA = Array.from(publicKey);
     // @ts-expect-error acceptance of array-like types is not modeled
-    return SECP256K1.verify(messageA, signatureA, publicKeyA);
+    return SECP256K1.verify(signerMessageA, signatureA, publicKeyA);
+}
+
+export class BlindContextSigner implements ContextSigner {
+
+    signer: Signer;
+
+    constructor(signer: Signer) {
+        this.signer = signer;
+    }
+
+    public(): Uint8Array {
+        return this.signer.public();
+    }
+
+    async sign(context: string, message: Uint8Array): Promise<Uint8Array> {
+        const signerMessage = await oasis.signature.prepareSignerMessage(context, message);
+        return await this.signer.sign(signerMessage);
+    }
+
 }
 
 export class EllipticSigner implements Signer {
