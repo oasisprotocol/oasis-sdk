@@ -1,6 +1,6 @@
 {
     "workspaces": [
         "client-sdk/ts-web",
-        "client-sdk/ts-web-ledger"
+        "client-sdk/ts-web-signer-ledger"
     ]
 }

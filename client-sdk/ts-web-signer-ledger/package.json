@@ -1,5 +1,5 @@
 {
-    "name": "@oasisprotocol/client-ledger",
+    "name": "@oasisprotocol/client-signer-ledger",
     "version": "0.0.1",
     "files": [
         "dist"
