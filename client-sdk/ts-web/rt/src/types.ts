@@ -1,5 +1,22 @@
 import * as oasis from '@oasisprotocol/client';
 
+export interface AccountsAccountBalances {
+    balances: Map<Uint8Array, Uint8Array>;
+}
+
+export interface AccountsBalancesQuery {
+    address: Uint8Array;
+}
+
+export interface AccountsNonceQuery {
+    address: Uint8Array;
+}
+
+export interface AccountsTransfer {
+    to: Uint8Array;
+    amount: BaseUnits;
+}
+
 export interface AuthInfo {
     si: SignerInfo[];
     fee: Fee;
@@ -28,6 +45,11 @@ export interface FailedCallResult {
 export interface Fee {
     amount: BaseUnits;
     gas: oasis.types.longnum;
+}
+
+export interface MintEvent {
+    owner: Uint8Array;
+    amount: BaseUnits;
 }
 
 export interface PublicKey {
