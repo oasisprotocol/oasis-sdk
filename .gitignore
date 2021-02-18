@@ -10,7 +10,6 @@ target/
 hfuzz_target
 hfuzz_workspace
 .gitlint-rules/__pycache__/
-/node_modules
 
 # IDE.
 .idea/*
