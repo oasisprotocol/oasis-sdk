@@ -1,0 +1,6 @@
+{
+    "workspaces": [
+        "core",
+        "signer-ledger"
+    ]
+}
