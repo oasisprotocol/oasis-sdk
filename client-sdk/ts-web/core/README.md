@@ -6,6 +6,8 @@ Prioritize exposing an unopinionated binding to
 [`oasis-node`](https://github.com/oasisprotocol/oasis-core/tree/master/go/oasis-node)'s gRPC
 services.
 Mostly leave the protocol and formats be, and don't create too much abstraction over it.
+Aim to create a library that will take less work to maintain when oasis-core changes.
+The target audience is developers who are already familiar with oasis-core.
 
 ## Inventory of what's here
 
@@ -15,6 +17,7 @@ serialization.
 1. A heuristic to convert structures from CBOR maps to JavaScript objects.
 1. Type definitions for structures.
 1. Helpers for operating on a few kinds of data.
+1. JSDoc copied from Godoc.
 
 ## Design notes
 
@@ -34,3 +37,5 @@ waiting for the fix to be included in an upstream release of `grpc-web`. We sugg
 `try ... catch` block around calls known to return `nil`.
 1. Empty structures are deserialized into an empty `Map`, due to a limitation in the heuristic that
 converts structures to objets.
+1. Go prefers to use `nil` instead of some empty values and to serialize them as `null` or missing
+structure fields. This behavior is not modeled in this library's type system.
