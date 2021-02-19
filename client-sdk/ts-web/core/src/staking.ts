@@ -44,11 +44,13 @@ export const KIND_NODE_STORAGE = 3;
 export const KIND_NODE_KEY_MANAGER = 4;
 export const KIND_RUNTIME_COMPUTE = 5;
 export const KIND_RUNTIME_KEY_MANAGER = 6;
+export const KIND_MAX = KIND_RUNTIME_KEY_MANAGER;
 
 /**
  * SlashDoubleSigning is slashing due to double signing.
  */
 export const SLASH_DOUBLE_SIGNING = 0;
+export const SLASH_MAX = SLASH_DOUBLE_SIGNING;
 
 /**
  * GasOpTransfer is the gas operation identifier for transfer.
