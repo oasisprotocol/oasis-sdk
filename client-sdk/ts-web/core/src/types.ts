@@ -76,15 +76,15 @@ export interface CommonRuntime {
     extra_info: Uint8Array;
 }
 
-export interface CommonTLSAddresses {
+export interface CommonTLSAddress {
     pub_key: Uint8Array;
-    addresses: CommonAddress;
+    address: CommonAddress;
 }
 
 export interface CommonTLSInfo {
     pub_key: Uint8Array;
     next_pub_key?: Uint8Array;
-    addresses: CommonAddress[];
+    addresses: CommonTLSAddress[];
 }
 
 export interface CommonVersion {
@@ -181,6 +181,7 @@ export interface ConsensusStatus {
     latest_time: longnum;
     latest_state_root: StorageRoot;
     genesis_height: longnum;
+    genesis_hash: Uint8Array;
     last_retained_height: longnum;
     last_retained_hash: Uint8Array;
     is_validator: boolean;
