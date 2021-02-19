@@ -1,4 +1,5 @@
 import * as address from './address';
+import * as misc from './misc';
 
 /**
  * AddressV0Context is the unique context for v0 staking account addresses.
@@ -123,4 +124,21 @@ export function addressToBech32(addr: Uint8Array) {
 
 export function addressFromBech32(str: string) {
     return address.fromBech32(ADDRESS_PREFIX, str);
+}
+
+/**
+ * CommonPoolAddress is the common pool address.
+ * The address is reserved to prevent it being accidentally used in the actual ledger.
+ */
+export async function commonPoolKey() {
+    return await addressFromPublicKey(misc.fromHex('1abe11edc001ffffffffffffffffffffffffffffffffffffffffffffffffffff'));
+}
+
+/**
+ * FeeAccumulatorAddress is the per-block fee accumulator address.
+ * It holds all fees from txs in a block which are later disbursed to validators appropriately.
+ * The address is reserved to prevent it being accidentally used in the actual ledger.
+ */
+export async function feeAccumulatorKey() {
+    return await addressFromPublicKey(misc.fromHex('1abe11edfeeaccffffffffffffffffffffffffffffffffffffffffffffffffff'));
 }
