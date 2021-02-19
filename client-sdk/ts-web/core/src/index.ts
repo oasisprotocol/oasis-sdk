@@ -172,104 +172,407 @@ export class OasisNodeClient {
     }
 
     // scheduler
+    /**
+     * GetValidators returns the vector of consensus validators for
+     * a given epoch.
+     */
     schedulerGetValidators(height: types.longnum) { return this.callUnary(methodDescriptorSchedulerGetValidators, height); }
+    /**
+     * GetCommittees returns the vector of committees for a given
+     * runtime ID, at the specified block height, and optional callback
+     * for querying the beacon for a given epoch/block height.
+     *
+     * Iff the callback is nil, `beacon.GetBlockBeacon` will be used.
+     */
     schedulerGetCommittees(request: types.SchedulerGetCommitteesRequest) { return this.callUnary(methodDescriptorSchedulerGetCommittees, request); }
+    /**
+     * StateToGenesis returns the genesis state at specified block height.
+     */
     schedulerStateToGenesis(height: types.longnum) { return this.callUnary(methodDescriptorSchedulerStateToGenesis, height); }
+    /**
+     * WatchCommittees returns a channel that produces a stream of
+     * Committee.
+     *
+     * Upon subscription, all committees for the current epoch will
+     * be sent immediately.
+     */
     schedulerWatchCommittees() { return this.callServerStreaming(methodDescriptorSchedulerWatchCommittees, undefined); }
 
     // registry
+    /**
+     * GetEntity gets an entity by ID.
+     */
     registryGetEntity(query: types.RegistryIDQuery) { return this.callUnary(methodDescriptorRegistryGetEntity, query); }
+    /**
+     * GetEntities gets a list of all registered entities.
+     */
     registryGetEntities(height: types.longnum) { return this.callUnary(methodDescriptorRegistryGetEntities, height); }
+    /**
+     * GetNode gets a node by ID.
+     */
     registryGetNode(query: types.RegistryIDQuery) { return this.callUnary(methodDescriptorRegistryGetNode, query); }
+    /**
+     * GetNodeByConsensusAddress looks up a node by its consensus address at the
+	 * specified block height. The nature and format of the consensus address depends
+	 * on the specific consensus backend implementation used.
+     */
     registryGetNodeByConsensusAddress(query: types.RegistryConsensusAddressQuery) { return this.callUnary(methodDescriptorRegistryGetNodeByConsensusAddress, query); }
+    /**
+     * GetNodeStatus returns a node's status.
+     */
     registryGetNodeStatus(query: types.RegistryIDQuery) { return this.callUnary(methodDescriptorRegistryGetNodeStatus, query); }
+    /**
+     * GetNodes gets a list of all registered nodes.
+     */
     registryGetNodes(height: types.longnum) { return this.callUnary(methodDescriptorRegistryGetNodes, height); }
+    /**
+     * GetRuntime gets a runtime by ID.
+     */
     registryGetRuntime(query: types.RegistryNamespaceQuery) { return this.callUnary(methodDescriptorRegistryGetRuntime, query); }
+    /**
+     * GetRuntimes returns the registered Runtimes at the specified
+	 * block height.
+     */
     registryGetRuntimes(query: types.RegistryGetRuntimesQuery) { return this.callUnary(methodDescriptorRegistryGetRuntimes, query); }
+    /**
+     * StateToGenesis returns the genesis state at specified block height.
+     */
     registryStateToGenesis(height: types.longnum) { return this.callUnary(methodDescriptorRegistryStateToGenesis, height); }
+    /**
+     * GetEvents returns the events at specified block height.
+     */
     registryGetEvents(height: types.longnum) { return this.callUnary(methodDescriptorRegistryGetEvents, height); }
+    /**
+     * WatchEntities returns a channel that produces a stream of
+	 * EntityEvent on entity registration changes.
+     */
     registryWatchEntities() { return this.callServerStreaming(methodDescriptorRegistryWatchEntities, undefined); }
+    /**
+     * WatchNodes returns a channel that produces a stream of
+	 * NodeEvent on node registration changes.
+     */
     registryWatchNodes() { return this.callServerStreaming(methodDescriptorRegistryWatchNodes, undefined); }
+    /**
+     * WatchNodeList returns a channel that produces a stream of NodeList.
+	 * Upon subscription, the node list for the current epoch will be sent
+	 * immediately.
+	 *
+	 * Each node list will be sorted by node ID in lexicographically ascending
+	 * order.
+     */
     registryWatchNodeList() { return this.callServerStreaming(methodDescriptorRegistryWatchNodeList, undefined); }
+    /**
+     * WatchRuntimes returns a stream of Runtime.  Upon subscription,
+     * all runtimes will be sent immediately.
+     */
     registryWatchRuntimes() { return this.callServerStreaming(methodDescriptorRegistryWatchRuntimes, undefined); }
 
     // staking
+    /**
+     * TokenSymbol returns the token's ticker symbol.
+     */
     stakingTokenSymbol() { return this.callUnary(methodDescriptorStakingTokenSymbol, undefined); }
+    /**
+     * TokenValueExponent is the token's value base-10 exponent, i.e.
+     * 1 token = 10**TokenValueExponent base units.
+     */
     stakingTokenValueExponent() { return this.callUnary(methodDescriptorStakingTokenValueExponent, undefined); }
+    /**
+     * TotalSupply returns the total number of base units.
+     */
     stakingTotalSupply(height: types.longnum) { return this.callUnary(methodDescriptorStakingTotalSupply, height); }
+    /**
+     * CommonPool returns the common pool balance.
+     */
     stakingCommonPool(height: types.longnum) { return this.callUnary(methodDescriptorStakingCommonPool, height); }
+    /**
+     * LastBlockFees returns the collected fees for previous block.
+     */
     stakingLastBlockFees(height: types.longnum) { return this.callUnary(methodDescriptorStakingLastBlockFees, height); }
+    /**
+     * Threshold returns the specific staking threshold by kind.
+     */
     stakingThreshold(query: types.StakingThresholdQuery) { return this.callUnary(methodDescriptorStakingThreshold, query); }
+    /**
+     * Addresses returns the addresses of all accounts with a non-zero general
+     * or escrow balance.
+     */
     stakingAddresses(height: types.longnum) { return this.callUnary(methodDescriptorStakingAddresses, height); }
+    /**
+     * Account returns the account descriptor for the given account.
+     */
     stakingAccount(query: types.StakingOwnerQuery) { return this.callUnary(methodDescriptorStakingAccount, query); }
+    /**
+     * Delegations returns the list of delegations for the given owner
+     * (delegator).
+     */
     stakingDelegations(query: types.StakingOwnerQuery) { return this.callUnary(methodDescriptorStakingDelegations, query); }
+    /**
+     * DebondingDelegations returns the list of debonding delegations for
+     * the given owner (delegator).
+     */
     stakingDebondingDelegations(query: types.StakingOwnerQuery) { return this.callUnary(methodDescriptorStakingDebondingDelegations, query); }
+    /**
+     * StateToGenesis returns the genesis state at specified block height.
+     */
     stakingStateToGenesis(height: types.longnum) { return this.callUnary(methodDescriptorStakingStateToGenesis, height); }
+    /**
+     * Paremeters returns the staking consensus parameters.
+     */
     stakingConsensusParameters(height: types.longnum) { return this.callUnary(methodDescriptorStakingConsensusParameters, height); }
+    /**
+     * GetEvents returns the events at specified block height.
+     */
     stakingGetEvents(height: types.longnum) { return this.callUnary(methodDescriptorStakingGetEvents, height); }
+    /**
+     * WatchEvents returns a channel that produces a stream of Events.
+     */
     stakingWatchEvents() { return this.callServerStreaming(methodDescriptorStakingWatchEvents, undefined); }
 
     // keymanager
+    /**
+     * GetStatus returns a key manager status by key manager ID.
+     */
     keyManagerGetStatus(query: types.RegistryNamespaceQuery) { return this.callUnary(methodDescriptorKeyManagerGetStatus, query); }
+    /**
+     * GetStatuses returns all currently tracked key manager statuses.
+     */
     keyManagerGetStatuses(height: types.longnum) { return this.callUnary(methodDescriptorKeyManagerGetStatuses, height); }
 
     // storage
+    /**
+     * SyncGet fetches a single key and returns the corresponding proof.
+     */
     storageSyncGet(request: types.StorageGetRequest) { return this.callUnary(methodDescriptorStorageSyncGet, request); }
+    /**
+     * SyncGetPrefixes fetches all keys under the given prefixes and returns
+     * the corresponding proofs.
+     */
     storageSyncGetPrefixes(request: types.StorageGetPrefixesRequest) { return this.callUnary(methodDescriptorStorageSyncGetPrefixes, request); }
+    /**
+     * SyncIterate seeks to a given key and then fetches the specified
+     * number of following items based on key iteration order.
+     */
     storageSyncIterate(request: types.StorageIterateRequest) { return this.callUnary(methodDescriptorStorageSyncIterate, request); }
+    /**
+     * Apply applies a set of operations against the MKVS.  The root may refer
+     * to a nil node, in which case a new root will be created.
+     * The expected new root is used to check if the new root after all the
+     * operations are applied already exists in the local DB.  If it does, the
+     * Apply is ignored.
+     */
     storageApply(request: types.StorageApplyRequest) { return this.callUnary(methodDescriptorStorageApply, request); }
+    /**
+     * ApplyBatch applies multiple sets of operations against the MKVS and
+     * returns a single receipt covering all applied roots.
+     *
+     * See Apply for more details.
+     */
     storageApplyBatch(request: types.StorageApplyBatchRequest) { return this.callUnary(methodDescriptorStorageApplyBatch, request); }
+    /**
+     * GetCheckpoints returns a list of checkpoint metadata for all known checkpoints.
+     */
     storageGetCheckpoints(request: types.StorageGetCheckpointsRequest) { return this.callUnary(methodDescriptorStorageGetCheckpoints, request); }
+    /**
+     * GetDiff returns an iterator of write log entries that must be applied
+     * to get from the first given root to the second one.
+     */
     storageGetDiff(request: types.StorageGetDiffRequest) { return this.callServerStreaming(methodDescriptorStorageGetDiff, request); }
+    /**
+     * GetCheckpointChunk fetches a specific chunk from an existing chekpoint.
+     */
     storageGetCheckpointChunk(chunk: types.StorageChunkMetadata) { return this.callServerStreaming(methodDescriptorStorageGetCheckpointChunk, chunk); }
 
     // runtime/client
+    /**
+     * SubmitTx submits a transaction to the runtime transaction scheduler.
+     */
     runtimeClientSubmitTx(request: types.RuntimeClientSubmitTxRequest) { return this.callUnary(methodDescriptorRuntimeClientSubmitTx, request); }
+    /**
+     * GetGenesisBlock returns the genesis block.
+     */
     runtimeClientGetGenesisBlock(runtimeID: Uint8Array) { return this.callUnary(methodDescriptorRuntimeClientGetGenesisBlock, runtimeID); }
+    /**
+     * GetBlock fetches the given runtime block.
+     */
     runtimeClientGetBlock(request: types.RuntimeClientGetBlockRequest) { return this.callUnary(methodDescriptorRuntimeClientGetBlock, request); }
+    /**
+     * GetBlockByHash fetches the given runtime block by its block hash.
+     */
     runtimeClientGetBlockByHash(request: types.RuntimeClientGetTxByBlockHashRequest) { return this.callUnary(methodDescriptorRuntimeClientGetBlockByHash, request); }
+    /**
+     * GetTx fetches the given runtime transaction.
+     */
     runtimeClientGetTx(request: types.RuntimeClientGetTxRequest) { return this.callUnary(methodDescriptorRuntimeClientGetTx, request); }
+    /**
+     * GetTxByBlockHash fetches the given rutnime transaction where the
+     * block is identified by its hash instead of its round number.
+     */
     runtimeClientGetTxByBlockHash(request: types.RuntimeClientGetTxByBlockHashRequest) { return this.callUnary(methodDescriptorRuntimeClientGetTxByBlockHash, request); }
+    /**
+     * GetTxs fetches all runtime transactions in a given block.
+     */
     runtimeClientGetTxs(request: types.RuntimeClientGetTxsRequest) { return this.callUnary(methodDescriptorRuntimeClientGetTxs, request); }
+    /**
+     * QueryTx queries the indexer for a specific runtime transaction.
+     */
     runtimeClientQueryTx(request: types.RuntimeClientQueryTxRequest) { return this.callUnary(methodDescriptorRuntimeClientQueryTx, request); }
+    /**
+     * QueryTxs queries the indexer for specific runtime transactions.
+     */
     runtimeClientQueryTxs(request: types.RuntimeClientQueryTxsRequest) { return this.callUnary(methodDescriptorRuntimeClientQueryTxs, request); }
+    /**
+     * WaitBlockIndexed waits for a runtime block to be indexed by the indexer.
+     */
     runtimeClientWaitBlockIndexed(request: types.RuntimeClientWaitBlockIndexedRequest) { return this.callUnary(methodDescriptorRuntimeClientWaitBlockIndexed, request); }
+    /**
+     * WatchBlocks subscribes to blocks for a specific runtimes.
+     */
     runtimeClientWatchBlocks(runtimeID: Uint8Array) { return this.callServerStreaming(methodDescriptorRuntimeClientWatchBlocks, runtimeID); }
 
     // enclaverpc
+    /**
+     * CallEnclave sends the request bytes to the target enclave.
+     */
     enclaveRPCCallEnclave(request: types.EnclaveRPCCallEnclaveRequest) { return this.callUnary(methodDescriptorEnclaveRPCCallEnclave, request); }
 
     // consensus
+    /**
+     * SubmitTx submits a signed consensus transaction and waits for the transaction to be included
+     * in a block. Use SubmitTxNoWait if you only need to broadcast the transaction.
+     */
     consensusSubmitTx(tx: types.SignatureSigned) { return this.callUnary(methodDescriptorConsensusSubmitTx, tx); }
+    /**
+     * StateToGenesis returns the genesis state at the specified block height.
+     */
     consensusStateToGenesis(height: types.longnum) { return this.callUnary(methodDescriptorConsensusStateToGenesis, height); }
+    /**
+     * EstimateGas calculates the amount of gas required to execute the given transaction.
+     */
     consensusEstimateGas(req: types.ConsensusEstimateGasRequest) { return this.callUnary(methodDescriptorConsensusEstimateGas, req); }
+    /**
+     * GetSignerNonce returns the nonce that should be used by the given
+     * signer for transmitting the next transaction.
+     */
     consensusGetSignerNonce(req: types.ConsensusGetSignerNonceRequest) { return this.callUnary(methodDescriptorConsensusGetSignerNonce, req); }
+    /**
+     * GetEpoch returns the current epoch.
+     */
     consensusGetEpoch(height: types.longnum) { return this.callUnary(methodDescriptorConsensusGetEpoch, height); }
+    /**
+     * WaitEpoch waits for consensus to reach an epoch.
+     *
+     * Note that an epoch is considered reached even if any epoch greater than
+     * the one specified is reached (e.g., that the current epoch is already
+     * in the future).
+     */
     consensusWaitEpoch(epoch: types.longnum) { return this.callUnary(methodDescriptorConsensusWaitEpoch, epoch); }
+    /**
+     * GetBlock returns a consensus block at a specific height.
+     */
     consensusGetBlock(height: types.longnum) { return this.callUnary(methodDescriptorConsensusGetBlock, height); }
+    /**
+     * GetTransactions returns a list of all transactions contained within a
+     * consensus block at a specific height.
+     *
+     * NOTE: Any of these transactions could be invalid.
+     */
     consensusGetTransactions(height: types.longnum) { return this.callUnary(methodDescriptorConsensusGetTransactions, height); }
+    /**
+     * GetTransactionsWithResults returns a list of transactions and their
+     * execution results, contained within a consensus block at a specific
+     * height.
+     */
     consensusGetTransactionsWithResults(height: types.longnum) { return this.callUnary(methodDescriptorConsensusGetTransactionsWithResults, height); }
+    /**
+     * GetUnconfirmedTransactions returns a list of transactions currently in the local node's
+     * mempool. These have not yet been included in a block.
+     */
     consensusGetUnconfirmedTransactions() { return this.callUnary(methodDescriptorConsensusGetUnconfirmedTransactions, undefined); }
+    /**
+     * GetGenesisDocument returns the original genesis document.
+     */
     consensusGetGenesisDocument() { return this.callUnary(methodDescriptorConsensusGetGenesisDocument, undefined); }
+    /**
+     * GetStatus returns the current status overview.
+     */
     consensusGetStatus() { return this.callUnary(methodDescriptorConsensusGetStatus, undefined); }
+    /**
+     * WatchBlocks returns a channel that produces a stream of consensus
+     * blocks as they are being finalized.
+     */
     consensusWatchBlocks() { return this.callServerStreaming(methodDescriptorConsensusWatchBlocks, undefined); }
 
+    /**
+     * GetLightBlock returns a light version of the consensus layer block that can be used for light
+     * client verification.
+     */
     consensusLightGetLightBlock(height: types.longnum) { return this.callUnary(methodDescriptorConsensusLightGetLightBlock, height); }
+    /**
+     * GetParameters returns the consensus parameters for a specific height.
+     */
     consensusLightGetParameters(height: types.longnum) { return this.callUnary(methodDescriptorConsensusLightGetParameters, height); }
+    /**
+     * SyncGet fetches a single key and returns the corresponding proof.
+     */
     consensusLightStateSyncGet(request: types.StorageGetRequest) { return this.callUnary(methodDescriptorConsensusLightStateSyncGet, request); }
+    /**
+     * SyncGetPrefixes fetches all keys under the given prefixes and returns
+     * the corresponding proofs.
+     */
     consensusLightStateSyncGetPrefixes(request: types.StorageGetPrefixesRequest) { return this.callUnary(methodDescriptorConsensusLightStateSyncGetPrefixes, request); }
+    /**
+     * SyncIterate seeks to a given key and then fetches the specified
+     * number of following items based on key iteration order.
+     */
     consensusLightStateSyncIterate(request: types.StorageIterateRequest) { return this.callUnary(methodDescriptorConsensusLightStateSyncIterate, request); }
+    /**
+     * SubmitTxNoWait submits a signed consensus transaction, but does not wait for the transaction
+     * to be included in a block. Use SubmitTx if you need to wait for execution.
+     */
     consensusLightSubmitTxNoWait(tx: types.SignatureSigned) { return this.callUnary(methodDescriptorConsensusLightSubmitTxNoWait, tx); }
+    /**
+     * SubmitEvidence submits evidence of misbehavior.
+     */
     consensusLightSubmitEvidence(evidence: types.ConsensusEvidence) { return this.callUnary(methodDescriptorConsensusLightSubmitEvidence, evidence); }
 
     // control
+    /**
+     * RequestShutdown requests the node to shut down gracefully.
+     *
+     * If the wait argument is true then the method will also wait for the
+     * shutdown to complete.
+     */
     nodeControllerRequestShudown() { return this.callUnary(methodDescriptorNodeControllerRequestShutdown, undefined); }
+    /**
+     * WaitSync waits for the node to finish syncing.
+     */
     nodeControllerWaitSync() { return this.callUnary(methodDescriptorNodeControllerWaitSync, undefined); }
+    /**
+     * IsSynced checks whether the node has finished syncing.
+     */
     nodeControllerIsSynced() { return this.callUnary(methodDescriptorNodeControllerIsSynced, undefined); }
+    /**
+     * WaitReady waits for the node to accept runtime work.
+     */
     nodeControllerWaitReady() { return this.callUnary(methodDescriptorNodeControllerWaitReady, undefined); }
+    /**
+     * IsReady checks whether the node is ready to accept runtime work.
+     */
     nodeControllerIsReady() { return this.callUnary(methodDescriptorNodeControllerIsReady, undefined); }
+    /**
+     * UpgradeBinary submits an upgrade descriptor to a running node.
+     * The node will wait for the appropriate epoch, then update its binaries
+     * and shut down.
+     */
     nodeControllerUpgradeBinary(descriptor: types.UpgradeDescriptor) { return this.callUnary(methodDescriptorNodeControllerUpgradeBinary, descriptor); }
+    /**
+     * CancelUpgrade cancels a pending upgrade, unless it is already in progress.
+     */
     nodeControllerCancelUpgrade() { return this.callUnary(methodDescriptorNodeControllerCancelUpgrade, undefined); }
+    /**
+     * GetStatus returns the current status overview of the node.
+     */
     nodeControllerGetStatus() { return this.callUnary(methodDescriptorNodeControllerGetStatus, undefined); }
 
 }
