@@ -49,16 +49,6 @@ function createMethodDescriptorServerStreaming<REQ, RESP>(serviceName: string, m
     );
 }
 
-/*
-/\s*{\s*MethodName:\s*method(\w+)\.ShortName\(\),[^}]+},/g
-'const methodDescriptor???$1 = createMethodDescriptorUnary<void, void>('???', '$1');\n'
-*/
-
-/*
-/\s*{\s*StreamName:\s*method(\w+)\.ShortName\(\),[^}]+},/g
-'const methodDescriptor???$1 = createMethodDescriptorServerStreaming<void, void>('???', '$1');\n'
-*/
-
 // scheduler
 const methodDescriptorSchedulerGetValidators = createMethodDescriptorUnary<types.longnum, types.SchedulerValidator[]>('Scheduler', 'GetValidators');
 const methodDescriptorSchedulerGetCommittees = createMethodDescriptorUnary<types.SchedulerGetCommitteesRequest, types.SchedulerCommittee[]>('Scheduler', 'GetCommittees');
@@ -180,16 +170,6 @@ export class OasisNodeClient {
         const name = desc.name;
         return this.client.serverStreaming(this.base + name, request, null, desc);
     }
-
-    /*
-    /\s*{\s*MethodName:\s*method(\w+)\.ShortName\(\),[^}]+},/g
-    '???$1(arg: void) { return this.callUnary(methodDescriptor???$1, arg); }\n'
-    */
-
-    /*
-    /\s*{\s*StreamName:\s*method(\w+)\.ShortName\(\),[^}]+},/g
-    '???$1(arg: void) { return this.callServerStreaming(methodDescriptor???$1, arg); }\n'
-    */
 
     // scheduler
     schedulerGetValidators(height: types.longnum) { return this.callUnary(methodDescriptorSchedulerGetValidators, height); }
