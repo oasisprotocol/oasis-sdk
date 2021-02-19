@@ -120,3 +120,11 @@ export async function signExecutorCommitment(signer: signature.ContextSigner, ch
     const context = signature.combineChainContext(EXECUTOR_SIGNATURE_CONTEXT, chainContext);
     return await signature.signSigned(signer, context, misc.toCBOR(computeBody));
 }
+
+export async function verifyComputeResultsHeader(rakPub: Uint8Array, header: types.RoothashComputeResultsHeader, rakSig: Uint8Array) {
+    return await signature.verify(rakPub, COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT, misc.toCBOR(header), rakSig);
+}
+
+export async function signComputeResultsHeader(rakSigner: signature.ContextSigner, header: types.RoothashComputeResultsHeader) {
+    return await rakSigner.sign(COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT, misc.toCBOR(header));
+}
