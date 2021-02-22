@@ -24,13 +24,18 @@ export interface ContextSigner {
 
 const ED25519 = new elliptic.eddsa('ed25519');
 
-export async function openSigned(context: string, signed: types.SignatureSigned) {
-    const signerMessage = await prepareSignerMessage(context, signed.untrusted_raw_value);
+export async function verify(publicKey: Uint8Array, context: string, message: Uint8Array, signature: Uint8Array) {
+    const signerMessage = await prepareSignerMessage(context, message);
     const signerMessageA = Array.from(signerMessage);
-    const signatureA = Array.from(signed.signature.signature);
-    const publicKeyA = Array.from(signed.signature.public_key);
+    const publicKeyA = Array.from(publicKey);
+    const signatureA = Array.from(signature);
     // @ts-expect-error acceptance of array-like types is not modeled
     const sigOk = ED25519.verify(signerMessageA, signatureA, publicKeyA);
+    return sigOk;
+}
+
+export async function openSigned(context: string, signed: types.SignatureSigned) {
+    const sigOk = await verify(signed.signature.public_key, context, signed.untrusted_raw_value, signed.signature.signature);
     if (!sigOk) throw new Error('signature verification failed');
     return signed.untrusted_raw_value;
 }

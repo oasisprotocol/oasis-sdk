@@ -1,8 +1,27 @@
+/**
+ * ModuleName is the runtime client module name.
+ */
 export const CLIENT_MODULE_NAME = 'runtime/client';
+/**
+ * ErrNotFound is an error returned when the item is not found.
+ */
 export const CODE_NOT_FOUND = 1;
+/**
+ * ErrInternal is an error returned when an unspecified internal error occurs.
+ */
 export const CODE_INTERNAL = 2;
+/**
+ * ErrTransactionExpired is an error returned when transaction expired.
+ */
 export const CODE_TRANSACTION_EXPIRED = 3;
+/**
+ * ErrNotSynced is an error return if transaction is submitted before node has finished
+ * initial syncing.
+ */
 export const CODE_NOT_SYNCED = 4;
 
 export const HOST_PROTOCOL_MODULE_NAME = 'rhp/internal';
+/**
+ * ErrNotReady is the error reported when the Runtime Host Protocol is not initialized.
+ */
 export const CODE_NOT_READY = 1;

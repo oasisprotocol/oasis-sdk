@@ -2,27 +2,72 @@ import * as misc from './misc';
 import * as signature from './signature';
 import * as types from './types';
 
+/**
+ * RoleComputeWorker is the compute worker role.
+ */
 export const ROLE_COMPUTE_WORKER = 1 << 0;
+/**
+ * RoleStorageWorker is the storage worker role.
+ */
 export const ROLE_STORAGE_WORKER = 1 << 1;
+/**
+ * RoleKeyManager is the the key manager role.
+ */
 export const ROLE_KEY_MANAGER = 1 << 2;
+/**
+ * RoleValidator is the validator role.
+ */
 export const ROLE_VALIDATOR = 1 << 3;
+/**
+ * RoleConsensusRPC is the public consensus RPC services worker role.
+ */
 export const ROLE_CONSENSUS_RPC = 1 << 4;
 
+/**
+ * TEEHardwareInvalid is a non-TEE implementation.
+ */
 export const TEE_HARDWARE_INVALID = 0;
+/**
+ * TEEHardwareIntelSGX is an Intel SGX TEE implementation.
+ */
 export const TEE_HARDWARE_INTEL_SGX = 1;
+/**
+ * TEEHardwareReserved is the first reserved hardware implementation
+ * identifier. All equal or greater identifiers are reserved.
+ */
 export const TEE_HARDWARE_RESERVED = TEE_HARDWARE_INTEL_SGX + 1;
 
 export const INVALID_VERSION = 65536;
 
+/**
+ * LatestEntityDescriptorVersion is the latest entity descriptor version that should be used for
+ * all new descriptors. Using earlier versions may be rejected.
+ */
 export const LATEST_ENTITY_DESCRIPTOR_VERSION = 1;
+/**
+ * LatestNodeDescriptorVersion is the latest node descriptor version that should be used for all
+ * new descriptors. Using earlier versions may be rejected.
+ */
 export const LATEST_NODE_DESCRIPTOR_VERSION = 1;
 
+/**
+ * CodeNoError is the reserved "no error" code.
+ */
 export const CODE_NO_ERROR = 0;
 
+/**
+ * UnknownModule is the module name used when the module is unknown.
+ */
 export const UNKNOWN_MODULE = 'unknown';
 export const CODE_UNKNOWN_ERROR = 1;
 
 export const IDENTITY_MODULE_NAME = 'identity';
+/**
+ * ErrCertificateRotationForbidden is returned by RotateCertificates if
+ * TLS certificate rotation is forbidden.  This happens when rotation is
+ * enabled and an existing TLS certificate was successfully loaded
+ * (or a new one was generated and persisted to disk).
+ */
 export const CODE_CERTIFICATE_ROTATION_FORBIDDEN = 1;
 
 export async function openSignedEntity(context: string, signed: types.SignatureSigned) {
