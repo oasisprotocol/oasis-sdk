@@ -213,8 +213,8 @@ export class OasisNodeClient {
     registryGetNode(query: types.RegistryIDQuery) { return this.callUnary(methodDescriptorRegistryGetNode, query); }
     /**
      * GetNodeByConsensusAddress looks up a node by its consensus address at the
-	 * specified block height. The nature and format of the consensus address depends
-	 * on the specific consensus backend implementation used.
+     * specified block height. The nature and format of the consensus address depends
+     * on the specific consensus backend implementation used.
      */
     registryGetNodeByConsensusAddress(query: types.RegistryConsensusAddressQuery) { return this.callUnary(methodDescriptorRegistryGetNodeByConsensusAddress, query); }
     /**
@@ -231,7 +231,7 @@ export class OasisNodeClient {
     registryGetRuntime(query: types.RegistryNamespaceQuery) { return this.callUnary(methodDescriptorRegistryGetRuntime, query); }
     /**
      * GetRuntimes returns the registered Runtimes at the specified
-	 * block height.
+     * block height.
      */
     registryGetRuntimes(query: types.RegistryGetRuntimesQuery) { return this.callUnary(methodDescriptorRegistryGetRuntimes, query); }
     /**
@@ -244,21 +244,21 @@ export class OasisNodeClient {
     registryGetEvents(height: types.longnum) { return this.callUnary(methodDescriptorRegistryGetEvents, height); }
     /**
      * WatchEntities returns a channel that produces a stream of
-	 * EntityEvent on entity registration changes.
+     * EntityEvent on entity registration changes.
      */
     registryWatchEntities() { return this.callServerStreaming(methodDescriptorRegistryWatchEntities, undefined); }
     /**
      * WatchNodes returns a channel that produces a stream of
-	 * NodeEvent on node registration changes.
+     * NodeEvent on node registration changes.
      */
     registryWatchNodes() { return this.callServerStreaming(methodDescriptorRegistryWatchNodes, undefined); }
     /**
      * WatchNodeList returns a channel that produces a stream of NodeList.
-	 * Upon subscription, the node list for the current epoch will be sent
-	 * immediately.
-	 *
-	 * Each node list will be sorted by node ID in lexicographically ascending
-	 * order.
+     * Upon subscription, the node list for the current epoch will be sent
+     * immediately.
+     *
+     * Each node list will be sorted by node ID in lexicographically ascending
+     * order.
      */
     registryWatchNodeList() { return this.callServerStreaming(methodDescriptorRegistryWatchNodeList, undefined); }
     /**
