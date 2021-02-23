@@ -12,9 +12,25 @@ export type longnum = number | bigint;
  */
 export interface BeaconConsensusParameters {
     /**
+     * Backend is the beacon backend.
+     */
+    backend: string;
+    /**
+     * DebugMockBackend is flag for enabling the mock epochtime backend.
+     */
+    debug_mock_backend?: boolean;
+    /**
      * DebugDeterministic is true iff the output should be deterministic.
      */
     debug_deterministic?: boolean;
+    /**
+     * InsecureParameters are the beacon parameters for the insecure backend.
+     */
+    insecure_parameters?: BeaconInsecureParameters;
+    /**
+     * PVSSParameters are the beacon parameters for the PVSS backend.
+     */
+    pvss_parameters?: BeaconPVSSParameters;
 }
 
 /**
@@ -22,9 +38,53 @@ export interface BeaconConsensusParameters {
  */
 export interface BeaconGenesis {
     /**
+     * Base is the starting epoch.
+     */
+    base: longnum;
+    /**
      * Parameters are the beacon consensus parameters.
      */
     params: BeaconConsensusParameters;
+}
+
+/**
+ * InsecureParameters are the beacon parameters for the insecure backend.
+ */
+export interface BeaconInsecureParameters {
+    /**
+     * Interval is the epoch interval (in blocks).
+     */
+    interval: longnum;
+}
+
+/**
+ * PVSSCommit is a PVSS commitment transaction payload.
+ */
+export interface BeaconPVSSCommit {
+    epoch: longnum;
+    round: longnum;
+    commit?: PVSSCommit;
+}
+
+/**
+ * PVSSParameters are the beacon parameters for the PVSS backend.
+ */
+export interface BeaconPVSSParameters {
+    participants: number;
+    threshold: number;
+    commit_interval: longnum;
+    reveal_interval: longnum;
+    transition_delay: longnum;
+    debug_forced_participants?: Uint8Array[];
+}
+
+/**
+ * PVSSReveal is a PVSS reveal transaction payload.
+ */
+export interface BeaconPVSSReveal {
+    epoch: longnum;
+    round: longnum;
+    reveal?: PVSSReveal;
 }
 
 /**
@@ -34,6 +94,10 @@ export interface CommonAddress {
     IP: Uint8Array;
     Port: number;
     Zone: string;
+}
+
+export interface CommonBeaconInfo {
+    point: Uint8Array;
 }
 
 /**
@@ -94,6 +158,16 @@ export interface CommonConsensusInfo {
      * Addresses is the list of addresses at which the node can be reached.
      */
     addresses: CommonConsensusAddress[];
+}
+
+/**
+ * Constraints are the Intel SGX TEE constraints.
+ */
+export interface CommonConstraints {
+    /**
+     * Enclaves is the allowed MRENCLAVE/MRSIGNER pairs.
+     */
+    enclaves: CommonEnclaveIdentity[];
 }
 
 /**
@@ -163,7 +237,7 @@ export interface CommonNode extends CommonVersioned {
      * TODO: This is optional for now, make mandatory once enough
      * nodes provide this field.
      */
-    beacon?: unknown;
+    beacon?: CommonBeaconInfo;
     /**
      * Runtimes are the node's runtimes.
      */
@@ -186,6 +260,16 @@ export interface CommonP2PInfo {
      * Addresses is the list of addresses at which the node can be reached.
      */
     addresses: CommonAddress[];
+}
+
+/**
+ * ProtocolVersions are the protocol versions.
+ */
+export interface CommonProtocolVersions {
+    runtime_host_protocol: CommonVersion;
+    runtime_committee_protocol: CommonVersion;
+    consensus_protocol: CommonVersion;
+    toolchain: CommonVersion;
 }
 
 /**
@@ -249,7 +333,7 @@ export interface CommonTLSInfo {
 }
 
 /**
- * Version is a protocol or a runtime version.
+ * Version is a protocol version.
  */
 export interface CommonVersion {
     major?: number;
@@ -318,6 +402,7 @@ export interface ConsensusEvent {
     staking?: StakingEvent;
     registry?: RegistryEvent;
     roothash?: RoothashEvent;
+    governance?: GovernanceEvent;
 }
 
 /**
@@ -384,6 +469,10 @@ export interface ConsensusLightParameters {
      */
     height: longnum;
     /**
+     * Parameters are the backend agnostic consensus parameters.
+     */
+    parameters: ConsensusParameters;
+    /**
      * Meta contains the consensus backend specific consensus parameters.
      */
     meta: Uint8Array;
@@ -399,7 +488,7 @@ export interface ConsensusParameters {
     max_tx_size: longnum;
     max_block_size: longnum;
     max_block_gas: longnum;
-    max_evidence_num: number;
+    max_evidence_size: number;
     /**
      * StateCheckpointInterval is the expected state checkpoint interval (in blocks).
      */
@@ -434,6 +523,10 @@ export interface ConsensusResult {
  * Status is the current status overview.
  */
 export interface ConsensusStatus {
+    /**
+     * Version is the version of the consensus protocol that the node is using.
+     */
+    version: CommonVersion;
     /**
      * ConsensusVersion is the version of the consensus protocol that the node is using.
      */
@@ -627,6 +720,10 @@ export interface ControlStatus {
      * Registration is the node's registration status.
      */
     registration: ControlRegistrationStatus;
+    /**
+     * PendingUpgrades are the node's pending upgrades.
+     */
+    pending_upgrades: UpgradePendingUpgrade[];
 }
 
 /**
@@ -714,6 +811,10 @@ export interface GenesisDocument {
      */
     beacon: BeaconGenesis;
     /**
+     * Governance is the governance genesis state.
+     */
+    governance: GovernanceGenesis;
+    /**
      * Consensus is the consensus genesis state.
      */
     consensus: ConsensusGenesis;
@@ -727,6 +828,216 @@ export interface GenesisDocument {
      * genesis block but is otherwise ignored by the protocol.
      */
     extra_data: {[key: string]: Uint8Array};
+}
+
+/**
+ * CancelUpgradeProposal is an upgrade cancellation proposal.
+ */
+export interface GovernanceCancelUpgradeProposal {
+    proposal_id: longnum;
+}
+
+/**
+ * ConsensusParameters are the governance consensus parameters.
+ */
+export interface GovernanceConsensusParameters {
+    /**
+     * GasCosts are the governance transaction gas costs.
+     */
+    gas_costs?: {[op: string]: longnum};
+    /**
+     * MinProposalDeposit is the number of base units that are deposited when
+     * creating a new proposal.
+     */
+    min_proposal_deposit?: Uint8Array;
+    /**
+     * VotingPeriod is the number of epochs after which the voting for a proposal
+     * is closed and the votes are tallied.
+     */
+    voting_period?: longnum;
+    /**
+     * Quorum is he minimum percentage of voting power that needs to be cast on
+     * a proposal for the result to be valid.
+     */
+    quorum?: number;
+    /**
+     * Threshold is the minimum percentage of VoteYes votes in order for a
+     * proposal to be accepted.
+     */
+    threshold?: number;
+    /**
+     * UpgradeMinEpochDiff is the minimum number of epochs between the current
+     * epoch and the proposed upgrade epoch for the upgrade proposal to be valid.
+     * This is also the minimum number of epochs between two pending upgrades.
+     */
+    upgrade_min_epoch_diff?: longnum;
+    /**
+     * UpgradeCancelMinEpochDiff is the minimum number of epochs between the current
+     * epoch and the proposed upgrade epoch for the upgrade cancellation proposal to be valid.
+     */
+    upgrade_cancel_min_epoch_diff?: longnum;
+}
+
+/**
+ * Event signifies a governance event, returned via GetEvents.
+ */
+export interface GovernanceEvent {
+    height?: longnum;
+    tx_hash?: Uint8Array;
+    proposal_submitted?: GovernanceProposalSubmittedEvent;
+    proposal_executed?: GovernanceProposalExecutedEvent;
+    proposal_finalized?: GovernanceProposalFinalizedEvent;
+    vote?: GovernanceVoteEvent;
+}
+
+/**
+ * Genesis is the initial governance state for use in the genesis block.
+ *
+ * Note: PendingProposalUpgrades are not included in genesis, but are instead
+ * computed at InitChain from accepted proposals.
+ */
+export interface GovernanceGenesis {
+    /**
+     * Parameters are the genesis consensus parameters.
+     */
+    params: GovernanceConsensusParameters;
+    /**
+     * Proposals are the governance proposals.
+     */
+    proposals?: GovernanceProposal[];
+    /**
+     * VoteEntries are the governance proposal vote entries.
+     */
+    vote_entries?: Map<longnum, GovernanceVoteEntry[]>;
+}
+
+/**
+ * Proposal is a consensus upgrade proposal.
+ */
+export interface GovernanceProposal {
+    /**
+     * ID is the unique identifier of the proposal.
+     */
+    id: longnum;
+    /**
+     * Submitter is the address of the proposal submitter.
+     */
+    submitter: Uint8Array;
+    /**
+     * State is the state of the proposal.
+     */
+    state: number;
+    /**
+     * Deposit is the deposit attached to the proposal.
+     */
+    deposit: Uint8Array;
+    /**
+     * Content is the content of the proposal.
+     */
+    content: GovernanceProposalContent;
+    /**
+     * CreatedAt is the epoch at which the proposal was created.
+     */
+    created_at: longnum;
+    /**
+     * ClosesAt is the epoch at which the proposal will close and votes will
+     * be tallied.
+     */
+    closes_at: longnum;
+    /**
+     * Results are the final tallied results after the voting period has
+     * ended.
+     */
+    results?: Map<number, Uint8Array>;
+    /**
+     * InvalidVotes is the number of invalid votes after tallying.
+     */
+    invalid_votes: longnum;
+}
+
+/**
+ * ProposalContent is a consensus layer governance proposal content.
+ */
+export interface GovernanceProposalContent {
+    upgrade?: UpgradeDescriptor;
+    cancel_upgrade?: GovernanceCancelUpgradeProposal;
+}
+
+/**
+ * ProposalExecutedEvent is emitted when a proposal is executed.
+ */
+export interface GovernanceProposalExecutedEvent {
+    /**
+     * ID is the unique identifier of a proposal.
+     */
+    id: longnum;
+}
+
+/**
+ * ProposalFinalizedEvent is the event emitted when a proposal is finalized.
+ */
+export interface GovernanceProposalFinalizedEvent {
+    /**
+     * ID is the unique identifier of a proposal.
+     */
+    id: longnum;
+    state: number;
+}
+
+/**
+ * ProposalQuery is a proposal query.
+ */
+export interface GovernanceProposalQuery {
+    height: longnum;
+    id: longnum;
+}
+
+/**
+ * ProposalSubmittedEvent is the event emitted when a new proposal is submitted.
+ */
+export interface GovernanceProposalSubmittedEvent {
+    /**
+     * ID is the unique identifier of a proposal.
+     */
+    id: longnum;
+    /**
+     * Submitter is the staking account address of the submitter.
+     */
+    submitter: Uint8Array;
+}
+
+/**
+ * ProposalVote is a vote for a proposal.
+ */
+export interface GovernanceProposalVote {
+    id: longnum;
+    vote: number;
+}
+
+/**
+ * VoteEntry contains data about a cast vote.
+ */
+export interface GovernanceVoteEntry {
+    voter: Uint8Array;
+    vote: number;
+}
+
+/**
+ * VoteEvent is the event emitted when a vote is cast.
+ */
+export interface GovernanceVoteEvent {
+    /**
+     * ID is the unique identifier of a proposal.
+     */
+    id: longnum;
+    /**
+     * Submitter is the staking account address of the vote submitter.
+     */
+    submitter: Uint8Array;
+    /**
+     * Vote is the cast vote.
+     */
+    vote: number;
 }
 
 /**
@@ -814,6 +1125,58 @@ export interface KeyManagerStatus {
 }
 
 /**
+ * Commit is a PVSS commit.
+ */
+export interface PVSSCommit {
+    index: number;
+    shares: PVSSCommitShare;
+}
+
+/**
+ * CommitShare is a commit share.
+ */
+export interface PVSSCommitShare extends PVSSPubVerShare {
+    /**
+     * Share of the public commitment polynomial
+     */
+    poly_v: Uint8Array;
+}
+
+/**
+ * PubVerShare is a public verifiable share (`pvss.PubVerShare`)
+ */
+export interface PVSSPubVerShare {
+    /**
+     * Encrypted/decrypted share
+     */
+    v: Uint8Array;
+    /**
+     * Challenge
+     */
+    c: Uint8Array;
+    /**
+     * Response
+     */
+    r: Uint8Array;
+    /**
+     * Public commitment with respect to base point G
+     */
+    vg: Uint8Array;
+    /**
+     * Public commitment with respect to base point H
+     */
+    vh: Uint8Array;
+}
+
+/**
+ * Reveal is a PVSS reveal.
+ */
+export interface PVSSReveal {
+    index: number;
+    decrypted_shares: Map<number, PVSSPubVerShare>;
+}
+
+/**
  * AnyNodeRuntimeAdmissionPolicy allows any node to register.
  */
 export type RegistryAnyNodeRuntimeAdmissionPolicy = Map<never, never>;
@@ -871,6 +1234,10 @@ export interface RegistryConsensusParameters {
      * at registration time that a single node registration is valid for.
      */
     max_node_expiration?: longnum;
+    /**
+     * EnableRuntimeGovernanceModels is a set of enabled runtime governance models.
+     */
+    enable_runtime_governance_models?: Map<number, boolean>;
 }
 
 /**
@@ -882,11 +1249,22 @@ export interface RegistryEntityEvent {
     is_registration: boolean;
 }
 
+export interface RegistryEntityWhitelistConfig {
+    /**
+     * MaxNodes is the maximum number of nodes that an entity can register under
+     * the given runtime for a specific role. If the map is empty or absent, the
+     * number of nodes is unlimited. If the map is present and non-empty, the
+     * the number of nodes is restricted to the specified maximum (where zero
+     * means no nodes allowed), any missing roles imply zero nodes.
+     */
+    max_nodes?: Map<number, number>;
+}
+
 /**
  * EntityWhitelistRuntimeAdmissionPolicy allows only whitelisted entities' nodes to register.
  */
 export interface RegistryEntityWhitelistRuntimeAdmissionPolicy {
-    entities: Map<Uint8Array, boolean>;
+    entities: Map<Uint8Array, RegistryEntityWhitelistConfig>;
 }
 
 /**
@@ -908,19 +1286,24 @@ export interface RegistryExecutorParameters {
     /**
      * GroupSize is the size of the committee.
      */
-    group_size: longnum;
+    group_size: number;
     /**
      * GroupBackupSize is the size of the discrepancy resolution group.
      */
-    group_backup_size: longnum;
+    group_backup_size: number;
     /**
      * AllowedStragglers is the number of allowed stragglers.
      */
-    allowed_stragglers: longnum;
+    allowed_stragglers: number;
     /**
      * RoundTimeout is the round timeout in consensus blocks.
      */
     round_timeout: longnum;
+    /**
+     * MaxMessages is the maximum number of messages that can be emitted by the runtime in a
+     * single round.
+     */
+    max_messages: number;
 }
 
 /**
@@ -938,11 +1321,11 @@ export interface RegistryGenesis {
     /**
      * Runtimes is the initial list of runtimes.
      */
-    runtimes?: SignatureSigned[];
+    runtimes?: RegistryRuntime[];
     /**
      * SuspendedRuntimes is the list of suspended runtimes.
      */
-    suspended_runtimes?: SignatureSigned[];
+    suspended_runtimes?: RegistryRuntime[];
     /**
      * Nodes is the initial list of nodes.
      */
@@ -967,6 +1350,20 @@ export interface RegistryGetRuntimesQuery {
 export interface RegistryIDQuery {
     height: longnum;
     id: Uint8Array;
+}
+
+/**
+ * MaxNodesConstraint specifies that only the given number of nodes may be eligible per entity.
+ */
+export interface RegistryMaxNodesConstraint {
+    limit: number;
+}
+
+/**
+ * MinPoolSizeConstraint is the minimum required candidate pool size constraint.
+ */
+export interface RegistryMinPoolSizeConstraint {
+    limit: number;
 }
 
 /**
@@ -1012,6 +1409,13 @@ export interface RegistryNodeStatus {
      * cleared (set to zero) in order for the node to become unfrozen.
      */
     freeze_end_time: longnum;
+    /**
+     * ElectionEligibleAfter specifies the epoch after which a node is
+     * eligible to be included in non-validator committee elections.
+     *
+     * Note: A value of 0 is treated unconditionally as "ineligible".
+     */
+    election_eligible_after: longnum;
 }
 
 /**
@@ -1073,9 +1477,17 @@ export interface RegistryRuntime extends CommonVersioned {
      */
     admission_policy: RegistryRuntimeAdmissionPolicy;
     /**
+     * Constraints are the node scheduling constraints.
+     */
+    constraints: Map<number, Map<number, RegistrySchedulingConstraints>>;
+    /**
      * Staking stores the runtime's staking-related parameters.
      */
     staking?: RegistryRuntimeStakingParameters;
+    /**
+     * GovernanceModel specifies the runtime governance model.
+     */
+    governance_model: number;
 }
 
 /**
@@ -1135,6 +1547,31 @@ export interface RegistryRuntimeStakingParameters {
      * threshold of all the runtimes.
      */
     thresholds?: Map<number, Uint8Array>;
+    /**
+     * Slashing are the per-runtime misbehavior slashing parameters.
+     */
+    slashing?: Map<number, StakingSlash>;
+    /**
+     * RewardSlashEquvocationRuntimePercent is the percentage of the reward obtained when slashing
+     * for equivocation that is transferred to the runtime's account.
+     */
+    reward_equivocation?: number;
+    /**
+     * RewardSlashBadResultsRuntimePercent is the percentage of the reward obtained when slashing
+     * for incorrect results that is transferred to the runtime's account.
+     */
+    reward_bad_results?: number;
+}
+
+/**
+ * SchedulingConstraints are the node scheduling constraints.
+ *
+ * Multiple fields may be set in which case the ALL the constraints must be satisfied.
+ */
+export interface RegistrySchedulingConstraints {
+    validator_set?: RegistryValidatorSetConstraint;
+    max_nodes?: RegistryMaxNodesConstraint;
+    min_pool_size?: RegistryMinPoolSizeConstraint;
 }
 
 /**
@@ -1144,12 +1581,12 @@ export interface RegistryStorageParameters {
     /**
      * GroupSize is the size of the storage group.
      */
-    group_size: longnum;
+    group_size: number;
     /**
      * MinWriteReplication is the number of nodes to which any writes must be replicated before
      * being assumed to be committed. It must be less than or equal to the GroupSize.
      */
-    min_write_replication: longnum;
+    min_write_replication: number;
     /**
      * MaxApplyWriteLogEntries is the maximum number of write log entries when performing an Apply
      * operation.
@@ -1209,6 +1646,12 @@ export interface RegistryUnfreezeNode {
 }
 
 /**
+ * ValidatorSetConstraint specifies that the entity must have a node that is part of the validator
+ * set. No other options can currently be specified.
+ */
+export type RegistryValidatorSetConstraint = Map<never, never>;
+
+/**
  * VersionInfo is the per-runtime version information.
  */
 export interface RegistryVersionInfo {
@@ -1255,11 +1698,13 @@ export interface RoothashBlock {
  */
 export interface RoothashComputeBody {
     header: RoothashComputeResultsHeader;
-    storage_signatures: SignatureSignature[];
-    rak_sig: Uint8Array;
+    failure?: number;
     txn_sched_sig: SignatureSignature;
     input_root: Uint8Array;
     input_storage_sigs: SignatureSignature;
+    storage_signatures?: SignatureSignature[];
+    rak_sig?: Uint8Array;
+    messages?: RoothashMessage[];
 }
 
 /**
@@ -1275,9 +1720,9 @@ export interface RoothashComputeBody {
 export interface RoothashComputeResultsHeader {
     round: longnum;
     previous_hash: Uint8Array;
-    io_root: Uint8Array;
-    state_root: Uint8Array;
-    messages: RoothashMessage[];
+    io_root?: Uint8Array;
+    state_root?: Uint8Array;
+    messages_hash?: Uint8Array;
 }
 
 /**
@@ -1298,6 +1743,31 @@ export interface RoothashConsensusParameters {
      * related checks and operations.
      */
     debug_bypass_stake?: boolean;
+    /**
+     * MaxRuntimeMessages is the maximum number of allowed messages that can be emitted by a runtime
+     * in a single round.
+     */
+    max_runtime_messages: number;
+    /**
+     * MaxEvidenceAge is the maximum age of submitted evidence in the number of rounds.
+     */
+    max_evidence_age: longnum;
+}
+
+/**
+ * EquivocationBatchEvidence is evidence of executor proposed batch equivocation.
+ */
+export interface RoothashEquivocationBatchEvidence {
+    batch_a: SignatureSigned;
+    batch_b: SignatureSigned;
+}
+
+/**
+ * EquivocationExecutorEvidence is evidence of executor commitment equivocation.
+ */
+export interface RoothashEquivocationExecutorEvidence {
+    commit_a: SignatureSigned;
+    commit_b: SignatureSigned;
 }
 
 /**
@@ -1310,6 +1780,16 @@ export interface RoothashEvent {
     executor_committed?: RoothashExecutorCommittedEvent;
     execution_discrepancy?: RoothashExecutionDiscrepancyDetectedEvent;
     finalized?: RoothashFinalizedEvent;
+    message?: RoothashMessageEvent;
+}
+
+/**
+ * Evidence is an evidence of node misbehaviour.
+ */
+export interface RoothashEvidence {
+    id: Uint8Array;
+    equivocation_executor?: RoothashEquivocationExecutorEvidence;
+    equivocation_batch?: RoothashEquivocationBatchEvidence;
 }
 
 /**
@@ -1323,6 +1803,14 @@ export interface RoothashExecutionDiscrepancyDetectedEvent {
 }
 
 /**
+ * ExecutorCommit is the argument set for the ExecutorCommit method.
+ */
+export interface RoothashExecutorCommit {
+    id: Uint8Array;
+    commits: SignatureSigned[];
+}
+
+/**
  * ExecutorCommittedEvent is an event emitted each time an executor node commits.
  */
 export interface RoothashExecutorCommittedEvent {
@@ -1330,6 +1818,14 @@ export interface RoothashExecutorCommittedEvent {
      * Commit is the executor commitment.
      */
     commit: SignatureSigned;
+}
+
+/**
+ * ExecutorProposerTimeoutRequest is an executor proposer timeout request.
+ */
+export interface RoothashExecutorProposerTimeoutRequest {
+    id: Uint8Array;
+    round: longnum;
 }
 
 /**
@@ -1348,9 +1844,19 @@ export interface RoothashGenesis {
      */
     params: RoothashConsensusParameters;
     /**
-     * RuntimeStates is the per-runtime map of genesis blocks.
+     * RuntimeStates are the runtime states at genesis.
      */
-    runtime_states?: Map<Uint8Array, RegistryRuntimeGenesis>;
+    runtime_states?: Map<Uint8Array, RoothashGenesisRuntimeState>;
+}
+
+/**
+ * GenesisRuntimeState contains state for runtimes that are restored in a genesis block.
+ */
+export interface RoothashGenesisRuntimeState extends RegistryRuntimeGenesis {
+    /**
+     * MessageResults are the message results emitted at the last processed round.
+     */
+    message_results?: RoothashMessageEvent[];
 }
 
 /**
@@ -1392,9 +1898,9 @@ export interface RoothashHeader {
      */
     state_root: Uint8Array;
     /**
-     * Messages are the roothash messages sent in this round.
+     * MessagesHash is the hash of emitted runtime messages.
      */
-    messages: RoothashMessage[];
+    messages_hash: Uint8Array;
     /**
      * StorageSignatures are the storage receipt signatures for the merkle
      * roots.
@@ -1402,11 +1908,79 @@ export interface RoothashHeader {
     storage_signatures: SignatureSignature[];
 }
 
-// these will be decoded into Map until we define a message
 /**
- * Message is a roothash message that can be sent by a runtime.
+ * Message is a message that can be sent by a runtime.
  */
-export type RoothashMessage = Map<never, never>;
+export interface RoothashMessage {
+    staking?: RoothashStakingMessage;
+    registry?: RoothashRegistryMessage;
+}
+
+/**
+ * MessageEvent is a runtime message processed event.
+ */
+export interface RoothashMessageEvent {
+        module?: string;
+        code?: number;
+        index?: number;
+}
+
+/**
+ * ProposedBatch is the message sent from the transaction scheduler
+ * to executor workers after a batch is ready to be executed.
+ *
+ * Don't forget to bump CommitteeProtocol version in go/common/version
+ * if you change anything in this struct.
+ */
+export interface RoothashProposedBatch {
+    /**
+     * IORoot is the I/O root containing the inputs (transactions) that
+     * the executor node should use.
+     */
+    io_root: Uint8Array;
+    /**
+     * StorageSignatures are the storage receipt signatures for the I/O root.
+     */
+    storage_signatures: SignatureSignature[];
+    /**
+     * Header is the block header on which the batch should be based.
+     */
+    header: RoothashHeader;
+}
+
+/**
+ * RegistryMessage is a runtime message that allows a runtime to perform staking operations.
+ */
+export interface RoothashRegistryMessage extends CommonVersioned {
+    update_runtime?: RegistryRuntime;
+}
+
+/**
+ * StakingMessage is a runtime message that allows a runtime to perform staking operations.
+ */
+export interface RoothashStakingMessage extends CommonVersioned {
+    transfer?: StakingTransfer;
+    withdraw?: StakingWithdraw;
+}
+
+/**
+ * CheckTxRequest is a CheckTx request.
+ */
+export interface RuntimeClientCheckTxRequest {
+    runtime_id: Uint8Array;
+    data: Uint8Array;
+}
+
+/**
+ * Event is an event emitted by a runtime in the form of a runtime transaction tag.
+ *
+ * Key and value semantics are runtime-dependent.
+ */
+export interface RuntimeClientEvent {
+    key: Uint8Array;
+    value: Uint8Array;
+    tx_hash: Uint8Array;
+}
 
 /**
  * GetBlockByHashRequest is a GetBlockByHash request.
@@ -1420,6 +1994,14 @@ export interface RuntimeClientGetBlockByHashRequest {
  * GetBlockRequest is a GetBlock request.
  */
 export interface RuntimeClientGetBlockRequest {
+    runtime_id: Uint8Array;
+    round: longnum;
+}
+
+/**
+ * GetEventsRequest is a GetEvents request.
+ */
+export interface RuntimeClientGetEventsRequest {
     runtime_id: Uint8Array;
     round: longnum;
 }
@@ -1494,6 +2076,23 @@ export interface RuntimeClientQueryCondition {
      * of the values will match.
      */
     values: Uint8Array[];
+}
+
+/**
+ * QueryRequest is a Query request.
+ */
+export interface RuntimeClientQueryRequest {
+    runtime_id: Uint8Array;
+    round: longnum;
+    method: string;
+    args: unknown;
+}
+
+/**
+ * QueryResponse is a response to the runtime query.
+ */
+export interface RuntimeClientQueryResponse {
+    data: unknown;
 }
 
 /**
@@ -1708,6 +2307,35 @@ export interface StakingAddEscrowEvent {
 }
 
 /**
+ * Allow is a beneficiary allowance configuration.
+ */
+export interface StakingAllow {
+    beneficiary: Uint8Array;
+    negative?: boolean;
+    amount_change: Uint8Array;
+}
+
+/**
+ * AllowanceChangeEvent is the event emitted when allowance is changed for a beneficiary.
+ */
+export interface StakingAllowanceChangeEvent {
+    owner: Uint8Array;
+    beneficiary: Uint8Array;
+    allowance: Uint8Array;
+    negative?: boolean;
+    amount_change: Uint8Array;
+}
+
+/**
+ * AllowanceQuery is an allowance query.
+ */
+export interface StakingAllowanceQuery {
+    height: longnum;
+    owner: Uint8Array;
+    beneficiary: Uint8Array;
+}
+
+/**
  * AmendCommissionSchedule is an amendment to a commission schedule.
  */
 export interface StakingAmendCommissionSchedule {
@@ -1818,6 +2446,10 @@ export interface StakingConsensusParameters {
     disable_delegation?: boolean;
     undisable_transfers_from?: Map<Uint8Array, boolean>;
     /**
+     * MaxAllowances is the maximum number of allowances an account can have. Zero means disabled.
+     */
+    max_allowances: number;
+    /**
      * FeeSplitWeightPropose is the proportion of block fee portions that go to the proposer.
      */
     fee_split_weight_propose: Uint8Array;
@@ -1893,6 +2525,7 @@ export interface StakingEvent {
     transfer?: StakingTransferEvent;
     burn?: StakingBurnEvent;
     escrow?: StakingEscrowEvent;
+    allowance_change?: StakingAllowanceChangeEvent;
 }
 
 /**
@@ -1901,6 +2534,7 @@ export interface StakingEvent {
 export interface StakingGeneralAccount {
     balance?: Uint8Array;
     nonce?: longnum;
+    allowances?: Map<Uint8Array, Uint8Array>;
 }
 
 /**
@@ -1933,6 +2567,10 @@ export interface StakingGenesis {
      * LastBlockFees are the collected fees for previous block.
      */
     last_block_fees: Uint8Array;
+    /**
+     * GovernanceDeposits are network's governance deposits.
+     */
+    governance_deposits: Uint8Array;
     /**
      * Ledger is a map of staking accounts.
      */
@@ -2035,7 +2673,7 @@ export interface StakingTakeEscrowEvent {
 }
 
 /**
- * ThresholdQuery is a treshold query.
+ * ThresholdQuery is a threshold query.
  */
 export interface StakingThresholdQuery {
     height: longnum;
@@ -2061,9 +2699,21 @@ export interface StakingTransferEvent {
 }
 
 /**
+ * Withdraw is a withdrawal from an account.
+ */
+export interface StakingWithdraw {
+    from: Uint8Array;
+    amount: Uint8Array;
+}
+
+/**
  * ApplyOp is an apply operation within a batch of apply operations.
  */
 export interface StorageApplyOp {
+    /**
+     * ApplyOp is an apply operation within a batch of apply operations.
+     */
+    root_type: number;
     /**
      * SrcRound is the source root round.
      */
@@ -2089,6 +2739,7 @@ export interface StorageApplyOp {
  */
 export interface StorageApplyRequest {
     namespace: Uint8Array;
+    root_type: number;
     src_round: longnum;
     src_root: Uint8Array;
     dst_round: longnum;
@@ -2213,6 +2864,10 @@ export interface StorageReceiptBody {
      */
     round: longnum;
     /**
+     * RootTypes are the storage types of the merkle roots in Roots.
+     */
+    root_types: number[];
+    /**
      * Roots are the merkle roots of the merklized data structure that the
      * storage node is certifying to store.
      */
@@ -2231,6 +2886,10 @@ export interface StorageRoot {
      * Version is the monotonically increasing version number in which the root is stored.
      */
     version: longnum;
+    /**
+     * Type is the type of storage this root is used for.
+     */
+    root_type: number;
     /**
      * Hash is the merkle root hash.
      */
@@ -2280,16 +2939,42 @@ export interface UpgradeDescriptor {
     /**
      * Method is the upgrade method that should be used for this upgrade.
      */
-    method: string;
+    method: number;
     /**
-     * Identifier is a hash of the binary to be used for upgrading.
-     * Upgrade methods other than "internal" may have differently formatted identifiers.
+     * Identifier is the upgrade method specific upgrade identifier.
      */
-    identifier: string;
+    identifier: unknown;
     /**
      * Epoch is the epoch at which the upgrade should happen.
      */
     epoch: longnum;
+}
+/**
+ * PendingUpgrade describes a currently pending upgrade and includes the
+ * submitted upgrade descriptor.
+ */
+export interface UpgradePendingUpgrade {
+    /**
+     * Descriptor is the upgrade descriptor describing the upgrade.
+     */
+    descriptor: UpgradeDescriptor;
+    /**
+     * SubmittingVersion is the version of the node used to submit the descriptor.
+     */
+    submitting_version: string;
+    /**
+     * RunningVersion is the version of the node trying to execute the descriptor.
+     */
+    running_version: string;
+    /**
+     * UpgradeHeight is the height at which the upgrade epoch was reached
+     * (or InvalidUpgradeHeight if it hasn't been reached yet).
+     */
+    upgrade_height: longnum;
+    /**
+     * LastCompletedStage is the last upgrade stage that was successfully completed.
+     */
+    last_completed_stage: number;
 }
 
 /**
@@ -2309,13 +2994,13 @@ export interface WorkerCommonStatus {
      */
     last_committee_update_height: longnum;
     /**
-     * ExecutorRole is the node's role in the executor committee.
+     * ExecutorRoles are the node's roles in the executor committee.
      */
-    executor_role: number;
+    executor_roles: number[];
     /**
-     * StorageRole is the node's role in the storage committee.
+     * StorageRole are the node's roles in the storage committee.
      */
-    storage_role: number;
+    storage_roles: number[];
     /**
      * IsTransactionScheduler indicates whether the node is a transaction scheduler in this round.
      */

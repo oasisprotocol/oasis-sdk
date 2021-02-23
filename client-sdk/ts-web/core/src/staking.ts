@@ -9,6 +9,14 @@ export const ADDRESS_V0_CONTEXT_IDENTIFIER = 'oasis-core/address: staking';
  * AddressV0Context is the unique context for v0 staking account addresses.
  */
 export const ADDRESS_V0_CONTEXT_VERSION = 0;
+/**
+ * AddressRuntimeV0Context is the unique context for v0 runtime account addresses.
+ */
+export const ADDRESS_RUNTIME_V0_CONTEXT_IDENTIFIER = 'oasis-core/address: runtime';
+/**
+ * AddressRuntimeV0Context is the unique context for v0 runtime account addresses.
+ */
+export const ADDRESS_RUNTIME_V0_CONTEXT_VERSION = 0;
 
 /**
  * AddressBech32HRP is the unique human readable part of Bech32 encoded
@@ -36,6 +44,14 @@ export const METHOD_RECLAIM_ESCROW = 'staking.ReclaimEscrow';
  * MethodAmendCommissionSchedule is the method name for amending commission schedules.
  */
 export const METHOD_AMEND_COMMISSION_SCHEDULE = 'staking.AmendCommissionSchedule';
+/**
+ * MethodAllow is the method name for setting a beneficiary allowance.
+ */
+export const METHOD_ALLOW = 'staking.Allow';
+/**
+ * MethodWithdraw is the method name for
+ */
+export const METHOD_WITHDRAW = 'staking.Withdraw';
 
 export const KIND_ENTITY = 0;
 export const KIND_NODE_VALIDATOR = 1;
@@ -47,10 +63,35 @@ export const KIND_RUNTIME_KEY_MANAGER = 6;
 export const KIND_MAX = KIND_RUNTIME_KEY_MANAGER;
 
 /**
- * SlashDoubleSigning is slashing due to double signing.
+ * SlashConsensusEquivocation is slashing due to equivocation.
  */
-export const SLASH_DOUBLE_SIGNING = 0;
-export const SLASH_MAX = SLASH_DOUBLE_SIGNING;
+export const SLASH_CONSENSUS_EQUIVOCATION = 0x00;
+/**
+ * SlashBeaconInvalidCommit is slashing due to invalid commit behavior.
+ */
+export const SLASH_BEACON_INVALID_COMMIT = 0x01;
+/**
+ * SlashBeaconInvalidReveal is slashing due to invalid reveal behavior.
+ */
+export const SLASH_BEACON_INVALID_REVEAL = 0x02;
+/**
+ * SlashBeaconNonparticipation is slashing due to nonparticipation.
+ */
+export const SLASH_BEACON_NONPARTICIPATION = 0x03;
+/**
+ * SlashConsensusLightClientAttack is slashing due to light client attacks.
+ */
+export const SLASH_CONSENSUS_LIGHT_CLIENT_ATTACK = 0x04;
+/**
+ * SlashRuntimeIncorrectResults is slashing due to submission of incorrect
+ * results in runtime executor commitments.
+ */
+export const SLASH_RUNTIME_INCORRECT_RESULTS = 0x80;
+/**
+ * SlashRuntimeEquivocation is slashing due to signing two different
+ * executor commits or proposed batches for the same round.
+ */
+export const SLASH_RUNTIME_EQUIVOCATION = 0x81;
 
 /**
  * GasOpTransfer is the gas operation identifier for transfer.
@@ -72,6 +113,14 @@ export const GAS_OP_RECLAIM_ESCROW = 'reclaim_escrow';
  * GasOpAmendCommissionSchedule is the gas operation identifier for amend commission schedule.
  */
 export const GAS_OP_AMEND_COMMISSION_SCHEDULE = 'amend_commission_schedule';
+/**
+ * GasOpAllow is the gas operation identifier for allow.
+ */
+export const GAS_OP_ALLOW = 'allow';
+/**
+ * GasOpWithdraw is the gas operation identifier for withdraw.
+ */
+export const GAS_OP_WITHDRAW = 'withdraw';
 
 /**
  * ModuleName is a unique module name for the staking module.
@@ -105,6 +154,11 @@ export const CODE_FORBIDDEN = 5;
  * is specified in a query.
  */
 export const CODE_INVALID_THRESHOLD = 6;
+/**
+ * ErrTooManyAllowances is the error returned when the number of allowances per account would
+ * exceed the maximum allowed number.
+ */
+export const CODE_TOO_MANY_ALLOWANCES = 7;
 
 /**
  * ModuleName is a unique module name for the staking/token module.
@@ -117,7 +171,11 @@ export const TOKEN_MODULE_NAME = 'staking/token';
 export const CODE_INVALID_TOKEN_VALUE_EXPONENT = 1;
 
 export async function addressFromPublicKey(pk: Uint8Array) {
-    return await address.fromPublicKey(ADDRESS_V0_CONTEXT_IDENTIFIER, ADDRESS_V0_CONTEXT_VERSION, pk);
+    return await address.fromData(ADDRESS_V0_CONTEXT_IDENTIFIER, ADDRESS_V0_CONTEXT_VERSION, pk);
+}
+
+export async function addressFromRuntimeID(id: Uint8Array) {
+    return await address.fromData(ADDRESS_RUNTIME_V0_CONTEXT_IDENTIFIER, ADDRESS_RUNTIME_V0_CONTEXT_VERSION, id);
 }
 
 export function addressToBech32(addr: Uint8Array) {
@@ -143,4 +201,12 @@ export async function commonPoolAddress() {
  */
 export async function feeAccumulatorAddress() {
     return await addressFromPublicKey(misc.fromHex('1abe11edfeeaccffffffffffffffffffffffffffffffffffffffffffffffffff'));
+}
+
+/**
+ * GovernanceDepositsAddress is the governance deposits address.
+ * This address is reserved to prevent it from being accidentally used in the actual ledger.
+ */
+export async function governanceDepositsAddress() {
+    return await addressFromPublicKey(misc.fromHex('1abe11eddeaccfffffffffffffffffffffffffffffffffffffffffffffffffff'));
 }

@@ -1,8 +1,18 @@
 /**
- * UpgradeMethInternal is the internal upgrade method,
- * where the node binary itself has the migration code.
+ * UpgradeStageStartup is the startup upgrade stage, executed at the beginning of node startup.
  */
-export const UPGRADE_METH_INTERNAL = 'internal';
+export const UPGRADE_STAGE_STARTUP = 1;
+/**
+ * UpgradeStageConsensus is the upgrade stage carried out during consensus events.
+ */
+export const UPGRADE_STAGE_CONSENSUS = 2;
+export const UPGRADE_STAGE_LAST = UPGRADE_STAGE_CONSENSUS;
+
+/**
+ * UpgradeMethodInternal is the internal upgrade method, where the node
+ * binary itself has the migration code.
+ */
+export const UPGRADE_METHOD_INTERNAL = 1;
 
 /**
  * ModuleName is the upgrade module name.
@@ -29,7 +39,7 @@ export const CODE_NEW_TOO_SOON = 3;
  */
 export const CODE_INVALID_RESUMING_VERSION = 4;
 /**
- * ErrAlreadyPending is the error returned from SubmitDescriptor when there is already an upgrade pending.
+ * ErrAlreadyPending is the error returned from SubmitDescriptor when the specific upgrade is already pending.
  */
 export const CODE_ALREADY_PENDING = 5;
 /**

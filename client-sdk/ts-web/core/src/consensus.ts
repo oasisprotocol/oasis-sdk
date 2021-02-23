@@ -59,6 +59,10 @@ export const CODE_UNSUPPORTED = 4;
  * ErrDuplicateTx is the error returned when the transaction already exists in the mempool.
  */
 export const CODE_DUPLICATE_TX = 5;
+/**
+ * ErrInvalidArgument is the error returned when the request contains an invalid argument.
+ */
+export const CODE_INVALID_ARGUMENT = 6;
 
 /**
  * moduleName is the module name used for error definitions.

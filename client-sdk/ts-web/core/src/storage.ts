@@ -10,6 +10,23 @@ export const RECEIPT_SIGNATURE_CONTEXT = 'oasis-core/storage: receipt';
 export const CHECKPOINT_VERSION = 1;
 
 /**
+ * RootTypeInvalid is an invalid/uninitialized root type.
+ */
+export const ROOT_TYPE_INVALID = 0;
+/**
+ * RootTypeState is the type for state storage roots.
+ */
+export const ROOT_TYPE_STATE = 1;
+/**
+ * RootTypeIO is the type for IO storage roots.
+ */
+export const ROOT_TYPE_IO = 2;
+/**
+ * RootTypeMax is the number of different root types and should be kept at the last one.
+ */
+export const ROOT_TYPE_MAX = 2;
+
+/**
  * ModuleName is the storage module name.
  */
 export const MODULE_NAME = 'storage';
@@ -137,6 +154,11 @@ export const CODE_MULTIPART_IN_PROGRESS = 13;
  * that doesn't match the current multipart restore as set with StartMultipartRestore.
  */
 export const CODE_INVALID_MULTIPART_VERSION = 14;
+/**
+ * ErrUpgradeInProgress indicates that a database upgrade was started by the upgrader tool and the
+ * database is therefore unusable. Run the upgrade tool to finish upgrading.
+ */
+export const CODE_UPGRADE_IN_PROGRESS = 15;
 
 export async function openReceipt(chainContext: string, receipt: types.SignatureSigned) {
     const context = signature.combineChainContext(RECEIPT_SIGNATURE_CONTEXT, chainContext);

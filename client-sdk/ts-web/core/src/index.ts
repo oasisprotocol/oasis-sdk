@@ -5,8 +5,8 @@ export * as beacon from './beacon';
 export * as common from './common';
 export * as consensus from './consensus';
 export * as control from './control';
-export * as epochtimeMock from './epochtime_mock';
 export * as genesis from './genesis';
+export * as governance from './governance';
 export * as hash from './hash';
 export * as keymanager from './keymanager';
 import * as misc from './misc';
@@ -49,10 +49,21 @@ function createMethodDescriptorServerStreaming<REQ, RESP>(serviceName: string, m
     );
 }
 
+// beacon
+const methodDescriptorBeaconGetBaseEpoch = createMethodDescriptorUnary<void, types.longnum>('Beacon', 'GetBaseEpoch');
+const methodDescriptorBeaconGetEpoch = createMethodDescriptorUnary<types.longnum, types.longnum>('Beacon', 'GetEpoch');
+const methodDescriptorBeaconWaitEpoch = createMethodDescriptorUnary<types.longnum, void>('Beacon', 'WaitEpoch');
+const methodDescriptorBeaconGetEpochBlock = createMethodDescriptorUnary<types.longnum, types.longnum>('Beacon', 'GetEpochBlock');
+const methodDescriptorBeaconGetBeacon = createMethodDescriptorUnary<types.longnum, Uint8Array>('Beacon', 'GetBeacon');
+const methodDescriptorBeaconStateToGenesis = createMethodDescriptorUnary<types.longnum, types.BeaconGenesis>('Beacon', 'StateToGenesis');
+const methodDescriptorBeaconConsensusParameters = createMethodDescriptorUnary<types.longnum, types.BeaconConsensusParameters>('Beacon', 'ConsensusParameters');
+const methodDescriptorBeaconWatchEpochs = createMethodDescriptorServerStreaming<void, types.longnum>('Beacon', 'WatchEpochs');
+
 // scheduler
 const methodDescriptorSchedulerGetValidators = createMethodDescriptorUnary<types.longnum, types.SchedulerValidator[]>('Scheduler', 'GetValidators');
 const methodDescriptorSchedulerGetCommittees = createMethodDescriptorUnary<types.SchedulerGetCommitteesRequest, types.SchedulerCommittee[]>('Scheduler', 'GetCommittees');
 const methodDescriptorSchedulerStateToGenesis = createMethodDescriptorUnary<types.longnum, types.SchedulerGenesis>('Scheduler', 'StateToGenesis');
+const methodDescriptorSchedulerConsensusParameters = createMethodDescriptorUnary<types.longnum, types.SchedulerConsensusParameters>('Scheduler', 'ConsensusParameters');
 const methodDescriptorSchedulerWatchCommittees = createMethodDescriptorServerStreaming<void, types.SchedulerCommittee>('Scheduler', 'WatchCommittees');
 
 // registry
@@ -77,11 +88,13 @@ const methodDescriptorStakingTokenValueExponent = createMethodDescriptorUnary<vo
 const methodDescriptorStakingTotalSupply = createMethodDescriptorUnary<types.longnum, Uint8Array>('Staking', 'TotalSupply');
 const methodDescriptorStakingCommonPool = createMethodDescriptorUnary<types.longnum, Uint8Array>('Staking', 'CommonPool');
 const methodDescriptorStakingLastBlockFees = createMethodDescriptorUnary<types.longnum, Uint8Array>('Staking', 'LastBlockFees');
+const methodDescriptorStakingGovernanceDeposits = createMethodDescriptorUnary<types.longnum, Uint8Array>('Staking', 'GovernanceDeposits');
 const methodDescriptorStakingThreshold = createMethodDescriptorUnary<types.StakingThresholdQuery, Uint8Array>('Staking', 'Threshold');
 const methodDescriptorStakingAddresses = createMethodDescriptorUnary<types.longnum, Uint8Array[]>('Staking', 'Addresses');
 const methodDescriptorStakingAccount = createMethodDescriptorUnary<types.StakingOwnerQuery, types.StakingAccount>('Staking', 'Account');
 const methodDescriptorStakingDelegations = createMethodDescriptorUnary<types.StakingOwnerQuery, Map<Uint8Array, types.StakingDelegation>>('Staking', 'Delegations');
 const methodDescriptorStakingDebondingDelegations = createMethodDescriptorUnary<types.StakingOwnerQuery, Map<Uint8Array, types.StakingDebondingDelegation[]>>('Staking', 'DebondingDelegations');
+const methodDescriptorStakingAllowance = createMethodDescriptorUnary<types.StakingAllowanceQuery, Uint8Array>('Staking', 'Allowance');
 const methodDescriptorStakingStateToGenesis = createMethodDescriptorUnary<types.longnum, types.StakingGenesis>('Staking', 'StateToGenesis');
 const methodDescriptorStakingConsensusParameters = createMethodDescriptorUnary<types.longnum, types.StakingConsensusParameters>('Staking', 'ConsensusParameters');
 const methodDescriptorStakingGetEvents = createMethodDescriptorUnary<types.longnum, types.StakingEvent[]>('Staking', 'GetEvents');
@@ -90,6 +103,17 @@ const methodDescriptorStakingWatchEvents = createMethodDescriptorServerStreaming
 // keymanager
 const methodDescriptorKeyManagerGetStatus = createMethodDescriptorUnary<types.RegistryNamespaceQuery, types.KeyManagerStatus>('KeyManager', 'GetStatus');
 const methodDescriptorKeyManagerGetStatuses = createMethodDescriptorUnary<types.longnum, types.KeyManagerStatus[]>('KeyManager', 'GetStatuses');
+
+// governance
+const methodDescriptorGovernanceActiveProposals = createMethodDescriptorUnary<types.longnum, types.GovernanceProposal[]>('Governance', 'ActiveProposals');
+const methodDescriptorGovernanceProposals = createMethodDescriptorUnary<types.longnum, types.GovernanceProposal[]>('Governance', 'Proposals');
+const methodDescriptorGovernanceProposal = createMethodDescriptorUnary<types.GovernanceProposalQuery, types.GovernanceProposal>('Governance', 'Proposal');
+const methodDescriptorGovernanceVotes = createMethodDescriptorUnary<types.GovernanceProposalQuery, types.GovernanceVoteEntry[]>('Governance', 'Votes');
+const methodDescriptorGovernancePendingUpgrades = createMethodDescriptorUnary<types.longnum, types.UpgradeDescriptor[]>('Governance', 'PendingUpgrades');
+const methodDescriptorGovernanceStateToGenesis = createMethodDescriptorUnary<types.longnum, types.GovernanceGenesis>('Governance', 'StateToGenesis');
+const methodDescriptorGovernanceConsensusParameters = createMethodDescriptorUnary<types.longnum, types.GovernanceConsensusParameters>('Governance', 'ConsensusParameters');
+const methodDescriptorGovernanceGetEvents = createMethodDescriptorUnary<types.longnum, types.GovernanceEvent[]>('Governance', 'GetEvents');
+const methodDescriptorGovernanceWatchEvents = createMethodDescriptorServerStreaming<void, types.GovernanceEvent>('Governance', 'WatchEvents');
 
 // storage
 const methodDescriptorStorageSyncGet = createMethodDescriptorUnary<types.StorageGetRequest, types.StorageProofResponse>('Storage', 'SyncGet');
@@ -103,12 +127,15 @@ const methodDescriptorStorageGetCheckpointChunk = createMethodDescriptorServerSt
 
 // runtime/client
 const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorUnary<types.RuntimeClientSubmitTxRequest, Uint8Array>('RuntimeClient', 'SubmitTx');
+const methodDescriptorRuntimeClientCheckTx = createMethodDescriptorUnary<types.RuntimeClientCheckTxRequest, void>('RuntimeClient', 'CheckTx');
 const methodDescriptorRuntimeClientGetGenesisBlock = createMethodDescriptorUnary<Uint8Array, types.RoothashBlock>('RuntimeClient', 'GetGenesisBlock');
 const methodDescriptorRuntimeClientGetBlock = createMethodDescriptorUnary<types.RuntimeClientGetBlockRequest, types.RoothashBlock>('RuntimeClient', 'GetBlock');
 const methodDescriptorRuntimeClientGetBlockByHash = createMethodDescriptorUnary<types.RuntimeClientGetBlockByHashRequest, types.RoothashBlock>('RuntimeClient', 'GetBlockByHash');
 const methodDescriptorRuntimeClientGetTx = createMethodDescriptorUnary<types.RuntimeClientGetTxRequest, types.RuntimeClientTxResult>('RuntimeClient', 'GetTx');
 const methodDescriptorRuntimeClientGetTxByBlockHash = createMethodDescriptorUnary<types.RuntimeClientGetTxByBlockHashRequest, types.RuntimeClientTxResult>('RuntimeClient', 'GetTxByBlockHash');
 const methodDescriptorRuntimeClientGetTxs = createMethodDescriptorUnary<types.RuntimeClientGetTxsRequest, Uint8Array[]>('RuntimeClient', 'GetTxs');
+const methodDescriptorRuntimeClientGetEvents = createMethodDescriptorUnary<types.RuntimeClientGetEventsRequest, types.RuntimeClientEvent[]>('RuntimeClient', 'GetEvents');
+const methodDescriptorRuntimeClientQuery = createMethodDescriptorUnary<types.RuntimeClientQueryRequest, types.RuntimeClientQueryResponse>('RuntimeClient', 'Query');
 const methodDescriptorRuntimeClientQueryTx = createMethodDescriptorUnary<types.RuntimeClientQueryTxRequest, types.RuntimeClientTxResult>('RuntimeClient', 'QueryTx');
 const methodDescriptorRuntimeClientQueryTxs = createMethodDescriptorUnary<types.RuntimeClientQueryTxsRequest, types.RuntimeClientTxResult[]>('RuntimeClient', 'QueryTxs');
 const methodDescriptorRuntimeClientWaitBlockIndexed = createMethodDescriptorUnary<types.RuntimeClientWaitBlockIndexedRequest, void>('RuntimeClient', 'WaitBlockIndexed');
@@ -122,8 +149,6 @@ const methodDescriptorConsensusSubmitTx = createMethodDescriptorUnary<types.Sign
 const methodDescriptorConsensusStateToGenesis = createMethodDescriptorUnary<types.longnum, types.GenesisDocument>('Consensus', 'StateToGenesis');
 const methodDescriptorConsensusEstimateGas = createMethodDescriptorUnary<types.ConsensusEstimateGasRequest, types.longnum>('Consensus', 'EstimateGas');
 const methodDescriptorConsensusGetSignerNonce = createMethodDescriptorUnary<types.ConsensusGetSignerNonceRequest, types.longnum>('Consensus', 'GetSignerNonce');
-const methodDescriptorConsensusGetEpoch = createMethodDescriptorUnary<types.longnum, types.longnum>('Consensus', 'GetEpoch');
-const methodDescriptorConsensusWaitEpoch = createMethodDescriptorUnary<types.longnum, void>('Consensus', 'WaitEpoch');
 const methodDescriptorConsensusGetBlock = createMethodDescriptorUnary<types.longnum, types.ConsensusBlock>('Consensus', 'GetBlock');
 const methodDescriptorConsensusGetTransactions = createMethodDescriptorUnary<types.longnum, Uint8Array[]>('Consensus', 'GetTransactions');
 const methodDescriptorConsensusGetTransactionsWithResults = createMethodDescriptorUnary<types.longnum, types.ConsensusTransactionsWithResults>('Consensus', 'GetTransactionsWithResults');
@@ -146,8 +171,10 @@ const methodDescriptorNodeControllerIsSynced = createMethodDescriptorUnary<void,
 const methodDescriptorNodeControllerWaitReady = createMethodDescriptorUnary<void, void>('NodeController', 'WaitReady');
 const methodDescriptorNodeControllerIsReady = createMethodDescriptorUnary<void, boolean>('NodeController', 'IsReady');
 const methodDescriptorNodeControllerUpgradeBinary = createMethodDescriptorUnary<types.UpgradeDescriptor, void>('NodeController', 'UpgradeBinary');
-const methodDescriptorNodeControllerCancelUpgrade = createMethodDescriptorUnary<void, void>('NodeController', 'CancelUpgrade');
+const methodDescriptorNodeControllerCancelUpgrade = createMethodDescriptorUnary<types.UpgradeDescriptor, void>('NodeController', 'CancelUpgrade');
 const methodDescriptorNodeControllerGetStatus = createMethodDescriptorUnary<void, types.ControlStatus>('NodeController', 'GetStatus');
+const methodDescriptorDebugControllerSetEpoch = createMethodDescriptorUnary<types.longnum, void>('DebugController', 'SetEpoch');
+const methodDescriptorDebugControllerWaitNodesRegistered = createMethodDescriptorUnary<number, void>('DebugController', 'WaitNodesRegistered');
 
 export class OasisNodeClient {
 
@@ -171,6 +198,52 @@ export class OasisNodeClient {
         return this.client.serverStreaming(this.base + name, request, null, desc);
     }
 
+    // beacon
+    /**
+     * GetBaseEpoch returns the base epoch.
+     */
+    beaconGetBaseEpoch() { return this.callUnary(methodDescriptorBeaconGetBaseEpoch, undefined); }
+    /**
+     * GetEpoch returns the epoch number at the specified block height.
+     * Calling this method with height `consensus.HeightLatest`, should
+     * return the epoch of latest known block.
+     */
+    beaconGetEpoch(height: types.longnum) { return this.callUnary(methodDescriptorBeaconGetEpoch, height); }
+    /**
+     * WaitEpoch waits for a specific epoch.
+     *
+     * Note that an epoch is considered reached even if any epoch greater
+     * than the one specified is reached (e.g., that the current epoch
+     * is already in the future).
+     */
+    beaconWaitEpoch(epoch: types.longnum) { return this.callUnary(methodDescriptorBeaconWaitEpoch, epoch); }
+    /**
+     * GetEpochBlock returns the block height at the start of the said
+     * epoch.
+     */
+    beaconGetEpochBlock(epoch: types.longnum) { return this.callUnary(methodDescriptorBeaconGetEpochBlock, epoch); }
+    /**
+     * GetBeacon gets the beacon for the provided block height.
+     * Calling this method with height `consensus.HeightLatest` should
+     * return the beacon for the latest finalized block.
+     */
+    beaconGetBeacon(height: types.longnum) { return this.callUnary(methodDescriptorBeaconGetBeacon, height); }
+    /**
+     * StateToGenesis returns the genesis state at specified block height.
+     */
+    beaconStateToGenesis(height: types.longnum) { return this.callUnary(methodDescriptorBeaconStateToGenesis, height); }
+    /**
+     * ConsensusParameters returns the beacon consensus parameters.
+     */
+    beaconConsensusParameters(height: types.longnum) { return this.callUnary(methodDescriptorBeaconConsensusParameters, height); }
+    /**
+     * WatchEpochs returns a channel that produces a stream of messages
+     * on epoch transitions.
+     *
+     * Upon subscription the current epoch is sent immediately.
+     */
+    beaconWatchEpochs(arg: void) { return this.callServerStreaming(methodDescriptorBeaconWatchEpochs, arg); }
+
     // scheduler
     /**
      * GetValidators returns the vector of consensus validators for
@@ -189,6 +262,10 @@ export class OasisNodeClient {
      * StateToGenesis returns the genesis state at specified block height.
      */
     schedulerStateToGenesis(height: types.longnum) { return this.callUnary(methodDescriptorSchedulerStateToGenesis, height); }
+    /**
+     * ConsensusParameters returns the scheduler consensus parameters.
+     */
+    schedulerConsensusParameters(height: types.longnum) { return this.callUnary(methodDescriptorSchedulerConsensusParameters, height); }
     /**
      * WatchCommittees returns a channel that produces a stream of
      * Committee.
@@ -290,6 +367,10 @@ export class OasisNodeClient {
      */
     stakingLastBlockFees(height: types.longnum) { return this.callUnary(methodDescriptorStakingLastBlockFees, height); }
     /**
+     * GovernanceDeposits returns the governance deposits account balance.
+     */
+    stakingGovernanceDeposits(height: types.longnum) { return this.callUnary(methodDescriptorStakingGovernanceDeposits, height); }
+    /**
      * Threshold returns the specific staking threshold by kind.
      */
     stakingThreshold(query: types.StakingThresholdQuery) { return this.callUnary(methodDescriptorStakingThreshold, query); }
@@ -312,6 +393,10 @@ export class OasisNodeClient {
      * the given owner (delegator).
      */
     stakingDebondingDelegations(query: types.StakingOwnerQuery) { return this.callUnary(methodDescriptorStakingDebondingDelegations, query); }
+    /**
+     * Allowance looks up the allowance for the given owner/beneficiary combination.
+     */
+    stakingAllowance(query: types.StakingAllowanceQuery) { return this.callUnary(methodDescriptorStakingAllowance, query); }
     /**
      * StateToGenesis returns the genesis state at specified block height.
      */
@@ -338,6 +423,44 @@ export class OasisNodeClient {
      * GetStatuses returns all currently tracked key manager statuses.
      */
     keyManagerGetStatuses(height: types.longnum) { return this.callUnary(methodDescriptorKeyManagerGetStatuses, height); }
+
+    // governance
+    /**
+     * ActiveProposals returns a list of all proposals that have not yet closed.
+     */
+    governanceActiveProposals(height: types.longnum) { return this.callUnary(methodDescriptorGovernanceActiveProposals, height); }
+    /**
+     * Proposals returns a list of all proposals.
+     */
+    governanceProposals(height: types.longnum) { return this.callUnary(methodDescriptorGovernanceProposals, height); }
+    /**
+     * Proposal looks up a specific proposal.
+     */
+    governanceProposal(request: types.GovernanceProposalQuery) { return this.callUnary(methodDescriptorGovernanceProposal, request); }
+    /**
+     * Votes looks up votes for a specific proposal.
+     */
+    governanceVotes(request: types.GovernanceProposalQuery) { return this.callUnary(methodDescriptorGovernanceVotes, request); }
+    /**
+     * PendingUpgrades returns a list of all pending upgrades.
+     */
+    governancePendingUpgrades(height: types.longnum) { return this.callUnary(methodDescriptorGovernancePendingUpgrades, height); }
+    /**
+     * StateToGenesis returns the genesis state at specified block height.
+     */
+    governanceStateToGenesis(height: types.longnum) { return this.callUnary(methodDescriptorGovernanceStateToGenesis, height); }
+    /**
+     * ConsensusParameters returns the governance consensus parameters.
+     */
+    governanceConsensusParameters(height: types.longnum) { return this.callUnary(methodDescriptorGovernanceConsensusParameters, height); }
+    /**
+     * GetEvents returns the events at specified block height.
+     */
+    governanceGetEvents(height: types.longnum) { return this.callUnary(methodDescriptorGovernanceGetEvents, height); }
+    /**
+     * WatchEvents returns a channel that produces a stream of Events.
+     */
+    governanceWatchEvents() { return this.callServerStreaming(methodDescriptorGovernanceWatchEvents, undefined); }
 
     // storage
     /**
@@ -389,6 +512,10 @@ export class OasisNodeClient {
      */
     runtimeClientSubmitTx(request: types.RuntimeClientSubmitTxRequest) { return this.callUnary(methodDescriptorRuntimeClientSubmitTx, request); }
     /**
+     * CheckTx asks the local runtime to check the specified transaction.
+     */
+    runtimeClientCheckTx(request: types.RuntimeClientCheckTxRequest) { return this.callUnary(methodDescriptorRuntimeClientCheckTx, request); }
+    /**
      * GetGenesisBlock returns the genesis block.
      */
     runtimeClientGetGenesisBlock(runtimeID: Uint8Array) { return this.callUnary(methodDescriptorRuntimeClientGetGenesisBlock, runtimeID); }
@@ -413,6 +540,14 @@ export class OasisNodeClient {
      * GetTxs fetches all runtime transactions in a given block.
      */
     runtimeClientGetTxs(request: types.RuntimeClientGetTxsRequest) { return this.callUnary(methodDescriptorRuntimeClientGetTxs, request); }
+    /**
+     * GetEvents returns all events emitted in a given block.
+     */
+    runtimeClientGetEvents(request: types.RuntimeClientGetEventsRequest) { return this.callUnary(methodDescriptorRuntimeClientGetEvents, request); }
+    /**
+     * Query makes a runtime-specific query.
+     */
+    runtimeClientQuery(request: types.RuntimeClientQueryRequest) { return this.callUnary(methodDescriptorRuntimeClientQuery, request); }
     /**
      * QueryTx queries the indexer for a specific runtime transaction.
      */
@@ -455,18 +590,6 @@ export class OasisNodeClient {
      * signer for transmitting the next transaction.
      */
     consensusGetSignerNonce(req: types.ConsensusGetSignerNonceRequest) { return this.callUnary(methodDescriptorConsensusGetSignerNonce, req); }
-    /**
-     * GetEpoch returns the current epoch.
-     */
-    consensusGetEpoch(height: types.longnum) { return this.callUnary(methodDescriptorConsensusGetEpoch, height); }
-    /**
-     * WaitEpoch waits for consensus to reach an epoch.
-     *
-     * Note that an epoch is considered reached even if any epoch greater than
-     * the one specified is reached (e.g., that the current epoch is already
-     * in the future).
-     */
-    consensusWaitEpoch(epoch: types.longnum) { return this.callUnary(methodDescriptorConsensusWaitEpoch, epoch); }
     /**
      * GetBlock returns a consensus block at a specific height.
      */
@@ -567,12 +690,23 @@ export class OasisNodeClient {
      */
     nodeControllerUpgradeBinary(descriptor: types.UpgradeDescriptor) { return this.callUnary(methodDescriptorNodeControllerUpgradeBinary, descriptor); }
     /**
-     * CancelUpgrade cancels a pending upgrade, unless it is already in progress.
+     * CancelUpgrade cancels the specific pending upgrade, unless it is already in progress.
      */
-    nodeControllerCancelUpgrade() { return this.callUnary(methodDescriptorNodeControllerCancelUpgrade, undefined); }
+    nodeControllerCancelUpgrade(descriptor: types.UpgradeDescriptor) { return this.callUnary(methodDescriptorNodeControllerCancelUpgrade, descriptor); }
     /**
      * GetStatus returns the current status overview of the node.
      */
     nodeControllerGetStatus() { return this.callUnary(methodDescriptorNodeControllerGetStatus, undefined); }
+    /**
+     * SetEpoch manually sets the current epoch to the given epoch.
+     *
+     * NOTE: This only works with a mock beacon backend and will otherwise
+     *       return an error.
+     */
+    debugControllerSetEpoch(epoch: types.longnum) { return this.callUnary(methodDescriptorDebugControllerSetEpoch, epoch); }
+    /**
+     * WaitNodesRegistered waits for the given number of nodes to register.
+     */
+    debugControllerWaitNodesRegistered(count: number) { return this.callUnary(methodDescriptorDebugControllerWaitNodesRegistered, count); }
 
 }

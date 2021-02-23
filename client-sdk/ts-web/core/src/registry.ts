@@ -28,19 +28,6 @@ export const REGISTER_NODE_SIGNATURE_CONTEXT = 'oasis-core/registry: register no
  * migrating existing registrations into a new genesis document.
  */
 export const REGISTER_GENESIS_NODE_SIGNATURE_CONTEXT = REGISTER_NODE_SIGNATURE_CONTEXT;
-/**
- * RegisterRuntimeSignatureContext is the context used for runtime
- * registration.
- */
-export const REGISTER_RUNTIME_SIGNATURE_CONTEXT = 'oasis-core/registry: register runtime';
-/**
- * RegisterGenesisRuntimeSignatureContext is the context used for
- * runtime registation in the genesis document.
- *
- * Note: This is identical to non-gensis registrations to support
- * migrating existing registrations into a new genesis document.
- */
-export const REGISTER_GENESIS_RUNTIME_SIGNATURE_CONTEXT = REGISTER_RUNTIME_SIGNATURE_CONTEXT;
 
 /**
  * MethodRegisterEntity is the method name for entity registrations.
@@ -107,11 +94,17 @@ export const KIND_COMPUTE = 1;
  */
 export const KIND_KEY_MANAGER = 2;
 
+export const GOVERNANCE_INVALID = 0;
+export const GOVERNANCE_ENTITY = 1;
+export const GOVERNANCE_RUNTIME = 2;
+export const GOVERNANCE_CONSENSUS = 3;
+export const GOVERNANCE_MAX = GOVERNANCE_CONSENSUS;
+
 /**
  * LatestRuntimeDescriptorVersion is the latest entity descriptor version that should be used
  * for all new descriptors. Using earlier versions may be rejected.
  */
-export const LATEST_RUNTIME_DESCRIPTOR_VERSION = 1;
+export const LATEST_RUNTIME_DESCRIPTOR_VERSION = 2;
 
 /**
  * ModuleName is a unique module name for the registry module.
@@ -206,11 +199,3 @@ export const CODE_RUNTIME_UPDATE_NOT_ALLOWED = 18;
  * has runtimes.
  */
 export const CODE_ENTITY_HAS_RUNTIMES = 19;
-
-export async function openSignedRuntime(context: string, signed: types.SignatureSigned) {
-    return misc.fromCBOR(await signature.openSigned(context, signed)) as types.RegistryRuntime;
-}
-
-export async function signSignedRuntime(signer: signature.ContextSigner, context: string, runtime: types.RegistryRuntime) {
-    return await signature.signSigned(signer, context, misc.toCBOR(runtime));
-}
