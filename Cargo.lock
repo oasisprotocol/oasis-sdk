@@ -76,6 +76,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4d7d63395147b81a9e570bcc6243aaf71c017bd666d4909cfef0085bdda8d73"
 
 [[package]]
+name = "assert_matches"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
+
+[[package]]
 name = "autocfg"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -735,6 +741,7 @@ name = "oasis-runtime-sdk"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert_matches",
  "base64",
  "bech32 0.7.2",
  "ed25519-dalek",
@@ -742,6 +749,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "io-context",
  "k256",
+ "lazy_static",
  "num-traits",
  "oasis-core-runtime",
  "serde",

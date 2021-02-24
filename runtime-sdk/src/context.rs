@@ -33,22 +33,22 @@ pub enum Mode {
 
 /// Dispatch context for the whole batch.
 pub struct DispatchContext<'a> {
-    mode: Mode,
+    pub(crate) mode: Mode,
 
-    runtime_header: &'a roothash::Header,
-    runtime_round_results: &'a roothash::RoundResults,
-    runtime_storage: &'a mut dyn mkvs::MKVS,
+    pub(crate) runtime_header: &'a roothash::Header,
+    pub(crate) runtime_round_results: &'a roothash::RoundResults,
+    pub(crate) runtime_storage: &'a mut dyn mkvs::MKVS,
     // TODO: linked consensus layer block
     // TODO: linked consensus layer state storage (or just expose high-level stuff)
-    io_ctx: Arc<IoContext>,
+    pub(crate) io_ctx: Arc<IoContext>,
 
     /// Maximum number of messages that can be emitted.
-    max_messages: u32,
+    pub(crate) max_messages: u32,
     /// Emitted messages.
-    messages: Vec<roothash::Message>,
+    pub(crate) messages: Vec<roothash::Message>,
 
     /// Per-context values.
-    values: BTreeMap<&'static str, Box<dyn Any>>,
+    pub(crate) values: BTreeMap<&'static str, Box<dyn Any>>,
 }
 
 impl<'a> DispatchContext<'a> {
@@ -278,43 +278,11 @@ mod test {
     use oasis_core_runtime::common::cbor;
 
     use super::*;
-
-    struct Mock {
-        runtime_header: roothash::Header,
-        runtime_round_results: roothash::RoundResults,
-        runtime_storage: mkvs::OverlayTree<mkvs::Tree>,
-    }
-
-    impl Mock {
-        fn new() -> Self {
-            Self {
-                runtime_header: roothash::Header::default(),
-                runtime_round_results: roothash::RoundResults::default(),
-                runtime_storage: mkvs::OverlayTree::new(
-                    mkvs::Tree::make()
-                        .with_root_type(mkvs::RootType::State)
-                        .new(Box::new(mkvs::sync::NoopReadSyncer)),
-                ),
-            }
-        }
-
-        fn create_ctx(&mut self) -> DispatchContext {
-            DispatchContext {
-                mode: Mode::ExecuteTx,
-                runtime_header: &self.runtime_header,
-                runtime_round_results: &self.runtime_round_results,
-                runtime_storage: &mut self.runtime_storage,
-                io_ctx: IoContext::background().freeze(),
-                messages: Vec::new(),
-                max_messages: 32,
-                values: BTreeMap::new(),
-            }
-        }
-    }
+    use crate::testing::mock::Mock;
 
     #[test]
     fn test_value() {
-        let mut mock = Mock::new();
+        let mut mock = Mock::default();
         let mut ctx = mock.create_ctx();
 
         let x: &mut Option<u64> = ctx.value("module.TestKey");
@@ -334,7 +302,7 @@ mod test {
     #[test]
     #[should_panic]
     fn test_value_type_change() {
-        let mut mock = Mock::new();
+        let mut mock = Mock::default();
         let mut ctx = mock.create_ctx();
 
         let x: &mut Option<u64> = ctx.value("module.TestKey");
@@ -347,7 +315,7 @@ mod test {
 
     #[test]
     fn test_value_tx_context() {
-        let mut mock = Mock::new();
+        let mut mock = Mock::default();
         let mut ctx = mock.create_ctx();
 
         let x: &mut Option<u64> = ctx.value("module.TestKey");
@@ -390,7 +358,7 @@ mod test {
     #[test]
     #[should_panic]
     fn test_value_tx_context_type_change() {
-        let mut mock = Mock::new();
+        let mut mock = Mock::default();
         let mut ctx = mock.create_ctx();
 
         let x: &mut Option<u64> = ctx.value("module.TestKey");

@@ -59,3 +59,9 @@ impl From<&CorePublicKey> for PublicKey {
             .expect("types are compatible so conversion must always succeed")
     }
 }
+
+impl From<PublicKey> for CorePublicKey {
+    fn from(pk: PublicKey) -> CorePublicKey {
+        pk.as_bytes().into()
+    }
+}

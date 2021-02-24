@@ -127,6 +127,13 @@ pub struct SignerInfo {
     pub nonce: u64,
 }
 
+impl SignerInfo {
+    /// Create a new signer info from public key and nonce.
+    pub fn new(public_key: PublicKey, nonce: u64) -> Self {
+        Self { public_key, nonce }
+    }
+}
+
 /// Call result.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
