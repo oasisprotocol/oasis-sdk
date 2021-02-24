@@ -1,0 +1,34 @@
+# NOTE: This name appears in GitHub's Checks API and in workflow's status badge.
+name: ci-test
+
+# Trigger the workflow when:
+on:
+  # A push occurs to one of the matched branches.
+  push:
+    branches:
+      - main
+      - stable/*
+  # Or when a pull request event occurs for a pull request against one of the
+  # matched branches.
+  pull_request:
+    branches:
+      - main
+      - stable/*
+
+jobs:
+
+  lint:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+
+      - name: Unit tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
