@@ -216,9 +216,7 @@ mod test {
 
     #[test]
     fn test_address_ed25519() {
-        let pk = PublicKey::Ed25519(
-            "badadd1e55ffffffffffffffffffffffffffffffffffffffffffffffffffffff".into(),
-        );
+        let pk = PublicKey::Ed25519("utrdHlX///////////////////////////////////8=".into());
 
         let addr = Address::from_pk(&pk);
         assert_eq!(
@@ -229,9 +227,7 @@ mod test {
 
     #[test]
     fn test_address_secp256k1() {
-        let pk = PublicKey::Secp256k1(
-            "02badadd1e55ffffffffffffffffffffffffffffffffffffffffffffffffffffff".into(),
-        );
+        let pk = PublicKey::Secp256k1("Arra3R5V////////////////////////////////////".into());
 
         let addr = Address::from_pk(&pk);
         assert_eq!(
