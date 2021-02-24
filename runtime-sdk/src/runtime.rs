@@ -8,7 +8,9 @@ use oasis_core_runtime::{
 use crate::{
     context::DispatchContext,
     dispatcher,
-    module::{AuthHandler, MethodRegistrationHandler, MethodRegistry, MigrationHandler},
+    module::{
+        AuthHandler, BlockHandler, MethodRegistrationHandler, MethodRegistry, MigrationHandler,
+    },
     modules, storage,
 };
 
@@ -17,7 +19,7 @@ pub trait Runtime {
     /// Runtime version.
     const VERSION: version::Version;
 
-    type Modules: AuthHandler + MigrationHandler + MethodRegistrationHandler;
+    type Modules: AuthHandler + MigrationHandler + MethodRegistrationHandler + BlockHandler;
 
     /// Genesis state for the runtime.
     fn genesis_state() -> <Self::Modules as MigrationHandler>::Genesis;

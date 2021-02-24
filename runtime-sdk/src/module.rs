@@ -151,6 +151,22 @@ impl MigrationHandler for Tuple {
     }
 }
 
+/// Block handler.
+#[impl_for_tuples(30)]
+pub trait BlockHandler {
+    /// Perform any common actions at the start of the block (before any transactions have been
+    /// executed).
+    fn begin_block(_ctx: &mut DispatchContext) {
+        // Default implementation doesn't do anything.
+    }
+
+    /// Perform any common actions at the end of the block (after all transactions have been
+    /// executed).
+    fn end_block(_ctx: &mut DispatchContext) {
+        // Default implementation doesn't do anything.
+    }
+}
+
 /// A runtime module.
 pub trait Module {
     /// Module name.

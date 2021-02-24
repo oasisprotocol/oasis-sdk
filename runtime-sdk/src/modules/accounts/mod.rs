@@ -496,3 +496,6 @@ impl module::AuthHandler for Module {
         Ok(())
     }
 }
+
+impl module::BlockHandler for Module {
+}
