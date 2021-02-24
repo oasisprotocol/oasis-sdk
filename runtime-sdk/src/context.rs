@@ -1,5 +1,5 @@
 //! Execution context.
-use std::sync::Arc;
+use std::{any::Any, collections::BTreeMap, sync::Arc};
 
 use io_context::Context as IoContext;
 use thiserror::Error;
@@ -44,6 +44,9 @@ pub struct DispatchContext<'a> {
 
     /// Emitted messages.
     messages: Vec<roothash::Message>,
+
+    /// Per-context values.
+    values: BTreeMap<&'static str, Box<dyn Any>>,
 }
 
 impl<'a> DispatchContext<'a> {
@@ -60,6 +63,7 @@ impl<'a> DispatchContext<'a> {
             runtime_storage: mkvs,
             io_ctx: ctx.io_ctx.clone(),
             messages: Vec::new(),
+            values: BTreeMap::new(),
         }
     }
 
@@ -78,6 +82,31 @@ impl<'a> DispatchContext<'a> {
     /// Finalize the context and return the emitted runtime messages, consuming the context.
     pub fn commit(self) -> Vec<roothash::Message> {
         self.messages
+    }
+
+    /// Fetches or sets a value associated with the context.
+    pub fn value<V>(&mut self, key: &'static str) -> &mut V
+    where
+        V: Any + Default,
+    {
+        self.values
+            .entry(key)
+            .or_insert_with(|| Box::new(V::default()))
+            .downcast_mut()
+            .expect("type should stay the same")
+    }
+
+    /// Takes a value associated with the context.
+    ///
+    /// The previous value is removed so subsequent fetches will return the default value.
+    pub fn take_value<V>(&mut self, key: &'static str) -> Box<V>
+    where
+        V: Any + Default,
+    {
+        self.values
+            .remove(key)
+            .map(|x| x.downcast().expect("type should stay the same"))
+            .unwrap_or_default()
     }
 
     /// Executes a function with the transaction-specific context set.
@@ -99,6 +128,7 @@ impl<'a> DispatchContext<'a> {
             // NOTE: Since a limit is enforced (which is a u32) this cast is always safe.
             message_offset: self.messages.len() as u32,
             messages: Vec::new(),
+            values: &mut self.values,
         };
         f(tx_ctx, tx.call)
     }
@@ -124,6 +154,9 @@ pub struct TxContext<'a, 'b> {
     message_offset: u32,
     /// Emitted messages.
     messages: Vec<roothash::Message>,
+
+    /// Per-context values.
+    values: &'b mut BTreeMap<&'static str, Box<dyn Any>>,
 }
 
 impl<'a, 'b> TxContext<'a, 'b> {
@@ -188,5 +221,174 @@ impl<'a, 'b> TxContext<'a, 'b> {
     pub fn commit(self) -> (Tags, Vec<roothash::Message>) {
         self.store.commit();
         (self.tags, self.messages)
+    }
+
+    /// Fetches or sets a value associated with the context.
+    pub fn value<V>(&mut self, key: &'static str) -> &mut V
+    where
+        V: Any + Default,
+    {
+        self.values
+            .entry(key)
+            .or_insert_with(|| Box::new(V::default()))
+            .downcast_mut()
+            .expect("type should stay the same")
+    }
+
+    /// Takes a value associated with the context.
+    ///
+    /// The previous value is removed so subsequent fetches will return the default value.
+    pub fn take_value<V>(&mut self, key: &'static str) -> Box<V>
+    where
+        V: Any + Default,
+    {
+        self.values
+            .remove(key)
+            .map(|x| x.downcast().expect("type should stay the same"))
+            .unwrap_or_default()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use oasis_core_runtime::common::cbor;
+
+    use super::*;
+
+    struct Mock {
+        runtime_header: roothash::Header,
+        runtime_message_results: Vec<roothash::MessageEvent>,
+        runtime_storage: mkvs::OverlayTree<mkvs::Tree>,
+    }
+
+    impl Mock {
+        fn new() -> Self {
+            Self {
+                runtime_header: roothash::Header::default(),
+                runtime_message_results: Vec::new(),
+                runtime_storage: mkvs::OverlayTree::new(
+                    mkvs::Tree::make()
+                        .with_root_type(mkvs::RootType::State)
+                        .new(Box::new(mkvs::sync::NoopReadSyncer)),
+                ),
+            }
+        }
+
+        fn create_ctx(&mut self) -> DispatchContext {
+            DispatchContext {
+                mode: Mode::ExecuteTx,
+                runtime_header: &self.runtime_header,
+                runtime_message_results: &self.runtime_message_results,
+                runtime_storage: &mut self.runtime_storage,
+                io_ctx: IoContext::background().freeze(),
+                messages: Vec::new(),
+                values: BTreeMap::new(),
+            }
+        }
+    }
+
+    #[test]
+    fn test_value() {
+        let mut mock = Mock::new();
+        let mut ctx = mock.create_ctx();
+
+        let x: &mut Option<u64> = ctx.value("module.TestKey");
+        assert_eq!(x, &None, "default value should be created");
+        *x = Some(42);
+
+        let y: &mut Option<u64> = ctx.value("module.TestKey");
+        assert_eq!(y, &Some(42));
+
+        let z: Box<Option<u64>> = ctx.take_value("module.TestKey");
+        assert_eq!(z, Box::new(Some(42)));
+
+        let y: &mut Option<u64> = ctx.value("module.TestKey");
+        assert_eq!(y, &None);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_value_type_change() {
+        let mut mock = Mock::new();
+        let mut ctx = mock.create_ctx();
+
+        let x: &mut Option<u64> = ctx.value("module.TestKey");
+        assert_eq!(x, &None, "default value should be created");
+        *x = Some(42);
+
+        // Changing the type of a key should result in a panic.
+        ctx.value::<Option<u32>>("module.TestKey");
+    }
+
+    #[test]
+    fn test_value_tx_context() {
+        let mut mock = Mock::new();
+        let mut ctx = mock.create_ctx();
+
+        let x: &mut Option<u64> = ctx.value("module.TestKey");
+        assert_eq!(x, &None, "default value should be created");
+        *x = Some(42);
+
+        let tx = transaction::Transaction {
+            version: 1,
+            call: transaction::Call {
+                method: "test".to_owned(),
+                body: cbor::Value::Null,
+            },
+            auth_info: transaction::AuthInfo {
+                signer_info: vec![],
+                fee: transaction::Fee {
+                    amount: Default::default(),
+                    gas: 1000,
+                },
+            },
+        };
+        ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+            let y: &mut Option<u64> = tx_ctx.value("module.TestKey");
+            assert_eq!(y, &Some(42));
+
+            *y = Some(48);
+        });
+
+        let x: &mut Option<u64> = ctx.value("module.TestKey");
+        assert_eq!(x, &Some(48));
+
+        ctx.with_tx(tx, |mut tx_ctx, _call| {
+            let z: Box<Option<u64>> = tx_ctx.take_value("module.TestKey");
+            assert_eq!(z, Box::new(Some(48)));
+        });
+
+        let y: &mut Option<u64> = ctx.value("module.TestKey");
+        assert_eq!(y, &None);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_value_tx_context_type_change() {
+        let mut mock = Mock::new();
+        let mut ctx = mock.create_ctx();
+
+        let x: &mut Option<u64> = ctx.value("module.TestKey");
+        assert_eq!(x, &None, "default value should be created");
+        *x = Some(42);
+
+        let tx = transaction::Transaction {
+            version: 1,
+            call: transaction::Call {
+                method: "test".to_owned(),
+                body: cbor::Value::Null,
+            },
+            auth_info: transaction::AuthInfo {
+                signer_info: vec![],
+                fee: transaction::Fee {
+                    amount: Default::default(),
+                    gas: 1000,
+                },
+            },
+        };
+        ctx.with_tx(tx, |mut tx_ctx, _call| {
+            // Changing the type of a key should result in a panic.
+            tx_ctx.value::<Option<u32>>("module.TestKey");
+        });
     }
 }
