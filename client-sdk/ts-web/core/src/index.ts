@@ -67,12 +67,12 @@ const methodDescriptorSchedulerConsensusParameters = createMethodDescriptorUnary
 const methodDescriptorSchedulerWatchCommittees = createMethodDescriptorServerStreaming<void, types.SchedulerCommittee>('Scheduler', 'WatchCommittees');
 
 // registry
-const methodDescriptorRegistryGetEntity = createMethodDescriptorUnary<types.RegistryIDQuery, types.CommonEntity>('Registry', 'GetEntity');
-const methodDescriptorRegistryGetEntities = createMethodDescriptorUnary<types.longnum, types.CommonEntity[]>('Registry', 'GetEntities');
-const methodDescriptorRegistryGetNode = createMethodDescriptorUnary<types.RegistryIDQuery, types.CommonNode>('Registry', 'GetNode');
-const methodDescriptorRegistryGetNodeByConsensusAddress = createMethodDescriptorUnary<types.RegistryConsensusAddressQuery, types.CommonNode>('Registry', 'GetNodeByConsensusAddress');
-const methodDescriptorRegistryGetNodeStatus = createMethodDescriptorUnary<types.RegistryIDQuery, types.CommonNode>('Registry', 'GetNodeStatus');
-const methodDescriptorRegistryGetNodes = createMethodDescriptorUnary<types.longnum, types.CommonNode[]>('Registry', 'GetNodes');
+const methodDescriptorRegistryGetEntity = createMethodDescriptorUnary<types.RegistryIDQuery, types.Entity>('Registry', 'GetEntity');
+const methodDescriptorRegistryGetEntities = createMethodDescriptorUnary<types.longnum, types.Entity[]>('Registry', 'GetEntities');
+const methodDescriptorRegistryGetNode = createMethodDescriptorUnary<types.RegistryIDQuery, types.Node>('Registry', 'GetNode');
+const methodDescriptorRegistryGetNodeByConsensusAddress = createMethodDescriptorUnary<types.RegistryConsensusAddressQuery, types.Node>('Registry', 'GetNodeByConsensusAddress');
+const methodDescriptorRegistryGetNodeStatus = createMethodDescriptorUnary<types.RegistryIDQuery, types.Node>('Registry', 'GetNodeStatus');
+const methodDescriptorRegistryGetNodes = createMethodDescriptorUnary<types.longnum, types.Node[]>('Registry', 'GetNodes');
 const methodDescriptorRegistryGetRuntime = createMethodDescriptorUnary<types.RegistryNamespaceQuery, types.RegistryRuntime>('Registry', 'GetRuntime');
 const methodDescriptorRegistryGetRuntimes = createMethodDescriptorUnary<types.RegistryGetRuntimesQuery, types.RegistryRuntime[]>('Registry', 'GetRuntimes');
 const methodDescriptorRegistryStateToGenesis = createMethodDescriptorUnary<types.longnum, types.RegistryGenesis>('Registry', 'StateToGenesis');
