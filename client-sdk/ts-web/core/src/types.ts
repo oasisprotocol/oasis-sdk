@@ -1091,7 +1091,7 @@ export interface KeyManagerPolicySGX {
  */
 export interface KeyManagerSignedPolicySGX {
     policy: KeyManagerPolicySGX;
-    signatures: SignatureSignature[];
+    signatures: Signature[];
 }
 
 /**
@@ -1528,7 +1528,7 @@ export interface RegistryRuntimeGenesis {
      * empty or StateRoot is an empty hash or if used in network genesis
      * (e.g. during consensus chain init).
      */
-    storage_receipts: SignatureSignature[];
+    storage_receipts: Signature[];
     /**
      * Round is the runtime round in the genesis.
      */
@@ -1699,10 +1699,10 @@ export interface RoothashBlock {
 export interface RoothashComputeBody {
     header: RoothashComputeResultsHeader;
     failure?: number;
-    txn_sched_sig: SignatureSignature;
+    txn_sched_sig: Signature;
     input_root: Uint8Array;
-    input_storage_sigs: SignatureSignature;
-    storage_signatures?: SignatureSignature[];
+    input_storage_sigs: Signature;
+    storage_signatures?: Signature[];
     rak_sig?: Uint8Array;
     messages?: RoothashMessage[];
 }
@@ -1905,7 +1905,7 @@ export interface RoothashHeader {
      * StorageSignatures are the storage receipt signatures for the merkle
      * roots.
      */
-    storage_signatures: SignatureSignature[];
+    storage_signatures: Signature[];
 }
 
 /**
@@ -1941,7 +1941,7 @@ export interface RoothashProposedBatch {
     /**
      * StorageSignatures are the storage receipt signatures for the I/O root.
      */
-    storage_signatures: SignatureSignature[];
+    storage_signatures: Signature[];
     /**
      * Header is the block header on which the batch should be based.
      */
@@ -2254,13 +2254,13 @@ export interface SignatureMultiSigned {
     /**
      * Signatures are the signatures over the blob.
      */
-    signatures: SignatureSignature[];
+    signatures: Signature[];
 }
 
 /**
  * Signature is a signature, bundled with the signing public key.
  */
-export interface SignatureSignature {
+export interface Signature {
     /**
      * PublicKey is the public key that produced the signature.
      */
@@ -2282,7 +2282,7 @@ export interface SignatureSigned {
     /**
      * Signature is the signature over blob.
      */
-    signature: SignatureSignature;
+    signature: Signature;
 }
 
 /**
