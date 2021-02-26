@@ -682,7 +682,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-runtime"
 version = "0.3.0-alpha"
-source = "git+https://github.com/oasisprotocol/oasis-core#9998deaee02ff1fa9a549d42791449013ca8662a"
+source = "git+https://github.com/oasisprotocol/oasis-core#d186644faee8ab99cc1e94df4bdcf04a92873e00"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -1010,9 +1010,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.62"
+version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea1c6153794552ea7cf7cf63b1231a25de00ec90db326ba6264440fa08e31486"
+checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
 dependencies = [
  "itoa",
  "ryu",
