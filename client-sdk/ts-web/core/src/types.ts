@@ -88,263 +88,9 @@ export interface BeaconPVSSReveal {
 }
 
 /**
- * Address represents a TCP address for the purpose of node descriptors.
- */
-export interface CommonAddress {
-    IP: Uint8Array;
-    Port: number;
-    Zone: string;
-}
-
-export interface CommonBeaconInfo {
-    point: Uint8Array;
-}
-
-/**
- * Capabilities represents a node's capabilities.
- */
-export interface CommonCapabilities {
-    /**
-     * TEE is the capability of a node executing batches in a TEE.
-     */
-    tee?: CommonCapabilityTEE;
-}
-
-/**
- * CapabilityTEE represents the node's TEE capability.
- */
-export interface CommonCapabilityTEE {
-    /**
-     * TEE hardware type.
-     */
-    hardware: number;
-    /**
-     * Runtime attestation key.
-     */
-    rak: Uint8Array;
-    /**
-     * Attestation.
-     */
-    attestation: Uint8Array;
-}
-
-/**
- * ConsensusAddress represents a Tendermint consensus address that includes an
- * ID and a TCP address.
- * NOTE: The consensus address ID could be different from the consensus ID
- * to allow using a sentry node's ID and address instead of the validator's.
- */
-export interface CommonConsensusAddress {
-    /**
-     * ID is public key identifying the node.
-     */
-    id: Uint8Array;
-    /**
-     * Address is the address at which the node can be reached.
-     */
-    address: CommonAddress;
-}
-
-/**
- * ConsensusInfo contains information for connecting to this node as a
- * consensus member.
- */
-export interface CommonConsensusInfo {
-    /**
-     * ID is the unique identifier of the node as a consensus member.
-     */
-    id: Uint8Array;
-    /**
-     * Addresses is the list of addresses at which the node can be reached.
-     */
-    addresses: CommonConsensusAddress[];
-}
-
-/**
- * Constraints are the Intel SGX TEE constraints.
- */
-export interface CommonConstraints {
-    /**
-     * Enclaves is the allowed MRENCLAVE/MRSIGNER pairs.
-     */
-    enclaves: CommonEnclaveIdentity[];
-}
-
-/**
- * EnclaveIdentity is a byte serialized MRSIGNER/MRENCLAVE pair.
- */
-export interface CommonEnclaveIdentity {
-    mr_enclave: Uint8Array;
-    mr_signer: Uint8Array;
-}
-
-/**
- * Entity represents an entity that controls one or more Nodes and or
- * services.
- */
-export interface CommonEntity extends CommonVersioned {
-    /**
-     * ID is the public key identifying the entity.
-     */
-    id: Uint8Array;
-    /**
-     * Nodes is the vector of node identity keys owned by this entity, that
-     * will sign the descriptor with the node signing key rather than the
-     * entity signing key.
-     */
-    nodes?: Uint8Array[];
-    /**
-     * AllowEntitySignedNodes is true iff nodes belonging to this entity
-     * may be signed with the entity signing key.
-     */
-    allow_entity_signed_nodes: boolean;
-}
-
-/**
- * Node represents public connectivity information about an Oasis node.
- */
-export interface CommonNode extends CommonVersioned {
-    /**
-     * ID is the public key identifying the node.
-     */
-    id: Uint8Array;
-    /**
-     * EntityID is the public key identifying the Entity controlling
-     * the node.
-     */
-    entity_id: Uint8Array;
-    /**
-     * Expiration is the epoch in which this node's commitment expires.
-     */
-    expiration: longnum;
-    /**
-     * TLS contains information for connecting to this node via TLS.
-     */
-    tls: CommonTLSInfo;
-    /**
-     * P2P contains information for connecting to this node via P2P.
-     */
-    p2p: CommonP2PInfo;
-    /**
-     * Consensus contains information for connecting to this node as a
-     * consensus member.
-     */
-    consensus: CommonConsensusInfo;
-    /**
-     * Beacon contains information for this node's participation
-     * in the random beacon protocol.
-     *
-     * TODO: This is optional for now, make mandatory once enough
-     * nodes provide this field.
-     */
-    beacon?: CommonBeaconInfo;
-    /**
-     * Runtimes are the node's runtimes.
-     */
-    runtimes: CommonRuntime[];
-    /**
-     * Roles is a bitmask representing the node roles.
-     */
-    roles: number;
-}
-
-/**
- * P2PInfo contains information for connecting to this node via P2P transport.
- */
-export interface CommonP2PInfo {
-    /**
-     * ID is the unique identifier of the node on the P2P transport.
-     */
-    id: Uint8Array;
-    /**
-     * Addresses is the list of addresses at which the node can be reached.
-     */
-    addresses: CommonAddress[];
-}
-
-/**
- * ProtocolVersions are the protocol versions.
- */
-export interface CommonProtocolVersions {
-    runtime_host_protocol: CommonVersion;
-    runtime_committee_protocol: CommonVersion;
-    consensus_protocol: CommonVersion;
-    toolchain: CommonVersion;
-}
-
-/**
- * Runtime represents the runtimes supported by a given Oasis node.
- */
-export interface CommonRuntime {
-    /**
-     * ID is the public key identifying the runtime.
-     */
-    id: Uint8Array;
-    /**
-     * Version is the version of the runtime.
-     */
-    version: CommonVersion;
-    /**
-     * Capabilities are the node's capabilities for a given runtime.
-     */
-    capabilities: CommonCapabilities;
-    /**
-     * ExtraInfo is the extra per node + per runtime opaque data associated
-     * with the current instance.
-     */
-    extra_info: Uint8Array;
-}
-
-/**
- * TLSAddress represents an Oasis committee address that includes a TLS public key and a TCP
- * address.
- *
- * NOTE: The address TLS public key can be different from the actual node TLS public key to allow
- * using a sentry node's addresses.
- */
-export interface CommonTLSAddress {
-    /**
-     * PubKey is the public key used for establishing TLS connections.
-     */
-    pub_key: Uint8Array;
-    /**
-     * Address is the address at which the node can be reached.
-     */
-    address: CommonAddress;
-}
-
-/**
- * TLSInfo contains information for connecting to this node via TLS.
- */
-export interface CommonTLSInfo {
-    /**
-     * PubKey is the public key used for establishing TLS connections.
-     */
-    pub_key: Uint8Array;
-    /**
-     * NextPubKey is the public key that will be used for establishing TLS connections after
-     * certificate rotation (if enabled).
-     */
-    next_pub_key?: Uint8Array;
-    /**
-     * Addresses is the list of addresses at which the node can be reached.
-     */
-    addresses: CommonTLSAddress[];
-}
-
-/**
- * Version is a protocol version.
- */
-export interface CommonVersion {
-    major?: number;
-    minor?: number;
-    patch?: number;
-}
-
-/**
  * Versioned is a generic versioned serializable data structure.
  */
-export interface CommonVersioned {
+export interface CBORVersioned {
     v: number;
 }
 
@@ -526,7 +272,7 @@ export interface ConsensusStatus {
     /**
      * Version is the version of the consensus protocol that the node is using.
      */
-    version: CommonVersion;
+    version: Version;
     /**
      * ConsensusVersion is the version of the consensus protocol that the node is using.
      */
@@ -650,7 +396,7 @@ export interface ControlRegistrationStatus {
      * Descriptor is the node descriptor that the node successfully registered with. In case the
      * node did not successfully register yet, it will be nil.
      */
-    descriptor?: CommonNode;
+    descriptor?: Node;
 }
 
 /**
@@ -736,6 +482,28 @@ export interface EnclaveRPCCallEnclaveRequest {
      * Payload is a CBOR-serialized Frame.
      */
     payload: Uint8Array;
+}
+
+/**
+ * Entity represents an entity that controls one or more Nodes and or
+ * services.
+ */
+export interface Entity extends CBORVersioned {
+    /**
+     * ID is the public key identifying the entity.
+     */
+    id: Uint8Array;
+    /**
+     * Nodes is the vector of node identity keys owned by this entity, that
+     * will sign the descriptor with the node signing key rather than the
+     * entity signing key.
+     */
+    nodes?: Uint8Array[];
+    /**
+     * AllowEntitySignedNodes is true iff nodes belonging to this entity
+     * may be signed with the entity signing key.
+     */
+    allow_entity_signed_nodes: boolean;
 }
 
 /**
@@ -1051,13 +819,13 @@ export interface KeyManagerEnclavePolicySGX {
      * TODO: This could be made more sophisticated and seggregate based on
      * contract ID as well, but for now punt on the added complexity.
      */
-    may_query: Map<Uint8Array, CommonEnclaveIdentity[]>;
+    may_query: Map<Uint8Array, SGXEnclaveIdentity[]>;
     /**
      * MayReplicate is the vector of enclave IDs that may retrieve the master
      * secret (Note: Each enclave ID may always implicitly replicate from other
      * instances of itself).
      */
-    may_replicate: CommonEnclaveIdentity[];
+    may_replicate: SGXEnclaveIdentity[];
 }
 
 /**
@@ -1083,7 +851,7 @@ export interface KeyManagerPolicySGX {
     /**
      * Enclaves is the per-key manager enclave ID access control policy.
      */
-    enclaves: Map<CommonEnclaveIdentity, KeyManagerEnclavePolicySGX>;
+    enclaves: Map<SGXEnclaveIdentity, KeyManagerEnclavePolicySGX>;
 }
 
 /**
@@ -1091,7 +859,7 @@ export interface KeyManagerPolicySGX {
  */
 export interface KeyManagerSignedPolicySGX {
     policy: KeyManagerPolicySGX;
-    signatures: SignatureSignature[];
+    signatures: Signature[];
 }
 
 /**
@@ -1122,6 +890,201 @@ export interface KeyManagerStatus {
      * Policy is the key manager policy.
      */
     policy: KeyManagerSignedPolicySGX;
+}
+
+/**
+ * Node represents public connectivity information about an Oasis node.
+ */
+export interface Node extends CBORVersioned {
+    /**
+     * ID is the public key identifying the node.
+     */
+    id: Uint8Array;
+    /**
+     * EntityID is the public key identifying the Entity controlling
+     * the node.
+     */
+    entity_id: Uint8Array;
+    /**
+     * Expiration is the epoch in which this node's commitment expires.
+     */
+    expiration: longnum;
+    /**
+     * TLS contains information for connecting to this node via TLS.
+     */
+    tls: NodeTLSInfo;
+    /**
+     * P2P contains information for connecting to this node via P2P.
+     */
+    p2p: NodeP2PInfo;
+    /**
+     * Consensus contains information for connecting to this node as a
+     * consensus member.
+     */
+    consensus: NodeConsensusInfo;
+    /**
+     * Beacon contains information for this node's participation
+     * in the random beacon protocol.
+     *
+     * TODO: This is optional for now, make mandatory once enough
+     * nodes provide this field.
+     */
+    beacon?: NodeBeaconInfo;
+    /**
+     * Runtimes are the node's runtimes.
+     */
+    runtimes: NodeRuntime[];
+    /**
+     * Roles is a bitmask representing the node roles.
+     */
+    roles: number;
+}
+
+/**
+ * Address represents a TCP address for the purpose of node descriptors.
+ */
+export interface NodeAddress {
+    IP: Uint8Array;
+    Port: number;
+    Zone: string;
+}
+
+export interface NodeBeaconInfo {
+    point: Uint8Array;
+}
+
+/**
+ * Capabilities represents a node's capabilities.
+ */
+export interface NodeCapabilities {
+    /**
+     * TEE is the capability of a node executing batches in a TEE.
+     */
+    tee?: NodeCapabilityTEE;
+}
+
+/**
+ * CapabilityTEE represents the node's TEE capability.
+ */
+export interface NodeCapabilityTEE {
+    /**
+     * TEE hardware type.
+     */
+    hardware: number;
+    /**
+     * Runtime attestation key.
+     */
+    rak: Uint8Array;
+    /**
+     * Attestation.
+     */
+    attestation: Uint8Array;
+}
+
+/**
+ * ConsensusAddress represents a Tendermint consensus address that includes an
+ * ID and a TCP address.
+ * NOTE: The consensus address ID could be different from the consensus ID
+ * to allow using a sentry node's ID and address instead of the validator's.
+ */
+export interface NodeConsensusAddress {
+    /**
+     * ID is public key identifying the node.
+     */
+    id: Uint8Array;
+    /**
+     * Address is the address at which the node can be reached.
+     */
+    address: NodeAddress;
+}
+
+/**
+ * ConsensusInfo contains information for connecting to this node as a
+ * consensus member.
+ */
+export interface NodeConsensusInfo {
+    /**
+     * ID is the unique identifier of the node as a consensus member.
+     */
+    id: Uint8Array;
+    /**
+     * Addresses is the list of addresses at which the node can be reached.
+     */
+    addresses: NodeConsensusAddress[];
+}
+
+/**
+ * Runtime represents the runtimes supported by a given Oasis node.
+ */
+export interface NodeRuntime {
+    /**
+     * ID is the public key identifying the runtime.
+     */
+    id: Uint8Array;
+    /**
+     * Version is the version of the runtime.
+     */
+    version: Version;
+    /**
+     * Capabilities are the node's capabilities for a given runtime.
+     */
+    capabilities: NodeCapabilities;
+    /**
+     * ExtraInfo is the extra per node + per runtime opaque data associated
+     * with the current instance.
+     */
+    extra_info: Uint8Array;
+}
+
+/**
+ * TLSAddress represents an Oasis committee address that includes a TLS public key and a TCP
+ * address.
+ *
+ * NOTE: The address TLS public key can be different from the actual node TLS public key to allow
+ * using a sentry node's addresses.
+ */
+export interface NodeTLSAddress {
+    /**
+     * PubKey is the public key used for establishing TLS connections.
+     */
+    pub_key: Uint8Array;
+    /**
+     * Address is the address at which the node can be reached.
+     */
+    address: NodeAddress;
+}
+
+/**
+ * TLSInfo contains information for connecting to this node via TLS.
+ */
+export interface NodeTLSInfo {
+    /**
+     * PubKey is the public key used for establishing TLS connections.
+     */
+    pub_key: Uint8Array;
+    /**
+     * NextPubKey is the public key that will be used for establishing TLS connections after
+     * certificate rotation (if enabled).
+     */
+    next_pub_key?: Uint8Array;
+    /**
+     * Addresses is the list of addresses at which the node can be reached.
+     */
+    addresses: NodeTLSAddress[];
+}
+
+/**
+ * P2PInfo contains information for connecting to this node via P2P transport.
+ */
+export interface NodeP2PInfo {
+    /**
+     * ID is the unique identifier of the node on the P2P transport.
+     */
+    id: Uint8Array;
+    /**
+     * Addresses is the list of addresses at which the node can be reached.
+     */
+    addresses: NodeAddress[];
 }
 
 /**
@@ -1245,7 +1208,7 @@ export interface RegistryConsensusParameters {
  * entity registration changes and updates.
  */
 export interface RegistryEntityEvent {
-    entity: CommonEntity;
+    entity: Entity;
     is_registration: boolean;
 }
 
@@ -1379,7 +1342,7 @@ export interface RegistryNamespaceQuery {
  * registration changes and updates.
  */
 export interface RegistryNodeEvent {
-    node: CommonNode;
+    node: Node;
     is_registration: boolean;
 }
 
@@ -1387,7 +1350,7 @@ export interface RegistryNodeEvent {
  * NodeList is a per-epoch immutable node list.
  */
 export interface RegistryNodeList {
-    nodes: CommonNode[];
+    nodes: Node[];
 }
 
 /**
@@ -1428,7 +1391,7 @@ export interface RegistryNodeUnfrozenEvent {
 /**
  * Runtime represents a runtime.
  */
-export interface RegistryRuntime extends CommonVersioned {
+export interface RegistryRuntime extends CBORVersioned {
     /**
      * ID is a globally unique long term identifier of the runtime.
      */
@@ -1528,7 +1491,7 @@ export interface RegistryRuntimeGenesis {
      * empty or StateRoot is an empty hash or if used in network genesis
      * (e.g. during consensus chain init).
      */
-    storage_receipts: SignatureSignature[];
+    storage_receipts: Signature[];
     /**
      * Round is the runtime round in the genesis.
      */
@@ -1658,7 +1621,7 @@ export interface RegistryVersionInfo {
     /**
      * Version of the runtime.
      */
-    version: CommonVersion;
+    version: Version;
     /**
      * TEE is the enclave version information, in an enclave provider specific
      * format if any.
@@ -1699,10 +1662,10 @@ export interface RoothashBlock {
 export interface RoothashComputeBody {
     header: RoothashComputeResultsHeader;
     failure?: number;
-    txn_sched_sig: SignatureSignature;
+    txn_sched_sig: Signature;
     input_root: Uint8Array;
-    input_storage_sigs: SignatureSignature;
-    storage_signatures?: SignatureSignature[];
+    input_storage_sigs: Signature;
+    storage_signatures?: Signature[];
     rak_sig?: Uint8Array;
     messages?: RoothashMessage[];
 }
@@ -1905,7 +1868,7 @@ export interface RoothashHeader {
      * StorageSignatures are the storage receipt signatures for the merkle
      * roots.
      */
-    storage_signatures: SignatureSignature[];
+    storage_signatures: Signature[];
 }
 
 /**
@@ -1941,7 +1904,7 @@ export interface RoothashProposedBatch {
     /**
      * StorageSignatures are the storage receipt signatures for the I/O root.
      */
-    storage_signatures: SignatureSignature[];
+    storage_signatures: Signature[];
     /**
      * Header is the block header on which the batch should be based.
      */
@@ -1951,14 +1914,14 @@ export interface RoothashProposedBatch {
 /**
  * RegistryMessage is a runtime message that allows a runtime to perform staking operations.
  */
-export interface RoothashRegistryMessage extends CommonVersioned {
+export interface RoothashRegistryMessage extends CBORVersioned {
     update_runtime?: RegistryRuntime;
 }
 
 /**
  * StakingMessage is a runtime message that allows a runtime to perform staking operations.
  */
-export interface RoothashStakingMessage extends CommonVersioned {
+export interface RoothashStakingMessage extends CBORVersioned {
     transfer?: StakingTransfer;
     withdraw?: StakingWithdraw;
 }
@@ -2244,6 +2207,24 @@ export interface SchedulerValidator {
 }
 
 /**
+ * Constraints are the Intel SGX TEE constraints.
+ */
+export interface SGXConstraints {
+    /**
+     * Enclaves is the allowed MRENCLAVE/MRSIGNER pairs.
+     */
+    enclaves: SGXEnclaveIdentity[];
+}
+
+/**
+ * EnclaveIdentity is a byte serialized MRSIGNER/MRENCLAVE pair.
+ */
+export interface SGXEnclaveIdentity {
+    mr_enclave: Uint8Array;
+    mr_signer: Uint8Array;
+}
+
+/**
  * MultiSigned is a blob signed by multiple public keys.
  */
 export interface SignatureMultiSigned {
@@ -2254,13 +2235,13 @@ export interface SignatureMultiSigned {
     /**
      * Signatures are the signatures over the blob.
      */
-    signatures: SignatureSignature[];
+    signatures: Signature[];
 }
 
 /**
  * Signature is a signature, bundled with the signing public key.
  */
-export interface SignatureSignature {
+export interface Signature {
     /**
      * PublicKey is the public key that produced the signature.
      */
@@ -2282,7 +2263,7 @@ export interface SignatureSigned {
     /**
      * Signature is the signature over blob.
      */
-    signature: SignatureSignature;
+    signature: Signature;
 }
 
 /**
@@ -2975,6 +2956,25 @@ export interface UpgradePendingUpgrade {
      * LastCompletedStage is the last upgrade stage that was successfully completed.
      */
     last_completed_stage: number;
+}
+
+/**
+ * Version is a protocol version.
+ */
+export interface Version {
+    major?: number;
+    minor?: number;
+    patch?: number;
+}
+
+/**
+ * ProtocolVersions are the protocol versions.
+ */
+export interface VersionProtocolVersions {
+    runtime_host_protocol: Version;
+    runtime_committee_protocol: Version;
+    consensus_protocol: Version;
+    toolchain: Version;
 }
 
 /**
