@@ -15,10 +15,18 @@ export const CODE_INTERNAL = 2;
  */
 export const CODE_TRANSACTION_EXPIRED = 3;
 /**
- * ErrNotSynced is an error return if transaction is submitted before node has finished
+ * ErrNotSynced is an error returned if transaction is submitted before node has finished
  * initial syncing.
  */
 export const CODE_NOT_SYNCED = 4;
+/**
+ * ErrCheckTxFailed is an error returned if the local transaction check fails.
+ */
+export const CODE_CHECK_TX_FAILED = 5;
+/**
+ * ErrNoHostedRuntime is returned when the hosted runtime is not available locally.
+ */
+export const CODE_NO_HOSTED_RUNTIME = 6;
 
 export const HOST_PROTOCOL_MODULE_NAME = 'rhp/internal';
 /**

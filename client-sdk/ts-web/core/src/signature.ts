@@ -68,7 +68,7 @@ export async function openMultiSigned(context: string, multiSigned: types.Signat
 }
 
 export async function signMultiSigned(signers: ContextSigner[], context: string, rawValue: Uint8Array) {
-    const signatures = [] as types.SignatureSignature[];
+    const signatures = [] as types.Signature[];
     for (const signer of signers) {
         signatures.push({
             public_key: signer.public(),

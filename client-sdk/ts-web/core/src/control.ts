@@ -3,7 +3,7 @@
  */
 export const DEBUG_MODULE_NAME = 'control/debug';
 /**
- * ErrIncompatibleBackend is the error raised when the current epochtime
+ * ErrIncompatibleBackend is the error raised when the current beacon
  * backend does not support manually setting the current epoch.
  */
 export const CODE_INCOMPATIBLE_BACKEND = 1;
