@@ -2,7 +2,7 @@
 use ed25519_dalek::{self, ed25519::signature::Signature as _};
 use serde::{Deserialize, Serialize};
 
-use oasis_core_runtime::common::crypto::hash::Hash;
+use oasis_core_runtime::common::crypto::{hash::Hash, signature::PublicKey as CorePublicKey};
 
 use crate::crypto::signature::{Error, Signature};
 
@@ -43,5 +43,19 @@ impl PublicKey {
 impl From<&'static str> for PublicKey {
     fn from(s: &'static str) -> PublicKey {
         PublicKey::from_bytes(&base64::decode(s).unwrap()).unwrap()
+    }
+}
+
+impl From<CorePublicKey> for PublicKey {
+    fn from(pk: CorePublicKey) -> PublicKey {
+        PublicKey::from_bytes(pk.as_ref())
+            .expect("types are compatible so conversion must always succeed")
+    }
+}
+
+impl From<&CorePublicKey> for PublicKey {
+    fn from(pk: &CorePublicKey) -> PublicKey {
+        PublicKey::from_bytes(pk.as_ref())
+            .expect("types are compatible so conversion must always succeed")
     }
 }
