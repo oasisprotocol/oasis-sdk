@@ -1,4 +1,9 @@
 /**
+ * RoundLatest is a special round number always referring to the latest round.
+ */
+export const ROUND_LATEST = 0xffffffffffffffffn;
+
+/**
  * ModuleName is the runtime client module name.
  */
 export const CLIENT_MODULE_NAME = 'runtime/client';
