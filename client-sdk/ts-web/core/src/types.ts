@@ -1795,7 +1795,20 @@ export interface RoothashExecutorProposerTimeoutRequest {
  * FinalizedEvent is a finalized event.
  */
 export interface RoothashFinalizedEvent {
+    /**
+     * Round is the round that was finalized.
+     */
     round: longnum;
+    /**
+     * Good ComputeNodes are the public keys of compute nodes that positively contributed to the
+     * round by replicating the computation correctly.
+     */
+    good_compute_nodes?: Uint8Array[];
+    /**
+     * BadComputeNodes are the public keys of compute nodes that negatively contributed to the round
+     * by causing discrepancies.
+     */
+    bad_compute_nodes?: Uint8Array[];
 }
 
 /**
@@ -1924,6 +1937,8 @@ export interface RoothashRegistryMessage extends CBORVersioned {
 export interface RoothashStakingMessage extends CBORVersioned {
     transfer?: StakingTransfer;
     withdraw?: StakingWithdraw;
+    add_escrow?: StakingEscrow;
+    reclaim_escrow?: StakingReclaimEscrow;
 }
 
 /**
@@ -2426,6 +2441,11 @@ export interface StakingConsensusParameters {
     disable_transfers?: boolean;
     disable_delegation?: boolean;
     undisable_transfers_from?: Map<Uint8Array, boolean>;
+    /**
+     * AllowEscrowMessages can be used to allow runtimes to perform AddEscrow
+     * and ReclaimEscrow via runtime messages.
+     */
+    allow_escrow_messages?: boolean;
     /**
      * MaxAllowances is the maximum number of allowances an account can have. Zero means disabled.
      */
