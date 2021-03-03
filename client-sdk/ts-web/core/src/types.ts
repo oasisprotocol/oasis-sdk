@@ -499,11 +499,6 @@ export interface Entity extends CBORVersioned {
      * entity signing key.
      */
     nodes?: Uint8Array[];
-    /**
-     * AllowEntitySignedNodes is true iff nodes belonging to this entity
-     * may be signed with the entity signing key.
-     */
-    allow_entity_signed_nodes: boolean;
 }
 
 /**
@@ -1169,11 +1164,6 @@ export interface RegistryConsensusParameters {
      */
     debug_allow_test_runtimes?: boolean;
     /**
-     * DebugAllowEntitySignedNodeRegistration is true iff node registration
-     * signed by entity signing keys should be allowed.
-     */
-    debug_allow_entity_signed_node_registration?: boolean;
-    /**
      * DebugBypassStake is true iff the registry should bypass all of the staking
      * related checks and operations.
      */
@@ -1800,7 +1790,7 @@ export interface RoothashFinalizedEvent {
      */
     round: longnum;
     /**
-     * Good ComputeNodes are the public keys of compute nodes that positively contributed to the
+     * GoodComputeNodes are the public keys of compute nodes that positively contributed to the
      * round by replicating the computation correctly.
      */
     good_compute_nodes?: Uint8Array[];
