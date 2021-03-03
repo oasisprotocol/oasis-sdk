@@ -3,9 +3,9 @@
  */
 export const MODULE_NAME = 'accounts';
 
-export const CODE_INVALID_ARGUMENT = 1;
-export const CODE_INSUFFICIENT_BALANCE = 2;
-export const CODE_FORBIDDEN = 3;
+export const ERR_INVALID_ARGUMENT_CODE = 1;
+export const ERR_INSUFFICIENT_BALANCE_CODE = 2;
+export const ERR_FORBIDDEN_CODE = 3;
 
 // Callable methods.
 export const METHOD_TRANSFER = 'accounts.Transfer';
