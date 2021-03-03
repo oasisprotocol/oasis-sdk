@@ -3,6 +3,9 @@ import * as oasis from '@oasisprotocol/client';
 import * as signatureSecp256k1 from './signature_secp256k1';
 import * as types from './types';
 
+/**
+ * The latest transaction format version.
+ */
 export const LATEST_TRANSACTION_VERSION = 1;
 
 export async function signUnverifiedTransaction(

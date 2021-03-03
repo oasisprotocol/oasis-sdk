@@ -1,3 +1,6 @@
+/**
+ * Unique module name.
+ */
 export const MODULE_NAME = 'core';
 
 export const CODE_MALFORMED_TRANSACTION = 1;
