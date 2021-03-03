@@ -126,49 +126,51 @@ export const GAS_OP_WITHDRAW = 'withdraw';
  * ModuleName is a unique module name for the staking module.
  */
 export const MODULE_NAME = 'staking';
+
 /**
  * ErrInvalidArgument is the error returned on malformed arguments.
  */
-export const CODE_INVALID_ARGUMENT = 1;
+export const ERR_INVALID_ARGUMENT_CODE = 1;
 /**
  * ErrInvalidSignature is the error returned on invalid signature.
  */
-export const CODE_INVALID_SIGNATURE = 2;
+export const ERR_INVALID_SIGNATURE_CODE = 2;
 /**
  * ErrInsufficientBalance is the error returned when an operation
  * fails due to insufficient balance.
  */
-export const CODE_INSUFFICIENT_BALANCE = 3;
+export const ERR_INSUFFICIENT_BALANCE_CODE = 3;
 /**
  * ErrInsufficientStake is the error returned when an operation fails
  * due to insufficient stake.
  */
-export const CODE_INSUFFICIENT_STAKE = 4;
+export const ERR_INSUFFICIENT_STAKE_CODE = 4;
 /**
  * ErrForbidden is the error returned when an operation is forbidden by
  * policy.
  */
-export const CODE_FORBIDDEN = 5;
+export const ERR_FORBIDDEN_CODE = 5;
 /**
  * ErrInvalidThreshold is the error returned when an invalid threshold kind
  * is specified in a query.
  */
-export const CODE_INVALID_THRESHOLD = 6;
+export const ERR_INVALID_THRESHOLD_CODE = 6;
 /**
  * ErrTooManyAllowances is the error returned when the number of allowances per account would
  * exceed the maximum allowed number.
  */
-export const CODE_TOO_MANY_ALLOWANCES = 7;
+export const ERR_TOO_MANY_ALLOWANCES_CODE = 7;
 
 /**
  * ModuleName is a unique module name for the staking/token module.
  */
 export const TOKEN_MODULE_NAME = 'staking/token';
+
 /**
  * ErrInvalidTokenValueExponent is the error returned when an invalid token's
  * value base-10 exponent is specified.
  */
-export const CODE_INVALID_TOKEN_VALUE_EXPONENT = 1;
+export const TOKEN_ERR_INVALID_TOKEN_VALUE_EXPONENT_CODE = 1;
 
 export async function addressFromPublicKey(pk: Uint8Array) {
     return await address.fromData(ADDRESS_V0_CONTEXT_IDENTIFIER, ADDRESS_V0_CONTEXT_VERSION, pk);

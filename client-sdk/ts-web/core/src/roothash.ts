@@ -92,73 +92,75 @@ export const FAILURE_STORAGE_UNAVAILABLE = 2;
  * ModuleName is a unique module name for the roothash module.
  */
 export const MODULE_NAME = 'roothash';
+
 /**
  * ErrInvalidArgument is the error returned on malformed argument(s).
  */
-export const CODE_INVALID_ARGUMENT = 1;
+export const ERR_INVALID_ARGUMENT_CODE = 1;
 /**
  * ErrNotFound is the error returned when a block is not found.
  */
-export const CODE_NOT_FOUND = 2;
+export const ERR_NOT_FOUND_CODE = 2;
 /**
  * ErrInvalidRuntime is the error returned when the passed runtime is invalid.
  */
-export const CODE_INVALID_RUNTIME = 3;
+export const ERR_INVALID_RUNTIME_CODE = 3;
 /**
  * ErrNoExecutorPool is the error returned when there is no executor pool.
  */
-export const CODE_NO_EXECUTOR_POOL = 4;
+export const ERR_NO_EXECUTOR_POOL_CODE = 4;
 /**
  * ErrRuntimeSuspended is the error returned when the passed runtime is suspended.
  */
-export const CODE_RUNTIME_SUSPENDED = 5;
+export const ERR_RUNTIME_SUSPENDED_CODE = 5;
 /**
  * ErrProposerTimeoutNotAllowed is the error returned when proposer timeout is not allowed.
  */
-export const CODE_PROPOSER_TIMEOUT_NOT_ALLOWED = 6;
+export const ERR_PROPOSER_TIMEOUT_NOT_ALLOWED_CODE = 6;
 /**
  * ErrMaxMessagesTooBig is the error returned when the MaxMessages parameter is set to a value
  * larger than the MaxRuntimeMessages specified in consensus parameters.
  */
-export const CODE_MAX_MESSAGES_TOO_BIG = 7;
+export const ERR_MAX_MESSAGES_TOO_BIG_CODE = 7;
 /**
  * ErrRuntimeDoesNotSlash is the error returned when misbehaviour evidence is submitted for a
  * runtime that does not slash.
  */
-export const CODE_RUNTIME_DOES_NOT_SLASH = 8;
+export const ERR_RUNTIME_DOES_NOT_SLASH_CODE = 8;
 /**
  * ErrDuplicateEvidence is the error returned when submitting already existing evidence.
  */
-export const CODE_DUPLICATE_EVIDENCE = 9;
+export const ERR_DUPLICATE_EVIDENCE_CODE = 9;
 /**
  * ErrInvalidEvidence is the error return when an invalid evidence is submitted.
  */
-export const CODE_INVALID_EVIDENCE = 10;
+export const ERR_INVALID_EVIDENCE_CODE = 10;
 
 /**
  * moduleName is the module name used for namespacing errors.
  */
 export const COMMITMENT_MODULE_NAME = 'roothash/commitment';
-export const CODE_NO_RUNTIME = 1;
-export const CODE_NO_COMMITTEE = 2;
-export const CODE_INVALID_COMMITTEE_KIND = 3;
-export const CODE_RAK_SIG_INVALID = 4;
-export const CODE_NOT_IN_COMMITTEE = 5;
-export const CODE_ALREADY_COMMITTED = 6;
-export const CODE_NOT_BASED_ON_CORRECT_BLOCK = 7;
-export const CODE_DISCREPANCY_DETECTED = 8;
-export const CODE_STILL_WAITING = 9;
-export const CODE_INSUFFICIENT_VOTES = 10;
-export const CODE_BAD_EXECUTOR_COMMITMENT = 11;
-export const CODE_TXN_SCHED_SIG_INVALID = 12;
-export const CODE_INVALID_MESSAGES = 13;
-export const CODE_BAD_STORAGE_RECEIPTS = 14;
-export const CODE_TIMEOUT_NOT_CORRECT_ROUND = 15;
-export const CODE_NODE_IS_SCHEDULER = 16;
-export const CODE_MAJORITY_FAILURE = 17;
-export const CODE_INVALID_ROUND = 18;
-export const CODE_NO_PROPOSER_COMMITMENT = 19;
-export const CODE_BAD_PROPOSER_COMMITMENT = 20;
+
+export const ERR_NO_RUNTIME_CODE = 1;
+export const ERR_NO_COMMITTEE_CODE = 2;
+export const ERR_INVALID_COMMITTEE_KIND_CODE = 3;
+export const ERR_RAK_SIG_INVALID_CODE = 4;
+export const ERR_NOT_IN_COMMITTEE_CODE = 5;
+export const ERR_ALREADY_COMMITTED_CODE = 6;
+export const ERR_NOT_BASED_ON_CORRECT_BLOCK_CODE = 7;
+export const ERR_DISCREPANCY_DETECTED_CODE = 8;
+export const ERR_STILL_WAITING_CODE = 9;
+export const ERR_INSUFFICIENT_VOTES_CODE = 10;
+export const ERR_BAD_EXECUTOR_COMMITMENT_CODE = 11;
+export const ERR_TXN_SCHED_SIG_INVALID_CODE = 12;
+export const ERR_INVALID_MESSAGES_CODE = 13;
+export const ERR_BAD_STORAGE_RECEIPTS_CODE = 14;
+export const ERR_TIMEOUT_NOT_CORRECT_ROUND_CODE = 15;
+export const ERR_NODE_IS_SCHEDULER_CODE = 16;
+export const ERR_MAJORITY_FAILURE_CODE = 17;
+export const ERR_INVALID_ROUND_CODE = 18;
+export const ERR_NO_PROPOSER_COMMITMENT_CODE = 19;
+export const ERR_BAD_PROPOSER_COMMITMENT_CODE = 20;
 
 export async function openExecutorCommitment(chainContext: string, runtimeID: Uint8Array, signed: types.SignatureSigned) {
     const context = `${signature.combineChainContext(EXECUTOR_SIGNATURE_CONTEXT, chainContext)} for runtime ${misc.toHex(runtimeID)}`;
