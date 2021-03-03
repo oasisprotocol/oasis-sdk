@@ -8,11 +8,27 @@ export interface AccountsBalancesQuery {
     address: Uint8Array;
 }
 
+export interface AccountsBurnEvent {
+    owner: Uint8Array;
+    amount: BaseUnits;
+}
+
+export interface AccountsMintEvent {
+    owner: Uint8Array;
+    amount: BaseUnits;
+}
+
 export interface AccountsNonceQuery {
     address: Uint8Array;
 }
 
 export interface AccountsTransfer {
+    to: Uint8Array;
+    amount: BaseUnits;
+}
+
+export interface AccountsTransferEvent {
+    from: Uint8Array;
     to: Uint8Array;
     amount: BaseUnits;
 }
@@ -45,11 +61,6 @@ export interface FailedCallResult {
 export interface Fee {
     amount: BaseUnits;
     gas: oasis.types.longnum;
-}
-
-export interface MintEvent {
-    owner: Uint8Array;
-    amount: BaseUnits;
 }
 
 export interface PublicKey {
