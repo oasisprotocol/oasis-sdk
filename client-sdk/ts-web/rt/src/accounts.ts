@@ -13,6 +13,6 @@ export const METHOD_TRANSFER = 'accounts.Transfer';
 export const METHOD_NONCE = 'accounts.Nonce';
 export const METHOD_BALANCES = 'accounts.Balances';
 
-export const CODE_TRANSFER_HEX = '00000001';
-export const CODE_BURN_HEX = '00000002';
-export const CODE_MINT_HEX = '00000003';
+export const EVENT_TRANSFER_CODE = 1;
+export const EVENT_BURN_CODE = 2;
+export const EVENT_MINT_CODE = 3;
