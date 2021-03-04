@@ -76,6 +76,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4d7d63395147b81a9e570bcc6243aaf71c017bd666d4909cfef0085bdda8d73"
 
 [[package]]
+name = "assert_matches"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
+
+[[package]]
 name = "autocfg"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -682,7 +688,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-runtime"
 version = "0.3.0-alpha"
-source = "git+https://github.com/oasisprotocol/oasis-core#9998deaee02ff1fa9a549d42791449013ca8662a"
+source = "git+https://github.com/oasisprotocol/oasis-core#d186644faee8ab99cc1e94df4bdcf04a92873e00"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -735,6 +741,7 @@ name = "oasis-runtime-sdk"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert_matches",
  "base64",
  "bech32 0.7.2",
  "ed25519-dalek",
@@ -742,6 +749,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "io-context",
  "k256",
+ "lazy_static",
  "num-traits",
  "oasis-core-runtime",
  "serde",
@@ -1010,9 +1018,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.62"
+version = "1.0.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea1c6153794552ea7cf7cf63b1231a25de00ec90db326ba6264440fa08e31486"
+checksum = "799e97dc9fdae36a5c8b8f2cae9ce2ee9fdce2058c57a93e6099d919fd982f79"
 dependencies = [
  "itoa",
  "ryu",

@@ -22,7 +22,7 @@ use oasis_core_runtime::{
 use crate::{
     context::DispatchContext,
     error::{Error as _, RuntimeError},
-    module::{AuthHandler, MethodRegistry},
+    module::{AuthHandler, BlockHandler, MethodRegistry},
     modules,
     runtime::Runtime,
     types,
@@ -197,11 +197,17 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Perform state migrations if required.
             self.maybe_init_state(&mut ctx);
 
+            // Run begin block hooks.
+            R::Modules::begin_block(&mut ctx);
+
             // Execute the batch.
             let mut results = Vec::with_capacity(batch.len());
             for tx in batch.iter() {
                 results.push(self.execute_tx(&mut ctx, &tx)?);
             }
+
+            // Run end block hooks.
+            R::Modules::end_block(&mut ctx);
 
             // Commit the context and retrieve the emitted messages.
             let messages = ctx.commit();

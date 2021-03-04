@@ -1,4 +1,4 @@
-//! Module that contains definitions useful for testing.
+//! Module that contains known test keys.
 
 // TODO: Should be derived from seeds once implemented in the Rust version.
 
@@ -9,14 +9,21 @@ macro_rules! test_key {
         #[doc=$doc]
         #[doc="."]
         pub mod $name {
-            use crate::crypto::signature::PublicKey;
+            use crate::crypto::signature::{PublicKey, ed25519};
             use crate::types::address::Address;
 
             #[doc=" Test public key "]
             #[doc=$doc]
             #[doc="."]
             pub fn pk() -> PublicKey {
-                PublicKey::Ed25519($pk.into())
+                PublicKey::Ed25519(pk_ed25519())
+            }
+
+            #[doc=" Test Ed25519 public key "]
+            #[doc=$doc]
+            #[doc="."]
+            pub fn pk_ed25519() -> ed25519::PublicKey {
+                $pk.into()
             }
 
             #[doc=" Test address "]

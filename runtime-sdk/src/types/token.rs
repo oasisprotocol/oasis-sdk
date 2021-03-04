@@ -1,4 +1,6 @@
 //! Token types.
+use std::fmt;
+
 use serde::{self, Deserialize, Serialize};
 
 pub use oasis_core_runtime::common::quantity::Quantity;
@@ -21,6 +23,17 @@ impl Denomination {
     /// Whether the denomination represents the native token.
     pub fn is_native(&self) -> bool {
         self.0.is_empty()
+    }
+}
+
+impl fmt::Display for Denomination {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_native() {
+            write!(f, "<native>")?;
+        } else {
+            write!(f, "{}", String::from_utf8_lossy(&self.0))?;
+        }
+        Ok(())
     }
 }
 
@@ -70,6 +83,13 @@ impl BaseUnits {
     /// Denomination of the token amount.
     pub fn denomination(&self) -> &Denomination {
         &self.1
+    }
+}
+
+impl fmt::Display for BaseUnits {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} {}", self.0, self.1)?;
+        Ok(())
     }
 }
 
