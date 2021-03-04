@@ -181,7 +181,7 @@ export class OasisNodeClient {
     client: grpcWeb.AbstractClientBase;
     base: string;
 
-    constructor (base: string) {
+    constructor(base: string) {
         this.client = new grpcWeb.GrpcWebClientBase({});
         this.base = base;
     }
