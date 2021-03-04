@@ -8,8 +8,10 @@ import * as types from './types';
  */
 export const LATEST_TRANSACTION_VERSION = 1;
 
+export type AnySigner = oasis.signature.ContextSigner | signatureSecp256k1.ContextSigner;
+
 export async function signUnverifiedTransaction(
-    signers: (oasis.signature.ContextSigner | signatureSecp256k1.ContextSigner)[],
+    signers: AnySigner[],
     transaction: types.Transaction,
 ) {
     // TODO: Reconcile this with transaction.rs.
