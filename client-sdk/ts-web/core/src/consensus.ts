@@ -36,51 +36,53 @@ export const TENDERMINT_BACKEND_NAME = 'tendermint';
  * moduleName is the module name used for error definitions.
  */
 export const MODULE_NAME = 'consensus';
+
 /**
  * ErrNoCommittedBlocks is the error returned when there are no committed
  * blocks and as such no state can be queried.
  */
-export const CODE_NO_COMMITTED_BLOCKS = 1;
+export const ERR_NO_COMMITTED_BLOCKS_CODE = 1;
 /**
  * ErrOversizedTx is the error returned when the given transaction is too big to be processed.
  */
-export const CODE_OVERSIZED_TX = 2;
+export const ERR_OVERSIZED_TX_CODE = 2;
 /**
  * ErrVersionNotFound is the error returned when the given version (height) cannot be found,
  * possibly because it was pruned.
  */
-export const CODE_VERSION_NOT_FOUND = 3;
+export const ERR_VERSION_NOT_FOUND_CODE = 3;
 /**
  * ErrUnsupported is the error returned when the given method is not supported by the consensus
  * backend.
  */
-export const CODE_UNSUPPORTED = 4;
+export const ERR_UNSUPPORTED_CODE = 4;
 /**
  * ErrDuplicateTx is the error returned when the transaction already exists in the mempool.
  */
-export const CODE_DUPLICATE_TX = 5;
+export const ERR_DUPLICATE_TX_CODE = 5;
 /**
  * ErrInvalidArgument is the error returned when the request contains an invalid argument.
  */
-export const CODE_INVALID_ARGUMENT = 6;
+export const ERR_INVALID_ARGUMENT_CODE = 6;
 
 /**
  * moduleName is the module name used for error definitions.
  */
 export const TRANSACTION_MODULE_NAME = 'consensus/transaction';
+
 /**
  * ErrInvalidNonce is the error returned when a nonce is invalid.
  */
-export const CODE_INVALID_NONCE = 1;
+export const TRANSACTION_ERR_INVALID_NONCE_CODE = 1;
 /**
  * ErrInsufficientFeeBalance is the error returned when there is insufficient
  * balance to pay consensus fees.
  */
-export const CODE_INSUFFICIENT_FEE_BALANCE = 2;
+export const TRANSACTION_ERR_INSUFFICIENT_FEE_BALANCE_CODE = 2;
 /**
  * ErrGasPriceTooLow is the error returned when the gas price is too low.
  */
-export const CODE_GAS_PRICE_TOO_LOW = 3;
+export const TRANSACTION_ERR_GAS_PRICE_TOO_LOW_CODE = 3;
 
 export async function openSignedTransaction(chainContext: string, signed: types.SignatureSigned) {
     const context = signature.combineChainContext(TRANSACTION_SIGNATURE_CONTEXT, chainContext);

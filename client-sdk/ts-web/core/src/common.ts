@@ -59,16 +59,18 @@ export const CODE_NO_ERROR = 0;
  * UnknownModule is the module name used when the module is unknown.
  */
 export const UNKNOWN_MODULE = 'unknown';
-export const CODE_UNKNOWN_ERROR = 1;
+
+export const ERR_UNKNOWN_ERROR_CODE = 1;
 
 export const IDENTITY_MODULE_NAME = 'identity';
+
 /**
  * ErrCertificateRotationForbidden is returned by RotateCertificates if
  * TLS certificate rotation is forbidden.  This happens when rotation is
  * enabled and an existing TLS certificate was successfully loaded
  * (or a new one was generated and persisted to disk).
  */
-export const CODE_CERTIFICATE_ROTATION_FORBIDDEN = 1;
+export const IDENTITY_ERR_CERTIFICATE_ROTATION_FORBIDDEN_CODE = 1;
 
 export async function openSignedEntity(context: string, signed: types.SignatureSigned) {
     return misc.fromCBOR(await signature.openSigned(context, signed)) as types.Entity;

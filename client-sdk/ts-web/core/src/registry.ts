@@ -110,92 +110,93 @@ export const LATEST_RUNTIME_DESCRIPTOR_VERSION = 2;
  * ModuleName is a unique module name for the registry module.
  */
 export const MODULE_NAME = 'registry';
+
 /**
  * ErrInvalidArgument is the error returned on malformed argument(s).
  */
-export const CODE_INVALID_ARGUMENT = 1;
+export const ERR_INVALID_ARGUMENT_CODE = 1;
 /**
  * ErrInvalidSignature is the error returned on an invalid signature.
  */
-export const CODE_INVALID_SIGNATURE = 2;
+export const ERR_INVALID_SIGNATURE_CODE = 2;
 /**
  * ErrBadEntityForNode is the error returned when a node registration
  * with an unknown entity is attempted.
  */
-export const CODE_BAD_ENTITY_FOR_NODE = 3;
+export const ERR_BAD_ENTITY_FOR_NODE_CODE = 3;
 /**
  * ErrBadEntityForRuntime is the error returned when a runtime
  * attempts to register with an unknown entity.
  */
-export const CODE_BAD_ENTITY_FOR_RUNTIME = 4;
+export const ERR_BAD_ENTITY_FOR_RUNTIME_CODE = 4;
 /**
  * ErrNoEnclaveForRuntime is the error returned when a TEE runtime
  * registers with no enclave IDs.
  */
-export const CODE_NO_ENCLAVE_FOR_RUNTIME = 5;
+export const ERR_NO_ENCLAVE_FOR_RUNTIME_CODE = 5;
 /**
  * ErrBadEnclaveIdentity is the error returned when a node tries to
  * register runtimes with wrong Enclave IDs.
  */
-export const CODE_BAD_ENCLAVE_IDENTITY = 6;
+export const ERR_BAD_ENCLAVE_IDENTITY_CODE = 6;
 /**
  * ErrBadCapabilitiesTEEHardware is the error returned when a node tries to
  * register a runtime with bad Capabilities.TEE.Hardware.
  */
-export const CODE_BAD_CAPABILITIES_TEE_HARDWARE = 7;
+export const ERR_BAD_CAPABILITIES_TEE_HARDWARE_CODE = 7;
 /**
  * ErrTEEHardwareMismatch is the error returned when a node tries to
  * register a runtime and Capabilities.TEE.Hardware mismatches the one in
  * the registry.
  */
-export const CODE_TEE_HARDWARE_MISMATCH = 8;
+export const ERR_TEE_HARDWARE_MISMATCH_CODE = 8;
 /**
  * ErrNoSuchEntity is the error returned when an entity does not exist.
  */
-export const CODE_NO_SUCH_ENTITY = 9;
+export const ERR_NO_SUCH_ENTITY_CODE = 9;
 /**
  * ErrNoSuchNode is the error returned when an node does not exist.
  */
-export const CODE_NO_SUCH_NODE = 10;
+export const ERR_NO_SUCH_NODE_CODE = 10;
 /**
  * ErrNoSuchRuntime is the error returned when an runtime does not exist.
  */
-export const CODE_NO_SUCH_RUNTIME = 11;
+export const ERR_NO_SUCH_RUNTIME_CODE = 11;
 /**
  * ErrIncorrectTxSigner is the error returned when the signer of the transaction
  * is not the correct one.
  */
-export const CODE_INCORRECT_TX_SIGNER = 12;
+export const ERR_INCORRECT_TX_SIGNER_CODE = 12;
 /**
  * ErrNodeExpired is the error returned when a node is expired.
  */
-export const CODE_NODE_EXPIRED = 13;
+export const ERR_NODE_EXPIRED_CODE = 13;
 /**
  * ErrNodeCannotBeUnfrozen is the error returned when a node cannot yet be
  * unfrozen due to the freeze period not being over yet.
  */
-export const CODE_NODE_CANNOT_BE_UNFROZEN = 14;
+export const ERR_NODE_CANNOT_BE_UNFROZEN_CODE = 14;
 /**
  * ErrEntityHasNodes is the error returned when an entity cannot be deregistered
  * as it still has nodes.
  */
-export const CODE_ENTITY_HAS_NODES = 15;
+export const ERR_ENTITY_HAS_NODES_CODE = 15;
 /**
  * ErrForbidden is the error returned when an operation is forbidden by
  * policy.
  */
-export const CODE_FORBIDDEN = 16;
+export const ERR_FORBIDDEN_CODE = 16;
 /**
  * ErrNodeUpdateNotAllowed is the error returned when trying to update an existing node with
  * disallowed changes.
  */
-export const CODE_NODE_UPDATE_NOT_ALLOWED = 17;
+export const ERR_NODE_UPDATE_NOT_ALLOWED_CODE = 17;
 /**
  * ErrRuntimeUpdateNotAllowed is the error returned when trying to update an existing runtime.
  */
-export const CODE_RUNTIME_UPDATE_NOT_ALLOWED = 18;
+export const ERR_RUNTIME_UPDATE_NOT_ALLOWED_CODE = 18;
 /**
  * ErrEntityHasRuntimes is the error returned when an entity cannot be deregistered as it still
  * has runtimes.
  */
-export const CODE_ENTITY_HAS_RUNTIMES = 19;
+export const ERR_ENTITY_HAS_RUNTIMES_CODE = 19;

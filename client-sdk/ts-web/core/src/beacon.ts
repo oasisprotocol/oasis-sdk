@@ -19,12 +19,14 @@ export const BACKEND_INSECURE = 'insecure';
  * BackendPVSS is the name of the PVSS backend.
  */
 export const BACKEND_PVSS = 'pvss';
+
 /**
  * ModuleName is a unique module name for the beacon module.
  */
 export const MODULE_NAME = 'beacon';
+
 /**
  * ErrBeaconNotAvailable is the error returned when a beacon is not
  * available for the requested height for any reason.
  */
-export const CODE_BEACON_NOT_AVAILABLE = 1;
+export const ERR_BEACON_NOT_AVAILABLE_CODE = 1;
