@@ -23,6 +23,8 @@ pub enum Error {
     InvalidMethod,
     #[error("invalid nonce")]
     InvalidNonce,
+    #[error("insufficient balance to pay fees")]
+    InsufficientFeeBalance,
 }
 
 impl error::Error for Error {
@@ -36,6 +38,7 @@ impl error::Error for Error {
             Error::InvalidTransaction(..) => 2,
             Error::InvalidMethod => 3,
             Error::InvalidNonce => 4,
+            Error::InsufficientFeeBalance => 5,
         }
     }
 }
