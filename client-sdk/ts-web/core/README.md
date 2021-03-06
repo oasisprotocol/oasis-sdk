@@ -17,6 +17,7 @@ serialization.
 1. A heuristic to convert structures from CBOR maps to JavaScript objects.
 1. Type definitions for structures.
 1. Helpers for operating on a few kinds of data.
+1. Constants.
 1. JSDoc copied from Godoc.
 
 ## Design notes
