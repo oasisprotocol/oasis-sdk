@@ -5,6 +5,7 @@
         "signer-ledger"
     ],
     "scripts": {
+        "lint": "prettier --check '**/src/**.ts'",
         "fmt": "prettier --write '**/src/**.ts'"
     },
     "devDependencies": {

@@ -17,32 +17,14 @@ on:
 
 jobs:
 
-  lint:
+  lint-rust:
     # NOTE: This name appears in GitHub's Checks API.
-    name: lint
+    name: lint-rust
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          # Check out pull request's HEAD commit instead of the merge commit to
-          # prevent gitlint from failing due to too long commit message titles,
-          # e.g. "Merge 3e621938d65caaa67f8e35d145335d889d470fc8 into 19a39b2f66cd7a165082d1486b2f1eb36ec2354a".
-          ref: ${{ github.event.pull_request.head.sha }}
-          # Fetch all history so gitlint can check the relevant commits.
-          fetch-depth: '0'
-      - name: Set up Python 3
-        uses: actions/setup-python@v2.2.1
-        with:
-          python-version: '3.x'
-      - name: Set up Node.js 12
-        uses: actions/setup-node@v2.1.4
-        with:
-          node-version: "12.x"
-      - name: Set up Go 1.15
-        uses: actions/setup-go@v2.1.3
-        with:
-          go-version: "1.15.x"
+
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -52,10 +34,30 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features -- -D warnings
+          args: --all-features --locked -- -D warnings -D clippy::dbg_macro
 
       - name: Formatting check
         uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: -- --check
+
+  lint-ts-web:
+    name: lint-ts-web
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js LTS
+        uses: actions/setup-node@v2.1.4
+        with:
+          node-version: "14.x"
+
+      - name: Install Node deps
+        working-directory: client-sdk/ts-web
+        run: npm ci
+
+      - name: Lint ts-web
+        working-directory: client-sdk/ts-web
+        run: npm run-script lint
