@@ -1,5 +1,7 @@
 # An oasis-core SDK for TypeScript
 
+Developers, see [this getting started guide](docs/getting-started.md).
+
 ## Philosophy
 
 Prioritize exposing an unopinionated binding to
