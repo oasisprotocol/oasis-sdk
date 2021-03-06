@@ -4,7 +4,6 @@ import * as transaction from './transaction';
 import * as types from './types';
 
 export class Wrapper {
-
     client: oasis.OasisNodeClient;
     runtimeID: Uint8Array;
 
@@ -51,5 +50,4 @@ export class Wrapper {
         const response = await this.client.runtimeClientQuery(request);
         return response.data;
     }
-
 }

@@ -3,5 +3,11 @@
         "core",
         "rt",
         "signer-ledger"
-    ]
+    ],
+    "scripts": {
+        "fmt": "prettier --write '**/src/**.ts'"
+    },
+    "devDependencies": {
+        "prettier": "^2.2.1"
+    }
 }
