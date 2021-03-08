@@ -11,7 +11,7 @@
         "playground": "cd playground && webpack s -c webpack.config.js"
     },
     "dependencies": {
-        "@oasisprotocol/client": "^0.0.1",
+        "@oasisprotocol/client": "^0.0.2",
         "elliptic": "^6.5.3"
     },
     "devDependencies": {
