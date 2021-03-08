@@ -177,7 +177,11 @@ export async function addressFromPublicKey(pk: Uint8Array) {
 }
 
 export async function addressFromRuntimeID(id: Uint8Array) {
-    return await address.fromData(ADDRESS_RUNTIME_V0_CONTEXT_IDENTIFIER, ADDRESS_RUNTIME_V0_CONTEXT_VERSION, id);
+    return await address.fromData(
+        ADDRESS_RUNTIME_V0_CONTEXT_IDENTIFIER,
+        ADDRESS_RUNTIME_V0_CONTEXT_VERSION,
+        id,
+    );
 }
 
 export function addressToBech32(addr: Uint8Array) {
@@ -193,7 +197,9 @@ export function addressFromBech32(str: string) {
  * The address is reserved to prevent it being accidentally used in the actual ledger.
  */
 export async function commonPoolAddress() {
-    return await addressFromPublicKey(misc.fromHex('1abe11edc001ffffffffffffffffffffffffffffffffffffffffffffffffffff'));
+    return await addressFromPublicKey(
+        misc.fromHex('1abe11edc001ffffffffffffffffffffffffffffffffffffffffffffffffffff'),
+    );
 }
 
 /**
@@ -202,7 +208,9 @@ export async function commonPoolAddress() {
  * The address is reserved to prevent it being accidentally used in the actual ledger.
  */
 export async function feeAccumulatorAddress() {
-    return await addressFromPublicKey(misc.fromHex('1abe11edfeeaccffffffffffffffffffffffffffffffffffffffffffffffffff'));
+    return await addressFromPublicKey(
+        misc.fromHex('1abe11edfeeaccffffffffffffffffffffffffffffffffffffffffffffffffff'),
+    );
 }
 
 /**
@@ -210,5 +218,7 @@ export async function feeAccumulatorAddress() {
  * This address is reserved to prevent it from being accidentally used in the actual ledger.
  */
 export async function governanceDepositsAddress() {
-    return await addressFromPublicKey(misc.fromHex('1abe11eddeaccfffffffffffffffffffffffffffffffffffffffffffffffffff'));
+    return await addressFromPublicKey(
+        misc.fromHex('1abe11eddeaccfffffffffffffffffffffffffffffffffffffffffffffffffff'),
+    );
 }

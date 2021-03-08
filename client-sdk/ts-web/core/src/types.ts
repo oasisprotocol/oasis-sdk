@@ -1,4 +1,4 @@
-export type NotModeled = {[key: string]: unknown};
+export type NotModeled = { [key: string]: unknown };
 
 /**
  * These represent int64 and uint64. We accept both number (for small integer values) and bignum
@@ -250,7 +250,7 @@ export interface ConsensusParameters {
     /**
      * GasCosts are the base transaction gas costs.
      */
-    gas_costs?: {[op: string]: longnum};
+    gas_costs?: { [op: string]: longnum };
     /**
      * PublicKeyBlacklist is the network-wide public key blacklist.
      */
@@ -595,7 +595,7 @@ export interface GenesisDocument {
      * Extra data is arbitrary extra data that is part of the
      * genesis block but is otherwise ignored by the protocol.
      */
-    extra_data: {[key: string]: Uint8Array};
+    extra_data: { [key: string]: Uint8Array };
 }
 
 /**
@@ -612,7 +612,7 @@ export interface GovernanceConsensusParameters {
     /**
      * GasCosts are the governance transaction gas costs.
      */
-    gas_costs?: {[op: string]: longnum};
+    gas_costs?: { [op: string]: longnum };
     /**
      * MinProposalDeposit is the number of base units that are deposited when
      * creating a new proposal.
@@ -1191,7 +1191,7 @@ export interface RegistryConsensusParameters {
     /**
      * GasCosts are the registry transaction gas costs.
      */
-    gas_costs?: {[op: string]: longnum};
+    gas_costs?: { [op: string]: longnum };
     /**
      * MaxNodeExpiration is the maximum number of epochs relative to the epoch
      * at registration time that a single node registration is valid for.
@@ -1695,7 +1695,7 @@ export interface RoothashConsensusParameters {
     /**
      * GasCosts are the roothash transaction gas costs.
      */
-    gas_costs?: {[op: string]: longnum};
+    gas_costs?: { [op: string]: longnum };
     /**
      * DebugDoNotSuspendRuntimes is true iff runtimes should not be suspended
      * for lack of paying maintenance fees.
@@ -1883,9 +1883,9 @@ export interface RoothashMessage {
  * MessageEvent is a runtime message processed event.
  */
 export interface RoothashMessageEvent {
-        module?: string;
-        code?: number;
-        index?: number;
+    module?: string;
+    code?: number;
+    index?: number;
 }
 
 /**
@@ -2421,7 +2421,7 @@ export interface StakingConsensusParameters {
     signing_reward_threshold_denominator?: longnum;
     commission_schedule_rules?: StakingCommissionScheduleRules;
     slashing?: Map<number, StakingSlash>;
-    gas_costs?: {[op: string]: longnum};
+    gas_costs?: { [op: string]: longnum };
     min_delegation: Uint8Array;
     disable_transfers?: boolean;
     disable_delegation?: boolean;
@@ -2627,7 +2627,7 @@ export interface StakingStakeAccumulator {
      * Claims are the stake claims that must be satisfied at any given point. Adding a new claim is
      * only possible if all of the existing claims plus the new claim is satisfied.
      */
-    claims?: {[claim: string]: StakingStakeThreshold[]}
+    claims?: { [claim: string]: StakingStakeThreshold[] };
 }
 
 /**
@@ -2904,10 +2904,7 @@ export interface StorageTreeID {
 /**
  * LogEntry is a write log entry.
  */
-export type StorageLogEntry = [
-    key: Uint8Array,
-    value: Uint8Array,
-];
+export type StorageLogEntry = [key: Uint8Array, value: Uint8Array];
 
 /**
  * Descriptor describes an upgrade.

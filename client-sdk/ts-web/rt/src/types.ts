@@ -56,10 +56,7 @@ export interface AuthInfo {
 /**
  * Token amount of given denomination in base units.
  */
-export type BaseUnits = [
-    amount: Uint8Array,
-    denomination: Uint8Array,
-];
+export type BaseUnits = [amount: Uint8Array, denomination: Uint8Array];
 
 /**
  * Method call.
@@ -117,7 +114,4 @@ export interface Transaction extends oasis.types.CBORVersioned {
 /**
  * An unverified signed transaction.
  */
-export type UnverifiedTransaction = [
-    body: Uint8Array,
-    signatures: Uint8Array[],
-];
+export type UnverifiedTransaction = [body: Uint8Array, signatures: Uint8Array[]];
