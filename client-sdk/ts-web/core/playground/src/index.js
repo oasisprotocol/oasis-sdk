@@ -103,18 +103,7 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
             console.log('singed transaction', signedTransaction);
             console.log('hash', await oasis.consensus.hashSignedTransaction(signedTransaction));
 
-            try {
-                await client.consensusSubmitTx(signedTransaction);
-            } catch (e) {
-                if (e.message === 'Incomplete response') {
-                    // This is normal. grpc-web freaks out if the response is `== null`, which it
-                    // always is for a void method.
-                    // todo: unhack this when they release with our change
-                    // https://github.com/grpc/grpc-web/pull/1025
-                } else {
-                    throw e;
-                }
-            }
+            await client.consensusSubmitTx(signedTransaction);
             console.log('sent');
         }
 
