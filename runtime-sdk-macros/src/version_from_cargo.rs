@@ -36,6 +36,6 @@ mod tests {
         );
         let actual: syn::Expr = syn::parse2(super::version_from_cargo()).unwrap();
 
-        assert_eq!(actual, expected);
+        crate::assert_empty_diff!(actual, expected);
     }
 }
