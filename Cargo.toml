@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "runtime-sdk",
+    "runtime-sdk-macros",
 
     # Test runtimes.
     "tests/runtimes/simple-keyvalue",

@@ -27,6 +27,8 @@ jobs:
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
+        with:
+          components: rustfmt # rustfmt is required for macros tests.
 
       - name: Unit tests with coverage
         uses: actions-rs/tarpaulin@v0.1
