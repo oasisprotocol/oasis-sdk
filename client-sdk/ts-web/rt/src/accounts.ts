@@ -24,8 +24,8 @@ export const EVENT_BURN_CODE = 2;
 export const EVENT_MINT_CODE = 3;
 
 export class Client extends wrapper.Wrapper {
-    constructor(client: oasis.OasisNodeClient, runtimeID: Uint8Array) {
-        super(client, runtimeID);
+    constructor(nic: oasis.client.NodeInternal, runtimeID: Uint8Array) {
+        super(nic, runtimeID);
     }
 
     callTransfer(

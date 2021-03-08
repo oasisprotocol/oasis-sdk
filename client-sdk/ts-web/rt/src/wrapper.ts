@@ -4,11 +4,11 @@ import * as transaction from './transaction';
 import * as types from './types';
 
 export class Wrapper {
-    client: oasis.OasisNodeClient;
+    nic: oasis.client.NodeInternal;
     runtimeID: Uint8Array;
 
-    constructor(client: oasis.OasisNodeClient, runtimeID: Uint8Array) {
-        this.client = client;
+    constructor(nic: oasis.client.NodeInternal, runtimeID: Uint8Array) {
+        this.nic = nic;
         this.runtimeID = runtimeID;
     }
 
@@ -31,7 +31,7 @@ export class Wrapper {
             },
         } as types.Transaction;
         const signed = await transaction.signUnverifiedTransaction(signers, tx);
-        const response = await this.client.runtimeClientSubmitTx({
+        const response = await this.nic.runtimeClientSubmitTx({
             runtime_id: this.runtimeID,
             data: oasis.misc.toCBOR(signed),
         });
@@ -47,7 +47,7 @@ export class Wrapper {
             method,
             args,
         } as oasis.types.RuntimeClientQueryRequest;
-        const response = await this.client.runtimeClientQuery(request);
+        const response = await this.nic.runtimeClientQuery(request);
         return response.data;
     }
 }
