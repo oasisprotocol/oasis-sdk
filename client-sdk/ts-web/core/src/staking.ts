@@ -1,5 +1,7 @@
 import * as address from './address';
+import * as consensus from './consensus';
 import * as misc from './misc';
+import * as types from './types';
 
 /**
  * AddressV0Context is the unique context for v0 staking account addresses.
@@ -221,4 +223,34 @@ export async function governanceDepositsAddress() {
     return await addressFromPublicKey(
         misc.fromHex('1abe11eddeaccfffffffffffffffffffffffffffffffffffffffffffffffffff'),
     );
+}
+
+export function transferWrapper() {
+    return new consensus.TransactionWrapper<types.StakingTransfer>(METHOD_TRANSFER);
+}
+
+export function burnWrapper() {
+    return new consensus.TransactionWrapper<types.StakingBurn>(METHOD_BURN);
+}
+
+export function addEscrowWrapper() {
+    return new consensus.TransactionWrapper<types.StakingEscrow>(METHOD_ADD_ESCROW);
+}
+
+export function reclaimEscrowWrapper() {
+    return new consensus.TransactionWrapper<types.StakingReclaimEscrow>(METHOD_RECLAIM_ESCROW);
+}
+
+export function amendCommissionScheduleWrapper() {
+    return new consensus.TransactionWrapper<types.StakingAmendCommissionSchedule>(
+        METHOD_AMEND_COMMISSION_SCHEDULE,
+    );
+}
+
+export function allowWrapper() {
+    return new consensus.TransactionWrapper<types.StakingAllow>(METHOD_ALLOW);
+}
+
+export function withdrawWrapper() {
+    return new consensus.TransactionWrapper<types.StakingWithdraw>(METHOD_WITHDRAW);
 }

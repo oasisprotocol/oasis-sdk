@@ -75,35 +75,24 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
             });
             console.log('account', account);
 
-            /** @type {oasis.types.StakingTransfer} */
-            const body = {
+            const tw = oasis.staking.transferWrapper();
+            tw.setNonce(account.general?.nonce ?? 0);
+            tw.setFeeAmount(oasis.quantity.fromBigInt(0n));
+            tw.setBody({
                 to: await oasis.staking.addressFromPublicKey(dst.public()),
                 amount: oasis.quantity.fromBigInt(0n),
-            };
-            /** @type {oasis.types.ConsensusTransaction} */
-            const transaction = {
-                nonce: account.general?.nonce ?? 0,
-                fee: {
-                    amount: oasis.quantity.fromBigInt(0n),
-                    gas: 0n,
-                },
-                method: oasis.staking.METHOD_TRANSFER,
-                body: body,
-            };
-
-            const gas = await nic.consensusEstimateGas({
-                signer: src.public(),
-                transaction: transaction,
             });
+
+            const gas = await tw.estimateGas(nic, src.public());
             console.log('gas', gas);
-            transaction.fee.gas = gas;
-            console.log('transaction', transaction);
+            tw.setFeeGas(gas);
+            console.log('transaction', tw.transaction);
 
-            const signedTransaction = await oasis.consensus.signSignedTransaction(new oasis.signature.BlindContextSigner(src), chainContext, transaction);
-            console.log('singed transaction', signedTransaction);
-            console.log('hash', await oasis.consensus.hashSignedTransaction(signedTransaction));
+            await tw.sign(new oasis.signature.BlindContextSigner(src), chainContext);
+            console.log('singed transaction', tw.signedTransaction);
+            console.log('hash', await tw.hash());
 
-            await nic.consensusSubmitTx(signedTransaction);
+            await tw.submit(nic);
             console.log('sent');
         }
 

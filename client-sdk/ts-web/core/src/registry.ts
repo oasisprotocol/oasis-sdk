@@ -1,3 +1,6 @@
+import * as consensus from './consensus';
+import * as types from './types';
+
 /**
  * RegisterEntitySignatureContext is the context used for entity
  * registration.
@@ -196,3 +199,23 @@ export const ERR_RUNTIME_UPDATE_NOT_ALLOWED_CODE = 18;
  * has runtimes.
  */
 export const ERR_ENTITY_HAS_RUNTIMES_CODE = 19;
+
+export function registerEntityWrapper() {
+    return new consensus.TransactionWrapper<types.SignatureSigned>(METHOD_REGISTER_ENTITY);
+}
+
+export function deregisterEntityWrapper() {
+    return new consensus.TransactionWrapper<void>(METHOD_DEREGISTER_ENTITY);
+}
+
+export function registerNodeWrapper() {
+    return new consensus.TransactionWrapper<types.SignatureMultiSigned>(METHOD_REGISTER_NODE);
+}
+
+export function unfreezeNodeWrapper() {
+    return new consensus.TransactionWrapper<types.RegistryUnfreezeNode>(METHOD_UNFREEZE_NODE);
+}
+
+export function registerRuntimeWrapper() {
+    return new consensus.TransactionWrapper<types.RegistryRuntime>(METHOD_REGISTER_RUNTIME);
+}
