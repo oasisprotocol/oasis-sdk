@@ -22,11 +22,11 @@ export async function signUnverifiedTransaction(
         if ('ed25519' in transaction.ai.si[i].pub) {
             signatures[i] = await (signers[i] as oasis.signature.ContextSigner).sign(context, body);
         } else if ('secp256k1' in transaction.ai.si[i].pub) {
-            signatures[i] = await (signers[i] as signatureSecp256k1.ContextSigner).sign(context, body);
+            signatures[i] = await (signers[i] as signatureSecp256k1.ContextSigner).sign(
+                context,
+                body,
+            );
         }
     }
-    return [
-        body,
-        signatures,
-    ] as types.UnverifiedTransaction;
+    return [body, signatures] as types.UnverifiedTransaction;
 }

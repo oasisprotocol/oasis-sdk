@@ -24,7 +24,12 @@ export interface ContextSigner {
 
 const ED25519 = new elliptic.eddsa('ed25519');
 
-export async function verify(publicKey: Uint8Array, context: string, message: Uint8Array, signature: Uint8Array) {
+export async function verify(
+    publicKey: Uint8Array,
+    context: string,
+    message: Uint8Array,
+    signature: Uint8Array,
+) {
     const signerMessage = await prepareSignerMessage(context, message);
     const signerMessageA = Array.from(signerMessage);
     const publicKeyA = Array.from(publicKey);
@@ -35,7 +40,12 @@ export async function verify(publicKey: Uint8Array, context: string, message: Ui
 }
 
 export async function openSigned(context: string, signed: types.SignatureSigned) {
-    const sigOk = await verify(signed.signature.public_key, context, signed.untrusted_raw_value, signed.signature.signature);
+    const sigOk = await verify(
+        signed.signature.public_key,
+        context,
+        signed.untrusted_raw_value,
+        signed.signature.signature,
+    );
     if (!sigOk) throw new Error('signature verification failed');
     return signed.untrusted_raw_value;
 }
@@ -67,7 +77,11 @@ export async function openMultiSigned(context: string, multiSigned: types.Signat
     return multiSigned.untrusted_raw_value;
 }
 
-export async function signMultiSigned(signers: ContextSigner[], context: string, rawValue: Uint8Array) {
+export async function signMultiSigned(
+    signers: ContextSigner[],
+    context: string,
+    rawValue: Uint8Array,
+) {
     const signatures = [] as types.Signature[];
     for (const signer of signers) {
         signatures.push({
@@ -82,7 +96,6 @@ export async function signMultiSigned(signers: ContextSigner[], context: string,
 }
 
 export class BlindContextSigner implements ContextSigner {
-
     signer: Signer;
 
     constructor(signer: Signer) {
@@ -97,14 +110,12 @@ export class BlindContextSigner implements ContextSigner {
         const signerMessage = await prepareSignerMessage(context, message);
         return await this.signer.sign(signerMessage);
     }
-
 }
 
 /**
  * An in-memory signer based on the elliptic library. We've included this for development.
  */
 export class EllipticSigner implements Signer {
-
     key: elliptic.eddsa.KeyPair;
 
     constructor(key: elliptic.eddsa.KeyPair, note: string) {
@@ -135,5 +146,4 @@ export class EllipticSigner implements Signer {
         const sig = this.key.sign(messageA);
         return new Uint8Array(sig.toBytes());
     }
-
 }

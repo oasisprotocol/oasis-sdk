@@ -76,14 +76,25 @@ export async function openSignedEntity(context: string, signed: types.SignatureS
     return misc.fromCBOR(await signature.openSigned(context, signed)) as types.Entity;
 }
 
-export async function signSignedEntity(signer: signature.ContextSigner, context: string, entity: types.Entity) {
+export async function signSignedEntity(
+    signer: signature.ContextSigner,
+    context: string,
+    entity: types.Entity,
+) {
     return await signature.signSigned(signer, context, misc.toCBOR(entity));
 }
 
-export async function openMultiSignedNode(context: string, multiSigned: types.SignatureMultiSigned) {
+export async function openMultiSignedNode(
+    context: string,
+    multiSigned: types.SignatureMultiSigned,
+) {
     return misc.fromCBOR(await signature.openMultiSigned(context, multiSigned)) as types.Node;
 }
 
-export async function signMultiSignedNode(signers: signature.ContextSigner[], context: string, node: types.Node) {
+export async function signMultiSignedNode(
+    signers: signature.ContextSigner[],
+    context: string,
+    node: types.Node,
+) {
     return await signature.signMultiSigned(signers, context, misc.toCBOR(node));
 }

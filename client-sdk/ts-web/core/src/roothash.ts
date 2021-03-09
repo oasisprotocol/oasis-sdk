@@ -11,7 +11,8 @@ export const EXECUTOR_SIGNATURE_CONTEXT = 'oasis-core/roothash: executor commitm
  * ComputeResultsHeaderSignatureContext is the signature context used to
  * sign compute results headers with RAK.
  */
-export const COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT = 'oasis-core/roothash: compute results header';
+export const COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT =
+    'oasis-core/roothash: compute results header';
 /**
  * ProposedBatchSignatureContext is the context used for signing propose batch
  * dispatch messages.
@@ -162,30 +163,74 @@ export const ERR_INVALID_ROUND_CODE = 18;
 export const ERR_NO_PROPOSER_COMMITMENT_CODE = 19;
 export const ERR_BAD_PROPOSER_COMMITMENT_CODE = 20;
 
-export async function openExecutorCommitment(chainContext: string, runtimeID: Uint8Array, signed: types.SignatureSigned) {
-    const context = `${signature.combineChainContext(EXECUTOR_SIGNATURE_CONTEXT, chainContext)} for runtime ${misc.toHex(runtimeID)}`;
+export async function openExecutorCommitment(
+    chainContext: string,
+    runtimeID: Uint8Array,
+    signed: types.SignatureSigned,
+) {
+    const context = `${signature.combineChainContext(
+        EXECUTOR_SIGNATURE_CONTEXT,
+        chainContext,
+    )} for runtime ${misc.toHex(runtimeID)}`;
     return misc.fromCBOR(await signature.openSigned(context, signed)) as types.RoothashComputeBody;
 }
 
-export async function signExecutorCommitment(signer: signature.ContextSigner, chainContext: string, runtimeID: Uint8Array, computeBody: types.RoothashComputeBody) {
-    const context = `${signature.combineChainContext(EXECUTOR_SIGNATURE_CONTEXT, chainContext)} for runtime ${misc.toHex(runtimeID)}`;
+export async function signExecutorCommitment(
+    signer: signature.ContextSigner,
+    chainContext: string,
+    runtimeID: Uint8Array,
+    computeBody: types.RoothashComputeBody,
+) {
+    const context = `${signature.combineChainContext(
+        EXECUTOR_SIGNATURE_CONTEXT,
+        chainContext,
+    )} for runtime ${misc.toHex(runtimeID)}`;
     return await signature.signSigned(signer, context, misc.toCBOR(computeBody));
 }
 
-export async function verifyComputeResultsHeader(rakPub: Uint8Array, header: types.RoothashComputeResultsHeader, rakSig: Uint8Array) {
-    return await signature.verify(rakPub, COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT, misc.toCBOR(header), rakSig);
+export async function verifyComputeResultsHeader(
+    rakPub: Uint8Array,
+    header: types.RoothashComputeResultsHeader,
+    rakSig: Uint8Array,
+) {
+    return await signature.verify(
+        rakPub,
+        COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT,
+        misc.toCBOR(header),
+        rakSig,
+    );
 }
 
-export async function signComputeResultsHeader(rakSigner: signature.ContextSigner, header: types.RoothashComputeResultsHeader) {
+export async function signComputeResultsHeader(
+    rakSigner: signature.ContextSigner,
+    header: types.RoothashComputeResultsHeader,
+) {
     return await rakSigner.sign(COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT, misc.toCBOR(header));
 }
 
-export async function openProposedBatch(chainContext: string, runtimeID: Uint8Array, signed: types.SignatureSigned) {
-    const context = `${signature.combineChainContext(PROPOSED_BATCH_SIGNATURE_CONTEXT, chainContext)} for runtime ${misc.toHex(runtimeID)}`;
-    return misc.fromCBOR(await signature.openSigned(context, signed)) as types.RoothashProposedBatch;
+export async function openProposedBatch(
+    chainContext: string,
+    runtimeID: Uint8Array,
+    signed: types.SignatureSigned,
+) {
+    const context = `${signature.combineChainContext(
+        PROPOSED_BATCH_SIGNATURE_CONTEXT,
+        chainContext,
+    )} for runtime ${misc.toHex(runtimeID)}`;
+    return misc.fromCBOR(
+        await signature.openSigned(context, signed),
+    ) as types.RoothashProposedBatch;
 }
 
-export async function signProposedBatch(signer: signature.ContextSigner, chainContext: string, runtimeID: Uint8Array, proposedBatch: types.RoothashProposedBatch) {
-    const context = `${signature.combineChainContext(PROPOSED_BATCH_SIGNATURE_CONTEXT, chainContext)} for runtime ${misc.toHex(runtimeID)}`;
+export async function signProposedBatch(
+    signer: signature.ContextSigner,
+    chainContext: string,
+    runtimeID: Uint8Array,
+    proposedBatch: types.RoothashProposedBatch,
+) {
+    const context = `${signature.combineChainContext(
+        PROPOSED_BATCH_SIGNATURE_CONTEXT,
+        chainContext,
+    )} for runtime ${misc.toHex(runtimeID)}`;
     return await signature.signSigned(signer, context, misc.toCBOR(proposedBatch));
 }

@@ -1,8 +1,6 @@
 //! Tests for the accounts module.
 use std::collections::BTreeMap;
 
-use assert_matches::assert_matches;
-
 use oasis_core_runtime::common::cbor;
 
 use crate::{
@@ -142,7 +140,7 @@ fn test_init_2() {
     );
 }
 
-fn init_accounts(ctx: &mut DispatchContext) {
+fn init_accounts(ctx: &mut DispatchContext<'_>) {
     Accounts::init(
         ctx,
         &Genesis {
@@ -189,7 +187,7 @@ fn test_api_transfer() {
             keys::bob::address(),
             &BaseUnits::new(1_000_000.into(), Denomination::NATIVE),
         );
-        assert_matches!(result, Err(Error::InsufficientBalance));
+        assert!(matches!(result, Err(Error::InsufficientBalance)));
 
         // Check source account balances.
         let bals = Accounts::get_balances(tx_ctx.runtime_state(), keys::alice::address())
@@ -268,13 +266,13 @@ fn test_authenticate_tx() {
 
     // Should fail with an invalid nonce.
     let result = Accounts::authenticate_tx(&mut ctx, &tx);
-    assert_matches!(result, Err(core::Error::InvalidNonce));
+    assert!(matches!(result, Err(core::Error::InvalidNonce)));
 
     // Should fail when there's not enough balance to pay fees.
     tx.auth_info.signer_info[0].nonce = nonce;
     tx.auth_info.fee.amount = BaseUnits::new(1_100_000.into(), Denomination::NATIVE);
     let result = Accounts::authenticate_tx(&mut ctx, &tx);
-    assert_matches!(result, Err(core::Error::InsufficientFeeBalance));
+    assert!(matches!(result, Err(core::Error::InsufficientFeeBalance)));
 }
 
 #[test]

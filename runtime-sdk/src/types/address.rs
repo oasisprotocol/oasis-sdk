@@ -109,7 +109,7 @@ impl From<&'static str> for Address {
 }
 
 impl fmt::LowerHex for Address {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for i in &self.0[..] {
             write!(f, "{:02x}", i)?;
         }
@@ -118,14 +118,14 @@ impl fmt::LowerHex for Address {
 }
 
 impl fmt::Debug for Address {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_bech32())?;
         Ok(())
     }
 }
 
 impl fmt::Display for Address {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_bech32())?;
         Ok(())
     }
@@ -155,7 +155,7 @@ impl<'de> serde::Deserialize<'de> for Address {
         impl<'de> serde::de::Visitor<'de> for BytesVisitor {
             type Value = Address;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("bytes or string expected")
             }
 

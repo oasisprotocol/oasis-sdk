@@ -25,7 +25,7 @@ pub trait Runtime {
     fn genesis_state() -> <Self::Modules as MigrationHandler>::Genesis;
 
     /// Perform state migrations if required.
-    fn migrate(ctx: &mut DispatchContext) {
+    fn migrate(ctx: &mut DispatchContext<'_>) {
         let store = storage::TypedStore::new(storage::PrefixStore::new(
             ctx.runtime_state(),
             &modules::core::MODULE_NAME,

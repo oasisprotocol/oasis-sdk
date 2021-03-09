@@ -34,7 +34,7 @@ impl<S: Store> TypedStore<S> {
         self.parent.remove(key)
     }
 
-    pub fn iter<K: DecodableStoreKey, V: DeserializeOwned>(&self) -> TypedStoreIterator<K, V> {
+    pub fn iter<K: DecodableStoreKey, V: DeserializeOwned>(&self) -> TypedStoreIterator<'_, K, V> {
         TypedStoreIterator::new(self.parent.iter())
     }
 }

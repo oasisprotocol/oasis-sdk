@@ -70,7 +70,7 @@ impl<S: Store> Store for OverlayStore<S> {
 }
 
 /// An iterator over the `OverlayStore`.
-pub struct OverlayStoreIterator<'store, S: Store> {
+pub(crate) struct OverlayStoreIterator<'store, S: Store> {
     store: &'store OverlayStore<S>,
 
     parent: Box<dyn mkvs::Iterator + 'store>,

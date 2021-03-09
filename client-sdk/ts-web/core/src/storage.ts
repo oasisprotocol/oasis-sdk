@@ -167,7 +167,11 @@ export async function openReceipt(chainContext: string, receipt: types.Signature
     return misc.fromCBOR(await signature.openSigned(context, receipt)) as types.StorageReceiptBody;
 }
 
-export async function signReceipt(signer: signature.ContextSigner, chainContext: string, receiptBody: types.StorageReceiptBody) {
+export async function signReceipt(
+    signer: signature.ContextSigner,
+    chainContext: string,
+    receiptBody: types.StorageReceiptBody,
+) {
     const context = signature.combineChainContext(RECEIPT_SIGNATURE_CONTEXT, chainContext);
     return await signature.signSigned(signer, context, misc.toCBOR(receiptBody));
 }

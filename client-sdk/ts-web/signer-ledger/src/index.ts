@@ -20,12 +20,12 @@ function bufFromU8(u8: Uint8Array) {
 }
 
 function successOrThrow(response: Response, message: string) {
-    if (response.return_code !== 0x9000) throw new Error(`${message}: ${response.return_code} ${response.error_message}`);
+    if (response.return_code !== 0x9000)
+        throw new Error(`${message}: ${response.return_code} ${response.error_message}`);
     return response;
 }
 
 export class LedgerContextSigner implements oasis.signature.ContextSigner {
-
     app: OasisApp;
     path: number[];
     publicKey: Uint8Array;
@@ -41,7 +41,10 @@ export class LedgerContextSigner implements oasis.signature.ContextSigner {
     }
 
     async sign(context: string, message: Uint8Array): Promise<Uint8Array> {
-        const response = successOrThrow(await this.app.sign(this.path, context, bufFromU8(message)), 'ledger sign');
+        const response = successOrThrow(
+            await this.app.sign(this.path, context, bufFromU8(message)),
+            'ledger sign',
+        );
         return u8FromBuf(response.signature as Buffer);
     }
 
@@ -53,5 +56,4 @@ export class LedgerContextSigner implements oasis.signature.ContextSigner {
         const publicKeyResponse = successOrThrow(await app.publicKey(path), 'ledger public key');
         return new LedgerContextSigner(app, path, u8FromBuf(publicKeyResponse.pk as Buffer));
     }
-
 }

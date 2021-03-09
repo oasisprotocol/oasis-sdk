@@ -77,7 +77,7 @@ impl<'de> serde::Deserialize<'de> for PublicKey {
         impl<'de> serde::de::Visitor<'de> for BytesVisitor {
             type Value = PublicKey;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("bytes expected")
             }
 

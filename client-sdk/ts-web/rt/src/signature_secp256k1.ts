@@ -13,7 +13,12 @@ export interface ContextSigner {
 
 const SECP256K1 = new elliptic.ec('secp256k1');
 
-export async function verify(context: string, message: Uint8Array, signature: Uint8Array, publicKey: Uint8Array) {
+export async function verify(
+    context: string,
+    message: Uint8Array,
+    signature: Uint8Array,
+    publicKey: Uint8Array,
+) {
     const signerMessage = await oasis.signature.prepareSignerMessage(context, message);
     const signerMessageA = Array.from(signerMessage);
     const signatureA = Array.from(signature);
@@ -23,7 +28,6 @@ export async function verify(context: string, message: Uint8Array, signature: Ui
 }
 
 export class BlindContextSigner implements ContextSigner {
-
     signer: Signer;
 
     constructor(signer: Signer) {
@@ -38,11 +42,9 @@ export class BlindContextSigner implements ContextSigner {
         const signerMessage = await oasis.signature.prepareSignerMessage(context, message);
         return await this.signer.sign(signerMessage);
     }
-
 }
 
 export class EllipticSigner implements Signer {
-
     key: elliptic.ec.KeyPair;
 
     constructor(key: elliptic.ec.KeyPair, note: string) {
@@ -66,5 +68,4 @@ export class EllipticSigner implements Signer {
         const sig = this.key.sign(Array.from(message));
         return new Uint8Array(sig.toDER());
     }
-
 }
