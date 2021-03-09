@@ -79,3 +79,37 @@ impl AsRef<[u8]> for PublicKey {
 /// Variable-length opaque signature.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Signature(#[serde(with = "serde_bytes")] Vec<u8>);
+
+impl AsRef<[u8]> for Signature {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl From<Vec<u8>> for Signature {
+    fn from(v: Vec<u8>) -> Signature {
+        Signature(v)
+    }
+}
+
+impl From<Signature> for Vec<u8> {
+    fn from(s: Signature) -> Vec<u8> {
+        s.0
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_signature_conversion() {
+        let raw = vec![0x00, 0x01, 0x02, 0x03];
+        let sig = Signature::from(raw.clone());
+        let v: Vec<u8> = sig.clone().into();
+        assert_eq!(v, raw);
+
+        let vref: &[u8] = v.as_ref();
+        assert_eq!(vref, sig.as_ref());
+    }
+}
