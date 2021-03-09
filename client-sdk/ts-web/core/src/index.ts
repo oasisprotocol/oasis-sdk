@@ -21,7 +21,7 @@ export * as storage from './storage';
 import * as types from './types';
 export * as upgrade from './upgrade';
 export * as worker from './worker';
-export { misc, types };
+export {misc, types};
 
 function createMethodDescriptorUnary<REQ, RESP>(serviceName: string, methodName: string) {
     // @ts-expect-error missing declaration

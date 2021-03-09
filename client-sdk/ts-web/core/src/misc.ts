@@ -17,7 +17,7 @@ function objsFromMaps(v: unknown): unknown {
         }
         if (v.size > 0 && keysCompatible) {
             // Recreate as an object.
-            const o: { [key: string]: unknown } = {};
+            const o: {[key: string]: unknown} = {};
             for (const [key, val] of v) {
                 o[key] = objsFromMaps(val);
             }
@@ -51,7 +51,7 @@ export function toCBOR(v: unknown) {
 export function fromCBOR(u8: Uint8Array) {
     // oasis-core uses a special case to marshal `nil` to an empty byte string.
     if (!u8.length) return undefined;
-    return objsFromMaps(cborg.decode(u8, { useMaps: true }));
+    return objsFromMaps(cborg.decode(u8, {useMaps: true}));
 }
 
 export function toHex(u8: Uint8Array) {
