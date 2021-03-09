@@ -6,7 +6,7 @@ use syn::{DeriveInput, Ident};
 use crate::generators::{self as gen, CodedVariant};
 
 #[derive(FromDeriveInput)]
-#[darling(supports(enum_any), attributes(runtime_error))]
+#[darling(supports(enum_any), attributes(sdk_error))]
 struct Error {
     ident: Ident,
 
@@ -24,21 +24,23 @@ struct Error {
     /// Whether to sequentially autonumber the error codes.
     /// This option exists as a convenience for runtimes that
     /// only append errors or release only breaking changes.
-    #[darling(default)]
+    #[darling(default, rename = "autonumber")]
     autonumber: Flag,
 }
 
 #[derive(FromVariant)]
-#[darling(attributes(runtime_error))]
+#[darling(attributes(sdk_error))]
 struct ErrorVariant {
     ident: Ident,
 
     /// The explicit ID of the error code. Overrides any autonumber set on the error enum.
-    #[darling(default)]
+    #[darling(default, rename = "code")]
     code: Option<u32>,
 }
 
 impl CodedVariant for ErrorVariant {
+    const FIELD_NAME: &'static str = "code";
+
     fn ident(&self) -> &Ident {
         &self.ident
     }
@@ -71,7 +73,7 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
             "either `module` and `module_name` must be set"
         )),
         (None, None) => quote!(compile_error!(
-            r#"missing `#[runtime_error(module = "path::to::Module")]` attribute"#
+            r#"missing `#[sdk_error(module = "path::to::Module")]` attribute"#
         )),
     };
 
@@ -94,9 +96,9 @@ mod tests {
     fn generate_error_impl() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
-                impl oasis_runtime_sdk::error::Error for Error {
+                impl ::oasis_runtime_sdk::error::Error for Error {
                     fn module(&self) -> &str {
-                        <module::TheModule as oasis_runtime_sdk::module::Module>::NAME
+                        <module::TheModule as ::oasis_runtime_sdk::module::Module>::NAME
                     }
                     fn code(&self) -> u32 {
                         match self {
@@ -112,10 +114,10 @@ mod tests {
 
         let input: syn::DeriveInput = syn::parse_quote!(
             #[derive(Error)]
-            #[runtime_error(autonumber, module = "module::TheModule")]
+            #[sdk_error(autonumber, module = "module::TheModule")]
             pub enum Error {
                 Error0,
-                #[runtime_error(code = 2)]
+                #[sdk_error(code = 2)]
                 Error2 {
                     payload: Vec<u8>,
                 },

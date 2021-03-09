@@ -6,7 +6,7 @@ use syn::{DeriveInput, Ident};
 use crate::generators::{self as gen, CodedVariant};
 
 #[derive(FromDeriveInput)]
-#[darling(supports(enum_any), attributes(event))]
+#[darling(supports(enum_any), attributes(sdk_event))]
 struct Event {
     ident: Ident,
 
@@ -18,21 +18,23 @@ struct Event {
     /// Whether to sequentially autonumber the event codes.
     /// This option exists as a convenience for runtimes that
     /// only append events or release only breaking changes.
-    #[darling(default)]
+    #[darling(default, rename = "autonumber")]
     autonumber: Flag,
 }
 
 #[derive(FromVariant)]
-#[darling(attributes(event))]
+#[darling(attributes(sdk_event))]
 struct EventVariant {
     ident: Ident,
 
     /// The explicit ID of the event code. Overrides any autonumber set on the event enum.
-    #[darling(default)]
+    #[darling(default, rename = "code")]
     code: Option<u32>,
 }
 
 impl CodedVariant for EventVariant {
+    const FIELD_NAME: &'static str = "code";
+
     fn ident(&self) -> &Ident {
         &self.ident
     }
@@ -85,9 +87,9 @@ mod tests {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
                 use oasis_runtime_sdk::core::common::cbor;
-                impl oasis_runtime_sdk::event::Event for MainEvent {
+                impl ::oasis_runtime_sdk::event::Event for MainEvent {
                     fn module(&self) -> &str {
-                        <module::TheModule as oasis_runtime_sdk::module::Module>::NAME
+                        <module::TheModule as ::oasis_runtime_sdk::module::Module>::NAME
                     }
                     fn code(&self) -> u32 {
                         match self {
@@ -106,10 +108,10 @@ mod tests {
 
         let input: syn::DeriveInput = syn::parse_quote!(
             #[derive(Event)]
-            #[event(autonumber, module = "module::TheModule")]
+            #[sdk_event(autonumber, module = "module::TheModule")]
             pub enum MainEvent {
                 Event0,
-                #[event(code = 2)]
+                #[sdk_event(code = 2)]
                 Event2 {
                     payload: Vec<u8>,
                 },

@@ -17,18 +17,28 @@ pub fn sdk_crate_path() -> syn::Path {
         .map(|pkg_name| pkg_name == "oasis-runtime-sdk")
         .unwrap_or_default();
     if is_internal {
-        syn::parse_quote!(crate)
+        // Doctests are their own crates, but they share the name of the primary crate.
+        // Thus, the primary crate needs to refer to itself. Either that or depend on unstable
+        // rustdoc env vars.
+        syn::parse_quote!(crate::oasis_runtime_sdk)
     } else {
-        syn::parse_quote!(oasis_runtime_sdk)
+        syn::parse_quote!(::oasis_runtime_sdk)
     }
 }
 
 pub trait CodedVariant {
+    /// The field in the helper attribute that yields the value provided by `code`.
+    /// For instance, in `#[sdk_event(code = 0)]`, the `FIELD_NAME` would be `code`.
+    const FIELD_NAME: &'static str;
+
+    /// The variant ident.
     fn ident(&self) -> &Ident;
 
+    /// The code to which the variant should be converted.
     fn code(&self) -> Option<u32>;
 }
 
+/// Returns a `match` expression that encodes an enum's variants as integral codes.
 pub fn enum_code_converter<V: CodedVariant>(
     enum_binding: &Ident,
     variants: &[&V],
@@ -69,7 +79,7 @@ pub fn enum_code_converter<V: CodedVariant>(
                 variant_ident
                     .span()
                     .unwrap()
-                    .error("missing `code` for variant")
+                    .error(format!("missing `{}` for variant", V::FIELD_NAME))
                     .emit();
                 return quote!();
             }
@@ -91,6 +101,7 @@ mod tests {
     fn generate_empty_enum_converter() {
         struct DummyVariant {}
         impl CodedVariant for DummyVariant {
+            const FIELD_NAME: &'static str = "code";
             fn ident(&self) -> &Ident {
                 unimplemented!()
             }
