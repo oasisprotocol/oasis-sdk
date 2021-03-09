@@ -47,11 +47,10 @@ export async function openSigned<T>(context: string, signed: types.SignatureSign
         signed.signature.signature,
     );
     if (!sigOk) throw new Error('signature verification failed');
-    return misc.fromCBOR(signed.untrusted_raw_value) as T;
+    return signed.untrusted_raw_value;
 }
 
-export async function signSigned<T>(signer: ContextSigner, context: string, value: T) {
-    const rawValue = misc.toCBOR(value);
+export async function signSigned<T>(signer: ContextSigner, context: string, rawValue: Uint8Array) {
     return {
         untrusted_raw_value: rawValue,
         signature: {
@@ -74,11 +73,14 @@ export async function openMultiSigned<T>(
         const sigOk = ED25519.verify(signerMessageA, signatureA, publicKeyA);
         if (!sigOk) throw new Error('signature verification failed');
     }
-    return misc.fromCBOR(multiSigned.untrusted_raw_value) as T;
+    return multiSigned.untrusted_raw_value;
 }
 
-export async function signMultiSigned<T>(signers: ContextSigner[], context: string, value: T) {
-    const rawValue = misc.toCBOR(value);
+export async function signMultiSigned<T>(
+    signers: ContextSigner[],
+    context: string,
+    rawValue: Uint8Array,
+) {
     const signatures = [] as types.Signature[];
     for (const signer of signers) {
         signatures.push({

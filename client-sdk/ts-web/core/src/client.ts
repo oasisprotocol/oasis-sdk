@@ -329,8 +329,8 @@ const methodDescriptorRuntimeClientGetEvents = createMethodDescriptorUnary<
     types.RuntimeClientEvent[]
 >('RuntimeClient', 'GetEvents');
 const methodDescriptorRuntimeClientQuery = createMethodDescriptorUnary<
-    types.RuntimeClientQueryRequest,
-    types.RuntimeClientQueryResponse
+    types.RuntimeClientQueryRequest<unknown>,
+    types.RuntimeClientQueryResponse<unknown>
 >('RuntimeClient', 'Query');
 const methodDescriptorRuntimeClientQueryTx = createMethodDescriptorUnary<
     types.RuntimeClientQueryTxRequest,
@@ -356,7 +356,7 @@ const methodDescriptorEnclaveRPCCallEnclave = createMethodDescriptorUnary<
 >('EnclaveRPC', 'CallEnclave');
 
 // consensus
-const methodDescriptorConsensusSubmitTx = createMethodDescriptorUnary<types.SignatureSigned, void>(
+const methodDescriptorConsensusSubmitTx = createMethodDescriptorUnary<types.SignatureSigned<types.ConsensusTransaction<unknown>>, void>(
     'Consensus',
     'SubmitTx',
 );
@@ -365,7 +365,7 @@ const methodDescriptorConsensusStateToGenesis = createMethodDescriptorUnary<
     types.GenesisDocument
 >('Consensus', 'StateToGenesis');
 const methodDescriptorConsensusEstimateGas = createMethodDescriptorUnary<
-    types.ConsensusEstimateGasRequest,
+    types.ConsensusEstimateGasRequest<unknown>,
     types.longnum
 >('Consensus', 'EstimateGas');
 const methodDescriptorConsensusGetSignerNonce = createMethodDescriptorUnary<
@@ -421,7 +421,7 @@ const methodDescriptorConsensusLightStateSyncIterate = createMethodDescriptorUna
     types.StorageProofResponse
 >('ConsensusLight', 'StateSyncIterate');
 const methodDescriptorConsensusLightSubmitTxNoWait = createMethodDescriptorUnary<
-    types.SignatureSigned,
+    types.SignatureSigned<types.ConsensusTransaction<unknown>>,
     void
 >('ConsensusLight', 'SubmitTxNoWait');
 const methodDescriptorConsensusLightSubmitEvidence = createMethodDescriptorUnary<
@@ -1077,7 +1077,7 @@ export class NodeInternal extends GRPCWrapper {
     /**
      * Query makes a runtime-specific query.
      */
-    runtimeClientQuery(request: types.RuntimeClientQueryRequest) {
+    runtimeClientQuery(request: types.RuntimeClientQueryRequest<unknown>) {
         return this.callUnary(methodDescriptorRuntimeClientQuery, request);
     }
 

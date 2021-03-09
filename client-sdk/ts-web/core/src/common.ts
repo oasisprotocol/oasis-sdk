@@ -72,7 +72,10 @@ export const IDENTITY_MODULE_NAME = 'identity';
  */
 export const IDENTITY_ERR_CERTIFICATE_ROTATION_FORBIDDEN_CODE = 1;
 
-export async function openSignedEntity(context: string, signed: types.SignatureSigned) {
+export async function openSignedEntity(
+    context: string,
+    signed: types.SignatureSigned<types.Entity>,
+) {
     return misc.fromCBOR(await signature.openSigned(context, signed)) as types.Entity;
 }
 
@@ -86,7 +89,7 @@ export async function signSignedEntity(
 
 export async function openMultiSignedNode(
     context: string,
-    multiSigned: types.SignatureMultiSigned,
+    multiSigned: types.SignatureMultiSigned<types.Node>,
 ) {
     return misc.fromCBOR(await signature.openMultiSigned(context, multiSigned)) as types.Node;
 }
