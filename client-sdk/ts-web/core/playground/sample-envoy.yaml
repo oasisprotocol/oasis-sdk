@@ -18,17 +18,30 @@ static_resources:
               domains: ['*']
               routes:
               - match:
-                  prefix: '/oasis-core'
+                  safe_regex:
+                    google_re2:
+                      max_program_size: 1000000
+                    regex: '/oasis-core\.(Registry/(GetNodes)|Staking/(Account|Delegations|GetEvents)|Consensus/(SubmitTx|EstimateGas|GetBlock|GetTransactionsWithResults|GetGenesisDocument|WatchBlocks))'
                 route:
                   cluster: oasis_node_grpc
                   timeout: 0s
                   max_stream_duration:
                     grpc_timeout_header_max: 0s
               - match:
+                  prefix: '/oasis-core'
+                direct_response:
+                  status: 404
+                  body:
+                    inline_string: 'You have to list every method you use in the envoy matcher.'
+              - match:
                   prefix: '/'
                 route:
                   cluster: dev_static
-              # cors: {}
+              # cors:
+              #   allow_origin_string_match:
+              #   - exact: '*'
+              #   allow_headers: content-type,x-grpc-web,x-user-agent
+              #   max_age: '1728000'
           http_filters:
           - name: envoy.filters.http.grpc_web
           # - name: envoy.filters.http.cors
@@ -56,9 +69,9 @@ static_resources:
               socket_address:
                 address: 127.0.0.1
                 port_value: 8080
-admin:
-  access_log_path: /dev/null
-  address:
-    socket_address:
-      address: 127.0.0.1
-      port_value: 42281
+# admin:
+#   access_log_path: /dev/null
+#   address:
+#     socket_address:
+#       address: 127.0.0.1
+#       port_value: 42281
