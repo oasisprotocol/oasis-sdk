@@ -21,7 +21,7 @@ pub struct Mock {
 
 impl Mock {
     /// Create a new mock dispatch context.
-    pub fn create_ctx(&mut self) -> DispatchContext {
+    pub fn create_ctx(&mut self) -> DispatchContext<'_> {
         DispatchContext {
             mode: Mode::ExecuteTx,
             runtime_header: &self.runtime_header,

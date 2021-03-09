@@ -183,17 +183,25 @@ module!{
 pub trait API {
     /// Transfer an amount from one account to the other.
     fn transfer(
-        ctx: &mut TxContext,
+        ctx: &mut TxContext<'_, '_>,
         from: Address,
         to: Address,
         amount: &token::BaseUnits,
     ) -> Result<(), Error>;
 
     /// Mint new tokens, increasing the total supply.
-    fn mint(ctx: &mut TxContext, to: Address, amount: &token::BaseUnits) -> Result<(), Error>;
+    fn mint(
+        ctx: &mut TxContext<'_, '_>,
+        to: Address,
+        amount: &token::BaseUnits,
+    ) -> Result<(), Error>;
 
     /// Burn existing tokens, decreasing the total supply.
-    fn burn(ctx: &mut TxContext, from: Address, amount: &token::BaseUnits) -> Result<(), Error>;
+    fn burn(
+        ctx: &mut TxContext<'_, '_>,
+        from: Address,
+        amount: &token::BaseUnits,
+    ) -> Result<(), Error>;
 
     /// Fetch an account's current nonce.
     fn get_nonce<S: storage::Store>(state: S, address: Address) -> Result<u64, Error>;
@@ -296,7 +304,7 @@ impl Module {
 
 impl API for Module {
     fn transfer(
-        ctx: &mut TxContext,
+        ctx: &mut TxContext<'_, '_>,
         from: Address,
         to: Address,
         amount: &token::BaseUnits,
@@ -320,7 +328,11 @@ impl API for Module {
         Ok(())
     }
 
-    fn mint(ctx: &mut TxContext, to: Address, amount: &token::BaseUnits) -> Result<(), Error> {
+    fn mint(
+        ctx: &mut TxContext<'_, '_>,
+        to: Address,
+        amount: &token::BaseUnits,
+    ) -> Result<(), Error> {
         // Add to destination account.
         Self::add_amount(ctx.runtime_state(), to, amount)?;
 
@@ -330,7 +342,11 @@ impl API for Module {
         Ok(())
     }
 
-    fn burn(ctx: &mut TxContext, from: Address, amount: &token::BaseUnits) -> Result<(), Error> {
+    fn burn(
+        ctx: &mut TxContext<'_, '_>,
+        from: Address,
+        amount: &token::BaseUnits,
+    ) -> Result<(), Error> {
         // Remove from target account.
         Self::sub_amount(ctx.runtime_state(), from, amount)?;
 
@@ -363,7 +379,7 @@ impl API for Module {
 }
 
 impl Module {
-    fn tx_transfer(ctx: &mut TxContext, body: types::Transfer) -> Result<(), Error> {
+    fn tx_transfer(ctx: &mut TxContext<'_, '_>, body: types::Transfer) -> Result<(), Error> {
         // Reject transfers when they are disabled.
         if Self::params(ctx.runtime_state()).transfers_disabled {
             return Err(Error::Forbidden);
@@ -374,12 +390,12 @@ impl Module {
         Ok(())
     }
 
-    fn query_nonce(ctx: &mut DispatchContext, args: types::NonceQuery) -> Result<u64, Error> {
+    fn query_nonce(ctx: &mut DispatchContext<'_>, args: types::NonceQuery) -> Result<u64, Error> {
         Self::get_nonce(ctx.runtime_state(), args.address)
     }
 
     fn query_balances(
-        ctx: &mut DispatchContext,
+        ctx: &mut DispatchContext<'_>,
         args: types::BalancesQuery,
     ) -> Result<types::AccountBalances, Error> {
         Self::get_balances(ctx.runtime_state(), args.address)
@@ -389,7 +405,7 @@ impl Module {
 impl Module {
     fn _callable_transfer_handler(
         _mi: &CallableMethodInfo,
-        ctx: &mut TxContext,
+        ctx: &mut TxContext<'_, '_>,
         body: cbor::Value,
     ) -> CallResult {
         let result = || -> Result<cbor::Value, Error> {
@@ -404,7 +420,7 @@ impl Module {
 
     fn _query_nonce_handler(
         _mi: &QueryMethodInfo,
-        ctx: &mut DispatchContext,
+        ctx: &mut DispatchContext<'_>,
         args: cbor::Value,
     ) -> Result<cbor::Value, error::RuntimeError> {
         let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
@@ -413,7 +429,7 @@ impl Module {
 
     fn _query_balances_handler(
         _mi: &QueryMethodInfo,
-        ctx: &mut DispatchContext,
+        ctx: &mut DispatchContext<'_>,
         args: cbor::Value,
     ) -> Result<cbor::Value, error::RuntimeError> {
         let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
@@ -450,7 +466,7 @@ impl module::MethodRegistrationHandler for Module {
 
 impl Module {
     /// Initialize state from genesis.
-    fn init(ctx: &mut DispatchContext, genesis: &Genesis) {
+    fn init(ctx: &mut DispatchContext<'_>, genesis: &Genesis) {
         // Create accounts.
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut accounts =
@@ -505,7 +521,7 @@ impl Module {
     }
 
     /// Migrate state from a previous version.
-    fn migrate(_ctx: &mut DispatchContext, _from: u32) -> bool {
+    fn migrate(_ctx: &mut DispatchContext<'_>, _from: u32) -> bool {
         // No migrations currently supported.
         false
     }
@@ -515,7 +531,7 @@ impl module::MigrationHandler for Module {
     type Genesis = Genesis;
 
     fn init_or_migrate(
-        ctx: &mut DispatchContext,
+        ctx: &mut DispatchContext<'_>,
         meta: &mut modules::core::types::Metadata,
         genesis: &Self::Genesis,
     ) -> bool {
@@ -554,7 +570,7 @@ const CONTEXT_KEY_FEE_ACCUMULATOR: &str = "accounts.FeeAccumulator";
 
 impl module::AuthHandler for Module {
     fn authenticate_tx(
-        ctx: &mut DispatchContext,
+        ctx: &mut DispatchContext<'_>,
         tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
         // Fetch information about each signer.
@@ -597,7 +613,7 @@ impl module::AuthHandler for Module {
 }
 
 impl module::BlockHandler for Module {
-    fn end_block(ctx: &mut DispatchContext) {
+    fn end_block(ctx: &mut DispatchContext<'_>) {
         // Determine the fees that are available for disbursement from the last block.
         let mut previous_fees = Self::get_balances(ctx.runtime_state(), *ADDRESS_FEE_ACCUMULATOR)
             .expect("get_balances must succeed")

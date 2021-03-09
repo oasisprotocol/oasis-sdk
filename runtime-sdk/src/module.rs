@@ -19,7 +19,7 @@ pub struct CallableMethodInfo {
     pub name: &'static str,
 
     /// Method handler function.
-    pub handler: fn(&CallableMethodInfo, &mut TxContext, cbor::Value) -> CallResult,
+    pub handler: fn(&CallableMethodInfo, &mut TxContext<'_, '_>, cbor::Value) -> CallResult,
 }
 
 /// Metadata of a query method.
@@ -30,7 +30,7 @@ pub struct QueryMethodInfo {
     /// Method handler function.
     pub handler: fn(
         &QueryMethodInfo,
-        &mut DispatchContext,
+        &mut DispatchContext<'_>,
         cbor::Value,
     ) -> Result<cbor::Value, error::RuntimeError>,
 }
@@ -101,7 +101,7 @@ pub trait AuthHandler {
     ///
     /// Note that any signatures have already been verified.
     fn authenticate_tx(
-        _ctx: &mut DispatchContext,
+        _ctx: &mut DispatchContext<'_>,
         _tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
         // Default implementation doesn't do any checks.
@@ -112,7 +112,7 @@ pub trait AuthHandler {
 #[impl_for_tuples(30)]
 impl AuthHandler for Tuple {
     fn authenticate_tx(
-        ctx: &mut DispatchContext,
+        ctx: &mut DispatchContext<'_>,
         tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::authenticate_tx(ctx, tx)?; )* );
@@ -129,7 +129,7 @@ pub trait MigrationHandler {
     ///
     /// Should return true in case metadata has been changed.
     fn init_or_migrate(
-        ctx: &mut DispatchContext,
+        ctx: &mut DispatchContext<'_>,
         meta: &mut modules::core::types::Metadata,
         genesis: &Self::Genesis,
     ) -> bool;
@@ -141,7 +141,7 @@ impl MigrationHandler for Tuple {
     for_tuples!( type Genesis = ( #( Tuple::Genesis ),* ); );
 
     fn init_or_migrate(
-        ctx: &mut DispatchContext,
+        ctx: &mut DispatchContext<'_>,
         meta: &mut modules::core::types::Metadata,
         genesis: &Self::Genesis,
     ) -> bool {
@@ -156,13 +156,13 @@ impl MigrationHandler for Tuple {
 pub trait BlockHandler {
     /// Perform any common actions at the start of the block (before any transactions have been
     /// executed).
-    fn begin_block(_ctx: &mut DispatchContext) {
+    fn begin_block(_ctx: &mut DispatchContext<'_>) {
         // Default implementation doesn't do anything.
     }
 
     /// Perform any common actions at the end of the block (after all transactions have been
     /// executed).
-    fn end_block(_ctx: &mut DispatchContext) {
+    fn end_block(_ctx: &mut DispatchContext<'_>) {
         // Default implementation doesn't do anything.
     }
 }
