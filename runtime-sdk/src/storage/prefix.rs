@@ -39,7 +39,7 @@ impl<'store, S: Store> Store for PrefixStore<'store, S> {
 }
 
 /// An iterator over the `PrefixStore`.
-pub struct PrefixStoreIterator<'store> {
+pub(crate) struct PrefixStoreIterator<'store> {
     inner: Box<dyn mkvs::Iterator + 'store>,
     prefix: &'store [u8],
 }

@@ -140,7 +140,7 @@ fn test_init_2() {
     );
 }
 
-fn init_accounts(ctx: &mut DispatchContext) {
+fn init_accounts(ctx: &mut DispatchContext<'_>) {
     Accounts::init(
         ctx,
         &Genesis {
