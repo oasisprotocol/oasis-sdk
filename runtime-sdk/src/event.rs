@@ -3,19 +3,18 @@ use oasis_core_runtime::{common::cbor, transaction::tags::Tag};
 
 /// An event emitted by the runtime.
 ///
-/// This trait can be derived when using `features = ["oasis-sdk-runtime-macros"]`:
-/// ```no_run
-/// # #[cfg(feature = "oasis-sdk-runtime-macros")]
+/// This trait can be derived:
+/// ```ignore
+/// # #[cfg(feature = "oasis-runtime-sdk-macros")]
 /// # mod example {
 /// # use serde::{Serialize, Deserialize};
-/// # use oasis_sdk_runtime_macros::Event;
-/// #[derive(Clone, Debug, Serialize, Deserialize, Event)]
+/// #[derive(Clone, Debug, Serialize, Deserialize, oasis_runtime_sdk::Event)]
 /// #[event(module = "path::to::MyModule", autonumber)] // `module` is required
 /// enum MyEvent {
-///    Greeting(String),  // autonumbered to id 0
-///    #[event(id = 42)]  // manually numbered to id 42 (`id` is required if not autonumbering)
+///    Greeting(String),    // autonumbered to 0
+///    #[event(code = 42)]  // manually numbered to 42 (`code` is required if not autonumbering)
 ///    DontPanic,
-///    Salutation {       // autonumbered to id 1
+///    Salutation {         // autonumbered to 1
 ///        plural: bool,
 ///    }
 /// }

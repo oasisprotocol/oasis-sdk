@@ -3,6 +3,8 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{DeriveInput, Ident};
 
+use crate::generators::{self as gen, CodedVariant};
+
 #[derive(FromDeriveInput)]
 #[darling(supports(enum_any), attributes(event))]
 struct Event {
@@ -27,7 +29,17 @@ struct EventVariant {
 
     /// The explicit ID of the event code. Overrides any autonumber set on the event enum.
     #[darling(default)]
-    id: Option<u32>,
+    code: Option<u32>,
+}
+
+impl CodedVariant for EventVariant {
+    fn ident(&self) -> &Ident {
+        &self.ident
+    }
+
+    fn code(&self) -> Option<u32> {
+        self.code
+    }
 }
 
 pub fn derive_event(input: DeriveInput) -> TokenStream {
@@ -37,74 +49,31 @@ pub fn derive_event(input: DeriveInput) -> TokenStream {
     };
 
     let event_ty_ident = &event.ident;
-    let wrapper_ident = format_ident!("_IMPL_EVENT_FOR_{}", event_ty_ident);
     let module_path = &event.module;
 
-    let variants = event.data.as_ref().take_enum().unwrap();
-    let mut next_autonumber = 0u32;
-    let mut reserved_numbers = std::collections::BTreeSet::new();
-    let code_match_arms = variants.iter().map(|variant| {
-        let event_id = match variant.id {
-            Some(id) => {
-                if reserved_numbers.contains(&id) {
-                    variant
-                        .ident
-                        .span()
-                        .unwrap()
-                        .error(format!("id {} already used", id))
-                        .emit();
-                    return quote!({});
-                }
-                reserved_numbers.insert(id);
-                id
+    let code_converter = gen::enum_code_converter(
+        &format_ident!("self"),
+        &event.data.as_ref().take_enum().unwrap(),
+        event.autonumber.is_some(),
+    );
+
+    gen::wrap_in_const(quote! {
+        use oasis_runtime_sdk::core::common::cbor;
+
+        impl oasis_runtime_sdk::event::Event for #event_ty_ident {
+            fn module(&self) -> &str {
+                <#module_path as oasis_runtime_sdk::module::Module>::NAME
             }
-            None if event.autonumber.is_some() => {
-                let mut reserved_successors = reserved_numbers.range(next_autonumber..);
-                while reserved_successors.next() == Some(&next_autonumber) {
-                    next_autonumber += 1;
-                }
-                let i = next_autonumber;
-                reserved_numbers.insert(i);
-                next_autonumber += 1;
-                i
+
+            fn code(&self) -> u32 {
+                #code_converter
             }
-            None => {
-                variant
-                    .ident
-                    .span()
-                    .unwrap()
-                    .error("missing `id` for variant")
-                    .emit();
-                return quote!();
+
+            fn value(&self) -> cbor::Value {
+                cbor::to_value(self)
             }
-        };
-        let variant_ident = &variant.ident;
-        quote! {
-            Self::#variant_ident { .. } => { #event_id }
         }
-    });
-
-    quote! {
-        const #wrapper_ident: () = {
-            use oasis_runtime_sdk::core::common::cbor;
-
-            impl oasis_runtime_sdk::event::Event for #event_ty_ident {
-                fn module(&self) -> &str {
-                    <#module_path as oasis_runtime_sdk::module::Module>::NAME
-                }
-
-                fn code(&self) -> u32 {
-                    match self {
-                        #(#code_match_arms)*
-                    }
-                }
-
-                fn value(&self) -> cbor::Value {
-                    cbor::to_value(self)
-                }
-            }
-        };
-    }
+    })
 }
 
 #[cfg(test)]
@@ -112,7 +81,7 @@ mod tests {
     #[test]
     fn generate_event_impl() {
         let expected: syn::Stmt = syn::parse_quote!(
-            const _IMPL_EVENT_FOR_MainEvent: () = {
+            const _: () = {
                 use oasis_runtime_sdk::core::common::cbor;
                 impl oasis_runtime_sdk::event::Event for MainEvent {
                     fn module(&self) -> &str {
@@ -138,7 +107,7 @@ mod tests {
             #[event(autonumber, module = "module::TheModule")]
             pub enum MainEvent {
                 Event0,
-                #[event(id = 2)]
+                #[event(code = 2)]
                 Event2 {
                     payload: Vec<u8>,
                 },

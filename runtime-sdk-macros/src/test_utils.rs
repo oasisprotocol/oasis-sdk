@@ -1,12 +1,30 @@
-pub fn rustfmt(code: String) -> String {
-    let mut formatted = Vec::new();
-    let mut config = rustfmt::config::Config::default();
-    config.set().write_mode(rustfmt::config::WriteMode::Plain);
-    let code = format!("const wrap: () = {{ {} }};", code);
-    let (_summary, _, _) =
-        rustfmt::format_input(rustfmt::Input::Text(code), &config, Some(&mut formatted))
-            .expect("unable to format output");
-    String::from_utf8(formatted).unwrap()
+pub fn rustfmt(code: &str) -> String {
+    use std::{
+        io::Write,
+        process::{Command, Stdio},
+    };
+
+    let mut cp = Command::new("rustfmt")
+        .args(&["--emit", "stdout", "--quiet"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("unable to spawn rustfmt. Do you need to install it?");
+
+    cp.stdin
+        .as_mut()
+        .unwrap()
+        .write_all(format!("const _: () = {{ {}; }};", code).as_bytes())
+        .expect("unable to communicate with rustfmt");
+
+    let output = cp.wait_with_output().unwrap();
+    if !output.status.success() {
+        panic!(
+            "unable to rustfmt\n{}",
+            String::from_utf8(output.stderr).unwrap_or_default()
+        );
+    }
+    String::from_utf8(output.stdout).unwrap()
 }
 
 #[macro_export]
@@ -14,8 +32,8 @@ macro_rules! assert_empty_diff {
     ($actual:expr, $expected:expr) => {{
         use quote::ToTokens;
 
-        let actual_code = crate::test_utils::rustfmt($actual.to_token_stream().to_string());
-        let expected_code = crate::test_utils::rustfmt($expected.to_token_stream().to_string());
+        let actual_code = crate::test_utils::rustfmt(&$actual.to_token_stream().to_string());
+        let expected_code = crate::test_utils::rustfmt(&$expected.to_token_stream().to_string());
 
         let diffs = diff::lines(&actual_code, &expected_code);
 

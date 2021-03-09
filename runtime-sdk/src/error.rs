@@ -7,6 +7,19 @@ use crate::types::transaction::CallResult;
 ///
 /// It extends `std::error::Error` with module name and error code so that errors can be easily
 /// serialized and transferred between different processes.
+///
+/// This trait can be derived:
+/// ```ignore
+/// # #[cfg(feature = "oasis-runtime-sdk-macros")]
+/// # mod example {
+/// #[derive(Clone, Debug, thiserror::Error, oasis_runtime_sdk::Error)]
+/// #[event(module = "path::to::MyModule", autonumber)] // `module` is required
+/// enum Error {
+///    InvalidArgument,      // autonumbered to 0
+///    #[event(code = 401)]  // manually numbered to 403 (`code` is required if not autonumbering)
+///    Forbidden,
+/// }
+/// # }
 pub trait Error: std::error::Error {
     /// Name of the module that emitted the error.
     fn module(&self) -> &str;

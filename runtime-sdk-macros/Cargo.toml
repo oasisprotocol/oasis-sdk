@@ -16,5 +16,4 @@ syn = "1.0.62"
 
 [dev-dependencies]
 diff = "0.1.12"
-rustfmt = "0.10"
 syn = { version = "1.0.62", features = ["extra-traits"] }
