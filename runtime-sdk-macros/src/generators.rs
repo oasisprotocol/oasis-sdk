@@ -10,6 +10,19 @@ pub fn wrap_in_const(tokens: TokenStream) -> TokenStream {
     }
 }
 
+/// Determines what crate name should be used to refer to `oasis_runtime_sdk` types.
+/// Required for use within the SDK itself (crates cannot refer to their own names).
+pub fn sdk_crate_path() -> syn::Path {
+    let is_internal = std::env::var("CARGO_PKG_NAME")
+        .map(|pkg_name| pkg_name == "oasis-runtime-sdk")
+        .unwrap_or_default();
+    if is_internal {
+        syn::parse_quote!(crate)
+    } else {
+        syn::parse_quote!(oasis_runtime_sdk)
+    }
+}
+
 pub trait CodedVariant {
     fn ident(&self) -> &Ident;
 

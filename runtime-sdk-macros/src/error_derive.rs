@@ -12,8 +12,14 @@ struct Error {
 
     data: darling::ast::Data<ErrorVariant, darling::util::Ignored>,
 
-    /// The type ident of the error enum.
-    module: syn::Path,
+    /// The path to the module type.
+    #[darling(default)]
+    module: Option<syn::Path>,
+
+    /// The path to a const set to the module name.
+    /// This is intended for use only by core modules.
+    #[darling(default)]
+    module_name_path: Option<syn::Path>,
 
     /// Whether to sequentially autonumber the error codes.
     /// This option exists as a convenience for runtimes that
@@ -49,7 +55,6 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
     };
 
     let error_ty_ident = &error.ident;
-    let module_path = &error.module;
 
     let code_converter = gen::enum_code_converter(
         &format_ident!("self"),
@@ -57,10 +62,23 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
         error.autonumber.is_some(),
     );
 
+    let sdk_crate = gen::sdk_crate_path();
+
+    let module_name = match (&error.module, &error.module_name_path) {
+        (Some(module_path), None) => quote!(<#module_path as #sdk_crate::module::Module>::NAME),
+        (None, Some(module_name)) => quote!(#module_name),
+        (Some(_), Some(_)) => quote!(compile_error!(
+            "either `module` and `module_name` must be set"
+        )),
+        (None, None) => quote!(compile_error!(
+            r#"missing `#[runtime_error(module = "path::to::Module")]` attribute"#
+        )),
+    };
+
     gen::wrap_in_const(quote! {
-        impl oasis_runtime_sdk::Error for #error_ty_ident {
+        impl #sdk_crate::error::Error for #error_ty_ident {
             fn module(&self) -> &str {
-                <#module_path as oasis_runtime_sdk::module::Module>::NAME
+                #module_name
             }
 
             fn code(&self) -> u32 {
@@ -76,7 +94,7 @@ mod tests {
     fn generate_error_impl() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
-                impl oasis_runtime_sdk::Error for Error {
+                impl oasis_runtime_sdk::error::Error for Error {
                     fn module(&self) -> &str {
                         <module::TheModule as oasis_runtime_sdk::module::Module>::NAME
                     }

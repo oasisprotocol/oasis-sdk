@@ -9,17 +9,24 @@ use crate::types::transaction::CallResult;
 /// serialized and transferred between different processes.
 ///
 /// This trait can be derived:
-/// ```ignore
+/// ```
 /// # #[cfg(feature = "oasis-runtime-sdk-macros")]
 /// # mod example {
-/// #[derive(Clone, Debug, thiserror::Error, oasis_runtime_sdk::Error)]
-/// #[event(module = "path::to::MyModule", autonumber)] // `module` is required
+/// # use serde::{Serialize, Deserialize};
+/// # use oasis_runtime_sdk_macros::Error;
+/// # mod path { pub mod to { pub use oasis_runtime_sdk::modules::accounts::Module as MyModule; }}
+/// #[derive(Clone, Debug, Serialize, Deserialize, Error, thiserror::Error)]
+/// #[sdk_error(module = "path::to::MyModule", autonumber)] // `module` is required
 /// enum Error {
-///    InvalidArgument,      // autonumbered to 0
-///    #[event(code = 401)]  // manually numbered to 403 (`code` is required if not autonumbering)
+///    #[error("invalid argument")]
+///    InvalidArgument,          // autonumbered to 0
+///
+///    #[error("forbidden")]
+///    #[sdk_error(code = 401)]  // manually numbered to 403 (`code` or autonumbering is required)
 ///    Forbidden,
 /// }
 /// # }
+/// ```
 pub trait Error: std::error::Error {
     /// Name of the module that emitted the error.
     fn module(&self) -> &str;

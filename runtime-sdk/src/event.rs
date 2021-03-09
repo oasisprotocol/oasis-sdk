@@ -4,17 +4,19 @@ use oasis_core_runtime::{common::cbor, transaction::tags::Tag};
 /// An event emitted by the runtime.
 ///
 /// This trait can be derived:
-/// ```ignore
+/// ```
 /// # #[cfg(feature = "oasis-runtime-sdk-macros")]
 /// # mod example {
 /// # use serde::{Serialize, Deserialize};
-/// #[derive(Clone, Debug, Serialize, Deserialize, oasis_runtime_sdk::Event)]
-/// #[event(module = "path::to::MyModule", autonumber)] // `module` is required
+/// # use oasis_runtime_sdk_macros::Event;
+/// # mod path { pub mod to { pub use oasis_runtime_sdk::modules::accounts::Module as MyModule; }}
+/// #[derive(Clone, Debug, Serialize, Deserialize, Event)]
+/// #[sdk_event(module = "path::to::MyModule", autonumber)] // `module` is required
 /// enum MyEvent {
-///    Greeting(String),    // autonumbered to 0
-///    #[event(code = 42)]  // manually numbered to 42 (`code` is required if not autonumbering)
-///    DontPanic,
-///    Salutation {         // autonumbered to 1
+///    Greeting(String),      // autonumbered to 0
+///    #[sdk_event(code = 2)] // manually numbered to 2 (`code` is required if not autonumbering)
+///    DontPanic,             // autonumbered to 1
+///    Salutation {           // autonumbered to 3
 ///        plural: bool,
 ///    }
 /// }
@@ -34,7 +36,7 @@ pub trait Event {
     ///
     /// # Key
     ///
-    /// ```ignore
+    /// ```text
     /// <module (variable size bytes)> <code (big-endian u32)>
     /// ```
     ///

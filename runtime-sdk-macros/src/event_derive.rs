@@ -12,7 +12,7 @@ struct Event {
 
     data: darling::ast::Data<EventVariant, darling::util::Ignored>,
 
-    /// The type ident of the event enum.
+    /// The path to the module type.
     module: syn::Path,
 
     /// Whether to sequentially autonumber the event codes.
@@ -57,12 +57,14 @@ pub fn derive_event(input: DeriveInput) -> TokenStream {
         event.autonumber.is_some(),
     );
 
-    gen::wrap_in_const(quote! {
-        use oasis_runtime_sdk::core::common::cbor;
+    let sdk_crate = gen::sdk_crate_path();
 
-        impl oasis_runtime_sdk::event::Event for #event_ty_ident {
+    gen::wrap_in_const(quote! {
+        use #sdk_crate::core::common::cbor;
+
+        impl #sdk_crate::event::Event for #event_ty_ident {
             fn module(&self) -> &str {
-                <#module_path as oasis_runtime_sdk::module::Module>::NAME
+                <#module_path as #sdk_crate::module::Module>::NAME
             }
 
             fn code(&self) -> u32 {
