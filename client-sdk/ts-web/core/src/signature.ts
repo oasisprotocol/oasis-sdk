@@ -39,7 +39,7 @@ export async function verify(
     return sigOk;
 }
 
-export async function openSigned(context: string, signed: types.SignatureSigned) {
+export async function openSigned<T>(context: string, signed: types.SignatureSigned<T>) {
     const sigOk = await verify(
         signed.signature.public_key,
         context,
@@ -47,24 +47,24 @@ export async function openSigned(context: string, signed: types.SignatureSigned)
         signed.signature.signature,
     );
     if (!sigOk) throw new Error('signature verification failed');
-    return signed.untrusted_raw_value;
+    return misc.fromCBOR(signed.untrusted_raw_value) as T;
 }
 
-export async function signSigned(signer: ContextSigner, context: string, rawValue: Uint8Array) {
+export async function signSigned<T>(signer: ContextSigner, context: string, value: T) {
+    const rawValue = misc.toCBOR(value);
     return {
         untrusted_raw_value: rawValue,
         signature: {
             public_key: signer.public(),
             signature: await signer.sign(context, rawValue),
         },
-    } as types.SignatureSigned;
+    } as types.SignatureSigned<T>;
 }
 
-export function deserializeSigned(raw: Uint8Array) {
-    return misc.fromCBOR(raw) as types.SignatureSigned;
-}
-
-export async function openMultiSigned(context: string, multiSigned: types.SignatureMultiSigned) {
+export async function openMultiSigned<T>(
+    context: string,
+    multiSigned: types.SignatureMultiSigned<T>,
+) {
     const signerMessage = await prepareSignerMessage(context, multiSigned.untrusted_raw_value);
     const signerMessageA = Array.from(signerMessage);
     for (const signature of multiSigned.signatures) {
@@ -74,14 +74,11 @@ export async function openMultiSigned(context: string, multiSigned: types.Signat
         const sigOk = ED25519.verify(signerMessageA, signatureA, publicKeyA);
         if (!sigOk) throw new Error('signature verification failed');
     }
-    return multiSigned.untrusted_raw_value;
+    return misc.fromCBOR(multiSigned.untrusted_raw_value) as T;
 }
 
-export async function signMultiSigned(
-    signers: ContextSigner[],
-    context: string,
-    rawValue: Uint8Array,
-) {
+export async function signMultiSigned<T>(signers: ContextSigner[], context: string, value: T) {
+    const rawValue = misc.toCBOR(value);
     const signatures = [] as types.Signature[];
     for (const signer of signers) {
         signatures.push({
@@ -92,7 +89,7 @@ export async function signMultiSigned(
     return {
         untrusted_raw_value: rawValue,
         signatures: signatures,
-    } as types.SignatureMultiSigned;
+    } as types.SignatureMultiSigned<T>;
 }
 
 export class BlindContextSigner implements ContextSigner {

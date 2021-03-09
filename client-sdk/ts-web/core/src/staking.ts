@@ -1,5 +1,8 @@
+import * as client from './client';
 import * as address from './address';
+import * as consensus from './consensus';
 import * as misc from './misc';
+import * as types from './types';
 
 /**
  * AddressV0Context is the unique context for v0 staking account addresses.
@@ -25,33 +28,47 @@ export const ADDRESS_RUNTIME_V0_CONTEXT_VERSION = 0;
 export const ADDRESS_PREFIX = 'oasis';
 
 /**
+ * ModuleName is a unique module name for the staking module.
+ */
+export const MODULE_NAME = 'staking';
+
+/**
  * MethodTransfer is the method name for transfers.
  */
-export const METHOD_TRANSFER = 'staking.Transfer';
+export const METHOD_TRANSFER = new consensus.Method<types.StakingTransfer>(MODULE_NAME, 'Transfer');
 /**
  * MethodBurn is the method name for burns.
  */
-export const METHOD_BURN = 'staking.Burn';
+export const METHOD_BURN = new consensus.Method<types.StakingBurn>(MODULE_NAME, 'Burn');
 /**
  * MethodAddEscrow is the method name for escrows.
  */
-export const METHOD_ADD_ESCROW = 'staking.AddEscrow';
+export const METHOD_ADD_ESCROW = new consensus.Method<types.StakingEscrow>(
+    MODULE_NAME,
+    'AddEscrow',
+);
 /**
  * MethodReclaimEscrow is the method name for escrow reclamations.
  */
-export const METHOD_RECLAIM_ESCROW = 'staking.ReclaimEscrow';
+export const METHOD_RECLAIM_ESCROW = new consensus.Method<types.StakingReclaimEscrow>(
+    MODULE_NAME,
+    'ReclaimEscrow',
+);
 /**
  * MethodAmendCommissionSchedule is the method name for amending commission schedules.
  */
-export const METHOD_AMEND_COMMISSION_SCHEDULE = 'staking.AmendCommissionSchedule';
+export const METHOD_AMEND_COMMISSION_SCHEDULE = new consensus.Method<types.StakingAmendCommissionSchedule>(
+    MODULE_NAME,
+    'AmendCommissionSchedule',
+);
 /**
  * MethodAllow is the method name for setting a beneficiary allowance.
  */
-export const METHOD_ALLOW = 'staking.Allow';
+export const METHOD_ALLOW = new consensus.Method<types.StakingAllow>(MODULE_NAME, 'Allow');
 /**
  * MethodWithdraw is the method name for
  */
-export const METHOD_WITHDRAW = 'staking.Withdraw';
+export const METHOD_WITHDRAW = new consensus.Method<types.StakingWithdraw>(MODULE_NAME, 'Withdraw');
 
 export const KIND_ENTITY = 0;
 export const KIND_NODE_VALIDATOR = 1;
@@ -121,11 +138,6 @@ export const GAS_OP_ALLOW = 'allow';
  * GasOpWithdraw is the gas operation identifier for withdraw.
  */
 export const GAS_OP_WITHDRAW = 'withdraw';
-
-/**
- * ModuleName is a unique module name for the staking module.
- */
-export const MODULE_NAME = 'staking';
 
 /**
  * ErrInvalidArgument is the error returned on malformed arguments.
@@ -221,4 +233,8 @@ export async function governanceDepositsAddress() {
     return await addressFromPublicKey(
         misc.fromHex('1abe11eddeaccfffffffffffffffffffffffffffffffffffffffffffffffffff'),
     );
+}
+
+export async function callTrasnfer(c: client.NodeInternal) {
+    c.consensusSubmitTx();
 }

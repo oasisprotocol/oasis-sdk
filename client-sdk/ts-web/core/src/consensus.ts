@@ -84,6 +84,20 @@ export const TRANSACTION_ERR_INSUFFICIENT_FEE_BALANCE_CODE = 2;
  */
 export const TRANSACTION_ERR_GAS_PRICE_TOO_LOW_CODE = 3;
 
+export class Method<BODY> {
+    module: string;
+    method: string;
+
+    constructor(module: string, method: string) {
+        this.module = module;
+        this.method = method;
+    }
+
+    methodName() {
+        return `${this.module}.${this.method}`;
+    }
+}
+
 export async function openSignedTransaction(chainContext: string, signed: types.SignatureSigned) {
     const context = signature.combineChainContext(TRANSACTION_SIGNATURE_CONTEXT, chainContext);
     return misc.fromCBOR(await signature.openSigned(context, signed)) as types.ConsensusTransaction;

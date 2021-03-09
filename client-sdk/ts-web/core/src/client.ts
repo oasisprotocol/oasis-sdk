@@ -272,11 +272,11 @@ const methodDescriptorStorageSyncIterate = createMethodDescriptorUnary<
 >('Storage', 'SyncIterate');
 const methodDescriptorStorageApply = createMethodDescriptorUnary<
     types.StorageApplyRequest,
-    types.SignatureSigned[]
+    types.SignatureSigned<types.StorageReceiptBody>[]
 >('Storage', 'Apply');
 const methodDescriptorStorageApplyBatch = createMethodDescriptorUnary<
     types.StorageApplyBatchRequest,
-    types.SignatureSigned[]
+    types.SignatureSigned<types.StorageReceiptBody>[]
 >('Storage', 'ApplyBatch');
 const methodDescriptorStorageGetCheckpoints = createMethodDescriptorUnary<
     types.StorageGetCheckpointsRequest,

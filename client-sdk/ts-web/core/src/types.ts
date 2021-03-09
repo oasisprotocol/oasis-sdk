@@ -135,9 +135,9 @@ export interface ConsensusError {
 /**
  * EstimateGasRequest is a EstimateGas request.
  */
-export interface ConsensusEstimateGasRequest {
+export interface ConsensusEstimateGasRequest<BODY> {
     signer: Uint8Array;
-    transaction: ConsensusTransaction;
+    transaction: ConsensusTransaction<BODY>;
 }
 
 /**
@@ -330,7 +330,7 @@ export interface ConsensusStatus {
 /**
  * Transaction is an unsigned consensus transaction.
  */
-export interface ConsensusTransaction {
+export interface ConsensusTransaction<BODY> {
     /**
      * Nonce is a nonce to prevent replay.
      */
@@ -347,7 +347,7 @@ export interface ConsensusTransaction {
     /**
      * Body is the method call body.
      */
-    body?: unknown;
+    body?: BODY;
 }
 
 /**
@@ -1280,7 +1280,7 @@ export interface RegistryGenesis {
     /**
      * Entities is the initial list of entities.
      */
-    entities?: SignatureSigned[];
+    entities?: SignatureSigned<Entity>[];
     /**
      * Runtimes is the initial list of runtimes.
      */
@@ -1292,7 +1292,7 @@ export interface RegistryGenesis {
     /**
      * Nodes is the initial list of nodes.
      */
-    nodes?: SignatureMultiSigned[];
+    nodes?: SignatureMultiSigned<Node>[];
     /**
      * NodeStatuses is a set of node statuses.
      */
@@ -1721,16 +1721,16 @@ export interface RoothashConsensusParameters {
  * EquivocationBatchEvidence is evidence of executor proposed batch equivocation.
  */
 export interface RoothashEquivocationBatchEvidence {
-    batch_a: SignatureSigned;
-    batch_b: SignatureSigned;
+    batch_a: SignatureSigned<RoothashProposedBatch>;
+    batch_b: SignatureSigned<RoothashProposedBatch>;
 }
 
 /**
  * EquivocationExecutorEvidence is evidence of executor commitment equivocation.
  */
 export interface RoothashEquivocationExecutorEvidence {
-    commit_a: SignatureSigned;
-    commit_b: SignatureSigned;
+    commit_a: SignatureSigned<RoothashComputeBody>;
+    commit_b: SignatureSigned<RoothashComputeBody>;
 }
 
 /**
@@ -1770,7 +1770,7 @@ export interface RoothashExecutionDiscrepancyDetectedEvent {
  */
 export interface RoothashExecutorCommit {
     id: Uint8Array;
-    commits: SignatureSigned[];
+    commits: SignatureSigned<RoothashComputeBody>[];
 }
 
 /**
@@ -1780,7 +1780,7 @@ export interface RoothashExecutorCommittedEvent {
     /**
      * Commit is the executor commitment.
      */
-    commit: SignatureSigned;
+    commit: SignatureSigned<RoothashComputeBody>;
 }
 
 /**
@@ -2044,18 +2044,18 @@ export interface RuntimeClientQueryCondition {
 /**
  * QueryRequest is a Query request.
  */
-export interface RuntimeClientQueryRequest {
+export interface RuntimeClientQueryRequest<ARGS> {
     runtime_id: Uint8Array;
     round: longnum;
     method: string;
-    args: unknown;
+    args: ARGS;
 }
 
 /**
  * QueryResponse is a response to the runtime query.
  */
-export interface RuntimeClientQueryResponse {
-    data: unknown;
+export interface RuntimeClientQueryResponse<DATA> {
+    data: DATA;
 }
 
 /**
@@ -2227,7 +2227,7 @@ export interface SGXEnclaveIdentity {
 /**
  * MultiSigned is a blob signed by multiple public keys.
  */
-export interface SignatureMultiSigned {
+export interface SignatureMultiSigned<T> {
     /**
      * Blob is the signed blob.
      */
@@ -2255,7 +2255,7 @@ export interface Signature {
 /**
  * Signed is a signed blob.
  */
-export interface SignatureSigned {
+export interface SignatureSigned<T> {
     /**
      * Blob is the signed blob.
      */
