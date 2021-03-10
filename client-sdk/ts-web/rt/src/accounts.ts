@@ -1,6 +1,5 @@
 import * as oasis from '@oasisprotocol/client';
 
-import * as transaction from './transaction';
 import * as types from './types';
 import * as wrapper from './wrapper';
 
@@ -23,24 +22,21 @@ export const EVENT_TRANSFER_CODE = 1;
 export const EVENT_BURN_CODE = 2;
 export const EVENT_MINT_CODE = 3;
 
-export class Client extends wrapper.Wrapper {
-    constructor(nic: oasis.client.NodeInternal, runtimeID: Uint8Array) {
-        super(nic, runtimeID);
+export class Wrapper extends wrapper.Base {
+    constructor(runtimeID: Uint8Array) {
+        super(runtimeID);
     }
 
-    callTransfer(
-        body: types.AccountsTransfer,
-        signerInfo: types.SignerInfo[],
-        fee: types.Fee,
-        signers: transaction.AnySigner[],
-    ) {
-        return this.call(METHOD_TRANSFER, body, signerInfo, fee, signers) as Promise<void>;
+    callTransfer() {
+        return this.call<types.AccountsTransfer, void>(METHOD_TRANSFER);
     }
 
-    queryNonce(round: oasis.types.longnum, args: types.AccountsNonceQuery) {
-        return this.query(round, METHOD_NONCE, args) as Promise<oasis.types.longnum>;
+    queryNonce() {
+        return this.query<types.AccountsNonceQuery, oasis.types.longnum>(METHOD_NONCE);
     }
-    queryBalances(round: oasis.types.longnum, args: types.AccountsBalancesQuery) {
-        return this.query(round, METHOD_BALANCES, args) as Promise<types.AccountsAccountBalances>;
+    queryBalances() {
+        return this.query<types.AccountsBalancesQuery, types.AccountsAccountBalances>(
+            METHOD_BALANCES,
+        );
     }
 }
