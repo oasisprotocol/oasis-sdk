@@ -70,22 +70,22 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npm run-script prepare
 
-      - name: Build ts-web/core playground
-        working-directory: client-sdk/ts-web/core/playground
-        run: npx webpack -c webpack.config.js
+      - name: Check ts-web/core playground
+        working-directory: client-sdk/ts-web/core
+        run: npm run-script check-playground
 
       - name: Prepare ts-web/signer-ledger
         working-directory: client-sdk/ts-web/signer-ledger
         run: npm run-script prepare
 
-      - name: Build ts-web/signer-ledger playground
-        working-directory: client-sdk/ts-web/signer-ledger/playground
-        run: npx webpack -c webpack.config.js
+      - name: Check ts-web/signer-ledger playground
+        working-directory: client-sdk/ts-web/signer-ledger
+        run: npm run-script check-playground
 
       - name: Prepare ts-web/rt
         working-directory: client-sdk/ts-web/rt
         run: npm run-script prepare
 
-      - name: Build ts-web/rt playground
-        working-directory: client-sdk/ts-web/rt/playground
-        run: npx webpack -c webpack.config.js
+      - name: Check ts-web/rt playground
+        working-directory: client-sdk/ts-web/rt
+        run: npm run-script check-playground
