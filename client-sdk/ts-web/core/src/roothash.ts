@@ -26,7 +26,7 @@ export const METHOD_EXECUTOR_COMMIT = 'roothash.ExecutorCommit';
 /**
  * MethodExecutorProposerTimeout is the method name for executor.
  */
-export const METHOD_PROPOSER_TIMEOUT = 'roothash.ExecutorProposerTimeout';
+export const METHOD_EXECUTOR_PROPOSER_TIMEOUT = 'roothash.ExecutorProposerTimeout';
 /**
  * MethodEvidence is the method name for submitting evidence of node misbehavior.
  */
