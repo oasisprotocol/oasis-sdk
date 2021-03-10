@@ -1,7 +1,3 @@
-import * as misc from './misc';
-import * as signature from './signature';
-import * as types from './types';
-
 /**
  * RegisterEntitySignatureContext is the context used for entity
  * registration.
