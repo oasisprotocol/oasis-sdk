@@ -40,7 +40,7 @@ async function play() {
             console.log('signed transaction', signedTransaction);
             console.log('hash', await oasis.consensus.hashSignedTransaction(signedTransaction));
 
-            console.log('reopened', oasis.consensus.openSignedTransaction(chainContext, signedTransaction));
+            console.log('reopened', await oasis.consensus.openSignedTransaction(chainContext, signedTransaction));
         }
     } catch (e) {
         console.error(e);
