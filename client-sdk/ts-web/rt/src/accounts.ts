@@ -34,6 +34,7 @@ export class Wrapper extends wrapper.Base {
     queryNonce() {
         return this.query<types.AccountsNonceQuery, oasis.types.longnum>(METHOD_NONCE);
     }
+
     queryBalances() {
         return this.query<types.AccountsBalancesQuery, types.AccountsAccountBalances>(
             METHOD_BALANCES,
