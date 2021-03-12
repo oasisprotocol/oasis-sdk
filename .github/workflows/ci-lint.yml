@@ -42,6 +42,20 @@ jobs:
           command: fmt
           args: -- --check
 
+  lint-go:
+    name: lint-go
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Lint Go code
+        uses: golangci/golangci-lint-action@v2
+        with:
+          # NOTE: The version must be specified without the patch version.
+          version: v1.28
+          working-directory: client-sdk/go
+
   lint-ts-web:
     name: lint-ts-web
     runs-on: ubuntu-latest
