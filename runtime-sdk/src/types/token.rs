@@ -27,7 +27,7 @@ impl Denomination {
 }
 
 impl fmt::Display for Denomination {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.is_native() {
             write!(f, "<native>")?;
         } else {
@@ -87,7 +87,7 @@ impl BaseUnits {
 }
 
 impl fmt::Display for BaseUnits {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} {}", self.0, self.1)?;
         Ok(())
     }

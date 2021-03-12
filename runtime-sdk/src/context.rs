@@ -53,7 +53,7 @@ pub struct DispatchContext<'a> {
 
 impl<'a> DispatchContext<'a> {
     /// Create a new dispatch context from the low-level runtime context.
-    pub(crate) fn from_runtime(ctx: &'a RuntimeContext, mkvs: &'a mut dyn mkvs::MKVS) -> Self {
+    pub(crate) fn from_runtime(ctx: &'a RuntimeContext<'_>, mkvs: &'a mut dyn mkvs::MKVS) -> Self {
         Self {
             mode: if ctx.check_only {
                 Mode::CheckTx
@@ -129,7 +129,7 @@ impl<'a> DispatchContext<'a> {
     /// Executes a function with the transaction-specific context set.
     pub fn with_tx<F, R>(&mut self, tx: transaction::Transaction, f: F) -> R
     where
-        F: FnOnce(TxContext, transaction::Call) -> R,
+        F: FnOnce(TxContext<'_, '_>, transaction::Call) -> R,
     {
         // Create a store wrapped by an overlay store so we can either rollback or commit.
         let store = storage::MKVSStore::new(self.io_ctx.clone(), &mut self.runtime_storage);

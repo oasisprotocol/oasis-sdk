@@ -92,7 +92,7 @@ impl<R: Runtime> Dispatcher<R> {
 
     fn dispatch_tx(
         &self,
-        ctx: &mut DispatchContext,
+        ctx: &mut DispatchContext<'_>,
         tx: types::transaction::Transaction,
     ) -> Result<DispatchResult, Error> {
         // Run pre-processing hooks.
@@ -128,7 +128,7 @@ impl<R: Runtime> Dispatcher<R> {
         Ok(result)
     }
 
-    fn check_tx(&self, ctx: &mut DispatchContext, tx: &[u8]) -> Result<CheckTxResult, Error> {
+    fn check_tx(&self, ctx: &mut DispatchContext<'_>, tx: &[u8]) -> Result<CheckTxResult, Error> {
         let tx = match self.decode_tx(&tx) {
             Ok(tx) => tx,
             Err(err) => {
@@ -160,7 +160,11 @@ impl<R: Runtime> Dispatcher<R> {
         }
     }
 
-    fn execute_tx(&self, ctx: &mut DispatchContext, tx: &[u8]) -> Result<ExecuteTxResult, Error> {
+    fn execute_tx(
+        &self,
+        ctx: &mut DispatchContext<'_>,
+        tx: &[u8],
+    ) -> Result<ExecuteTxResult, Error> {
         let tx = match self.decode_tx(&tx) {
             Ok(tx) => tx,
             Err(err) => {
@@ -179,7 +183,7 @@ impl<R: Runtime> Dispatcher<R> {
         })
     }
 
-    fn maybe_init_state(&self, ctx: &mut DispatchContext) {
+    fn maybe_init_state(&self, ctx: &mut DispatchContext<'_>) {
         R::migrate(ctx)
     }
 }
@@ -187,7 +191,7 @@ impl<R: Runtime> Dispatcher<R> {
 impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
     fn execute_batch(
         &self,
-        ctx: transaction::Context,
+        ctx: transaction::Context<'_>,
         batch: &TxnBatch,
     ) -> Result<ExecuteBatchResult, RuntimeError> {
         // TODO: Get rid of StorageContext (pass mkvs in ctx).
@@ -218,7 +222,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
 
     fn check_batch(
         &self,
-        ctx: transaction::Context,
+        ctx: transaction::Context<'_>,
         batch: &TxnBatch,
     ) -> Result<Vec<CheckTxResult>, RuntimeError> {
         // TODO: Get rid of StorageContext (pass mkvs in ctx).
@@ -244,7 +248,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
 
     fn query(
         &self,
-        ctx: transaction::Context,
+        ctx: transaction::Context<'_>,
         method: &str,
         args: cbor::Value,
     ) -> Result<cbor::Value, RuntimeError> {
