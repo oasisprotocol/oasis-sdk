@@ -1,3 +1,4 @@
+import * as consensus from './consensus';
 import * as misc from './misc';
 import * as signature from './signature';
 import * as types from './types';
@@ -26,7 +27,7 @@ export const METHOD_EXECUTOR_COMMIT = 'roothash.ExecutorCommit';
 /**
  * MethodExecutorProposerTimeout is the method name for executor.
  */
-export const METHOD_PROPOSER_TIMEOUT = 'roothash.ExecutorProposerTimeout';
+export const METHOD_EXECUTOR_PROPOSER_TIMEOUT = 'roothash.ExecutorProposerTimeout';
 /**
  * MethodEvidence is the method name for submitting evidence of node misbehavior.
  */
@@ -233,4 +234,18 @@ export async function signProposedBatch(
         chainContext,
     )} for runtime ${misc.toHex(runtimeID)}`;
     return await signature.signSigned(signer, context, misc.toCBOR(proposedBatch));
+}
+
+export function executorCommitWrapper() {
+    return new consensus.TransactionWrapper<types.RoothashExecutorCommit>(METHOD_EXECUTOR_COMMIT);
+}
+
+export function executorProposerTimeoutWrapper() {
+    return new consensus.TransactionWrapper<types.RoothashExecutorProposerTimeoutRequest>(
+        METHOD_EXECUTOR_PROPOSER_TIMEOUT,
+    );
+}
+
+export function evidenceWrapper() {
+    return new consensus.TransactionWrapper<types.RoothashEvidence>(METHOD_EVIDENCE);
 }

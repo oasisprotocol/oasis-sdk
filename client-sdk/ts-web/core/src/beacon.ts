@@ -1,3 +1,6 @@
+import * as consensus from './consensus';
+import * as types from './types';
+
 /**
  * MethodPVSSCommit is the method name for a PVSS commitment.
  */
@@ -30,3 +33,15 @@ export const MODULE_NAME = 'beacon';
  * available for the requested height for any reason.
  */
 export const ERR_BEACON_NOT_AVAILABLE_CODE = 1;
+
+export function pvssCommitWrapper() {
+    return new consensus.TransactionWrapper<types.BeaconPVSSCommit>(METHOD_PVSS_COMMIT);
+}
+
+export function pvssRevealWrapper() {
+    return new consensus.TransactionWrapper<types.BeaconPVSSReveal>(METHOD_PVSS_REVEAL);
+}
+
+export function setEpochWrapper() {
+    return new consensus.TransactionWrapper<types.longnum>(METHOD_SET_EPOCH);
+}

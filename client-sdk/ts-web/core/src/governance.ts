@@ -1,3 +1,6 @@
+import * as consensus from './consensus';
+import * as types from './types';
+
 /**
  * MethodSubmitProposal submits a new consensus layer governance proposal.
  */
@@ -49,3 +52,13 @@ export const ERR_NOT_ELIGIBLE_CODE = 6;
  * ErrVotingIsClosed is the error returned when a vote is cast for a non-active proposal.
  */
 export const ERR_VOTING_IS_CLOSED_CODE = 7;
+
+export function submitProposalWrapper() {
+    return new consensus.TransactionWrapper<types.GovernanceProposalContent>(
+        METHOD_SUBMIT_PROPOSAL,
+    );
+}
+
+export function castVoteWrapper() {
+    return new consensus.TransactionWrapper<types.GovernanceProposalVote>(METHOD_CAST_VOTE);
+}

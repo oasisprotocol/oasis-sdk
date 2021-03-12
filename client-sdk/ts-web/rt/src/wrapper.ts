@@ -1,53 +1,105 @@
 import * as oasis from '@oasisprotocol/client';
 
+import * as token from './token';
 import * as transaction from './transaction';
 import * as types from './types';
 
-export class Wrapper {
-    client: oasis.OasisNodeClient;
+export class TransactionWrapper<BODY, OK> {
     runtimeID: Uint8Array;
+    transaction: types.Transaction;
+    unverifiedTransaction: types.UnverifiedTransaction;
 
-    constructor(client: oasis.OasisNodeClient, runtimeID: Uint8Array) {
-        this.client = client;
+    constructor(runtimeID: Uint8Array, method: string) {
         this.runtimeID = runtimeID;
-    }
-
-    protected async call(
-        method: string,
-        body: unknown,
-        signerInfo: types.SignerInfo[],
-        fee: types.Fee,
-        signers: transaction.AnySigner[],
-    ) {
-        const tx = {
+        this.transaction = {
             v: transaction.LATEST_TRANSACTION_VERSION,
             call: {
                 method,
-                body,
+                body: undefined,
             },
             ai: {
-                si: signerInfo,
-                fee,
+                si: [],
+                fee: {
+                    amount: [oasis.quantity.fromBigInt(0n), token.NATIVE_DENOMINATION],
+                    gas: 0n,
+                },
             },
-        } as types.Transaction;
-        const signed = await transaction.signUnverifiedTransaction(signers, tx);
-        const response = await this.client.runtimeClientSubmitTx({
+        };
+    }
+
+    setBody(body: BODY) {
+        this.transaction.call.body = body;
+        return this;
+    }
+
+    setSignerInfo(signerInfo: types.SignerInfo[]) {
+        this.transaction.ai.si = signerInfo;
+        return this;
+    }
+
+    setFeeAmount(amount: types.BaseUnits) {
+        this.transaction.ai.fee.amount = amount;
+        return this;
+    }
+
+    setFeeGas(gas: oasis.types.longnum) {
+        this.transaction.ai.fee.gas = gas;
+        return this;
+    }
+
+    async sign(signers: transaction.AnySigner[]) {
+        this.unverifiedTransaction = await transaction.signUnverifiedTransaction(
+            signers,
+            this.transaction,
+        );
+    }
+
+    async submit(nic: oasis.client.NodeInternal) {
+        const response = await nic.runtimeClientSubmitTx({
             runtime_id: this.runtimeID,
-            data: oasis.misc.toCBOR(signed),
+            data: oasis.misc.toCBOR(this.unverifiedTransaction),
         });
         const result = oasis.misc.fromCBOR(response) as types.CallResult;
         if (result.fail) throw result.fail;
-        return result.ok;
+        return result.ok as OK;
+    }
+}
+
+export class QueryWrapper<ARGS, DATA> {
+    request: oasis.types.RuntimeClientQueryRequest;
+
+    constructor(runtimeID: Uint8Array, method: string) {
+        this.request = {
+            runtime_id: runtimeID,
+            round: oasis.runtime.CLIENT_ROUND_LATEST,
+            method: method,
+            args: undefined,
+        };
     }
 
-    protected async query(round: oasis.types.longnum, method: string, args: unknown) {
-        const request = {
-            runtime_id: this.runtimeID,
-            round,
-            method,
-            args,
-        } as oasis.types.RuntimeClientQueryRequest;
-        const response = await this.client.runtimeClientQuery(request);
-        return response.data;
+    setArgs(args: ARGS) {
+        this.request.args = args;
+        return this;
+    }
+
+    async query(nic: oasis.client.NodeInternal) {
+        const response = await nic.runtimeClientQuery(this.request);
+        return response.data as DATA;
+    }
+}
+
+export class Base {
+    runtimeID: Uint8Array;
+
+    constructor(runtimeID: Uint8Array) {
+        this.runtimeID = runtimeID;
+    }
+
+    protected call<BODY, OK>(method: string) {
+        return new TransactionWrapper<BODY, OK>(this.runtimeID, method);
+    }
+
+    protected query<ARGS, DATA>(method: string) {
+        return new QueryWrapper<ARGS, DATA>(this.runtimeID, method);
     }
 }

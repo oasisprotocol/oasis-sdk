@@ -1,6 +1,7 @@
 import * as oasis from '@oasisprotocol/client';
 
 import * as signatureSecp256k1 from './signature_secp256k1';
+import * as token from './token';
 import * as types from './types';
 
 /**

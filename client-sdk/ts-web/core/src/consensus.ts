@@ -1,5 +1,7 @@
+import * as client from './client';
 import * as hash from './hash';
 import * as misc from './misc';
+import * as quantity from './quantity';
 import * as signature from './signature';
 import * as types from './types';
 
@@ -104,4 +106,63 @@ export async function signSignedTransaction(
  */
 export async function hashSignedTransaction(signed: types.SignatureSigned) {
     return misc.toHex(await hash.hash(misc.toCBOR(signed)));
+}
+
+export class TransactionWrapper<BODY> {
+    transaction: types.ConsensusTransaction;
+    signedTransaction: types.SignatureSigned;
+
+    constructor(method: string) {
+        this.transaction = {
+            nonce: 0n,
+            fee: {
+                amount: quantity.fromBigInt(0n),
+                gas: 0n,
+            },
+            method,
+        };
+    }
+
+    setNonce(nonce: types.longnum) {
+        this.transaction.nonce = nonce;
+        return this;
+    }
+
+    setFeeAmount(amount: Uint8Array) {
+        this.transaction.fee.amount = amount;
+        return this;
+    }
+
+    setFeeGas(gas: types.longnum) {
+        this.transaction.fee.gas = gas;
+        return this;
+    }
+
+    setBody(body: BODY) {
+        this.transaction.body = body;
+        return this;
+    }
+
+    async estimateGas(nic: client.NodeInternal, signer: Uint8Array) {
+        return await nic.consensusEstimateGas({
+            signer,
+            transaction: this.transaction,
+        });
+    }
+
+    async sign(signer: signature.ContextSigner, chainContext: string) {
+        this.signedTransaction = await signSignedTransaction(
+            signer,
+            chainContext,
+            this.transaction,
+        );
+    }
+
+    async hash() {
+        return await hashSignedTransaction(this.signedTransaction);
+    }
+
+    async submit(nic: client.NodeInternal) {
+        await nic.consensusSubmitTx(this.signedTransaction);
+    }
 }

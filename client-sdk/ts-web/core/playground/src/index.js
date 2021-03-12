@@ -2,22 +2,22 @@
 
 import * as oasis from './../..';
 
-const client = new oasis.OasisNodeClient('http://localhost:42280');
+const nic = new oasis.client.NodeInternal('http://localhost:42280');
 
 (async function () {
     try {
         // Get something with addresses.
         {
-            console.log('nodes', await client.registryGetNodes(oasis.consensus.HEIGHT_LATEST));
+            console.log('nodes', await nic.registryGetNodes(oasis.consensus.HEIGHT_LATEST));
         }
 
         // Block and events have a variety of different types.
         {
             const height = 2385080n;
             console.log('height', height);
-            const block = await client.consensusGetBlock(height);
+            const block = await nic.consensusGetBlock(height);
             console.log('block', block);
-            const stakingEvents = await client.stakingGetEvents(height);
+            const stakingEvents = await nic.stakingGetEvents(height);
             console.log('staking events', stakingEvents);
         }
 
@@ -25,7 +25,7 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
         {
             const toAddr = 'oasis1qpl5634wyu6larn047he9af7a3qyhzx59u0mquw7';
             console.log('delegations to', toAddr);
-            const response = await client.stakingDelegations({
+            const response = await nic.stakingDelegations({
                 height: oasis.consensus.HEIGHT_LATEST,
                 owner: oasis.staking.addressFromBech32(toAddr),
             });
@@ -39,13 +39,13 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
 
         // Try verifying transaction signatures.
         {
-            const genesis = await client.consensusGetGenesisDocument();
+            const genesis = await nic.consensusGetGenesisDocument();
             console.log('genesis', genesis);
             const chainContext = await oasis.genesis.chainContext(genesis);
             console.log('chain context', chainContext);
             const height = 2385080n;
             console.log('height', height);
-            const response = await client.consensusGetTransactionsWithResults(height);
+            const response = await nic.consensusGetTransactionsWithResults(height);
             for (let i = 0; i < response.transactions.length; i++) {
                 const signedTransaction = oasis.signature.deserializeSigned(response.transactions[i]);
                 const transaction = await oasis.consensus.openSignedTransaction(chainContext, signedTransaction);
@@ -65,56 +65,34 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
             const dst = oasis.signature.EllipticSigner.fromRandom('this key is not important');
             console.log('src', src, 'dst', dst);
 
-            const genesis = await client.consensusGetGenesisDocument();
+            const genesis = await nic.consensusGetGenesisDocument();
             const chainContext = await oasis.genesis.chainContext(genesis);
             console.log('chain context', chainContext);
 
-            const account = await client.stakingAccount({
+            const account = await nic.stakingAccount({
                 height: oasis.consensus.HEIGHT_LATEST,
                 owner: await oasis.staking.addressFromPublicKey(src.public()),
             });
             console.log('account', account);
 
-            /** @type {oasis.types.StakingTransfer} */
-            const body = {
+            const tw = oasis.staking.transferWrapper();
+            tw.setNonce(account.general?.nonce ?? 0);
+            tw.setFeeAmount(oasis.quantity.fromBigInt(0n));
+            tw.setBody({
                 to: await oasis.staking.addressFromPublicKey(dst.public()),
                 amount: oasis.quantity.fromBigInt(0n),
-            };
-            /** @type {oasis.types.ConsensusTransaction} */
-            const transaction = {
-                nonce: account.general?.nonce ?? 0,
-                fee: {
-                    amount: oasis.quantity.fromBigInt(0n),
-                    gas: 0n,
-                },
-                method: oasis.staking.METHOD_TRANSFER,
-                body: body,
-            };
-
-            const gas = await client.consensusEstimateGas({
-                signer: src.public(),
-                transaction: transaction,
             });
+
+            const gas = await tw.estimateGas(nic, src.public());
             console.log('gas', gas);
-            transaction.fee.gas = gas;
-            console.log('transaction', transaction);
+            tw.setFeeGas(gas);
+            console.log('transaction', tw.transaction);
 
-            const signedTransaction = await oasis.consensus.signSignedTransaction(new oasis.signature.BlindContextSigner(src), chainContext, transaction);
-            console.log('singed transaction', signedTransaction);
-            console.log('hash', await oasis.consensus.hashSignedTransaction(signedTransaction));
+            await tw.sign(new oasis.signature.BlindContextSigner(src), chainContext);
+            console.log('singed transaction', tw.signedTransaction);
+            console.log('hash', await tw.hash());
 
-            try {
-                await client.consensusSubmitTx(signedTransaction);
-            } catch (e) {
-                if (e.message === 'Incomplete response') {
-                    // This is normal. grpc-web freaks out if the response is `== null`, which it
-                    // always is for a void method.
-                    // todo: unhack this when they release with our change
-                    // https://github.com/grpc/grpc-web/pull/1025
-                } else {
-                    throw e;
-                }
-            }
+            await tw.submit(nic);
             console.log('sent');
         }
 
@@ -122,7 +100,7 @@ const client = new oasis.OasisNodeClient('http://localhost:42280');
         {
             console.log('watching consensus blocks for 30s');
             await new Promise((resolve, reject) => {
-                const blocks = client.consensusWatchBlocks();
+                const blocks = nic.consensusWatchBlocks();
                 const cancel = setTimeout(() => {
                     console.log('time\'s up, cancelling');
                     blocks.cancel();

@@ -21,26 +21,21 @@ async function play() {
             const chainContext = 'test';
             console.log('chain context', chainContext);
 
-            /** @type {oasis.types.ConsensusTransaction} */
-            const transaction = {
-                nonce: 123n,
-                fee: {
-                    amount: oasis.quantity.fromBigInt(150n),
-                    gas: 1300n,
-                },
-                method: 'staking.Transfer',
-                body: {
+            const tw = oasis.staking.transferWrapper()
+                .setNonce(123n)
+                .setFeeAmount(oasis.quantity.fromBigInt(150n))
+                .setFeeGas(1300n)
+                .setBody({
                     to: dstAddr,
                     amount: oasis.quantity.fromBigInt(0n),
-                }
-            };
-            console.log('transaction', transaction);
+                });
+            console.log('transaction', tw.transaction);
 
-            const signedTransaction = await oasis.consensus.signSignedTransaction(signer, chainContext, transaction);
-            console.log('signed transaction', signedTransaction);
-            console.log('hash', await oasis.consensus.hashSignedTransaction(signedTransaction));
+            await tw.sign(signer, chainContext);
+            console.log('signed transaction', tw.signedTransaction);
+            console.log('hash', await tw.hash());
 
-            console.log('reopened', oasis.consensus.openSignedTransaction(chainContext, signedTransaction));
+            console.log('reopened', await oasis.consensus.openSignedTransaction(chainContext, tw.signedTransaction));
         }
     } catch (e) {
         console.error(e);
