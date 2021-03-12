@@ -10,16 +10,22 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
+	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	coreClient "github.com/oasisprotocol/oasis-core/go/runtime/client/api"
 
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
+// RoundLatest is a special round number always referring to the latest round.
 const RoundLatest = coreClient.RoundLatest
 
 // RuntimeClient is a client interface for runtimes based on the Oasis Runtime SDK.
 type RuntimeClient interface {
+	// GetInfo returns information about the runtime.
+	GetInfo(ctx context.Context) (*types.RuntimeInfo, error)
+
 	SubmitTx(ctx context.Context, tx *types.UnverifiedTransaction) (cbor.RawMessage, error)
 
 	// GetTransactions(ctx context.Context, round uint64) ([][]byte, error)
@@ -45,8 +51,22 @@ type Event struct {
 }
 
 type runtimeClient struct {
+	cs        consensus.ClientBackend
 	cc        coreClient.RuntimeClient
 	runtimeID common.Namespace
+}
+
+// Implements RuntimeClient.
+func (rc *runtimeClient) GetInfo(ctx context.Context) (*types.RuntimeInfo, error) {
+	chainCtx, err := rc.cs.GetChainContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch consensus layer chain context: %w", err)
+	}
+
+	return &types.RuntimeInfo{
+		ID:           rc.runtimeID,
+		ChainContext: signature.DeriveChainContext(rc.runtimeID, chainCtx),
+	}, nil
 }
 
 // Implements RuntimeClient.
@@ -102,6 +122,7 @@ func (rc *runtimeClient) Query(ctx context.Context, round uint64, method string,
 // New creates a new runtime client for the specified runtime.
 func New(conn *grpc.ClientConn, runtimeID common.Namespace) RuntimeClient {
 	return &runtimeClient{
+		cs:        consensus.NewConsensusClient(conn),
 		cc:        coreClient.NewRuntimeClient(conn),
 		runtimeID: runtimeID,
 	}

@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+pub mod context;
 pub mod ed25519;
 pub mod secp256k1;
 
