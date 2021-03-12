@@ -5,12 +5,12 @@ use thiserror::Error;
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    crypto::signature::{PublicKey, Signature},
+    crypto::signature::{self, PublicKey, Signature},
     types::token,
 };
 
-// TODO: Signature context: oasis-runtime-sdk/tx: v0 for chain H(<consensus-chain-context> || <runtime-id>)
-
+/// Transction signature domain separation context base.
+pub const SIGNATURE_CONTEXT_BASE: &[u8] = b"oasis-runtime-sdk/tx: v0";
 /// The latest transaction format version.
 pub const LATEST_TRANSACTION_VERSION: u16 = 1;
 
@@ -42,14 +42,14 @@ impl UnverifiedTransaction {
         }
 
         // Verify all signatures.
-        // XXX: Context.
+        let ctx = signature::context::get_chain_context_for(SIGNATURE_CONTEXT_BASE);
         let signers: Vec<PublicKey> = body
             .auth_info
             .signer_info
             .iter()
             .map(|si| si.public_key.clone())
             .collect();
-        PublicKey::verify_batch_multisig(b"TODO CTX", &self.0, &signers, &self.1)
+        PublicKey::verify_batch_multisig(&ctx, &self.0, &signers, &self.1)
             .map_err(|_| Error::MalformedTransaction)?;
 
         Ok(body)

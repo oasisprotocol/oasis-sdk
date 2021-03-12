@@ -10,7 +10,8 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 )
 
-// TODO: Signature context: oasis-runtime-sdk/tx: v0 for chain H(<consensus-chain-context> || <runtime-id>)
+// SignatureContextBase is the transction signature domain separation context base.
+var SignatureContextBase = []byte("oasis-runtime-sdk/tx: v0")
 
 // LatestTransactionVersion is the latest transaction format version.
 const LatestTransactionVersion = 1
@@ -31,7 +32,7 @@ type TransactionSigner struct {
 // AppendSign signs the transaction and appends the signature.
 //
 // The signer must be specified in the AuthInfo.
-func (ts *TransactionSigner) AppendSign(signer signature.Signer) error {
+func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.Signer) error {
 	pk := signer.Public()
 	index := -1
 	for i, si := range ts.tx.AuthInfo.SignerInfo {
@@ -52,7 +53,7 @@ func (ts *TransactionSigner) AppendSign(signer signature.Signer) error {
 		return fmt.Errorf("transaction: inconsistent number of signature slots")
 	}
 
-	sig, err := signer.ContextSign([]byte("TODO CTX"), ts.ut.Body) // XXX: Context.
+	sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
 	if err != nil {
 		return fmt.Errorf("transaction: failed to sign transaction: %w", err)
 	}
