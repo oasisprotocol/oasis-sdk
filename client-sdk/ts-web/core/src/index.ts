@@ -21,7 +21,7 @@ export * as storage from './storage';
 import * as types from './types';
 export * as upgrade from './upgrade';
 export * as worker from './worker';
-export { misc, types };
+export {misc, types};
 
 function createMethodDescriptorUnary<REQ, RESP>(serviceName: string, methodName: string) {
     // @ts-expect-error missing declaration
@@ -519,12 +519,14 @@ export class OasisNodeClient {
     }
 
     // beacon
+
     /**
      * GetBaseEpoch returns the base epoch.
      */
     beaconGetBaseEpoch() {
         return this.callUnary(methodDescriptorBeaconGetBaseEpoch, undefined);
     }
+
     /**
      * GetEpoch returns the epoch number at the specified block height.
      * Calling this method with height `consensus.HeightLatest`, should
@@ -533,6 +535,7 @@ export class OasisNodeClient {
     beaconGetEpoch(height: types.longnum) {
         return this.callUnary(methodDescriptorBeaconGetEpoch, height);
     }
+
     /**
      * WaitEpoch waits for a specific epoch.
      *
@@ -543,6 +546,7 @@ export class OasisNodeClient {
     beaconWaitEpoch(epoch: types.longnum) {
         return this.callUnary(methodDescriptorBeaconWaitEpoch, epoch);
     }
+
     /**
      * GetEpochBlock returns the block height at the start of the said
      * epoch.
@@ -550,6 +554,7 @@ export class OasisNodeClient {
     beaconGetEpochBlock(epoch: types.longnum) {
         return this.callUnary(methodDescriptorBeaconGetEpochBlock, epoch);
     }
+
     /**
      * GetBeacon gets the beacon for the provided block height.
      * Calling this method with height `consensus.HeightLatest` should
@@ -558,18 +563,21 @@ export class OasisNodeClient {
     beaconGetBeacon(height: types.longnum) {
         return this.callUnary(methodDescriptorBeaconGetBeacon, height);
     }
+
     /**
      * StateToGenesis returns the genesis state at specified block height.
      */
     beaconStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorBeaconStateToGenesis, height);
     }
+
     /**
      * ConsensusParameters returns the beacon consensus parameters.
      */
     beaconConsensusParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorBeaconConsensusParameters, height);
     }
+
     /**
      * WatchEpochs returns a channel that produces a stream of messages
      * on epoch transitions.
@@ -581,6 +589,7 @@ export class OasisNodeClient {
     }
 
     // scheduler
+
     /**
      * GetValidators returns the vector of consensus validators for
      * a given epoch.
@@ -588,6 +597,7 @@ export class OasisNodeClient {
     schedulerGetValidators(height: types.longnum) {
         return this.callUnary(methodDescriptorSchedulerGetValidators, height);
     }
+
     /**
      * GetCommittees returns the vector of committees for a given
      * runtime ID, at the specified block height, and optional callback
@@ -598,18 +608,21 @@ export class OasisNodeClient {
     schedulerGetCommittees(request: types.SchedulerGetCommitteesRequest) {
         return this.callUnary(methodDescriptorSchedulerGetCommittees, request);
     }
+
     /**
      * StateToGenesis returns the genesis state at specified block height.
      */
     schedulerStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorSchedulerStateToGenesis, height);
     }
+
     /**
      * ConsensusParameters returns the scheduler consensus parameters.
      */
     schedulerConsensusParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorSchedulerConsensusParameters, height);
     }
+
     /**
      * WatchCommittees returns a channel that produces a stream of
      * Committee.
@@ -622,24 +635,28 @@ export class OasisNodeClient {
     }
 
     // registry
+
     /**
      * GetEntity gets an entity by ID.
      */
     registryGetEntity(query: types.RegistryIDQuery) {
         return this.callUnary(methodDescriptorRegistryGetEntity, query);
     }
+
     /**
      * GetEntities gets a list of all registered entities.
      */
     registryGetEntities(height: types.longnum) {
         return this.callUnary(methodDescriptorRegistryGetEntities, height);
     }
+
     /**
      * GetNode gets a node by ID.
      */
     registryGetNode(query: types.RegistryIDQuery) {
         return this.callUnary(methodDescriptorRegistryGetNode, query);
     }
+
     /**
      * GetNodeByConsensusAddress looks up a node by its consensus address at the
      * specified block height. The nature and format of the consensus address depends
@@ -648,24 +665,28 @@ export class OasisNodeClient {
     registryGetNodeByConsensusAddress(query: types.RegistryConsensusAddressQuery) {
         return this.callUnary(methodDescriptorRegistryGetNodeByConsensusAddress, query);
     }
+
     /**
      * GetNodeStatus returns a node's status.
      */
     registryGetNodeStatus(query: types.RegistryIDQuery) {
         return this.callUnary(methodDescriptorRegistryGetNodeStatus, query);
     }
+
     /**
      * GetNodes gets a list of all registered nodes.
      */
     registryGetNodes(height: types.longnum) {
         return this.callUnary(methodDescriptorRegistryGetNodes, height);
     }
+
     /**
      * GetRuntime gets a runtime by ID.
      */
     registryGetRuntime(query: types.RegistryNamespaceQuery) {
         return this.callUnary(methodDescriptorRegistryGetRuntime, query);
     }
+
     /**
      * GetRuntimes returns the registered Runtimes at the specified
      * block height.
@@ -673,18 +694,21 @@ export class OasisNodeClient {
     registryGetRuntimes(query: types.RegistryGetRuntimesQuery) {
         return this.callUnary(methodDescriptorRegistryGetRuntimes, query);
     }
+
     /**
      * StateToGenesis returns the genesis state at specified block height.
      */
     registryStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorRegistryStateToGenesis, height);
     }
+
     /**
      * GetEvents returns the events at specified block height.
      */
     registryGetEvents(height: types.longnum) {
         return this.callUnary(methodDescriptorRegistryGetEvents, height);
     }
+
     /**
      * WatchEntities returns a channel that produces a stream of
      * EntityEvent on entity registration changes.
@@ -692,6 +716,7 @@ export class OasisNodeClient {
     registryWatchEntities() {
         return this.callServerStreaming(methodDescriptorRegistryWatchEntities, undefined);
     }
+
     /**
      * WatchNodes returns a channel that produces a stream of
      * NodeEvent on node registration changes.
@@ -699,6 +724,7 @@ export class OasisNodeClient {
     registryWatchNodes() {
         return this.callServerStreaming(methodDescriptorRegistryWatchNodes, undefined);
     }
+
     /**
      * WatchNodeList returns a channel that produces a stream of NodeList.
      * Upon subscription, the node list for the current epoch will be sent
@@ -710,6 +736,7 @@ export class OasisNodeClient {
     registryWatchNodeList() {
         return this.callServerStreaming(methodDescriptorRegistryWatchNodeList, undefined);
     }
+
     /**
      * WatchRuntimes returns a stream of Runtime.  Upon subscription,
      * all runtimes will be sent immediately.
@@ -719,12 +746,14 @@ export class OasisNodeClient {
     }
 
     // staking
+
     /**
      * TokenSymbol returns the token's ticker symbol.
      */
     stakingTokenSymbol() {
         return this.callUnary(methodDescriptorStakingTokenSymbol, undefined);
     }
+
     /**
      * TokenValueExponent is the token's value base-10 exponent, i.e.
      * 1 token = 10**TokenValueExponent base units.
@@ -732,36 +761,42 @@ export class OasisNodeClient {
     stakingTokenValueExponent() {
         return this.callUnary(methodDescriptorStakingTokenValueExponent, undefined);
     }
+
     /**
      * TotalSupply returns the total number of base units.
      */
     stakingTotalSupply(height: types.longnum) {
         return this.callUnary(methodDescriptorStakingTotalSupply, height);
     }
+
     /**
      * CommonPool returns the common pool balance.
      */
     stakingCommonPool(height: types.longnum) {
         return this.callUnary(methodDescriptorStakingCommonPool, height);
     }
+
     /**
      * LastBlockFees returns the collected fees for previous block.
      */
     stakingLastBlockFees(height: types.longnum) {
         return this.callUnary(methodDescriptorStakingLastBlockFees, height);
     }
+
     /**
      * GovernanceDeposits returns the governance deposits account balance.
      */
     stakingGovernanceDeposits(height: types.longnum) {
         return this.callUnary(methodDescriptorStakingGovernanceDeposits, height);
     }
+
     /**
      * Threshold returns the specific staking threshold by kind.
      */
     stakingThreshold(query: types.StakingThresholdQuery) {
         return this.callUnary(methodDescriptorStakingThreshold, query);
     }
+
     /**
      * Addresses returns the addresses of all accounts with a non-zero general
      * or escrow balance.
@@ -769,12 +804,14 @@ export class OasisNodeClient {
     stakingAddresses(height: types.longnum) {
         return this.callUnary(methodDescriptorStakingAddresses, height);
     }
+
     /**
      * Account returns the account descriptor for the given account.
      */
     stakingAccount(query: types.StakingOwnerQuery) {
         return this.callUnary(methodDescriptorStakingAccount, query);
     }
+
     /**
      * Delegations returns the list of delegations for the given owner
      * (delegator).
@@ -782,6 +819,7 @@ export class OasisNodeClient {
     stakingDelegations(query: types.StakingOwnerQuery) {
         return this.callUnary(methodDescriptorStakingDelegations, query);
     }
+
     /**
      * DebondingDelegations returns the list of debonding delegations for
      * the given owner (delegator).
@@ -789,30 +827,35 @@ export class OasisNodeClient {
     stakingDebondingDelegations(query: types.StakingOwnerQuery) {
         return this.callUnary(methodDescriptorStakingDebondingDelegations, query);
     }
+
     /**
      * Allowance looks up the allowance for the given owner/beneficiary combination.
      */
     stakingAllowance(query: types.StakingAllowanceQuery) {
         return this.callUnary(methodDescriptorStakingAllowance, query);
     }
+
     /**
      * StateToGenesis returns the genesis state at specified block height.
      */
     stakingStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorStakingStateToGenesis, height);
     }
+
     /**
      * Paremeters returns the staking consensus parameters.
      */
     stakingConsensusParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorStakingConsensusParameters, height);
     }
+
     /**
      * GetEvents returns the events at specified block height.
      */
     stakingGetEvents(height: types.longnum) {
         return this.callUnary(methodDescriptorStakingGetEvents, height);
     }
+
     /**
      * WatchEvents returns a channel that produces a stream of Events.
      */
@@ -821,12 +864,14 @@ export class OasisNodeClient {
     }
 
     // keymanager
+
     /**
      * GetStatus returns a key manager status by key manager ID.
      */
     keyManagerGetStatus(query: types.RegistryNamespaceQuery) {
         return this.callUnary(methodDescriptorKeyManagerGetStatus, query);
     }
+
     /**
      * GetStatuses returns all currently tracked key manager statuses.
      */
@@ -835,54 +880,63 @@ export class OasisNodeClient {
     }
 
     // governance
+
     /**
      * ActiveProposals returns a list of all proposals that have not yet closed.
      */
     governanceActiveProposals(height: types.longnum) {
         return this.callUnary(methodDescriptorGovernanceActiveProposals, height);
     }
+
     /**
      * Proposals returns a list of all proposals.
      */
     governanceProposals(height: types.longnum) {
         return this.callUnary(methodDescriptorGovernanceProposals, height);
     }
+
     /**
      * Proposal looks up a specific proposal.
      */
     governanceProposal(request: types.GovernanceProposalQuery) {
         return this.callUnary(methodDescriptorGovernanceProposal, request);
     }
+
     /**
      * Votes looks up votes for a specific proposal.
      */
     governanceVotes(request: types.GovernanceProposalQuery) {
         return this.callUnary(methodDescriptorGovernanceVotes, request);
     }
+
     /**
      * PendingUpgrades returns a list of all pending upgrades.
      */
     governancePendingUpgrades(height: types.longnum) {
         return this.callUnary(methodDescriptorGovernancePendingUpgrades, height);
     }
+
     /**
      * StateToGenesis returns the genesis state at specified block height.
      */
     governanceStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorGovernanceStateToGenesis, height);
     }
+
     /**
      * ConsensusParameters returns the governance consensus parameters.
      */
     governanceConsensusParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorGovernanceConsensusParameters, height);
     }
+
     /**
      * GetEvents returns the events at specified block height.
      */
     governanceGetEvents(height: types.longnum) {
         return this.callUnary(methodDescriptorGovernanceGetEvents, height);
     }
+
     /**
      * WatchEvents returns a channel that produces a stream of Events.
      */
@@ -891,12 +945,14 @@ export class OasisNodeClient {
     }
 
     // storage
+
     /**
      * SyncGet fetches a single key and returns the corresponding proof.
      */
     storageSyncGet(request: types.StorageGetRequest) {
         return this.callUnary(methodDescriptorStorageSyncGet, request);
     }
+
     /**
      * SyncGetPrefixes fetches all keys under the given prefixes and returns
      * the corresponding proofs.
@@ -904,6 +960,7 @@ export class OasisNodeClient {
     storageSyncGetPrefixes(request: types.StorageGetPrefixesRequest) {
         return this.callUnary(methodDescriptorStorageSyncGetPrefixes, request);
     }
+
     /**
      * SyncIterate seeks to a given key and then fetches the specified
      * number of following items based on key iteration order.
@@ -911,6 +968,7 @@ export class OasisNodeClient {
     storageSyncIterate(request: types.StorageIterateRequest) {
         return this.callUnary(methodDescriptorStorageSyncIterate, request);
     }
+
     /**
      * Apply applies a set of operations against the MKVS.  The root may refer
      * to a nil node, in which case a new root will be created.
@@ -921,6 +979,7 @@ export class OasisNodeClient {
     storageApply(request: types.StorageApplyRequest) {
         return this.callUnary(methodDescriptorStorageApply, request);
     }
+
     /**
      * ApplyBatch applies multiple sets of operations against the MKVS and
      * returns a single receipt covering all applied roots.
@@ -930,12 +989,14 @@ export class OasisNodeClient {
     storageApplyBatch(request: types.StorageApplyBatchRequest) {
         return this.callUnary(methodDescriptorStorageApplyBatch, request);
     }
+
     /**
      * GetCheckpoints returns a list of checkpoint metadata for all known checkpoints.
      */
     storageGetCheckpoints(request: types.StorageGetCheckpointsRequest) {
         return this.callUnary(methodDescriptorStorageGetCheckpoints, request);
     }
+
     /**
      * GetDiff returns an iterator of write log entries that must be applied
      * to get from the first given root to the second one.
@@ -943,6 +1004,7 @@ export class OasisNodeClient {
     storageGetDiff(request: types.StorageGetDiffRequest) {
         return this.callServerStreaming(methodDescriptorStorageGetDiff, request);
     }
+
     /**
      * GetCheckpointChunk fetches a specific chunk from an existing chekpoint.
      */
@@ -951,42 +1013,49 @@ export class OasisNodeClient {
     }
 
     // runtime/client
+
     /**
      * SubmitTx submits a transaction to the runtime transaction scheduler.
      */
     runtimeClientSubmitTx(request: types.RuntimeClientSubmitTxRequest) {
         return this.callUnary(methodDescriptorRuntimeClientSubmitTx, request);
     }
+
     /**
      * CheckTx asks the local runtime to check the specified transaction.
      */
     runtimeClientCheckTx(request: types.RuntimeClientCheckTxRequest) {
         return this.callUnary(methodDescriptorRuntimeClientCheckTx, request);
     }
+
     /**
      * GetGenesisBlock returns the genesis block.
      */
     runtimeClientGetGenesisBlock(runtimeID: Uint8Array) {
         return this.callUnary(methodDescriptorRuntimeClientGetGenesisBlock, runtimeID);
     }
+
     /**
      * GetBlock fetches the given runtime block.
      */
     runtimeClientGetBlock(request: types.RuntimeClientGetBlockRequest) {
         return this.callUnary(methodDescriptorRuntimeClientGetBlock, request);
     }
+
     /**
      * GetBlockByHash fetches the given runtime block by its block hash.
      */
     runtimeClientGetBlockByHash(request: types.RuntimeClientGetTxByBlockHashRequest) {
         return this.callUnary(methodDescriptorRuntimeClientGetBlockByHash, request);
     }
+
     /**
      * GetTx fetches the given runtime transaction.
      */
     runtimeClientGetTx(request: types.RuntimeClientGetTxRequest) {
         return this.callUnary(methodDescriptorRuntimeClientGetTx, request);
     }
+
     /**
      * GetTxByBlockHash fetches the given rutnime transaction where the
      * block is identified by its hash instead of its round number.
@@ -994,42 +1063,49 @@ export class OasisNodeClient {
     runtimeClientGetTxByBlockHash(request: types.RuntimeClientGetTxByBlockHashRequest) {
         return this.callUnary(methodDescriptorRuntimeClientGetTxByBlockHash, request);
     }
+
     /**
      * GetTxs fetches all runtime transactions in a given block.
      */
     runtimeClientGetTxs(request: types.RuntimeClientGetTxsRequest) {
         return this.callUnary(methodDescriptorRuntimeClientGetTxs, request);
     }
+
     /**
      * GetEvents returns all events emitted in a given block.
      */
     runtimeClientGetEvents(request: types.RuntimeClientGetEventsRequest) {
         return this.callUnary(methodDescriptorRuntimeClientGetEvents, request);
     }
+
     /**
      * Query makes a runtime-specific query.
      */
     runtimeClientQuery(request: types.RuntimeClientQueryRequest) {
         return this.callUnary(methodDescriptorRuntimeClientQuery, request);
     }
+
     /**
      * QueryTx queries the indexer for a specific runtime transaction.
      */
     runtimeClientQueryTx(request: types.RuntimeClientQueryTxRequest) {
         return this.callUnary(methodDescriptorRuntimeClientQueryTx, request);
     }
+
     /**
      * QueryTxs queries the indexer for specific runtime transactions.
      */
     runtimeClientQueryTxs(request: types.RuntimeClientQueryTxsRequest) {
         return this.callUnary(methodDescriptorRuntimeClientQueryTxs, request);
     }
+
     /**
      * WaitBlockIndexed waits for a runtime block to be indexed by the indexer.
      */
     runtimeClientWaitBlockIndexed(request: types.RuntimeClientWaitBlockIndexedRequest) {
         return this.callUnary(methodDescriptorRuntimeClientWaitBlockIndexed, request);
     }
+
     /**
      * WatchBlocks subscribes to blocks for a specific runtimes.
      */
@@ -1038,6 +1114,7 @@ export class OasisNodeClient {
     }
 
     // enclaverpc
+
     /**
      * CallEnclave sends the request bytes to the target enclave.
      */
@@ -1046,6 +1123,7 @@ export class OasisNodeClient {
     }
 
     // consensus
+
     /**
      * SubmitTx submits a signed consensus transaction and waits for the transaction to be included
      * in a block. Use SubmitTxNoWait if you only need to broadcast the transaction.
@@ -1053,18 +1131,21 @@ export class OasisNodeClient {
     consensusSubmitTx(tx: types.SignatureSigned) {
         return this.callUnary(methodDescriptorConsensusSubmitTx, tx);
     }
+
     /**
      * StateToGenesis returns the genesis state at the specified block height.
      */
     consensusStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorConsensusStateToGenesis, height);
     }
+
     /**
      * EstimateGas calculates the amount of gas required to execute the given transaction.
      */
     consensusEstimateGas(req: types.ConsensusEstimateGasRequest) {
         return this.callUnary(methodDescriptorConsensusEstimateGas, req);
     }
+
     /**
      * GetSignerNonce returns the nonce that should be used by the given
      * signer for transmitting the next transaction.
@@ -1072,12 +1153,14 @@ export class OasisNodeClient {
     consensusGetSignerNonce(req: types.ConsensusGetSignerNonceRequest) {
         return this.callUnary(methodDescriptorConsensusGetSignerNonce, req);
     }
+
     /**
      * GetBlock returns a consensus block at a specific height.
      */
     consensusGetBlock(height: types.longnum) {
         return this.callUnary(methodDescriptorConsensusGetBlock, height);
     }
+
     /**
      * GetTransactions returns a list of all transactions contained within a
      * consensus block at a specific height.
@@ -1087,6 +1170,7 @@ export class OasisNodeClient {
     consensusGetTransactions(height: types.longnum) {
         return this.callUnary(methodDescriptorConsensusGetTransactions, height);
     }
+
     /**
      * GetTransactionsWithResults returns a list of transactions and their
      * execution results, contained within a consensus block at a specific
@@ -1095,6 +1179,7 @@ export class OasisNodeClient {
     consensusGetTransactionsWithResults(height: types.longnum) {
         return this.callUnary(methodDescriptorConsensusGetTransactionsWithResults, height);
     }
+
     /**
      * GetUnconfirmedTransactions returns a list of transactions currently in the local node's
      * mempool. These have not yet been included in a block.
@@ -1102,18 +1187,21 @@ export class OasisNodeClient {
     consensusGetUnconfirmedTransactions() {
         return this.callUnary(methodDescriptorConsensusGetUnconfirmedTransactions, undefined);
     }
+
     /**
      * GetGenesisDocument returns the original genesis document.
      */
     consensusGetGenesisDocument() {
         return this.callUnary(methodDescriptorConsensusGetGenesisDocument, undefined);
     }
+
     /**
      * GetStatus returns the current status overview.
      */
     consensusGetStatus() {
         return this.callUnary(methodDescriptorConsensusGetStatus, undefined);
     }
+
     /**
      * WatchBlocks returns a channel that produces a stream of consensus
      * blocks as they are being finalized.
@@ -1129,18 +1217,21 @@ export class OasisNodeClient {
     consensusLightGetLightBlock(height: types.longnum) {
         return this.callUnary(methodDescriptorConsensusLightGetLightBlock, height);
     }
+
     /**
      * GetParameters returns the consensus parameters for a specific height.
      */
     consensusLightGetParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorConsensusLightGetParameters, height);
     }
+
     /**
      * SyncGet fetches a single key and returns the corresponding proof.
      */
     consensusLightStateSyncGet(request: types.StorageGetRequest) {
         return this.callUnary(methodDescriptorConsensusLightStateSyncGet, request);
     }
+
     /**
      * SyncGetPrefixes fetches all keys under the given prefixes and returns
      * the corresponding proofs.
@@ -1148,6 +1239,7 @@ export class OasisNodeClient {
     consensusLightStateSyncGetPrefixes(request: types.StorageGetPrefixesRequest) {
         return this.callUnary(methodDescriptorConsensusLightStateSyncGetPrefixes, request);
     }
+
     /**
      * SyncIterate seeks to a given key and then fetches the specified
      * number of following items based on key iteration order.
@@ -1155,6 +1247,7 @@ export class OasisNodeClient {
     consensusLightStateSyncIterate(request: types.StorageIterateRequest) {
         return this.callUnary(methodDescriptorConsensusLightStateSyncIterate, request);
     }
+
     /**
      * SubmitTxNoWait submits a signed consensus transaction, but does not wait for the transaction
      * to be included in a block. Use SubmitTx if you need to wait for execution.
@@ -1162,6 +1255,7 @@ export class OasisNodeClient {
     consensusLightSubmitTxNoWait(tx: types.SignatureSigned) {
         return this.callUnary(methodDescriptorConsensusLightSubmitTxNoWait, tx);
     }
+
     /**
      * SubmitEvidence submits evidence of misbehavior.
      */
@@ -1170,6 +1264,7 @@ export class OasisNodeClient {
     }
 
     // control
+
     /**
      * RequestShutdown requests the node to shut down gracefully.
      *
@@ -1179,30 +1274,35 @@ export class OasisNodeClient {
     nodeControllerRequestShudown() {
         return this.callUnary(methodDescriptorNodeControllerRequestShutdown, undefined);
     }
+
     /**
      * WaitSync waits for the node to finish syncing.
      */
     nodeControllerWaitSync() {
         return this.callUnary(methodDescriptorNodeControllerWaitSync, undefined);
     }
+
     /**
      * IsSynced checks whether the node has finished syncing.
      */
     nodeControllerIsSynced() {
         return this.callUnary(methodDescriptorNodeControllerIsSynced, undefined);
     }
+
     /**
      * WaitReady waits for the node to accept runtime work.
      */
     nodeControllerWaitReady() {
         return this.callUnary(methodDescriptorNodeControllerWaitReady, undefined);
     }
+
     /**
      * IsReady checks whether the node is ready to accept runtime work.
      */
     nodeControllerIsReady() {
         return this.callUnary(methodDescriptorNodeControllerIsReady, undefined);
     }
+
     /**
      * UpgradeBinary submits an upgrade descriptor to a running node.
      * The node will wait for the appropriate epoch, then update its binaries
@@ -1211,18 +1311,21 @@ export class OasisNodeClient {
     nodeControllerUpgradeBinary(descriptor: types.UpgradeDescriptor) {
         return this.callUnary(methodDescriptorNodeControllerUpgradeBinary, descriptor);
     }
+
     /**
      * CancelUpgrade cancels the specific pending upgrade, unless it is already in progress.
      */
     nodeControllerCancelUpgrade(descriptor: types.UpgradeDescriptor) {
         return this.callUnary(methodDescriptorNodeControllerCancelUpgrade, descriptor);
     }
+
     /**
      * GetStatus returns the current status overview of the node.
      */
     nodeControllerGetStatus() {
         return this.callUnary(methodDescriptorNodeControllerGetStatus, undefined);
     }
+
     /**
      * SetEpoch manually sets the current epoch to the given epoch.
      *
@@ -1232,6 +1335,7 @@ export class OasisNodeClient {
     debugControllerSetEpoch(epoch: types.longnum) {
         return this.callUnary(methodDescriptorDebugControllerSetEpoch, epoch);
     }
+
     /**
      * WaitNodesRegistered waits for the given number of nodes to register.
      */
