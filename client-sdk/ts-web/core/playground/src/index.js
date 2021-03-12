@@ -126,6 +126,11 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
             });
             console.log('done watching');
         }
+
+        // Tell cypress that we're done.
+        {
+            document.body.appendChild(document.createTextNode('plastrophonic'));
+        }
     } catch (e) {
         console.error(e);
     }
