@@ -2,7 +2,6 @@ package types
 
 import (
 	"encoding"
-	"sync"
 
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/address"
 	"github.com/oasisprotocol/oasis-core/go/common/encoding/bech32"
@@ -27,8 +26,6 @@ var (
 	_ encoding.BinaryUnmarshaler = (*Address)(nil)
 	_ encoding.TextMarshaler     = Address{}
 	_ encoding.TextUnmarshaler   = (*Address)(nil)
-
-	reservedAddresses sync.Map
 )
 
 // Address is the account address.

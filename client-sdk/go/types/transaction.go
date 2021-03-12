@@ -17,7 +17,7 @@ const LatestTransactionVersion = 1
 
 // UnverifiedTransaction is an unverified transaction.
 type UnverifiedTransaction struct {
-	_ struct{} `cbor:",toarray"` // nolint
+	_ struct{} `cbor:",toarray"`
 
 	Body       []byte
 	Signatures [][]byte
