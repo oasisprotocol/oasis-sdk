@@ -1,21 +1,20 @@
 package types
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
+)
 
 func TestAddressEd25519(t *testing.T) {
-	// TODO
-	/*#[test]
-	  fn test_address_ed25519() {
-	      let pk = PublicKey::Ed25519(
-	          "badadd1e55ffffffffffffffffffffffffffffffffffffffffffffffffffffff".into(),
-	      );
+	require := require.New(t)
 
-	      let addr = Address::from_pk(&pk);
-	      assert_eq!(
-	          addr.to_bech32(),
-	          "oasis1qryqqccycvckcxp453tflalujvlf78xymcdqw4vz"
-	      );
-	  }*/
+	pk := ed25519.NewPublicKey("utrdHlX///////////////////////////////////8=")
+	addr := NewAddress(pk)
+
+	require.EqualValues("oasis1qryqqccycvckcxp453tflalujvlf78xymcdqw4vz", addr.String())
 }
 
 func TestAddressSecp256k1(t *testing.T) {
