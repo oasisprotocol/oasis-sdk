@@ -75,7 +75,7 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
             const transactions = response.transactions || [];
             const results = response.results || [];
             for (let i = 0; i < transactions.length; i++) {
-                const signedTransaction = oasis.signature.deserializeSigned(transactions[i]);
+                const signedTransaction = /** @type {oasis.types.SignatureSigned} */ (oasis.misc.fromCBOR(transactions[i]));
                 const transaction = await oasis.consensus.openSignedTransaction(chainContext, signedTransaction);
                 console.log({
                     hash: await oasis.consensus.hashSignedTransaction(signedTransaction),
