@@ -1,4 +1,6 @@
 #!/bin/sh -eux
+. ./consts.sh
+
 docker run \
     -it \
     --name sdktsenvoy \
@@ -9,5 +11,5 @@ docker run \
     -v "$PWD/sample-envoy.yaml:/mnt/ts-web/sample-envoy.yaml" \
     -v "/tmp/oasis-net-runner-sdk-core/net-runner/network/validator-0/internal.sock:/mnt/ts-web/node/internal.sock" \
     -w /mnt/ts-web \
-    envoyproxy/envoy:v1.16-latest \
+    "$ENVOY_DOCKER_IMAGE" \
     -c sample-envoy.yaml
