@@ -89,3 +89,35 @@ jobs:
       - name: Check ts-web/rt playground
         working-directory: client-sdk/ts-web/rt
         run: npm run-script check-playground
+
+  e2e-ts-web-core:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: e2e-ts-web-core
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download artifacts
+        run: cd client-sdk/ts-web/core/playground && ./download-artifacts.sh
+
+      - name: Pull Docker images
+        run: cd client-sdk/ts-web/core/playground && ./pull-images.sh
+
+      - name: Start network
+        run: cd client-sdk/ts-web/core/playground && ./sample-run-network.sh &
+
+      - run: sleep 6
+
+      - name: Check for node socket
+        run: test -e /tmp/oasis-net-runner-sdk-core/net-runner/network/validator-0/internal.sock
+
+      - name: Start proxy
+        run: cd client-sdk/ts-web/core/playground && ./sample-run-envoy-docker.sh &
+
+      - name: Cypress run
+        uses: cypress-io/github-action@v2
+        with:
+          project: core
+          start: cd core && npm run playground
+          working-directory: client-sdk/ts-web
