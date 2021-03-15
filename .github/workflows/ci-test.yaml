@@ -98,11 +98,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Install Envoy
+        # https://www.getenvoy.io/install/envoy/ubuntu/
+        run: |
+          curl -sL 'https://getenvoy.io/gpg' | sudo apt-key add -
+          sudo add-apt-repository "deb [arch=amd64] https://dl.bintray.com/tetrate/getenvoy-deb $(lsb_release -cs) stable"
+          sudo apt-get update && sudo apt-get install -y getenvoy-envoy
+
       - name: Download artifacts
         run: cd client-sdk/ts-web/core/playground && ./download-artifacts.sh
-
-      - name: Pull Docker images
-        run: cd client-sdk/ts-web/core/playground && ./pull-images.sh
 
       - name: Start network
         run: cd client-sdk/ts-web/core/playground && ./sample-run-network.sh &
@@ -113,7 +117,7 @@ jobs:
         run: test -e /tmp/oasis-net-runner-sdk-core/net-runner/network/validator-0/internal.sock
 
       - name: Start proxy
-        run: cd client-sdk/ts-web/core/playground && ./sample-run-envoy-docker.sh &
+        run: cd client-sdk/ts-web/core/playground && ./sample-run-envoy.sh &
 
       - name: Cypress run
         uses: cypress-io/github-action@v2
