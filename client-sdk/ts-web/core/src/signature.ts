@@ -60,10 +60,6 @@ export async function signSigned(signer: ContextSigner, context: string, rawValu
     } as types.SignatureSigned;
 }
 
-export function deserializeSigned(raw: Uint8Array) {
-    return misc.fromCBOR(raw) as types.SignatureSigned;
-}
-
 export async function openMultiSigned(context: string, multiSigned: types.SignatureMultiSigned) {
     const signerMessage = await prepareSignerMessage(context, multiSigned.untrusted_raw_value);
     const signerMessageA = Array.from(signerMessage);
