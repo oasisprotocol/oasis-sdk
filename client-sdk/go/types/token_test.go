@@ -1,26 +1,40 @@
 package types
 
-import "testing"
+import (
+	"encoding/hex"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+)
 
 func TestToken(t *testing.T) {
-	// TODO
-	/*let cases = vec![
-	      // Native denomination.
-	      (0, Denomination::NATIVE, "824040"),
-	      (1, Denomination::NATIVE, "82410140"),
-	      (1000, Denomination::NATIVE, "824203e840"),
-	      // Custom denomination.
-	      (0, "test".into(), "82404474657374"),
-	      (1, "test".into(), "8241014474657374"),
-	      (1000, "test".into(), "824203e84474657374"),
-	  ];
+	require := require.New(t)
 
-	  for tc in cases {
-	      let token = BaseUnits::new(Quantity::from(tc.0), tc.1);
-	      let enc = cbor::to_vec(&token);
-	      assert_eq!(hex::encode(&enc), tc.2, "serialization should match");
+	for _, tc := range []struct {
+		value       uint64
+		denom       Denomination
+		expectedHex string
+	}{
+		// Native denomination.
+		{0, NativeDenomination, "824040"},
+		{1, NativeDenomination, "82410140"},
+		{1000, NativeDenomination, "824203e840"},
+		// Custom denomination.
+		{0, Denomination("test"), "82404474657374"},
+		{1, Denomination("test"), "8241014474657374"},
+		{1000, Denomination("test"), "824203e84474657374"},
+	} {
+		token := NewBaseUnits(*quantity.NewFromUint64(tc.value), tc.denom)
+		enc := cbor.Marshal(token)
 
-	      let dec: BaseUnits = cbor::from_slice(&enc).expect("deserialization should succeed");
-	      assert_eq!(dec, token, "serialization should round-trip");
-	  }*/
+		require.EqualValues(tc.expectedHex, hex.EncodeToString(enc), "serialization should match")
+
+		var dec BaseUnits
+		err := cbor.Unmarshal(enc, &dec)
+		require.NoError(err, "deserialization should succeed")
+		require.EqualValues(token, dec, "serialization should round-trip")
+	}
 }

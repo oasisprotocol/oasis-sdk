@@ -24,6 +24,33 @@ type UnverifiedTransaction struct {
 	Signatures [][]byte
 }
 
+// Verify verifies and deserializes the unverified transaction.
+func (ut *UnverifiedTransaction) Verify(ctx signature.Context) (*Transaction, error) {
+	// Deserialize the inner body.
+	var tx Transaction
+	if err := cbor.Unmarshal(ut.Body, &tx); err != nil {
+		return nil, fmt.Errorf("transaction: malformed transaction body: %w", err)
+	}
+	if err := tx.ValidateBasic(); err != nil {
+		return nil, err
+	}
+
+	// Basic structure validation.
+	if len(ut.Signatures) != len(tx.AuthInfo.SignerInfo) {
+		return nil, fmt.Errorf("transaction: inconsistent number of signatures")
+	}
+
+	// Verify all signatures.
+	txCtx := ctx.New(SignatureContextBase)
+	for i, sig := range ut.Signatures {
+		if !tx.AuthInfo.SignerInfo[i].PublicKey.Verify(txCtx, ut.Body, sig) {
+			return nil, fmt.Errorf("transaction: signature %d verification failed", i)
+		}
+	}
+
+	return &tx, nil
+}
+
 type TransactionSigner struct {
 	tx Transaction
 	ut UnverifiedTransaction

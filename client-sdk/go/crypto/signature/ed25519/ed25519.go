@@ -71,6 +71,15 @@ func (pk PublicKey) Verify(context, message, sig []byte) bool {
 	return signature.PublicKey(pk).Verify(signature.Context(context), message, sig)
 }
 
+// NewPublicKey creates a new public key from the given Base64 representation or
+// panics.
+func NewPublicKey(text string) (pk PublicKey) {
+	if err := pk.UnmarshalText([]byte(text)); err != nil {
+		panic(err)
+	}
+	return
+}
+
 func init() {
 	// We need to allow unregistered contexts as contexts may be runtime-dependent.
 	signature.UnsafeAllowUnregisteredContexts()
