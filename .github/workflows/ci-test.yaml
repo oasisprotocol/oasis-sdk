@@ -98,6 +98,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Set up Node.js LTS
+        uses: actions/setup-node@v2.1.4
+        with:
+          node-version: "14.x"
+
+      - name: Set up npm
+        run: npm install npm@7 -g
+
       - name: Install Envoy
         # https://www.getenvoy.io/install/envoy/ubuntu/
         run: |
@@ -107,6 +115,18 @@ jobs:
 
       - name: Download artifacts
         run: cd client-sdk/ts-web/core/playground && ./download-artifacts.sh
+
+      - name: Install Node deps
+        working-directory: client-sdk/ts-web
+        run: npm ci
+
+      - name: Prepare ts-web/core
+        working-directory: client-sdk/ts-web/core
+        run: npm run-script prepare
+
+      - name: Start dev server
+        working-directory: client-sdk/ts-web/core
+        run: npm run-script playground &
 
       - name: Start network
         run: cd client-sdk/ts-web/core/playground && ./sample-run-network.sh &
@@ -122,6 +142,6 @@ jobs:
       - name: Cypress run
         uses: cypress-io/github-action@v2
         with:
+          install-command: true
           project: core
-          start: cd core && npm run playground
           working-directory: client-sdk/ts-web
