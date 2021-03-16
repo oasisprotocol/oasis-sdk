@@ -16,6 +16,11 @@ import * as oasisRT from './../..';
             console.log('signature', signature);
             console.log('valid', await oasisRT.signatureSecp256k1.verify('test context', message, signature, publicKey));
         }
+
+        // Tell cypress that we're done.
+        {
+            document.body.appendChild(document.createTextNode('barolitopsis'));
+        }
     } catch (e) {
         console.error(e);
     }

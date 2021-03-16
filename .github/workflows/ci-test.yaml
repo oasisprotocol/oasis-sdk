@@ -146,3 +146,39 @@ jobs:
       - name: Cypress run
         working-directory: client-sdk/ts-web/core
         run: npx -c 'cypress run'
+
+  e2e-ts-web-rt:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: e2e-ts-web-rt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js LTS
+        uses: actions/setup-node@v2.1.4
+        with:
+          node-version: "14.x"
+
+      - name: Set up npm
+        run: npm install npm@7 -g
+
+      - name: Install Node deps
+        working-directory: client-sdk/ts-web
+        run: npm ci
+
+      - name: Prepare ts-web/core
+        working-directory: client-sdk/ts-web/core
+        run: npm run-script prepare
+
+      - name: Prepare ts-web/rt
+        working-directory: client-sdk/ts-web/rt
+        run: npm run-script prepare
+
+      - name: 'dev-server: Start'
+        working-directory: client-sdk/ts-web/rt
+        run: npm run-script playground &
+
+      - name: Cypress run
+        working-directory: client-sdk/ts-web/rt
+        run: npx -c 'cypress run'
