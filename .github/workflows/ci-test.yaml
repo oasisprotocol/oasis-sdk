@@ -140,8 +140,4 @@ jobs:
         run: cd client-sdk/ts-web/core/playground && ./sample-run-envoy.sh &
 
       - name: Cypress run
-        uses: cypress-io/github-action@v2
-        with:
-          install-command: true
-          project: core
-          working-directory: client-sdk/ts-web
+        run: cd client-sdk/ts-web/core && npx -c 'cypress run'
