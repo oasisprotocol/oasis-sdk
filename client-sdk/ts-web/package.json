@@ -9,7 +9,6 @@
         "fmt": "prettier --write '**/src/**.ts'"
     },
     "devDependencies": {
-        "cypress": "^6.6.0",
         "prettier": "^2.2.1"
     }
 }
