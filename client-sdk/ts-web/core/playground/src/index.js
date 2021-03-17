@@ -1,6 +1,7 @@
 // @ts-check
 
 import * as oasis from './../..';
+import * as shared from './shared';
 
 const nic = new oasis.client.NodeInternal('http://localhost:42280');
 
@@ -129,7 +130,7 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
 
         // Tell cypress that we're done.
         {
-            document.body.appendChild(document.createTextNode('plastrophonic'));
+            document.body.appendChild(document.createTextNode(shared.CYPRESS_DONE_STRING));
         }
     } catch (e) {
         console.error(e);

@@ -1,6 +1,7 @@
 // @ts-check
 
 import * as oasisRT from './../..';
+import * as shared from './shared';
 
 (async function () {
     try {
@@ -19,7 +20,7 @@ import * as oasisRT from './../..';
 
         // Tell cypress that we're done.
         {
-            document.body.appendChild(document.createTextNode('barolitopsis'));
+            document.body.appendChild(document.createTextNode(shared.CYPRESS_DONE_STRING));
         }
     } catch (e) {
         console.error(e);
