@@ -46,9 +46,9 @@ jobs:
           name: code-coverage-report
           path: cobertura.xml
 
-  typecheck:
+  build-ts-web:
     # NOTE: This name appears in GitHub's Checks API.
-    name: typecheck
+    name: build-ts-web
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -70,6 +70,16 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npm run-script prepare
 
+      - name: Pack ts-web/core
+        working-directory: client-sdk/ts-web/core
+        run: npm pack
+
+      - name: Upload ts-web/core
+        uses: actions/upload-artifact@v2
+        with:
+          name: ts-web/core
+          path: client-sdk/ts-web/core/*.tgz
+
       - name: Check ts-web/core playground
         working-directory: client-sdk/ts-web/core
         run: npm run-script check-playground
@@ -78,6 +88,16 @@ jobs:
         working-directory: client-sdk/ts-web/signer-ledger
         run: npm run-script prepare
 
+      - name: Pack ts-web/signer-ledger
+        working-directory: client-sdk/ts-web/signer-ledger
+        run: npm pack
+
+      - name: Upload ts-web/signer-ledger
+        uses: actions/upload-artifact@v2
+        with:
+          name: ts-web/signer-ledger
+          path: client-sdk/ts-web/signer-ledger/*.tgz
+
       - name: Check ts-web/signer-ledger playground
         working-directory: client-sdk/ts-web/signer-ledger
         run: npm run-script check-playground
@@ -85,6 +105,16 @@ jobs:
       - name: Prepare ts-web/rt
         working-directory: client-sdk/ts-web/rt
         run: npm run-script prepare
+
+      - name: Pack ts-web/rt
+        working-directory: client-sdk/ts-web/rt
+        run: npm pack
+
+      - name: Upload ts-web/rt
+        uses: actions/upload-artifact@v2
+        with:
+          name: ts-web/rt
+          path: client-sdk/ts-web/rt/*.tgz
 
       - name: Check ts-web/rt playground
         working-directory: client-sdk/ts-web/rt
