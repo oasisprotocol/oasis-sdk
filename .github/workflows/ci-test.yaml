@@ -77,7 +77,7 @@ jobs:
       - name: Upload ts-web/core
         uses: actions/upload-artifact@v2
         with:
-          name: ts-web/core
+          name: ts-web-core
           path: client-sdk/ts-web/core/*.tgz
 
       - name: Check ts-web/core playground
@@ -95,7 +95,7 @@ jobs:
       - name: Upload ts-web/signer-ledger
         uses: actions/upload-artifact@v2
         with:
-          name: ts-web/signer-ledger
+          name: ts-web-signer-ledger
           path: client-sdk/ts-web/signer-ledger/*.tgz
 
       - name: Check ts-web/signer-ledger playground
@@ -113,7 +113,7 @@ jobs:
       - name: Upload ts-web/rt
         uses: actions/upload-artifact@v2
         with:
-          name: ts-web/rt
+          name: ts-web-rt
           path: client-sdk/ts-web/rt/*.tgz
 
       - name: Check ts-web/rt playground
