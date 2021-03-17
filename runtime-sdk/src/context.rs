@@ -88,7 +88,7 @@ impl<'a> DispatchContext<'a> {
     /// Emits runtime messages
     pub fn emit_messages(&mut self, mut msgs: Vec<roothash::Message>) -> Result<(), Error> {
         // Check against maximum number of messages that can be emitted per round.
-        if self.messages.len() >= self.max_messages as usize {
+        if self.messages.len() > self.max_messages as usize {
             return Err(Error::TooManyMessages);
         }
 
