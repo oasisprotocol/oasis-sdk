@@ -1,6 +1,7 @@
 // @ts-check
 
 import * as oasis from './../..';
+import * as shared from './shared';
 
 const nic = new oasis.client.NodeInternal('http://localhost:42280');
 
@@ -9,16 +10,6 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
         // Get something with addresses.
         {
             console.log('nodes', await nic.registryGetNodes(oasis.consensus.HEIGHT_LATEST));
-        }
-
-        // Block and events have a variety of different types.
-        {
-            const height = 2385080n;
-            console.log('height', height);
-            const block = await nic.consensusGetBlock(height);
-            console.log('block', block);
-            const stakingEvents = await nic.stakingGetEvents(height);
-            console.log('staking events', stakingEvents);
         }
 
         // Try map with non-string keys.
@@ -33,28 +24,6 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
                 console.log({
                     from: oasis.staking.addressToBech32(fromAddr),
                     shares: oasis.quantity.toBigInt(delegation.shares),
-                });
-            }
-        }
-
-        // Try verifying transaction signatures.
-        {
-            const genesis = await nic.consensusGetGenesisDocument();
-            console.log('genesis', genesis);
-            const chainContext = await oasis.genesis.chainContext(genesis);
-            console.log('chain context', chainContext);
-            const height = 2385080n;
-            console.log('height', height);
-            const response = await nic.consensusGetTransactionsWithResults(height);
-            for (let i = 0; i < response.transactions.length; i++) {
-                const signedTransaction = oasis.signature.deserializeSigned(response.transactions[i]);
-                const transaction = await oasis.consensus.openSignedTransaction(chainContext, signedTransaction);
-                console.log({
-                    hash: await oasis.consensus.hashSignedTransaction(signedTransaction),
-                    from: oasis.staking.addressToBech32(await oasis.staking.addressFromPublicKey(signedTransaction.signature.public_key)),
-                    transaction: transaction,
-                    feeAmount: oasis.quantity.toBigInt(transaction.fee.amount),
-                    result: response.results[i],
                 });
             }
         }
@@ -96,16 +65,48 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
             console.log('sent');
         }
 
+        // Try verifying transaction signatures.
+        {
+            // TODO: Make sure this is the block with the transaction we sent above.
+            const genesis = await nic.consensusGetGenesisDocument();
+            console.log('genesis', genesis);
+            const chainContext = await oasis.genesis.chainContext(genesis);
+            console.log('chain context', chainContext);
+            const response = await nic.consensusGetTransactionsWithResults(oasis.consensus.HEIGHT_LATEST);
+            const transactions = response.transactions || [];
+            const results = response.results || [];
+            for (let i = 0; i < transactions.length; i++) {
+                const signedTransaction = /** @type {oasis.types.SignatureSigned} */ (oasis.misc.fromCBOR(transactions[i]));
+                const transaction = await oasis.consensus.openSignedTransaction(chainContext, signedTransaction);
+                console.log({
+                    hash: await oasis.consensus.hashSignedTransaction(signedTransaction),
+                    from: oasis.staking.addressToBech32(await oasis.staking.addressFromPublicKey(signedTransaction.signature.public_key)),
+                    transaction: transaction,
+                    feeAmount: oasis.quantity.toBigInt(transaction.fee.amount),
+                    result: results[i],
+                });
+            }
+        }
+
+        // Block and events have a variety of different types.
+        {
+            // TODO: Make sure this is the block with the transaction we sent above.
+            const block = await nic.consensusGetBlock(oasis.consensus.HEIGHT_LATEST);
+            console.log('block', block);
+            const stakingEvents = await nic.stakingGetEvents(oasis.consensus.HEIGHT_LATEST);
+            console.log('staking events', stakingEvents);
+        }
+
         // Try server streaming.
         {
-            console.log('watching consensus blocks for 30s');
+            console.log('watching consensus blocks for 5s');
             await new Promise((resolve, reject) => {
                 const blocks = nic.consensusWatchBlocks();
                 const cancel = setTimeout(() => {
                     console.log('time\'s up, cancelling');
                     blocks.cancel();
                     resolve();
-                }, 30_000);
+                }, 5_000);
                 blocks.on('error', (e) => {
                     clearTimeout(cancel);
                     reject(e);
@@ -125,6 +126,11 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
                 });
             });
             console.log('done watching');
+        }
+
+        // Tell cypress that we're done.
+        {
+            document.body.appendChild(document.createTextNode(shared.CYPRESS_DONE_STRING));
         }
     } catch (e) {
         console.error(e);
