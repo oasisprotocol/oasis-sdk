@@ -15,6 +15,12 @@ export const STATE_PASSED = 2;
 export const STATE_REJECTED = 3;
 export const STATE_FAILED = 4;
 
+/**
+ * ProposalContentInvalidText is the textual representation of an invalid
+ * ProposalContent.
+ */
+export const PROPOSAL_CONTENT_INVALID_TEXT = '(invalid)';
+
 export const VOTE_YES = 1;
 export const VOTE_NO = 2;
 export const VOTE_ABSTAIN = 3;

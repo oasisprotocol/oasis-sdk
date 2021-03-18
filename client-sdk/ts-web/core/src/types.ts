@@ -413,6 +413,10 @@ export interface ControlRegistrationStatus {
      * node did not successfully register yet, it will be nil.
      */
     descriptor?: Node;
+    /**
+     * NodeStatus is the registry live status of the node.
+     */
+    node_status?: RegistryNodeStatus;
 }
 
 /**
@@ -2489,10 +2493,30 @@ export interface StakingDebondingDelegation {
 }
 
 /**
+ * DebondingDelegationInfo is a debonding delegation descriptor with additional
+ * information.
+ *
+ * Additional information contains the share pool the debonding delegation
+ * belongs to.
+ */
+export interface StakingDebondingDelegationInfo extends StakingDebondingDelegation {
+    pool: StakingSharePool;
+}
+
+/**
  * Delegation is a delegation descriptor.
  */
 export interface StakingDelegation {
     shares: Uint8Array;
+}
+
+/**
+ * DelegationInfo is a delegation descriptor with additional information.
+ *
+ * Additional information contains the share pool the delegation belongs to.
+ */
+export interface StakingDelegationInfo extends StakingDelegation {
+    pool: StakingSharePool;
 }
 
 /**
@@ -2935,19 +2959,15 @@ export type StorageLogEntry = [key: Uint8Array, value: Uint8Array];
 /**
  * Descriptor describes an upgrade.
  */
-export interface UpgradeDescriptor {
+export interface UpgradeDescriptor extends CBORVersioned {
     /**
-     * Name is the name of the upgrade. It should be derived from the node version.
+     * Handler is the name of the upgrade handler.
      */
-    name: string;
+    handler: string;
     /**
-     * Method is the upgrade method that should be used for this upgrade.
+     * Target is upgrade's target version.
      */
-    method: number;
-    /**
-     * Identifier is the upgrade method specific upgrade identifier.
-     */
-    identifier: unknown;
+    target: VersionProtocolVersions;
     /**
      * Epoch is the epoch at which the upgrade should happen.
      */
@@ -2957,7 +2977,7 @@ export interface UpgradeDescriptor {
  * PendingUpgrade describes a currently pending upgrade and includes the
  * submitted upgrade descriptor.
  */
-export interface UpgradePendingUpgrade {
+export interface UpgradePendingUpgrade extends CBORVersioned {
     /**
      * Descriptor is the upgrade descriptor describing the upgrade.
      */
@@ -2989,7 +3009,6 @@ export interface VersionProtocolVersions {
     runtime_host_protocol: Version;
     runtime_committee_protocol: Version;
     consensus_protocol: Version;
-    toolchain: Version;
 }
 
 /**

@@ -184,14 +184,30 @@ const methodDescriptorStakingAccount = createMethodDescriptorUnary<
     types.StakingOwnerQuery,
     types.StakingAccount
 >('Staking', 'Account');
-const methodDescriptorStakingDelegations = createMethodDescriptorUnary<
+const methodDescriptorStakingDelegationsFor = createMethodDescriptorUnary<
     types.StakingOwnerQuery,
     Map<Uint8Array, types.StakingDelegation>
->('Staking', 'Delegations');
-const methodDescriptorStakingDebondingDelegations = createMethodDescriptorUnary<
+>('Staking', 'DelegationsFor');
+const methodDescriptorStakingDelegationInfosFor = createMethodDescriptorUnary<
+    types.StakingOwnerQuery,
+    Map<Uint8Array, types.StakingDelegationInfo>
+>('Staking', 'DelegationInfosFor');
+const methodDescriptorStakingDelegationsTo = createMethodDescriptorUnary<
+    types.StakingOwnerQuery,
+    Map<Uint8Array, types.StakingDelegation>
+>('Staking', 'DelegationsTo');
+const methodDescriptorStakingDebondingDelegationsFor = createMethodDescriptorUnary<
     types.StakingOwnerQuery,
     Map<Uint8Array, types.StakingDebondingDelegation[]>
->('Staking', 'DebondingDelegations');
+>('Staking', 'DebondingDelegationsFor');
+const methodDescriptorStakingDebondingDelegationInfosFor = createMethodDescriptorUnary<
+    types.StakingOwnerQuery,
+    Map<Uint8Array, types.StakingDebondingDelegationInfo[]>
+>('Staking', 'DebondingDelegationInfosFor');
+const methodDescriptorStakingDebondingDelegationsTo = createMethodDescriptorUnary<
+    types.StakingOwnerQuery,
+    Map<Uint8Array, types.StakingDebondingDelegation[]>
+>('Staking', 'DebondingDelegationsTo');
 const methodDescriptorStakingAllowance = createMethodDescriptorUnary<
     types.StakingAllowanceQuery,
     Uint8Array
@@ -832,19 +848,51 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * Delegations returns the list of delegations for the given owner
-     * (delegator).
+     * DelegationsFor returns the list of (outgoing) delegations for the given
+     * owner (delegator).
      */
-    stakingDelegations(query: types.StakingOwnerQuery) {
-        return this.callUnary(methodDescriptorStakingDelegations, query);
+    stakingDelegationsFor(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDelegationsFor, query);
     }
 
     /**
-     * DebondingDelegations returns the list of debonding delegations for
-     * the given owner (delegator).
+     * DelegationsInfosFor returns (outgoing) delegations with additional
+     * information for the given owner (delegator).
      */
-    stakingDebondingDelegations(query: types.StakingOwnerQuery) {
-        return this.callUnary(methodDescriptorStakingDebondingDelegations, query);
+    stakingDelegationInfosFor(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDelegationInfosFor, query);
+    }
+
+    /**
+     * DelegationsTo returns the list of (incoming) delegations to the given
+     * account.
+     */
+    stakingDelegationsTo(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDelegationsTo, query);
+    }
+
+    /**
+     * DebondingDelegationsFor returns the list of (outgoing) debonding
+     * delegations for the given owner (delegator).
+     */
+    stakingDebondingDelegationsFor(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDebondingDelegationsFor, query);
+    }
+
+    /**
+     * DebondingDelegationsInfosFor returns (outgoing) debonding delegations
+     * with additional information for the given owner (delegator).
+     */
+    stakingDebondingDelegationInfosFor(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDebondingDelegationInfosFor, query);
+    }
+
+    /**
+     * DebondingDelegationsTo returns the list of (incoming) debonding
+     * delegations to the given account.
+     */
+    stakingDebondingDelegationsTo(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDebondingDelegationsTo, query);
     }
 
     /**
