@@ -25,21 +25,6 @@ export const MODULE_NAME = 'upgrade';
  */
 export const ERR_STOP_FOR_UPGRADE_CODE = 1;
 /**
- * ErrUpgradePending is the error returned when there is a pending upgrade and the node detects that it is
- * not the one performing it.
- */
-export const ERR_UPGRADE_PENDING_CODE = 2;
-/**
- * ErrNewTooSoon is the error returned when the node started isn't the pre-upgrade version and the upgrade
- * epoch hasn't been reached yet.
- */
-export const ERR_NEW_TOO_SOON_CODE = 3;
-/**
- * ErrInvalidResumingVersion is the error returned when the running node's version is different from the one that
- * started performing the upgrade.
- */
-export const ERR_INVALID_RESUMING_VERSION_CODE = 4;
-/**
  * ErrAlreadyPending is the error returned from SubmitDescriptor when the specific upgrade is already pending.
  */
 export const ERR_ALREADY_PENDING_CODE = 5;

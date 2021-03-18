@@ -85,6 +85,11 @@ export const TRANSACTION_ERR_INSUFFICIENT_FEE_BALANCE_CODE = 2;
  * ErrGasPriceTooLow is the error returned when the gas price is too low.
  */
 export const TRANSACTION_ERR_GAS_PRICE_TOO_LOW_CODE = 3;
+/**
+ * ErrUpgradePending is the error returned when an upgrade is pending and the transaction thus
+ * cannot be processed right now. The submitter should retry the transaction in this case.
+ */
+export const TRANSACTION_ERR_UPGRADE_PENDING = 4;
 
 export async function openSignedTransaction(chainContext: string, signed: types.SignatureSigned) {
     const context = signature.combineChainContext(TRANSACTION_SIGNATURE_CONTEXT, chainContext);

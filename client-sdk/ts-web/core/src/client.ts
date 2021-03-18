@@ -38,6 +38,10 @@ const methodDescriptorBeaconGetEpoch = createMethodDescriptorUnary<types.longnum
     'Beacon',
     'GetEpoch',
 );
+const methodDescriptorBeaconGetFutureEpoch = createMethodDescriptorUnary<
+    types.longnum,
+    types.BeaconEpochTimeState
+>('Beacon', 'GetFutureEpoch');
 const methodDescriptorBeaconWaitEpoch = createMethodDescriptorUnary<types.longnum, void>(
     'Beacon',
     'WaitEpoch',
@@ -296,6 +300,10 @@ const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorUnary<
     types.RuntimeClientSubmitTxRequest,
     Uint8Array
 >('RuntimeClient', 'SubmitTx');
+const methodDescriptorRuntimeClientSubmitTxNoWait = createMethodDescriptorUnary<
+    types.RuntimeClientSubmitTxRequest,
+    Uint8Array
+>('RuntimeClient', 'SubmitTxNoWait');
 const methodDescriptorRuntimeClientCheckTx = createMethodDescriptorUnary<
     types.RuntimeClientCheckTxRequest,
     void
@@ -392,6 +400,10 @@ const methodDescriptorConsensusGetGenesisDocument = createMethodDescriptorUnary<
     void,
     types.GenesisDocument
 >('Consensus', 'GetGenesisDocument');
+const methodDescriptorConsensusGetChainContext = createMethodDescriptorUnary<void, string>(
+    'Consensus',
+    'GetChainContext',
+);
 const methodDescriptorConsensusGetStatus = createMethodDescriptorUnary<void, types.ConsensusStatus>(
     'Consensus',
     'GetStatus',
@@ -530,6 +542,17 @@ export class NodeInternal extends GRPCWrapper {
      */
     beaconGetEpoch(height: types.longnum) {
         return this.callUnary(methodDescriptorBeaconGetEpoch, height);
+    }
+
+    /**
+     * GetFutureEpoch returns any future epoch that is currently scheduled
+     * to occur at a specific height.
+     *
+     * Note that this may return a nil state in case no future epoch is
+     * currently scheduled.
+     */
+    beaconGetFutureEpoch(height: types.longnum) {
+        return this.callUnary(methodDescriptorBeaconGetFutureEpoch, height);
     }
 
     /**
@@ -1011,10 +1034,19 @@ export class NodeInternal extends GRPCWrapper {
     // runtime/client
 
     /**
-     * SubmitTx submits a transaction to the runtime transaction scheduler.
+     * SubmitTx submits a transaction to the runtime transaction scheduler and waits
+     * for transaction execution results.
      */
     runtimeClientSubmitTx(request: types.RuntimeClientSubmitTxRequest) {
         return this.callUnary(methodDescriptorRuntimeClientSubmitTx, request);
+    }
+
+    /**
+     * SubmitTxNoWait submits a transaction to the runtime transaction scheduler but does
+     * not wait for transaction execution.
+     */
+    runtimeClientSubmitTxNoWait(request: types.RuntimeClientSubmitTxRequest) {
+        return this.callUnary(methodDescriptorRuntimeClientSubmitTxNoWait, request);
     }
 
     /**
@@ -1189,6 +1221,13 @@ export class NodeInternal extends GRPCWrapper {
      */
     consensusGetGenesisDocument() {
         return this.callUnary(methodDescriptorConsensusGetGenesisDocument, undefined);
+    }
+
+    /**
+     * GetChainContext returns the chain domain separation context.
+     */
+    consensusGetChainContext() {
+        return this.callUnary(methodDescriptorConsensusGetChainContext, undefined);
     }
 
     /**

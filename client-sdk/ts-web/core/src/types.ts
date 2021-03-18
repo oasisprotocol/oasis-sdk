@@ -8,6 +8,14 @@ export type NotModeled = {[key: string]: unknown};
 export type longnum = number | bigint;
 
 /**
+ * EpochTimeState is the epoch state.
+ */
+export interface BeaconEpochTimeState {
+    epoch: longnum;
+    height: longnum;
+}
+
+/**
  * ConsensusParameters are the beacon consensus parameters.
  */
 export interface BeaconConsensusParameters {
@@ -302,6 +310,10 @@ export interface ConsensusStatus {
      */
     latest_time: longnum;
     /**
+     * LatestEpoch is the epoch of the latest block.
+     */
+    latest_epoch: longnum;
+    /**
      * LatestStateRoot is the Merkle root of the consensus state tree.
      */
     latest_state_root: StorageRoot;
@@ -321,6 +333,10 @@ export interface ConsensusStatus {
      * LastRetainedHash is the hash of the oldest retained block.
      */
     last_retained_hash: Uint8Array;
+    /**
+     * ChainContext is the chain domain separation context.
+     */
+    chain_context: string;
     /**
      * IsValidator returns whether the current node is part of the validator set.
      */
@@ -2946,14 +2962,6 @@ export interface UpgradePendingUpgrade {
      * Descriptor is the upgrade descriptor describing the upgrade.
      */
     descriptor: UpgradeDescriptor;
-    /**
-     * SubmittingVersion is the version of the node used to submit the descriptor.
-     */
-    submitting_version: string;
-    /**
-     * RunningVersion is the version of the node trying to execute the descriptor.
-     */
-    running_version: string;
     /**
      * UpgradeHeight is the height at which the upgrade epoch was reached
      * (or InvalidUpgradeHeight if it hasn't been reached yet).
