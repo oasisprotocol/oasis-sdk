@@ -162,6 +162,12 @@ export const ERR_INVALID_THRESHOLD_CODE = 6;
  * exceed the maximum allowed number.
  */
 export const ERR_TOO_MANY_ALLOWANCES_CODE = 7;
+/**
+ * ErrUnderMinDelegationAmount is the error returned when the given escrow
+ * amount is lower than the minimum delegation amount specified in the
+ * consensus parameters.
+ */
+export const ERR_UNDER_MIN_DELEGATION_AMOUNT_CODE = 8;
 
 /**
  * ModuleName is a unique module name for the staking/token module.

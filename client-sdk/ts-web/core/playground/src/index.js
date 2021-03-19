@@ -16,7 +16,7 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
         {
             const toAddr = 'oasis1qpl5634wyu6larn047he9af7a3qyhzx59u0mquw7';
             console.log('delegations to', toAddr);
-            const response = await nic.stakingDelegations({
+            const response = await nic.stakingDelegationsTo({
                 height: oasis.consensus.HEIGHT_LATEST,
                 owner: oasis.staking.addressFromBech32(toAddr),
             });

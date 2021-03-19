@@ -9,10 +9,18 @@ export const UPGRADE_STAGE_CONSENSUS = 2;
 export const UPGRADE_STAGE_LAST = UPGRADE_STAGE_CONSENSUS;
 
 /**
- * UpgradeMethodInternal is the internal upgrade method, where the node
- * binary itself has the migration code.
+ * InvalidUpgradeHeight means the upgrade epoch hasn't been reached yet.
  */
-export const UPGRADE_METHOD_INTERNAL = 1;
+export const INVALID_UPGRADE_HEIGHT = 0n;
+/**
+ * LatestDescriptorVersion is the latest upgrade descriptor version that should be used for
+ * descriptors.
+ */
+export const LATEST_DESCRIPTOR_VERSION = 1;
+/**
+ * LatestPendingUpgradeVersion is the latest pending upgrade struct version.
+ */
+export const LATEST_PENDING_UPGRADE_VERSION = 1;
 
 /**
  * ModuleName is the upgrade module name.
@@ -24,21 +32,6 @@ export const MODULE_NAME = 'upgrade';
  * the consensus layer has reached the scheduled shutdown epoch and should be interrupted.
  */
 export const ERR_STOP_FOR_UPGRADE_CODE = 1;
-/**
- * ErrUpgradePending is the error returned when there is a pending upgrade and the node detects that it is
- * not the one performing it.
- */
-export const ERR_UPGRADE_PENDING_CODE = 2;
-/**
- * ErrNewTooSoon is the error returned when the node started isn't the pre-upgrade version and the upgrade
- * epoch hasn't been reached yet.
- */
-export const ERR_NEW_TOO_SOON_CODE = 3;
-/**
- * ErrInvalidResumingVersion is the error returned when the running node's version is different from the one that
- * started performing the upgrade.
- */
-export const ERR_INVALID_RESUMING_VERSION_CODE = 4;
 /**
  * ErrAlreadyPending is the error returned from SubmitDescriptor when the specific upgrade is already pending.
  */

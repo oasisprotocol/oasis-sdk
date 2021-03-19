@@ -8,6 +8,14 @@ export type NotModeled = {[key: string]: unknown};
 export type longnum = number | bigint;
 
 /**
+ * EpochTimeState is the epoch state.
+ */
+export interface BeaconEpochTimeState {
+    epoch: longnum;
+    height: longnum;
+}
+
+/**
  * ConsensusParameters are the beacon consensus parameters.
  */
 export interface BeaconConsensusParameters {
@@ -302,6 +310,10 @@ export interface ConsensusStatus {
      */
     latest_time: longnum;
     /**
+     * LatestEpoch is the epoch of the latest block.
+     */
+    latest_epoch: longnum;
+    /**
      * LatestStateRoot is the Merkle root of the consensus state tree.
      */
     latest_state_root: StorageRoot;
@@ -321,6 +333,10 @@ export interface ConsensusStatus {
      * LastRetainedHash is the hash of the oldest retained block.
      */
     last_retained_hash: Uint8Array;
+    /**
+     * ChainContext is the chain domain separation context.
+     */
+    chain_context: string;
     /**
      * IsValidator returns whether the current node is part of the validator set.
      */
@@ -397,6 +413,10 @@ export interface ControlRegistrationStatus {
      * node did not successfully register yet, it will be nil.
      */
     descriptor?: Node;
+    /**
+     * NodeStatus is the registry live status of the node.
+     */
+    node_status?: RegistryNodeStatus;
 }
 
 /**
@@ -499,11 +519,6 @@ export interface Entity extends CBORVersioned {
      * entity signing key.
      */
     nodes?: Uint8Array[];
-    /**
-     * AllowEntitySignedNodes is true iff nodes belonging to this entity
-     * may be signed with the entity signing key.
-     */
-    allow_entity_signed_nodes: boolean;
 }
 
 /**
@@ -1169,11 +1184,6 @@ export interface RegistryConsensusParameters {
      */
     debug_allow_test_runtimes?: boolean;
     /**
-     * DebugAllowEntitySignedNodeRegistration is true iff node registration
-     * signed by entity signing keys should be allowed.
-     */
-    debug_allow_entity_signed_node_registration?: boolean;
-    /**
      * DebugBypassStake is true iff the registry should bypass all of the staking
      * related checks and operations.
      */
@@ -1795,7 +1805,20 @@ export interface RoothashExecutorProposerTimeoutRequest {
  * FinalizedEvent is a finalized event.
  */
 export interface RoothashFinalizedEvent {
+    /**
+     * Round is the round that was finalized.
+     */
     round: longnum;
+    /**
+     * GoodComputeNodes are the public keys of compute nodes that positively contributed to the
+     * round by replicating the computation correctly.
+     */
+    good_compute_nodes?: Uint8Array[];
+    /**
+     * BadComputeNodes are the public keys of compute nodes that negatively contributed to the round
+     * by causing discrepancies.
+     */
+    bad_compute_nodes?: Uint8Array[];
 }
 
 /**
@@ -1924,6 +1947,8 @@ export interface RoothashRegistryMessage extends CBORVersioned {
 export interface RoothashStakingMessage extends CBORVersioned {
     transfer?: StakingTransfer;
     withdraw?: StakingWithdraw;
+    add_escrow?: StakingEscrow;
+    reclaim_escrow?: StakingReclaimEscrow;
 }
 
 /**
@@ -2427,6 +2452,11 @@ export interface StakingConsensusParameters {
     disable_delegation?: boolean;
     undisable_transfers_from?: Map<Uint8Array, boolean>;
     /**
+     * AllowEscrowMessages can be used to allow runtimes to perform AddEscrow
+     * and ReclaimEscrow via runtime messages.
+     */
+    allow_escrow_messages?: boolean;
+    /**
      * MaxAllowances is the maximum number of allowances an account can have. Zero means disabled.
      */
     max_allowances: number;
@@ -2463,10 +2493,30 @@ export interface StakingDebondingDelegation {
 }
 
 /**
+ * DebondingDelegationInfo is a debonding delegation descriptor with additional
+ * information.
+ *
+ * Additional information contains the share pool the debonding delegation
+ * belongs to.
+ */
+export interface StakingDebondingDelegationInfo extends StakingDebondingDelegation {
+    pool: StakingSharePool;
+}
+
+/**
  * Delegation is a delegation descriptor.
  */
 export interface StakingDelegation {
     shares: Uint8Array;
+}
+
+/**
+ * DelegationInfo is a delegation descriptor with additional information.
+ *
+ * Additional information contains the share pool the delegation belongs to.
+ */
+export interface StakingDelegationInfo extends StakingDelegation {
+    pool: StakingSharePool;
 }
 
 /**
@@ -2909,19 +2959,15 @@ export type StorageLogEntry = [key: Uint8Array, value: Uint8Array];
 /**
  * Descriptor describes an upgrade.
  */
-export interface UpgradeDescriptor {
+export interface UpgradeDescriptor extends CBORVersioned {
     /**
-     * Name is the name of the upgrade. It should be derived from the node version.
+     * Handler is the name of the upgrade handler.
      */
-    name: string;
+    handler: string;
     /**
-     * Method is the upgrade method that should be used for this upgrade.
+     * Target is upgrade's target version.
      */
-    method: number;
-    /**
-     * Identifier is the upgrade method specific upgrade identifier.
-     */
-    identifier: unknown;
+    target: VersionProtocolVersions;
     /**
      * Epoch is the epoch at which the upgrade should happen.
      */
@@ -2931,19 +2977,11 @@ export interface UpgradeDescriptor {
  * PendingUpgrade describes a currently pending upgrade and includes the
  * submitted upgrade descriptor.
  */
-export interface UpgradePendingUpgrade {
+export interface UpgradePendingUpgrade extends CBORVersioned {
     /**
      * Descriptor is the upgrade descriptor describing the upgrade.
      */
     descriptor: UpgradeDescriptor;
-    /**
-     * SubmittingVersion is the version of the node used to submit the descriptor.
-     */
-    submitting_version: string;
-    /**
-     * RunningVersion is the version of the node trying to execute the descriptor.
-     */
-    running_version: string;
     /**
      * UpgradeHeight is the height at which the upgrade epoch was reached
      * (or InvalidUpgradeHeight if it hasn't been reached yet).
@@ -2971,7 +3009,6 @@ export interface VersionProtocolVersions {
     runtime_host_protocol: Version;
     runtime_committee_protocol: Version;
     consensus_protocol: Version;
-    toolchain: Version;
 }
 
 /**
