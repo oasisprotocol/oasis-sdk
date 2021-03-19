@@ -21,6 +21,7 @@ serialization.
 1. Helpers for operating on a few kinds of data.
 1. Constants.
 1. JSDoc copied from Godoc.
+1. Wrappers for consensus transactions.
 
 ## Design notes
 
