@@ -179,6 +179,38 @@ jobs:
         working-directory: client-sdk/ts-web/rt
         run: npm run-script playground &
 
+      - name: 'proxy: Install Envoy'
+        # https://www.getenvoy.io/install/envoy/ubuntu/
+        run: |
+          curl -sL 'https://getenvoy.io/gpg' | sudo apt-key add -
+          sudo add-apt-repository "deb [arch=amd64] https://dl.bintray.com/tetrate/getenvoy-deb $(lsb_release -cs) stable"
+          sudo apt-get update && sudo apt-get install -y getenvoy-envoy
+
+      - name: 'proxy: Start'
+        working-directory: client-sdk/ts-web/rt/playground
+        run: ./sample-run-envoy.sh &
+
+      - name: 'testnet: Install system packages'
+        run: sudo apt-get -y install bubblewrap
+
+      - name: 'testnet: Download artifacts'
+        working-directory: client-sdk/ts-web/rt/playground
+        run: ./download-artifacts.sh
+
+      - name: 'testnet: Build runtime'
+        working-directory: client-sdk/ts-web/rt/playground
+        run: ./build-runtime.sh
+
+      - name: 'testnet: Start'
+        working-directory: client-sdk/ts-web/rt/playground
+        run: ./sample-run-network.sh &
+
+      - name: 'testnet: Wait for node socket'
+        run: |
+          while [ ! -e /tmp/oasis-net-runner-sdk-rt/net-runner/network/client-0/internal.sock ]; do
+            sleep 1
+          done
+
       - name: Cypress run
         working-directory: client-sdk/ts-web/rt
         run: npx -c 'cypress run'
