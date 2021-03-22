@@ -1,4 +1,3 @@
-// @ts-expect-error missing declaration
 import * as cborg from 'cborg';
 
 const HEX_DIGITS = '0123456789abcdef';
