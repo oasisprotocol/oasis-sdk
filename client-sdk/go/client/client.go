@@ -12,6 +12,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
+	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	coreClient "github.com/oasisprotocol/oasis-core/go/runtime/client/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -26,9 +27,22 @@ type RuntimeClient interface {
 	// GetInfo returns information about the runtime.
 	GetInfo(ctx context.Context) (*types.RuntimeInfo, error)
 
+	// SubmitTx submits a transaction to the runtime transaction scheduler and waits
+	// for transaction execution results.
 	SubmitTx(ctx context.Context, tx *types.UnverifiedTransaction) (cbor.RawMessage, error)
 
-	// GetTransactions(ctx context.Context, round uint64) ([][]byte, error)
+	// SubmitTxNoWait submits a transaction to the runtime transaction scheduler but does
+	// not wait for transaction execution.
+	SubmitTxNoWait(ctx context.Context, tx *types.UnverifiedTransaction) error
+
+	// GetGenesisBlock returns the genesis block.
+	GetGenesisBlock(ctx context.Context) (*block.Block, error)
+
+	// GetBlock fetches the given runtime block.
+	GetBlock(ctx context.Context, round uint64) (*block.Block, error)
+
+	// GetTransactions returns all transactions that are part of a given block.
+	GetTransactions(ctx context.Context, round uint64) ([]*types.UnverifiedTransaction, error)
 
 	// GetEvents returns all events emitted in a given block.
 	GetEvents(ctx context.Context, round uint64) ([]*coreClient.Event, error)
@@ -36,6 +50,7 @@ type RuntimeClient interface {
 	// WatchBlocks subscribes to blocks for a specific runtimes.
 	WatchBlocks(ctx context.Context) (<-chan *roothash.AnnotatedBlock, pubsub.ClosableSubscription, error)
 
+	// Query makes a runtime-specific query.
 	Query(ctx context.Context, round uint64, method string, args, rsp interface{}) error
 }
 
@@ -90,8 +105,55 @@ func (rc *runtimeClient) SubmitTx(ctx context.Context, tx *types.UnverifiedTrans
 }
 
 // Implements RuntimeClient.
+func (rc *runtimeClient) SubmitTxNoWait(ctx context.Context, tx *types.UnverifiedTransaction) error {
+	return rc.cc.SubmitTxNoWait(ctx, &coreClient.SubmitTxRequest{
+		RuntimeID: rc.runtimeID,
+		Data:      cbor.Marshal(tx),
+	})
+}
+
+// Implements RuntimeClient.
 func (rc *runtimeClient) WatchBlocks(ctx context.Context) (<-chan *roothash.AnnotatedBlock, pubsub.ClosableSubscription, error) {
 	return rc.cc.WatchBlocks(ctx, rc.runtimeID)
+}
+
+// Implements RuntimeClient.
+func (rc *runtimeClient) GetGenesisBlock(ctx context.Context) (*block.Block, error) {
+	return rc.cc.GetGenesisBlock(ctx, rc.runtimeID)
+}
+
+// Implements RuntimeClient.
+func (rc *runtimeClient) GetBlock(ctx context.Context, round uint64) (*block.Block, error) {
+	return rc.cc.GetBlock(ctx, &coreClient.GetBlockRequest{
+		RuntimeID: rc.runtimeID,
+		Round:     round,
+	})
+}
+
+// Implements RuntimeClient.
+func (rc *runtimeClient) GetTransactions(ctx context.Context, round uint64) ([]*types.UnverifiedTransaction, error) {
+	// XXX: We first need to fetch the block (https://github.com/oasisprotocol/oasis-core/issues/3812).
+	blk, err := rc.GetBlock(ctx, round)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch block for round %d: %w", round, err)
+	}
+
+	rawTxs, err := rc.cc.GetTxs(ctx, &coreClient.GetTxsRequest{
+		RuntimeID: rc.runtimeID,
+		Round:     round,
+		IORoot:    blk.Header.IORoot,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	txs := make([]*types.UnverifiedTransaction, len(rawTxs))
+	for i, rawTx := range rawTxs {
+		var tx types.UnverifiedTransaction
+		_ = cbor.Unmarshal(rawTx, &tx) // Ignore errors as there can be invalid transactions.
+		txs[i] = &tx
+	}
+	return txs, nil
 }
 
 // Implements RuntimeClient.
