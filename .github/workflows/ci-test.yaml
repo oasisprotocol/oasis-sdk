@@ -147,6 +147,13 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npx -c 'cypress run'
 
+      - name: Upload screenshot
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: e2e-ts-web-core-screenshots
+          path: client-sdk/ts-web/core/cypress/screenshots
+
   e2e-ts-web-rt:
     # NOTE: This name appears in GitHub's Checks API.
     name: e2e-ts-web-rt
@@ -214,3 +221,10 @@ jobs:
       - name: Cypress run
         working-directory: client-sdk/ts-web/rt
         run: npx -c 'cypress run'
+
+      - name: Upload screenshot
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: e2e-ts-web-rt-screenshots
+          path: client-sdk/ts-web/rt/cypress/screenshots
