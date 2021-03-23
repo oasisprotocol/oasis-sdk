@@ -7,6 +7,15 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
 
 (async function () {
     try {
+        // Wait for ready.
+        {
+            console.log('waiting for node to be ready');
+            const waitStart = Date.now();
+            await nic.nodeControllerWaitReady();
+            const waitEnd = Date.now();
+            console.log(`ready ${waitEnd - waitStart} ms`);
+        }
+
         // Get something with addresses.
         {
             console.log('nodes', await nic.registryGetNodes(oasis.consensus.HEIGHT_LATEST));
