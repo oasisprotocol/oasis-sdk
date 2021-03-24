@@ -47,9 +47,11 @@ export class TransactionWrapper<BODY, OK> {
         return this;
     }
 
-    async sign(signers: transaction.AnySigner[]) {
+    async sign(signers: transaction.AnySigner[], consensusChainContext: string) {
         this.unverifiedTransaction = await transaction.signUnverifiedTransaction(
             signers,
+            this.runtimeID,
+            consensusChainContext,
             this.transaction,
         );
     }
