@@ -18,8 +18,9 @@ const ERR_INVALID_ARGUMENT_CODE = 1;
 
 // Callable methods.
 const METHOD_INSERT = 'keyvalue.Insert';
-const METHOD_GET = 'keyvalue.Get';
 const METHOD_REMOVE = 'keyvalue.Remove';
+// Queries.
+const METHOD_GET = 'keyvalue.Get';
 
 const EVENT_DUMMY_EVENT_CODE = 1;
 
@@ -48,13 +49,13 @@ class Wrapper extends oasisRT.wrapper.Base {
      */
     callInsert() { return this.call(METHOD_INSERT); }
     /**
-     * @returns {oasisRT.wrapper.TransactionWrapper<Key, KeyValue>}
-     */
-    callGet() { return this.call(METHOD_GET); }
-    /**
      * @returns {oasisRT.wrapper.TransactionWrapper<Key, void>}
      */
     callRemove() { return this.call(METHOD_REMOVE); }
+    /**
+     * @returns {oasisRT.wrapper.QueryWrapper<Key, KeyValue>}
+     */
+    queryGet() { return this.query(METHOD_GET); }
 
 }
 
@@ -111,15 +112,11 @@ const keyvalueWrapper = new Wrapper(KEYVALUE_RUNTIME_ID);
             console.log('ok');
 
             console.log('get', THE_KEY);
-            const twGet = keyvalueWrapper.callGet()
-                .setBody({
+            const getResult = await keyvalueWrapper.queryGet()
+                .setArgs({
                     key: THE_KEY,
                 })
-                .setSignerInfo([siAlice])
-                .setFeeAmount(FEE_FREE)
-                .setFeeGas(0n);
-            await twGet.sign([csAlice]);
-            const getResult = await twGet.submit(nic);
+                .query(nic);
             console.log('ok', getResult.key, getResult.value);
             if (oasis.misc.toHex(getResult.key) !== oasis.misc.toHex(THE_KEY)) throw new Error('Key mismatch');
             if (oasis.misc.toHex(getResult.value) !== oasis.misc.toHex(THE_VALUE)) throw new Error('Value mismatch');
