@@ -121,7 +121,7 @@ jobs:
       - name: 'proxy: Install Envoy'
         # https://www.getenvoy.io/install/envoy/ubuntu/
         run: |
-          curl -sL 'https://getenvoy.io/gpg' | sudo apt-key add -
+          curl -sL 'https://www.getenvoy.io/gpg' | sudo apt-key add -
           sudo add-apt-repository "deb [arch=amd64] https://dl.bintray.com/tetrate/getenvoy-deb $(lsb_release -cs) stable"
           sudo apt-get update && sudo apt-get install -y getenvoy-envoy
 
@@ -189,7 +189,7 @@ jobs:
       - name: 'proxy: Install Envoy'
         # https://www.getenvoy.io/install/envoy/ubuntu/
         run: |
-          curl -sL 'https://getenvoy.io/gpg' | sudo apt-key add -
+          curl -sL 'https://www.getenvoy.io/gpg' | sudo apt-key add -
           sudo add-apt-repository "deb [arch=amd64] https://dl.bintray.com/tetrate/getenvoy-deb $(lsb_release -cs) stable"
           sudo apt-get update && sudo apt-get install -y getenvoy-envoy
 
