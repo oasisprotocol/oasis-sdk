@@ -1188,6 +1188,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-runtime-simple-keyvalue"
+version = "0.1.0"
+dependencies = [
+ "oasis-runtime-sdk",
+ "serde",
+ "serde_bytes",
+ "thiserror",
+]
+
+[[package]]
 name = "thiserror"
 version = "1.0.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
