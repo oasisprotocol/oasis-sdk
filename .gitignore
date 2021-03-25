@@ -22,4 +22,5 @@ coverage-e2e-*.txt
 
 # Built binaries.
 examples/user-witness-flow/main
+tests/e2e/e2e
 
