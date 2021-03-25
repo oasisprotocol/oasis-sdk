@@ -1,7 +1,7 @@
 #!/bin/sh -eux
-if [ ! -e ../../../../target/debug/simple-keyvalue-runtime ]; then
+if [ ! -e ../../../../target/debug/test-runtime-simple-keyvalue ]; then
     (
         cd ../../../..
-        cargo build -p simple-keyvalue-runtime
+        cargo build -p test-runtime-simple-keyvalue
     )
 fi
