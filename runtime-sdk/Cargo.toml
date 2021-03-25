@@ -6,8 +6,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-# TODO: Use specific tag.
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", branch = "master" }
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.0.1" }
 
 # Third party.
 serde = { version = "1.0.118", features = ["derive"] }
