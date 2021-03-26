@@ -3046,6 +3046,30 @@ export interface WorkerCommonStatus {
 }
 
 /**
+ * ForceFinalizeRequest is a ForceFinalize request.
+ */
+export interface WorkerStorageForceFinalizeRequest {
+    runtime_id: Uint8Array;
+    round: longnum;
+}
+
+/**
+ * GetLastSyncedRoundRequest is a GetLastSyncedRound request.
+ */
+export interface WorkerStorageGetLastSyncedRoundRequest {
+    runtime_id: Uint8Array;
+}
+
+/**
+ * GetLastSyncedRoundResponse is a GetLastSyncedRound response.
+ */
+export interface WorkerStorageGetLastSyncedRoundResponse {
+    round: longnum;
+    io_root: StorageRoot;
+    state_root: StorageRoot;
+}
+
+/**
  * Status is the storage worker status.
  */
 export interface WorkerStorageStatus {
