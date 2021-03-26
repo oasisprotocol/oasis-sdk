@@ -17,9 +17,9 @@ on:
 
 jobs:
 
-  lint:
+  test-rust:
     # NOTE: This name appears in GitHub's Checks API.
-    name: test
+    name: test-rust
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -45,6 +45,28 @@ jobs:
         with:
           name: code-coverage-report
           path: cobertura.xml
+
+  test-go:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: test-go
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go 1.15
+        uses: actions/setup-go@v2.1.3
+        with:
+          go-version: "1.15.x"
+
+      - name: Unit tests with coverage
+        working-directory: client-sdk/go
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v1.2.1
+        with:
+          directory: client-sdk/go
 
   typecheck:
     # NOTE: This name appears in GitHub's Checks API.

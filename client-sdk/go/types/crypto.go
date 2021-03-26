@@ -14,7 +14,8 @@ import (
 var (
 	_ json.Marshaler   = (*PublicKey)(nil)
 	_ json.Unmarshaler = (*PublicKey)(nil)
-	// TODO: CBOR
+	_ cbor.Marshaler   = (*PublicKey)(nil)
+	_ cbor.Unmarshaler = (*PublicKey)(nil)
 )
 
 // PublicKey is a serializable public key.

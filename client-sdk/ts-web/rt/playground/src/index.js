@@ -77,6 +77,13 @@ const keyvalueWrapper = new Wrapper(KEYVALUE_RUNTIME_ID);
             console.log('valid', await oasisRT.signatureSecp256k1.verify('test context', message, signature, publicKey));
         }
 
+        // Test derived transaction chain context.
+        {
+            const runtimeID = oasis.misc.fromHex('8000000000000000000000000000000000000000000000000000000000000000');
+            const chainContext = await oasisRT.transaction.deriveChainContext(runtimeID, '643fb06848be7e970af3b5b2d772eb8cfb30499c8162bc18ac03df2f5e22520e');
+            console.log('reference chain context (see context_test.go)', chainContext);
+        }
+
         // Wait for ready.
         {
             console.log('waiting for node to be ready');
@@ -98,6 +105,8 @@ const keyvalueWrapper = new Wrapper(KEYVALUE_RUNTIME_ID);
             const nonce = BigInt(Date.now());
             const siAlice = /** @type {oasisRT.types.SignerInfo} */ ({pub: {ed25519: csAlice.public()}, nonce});
 
+            const consensusChainContext = await nic.consensusGetChainContext();
+
             console.log('insert', THE_KEY, THE_VALUE);
             const twInsert = keyvalueWrapper.callInsert()
                 .setBody({
@@ -107,7 +116,7 @@ const keyvalueWrapper = new Wrapper(KEYVALUE_RUNTIME_ID);
                 .setSignerInfo([siAlice])
                 .setFeeAmount(FEE_FREE)
                 .setFeeGas(0n);
-            await twInsert.sign([csAlice]);
+            await twInsert.sign([csAlice], consensusChainContext);
             await twInsert.submit(nic);
             console.log('ok');
 
@@ -129,7 +138,7 @@ const keyvalueWrapper = new Wrapper(KEYVALUE_RUNTIME_ID);
                 .setSignerInfo([siAlice])
                 .setFeeAmount(FEE_FREE)
                 .setFeeGas(0n);
-            await twRemove.sign([csAlice]);
+            await twRemove.sign([csAlice], consensusChainContext);
             await twRemove.submit(nic);
             console.log('ok');
         }
