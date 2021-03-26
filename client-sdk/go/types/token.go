@@ -24,11 +24,11 @@ func (d Denomination) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary decodes a binary marshaled denomination.
-func (a *Denomination) UnmarshalBinary(data []byte) error {
+func (d *Denomination) UnmarshalBinary(data []byte) error {
 	if len(data) > MaxDenominationSize {
 		return fmt.Errorf("malformed denomination")
 	}
-	*a = Denomination(string(data))
+	*d = Denomination(string(data))
 	return nil
 }
 
@@ -47,7 +47,7 @@ func (d Denomination) IsNative() bool {
 
 // BaseUnits is the token amount of given denomination in base units.
 type BaseUnits struct {
-	_ struct{} `cbor:",toarray"` // nolint
+	_ struct{} `cbor:",toarray"`
 
 	Amount       quantity.Quantity
 	Denomination Denomination

@@ -7,7 +7,7 @@ use oasis_core_runtime::{
 
 use crate::{
     context::DispatchContext,
-    dispatcher,
+    crypto, dispatcher,
     module::{
         AuthHandler, BlockHandler, MethodRegistrationHandler, MethodRegistry, MigrationHandler,
     },
@@ -55,15 +55,17 @@ pub trait Runtime {
         Self: Sized + 'static,
     {
         // Initializer.
-        let init = |_protocol: &Arc<Protocol>,
+        let init = |protocol: &Arc<Protocol>,
                     _rak: &Arc<RAK>,
                     _rpc_demux: &mut RpcDemux,
                     _rpc: &mut RpcDispatcher|
          -> Option<Box<dyn TxnDispatcher>> {
-            // TODO: Initialize global context.
-            // protocol.get_runtime_id();
-            // protocol.get_consensus_chain_context();
-            // crypto::context::set_chain_context(protocol.get_runtime_id(), protocol.get_consensus_chain_context());
+            // Fetch host information and configure domain separation context.
+            let hi = protocol.get_host_info();
+            crypto::signature::context::set_chain_context(
+                hi.runtime_id,
+                &hi.consensus_chain_context,
+            );
 
             // Register runtime's methods.
             let mut methods = MethodRegistry::new();

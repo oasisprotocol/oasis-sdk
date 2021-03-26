@@ -2,6 +2,13 @@ module github.com/oasisprotocol/oasis-sdk/client-sdk/go
 
 go 1.15
 
+// Should be synced with Oasis Core as replace directives are not propagated.
+replace (
+	github.com/tendermint/tendermint => github.com/oasisprotocol/tendermint v0.34.8-oasis1
+	golang.org/x/crypto/curve25519 => github.com/oasisprotocol/ed25519/extra/x25519 v0.0.0-20210127160119-f7017427c1ea
+	golang.org/x/crypto/ed25519 => github.com/oasisprotocol/ed25519 v0.0.0-20210127160119-f7017427c1ea
+)
+
 require (
 	github.com/oasisprotocol/oasis-core/go v0.2100.1
 	github.com/stretchr/testify v1.7.0
