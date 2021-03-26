@@ -311,6 +311,16 @@ const methodDescriptorStorageGetCheckpointChunk = createMethodDescriptorServerSt
     Uint8Array
 >('Storage', 'GetCheckpointChunk');
 
+// worker/storage
+const methodDescriptorStorageWorkerGetLastSyncedRound = createMethodDescriptorUnary<
+    types.WorkerStorageGetLastSyncedRoundRequest,
+    types.WorkerStorageGetLastSyncedRoundResponse
+>('StorageWorker', 'GetLastSyncedRound');
+const methodDescriptorStorageWorkerForceFinalize = createMethodDescriptorUnary<
+    types.WorkerStorageForceFinalizeRequest,
+    void
+>('StorageWorker', 'ForceFinalize');
+
 // runtime/client
 const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorUnary<
     types.RuntimeClientSubmitTxRequest,
@@ -1077,6 +1087,22 @@ export class NodeInternal extends GRPCWrapper {
      */
     storageGetCheckpointChunk(chunk: types.StorageChunkMetadata) {
         return this.callServerStreaming(methodDescriptorStorageGetCheckpointChunk, chunk);
+    }
+
+    // worker/storage
+
+    /**
+     * GetLastSyncedRound retrieves the last synced round for the storage worker.
+     */
+    storageWorkerGetLastSyncedRound(request: types.WorkerStorageGetLastSyncedRoundRequest) {
+        return this.callUnary(methodDescriptorStorageWorkerGetLastSyncedRound, request);
+    }
+
+    /**
+     * ForceFinalize forces finalization of a specific round.
+     */
+    storageWorkerForceFinalize(request: types.WorkerStorageForceFinalizeRequest) {
+        return this.callUnary(methodDescriptorStorageWorkerForceFinalize, request);
     }
 
     // runtime/client
