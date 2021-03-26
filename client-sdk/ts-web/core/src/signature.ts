@@ -1,4 +1,4 @@
-import * as elliptic from 'elliptic';
+import * as nacl from 'tweetnacl';
 
 import * as hash from './hash';
 import * as misc from './misc';
@@ -22,8 +22,6 @@ export interface ContextSigner {
     sign(context: string, message: Uint8Array): Promise<Uint8Array>;
 }
 
-const ED25519 = new elliptic.eddsa('ed25519');
-
 export async function verify(
     publicKey: Uint8Array,
     context: string,
@@ -31,11 +29,8 @@ export async function verify(
     signature: Uint8Array,
 ) {
     const signerMessage = await prepareSignerMessage(context, message);
-    const signerMessageA = Array.from(signerMessage);
-    const publicKeyA = Array.from(publicKey);
-    const signatureA = Array.from(signature);
-    // @ts-expect-error acceptance of array-like types is not modeled
-    const sigOk = ED25519.verify(signerMessageA, signatureA, publicKeyA);
+    const sigOk = nacl.sign.detached.verify(signerMessage, signature, publicKey);
+
     return sigOk;
 }
 
@@ -62,12 +57,12 @@ export async function signSigned(signer: ContextSigner, context: string, rawValu
 
 export async function openMultiSigned(context: string, multiSigned: types.SignatureMultiSigned) {
     const signerMessage = await prepareSignerMessage(context, multiSigned.untrusted_raw_value);
-    const signerMessageA = Array.from(signerMessage);
     for (const signature of multiSigned.signatures) {
-        const signatureA = Array.from(signature.signature);
-        const publicKeyA = Array.from(signature.public_key);
-        // @ts-expect-error acceptance of array-like types is not modeled
-        const sigOk = ED25519.verify(signerMessageA, signatureA, publicKeyA);
+        const sigOk = nacl.sign.detached.verify(
+            signerMessage,
+            signature.signature,
+            signature.public_key,
+        );
         if (!sigOk) throw new Error('signature verification failed');
     }
     return multiSigned.untrusted_raw_value;
@@ -109,37 +104,63 @@ export class BlindContextSigner implements ContextSigner {
 }
 
 /**
- * An in-memory signer based on the elliptic library. We've included this for development.
+ * An in-memory signer based on tweetnacl. We've included this for development.
  */
-export class EllipticSigner implements Signer {
-    key: elliptic.eddsa.KeyPair;
+export class NaclSigner implements Signer {
+    key: nacl.SignKeyPair;
 
-    constructor(key: elliptic.eddsa.KeyPair, note: string) {
+    constructor(key: nacl.SignKeyPair, note: string) {
         if (note !== 'this key is not important') throw new Error('insecure signer implementation');
         this.key = key;
     }
 
+    /**
+     * Generate a keypair from a random seed
+     * @param note Set to 'this key is not important' to acknowledge the risks
+     * @returns Instance of NaclSigner
+     */
     static fromRandom(note: string) {
         const secret = new Uint8Array(32);
         crypto.getRandomValues(secret);
-        return EllipticSigner.fromSecret(secret, note);
+        return NaclSigner.fromSeed(secret, note);
     }
 
+    /**
+     * Instanciate from a given secret
+     * @param secret 64 bytes ed25519 secret (h) that will be used to sign messages
+     * @param note Set to 'this key is not important' to acknowledge the risks
+     * @returns Instance of NaclSigner
+     */
     static fromSecret(secret: Uint8Array, note: string) {
-        const secretA = Array.from(secret);
-        // @ts-expect-error acceptance of array-like types is not modeled
-        const key = ED25519.keyFromSecret(secretA);
-        return new EllipticSigner(key, note);
+        const key = nacl.sign.keyPair.fromSecretKey(secret);
+        return new NaclSigner(key, note);
     }
 
+    /**
+     * Instanciate from a given seed
+     * @param seed 32 bytes ed25519 seed (k) that will deterministically generate a private key
+     * @param note Set to 'this key is not important' to acknowledge the risks
+     * @returns Instance of NaclSigner
+     */
+    static fromSeed(seed: Uint8Array, note: string) {
+        const key = nacl.sign.keyPair.fromSeed(seed);
+        return new NaclSigner(key, note);
+    }
+
+    /**
+     * Returns the 32 bytes public key of this key pair
+     * @returns Public key
+     */
     public(): Uint8Array {
-        return new Uint8Array(this.key.getPublic());
+        return this.key.publicKey;
     }
 
+    /**
+     * Signs the given message
+     * @param message Bytes to sign
+     * @returns Signed message
+     */
     async sign(message: Uint8Array): Promise<Uint8Array> {
-        const messageA = Array.from(message);
-        // @ts-expect-error acceptance of array-like types is not modeled
-        const sig = this.key.sign(messageA);
-        return new Uint8Array(sig.toBytes());
+        return nacl.sign.detached(message, this.key.secretKey);
     }
 }

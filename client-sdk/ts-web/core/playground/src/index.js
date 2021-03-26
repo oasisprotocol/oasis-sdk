@@ -39,8 +39,8 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
 
         // Try sending a transaction.
         {
-            const src = oasis.signature.EllipticSigner.fromRandom('this key is not important');
-            const dst = oasis.signature.EllipticSigner.fromRandom('this key is not important');
+            const src = oasis.signature.NaclSigner.fromRandom('this key is not important');
+            const dst = oasis.signature.NaclSigner.fromRandom('this key is not important');
             console.log('src', src, 'dst', dst);
 
             const genesis = await nic.consensusGetGenesisDocument();
