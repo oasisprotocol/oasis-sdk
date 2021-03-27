@@ -1,6 +1,1 @@
-module.exports = {
-    mode: 'development',
-    devServer: {
-        contentBase: 'dist',
-    },
-};
+module.exports = require('./../../webpack.config');

@@ -9,16 +9,22 @@
     "scripts": {
         "prepare": "tsc",
         "check-playground": "cd playground && tsc -p jsconfig.json",
-        "playground": "cd playground && webpack s -c webpack.config.js"
+        "playground": "cd playground && webpack s -c webpack.config.js",
+        "test": "jest"
     },
     "dependencies": {
         "bech32": "^1.1.4",
-        "cborg": "^1.1.2",
+        "bip39": "^3.0.3",
+        "bn.js": "^5.2.0",
+        "cborg": "^1.2.1",
+        "elliptic": "^6.5.3",
         "grpc-web": "^1.2.1",
         "js-sha512": "^0.8.0",
+        "js-sha256": "^0.9.0",
         "tweetnacl": "^1.0.3"
     },
     "devDependencies": {
+        "@types/elliptic": "^6.4.12",
         "cypress": "^6.6.0",
         "typescript": "^4.1.3",
         "webpack": "^5.21.2",

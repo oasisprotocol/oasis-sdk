@@ -5,5 +5,8 @@
         "module": "CommonJS",
         "target": "ES2020",
         "declaration": true
-    }
+    },
+    "exclude": [
+        "tests"
+    ]
 }
