@@ -9,7 +9,7 @@ async function play() {
 
         // Try Ledger signing.
         {
-            const dst = oasis.signature.EllipticSigner.fromRandom('this key is not important');
+            const dst = oasis.signature.NaclSigner.fromRandom('this key is not important');
             const dstAddr = await oasis.staking.addressFromPublicKey(dst.public());
             console.log('dst addr', oasis.staking.addressToBech32(dstAddr));
 

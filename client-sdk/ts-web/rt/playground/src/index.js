@@ -98,7 +98,7 @@ const keyvalueWrapper = new Wrapper(KEYVALUE_RUNTIME_ID);
             const THE_KEY = oasis.misc.fromString('greeting-js');
             const THE_VALUE = oasis.misc.fromString('Hi from JavaScript');
 
-            const alice = oasis.signature.EllipticSigner.fromSecret(await oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')), 'this key is not important');
+            const alice = oasis.signature.NaclSigner.fromSeed(await oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')), 'this key is not important');
             const csAlice = new oasis.signature.BlindContextSigner(alice);
             // The keyvalue runtime does not use the accounts module, so there
             // is no nonce checking.
