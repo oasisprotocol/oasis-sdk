@@ -1,6 +1,10 @@
 module.exports = {
     mode: 'development',
-    devServer: {
-        contentBase: 'dist',
+    output: {
+        library: {
+            name: 'playground',
+            type: 'window',
+            export: 'playground',
+        },
     },
 };
