@@ -12,14 +12,8 @@ struct Error {
 
     data: darling::ast::Data<ErrorVariant, darling::util::Ignored>,
 
-    /// The path to the module type.
-    #[darling(default)]
-    module: Option<syn::Path>,
-
     /// The path to a const set to the module name.
-    /// This is intended for use only by core modules.
-    #[darling(default)]
-    module_name_path: Option<syn::Path>,
+    module_name: syn::Path,
 
     /// Whether to sequentially autonumber the error codes.
     /// This option exists as a convenience for runtimes that
@@ -66,16 +60,7 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
 
     let sdk_crate = gen::sdk_crate_path();
 
-    let module_name = match (&error.module, &error.module_name_path) {
-        (Some(module_path), None) => quote!(<#module_path as #sdk_crate::module::Module>::NAME),
-        (None, Some(module_name)) => quote!(#module_name),
-        (Some(_), Some(_)) => quote!(compile_error!(
-            "either `module` and `module_name` must be set"
-        )),
-        (None, None) => quote!(compile_error!(
-            r#"missing `#[sdk_error(module = "path::to::Module")]` attribute"#
-        )),
-    };
+    let module_name = error.module_name;
 
     gen::wrap_in_const(quote! {
         use #sdk_crate::{
@@ -83,7 +68,7 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
         };
 
         impl sdk::error::Error for #error_ty_ident {
-            fn module(&self) -> &str {
+            fn module_name(&self) -> &str {
                 #module_name
             }
 
@@ -94,7 +79,7 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
 
         impl From<#error_ty_ident> for RuntimeError {
             fn from(err: #error_ty_ident) -> RuntimeError {
-                RuntimeError::new(err.module(), err.code(), &err.to_string())
+                RuntimeError::new(err.module_name(), err.code(), &err.to_string())
             }
         }
     })
@@ -110,8 +95,8 @@ mod tests {
                     self as sdk, core::types::Error as RuntimeError, error::Error as _,
                 };
                 impl sdk::error::Error for Error {
-                    fn module(&self) -> &str {
-                        <module::TheModule as ::oasis_runtime_sdk::module::Module>::NAME
+                    fn module_name(&self) -> &str {
+                        MODULE_NAME
                     }
                     fn code(&self) -> u32 {
                         match self {
@@ -124,7 +109,7 @@ mod tests {
                 }
                 impl From<Error> for RuntimeError {
                     fn from(err: Error) -> RuntimeError {
-                        RuntimeError::new(err.module(), err.code(), &err.to_string())
+                        RuntimeError::new(err.module_name(), err.code(), &err.to_string())
                     }
                 }
             };
@@ -132,7 +117,7 @@ mod tests {
 
         let input: syn::DeriveInput = syn::parse_quote!(
             #[derive(Error)]
-            #[sdk_error(autonumber, module = "module::TheModule")]
+            #[sdk_error(autonumber, module_name = "MODULE_NAME")]
             pub enum Error {
                 Error0,
                 #[sdk_error(code = 2)]

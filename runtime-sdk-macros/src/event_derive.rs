@@ -12,8 +12,8 @@ struct Event {
 
     data: darling::ast::Data<EventVariant, darling::util::Ignored>,
 
-    /// The path to the module type.
-    module: syn::Path,
+    /// The path to a const set to the module name.
+    module_name: syn::Path,
 
     /// Whether to sequentially autonumber the event codes.
     /// This option exists as a convenience for runtimes that
@@ -51,7 +51,7 @@ pub fn derive_event(input: DeriveInput) -> TokenStream {
     };
 
     let event_ty_ident = &event.ident;
-    let module_path = &event.module;
+    let module_name = &event.module_name;
 
     let code_converter = gen::enum_code_converter(
         &format_ident!("self"),
@@ -65,8 +65,8 @@ pub fn derive_event(input: DeriveInput) -> TokenStream {
         use #sdk_crate::core::common::cbor;
 
         impl #sdk_crate::event::Event for #event_ty_ident {
-            fn module(&self) -> &str {
-                <#module_path as #sdk_crate::module::Module>::NAME
+            fn module_name(&self) -> &str {
+                #module_name
             }
 
             fn code(&self) -> u32 {
@@ -88,8 +88,8 @@ mod tests {
             const _: () = {
                 use oasis_runtime_sdk::core::common::cbor;
                 impl ::oasis_runtime_sdk::event::Event for MainEvent {
-                    fn module(&self) -> &str {
-                        <module::TheModule as ::oasis_runtime_sdk::module::Module>::NAME
+                    fn module_name(&self) -> &str {
+                        MODULE_NAME
                     }
                     fn code(&self) -> u32 {
                         match self {
@@ -108,7 +108,7 @@ mod tests {
 
         let input: syn::DeriveInput = syn::parse_quote!(
             #[derive(Event)]
-            #[sdk_event(autonumber, module = "module::TheModule")]
+            #[sdk_event(autonumber, module_name = "MODULE_NAME")]
             pub enum MainEvent {
                 Event0,
                 #[sdk_event(code = 2)]
