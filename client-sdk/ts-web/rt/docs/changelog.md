@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.0-alpha1
+
+Spotlight change:
+
+- We'll now be putting this on npm.
+
 Note: nonbreaking changes made before v0.1.0 aren't catalogued.
 Ask us directly or see the Git history for what changed.
 
