@@ -1,0 +1,19 @@
+[package]
+name = "oasis-runtime-sdk-macros"
+version = "0.1.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+darling = "0.12.2"
+proc-macro2 = "1.0.24"
+quote = "1.0.9"
+syn = "1.0.62"
+
+[dev-dependencies]
+diff = "0.1.12"
+syn = { version = "1.0.62", features = ["extra-traits"] }

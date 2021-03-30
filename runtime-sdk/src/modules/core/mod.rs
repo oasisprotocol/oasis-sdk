@@ -11,36 +11,29 @@ pub mod types;
 /// Unique module name.
 pub const MODULE_NAME: &str = "core";
 
-// TODO: Add a custom derive macro for easier error derivation (module/error codes).
 /// Errors emitted by the core module.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
+#[sdk_error(module_name_path = "MODULE_NAME")]
 pub enum Error {
     #[error("malformed transaction")]
+    #[sdk_error(code = 1)]
     MalformedTransaction,
+
     #[error("invalid transaction: {0}")]
+    #[sdk_error(code = 2)]
     InvalidTransaction(#[from] transaction::Error),
+
     #[error("invalid method")]
+    #[sdk_error(code = 3)]
     InvalidMethod,
+
     #[error("invalid nonce")]
+    #[sdk_error(code = 4)]
     InvalidNonce,
+
     #[error("insufficient balance to pay fees")]
+    #[sdk_error(code = 5)]
     InsufficientFeeBalance,
-}
-
-impl error::Error for Error {
-    fn module(&self) -> &str {
-        MODULE_NAME
-    }
-
-    fn code(&self) -> u32 {
-        match self {
-            Error::MalformedTransaction => 1,
-            Error::InvalidTransaction(..) => 2,
-            Error::InvalidMethod => 3,
-            Error::InvalidNonce => 4,
-            Error::InsufficientFeeBalance => 5,
-        }
-    }
 }
 
 impl From<Error> for error::RuntimeError {

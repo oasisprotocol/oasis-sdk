@@ -73,7 +73,7 @@ mod test {
     use super::*;
 
     lazy_static! {
-        static ref TEST_GUARD: Mutex<bool> = Mutex::new(false);
+        static ref TEST_GUARD: Mutex<()> = Mutex::new(());
     }
 
     fn reset_chain_context() {
