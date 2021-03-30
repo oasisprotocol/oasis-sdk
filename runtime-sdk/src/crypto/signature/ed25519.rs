@@ -7,7 +7,7 @@ use oasis_core_runtime::common::crypto::{hash::Hash, signature::PublicKey as Cor
 use crate::crypto::signature::{Error, Signature};
 
 /// An Ed25519 public key.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PublicKey(ed25519_dalek::PublicKey);
 
 impl PublicKey {

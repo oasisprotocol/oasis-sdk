@@ -7,7 +7,7 @@ pub mod ed25519;
 pub mod secp256k1;
 
 /// A public key used for signing.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub enum PublicKey {
     #[serde(rename = "ed25519")]
