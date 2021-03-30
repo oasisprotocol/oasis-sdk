@@ -16,53 +16,19 @@ pub mod types;
 const MODULE_NAME: &str = "keyvalue";
 
 /// Errors emitted by the keyvalue module.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, sdk::Error)]
+#[sdk_error(module = "Module")]
 pub enum Error {
     #[error("invalid argument")]
+    #[sdk_error(code = 1)]
     InvalidArgument,
 }
 
-impl sdk::error::Error for Error {
-    fn module(&self) -> &str {
-        MODULE_NAME
-    }
-
-    fn code(&self) -> u32 {
-        match self {
-            Error::InvalidArgument => 1,
-        }
-    }
-}
-
-impl From<Error> for sdk::error::RuntimeError {
-    fn from(err: Error) -> sdk::error::RuntimeError {
-        sdk::error::RuntimeError::new(err.module(), err.code(), &err.msg())
-    }
-}
-
 /// Events emitted by the keyvalue module (none so far).
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, sdk::Event)]
 #[serde(untagged)]
-pub enum Event {
-    // XXX: What if we don't want to have any events?  The SDK seems to require an implementation anyways :/
-    DummyEvent = 1,
-}
-
-impl sdk::event::Event for Event {
-    fn module(&self) -> &str {
-        MODULE_NAME
-    }
-
-    fn code(&self) -> u32 {
-        match self {
-            Event::DummyEvent { .. } => 1,
-        }
-    }
-
-    fn value(&self) -> cbor::Value {
-        cbor::to_value(self)
-    }
-}
+#[sdk_event(module = "Module")]
+pub enum Event {}
 
 /// Parameters for the keyvalue module (none so far).
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

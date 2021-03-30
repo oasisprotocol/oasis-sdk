@@ -78,13 +78,23 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
     };
 
     gen::wrap_in_const(quote! {
-        impl #sdk_crate::error::Error for #error_ty_ident {
+        use #sdk_crate::{
+            self as sdk, core::types::Error as RuntimeError, error::Error as _,
+        };
+
+        impl sdk::error::Error for #error_ty_ident {
             fn module(&self) -> &str {
                 #module_name
             }
 
             fn code(&self) -> u32 {
                 #code_converter
+            }
+        }
+
+        impl From<#error_ty_ident> for RuntimeError {
+            fn from(err: #error_ty_ident) -> RuntimeError {
+                RuntimeError::new(err.module(), err.code(), &err.to_string())
             }
         }
     })
@@ -96,7 +106,10 @@ mod tests {
     fn generate_error_impl() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
-                impl ::oasis_runtime_sdk::error::Error for Error {
+                use oasis_runtime_sdk::{
+                    self as sdk, core::types::Error as RuntimeError, error::Error as _,
+                };
+                impl sdk::error::Error for Error {
                     fn module(&self) -> &str {
                         <module::TheModule as ::oasis_runtime_sdk::module::Module>::NAME
                     }
@@ -107,6 +120,11 @@ mod tests {
                             Self::Error1 { .. } => 1u32,
                             Self::Error3 { .. } => 3u32,
                         }
+                    }
+                }
+                impl From<Error> for RuntimeError {
+                    fn from(err: Error) -> RuntimeError {
+                        RuntimeError::new(err.module(), err.code(), &err.to_string())
                     }
                 }
             };
