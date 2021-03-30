@@ -15,8 +15,8 @@ use crate::{
 };
 
 use super::{
-    types::*, Error, Genesis, Module as Accounts, ADDRESS_COMMON_POOL, ADDRESS_FEE_ACCUMULATOR,
-    API as _,
+    types::*, Api as _, Error, Genesis, Module as Accounts, ADDRESS_COMMON_POOL,
+    ADDRESS_FEE_ACCUMULATOR,
 };
 
 #[test]

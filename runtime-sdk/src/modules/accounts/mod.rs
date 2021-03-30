@@ -1,5 +1,5 @@
 //! Accounts module.
-use std::{collections::BTreeMap, iter::FromIterator};
+use std::collections::BTreeMap;
 
 use lazy_static::lazy_static;
 use num_traits::Zero;
@@ -150,7 +150,7 @@ module!{
 */
 
 /// Interface that can be called from other modules.
-pub trait API {
+pub trait Api {
     /// Transfer an amount from one account to the other.
     fn transfer(
         ctx: &mut TxContext<'_, '_>,
@@ -204,11 +204,7 @@ lazy_static! {
 
 impl Module {
     /// Add given amount of tokens to the specified account's balance.
-    fn add_amount<S: storage::Store>(
-        state: S,
-        addr: Address,
-        amount: &token::BaseUnits,
-    ) -> Result<(), Error> {
+    fn add_amount<S: storage::Store>(state: S, addr: Address, amount: &token::BaseUnits) {
         let store = storage::PrefixStore::new(state, &MODULE_NAME);
         let balances = storage::PrefixStore::new(store, &state::BALANCES);
         let mut account = storage::TypedStore::new(storage::PrefixStore::new(balances, &addr));
@@ -216,7 +212,6 @@ impl Module {
         value += amount.amount();
 
         account.insert(amount.denomination(), &value);
-        Ok(())
     }
 
     /// Subtract given amount of tokens from the specified account's balance.
@@ -238,10 +233,7 @@ impl Module {
     }
 
     /// Increment the total supply for the given amount.
-    fn inc_total_supply<S: storage::Store>(
-        state: S,
-        amount: &token::BaseUnits,
-    ) -> Result<(), Error> {
+    fn inc_total_supply<S: storage::Store>(state: S, amount: &token::BaseUnits) {
         let store = storage::PrefixStore::new(state, &MODULE_NAME);
         let mut total_supplies =
             storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
@@ -250,7 +242,6 @@ impl Module {
             .unwrap_or_default();
         total_supply += amount.amount();
         total_supplies.insert(amount.denomination(), &total_supply);
-        Ok(())
     }
 
     /// Decrement the total supply for the given amount.
@@ -272,7 +263,7 @@ impl Module {
     }
 }
 
-impl API for Module {
+impl Api for Module {
     fn transfer(
         ctx: &mut TxContext<'_, '_>,
         from: Address,
@@ -286,7 +277,7 @@ impl API for Module {
         // Subtract from source account.
         Self::sub_amount(ctx.runtime_state(), from, amount)?;
         // Add to destination account.
-        Self::add_amount(ctx.runtime_state(), to, amount)?;
+        Self::add_amount(ctx.runtime_state(), to, amount);
 
         // Emit a transfer event.
         ctx.emit_event(Event::Transfer {
@@ -304,10 +295,10 @@ impl API for Module {
         amount: &token::BaseUnits,
     ) -> Result<(), Error> {
         // Add to destination account.
-        Self::add_amount(ctx.runtime_state(), to, amount)?;
+        Self::add_amount(ctx.runtime_state(), to, amount);
 
         // Increase total supply.
-        Self::inc_total_supply(ctx.runtime_state(), amount)?;
+        Self::inc_total_supply(ctx.runtime_state(), amount);
 
         Ok(())
     }
@@ -343,7 +334,7 @@ impl API for Module {
         let account = storage::TypedStore::new(storage::PrefixStore::new(balances, &address));
 
         Ok(types::AccountBalances {
-            balances: BTreeMap::from_iter(account.iter()),
+            balances: account.iter().collect(),
         })
     }
 }
@@ -624,7 +615,6 @@ impl module::BlockHandler for Module {
                         .expect("there should be enough to disburse");
 
                     Self::add_amount(ctx.runtime_state(), address, &amount)
-                        .expect("add_amount must succeed for fee disbursement");
                 }
             }
         }
@@ -636,7 +626,6 @@ impl module::BlockHandler for Module {
                 *ADDRESS_COMMON_POOL,
                 &token::BaseUnits::new(remainder, denom),
             )
-            .expect("add_amount must succeed for transfer to common pool")
         }
 
         // Fees for the active block should be transferred to the fee accumulator address.
@@ -647,7 +636,6 @@ impl module::BlockHandler for Module {
                 *ADDRESS_FEE_ACCUMULATOR,
                 &token::BaseUnits::new(amount, denom),
             )
-            .expect("add_amount must succeed for transfer to fee accumulator")
         }
     }
 }

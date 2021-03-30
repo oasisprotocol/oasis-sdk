@@ -81,8 +81,8 @@ impl<'a> DispatchContext<'a> {
     }
 
     /// Runtime state store.
-    pub fn runtime_state(&mut self) -> storage::MKVSStore<&mut dyn mkvs::MKVS> {
-        storage::MKVSStore::new(self.io_ctx.clone(), &mut self.runtime_storage)
+    pub fn runtime_state(&mut self) -> storage::MkvsStore<&mut dyn mkvs::MKVS> {
+        storage::MkvsStore::new(self.io_ctx.clone(), &mut self.runtime_storage)
     }
 
     /// Emits runtime messages
@@ -132,7 +132,7 @@ impl<'a> DispatchContext<'a> {
         F: FnOnce(TxContext<'_, '_>, transaction::Call) -> R,
     {
         // Create a store wrapped by an overlay store so we can either rollback or commit.
-        let store = storage::MKVSStore::new(self.io_ctx.clone(), &mut self.runtime_storage);
+        let store = storage::MkvsStore::new(self.io_ctx.clone(), &mut self.runtime_storage);
         let store = storage::OverlayStore::new(store);
 
         let tx_ctx = TxContext {
@@ -160,7 +160,7 @@ pub struct TxContext<'a, 'b> {
     runtime_round_results: &'a roothash::RoundResults,
     // TODO: linked consensus layer block
     // TODO: linked consensus layer state storage (or just expose high-level stuff)
-    store: storage::OverlayStore<storage::MKVSStore<&'b mut &'a mut dyn mkvs::MKVS>>,
+    store: storage::OverlayStore<storage::MkvsStore<&'b mut &'a mut dyn mkvs::MKVS>>,
 
     /// Transaction authentication info.
     tx_auth_info: transaction::AuthInfo,
@@ -203,7 +203,7 @@ impl<'a, 'b> TxContext<'a, 'b> {
     /// Runtime state store.
     pub fn runtime_state(
         &mut self,
-    ) -> &mut storage::OverlayStore<storage::MKVSStore<&'b mut &'a mut dyn mkvs::MKVS>> {
+    ) -> &mut storage::OverlayStore<storage::MkvsStore<&'b mut &'a mut dyn mkvs::MKVS>> {
         &mut self.store
     }
 

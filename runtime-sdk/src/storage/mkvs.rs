@@ -7,12 +7,12 @@ use oasis_core_runtime::storage::mkvs;
 use super::{Store, StoreKey};
 
 /// A key-value store backed by MKVS.
-pub struct MKVSStore<M: mkvs::MKVS> {
+pub struct MkvsStore<M: mkvs::MKVS> {
     ctx: Arc<Context>,
     parent: M,
 }
 
-impl<M: mkvs::MKVS> MKVSStore<M> {
+impl<M: mkvs::MKVS> MkvsStore<M> {
     pub fn new(ctx: Arc<Context>, parent: M) -> Self {
         Self { ctx, parent }
     }
@@ -23,7 +23,7 @@ impl<M: mkvs::MKVS> MKVSStore<M> {
     }
 }
 
-impl<M: mkvs::MKVS> Store for MKVSStore<M> {
+impl<M: mkvs::MKVS> Store for MkvsStore<M> {
     fn get<K: StoreKey>(&self, key: K) -> Option<Vec<u8>> {
         self.parent.get(self.create_ctx(), key.as_store_key())
     }

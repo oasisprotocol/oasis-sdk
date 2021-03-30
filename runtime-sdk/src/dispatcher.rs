@@ -94,10 +94,10 @@ impl<R: Runtime> Dispatcher<R> {
         &self,
         ctx: &mut DispatchContext<'_>,
         tx: types::transaction::Transaction,
-    ) -> Result<DispatchResult, Error> {
+    ) -> DispatchResult {
         // Run pre-processing hooks.
         if let Err(err) = R::Modules::authenticate_tx(ctx, &tx) {
-            return Ok(err.to_call_result().into());
+            return err.to_call_result().into();
         }
 
         // Perform transaction method lookup.
@@ -105,7 +105,7 @@ impl<R: Runtime> Dispatcher<R> {
             Some(mi) => mi,
             None => {
                 // Method not found.
-                return Ok(modules::core::Error::InvalidMethod.to_call_result().into());
+                return modules::core::Error::InvalidMethod.to_call_result().into();
             }
         };
 
@@ -125,62 +125,58 @@ impl<R: Runtime> Dispatcher<R> {
         ctx.emit_messages(messages)
             .expect("per-tx context has already enforced the limits");
 
-        Ok(result)
+        result
     }
 
-    fn check_tx(&self, ctx: &mut DispatchContext<'_>, tx: &[u8]) -> Result<CheckTxResult, Error> {
+    fn check_tx(&self, ctx: &mut DispatchContext<'_>, tx: &[u8]) -> CheckTxResult {
         let tx = match self.decode_tx(&tx) {
             Ok(tx) => tx,
             Err(err) => {
-                return Ok(CheckTxResult {
+                return CheckTxResult {
                     error: RuntimeError {
                         module: err.module().to_string(),
                         code: err.code(),
                         message: err.to_string(),
                     },
                     meta: None,
-                })
+                }
             }
         };
 
-        match self.dispatch_tx(ctx, tx)?.result {
-            types::transaction::CallResult::Ok(value) => Ok(CheckTxResult {
+        match self.dispatch_tx(ctx, tx).result {
+            types::transaction::CallResult::Ok(value) => CheckTxResult {
                 error: Default::default(),
                 meta: Some(value),
-            }),
+            },
 
-            types::transaction::CallResult::Failed { module, code } => Ok(CheckTxResult {
+            types::transaction::CallResult::Failed { module, code } => CheckTxResult {
                 error: RuntimeError {
                     module,
                     code,
                     message: Default::default(),
                 },
                 meta: None,
-            }),
+            },
         }
     }
 
-    fn execute_tx(
-        &self,
-        ctx: &mut DispatchContext<'_>,
-        tx: &[u8],
-    ) -> Result<ExecuteTxResult, Error> {
+    fn execute_tx(&self, ctx: &mut DispatchContext<'_>, tx: &[u8]) -> ExecuteTxResult {
         let tx = match self.decode_tx(&tx) {
             Ok(tx) => tx,
             Err(err) => {
-                return Ok(ExecuteTxResult {
+                return ExecuteTxResult {
                     output: cbor::to_vec(&err.to_call_result()),
                     tags: Tags::new(),
-                })
+                }
             }
         };
 
-        let dispatch_result = self.dispatch_tx(ctx, tx)?;
+        let dispatch_result = self.dispatch_tx(ctx, tx);
 
-        Ok(ExecuteTxResult {
+        ExecuteTxResult {
             output: cbor::to_vec(&dispatch_result.result),
             tags: dispatch_result.tags,
-        })
+        }
     }
 
     fn maybe_init_state(&self, ctx: &mut DispatchContext<'_>) {
@@ -207,7 +203,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Execute the batch.
             let mut results = Vec::with_capacity(batch.len());
             for tx in batch.iter() {
-                results.push(self.execute_tx(&mut ctx, &tx)?);
+                results.push(self.execute_tx(&mut ctx, &tx));
             }
 
             // Run end block hooks.
@@ -235,7 +231,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Check the batch.
             let mut results = Vec::with_capacity(batch.len());
             for tx in batch.iter() {
-                results.push(self.check_tx(&mut ctx, &tx)?);
+                results.push(self.check_tx(&mut ctx, &tx));
             }
 
             Ok(results)

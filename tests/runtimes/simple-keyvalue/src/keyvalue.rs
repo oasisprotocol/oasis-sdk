@@ -88,7 +88,7 @@ impl Module {
     ) -> CallResult {
         let result = || -> Result<cbor::Value, Error> {
             let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-            Ok(cbor::to_value(&Self::insert(ctx, args)?))
+            Ok(cbor::to_value(&Self::insert(ctx, args)))
         }();
         match result {
             Ok(value) => CallResult::Ok(value),
@@ -103,7 +103,7 @@ impl Module {
     ) -> CallResult {
         let result = || -> Result<cbor::Value, Error> {
             let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-            Ok(cbor::to_value(&Self::remove(ctx, args)?))
+            Ok(cbor::to_value(&Self::remove(ctx, args)))
         }();
         match result {
             Ok(value) => CallResult::Ok(value),
@@ -124,25 +124,23 @@ impl Module {
 // Actual implementation of this runtime's externally-callable methods.
 impl Module {
     // Insert given keyvalue into storage.
-    fn insert(ctx: &mut TxContext, body: types::KeyValue) -> Result<(), Error> {
+    fn insert(ctx: &mut TxContext, body: types::KeyValue) {
         if ctx.is_check_only() {
-            return Ok(());
+            return;
         }
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut ts = sdk::storage::TypedStore::new(&mut store);
         ts.insert(body.key, &body.value);
-        Ok(())
     }
 
     // Remove keyvalue from storage using given key.
-    fn remove(ctx: &mut TxContext, body: types::Key) -> Result<(), Error> {
+    fn remove(ctx: &mut TxContext, body: types::Key) {
         if ctx.is_check_only() {
-            return Ok(());
+            return;
         }
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut ts = sdk::storage::TypedStore::new(&mut store);
         ts.remove(body.key);
-        Ok(())
     }
 
     // Fetch keyvalue from storage using given key.

@@ -105,7 +105,7 @@ impl From<u64> for OwnedStoreKey {
     }
 }
 
-pub use mkvs::MKVSStore;
+pub use mkvs::MkvsStore;
 pub use overlay::OverlayStore;
 pub use prefix::PrefixStore;
 pub use typed::TypedStore;
