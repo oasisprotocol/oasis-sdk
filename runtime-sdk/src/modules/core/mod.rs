@@ -1,10 +1,7 @@
 //! Core definitions module.
 use thiserror::Error;
 
-use crate::{
-    error::{self, Error as _},
-    types::transaction,
-};
+use crate::types::transaction;
 
 pub mod types;
 
@@ -34,12 +31,6 @@ pub enum Error {
     #[error("insufficient balance to pay fees")]
     #[sdk_error(code = 5)]
     InsufficientFeeBalance,
-}
-
-impl From<Error> for error::RuntimeError {
-    fn from(err: Error) -> error::RuntimeError {
-        error::RuntimeError::new(err.module(), err.code(), &err.msg())
-    }
 }
 
 /// State schema constants.

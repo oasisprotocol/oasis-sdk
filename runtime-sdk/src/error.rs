@@ -34,11 +34,6 @@ pub trait Error: std::error::Error {
     /// Error code uniquely identifying the error.
     fn code(&self) -> u32;
 
-    /// Error message.
-    fn msg(&self) -> String {
-        self.to_string()
-    }
-
     /// Converts the error into a call result.
     fn to_call_result(&self) -> CallResult {
         CallResult::Failed {

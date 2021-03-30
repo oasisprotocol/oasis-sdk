@@ -46,12 +46,6 @@ pub enum Error {
     Forbidden,
 }
 
-impl From<Error> for error::RuntimeError {
-    fn from(err: Error) -> error::RuntimeError {
-        error::RuntimeError::new(err.module(), err.code(), &err.msg())
-    }
-}
-
 /// Events emitted by the accounts module.
 #[derive(Debug, Serialize, Deserialize, oasis_runtime_sdk_macros::Event)]
 #[serde(untagged)]
