@@ -6,6 +6,13 @@ Spotlight change:
 
 - We'll now be putting this on npm.
 
+Breaking changes:
+
+- `TransactionWrapper.sign` now computes the signature context.
+  Accordingly, it now takes the consensus chain context as a parameter.
+  You can get this from `oasis.client.NodeInternal.consensusGetChainContext` if
+  you don't already have it.
+
 Note: nonbreaking changes made before v0.1.0 aren't catalogued.
 Ask us directly or see the Git history for what changed.
 
