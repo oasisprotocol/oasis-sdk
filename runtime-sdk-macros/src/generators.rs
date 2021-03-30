@@ -55,15 +55,18 @@ pub fn enum_code_converter<V: CodedVariant>(
         let code = match variant.code() {
             Some(code) => {
                 if reserved_numbers.contains(&code) {
+                    let code_already_used = format!("code {} already used", code);
+                    #[cfg(feature = "nightly")]
                     variant_ident
                         .span()
                         .unwrap()
-                        .error(format!("code {} already used", code))
+                        .error(code_already_used)
                         .emit();
-                    return quote!({});
+                    quote!(compile_error!(#code_already_used))
+                } else {
+                    reserved_numbers.insert(code);
+                    quote!(#code)
                 }
-                reserved_numbers.insert(code);
-                code
             }
             None if autonumber => {
                 let mut reserved_successors = reserved_numbers.range(next_autonumber..);
@@ -73,15 +76,17 @@ pub fn enum_code_converter<V: CodedVariant>(
                 let code = next_autonumber;
                 reserved_numbers.insert(code);
                 next_autonumber += 1;
-                code
+                quote!(#code)
             }
             None => {
+                let missing_code_for_variant = format!("missing `{}` for variant", V::FIELD_NAME);
+                #[cfg(feature = "nightly")]
                 variant_ident
                     .span()
                     .unwrap()
-                    .error(format!("missing `{}` for variant", V::FIELD_NAME))
+                    .error(missing_code_for_variant)
                     .emit();
-                return quote!();
+                quote!(compile_error!(#missing_code_for_variant))
             }
         };
         quote!(Self::#variant_ident { .. } => { #code })

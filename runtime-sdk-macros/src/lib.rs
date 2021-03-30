@@ -1,4 +1,4 @@
-#![feature(proc_macro_diagnostic)]
+#![cfg_attr(feature = "nightly", feature(proc_macro_diagnostic))]
 #![deny(rust_2018_idioms)]
 
 use proc_macro::TokenStream;

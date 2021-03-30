@@ -6,7 +6,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.0.1" }
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", branch = "nhynes/use-stable-rust" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
@@ -26,3 +26,4 @@ lazy_static = "1.4.0"
 
 [features]
 default = ["oasis-runtime-sdk-macros"]
+nightly = ["oasis-runtime-sdk-macros/nightly"]

@@ -17,3 +17,6 @@ syn = "1.0.62"
 [dev-dependencies]
 diff = "0.1.12"
 syn = { version = "1.0.62", features = ["extra-traits"] }
+
+[features]
+nightly = [] # Enables better error messages.
