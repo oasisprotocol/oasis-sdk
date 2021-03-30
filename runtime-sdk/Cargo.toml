@@ -7,6 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.0.1" }
+oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
 serde = { version = "1.0.118", features = ["derive"] }
@@ -22,3 +23,6 @@ num-traits = "0.2.14"
 impl-trait-for-tuples = "0.2"
 base64 = "0.13.0"
 lazy_static = "1.4.0"
+
+[features]
+default = ["oasis-runtime-sdk-macros"]

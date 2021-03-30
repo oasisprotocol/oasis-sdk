@@ -12,7 +12,7 @@ use crate::{
     context::{DispatchContext, TxContext},
     crypto::signature::PublicKey,
     error::{self, Error as _},
-    event, module,
+    module,
     module::{CallableMethodInfo, Module as _, QueryMethodInfo},
     modules, storage,
     types::{
@@ -29,76 +29,46 @@ pub mod types;
 /// Unique module name.
 const MODULE_NAME: &str = "accounts";
 
-// TODO: Add a custom derive macro for easier error derivation (module/error codes).
 /// Errors emitted by the accounts module.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
+#[sdk_error(module = "Module")]
 pub enum Error {
     #[error("invalid argument")]
+    #[sdk_error(code = 1)]
     InvalidArgument,
+
     #[error("insufficient balance")]
+    #[sdk_error(code = 2)]
     InsufficientBalance,
+
     #[error("forbidden by policy")]
+    #[sdk_error(code = 3)]
     Forbidden,
 }
 
-impl error::Error for Error {
-    fn module(&self) -> &str {
-        MODULE_NAME
-    }
-
-    fn code(&self) -> u32 {
-        match self {
-            Error::InvalidArgument => 1,
-            Error::InsufficientBalance => 2,
-            Error::Forbidden => 3,
-        }
-    }
-}
-
-impl From<Error> for error::RuntimeError {
-    fn from(err: Error) -> error::RuntimeError {
-        error::RuntimeError::new(err.module(), err.code(), &err.msg())
-    }
-}
-
-// TODO: Add a custom derive macro for easier event derivation (tags).
 /// Events emitted by the accounts module.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, oasis_runtime_sdk_macros::Event)]
 #[serde(untagged)]
+#[sdk_event(module = "Module")]
 pub enum Event {
+    #[sdk_event(code = 1)]
     Transfer {
         from: Address,
         to: Address,
         amount: token::BaseUnits,
     },
 
+    #[sdk_event(code = 2)]
     Burn {
         owner: Address,
         amount: token::BaseUnits,
     },
 
+    #[sdk_event(code = 3)]
     Mint {
         owner: Address,
         amount: token::BaseUnits,
     },
-}
-
-impl event::Event for Event {
-    fn module(&self) -> &str {
-        MODULE_NAME
-    }
-
-    fn code(&self) -> u32 {
-        match self {
-            Event::Transfer { .. } => 1,
-            Event::Burn { .. } => 2,
-            Event::Mint { .. } => 3,
-        }
-    }
-
-    fn value(&self) -> cbor::Value {
-        cbor::to_value(self)
-    }
 }
 
 /// Parameters for the accounts module.
