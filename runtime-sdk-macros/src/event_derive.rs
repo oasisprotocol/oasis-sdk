@@ -65,7 +65,7 @@ pub fn derive_event(input: DeriveInput) -> TokenStream {
         use #sdk_crate::core::common::cbor;
 
         impl #sdk_crate::event::Event for #event_ty_ident {
-            fn module_name(&self) -> &str {
+            fn module_name() -> &'static str {
                 #module_name
             }
 
@@ -88,7 +88,7 @@ mod tests {
             const _: () = {
                 use oasis_runtime_sdk::core::common::cbor;
                 impl ::oasis_runtime_sdk::event::Event for MainEvent {
-                    fn module_name(&self) -> &str {
+                    fn module_name() -> &'static str {
                         MODULE_NAME
                     }
                     fn code(&self) -> u32 {

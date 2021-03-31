@@ -24,7 +24,7 @@ use oasis_core_runtime::{common::cbor, transaction::tags::Tag};
 /// ```
 pub trait Event {
     /// Name of the module that emitted the event.
-    fn module_name(&self) -> &str;
+    fn module_name() -> &'static str;
 
     /// Code uniquely identifying the event.
     fn code(&self) -> u32;
@@ -46,7 +46,7 @@ pub trait Event {
     ///
     fn to_tag(&self) -> Tag {
         Tag::new(
-            [self.module_name().as_bytes(), &self.code().to_be_bytes()]
+            [Self::module_name().as_bytes(), &self.code().to_be_bytes()]
                 .concat()
                 .to_vec(),
             cbor::to_vec(&self.value()),

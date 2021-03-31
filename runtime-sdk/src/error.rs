@@ -29,7 +29,7 @@ use crate::types::transaction::CallResult;
 /// ```
 pub trait Error: std::error::Error {
     /// Name of the module that emitted the error.
-    fn module_name(&self) -> &str;
+    fn module_name() -> &'static str;
 
     /// Error code uniquely identifying the error.
     fn code(&self) -> u32;
@@ -37,7 +37,7 @@ pub trait Error: std::error::Error {
     /// Converts the error into a call result.
     fn to_call_result(&self) -> CallResult {
         CallResult::Failed {
-            module: self.module_name().to_owned(),
+            module: Self::module_name().to_owned(),
             code: self.code(),
         }
     }
