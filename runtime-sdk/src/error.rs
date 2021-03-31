@@ -14,9 +14,9 @@ use crate::types::transaction::CallResult;
 /// # mod example {
 /// # use serde::{Serialize, Deserialize};
 /// # use oasis_runtime_sdk_macros::Error;
-/// # mod path { pub mod to { pub use oasis_runtime_sdk::modules::accounts::Module as MyModule; }}
+/// const MODULE_NAME: &str = "my-module";
 /// #[derive(Clone, Debug, Serialize, Deserialize, Error, thiserror::Error)]
-/// #[sdk_error(module = "path::to::MyModule", autonumber)] // `module` is required
+/// #[sdk_error(autonumber)] // `module_name` meta is required if `MODULE_NAME` isn't in scope
 /// enum Error {
 ///    #[error("invalid argument")]
 ///    InvalidArgument,          // autonumbered to 0
@@ -29,7 +29,7 @@ use crate::types::transaction::CallResult;
 /// ```
 pub trait Error: std::error::Error {
     /// Name of the module that emitted the error.
-    fn module(&self) -> &str;
+    fn module_name() -> &'static str;
 
     /// Error code uniquely identifying the error.
     fn code(&self) -> u32;
@@ -37,7 +37,7 @@ pub trait Error: std::error::Error {
     /// Converts the error into a call result.
     fn to_call_result(&self) -> CallResult {
         CallResult::Failed {
-            module: self.module().to_owned(),
+            module: Self::module_name().to_owned(),
             code: self.code(),
         }
     }

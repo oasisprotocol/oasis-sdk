@@ -31,7 +31,6 @@ const MODULE_NAME: &str = "accounts";
 
 /// Errors emitted by the accounts module.
 #[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
-#[sdk_error(module = "Module")]
 pub enum Error {
     #[error("invalid argument")]
     #[sdk_error(code = 1)]
@@ -49,7 +48,6 @@ pub enum Error {
 /// Events emitted by the accounts module.
 #[derive(Debug, Serialize, Deserialize, oasis_runtime_sdk_macros::Event)]
 #[serde(untagged)]
-#[sdk_event(module = "Module")]
 pub enum Event {
     #[sdk_event(code = 1)]
     Transfer {
