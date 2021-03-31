@@ -1,6 +1,6 @@
 {
     "name": "@oasisprotocol/client-signer-ledger",
-    "version": "0.0.1",
+    "version": "0.1.0-alpha1",
     "license": "Apache-2.0",
     "files": [
         "dist"
@@ -13,7 +13,7 @@
     },
     "dependencies": {
         "@ledgerhq/hw-transport-webusb": "^5.41.0",
-        "@oasisprotocol/client": "^0.0.2",
+        "@oasisprotocol/client": "^0.1.0-alpha1",
         "@oasisprotocol/ledger": "^0.1.0"
     },
     "devDependencies": {
