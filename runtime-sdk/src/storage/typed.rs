@@ -1,10 +1,10 @@
-use std::marker::PhantomData;
+use std::{convert::TryFrom, marker::PhantomData};
 
 use serde::{de::DeserializeOwned, Serialize};
 
 use oasis_core_runtime::{common::cbor, storage::mkvs};
 
-use super::{DecodableStoreKey, Store, StoreKey};
+use super::Store;
 
 /// A key-value store that transparently handles serialization/deserialization.
 pub struct TypedStore<S: Store> {
@@ -18,36 +18,48 @@ impl<S: Store> TypedStore<S> {
     }
 
     /// Fetch entry with given key.
-    pub fn get<K: StoreKey, T: DeserializeOwned>(&self, key: K) -> Option<T> {
+    pub fn get<K: AsRef<[u8]>, T: DeserializeOwned>(&self, key: K) -> Option<T> {
         self.parent
             .get(key)
             .map(|data| cbor::from_slice(&data).unwrap())
     }
 
     /// Update entry with given key to the given value.
-    pub fn insert<K: StoreKey, T: Serialize>(&mut self, key: K, value: &T) {
+    pub fn insert<K: AsRef<[u8]>, T: Serialize>(&mut self, key: K, value: &T) {
         self.parent.insert(key, &cbor::to_vec(value))
     }
 
     /// Remove entry with given key.
-    pub fn remove<K: StoreKey>(&mut self, key: K) {
+    pub fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
         self.parent.remove(key)
     }
 
-    pub fn iter<K: DecodableStoreKey, V: DeserializeOwned>(&self) -> TypedStoreIterator<'_, K, V> {
+    pub fn iter<'store, K, V>(&'store self) -> TypedStoreIterator<'store, K, V>
+    where
+        K: for<'k> TryFrom<&'k [u8]>,
+        V: DeserializeOwned,
+    {
         TypedStoreIterator::new(self.parent.iter())
     }
 }
 
 /// An iterator over the `TypedStore`.
-pub struct TypedStoreIterator<'store, K: DecodableStoreKey, V: DeserializeOwned> {
+pub struct TypedStoreIterator<'store, K, V>
+where
+    K: for<'k> TryFrom<&'k [u8]>,
+    V: DeserializeOwned,
+{
     inner: Box<dyn mkvs::Iterator + 'store>,
 
     _key: PhantomData<K>,
     _value: PhantomData<V>,
 }
 
-impl<'store, K: DecodableStoreKey, V: DeserializeOwned> TypedStoreIterator<'store, K, V> {
+impl<'store, K, V> TypedStoreIterator<'store, K, V>
+where
+    K: for<'k> TryFrom<&'k [u8]>,
+    V: DeserializeOwned,
+{
     fn new(inner: Box<dyn mkvs::Iterator + 'store>) -> Self {
         Self {
             inner,
@@ -57,17 +69,19 @@ impl<'store, K: DecodableStoreKey, V: DeserializeOwned> TypedStoreIterator<'stor
     }
 }
 
-impl<'store, K: DecodableStoreKey, V: DeserializeOwned> Iterator
-    for TypedStoreIterator<'store, K, V>
+impl<'store, K, V, E> Iterator for TypedStoreIterator<'store, K, V>
+where
+    K: for<'k> TryFrom<&'k [u8], Error = E>,
+    E: std::error::Error,
+    V: DeserializeOwned,
 {
     type Item = (K, V);
 
     fn next(&mut self) -> Option<Self::Item> {
         Iterator::next(&mut self.inner).map(|(k, v)| {
-            (
-                DecodableStoreKey::from_bytes(&k).unwrap(),
-                cbor::from_slice(&v).unwrap(),
-            )
+            let key = K::try_from(&k).unwrap_or_else(|e| panic!("corrupted storage key: {}", e));
+            let value = cbor::from_slice(&v).unwrap();
+            (key, value)
         })
     }
 }

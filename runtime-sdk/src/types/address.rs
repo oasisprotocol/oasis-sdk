@@ -6,10 +6,7 @@ use thiserror::Error;
 
 use oasis_core_runtime::common::crypto::hash::Hash;
 
-use crate::{
-    crypto::signature::PublicKey,
-    storage::{DecodableStoreKey, StoreKey},
-};
+use crate::crypto::signature::PublicKey;
 
 const ADDRESS_VERSION_SIZE: usize = 1;
 const ADDRESS_DATA_SIZE: usize = 20;
@@ -102,6 +99,12 @@ impl Address {
     }
 }
 
+impl AsRef<[u8]> for Address {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl From<&'static str> for Address {
     fn from(s: &'static str) -> Address {
         Address::from_bech32(s).unwrap()
@@ -188,24 +191,6 @@ impl<'de> serde::Deserialize<'de> for Address {
         } else {
             Ok(deserializer.deserialize_bytes(BytesVisitor)?)
         }
-    }
-}
-
-impl StoreKey for Address {
-    fn as_store_key(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl StoreKey for &Address {
-    fn as_store_key(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl DecodableStoreKey for Address {
-    fn from_bytes(v: &[u8]) -> Option<Address> {
-        Address::from_bytes(v).ok()
     }
 }
 

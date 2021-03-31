@@ -1,11 +1,9 @@
 //! Token types.
-use std::fmt;
+use std::{convert::TryFrom, fmt};
 
 use serde::{self, Deserialize, Serialize};
 
 pub use oasis_core_runtime::common::quantity::Quantity;
-
-use crate::storage::{DecodableStoreKey, StoreKey};
 
 /// Name/type of the token.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -18,11 +16,15 @@ impl Denomination {
     /// Denomination in native token.
     pub const NATIVE: Denomination = Denomination(Vec::new());
 
-    // TODO: Enforce maximum length during deserialization.
-
     /// Whether the denomination represents the native token.
     pub fn is_native(&self) -> bool {
         self.0.is_empty()
+    }
+}
+
+impl AsRef<[u8]> for Denomination {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 
@@ -37,31 +39,32 @@ impl fmt::Display for Denomination {
     }
 }
 
-impl From<&str> for Denomination {
-    fn from(v: &str) -> Denomination {
-        Denomination(v.as_bytes().to_vec())
+impl std::str::FromStr for Denomination {
+    type Err = Error;
+    fn from_str(v: &str) -> Result<Self, Self::Err> {
+        Self::try_from(v.as_bytes())
     }
 }
 
-impl StoreKey for Denomination {
-    fn as_store_key(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl StoreKey for &Denomination {
-    fn as_store_key(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl DecodableStoreKey for Denomination {
-    fn from_bytes(v: &[u8]) -> Option<Denomination> {
-        if v.len() > Self::MAX_LENGTH {
-            return None;
+impl TryFrom<&[u8]> for Denomination {
+    type Error = Error;
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        if bytes.len() > Self::MAX_LENGTH {
+            return Err(Error::NameTooLong {
+                length: bytes.len(),
+            });
         }
-        Some(Denomination(v.into()))
+        Ok(Self(bytes.to_vec()))
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error(
+        "denomination name too long. received length {length} exceeded maximum of {}",
+        Denomination::MAX_LENGTH
+    )]
+    NameTooLong { length: usize },
 }
 
 /// Token amount of given denomination in base units.
@@ -107,9 +110,9 @@ mod test {
             (1, Denomination::NATIVE, "82410140"),
             (1000, Denomination::NATIVE, "824203e840"),
             // Custom denomination.
-            (0, "test".into(), "82404474657374"),
-            (1, "test".into(), "8241014474657374"),
-            (1000, "test".into(), "824203e84474657374"),
+            (0, "test".parse().unwrap(), "82404474657374"),
+            (1, "test".parse().unwrap(), "8241014474657374"),
+            (1000, "test".parse().unwrap(), "824203e84474657374"),
         ];
 
         for tc in cases {

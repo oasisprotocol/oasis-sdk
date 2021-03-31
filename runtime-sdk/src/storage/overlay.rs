@@ -5,7 +5,7 @@ use std::{
 
 use oasis_core_runtime::storage::mkvs;
 
-use super::{Store, StoreKey};
+use super::Store;
 
 pub struct OverlayStore<S: Store> {
     parent: S,
@@ -37,31 +37,31 @@ impl<S: Store> OverlayStore<S> {
 }
 
 impl<S: Store> Store for OverlayStore<S> {
-    fn get<K: StoreKey>(&self, key: K) -> Option<Vec<u8>> {
+    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Vec<u8>> {
         // For dirty values, check the overlay.
-        if self.dirty.contains(key.as_store_key()) {
-            return self.overlay.get(key.as_store_key()).cloned();
+        if self.dirty.contains(key.as_ref()) {
+            return self.overlay.get(key.as_ref()).cloned();
         }
 
         // Otherwise fetch from parent store.
         self.parent.get(key)
     }
 
-    fn insert<K: StoreKey>(&mut self, key: K, value: &[u8]) {
+    fn insert<K: AsRef<[u8]>>(&mut self, key: K, value: &[u8]) {
         self.overlay
-            .insert(key.as_store_key().to_owned(), value.to_owned());
-        self.dirty.insert(key.as_store_key().to_owned());
+            .insert(key.as_ref().to_owned(), value.to_owned());
+        self.dirty.insert(key.as_ref().to_owned());
     }
 
-    fn remove<K: StoreKey>(&mut self, key: K) {
+    fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
         // For dirty values, remove from the overlay.
-        if self.dirty.contains(key.as_store_key()) {
-            self.overlay.remove(key.as_store_key());
+        if self.dirty.contains(key.as_ref()) {
+            self.overlay.remove(key.as_ref());
             return;
         }
 
         // Since we don't care about the previous value, we can just record an update.
-        self.dirty.insert(key.as_store_key().to_owned());
+        self.dirty.insert(key.as_ref().to_owned());
     }
 
     fn iter(&self) -> Box<dyn mkvs::Iterator + '_> {

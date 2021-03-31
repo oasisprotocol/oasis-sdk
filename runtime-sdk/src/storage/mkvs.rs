@@ -4,7 +4,7 @@ use io_context::Context;
 
 use oasis_core_runtime::storage::mkvs;
 
-use super::{Store, StoreKey};
+use super::Store;
 
 /// A key-value store backed by MKVS.
 pub struct MKVSStore<M: mkvs::MKVS> {
@@ -24,17 +24,16 @@ impl<M: mkvs::MKVS> MKVSStore<M> {
 }
 
 impl<M: mkvs::MKVS> Store for MKVSStore<M> {
-    fn get<K: StoreKey>(&self, key: K) -> Option<Vec<u8>> {
-        self.parent.get(self.create_ctx(), key.as_store_key())
+    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Vec<u8>> {
+        self.parent.get(self.create_ctx(), key.as_ref())
     }
 
-    fn insert<K: StoreKey>(&mut self, key: K, value: &[u8]) {
-        self.parent
-            .insert(self.create_ctx(), key.as_store_key(), value);
+    fn insert<K: AsRef<[u8]>>(&mut self, key: K, value: &[u8]) {
+        self.parent.insert(self.create_ctx(), key.as_ref(), value);
     }
 
-    fn remove<K: StoreKey>(&mut self, key: K) {
-        self.parent.remove(self.create_ctx(), key.as_store_key());
+    fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
+        self.parent.remove(self.create_ctx(), key.as_ref());
     }
 
     fn iter(&self) -> Box<dyn mkvs::Iterator + '_> {
