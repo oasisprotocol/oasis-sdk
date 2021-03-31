@@ -17,7 +17,6 @@ const MODULE_NAME: &str = "keyvalue";
 
 /// Errors emitted by the keyvalue module.
 #[derive(Error, Debug, sdk::Error)]
-#[sdk_error(module_name = "MODULE_NAME")]
 pub enum Error {
     #[error("invalid argument")]
     #[sdk_error(code = 1)]
@@ -27,7 +26,6 @@ pub enum Error {
 /// Events emitted by the keyvalue module (none so far).
 #[derive(Debug, Serialize, Deserialize, sdk::Event)]
 #[serde(untagged)]
-#[sdk_event(module_name = "MODULE_NAME")]
 pub enum Event {}
 
 /// Parameters for the keyvalue module (none so far).

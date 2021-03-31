@@ -16,7 +16,7 @@ use crate::types::transaction::CallResult;
 /// # use oasis_runtime_sdk_macros::Error;
 /// const MODULE_NAME: &str = "my-module";
 /// #[derive(Clone, Debug, Serialize, Deserialize, Error, thiserror::Error)]
-/// #[sdk_error(module_name = "MODULE_NAME", autonumber)] // `module_name` is required
+/// #[sdk_error(autonumber)] // `module_name` meta is required if `MODULE_NAME` isn't in scope
 /// enum Error {
 ///    #[error("invalid argument")]
 ///    InvalidArgument,          // autonumbered to 0

@@ -13,7 +13,8 @@ struct Error {
     data: darling::ast::Data<ErrorVariant, darling::util::Ignored>,
 
     /// The path to a const set to the module name.
-    module_name: syn::Path,
+    #[darling(default)]
+    module_name: Option<syn::Path>,
 
     /// Whether to sequentially autonumber the error codes.
     /// This option exists as a convenience for runtimes that
@@ -60,7 +61,9 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
 
     let sdk_crate = gen::sdk_crate_path();
 
-    let module_name = error.module_name;
+    let module_name = error
+        .module_name
+        .unwrap_or_else(|| syn::parse_quote!(MODULE_NAME));
 
     gen::wrap_in_const(quote! {
         use #sdk_crate::{
@@ -88,7 +91,7 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn generate_error_impl() {
+    fn generate_error_impl_auto() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
                 use oasis_runtime_sdk::{
@@ -117,7 +120,7 @@ mod tests {
 
         let input: syn::DeriveInput = syn::parse_quote!(
             #[derive(Error)]
-            #[sdk_error(autonumber, module_name = "MODULE_NAME")]
+            #[sdk_error(autonumber)]
             pub enum Error {
                 Error0,
                 #[sdk_error(code = 2)]
@@ -127,6 +130,40 @@ mod tests {
                 Error1(String),
                 Error3,
             }
+        );
+        let error_derivation = super::derive_error(input);
+        let actual: syn::Stmt = syn::parse2(error_derivation).unwrap();
+
+        crate::assert_empty_diff!(actual, expected);
+    }
+
+    #[test]
+    fn generate_error_impl_manual() {
+        let expected: syn::Stmt = syn::parse_quote!(
+            const _: () = {
+                use oasis_runtime_sdk::{
+                    self as sdk, core::types::Error as RuntimeError, error::Error as _,
+                };
+                impl sdk::error::Error for Error {
+                    fn module_name() -> &'static str {
+                        THE_MODULE_NAME
+                    }
+                    fn code(&self) -> u32 {
+                        0
+                    }
+                }
+                impl From<Error> for RuntimeError {
+                    fn from(err: Error) -> RuntimeError {
+                        RuntimeError::new(Error::module_name(), err.code(), &err.to_string())
+                    }
+                }
+            };
+        );
+
+        let input: syn::DeriveInput = syn::parse_quote!(
+            #[derive(Error)]
+            #[sdk_error(autonumber, module_name = "THE_MODULE_NAME")]
+            pub enum Error {}
         );
         let error_derivation = super::derive_error(input);
         let actual: syn::Stmt = syn::parse2(error_derivation).unwrap();

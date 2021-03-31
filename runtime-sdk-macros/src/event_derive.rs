@@ -13,7 +13,8 @@ struct Event {
     data: darling::ast::Data<EventVariant, darling::util::Ignored>,
 
     /// The path to a const set to the module name.
-    module_name: syn::Path,
+    #[darling(default)]
+    module_name: Option<syn::Path>,
 
     /// Whether to sequentially autonumber the event codes.
     /// This option exists as a convenience for runtimes that
@@ -51,7 +52,9 @@ pub fn derive_event(input: DeriveInput) -> TokenStream {
     };
 
     let event_ty_ident = &event.ident;
-    let module_name = &event.module_name;
+    let module_name = event
+        .module_name
+        .unwrap_or_else(|| syn::parse_quote!(MODULE_NAME));
 
     let code_converter = gen::enum_code_converter(
         &format_ident!("self"),
@@ -83,7 +86,7 @@ pub fn derive_event(input: DeriveInput) -> TokenStream {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn generate_event_impl() {
+    fn generate_event_impl_auto() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
                 use oasis_runtime_sdk::core::common::cbor;
@@ -108,7 +111,7 @@ mod tests {
 
         let input: syn::DeriveInput = syn::parse_quote!(
             #[derive(Event)]
-            #[sdk_event(autonumber, module_name = "MODULE_NAME")]
+            #[sdk_event(autonumber)]
             pub enum MainEvent {
                 Event0,
                 #[sdk_event(code = 2)]
@@ -118,6 +121,36 @@ mod tests {
                 Event1(String),
                 Event3,
             }
+        );
+        let event_derivation = super::derive_event(input);
+        let actual: syn::Stmt = syn::parse2(event_derivation).unwrap();
+
+        crate::assert_empty_diff!(actual, expected);
+    }
+
+    #[test]
+    fn generate_event_impl_manual() {
+        let expected: syn::Stmt = syn::parse_quote!(
+            const _: () = {
+                use oasis_runtime_sdk::core::common::cbor;
+                impl ::oasis_runtime_sdk::event::Event for MainEvent {
+                    fn module_name() -> &'static str {
+                        THE_MODULE_NAME
+                    }
+                    fn code(&self) -> u32 {
+                        0
+                    }
+                    fn value(&self) -> cbor::Value {
+                        cbor::to_value(self)
+                    }
+                }
+            };
+        );
+
+        let input: syn::DeriveInput = syn::parse_quote!(
+            #[derive(Event)]
+            #[sdk_event(autonumber, module_name = "THE_MODULE_NAME")]
+            pub enum MainEvent {}
         );
         let event_derivation = super::derive_event(input);
         let actual: syn::Stmt = syn::parse2(event_derivation).unwrap();

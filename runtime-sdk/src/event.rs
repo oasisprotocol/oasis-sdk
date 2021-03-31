@@ -11,7 +11,7 @@ use oasis_core_runtime::{common::cbor, transaction::tags::Tag};
 /// # use oasis_runtime_sdk_macros::Event;
 /// const MODULE_NAME: &str = "my-module";
 /// #[derive(Clone, Debug, Serialize, Deserialize, Event)]
-/// #[sdk_event(module_name = "MODULE_NAME", autonumber)] // `module_name` is required
+/// #[sdk_event(autonumber)] // `module_name` meta is required if `MODULE_NAME` isn't in scope
 /// enum MyEvent {
 ///    Greeting(String),      // autonumbered to 0
 ///    #[sdk_event(code = 2)] // manually numbered to 2 (`code` is required if not autonumbering)
