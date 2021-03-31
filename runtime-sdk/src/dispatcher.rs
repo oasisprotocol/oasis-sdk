@@ -134,7 +134,7 @@ impl<R: Runtime> Dispatcher<R> {
             Err(err) => {
                 return Ok(CheckTxResult {
                     error: RuntimeError {
-                        module: err.module().to_string(),
+                        module: modules::core::Error::module_name().to_string(),
                         code: err.code(),
                         message: err.to_string(),
                     },
