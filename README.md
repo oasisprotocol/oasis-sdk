@@ -17,10 +17,14 @@
 
 * **Oasis SDK is in active development so all APIs, protocols and data
   structures are subject to change.**
-* **The SDK currently depends on an unreleased version of [Oasis Core].**
+* **The SDK currently depends on v21.0 of [Oasis Core].**
+  This version is not used on the [Oasis Network] yet.
+  You can try it out on a [local network].
 * **The code has not yet been audited.**
 
 [Oasis Core]: https://github.com/oasisprotocol/oasis-core
+[Oasis Network]: https://docs.oasis.dev/general/oasis-network/network-parameters
+[local network]: https://docs.oasis.dev/oasis-core/development-setup/running-tests-and-development-networks/oasis-net-runner
 
 ## Directories
 
