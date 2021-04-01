@@ -21,7 +21,7 @@ static_resources:
                   safe_regex:
                     google_re2:
                       max_program_size: 1000000
-                    regex: '/oasis-core\.(Registry/(GetNodes)|Staking/(Account|DelegationsTo|GetEvents)|Consensus/(SubmitTx|EstimateGas|GetBlock|GetTransactionsWithResults|GetGenesisDocument|WatchBlocks)|NodeController/(WaitReady))'
+                    regex: '/oasis-core\.(Registry/(GetNodes)|Staking/(Account|DelegationsTo|GetEvents)|Consensus/(SubmitTx|EstimateGas|GetSignerNonce|GetBlock|GetTransactionsWithResults|GetGenesisDocument|GetChainContext|WatchBlocks)|NodeController/(WaitReady))'
                 route:
                   cluster: oasis_node_grpc
                   timeout: 0s
