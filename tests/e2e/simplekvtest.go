@@ -26,9 +26,22 @@ type kvKeyValue struct {
 	Value []byte `json:"value"`
 }
 
+// GetChainContext returns the chain context.
+func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.Context, error) {
+	info, err := rtc.GetInfo(ctx)
+	if err != nil {
+		return "", err
+	}
+	return info.ChainContext, nil
+}
+
 // kvInsert inserts given key-value pair into storage.
 func kvInsert(rtc client.RuntimeClient, signer signature.Signer, nonce uint64, key []byte, value []byte) error {
 	ctx := context.Background()
+	chainCtx, err := GetChainContext(ctx, rtc)
+	if err != nil {
+		return err
+	}
 
 	tx := types.NewTransaction(nil, "keyvalue.Insert", kvKeyValue{
 		Key:   key,
@@ -36,9 +49,9 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, nonce uint64, k
 	})
 	tx.AppendSignerInfo(signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
-	stx.AppendSign(signer)
+	stx.AppendSign(chainCtx, signer)
 
-	if _, err := rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
+	if _, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
 		return err
 	}
 	return nil
@@ -47,13 +60,17 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, nonce uint64, k
 // kvRemove removes given key from storage.
 func kvRemove(rtc client.RuntimeClient, signer signature.Signer, nonce uint64, key []byte) error {
 	ctx := context.Background()
+	chainCtx, err := GetChainContext(ctx, rtc)
+	if err != nil {
+		return err
+	}
 
 	tx := types.NewTransaction(nil, "keyvalue.Remove", kvKey{
 		Key: key,
 	})
 	tx.AppendSignerInfo(signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
-	stx.AppendSign(signer)
+	stx.AppendSign(chainCtx, signer)
 
 	if _, err := rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
 		return err
