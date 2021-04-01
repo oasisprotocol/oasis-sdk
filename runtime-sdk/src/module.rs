@@ -123,6 +123,9 @@ impl AuthHandler for Tuple {
 /// Migration handler.
 pub trait MigrationHandler {
     /// Genesis state type.
+    ///
+    /// If this state is expensive to compute and not often updated, prefer
+    /// to make the genesis type something like `once_cell::unsync::Lazy<T>`.
     type Genesis;
 
     /// Initialize state from genesis or perform a migration.

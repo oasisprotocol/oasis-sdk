@@ -1,8 +1,8 @@
 //! Accounts module.
 use std::{collections::BTreeMap, iter::FromIterator};
 
-use lazy_static::lazy_static;
 use num_traits::Zero;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -193,12 +193,12 @@ pub mod state {
 
 pub struct Module;
 
-lazy_static! {
-    /// Module's address that has the common pool.
-    pub static ref ADDRESS_COMMON_POOL: Address = Address::from_module(MODULE_NAME, "common-pool");
-    /// Module's address that has the fee accumulator.
-    pub static ref ADDRESS_FEE_ACCUMULATOR: Address = Address::from_module(MODULE_NAME, "fee-accumulator");
-}
+/// Module's address that has the common pool.
+static ADDRESS_COMMON_POOL: Lazy<Address> =
+    Lazy::new(|| Address::from_module(MODULE_NAME, "common-pool"));
+/// Module's address that has the fee accumulator.
+static ADDRESS_FEE_ACCUMULATOR: Lazy<Address> =
+    Lazy::new(|| Address::from_module(MODULE_NAME, "fee-accumulator"));
 
 impl Module {
     /// Add given amount of tokens to the specified account's balance.

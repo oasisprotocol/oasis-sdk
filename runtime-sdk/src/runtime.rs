@@ -35,7 +35,6 @@ pub trait Runtime {
             .unwrap_or_default();
 
         // Perform state migrations/initialization on all modules.
-        // TODO: Could this be optimized to not needlessly generate genesis state?
         let has_changes =
             Self::Modules::init_or_migrate(ctx, &mut metadata, &Self::genesis_state());
 
