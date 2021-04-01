@@ -40,8 +40,8 @@ See [Installing
 Envoy](https://www.envoyproxy.io/docs/envoy/latest/start/install)
 for a variety of ways to get Envoy.
 
-In our sample setup, we use [the container image from Docker
-Hub](https://hub.docker.com/r/envoyproxy/envoy/tags).
+In our sample setup, we use [the distribution from Get
+Envoy](https://www.getenvoy.io/).
 
 ## Configuring Envoy
 
@@ -65,13 +65,14 @@ route, enable CORS, and serve your web app from a separate origin.
 
 ## Running Envoy
 
-In our sample, we run Envoy in a Docker container and proxy the web app
-through it, so we configure the container with:
+In our sample, we run Envoy and proxy the web app through it.
 
-- host networking, so that Envoy can connect to our web server
-- a volume mount for our node's socket
+See [our sample invocation](../playground/sample-run-envoy.sh).
 
-See [our sample invocation](../playground/sample-run-envoy-docker.sh).
+If you're running Envoy in Docker, you can use volume mounts to allow envoy
+to access the YAML config file and the node's UNIX socket, and you can set the
+container to use the "host" network so that Envoy can connect to the web
+server.
 
 ## Getting this SDK and building
 
