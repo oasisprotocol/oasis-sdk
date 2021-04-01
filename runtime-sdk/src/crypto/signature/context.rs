@@ -1,15 +1,13 @@
 //! Domain separation context helpers.
 use std::sync::Mutex;
 
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 
 use oasis_core_runtime::common::{crypto::hash::Hash, namespace::Namespace};
 
 const CHAIN_CONTEXT_SEPARATOR: &[u8] = b" for chain ";
 
-lazy_static! {
-    static ref CHAIN_CONTEXT: Mutex<Option<Vec<u8>>> = Mutex::new(None);
-}
+static CHAIN_CONTEXT: Lazy<Mutex<Option<Vec<u8>>>> = Lazy::new(Default::default);
 
 /// Return the globally configured chain domain separation context.
 ///
@@ -72,9 +70,7 @@ pub fn set_chain_context(runtime_id: Namespace, consensus_chain_context: &str) {
 mod test {
     use super::*;
 
-    lazy_static! {
-        static ref TEST_GUARD: Mutex<()> = Mutex::new(());
-    }
+    static TEST_GUARD: Lazy<Mutex<()>> = Lazy::new(Default::default);
 
     fn reset_chain_context() {
         *CHAIN_CONTEXT.lock().unwrap() = None;
