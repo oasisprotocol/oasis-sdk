@@ -1,16 +1,21 @@
 //! Token types.
-use std::fmt;
+use std::{convert::TryFrom, fmt};
 
-use serde::{self, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 pub use oasis_core_runtime::common::quantity::Quantity;
 
-use crate::storage::{DecodableStoreKey, StoreKey};
-
 /// Name/type of the token.
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Denomination(#[serde(with = "serde_bytes")] Vec<u8>);
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+#[serde(transparent)]
+pub struct Denomination(#[serde(serialize_with = "serde_bytes::serialize")] Vec<u8>);
+
+impl<'de> serde::de::Deserialize<'de> for Denomination {
+    fn deserialize<D: serde::de::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let bytes = serde_bytes::ByteBuf::deserialize(d)?;
+        Self::try_from(bytes.as_ref()).map_err(serde::de::Error::custom)
+    }
+}
 
 impl Denomination {
     /// Maximum length of a remote denomination.
@@ -18,11 +23,15 @@ impl Denomination {
     /// Denomination in native token.
     pub const NATIVE: Denomination = Denomination(Vec::new());
 
-    // TODO: Enforce maximum length during deserialization.
-
     /// Whether the denomination represents the native token.
     pub fn is_native(&self) -> bool {
         self.0.is_empty()
+    }
+}
+
+impl AsRef<[u8]> for Denomination {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
     }
 }
 
@@ -37,31 +46,34 @@ impl fmt::Display for Denomination {
     }
 }
 
-impl From<&str> for Denomination {
-    fn from(v: &str) -> Denomination {
-        Denomination(v.as_bytes().to_vec())
+impl std::str::FromStr for Denomination {
+    type Err = Error;
+
+    fn from_str(v: &str) -> Result<Self, Self::Err> {
+        Self::try_from(v.as_bytes())
     }
 }
 
-impl StoreKey for Denomination {
-    fn as_store_key(&self) -> &[u8] {
-        &self.0
-    }
-}
+impl TryFrom<&[u8]> for Denomination {
+    type Error = Error;
 
-impl StoreKey for &Denomination {
-    fn as_store_key(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl DecodableStoreKey for Denomination {
-    fn from_bytes(v: &[u8]) -> Option<Denomination> {
-        if v.len() > Self::MAX_LENGTH {
-            return None;
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        if bytes.len() > Self::MAX_LENGTH {
+            return Err(Error::NameTooLong {
+                length: bytes.len(),
+            });
         }
-        Some(Denomination(v.into()))
+        Ok(Self(bytes.to_vec()))
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
+    #[error(
+        "denomination name too long. received length {length} exceeded maximum of {}",
+        Denomination::MAX_LENGTH
+    )]
+    NameTooLong { length: usize },
 }
 
 /// Token amount of given denomination in base units.
@@ -97,7 +109,7 @@ impl fmt::Display for BaseUnits {
 mod test {
     use oasis_core_runtime::common::{cbor, quantity::Quantity};
 
-    use super::{BaseUnits, Denomination};
+    use super::*;
 
     #[test]
     fn test_basic() {
@@ -107,9 +119,9 @@ mod test {
             (1, Denomination::NATIVE, "82410140"),
             (1000, Denomination::NATIVE, "824203e840"),
             // Custom denomination.
-            (0, "test".into(), "82404474657374"),
-            (1, "test".into(), "8241014474657374"),
-            (1000, "test".into(), "824203e84474657374"),
+            (0, "test".parse().unwrap(), "82404474657374"),
+            (1, "test".parse().unwrap(), "8241014474657374"),
+            (1000, "test".parse().unwrap(), "824203e84474657374"),
         ];
 
         for tc in cases {
@@ -120,5 +132,27 @@ mod test {
             let dec: BaseUnits = cbor::from_slice(&enc).expect("deserialization should succeed");
             assert_eq!(dec, token, "serialization should round-trip");
         }
+    }
+
+    #[test]
+    fn test_serde_denomination() {
+        macro_rules! asset_rountrip_ok {
+            ($bytes:expr) => {
+                let enc = cbor::to_vec(&serde_bytes::Bytes::new($bytes));
+                let dec: Denomination = cbor::from_slice(&enc).unwrap();
+                assert_eq!(dec, Denomination::try_from($bytes).unwrap());
+                assert_eq!(dec.0, $bytes);
+            };
+        }
+
+        let bytes_fixture = vec![42u8; Denomination::MAX_LENGTH + 1];
+
+        asset_rountrip_ok!(&bytes_fixture[0..0]);
+        asset_rountrip_ok!(&bytes_fixture[0..1]);
+        asset_rountrip_ok!(&bytes_fixture[0..Denomination::MAX_LENGTH]);
+
+        // Too long denomination:
+        let dec_result: Result<Denomination, _> = cbor::from_slice(&cbor::to_vec(&bytes_fixture));
+        assert!(dec_result.is_err());
     }
 }

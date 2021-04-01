@@ -1,6 +1,6 @@
 use oasis_core_runtime::storage::mkvs;
 
-use super::{Store, StoreKey};
+use super::Store;
 
 /// A key-value store that prefixes all keys with the given prefix.
 pub struct PrefixStore<'store, S: Store> {
@@ -10,27 +10,26 @@ pub struct PrefixStore<'store, S: Store> {
 
 impl<'store, S: Store> PrefixStore<'store, S> {
     /// Create a new prefix store with the given prefix.
-    pub fn new<K: 'store + StoreKey>(parent: S, prefix: &'store K) -> Self {
+    pub fn new<K: 'store + AsRef<[u8]>>(parent: S, prefix: &'store K) -> Self {
         Self {
             parent,
-            prefix: prefix.as_store_key(),
+            prefix: prefix.as_ref(),
         }
     }
 }
 
 impl<'store, S: Store> Store for PrefixStore<'store, S> {
-    fn get<K: StoreKey>(&self, key: K) -> Option<Vec<u8>> {
-        self.parent.get(&[self.prefix, key.as_store_key()].concat())
+    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Vec<u8>> {
+        self.parent.get(&[self.prefix, key.as_ref()].concat())
     }
 
-    fn insert<K: StoreKey>(&mut self, key: K, value: &[u8]) {
+    fn insert<K: AsRef<[u8]>>(&mut self, key: K, value: &[u8]) {
         self.parent
-            .insert(&[self.prefix, key.as_store_key()].concat(), value);
+            .insert(&[self.prefix, key.as_ref()].concat(), value);
     }
 
-    fn remove<K: StoreKey>(&mut self, key: K) {
-        self.parent
-            .remove(&[self.prefix, key.as_store_key()].concat());
+    fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
+        self.parent.remove(&[self.prefix, key.as_ref()].concat());
     }
 
     fn iter(&self) -> Box<dyn mkvs::Iterator + '_> {

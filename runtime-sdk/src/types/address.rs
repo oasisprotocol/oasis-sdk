@@ -1,15 +1,12 @@
 //! Account address type.
-use std::fmt;
+use std::{convert::TryFrom, fmt};
 
 use bech32::{self, FromBase32, ToBase32};
 use thiserror::Error;
 
 use oasis_core_runtime::common::crypto::hash::Hash;
 
-use crate::{
-    crypto::signature::PublicKey,
-    storage::{DecodableStoreKey, StoreKey},
-};
+use crate::crypto::signature::PublicKey;
 
 const ADDRESS_VERSION_SIZE: usize = 1;
 const ADDRESS_DATA_SIZE: usize = 20;
@@ -102,6 +99,20 @@ impl Address {
     }
 }
 
+impl AsRef<[u8]> for Address {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+impl TryFrom<&[u8]> for Address {
+    type Error = Error;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        Self::from_bytes(bytes)
+    }
+}
+
 impl From<&'static str> for Address {
     fn from(s: &'static str) -> Address {
         Address::from_bech32(s).unwrap()
@@ -191,27 +202,9 @@ impl<'de> serde::Deserialize<'de> for Address {
     }
 }
 
-impl StoreKey for Address {
-    fn as_store_key(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl StoreKey for &Address {
-    fn as_store_key(&self) -> &[u8] {
-        &self.0
-    }
-}
-
-impl DecodableStoreKey for Address {
-    fn from_bytes(v: &[u8]) -> Option<Address> {
-        Address::from_bytes(v).ok()
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use super::Address;
+    use super::*;
     use crate::crypto::signature::PublicKey;
 
     #[test]
@@ -234,5 +227,18 @@ mod test {
             addr.to_bech32(),
             "oasis1qr4cd0sr32m3xcez37ym7rmjp5g88muu8sdfx8u3"
         );
+    }
+
+    #[test]
+    fn test_address_try_from_bytes() {
+        let bytes_fixture = vec![42u8; ADDRESS_SIZE + 1];
+        assert_eq!(
+            Address::try_from(&bytes_fixture[0..ADDRESS_SIZE]).unwrap(),
+            Address::from_bytes(&bytes_fixture[0..ADDRESS_SIZE]).unwrap()
+        );
+        assert!(matches!(
+            Address::try_from(bytes_fixture.as_slice()).unwrap_err(),
+            Error::MalformedAddress
+        ));
     }
 }

@@ -10,7 +10,6 @@ pub const MODULE_NAME: &str = "core";
 
 /// Errors emitted by the core module.
 #[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
-#[sdk_error(module_name = "MODULE_NAME")]
 pub enum Error {
     #[error("malformed transaction")]
     #[sdk_error(code = 1)]
