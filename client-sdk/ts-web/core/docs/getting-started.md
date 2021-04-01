@@ -77,11 +77,13 @@ server.
 ## Getting this SDK and building
 
 ```sh
-npm install @oasisprotocol/client
+npm install @oasisprotocol/client@alpha
 ```
 
-**TODO: This is not actually on npm yet.
-Brave early access friends, clone this repo and compile.**
+Install this package [from
+npm](https://www.npmjs.com/package/@oasisprotocol/client).
+
+**TODO: Update this command when this library gets out of alpha.**
 
 You'll need a bundler.
 We have [a sample that uses webpack](../playground/webpack.config.js).
