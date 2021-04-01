@@ -1,5 +1,5 @@
 //! Account address type.
-use std::fmt;
+use std::{convert::TryFrom, fmt};
 
 use bech32::{self, FromBase32, ToBase32};
 use thiserror::Error;
@@ -105,6 +105,14 @@ impl AsRef<[u8]> for Address {
     }
 }
 
+impl TryFrom<&[u8]> for Address {
+    type Error = Error;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        Self::from_bytes(bytes)
+    }
+}
+
 impl From<&'static str> for Address {
     fn from(s: &'static str) -> Address {
         Address::from_bech32(s).unwrap()
@@ -196,7 +204,7 @@ impl<'de> serde::Deserialize<'de> for Address {
 
 #[cfg(test)]
 mod test {
-    use super::Address;
+    use super::*;
     use crate::crypto::signature::PublicKey;
 
     #[test]
@@ -219,5 +227,18 @@ mod test {
             addr.to_bech32(),
             "oasis1qr4cd0sr32m3xcez37ym7rmjp5g88muu8sdfx8u3"
         );
+    }
+
+    #[test]
+    fn test_address_try_from_bytes() {
+        let bytes_fixture = vec![42u8; ADDRESS_SIZE + 1];
+        assert_eq!(
+            Address::try_from(&bytes_fixture[0..ADDRESS_SIZE]).unwrap(),
+            Address::from_bytes(&bytes_fixture[0..ADDRESS_SIZE]).unwrap()
+        );
+        assert!(matches!(
+            Address::try_from(bytes_fixture.as_slice()).unwrap_err(),
+            Error::MalformedAddress
+        ));
     }
 }
