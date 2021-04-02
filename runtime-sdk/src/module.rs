@@ -215,3 +215,7 @@ pub trait Parameters: Debug + Default + Serialize + DeserializeOwned {
         Ok(())
     }
 }
+
+impl Parameters for () {
+    type Error = std::convert::Infallible;
+}
