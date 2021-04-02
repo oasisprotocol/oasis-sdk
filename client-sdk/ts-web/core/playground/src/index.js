@@ -41,15 +41,26 @@ export const playground = (async function () {
         const dst = oasis.signature.NaclSigner.fromRandom('this key is not important');
         console.log('src', src, 'dst', dst);
 
-        const genesis = await nic.consensusGetGenesisDocument();
-        const chainContext = await oasis.genesis.chainContext(genesis);
+        const chainContext = await nic.consensusGetChainContext();
         console.log('chain context', chainContext);
+
+        const genesis = await nic.consensusGetGenesisDocument();
+        const ourChainContext = await oasis.genesis.chainContext(genesis);
+        console.log('computed from genesis', ourChainContext);
+        if (ourChainContext !== chainContext) throw new Error('computed chain context mismatch');
+
+        const nonce = await nic.consensusGetSignerNonce({
+            account_address: await oasis.staking.addressFromPublicKey(src.public()),
+            height: oasis.consensus.HEIGHT_LATEST,
+        }) ?? 0;
+        console.log('nonce', nonce);
 
         const account = await nic.stakingAccount({
             height: oasis.consensus.HEIGHT_LATEST,
             owner: await oasis.staking.addressFromPublicKey(src.public()),
         });
         console.log('account', account);
+        if ((account.general?.nonce ?? 0) !== nonce) throw new Error('nonce mismatch');
 
         const tw = oasis.staking.transferWrapper();
         tw.setNonce(account.general?.nonce ?? 0);
@@ -75,9 +86,7 @@ export const playground = (async function () {
     // Try verifying transaction signatures.
     {
         // TODO: Make sure this is the block with the transaction we sent above.
-        const genesis = await nic.consensusGetGenesisDocument();
-        console.log('genesis', genesis);
-        const chainContext = await oasis.genesis.chainContext(genesis);
+        const chainContext = await nic.consensusGetChainContext();
         console.log('chain context', chainContext);
         const response = await nic.consensusGetTransactionsWithResults(oasis.consensus.HEIGHT_LATEST);
         const transactions = response.transactions || [];
