@@ -53,3 +53,17 @@ pub trait Event {
         )
     }
 }
+
+impl Event for () {
+    fn module_name() -> &'static str {
+        "(none)"
+    }
+
+    fn code(&self) -> u32 {
+        Default::default()
+    }
+
+    fn value(&self) -> cbor::Value {
+        cbor::Value::Null
+    }
+}

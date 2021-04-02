@@ -42,3 +42,13 @@ pub trait Error: std::error::Error {
         }
     }
 }
+
+impl Error for std::convert::Infallible {
+    fn module_name() -> &'static str {
+        "(none)"
+    }
+
+    fn code(&self) -> u32 {
+        Default::default()
+    }
+}
