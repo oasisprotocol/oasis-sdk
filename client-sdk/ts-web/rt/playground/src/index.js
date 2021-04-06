@@ -69,6 +69,13 @@ class Wrapper extends oasisRT.wrapper.Base {
 
 }
 
+function moduleEventHandler(/** @type {{
+    [EVENT_INSERT_CODE]?: oasisRT.event.Handler<InsertEvent>,
+    [EVENT_REMOVE_CODE]?: oasisRT.event.Handler<RemoveEvent>,
+}} */ codes) {
+    return /** @type {oasisRT.event.ModuleHandler} */ ([MODULE_NAME, codes]);
+}
+
 const nic = new oasis.client.NodeInternal('http://localhost:42280');
 const keyvalueWrapper = new Wrapper(KEYVALUE_RUNTIME_ID);
 
@@ -106,6 +113,36 @@ export const playground = (async function () {
     {
         const THE_KEY = oasis.misc.fromString('greeting-js');
         const THE_VALUE = oasis.misc.fromString('Hi from JavaScript');
+
+        const eventVisitor = new oasisRT.event.Visitor([
+            moduleEventHandler({
+                [EVENT_INSERT_CODE]: (e, insertEvent) => {
+                    console.log('observed insert', insertEvent);
+                },
+                [EVENT_REMOVE_CODE]: (e, removeEvent) => {
+                    console.log('observed remove', removeEvent);
+                },
+            }),
+        ]);
+        const blocks = nic.runtimeClientWatchBlocks(KEYVALUE_RUNTIME_ID);
+        blocks.on('data', (annotatedBlock) => {
+            console.log('observed block', annotatedBlock.block.header.round);
+            (async () => {
+                try {
+                    /** @type oasis.types.RuntimeClientEvent[] */
+                    const events = await nic.runtimeClientGetEvents({
+                        runtime_id: KEYVALUE_RUNTIME_ID,
+                        round: annotatedBlock.block.header.round,
+                    }) || [];
+                    for (const event of events) {
+                        console.log('observed event', event);
+                        eventVisitor.visit(event);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            })();
+        });
 
         const alice = oasis.signature.NaclSigner.fromSeed(await oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')), 'this key is not important');
         const csAlice = new oasis.signature.BlindContextSigner(alice);
