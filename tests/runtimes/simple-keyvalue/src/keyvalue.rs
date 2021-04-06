@@ -23,10 +23,16 @@ pub enum Error {
     InvalidArgument,
 }
 
-/// Events emitted by the keyvalue module (none so far).
+/// Events emitted by the keyvalue module.
 #[derive(Debug, Serialize, Deserialize, sdk::Event)]
 #[serde(untagged)]
-pub enum Event {}
+pub enum Event {
+    #[sdk_event(code = 1)]
+    Insert { kv: types::KeyValue },
+
+    #[sdk_event(code = 2)]
+    Remove { key: types::Key },
+}
 
 /// Parameters for the keyvalue module (none so far).
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -128,7 +134,9 @@ impl Module {
         }
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut ts = sdk::storage::TypedStore::new(&mut store);
+        let bc = body.clone();
         ts.insert(body.key, &body.value);
+        ctx.emit_event(Event::Insert { kv: bc });
         Ok(())
     }
 
@@ -139,7 +147,9 @@ impl Module {
         }
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut ts = sdk::storage::TypedStore::new(&mut store);
+        let bc = body.clone();
         ts.remove(body.key);
+        ctx.emit_event(Event::Remove { key: bc });
         Ok(())
     }
 
