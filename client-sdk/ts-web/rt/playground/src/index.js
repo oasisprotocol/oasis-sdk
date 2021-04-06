@@ -21,7 +21,13 @@ const METHOD_REMOVE = 'keyvalue.Remove';
 // Queries.
 const METHOD_GET = 'keyvalue.Get';
 
-const EVENT_DUMMY_EVENT_CODE = 1;
+const EVENT_INSERT_CODE = 1;
+const EVENT_REMOVE_CODE = 2;
+
+/**
+ * @typedef {object} InsertEvent
+ * @property {KeyValue} kv
+ */
 
 /**
  * @typedef {object} Key
@@ -32,6 +38,11 @@ const EVENT_DUMMY_EVENT_CODE = 1;
  * @typedef {object} KeyValue
  * @property {Uint8Array} key
  * @property {Uint8Array} value
+ */
+
+/**
+ * @typedef {object} RemoveEvent
+ * @property {Key} key
  */
 
 class Wrapper extends oasisRT.wrapper.Base {
