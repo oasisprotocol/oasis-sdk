@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased changes
+
+Breaking changes:
+
+- `event.toTag` is renamed to `toKey`.
+  It never included the value, so that was only the key all along.
+
 ## v0.1.0-alpha1
 
 Spotlight change:
