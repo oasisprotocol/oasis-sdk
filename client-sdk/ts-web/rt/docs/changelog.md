@@ -7,6 +7,13 @@ Breaking changes:
 - `event.toTag` is renamed to `toKey`.
   It never included the value, so that was only the key all along.
 
+New features:
+
+- There's a new `event.Visitor` class to help set up event handlers with type
+  help.
+  Construct it with the outputs of modules' new `moduleEventHandler`
+  functions.
+
 ## v0.1.0-alpha1
 
 Spotlight change:

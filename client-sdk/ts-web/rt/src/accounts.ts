@@ -1,5 +1,6 @@
 import * as oasis from '@oasisprotocol/client';
 
+import * as event from './event';
 import * as types from './types';
 import * as wrapper from './wrapper';
 
@@ -40,4 +41,12 @@ export class Wrapper extends wrapper.Base {
             METHOD_BALANCES,
         );
     }
+}
+
+export function moduleEventHandler(codes: {
+    [EVENT_TRANSFER_CODE]?: event.Handler<types.AccountsTransferEvent>;
+    [EVENT_BURN_CODE]?: event.Handler<types.AccountsBurnEvent>;
+    [EVENT_MINT_CODE]?: event.Handler<types.AccountsMintEvent>;
+}) {
+    return [MODULE_NAME, codes] as event.ModuleHandler;
 }
