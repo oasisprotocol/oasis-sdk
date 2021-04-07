@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased changes
+## v0.2.0-alpha1
 
 Spotlight change:
 
