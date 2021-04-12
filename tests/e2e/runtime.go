@@ -15,6 +15,7 @@ import (
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/node"
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/env"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/log"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
@@ -22,7 +23,9 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/scenario/e2e"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
 	scheduler "github.com/oasisprotocol/oasis-core/go/scheduler/api"
+	"github.com/oasisprotocol/oasis-core/go/staking/api"
 	"github.com/oasisprotocol/oasis-core/go/storage/database"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 )
@@ -51,7 +54,7 @@ var (
 )
 
 // RunTestFunction is a test function.
-type RunTestFunction func(*logging.Logger, client.RuntimeClient) error
+type RunTestFunction func(*logging.Logger, *grpc.ClientConn, client.RuntimeClient) error
 
 // runtimeScenario is a base class for e2e test scenarios involving runtimes.
 type runtimeScenario struct {
@@ -112,6 +115,30 @@ func (sc *runtimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			Consensus:                         f.Network.Consensus,
 			IAS: oasis.IASCfg{
 				Mock: iasMock,
+			},
+			StakingGenesis: &api.Genesis{
+				Parameters: api.ConsensusParameters{
+					MaxAllowances: 10,
+				},
+				TotalSupply: *quantity.NewFromUint64(200),
+				Ledger: map[api.Address]*api.Account{
+					api.Address(testing.Alice.Address): {
+						General: api.GeneralAccount{
+							Balance: *quantity.NewFromUint64(100),
+							Allowances: map[api.Address]quantity.Quantity{
+								api.NewRuntimeAddress(runtimeID): *quantity.NewFromUint64(100),
+							},
+						},
+					},
+					api.Address(testing.Bob.Address): {
+						General: api.GeneralAccount{
+							Balance: *quantity.NewFromUint64(100),
+							Allowances: map[api.Address]quantity.Quantity{
+								api.NewRuntimeAddress(runtimeID): *quantity.NewFromUint64(100),
+							},
+						},
+					},
+				},
 			},
 		},
 		Entities: []oasis.EntityCfg{
@@ -290,7 +317,7 @@ func (sc *runtimeScenario) Run(childEnv *env.Env) error {
 		testName := runtime.FuncForPC(reflect.ValueOf(test).Pointer()).Name()
 
 		sc.Logger.Info("running test", "test", testName)
-		if testErr := test(sc.Logger, rtc); testErr != nil {
+		if testErr := test(sc.Logger, conn, rtc); testErr != nil {
 			sc.Logger.Error("test failed",
 				"test", testName,
 				"err", testErr,

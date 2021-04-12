@@ -5,4 +5,5 @@ members = [
 
     # Test runtimes.
     "tests/runtimes/simple-keyvalue",
+    "tests/runtimes/simple-consensus",
 ]

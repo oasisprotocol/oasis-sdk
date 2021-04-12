@@ -4,7 +4,9 @@ use std::{convert::TryFrom, fmt};
 use bech32::{self, FromBase32, ToBase32};
 use thiserror::Error;
 
-use oasis_core_runtime::common::crypto::hash::Hash;
+use oasis_core_runtime::{
+    common::crypto::hash::Hash, consensus::address::Address as ConsensusAddress,
+};
 
 use crate::crypto::signature::PublicKey;
 
@@ -202,6 +204,12 @@ impl<'de> serde::Deserialize<'de> for Address {
     }
 }
 
+impl From<Address> for ConsensusAddress {
+    fn from(addr: Address) -> ConsensusAddress {
+        ConsensusAddress::from(&addr.0)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -240,5 +248,14 @@ mod test {
             Address::try_from(bytes_fixture.as_slice()).unwrap_err(),
             Error::MalformedAddress
         ));
+    }
+
+    #[test]
+    fn test_address_into_consensus_address() {
+        let pk = PublicKey::Ed25519("utrdHlX///////////////////////////////////8=".into());
+        let addr = Address::from_pk(&pk);
+
+        let consensus_addr: ConsensusAddress = addr.into();
+        assert_eq!(addr.to_bech32(), consensus_addr.to_bech32())
     }
 }

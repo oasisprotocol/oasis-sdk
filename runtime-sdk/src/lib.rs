@@ -16,7 +16,8 @@ pub mod testing;
 pub mod types;
 
 pub use crate::{
-    context::{DispatchContext, TxContext},
+    context::{Context, DispatchContext},
+    core::common::version::Version,
     module::Module,
     runtime::Runtime,
 };

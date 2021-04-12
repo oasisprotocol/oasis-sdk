@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    context::DispatchContext,
+    context::{Context, DispatchContext},
     module::{AuthHandler, BlockHandler},
     modules::core,
     testing::{keys, mock},
@@ -15,8 +15,8 @@ use crate::{
 };
 
 use super::{
-    types::*, Error, Genesis, Module as Accounts, ADDRESS_COMMON_POOL, ADDRESS_FEE_ACCUMULATOR,
-    API as _,
+    types::*, Error, Genesis, Module as Accounts, Parameters, ADDRESS_COMMON_POOL,
+    ADDRESS_FEE_ACCUMULATOR, API as _,
 };
 
 #[test]
@@ -140,7 +140,65 @@ fn test_init_2() {
     );
 }
 
-fn init_accounts(ctx: &mut DispatchContext<'_>) {
+#[test]
+fn test_api_tx_transfer_disabled() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    Accounts::init(
+        &mut ctx,
+        &Genesis {
+            balances: {
+                let mut balances = BTreeMap::new();
+                // Alice.
+                balances.insert(keys::alice::address(), {
+                    let mut denominations = BTreeMap::new();
+                    denominations.insert(Denomination::NATIVE, 1_000_000.into());
+                    denominations
+                });
+                balances
+            },
+            total_supplies: {
+                let mut total_supplies = BTreeMap::new();
+                total_supplies.insert(Denomination::NATIVE, 1_000_000.into());
+                total_supplies
+            },
+            parameters: Parameters {
+                transfers_disabled: true,
+            },
+            ..Default::default()
+        },
+    );
+
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            method: "accounts.Transfer".to_owned(),
+            body: cbor::to_value(Transfer {
+                to: keys::bob::address(),
+                amount: BaseUnits::new(1_000.into(), Denomination::NATIVE),
+            }),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 1000,
+            },
+        },
+    };
+
+    // Try to transfer.
+    ctx.with_tx(tx, |mut tx_ctx, call| {
+        assert_eq!(
+            Err(Error::Forbidden),
+            Accounts::tx_transfer(&mut tx_ctx, cbor::from_value(call.body).unwrap()),
+            "transfers are forbidden",
+        );
+    });
+}
+
+pub(crate) fn init_accounts(ctx: &mut DispatchContext<'_>) {
     Accounts::init(
         ctx,
         &Genesis {

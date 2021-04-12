@@ -1,14 +1,17 @@
 //! Transaction dispatcher.
 use std::{
+    collections::BTreeMap,
     marker::PhantomData,
     sync::{atomic::AtomicBool, Arc},
 };
 
+use slog::error;
 use thiserror::Error;
 
 use oasis_core_runtime::{
     self,
     common::cbor,
+    consensus::roothash::MessageEvent,
     storage::context::StorageContext,
     transaction::{
         self,
@@ -20,12 +23,12 @@ use oasis_core_runtime::{
 };
 
 use crate::{
-    context::DispatchContext,
+    context::{Context, DispatchContext},
     error::{Error as _, RuntimeError},
-    module::{AuthHandler, BlockHandler, MethodRegistry},
+    module::{AuthHandler, BlockHandler, MessageHandlerRegistry, MethodRegistry},
     modules,
     runtime::Runtime,
-    types,
+    storage, types,
 };
 
 /// Error emitted by the dispatch process. Note that this indicates an error in the dispatch
@@ -61,15 +64,21 @@ pub struct Dispatcher<R: Runtime> {
     abort_batch: Option<Arc<AtomicBool>>,
     /// Method registry.
     methods: MethodRegistry,
+    /// Handlers registered for consensus messages.
+    consensus_message_handlers: MessageHandlerRegistry,
 
     _runtime: PhantomData<R>,
 }
 
 impl<R: Runtime> Dispatcher<R> {
-    pub(super) fn new(methods: MethodRegistry) -> Self {
+    pub(super) fn new(
+        methods: MethodRegistry,
+        consensus_message_handlers: MessageHandlerRegistry,
+    ) -> Self {
         Self {
             abort_batch: None,
             methods,
+            consensus_message_handlers,
             _runtime: PhantomData,
         }
     }
@@ -101,8 +110,8 @@ impl<R: Runtime> Dispatcher<R> {
         }
 
         // Perform transaction method lookup.
-        let mi = match self.methods.lookup_callable(&tx.call.method) {
-            Some(mi) => mi,
+        let method_info = match self.methods.lookup_callable(&tx.call.method) {
+            Some(method_info) => method_info,
             None => {
                 // Method not found.
                 return Ok(modules::core::Error::InvalidMethod.to_call_result().into());
@@ -110,7 +119,7 @@ impl<R: Runtime> Dispatcher<R> {
         };
 
         let (result, messages) = ctx.with_tx(tx, |mut ctx, call| {
-            let result = (mi.handler)(&mi, &mut ctx, call.body);
+            let result = (method_info.handler)(&method_info, &mut ctx, call.body);
             if !result.is_success() {
                 return (result.into(), Vec::new());
             }
@@ -183,6 +192,71 @@ impl<R: Runtime> Dispatcher<R> {
         })
     }
 
+    fn dispatch_message(
+        &self,
+        mut ctx: &mut DispatchContext<'_>,
+        handler_name: String,
+        message_event: MessageEvent,
+        handler_ctx: cbor::Value,
+    ) -> Result<(), modules::core::Error> {
+        // Perform message handler lookup.
+        let method_info = self
+            .consensus_message_handlers
+            .lookup_handler(&handler_name)
+            .ok_or(modules::core::Error::InvalidMethod)?;
+
+        (method_info.handler)(&method_info, &mut ctx, message_event, handler_ctx);
+
+        Ok(())
+    }
+
+    fn handle_last_round_messages(
+        &self,
+        ctx: &mut DispatchContext<'_>,
+    ) -> Result<(), modules::core::Error> {
+        let message_events = ctx.runtime_round_results().messages.clone();
+
+        let store = storage::TypedStore::new(storage::PrefixStore::new(
+            ctx.runtime_state(),
+            &modules::core::MODULE_NAME,
+        ));
+        let mut handlers: BTreeMap<u32, types::message::MessageEventHookInvocation> = store
+            .get(&modules::core::state::MESSAGE_HANDLERS)
+            .unwrap_or_default();
+
+        for event in message_events {
+            let handler = handlers
+                .remove(&event.index)
+                .ok_or(modules::core::Error::MessageHandlerMissing(event.index))?;
+            self.dispatch_message(ctx, handler.hook_name, event, handler.payload)?;
+        }
+
+        if !handlers.is_empty() {
+            error!(ctx.get_logger("dispatcher"), "message handler not invoked"; "unhandled" => ?handlers);
+            return Err(modules::core::Error::MessageHandlerNotInvoked);
+        }
+
+        Ok(())
+    }
+
+    fn save_emitted_message_handlers<S: storage::Store>(
+        &self,
+        store: S,
+        handlers: Vec<types::message::MessageEventHookInvocation>,
+    ) {
+        let message_handlers: BTreeMap<u32, types::message::MessageEventHookInvocation> = handlers
+            .into_iter()
+            .enumerate()
+            .map(|(idx, h)| (idx as u32, h))
+            .collect();
+
+        let mut store = storage::TypedStore::new(storage::PrefixStore::new(
+            store,
+            &modules::core::MODULE_NAME,
+        ));
+        store.insert(&modules::core::state::MESSAGE_HANDLERS, &message_handlers);
+    }
+
     fn maybe_init_state(&self, ctx: &mut DispatchContext<'_>) {
         R::migrate(ctx)
     }
@@ -191,15 +265,18 @@ impl<R: Runtime> Dispatcher<R> {
 impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
     fn execute_batch(
         &self,
-        ctx: transaction::Context<'_>,
+        rt_ctx: transaction::Context<'_>,
         batch: &TxnBatch,
     ) -> Result<ExecuteBatchResult, RuntimeError> {
         // TODO: Get rid of StorageContext (pass mkvs in ctx).
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
-            let mut ctx = DispatchContext::from_runtime(&ctx, mkvs);
+            let mut ctx = DispatchContext::from_runtime(&rt_ctx, mkvs);
             // Perform state migrations if required.
             self.maybe_init_state(&mut ctx);
+
+            // Handle last round message results.
+            self.handle_last_round_messages(&mut ctx)?;
 
             // Run begin block hooks.
             R::Modules::begin_block(&mut ctx);
@@ -214,9 +291,17 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             R::Modules::end_block(&mut ctx);
 
             // Commit the context and retrieve the emitted messages.
-            let messages = ctx.commit();
+            let (block_tags, messages) = ctx.commit();
+            let (messages, handlers) = messages.into_iter().unzip();
 
-            Ok(ExecuteBatchResult { results, messages })
+            let state = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), mkvs);
+            self.save_emitted_message_handlers(state, handlers);
+
+            Ok(ExecuteBatchResult {
+                results,
+                messages,
+                block_tags,
+            })
         })
     }
 
@@ -258,11 +343,11 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             let mut ctx = DispatchContext::from_runtime(&ctx, mkvs);
 
             // Execute the query.
-            let mi = self
+            let method_info = self
                 .methods
                 .lookup_query(method)
                 .ok_or(modules::core::Error::InvalidMethod)?;
-            (mi.handler)(&mi, &mut ctx, args)
+            (method_info.handler)(&method_info, &mut ctx, args)
         })
     }
 }

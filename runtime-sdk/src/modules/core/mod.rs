@@ -30,10 +30,24 @@ pub enum Error {
     #[error("insufficient balance to pay fees")]
     #[sdk_error(code = 5)]
     InsufficientFeeBalance,
+
+    #[error("out of message slots")]
+    #[sdk_error(code = 6)]
+    OutOfMessageSlots,
+
+    #[error("message handler not invoked")]
+    #[sdk_error(code = 8)]
+    MessageHandlerNotInvoked,
+
+    #[error("missing message handler")]
+    #[sdk_error(code = 9)]
+    MessageHandlerMissing(u32),
 }
 
 /// State schema constants.
 pub mod state {
     /// Runtime metadata.
     pub const METADATA: &[u8] = &[0x01];
+    /// Map of message idx to message handlers for messages emitted in previous round.
+    pub const MESSAGE_HANDLERS: &[u8] = &[0x02];
 }

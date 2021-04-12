@@ -1,10 +1,13 @@
 //! Execution context.
+use core::fmt;
 use std::{any::Any, collections::BTreeMap, sync::Arc};
 
 use io_context::Context as IoContext;
-use thiserror::Error;
+use slog::{self, o};
 
 use oasis_core_runtime::{
+    common::logger::get_logger,
+    consensus,
     consensus::roothash,
     storage::mkvs,
     transaction::{context::Context as RuntimeContext, tags::Tags},
@@ -12,16 +15,10 @@ use oasis_core_runtime::{
 
 use crate::{
     event::Event,
+    modules::core::Error,
     storage,
-    types::{address::Address, transaction},
+    types::{address::Address, message::MessageEventHookInvocation, transaction},
 };
-
-/// Context-related errors.
-#[derive(Error, Debug)]
-pub enum Error {
-    #[error("too many emitted runtime messages")]
-    TooManyMessages,
-}
 
 /// Transaction execution mode.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -31,21 +28,135 @@ pub enum Mode {
     SimulateTx,
 }
 
+const MODE_CHECK_TX: &str = "check_tx";
+const MODE_EXECUTE_TX: &str = "execute_tx";
+const MODE_SIMULATE_TX: &str = "simulate_tx";
+
+impl fmt::Display for Mode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", Into::<&'static str>::into(self))
+    }
+}
+
+impl From<&Mode> for &'static str {
+    fn from(m: &Mode) -> Self {
+        match m {
+            Mode::CheckTx => MODE_CHECK_TX,
+            Mode::ExecuteTx => MODE_EXECUTE_TX,
+            Mode::SimulateTx => MODE_SIMULATE_TX,
+        }
+    }
+}
+
+/// Runtime SDK context.
+pub trait Context {
+    /// Runtime state output type.
+    type S: storage::Store;
+
+    /// Returns a logger.
+    fn get_logger(&self, module: &'static str) -> slog::Logger;
+
+    /// Context mode.
+    fn mode(&self) -> Mode;
+
+    /// Whether the transaction is just being checked for validity.
+    fn is_check_only(&self) -> bool {
+        self.mode() == Mode::CheckTx
+    }
+
+    /// Whether the transaction is just being simulated.
+    fn is_simulation(&self) -> bool {
+        self.mode() == Mode::SimulateTx
+    }
+
+    /// Last runtime block header.
+    fn runtime_header(&self) -> &roothash::Header;
+
+    /// Results of executing the last successful runtime round.
+    fn runtime_round_results(&self) -> &roothash::RoundResults;
+
+    /// Runtime state store.
+    fn runtime_state(&mut self) -> &mut Self::S;
+
+    /// Consensus state.
+    fn consensus_state(&self) -> &consensus::state::ConsensusState;
+
+    /// Transaction authentication information.
+    ///
+    /// Only present if this is a transaction processing context.
+    fn tx_auth_info(&self) -> Option<&transaction::AuthInfo>;
+
+    /// Authenticated address of the caller.
+    ///
+    /// In case there are multiple signers of a transaction, this will return the address
+    /// corresponding to the first signer.
+    ///
+    /// Only present if this is a transaction processing context.
+    fn tx_caller_address(&self) -> Option<Address> {
+        self.tx_auth_info()
+            .map(|info| Address::from_pk(&info.signer_info[0].public_key))
+    }
+
+    /// Emits an event.
+    fn emit_event<E: Event>(&mut self, event: E);
+
+    /// Attempts to emit consensus runtime message.
+    fn emit_message(
+        &mut self,
+        msg: roothash::Message,
+        hook: MessageEventHookInvocation,
+    ) -> Result<(), Error>;
+
+    /// Attempts to emit multiple consensus runtime messages.
+    fn emit_messages(
+        &mut self,
+        msgs: Vec<(roothash::Message, MessageEventHookInvocation)>,
+    ) -> Result<(), Error> {
+        for m in msgs {
+            self.emit_message(m.0, m.1)?;
+        }
+
+        Ok(())
+    }
+
+    /// Returns a child io_ctx.
+    fn io_ctx(&self) -> IoContext;
+
+    /// Commit any changes made to storage, return any emitted tags and runtime messages. It
+    /// consumes the transaction context.
+    fn commit(self) -> (Tags, Vec<(roothash::Message, MessageEventHookInvocation)>);
+
+    /// Fetches or sets a value associated with the context.
+    fn value<V>(&mut self, key: &'static str) -> &mut V
+    where
+        V: Any + Default;
+
+    /// Takes a value associated with the context.
+    ///
+    /// The previous value is removed so subsequent fetches will return the default value.
+    fn take_value<V>(&mut self, key: &'static str) -> Box<V>
+    where
+        V: Any + Default;
+}
+
 /// Dispatch context for the whole batch.
 pub struct DispatchContext<'a> {
     pub(crate) mode: Mode,
 
     pub(crate) runtime_header: &'a roothash::Header,
     pub(crate) runtime_round_results: &'a roothash::RoundResults,
-    pub(crate) runtime_storage: &'a mut dyn mkvs::MKVS,
+    pub(crate) runtime_storage: storage::MKVSStore<&'a mut dyn mkvs::MKVS>,
     // TODO: linked consensus layer block
-    // TODO: linked consensus layer state storage (or just expose high-level stuff)
+    pub(crate) consensus_state: &'a consensus::state::ConsensusState,
     pub(crate) io_ctx: Arc<IoContext>,
+    pub(crate) logger: slog::Logger,
+
+    pub(crate) block_tags: Tags,
 
     /// Maximum number of messages that can be emitted.
     pub(crate) max_messages: u32,
     /// Emitted messages.
-    pub(crate) messages: Vec<roothash::Message>,
+    pub(crate) messages: Vec<(roothash::Message, MessageEventHookInvocation)>,
 
     /// Per-context values.
     pub(crate) values: BTreeMap<&'static str, Box<dyn Any>>,
@@ -54,76 +165,25 @@ pub struct DispatchContext<'a> {
 impl<'a> DispatchContext<'a> {
     /// Create a new dispatch context from the low-level runtime context.
     pub(crate) fn from_runtime(ctx: &'a RuntimeContext<'_>, mkvs: &'a mut dyn mkvs::MKVS) -> Self {
+        let mode = if ctx.check_only {
+            Mode::CheckTx
+        } else {
+            Mode::ExecuteTx
+        };
         Self {
-            mode: if ctx.check_only {
-                Mode::CheckTx
-            } else {
-                Mode::ExecuteTx
-            },
+            mode,
             runtime_header: ctx.header,
             runtime_round_results: ctx.round_results,
-            runtime_storage: mkvs,
+            runtime_storage: storage::MKVSStore::new(ctx.io_ctx.clone(), mkvs),
+            consensus_state: &ctx.consensus_state,
             io_ctx: ctx.io_ctx.clone(),
+            logger: get_logger("runtime-sdk")
+                .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
+            block_tags: Tags::new(),
             max_messages: ctx.max_messages,
             messages: Vec::new(),
             values: BTreeMap::new(),
         }
-    }
-
-    /// Last runtime block header.
-    pub fn runtime_header(&self) -> &roothash::Header {
-        self.runtime_header
-    }
-
-    /// Results of executing the last successful runtime round.
-    pub fn runtime_round_results(&self) -> &roothash::RoundResults {
-        self.runtime_round_results
-    }
-
-    /// Runtime state store.
-    pub fn runtime_state(&mut self) -> storage::MKVSStore<&mut dyn mkvs::MKVS> {
-        storage::MKVSStore::new(self.io_ctx.clone(), &mut self.runtime_storage)
-    }
-
-    /// Emits runtime messages
-    pub fn emit_messages(&mut self, mut msgs: Vec<roothash::Message>) -> Result<(), Error> {
-        // Check against maximum number of messages that can be emitted per round.
-        if self.messages.len() > self.max_messages as usize {
-            return Err(Error::TooManyMessages);
-        }
-
-        self.messages.append(&mut msgs);
-        Ok(())
-    }
-
-    /// Finalize the context and return the emitted runtime messages, consuming the context.
-    pub fn commit(self) -> Vec<roothash::Message> {
-        self.messages
-    }
-
-    /// Fetches or sets a value associated with the context.
-    pub fn value<V>(&mut self, key: &'static str) -> &mut V
-    where
-        V: Any + Default,
-    {
-        self.values
-            .entry(key)
-            .or_insert_with(|| Box::new(V::default()))
-            .downcast_mut()
-            .expect("type should stay the same")
-    }
-
-    /// Takes a value associated with the context.
-    ///
-    /// The previous value is removed so subsequent fetches will return the default value.
-    pub fn take_value<V>(&mut self, key: &'static str) -> Box<V>
-    where
-        V: Any + Default,
-    {
-        self.values
-            .remove(key)
-            .map(|x| x.downcast().expect("type should stay the same"))
-            .unwrap_or_default()
     }
 
     /// Executes a function with the transaction-specific context set.
@@ -132,18 +192,21 @@ impl<'a> DispatchContext<'a> {
         F: FnOnce(TxContext<'_, '_>, transaction::Call) -> R,
     {
         // Create a store wrapped by an overlay store so we can either rollback or commit.
-        let store = storage::MKVSStore::new(self.io_ctx.clone(), &mut self.runtime_storage);
-        let store = storage::OverlayStore::new(store);
+        let store = storage::OverlayStore::new(&mut self.runtime_storage);
 
         let tx_ctx = TxContext {
             mode: self.mode,
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
+            consensus_state: self.consensus_state,
             store,
+            io_ctx: self.io_ctx.clone(),
+            logger: self
+                .logger
+                .new(o!("ctx" => "transaction", "mode" => Into::<&'static str>::into(&self.mode))),
             tx_auth_info: tx.auth_info,
             tags: Tags::new(),
             // NOTE: Since a limit is enforced (which is a u32) this cast is always safe.
-            message_offset: self.messages.len() as u32,
             max_messages: self.max_messages.saturating_sub(self.messages.len() as u32),
             messages: Vec::new(),
             values: &mut self.values,
@@ -152,103 +215,65 @@ impl<'a> DispatchContext<'a> {
     }
 }
 
-/// Per-transaction dispatch context.
-pub struct TxContext<'a, 'b> {
-    mode: Mode,
+impl<'a> Context for DispatchContext<'a> {
+    type S = storage::MKVSStore<&'a mut dyn mkvs::MKVS>;
 
-    runtime_header: &'a roothash::Header,
-    runtime_round_results: &'a roothash::RoundResults,
-    // TODO: linked consensus layer block
-    // TODO: linked consensus layer state storage (or just expose high-level stuff)
-    store: storage::OverlayStore<storage::MKVSStore<&'b mut &'a mut dyn mkvs::MKVS>>,
-
-    /// Transaction authentication info.
-    tx_auth_info: transaction::AuthInfo,
-
-    /// Emitted tags.
-    tags: Tags,
-
-    /// Offset for emitted message indices (as those are global).
-    message_offset: u32,
-    /// Maximum number of messages that can be emitted.
-    max_messages: u32,
-    /// Emitted messages.
-    messages: Vec<roothash::Message>,
-
-    /// Per-context values.
-    values: &'b mut BTreeMap<&'static str, Box<dyn Any>>,
-}
-
-impl<'a, 'b> TxContext<'a, 'b> {
-    /// Whether the transaction is just being checked for validity.
-    pub fn is_check_only(&self) -> bool {
-        self.mode == Mode::CheckTx
+    fn get_logger(&self, module: &'static str) -> slog::Logger {
+        self.logger.new(o!("sdk_module" => module))
     }
 
-    /// Whether the transaction is just being simulated.
-    pub fn is_simulation(&self) -> bool {
-        self.mode == Mode::SimulateTx
+    fn mode(&self) -> Mode {
+        self.mode
     }
 
-    /// Last runtime block header.
-    pub fn runtime_header(&self) -> &roothash::Header {
-        self.runtime_header
+    fn runtime_header(&self) -> &roothash::Header {
+        &self.runtime_header
     }
 
-    /// Results of executing the last successful runtime round.
-    pub fn runtime_round_results(&self) -> &roothash::RoundResults {
-        self.runtime_round_results
+    fn runtime_round_results(&self) -> &roothash::RoundResults {
+        &self.runtime_round_results
     }
 
-    /// Runtime state store.
-    pub fn runtime_state(
+    fn runtime_state(&mut self) -> &mut Self::S {
+        &mut self.runtime_storage
+    }
+
+    fn consensus_state(&self) -> &consensus::state::ConsensusState {
+        &self.consensus_state
+    }
+
+    fn tx_auth_info(&self) -> Option<&transaction::AuthInfo> {
+        None
+    }
+
+    fn emit_event<E: Event>(&mut self, event: E) {
+        self.block_tags.push(event.to_tag());
+    }
+
+    fn emit_message(
         &mut self,
-    ) -> &mut storage::OverlayStore<storage::MKVSStore<&'b mut &'a mut dyn mkvs::MKVS>> {
-        &mut self.store
-    }
-
-    /// Transaction authentication information.
-    pub fn tx_auth_info(&self) -> &transaction::AuthInfo {
-        &self.tx_auth_info
-    }
-
-    /// Authenticated address of the caller.
-    ///
-    /// In case there are multiple signers of a transaction, this will return the address
-    /// corresponding to the first signer.
-    pub fn tx_caller_address(&self) -> Address {
-        Address::from_pk(&self.tx_auth_info().signer_info[0].public_key)
-    }
-
-    /// Emits an event.
-    pub fn emit_event<E: Event>(&mut self, event: E) {
-        self.tags.push(event.to_tag());
-    }
-
-    /// Attempts to emit a runtime message.
-    ///
-    /// Returns an index of the emitted message that can be used to correlate the corresponding
-    /// result after the message has been processed (in the next round).
-    pub fn emit_message(&mut self, msg: roothash::Message) -> Result<u32, Error> {
+        msg: roothash::Message,
+        hook: MessageEventHookInvocation,
+    ) -> Result<(), Error> {
         // Check against maximum number of messages that can be emitted per round.
         if self.messages.len() >= self.max_messages as usize {
-            return Err(Error::TooManyMessages);
+            return Err(Error::OutOfMessageSlots);
         }
 
-        self.messages.push(msg);
-        // NOTE: The cast to u32 is safe as the maximum is u32 so the length is representable.
-        Ok(self.message_offset + (self.messages.len() as u32) - 1)
+        self.messages.push((msg, hook));
+
+        Ok(())
     }
 
-    /// Commit any changes made to storage, return any emitted tags and runtime messages. It
-    /// consumes the transaction context.
-    pub fn commit(self) -> (Tags, Vec<roothash::Message>) {
-        self.store.commit();
-        (self.tags, self.messages)
+    fn io_ctx(&self) -> IoContext {
+        IoContext::create_child(&self.io_ctx)
     }
 
-    /// Fetches or sets a value associated with the context.
-    pub fn value<V>(&mut self, key: &'static str) -> &mut V
+    fn commit(self) -> (Tags, Vec<(roothash::Message, MessageEventHookInvocation)>) {
+        (self.block_tags, self.messages)
+    }
+
+    fn value<V>(&mut self, key: &'static str) -> &mut V
     where
         V: Any + Default,
     {
@@ -259,10 +284,116 @@ impl<'a, 'b> TxContext<'a, 'b> {
             .expect("type should stay the same")
     }
 
-    /// Takes a value associated with the context.
-    ///
-    /// The previous value is removed so subsequent fetches will return the default value.
-    pub fn take_value<V>(&mut self, key: &'static str) -> Box<V>
+    fn take_value<V>(&mut self, key: &'static str) -> Box<V>
+    where
+        V: Any + Default,
+    {
+        self.values
+            .remove(key)
+            .map(|x| x.downcast().expect("type should stay the same"))
+            .unwrap_or_default()
+    }
+}
+
+/// Per-transaction/method dispatch sub-context.
+pub struct TxContext<'a, 'b> {
+    mode: Mode,
+
+    runtime_header: &'a roothash::Header,
+    runtime_round_results: &'a roothash::RoundResults,
+    consensus_state: &'a consensus::state::ConsensusState,
+    // TODO: linked consensus layer block
+    store: storage::OverlayStore<&'b mut storage::MKVSStore<&'a mut dyn mkvs::MKVS>>,
+
+    io_ctx: Arc<IoContext>,
+    logger: slog::Logger,
+
+    /// Transaction authentication info.
+    tx_auth_info: transaction::AuthInfo,
+
+    /// Emitted tags.
+    tags: Tags,
+
+    /// Maximum number of messages that can be emitted.
+    max_messages: u32,
+    /// Emitted messages and respective event hooks.
+    messages: Vec<(roothash::Message, MessageEventHookInvocation)>,
+
+    /// Per-context values.
+    values: &'b mut BTreeMap<&'static str, Box<dyn Any>>,
+}
+
+impl<'a, 'b> Context for TxContext<'a, 'b> {
+    type S = storage::OverlayStore<&'b mut storage::MKVSStore<&'a mut dyn mkvs::MKVS>>;
+
+    fn get_logger(&self, module: &'static str) -> slog::Logger {
+        self.logger.new(o!("sdk_module" => module))
+    }
+
+    fn mode(&self) -> Mode {
+        self.mode
+    }
+
+    fn runtime_header(&self) -> &roothash::Header {
+        self.runtime_header
+    }
+
+    fn runtime_round_results(&self) -> &roothash::RoundResults {
+        self.runtime_round_results
+    }
+
+    fn runtime_state(&mut self) -> &mut Self::S {
+        &mut self.store
+    }
+
+    fn consensus_state(&self) -> &consensus::state::ConsensusState {
+        self.consensus_state
+    }
+
+    fn tx_auth_info(&self) -> Option<&transaction::AuthInfo> {
+        Some(&self.tx_auth_info)
+    }
+
+    fn emit_event<E: Event>(&mut self, event: E) {
+        self.tags.push(event.to_tag());
+    }
+
+    fn emit_message(
+        &mut self,
+        msg: roothash::Message,
+        hook: MessageEventHookInvocation,
+    ) -> Result<(), Error> {
+        // Check against maximum number of messages that can be emitted per round.
+        if self.messages.len() >= self.max_messages as usize {
+            return Err(Error::OutOfMessageSlots);
+        }
+
+        self.messages.push((msg, hook));
+
+        Ok(())
+    }
+
+    fn io_ctx(&self) -> IoContext {
+        IoContext::create_child(&self.io_ctx)
+    }
+
+    fn commit(self) -> (Tags, Vec<(roothash::Message, MessageEventHookInvocation)>) {
+        self.store.commit();
+        (self.tags, self.messages)
+    }
+
+    fn value<V>(&mut self, key: &'static str) -> &mut V
+    where
+        V: Any + Default,
+    {
+        self.values
+            .entry(key)
+            .or_insert_with(|| Box::new(V::default()))
+            .downcast_mut()
+            .expect("type should stay the same")
+    }
+
+    fn take_value<V>(&mut self, key: &'static str) -> Box<V>
     where
         V: Any + Default,
     {
