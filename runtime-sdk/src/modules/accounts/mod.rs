@@ -14,7 +14,9 @@ use crate::{
     error::{self, Error as _},
     module,
     module::{CallableMethodInfo, Module as _, QueryMethodInfo},
-    modules, storage,
+    modules,
+    modules::core::{Module as Core, API as _},
+    storage,
     types::{
         address::Address,
         token,
@@ -43,6 +45,10 @@ pub enum Error {
     #[error("forbidden by policy")]
     #[sdk_error(code = 3)]
     Forbidden,
+
+    #[error("core: {0}")]
+    #[sdk_error(code = 4)]
+    Core(#[from] modules::core::Error),
 }
 
 /// Events emitted by the accounts module.
@@ -352,6 +358,10 @@ impl Module {
         if Self::params(ctx.runtime_state()).transfers_disabled {
             return Err(Error::Forbidden);
         }
+
+        // TODO: Needs configuration.
+        // TODO: Needs to be replicated across all other transactions.
+        Core::use_gas(ctx, 100)?;
 
         Self::transfer(ctx, ctx.tx_caller_address(), body.to, &body.amount)?;
 

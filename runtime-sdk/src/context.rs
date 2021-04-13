@@ -147,6 +147,7 @@ impl<'a> DispatchContext<'a> {
             max_messages: self.max_messages.saturating_sub(self.messages.len() as u32),
             messages: Vec::new(),
             values: &mut self.values,
+            tx_values: BTreeMap::new(),
         };
         f(tx_ctx, tx.call)
     }
@@ -177,6 +178,9 @@ pub struct TxContext<'a, 'b> {
 
     /// Per-context values.
     values: &'b mut BTreeMap<&'static str, Box<dyn Any>>,
+
+    /// Per-transaction values.
+    tx_values: BTreeMap<&'static str, Box<dyn Any>>,
 }
 
 impl<'a, 'b> TxContext<'a, 'b> {
@@ -271,6 +275,31 @@ impl<'a, 'b> TxContext<'a, 'b> {
             .map(|x| x.downcast().expect("type should stay the same"))
             .unwrap_or_default()
     }
+
+    /// Fetches or sets a value associated with the transaction.
+    pub fn tx_value<V>(&mut self, key: &'static str) -> &mut V
+    where
+        V: Any + Default,
+    {
+        self.tx_values
+            .entry(key)
+            .or_insert_with(|| Box::new(V::default()))
+            .downcast_mut()
+            .expect("type should stay the same")
+    }
+
+    /// Takes a value associated with the transaction.
+    ///
+    /// The previous value is removed so subsequent fetches will return the default value.
+    pub fn take_tx_value<V>(&mut self, key: &'static str) -> Box<V>
+    where
+        V: Any + Default,
+    {
+        self.tx_values
+            .remove(key)
+            .map(|x| x.downcast().expect("type should stay the same"))
+            .unwrap_or_default()
+    }
 }
 
 #[cfg(test)]
@@ -341,6 +370,14 @@ mod test {
             assert_eq!(y, &Some(42));
 
             *y = Some(48);
+
+            let a: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey");
+            assert_eq!(a, &None);
+
+            *a = Some(65);
+
+            let b: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey");
+            assert_eq!(b, &Some(65));
         });
 
         let x: &mut Option<u64> = ctx.value("module.TestKey");
@@ -349,6 +386,9 @@ mod test {
         ctx.with_tx(tx, |mut tx_ctx, _call| {
             let z: Box<Option<u64>> = tx_ctx.take_value("module.TestKey");
             assert_eq!(z, Box::new(Some(48)));
+
+            let a: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey");
+            assert_eq!(a, &None);
         });
 
         let y: &mut Option<u64> = ctx.value("module.TestKey");
