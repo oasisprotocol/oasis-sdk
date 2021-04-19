@@ -8,10 +8,12 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	sdk "github.com/oasisprotocol/oasis-sdk/client-sdk/go"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
@@ -58,9 +60,14 @@ func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.C
 }
 
 // kvInsert inserts given key-value pair into storage.
-func kvInsert(rtc client.RuntimeClient, signer signature.Signer, nonce uint64, key []byte, value []byte) error {
+func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key []byte, value []byte) error {
 	ctx := context.Background()
 	chainCtx, err := GetChainContext(ctx, rtc)
+	if err != nil {
+		return err
+	}
+	ac := accounts.NewV1(rtc)
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
 	if err != nil {
 		return err
 	}
@@ -80,9 +87,14 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, nonce uint64, k
 }
 
 // kvRemove removes given key from storage.
-func kvRemove(rtc client.RuntimeClient, signer signature.Signer, nonce uint64, key []byte) error {
+func kvRemove(rtc client.RuntimeClient, signer signature.Signer, key []byte) error {
 	ctx := context.Background()
 	chainCtx, err := GetChainContext(ctx, rtc)
+	if err != nil {
+		return err
+	}
+	ac := accounts.NewV1(rtc)
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
 	if err != nil {
 		return err
 	}
@@ -118,7 +130,7 @@ func SimpleKVTest(log *logging.Logger, rtc client.RuntimeClient) error {
 	testValue := []byte("test_value")
 
 	log.Info("inserting test key")
-	if err := kvInsert(rtc, signer, 0, testKey, testValue); err != nil {
+	if err := kvInsert(rtc, signer, testKey, testValue); err != nil {
 		return err
 	}
 
@@ -132,7 +144,7 @@ func SimpleKVTest(log *logging.Logger, rtc client.RuntimeClient) error {
 	}
 
 	log.Info("removing test key")
-	if err := kvRemove(rtc, signer, 1, testKey); err != nil {
+	if err := kvRemove(rtc, signer, testKey); err != nil {
 		return err
 	}
 
@@ -160,7 +172,7 @@ func KVEventTest(log *logging.Logger, rtc client.RuntimeClient) error {
 	defer blkSub.Close()
 
 	log.Info("inserting test key")
-	if err := kvInsert(rtc, signer, 0, testKey, testValue); err != nil {
+	if err := kvInsert(rtc, signer, testKey, testValue); err != nil {
 		return err
 	}
 
@@ -213,7 +225,7 @@ WaitInsertLoop:
 	}
 
 	log.Info("removing test key")
-	if err := kvRemove(rtc, signer, 1, testKey); err != nil {
+	if err := kvRemove(rtc, signer, testKey); err != nil {
 		return err
 	}
 
@@ -263,6 +275,111 @@ WaitRemoveLoop:
 	}
 	if !gotEvent {
 		return fmt.Errorf("didn't get remove event")
+	}
+
+	return nil
+}
+
+func KVBalanceTest(log *logging.Logger, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	ac := accounts.NewV1(rtc)
+
+	log.Info("checking Alice's account balance")
+	ab, err := ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := ab.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(3000)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 3000, got %s)", q.String())
+		}
+	} else {
+		return fmt.Errorf("Alice's account is missing native denomination balance")
+	}
+
+	log.Info("checking Bob's account balance")
+	bb, err := ac.Balances(ctx, client.RoundLatest, testing.Bob.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := bb.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(2000)) != 0 {
+			return fmt.Errorf("Bob's account balance is wrong (expected 2000, got %s)", q.String())
+		}
+	} else {
+		return fmt.Errorf("Bob's account is missing native denomination balance")
+	}
+
+	log.Info("checking Charlie's account balance")
+	cb, err := ac.Balances(ctx, client.RoundLatest, testing.Charlie.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := cb.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(1000)) != 0 {
+			return fmt.Errorf("Charlie's account balance is wrong (expected 1000, got %s)", q.String())
+		}
+	} else {
+		return fmt.Errorf("Charlie's account is missing native denomination balance")
+	}
+
+	return nil
+}
+
+func KVTransferTest(log *logging.Logger, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	ac := accounts.NewV1(rtc)
+
+	chainCtx, err := GetChainContext(ctx, rtc)
+	if err != nil {
+		return err
+	}
+
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return err
+	}
+
+	log.Info("transferring 100 units from Alice to Bob")
+	tx := types.NewTransaction(nil, "accounts.Transfer", struct {
+		To     types.Address   `json:"to"`
+		Amount types.BaseUnits `json:"amount"`
+	}{
+		To:     testing.Bob.Address,
+		Amount: types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination),
+	})
+	tx.AppendSignerInfo(testing.Alice.Signer.Public(), nonce)
+	stx := tx.PrepareForSigning()
+	stx.AppendSign(chainCtx, testing.Alice.Signer)
+
+	if _, err := rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
+		return err
+	}
+
+	log.Info("checking Alice's account balance")
+	ab, err := ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := ab.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(2900)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 2900, got %s)", q.String())
+		}
+	} else {
+		return fmt.Errorf("Alice's account is missing native denomination balance")
+	}
+
+	log.Info("checking Bob's account balance")
+	bb, err := ac.Balances(ctx, client.RoundLatest, testing.Bob.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := bb.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(2100)) != 0 {
+			return fmt.Errorf("Bob's account balance is wrong (expected 2100, got %s)", q.String())
+		}
+	} else {
+		return fmt.Errorf("Bob's account is missing native denomination balance")
 	}
 
 	return nil
