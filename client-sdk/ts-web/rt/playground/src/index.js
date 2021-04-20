@@ -77,6 +77,7 @@ function moduleEventHandler(/** @type {{
 }
 
 const nic = new oasis.client.NodeInternal('http://localhost:42280');
+const accountsWrapper = new oasisRT.accounts.Wrapper(KEYVALUE_RUNTIME_ID);
 const keyvalueWrapper = new Wrapper(KEYVALUE_RUNTIME_ID);
 
 export const playground = (async function () {
@@ -146,10 +147,14 @@ export const playground = (async function () {
 
         const alice = oasis.signature.NaclSigner.fromSeed(await oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')), 'this key is not important');
         const csAlice = new oasis.signature.BlindContextSigner(alice);
-        // The keyvalue runtime does not use the accounts module, so there
-        // is no nonce checking.
-        const nonce = BigInt(Date.now());
-        const siAlice = /** @type {oasisRT.types.SignerInfo} */ ({pub: {ed25519: csAlice.public()}, nonce});
+
+        // Fetch nonce for Alice's account.
+        const nonce1 = await accountsWrapper.queryNonce()
+            .setArgs({
+                address: await oasis.staking.addressFromPublicKey(alice.public()),
+            })
+            .query(nic);
+        const siAlice1 = /** @type {oasisRT.types.SignerInfo} */ ({pub: {ed25519: csAlice.public()}, nonce: nonce1});
 
         const consensusChainContext = await nic.consensusGetChainContext();
 
@@ -159,7 +164,7 @@ export const playground = (async function () {
                 key: THE_KEY,
                 value: THE_VALUE,
             })
-            .setSignerInfo([siAlice])
+            .setSignerInfo([siAlice1])
             .setFeeAmount(FEE_FREE)
             .setFeeGas(0n);
         await twInsert.sign([csAlice], consensusChainContext);
@@ -176,12 +181,20 @@ export const playground = (async function () {
         if (oasis.misc.toHex(getResult.key) !== oasis.misc.toHex(THE_KEY)) throw new Error('Key mismatch');
         if (oasis.misc.toHex(getResult.value) !== oasis.misc.toHex(THE_VALUE)) throw new Error('Value mismatch');
 
+        // Fetch nonce for Alice's account again.
+        const nonce2 = await accountsWrapper.queryNonce()
+            .setArgs({
+                address: await oasis.staking.addressFromPublicKey(alice.public()),
+            })
+            .query(nic);
+        const siAlice2 = /** @type {oasisRT.types.SignerInfo} */ ({pub: {ed25519: csAlice.public()}, nonce: nonce2});
+
         console.log('remove', THE_KEY);
         const twRemove = keyvalueWrapper.callRemove()
             .setBody({
                 key: THE_KEY,
             })
-            .setSignerInfo([siAlice])
+            .setSignerInfo([siAlice2])
             .setFeeAmount(FEE_FREE)
             .setFeeGas(0n);
         await twRemove.sign([csAlice], consensusChainContext);

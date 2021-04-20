@@ -129,15 +129,15 @@ func (sc *runtimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				Executor: registry.ExecutorParameters{
 					GroupSize:       2,
 					GroupBackupSize: 1,
-					RoundTimeout:    20,
-					MaxMessages:     128,
+					RoundTimeout:    30,
+					MaxMessages:     256,
 				},
 				TxnScheduler: registry.TxnSchedulerParameters{
 					Algorithm:         registry.TxnSchedulerSimple,
-					MaxBatchSize:      1,
-					MaxBatchSizeBytes: 1024,
+					MaxBatchSize:      10,
+					MaxBatchSizeBytes: 16 * 1024 * 1024, // 16 MB.
 					BatchFlushTimeout: 1 * time.Second,
-					ProposerTimeout:   20,
+					ProposerTimeout:   30,
 				},
 				Storage: registry.StorageParameters{
 					GroupSize:               2,
