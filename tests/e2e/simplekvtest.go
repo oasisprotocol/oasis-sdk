@@ -354,7 +354,9 @@ func KVTransferTest(log *logging.Logger, rtc client.RuntimeClient) error {
 	}
 
 	log.Info("transferring 100 units from Alice to Bob")
-	tx := types.NewTransaction(nil, "accounts.Transfer", struct {
+	tx := types.NewTransaction(&types.Fee{
+		Gas:    100,
+	}, "accounts.Transfer", struct {
 		To     types.Address   `json:"to"`
 		Amount types.BaseUnits `json:"amount"`
 	}{
