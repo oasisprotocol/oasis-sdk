@@ -1,9 +1,16 @@
 //! Core definitions module.
-use oasis_core_runtime::common::cbor;
+use std::collections::BTreeMap;
+
 use thiserror::Error;
 
+use oasis_core_runtime::common::cbor;
+
 use crate::{
-    error, module, module::QueryMethodInfo, types::transaction, DispatchContext, TxContext,
+    context::Mode,
+    error,
+    module::{self, QueryMethodInfo},
+    types::transaction,
+    DispatchContext, TxContext,
 };
 
 #[cfg(test)]
@@ -81,13 +88,30 @@ impl API for Module {
 
 impl Module {
     fn query_estimate_gas(
-        _ctx: &mut DispatchContext<'_>,
-        _args: transaction::Transaction,
+        ctx: &mut DispatchContext<'_>,
+        args: transaction::Transaction,
     ) -> Result<u64, Error> {
-        // go back out and make a different dispatch context in simulate mode
-        // is that stuff even okay with reentrancy?
-        // might be blocked on the pass-storage-in-context transition
-        todo!()
+        let mi = ctx
+            .methods
+            .lookup_callable(&args.call.method)
+            .ok_or(Error::InvalidMethod)?;
+        let mut sim_ctx = DispatchContext {
+            mode: Mode::SimulateTx,
+            runtime_header: ctx.runtime_header,
+            runtime_round_results: ctx.runtime_round_results,
+            runtime_storage: ctx.runtime_storage,
+            io_ctx: ctx.io_ctx.clone(),
+            methods: ctx.methods,
+            max_messages: ctx.max_messages,
+            messages: Vec::new(),
+            values: BTreeMap::new(),
+        };
+        Ok(sim_ctx.with_tx(args, |mut tx_ctx, call| {
+            (mi.handler)(&mi, &mut tx_ctx, call.body);
+            // Warning: we don't report success or failure. If the call fails, we still report how
+            // much gas it uses while it fails.
+            *tx_ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED)
+        }))
     }
 }
 

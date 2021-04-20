@@ -7,6 +7,7 @@ use oasis_core_runtime::{common::cbor, consensus::roothash, storage::mkvs};
 
 use crate::{
     context::{DispatchContext, Mode},
+    module::MethodRegistry,
     types::transaction,
 };
 
@@ -15,6 +16,8 @@ pub struct Mock {
     pub runtime_header: roothash::Header,
     pub runtime_round_results: roothash::RoundResults,
     pub runtime_storage: mkvs::OverlayTree<mkvs::Tree>,
+
+    pub methods: MethodRegistry,
 
     pub max_messages: u32,
 }
@@ -28,6 +31,7 @@ impl Mock {
             runtime_round_results: &self.runtime_round_results,
             runtime_storage: &mut self.runtime_storage,
             io_ctx: IoContext::background().freeze(),
+            methods: &self.methods,
             messages: Vec::new(),
             max_messages: self.max_messages,
             values: BTreeMap::new(),
@@ -45,6 +49,7 @@ impl Default for Mock {
                     .with_root_type(mkvs::RootType::State)
                     .new(Box::new(mkvs::sync::NoopReadSyncer)),
             ),
+            methods: MethodRegistry::new(),
             max_messages: 32,
         }
     }

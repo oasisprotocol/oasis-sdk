@@ -197,7 +197,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         // TODO: Get rid of StorageContext (pass mkvs in ctx).
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
-            let mut ctx = DispatchContext::from_runtime(&ctx, mkvs);
+            let mut ctx = DispatchContext::from_runtime(&ctx, mkvs, &self.methods);
             // Perform state migrations if required.
             self.maybe_init_state(&mut ctx);
 
@@ -228,7 +228,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         // TODO: Get rid of StorageContext (pass mkvs in ctx).
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
-            let mut ctx = DispatchContext::from_runtime(&ctx, mkvs);
+            let mut ctx = DispatchContext::from_runtime(&ctx, mkvs, &self.methods);
             // Perform state migrations if required.
             self.maybe_init_state(&mut ctx);
 
@@ -255,7 +255,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         // TODO: Get rid of StorageContext (pass mkvs in ctx).
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
-            let mut ctx = DispatchContext::from_runtime(&ctx, mkvs);
+            let mut ctx = DispatchContext::from_runtime(&ctx, mkvs, &self.methods);
 
             // Execute the query.
             let mi = self

@@ -12,6 +12,7 @@ use oasis_core_runtime::{
 
 use crate::{
     event::Event,
+    module::MethodRegistry,
     storage,
     types::{address::Address, transaction},
 };
@@ -42,6 +43,9 @@ pub struct DispatchContext<'a> {
     // TODO: linked consensus layer state storage (or just expose high-level stuff)
     pub(crate) io_ctx: Arc<IoContext>,
 
+    /// The runtime's methods, in case you need to look them up for some reason.
+    pub(crate) methods: &'a MethodRegistry,
+
     /// Maximum number of messages that can be emitted.
     pub(crate) max_messages: u32,
     /// Emitted messages.
@@ -53,7 +57,11 @@ pub struct DispatchContext<'a> {
 
 impl<'a> DispatchContext<'a> {
     /// Create a new dispatch context from the low-level runtime context.
-    pub(crate) fn from_runtime(ctx: &'a RuntimeContext<'_>, mkvs: &'a mut dyn mkvs::MKVS) -> Self {
+    pub(crate) fn from_runtime(
+        ctx: &'a RuntimeContext<'_>,
+        mkvs: &'a mut dyn mkvs::MKVS,
+        methods: &'a MethodRegistry,
+    ) -> Self {
         Self {
             mode: if ctx.check_only {
                 Mode::CheckTx
@@ -64,6 +72,7 @@ impl<'a> DispatchContext<'a> {
             runtime_round_results: ctx.round_results,
             runtime_storage: mkvs,
             io_ctx: ctx.io_ctx.clone(),
+            methods,
             max_messages: ctx.max_messages,
             messages: Vec::new(),
             values: BTreeMap::new(),
