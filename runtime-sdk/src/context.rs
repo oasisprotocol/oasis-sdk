@@ -160,6 +160,27 @@ impl<'a> DispatchContext<'a> {
         };
         f(tx_ctx, tx.call)
     }
+
+    /// Run something with a simulation context based on this context.
+    /// The simulation context collects its own messages and starts with an empty set of context
+    /// values.
+    pub fn with_simulation<F, R>(&mut self, f: F) -> R
+    where
+        F: FnOnce(&mut DispatchContext<'_>) -> R,
+    {
+        let mut sim_ctx = DispatchContext {
+            mode: Mode::SimulateTx,
+            runtime_header: self.runtime_header,
+            runtime_round_results: self.runtime_round_results,
+            runtime_storage: self.runtime_storage,
+            io_ctx: self.io_ctx.clone(),
+            methods: self.methods,
+            max_messages: self.max_messages,
+            messages: Vec::new(),
+            values: BTreeMap::new(),
+        };
+        f(&mut sim_ctx)
+    }
 }
 
 /// Per-transaction dispatch context.

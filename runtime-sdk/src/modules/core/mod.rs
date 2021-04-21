@@ -1,12 +1,9 @@
 //! Core definitions module.
-use std::collections::BTreeMap;
-
 use thiserror::Error;
 
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    context::Mode,
     error,
     module::{self, QueryMethodInfo},
     types::transaction,
@@ -95,23 +92,14 @@ impl Module {
             .methods
             .lookup_callable(&args.call.method)
             .ok_or(Error::InvalidMethod)?;
-        let mut sim_ctx = DispatchContext {
-            mode: Mode::SimulateTx,
-            runtime_header: ctx.runtime_header,
-            runtime_round_results: ctx.runtime_round_results,
-            runtime_storage: ctx.runtime_storage,
-            io_ctx: ctx.io_ctx.clone(),
-            methods: ctx.methods,
-            max_messages: ctx.max_messages,
-            messages: Vec::new(),
-            values: BTreeMap::new(),
-        };
-        Ok(sim_ctx.with_tx(args, |mut tx_ctx, call| {
-            (mi.handler)(&mi, &mut tx_ctx, call.body);
-            // Warning: we don't report success or failure. If the call fails, we still report how
-            // much gas it uses while it fails.
-            *tx_ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED)
-        }))
+        ctx.with_simulation(|sim_ctx| {
+            sim_ctx.with_tx(args, |mut tx_ctx, call| {
+                (mi.handler)(&mi, &mut tx_ctx, call.body);
+                // Warning: we don't report success or failure. If the call fails, we still report
+                // how much gas it uses while it fails.
+                Ok(*tx_ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED))
+            })
+        })
     }
 }
 
