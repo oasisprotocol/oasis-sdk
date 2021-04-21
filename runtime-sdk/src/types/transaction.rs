@@ -150,6 +150,8 @@ pub enum CallResult {
         code: u32,
 
         #[serde(rename = "message")]
+        #[serde(default)]
+        #[serde(skip_serializing_if = "String::is_empty")]
         message: String,
     },
 }

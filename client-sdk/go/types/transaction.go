@@ -186,7 +186,7 @@ func (cr *CallResult) IsSuccess() bool {
 type FailedCallResult struct {
 	Module  string `json:"module"`
 	Code    uint32 `json:"code"`
-	Message string `json:"message"`
+	Message string `json:"message,omitempty"`
 }
 
 // Error is a trivial implementation of error.
