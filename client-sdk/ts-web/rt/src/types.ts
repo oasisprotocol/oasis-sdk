@@ -77,6 +77,7 @@ export interface CallResult {
 export interface FailedCallResult {
     module: string;
     code: number;
+    message?: string;
 }
 
 /**

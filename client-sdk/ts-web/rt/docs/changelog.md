@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased changes
+
+New features:
+
+- We added bindings for runtime gas accounting.
+
 ## v0.2.0-alpha1
 
 Spotlight change:
