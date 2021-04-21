@@ -149,11 +149,15 @@ impl<R: Runtime> Dispatcher<R> {
                 meta: Some(value),
             }),
 
-            types::transaction::CallResult::Failed { module, code } => Ok(CheckTxResult {
+            types::transaction::CallResult::Failed {
+                module,
+                code,
+                message,
+            } => Ok(CheckTxResult {
                 error: RuntimeError {
                     module,
                     code,
-                    message: Default::default(),
+                    message,
                 },
                 meta: None,
             }),

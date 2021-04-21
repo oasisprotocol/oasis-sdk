@@ -39,6 +39,7 @@ pub trait Error: std::error::Error {
         CallResult::Failed {
             module: self.module_name().to_owned(),
             code: self.code(),
+            message: self.to_string(),
         }
     }
 }

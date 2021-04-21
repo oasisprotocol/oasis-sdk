@@ -148,6 +148,9 @@ pub enum CallResult {
 
         #[serde(rename = "code")]
         code: u32,
+
+        #[serde(rename = "message")]
+        message: String,
     },
 }
 
