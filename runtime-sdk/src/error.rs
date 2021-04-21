@@ -29,7 +29,7 @@ use crate::types::transaction::CallResult;
 /// ```
 pub trait Error: std::error::Error {
     /// Name of the module that emitted the error.
-    fn module_name() -> &'static str;
+    fn module_name(&self) -> &'static str;
 
     /// Error code uniquely identifying the error.
     fn code(&self) -> u32;
@@ -37,18 +37,121 @@ pub trait Error: std::error::Error {
     /// Converts the error into a call result.
     fn to_call_result(&self) -> CallResult {
         CallResult::Failed {
-            module: Self::module_name().to_owned(),
+            module: self.module_name().to_owned(),
             code: self.code(),
         }
     }
 }
 
 impl Error for std::convert::Infallible {
-    fn module_name() -> &'static str {
+    fn module_name(&self) -> &'static str {
         "(none)"
     }
 
     fn code(&self) -> u32 {
         Default::default()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    const MODULE_NAME_1: &str = "test1";
+    const MODULE_NAME_2: &str = "test2";
+
+    #[derive(thiserror::Error, Debug, oasis_runtime_sdk_macros::Error)]
+    #[sdk_error(module_name = "MODULE_NAME_1")]
+    enum ChildError {
+        #[error("first error")]
+        #[sdk_error(code = 1)]
+        Error1,
+
+        #[error("second error")]
+        #[sdk_error(code = 2)]
+        Error2,
+    }
+
+    #[derive(thiserror::Error, Debug, oasis_runtime_sdk_macros::Error)]
+    #[sdk_error(module_name = "MODULE_NAME_2")]
+    enum ParentError {
+        #[error("first error")]
+        #[sdk_error(code = 1)]
+        NotForwarded(#[source] ChildError),
+
+        #[error("nested error")]
+        #[sdk_error(transparent)]
+        Nested(#[source] ChildError),
+    }
+
+    #[derive(thiserror::Error, Debug, oasis_runtime_sdk_macros::Error)]
+    enum ParentParentError {
+        #[error("nested nested error")]
+        #[sdk_error(transparent)]
+        Nested(#[source] ParentError),
+    }
+
+    #[test]
+    fn test_error_sources_1() {
+        let err = ParentError::Nested(ChildError::Error1);
+        let result = err.to_call_result();
+
+        match result {
+            CallResult::Failed { module, code } => {
+                assert_eq!(module, "test1");
+                assert_eq!(code, 1);
+            }
+            _ => panic!("expected failed result, got: {:?}", result),
+        }
+
+        let err = ParentError::Nested(ChildError::Error2);
+        let result = err.to_call_result();
+
+        match result {
+            CallResult::Failed { module, code } => {
+                assert_eq!(module, "test1");
+                assert_eq!(code, 2);
+            }
+            _ => panic!("expected failed result, got: {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_error_sources_2() {
+        let err = ParentError::NotForwarded(ChildError::Error1);
+        let result = err.to_call_result();
+
+        match result {
+            CallResult::Failed { module, code } => {
+                assert_eq!(module, "test2");
+                assert_eq!(code, 1);
+            }
+            _ => panic!("expected failed result, got: {:?}", result),
+        }
+
+        let err = ParentError::NotForwarded(ChildError::Error2);
+        let result = err.to_call_result();
+
+        match result {
+            CallResult::Failed { module, code } => {
+                assert_eq!(module, "test2");
+                assert_eq!(code, 1);
+            }
+            _ => panic!("expected failed result, got: {:?}", result),
+        }
+    }
+
+    #[test]
+    fn test_error_sources_3() {
+        let err = ParentParentError::Nested(ParentError::Nested(ChildError::Error1));
+        let result = err.to_call_result();
+
+        match result {
+            CallResult::Failed { module, code } => {
+                assert_eq!(module, "test1");
+                assert_eq!(code, 1);
+            }
+            _ => panic!("expected failed result, got: {:?}", result),
+        }
     }
 }
