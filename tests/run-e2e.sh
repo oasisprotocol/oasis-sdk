@@ -73,6 +73,7 @@ ${TAR} -xf oasis-core.tar.gz --strip-components=1 oasis_core_${OASIS_RELEASE}_li
 
 printf "${CYAN}### Running end-to-end tests...${OFF}\n"
 ./e2e --log.level=INFO \
+	--basedir.no_cleanup \
 	--e2e.node.binary="${TEST_BASE_DIR}"/oasis-node \
 	--e2e.runtime.binary_dir.default="${TEST_BASE_DIR}" \
 	--e2e.runtime.loader="${TEST_BASE_DIR}"/oasis-core-runtime-loader

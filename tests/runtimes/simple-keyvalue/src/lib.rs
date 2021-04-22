@@ -41,11 +41,17 @@ impl sdk::Runtime for Runtime {
                         d.insert(Denomination::NATIVE, 1_000.into());
                         d
                     });
+                    // Dave.
+                    b.insert(sdk::testing::keys::dave::address(), {
+                        let mut d = BTreeMap::new();
+                        d.insert(Denomination::NATIVE, 100.into());
+                        d
+                    });
                     b
                 },
                 total_supplies: {
                     let mut ts = BTreeMap::new();
-                    ts.insert(Denomination::NATIVE, 6_000.into());
+                    ts.insert(Denomination::NATIVE, 6_100.into());
                     ts
                 },
                 ..Default::default()

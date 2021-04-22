@@ -1,12 +1,11 @@
 //! Secp256k1 signatures.
-use std::{convert::TryFrom, fmt};
+use std::fmt;
 
 use k256::{
     self,
-    ecdsa::{self, signature::Verifier},
+    ecdsa::{self, digest::Digest, signature::DigestVerifier},
 };
-
-use oasis_core_runtime::common::crypto::hash::Hash;
+use sha2::Sha512Trunc256;
 
 use crate::crypto::signature::{Error, Signature};
 
@@ -40,14 +39,21 @@ impl PublicKey {
         message: &[u8],
         signature: &Signature,
     ) -> Result<(), Error> {
-        let digest = Hash::digest_bytes_list(&[context, message]);
-        let sig = ecdsa::Signature::try_from(signature.0.as_ref())
+        // Note that we must use Sha512Trunc256 instead of our Hash here,
+        // even though it's the same thing, because it implements the Digest
+        // trait, so we can use verify_digest() below, which doesn't pre-hash
+        // the data (verify() does).
+        let mut digest = Sha512Trunc256::new();
+        for byte in &[context, message] {
+            digest.update(byte);
+        }
+        let sig = ecdsa::Signature::from_asn1(signature.0.as_ref())
             .map_err(|_| Error::MalformedSignature)?;
         let verify_key = ecdsa::VerifyingKey::from_encoded_point(&self.0)
             .map_err(|_| Error::MalformedPublicKey)?;
 
         verify_key
-            .verify(digest.as_ref(), &sig)
+            .verify_digest(digest, &sig)
             .map_err(|_| Error::VerificationFailed)
     }
 }
