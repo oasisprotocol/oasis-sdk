@@ -7,6 +7,7 @@ import * as oasisRT from './../..';
 const KEYVALUE_RUNTIME_ID = oasis.misc.fromHex('8000000000000000000000000000000000000000000000000000000000000000');
 
 const FEE_FREE = /** @type {oasisRT.types.BaseUnits} */ ([oasis.quantity.fromBigInt(0n), oasisRT.token.NATIVE_DENOMINATION]);
+const GAS_HIGH = 1_000_000n;
 
 /**
  * The name of our module.
@@ -78,6 +79,7 @@ function moduleEventHandler(/** @type {{
 
 const nic = new oasis.client.NodeInternal('http://localhost:42280');
 const accountsWrapper = new oasisRT.accounts.Wrapper(KEYVALUE_RUNTIME_ID);
+const coreWrapper = new oasisRT.core.Wrapper(KEYVALUE_RUNTIME_ID);
 const keyvalueWrapper = new Wrapper(KEYVALUE_RUNTIME_ID);
 
 export const playground = (async function () {
@@ -166,7 +168,23 @@ export const playground = (async function () {
             })
             .setSignerInfo([siAlice1])
             .setFeeAmount(FEE_FREE)
-            .setFeeGas(0n);
+            .setFeeGas(GAS_HIGH);
+
+        console.log('  estimate gas');
+        const estimatedGas = await coreWrapper.queryEstimateGas()
+            .setArgs(twInsert.transaction)
+            .query(nic);
+        console.log('  estimated gas', estimatedGas);
+        twInsert.setFeeGas(estimatedGas);
+
+        console.log('  get', THE_KEY); // %%%
+        const get0Result = await keyvalueWrapper.queryGet()
+            .setArgs({
+                key: THE_KEY,
+            })
+            .query(nic);
+        console.log('  ok', get0Result.key, get0Result.value);
+
         await twInsert.sign([csAlice], consensusChainContext);
         await twInsert.submit(nic);
         console.log('ok');
