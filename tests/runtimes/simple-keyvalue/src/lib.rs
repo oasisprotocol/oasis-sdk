@@ -13,7 +13,11 @@ pub struct Runtime;
 impl sdk::Runtime for Runtime {
     const VERSION: Version = Version::new(0, 1, 0);
 
-    type Modules = (keyvalue::Module, modules::accounts::Module);
+    type Modules = (
+        keyvalue::Module,
+        modules::accounts::Module,
+        modules::core::Module,
+    );
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {
         (
@@ -56,6 +60,7 @@ impl sdk::Runtime for Runtime {
                 },
                 ..Default::default()
             },
+            (),
         )
     }
 }

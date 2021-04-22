@@ -72,7 +72,9 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key []byte, val
 		return err
 	}
 
-	tx := types.NewTransaction(nil, "keyvalue.Insert", kvKeyValue{
+	tx := types.NewTransaction(&types.Fee{
+		Gas:    100,
+	}, "keyvalue.Insert", kvKeyValue{
 		Key:   key,
 		Value: value,
 	})

@@ -7,6 +7,10 @@ use oasis_runtime_sdk::{
     core::common::cbor,
     error::{Error as _, RuntimeError},
     module::{CallableMethodInfo, Module as _, QueryMethodInfo},
+    modules::{
+        core,
+        core::{Module as Core, API as _},
+    },
     types::transaction::CallResult,
 };
 
@@ -21,6 +25,10 @@ pub enum Error {
     #[error("invalid argument")]
     #[sdk_error(code = 1)]
     InvalidArgument,
+
+    #[error("core: {0}")]
+    #[sdk_error(code = 2)]
+    Core(#[from] core::Error),
 }
 
 /// Events emitted by the keyvalue module.
@@ -132,6 +140,10 @@ impl Module {
         if ctx.is_check_only() {
             return Ok(());
         }
+
+        // TODO: Needs configuration.
+        Core::use_gas(ctx, 100)?;
+
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut ts = sdk::storage::TypedStore::new(&mut store);
         let bc = body.clone();

@@ -177,14 +177,6 @@ export const playground = (async function () {
         console.log('  estimated gas', estimatedGas);
         twInsert.setFeeGas(estimatedGas);
 
-        console.log('  get', THE_KEY); // %%%
-        const get0Result = await keyvalueWrapper.queryGet()
-            .setArgs({
-                key: THE_KEY,
-            })
-            .query(nic);
-        console.log('  ok', get0Result.key, get0Result.value);
-
         await twInsert.sign([csAlice], consensusChainContext);
         await twInsert.submit(nic);
         console.log('ok');
