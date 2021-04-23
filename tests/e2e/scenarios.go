@@ -7,7 +7,7 @@ import (
 
 var (
 	// SimpleKVRuntime is the basic network + client test case with runtime support.
-	SimpleKVRuntime scenario.Scenario = NewRuntimeScenario("test-runtime-simple-keyvalue", []RunTestFunction{SimpleKVTest, KVEventTest, KVBalanceTest, KVTransferTest})
+	SimpleKVRuntime scenario.Scenario = NewRuntimeScenario("test-runtime-simple-keyvalue", []RunTestFunction{SimpleKVTest, KVEventTest, KVBalanceTest, KVTransferTest, KVDaveTest})
 )
 
 // RegisterScenarios registers all oasis-sdk end-to-end runtime tests.

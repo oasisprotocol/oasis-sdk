@@ -13,7 +13,8 @@ oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 serde = { version = "1.0.118", features = ["derive"] }
 serde_bytes = "0.11.5"
 ed25519-dalek = { version = "1.0.1", features = ["serde"] }
-k256 = { version = "0.6.0", features = ["ecdsa", "sha256"] }
+sha2 = "0.9.3"
+k256 = { version = "0.6.0", features = ["ecdsa"] }
 thiserror = "1.0.24"
 hex = "0.4.2"
 io-context = "0.2.0"

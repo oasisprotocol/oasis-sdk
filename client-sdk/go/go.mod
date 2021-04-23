@@ -10,6 +10,7 @@ replace (
 )
 
 require (
+	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/oasisprotocol/oasis-core/go v0.2100.1
 	github.com/stretchr/testify v1.7.0
 	google.golang.org/grpc v1.36.0

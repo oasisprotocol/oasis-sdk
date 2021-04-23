@@ -323,6 +323,19 @@ func KVBalanceTest(log *logging.Logger, rtc client.RuntimeClient) error {
 		return fmt.Errorf("Charlie's account is missing native denomination balance")
 	}
 
+	log.Info("checking Dave's account balance")
+	db, err := ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := db.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(100)) != 0 {
+			return fmt.Errorf("Dave's account balance is wrong (expected 100, got %s)", q.String())
+		}
+	} else {
+		return fmt.Errorf("Dave's account is missing native denomination balance")
+	}
+
 	return nil
 }
 
@@ -380,6 +393,65 @@ func KVTransferTest(log *logging.Logger, rtc client.RuntimeClient) error {
 		}
 	} else {
 		return fmt.Errorf("Bob's account is missing native denomination balance")
+	}
+
+	return nil
+}
+
+func KVDaveTest(log *logging.Logger, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	ac := accounts.NewV1(rtc)
+
+	chainCtx, err := GetChainContext(ctx, rtc)
+	if err != nil {
+		return err
+	}
+
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Dave.Address)
+	if err != nil {
+		return err
+	}
+
+	log.Info("transferring 10 units from Dave to Alice")
+	tx := types.NewTransaction(nil, "accounts.Transfer", struct {
+		To     types.Address   `json:"to"`
+		Amount types.BaseUnits `json:"amount"`
+	}{
+		To:     testing.Alice.Address,
+		Amount: types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination),
+	})
+	tx.AppendSignerInfo(testing.Dave.Signer.Public(), nonce)
+	stx := tx.PrepareForSigning()
+	stx.AppendSign(chainCtx, testing.Dave.Signer)
+
+	if _, err := rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
+		return err
+	}
+
+	log.Info("checking Dave's account balance")
+	db, err := ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := db.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(90)) != 0 {
+			return fmt.Errorf("Dave's account balance is wrong (expected 90, got %s)", q.String())
+		}
+	} else {
+		return fmt.Errorf("Dave's account is missing native denomination balance")
+	}
+
+	log.Info("checking Alice's account balance")
+	ab, err := ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := ab.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(2910)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 2910, got %s)", q.String())
+		}
+	} else {
+		return fmt.Errorf("Alice's account is missing native denomination balance")
 	}
 
 	return nil
