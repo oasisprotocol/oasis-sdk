@@ -2,9 +2,6 @@
 set -o nounset -o pipefail -o errexit
 trap "exit 1" INT
 
-# Oasis Core release version to test against.
-OASIS_RELEASE=21.1.1
-
 # Get the root directory of the tests dir inside the repository.
 ROOT="$(cd $(dirname $0); pwd -P)"
 
@@ -28,6 +25,16 @@ cleanup() {
 }
 trap "cleanup" EXIT
 
+if [[ ! -v TEST_NODE_BINARY ]]; then
+	printf "${RED}### Please set \$TEST_NODE_BINARY variable.${OFF}\n"
+	exit 1
+fi
+
+if [[ ! -v TEST_RUNTIME_LOADER ]]; then
+	printf "${RED}### Please set \$TEST_RUNTIME_LOADER variable.${OFF}\n"
+	exit 1
+fi
+
 # Find build tools.
 if [[ "$(which go)" == "" ]]; then
 	printf "${RED}### Please install 'go'.${OFF}\n"
@@ -38,22 +45,15 @@ if [[ "$(which cargo)" == "" ]]; then
 	exit 1
 fi
 
-# Find a downloader tool.
-if [[ "$(which wget)" == "" ]]; then
-	if [[ "$(which curl)" == "" ]]; then
-		printf "${RED}### Please install 'wget' or 'curl'.${OFF}\n"
-		exit 1
-	else
-		DOWNLOAD="curl --progress-bar --location -o"
-	fi
-else
-	DOWNLOAD="wget --quiet --show-progress --progress=bar:force:noscroll -O"
-fi
-
 printf "${CYAN}### Building test simple-keyvalue runtime...${OFF}\n"
 cd "${ROOT}"/runtimes/simple-keyvalue
 cargo build
 cp "${ROOT}"/../target/debug/test-runtime-simple-keyvalue "${TEST_BASE_DIR}"/
+
+printf "${CYAN}### Building test simple-consensus runtime...${OFF}\n"
+cd "${ROOT}"/runtimes/simple-consensus
+cargo build
+cp "${ROOT}"/../target/debug/test-runtime-simple-consensus "${TEST_BASE_DIR}"/
 
 printf "${CYAN}### Building e2e test harness...${OFF}\n"
 cd "${ROOT}"/e2e
@@ -62,21 +62,13 @@ cp "${ROOT}"/e2e/e2e "${TEST_BASE_DIR}"/
 
 cd "${TEST_BASE_DIR}"
 
-printf "${CYAN}### Downloading oasis-core release ${OASIS_RELEASE}...${OFF}\n"
-${DOWNLOAD} oasis-core.tar.gz https://github.com/oasisprotocol/oasis-core/releases/download/v${OASIS_RELEASE}/oasis_core_${OASIS_RELEASE}_linux_amd64.tar.gz
-
-printf "${CYAN}### Unpacking oasis-node...${OFF}\n"
-${TAR} -xf oasis-core.tar.gz --strip-components=1 oasis_core_${OASIS_RELEASE}_linux_amd64/oasis-node
-
-printf "${CYAN}### Unpacking oasis-core-runtime-loader...${OFF}\n"
-${TAR} -xf oasis-core.tar.gz --strip-components=1 oasis_core_${OASIS_RELEASE}_linux_amd64/oasis-core-runtime-loader
-
 printf "${CYAN}### Running end-to-end tests...${OFF}\n"
 ./e2e --log.level=INFO \
+	--log.format json \
 	--basedir.no_cleanup \
-	--e2e.node.binary="${TEST_BASE_DIR}"/oasis-node \
+	--e2e.node.binary="${TEST_NODE_BINARY}" \
 	--e2e.runtime.binary_dir.default="${TEST_BASE_DIR}" \
-	--e2e.runtime.loader="${TEST_BASE_DIR}"/oasis-core-runtime-loader
+	--e2e.runtime.loader="${TEST_RUNTIME_LOADER}"
 
 cd "${ROOT}"
 rm -rf "${TEST_BASE_DIR}"
