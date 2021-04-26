@@ -47,7 +47,7 @@ pub enum Error {
     Forbidden,
 
     #[error("core: {0}")]
-    #[sdk_error(code = 4)]
+    #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),
 }
 

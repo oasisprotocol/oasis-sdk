@@ -27,7 +27,7 @@ pub enum Error {
     InvalidArgument,
 
     #[error("core: {0}")]
-    #[sdk_error(code = 2)]
+    #[sdk_error(transparent)]
     Core(#[from] core::Error),
 }
 
