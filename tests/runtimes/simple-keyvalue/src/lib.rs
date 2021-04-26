@@ -22,9 +22,20 @@ impl sdk::Runtime for Runtime {
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {
         (
             keyvalue::Genesis {
-                parameters: Default::default(),
+                parameters: keyvalue::Parameters {
+                    gas_costs: keyvalue::GasCosts {
+                        insert_absent: 200,
+                        insert_existing: 100,
+                        remove_absent: 100,
+                        remove_existing: 50,
+                    },
+                },
             },
             modules::accounts::Genesis {
+                parameters: modules::accounts::Parameters {
+                    gas_costs: modules::accounts::GasCosts { tx_transfer: 100 },
+                    ..Default::default()
+                },
                 balances: {
                     let mut b = BTreeMap::new();
                     // Alice.
