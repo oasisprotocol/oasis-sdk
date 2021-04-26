@@ -727,7 +727,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-runtime"
 version = "0.3.0-alpha"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.0.1#8bbfd8b729a8ea9a0bf1b62f632bd840684d3a82"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.1.1#efadf65d55f76f7a1034e4f546a1ae7cd95a9573"
 dependencies = [
  "anyhow",
  "arbitrary",
