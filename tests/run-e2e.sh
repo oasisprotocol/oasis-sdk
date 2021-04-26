@@ -3,7 +3,7 @@ set -o nounset -o pipefail -o errexit
 trap "exit 1" INT
 
 # Oasis Core release version to test against.
-OASIS_RELEASE=21.0.1
+OASIS_RELEASE=21.1.1
 
 # Get the root directory of the tests dir inside the repository.
 ROOT="$(cd $(dirname $0); pwd -P)"
