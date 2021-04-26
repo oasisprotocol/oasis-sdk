@@ -75,18 +75,29 @@ pub enum Event {
     },
 }
 
+/// Gas costs.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GasCosts {
+    #[serde(rename = "tx_transfer")]
+    pub tx_transfer: u64,
+}
+
 /// Parameters for the accounts module.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
     #[serde(rename = "transfers_disabled")]
     pub transfers_disabled: bool,
+    #[serde(rename = "gas_costs")]
+    pub gas_costs: GasCosts,
 }
 
 impl Default for Parameters {
     fn default() -> Self {
         Self {
             transfers_disabled: false,
+            gas_costs: Default::default(),
         }
     }
 }
@@ -354,14 +365,14 @@ impl API for Module {
 
 impl Module {
     fn tx_transfer(ctx: &mut TxContext<'_, '_>, body: types::Transfer) -> Result<(), Error> {
+        let params = Self::params(ctx.runtime_state());
+
         // Reject transfers when they are disabled.
-        if Self::params(ctx.runtime_state()).transfers_disabled {
+        if params.transfers_disabled {
             return Err(Error::Forbidden);
         }
 
-        // TODO: Needs configuration.
-        // TODO: Needs to be replicated across all other transactions.
-        Core::use_gas(ctx, 100)?;
+        Core::use_gas(ctx, params.gas_costs.tx_transfer)?;
 
         Self::transfer(ctx, ctx.tx_caller_address(), body.to, &body.amount)?;
 
