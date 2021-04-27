@@ -47,6 +47,13 @@ fn test_use_gas() {
         Core::use_gas(&mut tx_ctx, u64::max_value()).expect_err("overflow should cause error");
     });
 
+    let mut big_tx = tx.clone();
+    big_tx.auth_info.fee.gas = u64::max_value();
+    ctx.with_tx(big_tx, |mut tx_ctx, _call| {
+        Core::use_gas(&mut tx_ctx, u64::max_value())
+            .expect_err("batch overflow should cause error");
+    });
+
     ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
         Core::use_gas(&mut tx_ctx, 1).expect_err("batch gas should accumulate");
     });
