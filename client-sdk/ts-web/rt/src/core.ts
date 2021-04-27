@@ -16,6 +16,8 @@ export const ERR_INSUFFICIENT_FEE_BALANCE = 5;
 export const ERR_INVALID_ARGUMENT = 6;
 export const ERR_GAS_OVERFLOW = 7;
 export const ERR_OUT_OF_GAS = 8;
+export const ERR_BATCH_GAS_OVERFLOW = 9;
+export const ERR_BATCH_OUT_OF_GAS = 10;
 
 // Queries.
 export const METHOD_ESTIMATE_GAS = 'core.EstimateGas';

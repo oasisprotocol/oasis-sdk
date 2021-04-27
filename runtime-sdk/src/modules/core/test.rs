@@ -3,6 +3,7 @@ use oasis_core_runtime::common::cbor;
 use crate::{
     context::Mode,
     module,
+    module::Module,
     testing::{keys, mock},
     types::{token, transaction},
 };
@@ -12,8 +13,18 @@ use super::{Module as Core, API as _};
 #[test]
 fn test_use_gas() {
     const MAX_GAS: u64 = 1000;
+    const BLOCK_MAX_GAS: u64 = 3 * MAX_GAS + 2;
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
+    Core::set_params(
+        ctx.runtime_state(),
+        &super::Parameters {
+            batch_gas: BLOCK_MAX_GAS,
+        },
+    );
+
+    Core::batch_use_gas(&mut ctx, 1).expect("using batch gas under limit should succeed");
+
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = MAX_GAS;
 
@@ -35,6 +46,12 @@ fn test_use_gas() {
         Core::use_gas(&mut tx_ctx, 1).unwrap();
         Core::use_gas(&mut tx_ctx, u64::max_value()).expect_err("overflow should cause error");
     });
+
+    ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+        Core::use_gas(&mut tx_ctx, 1).expect_err("batch gas should accumulate");
+    });
+
+    Core::batch_use_gas(&mut ctx, 1).expect_err("batch gas should accumulate outside tx");
 }
 
 #[test]
@@ -51,6 +68,12 @@ fn test_query_estimate_gas() {
     });
     let mut ctx = mock.create_ctx();
     ctx.mode = Mode::CheckTx;
+    Core::set_params(
+        ctx.runtime_state(),
+        &super::Parameters {
+            batch_gas: u64::max_value(),
+        },
+    );
 
     let tx = transaction::Transaction {
         version: 1,

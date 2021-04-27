@@ -1,11 +1,12 @@
 //! Core definitions module.
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use oasis_core_runtime::common::cbor;
 
 use crate::{
     error,
-    module::{self, QueryMethodInfo},
+    module::{self, Module as _, QueryMethodInfo},
     types::transaction,
     DispatchContext, TxContext,
 };
@@ -51,10 +52,53 @@ pub enum Error {
     #[error("out of gas")]
     #[sdk_error(code = 8)]
     OutOfGas,
+
+    #[error("batch gas overflow")]
+    #[sdk_error(code = 9)]
+    BatchGasOverflow,
+
+    #[error("batch out of gas")]
+    #[sdk_error(code = 10)]
+    BatchOutOfGas,
+}
+
+/// Parameters for the core module.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Parameters {
+    #[serde(rename = "batch_gas")]
+    pub batch_gas: u64,
+}
+
+impl Default for Parameters {
+    fn default() -> Self {
+        Self { batch_gas: 0 }
+    }
+}
+
+impl module::Parameters for Parameters {
+    type Error = std::convert::Infallible;
 }
 
 pub trait API {
     fn use_gas(ctx: &mut TxContext<'_, '_>, gas: u64) -> Result<(), Error>;
+    fn batch_use_gas(ctx: &mut DispatchContext<'_>, gas: u64) -> Result<(), Error>;
+}
+
+/// Genesis state for the accounts module.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Genesis {
+    #[serde(rename = "parameters")]
+    pub parameters: Parameters,
+}
+
+impl Default for Genesis {
+    fn default() -> Self {
+        Self {
+            parameters: Default::default(),
+        }
+    }
 }
 
 /// State schema constants.
@@ -67,6 +111,20 @@ pub struct Module;
 
 const CONTEXT_KEY_GAS_USED: &str = "core.GasUsed";
 
+impl Module {
+    /// Initialize state from genesis.
+    fn init(ctx: &mut DispatchContext<'_>, genesis: &Genesis) {
+        // Set genesis parameters.
+        Self::set_params(ctx.runtime_state(), &genesis.parameters);
+    }
+
+    /// Migrate state from a previous version.
+    fn migrate(_ctx: &mut DispatchContext<'_>, _from: u32) -> bool {
+        // No migrations currently supported.
+        false
+    }
+}
+
 impl API for Module {
     fn use_gas(ctx: &mut TxContext<'_, '_>, gas: u64) -> Result<(), Error> {
         let gas_limit = ctx.tx_auth_info().fee.gas;
@@ -78,7 +136,37 @@ impl API for Module {
         if new_gas_used > gas_limit {
             return Err(Error::OutOfGas);
         }
+
+        let batch_gas_limit = Self::params(ctx.runtime_state()).batch_gas;
+        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
+        let batch_new_gas_used = match batch_gas_used.overflowing_add(gas) {
+            (batch_new_gas_used, false) => batch_new_gas_used,
+            (_, true) => return Err(Error::BatchGasOverflow),
+        };
+        if batch_new_gas_used > batch_gas_limit {
+            return Err(Error::BatchOutOfGas);
+        }
+
+        let gas_used = ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED);
         *gas_used = new_gas_used;
+        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
+        *batch_gas_used = batch_new_gas_used;
+
+        Ok(())
+    }
+
+    fn batch_use_gas(ctx: &mut DispatchContext<'_>, gas: u64) -> Result<(), Error> {
+        let batch_gas_limit = Self::params(ctx.runtime_state()).batch_gas;
+        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
+        let batch_new_gas_used = match batch_gas_used.overflowing_add(gas) {
+            (batch_new_gas_used, false) => batch_new_gas_used,
+            (_, true) => return Err(Error::BatchGasOverflow),
+        };
+        if batch_new_gas_used > batch_gas_limit {
+            return Err(Error::BatchOutOfGas);
+        }
+        *batch_gas_used = batch_new_gas_used;
+
         Ok(())
     }
 }
@@ -118,20 +206,29 @@ impl module::Module for Module {
     const NAME: &'static str = MODULE_NAME;
     type Error = Error;
     type Event = ();
-    type Parameters = ();
+    type Parameters = Parameters;
 }
 
 impl module::AuthHandler for Module {}
 
 impl module::MigrationHandler for Module {
-    type Genesis = ();
+    type Genesis = Genesis;
 
     fn init_or_migrate(
-        _ctx: &mut DispatchContext<'_>,
-        _meta: &mut types::Metadata,
-        _genesis: &Self::Genesis,
+        ctx: &mut DispatchContext<'_>,
+        meta: &mut types::Metadata,
+        genesis: &Self::Genesis,
     ) -> bool {
-        false
+        let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
+        if version == 0 {
+            // Initialize state from genesis.
+            Self::init(ctx, genesis);
+            meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
+            return true;
+        }
+
+        // Perform migration.
+        Self::migrate(ctx, version)
     }
 }
 

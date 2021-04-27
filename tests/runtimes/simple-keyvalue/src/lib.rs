@@ -71,7 +71,9 @@ impl sdk::Runtime for Runtime {
                 },
                 ..Default::default()
             },
-            (),
+            modules::core::Genesis {
+                parameters: modules::core::Parameters { batch_gas: 10_000 },
+            },
         )
     }
 }
