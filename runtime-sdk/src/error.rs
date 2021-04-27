@@ -98,7 +98,11 @@ mod test {
         let result = err.to_call_result();
 
         match result {
-            CallResult::Failed { module, code } => {
+            CallResult::Failed {
+                module,
+                code,
+                message: _,
+            } => {
                 assert_eq!(module, "test1");
                 assert_eq!(code, 1);
             }
@@ -109,7 +113,11 @@ mod test {
         let result = err.to_call_result();
 
         match result {
-            CallResult::Failed { module, code } => {
+            CallResult::Failed {
+                module,
+                code,
+                message: _,
+            } => {
                 assert_eq!(module, "test1");
                 assert_eq!(code, 2);
             }
@@ -123,7 +131,11 @@ mod test {
         let result = err.to_call_result();
 
         match result {
-            CallResult::Failed { module, code } => {
+            CallResult::Failed {
+                module,
+                code,
+                message: _,
+            } => {
                 assert_eq!(module, "test2");
                 assert_eq!(code, 1);
             }
@@ -134,7 +146,11 @@ mod test {
         let result = err.to_call_result();
 
         match result {
-            CallResult::Failed { module, code } => {
+            CallResult::Failed {
+                module,
+                code,
+                message: _,
+            } => {
                 assert_eq!(module, "test2");
                 assert_eq!(code, 1);
             }
@@ -148,7 +164,11 @@ mod test {
         let result = err.to_call_result();
 
         match result {
-            CallResult::Failed { module, code } => {
+            CallResult::Failed {
+                module,
+                code,
+                message: _,
+            } => {
                 assert_eq!(module, "test1");
                 assert_eq!(code, 1);
             }
