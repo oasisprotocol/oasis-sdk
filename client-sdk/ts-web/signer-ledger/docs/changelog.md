@@ -2,6 +2,10 @@
 
 ## Unreleased changes
 
+New features:
+
+- The new `LedgerContextSigner.fromTransport` lets you bring your own transport object.
+
 Bug fixes:
 
 - Corrected an issue in converting internal Buffers to Uint8Array.

@@ -1,4 +1,6 @@
 // @ts-expect-error missing declaration
+import Transport from '@ledgerhq/hw-transport';
+// @ts-expect-error missing declaration
 import TransportWebUSB from '@ledgerhq/hw-transport-webusb';
 // @ts-expect-error missing declaration
 import OasisApp from '@oasisprotocol/ledger';
@@ -48,12 +50,16 @@ export class LedgerContextSigner implements oasis.signature.ContextSigner {
         return u8FromBuf(response.signature as Buffer);
     }
 
-    static async fromWebUSB(keyNumber: number) {
-        const transport = await TransportWebUSB.create();
+    static async fromTransport(transport: Transport, keyNumber: number) {
         const app = new OasisApp(transport);
         // Specification forthcoming. See https://github.com/oasisprotocol/oasis-core/pull/3656.
         const path = [44, 474, 0, 0, keyNumber];
         const publicKeyResponse = successOrThrow(await app.publicKey(path), 'ledger public key');
         return new LedgerContextSigner(app, path, u8FromBuf(publicKeyResponse.pk as Buffer));
+    }
+
+    static async fromWebUSB(keyNumber: number) {
+        const transport = await TransportWebUSB.create();
+        return await LedgerContextSigner.fromTransport(transport, keyNumber);
     }
 }
