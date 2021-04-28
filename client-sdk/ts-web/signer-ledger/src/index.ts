@@ -12,7 +12,7 @@ interface Response {
 }
 
 function u8FromBuf(buf: Buffer) {
-    return new Uint8Array(buf.buffer);
+    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
 }
 
 function bufFromU8(u8: Uint8Array) {
