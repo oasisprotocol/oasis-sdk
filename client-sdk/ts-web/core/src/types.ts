@@ -3006,9 +3006,9 @@ export interface Version {
  * ProtocolVersions are the protocol versions.
  */
 export interface VersionProtocolVersions {
+    consensus_protocol: Version;
     runtime_host_protocol: Version;
     runtime_committee_protocol: Version;
-    consensus_protocol: Version;
 }
 
 /**

@@ -40,10 +40,10 @@ export const TEE_HARDWARE_RESERVED = TEE_HARDWARE_INTEL_SGX + 1;
 export const INVALID_VERSION = 65536;
 
 /**
- * LatestEntityDescriptorVersion is the latest entity descriptor version that should be used for
- * all new descriptors. Using earlier versions may be rejected.
+ * LatestDescriptorVersion is the latest descriptor version that should be
+ * used for all new descriptors. Using earlier versions may be rejected.
  */
-export const LATEST_ENTITY_DESCRIPTOR_VERSION = 2;
+export const ENTITY_LATEST_DESCRIPTOR_VERSION = 2;
 /**
  * LatestNodeDescriptorVersion is the latest node descriptor version that should be used for all
  * new descriptors. Using earlier versions may be rejected.

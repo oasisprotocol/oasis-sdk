@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased changes
+
+New features:
+
+- Compatibility with oasis-core is updated to 21.1.1.
+
 ## v0.1.0-alpha1
 
 Spotlight change:
