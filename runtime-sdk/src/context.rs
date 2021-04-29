@@ -409,6 +409,13 @@ mod test {
 
             let b: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey");
             assert_eq!(b, &Some(65));
+
+            let c: &mut Option<u64> = tx_ctx.tx_value("module.TestTakeTxKey");
+            *c = Some(67);
+            let d: Box<Option<u64>> = tx_ctx.take_tx_value("module.TestTakeTxKey");
+            assert_eq!(d, Box::new(Some(67)));
+            let e: &mut Option<u64> = tx_ctx.tx_value("module.TestTakeTxKey");
+            assert_eq!(e, &None);
         });
 
         let x: &mut Option<u64> = ctx.value("module.TestKey");
