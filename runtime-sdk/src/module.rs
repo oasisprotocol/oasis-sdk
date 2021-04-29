@@ -10,7 +10,10 @@ use crate::{
     context::{DispatchContext, TxContext},
     error, event, modules, storage,
     storage::Store,
-    types::transaction::{CallResult, Transaction},
+    types::{
+        message::MessageEvent,
+        transaction::{CallResult, Transaction},
+    },
 };
 
 /// Metadata of a callable method.
@@ -91,6 +94,50 @@ impl MethodRegistry {
 pub trait MethodRegistrationHandler {
     /// Register any methods exported by the module.
     fn register_methods(_methods: &mut MethodRegistry) {
+        // Default implementation doesn't do anything.
+    }
+}
+
+/// Metadata of the consensus message handling callback.
+pub struct MessageHandlerInfo {
+    /// Message handler name.
+    pub name: &'static str,
+    /// Message handler.
+    pub handler: fn(&MessageHandlerInfo, &mut DispatchContext<'_>, MessageEvent, cbor::Value),
+}
+
+/// Registry of message handlers registered by the module.
+pub struct MessageHandlerRegistry {
+    handlers: BTreeMap<&'static str, MessageHandlerInfo>,
+}
+
+impl MessageHandlerRegistry {
+    /// Create a new method registry.
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> Self {
+        Self {
+            handlers: BTreeMap::new(),
+        }
+    }
+
+    /// Register a message handler exposed by the module.
+    pub fn register_handler(&mut self, method_info: MessageHandlerInfo) {
+        if self.handlers.contains_key(method_info.name) {
+            panic!("message handler already exists: {}", method_info.name);
+        }
+        self.handlers.insert(method_info.name, method_info);
+    }
+
+    /// Looks up a previously registered message handler.
+    pub fn lookup_handler(&self, name: &str) -> Option<&MessageHandlerInfo> {
+        self.handlers.get(name)
+    }
+}
+
+#[impl_for_tuples(30)]
+pub trait MessageHookRegistrationHandler {
+    /// Register any handlers defined by the module.
+    fn register_handlers(_handlers: &mut MessageHandlerRegistry) {
         // Default implementation doesn't do anything.
     }
 }

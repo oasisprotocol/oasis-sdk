@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/grpc"
+
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
@@ -125,7 +127,7 @@ func kvGet(rtc client.RuntimeClient, key []byte) ([]byte, error) {
 	return resp.Value, nil
 }
 
-func SimpleKVTest(log *logging.Logger, rtc client.RuntimeClient) error {
+func SimpleKVTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("test_key")
@@ -159,7 +161,7 @@ func SimpleKVTest(log *logging.Logger, rtc client.RuntimeClient) error {
 	return nil
 }
 
-func KVEventTest(log *logging.Logger, rtc client.RuntimeClient) error {
+func KVEventTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("event_test_key")
@@ -282,7 +284,7 @@ WaitRemoveLoop:
 	return nil
 }
 
-func KVBalanceTest(log *logging.Logger, rtc client.RuntimeClient) error {
+func KVBalanceTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
@@ -341,7 +343,7 @@ func KVBalanceTest(log *logging.Logger, rtc client.RuntimeClient) error {
 	return nil
 }
 
-func KVTransferTest(log *logging.Logger, rtc client.RuntimeClient) error {
+func KVTransferTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
@@ -402,7 +404,7 @@ func KVTransferTest(log *logging.Logger, rtc client.RuntimeClient) error {
 	return nil
 }
 
-func KVDaveTest(log *logging.Logger, rtc client.RuntimeClient) error {
+func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 

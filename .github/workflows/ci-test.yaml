@@ -156,6 +156,8 @@ jobs:
       - name: 'testnet: Download artifacts'
         working-directory: client-sdk/ts-web/core/playground
         run: ./download-artifacts.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 'testnet: Start'
         working-directory: client-sdk/ts-web/core/playground
@@ -227,6 +229,8 @@ jobs:
       - name: 'testnet: Download artifacts'
         working-directory: client-sdk/ts-web/rt/playground
         run: ./download-artifacts.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 'testnet: Build runtime'
         working-directory: client-sdk/ts-web/rt/playground
@@ -253,6 +257,14 @@ jobs:
           name: e2e-ts-web-rt-screenshots
           path: client-sdk/ts-web/rt/cypress/screenshots
 
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v2
+        with:
+          name: e2e-ts-web-rt-logs
+          path: |
+            /tmp/oasis-net-runner-sdk-rt/**/*.log
+
   e2e-rt:
     # NOTE: This name appears in GitHub's Checks API.
     name: e2e-rt
@@ -274,5 +286,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install bubblewrap build-essential libseccomp-dev libssl-dev protobuf-compiler
 
+      - name: Download artifacts
+        working-directory: tests/
+        run: ./download-artifacts.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run end-to-end tests
         run: ./tests/run-e2e.sh
+        env:
+          TEST_NODE_BINARY: "${{ github.workspace }}/tests/untracked/oasis-node"
+          TEST_RUNTIME_LOADER: "${{ github.workspace}}/tests/untracked/oasis-core-runtime-loader"

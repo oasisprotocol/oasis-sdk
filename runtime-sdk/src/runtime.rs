@@ -6,10 +6,11 @@ use oasis_core_runtime::{
 };
 
 use crate::{
-    context::DispatchContext,
+    context::{Context, DispatchContext},
     crypto, dispatcher,
     module::{
-        AuthHandler, BlockHandler, MethodRegistrationHandler, MethodRegistry, MigrationHandler,
+        AuthHandler, BlockHandler, MessageHandlerRegistry, MessageHookRegistrationHandler,
+        MethodRegistrationHandler, MethodRegistry, MigrationHandler,
     },
     modules, storage,
 };
@@ -19,7 +20,11 @@ pub trait Runtime {
     /// Runtime version.
     const VERSION: version::Version;
 
-    type Modules: AuthHandler + MigrationHandler + MethodRegistrationHandler + BlockHandler;
+    type Modules: AuthHandler
+        + MigrationHandler
+        + MethodRegistrationHandler
+        + BlockHandler
+        + MessageHookRegistrationHandler;
 
     /// Genesis state for the runtime.
     fn genesis_state() -> <Self::Modules as MigrationHandler>::Genesis;
@@ -70,7 +75,10 @@ pub trait Runtime {
             let mut methods = MethodRegistry::new();
             Self::Modules::register_methods(&mut methods);
 
-            let dispatcher = dispatcher::Dispatcher::<Self>::new(methods);
+            let mut handlers = MessageHandlerRegistry::new();
+            Self::Modules::register_handlers(&mut handlers);
+
+            let dispatcher = dispatcher::Dispatcher::<Self>::new(methods, handlers);
             Some(Box::new(dispatcher))
         };
 

@@ -91,10 +91,10 @@ impl<'de> serde::Deserialize<'de> for PublicKey {
             where
                 E: serde::de::Error,
             {
-                Ok(PublicKey::from_bytes(data).map_err(serde::de::Error::custom)?)
+                PublicKey::from_bytes(data).map_err(serde::de::Error::custom)
             }
         }
 
-        Ok(deserializer.deserialize_bytes(BytesVisitor)?)
+        deserializer.deserialize_bytes(BytesVisitor)
     }
 }

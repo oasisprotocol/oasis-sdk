@@ -41,24 +41,36 @@ pub enum Error {
     #[sdk_error(code = 5)]
     InsufficientFeeBalance,
 
-    #[error("invalid argument")]
+    #[error("out of message slots")]
     #[sdk_error(code = 6)]
+    OutOfMessageSlots,
+
+    #[error("message handler not invoked")]
+    #[sdk_error(code = 8)]
+    MessageHandlerNotInvoked,
+
+    #[error("missing message handler")]
+    #[sdk_error(code = 9)]
+    MessageHandlerMissing(u32),
+
+    #[error("invalid argument")]
+    #[sdk_error(code = 10)]
     InvalidArgument,
 
     #[error("gas overflow")]
-    #[sdk_error(code = 7)]
+    #[sdk_error(code = 11)]
     GasOverflow,
 
     #[error("out of gas")]
-    #[sdk_error(code = 8)]
+    #[sdk_error(code = 12)]
     OutOfGas,
 
     #[error("batch gas overflow")]
-    #[sdk_error(code = 9)]
+    #[sdk_error(code = 13)]
     BatchGasOverflow,
 
     #[error("batch out of gas")]
-    #[sdk_error(code = 10)]
+    #[sdk_error(code = 14)]
     BatchOutOfGas,
 }
 
@@ -105,6 +117,8 @@ impl Default for Genesis {
 pub mod state {
     /// Runtime metadata.
     pub const METADATA: &[u8] = &[0x01];
+    /// Map of message idx to message handlers for messages emitted in previous round.
+    pub const MESSAGE_HANDLERS: &[u8] = &[0x02];
 }
 
 pub struct Module;

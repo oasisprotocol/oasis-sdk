@@ -1,11 +1,11 @@
 #!/bin/sh -eux
-. ./consts.sh
 
-./download-artifacts.sh
+NET_RUNNER="${TEST_NET_RUNNER:-./untracked/oasis-net-runner}"
+NODE_BINARY="${TEST_NODE_BINARY:-./untracked/oasis-node}"
 
 mkdir -p /tmp/oasis-net-runner-sdk-core
-"./untracked/oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-net-runner" \
-    --fixture.default.node.binary "untracked/oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" \
+"${NET_RUNNER}" \
+    --fixture.default.node.binary "${NODE_BINARY}" \
     --fixture.default.setup_runtimes=false \
     --basedir /tmp/oasis-net-runner-sdk-core \
     --basedir.no_temp_dir

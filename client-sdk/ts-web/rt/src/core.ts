@@ -13,11 +13,11 @@ export const ERR_INVALID_TRANSACTION_CODE = 2;
 export const ERR_INVALID_METHOD_CODE = 3;
 export const ERR_INVALID_NONCE_CODE = 4;
 export const ERR_INSUFFICIENT_FEE_BALANCE = 5;
-export const ERR_INVALID_ARGUMENT = 6;
-export const ERR_GAS_OVERFLOW = 7;
-export const ERR_OUT_OF_GAS = 8;
-export const ERR_BATCH_GAS_OVERFLOW = 9;
-export const ERR_BATCH_OUT_OF_GAS = 10;
+export const ERR_INVALID_ARGUMENT = 10;
+export const ERR_GAS_OVERFLOW = 11;
+export const ERR_OUT_OF_GAS = 12;
+export const ERR_BATCH_GAS_OVERFLOW = 13;
+export const ERR_BATCH_OUT_OF_GAS = 14;
 
 // Queries.
 export const METHOD_ESTIMATE_GAS = 'core.EstimateGas';

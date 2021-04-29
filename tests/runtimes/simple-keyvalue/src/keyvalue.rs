@@ -3,7 +3,7 @@ use thiserror::Error;
 
 use oasis_runtime_sdk::{
     self as sdk,
-    context::{DispatchContext, TxContext},
+    context::{Context, DispatchContext, TxContext},
     core::common::cbor,
     error::{Error as _, RuntimeError},
     module::{CallableMethodInfo, Module as _, QueryMethodInfo},
@@ -89,6 +89,7 @@ impl sdk::module::Module for Module {
 
 impl sdk::module::AuthHandler for Module {}
 impl sdk::module::BlockHandler for Module {}
+impl sdk::module::MessageHookRegistrationHandler for Module {}
 
 impl sdk::module::MethodRegistrationHandler for Module {
     /// Register all supported methods.

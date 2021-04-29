@@ -1,5 +1,5 @@
 //! Accounts module.
-use std::{collections::BTreeMap, iter::FromIterator};
+use std::collections::BTreeMap;
 
 use num_traits::Zero;
 use once_cell::sync::Lazy;
@@ -9,7 +9,7 @@ use thiserror::Error;
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    context::{DispatchContext, TxContext},
+    context::{Context, DispatchContext, TxContext},
     crypto::signature::PublicKey,
     error::{self, Error as _},
     module,
@@ -25,14 +25,14 @@ use crate::{
 };
 
 #[cfg(test)]
-mod test;
+pub(crate) mod test;
 pub mod types;
 
 /// Unique module name.
 const MODULE_NAME: &str = "accounts";
 
 /// Errors emitted by the accounts module.
-#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
+#[derive(Error, Debug, PartialEq, oasis_runtime_sdk_macros::Error)]
 pub enum Error {
     #[error("invalid argument")]
     #[sdk_error(code = 1)]
@@ -84,7 +84,7 @@ pub struct GasCosts {
 }
 
 /// Parameters for the accounts module.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
     #[serde(rename = "transfers_disabled")]
@@ -93,21 +93,12 @@ pub struct Parameters {
     pub gas_costs: GasCosts,
 }
 
-impl Default for Parameters {
-    fn default() -> Self {
-        Self {
-            transfers_disabled: false,
-            gas_costs: Default::default(),
-        }
-    }
-}
-
 impl module::Parameters for Parameters {
     type Error = ();
 }
 
 /// Genesis state for the accounts module.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Genesis {
     #[serde(rename = "parameters")]
@@ -121,17 +112,6 @@ pub struct Genesis {
 
     #[serde(rename = "total_supplies")]
     pub total_supplies: BTreeMap<token::Denomination, token::Quantity>,
-}
-
-impl Default for Genesis {
-    fn default() -> Self {
-        Self {
-            parameters: Default::default(),
-            accounts: BTreeMap::new(),
-            balances: BTreeMap::new(),
-            total_supplies: BTreeMap::new(),
-        }
-    }
 }
 
 // TODO: Add a custom macro for easier module derivation.
@@ -167,26 +147,19 @@ module!{
 /// Interface that can be called from other modules.
 pub trait API {
     /// Transfer an amount from one account to the other.
-    fn transfer(
-        ctx: &mut TxContext<'_, '_>,
+    fn transfer<C: Context>(
+        ctx: &mut C,
         from: Address,
         to: Address,
         amount: &token::BaseUnits,
     ) -> Result<(), Error>;
 
     /// Mint new tokens, increasing the total supply.
-    fn mint(
-        ctx: &mut TxContext<'_, '_>,
-        to: Address,
-        amount: &token::BaseUnits,
-    ) -> Result<(), Error>;
+    fn mint<C: Context>(ctx: &mut C, to: Address, amount: &token::BaseUnits) -> Result<(), Error>;
 
     /// Burn existing tokens, decreasing the total supply.
-    fn burn(
-        ctx: &mut TxContext<'_, '_>,
-        from: Address,
-        amount: &token::BaseUnits,
-    ) -> Result<(), Error>;
+    fn burn<C: Context>(ctx: &mut C, from: Address, amount: &token::BaseUnits)
+        -> Result<(), Error>;
 
     /// Fetch an account's current nonce.
     fn get_nonce<S: storage::Store>(state: S, address: Address) -> Result<u64, Error>;
@@ -288,8 +261,8 @@ impl Module {
 }
 
 impl API for Module {
-    fn transfer(
-        ctx: &mut TxContext<'_, '_>,
+    fn transfer<C: Context>(
+        ctx: &mut C,
         from: Address,
         to: Address,
         amount: &token::BaseUnits,
@@ -313,11 +286,7 @@ impl API for Module {
         Ok(())
     }
 
-    fn mint(
-        ctx: &mut TxContext<'_, '_>,
-        to: Address,
-        amount: &token::BaseUnits,
-    ) -> Result<(), Error> {
+    fn mint<C: Context>(ctx: &mut C, to: Address, amount: &token::BaseUnits) -> Result<(), Error> {
         // Add to destination account.
         Self::add_amount(ctx.runtime_state(), to, amount)?;
 
@@ -327,8 +296,8 @@ impl API for Module {
         Ok(())
     }
 
-    fn burn(
-        ctx: &mut TxContext<'_, '_>,
+    fn burn<C: Context>(
+        ctx: &mut C,
         from: Address,
         amount: &token::BaseUnits,
     ) -> Result<(), Error> {
@@ -358,7 +327,7 @@ impl API for Module {
         let account = storage::TypedStore::new(storage::PrefixStore::new(balances, &address));
 
         Ok(types::AccountBalances {
-            balances: BTreeMap::from_iter(account.iter()),
+            balances: account.iter().collect(),
         })
     }
 }
@@ -374,7 +343,12 @@ impl Module {
 
         Core::use_gas(ctx, params.gas_costs.tx_transfer)?;
 
-        Self::transfer(ctx, ctx.tx_caller_address(), body.to, &body.amount)?;
+        Self::transfer(
+            ctx,
+            ctx.tx_caller_address().expect("transaction context"),
+            body.to,
+            &body.amount,
+        )?;
 
         Ok(())
     }
@@ -432,6 +406,8 @@ impl module::Module for Module {
     type Event = Event;
     type Parameters = Parameters;
 }
+
+impl module::MessageHookRegistrationHandler for Module {}
 
 impl module::MethodRegistrationHandler for Module {
     fn register_methods(methods: &mut module::MethodRegistry) {
