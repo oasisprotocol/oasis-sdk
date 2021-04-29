@@ -67,12 +67,12 @@ pub enum Error {
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
     #[serde(rename = "batch_gas")]
-    pub batch_gas: u64,
+    pub max_batch_gas: u64,
 }
 
 impl Default for Parameters {
     fn default() -> Self {
-        Self { batch_gas: 0 }
+        Self { max_batch_gas: 0 }
     }
 }
 
@@ -137,7 +137,7 @@ impl API for Module {
             return Err(Error::OutOfGas);
         }
 
-        let batch_gas_limit = Self::params(ctx.runtime_state()).batch_gas;
+        let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
         let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
         let batch_new_gas_used = match batch_gas_used.overflowing_add(gas) {
             (batch_new_gas_used, false) => batch_new_gas_used,
@@ -156,7 +156,7 @@ impl API for Module {
     }
 
     fn batch_use_gas(ctx: &mut DispatchContext<'_>, gas: u64) -> Result<(), Error> {
-        let batch_gas_limit = Self::params(ctx.runtime_state()).batch_gas;
+        let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
         let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
         let batch_new_gas_used = match batch_gas_used.overflowing_add(gas) {
             (batch_new_gas_used, false) => batch_new_gas_used,

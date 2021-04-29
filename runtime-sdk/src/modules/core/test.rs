@@ -19,7 +19,7 @@ fn test_use_gas() {
     Core::set_params(
         ctx.runtime_state(),
         &super::Parameters {
-            batch_gas: BLOCK_MAX_GAS,
+            max_batch_gas: BLOCK_MAX_GAS,
         },
     );
 
@@ -78,7 +78,7 @@ fn test_query_estimate_gas() {
     Core::set_params(
         ctx.runtime_state(),
         &super::Parameters {
-            batch_gas: u64::max_value(),
+            max_batch_gas: u64::max_value(),
         },
     );
 
