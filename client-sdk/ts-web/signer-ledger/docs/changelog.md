@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased changes
+
+Bug fixes:
+
+- Corrected an issue in converting internal Buffers to Uint8Array.
+  This should get rid of the extraneous trailing zeros.
+
 ## v0.1.0-alpha1
 
 Spotlight change:
