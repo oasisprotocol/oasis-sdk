@@ -5,10 +5,10 @@ use thiserror::Error;
 use oasis_core_runtime::common::cbor;
 
 use crate::{
+    context::{Context, DispatchContext},
     error,
     module::{self, Module as _, QueryMethodInfo},
     types::transaction,
-    DispatchContext, TxContext,
 };
 
 #[cfg(test)]
@@ -19,7 +19,7 @@ pub mod types;
 pub const MODULE_NAME: &str = "core";
 
 /// Errors emitted by the core module.
-#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
+#[derive(Error, Debug, PartialEq, oasis_runtime_sdk_macros::Error)]
 pub enum Error {
     #[error("malformed transaction")]
     #[sdk_error(code = 1)]
@@ -93,8 +93,7 @@ impl module::Parameters for Parameters {
 }
 
 pub trait API {
-    fn use_gas(ctx: &mut TxContext<'_, '_>, gas: u64) -> Result<(), Error>;
-    fn batch_use_gas(ctx: &mut DispatchContext<'_>, gas: u64) -> Result<(), Error>;
+    fn use_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error>;
 }
 
 /// Genesis state for the accounts module.
@@ -140,16 +139,24 @@ impl Module {
 }
 
 impl API for Module {
-    fn use_gas(ctx: &mut TxContext<'_, '_>, gas: u64) -> Result<(), Error> {
-        let gas_limit = ctx.tx_auth_info().fee.gas;
-        let gas_used = ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED);
-        let new_gas_used = match gas_used.overflowing_add(gas) {
-            (new_gas_used, false) => new_gas_used,
-            (_, true) => return Err(Error::GasOverflow),
+    fn use_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error> {
+        let new_gas_used = match (
+            ctx.tx_auth_info().map(|ai| ai.fee.gas),
+            ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).copied(),
+        ) {
+            (Some(gas_limit), Some(gas_used)) => {
+                let sum = match gas_used.overflowing_add(gas) {
+                    (new_gas_used, false) => new_gas_used,
+                    (_, true) => return Err(Error::GasOverflow),
+                };
+                if sum > gas_limit {
+                    return Err(Error::OutOfGas);
+                }
+                Some(sum)
+            }
+            (None, None) => None,
+            _ => panic!("inconsistent tx availability"),
         };
-        if new_gas_used > gas_limit {
-            return Err(Error::OutOfGas);
-        }
 
         let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
         let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
@@ -161,24 +168,12 @@ impl API for Module {
             return Err(Error::BatchOutOfGas);
         }
 
-        let gas_used = ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED);
-        *gas_used = new_gas_used;
-        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
-        *batch_gas_used = batch_new_gas_used;
-
-        Ok(())
-    }
-
-    fn batch_use_gas(ctx: &mut DispatchContext<'_>, gas: u64) -> Result<(), Error> {
-        let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
-        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
-        let batch_new_gas_used = match batch_gas_used.overflowing_add(gas) {
-            (batch_new_gas_used, false) => batch_new_gas_used,
-            (_, true) => return Err(Error::BatchGasOverflow),
-        };
-        if batch_new_gas_used > batch_gas_limit {
-            return Err(Error::BatchOutOfGas);
+        match (new_gas_used, ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED)) {
+            (Some(sum), Some(gas_used)) => *gas_used = sum,
+            (None, None) => {}
+            _ => panic!("inconsistent tx availability"),
         }
+        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
         *batch_gas_used = batch_new_gas_used;
 
         Ok(())
@@ -194,13 +189,11 @@ impl Module {
             .methods
             .lookup_callable(&args.call.method)
             .ok_or(Error::InvalidMethod)?;
-        ctx.with_simulation(|sim_ctx| {
-            sim_ctx.with_tx(args, |mut tx_ctx, call| {
-                (mi.handler)(&mi, &mut tx_ctx, call.body);
-                // Warning: we don't report success or failure. If the call fails, we still report
-                // how much gas it uses while it fails.
-                Ok(*tx_ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED))
-            })
+        ctx.with_tx_simulation(args, |mut tx_ctx, call| {
+            (mi.handler)(&mi, &mut tx_ctx, call.body);
+            // Warning: we don't report success or failure. If the call fails, we still report
+            // how much gas it uses while it fails.
+            Ok(*tx_ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).unwrap())
         })
     }
 }
@@ -257,3 +250,5 @@ impl module::MethodRegistrationHandler for Module {
 }
 
 impl module::BlockHandler for Module {}
+
+impl module::MessageHookRegistrationHandler for Module {}

@@ -15,7 +15,7 @@ pub const SIGNATURE_CONTEXT_BASE: &[u8] = b"oasis-runtime-sdk/tx: v0";
 pub const LATEST_TRANSACTION_VERSION: u16 = 1;
 
 /// Error.
-#[derive(Error, Debug)]
+#[derive(Error, PartialEq, Debug)]
 pub enum Error {
     #[error("unsupported version")]
     UnsupportedVersion,

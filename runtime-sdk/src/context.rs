@@ -138,6 +138,22 @@ pub trait Context {
     fn take_value<V>(&mut self, key: &'static str) -> Box<V>
     where
         V: Any + Default;
+
+    /// Fetches or sets a value associated with the transaction.
+    ///
+    /// Only present if this is a transaction processing context.
+    fn tx_value<V>(&mut self, key: &'static str) -> Option<&mut V>
+    where
+        V: Any + Default;
+
+    /// Takes a value associated with the transaction.
+    ///
+    /// The previous value is removed so subsequent fetches will return the default value.
+    ///
+    /// Only present if this is a transaction processing context.
+    fn take_tx_value<V>(&mut self, key: &'static str) -> Option<Box<V>>
+    where
+        V: Any + Default;
 }
 
 /// Dispatch context for the whole batch.
@@ -224,26 +240,37 @@ impl<'a> DispatchContext<'a> {
         f(tx_ctx, tx.call)
     }
 
-    /// Run something with a simulation context based on this context.
+    /// Executes a function with the transaction-specific context set in simulation mode.
     /// The simulation context collects its own messages and starts with an empty set of context
     /// values.
     /// Runtime storage is shared with this context, so don't go committing it.
-    pub fn with_simulation<F, R>(&mut self, f: F) -> R
+    pub fn with_tx_simulation<F, R>(&mut self, tx: transaction::Transaction, f: F) -> R
     where
-        F: FnOnce(&mut DispatchContext<'_>) -> R,
+        F: FnOnce(TxContext<'_, '_>, transaction::Call) -> R,
     {
-        let mut sim_ctx = DispatchContext {
+        // Create a store wrapped by an overlay store so we can either rollback or commit.
+        let store = storage::OverlayStore::new(&mut self.runtime_storage);
+        let mut values = BTreeMap::new();
+
+        let tx_ctx = TxContext {
             mode: Mode::SimulateTx,
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
-            runtime_storage: self.runtime_storage,
+            consensus_state: self.consensus_state,
+            store,
             io_ctx: self.io_ctx.clone(),
-            methods: self.methods,
+            logger: self
+                .logger
+                .new(o!("ctx" => "transaction", "mode" => MODE_SIMULATE_TX)),
+            tx_auth_info: tx.auth_info,
+            // Other than for storage, simulation has a blank slate.
+            tags: Tags::new(),
             max_messages: self.max_messages,
             messages: Vec::new(),
-            values: BTreeMap::new(),
+            values: &mut values,
+            tx_values: BTreeMap::new(),
         };
-        f(&mut sim_ctx)
+        f(tx_ctx, tx.call)
     }
 }
 
@@ -324,6 +351,20 @@ impl<'a> Context for DispatchContext<'a> {
             .remove(key)
             .map(|x| x.downcast().expect("type should stay the same"))
             .unwrap_or_default()
+    }
+
+    fn tx_value<V>(&mut self, _key: &'static str) -> Option<&mut V>
+    where
+        V: Any + Default,
+    {
+        None
+    }
+
+    fn take_tx_value<V>(&mut self, _key: &'static str) -> Option<Box<V>>
+    where
+        V: Any + Default,
+    {
+        None
     }
 }
 
@@ -439,28 +480,32 @@ impl<'a, 'b> Context for TxContext<'a, 'b> {
     }
 
     /// Fetches or sets a value associated with the transaction.
-    pub fn tx_value<V>(&mut self, key: &'static str) -> &mut V
+    fn tx_value<V>(&mut self, key: &'static str) -> Option<&mut V>
     where
         V: Any + Default,
     {
-        self.tx_values
-            .entry(key)
-            .or_insert_with(|| Box::new(V::default()))
-            .downcast_mut()
-            .expect("type should stay the same")
+        Some(
+            self.tx_values
+                .entry(key)
+                .or_insert_with(|| Box::new(V::default()))
+                .downcast_mut()
+                .expect("type should stay the same"),
+        )
     }
 
     /// Takes a value associated with the transaction.
     ///
     /// The previous value is removed so subsequent fetches will return the default value.
-    pub fn take_tx_value<V>(&mut self, key: &'static str) -> Box<V>
+    fn take_tx_value<V>(&mut self, key: &'static str) -> Option<Box<V>>
     where
         V: Any + Default,
     {
-        self.tx_values
-            .remove(key)
-            .map(|x| x.downcast().expect("type should stay the same"))
-            .unwrap_or_default()
+        Some(
+            self.tx_values
+                .remove(key)
+                .map(|x| x.downcast().expect("type should stay the same"))
+                .unwrap_or_default(),
+        )
     }
 }
 
@@ -533,19 +578,19 @@ mod test {
 
             *y = Some(48);
 
-            let a: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey");
+            let a: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey").unwrap();
             assert_eq!(a, &None);
 
             *a = Some(65);
 
-            let b: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey");
+            let b: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey").unwrap();
             assert_eq!(b, &Some(65));
 
-            let c: &mut Option<u64> = tx_ctx.tx_value("module.TestTakeTxKey");
+            let c: &mut Option<u64> = tx_ctx.tx_value("module.TestTakeTxKey").unwrap();
             *c = Some(67);
-            let d: Box<Option<u64>> = tx_ctx.take_tx_value("module.TestTakeTxKey");
+            let d: Box<Option<u64>> = tx_ctx.take_tx_value("module.TestTakeTxKey").unwrap();
             assert_eq!(d, Box::new(Some(67)));
-            let e: &mut Option<u64> = tx_ctx.tx_value("module.TestTakeTxKey");
+            let e: &mut Option<u64> = tx_ctx.tx_value("module.TestTakeTxKey").unwrap();
             assert_eq!(e, &None);
         });
 
@@ -556,7 +601,7 @@ mod test {
             let z: Box<Option<u64>> = tx_ctx.take_value("module.TestKey");
             assert_eq!(z, Box::new(Some(48)));
 
-            let a: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey");
+            let a: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey").unwrap();
             assert_eq!(a, &None);
         });
 

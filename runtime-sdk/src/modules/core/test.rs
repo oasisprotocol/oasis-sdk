@@ -1,7 +1,7 @@
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    context::Mode,
+    context::{Context, Mode},
     module,
     module::Module,
     testing::{keys, mock},
@@ -23,7 +23,7 @@ fn test_use_gas() {
         },
     );
 
-    Core::batch_use_gas(&mut ctx, 1).expect("using batch gas under limit should succeed");
+    Core::use_gas(&mut ctx, 1).expect("using batch gas under limit should succeed");
 
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = MAX_GAS;
@@ -58,7 +58,7 @@ fn test_use_gas() {
         Core::use_gas(&mut tx_ctx, 1).expect_err("batch gas should accumulate");
     });
 
-    Core::batch_use_gas(&mut ctx, 1).expect_err("batch gas should accumulate outside tx");
+    Core::use_gas(&mut ctx, 1).expect_err("batch gas should accumulate outside tx");
 }
 
 #[test]
