@@ -164,6 +164,7 @@ impl<'a> DispatchContext<'a> {
     /// Run something with a simulation context based on this context.
     /// The simulation context collects its own messages and starts with an empty set of context
     /// values.
+    /// Runtime storage is shared with this context, so don't go committing it.
     pub fn with_simulation<F, R>(&mut self, f: F) -> R
     where
         F: FnOnce(&mut DispatchContext<'_>) -> R,
