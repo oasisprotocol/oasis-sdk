@@ -6,7 +6,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.1.1" }
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", rev = "17d2861" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
@@ -24,6 +24,7 @@ num-traits = "0.2.14"
 impl-trait-for-tuples = "0.2.1"
 base64 = "0.13.0"
 once_cell = "1.7.2"
+slog = "2.7.0"
 
 [features]
 default = ["oasis-runtime-sdk-macros"]

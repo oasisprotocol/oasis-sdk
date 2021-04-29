@@ -18,19 +18,13 @@ pub struct Transfer {
 }
 
 /// Account metadata.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Account {
     #[serde(rename = "nonce")]
     #[serde(default)]
     #[serde(skip_serializing_if = "Zero::is_zero")]
     pub nonce: u64,
-}
-
-impl Default for Account {
-    fn default() -> Self {
-        Self { nonce: 0 }
-    }
 }
 
 /// Arguments for the Nonce query.

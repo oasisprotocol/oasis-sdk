@@ -3,10 +3,16 @@ use std::collections::BTreeMap;
 
 use io_context::Context as IoContext;
 
-use oasis_core_runtime::{common::cbor, consensus::roothash, storage::mkvs};
+use oasis_core_runtime::{
+    common::{cbor, logger::get_logger},
+    consensus::{roothash, state::ConsensusState},
+    storage::mkvs,
+    transaction::tags::Tags,
+};
 
 use crate::{
     context::{DispatchContext, Mode},
+    storage,
     types::transaction,
 };
 
@@ -14,8 +20,8 @@ use crate::{
 pub struct Mock {
     pub runtime_header: roothash::Header,
     pub runtime_round_results: roothash::RoundResults,
-    pub runtime_storage: mkvs::OverlayTree<mkvs::Tree>,
-
+    pub mkvs: Box<dyn mkvs::MKVS>,
+    pub consensus_state: ConsensusState,
     pub max_messages: u32,
 }
 
@@ -26,8 +32,14 @@ impl Mock {
             mode: Mode::ExecuteTx,
             runtime_header: &self.runtime_header,
             runtime_round_results: &self.runtime_round_results,
-            runtime_storage: &mut self.runtime_storage,
+            runtime_storage: storage::MKVSStore::new(
+                IoContext::background().freeze(),
+                self.mkvs.as_mut(),
+            ),
+            consensus_state: &self.consensus_state,
             io_ctx: IoContext::background().freeze(),
+            logger: get_logger("mock"),
+            block_tags: Tags::new(),
             messages: Vec::new(),
             max_messages: self.max_messages,
             values: BTreeMap::new(),
@@ -37,14 +49,20 @@ impl Mock {
 
 impl Default for Mock {
     fn default() -> Self {
+        let mkvs = mkvs::OverlayTree::new(
+            mkvs::Tree::make()
+                .with_root_type(mkvs::RootType::State)
+                .new(Box::new(mkvs::sync::NoopReadSyncer)),
+        );
+        let consensus_tree = mkvs::Tree::make()
+            .with_root_type(mkvs::RootType::State)
+            .new(Box::new(mkvs::sync::NoopReadSyncer));
+
         Self {
             runtime_header: roothash::Header::default(),
             runtime_round_results: roothash::RoundResults::default(),
-            runtime_storage: mkvs::OverlayTree::new(
-                mkvs::Tree::make()
-                    .with_root_type(mkvs::RootType::State)
-                    .new(Box::new(mkvs::sync::NoopReadSyncer)),
-            ),
+            mkvs: Box::new(mkvs),
+            consensus_state: ConsensusState::new(consensus_tree),
             max_messages: 32,
         }
     }
