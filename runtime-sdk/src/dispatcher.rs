@@ -345,6 +345,8 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
             let mut ctx = DispatchContext::from_runtime(&ctx, mkvs, &self.methods);
+            // Perform state migrations if required.
+            self.maybe_init_state(&mut ctx);
 
             // Execute the query.
             let method_info = self
