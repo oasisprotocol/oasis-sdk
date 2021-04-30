@@ -1,0 +1,49 @@
+{
+    "params": {
+      "max_allowances": 10000,
+      "allow_escrow_messages": true
+    },
+    "total_supply": "200",
+    "ledger": {
+        "oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve": {
+            "general": {
+                "balance": "100",
+                "allowances": {
+                    "oasis1qz672fmkt32hc3hxqrrwr07falkr22agsqv5dhke": "100"
+                }
+            },
+            "escrow": {
+                "active": {
+                    "balance": "0",
+                    "total_shares": "0"
+                },
+                "debonding": {
+                    "balance": "0",
+                    "total_shares": "0"
+                },
+                "commission_schedule": {},
+                "stake_accumulator": {}
+            }
+        },
+        "oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx": {
+            "general": {
+                "balance": "100",
+                "allowances": {
+                    "oasis1qz672fmkt32hc3hxqrrwr07falkr22agsqv5dhke": "100"
+                }
+            },
+            "escrow": {
+                "active": {
+                    "balance": "0",
+                    "total_shares": "0"
+                },
+                "debonding": {
+                    "balance": "0",
+                    "total_shares": "0"
+                },
+                "commission_schedule": {},
+                "stake_accumulator": {}
+            }
+        }
+    }
+}
