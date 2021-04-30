@@ -10,9 +10,25 @@ impl sdk::Runtime for Runtime {
     type Modules = (
         modules::accounts::Module,
         modules::consensus_accounts::Module<modules::accounts::Module, modules::consensus::Module>,
+        modules::core::Module,
     );
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {
-        Default::default()
+        (
+            Default::default(),
+            modules::consensus_accounts::Genesis {
+                parameters: modules::consensus_accounts::Parameters {
+                    gas_costs: modules::consensus_accounts::GasCosts {
+                        tx_deposit: 100,
+                        tx_withdraw: 100,
+                    },
+                },
+            },
+            modules::core::Genesis {
+                parameters: modules::core::Parameters {
+                    max_batch_gas: 10_000,
+                },
+            },
+        )
     }
 }
