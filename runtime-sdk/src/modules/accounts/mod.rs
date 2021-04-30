@@ -14,7 +14,9 @@ use crate::{
     error::{self, Error as _},
     module,
     module::{CallableMethodInfo, Module as _, QueryMethodInfo},
-    modules, storage,
+    modules,
+    modules::core::{Module as Core, API as _},
+    storage,
     types::{
         address::Address,
         token,
@@ -43,6 +45,10 @@ pub enum Error {
     #[error("forbidden by policy")]
     #[sdk_error(code = 3)]
     Forbidden,
+
+    #[error("core: {0}")]
+    #[sdk_error(transparent)]
+    Core(#[from] modules::core::Error),
 }
 
 /// Events emitted by the accounts module.
@@ -69,12 +75,22 @@ pub enum Event {
     },
 }
 
+/// Gas costs.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GasCosts {
+    #[serde(rename = "tx_transfer")]
+    pub tx_transfer: u64,
+}
+
 /// Parameters for the accounts module.
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
     #[serde(rename = "transfers_disabled")]
     pub transfers_disabled: bool,
+    #[serde(rename = "gas_costs")]
+    pub gas_costs: GasCosts,
 }
 
 impl module::Parameters for Parameters {
@@ -318,10 +334,14 @@ impl API for Module {
 
 impl Module {
     fn tx_transfer(ctx: &mut TxContext<'_, '_>, body: types::Transfer) -> Result<(), Error> {
+        let params = Self::params(ctx.runtime_state());
+
         // Reject transfers when they are disabled.
-        if Self::params(ctx.runtime_state()).transfers_disabled {
+        if params.transfers_disabled {
             return Err(Error::Forbidden);
         }
+
+        Core::use_gas(ctx, params.gas_costs.tx_transfer)?;
 
         Self::transfer(
             ctx,

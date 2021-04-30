@@ -15,6 +15,7 @@ use oasis_core_runtime::{
 
 use crate::{
     event::Event,
+    module::MethodRegistry,
     modules::core::Error,
     storage,
     types::{address::Address, message::MessageEventHookInvocation, transaction},
@@ -137,6 +138,22 @@ pub trait Context {
     fn take_value<V>(&mut self, key: &'static str) -> Box<V>
     where
         V: Any + Default;
+
+    /// Fetches or sets a value associated with the transaction.
+    ///
+    /// Only present if this is a transaction processing context.
+    fn tx_value<V>(&mut self, key: &'static str) -> Option<&mut V>
+    where
+        V: Any + Default;
+
+    /// Takes a value associated with the transaction.
+    ///
+    /// The previous value is removed so subsequent fetches will return the default value.
+    ///
+    /// Only present if this is a transaction processing context.
+    fn take_tx_value<V>(&mut self, key: &'static str) -> Option<Box<V>>
+    where
+        V: Any + Default;
 }
 
 /// Dispatch context for the whole batch.
@@ -151,6 +168,9 @@ pub struct DispatchContext<'a> {
     pub(crate) io_ctx: Arc<IoContext>,
     pub(crate) logger: slog::Logger,
 
+    /// The runtime's methods, in case you need to look them up for some reason.
+    pub(crate) methods: &'a MethodRegistry,
+
     pub(crate) block_tags: Tags,
 
     /// Maximum number of messages that can be emitted.
@@ -164,7 +184,11 @@ pub struct DispatchContext<'a> {
 
 impl<'a> DispatchContext<'a> {
     /// Create a new dispatch context from the low-level runtime context.
-    pub(crate) fn from_runtime(ctx: &'a RuntimeContext<'_>, mkvs: &'a mut dyn mkvs::MKVS) -> Self {
+    pub(crate) fn from_runtime(
+        ctx: &'a RuntimeContext<'_>,
+        mkvs: &'a mut dyn mkvs::MKVS,
+        methods: &'a MethodRegistry,
+    ) -> Self {
         let mode = if ctx.check_only {
             Mode::CheckTx
         } else {
@@ -179,6 +203,7 @@ impl<'a> DispatchContext<'a> {
             io_ctx: ctx.io_ctx.clone(),
             logger: get_logger("runtime-sdk")
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
+            methods,
             block_tags: Tags::new(),
             max_messages: ctx.max_messages,
             messages: Vec::new(),
@@ -210,6 +235,40 @@ impl<'a> DispatchContext<'a> {
             max_messages: self.max_messages.saturating_sub(self.messages.len() as u32),
             messages: Vec::new(),
             values: &mut self.values,
+            tx_values: BTreeMap::new(),
+        };
+        f(tx_ctx, tx.call)
+    }
+
+    /// Executes a function with the transaction-specific context set in simulation mode.
+    /// The simulation context collects its own messages and starts with an empty set of context
+    /// values.
+    /// Runtime storage is shared with this context, so don't go committing it.
+    pub fn with_tx_simulation<F, R>(&mut self, tx: transaction::Transaction, f: F) -> R
+    where
+        F: FnOnce(TxContext<'_, '_>, transaction::Call) -> R,
+    {
+        // Create a store wrapped by an overlay store so we can either rollback or commit.
+        let store = storage::OverlayStore::new(&mut self.runtime_storage);
+        let mut values = BTreeMap::new();
+
+        let tx_ctx = TxContext {
+            mode: Mode::SimulateTx,
+            runtime_header: self.runtime_header,
+            runtime_round_results: self.runtime_round_results,
+            consensus_state: self.consensus_state,
+            store,
+            io_ctx: self.io_ctx.clone(),
+            logger: self
+                .logger
+                .new(o!("ctx" => "transaction", "mode" => MODE_SIMULATE_TX)),
+            tx_auth_info: tx.auth_info,
+            // Other than for storage, simulation has a blank slate.
+            tags: Tags::new(),
+            max_messages: self.max_messages,
+            messages: Vec::new(),
+            values: &mut values,
+            tx_values: BTreeMap::new(),
         };
         f(tx_ctx, tx.call)
     }
@@ -293,6 +352,20 @@ impl<'a> Context for DispatchContext<'a> {
             .map(|x| x.downcast().expect("type should stay the same"))
             .unwrap_or_default()
     }
+
+    fn tx_value<V>(&mut self, _key: &'static str) -> Option<&mut V>
+    where
+        V: Any + Default,
+    {
+        None
+    }
+
+    fn take_tx_value<V>(&mut self, _key: &'static str) -> Option<Box<V>>
+    where
+        V: Any + Default,
+    {
+        None
+    }
 }
 
 /// Per-transaction/method dispatch sub-context.
@@ -321,6 +394,9 @@ pub struct TxContext<'a, 'b> {
 
     /// Per-context values.
     values: &'b mut BTreeMap<&'static str, Box<dyn Any>>,
+
+    /// Per-transaction values.
+    tx_values: BTreeMap<&'static str, Box<dyn Any>>,
 }
 
 impl<'a, 'b> Context for TxContext<'a, 'b> {
@@ -402,6 +478,35 @@ impl<'a, 'b> Context for TxContext<'a, 'b> {
             .map(|x| x.downcast().expect("type should stay the same"))
             .unwrap_or_default()
     }
+
+    /// Fetches or sets a value associated with the transaction.
+    fn tx_value<V>(&mut self, key: &'static str) -> Option<&mut V>
+    where
+        V: Any + Default,
+    {
+        Some(
+            self.tx_values
+                .entry(key)
+                .or_insert_with(|| Box::new(V::default()))
+                .downcast_mut()
+                .expect("type should stay the same"),
+        )
+    }
+
+    /// Takes a value associated with the transaction.
+    ///
+    /// The previous value is removed so subsequent fetches will return the default value.
+    fn take_tx_value<V>(&mut self, key: &'static str) -> Option<Box<V>>
+    where
+        V: Any + Default,
+    {
+        Some(
+            self.tx_values
+                .remove(key)
+                .map(|x| x.downcast().expect("type should stay the same"))
+                .unwrap_or_default(),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -472,6 +577,21 @@ mod test {
             assert_eq!(y, &Some(42));
 
             *y = Some(48);
+
+            let a: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey").unwrap();
+            assert_eq!(a, &None);
+
+            *a = Some(65);
+
+            let b: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey").unwrap();
+            assert_eq!(b, &Some(65));
+
+            let c: &mut Option<u64> = tx_ctx.tx_value("module.TestTakeTxKey").unwrap();
+            *c = Some(67);
+            let d: Box<Option<u64>> = tx_ctx.take_tx_value("module.TestTakeTxKey").unwrap();
+            assert_eq!(d, Box::new(Some(67)));
+            let e: &mut Option<u64> = tx_ctx.tx_value("module.TestTakeTxKey").unwrap();
+            assert_eq!(e, &None);
         });
 
         let x: &mut Option<u64> = ctx.value("module.TestKey");
@@ -480,6 +600,9 @@ mod test {
         ctx.with_tx(tx, |mut tx_ctx, _call| {
             let z: Box<Option<u64>> = tx_ctx.take_value("module.TestKey");
             assert_eq!(z, Box::new(Some(48)));
+
+            let a: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey").unwrap();
+            assert_eq!(a, &None);
         });
 
         let y: &mut Option<u64> = ctx.value("module.TestKey");

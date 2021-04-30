@@ -11,14 +11,29 @@ pub struct Runtime;
 impl sdk::Runtime for Runtime {
     const VERSION: Version = sdk::version_from_cargo!();
 
-    type Modules = (keyvalue::Module, modules::accounts::Module);
+    type Modules = (
+        keyvalue::Module,
+        modules::accounts::Module,
+        modules::core::Module,
+    );
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {
         (
             keyvalue::Genesis {
-                parameters: Default::default(),
+                parameters: keyvalue::Parameters {
+                    gas_costs: keyvalue::GasCosts {
+                        insert_absent: 200,
+                        insert_existing: 100,
+                        remove_absent: 100,
+                        remove_existing: 50,
+                    },
+                },
             },
             modules::accounts::Genesis {
+                parameters: modules::accounts::Parameters {
+                    gas_costs: modules::accounts::GasCosts { tx_transfer: 100 },
+                    ..Default::default()
+                },
                 balances: {
                     let mut b = BTreeMap::new();
                     // Alice.
@@ -53,6 +68,11 @@ impl sdk::Runtime for Runtime {
                     ts
                 },
                 ..Default::default()
+            },
+            modules::core::Genesis {
+                parameters: modules::core::Parameters {
+                    max_batch_gas: 10_000,
+                },
             },
         )
     }

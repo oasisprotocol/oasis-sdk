@@ -15,7 +15,7 @@ pub const SIGNATURE_CONTEXT_BASE: &[u8] = b"oasis-runtime-sdk/tx: v0";
 pub const LATEST_TRANSACTION_VERSION: u16 = 1;
 
 /// Error.
-#[derive(Error, Debug)]
+#[derive(Error, PartialEq, Debug)]
 pub enum Error {
     #[error("unsupported version")]
     UnsupportedVersion,
@@ -148,6 +148,11 @@ pub enum CallResult {
 
         #[serde(rename = "code")]
         code: u32,
+
+        #[serde(rename = "message")]
+        #[serde(default)]
+        #[serde(skip_serializing_if = "String::is_empty")]
+        message: String,
     },
 }
 

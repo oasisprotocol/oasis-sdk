@@ -184,8 +184,9 @@ func (cr *CallResult) IsSuccess() bool {
 
 // FailedCallResult is a failed call result.
 type FailedCallResult struct {
-	Module string `json:"module"`
-	Code   uint32 `json:"code"`
+	Module  string `json:"module"`
+	Code    uint32 `json:"code"`
+	Message string `json:"message,omitempty"`
 }
 
 // Error is a trivial implementation of error.
@@ -195,5 +196,5 @@ func (cr FailedCallResult) Error() string {
 
 // String returns the string representation of a failed call result.
 func (cr FailedCallResult) String() string {
-	return fmt.Sprintf("module: %s code: %d", cr.Module, cr.Code)
+	return fmt.Sprintf("module: %s code: %d message: %s", cr.Module, cr.Code, cr.Message)
 }

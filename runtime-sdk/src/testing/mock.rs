@@ -12,6 +12,7 @@ use oasis_core_runtime::{
 
 use crate::{
     context::{DispatchContext, Mode},
+    module::MethodRegistry,
     storage,
     types::transaction,
 };
@@ -22,6 +23,9 @@ pub struct Mock {
     pub runtime_round_results: roothash::RoundResults,
     pub mkvs: Box<dyn mkvs::MKVS>,
     pub consensus_state: ConsensusState,
+
+    pub methods: MethodRegistry,
+
     pub max_messages: u32,
 }
 
@@ -38,6 +42,7 @@ impl Mock {
             ),
             consensus_state: &self.consensus_state,
             io_ctx: IoContext::background().freeze(),
+            methods: &self.methods,
             logger: get_logger("mock"),
             block_tags: Tags::new(),
             messages: Vec::new(),
@@ -63,6 +68,7 @@ impl Default for Mock {
             runtime_round_results: roothash::RoundResults::default(),
             mkvs: Box::new(mkvs),
             consensus_state: ConsensusState::new(consensus_tree),
+            methods: MethodRegistry::new(),
             max_messages: 32,
         }
     }

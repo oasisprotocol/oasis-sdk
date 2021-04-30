@@ -7,6 +7,10 @@ use oasis_runtime_sdk::{
     core::common::cbor,
     error::{Error as _, RuntimeError},
     module::{CallableMethodInfo, Module as _, QueryMethodInfo},
+    modules::{
+        core,
+        core::{Module as Core, API as _},
+    },
     types::transaction::CallResult,
 };
 
@@ -21,6 +25,10 @@ pub enum Error {
     #[error("invalid argument")]
     #[sdk_error(code = 1)]
     InvalidArgument,
+
+    #[error("core: {0}")]
+    #[sdk_error(transparent)]
+    Core(#[from] core::Error),
 }
 
 /// Events emitted by the keyvalue module.
@@ -34,10 +42,27 @@ pub enum Event {
     Remove { key: types::Key },
 }
 
-/// Parameters for the keyvalue module (none so far).
+/// Gas costs.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Parameters;
+pub struct GasCosts {
+    #[serde(rename = "insert_absent")]
+    pub insert_absent: u64,
+    #[serde(rename = "insert_existing")]
+    pub insert_existing: u64,
+    #[serde(rename = "remove_absent")]
+    pub remove_absent: u64,
+    #[serde(rename = "remove_existing")]
+    pub remove_existing: u64,
+}
+
+/// Parameters for the keyvalue module.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Parameters {
+    #[serde(rename = "gas_costs")]
+    pub gas_costs: GasCosts,
+}
 
 impl sdk::module::Parameters for Parameters {
     type Error = ();
@@ -133,10 +158,23 @@ impl Module {
         if ctx.is_check_only() {
             return Ok(());
         }
+
+        let params = Self::params(ctx.runtime_state());
+
+        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let ts = sdk::storage::TypedStore::new(&mut store);
+        let cost = match ts.get::<_, Vec<u8>>(body.key.as_slice()) {
+            None => params.gas_costs.insert_absent,
+            Some(_) => params.gas_costs.insert_existing,
+        };
+        // We must drop ts and store so that use_gas can borrow ctx.
+        Core::use_gas(ctx, cost)?;
+
+        // Recreate store and ts after we get ctx back
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut ts = sdk::storage::TypedStore::new(&mut store);
         let bc = body.clone();
-        ts.insert(body.key, &body.value);
+        ts.insert(&body.key, &body.value);
         ctx.emit_event(Event::Insert { kv: bc });
         Ok(())
     }
@@ -146,10 +184,23 @@ impl Module {
         if ctx.is_check_only() {
             return Ok(());
         }
+
+        let params = Self::params(ctx.runtime_state());
+
+        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let ts = sdk::storage::TypedStore::new(&mut store);
+        let cost = match ts.get::<_, Vec<u8>>(body.key.as_slice()) {
+            None => params.gas_costs.remove_absent,
+            Some(_) => params.gas_costs.remove_existing,
+        };
+        // We must drop ts and store so that use_gas can borrow ctx.
+        Core::use_gas(ctx, cost)?;
+
+        // Recreate store and ts after we get ctx back
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut ts = sdk::storage::TypedStore::new(&mut store);
         let bc = body.clone();
-        ts.remove(body.key);
+        ts.remove(&body.key);
         ctx.emit_event(Event::Remove { key: bc });
         Ok(())
     }

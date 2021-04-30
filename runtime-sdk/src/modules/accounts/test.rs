@@ -165,6 +165,7 @@ fn test_api_tx_transfer_disabled() {
             },
             parameters: Parameters {
                 transfers_disabled: true,
+                gas_costs: Default::default(),
             },
             ..Default::default()
         },

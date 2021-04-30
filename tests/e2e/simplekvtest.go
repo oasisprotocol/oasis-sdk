@@ -74,7 +74,9 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key []byte, val
 		return err
 	}
 
-	tx := types.NewTransaction(nil, "keyvalue.Insert", kvKeyValue{
+	tx := types.NewTransaction(&types.Fee{
+		Gas:    200,
+	}, "keyvalue.Insert", kvKeyValue{
 		Key:   key,
 		Value: value,
 	})
@@ -101,7 +103,9 @@ func kvRemove(rtc client.RuntimeClient, signer signature.Signer, key []byte) err
 		return err
 	}
 
-	tx := types.NewTransaction(nil, "keyvalue.Remove", kvKey{
+	tx := types.NewTransaction(&types.Fee{
+		Gas:    100,
+	}, "keyvalue.Remove", kvKey{
 		Key: key,
 	})
 	tx.AppendSignerInfo(signer.Public(), nonce)
@@ -356,7 +360,9 @@ func KVTransferTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runti
 	}
 
 	log.Info("transferring 100 units from Alice to Bob")
-	tx := types.NewTransaction(nil, "accounts.Transfer", struct {
+	tx := types.NewTransaction(&types.Fee{
+		Gas:    100,
+	}, "accounts.Transfer", struct {
 		To     types.Address   `json:"to"`
 		Amount types.BaseUnits `json:"amount"`
 	}{
@@ -415,7 +421,9 @@ func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeCl
 	}
 
 	log.Info("transferring 10 units from Dave to Alice")
-	tx := types.NewTransaction(nil, "accounts.Transfer", struct {
+	tx := types.NewTransaction(&types.Fee{
+		Gas:    100,
+	}, "accounts.Transfer", struct {
 		To     types.Address   `json:"to"`
 		Amount types.BaseUnits `json:"amount"`
 	}{
