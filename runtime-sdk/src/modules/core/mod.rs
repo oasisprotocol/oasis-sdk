@@ -78,7 +78,7 @@ pub enum Error {
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
-    #[serde(rename = "batch_gas")]
+    #[serde(rename = "max_batch_gas")]
     pub max_batch_gas: u64,
 }
 
