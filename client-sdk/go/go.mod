@@ -11,7 +11,7 @@ replace (
 
 require (
 	github.com/btcsuite/btcd v0.21.0-beta
-	github.com/oasisprotocol/oasis-core/go v0.2101.1
+	github.com/oasisprotocol/oasis-core/go v0.2101.1-0.20210504072550-da25d939a3d4
 	github.com/stretchr/testify v1.7.0
-	google.golang.org/grpc v1.36.1
+	google.golang.org/grpc v1.37.0
 )
