@@ -75,17 +75,11 @@ pub enum Error {
 }
 
 /// Parameters for the core module.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Parameters {
     #[serde(rename = "batch_gas")]
     pub max_batch_gas: u64,
-}
-
-impl Default for Parameters {
-    fn default() -> Self {
-        Self { max_batch_gas: 0 }
-    }
 }
 
 impl module::Parameters for Parameters {
@@ -97,19 +91,11 @@ pub trait API {
 }
 
 /// Genesis state for the accounts module.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Genesis {
     #[serde(rename = "parameters")]
     pub parameters: Parameters,
-}
-
-impl Default for Genesis {
-    fn default() -> Self {
-        Self {
-            parameters: Default::default(),
-        }
-    }
 }
 
 /// State schema constants.
