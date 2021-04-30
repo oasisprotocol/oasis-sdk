@@ -87,6 +87,11 @@ impl module::Parameters for Parameters {
 }
 
 pub trait API {
+    /// Attempt to use gas. Gas limits are per-batch (max_batch_gas in Parameters) and
+    /// per-transaction (.ai.fee.gas). If the gas specified would cause either total used to exceed
+    /// its limit, fails with Error::OutOfGas or Error::BatchOutOfGas, and neither gas usage is
+    /// increased. Per-transaction gas is not assessed when C is not a transaction processing
+    /// context.
     fn use_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error>;
 }
 
@@ -167,6 +172,11 @@ impl API for Module {
 }
 
 impl Module {
+    /// Run a transaction in simulation and return how much gas it uses. This looks up the method
+    /// in the context's method registry. Transactions that fail still use gas, and this query will
+    /// estimate that and return successfully, so do not use this query to see if a transaction will
+    /// succeed. Failure due to OutOfGas are included, so it's best to set the query argument
+    /// transaction's gas to something high.
     fn query_estimate_gas(
         ctx: &mut DispatchContext<'_>,
         args: transaction::Transaction,
