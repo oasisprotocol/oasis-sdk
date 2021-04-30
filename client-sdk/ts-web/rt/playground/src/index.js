@@ -171,11 +171,11 @@ export const playground = (async function () {
             .setFeeGas(GAS_HIGH);
 
         console.log('  estimate gas');
-        const estimatedGas = await coreWrapper.queryEstimateGas()
+        const estimatedGas1 = await coreWrapper.queryEstimateGas()
             .setArgs(twInsert.transaction)
             .query(nic);
-        console.log('  estimated gas', estimatedGas);
-        twInsert.setFeeGas(estimatedGas);
+        console.log('  estimated gas', estimatedGas1);
+        twInsert.setFeeGas(estimatedGas1);
 
         await twInsert.sign([csAlice], consensusChainContext);
         await twInsert.submit(nic);
@@ -206,7 +206,15 @@ export const playground = (async function () {
             })
             .setSignerInfo([siAlice2])
             .setFeeAmount(FEE_FREE)
-            .setFeeGas(0n);
+            .setFeeGas(GAS_HIGH);
+
+        console.log('  estimate gas');
+        const estimatedGas2 = await coreWrapper.queryEstimateGas()
+            .setArgs(twRemove.transaction)
+            .query(nic);
+        console.log('  estimated gas', estimatedGas2);
+        twRemove.setFeeGas(estimatedGas2);
+
         await twRemove.sign([csAlice], consensusChainContext);
         await twRemove.submit(nic);
         console.log('ok');
