@@ -82,6 +82,9 @@ pub trait Context {
     /// Consensus state.
     fn consensus_state(&self) -> &consensus::state::ConsensusState;
 
+    /// Current epoch.
+    fn epoch(&self) -> consensus::beacon::EpochTime;
+
     /// Transaction authentication information.
     ///
     /// Only present if this is a transaction processing context.
@@ -165,6 +168,7 @@ pub struct DispatchContext<'a> {
     pub(crate) runtime_storage: storage::MKVSStore<&'a mut dyn mkvs::MKVS>,
     // TODO: linked consensus layer block
     pub(crate) consensus_state: &'a consensus::state::ConsensusState,
+    pub(crate) epoch: consensus::beacon::EpochTime,
     pub(crate) io_ctx: Arc<IoContext>,
     pub(crate) logger: slog::Logger,
 
@@ -200,6 +204,7 @@ impl<'a> DispatchContext<'a> {
             runtime_round_results: ctx.round_results,
             runtime_storage: storage::MKVSStore::new(ctx.io_ctx.clone(), mkvs),
             consensus_state: &ctx.consensus_state,
+            epoch: ctx.epoch,
             io_ctx: ctx.io_ctx.clone(),
             logger: get_logger("runtime-sdk")
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
@@ -224,6 +229,7 @@ impl<'a> DispatchContext<'a> {
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
             consensus_state: self.consensus_state,
+            epoch: self.epoch,
             store,
             io_ctx: self.io_ctx.clone(),
             logger: self
@@ -257,6 +263,7 @@ impl<'a> DispatchContext<'a> {
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
             consensus_state: self.consensus_state,
+            epoch: self.epoch,
             store,
             io_ctx: self.io_ctx.clone(),
             logger: self
@@ -299,6 +306,10 @@ impl<'a> Context for DispatchContext<'a> {
 
     fn consensus_state(&self) -> &consensus::state::ConsensusState {
         &self.consensus_state
+    }
+
+    fn epoch(&self) -> consensus::beacon::EpochTime {
+        self.epoch
     }
 
     fn tx_auth_info(&self) -> Option<&transaction::AuthInfo> {
@@ -375,6 +386,7 @@ pub struct TxContext<'a, 'b> {
     runtime_header: &'a roothash::Header,
     runtime_round_results: &'a roothash::RoundResults,
     consensus_state: &'a consensus::state::ConsensusState,
+    epoch: consensus::beacon::EpochTime,
     // TODO: linked consensus layer block
     store: storage::OverlayStore<&'b mut storage::MKVSStore<&'a mut dyn mkvs::MKVS>>,
 
@@ -424,6 +436,10 @@ impl<'a, 'b> Context for TxContext<'a, 'b> {
 
     fn consensus_state(&self) -> &consensus::state::ConsensusState {
         self.consensus_state
+    }
+
+    fn epoch(&self) -> consensus::beacon::EpochTime {
+        self.epoch
     }
 
     fn tx_auth_info(&self) -> Option<&transaction::AuthInfo> {

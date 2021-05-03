@@ -184,10 +184,10 @@ pub mod state {
 pub struct Module;
 
 /// Module's address that has the common pool.
-static ADDRESS_COMMON_POOL: Lazy<Address> =
+pub static ADDRESS_COMMON_POOL: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "common-pool"));
 /// Module's address that has the fee accumulator.
-static ADDRESS_FEE_ACCUMULATOR: Lazy<Address> =
+pub static ADDRESS_FEE_ACCUMULATOR: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "fee-accumulator"));
 
 impl Module {

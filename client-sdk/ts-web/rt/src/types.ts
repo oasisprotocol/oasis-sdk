@@ -46,6 +46,31 @@ export interface AccountsTransferEvent {
 }
 
 /**
+ * Parameters for the rewards module.
+ */
+export interface RewardsParameters {
+    schedule: RewardsRewardSchedule;
+
+    participation_threshold_numerator: number;
+    participation_threshold_denominator: number;
+}
+
+/**
+ * A reward schedule.
+ */
+export interface RewardsRewardSchedule {
+    steps: RewardsRewardStep[];
+}
+
+/**
+ * One of the time periods in the reward schedule.
+ */
+export interface RewardsRewardStep {
+    until: oasis.types.longnum;
+    amount: BaseUnits;
+}
+
+/**
  * Transaction authentication information.
  */
 export interface AuthInfo {

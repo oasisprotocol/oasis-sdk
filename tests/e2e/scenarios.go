@@ -7,7 +7,14 @@ import (
 
 var (
 	// SimpleKVRuntime is the basic network + client test case with runtime support.
-	SimpleKVRuntime scenario.Scenario = NewRuntimeScenario("test-runtime-simple-keyvalue", []RunTestFunction{SimpleKVTest, KVEventTest, KVBalanceTest, KVTransferTest, KVDaveTest})
+	SimpleKVRuntime scenario.Scenario = NewRuntimeScenario("test-runtime-simple-keyvalue", []RunTestFunction{
+		SimpleKVTest,
+		KVEventTest,
+		KVBalanceTest,
+		KVTransferTest,
+		KVDaveTest,
+		KVRewardsTest,
+	})
 	// SimpleConsensusRuntime is the simple-consensus runtime test.
 	SimpleConsensusRuntime scenario.Scenario = NewRuntimeScenario("test-runtime-simple-consensus", []RunTestFunction{SimpleConsensusTest})
 )
