@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/oasis-sdk/tests/e2e
 
-go 1.15
+go 1.16
 
 // Should be synced with Oasis Core as replace directives are not propagated.
 replace (
