@@ -544,7 +544,7 @@ impl module::AuthHandler for Module {
             storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
         let mut payee = None;
         for si in tx.auth_info.signer_info.iter() {
-            let address = Address::from_pk(&si.public_key);
+            let address = si.address_spec.address();
             let mut account: types::Account = accounts.get(&address).unwrap_or_default();
             if account.nonce != si.nonce {
                 return Err(modules::core::Error::InvalidNonce);

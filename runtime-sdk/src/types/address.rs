@@ -8,7 +8,8 @@ use oasis_core_runtime::{
     common::crypto::hash::Hash, consensus::address::Address as ConsensusAddress,
 };
 
-use crate::crypto::signature::PublicKey;
+use crate::crypto::{multisig, signature::PublicKey};
+use oasis_core_runtime::common::cbor;
 
 const ADDRESS_VERSION_SIZE: usize = 1;
 const ADDRESS_DATA_SIZE: usize = 20;
@@ -21,6 +22,9 @@ const ADDRESS_V0_ED25519_CONTEXT: &[u8] = b"oasis-core/address: staking";
 const ADDRESS_V0_SECP256K1_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: secp256k1";
 
 const ADDRESS_V0_MODULE_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: module";
+
+/// V0 multisig address context.
+const ADDRESS_V0_MULTISIG_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: multisig";
 
 const ADDRESS_BECH32_HRP: &str = "oasis";
 
@@ -82,6 +86,11 @@ impl Address {
                 pk.as_bytes(),
             ),
         }
+    }
+
+    pub fn from_multisig(config: &multisig::Config) -> Self {
+        let config_vec = cbor::to_vec(config);
+        Address::new(ADDRESS_V0_MULTISIG_CONTEXT, ADDRESS_V0_VERSION, &config_vec)
     }
 
     /// Tries to create a new address from Bech32-encoded string.

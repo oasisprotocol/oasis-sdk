@@ -5,8 +5,11 @@ use thiserror::Error;
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    crypto::signature::{self, PublicKey, Signature},
-    types::token,
+    crypto::{
+        multisig,
+        signature::{self, PublicKey, Signature},
+    },
+    types::{address::Address, token},
 };
 
 /// Transction signature domain separation context base.
@@ -23,10 +26,16 @@ pub enum Error {
     MalformedTransaction,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum AuthProof {
+    Solo(Signature),
+    Multisig(multisig::SignatureSet),
+}
+
 /// An unverified signed transaction.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct UnverifiedTransaction(#[serde(with = "serde_bytes")] Vec<u8>, Vec<Signature>);
+pub struct UnverifiedTransaction(#[serde(with = "serde_bytes")] Vec<u8>, Vec<AuthProof>);
 
 impl UnverifiedTransaction {
     /// Verify and deserialize the unverified transaction.
@@ -43,13 +52,14 @@ impl UnverifiedTransaction {
 
         // Verify all signatures.
         let ctx = signature::context::get_chain_context_for(SIGNATURE_CONTEXT_BASE);
-        let signers: Vec<PublicKey> = body
-            .auth_info
-            .signer_info
-            .iter()
-            .map(|si| si.public_key.clone())
-            .collect();
-        PublicKey::verify_batch_multisig(&ctx, &self.0, &signers, &self.1)
+        let mut public_keys = vec![];
+        let mut signatures = vec![];
+        for (si, auth_proof) in body.auth_info.signer_info.iter().zip(self.1.iter()) {
+            let (mut batch_pks, mut batch_sigs) = si.address_spec.batch(auth_proof)?;
+            public_keys.append(&mut batch_pks);
+            signatures.append(&mut batch_sigs);
+        }
+        PublicKey::verify_batch_multisig(&ctx, &self.0, &public_keys, &signatures)
             .map_err(|_| Error::MalformedTransaction)?;
 
         Ok(body)
@@ -116,12 +126,40 @@ pub struct Fee {
     pub gas: u64,
 }
 
+/// Common information that specifies an address as well as how to authenticate.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum AddressSpec {
+    Solo(PublicKey),
+    Multisig(multisig::Config),
+}
+
+impl AddressSpec {
+    pub fn address(&self) -> Address {
+        match self {
+            AddressSpec::Solo(public_key) => Address::from_pk(public_key),
+            AddressSpec::Multisig(config) => Address::from_multisig(config),
+        }
+    }
+
+    pub fn batch(&self, auth_proof: &AuthProof) -> Result<(Vec<PublicKey>, Vec<Signature>), Error> {
+        Ok(match (self, auth_proof) {
+            (AddressSpec::Solo(public_key), AuthProof::Solo(signature)) => {
+                (vec![public_key.clone()], vec![signature.clone()])
+            }
+            (AddressSpec::Multisig(config), AuthProof::Multisig(signature_set)) => config
+                .batch(signature_set)
+                .map_err(|_| Error::MalformedTransaction)?,
+            _ => return Err(Error::MalformedTransaction),
+        })
+    }
+}
+
 /// Transaction signer information.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SignerInfo {
-    #[serde(rename = "pub")]
-    pub public_key: PublicKey,
+    #[serde(rename = "address_spec")]
+    pub address_spec: AddressSpec,
 
     #[serde(rename = "nonce")]
     pub nonce: u64,
@@ -130,7 +168,10 @@ pub struct SignerInfo {
 impl SignerInfo {
     /// Create a new signer info from public key and nonce.
     pub fn new(public_key: PublicKey, nonce: u64) -> Self {
-        Self { public_key, nonce }
+        Self {
+            address_spec: AddressSpec::Solo(public_key),
+            nonce,
+        }
     }
 }
 

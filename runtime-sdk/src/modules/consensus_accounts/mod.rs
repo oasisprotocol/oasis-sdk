@@ -202,7 +202,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
             .signer_info[0];
         Consensus::ensure_compatible_tx_signer(ctx)?;
 
-        let address = Address::from_pk(&signer.public_key);
+        let address = signer.address_spec.address();
         Self::deposit(ctx, address, body.amount)
     }
 
@@ -218,7 +218,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
             .signer_info[0];
         Consensus::ensure_compatible_tx_signer(ctx)?;
 
-        let address = Address::from_pk(&signer.public_key);
+        let address = signer.address_spec.address();
         Self::withdraw(ctx, address, body.amount)
     }
 
