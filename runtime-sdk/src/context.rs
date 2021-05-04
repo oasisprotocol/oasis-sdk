@@ -511,10 +511,10 @@ impl<'a, 'b> Context for TxContext<'a, 'b> {
 
 #[cfg(test)]
 mod test {
-    use oasis_core_runtime::common::cbor;
+    use oasis_core_runtime::{common::cbor, consensus::staking};
 
     use super::*;
-    use crate::testing::mock::Mock;
+    use crate::testing::{mock, mock::Mock};
 
     #[test]
     fn test_value() {
@@ -636,6 +636,75 @@ mod test {
         ctx.with_tx(tx, |mut tx_ctx, _call| {
             // Changing the type of a key should result in a panic.
             tx_ctx.value::<Option<u32>>("module.TestKey");
+        });
+    }
+
+    #[test]
+    fn test_ctx_message_slots() {
+        let mut mock = Mock::default();
+        let max_messages = mock.max_messages;
+        let mut ctx = mock.create_ctx();
+
+        for _ in 0..max_messages {
+            ctx.emit_message(
+                roothash::Message::Staking {
+                    v: 0,
+                    msg: roothash::StakingMessage::Transfer(staking::Transfer::default()),
+                },
+                MessageEventHookInvocation::new("test".to_string(), ""),
+            )
+            .expect("message should be emitted");
+        }
+
+        // Another message should error.
+        ctx.emit_message(
+            roothash::Message::Staking {
+                v: 0,
+                msg: roothash::StakingMessage::Transfer(staking::Transfer::default()),
+            },
+            MessageEventHookInvocation::new("test".to_string(), ""),
+        )
+        .expect_err("message emitting should fail");
+    }
+
+    #[test]
+    fn test_tx_ctx_message_slots() {
+        let mut mock = Mock::default();
+        let max_messages = mock.max_messages;
+        let mut ctx = mock.create_ctx();
+
+        ctx.emit_message(
+            roothash::Message::Staking {
+                v: 0,
+                msg: roothash::StakingMessage::Transfer(staking::Transfer::default()),
+            },
+            MessageEventHookInvocation::new("test".to_string(), ""),
+        )
+        .expect("message should be emitted");
+
+        ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+            for _ in 0..max_messages - 1 {
+                tx_ctx
+                    .emit_message(
+                        roothash::Message::Staking {
+                            v: 0,
+                            msg: roothash::StakingMessage::Transfer(staking::Transfer::default()),
+                        },
+                        MessageEventHookInvocation::new("test".to_string(), ""),
+                    )
+                    .expect("message should be emitted");
+            }
+
+            // Another message should error.
+            tx_ctx
+                .emit_message(
+                    roothash::Message::Staking {
+                        v: 0,
+                        msg: roothash::StakingMessage::Transfer(staking::Transfer::default()),
+                    },
+                    MessageEventHookInvocation::new("test".to_string(), ""),
+                )
+                .expect_err("message emitting should fail");
         });
     }
 }
