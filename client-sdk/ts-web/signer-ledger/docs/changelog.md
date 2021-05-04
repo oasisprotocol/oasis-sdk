@@ -5,6 +5,7 @@
 New features:
 
 - The new `LedgerContextSigner.fromTransport` lets you bring your own transport object.
+- Errors from Ledger now come as `LedgerCodeError` with a `returnCode` property.
 
 Bug fixes:
 
