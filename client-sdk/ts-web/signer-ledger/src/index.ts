@@ -21,9 +21,21 @@ function bufFromU8(u8: Uint8Array) {
     return Buffer.from(u8.buffer, u8.byteOffset, u8.byteLength);
 }
 
+export class LedgerCodeError extends Error {
+    returnCode: number;
+    errorMessage: string;
+
+    constructor(message: string, return_code: number, error_message: string) {
+        super(`${message}: ${return_code} ${error_message}`);
+        this.returnCode = return_code;
+        this.errorMessage = error_message;
+    }
+}
+
 function successOrThrow(response: Response, message: string) {
-    if (response.return_code !== 0x9000)
-        throw new Error(`${message}: ${response.return_code} ${response.error_message}`);
+    if (response.return_code !== 0x9000) {
+        throw new LedgerCodeError(message, response.return_code, response.error_message);
+    }
     return response;
 }
 
