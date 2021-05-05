@@ -13,6 +13,7 @@ use crate::{
     module,
     module::{CallableMethodInfo, Module as _, QueryMethodInfo},
     modules,
+    modules::core::{Module as Core, API as _},
     types::{
         address::Address,
         message::{MessageEvent, MessageEventHookInvocation},
@@ -45,6 +46,32 @@ pub enum Error {
     #[error("consensus: {0}")]
     #[sdk_error(transparent)]
     Consensus(#[from] modules::consensus::Error),
+
+    #[error("core: {0}")]
+    #[sdk_error(transparent)]
+    Core(#[from] modules::core::Error),
+}
+
+/// Gas costs.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GasCosts {
+    #[serde(rename = "tx_deposit")]
+    pub tx_deposit: u64,
+    #[serde(rename = "tx_withdraw")]
+    pub tx_withdraw: u64,
+}
+
+/// Parameters for the consensus module.
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Parameters {
+    #[serde(rename = "gas_costs")]
+    pub gas_costs: GasCosts,
+}
+
+impl module::Parameters for Parameters {
+    type Error = ();
 }
 
 /// Events emitted by the consensus module (none so far).
@@ -55,7 +82,10 @@ pub enum Event {}
 /// Genesis state for the consensus module.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Genesis {}
+pub struct Genesis {
+    #[serde(rename = "parameters")]
+    pub parameters: Parameters,
+}
 
 /// Interface that can be called from other modules.
 pub trait API {
@@ -163,6 +193,9 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 {
     /// Deposit in the runtime.
     fn tx_deposit(ctx: &mut TxContext<'_, '_>, body: types::Deposit) -> Result<(), Error> {
+        let params = Self::params(ctx.runtime_state());
+        Core::use_gas(ctx, params.gas_costs.tx_deposit)?;
+
         let signer = &ctx
             .tx_auth_info()
             .expect("should be called with a transaction ctx")
@@ -175,6 +208,9 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     /// Withdraw from the runtime.
     fn tx_withdraw(ctx: &mut TxContext<'_, '_>, body: types::Withdraw) -> Result<(), Error> {
+        let params = Self::params(ctx.runtime_state());
+        Core::use_gas(ctx, params.gas_costs.tx_withdraw)?;
+
         // Signer.
         let signer = &ctx
             .tx_auth_info()
@@ -269,7 +305,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
     const VERSION: u32 = 1;
     type Error = Error;
     type Event = Event;
-    type Parameters = ();
+    type Parameters = Parameters;
 }
 
 /// Module methods.
@@ -360,13 +396,15 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
     type Genesis = Genesis;
 
     fn init_or_migrate(
-        _ctx: &mut DispatchContext<'_>,
+        ctx: &mut DispatchContext<'_>,
         meta: &mut modules::core::types::Metadata,
-        _genesis: &Self::Genesis,
+        genesis: &Self::Genesis,
     ) -> bool {
         let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
         if version == 0 {
             // Initialize state from genesis.
+            // Set genesis parameters.
+            Self::set_params(ctx.runtime_state(), &genesis.parameters);
             meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
             return true;
         }
