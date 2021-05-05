@@ -23,16 +23,16 @@ pub struct Withdraw {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct BalanceQuery {
-    #[serde(rename = "addr")]
-    pub addr: Address,
+    #[serde(rename = "address")]
+    pub address: Address,
 }
 
 /// Consensus account query.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ConsensusAccountQuery {
-    #[serde(rename = "addr")]
-    pub addr: Address,
+    #[serde(rename = "address")]
+    pub address: Address,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

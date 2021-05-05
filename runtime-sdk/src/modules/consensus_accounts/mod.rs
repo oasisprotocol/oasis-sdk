@@ -191,7 +191,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         args: types::BalanceQuery,
     ) -> Result<types::AccountBalance, Error> {
         let denomination = Consensus::consensus_denomination(ctx)?;
-        let balances = Accounts::get_balances(ctx.runtime_state(), args.addr)
+        let balances = Accounts::get_balances(ctx.runtime_state(), args.address)
             .map_err(|_| Error::InvalidArgument)?;
         let balance = balances
             .balances
@@ -206,7 +206,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         ctx: &mut DispatchContext<'_>,
         args: types::ConsensusAccountQuery,
     ) -> Result<ConsensusAccount, Error> {
-        Consensus::account(ctx, args.addr).map_err(|_| Error::InvalidArgument)
+        Consensus::account(ctx, args.address).map_err(|_| Error::InvalidArgument)
     }
 }
 

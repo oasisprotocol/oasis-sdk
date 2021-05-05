@@ -116,3 +116,38 @@ export interface Transaction extends oasis.types.CBORVersioned {
  * An unverified signed transaction.
  */
 export type UnverifiedTransaction = [body: Uint8Array, signatures: Uint8Array[]];
+
+/**
+ * Consensus deposit call.
+ */
+export interface ConsensusDeposit {
+    amount: BaseUnits;
+}
+
+/**
+ * Consensus withdraw call.
+ */
+export interface ConsensusWithdraw {
+    amount: BaseUnits;
+}
+
+/**
+ * Consensus balance query.
+ */
+export interface ConsensusBalanceQuery {
+    address: Uint8Array;
+}
+
+/**
+ * Consensus account balance.
+ */
+export interface ConsensusAccountBalance {
+    balance: Uint8Array;
+}
+
+/**
+ * Consensus account query.
+ */
+export interface ConsensusAccountQuery {
+    address: Uint8Array;
+}
