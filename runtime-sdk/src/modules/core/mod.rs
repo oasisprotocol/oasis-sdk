@@ -136,10 +136,7 @@ impl API for Module {
             ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).copied(),
         ) {
             (Some(gas_limit), Some(gas_used)) => {
-                let sum = match gas_used.overflowing_add(gas) {
-                    (new_gas_used, false) => new_gas_used,
-                    (_, true) => return Err(Error::GasOverflow),
-                };
+                let sum = gas_used.checked_add(gas).ok_or(Error::GasOverflow)?;
                 if sum > gas_limit {
                     return Err(Error::OutOfGas);
                 }
@@ -151,10 +148,9 @@ impl API for Module {
 
         let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
         let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
-        let batch_new_gas_used = match batch_gas_used.overflowing_add(gas) {
-            (batch_new_gas_used, false) => batch_new_gas_used,
-            (_, true) => return Err(Error::BatchGasOverflow),
-        };
+        let batch_new_gas_used = batch_gas_used
+            .checked_add(gas)
+            .ok_or(Error::BatchGasOverflow)?;
         if batch_new_gas_used > batch_gas_limit {
             return Err(Error::BatchOutOfGas);
         }
