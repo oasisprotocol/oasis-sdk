@@ -3,9 +3,14 @@ use thiserror::Error;
 
 use crate::crypto::signature::{PublicKey, Signature};
 
+#[cfg(test)]
+mod test;
+
 /// Error.
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("invalid config")]
+    InvalidConfig,
     #[error("insufficient weight")]
     InsufficientWeight,
 }
@@ -23,6 +28,33 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn verify(&self) -> Result<(), Error> {
+        if self.threshold == 0 {
+            return Err(Error::InvalidConfig);
+        }
+        let mut total: u64 = 0;
+        for (i, signer) in self.signers.iter().enumerate() {
+            if self
+                .signers
+                .iter()
+                .take(i)
+                .any(|other_signer| signer.public_key == other_signer.public_key)
+            {
+                return Err(Error::InvalidConfig);
+            }
+            if signer.weight == 0 {
+                return Err(Error::InvalidConfig);
+            }
+            total = total
+                .checked_add(signer.weight)
+                .ok_or(Error::InvalidConfig)?;
+        }
+        if total < self.threshold {
+            return Err(Error::InvalidConfig);
+        }
+        Ok(())
+    }
+
     pub fn batch(
         &self,
         signature_set: &SignatureSet,
