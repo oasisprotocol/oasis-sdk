@@ -19,8 +19,10 @@ impl sdk::Runtime for Runtime {
             modules::consensus_accounts::Genesis {
                 parameters: modules::consensus_accounts::Parameters {
                     gas_costs: modules::consensus_accounts::GasCosts {
-                        tx_deposit: 100,
-                        tx_withdraw: 100,
+                        // These are free, in order to simplify testing. We do test gas accounting
+                        // with other methods elsewhere though.
+                        tx_deposit: 0,
+                        tx_withdraw: 0,
                     },
                 },
             },
