@@ -28,7 +28,9 @@ pub enum Error {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum AuthProof {
+    #[serde(rename = "solo")]
     Solo(Signature),
+    #[serde(rename = "multisig")]
     Multisig(multisig::SignatureSet),
 }
 
@@ -129,7 +131,9 @@ pub struct Fee {
 /// Common information that specifies an address as well as how to authenticate.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum AddressSpec {
+    #[serde(rename = "solo")]
     Solo(PublicKey),
+    #[serde(rename = "multisig")]
     Multisig(multisig::Config),
 }
 
