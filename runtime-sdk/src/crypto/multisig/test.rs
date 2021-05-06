@@ -1,6 +1,6 @@
-use crate::testing::keys;
+use crate::{crypto::signature::Signature, testing::keys};
 
-use super::{Config, Signer};
+use super::{Config, SignatureSet, Signer};
 
 #[test]
 fn test_config_verify() {
@@ -88,4 +88,71 @@ fn test_config_verify() {
     }
     .verify()
     .expect("this one should be fine");
+}
+
+#[test]
+fn test_config_batch() {
+    let config = Config {
+        signers: vec![
+            Signer {
+                public_key: keys::alice::pk(),
+                weight: 1,
+            },
+            Signer {
+                public_key: keys::bob::pk(),
+                weight: 1,
+            },
+            Signer {
+                public_key: keys::charlie::pk(),
+                weight: 2,
+            },
+        ],
+        threshold: 2,
+    };
+    let dummy_sig_a = Signature::from(vec![97]);
+    let dummy_sig_b = Signature::from(vec![98]);
+    let dummy_sig_c = Signature::from(vec![99]);
+    config
+        .batch(&SignatureSet {
+            signatures: vec![Some(dummy_sig_a.clone()), None, None],
+        })
+        .expect_err("insufficient weight");
+    assert_eq!(
+        config
+            .batch(&SignatureSet {
+                signatures: vec![Some(dummy_sig_a.clone()), Some(dummy_sig_b.clone()), None,],
+            })
+            .expect("sufficient weight ab"),
+        (
+            vec![keys::alice::pk(), keys::bob::pk()],
+            vec![dummy_sig_a.clone(), dummy_sig_b.clone()]
+        )
+    );
+    assert_eq!(
+        config
+            .batch(&SignatureSet {
+                signatures: vec![None, None, Some(dummy_sig_c.clone())],
+            })
+            .expect("sufficient weight c"),
+        (vec![keys::charlie::pk()], vec![dummy_sig_c.clone()])
+    );
+    assert_eq!(
+        config
+            .batch(&SignatureSet {
+                signatures: vec![
+                    Some(dummy_sig_a.clone()),
+                    Some(dummy_sig_b.clone()),
+                    Some(dummy_sig_c.clone()),
+                ],
+            })
+            .expect("sufficient weight abc"),
+        (
+            vec![keys::alice::pk(), keys::bob::pk(), keys::charlie::pk()],
+            vec![
+                dummy_sig_a.clone(),
+                dummy_sig_b.clone(),
+                dummy_sig_c.clone(),
+            ]
+        )
+    );
 }
