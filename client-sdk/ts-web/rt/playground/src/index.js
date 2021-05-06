@@ -157,7 +157,10 @@ export const playground = (async function () {
                 address: await oasis.staking.addressFromPublicKey(alice.public()),
             })
             .query(nic);
-        const siAlice1 = /** @type {oasisRT.types.SignerInfo} */ ({pub: {ed25519: csAlice.public()}, nonce: nonce1});
+        const siAlice1 = /** @type {oasisRT.types.SignerInfo} */ ({
+            address_spec: {solo: {ed25519: csAlice.public()}},
+            nonce: nonce1,
+        });
 
         const consensusChainContext = await nic.consensusGetChainContext();
 
@@ -198,7 +201,10 @@ export const playground = (async function () {
                 address: await oasis.staking.addressFromPublicKey(alice.public()),
             })
             .query(nic);
-        const siAlice2 = /** @type {oasisRT.types.SignerInfo} */ ({pub: {ed25519: csAlice.public()}, nonce: nonce2});
+        const siAlice2 = /** @type {oasisRT.types.SignerInfo} */ ({
+            address_spec: {solo: {ed25519: csAlice.public()}},
+            nonce: nonce2,
+        });
 
         console.log('remove', THE_KEY);
         const twRemove = keyvalueWrapper.callRemove()

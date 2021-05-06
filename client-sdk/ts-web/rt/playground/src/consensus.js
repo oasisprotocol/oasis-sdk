@@ -62,7 +62,7 @@ export const playground = (async function () {
             })
             .query(nic);
         const siAlice1 = /** @type {oasisRT.types.SignerInfo} */ ({
-            pub: {ed25519: csAlice.public()},
+            address_spec: {solo: {ed25519: csAlice.public()}},
             nonce: nonce1,
         });
 
@@ -93,7 +93,7 @@ export const playground = (async function () {
             })
             .query(nic);
         const siAlice2 = /** @type {oasisRT.types.SignerInfo} */ ({
-            pub: {ed25519: csAlice.public()},
+            address_spec: {solo: {ed25519: csAlice.public()}},
             nonce: nonce2,
         });
         const WITHDRAW_AMNT = /** @type {oasisRT.types.BaseUnits} */ ([

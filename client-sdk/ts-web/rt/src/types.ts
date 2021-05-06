@@ -71,11 +71,24 @@ export interface RewardsRewardStep {
 }
 
 /**
+ * Common information that specifies an address as well as how to authenticate.
+ */
+export interface AddressSpec {
+    solo?: PublicKey;
+    multisig?: MultisigConfig;
+}
+
+/**
  * Transaction authentication information.
  */
 export interface AuthInfo {
     si: SignerInfo[];
     fee: Fee;
+}
+
+export interface AuthProof {
+    solo?: Uint8Array;
+    multisig?: Uint8Array[];
 }
 
 /**
@@ -113,6 +126,16 @@ export interface Fee {
     gas: oasis.types.longnum;
 }
 
+export interface MultisigConfig {
+    signers: MultisigSigner[];
+    threshold: oasis.types.longnum;
+}
+
+export interface MultisigSigner {
+    public_key: PublicKey;
+    weight: oasis.types.longnum;
+}
+
 /**
  * A public key used for signing.
  */
@@ -125,7 +148,7 @@ export interface PublicKey {
  * Transaction signer information.
  */
 export interface SignerInfo {
-    pub: PublicKey;
+    address_spec: AddressSpec;
     nonce: oasis.types.longnum;
 }
 
@@ -140,7 +163,7 @@ export interface Transaction extends oasis.types.CBORVersioned {
 /**
  * An unverified signed transaction.
  */
-export type UnverifiedTransaction = [body: Uint8Array, signatures: Uint8Array[]];
+export type UnverifiedTransaction = [body: Uint8Array, authProofs: AuthProof[]];
 
 /**
  * Consensus deposit call.
