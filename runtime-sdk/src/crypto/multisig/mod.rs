@@ -21,6 +21,8 @@ pub struct Signer {
     pub weight: u64,
 }
 
+pub type SignatureSet = Vec<Option<Signature>>;
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub signers: Vec<Signer>,
@@ -62,7 +64,7 @@ impl Config {
         let mut total = 0;
         let mut public_keys = vec![];
         let mut signatures = vec![];
-        for (signer, signature_o) in self.signers.iter().zip(signature_set.signatures.iter()) {
+        for (signer, signature_o) in self.signers.iter().zip(signature_set.iter()) {
             if let Some(signature) = signature_o {
                 total += signer.weight;
                 public_keys.push(signer.public_key.clone());
@@ -74,9 +76,4 @@ impl Config {
         }
         Ok((public_keys, signatures))
     }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SignatureSet {
-    pub signatures: Vec<Option<Signature>>,
 }
