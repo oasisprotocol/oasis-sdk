@@ -113,6 +113,13 @@ export const playground = (async function () {
         console.log(`ready ${waitEnd - waitStart} ms`);
     }
 
+    const alice = oasis.signature.NaclSigner.fromSeed(await oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')), 'this key is not important');
+    const csAlice = new oasis.signature.BlindContextSigner(alice);
+    const bob = oasis.signature.NaclSigner.fromSeed(await oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: bob')), 'this key is not important');
+    const csBob = new oasis.signature.BlindContextSigner(bob);
+
+    const consensusChainContext = await nic.consensusGetChainContext();
+
     // Try key-value runtime.
     {
         const THE_KEY = oasis.misc.fromString('greeting-js');
@@ -148,9 +155,6 @@ export const playground = (async function () {
             })();
         });
 
-        const alice = oasis.signature.NaclSigner.fromSeed(await oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')), 'this key is not important');
-        const csAlice = new oasis.signature.BlindContextSigner(alice);
-
         // Fetch nonce for Alice's account.
         const nonce1 = await accountsWrapper.queryNonce()
             .setArgs({
@@ -161,8 +165,6 @@ export const playground = (async function () {
             address_spec: {solo: {ed25519: csAlice.public()}},
             nonce: nonce1,
         });
-
-        const consensusChainContext = await nic.consensusGetChainContext();
 
         console.log('insert', THE_KEY, THE_VALUE);
         const twInsert = keyvalueWrapper.callInsert()
@@ -233,6 +235,57 @@ export const playground = (async function () {
         const params = await rewardsWrapper.queryParameters().query(nic);
         if (params.participation_threshold_numerator !== 3) throw new Error('participation threshold numerator mismatch');
         if (params.participation_threshold_denominator !== 4) throw new Error('participation threshold denominator mismatch');
+        console.log('ok');
+    }
+
+    // Try multisig accounts.
+    {
+        const msConfig = /** @type {oasisRT.types.MultisigConfig} */ ({
+            signers: [
+                {public_key: {ed25519: alice.public()}, weight: 1},
+                {public_key: {ed25519: bob.public()}, weight: 1},
+            ],
+            threshold: 2,
+        });
+        const addr = await oasisRT.address.fromMultisigConfig(msConfig);
+        const addrBech32 = oasis.staking.addressToBech32(addr);
+        const refBech32 = 'oasis1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux';
+        console.log('address for sample config', addrBech32, 'reference', refBech32);
+        if (addrBech32 !== refBech32) throw new Error('Address mismatch');
+
+        // Fetch nonce before.
+        const nonce1 = await accountsWrapper.queryNonce()
+            .setArgs({
+                address: addr,
+            })
+            .query(nic);
+        console.log('nonce before', nonce1);
+        const si = /** @type {oasisRT.types.SignerInfo} */ ({
+            address_spec: {multisig: msConfig},
+            nonce: nonce1,
+        });
+
+        const tw = keyvalueWrapper.callInsert()
+            .setBody({
+                key: oasis.misc.fromString('arbitrary'),
+                value: oasis.misc.fromString(new Date().toString()),
+            })
+            .setSignerInfo([si])
+            .setFeeAmount(FEE_FREE)
+            .setFeeGas(GAS_HIGH);
+
+        await tw.sign([[csAlice, csBob]], consensusChainContext);
+        await tw.submit(nic);
+
+        // Check for nonce change.
+        const nonce2 = await accountsWrapper.queryNonce()
+            .setArgs({
+                address: addr,
+            })
+            .query(nic);
+        console.log('nonce after', nonce2);
+        if (nonce2 === nonce1) throw new Error('No nonce change');
+
         console.log('ok');
     }
 })();
