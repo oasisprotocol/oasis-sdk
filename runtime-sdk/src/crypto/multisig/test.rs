@@ -1,6 +1,28 @@
-use crate::{crypto::signature::Signature, testing::keys};
+use crate::{crypto::signature::Signature, testing::keys, types::address::Address};
 
 use super::{Config, Signer};
+
+#[test]
+fn test_address() {
+    let config = Config {
+        signers: vec![
+            Signer {
+                public_key: keys::alice::pk(),
+                weight: 1,
+            },
+            Signer {
+                public_key: keys::bob::pk(),
+                weight: 1,
+            },
+        ],
+        threshold: 2,
+    };
+    let addr = Address::from_multisig(&config);
+    assert_eq!(
+        addr,
+        Address::from_bech32("oasis1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux").unwrap(),
+    );
+}
 
 #[test]
 fn test_config_verify() {
