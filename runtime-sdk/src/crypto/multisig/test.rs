@@ -1,6 +1,6 @@
 use crate::{crypto::signature::Signature, testing::keys};
 
-use super::{Config, SignatureSet, Signer};
+use super::{Config, Signer};
 
 #[test]
 fn test_config_verify() {
@@ -113,15 +113,11 @@ fn test_config_batch() {
     let dummy_sig_b = Signature::from(vec![98]);
     let dummy_sig_c = Signature::from(vec![99]);
     config
-        .batch(&SignatureSet {
-            signatures: vec![Some(dummy_sig_a.clone()), None, None],
-        })
+        .batch(&[Some(dummy_sig_a.clone()), None, None])
         .expect_err("insufficient weight");
     assert_eq!(
         config
-            .batch(&SignatureSet {
-                signatures: vec![Some(dummy_sig_a.clone()), Some(dummy_sig_b.clone()), None,],
-            })
+            .batch(&[Some(dummy_sig_a.clone()), Some(dummy_sig_b.clone()), None])
             .expect("sufficient weight ab"),
         (
             vec![keys::alice::pk(), keys::bob::pk()],
@@ -130,21 +126,17 @@ fn test_config_batch() {
     );
     assert_eq!(
         config
-            .batch(&SignatureSet {
-                signatures: vec![None, None, Some(dummy_sig_c.clone())],
-            })
+            .batch(&[None, None, Some(dummy_sig_c.clone())])
             .expect("sufficient weight c"),
         (vec![keys::charlie::pk()], vec![dummy_sig_c.clone()])
     );
     assert_eq!(
         config
-            .batch(&SignatureSet {
-                signatures: vec![
-                    Some(dummy_sig_a.clone()),
-                    Some(dummy_sig_b.clone()),
-                    Some(dummy_sig_c.clone()),
-                ],
-            })
+            .batch(&[
+                Some(dummy_sig_a.clone()),
+                Some(dummy_sig_b.clone()),
+                Some(dummy_sig_c.clone()),
+            ])
             .expect("sufficient weight abc"),
         (
             vec![keys::alice::pk(), keys::bob::pk(), keys::charlie::pk()],

@@ -21,7 +21,8 @@ pub struct Signer {
     pub weight: u64,
 }
 
-pub type SignatureSet = Vec<Option<Signature>>;
+pub type SignatureSet = [Option<Signature>];
+pub type SignatureSetOwned = Vec<Option<Signature>>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {

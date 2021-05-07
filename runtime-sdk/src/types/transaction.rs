@@ -31,7 +31,7 @@ pub enum AuthProof {
     #[serde(rename = "solo")]
     Solo(Signature),
     #[serde(rename = "multisig")]
-    Multisig(multisig::SignatureSet),
+    Multisig(multisig::SignatureSetOwned),
 }
 
 /// An unverified signed transaction.
