@@ -222,7 +222,7 @@ impl From<Address> for ConsensusAddress {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::crypto::signature::PublicKey;
+    use crate::{crypto::signature::PublicKey, testing::keys};
 
     #[test]
     fn test_address_ed25519() {
@@ -243,6 +243,28 @@ mod test {
         assert_eq!(
             addr.to_bech32(),
             "oasis1qr4cd0sr32m3xcez37ym7rmjp5g88muu8sdfx8u3"
+        );
+    }
+
+    #[test]
+    fn test_address_multisig() {
+        let config = multisig::Config {
+            signers: vec![
+                multisig::Signer {
+                    public_key: keys::alice::pk(),
+                    weight: 1,
+                },
+                multisig::Signer {
+                    public_key: keys::bob::pk(),
+                    weight: 1,
+                },
+            ],
+            threshold: 2,
+        };
+        let addr = Address::from_multisig(&config);
+        assert_eq!(
+            addr,
+            Address::from_bech32("oasis1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux").unwrap(),
         );
     }
 
