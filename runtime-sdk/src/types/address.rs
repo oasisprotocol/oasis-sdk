@@ -96,7 +96,7 @@ impl Address {
     }
 
     /// Converts an address to Bech32 representation.
-    pub fn to_bech32(&self) -> String {
+    pub fn to_bech32(self) -> String {
         bech32::encode(ADDRESS_BECH32_HRP, self.0.to_base32()).unwrap()
     }
 }
