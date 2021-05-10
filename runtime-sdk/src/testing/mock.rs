@@ -5,7 +5,7 @@ use io_context::Context as IoContext;
 
 use oasis_core_runtime::{
     common::{cbor, logger::get_logger},
-    consensus::{roothash, state::ConsensusState},
+    consensus::{beacon, roothash, state::ConsensusState},
     storage::mkvs,
     transaction::tags::Tags,
 };
@@ -23,6 +23,7 @@ pub struct Mock {
     pub runtime_round_results: roothash::RoundResults,
     pub mkvs: Box<dyn mkvs::MKVS>,
     pub consensus_state: ConsensusState,
+    pub epoch: beacon::EpochTime,
 
     pub methods: MethodRegistry,
 
@@ -41,6 +42,7 @@ impl Mock {
                 self.mkvs.as_mut(),
             ),
             consensus_state: &self.consensus_state,
+            epoch: self.epoch,
             io_ctx: IoContext::background().freeze(),
             methods: &self.methods,
             logger: get_logger("mock"),
@@ -68,6 +70,7 @@ impl Default for Mock {
             runtime_round_results: roothash::RoundResults::default(),
             mkvs: Box::new(mkvs),
             consensus_state: ConsensusState::new(consensus_tree),
+            epoch: 1,
             methods: MethodRegistry::new(),
             max_messages: 32,
         }

@@ -16,6 +16,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
@@ -462,6 +463,29 @@ func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeCl
 		}
 	} else {
 		return fmt.Errorf("Alice's account is missing native denomination balance")
+	}
+
+	return nil
+}
+
+func KVRewardsTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	rw := rewards.NewV1(rtc)
+
+	log.Info("querying rewards parameters")
+	params, err := rw.Parameters(ctx, client.RoundLatest)
+	if err != nil {
+		return err
+	}
+
+	if n := params.ParticipationThresholdNumerator; n != 3 {
+		return fmt.Errorf("unexpected participation threshold numerator (expected: %d got: %d)", 3, n)
+	}
+	if d := params.ParticipationThresholdDenominator; d != 4 {
+		return fmt.Errorf("unexpected participation threshold numerator (expected: %d got: %d)", 4, d)
+	}
+	if l := len(params.Schedule.Steps); l != 1 {
+		return fmt.Errorf("unexpected number of reward schedule steps (expected: %d got: %d)", 1, l)
 	}
 
 	return nil

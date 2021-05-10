@@ -79,6 +79,7 @@ function moduleEventHandler(/** @type {{
 
 const nic = new oasis.client.NodeInternal('http://localhost:42280');
 const accountsWrapper = new oasisRT.accounts.Wrapper(KEYVALUE_RUNTIME_ID);
+const rewardsWrapper = new oasisRT.rewards.Wrapper(KEYVALUE_RUNTIME_ID);
 const coreWrapper = new oasisRT.core.Wrapper(KEYVALUE_RUNTIME_ID);
 const keyvalueWrapper = new Wrapper(KEYVALUE_RUNTIME_ID);
 
@@ -217,6 +218,15 @@ export const playground = (async function () {
 
         await twRemove.sign([csAlice], consensusChainContext);
         await twRemove.submit(nic);
+        console.log('ok');
+    }
+
+    // Try the rewards parameters.
+    {
+        console.log('query rewards parameters');
+        const params = await rewardsWrapper.queryParameters().query(nic);
+        if (params.participation_threshold_numerator !== 3) throw new Error('participation threshold numerator mismatch');
+        if (params.participation_threshold_denominator !== 4) throw new Error('participation threshold denominator mismatch');
         console.log('ok');
     }
 })();

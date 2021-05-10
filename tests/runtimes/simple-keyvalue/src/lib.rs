@@ -1,7 +1,11 @@
 //! Simple keyvalue runtime.
 use std::collections::BTreeMap;
 
-use oasis_runtime_sdk::{self as sdk, modules, types::token::Denomination, Version};
+use oasis_runtime_sdk::{
+    self as sdk, modules,
+    types::token::{BaseUnits, Denomination},
+    Version,
+};
 
 pub mod keyvalue;
 
@@ -14,6 +18,7 @@ impl sdk::Runtime for Runtime {
     type Modules = (
         keyvalue::Module,
         modules::accounts::Module,
+        modules::rewards::Module<modules::accounts::Module>,
         modules::core::Module,
     );
 
@@ -60,14 +65,32 @@ impl sdk::Runtime for Runtime {
                         d.insert(Denomination::NATIVE, 100.into());
                         d
                     });
+                    // Reward pool.
+                    b.insert(*modules::rewards::ADDRESS_REWARD_POOL, {
+                        let mut d = BTreeMap::new();
+                        d.insert(Denomination::NATIVE, 10_000.into());
+                        d
+                    });
                     b
                 },
                 total_supplies: {
                     let mut ts = BTreeMap::new();
-                    ts.insert(Denomination::NATIVE, 6_100.into());
+                    ts.insert(Denomination::NATIVE, 16_100.into());
                     ts
                 },
                 ..Default::default()
+            },
+            modules::rewards::Genesis {
+                parameters: modules::rewards::Parameters {
+                    schedule: modules::rewards::types::RewardSchedule {
+                        steps: vec![modules::rewards::types::RewardStep {
+                            until: 1000,
+                            amount: BaseUnits::new(100.into(), Denomination::NATIVE),
+                        }],
+                    },
+                    participation_threshold_numerator: 3,
+                    participation_threshold_denominator: 4,
+                },
             },
             modules::core::Genesis {
                 parameters: modules::core::Parameters {
