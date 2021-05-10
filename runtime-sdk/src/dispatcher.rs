@@ -31,18 +31,20 @@ use crate::{
     storage, types,
 };
 
+/// Unique module name.
+const MODULE_NAME: &str = "dispatcher";
+
 /// Error emitted by the dispatch process. Note that this indicates an error in the dispatch
 /// process itself and should not be used for any transaction-related errors.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
 pub enum Error {
     #[error("dispatch aborted")]
+    #[sdk_error(code = 1)]
     Aborted,
-}
 
-impl From<Error> for RuntimeError {
-    fn from(err: Error) -> RuntimeError {
-        RuntimeError::new("dispatcher", 1, &format!("{}", err))
-    }
+    #[error("malformed transaction in batch: {0}")]
+    #[sdk_error(code = 2)]
+    MalformedTransactionInBatch(#[source] modules::core::Error),
 }
 
 struct DispatchResult {
@@ -178,15 +180,14 @@ impl<R: Runtime> Dispatcher<R> {
         ctx: &mut DispatchContext<'_>,
         tx: &[u8],
     ) -> Result<ExecuteTxResult, Error> {
-        let tx = match self.decode_tx(&tx) {
-            Ok(tx) => tx,
-            Err(err) => {
-                return Ok(ExecuteTxResult {
-                    output: cbor::to_vec(&err.to_call_result()),
-                    tags: Tags::new(),
-                })
-            }
-        };
+        // It is an error to include a malformed transaction in a batch. So instead of only
+        // reporting a failed execution result, we fail the whole batch. This will make the compute
+        // node vote for failure and the round will fail.
+        //
+        // Correct proposers should only include transactions which have passed check_tx.
+        let tx = self
+            .decode_tx(&tx)
+            .map_err(Error::MalformedTransactionInBatch)?;
 
         let dispatch_result = self.dispatch_tx(ctx, tx)?;
 
