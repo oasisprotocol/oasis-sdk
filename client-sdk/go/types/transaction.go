@@ -16,12 +16,17 @@ var SignatureContextBase = []byte("oasis-runtime-sdk/tx: v0")
 // LatestTransactionVersion is the latest transaction format version.
 const LatestTransactionVersion = 1
 
+type AuthProof struct {
+	Solo     []byte   `json:"solo,omitempty"`
+	Multisig [][]byte `json:"multisig,omitempty"`
+}
+
 // UnverifiedTransaction is an unverified transaction.
 type UnverifiedTransaction struct {
 	_ struct{} `cbor:",toarray"`
 
 	Body       []byte
-	Signatures [][]byte
+	AuthProofs []AuthProof
 }
 
 // Verify verifies and deserializes the unverified transaction.
@@ -165,10 +170,15 @@ type Fee struct {
 	Gas    uint64    `json:"gas"`
 }
 
+type AddressSpec struct {
+	Solo     *PublicKey      `json:"solo,omitempty"`
+	Multisig *MultisigConfig `json:"multisig,omitempty"`
+}
+
 // SignerInfo contains transaction signer information.
 type SignerInfo struct {
-	PublicKey PublicKey `json:"pub"`
-	Nonce     uint64    `json:"nonce"`
+	AddressSpec AddressSpec `json:"address_spec"`
+	Nonce       uint64      `json:"nonce"`
 }
 
 // CallResult is the method call result.

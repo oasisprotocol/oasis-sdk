@@ -71,3 +71,13 @@ func (pk *PublicKey) UnmarshalJSON(data []byte) error {
 	}
 	return pk.unmarshal(&spk)
 }
+
+type MultisigSigner struct {
+	PublicKey PublicKey `json:"public_key"`
+	Weight    uint64    `json:"weight"`
+}
+
+type MultisigConfig struct {
+	Signers   []MultisigSigner `json:"signers"`
+	Threshold uint64           `json:"threshold"`
+}
