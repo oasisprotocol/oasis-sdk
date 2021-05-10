@@ -33,8 +33,8 @@ jobs:
       - name: Unit tests with coverage
         uses: actions-rs/tarpaulin@v0.1
         with:
-          version: '0.16.0'
-          args: '-- --test-threads 1'
+          version: '0.18.0-alpha3'
+          args: '--avoid-cfg-tarpaulin -- --test-threads 1'
         env:
           # Required as tarpaulin doesn't honor .cargo/config.
           RUSTFLAGS: -C target-feature=+aes,+ssse3
