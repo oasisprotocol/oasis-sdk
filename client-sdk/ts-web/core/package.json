@@ -9,7 +9,8 @@
     "scripts": {
         "prepare": "tsc",
         "check-playground": "cd playground && tsc -p jsconfig.json",
-        "playground": "cd playground && webpack s -c webpack.config.js"
+        "playground": "cd playground && webpack s -c webpack.config.js",
+        "test": "jest"
     },
     "dependencies": {
         "bech32": "^1.1.4",
