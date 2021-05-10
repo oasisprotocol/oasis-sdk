@@ -62,8 +62,6 @@ impl From<types::transaction::CallResult> for DispatchResult {
 }
 
 pub struct Dispatcher<R: Runtime> {
-    /// Abort batch flag.
-    abort_batch: Option<Arc<AtomicBool>>,
     /// Method registry.
     methods: MethodRegistry,
     /// Handlers registered for consensus messages.
@@ -78,7 +76,6 @@ impl<R: Runtime> Dispatcher<R> {
         consensus_message_handlers: MessageHandlerRegistry,
     ) -> Self {
         Self {
-            abort_batch: None,
             methods,
             consensus_message_handlers,
             _runtime: PhantomData,
@@ -332,8 +329,8 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         })
     }
 
-    fn set_abort_batch_flag(&mut self, abort_batch: Arc<AtomicBool>) {
-        self.abort_batch = Some(abort_batch);
+    fn set_abort_batch_flag(&mut self, _abort_batch: Arc<AtomicBool>) {
+        // TODO: Implement support for graceful batch aborts (oasis-sdk#129).
     }
 
     fn query(
