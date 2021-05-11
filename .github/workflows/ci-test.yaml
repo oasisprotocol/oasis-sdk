@@ -48,6 +48,26 @@ jobs:
           name: code-coverage-report
           path: cobertura.xml
 
+  test-rust-sgx:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: test-rust-sgx
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          components: rustfmt # rustfmt is required for macros tests.
+          target: x86_64-fortanix-unknown-sgx
+
+      - name: Build for SGX
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target x86_64-fortanix-unknown-sgx
+
   test-go:
     # NOTE: This name appears in GitHub's Checks API.
     name: test-go
