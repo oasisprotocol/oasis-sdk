@@ -4,7 +4,7 @@ import * as signatureSecp256k1 from './signature_secp256k1';
 import * as types from './types';
 
 /**
- * Transction signature domain separation context base.
+ * Transaction signature domain separation context base.
  */
 export const SIGNATURE_CONTEXT_BASE = 'oasis-runtime-sdk/tx: v0';
 

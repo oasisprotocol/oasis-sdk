@@ -12,7 +12,7 @@ use crate::{
     types::{address::Address, token},
 };
 
-/// Transction signature domain separation context base.
+/// Transaction signature domain separation context base.
 pub const SIGNATURE_CONTEXT_BASE: &[u8] = b"oasis-runtime-sdk/tx: v0";
 /// The latest transaction format version.
 pub const LATEST_TRANSACTION_VERSION: u16 = 1;

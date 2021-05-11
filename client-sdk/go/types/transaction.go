@@ -10,7 +10,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 )
 
-// SignatureContextBase is the transction signature domain separation context base.
+// SignatureContextBase is the transaction signature domain separation context base.
 var SignatureContextBase = []byte("oasis-runtime-sdk/tx: v0")
 
 // LatestTransactionVersion is the latest transaction format version.
