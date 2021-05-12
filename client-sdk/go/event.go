@@ -16,7 +16,7 @@ func (ek EventKey) IsEqual(other []byte) bool {
 // NewEventKey generates an event tag key from a module name and event code.
 func NewEventKey(module string, code uint32) EventKey {
 	key := make([]byte, len(module)+4)
-	copy(key[:len(module)], []byte(module))
+	copy(key[:len(module)], module)
 	binary.BigEndian.PutUint32(key[len(module):], code)
 	return key
 }
