@@ -13,6 +13,7 @@ var (
 		KVBalanceTest,
 		KVTransferTest,
 		KVDaveTest,
+		KVMultisigTest,
 		KVRewardsTest,
 	})
 	// SimpleConsensusRuntime is the simple-consensus runtime test.

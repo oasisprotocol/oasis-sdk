@@ -468,6 +468,61 @@ func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeCl
 	return nil
 }
 
+func KVMultisigTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	signerA := testing.Alice.Signer
+	signerB := testing.Bob.Signer
+	config := types.MultisigConfig{
+		Signers: []types.MultisigSigner{
+			{PublicKey: types.PublicKey{PublicKey: signerA.Public()}, Weight: 1},
+			{PublicKey: types.PublicKey{PublicKey: signerB.Public()}, Weight: 1},
+		},
+		Threshold: 2,
+	}
+	addr := types.NewAddressFromMultisig(&config)
+
+	ctx := context.Background()
+	ac := accounts.NewV1(rtc)
+
+	chainCtx, err := GetChainContext(ctx, rtc)
+	if err != nil {
+		return err
+	}
+
+	nonce1, err := ac.Nonce(ctx, client.RoundLatest, addr)
+	if err != nil {
+		return err
+	}
+
+	tx := types.NewTransaction(&types.Fee{
+		Gas: 200,
+	}, "keyvalue.Insert", kvKeyValue{
+		Key:   []byte("from-KVMultisigTest"),
+		Value: []byte("hi"),
+	})
+	tx.AppendSignerInfo(types.AddressSpec{Multisig: &config}, nonce1)
+	stx := tx.PrepareForSigning()
+	if err = stx.AppendSign(chainCtx, signerA); err != nil {
+		return err
+	}
+	if err = stx.AppendSign(chainCtx, signerB); err != nil {
+		return err
+	}
+	_, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction())
+	if err != nil {
+		return err
+	}
+
+	nonce2, err := ac.Nonce(ctx, client.RoundLatest, addr)
+	if err != nil {
+		return err
+	}
+	if nonce2 == nonce1 {
+		return fmt.Errorf("no nonce change")
+	}
+
+	return nil
+}
+
 func KVRewardsTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	rw := rewards.NewV1(rtc)
