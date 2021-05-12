@@ -33,3 +33,25 @@ func TestAddressSecp256k1(t *testing.T) {
 		    }
 	*/
 }
+
+func TestAddressMultisig(t *testing.T) {
+	require := require.New(t)
+
+	addr := NewAddressFromMultisig(&MultisigConfig{
+		Signers: []MultisigSigner{
+			{
+				// A snapshot of ../testing Alice.
+				PublicKey: PublicKey{PublicKey: ed25519.NewPublicKey("NcPzNW3YU2T+ugNUtUWtoQnRvbOL9dYSaBfbjHLP1pE=")},
+				Weight:    1,
+			},
+			{
+				// A snapshot of ../testing Bob.
+				PublicKey: PublicKey{PublicKey: ed25519.NewPublicKey("YgkEiVSR4SMQdfXw+ppuFYlqH0seutnCKk8KG8PyAx0=")},
+				Weight:    1,
+			},
+		},
+		Threshold: 2,
+	})
+
+	require.EqualValues("oasis1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux", addr.String())
+}
