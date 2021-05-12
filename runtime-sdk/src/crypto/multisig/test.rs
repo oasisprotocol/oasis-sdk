@@ -147,4 +147,15 @@ fn test_config_batch() {
             ]
         )
     );
+    config
+        .batch(&[Some(dummy_sig_a.clone()), Some(dummy_sig_b.clone())])
+        .expect_err("too few signature slots");
+    config
+        .batch(&[
+            Some(dummy_sig_a.clone()),
+            Some(dummy_sig_b.clone()),
+            None,
+            None,
+        ])
+        .expect_err("too many signature slots");
 }

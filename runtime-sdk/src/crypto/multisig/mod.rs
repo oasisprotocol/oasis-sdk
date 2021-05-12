@@ -11,6 +11,8 @@ mod test;
 pub enum Error {
     #[error("invalid config")]
     InvalidConfig,
+    #[error("invalid signature set")]
+    InvalidSignatureSet,
     #[error("insufficient weight")]
     InsufficientWeight,
 }
@@ -62,6 +64,9 @@ impl Config {
         &self,
         signature_set: &SignatureSet,
     ) -> Result<(Vec<PublicKey>, Vec<Signature>), Error> {
+        if signature_set.len() != self.signers.len() {
+            return Err(Error::InvalidSignatureSet);
+        }
         let mut total = 0;
         let mut public_keys = vec![];
         let mut signatures = vec![];
