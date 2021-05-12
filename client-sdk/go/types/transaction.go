@@ -80,37 +80,51 @@ type TransactionSigner struct {
 // The signer must be specified in the AuthInfo.
 func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.Signer) error {
 	pk := signer.Public()
-	index := -1
+	any := false
 	for i, si := range ts.tx.AuthInfo.SignerInfo {
-		if si.AddressSpec.Solo == nil {
-			continue
-		}
-		if !si.AddressSpec.Solo.Equal(pk) {
-			continue
-		}
+		switch {
+		case si.AddressSpec.Solo != nil:
+			if !si.AddressSpec.Solo.Equal(pk) {
+				continue
+			}
 
-		index = i
-		break
+			any = true
+			if len(ts.ut.AuthProofs) == 0 {
+				ts.ut.AuthProofs = make([]AuthProof, len(ts.tx.AuthInfo.SignerInfo))
+			}
+			sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
+			if err != nil {
+				return fmt.Errorf("signer info %d: failed to sign transaction: %w", i, err)
+			}
+			ts.ut.AuthProofs[i].Solo = sig
+		case si.AddressSpec.Multisig != nil:
+			for j, mss := range si.AddressSpec.Multisig.Signers {
+				if !mss.PublicKey.Equal(pk) {
+					continue
+				}
+
+				any = true
+				if len(ts.ut.AuthProofs) == 0 {
+					ts.ut.AuthProofs = make([]AuthProof, len(ts.tx.AuthInfo.SignerInfo))
+				}
+				if ts.ut.AuthProofs[i].Multisig == nil {
+					ts.ut.AuthProofs[i].Multisig = make([][]byte, len(si.AddressSpec.Multisig.Signers))
+				}
+				sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
+				if err != nil {
+					return fmt.Errorf("signer info %d: failed to sign transaction: %w", i, err)
+				}
+				ts.ut.AuthProofs[i].Multisig[j] = sig
+			}
+		default:
+			return fmt.Errorf("signer info %d: malformed AddressSpec", i)
+		}
 	}
-	if index == -1 {
+	if !any {
 		return fmt.Errorf("transaction: signer not found in AuthInfo")
 	}
-	if len(ts.ut.AuthProofs) == 0 {
-		ts.ut.AuthProofs = make([]AuthProof, len(ts.tx.AuthInfo.SignerInfo))
-	}
-	if len(ts.ut.AuthProofs) != len(ts.tx.AuthInfo.SignerInfo) {
-		return fmt.Errorf("transaction: inconsistent number of auth proof slots")
-	}
-
-	sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
-	if err != nil {
-		return fmt.Errorf("transaction: failed to sign transaction: %w", err)
-	}
-	ts.ut.AuthProofs[index].Solo = sig
 	return nil
 }
-
-// TODO: AppendSign for multisig
 
 // UnverifiedTransaction returns the (signed) unverified transaction.
 func (ts *TransactionSigner) UnverifiedTransaction() *UnverifiedTransaction {
