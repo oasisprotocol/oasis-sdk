@@ -44,9 +44,18 @@ func TestTransactionSigning(t *testing.T) {
 	require := require.New(t)
 
 	signer := ed25519.WrapSigner(memorySigner.NewTestSigner("oasis-runtime-sdk/test-keys: tx signing"))
+	signer2 := ed25519.WrapSigner(memorySigner.NewTestSigner("oasis-runtime-sdk/test-keys: tx signing 2"))
 
 	tx := NewTransaction(nil, "hello.World", nil)
 	tx.AppendSignerInfo(AddressSpec{Solo: &PublicKey{PublicKey: signer.Public()}}, 42)
+	tx.AppendSignerInfo(AddressSpec{Solo: &PublicKey{PublicKey: signer2.Public()}}, 43)
+	tx.AppendSignerInfo(AddressSpec{Multisig: &MultisigConfig{
+		Signers: []MultisigSigner{
+			{PublicKey: PublicKey{PublicKey: signer.Public()}, Weight: 1},
+			{PublicKey: PublicKey{PublicKey: signer2.Public()}, Weight: 1},
+		},
+		Threshold: 2,
+	}}, 44)
 
 	err := tx.ValidateBasic()
 	require.NoError(err, "ValidateBasic")
@@ -59,6 +68,8 @@ func TestTransactionSigning(t *testing.T) {
 	ts := tx.PrepareForSigning()
 	err = ts.AppendSign(chainCtx, signer)
 	require.NoError(err, "AppendSign")
+	err = ts.AppendSign(chainCtx, signer2)
+	require.NoError(err, "AppendSign signer2")
 
 	ut := ts.UnverifiedTransaction()
 	tx, err = ut.Verify(chainCtx)
