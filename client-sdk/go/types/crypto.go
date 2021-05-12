@@ -83,6 +83,9 @@ type MultisigConfig struct {
 }
 
 func (mc *MultisigConfig) Batch(signatureSet [][]byte) ([]PublicKey, [][]byte, error) {
+	if len(signatureSet) != len(mc.Signers) {
+		return nil, nil, fmt.Errorf("mismatched signature set length")
+	}
 	var total uint64
 	var publicKeys []PublicKey
 	var signatures [][]byte
