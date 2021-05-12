@@ -47,8 +47,9 @@ func (ut *UnverifiedTransaction) Verify(ctx signature.Context) (*Transaction, er
 
 	// Verify all signatures.
 	txCtx := ctx.New(SignatureContextBase)
-	var publicKeys []PublicKey
-	var signatures [][]byte
+	// We'll need at least one signature per proof. Could be more though.
+	publicKeys := make([]PublicKey, 0, len(ut.AuthProofs))
+	signatures := make([][]byte, 0, len(ut.AuthProofs))
 	for i, ap := range ut.AuthProofs {
 		pks, sigs, err := tx.AuthInfo.SignerInfo[i].AddressSpec.Batch(ap)
 		if err != nil {
