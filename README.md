@@ -17,17 +17,19 @@
 
 * **Oasis SDK is in active development so all APIs, protocols and data
   structures are subject to change.**
-* **The SDK currently depends on v21.0 of [Oasis Core].**
-  This version is not used on the [Oasis Network] yet.
+* **The SDK currently depends on master version of [Oasis Core].**
+  This version has not yet been released.
   You can try it out on a [local network].
 * **The code has not yet been audited.**
 
 [Oasis Core]: https://github.com/oasisprotocol/oasis-core
-[Oasis Network]: https://docs.oasis.dev/general/oasis-network/network-parameters
 [local network]: https://docs.oasis.dev/oasis-core/development-setup/running-tests-and-development-networks/oasis-net-runner
 
 ## Directories
 
-* `client-sdk`: Client libraries for interacting with the Oasis consensus layer
+* [`client-sdk`]: Client libraries for interacting with the Oasis consensus layer
   and runtimes in different languages.
-* `runtime-sdk`: Oasis Runtime SDK that makes it easy to develop new runtimes.
+* [`runtime-sdk`]: Oasis Runtime SDK that makes it easy to develop new runtimes.
+
+[`client-sdk`]: client-sdk/
+[`runtime-sdk`]: runtime-sdk/
