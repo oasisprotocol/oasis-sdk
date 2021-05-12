@@ -46,7 +46,7 @@ func TestTransactionSigning(t *testing.T) {
 	signer := ed25519.WrapSigner(memorySigner.NewTestSigner("oasis-runtime-sdk/test-keys: tx signing"))
 
 	tx := NewTransaction(nil, "hello.World", nil)
-	tx.AppendSignerInfo(signer.Public(), 42)
+	tx.AppendSignerInfo(AddressSpec{Solo: &PublicKey{PublicKey: signer.Public()}}, 42)
 
 	err := tx.ValidateBasic()
 	require.NoError(err, "ValidateBasic")
