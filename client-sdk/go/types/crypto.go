@@ -81,3 +81,20 @@ type MultisigConfig struct {
 	Signers   []MultisigSigner `json:"signers"`
 	Threshold uint64           `json:"threshold"`
 }
+
+func (mc *MultisigConfig) Batch(signatureSet [][]byte) ([]PublicKey, [][]byte, error) {
+	var total uint64
+	var publicKeys []PublicKey
+	var signatures [][]byte
+	for i := 0; i < len(mc.Signers); i++ {
+		if signatureSet[i] != nil {
+			total += mc.Signers[i].Weight
+			publicKeys = append(publicKeys, mc.Signers[i].PublicKey)
+			signatures = append(signatures, signatureSet[i])
+		}
+	}
+	if total < mc.Threshold {
+		return nil, nil, fmt.Errorf("insufficient weight")
+	}
+	return publicKeys, signatures, nil
+}

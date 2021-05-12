@@ -41,14 +41,27 @@ func (ut *UnverifiedTransaction) Verify(ctx signature.Context) (*Transaction, er
 	}
 
 	// Basic structure validation.
-	if len(ut.Signatures) != len(tx.AuthInfo.SignerInfo) {
-		return nil, fmt.Errorf("transaction: inconsistent number of signatures")
+	if len(ut.AuthProofs) != len(tx.AuthInfo.SignerInfo) {
+		return nil, fmt.Errorf("transaction: inconsistent number of auth proofs")
 	}
 
 	// Verify all signatures.
 	txCtx := ctx.New(SignatureContextBase)
-	for i, sig := range ut.Signatures {
-		if !tx.AuthInfo.SignerInfo[i].PublicKey.Verify(txCtx, ut.Body, sig) {
+	var publicKeys []PublicKey
+	var signatures [][]byte
+	for i, ap := range ut.AuthProofs {
+		pks, sigs, err := tx.AuthInfo.SignerInfo[i].AddressSpec.Batch(ap)
+		if err != nil {
+			return nil, fmt.Errorf("transaction: auth proof %d batch: %w", i, err)
+		}
+		publicKeys = append(publicKeys, pks...)
+		signatures = append(signatures, sigs...)
+	}
+	for i, pk := range publicKeys {
+		if !pk.Verify(txCtx, ut.Body, signatures[i]) {
+			// If you're looking at the below error message: the numbering doesn't match up with the auth proof indices
+			// if the transaction has multisig auth proofs. You have to count up the included signatures inside the
+			// multisig auth proofs to find which one (first) failed.
 			return nil, fmt.Errorf("transaction: signature %d verification failed", i)
 		}
 	}
@@ -68,7 +81,10 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 	pk := signer.Public()
 	index := -1
 	for i, si := range ts.tx.AuthInfo.SignerInfo {
-		if !si.PublicKey.Equal(pk) {
+		if si.AddressSpec.Solo == nil {
+			continue
+		}
+		if !si.AddressSpec.Solo.Equal(pk) {
 			continue
 		}
 
@@ -78,20 +94,22 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 	if index == -1 {
 		return fmt.Errorf("transaction: signer not found in AuthInfo")
 	}
-	if len(ts.ut.Signatures) == 0 {
-		ts.ut.Signatures = make([][]byte, len(ts.tx.AuthInfo.SignerInfo))
+	if len(ts.ut.AuthProofs) == 0 {
+		ts.ut.AuthProofs = make([]AuthProof, len(ts.tx.AuthInfo.SignerInfo))
 	}
-	if len(ts.ut.Signatures) != len(ts.tx.AuthInfo.SignerInfo) {
-		return fmt.Errorf("transaction: inconsistent number of signature slots")
+	if len(ts.ut.AuthProofs) != len(ts.tx.AuthInfo.SignerInfo) {
+		return fmt.Errorf("transaction: inconsistent number of auth proof slots")
 	}
 
 	sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
 	if err != nil {
 		return fmt.Errorf("transaction: failed to sign transaction: %w", err)
 	}
-	ts.ut.Signatures[index] = sig
+	ts.ut.AuthProofs[index].Solo = sig
 	return nil
 }
+
+// TODO: AppendSign for multisig
 
 // UnverifiedTransaction returns the (signed) unverified transaction.
 func (ts *TransactionSigner) UnverifiedTransaction() *UnverifiedTransaction {
@@ -118,10 +136,10 @@ func (t *Transaction) ValidateBasic() error {
 }
 
 // AppendSignerInfo appends a new transaction signer information to the transaction.
-func (t *Transaction) AppendSignerInfo(pk signature.PublicKey, nonce uint64) {
+func (t *Transaction) AppendSignerInfo(addressSpec AddressSpec, nonce uint64) {
 	t.AuthInfo.SignerInfo = append(t.AuthInfo.SignerInfo, SignerInfo{
-		PublicKey: PublicKey{pk},
-		Nonce:     nonce,
+		AddressSpec: addressSpec,
+		Nonce:       nonce,
 	})
 }
 
@@ -173,6 +191,28 @@ type Fee struct {
 type AddressSpec struct {
 	Solo     *PublicKey      `json:"solo,omitempty"`
 	Multisig *MultisigConfig `json:"multisig,omitempty"`
+}
+
+func (as *AddressSpec) Address() (Address, error) {
+	switch {
+	case as.Solo != nil:
+		return NewAddress(as.Solo), nil
+	case as.Multisig != nil:
+		return NewAddressFromMultisig(as.Multisig), nil
+	default:
+		return Address{}, fmt.Errorf("malformed AddressSpec")
+	}
+}
+
+func (as *AddressSpec) Batch(ap AuthProof) ([]PublicKey, [][]byte, error) {
+	switch {
+	case as.Solo != nil && ap.Solo != nil:
+		return []PublicKey{*as.Solo}, [][]byte{ap.Solo}, nil
+	case as.Multisig != nil && ap.Multisig != nil:
+		return as.Multisig.Batch(ap.Multisig)
+	default:
+		return nil, nil, fmt.Errorf("malformed AddressSpec and AuthProof pair")
+	}
 }
 
 // SignerInfo contains transaction signer information.
