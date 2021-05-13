@@ -38,7 +38,7 @@ func ensureStakingEvent(log *logging.Logger, ch <-chan *staking.Event, check fun
 	}
 }
 
-func SimpleConsensusTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 
 	cons := consensus.NewConsensusClient(conn)
