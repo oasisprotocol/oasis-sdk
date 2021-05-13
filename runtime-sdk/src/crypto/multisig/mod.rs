@@ -64,6 +64,7 @@ impl Config {
         &self,
         signature_set: &SignatureSet,
     ) -> Result<(Vec<PublicKey>, Vec<Signature>), Error> {
+        self.verify()?;
         if signature_set.len() != self.signers.len() {
             return Err(Error::InvalidSignatureSet);
         }
