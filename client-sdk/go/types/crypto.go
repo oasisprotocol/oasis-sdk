@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"math/bits"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
@@ -82,7 +83,36 @@ type MultisigConfig struct {
 	Threshold uint64           `json:"threshold"`
 }
 
+func (mc *MultisigConfig) Verify() error {
+	if mc.Threshold == 0 {
+		return fmt.Errorf("zero threshold")
+	}
+	var total uint64
+	encounteredKeys := make(map[PublicKey]bool)
+	for i, signer := range mc.Signers {
+		if encounteredKeys[signer.PublicKey] {
+			return fmt.Errorf("signer %d duplicated", i)
+		}
+		encounteredKeys[signer.PublicKey] = true
+		if signer.Weight == 0 {
+			return fmt.Errorf("signer %d zero weight", i)
+		}
+		newTotal, carry := bits.Add64(total, signer.Weight, 0)
+		if carry != 0 {
+			return fmt.Errorf("weight overflow")
+		}
+		total = newTotal
+	}
+	if total < mc.Threshold {
+		return fmt.Errorf("impossible threshold")
+	}
+	return nil
+}
+
 func (mc *MultisigConfig) Batch(signatureSet [][]byte) ([]PublicKey, [][]byte, error) {
+	if err := mc.Verify(); err != nil {
+		return nil, nil, err
+	}
 	if len(signatureSet) != len(mc.Signers) {
 		return nil, nil, fmt.Errorf("mismatched signature set length")
 	}

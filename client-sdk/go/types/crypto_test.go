@@ -1,11 +1,99 @@
 package types
 
 import (
+	"math"
 	"testing"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMultisigConfigVerify(t *testing.T) {
+	require := require.New(t)
+
+	dummyPKA := PublicKey{PublicKey: ed25519.NewPublicKey("CgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")}
+	dummyPKB := PublicKey{PublicKey: ed25519.NewPublicKey("CwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")}
+	config := MultisigConfig{
+		Signers: []MultisigSigner{
+			{
+				PublicKey: dummyPKA,
+				Weight:    0,
+			},
+		},
+		Threshold: 0,
+	}
+	require.Error(config.Verify(), "zero threshold")
+	config = MultisigConfig{
+		Signers: []MultisigSigner{
+			{
+				PublicKey: dummyPKA,
+				Weight:    1,
+			},
+			{
+				PublicKey: dummyPKA,
+				Weight:    1,
+			},
+		},
+		Threshold: 1,
+	}
+	require.Error(config.Verify(), "duplicate key")
+	config = MultisigConfig{
+		Signers: []MultisigSigner{
+			{
+				PublicKey: dummyPKA,
+				Weight:    1,
+			},
+			{
+				PublicKey: dummyPKB,
+				Weight:    0,
+			},
+		},
+		Threshold: 1,
+	}
+	require.Error(config.Verify(), "zero weight key")
+	config = MultisigConfig{
+		Signers: []MultisigSigner{
+			{
+				PublicKey: dummyPKA,
+				Weight:    1,
+			},
+			{
+				PublicKey: dummyPKB,
+				Weight:    math.MaxUint64,
+			},
+		},
+		Threshold: 1,
+	}
+	require.Error(config.Verify(), "weight overflow")
+	config = MultisigConfig{
+		Signers: []MultisigSigner{
+			{
+				PublicKey: dummyPKA,
+				Weight:    1,
+			},
+			{
+				PublicKey: dummyPKB,
+				Weight:    1,
+			},
+		},
+		Threshold: 3,
+	}
+	require.Error(config.Verify(), "impossible threshold")
+	config = MultisigConfig{
+		Signers: []MultisigSigner{
+			{
+				PublicKey: dummyPKA,
+				Weight:    1,
+			},
+			{
+				PublicKey: dummyPKB,
+				Weight:    1,
+			},
+		},
+		Threshold: 2,
+	}
+	require.NoError(config.Verify(), "this one should be fine")
+}
 
 func TestMultisigConfigBatch(t *testing.T) {
 	require := require.New(t)
