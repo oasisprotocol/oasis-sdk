@@ -8,7 +8,10 @@ use crate::{
     context::{Context, DispatchContext},
     error,
     module::{self, Module as _, QueryMethodInfo},
-    types::transaction,
+    types::{
+        transaction,
+        transaction::{AuthProof, UnverifiedTransaction},
+    },
 };
 
 #[cfg(test)]
@@ -72,6 +75,14 @@ pub enum Error {
     #[error("batch out of gas")]
     #[sdk_error(code = 14)]
     BatchOutOfGas,
+
+    #[error("too many authentication slots")]
+    #[sdk_error(code = 15)]
+    TooManyAuth,
+
+    #[error("multisig too many signers")]
+    #[sdk_error(code = 16)]
+    MultisigTooManySigners,
 }
 
 /// Parameters for the core module.
@@ -80,6 +91,10 @@ pub enum Error {
 pub struct Parameters {
     #[serde(rename = "max_batch_gas")]
     pub max_batch_gas: u64,
+    #[serde(rename = "max_tx_signers")]
+    pub max_tx_signers: u32,
+    #[serde(rename = "max_multisig_signers")]
+    pub max_multisig_signers: u32,
 }
 
 impl module::Parameters for Parameters {
@@ -208,7 +223,25 @@ impl module::Module for Module {
     type Parameters = Parameters;
 }
 
-impl module::AuthHandler for Module {}
+impl module::AuthHandler for Module {
+    fn approve_utx(
+        ctx: &mut DispatchContext<'_>,
+        utx: &UnverifiedTransaction,
+    ) -> Result<(), Error> {
+        let params = Self::params(ctx.runtime_state());
+        if utx.1.len() > params.max_tx_signers as usize {
+            return Err(Error::TooManyAuth);
+        }
+        for auth_proof in &utx.1 {
+            if let AuthProof::Multisig(config) = auth_proof {
+                if config.len() > params.max_multisig_signers as usize {
+                    return Err(Error::MultisigTooManySigners);
+                }
+            }
+        }
+        Ok(())
+    }
+}
 
 impl module::MigrationHandler for Module {
     type Genesis = Genesis;

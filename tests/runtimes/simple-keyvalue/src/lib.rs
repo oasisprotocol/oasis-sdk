@@ -95,6 +95,8 @@ impl sdk::Runtime for Runtime {
             modules::core::Genesis {
                 parameters: modules::core::Parameters {
                     max_batch_gas: 10_000,
+                    max_tx_signers: 8,
+                    max_multisig_signers: 8,
                 },
             },
         )

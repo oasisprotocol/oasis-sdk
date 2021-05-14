@@ -12,7 +12,7 @@ use crate::{
     storage::Store,
     types::{
         message::MessageEvent,
-        transaction::{CallResult, Transaction},
+        transaction::{CallResult, Transaction, UnverifiedTransaction},
     },
 };
 
@@ -144,6 +144,16 @@ pub trait MessageHookRegistrationHandler {
 
 /// Authentication handler.
 pub trait AuthHandler {
+    /// Judge if an unverified transaction is good enough to undergo verification.
+    /// This takes place before even verifying signatures.
+    fn approve_utx(
+        _ctx: &mut DispatchContext<'_>,
+        _utx: &UnverifiedTransaction,
+    ) -> Result<(), modules::core::Error> {
+        // Default implementation doesn't do any checks.
+        Ok(())
+    }
+
     /// Authenticate a transaction.
     ///
     /// Note that any signatures have already been verified.

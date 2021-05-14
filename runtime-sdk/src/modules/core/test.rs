@@ -20,6 +20,8 @@ fn test_use_gas() {
         ctx.runtime_state(),
         &super::Parameters {
             max_batch_gas: BLOCK_MAX_GAS,
+            max_tx_signers: 8,
+            max_multisig_signers: 8,
         },
     );
 
@@ -79,6 +81,8 @@ fn test_query_estimate_gas() {
         ctx.runtime_state(),
         &super::Parameters {
             max_batch_gas: u64::max_value(),
+            max_tx_signers: 8,
+            max_multisig_signers: 8,
         },
     );
 
