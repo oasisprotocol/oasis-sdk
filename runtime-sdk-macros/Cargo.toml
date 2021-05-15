@@ -9,6 +9,7 @@ license = "Apache-2.0"
 proc-macro = true
 
 [dependencies]
+Inflector = "0.11.4"
 darling = "0.13.0"
 proc-macro2 = "1.0.27"
 quote = "1.0.9"
