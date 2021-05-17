@@ -244,7 +244,7 @@ impl API for Module {
             .signer_info[0]
             .address_spec
         {
-            AddressSpec::Solo(PublicKey::Ed25519(_)) => Ok(()),
+            AddressSpec::Signature(PublicKey::Ed25519(_)) => Ok(()),
             _ => Err(Error::ConsensusIncompatibleSigner),
         }
     }

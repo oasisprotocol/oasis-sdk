@@ -17,8 +17,8 @@ var SignatureContextBase = []byte("oasis-runtime-sdk/tx: v0")
 const LatestTransactionVersion = 1
 
 type AuthProof struct {
-	Solo     []byte   `json:"solo,omitempty"`
-	Multisig [][]byte `json:"multisig,omitempty"`
+	Signature []byte   `json:"signature,omitempty"`
+	Multisig  [][]byte `json:"multisig,omitempty"`
 }
 
 // UnverifiedTransaction is an unverified transaction.
@@ -83,8 +83,8 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 	any := false
 	for i, si := range ts.tx.AuthInfo.SignerInfo {
 		switch {
-		case si.AddressSpec.Solo != nil:
-			if !si.AddressSpec.Solo.Equal(pk) {
+		case si.AddressSpec.Signature != nil:
+			if !si.AddressSpec.Signature.Equal(pk) {
 				continue
 			}
 
@@ -96,7 +96,7 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 			if err != nil {
 				return fmt.Errorf("signer info %d: failed to sign transaction: %w", i, err)
 			}
-			ts.ut.AuthProofs[i].Solo = sig
+			ts.ut.AuthProofs[i].Signature = sig
 		case si.AddressSpec.Multisig != nil:
 			for j, mss := range si.AddressSpec.Multisig.Signers {
 				if !mss.PublicKey.Equal(pk) {
@@ -204,14 +204,14 @@ type Fee struct {
 }
 
 type AddressSpec struct {
-	Solo     *PublicKey      `json:"solo,omitempty"`
-	Multisig *MultisigConfig `json:"multisig,omitempty"`
+	Signature *PublicKey      `json:"signature,omitempty"`
+	Multisig  *MultisigConfig `json:"multisig,omitempty"`
 }
 
 func (as *AddressSpec) Address() (Address, error) {
 	switch {
-	case as.Solo != nil:
-		return NewAddress(as.Solo), nil
+	case as.Signature != nil:
+		return NewAddress(as.Signature), nil
 	case as.Multisig != nil:
 		return NewAddressFromMultisig(as.Multisig), nil
 	default:
@@ -221,8 +221,8 @@ func (as *AddressSpec) Address() (Address, error) {
 
 func (as *AddressSpec) Batch(ap AuthProof) ([]PublicKey, [][]byte, error) {
 	switch {
-	case as.Solo != nil && ap.Solo != nil:
-		return []PublicKey{*as.Solo}, [][]byte{ap.Solo}, nil
+	case as.Signature != nil && ap.Signature != nil:
+		return []PublicKey{*as.Signature}, [][]byte{ap.Signature}, nil
 	case as.Multisig != nil && ap.Multisig != nil:
 		return as.Multisig.Batch(ap.Multisig)
 	default:

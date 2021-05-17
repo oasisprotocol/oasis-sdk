@@ -42,7 +42,7 @@ func (a *v1) Deposit(ctx context.Context, signer signature.Signer, nonce uint64,
 	}
 
 	tx := types.NewTransaction(nil, methodDeposit, deposit)
-	tx.AppendSignerInfo(types.AddressSpec{Solo: &types.PublicKey{PublicKey: signer.Public()}}, nonce)
+	tx.AppendSignerInfo(types.AddressSpec{Signature: &types.PublicKey{PublicKey: signer.Public()}}, nonce)
 	stx := tx.PrepareForSigning()
 	if err = stx.AppendSign(info.ChainContext, signer); err != nil {
 		return err
@@ -63,7 +63,7 @@ func (a *v1) Withdraw(ctx context.Context, signer signature.Signer, nonce uint64
 	}
 
 	tx := types.NewTransaction(nil, methodWithdraw, withdraw)
-	tx.AppendSignerInfo(types.AddressSpec{Solo: &types.PublicKey{PublicKey: signer.Public()}}, nonce)
+	tx.AppendSignerInfo(types.AddressSpec{Signature: &types.PublicKey{PublicKey: signer.Public()}}, nonce)
 	stx := tx.PrepareForSigning()
 	if err = stx.AppendSign(info.ChainContext, signer); err != nil {
 		return err

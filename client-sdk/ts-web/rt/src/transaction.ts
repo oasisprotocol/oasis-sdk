@@ -40,13 +40,13 @@ export async function signAny(
     }
 }
 
-export async function proveSolo(
+export async function proveSignature(
     pk: types.PublicKey,
     signer: AnySigner,
     context: string,
     body: Uint8Array,
 ) {
-    return {solo: await signAny(pk, signer, context, body)};
+    return {signature: await signAny(pk, signer, context, body)};
 }
 
 export async function proveMultisig(
@@ -77,8 +77,13 @@ export async function proveAny(
     context: string,
     body: Uint8Array,
 ) {
-    if ('solo' in addressSpec) {
-        return await proveSolo(addressSpec.solo, proofProvider as AnySigner, context, body);
+    if ('signature' in addressSpec) {
+        return await proveSignature(
+            addressSpec.signature,
+            proofProvider as AnySigner,
+            context,
+            body,
+        );
     } else if ('multisig' in addressSpec) {
         return await proveMultisig(
             addressSpec.multisig,

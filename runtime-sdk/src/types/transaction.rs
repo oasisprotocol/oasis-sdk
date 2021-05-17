@@ -28,8 +28,8 @@ pub enum Error {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum AuthProof {
-    #[serde(rename = "solo")]
-    Solo(Signature),
+    #[serde(rename = "signature")]
+    Signature(Signature),
     #[serde(rename = "multisig")]
     Multisig(multisig::SignatureSetOwned),
 }
@@ -131,8 +131,8 @@ pub struct Fee {
 /// Common information that specifies an address as well as how to authenticate.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum AddressSpec {
-    #[serde(rename = "solo")]
-    Solo(PublicKey),
+    #[serde(rename = "signature")]
+    Signature(PublicKey),
     #[serde(rename = "multisig")]
     Multisig(multisig::Config),
 }
@@ -140,14 +140,14 @@ pub enum AddressSpec {
 impl AddressSpec {
     pub fn address(&self) -> Address {
         match self {
-            AddressSpec::Solo(public_key) => Address::from_pk(public_key),
+            AddressSpec::Signature(public_key) => Address::from_pk(public_key),
             AddressSpec::Multisig(config) => Address::from_multisig(config),
         }
     }
 
     pub fn batch(&self, auth_proof: &AuthProof) -> Result<(Vec<PublicKey>, Vec<Signature>), Error> {
         Ok(match (self, auth_proof) {
-            (AddressSpec::Solo(public_key), AuthProof::Solo(signature)) => {
+            (AddressSpec::Signature(public_key), AuthProof::Signature(signature)) => {
                 (vec![public_key.clone()], vec![signature.clone()])
             }
             (AddressSpec::Multisig(config), AuthProof::Multisig(signature_set)) => config
@@ -173,7 +173,7 @@ impl SignerInfo {
     /// Create a new signer info from public key and nonce.
     pub fn new(public_key: PublicKey, nonce: u64) -> Self {
         Self {
-            address_spec: AddressSpec::Solo(public_key),
+            address_spec: AddressSpec::Signature(public_key),
             nonce,
         }
     }

@@ -74,7 +74,7 @@ export interface RewardsRewardStep {
  * Common information that specifies an address as well as how to authenticate.
  */
 export interface AddressSpec {
-    solo?: PublicKey;
+    signature?: PublicKey;
     multisig?: MultisigConfig;
 }
 
@@ -87,7 +87,7 @@ export interface AuthInfo {
 }
 
 export interface AuthProof {
-    solo?: Uint8Array;
+    signature?: Uint8Array;
     multisig?: Uint8Array[];
 }
 
