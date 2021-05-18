@@ -51,7 +51,14 @@ func TestMultisigConfigVerify(t *testing.T) {
 		Threshold: 1,
 	}
 	require.Error(config.Verify(), "zero weight key")
-	config = MultisigConfig{
+}
+
+func TestMultisigConfigVerify2(t *testing.T) {
+	require := require.New(t)
+
+	dummyPKA := PublicKey{PublicKey: ed25519.NewPublicKey("CgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")}
+	dummyPKB := PublicKey{PublicKey: ed25519.NewPublicKey("CwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")}
+	config := MultisigConfig{
 		Signers: []MultisigSigner{
 			{
 				PublicKey: dummyPKA,
