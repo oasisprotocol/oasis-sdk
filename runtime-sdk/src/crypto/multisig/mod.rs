@@ -18,8 +18,11 @@ pub enum Error {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Signer {
+    #[serde(rename = "public_key")]
     pub public_key: PublicKey,
+    #[serde(rename = "weight")]
     pub weight: u64,
 }
 
@@ -27,8 +30,11 @@ pub type SignatureSet = [Option<Signature>];
 pub type SignatureSetOwned = Vec<Option<Signature>>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
+    #[serde(rename = "signers")]
     pub signers: Vec<Signer>,
+    #[serde(rename = "threshold")]
     pub threshold: u64,
 }
 

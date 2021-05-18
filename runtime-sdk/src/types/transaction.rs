@@ -27,6 +27,7 @@ pub enum Error {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub enum AuthProof {
     #[serde(rename = "signature")]
     Signature(Signature),
@@ -133,6 +134,7 @@ pub struct Fee {
 
 /// Common information that specifies an address as well as how to authenticate.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub enum AddressSpec {
     #[serde(rename = "signature")]
     Signature(PublicKey),
