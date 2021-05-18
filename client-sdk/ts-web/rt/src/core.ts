@@ -18,6 +18,8 @@ export const ERR_GAS_OVERFLOW = 11;
 export const ERR_OUT_OF_GAS = 12;
 export const ERR_BATCH_GAS_OVERFLOW = 13;
 export const ERR_BATCH_OUT_OF_GAS = 14;
+export const ERR_TOO_MANY_AUTH_CODE = 15;
+export const ERR_MULTISIG_TOO_MANY_SIGNERS_CODE = 16;
 
 // Queries.
 export const METHOD_ESTIMATE_GAS = 'core.EstimateGas';
