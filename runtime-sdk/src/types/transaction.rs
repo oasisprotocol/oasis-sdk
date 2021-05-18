@@ -37,7 +37,10 @@ pub enum AuthProof {
 /// An unverified signed transaction.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct UnverifiedTransaction(#[serde(with = "serde_bytes")] Vec<u8>, pub Vec<AuthProof>);
+pub struct UnverifiedTransaction(
+    #[serde(with = "serde_bytes")] pub Vec<u8>,
+    pub Vec<AuthProof>,
+);
 
 impl UnverifiedTransaction {
     /// Verify and deserialize the unverified transaction.

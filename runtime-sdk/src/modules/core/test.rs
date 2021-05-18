@@ -3,7 +3,7 @@ use oasis_core_runtime::common::cbor;
 use crate::{
     context::{Context, Mode},
     module,
-    module::Module,
+    module::{AuthHandler as _, Module as _},
     testing::{keys, mock},
     types::{token, transaction},
 };
@@ -102,4 +102,53 @@ fn test_query_estimate_gas() {
 
     let est = Core::query_estimate_gas(&mut ctx, tx).expect("query_estimate_gas should succeed");
     assert_eq!(est, MAX_GAS, "estimated gas should be correct");
+}
+
+#[test]
+fn test_approve_unverified_tx() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+    Core::set_params(
+        ctx.runtime_state(),
+        &super::Parameters {
+            max_batch_gas: u64::MAX,
+            max_tx_signers: 2,
+            max_multisig_signers: 2,
+        },
+    );
+    let dummy_bytes = b"you look, you die".to_vec();
+    Core::approve_unverified_tx(
+        &mut ctx,
+        &transaction::UnverifiedTransaction(
+            dummy_bytes.clone(),
+            vec![
+                transaction::AuthProof::Signature(dummy_bytes.clone().into()),
+                transaction::AuthProof::Multisig(vec![None, None]),
+            ],
+        ),
+    )
+    .expect("at max");
+    Core::approve_unverified_tx(
+        &mut ctx,
+        &transaction::UnverifiedTransaction(
+            dummy_bytes.clone(),
+            vec![
+                transaction::AuthProof::Signature(dummy_bytes.clone().into()),
+                transaction::AuthProof::Multisig(vec![None, None]),
+                transaction::AuthProof::Signature(dummy_bytes.clone().into()),
+            ],
+        ),
+    )
+    .expect_err("too many authentication slots");
+    Core::approve_unverified_tx(
+        &mut ctx,
+        &transaction::UnverifiedTransaction(
+            dummy_bytes.clone(),
+            vec![
+                transaction::AuthProof::Signature(dummy_bytes.clone().into()),
+                transaction::AuthProof::Multisig(vec![None, None, None]),
+            ],
+        ),
+    )
+    .expect_err("multisig too many signers");
 }
