@@ -79,6 +79,20 @@ type TransactionSigner struct {
 	ut UnverifiedTransaction
 }
 
+func (ts *TransactionSigner) allocateProofs() {
+	if len(ts.ut.AuthProofs) == 0 {
+		ts.ut.AuthProofs = make([]AuthProof, len(ts.tx.AuthInfo.SignerInfo))
+
+		for i, si := range ts.tx.AuthInfo.SignerInfo {
+			if si.AddressSpec.Multisig != nil {
+				if len(ts.ut.AuthProofs[i].Multisig) == 0 {
+					ts.ut.AuthProofs[i].Multisig = make([][]byte, len(si.AddressSpec.Multisig.Signers))
+				}
+			}
+		}
+	}
+}
+
 // AppendSign signs the transaction and appends the signature.
 //
 // The signer must be specified in the AuthInfo.
@@ -93,9 +107,7 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 			}
 
 			any = true
-			if len(ts.ut.AuthProofs) == 0 {
-				ts.ut.AuthProofs = make([]AuthProof, len(ts.tx.AuthInfo.SignerInfo))
-			}
+			ts.allocateProofs()
 			sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
 			if err != nil {
 				return fmt.Errorf("signer info %d: failed to sign transaction: %w", i, err)
@@ -108,12 +120,7 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 				}
 
 				any = true
-				if len(ts.ut.AuthProofs) == 0 {
-					ts.ut.AuthProofs = make([]AuthProof, len(ts.tx.AuthInfo.SignerInfo))
-				}
-				if ts.ut.AuthProofs[i].Multisig == nil {
-					ts.ut.AuthProofs[i].Multisig = make([][]byte, len(si.AddressSpec.Multisig.Signers))
-				}
+				ts.allocateProofs()
 				sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
 				if err != nil {
 					return fmt.Errorf("signer info %d: failed to sign transaction: %w", i, err)
