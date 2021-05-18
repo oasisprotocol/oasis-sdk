@@ -224,7 +224,7 @@ impl module::Module for Module {
 }
 
 impl module::AuthHandler for Module {
-    fn approve_utx(
+    fn approve_unverified_tx(
         ctx: &mut DispatchContext<'_>,
         utx: &UnverifiedTransaction,
     ) -> Result<(), Error> {

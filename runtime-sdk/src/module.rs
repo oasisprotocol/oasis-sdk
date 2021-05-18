@@ -146,7 +146,7 @@ pub trait MessageHookRegistrationHandler {
 pub trait AuthHandler {
     /// Judge if an unverified transaction is good enough to undergo verification.
     /// This takes place before even verifying signatures.
-    fn approve_utx(
+    fn approve_unverified_tx(
         _ctx: &mut DispatchContext<'_>,
         _utx: &UnverifiedTransaction,
     ) -> Result<(), modules::core::Error> {

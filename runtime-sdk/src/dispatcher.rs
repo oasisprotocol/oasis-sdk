@@ -94,7 +94,7 @@ impl<R: Runtime> Dispatcher<R> {
             cbor::from_slice(&tx).map_err(|_| modules::core::Error::MalformedTransaction)?;
 
         // Perform any checks before signature verification.
-        R::Modules::approve_utx(ctx, &utx)?;
+        R::Modules::approve_unverified_tx(ctx, &utx)?;
 
         // Verify transaction signatures.
         // TODO: Support signature verification of the whole transaction batch.
