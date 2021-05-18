@@ -6,13 +6,13 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", rev = "5214f87" }
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", rev = "c287752" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
-serde = { version = "1.0.118", features = ["derive"] }
+serde = { version = "1.0.126", features = ["derive"] }
 serde_bytes = "0.11.5"
-ed25519-dalek = { version = "1.0.1", features = ["serde"] }
+curve25519-dalek = "3.0.0"
 sha2 = "0.9.3"
 k256 = { version = "0.6.0", features = ["ecdsa"] }
 thiserror = "1.0.24"
