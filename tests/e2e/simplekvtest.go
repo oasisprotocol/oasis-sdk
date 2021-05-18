@@ -81,7 +81,7 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key []byte, val
 		Key:   key,
 		Value: value,
 	})
-	tx.AppendSignerInfo(types.AddressSpec{Signature: &types.PublicKey{PublicKey: signer.Public()}}, nonce)
+	tx.AppendAuthSignature(signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
 	stx.AppendSign(chainCtx, signer)
 
@@ -109,7 +109,7 @@ func kvRemove(rtc client.RuntimeClient, signer signature.Signer, key []byte) err
 	}, "keyvalue.Remove", kvKey{
 		Key: key,
 	})
-	tx.AppendSignerInfo(types.AddressSpec{Signature: &types.PublicKey{PublicKey: signer.Public()}}, nonce)
+	tx.AppendAuthSignature(signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
 	stx.AppendSign(chainCtx, signer)
 
@@ -370,7 +370,7 @@ func KVTransferTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runti
 		To:     testing.Bob.Address,
 		Amount: types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination),
 	})
-	tx.AppendSignerInfo(types.AddressSpec{Signature: &types.PublicKey{PublicKey: testing.Alice.Signer.Public()}}, nonce)
+	tx.AppendAuthSignature(testing.Alice.Signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
 	stx.AppendSign(chainCtx, testing.Alice.Signer)
 
@@ -431,7 +431,7 @@ func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeCl
 		To:     testing.Alice.Address,
 		Amount: types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination),
 	})
-	tx.AppendSignerInfo(types.AddressSpec{Signature: &types.PublicKey{PublicKey: testing.Dave.Signer.Public()}}, nonce)
+	tx.AppendAuthSignature(testing.Dave.Signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
 	stx.AppendSign(chainCtx, testing.Dave.Signer)
 
@@ -499,7 +499,7 @@ func KVMultisigTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runti
 		Key:   []byte("from-KVMultisigTest"),
 		Value: []byte("hi"),
 	})
-	tx.AppendSignerInfo(types.AddressSpec{Multisig: &config}, nonce1)
+	tx.AppendAuthMultisig(&config, nonce1)
 	stx := tx.PrepareForSigning()
 	if err = stx.AppendSign(chainCtx, signerA); err != nil {
 		return err
