@@ -17,28 +17,40 @@ pub enum Error {
     InsufficientWeight,
 }
 
+/// One of the signers in a multisig configuration.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Signer {
+    /// The public key of the signer.
     #[serde(rename = "public_key")]
     pub public_key: PublicKey,
+    /// The weight of the signer.
     #[serde(rename = "weight")]
     pub weight: u64,
 }
 
+/// A set of signatures corresponding to a multisig configuration.
+/// The indices match the configuration's `signers` vec.
 pub type SignatureSet = [Option<Signature>];
+/// A `SignatureSet` owned in a `Vec`.
 pub type SignatureSetOwned = Vec<Option<Signature>>;
 
+/// A multisig configuration.
+/// A set of signers with total "weight" greater than or equal to a "threshold" can authenticate
+/// for the configuration.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
+    /// The signers.
     #[serde(rename = "signers")]
     pub signers: Vec<Signer>,
+    /// The threshold.
     #[serde(rename = "threshold")]
     pub threshold: u64,
 }
 
 impl Config {
+    /// Performs some sanity checks.
     pub fn verify(&self) -> Result<(), Error> {
         if self.threshold == 0 {
             return Err(Error::InvalidConfig);
@@ -66,6 +78,8 @@ impl Config {
         Ok(())
     }
 
+    /// Checks that the configuration and signature set are acceptable.
+    /// Returns vectors of public keys and signatures for batch verification of included signatures.
     pub fn batch(
         &self,
         signature_set: &SignatureSet,

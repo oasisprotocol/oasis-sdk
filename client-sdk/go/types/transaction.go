@@ -16,9 +16,12 @@ var SignatureContextBase = []byte("oasis-runtime-sdk/tx: v0")
 // LatestTransactionVersion is the latest transaction format version.
 const LatestTransactionVersion = 1
 
+// AuthProof is a container for data that authenticates a transaction.
 type AuthProof struct {
-	Signature []byte   `json:"signature,omitempty"`
-	Multisig  [][]byte `json:"multisig,omitempty"`
+	// Signature is for signature authentication.
+	Signature []byte `json:"signature,omitempty"`
+	// Multisig is for multisig authentication.
+	Multisig [][]byte `json:"multisig,omitempty"`
 }
 
 // UnverifiedTransaction is an unverified transaction.
@@ -47,7 +50,8 @@ func (ut *UnverifiedTransaction) Verify(ctx signature.Context) (*Transaction, er
 
 	// Verify all signatures.
 	txCtx := ctx.New(SignatureContextBase)
-	// We'll need at least one signature per proof. Could be more though.
+	// We'll need at least one signature per proof, so we might as well preallocate that.
+	// Could be more though.
 	publicKeys := make([]PublicKey, 0, len(ut.AuthProofs))
 	signatures := make([][]byte, 0, len(ut.AuthProofs))
 	for i, ap := range ut.AuthProofs {
@@ -213,11 +217,15 @@ type Fee struct {
 	Gas    uint64    `json:"gas"`
 }
 
+// AddressSpec is common information that specifies an address as well as how to authenticate.
 type AddressSpec struct {
-	Signature *PublicKey      `json:"signature,omitempty"`
-	Multisig  *MultisigConfig `json:"multisig,omitempty"`
+	// Signature is for signature authentication.
+	Signature *PublicKey `json:"signature,omitempty"`
+	// Multisig is for multisig authentication.
+	Multisig *MultisigConfig `json:"multisig,omitempty"`
 }
 
+// Address derives the address.
 func (as *AddressSpec) Address() (Address, error) {
 	switch {
 	case as.Signature != nil:
@@ -229,6 +237,8 @@ func (as *AddressSpec) Address() (Address, error) {
 	}
 }
 
+// Batch checks that the address specification and the authentication proof are acceptable.
+// Returns vectors of public keys and signatures for batch verification of included signatures.
 func (as *AddressSpec) Batch(ap AuthProof) ([]PublicKey, [][]byte, error) {
 	switch {
 	case as.Signature != nil && ap.Signature != nil:

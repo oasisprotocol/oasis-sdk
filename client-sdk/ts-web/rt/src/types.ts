@@ -74,7 +74,13 @@ export interface RewardsRewardStep {
  * Common information that specifies an address as well as how to authenticate.
  */
 export interface AddressSpec {
+    /**
+     * For _signature_ authentication.
+     */
     signature?: PublicKey;
+    /**
+     * For _multisig_ authentication.
+     */
     multisig?: MultisigConfig;
 }
 
@@ -86,8 +92,17 @@ export interface AuthInfo {
     fee: Fee;
 }
 
+/**
+ * A container for data that authenticates a transaction.
+ */
 export interface AuthProof {
+    /**
+     * For _signature_ authentication.
+     */
     signature?: Uint8Array;
+    /**
+     * For _multisig_ authentication.
+     */
     multisig?: Uint8Array[];
 }
 
@@ -126,13 +141,33 @@ export interface Fee {
     gas: oasis.types.longnum;
 }
 
+/**
+ * A multisig configuration.
+ * A set of signers with total "weight" greater than or equal to a "threshold" can authenticate
+ * for the configuration.
+ */
 export interface MultisigConfig {
+    /**
+     * The signers.
+     */
     signers: MultisigSigner[];
+    /**
+     * The threshold.
+     */
     threshold: oasis.types.longnum;
 }
 
+/**
+ * One of the signers in a multisig configuration.
+ */
 export interface MultisigSigner {
+    /**
+     * The public key of the signer.
+     */
     public_key: PublicKey;
+    /**
+     * The weight of the signer.
+     */
     weight: oasis.types.longnum;
 }
 

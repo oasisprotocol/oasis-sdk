@@ -26,11 +26,14 @@ pub enum Error {
     MalformedTransaction,
 }
 
+/// A container for data that authenticates a transaction.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub enum AuthProof {
+    /// For _signature_ authentication.
     #[serde(rename = "signature")]
     Signature(Signature),
+    /// For _multisig_ authentication.
     #[serde(rename = "multisig")]
     Multisig(multisig::SignatureSetOwned),
 }
@@ -136,13 +139,16 @@ pub struct Fee {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub enum AddressSpec {
+    /// For _signature_ authentication.
     #[serde(rename = "signature")]
     Signature(PublicKey),
+    /// For _multisig_ authentication.
     #[serde(rename = "multisig")]
     Multisig(multisig::Config),
 }
 
 impl AddressSpec {
+    /// Derives the address.
     pub fn address(&self) -> Address {
         match self {
             AddressSpec::Signature(public_key) => Address::from_pk(public_key),
@@ -150,6 +156,8 @@ impl AddressSpec {
         }
     }
 
+    /// Checks that the address specification and the authentication proof are acceptable.
+    /// Returns vectors of public keys and signatures for batch verification of included signatures.
     pub fn batch(&self, auth_proof: &AuthProof) -> Result<(Vec<PublicKey>, Vec<Signature>), Error> {
         Ok(match (self, auth_proof) {
             (AddressSpec::Signature(public_key), AuthProof::Signature(signature)) => {

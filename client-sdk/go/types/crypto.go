@@ -73,16 +73,21 @@ func (pk *PublicKey) UnmarshalJSON(data []byte) error {
 	return pk.unmarshal(&spk)
 }
 
+// MultisigSigner is one of the signers in a multisig configuration.
 type MultisigSigner struct {
 	PublicKey PublicKey `json:"public_key"`
 	Weight    uint64    `json:"weight"`
 }
 
+// MultisigConfig is a multisig configuration.
+// A set of signers with total "weight" greater than or equal to a "threshold" can authenticate
+// for the configuration.
 type MultisigConfig struct {
 	Signers   []MultisigSigner `json:"signers"`
 	Threshold uint64           `json:"threshold"`
 }
 
+// Verify performs some sanity checks.
 func (mc *MultisigConfig) Verify() error {
 	if mc.Threshold == 0 {
 		return fmt.Errorf("zero threshold")
@@ -109,6 +114,8 @@ func (mc *MultisigConfig) Verify() error {
 	return nil
 }
 
+// Batch checks that enough signers have signed and returns vectors of public keys and signatures
+// for batch verification of those signatures. This internally calls `Verify`.
 func (mc *MultisigConfig) Batch(signatureSet [][]byte) ([]PublicKey, [][]byte, error) {
 	if err := mc.Verify(); err != nil {
 		return nil, nil, err

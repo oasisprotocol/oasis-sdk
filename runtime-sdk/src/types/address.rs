@@ -88,6 +88,7 @@ impl Address {
         }
     }
 
+    /// Creates a new address from a multisig configuration.
     pub fn from_multisig(config: &multisig::Config) -> Self {
         let config_vec = cbor::to_vec(config);
         Address::new(ADDRESS_V0_MULTISIG_CONTEXT, ADDRESS_V0_VERSION, &config_vec)
