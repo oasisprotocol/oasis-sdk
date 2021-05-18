@@ -1,26 +1,42 @@
 //! Ed25519 signatures.
-use ed25519_dalek::{self, ed25519::signature::Signature as _};
+use curve25519_dalek::edwards::CompressedEdwardsY;
 use serde::{Deserialize, Serialize};
 
-use oasis_core_runtime::common::crypto::{hash::Hash, signature::PublicKey as CorePublicKey};
+use oasis_core_runtime::common::crypto::signature::{
+    PublicKey as CorePublicKey, Signature as CoreSignature,
+};
 
 use crate::crypto::signature::{Error, Signature};
 
 /// An Ed25519 public key.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PublicKey(ed25519_dalek::PublicKey);
+pub struct PublicKey(CorePublicKey);
 
 impl PublicKey {
     /// Return a byte representation of this public key.
     pub fn as_bytes(&self) -> &[u8] {
-        self.0.as_bytes()
+        self.0.as_ref()
     }
 
     /// Construct a public key from a slice of bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        Ok(PublicKey(
-            ed25519_dalek::PublicKey::from_bytes(bytes).map_err(|_| Error::MalformedPublicKey)?,
-        ))
+        // CorePublicKey::from doesn't support error checking.
+        if bytes.len() != CorePublicKey::len() {
+            return Err(Error::MalformedPublicKey);
+        }
+
+        // Ensure that the public key is a valid compressed point.
+        //
+        // Note: This could do the small order public key check,
+        // but just assume that signature verification will impose
+        // whatever semantics it desires.
+        let a = CompressedEdwardsY::from_slice(bytes);
+        let _a = match a.decompress() {
+            Some(point) => point,
+            None => return Err(Error::MalformedPublicKey),
+        };
+
+        Ok(PublicKey(CorePublicKey::from(bytes)))
     }
 
     /// Verify a signature.
@@ -30,12 +46,14 @@ impl PublicKey {
         message: &[u8],
         signature: &Signature,
     ) -> Result<(), Error> {
-        let digest = Hash::digest_bytes_list(&[context, message]);
-        let sig = ed25519_dalek::Signature::from_bytes(signature.0.as_ref())
-            .map_err(|_| Error::MalformedSignature)?;
+        // CoreSignature::from doesn't support error checking either.
+        if signature.0.len() != CoreSignature::len() {
+            return Err(Error::MalformedSignature);
+        }
+        let sig: &[u8] = signature.0.as_ref();
+        let sig = CoreSignature::from(sig);
 
-        self.0
-            .verify_strict(digest.as_ref(), &sig)
+        sig.verify(&self.0, context, message)
             .map_err(|_| Error::VerificationFailed)
     }
 }
@@ -48,20 +66,18 @@ impl From<&'static str> for PublicKey {
 
 impl From<CorePublicKey> for PublicKey {
     fn from(pk: CorePublicKey) -> PublicKey {
-        PublicKey::from_bytes(pk.as_ref())
-            .expect("types are compatible so conversion must always succeed")
+        PublicKey(pk)
     }
 }
 
 impl From<&CorePublicKey> for PublicKey {
     fn from(pk: &CorePublicKey) -> PublicKey {
-        PublicKey::from_bytes(pk.as_ref())
-            .expect("types are compatible so conversion must always succeed")
+        PublicKey(*pk)
     }
 }
 
 impl From<PublicKey> for CorePublicKey {
     fn from(pk: PublicKey) -> CorePublicKey {
-        pk.as_bytes().into()
+        pk.0
     }
 }

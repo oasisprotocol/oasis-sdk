@@ -10,13 +10,13 @@ replace (
 	// We want to test the current client-sdk.
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go => ../../client-sdk/go
 
-	github.com/tendermint/tendermint => github.com/oasisprotocol/tendermint v0.34.8-oasis1
-	golang.org/x/crypto/curve25519 => github.com/oasisprotocol/ed25519/extra/x25519 v0.0.0-20210127160119-f7017427c1ea
-	golang.org/x/crypto/ed25519 => github.com/oasisprotocol/ed25519 v0.0.0-20210127160119-f7017427c1ea
+	github.com/tendermint/tendermint => github.com/oasisprotocol/tendermint v0.34.9-oasis2
+	golang.org/x/crypto/curve25519 => github.com/oasisprotocol/curve25519-voi/primitives/x25519 v0.0.0-20210505121811-294cf0fbfb43
+	golang.org/x/crypto/ed25519 => github.com/oasisprotocol/curve25519-voi/primitives/ed25519 v0.0.0-20210505121811-294cf0fbfb43
 )
 
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2101.1-0.20210504072550-da25d939a3d4
+	github.com/oasisprotocol/oasis-core/go v0.2101.1-0.20210517160830-c287752b61b7
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-20210328195842-4de788c1c6f7
 	google.golang.org/grpc v1.37.0
 )
