@@ -46,14 +46,13 @@ fn test_use_gas() {
 
     ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
         Core::use_gas(&mut tx_ctx, 1).unwrap();
-        Core::use_gas(&mut tx_ctx, u64::max_value()).expect_err("overflow should cause error");
+        Core::use_gas(&mut tx_ctx, u64::MAX).expect_err("overflow should cause error");
     });
 
     let mut big_tx = tx.clone();
-    big_tx.auth_info.fee.gas = u64::max_value();
+    big_tx.auth_info.fee.gas = u64::MAX;
     ctx.with_tx(big_tx, |mut tx_ctx, _call| {
-        Core::use_gas(&mut tx_ctx, u64::max_value())
-            .expect_err("batch overflow should cause error");
+        Core::use_gas(&mut tx_ctx, u64::MAX).expect_err("batch overflow should cause error");
     });
 
     ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
@@ -80,7 +79,7 @@ fn test_query_estimate_gas() {
     Core::set_params(
         ctx.runtime_state(),
         &super::Parameters {
-            max_batch_gas: u64::max_value(),
+            max_batch_gas: u64::MAX,
             max_tx_signers: 8,
             max_multisig_signers: 8,
         },
@@ -96,7 +95,7 @@ fn test_query_estimate_gas() {
             signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0.into(), token::Denomination::NATIVE),
-                gas: u64::max_value(),
+                gas: u64::MAX,
             },
         },
     };

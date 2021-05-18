@@ -51,7 +51,7 @@ fn test_config_verify() {
             },
             Signer {
                 public_key: keys::bob::pk(),
-                weight: u64::max_value(),
+                weight: u64::MAX,
             },
         ],
         threshold: 1,
