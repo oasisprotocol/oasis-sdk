@@ -8,7 +8,7 @@ use crate::{
     context::{Context, DispatchContext},
     error,
     module::{self, Module as _, QueryMethodInfo},
-    types::transaction,
+    types::transaction::{self, AuthProof, UnverifiedTransaction},
 };
 
 #[cfg(test)]
@@ -72,6 +72,14 @@ pub enum Error {
     #[error("batch out of gas")]
     #[sdk_error(code = 14)]
     BatchOutOfGas,
+
+    #[error("too many authentication slots")]
+    #[sdk_error(code = 15)]
+    TooManyAuth,
+
+    #[error("multisig too many signers")]
+    #[sdk_error(code = 16)]
+    MultisigTooManySigners,
 }
 
 /// Parameters for the core module.
@@ -80,6 +88,10 @@ pub enum Error {
 pub struct Parameters {
     #[serde(rename = "max_batch_gas")]
     pub max_batch_gas: u64,
+    #[serde(rename = "max_tx_signers")]
+    pub max_tx_signers: u32,
+    #[serde(rename = "max_multisig_signers")]
+    pub max_multisig_signers: u32,
 }
 
 impl module::Parameters for Parameters {
@@ -136,10 +148,7 @@ impl API for Module {
             ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).copied(),
         ) {
             (Some(gas_limit), Some(gas_used)) => {
-                let sum = match gas_used.overflowing_add(gas) {
-                    (new_gas_used, false) => new_gas_used,
-                    (_, true) => return Err(Error::GasOverflow),
-                };
+                let sum = gas_used.checked_add(gas).ok_or(Error::GasOverflow)?;
                 if sum > gas_limit {
                     return Err(Error::OutOfGas);
                 }
@@ -151,10 +160,9 @@ impl API for Module {
 
         let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
         let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
-        let batch_new_gas_used = match batch_gas_used.overflowing_add(gas) {
-            (batch_new_gas_used, false) => batch_new_gas_used,
-            (_, true) => return Err(Error::BatchGasOverflow),
-        };
+        let batch_new_gas_used = batch_gas_used
+            .checked_add(gas)
+            .ok_or(Error::BatchGasOverflow)?;
         if batch_new_gas_used > batch_gas_limit {
             return Err(Error::BatchOutOfGas);
         }
@@ -212,7 +220,25 @@ impl module::Module for Module {
     type Parameters = Parameters;
 }
 
-impl module::AuthHandler for Module {}
+impl module::AuthHandler for Module {
+    fn approve_unverified_tx(
+        ctx: &mut DispatchContext<'_>,
+        utx: &UnverifiedTransaction,
+    ) -> Result<(), Error> {
+        let params = Self::params(ctx.runtime_state());
+        if utx.1.len() > params.max_tx_signers as usize {
+            return Err(Error::TooManyAuth);
+        }
+        for auth_proof in &utx.1 {
+            if let AuthProof::Multisig(config) = auth_proof {
+                if config.len() > params.max_multisig_signers as usize {
+                    return Err(Error::MultisigTooManySigners);
+                }
+            }
+        }
+        Ok(())
+    }
+}
 
 impl module::MigrationHandler for Module {
     type Genesis = Genesis;

@@ -3,7 +3,7 @@ use oasis_core_runtime::common::cbor;
 use crate::{
     context::{Context, Mode},
     module,
-    module::Module,
+    module::{AuthHandler as _, Module as _},
     testing::{keys, mock},
     types::{token, transaction},
 };
@@ -20,6 +20,8 @@ fn test_use_gas() {
         ctx.runtime_state(),
         &super::Parameters {
             max_batch_gas: BLOCK_MAX_GAS,
+            max_tx_signers: 8,
+            max_multisig_signers: 8,
         },
     );
 
@@ -44,14 +46,13 @@ fn test_use_gas() {
 
     ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
         Core::use_gas(&mut tx_ctx, 1).unwrap();
-        Core::use_gas(&mut tx_ctx, u64::max_value()).expect_err("overflow should cause error");
+        Core::use_gas(&mut tx_ctx, u64::MAX).expect_err("overflow should cause error");
     });
 
     let mut big_tx = tx.clone();
-    big_tx.auth_info.fee.gas = u64::max_value();
+    big_tx.auth_info.fee.gas = u64::MAX;
     ctx.with_tx(big_tx, |mut tx_ctx, _call| {
-        Core::use_gas(&mut tx_ctx, u64::max_value())
-            .expect_err("batch overflow should cause error");
+        Core::use_gas(&mut tx_ctx, u64::MAX).expect_err("batch overflow should cause error");
     });
 
     ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
@@ -78,7 +79,9 @@ fn test_query_estimate_gas() {
     Core::set_params(
         ctx.runtime_state(),
         &super::Parameters {
-            max_batch_gas: u64::max_value(),
+            max_batch_gas: u64::MAX,
+            max_tx_signers: 8,
+            max_multisig_signers: 8,
         },
     );
 
@@ -92,11 +95,60 @@ fn test_query_estimate_gas() {
             signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0.into(), token::Denomination::NATIVE),
-                gas: u64::max_value(),
+                gas: u64::MAX,
             },
         },
     };
 
     let est = Core::query_estimate_gas(&mut ctx, tx).expect("query_estimate_gas should succeed");
     assert_eq!(est, MAX_GAS, "estimated gas should be correct");
+}
+
+#[test]
+fn test_approve_unverified_tx() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+    Core::set_params(
+        ctx.runtime_state(),
+        &super::Parameters {
+            max_batch_gas: u64::MAX,
+            max_tx_signers: 2,
+            max_multisig_signers: 2,
+        },
+    );
+    let dummy_bytes = b"you look, you die".to_vec();
+    Core::approve_unverified_tx(
+        &mut ctx,
+        &transaction::UnverifiedTransaction(
+            dummy_bytes.clone(),
+            vec![
+                transaction::AuthProof::Signature(dummy_bytes.clone().into()),
+                transaction::AuthProof::Multisig(vec![None, None]),
+            ],
+        ),
+    )
+    .expect("at max");
+    Core::approve_unverified_tx(
+        &mut ctx,
+        &transaction::UnverifiedTransaction(
+            dummy_bytes.clone(),
+            vec![
+                transaction::AuthProof::Signature(dummy_bytes.clone().into()),
+                transaction::AuthProof::Multisig(vec![None, None]),
+                transaction::AuthProof::Signature(dummy_bytes.clone().into()),
+            ],
+        ),
+    )
+    .expect_err("too many authentication slots");
+    Core::approve_unverified_tx(
+        &mut ctx,
+        &transaction::UnverifiedTransaction(
+            dummy_bytes.clone(),
+            vec![
+                transaction::AuthProof::Signature(dummy_bytes.clone().into()),
+                transaction::AuthProof::Multisig(vec![None, None, None]),
+            ],
+        ),
+    )
+    .expect_err("multisig too many signers");
 }

@@ -84,6 +84,7 @@ impl<R: Runtime> Dispatcher<R> {
 
     fn decode_tx(
         &self,
+        ctx: &mut DispatchContext<'_>,
         tx: &[u8],
     ) -> Result<types::transaction::Transaction, modules::core::Error> {
         // TODO: Check against transaction size limit.
@@ -91,6 +92,9 @@ impl<R: Runtime> Dispatcher<R> {
         // Deserialize transaction.
         let utx: types::transaction::UnverifiedTransaction =
             cbor::from_slice(&tx).map_err(|_| modules::core::Error::MalformedTransaction)?;
+
+        // Perform any checks before signature verification.
+        R::Modules::approve_unverified_tx(ctx, &utx)?;
 
         // Verify transaction signatures.
         // TODO: Support signature verification of the whole transaction batch.
@@ -137,7 +141,7 @@ impl<R: Runtime> Dispatcher<R> {
     }
 
     fn check_tx(&self, ctx: &mut DispatchContext<'_>, tx: &[u8]) -> Result<CheckTxResult, Error> {
-        let tx = match self.decode_tx(&tx) {
+        let tx = match self.decode_tx(ctx, &tx) {
             Ok(tx) => tx,
             Err(err) => {
                 return Ok(CheckTxResult {
@@ -183,7 +187,7 @@ impl<R: Runtime> Dispatcher<R> {
         //
         // Correct proposers should only include transactions which have passed check_tx.
         let tx = self
-            .decode_tx(&tx)
+            .decode_tx(ctx, &tx)
             .map_err(Error::MalformedTransactionInBatch)?;
 
         let dispatch_result = self.dispatch_tx(ctx, tx)?;

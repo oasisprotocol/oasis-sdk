@@ -10,18 +10,26 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 )
 
-// SignatureContextBase is the transction signature domain separation context base.
+// SignatureContextBase is the transaction signature domain separation context base.
 var SignatureContextBase = []byte("oasis-runtime-sdk/tx: v0")
 
 // LatestTransactionVersion is the latest transaction format version.
 const LatestTransactionVersion = 1
+
+// AuthProof is a container for data that authenticates a transaction.
+type AuthProof struct {
+	// Signature is for signature authentication.
+	Signature []byte `json:"signature,omitempty"`
+	// Multisig is for multisig authentication.
+	Multisig [][]byte `json:"multisig,omitempty"`
+}
 
 // UnverifiedTransaction is an unverified transaction.
 type UnverifiedTransaction struct {
 	_ struct{} `cbor:",toarray"`
 
 	Body       []byte
-	Signatures [][]byte
+	AuthProofs []AuthProof
 }
 
 // Verify verifies and deserializes the unverified transaction.
@@ -36,14 +44,29 @@ func (ut *UnverifiedTransaction) Verify(ctx signature.Context) (*Transaction, er
 	}
 
 	// Basic structure validation.
-	if len(ut.Signatures) != len(tx.AuthInfo.SignerInfo) {
-		return nil, fmt.Errorf("transaction: inconsistent number of signatures")
+	if len(ut.AuthProofs) != len(tx.AuthInfo.SignerInfo) {
+		return nil, fmt.Errorf("transaction: inconsistent number of auth proofs")
 	}
 
 	// Verify all signatures.
 	txCtx := ctx.New(SignatureContextBase)
-	for i, sig := range ut.Signatures {
-		if !tx.AuthInfo.SignerInfo[i].PublicKey.Verify(txCtx, ut.Body, sig) {
+	// We'll need at least one signature per proof, so we might as well preallocate that.
+	// Could be more though.
+	publicKeys := make([]PublicKey, 0, len(ut.AuthProofs))
+	signatures := make([][]byte, 0, len(ut.AuthProofs))
+	for i, ap := range ut.AuthProofs {
+		pks, sigs, err := tx.AuthInfo.SignerInfo[i].AddressSpec.Batch(ap)
+		if err != nil {
+			return nil, fmt.Errorf("transaction: auth proof %d batch: %w", i, err)
+		}
+		publicKeys = append(publicKeys, pks...)
+		signatures = append(signatures, sigs...)
+	}
+	for i, pk := range publicKeys {
+		if !pk.Verify(txCtx, ut.Body, signatures[i]) {
+			// If you're looking at the below error message: the numbering doesn't match up with the auth proof indices
+			// if the transaction has multisig auth proofs. You have to count up the included signatures inside the
+			// multisig auth proofs to find which one (first) failed.
 			return nil, fmt.Errorf("transaction: signature %d verification failed", i)
 		}
 	}
@@ -56,35 +79,61 @@ type TransactionSigner struct {
 	ut UnverifiedTransaction
 }
 
+func (ts *TransactionSigner) allocateProofs() {
+	if len(ts.ut.AuthProofs) == 0 {
+		ts.ut.AuthProofs = make([]AuthProof, len(ts.tx.AuthInfo.SignerInfo))
+
+		for i, si := range ts.tx.AuthInfo.SignerInfo {
+			if si.AddressSpec.Multisig != nil {
+				if len(ts.ut.AuthProofs[i].Multisig) == 0 {
+					ts.ut.AuthProofs[i].Multisig = make([][]byte, len(si.AddressSpec.Multisig.Signers))
+				}
+			}
+		}
+	}
+}
+
 // AppendSign signs the transaction and appends the signature.
 //
 // The signer must be specified in the AuthInfo.
 func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.Signer) error {
 	pk := signer.Public()
-	index := -1
+	any := false
 	for i, si := range ts.tx.AuthInfo.SignerInfo {
-		if !si.PublicKey.Equal(pk) {
-			continue
-		}
+		switch {
+		case si.AddressSpec.Signature != nil:
+			if !si.AddressSpec.Signature.Equal(pk) {
+				continue
+			}
 
-		index = i
-		break
+			any = true
+			ts.allocateProofs()
+			sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
+			if err != nil {
+				return fmt.Errorf("signer info %d: failed to sign transaction: %w", i, err)
+			}
+			ts.ut.AuthProofs[i].Signature = sig
+		case si.AddressSpec.Multisig != nil:
+			for j, mss := range si.AddressSpec.Multisig.Signers {
+				if !mss.PublicKey.Equal(pk) {
+					continue
+				}
+
+				any = true
+				ts.allocateProofs()
+				sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
+				if err != nil {
+					return fmt.Errorf("signer info %d: failed to sign transaction: %w", i, err)
+				}
+				ts.ut.AuthProofs[i].Multisig[j] = sig
+			}
+		default:
+			return fmt.Errorf("signer info %d: malformed AddressSpec", i)
+		}
 	}
-	if index == -1 {
+	if !any {
 		return fmt.Errorf("transaction: signer not found in AuthInfo")
 	}
-	if len(ts.ut.Signatures) == 0 {
-		ts.ut.Signatures = make([][]byte, len(ts.tx.AuthInfo.SignerInfo))
-	}
-	if len(ts.ut.Signatures) != len(ts.tx.AuthInfo.SignerInfo) {
-		return fmt.Errorf("transaction: inconsistent number of signature slots")
-	}
-
-	sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
-	if err != nil {
-		return fmt.Errorf("transaction: failed to sign transaction: %w", err)
-	}
-	ts.ut.Signatures[index] = sig
 	return nil
 }
 
@@ -113,11 +162,21 @@ func (t *Transaction) ValidateBasic() error {
 }
 
 // AppendSignerInfo appends a new transaction signer information to the transaction.
-func (t *Transaction) AppendSignerInfo(pk signature.PublicKey, nonce uint64) {
+func (t *Transaction) AppendSignerInfo(addressSpec AddressSpec, nonce uint64) {
 	t.AuthInfo.SignerInfo = append(t.AuthInfo.SignerInfo, SignerInfo{
-		PublicKey: PublicKey{pk},
-		Nonce:     nonce,
+		AddressSpec: addressSpec,
+		Nonce:       nonce,
 	})
+}
+
+// AppendAuthSignature appends a new transaction signer information with a signature address specification to the transaction.
+func (t *Transaction) AppendAuthSignature(pk signature.PublicKey, nonce uint64) {
+	t.AppendSignerInfo(AddressSpec{Signature: &PublicKey{PublicKey: pk}}, nonce)
+}
+
+// AppendAuthMultisig appends n ew transaction signer information with a multisig address specification to the transaction.
+func (t *Transaction) AppendAuthMultisig(config *MultisigConfig, nonce uint64) {
+	t.AppendSignerInfo(AddressSpec{Multisig: config}, nonce)
 }
 
 func (t *Transaction) PrepareForSigning() *TransactionSigner {
@@ -165,10 +224,43 @@ type Fee struct {
 	Gas    uint64    `json:"gas"`
 }
 
+// AddressSpec is common information that specifies an address as well as how to authenticate.
+type AddressSpec struct {
+	// Signature is for signature authentication.
+	Signature *PublicKey `json:"signature,omitempty"`
+	// Multisig is for multisig authentication.
+	Multisig *MultisigConfig `json:"multisig,omitempty"`
+}
+
+// Address derives the address.
+func (as *AddressSpec) Address() (Address, error) {
+	switch {
+	case as.Signature != nil:
+		return NewAddress(as.Signature), nil
+	case as.Multisig != nil:
+		return NewAddressFromMultisig(as.Multisig), nil
+	default:
+		return Address{}, fmt.Errorf("malformed AddressSpec")
+	}
+}
+
+// Batch checks that the address specification and the authentication proof are acceptable.
+// Returns vectors of public keys and signatures for batch verification of included signatures.
+func (as *AddressSpec) Batch(ap AuthProof) ([]PublicKey, [][]byte, error) {
+	switch {
+	case as.Signature != nil && ap.Signature != nil:
+		return []PublicKey{*as.Signature}, [][]byte{ap.Signature}, nil
+	case as.Multisig != nil && ap.Multisig != nil:
+		return as.Multisig.Batch(ap.Multisig)
+	default:
+		return nil, nil, fmt.Errorf("malformed AddressSpec and AuthProof pair")
+	}
+}
+
 // SignerInfo contains transaction signer information.
 type SignerInfo struct {
-	PublicKey PublicKey `json:"pub"`
-	Nonce     uint64    `json:"nonce"`
+	AddressSpec AddressSpec `json:"address_spec"`
+	Nonce       uint64      `json:"nonce"`
 }
 
 // CallResult is the method call result.

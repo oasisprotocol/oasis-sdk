@@ -98,7 +98,7 @@ pub trait Context {
     /// Only present if this is a transaction processing context.
     fn tx_caller_address(&self) -> Option<Address> {
         self.tx_auth_info()
-            .map(|info| Address::from_pk(&info.signer_info[0].public_key))
+            .map(|info| info.signer_info[0].address_spec.address())
     }
 
     /// Emits an event.

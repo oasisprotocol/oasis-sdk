@@ -19,7 +19,9 @@ use crate::{
     module,
     module::Module as _,
     modules,
-    types::{address::Address, message::MessageEventHookInvocation, token},
+    types::{
+        address::Address, message::MessageEventHookInvocation, token, transaction::AddressSpec,
+    },
 };
 
 #[cfg(test)]
@@ -240,9 +242,9 @@ impl API for Module {
             .tx_auth_info()
             .expect("should be called with a transaction ctx")
             .signer_info[0]
-            .public_key
+            .address_spec
         {
-            PublicKey::Ed25519(_) => Ok(()),
+            AddressSpec::Signature(PublicKey::Ed25519(_)) => Ok(()),
             _ => Err(Error::ConsensusIncompatibleSigner),
         }
     }

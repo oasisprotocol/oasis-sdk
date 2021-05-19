@@ -81,7 +81,7 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key []byte, val
 		Key:   key,
 		Value: value,
 	})
-	tx.AppendSignerInfo(signer.Public(), nonce)
+	tx.AppendAuthSignature(signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
 	stx.AppendSign(chainCtx, signer)
 
@@ -109,7 +109,7 @@ func kvRemove(rtc client.RuntimeClient, signer signature.Signer, key []byte) err
 	}, "keyvalue.Remove", kvKey{
 		Key: key,
 	})
-	tx.AppendSignerInfo(signer.Public(), nonce)
+	tx.AppendAuthSignature(signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
 	stx.AppendSign(chainCtx, signer)
 
@@ -370,7 +370,7 @@ func KVTransferTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runti
 		To:     testing.Bob.Address,
 		Amount: types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination),
 	})
-	tx.AppendSignerInfo(testing.Alice.Signer.Public(), nonce)
+	tx.AppendAuthSignature(testing.Alice.Signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
 	stx.AppendSign(chainCtx, testing.Alice.Signer)
 
@@ -431,7 +431,7 @@ func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeCl
 		To:     testing.Alice.Address,
 		Amount: types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination),
 	})
-	tx.AppendSignerInfo(testing.Dave.Signer.Public(), nonce)
+	tx.AppendAuthSignature(testing.Dave.Signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
 	stx.AppendSign(chainCtx, testing.Dave.Signer)
 
@@ -463,6 +463,61 @@ func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeCl
 		}
 	} else {
 		return fmt.Errorf("Alice's account is missing native denomination balance")
+	}
+
+	return nil
+}
+
+func KVMultisigTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	signerA := testing.Alice.Signer
+	signerB := testing.Bob.Signer
+	config := types.MultisigConfig{
+		Signers: []types.MultisigSigner{
+			{PublicKey: types.PublicKey{PublicKey: signerA.Public()}, Weight: 1},
+			{PublicKey: types.PublicKey{PublicKey: signerB.Public()}, Weight: 1},
+		},
+		Threshold: 2,
+	}
+	addr := types.NewAddressFromMultisig(&config)
+
+	ctx := context.Background()
+	ac := accounts.NewV1(rtc)
+
+	chainCtx, err := GetChainContext(ctx, rtc)
+	if err != nil {
+		return err
+	}
+
+	nonce1, err := ac.Nonce(ctx, client.RoundLatest, addr)
+	if err != nil {
+		return err
+	}
+
+	tx := types.NewTransaction(&types.Fee{
+		Gas: 200,
+	}, "keyvalue.Insert", kvKeyValue{
+		Key:   []byte("from-KVMultisigTest"),
+		Value: []byte("hi"),
+	})
+	tx.AppendAuthMultisig(&config, nonce1)
+	stx := tx.PrepareForSigning()
+	if err = stx.AppendSign(chainCtx, signerA); err != nil {
+		return err
+	}
+	if err = stx.AppendSign(chainCtx, signerB); err != nil {
+		return err
+	}
+	_, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction())
+	if err != nil {
+		return err
+	}
+
+	nonce2, err := ac.Nonce(ctx, client.RoundLatest, addr)
+	if err != nil {
+		return err
+	}
+	if nonce2 == nonce1 {
+		return fmt.Errorf("no nonce change")
 	}
 
 	return nil

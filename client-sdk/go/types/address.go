@@ -3,6 +3,7 @@ package types
 import (
 	"encoding"
 
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/address"
 	"github.com/oasisprotocol/oasis-core/go/common/encoding/bech32"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
@@ -18,6 +19,8 @@ var (
 	AddressV0Ed25519Context = staking.AddressV0Context
 	// AddressV0Secp256k1Context is the unique context for v0 Ed25519-based addresses.
 	AddressV0Secp256k1Context = address.NewContext("oasis-runtime-sdk/address: secp256k1", 0)
+	// AddressV0MultisigContext is the unique context for v0 multisig addresses.
+	AddressV0MultisigContext = address.NewContext("oasis-runtime-sdk/address: multisig", 0)
 	// AddressBech32HRP is the unique human readable part of Bech32 encoded
 	// staking account addresses.
 	AddressBech32HRP = staking.AddressBech32HRP
@@ -93,4 +96,9 @@ func NewAddressFromBech32(data string) (a Address) {
 		panic(err)
 	}
 	return
+}
+
+// NewAddressFromMultisig creates a new address from the given multisig configuration.
+func NewAddressFromMultisig(config *MultisigConfig) Address {
+	return (Address)(address.NewAddress(AddressV0MultisigContext, cbor.Marshal(config)))
 }

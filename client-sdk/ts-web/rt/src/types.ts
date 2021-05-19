@@ -71,11 +71,39 @@ export interface RewardsRewardStep {
 }
 
 /**
+ * Common information that specifies an address as well as how to authenticate.
+ */
+export interface AddressSpec {
+    /**
+     * For _signature_ authentication.
+     */
+    signature?: PublicKey;
+    /**
+     * For _multisig_ authentication.
+     */
+    multisig?: MultisigConfig;
+}
+
+/**
  * Transaction authentication information.
  */
 export interface AuthInfo {
     si: SignerInfo[];
     fee: Fee;
+}
+
+/**
+ * A container for data that authenticates a transaction.
+ */
+export interface AuthProof {
+    /**
+     * For _signature_ authentication.
+     */
+    signature?: Uint8Array;
+    /**
+     * For _multisig_ authentication.
+     */
+    multisig?: Uint8Array[];
 }
 
 /**
@@ -114,6 +142,36 @@ export interface Fee {
 }
 
 /**
+ * A multisig configuration.
+ * A set of signers with total "weight" greater than or equal to a "threshold" can authenticate
+ * for the configuration.
+ */
+export interface MultisigConfig {
+    /**
+     * The signers.
+     */
+    signers: MultisigSigner[];
+    /**
+     * The threshold.
+     */
+    threshold: oasis.types.longnum;
+}
+
+/**
+ * One of the signers in a multisig configuration.
+ */
+export interface MultisigSigner {
+    /**
+     * The public key of the signer.
+     */
+    public_key: PublicKey;
+    /**
+     * The weight of the signer.
+     */
+    weight: oasis.types.longnum;
+}
+
+/**
  * A public key used for signing.
  */
 export interface PublicKey {
@@ -125,7 +183,7 @@ export interface PublicKey {
  * Transaction signer information.
  */
 export interface SignerInfo {
-    pub: PublicKey;
+    address_spec: AddressSpec;
     nonce: oasis.types.longnum;
 }
 
@@ -140,7 +198,7 @@ export interface Transaction extends oasis.types.CBORVersioned {
 /**
  * An unverified signed transaction.
  */
-export type UnverifiedTransaction = [body: Uint8Array, signatures: Uint8Array[]];
+export type UnverifiedTransaction = [body: Uint8Array, authProofs: AuthProof[]];
 
 /**
  * Consensus deposit call.

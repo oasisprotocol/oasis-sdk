@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"math/bits"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
@@ -70,4 +71,71 @@ func (pk *PublicKey) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	return pk.unmarshal(&spk)
+}
+
+// MultisigSigner is one of the signers in a multisig configuration.
+type MultisigSigner struct {
+	PublicKey PublicKey `json:"public_key"`
+	Weight    uint64    `json:"weight"`
+}
+
+// MultisigConfig is a multisig configuration.
+// A set of signers with total "weight" greater than or equal to a "threshold" can authenticate
+// for the configuration.
+type MultisigConfig struct {
+	Signers   []MultisigSigner `json:"signers"`
+	Threshold uint64           `json:"threshold"`
+}
+
+// ValidateBasic performs some sanity checks. This looks at the configuration only. There is no cryptographic
+// verification of any signatures.
+func (mc *MultisigConfig) ValidateBasic() error {
+	if mc.Threshold == 0 {
+		return fmt.Errorf("zero threshold")
+	}
+	var total uint64
+	encounteredKeys := make(map[PublicKey]bool)
+	for i, signer := range mc.Signers {
+		if encounteredKeys[signer.PublicKey] {
+			return fmt.Errorf("signer %d duplicated", i)
+		}
+		encounteredKeys[signer.PublicKey] = true
+		if signer.Weight == 0 {
+			return fmt.Errorf("signer %d zero weight", i)
+		}
+		newTotal, carry := bits.Add64(total, signer.Weight, 0)
+		if carry != 0 {
+			return fmt.Errorf("weight overflow")
+		}
+		total = newTotal
+	}
+	if total < mc.Threshold {
+		return fmt.Errorf("impossible threshold")
+	}
+	return nil
+}
+
+// Batch checks that enough signers have signed and returns vectors of public keys and signatures
+// for batch verification of those signatures. This internally calls `ValidateBasic`.
+func (mc *MultisigConfig) Batch(signatureSet [][]byte) ([]PublicKey, [][]byte, error) {
+	if err := mc.ValidateBasic(); err != nil {
+		return nil, nil, err
+	}
+	if len(signatureSet) != len(mc.Signers) {
+		return nil, nil, fmt.Errorf("mismatched signature set length")
+	}
+	var total uint64
+	var publicKeys []PublicKey
+	var signatures [][]byte
+	for i := 0; i < len(mc.Signers); i++ {
+		if signatureSet[i] != nil {
+			total += mc.Signers[i].Weight
+			publicKeys = append(publicKeys, mc.Signers[i].PublicKey)
+			signatures = append(signatures, signatureSet[i])
+		}
+	}
+	if total < mc.Threshold {
+		return nil, nil, fmt.Errorf("insufficient weight")
+	}
+	return publicKeys, signatures, nil
 }
