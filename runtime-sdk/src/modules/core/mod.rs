@@ -8,10 +8,7 @@ use crate::{
     context::{Context, DispatchContext},
     error,
     module::{self, Module as _, QueryMethodInfo},
-    types::{
-        transaction,
-        transaction::{AuthProof, UnverifiedTransaction},
-    },
+    types::transaction::{self, AuthProof, UnverifiedTransaction},
 };
 
 #[cfg(test)]
