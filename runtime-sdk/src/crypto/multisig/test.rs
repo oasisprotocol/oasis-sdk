@@ -3,7 +3,7 @@ use crate::{crypto::signature::Signature, testing::keys};
 use super::{Config, Signer};
 
 #[test]
-fn test_config_verify() {
+fn test_config_validate_basic() {
     Config {
         signers: vec![Signer {
             public_key: keys::alice::pk(),
@@ -11,7 +11,7 @@ fn test_config_verify() {
         }],
         threshold: 0,
     }
-    .verify()
+    .validate_basic()
     .expect_err("zero threshold");
     Config {
         signers: vec![
@@ -26,7 +26,7 @@ fn test_config_verify() {
         ],
         threshold: 1,
     }
-    .verify()
+    .validate_basic()
     .expect_err("duplicate key");
     Config {
         signers: vec![
@@ -41,7 +41,7 @@ fn test_config_verify() {
         ],
         threshold: 1,
     }
-    .verify()
+    .validate_basic()
     .expect_err("zero weight key");
     Config {
         signers: vec![
@@ -56,7 +56,7 @@ fn test_config_verify() {
         ],
         threshold: 1,
     }
-    .verify()
+    .validate_basic()
     .expect_err("weight overflow");
     Config {
         signers: vec![
@@ -71,7 +71,7 @@ fn test_config_verify() {
         ],
         threshold: 3,
     }
-    .verify()
+    .validate_basic()
     .expect_err("impossible threshold");
     Config {
         signers: vec![
@@ -86,7 +86,7 @@ fn test_config_verify() {
         ],
         threshold: 2,
     }
-    .verify()
+    .validate_basic()
     .expect("this one should be fine");
 }
 

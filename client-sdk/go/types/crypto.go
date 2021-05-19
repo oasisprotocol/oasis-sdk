@@ -87,8 +87,9 @@ type MultisigConfig struct {
 	Threshold uint64           `json:"threshold"`
 }
 
-// Verify performs some sanity checks.
-func (mc *MultisigConfig) Verify() error {
+// ValidateBasic performs some sanity checks. This looks at the configuration only. There is no cryptographic
+// verification of any signatures.
+func (mc *MultisigConfig) ValidateBasic() error {
 	if mc.Threshold == 0 {
 		return fmt.Errorf("zero threshold")
 	}
@@ -115,9 +116,9 @@ func (mc *MultisigConfig) Verify() error {
 }
 
 // Batch checks that enough signers have signed and returns vectors of public keys and signatures
-// for batch verification of those signatures. This internally calls `Verify`.
+// for batch verification of those signatures. This internally calls `ValidateBasic`.
 func (mc *MultisigConfig) Batch(signatureSet [][]byte) ([]PublicKey, [][]byte, error) {
-	if err := mc.Verify(); err != nil {
+	if err := mc.ValidateBasic(); err != nil {
 		return nil, nil, err
 	}
 	if len(signatureSet) != len(mc.Signers) {

@@ -50,8 +50,9 @@ pub struct Config {
 }
 
 impl Config {
-    /// Performs some sanity checks.
-    pub fn verify(&self) -> Result<(), Error> {
+    /// Performs some sanity checks. This looks at the configuration only. There is no cryptographic
+    /// verification of any signatures.
+    pub fn validate_basic(&self) -> Result<(), Error> {
         if self.threshold == 0 {
             return Err(Error::InvalidConfig);
         }
@@ -84,7 +85,7 @@ impl Config {
         &self,
         signature_set: &SignatureSet,
     ) -> Result<(Vec<PublicKey>, Vec<Signature>), Error> {
-        self.verify()?;
+        self.validate_basic()?;
         if signature_set.len() != self.signers.len() {
             return Err(Error::InvalidSignatureSet);
         }

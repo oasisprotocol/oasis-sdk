@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMultisigConfigVerify(t *testing.T) {
+func TestMultisigConfigValidateBasic(t *testing.T) {
 	require := require.New(t)
 
 	dummyPKA := PublicKey{PublicKey: ed25519.NewPublicKey("CgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")}
@@ -22,7 +22,7 @@ func TestMultisigConfigVerify(t *testing.T) {
 		},
 		Threshold: 0,
 	}
-	require.Error(config.Verify(), "zero threshold")
+	require.Error(config.ValidateBasic(), "zero threshold")
 	config = MultisigConfig{
 		Signers: []MultisigSigner{
 			{
@@ -36,7 +36,7 @@ func TestMultisigConfigVerify(t *testing.T) {
 		},
 		Threshold: 1,
 	}
-	require.Error(config.Verify(), "duplicate key")
+	require.Error(config.ValidateBasic(), "duplicate key")
 	config = MultisigConfig{
 		Signers: []MultisigSigner{
 			{
@@ -50,10 +50,10 @@ func TestMultisigConfigVerify(t *testing.T) {
 		},
 		Threshold: 1,
 	}
-	require.Error(config.Verify(), "zero weight key")
+	require.Error(config.ValidateBasic(), "zero weight key")
 }
 
-func TestMultisigConfigVerify2(t *testing.T) {
+func TestMultisigConfigValidateBasic2(t *testing.T) {
 	require := require.New(t)
 
 	dummyPKA := PublicKey{PublicKey: ed25519.NewPublicKey("CgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")}
@@ -71,7 +71,7 @@ func TestMultisigConfigVerify2(t *testing.T) {
 		},
 		Threshold: 1,
 	}
-	require.Error(config.Verify(), "weight overflow")
+	require.Error(config.ValidateBasic(), "weight overflow")
 	config = MultisigConfig{
 		Signers: []MultisigSigner{
 			{
@@ -85,7 +85,7 @@ func TestMultisigConfigVerify2(t *testing.T) {
 		},
 		Threshold: 3,
 	}
-	require.Error(config.Verify(), "impossible threshold")
+	require.Error(config.ValidateBasic(), "impossible threshold")
 	config = MultisigConfig{
 		Signers: []MultisigSigner{
 			{
@@ -99,7 +99,7 @@ func TestMultisigConfigVerify2(t *testing.T) {
 		},
 		Threshold: 2,
 	}
-	require.NoError(config.Verify(), "this one should be fine")
+	require.NoError(config.ValidateBasic(), "this one should be fine")
 }
 
 func TestMultisigConfigBatch(t *testing.T) {
