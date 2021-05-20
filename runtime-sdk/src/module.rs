@@ -168,6 +168,14 @@ pub trait AuthHandler {
 
 #[impl_for_tuples(30)]
 impl AuthHandler for Tuple {
+    fn approve_unverified_tx(
+        ctx: &mut DispatchContext<'_>,
+        utx: &UnverifiedTransaction,
+    ) -> Result<(), modules::core::Error> {
+        for_tuples!( #( Tuple::approve_unverified_tx(ctx, utx)?; )* );
+        Ok(())
+    }
+
     fn authenticate_tx(
         ctx: &mut DispatchContext<'_>,
         tx: &Transaction,

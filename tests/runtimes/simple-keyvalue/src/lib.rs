@@ -8,6 +8,8 @@ use oasis_runtime_sdk::{
 };
 
 pub mod keyvalue;
+#[cfg(test)]
+mod test;
 
 /// Simple keyvalue runtime.
 pub struct Runtime;
