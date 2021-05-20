@@ -8,7 +8,7 @@ use crate::{
     context::{Context, DispatchContext},
     error,
     module::{self, Module as _, QueryMethodInfo},
-    types::transaction::{self, AuthProof, UnverifiedTransaction},
+    types::transaction::{self, AddressSpec, AuthProof, Transaction, UnverifiedTransaction},
 };
 
 #[cfg(test)]
@@ -82,6 +82,16 @@ pub enum Error {
     MultisigTooManySigners,
 }
 
+/// Gas costs.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GasCosts {
+    #[serde(rename = "auth_signature")]
+    pub auth_signature: u64,
+    #[serde(rename = "auth_multisig_signer")]
+    pub auth_multisig_signer: u64,
+}
+
 /// Parameters for the core module.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -92,6 +102,8 @@ pub struct Parameters {
     pub max_tx_signers: u32,
     #[serde(rename = "max_multisig_signers")]
     pub max_multisig_signers: u32,
+    #[serde(rename = "gas_costs")]
+    pub gas_costs: GasCosts,
 }
 
 impl module::Parameters for Parameters {
@@ -236,6 +248,35 @@ impl module::AuthHandler for Module {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn authenticate_tx(ctx: &mut DispatchContext<'_>, tx: &Transaction) -> Result<(), Error> {
+        let mut num_signature: u64 = 0;
+        let mut num_multisig_signer: u64 = 0;
+        for si in &tx.auth_info.signer_info {
+            match &si.address_spec {
+                AddressSpec::Signature(_) => {
+                    num_signature = num_signature.checked_add(1).ok_or(Error::GasOverflow)?;
+                }
+                AddressSpec::Multisig(config) => {
+                    num_multisig_signer = num_multisig_signer
+                        .checked_add(config.signers.len() as u64)
+                        .ok_or(Error::GasOverflow)?;
+                }
+            }
+        }
+        let params = Self::params(ctx.runtime_state());
+        let total = num_signature
+            .checked_mul(params.gas_costs.auth_signature)
+            .ok_or(Error::GasOverflow)?
+            .checked_add(
+                num_multisig_signer
+                    .checked_mul(params.gas_costs.auth_multisig_signer)
+                    .ok_or(Error::GasOverflow)?,
+            )
+            .ok_or(Error::GasOverflow)?;
+        Self::use_gas(ctx, total)?;
         Ok(())
     }
 }

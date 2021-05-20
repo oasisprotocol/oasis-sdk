@@ -22,6 +22,7 @@ fn test_use_gas() {
             max_batch_gas: BLOCK_MAX_GAS,
             max_tx_signers: 8,
             max_multisig_signers: 8,
+            gas_costs: Default::default(),
         },
     );
 
@@ -82,6 +83,7 @@ fn test_query_estimate_gas() {
             max_batch_gas: u64::MAX,
             max_tx_signers: 8,
             max_multisig_signers: 8,
+            gas_costs: Default::default(),
         },
     );
 
@@ -114,6 +116,7 @@ fn test_approve_unverified_tx() {
             max_batch_gas: u64::MAX,
             max_tx_signers: 2,
             max_multisig_signers: 2,
+            gas_costs: Default::default(),
         },
     );
     let dummy_bytes = b"you look, you die".to_vec();
