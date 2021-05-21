@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"google.golang.org/grpc"
@@ -16,6 +17,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -76,12 +78,19 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key []byte, val
 	}
 
 	tx := types.NewTransaction(&types.Fee{
-		Gas:    200,
+		Gas:    math.MaxUint64,
 	}, "keyvalue.Insert", kvKeyValue{
 		Key:   key,
 		Value: value,
 	})
 	tx.AppendAuthSignature(signer.Public(), nonce)
+
+	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
+	if err != nil {
+		return err
+	}
+	tx.AuthInfo.Fee.Gas = gas
+
 	stx := tx.PrepareForSigning()
 	stx.AppendSign(chainCtx, signer)
 
@@ -105,11 +114,18 @@ func kvRemove(rtc client.RuntimeClient, signer signature.Signer, key []byte) err
 	}
 
 	tx := types.NewTransaction(&types.Fee{
-		Gas:    100,
+		Gas:    math.MaxUint64,
 	}, "keyvalue.Remove", kvKey{
 		Key: key,
 	})
 	tx.AppendAuthSignature(signer.Public(), nonce)
+
+	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
+	if err != nil {
+		return err
+	}
+	tx.AuthInfo.Fee.Gas = gas
+
 	stx := tx.PrepareForSigning()
 	stx.AppendSign(chainCtx, signer)
 
@@ -362,7 +378,7 @@ func KVTransferTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runti
 
 	log.Info("transferring 100 units from Alice to Bob")
 	tx := types.NewTransaction(&types.Fee{
-		Gas:    100,
+		Gas:    200,
 	}, "accounts.Transfer", struct {
 		To     types.Address   `json:"to"`
 		Amount types.BaseUnits `json:"amount"`
@@ -423,7 +439,7 @@ func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeCl
 
 	log.Info("transferring 10 units from Dave to Alice")
 	tx := types.NewTransaction(&types.Fee{
-		Gas:    100,
+		Gas:    200,
 	}, "accounts.Transfer", struct {
 		To     types.Address   `json:"to"`
 		Amount types.BaseUnits `json:"amount"`
@@ -494,7 +510,7 @@ func KVMultisigTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runti
 	}
 
 	tx := types.NewTransaction(&types.Fee{
-		Gas: 200,
+		Gas: 300,
 	}, "keyvalue.Insert", kvKeyValue{
 		Key:   []byte("from-KVMultisigTest"),
 		Value: []byte("hi"),
