@@ -4,6 +4,10 @@
         "noImplicitAny": true,
         "module": "CommonJS",
         "target": "ES2020",
-        "declaration": true
-    }
+        "declaration": true,
+        "resolveJsonModule": true
+    },
+    "exclude": [
+        "test"
+    ]
 }

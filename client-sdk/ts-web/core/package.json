@@ -9,11 +9,13 @@
     "scripts": {
         "prepare": "tsc",
         "check-playground": "cd playground && tsc -p jsconfig.json",
-        "playground": "cd playground && webpack s -c webpack.config.js"
+        "playground": "cd playground && webpack s -c webpack.config.js",
+        "test": "jest"
     },
     "dependencies": {
         "bech32": "^1.1.4",
         "cborg": "^1.1.2",
+        "bip39": "^3.0.4",
         "grpc-web": "^1.2.1",
         "js-sha512": "^0.8.0",
         "tweetnacl": "^1.0.3"

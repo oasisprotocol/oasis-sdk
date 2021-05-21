@@ -7,6 +7,7 @@ export * as control from './control';
 export * as genesis from './genesis';
 export * as governance from './governance';
 export * as hash from './hash';
+export * as hdkey from './hdkey';
 export * as keymanager from './keymanager';
 export * as misc from './misc';
 export * as quantity from './quantity';

@@ -1,0 +1,742 @@
+[
+  {
+    "kind": "standard account key generation",
+    "bip39_mnemonic": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    "bip39_passphrase": "",
+    "bip39_seed": "5eb00bbddcf069084889a8ab9155568165f5c453ccb85e70811aaed6f6da5fc19a5ac40b389cd370d086206dec8aa6c43daea6690f20ad3d8d48b2d2ce9e38e4",
+    "oasis_accounts": [
+      {
+        "bip32_path": "m/44'/474'/0'",
+        "private_key": "fb181e94e95cc6bedd2da03e6c4aca9951053f3e9865945dbc8975a6afd217c3ad55bbb7c192b8ecfeb6ad18bbd7681c0923f472d5b0c212fbde33008005ad61",
+        "public_key": "ad55bbb7c192b8ecfeb6ad18bbd7681c0923f472d5b0c212fbde33008005ad61",
+        "address": "oasis1qqx0wgxjwlw3jwatuwqj6582hdm9rjs4pcnvzz66"
+      },
+      {
+        "bip32_path": "m/44'/474'/1'",
+        "private_key": "1792482bcb001f45bc8ab15436e62d60fe3eb8c86e8944bfc12da4dc67a5c89b73fd7c51a0f059ea34d8dca305e0fdb21134ca32216ca1681ae1d12b3d350e16",
+        "public_key": "73fd7c51a0f059ea34d8dca305e0fdb21134ca32216ca1681ae1d12b3d350e16",
+        "address": "oasis1qr4xfjmmfx7zuyvskjw9jl3nxcp6a48e8v5e27ty"
+      },
+      {
+        "bip32_path": "m/44'/474'/2'",
+        "private_key": "765be01f40c1b78dd807e03a5099220c851cfe55870ab082be2345d63ffb9aa40f85ea84b81abded443be6ab3e16434cdddebca6e12ea27560a6ed65ff1998e0",
+        "public_key": "0f85ea84b81abded443be6ab3e16434cdddebca6e12ea27560a6ed65ff1998e0",
+        "address": "oasis1qqtdpw7jez243dnvmzfrhvgkm8zpndssvuwm346d"
+      },
+      {
+        "bip32_path": "m/44'/474'/3'",
+        "private_key": "759b3c2af3d7129072666677b37e9e7b6d22c8bbf634816627e1704f596f60c411ebdac05bfa37b746692733f15a02be9842b29088272354012417a215666b0e",
+        "public_key": "11ebdac05bfa37b746692733f15a02be9842b29088272354012417a215666b0e",
+        "address": "oasis1qqs7wl20gfppe2krdy3tm4298yt9gftxpc9j27z2"
+      },
+      {
+        "bip32_path": "m/44'/474'/4'",
+        "private_key": "db77a8a8508fd77083ba63f31b0a348441d4823e6ba73b65f354a93cf789358d8753c5da6085e6dbf5969773d27b08ee05eddcb3e11d570aaadf0f42036e69b1",
+        "public_key": "8753c5da6085e6dbf5969773d27b08ee05eddcb3e11d570aaadf0f42036e69b1",
+        "address": "oasis1qq8neyfkydj874tvs6ksljlmtxgw3plkkgf69j4w"
+      },
+      {
+        "bip32_path": "m/44'/474'/5'",
+        "private_key": "318e1fba7d83ca3ea57b0f45377e77391479ec38bfb2236a2842fe1b7a624e8800e1a8016629f2882bca2174f29033ec2a57747cd9d3c27f49cc6e11e38ee7bc",
+        "public_key": "00e1a8016629f2882bca2174f29033ec2a57747cd9d3c27f49cc6e11e38ee7bc",
+        "address": "oasis1qrdjslqdum7wwehz3uaw6t6xkpth0a9n8clsu6xq"
+      },
+      {
+        "bip32_path": "m/44'/474'/6'",
+        "private_key": "63a7f716e1994f7a8ab80f8acfae4c28c21af6b2f3084756b09651f4f4ee38606b85d0a8a9747faac85233ad5e4501b2a6862a4c02a46a0b7ea699cf2bd38f98",
+        "public_key": "6b85d0a8a9747faac85233ad5e4501b2a6862a4c02a46a0b7ea699cf2bd38f98",
+        "address": "oasis1qzlt62g85303qcrlm7s2wx2z8mxkr5v0yg5me0z3"
+      },
+      {
+        "bip32_path": "m/44'/474'/7'",
+        "private_key": "34af69924c04d75c79bd120e03d667ff6287ab602f9285bb323667ddf9f25c974f49a7672eeadbf78f910928e3d592d17f1e14964693cfa2afd94b79f0d49f48",
+        "public_key": "4f49a7672eeadbf78f910928e3d592d17f1e14964693cfa2afd94b79f0d49f48",
+        "address": "oasis1qzw2gd3qq8nse6648df32zxvsryvljeyyyl3cxma"
+      },
+      {
+        "bip32_path": "m/44'/474'/8'",
+        "private_key": "aa5242e7efe8dee05c21192766a11c46531f500ff7c0cc29ed59523c5e618792c0a24bf07953520f21c1c25882d9dbf00d24d0499be443fdcf07f2da9601d3e5",
+        "public_key": "c0a24bf07953520f21c1c25882d9dbf00d24d0499be443fdcf07f2da9601d3e5",
+        "address": "oasis1qqzjkx9u549r87ctv7x7t0un29vww6k6hckeuvtm"
+      },
+      {
+        "bip32_path": "m/44'/474'/9'",
+        "private_key": "b661567dcb9b5290889e110b0e9814e72d347c3a3bad2bafe2969637541451e5da8c9830655103c726ff80a4ac2f05a7e0b948a1986734a4f63b3e658da76c66",
+        "public_key": "da8c9830655103c726ff80a4ac2f05a7e0b948a1986734a4f63b3e658da76c66",
+        "address": "oasis1qpawhwugutd48zu4rzjdcgarcucxydedgq0uljkj"
+      },
+      {
+        "bip32_path": "m/44'/474'/2147483647'",
+        "private_key": "cc05cca118f3f26f05a0ff8e2bf5e232eede9978b7736ba10c3265870229efb19e7c2b2d03265ce4ea175e3664a678182548a7fc6db04801513cff7c98c8f151",
+        "public_key": "9e7c2b2d03265ce4ea175e3664a678182548a7fc6db04801513cff7c98c8f151",
+        "address": "oasis1qq7895v02vh40yc2dqfxhldww7wxsky0wgfdenrv"
+      }
+    ]
+  },
+  {
+    "kind": "standard account key generation",
+    "bip39_mnemonic": "equip will roof matter pink blind book anxiety banner elbow sun young",
+    "bip39_passphrase": "",
+    "bip39_seed": "ed2f664e65b5ef0dd907ae15a2788cfc98e41970bc9fcb46f5900f6919862075e721f37212304a56505dab99b001cc8907ef093b7c5016a46b50c01cc3ec1cac",
+    "oasis_accounts": [
+      {
+        "bip32_path": "m/44'/474'/0'",
+        "private_key": "4e9ca1a4c2ed90c90da93ea181557ef9f465f444c0b7de35daeb218f9390d98545601f761af17dba50243529e629732f1c58d08ffddaa8491238540475729d85",
+        "public_key": "45601f761af17dba50243529e629732f1c58d08ffddaa8491238540475729d85",
+        "address": "oasis1qqjkrr643qv7yzem6g4m8rrtceh42n46usfscpcf"
+      },
+      {
+        "bip32_path": "m/44'/474'/1'",
+        "private_key": "2d0d2e75a13fd9dc423a2db8dfc1db6ebacd53f22c8a7eeb269086ec3b443eb627ed04a3c0dcec6591c001e4ea307d65cbd712cb90d85ab7703c35eee07a77dd",
+        "public_key": "27ed04a3c0dcec6591c001e4ea307d65cbd712cb90d85ab7703c35eee07a77dd",
+        "address": "oasis1qp42qp8d5k8pgekvzz0ld47k8ewvppjtmqg7t5kz"
+      },
+      {
+        "bip32_path": "m/44'/474'/2'",
+        "private_key": "351749392b02c6b7a5053bc678e71009b4fb07c37a67b44558064dc63b2efd9219456a3f0cf3f4cc5e6ce52def57d92bb3c5a651fa9626b246cfec07abc28724",
+        "public_key": "19456a3f0cf3f4cc5e6ce52def57d92bb3c5a651fa9626b246cfec07abc28724",
+        "address": "oasis1qqnwwhj4qvtap422ck7qjxf7wm89tgjhwczpu0f3"
+      },
+      {
+        "bip32_path": "m/44'/474'/3'",
+        "private_key": "ebc13ccb62142ed5b600f398270801f8f80131b225feb278d42982ce314f896292549046214fdb4729bf7a6ee4a3bbd0f463c476acc933b2c7cce084509abee4",
+        "public_key": "92549046214fdb4729bf7a6ee4a3bbd0f463c476acc933b2c7cce084509abee4",
+        "address": "oasis1qp36crawwyk0gnfyf0epcsngnpuwrz0mtu8qzu2f"
+      },
+      {
+        "bip32_path": "m/44'/474'/4'",
+        "private_key": "664b95ad8582831fb787afefd0febdddcf03343cc1ca5aa86057477e0f22c93b331288192d442d3a32e239515b4c019071c57ee89f91942923dd4c1535db096c",
+        "public_key": "331288192d442d3a32e239515b4c019071c57ee89f91942923dd4c1535db096c",
+        "address": "oasis1qz8d2zptvf44y049g9dtyqya4g0jcqxmjsf9pqa3"
+      },
+      {
+        "bip32_path": "m/44'/474'/5'",
+        "private_key": "257600bfccc21e0bc772f4d1dcfb2834805e07959ad7bd586e7deec4a320bfcecbbfef21f0833744b3504a9860b42cb0bb11e2eb042a8b83e3ceb91fe0fca096",
+        "public_key": "cbbfef21f0833744b3504a9860b42cb0bb11e2eb042a8b83e3ceb91fe0fca096",
+        "address": "oasis1qz0cxkl3mftumy9l4g663fmwg69vmtc675xh8exw"
+      },
+      {
+        "bip32_path": "m/44'/474'/6'",
+        "private_key": "10d224fbbac9d6e3084dff75ed1d3ae2ce52bce3345a48bf68d1552ed7d89594defb924439e0c93f3b14f25b3cb4044f9bc9055fa4a14d89f711528e6760133b",
+        "public_key": "defb924439e0c93f3b14f25b3cb4044f9bc9055fa4a14d89f711528e6760133b",
+        "address": "oasis1qz3pjvqnkyj42d0mllgcjd66fkavzywu4y4uhak7"
+      },
+      {
+        "bip32_path": "m/44'/474'/7'",
+        "private_key": "517bcc41be16928d32c462ee2a38981ed15b784028eb0914cfe84acf475be342102ad25ab9e1707c477e39da2184f915669791a3a7b87df8fd433f15c926ede2",
+        "public_key": "102ad25ab9e1707c477e39da2184f915669791a3a7b87df8fd433f15c926ede2",
+        "address": "oasis1qr8zs06qtew5gefgs4608a4dzychwkm0ayz36jqg"
+      },
+      {
+        "bip32_path": "m/44'/474'/8'",
+        "private_key": "ee7577c5cef5714ba6738635c6d9851c43428ff3f1e8db2fe7f45fb8d8be7c55a6ec8903ca9062910cc780c9b209c7767c2e57d646bbe06901d090ad81dabe8b",
+        "public_key": "a6ec8903ca9062910cc780c9b209c7767c2e57d646bbe06901d090ad81dabe8b",
+        "address": "oasis1qp7w82tmm6srgxqqzragdt3269334pjtlu44qpeu"
+      },
+      {
+        "bip32_path": "m/44'/474'/9'",
+        "private_key": "5257b10a5fcfd008824e2216be17be6e47b9db74018f63bb55de4d747cae6d7bba734348f3ec7af939269f62828416091c0d89e14c813ebf5e64e24d6d37e7ab",
+        "public_key": "ba734348f3ec7af939269f62828416091c0d89e14c813ebf5e64e24d6d37e7ab",
+        "address": "oasis1qp9t7zerat3lh2f7xzc58ahqzta5kj4u3gupgxfk"
+      },
+      {
+        "bip32_path": "m/44'/474'/2147483647'",
+        "private_key": "e7152f1b69ad6edfc05dccf67dad5305edb224669025c809d89de7e56b2cabe58c348f412819da57361cdbd7dfbe695a05dba7f24b8e7328ff991ffadab6c4d2",
+        "public_key": "8c348f412819da57361cdbd7dfbe695a05dba7f24b8e7328ff991ffadab6c4d2",
+        "address": "oasis1qzajez400yvnzcv8x8gtcxt4z5mkfchuh5ca05hq"
+      }
+    ]
+  },
+  {
+    "kind": "standard account key generation",
+    "bip39_mnemonic": "network want title crash employ twelve elegant unlock arrow marriage cat april",
+    "bip39_passphrase": "",
+    "bip39_seed": "d84a448cc77865e3a14876b0e666249f64670c2a64cf6df65e6b4fc31a29571d13158298fdab07585b3259399c55f08776e1a3b2d2cd6a442a3e6d1e586273c1",
+    "oasis_accounts": [
+      {
+        "bip32_path": "m/44'/474'/0'",
+        "private_key": "fc116a9e9e6303e7be65b90a488de3f432eca50f10d606f39b4f37e034301f93747640555044f5c359911c0eda6d5e8cfbd6fe05bc8d94a25acd28e9f1eeb744",
+        "public_key": "747640555044f5c359911c0eda6d5e8cfbd6fe05bc8d94a25acd28e9f1eeb744",
+        "address": "oasis1qphafzljh9tl4wdv2pvhemhemgswh3fpa5cxllf3"
+      },
+      {
+        "bip32_path": "m/44'/474'/1'",
+        "private_key": "1171bf40b5544974d91a4b6f5b861aca4dc74d44c904fbef7d6ab0a734f24f3a9e580cf7c838136abbaf2e5ceac9f79fba36e92de5e0991bd9d585d180c583df",
+        "public_key": "9e580cf7c838136abbaf2e5ceac9f79fba36e92de5e0991bd9d585d180c583df",
+        "address": "oasis1qp2w8vfhvzmnzs6pn0e2r864ykgnp3xteylfngdl"
+      },
+      {
+        "bip32_path": "m/44'/474'/2'",
+        "private_key": "95c51653e07e3c7ae523955d2d302066e7cc85e56f5445e72492d5038230c9357bb992cae1e93ab284cc4e51347d9fb5f227cd85c8ceb9205ee26c39cadeedc4",
+        "public_key": "7bb992cae1e93ab284cc4e51347d9fb5f227cd85c8ceb9205ee26c39cadeedc4",
+        "address": "oasis1qr20w95fzjtx8s2vdvkh8k0js7hgnqu2muy4cnmv"
+      },
+      {
+        "bip32_path": "m/44'/474'/3'",
+        "private_key": "3c15f00dbf5d8202fa7f3e4b755aa76e154ccca3c5504a89018e4afd9e7b74066382ae1c5d5216a6435e036f252ca5cd32453166ac17a6eaf0b25db930b6f28e",
+        "public_key": "6382ae1c5d5216a6435e036f252ca5cd32453166ac17a6eaf0b25db930b6f28e",
+        "address": "oasis1qp4wmhyp8fgxgdvur5awejx4cyfv8w3dzuqq0nm7"
+      },
+      {
+        "bip32_path": "m/44'/474'/4'",
+        "private_key": "833b4545289cb1c26f92c8bca24b2f671ddf6f3f506002027d191add1e4826b62149832e017b6fa42f8013540ac273f1de08e59bc509ef6a39d594a9140fb6eb",
+        "public_key": "2149832e017b6fa42f8013540ac273f1de08e59bc509ef6a39d594a9140fb6eb",
+        "address": "oasis1qreq02gllr4mkt467k4vhvzm4mz5wdfsqcfdc042"
+      },
+      {
+        "bip32_path": "m/44'/474'/5'",
+        "private_key": "46b6fd6efeed5038214512c4e95fc85be2b4fc26be01bb81adcf5ef1565cd47907dfa107c4a2e562dd9de86c712afed77328b3ccdb797d08dc8247c98865abb3",
+        "public_key": "07dfa107c4a2e562dd9de86c712afed77328b3ccdb797d08dc8247c98865abb3",
+        "address": "oasis1qzvuy6ml54g88nxehk95ypuntpmtpw9lpy4jaqpf"
+      },
+      {
+        "bip32_path": "m/44'/474'/6'",
+        "private_key": "6554b127792b928ff63703fc4e45a62bd9e6d483c9e3f53074e139868b2eec191366cf39e3dec1daef59012c6ea1c8469d30a599e9ecec2788a28f4dc60fadaf",
+        "public_key": "1366cf39e3dec1daef59012c6ea1c8469d30a599e9ecec2788a28f4dc60fadaf",
+        "address": "oasis1qrkkzegn5v787e3jrt6ztazk3w7q7lrz0u6gmtfv"
+      },
+      {
+        "bip32_path": "m/44'/474'/7'",
+        "private_key": "90816c340fd7ab824fa543128f5f38a5711098676e94d9980900dbc8c9069b0c1f2cbf91e8c864765441367436464ba554c29d24f4d78f6de1953ce421ec6fe9",
+        "public_key": "1f2cbf91e8c864765441367436464ba554c29d24f4d78f6de1953ce421ec6fe9",
+        "address": "oasis1qqzeuzlfauk79ap79m8yycchdqdyy0t2e58zv2vr"
+      },
+      {
+        "bip32_path": "m/44'/474'/8'",
+        "private_key": "e0ea4640595bdf9074a49b9db584e2713dca2004fe9155983735e98eb910c0491eebde15e67432f55d10b0bbf413443157a682eabaf8c34e64740d5a82800b51",
+        "public_key": "1eebde15e67432f55d10b0bbf413443157a682eabaf8c34e64740d5a82800b51",
+        "address": "oasis1qq6zrutdukrq244udf333qs884y2azkzrqj23fk6"
+      },
+      {
+        "bip32_path": "m/44'/474'/9'",
+        "private_key": "f748156e767d232eec3554c5162c9aad2d64d1c35f13255b339e6fc8768cc4d24dd0b0ec158151b98f5b893627fb43a8a295207acb0e1ca9e048e0aae00f9381",
+        "public_key": "4dd0b0ec158151b98f5b893627fb43a8a295207acb0e1ca9e048e0aae00f9381",
+        "address": "oasis1qq4xwgh0nmkjyl6ykhaq0clatlu7jynxdch4ase2"
+      },
+      {
+        "bip32_path": "m/44'/474'/2147483647'",
+        "private_key": "9917380b4b4308e921103ef2b44cf0707c829cb34b6b9226de0d3b0ef18b9afb9d5a0ecc8f0e4ff7bda6b233b82eafca371427a0af0ab381680f1bba24272b8a",
+        "public_key": "9d5a0ecc8f0e4ff7bda6b233b82eafca371427a0af0ab381680f1bba24272b8a",
+        "address": "oasis1qq45l8l6fv955rgc5qyfttzzk7hp58nn75gne68w"
+      }
+    ]
+  },
+  {
+    "kind": "standard account key generation",
+    "bip39_mnemonic": "grape weapon help home entire invest warfare curious advance immense group vintage",
+    "bip39_passphrase": "",
+    "bip39_seed": "9fa385c4e07d2fea0f70c0662a2d65c7cff6ce882e58c399dd01baa15919755342fac1b98a5b80eec15534fa2157ff1d9b1505acf7b43ffcaeb6899da7ad5fa1",
+    "oasis_accounts": [
+      {
+        "bip32_path": "m/44'/474'/0'",
+        "private_key": "5f1ea873d36f96f0a9b457b284ee19265b1741bd8051b673e80adbadce0a270b6c6caa571309e7a18ef2c107d34c1515ecab4430f57260a63359c6de60511377",
+        "public_key": "6c6caa571309e7a18ef2c107d34c1515ecab4430f57260a63359c6de60511377",
+        "address": "oasis1qqhxxqjpqddm8dsvvvphfxn8ke8xvll4asg068hy"
+      },
+      {
+        "bip32_path": "m/44'/474'/1'",
+        "private_key": "2c7b2e0189450a456e30742b9865e27ebe94e8cc665ea41f67737a82a330b068ff85ff55f0350d7e842228cba34c3d9d1d7731f3aea9e8a60b3568ae89f2013a",
+        "public_key": "ff85ff55f0350d7e842228cba34c3d9d1d7731f3aea9e8a60b3568ae89f2013a",
+        "address": "oasis1qqpq0sa2rr7udz2ghex0p6kmuq72sjgtkcm8493w"
+      },
+      {
+        "bip32_path": "m/44'/474'/2'",
+        "private_key": "223226149d24b98ea93f4ea2df762ec92f3d96af1b618936e2cda515e68cd882894d23b87530256bb959adeac5d6432661d6384e1abef110f7fba23229e5be48",
+        "public_key": "894d23b87530256bb959adeac5d6432661d6384e1abef110f7fba23229e5be48",
+        "address": "oasis1qqugy82hf3yu7nq0xfhzftgv7cvns0fm3y2p0265"
+      },
+      {
+        "bip32_path": "m/44'/474'/3'",
+        "private_key": "e75d201a44d7394a831cd9140f936aa35c5e50282cafb13966afe5df4ff2cbf3295c94d05dfd817c54d0106a0f31b46b8c8111a97015753bf5ca59562de0f100",
+        "public_key": "295c94d05dfd817c54d0106a0f31b46b8c8111a97015753bf5ca59562de0f100",
+        "address": "oasis1qz92x53ph0k6r6uygz2kkj0m5kah5t0dpqhap948"
+      },
+      {
+        "bip32_path": "m/44'/474'/4'",
+        "private_key": "f4e17cd4b20106fb193f2deb39ba07ebe2eee16e05dae5c248f46dbe832e770aa9fcc4ecb3b78898d1ee626e113c39f5ce88c73be3ee756659faaa70df24426c",
+        "public_key": "a9fcc4ecb3b78898d1ee626e113c39f5ce88c73be3ee756659faaa70df24426c",
+        "address": "oasis1qqxkayw89zjtzw9ed4zal7sh2vz7a7s90qch2exq"
+      },
+      {
+        "bip32_path": "m/44'/474'/5'",
+        "private_key": "429b2c5ebeba0117b297f2882ae7b9daae00a296c79b57a58685f4e3f141dd05dfd9b56345548f468583f64a36cbc58a2430d6acb31339d644ddcae6401d4f2d",
+        "public_key": "dfd9b56345548f468583f64a36cbc58a2430d6acb31339d644ddcae6401d4f2d",
+        "address": "oasis1qznn2tu9wu0wccqnzkflq9n7ztjvt824pqp06ez3"
+      },
+      {
+        "bip32_path": "m/44'/474'/6'",
+        "private_key": "fc8aad885061d544ad607833d51b1c4608222fac33d96bdf36c5fd9e0760b59ec7d4b0b3d668276e28f332d16f966e0fae2361df9986d1f30c8b3124c99e3879",
+        "public_key": "c7d4b0b3d668276e28f332d16f966e0fae2361df9986d1f30c8b3124c99e3879",
+        "address": "oasis1qqhrwek9tny2qvwpsuzlzen6kjyz84y3dc83wx8u"
+      },
+      {
+        "bip32_path": "m/44'/474'/7'",
+        "private_key": "1d7f909480e21da10ebb47498d830bd5fd607477523b414f91c1215a995f58f63a6ae20701df22958f31ada407f51cc1945efa72ff5df136b7fb4f7ab1e5daa9",
+        "public_key": "3a6ae20701df22958f31ada407f51cc1945efa72ff5df136b7fb4f7ab1e5daa9",
+        "address": "oasis1qq3ju3ec5dxr3gruqxxgjlhmq9dfuc2d0qqxtlep"
+      },
+      {
+        "bip32_path": "m/44'/474'/8'",
+        "private_key": "993bd6878dda2e5819f21da4d41f3947d85c433cb56bc7fd9f600cafb95f7768d4b1210de4f90be8243c596899b00b6a9328db6666a1226d109cda75d1157ff5",
+        "public_key": "d4b1210de4f90be8243c596899b00b6a9328db6666a1226d109cda75d1157ff5",
+        "address": "oasis1qzzm0vp8lqz97kmhdmnnjk7fp239pl767sgee55h"
+      },
+      {
+        "bip32_path": "m/44'/474'/9'",
+        "private_key": "46db044ad7c03797cc93b5622bd2972d65757bfb2188de30ef009ba90f417e1d266d91587092d4a854506e3a953960ac7bd54dcddee29660b8c98285be1134e6",
+        "public_key": "266d91587092d4a854506e3a953960ac7bd54dcddee29660b8c98285be1134e6",
+        "address": "oasis1qzul482hhjjrunfru9rd83jcf6c502chm5fdgzl5"
+      },
+      {
+        "bip32_path": "m/44'/474'/2147483647'",
+        "private_key": "63942d2cc7ca3d336eb628fc57c8e0b19ea97add015d192202f04ad8d2e1923baaa15c47659890f4273c1f0cab277684e187f91e813500cdd2513884f7298ebc",
+        "public_key": "aaa15c47659890f4273c1f0cab277684e187f91e813500cdd2513884f7298ebc",
+        "address": "oasis1qqw4r4t7p3uhgqm7zmjzc4vh97psapjjhy4uv4qu"
+      }
+    ]
+  },
+  {
+    "kind": "standard account key generation",
+    "bip39_mnemonic": "vibrant length learn peanut garlic boil battle jeans fan cliff alone round setup dove shoe twist dumb trophy imitate coil team grocery when else",
+    "bip39_passphrase": "",
+    "bip39_seed": "47dc8df73b857cadcc2efa0de102d766c5fa013e2ad7744a4525bf9af89653be9e519c2e0852275ec71e4b044bc553a22c3c6e231042a817d02e5723a4c18b88",
+    "oasis_accounts": [
+      {
+        "bip32_path": "m/44'/474'/0'",
+        "private_key": "ad5be6620162d9d0a58aa81975e157ca3b2e0c50f9834443d8fcbf4b7573d88e6f9a0bf931842fe6c339d318e82df42deee9edb39d94921756ab5c8f57fba4bc",
+        "public_key": "6f9a0bf931842fe6c339d318e82df42deee9edb39d94921756ab5c8f57fba4bc",
+        "address": "oasis1qrwn7cmvaaas7ec27z4ct224cjk9jv5elyqfde8f"
+      },
+      {
+        "bip32_path": "m/44'/474'/1'",
+        "private_key": "f4dcf12e4d6d7df464f61fa2287b0d668fc796e835cf79489dafbb77b169a58e42adefc5a845f0dcef757745e559f9b2b3de1a1279dbf7fed4863d2dfaf59b13",
+        "public_key": "42adefc5a845f0dcef757745e559f9b2b3de1a1279dbf7fed4863d2dfaf59b13",
+        "address": "oasis1qz8kf5qxf7u6l6f7m4f58ry0mavy82lr6u7afk57"
+      },
+      {
+        "bip32_path": "m/44'/474'/2'",
+        "private_key": "8b0f6f58e270f7f3701a6f1473da085769aeaa8aaa56a71d8cce9403444ba79f05626acb408621d1472050e3fd78f50a8c3debd796f8b52e2e5c83c638ab4d79",
+        "public_key": "05626acb408621d1472050e3fd78f50a8c3debd796f8b52e2e5c83c638ab4d79",
+        "address": "oasis1qqvppaaazuwse5whrr2dsyx9r2sc3l6skvpw5gw7"
+      },
+      {
+        "bip32_path": "m/44'/474'/3'",
+        "private_key": "a319741f725a3c3b8703e435ce1ff5b7d78c80a4d9447451aed536f4e738dc3c5a0380a1ba27cc17f05902aa44856ba3bfe1eb4540056ae9bb27b4941fdbca85",
+        "public_key": "5a0380a1ba27cc17f05902aa44856ba3bfe1eb4540056ae9bb27b4941fdbca85",
+        "address": "oasis1qpkspvtxl7hxqnvy0u3pqfz7gy6ujxnlvynvcp27"
+      },
+      {
+        "bip32_path": "m/44'/474'/4'",
+        "private_key": "3d28efb14daf6f0847bc577b643d34012cbac022a0ddf54a0176e9f8a8f1b0900c6e6855499150a0c52adae2cf3d40806da6336bd6df6bb56508ec1b9460d311",
+        "public_key": "0c6e6855499150a0c52adae2cf3d40806da6336bd6df6bb56508ec1b9460d311",
+        "address": "oasis1qq273y2z62s0rp8vlwd40l6rchj6fl3rm5dtrfvk"
+      },
+      {
+        "bip32_path": "m/44'/474'/5'",
+        "private_key": "28b40c6618c3b72122cddaf8659d5bd028f6fb2afa6b2ebe20d8ad26b4ae0550900cb701c0dd05b3f9d59954a11ec09fd385f49a38c4018f54c9e2ff50d38061",
+        "public_key": "900cb701c0dd05b3f9d59954a11ec09fd385f49a38c4018f54c9e2ff50d38061",
+        "address": "oasis1qzt6jpg753sgydja3zq7zsxg87jrxwvt456qryez"
+      },
+      {
+        "bip32_path": "m/44'/474'/6'",
+        "private_key": "5d211e738d42f439e54f09421881b65ee17ecb8138ba7db7861a24c7b1241a5814a30af69180455f4f77e67552ffbc79f8bc5a035db8a97583018a32598592d9",
+        "public_key": "14a30af69180455f4f77e67552ffbc79f8bc5a035db8a97583018a32598592d9",
+        "address": "oasis1qp5rm47tcvfrnkx27pc6zrr7wcygj3em6gfemkhy"
+      },
+      {
+        "bip32_path": "m/44'/474'/7'",
+        "private_key": "e769ca8b37a1a070c71c135984aadcbf65c368f3a8f60d282b84395accf4f12ca390201aba663a0676128e134d5a1ea61600f3b184a56611c5522d31e12c08b9",
+        "public_key": "a390201aba663a0676128e134d5a1ea61600f3b184a56611c5522d31e12c08b9",
+        "address": "oasis1qzlcnlnyd6pm5pq2yvad62k4shl6nye93cuvcpe0"
+      },
+      {
+        "bip32_path": "m/44'/474'/8'",
+        "private_key": "a057fc427589f4ddb011a3953e9c08b3c975cc64de3d41b3bf97ce926cd500e107710b7076ee19b6140eb624d79be4baf365f660a1434e0fb17133c3c0ebc852",
+        "public_key": "07710b7076ee19b6140eb624d79be4baf365f660a1434e0fb17133c3c0ebc852",
+        "address": "oasis1qz0x3t8skpvul52e8dlulz3jl2f5w6ggzgxmya8r"
+      },
+      {
+        "bip32_path": "m/44'/474'/9'",
+        "private_key": "6a6d4b67d1cf7507a72885a2ebd801a381471aa3e900e34e4a14ebbe74182520713d660d92754e8b7c932305b4aa1a9f20728fd89d4ec34d7966adb0826ae3e5",
+        "public_key": "713d660d92754e8b7c932305b4aa1a9f20728fd89d4ec34d7966adb0826ae3e5",
+        "address": "oasis1qpcungdthc904dx8fg94ggscttel7e2yqy6cxfjn"
+      },
+      {
+        "bip32_path": "m/44'/474'/2147483647'",
+        "private_key": "7badd6bc80ccfc22c123c9418d7631fa10b939c0d2e5af79ca21e587886b4b3793b79f23cd00d0a6c5129ab95dabd58a849f6bd1812a1a86af07b69d05d679fd",
+        "public_key": "93b79f23cd00d0a6c5129ab95dabd58a849f6bd1812a1a86af07b69d05d679fd",
+        "address": "oasis1qzaajs5umyrmptse6zshwvz9j2swxyn38ufzq4l8"
+      }
+    ]
+  },
+  {
+    "kind": "standard account key generation",
+    "bip39_mnemonic": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    "bip39_passphrase": "p4ssphr4se",
+    "bip39_seed": "98fb88ef0a487468167862c275aac69510b85db5533c5608a148f2c3aa66538346d0163ea24958f8cff21a6bc2825d02197b194098baf1e98732f951aa806551",
+    "oasis_accounts": [
+      {
+        "bip32_path": "m/44'/474'/0'",
+        "private_key": "33e9e52acab2f32e6971ad8ff277078c47f7a99182b169f77cbb0525800f1b020d4198772fe327f28f7129505cbaecbaf5b0c6f79e4554021752bb5323c790e4",
+        "public_key": "0d4198772fe327f28f7129505cbaecbaf5b0c6f79e4554021752bb5323c790e4",
+        "address": "oasis1qpdrvurdjllyws9z2e8egv6mrnt5x73frqycrdun"
+      },
+      {
+        "bip32_path": "m/44'/474'/1'",
+        "private_key": "8ee48ecbf865b6737780cdff07f5ace4127416ee2f4e0eb886d5a04bb1e3e526ea57d861cbe429f1edbeda50f37ed8c9fc259711db118ba3b0af1a5f3562826a",
+        "public_key": "ea57d861cbe429f1edbeda50f37ed8c9fc259711db118ba3b0af1a5f3562826a",
+        "address": "oasis1qpvafxvdpmumz7t5zyln0823pst37pvwusl905vw"
+      },
+      {
+        "bip32_path": "m/44'/474'/2'",
+        "private_key": "7d03bdc79c5e185f215308537634d19366b8332431ea251f3b8ecc5b81ff4af7185f31500097573f64b53382ccc7c265cac74ac70495d3c841c1998d3d8a5409",
+        "public_key": "185f31500097573f64b53382ccc7c265cac74ac70495d3c841c1998d3d8a5409",
+        "address": "oasis1qrzrj82qyk8k8uwf425m8nagwvm68a2exg7na0pg"
+      },
+      {
+        "bip32_path": "m/44'/474'/3'",
+        "private_key": "f3433de07df3c4876fe260fe47ce0d1dfa15b453995813625d8d5d2110fc08a45689f1c19845546973b90acd5d53bfeab8654ca8be3e48f97a1003514d93a613",
+        "public_key": "5689f1c19845546973b90acd5d53bfeab8654ca8be3e48f97a1003514d93a613",
+        "address": "oasis1qq9qltg8w54djfg66w7dxt0m0tt5p9num5p0tkwv"
+      },
+      {
+        "bip32_path": "m/44'/474'/4'",
+        "private_key": "d21f86c343be1713bc4e3281fe6edfa6d0b0387f4f58c21a2f964af8cf9bdc2f4472afd87d26e8bd0bcc0008e04a038d71969c28ae85cc3cbf817cd8c27a492b",
+        "public_key": "4472afd87d26e8bd0bcc0008e04a038d71969c28ae85cc3cbf817cd8c27a492b",
+        "address": "oasis1qqe9vdfqhgkm3zc89sxzwm0a93987c02agyezm75"
+      },
+      {
+        "bip32_path": "m/44'/474'/5'",
+        "private_key": "a2263b74780e0f5928d9a21324c2bf5e631ec10baf7c40493380f7709eed576b5ca8b4d4fc20652ea8e1fd43b058483ae1a7c50af5b6f7ff691a91c79f5a5cbd",
+        "public_key": "5ca8b4d4fc20652ea8e1fd43b058483ae1a7c50af5b6f7ff691a91c79f5a5cbd",
+        "address": "oasis1qrr7p3nsf8tzkc9a87j72eu4f248hunajgc4j2sq"
+      },
+      {
+        "bip32_path": "m/44'/474'/6'",
+        "private_key": "94c8d1a921254fba2ea05995cf9a7ee10145716c3141ec76913934ddb94a8dda75dba2952be05ee0eb0e36bff8c23a6fc812c4d02118cf0a4e47b070893d04cc",
+        "public_key": "75dba2952be05ee0eb0e36bff8c23a6fc812c4d02118cf0a4e47b070893d04cc",
+        "address": "oasis1qzma3fahfflauhjq8pfcdu7ssynrfjukvc4yve09"
+      },
+      {
+        "bip32_path": "m/44'/474'/7'",
+        "private_key": "371dfa25ab1eb6b3938c4025a234b65bedb29e811714c4e99cc830eaa4fc9236aa83e4c4dca1e7e33727c04c61f60813ab3cc4230af58cceebe0ee5451d8622d",
+        "public_key": "aa83e4c4dca1e7e33727c04c61f60813ab3cc4230af58cceebe0ee5451d8622d",
+        "address": "oasis1qrqav32hesxtgn8zmckxjpq5v7jcywykpvzsungg"
+      },
+      {
+        "bip32_path": "m/44'/474'/8'",
+        "private_key": "338b56fca1685883d4e4a0a2ab93552b5e6b03c7e0f5e60844cb51a356b8e31d89f26bb3fae2c7e070ae52e8b71291032c847b5676511d1ccfe6ca047790e33e",
+        "public_key": "89f26bb3fae2c7e070ae52e8b71291032c847b5676511d1ccfe6ca047790e33e",
+        "address": "oasis1qp704da5zeqg8ejcg3z6wtxyem5hxsmjeutcm6e4"
+      },
+      {
+        "bip32_path": "m/44'/474'/9'",
+        "private_key": "8faed83ef82383d2c90e0e2ff249abd8bdc9ffb89e836bb948753297732a9c1754623bfd107f522ba45ccedc276e531e2c64eb462d0316de11afbe2338f501be",
+        "public_key": "54623bfd107f522ba45ccedc276e531e2c64eb462d0316de11afbe2338f501be",
+        "address": "oasis1qrs6c4260fa79wmwh8dnjxz6cgvd896spczm7wuu"
+      },
+      {
+        "bip32_path": "m/44'/474'/2147483647'",
+        "private_key": "3a190f574625abb7334f954c3358520bf53693aa64b4bb19b44060b7520f18a2b9864e9c2e719913c13d735207a3759d2d8bfc7ea6f20270c13f6d0cdaadc32c",
+        "public_key": "b9864e9c2e719913c13d735207a3759d2d8bfc7ea6f20270c13f6d0cdaadc32c",
+        "address": "oasis1qpjfeqnyr8ha8c6qhqztgwwkumwzkwe6m5j0mwsu"
+      }
+    ]
+  },
+  {
+    "kind": "standard account key generation",
+    "bip39_mnemonic": "equip will roof matter pink blind book anxiety banner elbow sun young",
+    "bip39_passphrase": "p4ssphr4se",
+    "bip39_seed": "3f5dec0c6b0f03f7c641f23cc4d823e8650c2bf6c52e8120f37431f140ce45b894fb1d13a8cd9c2de23f8b4caacb7bfedc32611ddad20ff0de2174aefd2f3515",
+    "oasis_accounts": [
+      {
+        "bip32_path": "m/44'/474'/0'",
+        "private_key": "7a1a5c773fe62cf238ccec1c43fa557f764967d9f7430390ea666d1cd298d777814e5cc6e7f3d159455db1b9770abc155350c458fa7c5db2fd252b286efff37d",
+        "public_key": "814e5cc6e7f3d159455db1b9770abc155350c458fa7c5db2fd252b286efff37d",
+        "address": "oasis1qpaxntmll2fzekwsz4gh89qnxz8ppwqlxgdf4jsd"
+      },
+      {
+        "bip32_path": "m/44'/474'/1'",
+        "private_key": "d8db2839892b05f250f3755b1b87075f9b0b39c6c9050507eab4f7d63949f217b099f8906467325aa1283590c1bca01e8708d5419557aa7771b826fa02d2abe6",
+        "public_key": "b099f8906467325aa1283590c1bca01e8708d5419557aa7771b826fa02d2abe6",
+        "address": "oasis1qzw5ghwfcxdvck0n5ut9hhj2m3gkxs2jf5t65qps"
+      },
+      {
+        "bip32_path": "m/44'/474'/2'",
+        "private_key": "b2460066056886e24b144cdff5c317e1f342c854d2a25c10ea7c84d44a657725d524b5590553ec6bd3a438cec6994cc1c4e8964945b630d0636c35a775c00056",
+        "public_key": "d524b5590553ec6bd3a438cec6994cc1c4e8964945b630d0636c35a775c00056",
+        "address": "oasis1qqh8tfyec95p0p2646sus9hveak392xr2sy4qwam"
+      },
+      {
+        "bip32_path": "m/44'/474'/3'",
+        "private_key": "9adac67c640163a71ba14ae6780bc8939295f8b8e7ef832b138b3412f326458b2cf62fe409c13f93981da3777f2683a7f940850475fd6f76c272940889b427e5",
+        "public_key": "2cf62fe409c13f93981da3777f2683a7f940850475fd6f76c272940889b427e5",
+        "address": "oasis1qrun5pn37mkyszpxgn38tay3kv6yjrhvf59gr70k"
+      },
+      {
+        "bip32_path": "m/44'/474'/4'",
+        "private_key": "757bfd2bd5559c77845a7afa55dc41f6231e66e069f5aa80045f9069874e68caf7ffb29bfeb36105188826f54d8e85e42f901060330cae85359b9a94aab63e65",
+        "public_key": "f7ffb29bfeb36105188826f54d8e85e42f901060330cae85359b9a94aab63e65",
+        "address": "oasis1qzt6jrazcla48wu8majzus9r9vqn4x6wssj5ss7y"
+      },
+      {
+        "bip32_path": "m/44'/474'/5'",
+        "private_key": "ebab27fcd199f6dd36beb21062c516e11b92f03d1196d2f7375fb4a78bafe954298d9c057bea72244343d732bfac36eb5c0dfbc0e03a6b69b8ef1a63e5e5f12a",
+        "public_key": "298d9c057bea72244343d732bfac36eb5c0dfbc0e03a6b69b8ef1a63e5e5f12a",
+        "address": "oasis1qz7kxejj2fm47ghfgtmxvgkk4kvevfhekgu9gr5m"
+      },
+      {
+        "bip32_path": "m/44'/474'/6'",
+        "private_key": "3909787a7af3c4c3cd47ec0156f0a48ff579b91b777b9ed0582197523acbf358a8fa27ad5abc2c283666290e25a61c23a3087735891d4a63509e1f7b37d89ea5",
+        "public_key": "a8fa27ad5abc2c283666290e25a61c23a3087735891d4a63509e1f7b37d89ea5",
+        "address": "oasis1qp4capggmtj9td2yetw3swv6fmffkw4ttgcywe5m"
+      },
+      {
+        "bip32_path": "m/44'/474'/7'",
+        "private_key": "3aeb30714b70ca44a51158d5b1faed83f2dec888f09cd757c486413305c1ac6c8556caacdcef2eb63fbd080a1e1dc48948f53660903ba16f875dd672742d95a7",
+        "public_key": "8556caacdcef2eb63fbd080a1e1dc48948f53660903ba16f875dd672742d95a7",
+        "address": "oasis1qrmrarvftcxvd9t470rfkcnlnx0kqpvxlyp690t9"
+      },
+      {
+        "bip32_path": "m/44'/474'/8'",
+        "private_key": "0cd7066a0d1b9ad1d974c82e0de38c03c48c626f93e21cbab3ef3a4d18b6086d648707cb8d889c0752c2304994acbb63508d058fe18ffe767538dccbe8a1fc3f",
+        "public_key": "648707cb8d889c0752c2304994acbb63508d058fe18ffe767538dccbe8a1fc3f",
+        "address": "oasis1qrc65yakdwgr7puvhstd4j47s30kxzq8mcggw42d"
+      },
+      {
+        "bip32_path": "m/44'/474'/9'",
+        "private_key": "9688d0ce8a59b3b735ceb6a2f2ccdbab865ebd689451eee22b245098557f80d9b4916a6a1bda175a5188e86e768dd0e408dc7ccb58c59d7cdf7511c6f9294f8f",
+        "public_key": "b4916a6a1bda175a5188e86e768dd0e408dc7ccb58c59d7cdf7511c6f9294f8f",
+        "address": "oasis1qpl3whvts4dp5ecax8url6eadr38gfuj9s6frzc5"
+      },
+      {
+        "bip32_path": "m/44'/474'/2147483647'",
+        "private_key": "58e806502803aa1657cc88b791f16ad135abeba24b0c660eedbbc617ee46c8ea902aa446e1b2275c7c18d1d488fa711c92dec505e40bf3f35ac53ace6c25236c",
+        "public_key": "902aa446e1b2275c7c18d1d488fa711c92dec505e40bf3f35ac53ace6c25236c",
+        "address": "oasis1qrghpg7aqvwuz7ma7yh8fhwpltzx5mqjn5a8f34r"
+      }
+    ]
+  },
+  {
+    "kind": "standard account key generation",
+    "bip39_mnemonic": "network want title crash employ twelve elegant unlock arrow marriage cat april",
+    "bip39_passphrase": "p4ssphr4se",
+    "bip39_seed": "6f07969fbaf653220ffd297a03ee9900ddc7ddfc98cd5c6392f7e1dcddb916e01f01aa243a74a7114901e0b781144f15ff54368ea986cc7da6852168572bf6b7",
+    "oasis_accounts": [
+      {
+        "bip32_path": "m/44'/474'/0'",
+        "private_key": "befac6f20823b2bbc0bfdebb044b6b6839ff8c45247091595a005edd88d5d6c13500024147b5956e2d46d4e3c480939eabc63dcf558bd6b94f914a377c5c1026",
+        "public_key": "3500024147b5956e2d46d4e3c480939eabc63dcf558bd6b94f914a377c5c1026",
+        "address": "oasis1qp05zg35p8mscryfxle5fque8kpq4lm5nqx4y73e"
+      },
+      {
+        "bip32_path": "m/44'/474'/1'",
+        "private_key": "d3222f84c7d15c882240c4c8b59a058893763e1c060f46017b7a4d38480c6c0e32a2c87b686ad47bb2bab628a76ea42e79ed9594f89333dbcdacc9f374249ba5",
+        "public_key": "32a2c87b686ad47bb2bab628a76ea42e79ed9594f89333dbcdacc9f374249ba5",
+        "address": "oasis1qzvsvgrl75x6qlw0xgwgp65rxdzg6s4h2ycau758"
+      },
+      {
+        "bip32_path": "m/44'/474'/2'",
+        "private_key": "1b14aa93821f1c7568f8ad73bcc6f089f6d4b35ef8f656427b4b2002755d83be11bc7d6595a0e03bcbe10b446633de85865f8c664e94c9269cfccf438ad82866",
+        "public_key": "11bc7d6595a0e03bcbe10b446633de85865f8c664e94c9269cfccf438ad82866",
+        "address": "oasis1qqa83va8q0fmgtczam5xfnl7tmzv0eplasw37wmg"
+      },
+      {
+        "bip32_path": "m/44'/474'/3'",
+        "private_key": "591e5e7795c128cad060ed0f2a76bd492a0d900ac383f19c7a4bb8e82c8f3c4d2f3976127c2bd1e4431a534170558023d45895dad7242aab542afd9386206dc0",
+        "public_key": "2f3976127c2bd1e4431a534170558023d45895dad7242aab542afd9386206dc0",
+        "address": "oasis1qpw4f5fk7rx5ruj22nlqgll79kfxjuwp2qw3cf9y"
+      },
+      {
+        "bip32_path": "m/44'/474'/4'",
+        "private_key": "4d6a14498429c7ac7b7a39cd018012ddfd3a93cd8d99dbfb118ee657d668b02dbf6f90750c384cb77bf4b8c3e19ff76f21ff91720192512f5d8ef37186366533",
+        "public_key": "bf6f90750c384cb77bf4b8c3e19ff76f21ff91720192512f5d8ef37186366533",
+        "address": "oasis1qzcwthn07aw4rrm0p6h03e50j6js5qarev5xk47v"
+      },
+      {
+        "bip32_path": "m/44'/474'/5'",
+        "private_key": "0ad8e2e3b8d92359f8b02b3325234ee7495272bda149e63c077a718650deaa457dcc3038acbbcb5474722283f8f6ef8f4946014faf0d5f2410b76dd9e34d11f1",
+        "public_key": "7dcc3038acbbcb5474722283f8f6ef8f4946014faf0d5f2410b76dd9e34d11f1",
+        "address": "oasis1qq4zxkzt9u58zca4rpgtptyadpk0t8vnwup0xa38"
+      },
+      {
+        "bip32_path": "m/44'/474'/6'",
+        "private_key": "a782323c48fab3c87bbbe6f547deef00ca68f0f5ba4e63bfa132b726149efc96f8ebc0b4378a9377b6240a869f6c8aec3a33e162c2cb0d458d663d4f4bb2f9ea",
+        "public_key": "f8ebc0b4378a9377b6240a869f6c8aec3a33e162c2cb0d458d663d4f4bb2f9ea",
+        "address": "oasis1qqhkn6uffvngzv5fss8kpdwmwgf2r9h4eqec2767"
+      },
+      {
+        "bip32_path": "m/44'/474'/7'",
+        "private_key": "fae3a53f37f82944f0c094f64f1feebb862a0f928e7a4cdbcc36241f6f8e54890d6ebd41a1bcf40e9c42836c86aa0ff47cbb161d8aa8a808acac1ea6d20e1bae",
+        "public_key": "0d6ebd41a1bcf40e9c42836c86aa0ff47cbb161d8aa8a808acac1ea6d20e1bae",
+        "address": "oasis1qply2ag6mcyqfxdmfc2scsdugdrcwfx2aulvpnhq"
+      },
+      {
+        "bip32_path": "m/44'/474'/8'",
+        "private_key": "e6ebda0af54610038df09c1d754e6292c16d93af7041d3e2300a3f9f234c70626f66e6db4192834d27c5eeaeb390d6ab458d4b4f20cb31bcb925b94b70abc8f4",
+        "public_key": "6f66e6db4192834d27c5eeaeb390d6ab458d4b4f20cb31bcb925b94b70abc8f4",
+        "address": "oasis1qz566ee6c4atzjk66v8sauzafpwkenwmgs4j458x"
+      },
+      {
+        "bip32_path": "m/44'/474'/9'",
+        "private_key": "b062600a49878b0041917cc854145646341d248006d2655e5e45641ce3f01f7a61e8e49b26e2729626262c85001026d8f7db4039506cd81bce0593c174dc80fe",
+        "public_key": "61e8e49b26e2729626262c85001026d8f7db4039506cd81bce0593c174dc80fe",
+        "address": "oasis1qqy4s5xk9zna52k60efl2d0aw579qe3cdcm302xl"
+      },
+      {
+        "bip32_path": "m/44'/474'/2147483647'",
+        "private_key": "c59f967704d9fd963f95ab00701750b7030a1948f7778c66d7aa2c8d2ca4a30eb6adab6beb3e6619f6c41a8c3dec2ffc7e393a8c0bfa325e06813d6af4295a82",
+        "public_key": "b6adab6beb3e6619f6c41a8c3dec2ffc7e393a8c0bfa325e06813d6af4295a82",
+        "address": "oasis1qrrukvvgmnvwel5g7q83tagp8ahxyqdaq57p0w7k"
+      }
+    ]
+  },
+  {
+    "kind": "standard account key generation",
+    "bip39_mnemonic": "grape weapon help home entire invest warfare curious advance immense group vintage",
+    "bip39_passphrase": "p4ssphr4se",
+    "bip39_seed": "eb1d21e320f19b8473dc7a71fa23a27394ec55d1fe681b3295db19eba22ef7d84a45903f01454ffb7d4278ab0fda125e91281489a85f74ab3826be9d9cdfffe1",
+    "oasis_accounts": [
+      {
+        "bip32_path": "m/44'/474'/0'",
+        "private_key": "5d7232d82024bd42c3a28ea0487fd597c3bae99acacd3cc0c5fc1629b36122b96d7b35aec0678ee46f322d47a5d0fce4405259ddd6e6274ee8c597a2d3f39b9b",
+        "public_key": "6d7b35aec0678ee46f322d47a5d0fce4405259ddd6e6274ee8c597a2d3f39b9b",
+        "address": "oasis1qzkpu4jm7hpa57wua4cfasunp0cvms70wq5tyd8l"
+      },
+      {
+        "bip32_path": "m/44'/474'/1'",
+        "private_key": "8139d180dbb525d92805532d29f84f47f062482353954a1d28f61d9d7104de6185e40ac64717bef77d808d7e5c082c37baa4a5199cffe825fb74ed6198dd2079",
+        "public_key": "85e40ac64717bef77d808d7e5c082c37baa4a5199cffe825fb74ed6198dd2079",
+        "address": "oasis1qrj6rr20f9hpvjz4qcazh7muzajk498j9uzfd4t0"
+      },
+      {
+        "bip32_path": "m/44'/474'/2'",
+        "private_key": "91d9517ef0538850623b89bbace9c0d34420dba721fe696b675c68302a29bcb69fa4019c7448ba75ee35270906b7379d4add3ec1c9a6799fec3ee92678770ea5",
+        "public_key": "9fa4019c7448ba75ee35270906b7379d4add3ec1c9a6799fec3ee92678770ea5",
+        "address": "oasis1qqeypk7spvexvm44a6dhhfy5mv9mhu3nlum9ycyu"
+      },
+      {
+        "bip32_path": "m/44'/474'/3'",
+        "private_key": "d3eca09dd122c14e2900f2fd8930ff527ffbb47ff0c1222d333440fd172d43598de49ff0449fe817a67a3dca6130959e359dfaaaa3e9d9c48e64fe853afdd95b",
+        "public_key": "8de49ff0449fe817a67a3dca6130959e359dfaaaa3e9d9c48e64fe853afdd95b",
+        "address": "oasis1qqq3ta9aa4r5vghql52kj7qcjhl3zjg3fggj937f"
+      },
+      {
+        "bip32_path": "m/44'/474'/4'",
+        "private_key": "a84c9d5fc5aaa4eb260a5a420271cd2adbac207af79596e588590fc6a32b26129207b4db721d187f29c3b5a9daa9add0029c3fe6b2908ab8bf7b110c9659a2fd",
+        "public_key": "9207b4db721d187f29c3b5a9daa9add0029c3fe6b2908ab8bf7b110c9659a2fd",
+        "address": "oasis1qpj8kamuqfq26cmsgyh6r935dgsr4llfyugt0p64"
+      },
+      {
+        "bip32_path": "m/44'/474'/5'",
+        "private_key": "1d05f0c9773f689351baf89c086731395445462e246cfe24f3a8d4658540ebf1d924e8de6dc493678d890ae2a639e8cd94d25e2468a2d3fed1977b8be60f76eb",
+        "public_key": "d924e8de6dc493678d890ae2a639e8cd94d25e2468a2d3fed1977b8be60f76eb",
+        "address": "oasis1qrs6ux0lrwf6nx07jnk0e9la46h880lq05wlrh2v"
+      },
+      {
+        "bip32_path": "m/44'/474'/6'",
+        "private_key": "d0e78bfba4d1026c0eff7fef9d0866094192766f06feae6df987ff02b75b9fcf7073136237c3000af11a3839e74bb45262b5333ac2cf3e591d2b117f5f863c1c",
+        "public_key": "7073136237c3000af11a3839e74bb45262b5333ac2cf3e591d2b117f5f863c1c",
+        "address": "oasis1qrw48zddrx4sdesgy24kt7vqk22t68gst5tjt705"
+      },
+      {
+        "bip32_path": "m/44'/474'/7'",
+        "private_key": "19106c6da73c6ddc80b6cede3bacc582852cb676d36a68f370a1189b34a9333225d9d6e38724bb8e1a83e62dd9752d787dbe70529918460e64cddaeb69f208d8",
+        "public_key": "25d9d6e38724bb8e1a83e62dd9752d787dbe70529918460e64cddaeb69f208d8",
+        "address": "oasis1qz4634spf9amrelj7zhukxrd3hr3e3kzl50xpvpd"
+      },
+      {
+        "bip32_path": "m/44'/474'/8'",
+        "private_key": "180f67f05914cce651ef756329ef15f7edfa2ba0d3c7a527d343b9f70c916029b733ea965040c38b5cab60da88c0fe20b8a2b84153adb2f0c69f70d3d35885ec",
+        "public_key": "b733ea965040c38b5cab60da88c0fe20b8a2b84153adb2f0c69f70d3d35885ec",
+        "address": "oasis1qqkt9632p78jklyf4r4p56xmdagyxslpnscuwuae"
+      },
+      {
+        "bip32_path": "m/44'/474'/9'",
+        "private_key": "73dcb75039c22ff85f697f0d6652c97ecd1e847f350a9d1badaa2a43e9b8cd8dd44289b64c33b695b0d9d0c7d5a16303a7b52df413fbf804c628cf12e354ad99",
+        "public_key": "d44289b64c33b695b0d9d0c7d5a16303a7b52df413fbf804c628cf12e354ad99",
+        "address": "oasis1qq353hejhncaheylwhs42q84al27fx62qud8eqk4"
+      },
+      {
+        "bip32_path": "m/44'/474'/2147483647'",
+        "private_key": "e2bf7ae816d18cb35cdbf9bf721aae023b083312c5263dfac420f9cda6e1c1004e3e09e76b2d85228dd885ca5911e225020c4c6bec76ae45f3e9de35ddc181a3",
+        "public_key": "4e3e09e76b2d85228dd885ca5911e225020c4c6bec76ae45f3e9de35ddc181a3",
+        "address": "oasis1qpldleeqf94303w3eu7u3e4lxvxw0pqewcan3zly"
+      }
+    ]
+  },
+  {
+    "kind": "standard account key generation",
+    "bip39_mnemonic": "vibrant length learn peanut garlic boil battle jeans fan cliff alone round setup dove shoe twist dumb trophy imitate coil team grocery when else",
+    "bip39_passphrase": "p4ssphr4se",
+    "bip39_seed": "1bf6034e60e1c7cfd7f96fa911eac95a2dcbffc024eaca96d9b1f3939d8fa7970b8f83f921eb91f8e43730bf46c112c60b10f9e09b0e5da9974461bef1d6d8f3",
+    "oasis_accounts": [
+      {
+        "bip32_path": "m/44'/474'/0'",
+        "private_key": "0e6a362ce4078f319300fb9cf44def3b2f5d82e27c975c8207080195322e531f224108d4087b9ccedf025b14cf03c1de44c384fb7a2a530bccd016c3fcafef61",
+        "public_key": "224108d4087b9ccedf025b14cf03c1de44c384fb7a2a530bccd016c3fcafef61",
+        "address": "oasis1qrd66kaw85yzlm24a9nr9l8runuesnnh4svk2lj7"
+      },
+      {
+        "bip32_path": "m/44'/474'/1'",
+        "private_key": "a2f5868cc24252938f2aa7d4ebc77e72324712918a0d3284c2111226140fc119f6e7c0b074f4be215184c9cbbb3db4196e8e6d63ba4570dadf3ce82582ff253b",
+        "public_key": "f6e7c0b074f4be215184c9cbbb3db4196e8e6d63ba4570dadf3ce82582ff253b",
+        "address": "oasis1qqpx5tld8prlhn7hphhpdkkrw97p4n76pcn2mj0l"
+      },
+      {
+        "bip32_path": "m/44'/474'/2'",
+        "private_key": "0d151eb2c157a4a4e087e77aa2b8aa9000e0650ccd27467a29b24c9aa5dbd301dfc72e454a718b0b548c135b90766b97c1eb6ac97c739252675ce2657ef630e0",
+        "public_key": "dfc72e454a718b0b548c135b90766b97c1eb6ac97c739252675ce2657ef630e0",
+        "address": "oasis1qq7fns29kv6udrf9p65qdapqe39r34r2cqaypfac"
+      },
+      {
+        "bip32_path": "m/44'/474'/3'",
+        "private_key": "865c18d8d2ecdb6a82637b5f32811dab3435b01d5ef95a82ec8bfaf85b6bc189f6c19987c6e229b51ad9fff7ac9d572bc08c847784620c727ad31580b82db8ae",
+        "public_key": "f6c19987c6e229b51ad9fff7ac9d572bc08c847784620c727ad31580b82db8ae",
+        "address": "oasis1qz5cq3gy4qp2vf4ldqcu6x94wwn0659zwq6g6trm"
+      },
+      {
+        "bip32_path": "m/44'/474'/4'",
+        "private_key": "9d39dd5929d32cb7c0b042beccbf794d48cfbd0141d309f509a0d50de52b45ec16d9a71e94398e2de8ef5f53eac57938d296b8b69f579caf595566efd57da8b0",
+        "public_key": "16d9a71e94398e2de8ef5f53eac57938d296b8b69f579caf595566efd57da8b0",
+        "address": "oasis1qq24lvxms0sqkjjel3zezmj5wv9h8ugkkv0ejnqv"
+      },
+      {
+        "bip32_path": "m/44'/474'/5'",
+        "private_key": "b50cc2c5f6250812113eacc59b9ddd9c18b0e5fabcea3f1d58a89aafe79510c1fbd1ac47457e32eb91559e1c05757f1a41f4438ec0dfcec6fd86a2b64cf26d55",
+        "public_key": "fbd1ac47457e32eb91559e1c05757f1a41f4438ec0dfcec6fd86a2b64cf26d55",
+        "address": "oasis1qpj8syp3wmhgcq0gy95mp980uzaw5gkmkyves6c5"
+      },
+      {
+        "bip32_path": "m/44'/474'/6'",
+        "private_key": "c1d8bd74169235f898c5e748ba1d7e41b64e86efd8ec97e1c618477a4becfb2e3cb8af918389e01bf8f56cd5d751368a6499418fe831b064d500f560d302f3a6",
+        "public_key": "3cb8af918389e01bf8f56cd5d751368a6499418fe831b064d500f560d302f3a6",
+        "address": "oasis1qpuyphtzt89j4t0q9lzsrah5nfamprp2z5tlex29"
+      },
+      {
+        "bip32_path": "m/44'/474'/7'",
+        "private_key": "a0713c5423fff078fd5799eaa108a0a30fab728c33d05c1a3cf5f36643fa2585fbb9be43264e4741daf4ff62af1539d6d00fed67d2902f61b6124d53be2e9be8",
+        "public_key": "fbb9be43264e4741daf4ff62af1539d6d00fed67d2902f61b6124d53be2e9be8",
+        "address": "oasis1qqr9q44l0qk653vrec4cnd4545ep9kydhvt5lnrz"
+      },
+      {
+        "bip32_path": "m/44'/474'/8'",
+        "private_key": "4892f22cf6573abb61807e3a3a9037904e3abf934e6982c7e8a9494ca400f616a7c7b0b96b23d13c9e65367717bb1ec418d92eeeeed815f4626e67c82b24f7b2",
+        "public_key": "a7c7b0b96b23d13c9e65367717bb1ec418d92eeeeed815f4626e67c82b24f7b2",
+        "address": "oasis1qzqk49vtue56srk3cyvq4kc0x948a8znvc8k30s2"
+      },
+      {
+        "bip32_path": "m/44'/474'/9'",
+        "private_key": "71ad66ceeb398212741c39a970695eec0f4eee2c01ec40981fa7df7e85f09f9176c7a32ea50c5e8f36ae2223ceb3f24afccbe3f9f50fc144016f359f0af16fd5",
+        "public_key": "76c7a32ea50c5e8f36ae2223ceb3f24afccbe3f9f50fc144016f359f0af16fd5",
+        "address": "oasis1qp2fae4y03rxewq8kqghajsj20arw99xayssmjc7"
+      },
+      {
+        "bip32_path": "m/44'/474'/2147483647'",
+        "private_key": "77b92641cb82440034152f7eccfdefd27e128505c5ec2d77c87c2477a685ea08dbfe5b1467a02d44b9dee5afb21a846f8034ab218c1b30d0db7f6d054bc80dde",
+        "public_key": "dbfe5b1467a02d44b9dee5afb21a846f8034ab218c1b30d0db7f6d054bc80dde",
+        "address": "oasis1qpvytnxhfxeagsfldqpskz4j86mdh2wqccmg0zul"
+      }
+    ]
+  }
+]
