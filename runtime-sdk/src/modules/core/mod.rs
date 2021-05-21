@@ -1,4 +1,6 @@
 //! Core definitions module.
+use std::collections::BTreeMap;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -8,6 +10,7 @@ use crate::{
     dispatcher, error,
     module::{self, Module as _},
     types::transaction::{self, AddressSpec, AuthProof, Call, UnverifiedTransaction},
+    CheckTxWeight,
 };
 
 #[cfg(test)]
@@ -119,6 +122,18 @@ pub trait API {
     /// its limit, fails with Error::OutOfGas or Error::BatchOutOfGas, and neither gas usage is
     /// increased.
     fn use_tx_gas<C: TxContext>(ctx: &mut C, gas: u64) -> Result<(), Error>;
+
+    /// Increase transaction priority for the provided amount.
+    fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error>;
+
+    /// Increase the specific transaction weight for the provided amount.
+    fn add_weight<C: Context>(ctx: &mut C, weight: CheckTxWeight, val: u64) -> Result<(), Error>;
+
+    // Takes the stored transaction weight.
+    fn take_weights<C: Context>(ctx: &mut C) -> BTreeMap<CheckTxWeight, u64>;
+
+    // Takes and returns the stored transaction priority.
+    fn take_priority<C: Context>(ctx: &mut C) -> u64;
 }
 
 /// Genesis state for the accounts module.
@@ -140,6 +155,8 @@ pub mod state {
 pub struct Module;
 
 const CONTEXT_KEY_GAS_USED: &str = "core.GasUsed";
+const CONTEXT_KEY_PRIORITY: &str = "core.Priority";
+const CONTEXT_KEY_WEIGHTS: &str = "core.Weights";
 
 impl Module {
     /// Initialize state from genesis.
@@ -188,6 +205,39 @@ impl API for Module {
         *ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default() = new_gas_used;
 
         Ok(())
+    }
+
+    fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error> {
+        let p = ctx.value::<u64>(CONTEXT_KEY_PRIORITY).or_default();
+        let added_p = p.checked_add(priority).unwrap_or(u64::MAX);
+
+        ctx.value::<u64>(CONTEXT_KEY_PRIORITY).set(added_p);
+
+        Ok(())
+    }
+
+    fn add_weight<C: Context>(ctx: &mut C, weight: CheckTxWeight, val: u64) -> Result<(), Error> {
+        let weights = ctx
+            .value::<BTreeMap<CheckTxWeight, u64>>(CONTEXT_KEY_WEIGHTS)
+            .or_default();
+
+        let w = weights.remove(&weight).unwrap_or_default();
+        let added_w = w.checked_add(val).unwrap_or(u64::MAX);
+        weights.insert(weight, added_w);
+
+        Ok(())
+    }
+
+    fn take_priority<C: Context>(ctx: &mut C) -> u64 {
+        ctx.value::<u64>(CONTEXT_KEY_PRIORITY)
+            .take()
+            .unwrap_or_default()
+    }
+
+    fn take_weights<C: Context>(ctx: &mut C) -> BTreeMap<CheckTxWeight, u64> {
+        ctx.value::<BTreeMap<CheckTxWeight, u64>>(CONTEXT_KEY_WEIGHTS)
+            .take()
+            .unwrap_or_default()
     }
 }
 

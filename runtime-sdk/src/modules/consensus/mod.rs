@@ -19,9 +19,11 @@ use crate::{
     module,
     module::Module as _,
     modules,
+    modules::core::{Module as Core, API as _},
     types::{
         address::Address, message::MessageEventHookInvocation, token, transaction::AddressSpec,
     },
+    CheckTxWeight,
 };
 
 #[cfg(test)]
@@ -152,6 +154,11 @@ impl API for Module {
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
 
+        if ctx.is_check_only() {
+            Core::add_weight(ctx, CheckTxWeight::ConsensusMessages, 1)?;
+            return Ok(());
+        }
+
         ctx.emit_message(
             Message::Staking {
                 v: 0,
@@ -173,6 +180,11 @@ impl API for Module {
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
+
+        if ctx.is_check_only() {
+            Core::add_weight(ctx, CheckTxWeight::ConsensusMessages, 1)?;
+            return Ok(());
+        }
 
         ctx.emit_message(
             Message::Staking {
@@ -196,6 +208,11 @@ impl API for Module {
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
 
+        if ctx.is_check_only() {
+            Core::add_weight(ctx, CheckTxWeight::ConsensusMessages, 1)?;
+            return Ok(());
+        }
+
         ctx.emit_message(
             Message::Staking {
                 v: 0,
@@ -217,6 +234,11 @@ impl API for Module {
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
+
+        if ctx.is_check_only() {
+            Core::add_weight(ctx, CheckTxWeight::ConsensusMessages, 1)?;
+            return Ok(());
+        }
 
         ctx.emit_message(
             Message::Staking {

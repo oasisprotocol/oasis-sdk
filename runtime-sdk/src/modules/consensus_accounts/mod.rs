@@ -20,6 +20,7 @@ use crate::{
         token,
         transaction::CallResult,
     },
+    CheckTxWeight,
 };
 
 #[cfg(test)]
@@ -125,6 +126,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         amount: token::BaseUnits,
     ) -> Result<(), Error> {
         if ctx.is_check_only() {
+            Core::add_weight(ctx, CheckTxWeight::ConsensusMessages, 1)?;
             return Ok(());
         }
 
@@ -156,6 +158,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         amount: token::BaseUnits,
     ) -> Result<(), Error> {
         if ctx.is_check_only() {
+            Core::add_weight(ctx, CheckTxWeight::ConsensusMessages, 1)?;
             return Ok(());
         }
 

@@ -18,7 +18,7 @@ use oasis_core_runtime::{
         tags::Tags,
         types::TxnBatch,
     },
-    types::CheckTxResult,
+    types::{CheckTxMetadata, CheckTxResult, CheckTxWeight},
 };
 
 use crate::{
@@ -26,6 +26,7 @@ use crate::{
     error::{Error as _, RuntimeError},
     module::{self, AuthHandler, BlockHandler, MethodHandler},
     modules,
+    modules::core::API as _,
     runtime::Runtime,
     storage, types,
 };
@@ -48,8 +49,14 @@ pub enum Error {
 
 /// Result of dispatching a transaction.
 pub struct DispatchResult {
+    /// Transaction call result.
     pub result: types::transaction::CallResult,
+    /// Transaction tags.
     pub tags: Tags,
+    /// Transaction priority.
+    pub priority: u64,
+    /// Transaction weights.
+    pub weights: BTreeMap<CheckTxWeight, u64>,
 }
 
 impl From<types::transaction::CallResult> for DispatchResult {
@@ -57,6 +64,8 @@ impl From<types::transaction::CallResult> for DispatchResult {
         Self {
             result: v,
             tags: Tags::new(),
+            priority: 0,
+            weights: BTreeMap::new(),
         }
     }
 }
@@ -131,10 +140,22 @@ impl<R: Runtime> Dispatcher<R> {
                 return (result.into(), Vec::new());
             }
 
+            // Load priority, weights.
+            let priority = modules::core::Module::take_priority(&mut ctx);
+            let weights = modules::core::Module::take_weights(&mut ctx);
+
             // Commit store and return emitted tags and messages.
             let (tags, messages) = ctx.commit();
 
-            (DispatchResult { result, tags }, messages)
+            (
+                DispatchResult {
+                    result,
+                    tags,
+                    priority,
+                    weights,
+                },
+                messages,
+            )
         });
 
         // Forward any emitted messages.
@@ -160,10 +181,14 @@ impl<R: Runtime> Dispatcher<R> {
             }
         };
 
-        match Self::dispatch_tx(ctx, tx)?.result {
-            types::transaction::CallResult::Ok(value) => Ok(CheckTxResult {
+        let dispatch = Self::dispatch_tx(ctx, tx)?;
+        match dispatch.result {
+            types::transaction::CallResult::Ok(_value) => Ok(CheckTxResult {
                 error: Default::default(),
-                meta: Some(value),
+                meta: Some(CheckTxMetadata {
+                    priority: dispatch.priority,
+                    weights: Some(dispatch.weights),
+                }),
             }),
 
             types::transaction::CallResult::Failed {
