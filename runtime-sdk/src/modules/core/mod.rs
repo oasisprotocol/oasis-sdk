@@ -2,13 +2,10 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use oasis_core_runtime::common::cbor;
-
 use crate::{
-    context::{Context, DispatchContext},
-    error,
-    module::{self, Module as _, QueryMethodInfo},
-    types::transaction::{self, AddressSpec, AuthProof, Transaction, UnverifiedTransaction},
+    context::{Context, DispatchContext, TxContext},
+    module::{self, Module as _},
+    types::transaction::{self, AddressSpec, AuthProof, UnverifiedTransaction},
 };
 
 #[cfg(test)]
@@ -117,6 +114,11 @@ pub trait API {
     /// increased. Per-transaction gas is not assessed when C is not a transaction processing
     /// context.
     fn use_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error>;
+    /// Returns how much gas the transaction has used.
+    fn tx_gas_used(ctx: &mut TxContext<'_, '_>) -> u64;
+    /// Attempt to use gas as needed to authenticate a transaction. This method is provided for the
+    /// dispatcher to call.
+    fn use_gas_for_auth(ctx: &mut TxContext<'_, '_>) -> Result<(), Error>;
 }
 
 /// Genesis state for the accounts module.
@@ -189,39 +191,38 @@ impl API for Module {
 
         Ok(())
     }
-}
 
-impl Module {
-    /// Run a transaction in simulation and return how much gas it uses. This looks up the method
-    /// in the context's method registry. Transactions that fail still use gas, and this query will
-    /// estimate that and return successfully, so do not use this query to see if a transaction will
-    /// succeed. Failure due to OutOfGas are included, so it's best to set the query argument
-    /// transaction's gas to something high.
-    fn query_estimate_gas(
-        ctx: &mut DispatchContext<'_>,
-        args: transaction::Transaction,
-    ) -> Result<u64, Error> {
-        let mi = ctx
-            .methods
-            .lookup_callable(&args.call.method)
-            .ok_or(Error::InvalidMethod)?;
-        ctx.with_tx_simulation(args, |mut tx_ctx, call| {
-            (mi.handler)(&mi, &mut tx_ctx, call.body);
-            // Warning: we don't report success or failure. If the call fails, we still report
-            // how much gas it uses while it fails.
-            Ok(*tx_ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).unwrap())
-        })
+    fn tx_gas_used(ctx: &mut TxContext<'_, '_>) -> u64 {
+        *ctx.value::<u64>(CONTEXT_KEY_GAS_USED)
     }
-}
 
-impl Module {
-    fn _query_estimate_gas_handler(
-        _mi: &QueryMethodInfo,
-        ctx: &mut DispatchContext<'_>,
-        args: cbor::Value,
-    ) -> Result<cbor::Value, error::RuntimeError> {
-        let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-        Ok(cbor::to_value(&Self::query_estimate_gas(ctx, args)?))
+    fn use_gas_for_auth(ctx: &mut TxContext<'_, '_>) -> Result<(), Error> {
+        let mut num_signature: u64 = 0;
+        let mut num_multisig_signer: u64 = 0;
+        for si in &ctx.tx_auth_info().unwrap().signer_info {
+            match &si.address_spec {
+                AddressSpec::Signature(_) => {
+                    num_signature = num_signature.checked_add(1).ok_or(Error::GasOverflow)?;
+                }
+                AddressSpec::Multisig(config) => {
+                    num_multisig_signer = num_multisig_signer
+                        .checked_add(config.signers.len() as u64)
+                        .ok_or(Error::GasOverflow)?;
+                }
+            }
+        }
+        let params = Self::params(ctx.runtime_state());
+        let total = num_signature
+            .checked_mul(params.gas_costs.auth_signature)
+            .ok_or(Error::GasOverflow)?
+            .checked_add(
+                num_multisig_signer
+                    .checked_mul(params.gas_costs.auth_multisig_signer)
+                    .ok_or(Error::GasOverflow)?,
+            )
+            .ok_or(Error::GasOverflow)?;
+        Self::use_gas(ctx, total)?;
+        Ok(())
     }
 }
 
@@ -250,35 +251,6 @@ impl module::AuthHandler for Module {
         }
         Ok(())
     }
-
-    fn authenticate_tx(ctx: &mut DispatchContext<'_>, tx: &Transaction) -> Result<(), Error> {
-        let mut num_signature: u64 = 0;
-        let mut num_multisig_signer: u64 = 0;
-        for si in &tx.auth_info.signer_info {
-            match &si.address_spec {
-                AddressSpec::Signature(_) => {
-                    num_signature = num_signature.checked_add(1).ok_or(Error::GasOverflow)?;
-                }
-                AddressSpec::Multisig(config) => {
-                    num_multisig_signer = num_multisig_signer
-                        .checked_add(config.signers.len() as u64)
-                        .ok_or(Error::GasOverflow)?;
-                }
-            }
-        }
-        let params = Self::params(ctx.runtime_state());
-        let total = num_signature
-            .checked_mul(params.gas_costs.auth_signature)
-            .ok_or(Error::GasOverflow)?
-            .checked_add(
-                num_multisig_signer
-                    .checked_mul(params.gas_costs.auth_multisig_signer)
-                    .ok_or(Error::GasOverflow)?,
-            )
-            .ok_or(Error::GasOverflow)?;
-        Self::use_gas(ctx, total)?;
-        Ok(())
-    }
 }
 
 impl module::MigrationHandler for Module {
@@ -302,15 +274,7 @@ impl module::MigrationHandler for Module {
     }
 }
 
-impl module::MethodRegistrationHandler for Module {
-    fn register_methods(methods: &mut module::MethodRegistry) {
-        // Queries.
-        methods.register_query(module::QueryMethodInfo {
-            name: "core.EstimateGas",
-            handler: Self::_query_estimate_gas_handler,
-        });
-    }
-}
+impl module::MethodRegistrationHandler for Module {}
 
 impl module::BlockHandler for Module {}
 

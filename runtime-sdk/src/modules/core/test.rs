@@ -1,11 +1,8 @@
-use oasis_core_runtime::common::cbor;
-
 use crate::{
-    context::{Context, Mode},
-    module,
+    context::Context,
     module::{AuthHandler as _, Module as _},
-    testing::{keys, mock},
-    types::{token, transaction},
+    testing::mock,
+    types::transaction,
 };
 
 use super::{Module as Core, API as _};
@@ -61,49 +58,6 @@ fn test_use_gas() {
     });
 
     Core::use_gas(&mut ctx, 1).expect_err("batch gas should accumulate outside tx");
-}
-
-#[test]
-fn test_query_estimate_gas() {
-    const MAX_GAS: u64 = 100;
-    const METHOD_WASTE_GAS: &str = "test.WasteGas";
-    let mut mock = mock::Mock::default();
-    mock.methods.register_callable(module::CallableMethodInfo {
-        name: METHOD_WASTE_GAS,
-        handler: |_mi, ctx, _args| {
-            Core::use_gas(ctx, MAX_GAS).expect("use_gas should succeed");
-            transaction::CallResult::Ok(cbor::Value::Null)
-        },
-    });
-    let mut ctx = mock.create_ctx();
-    ctx.mode = Mode::CheckTx;
-    Core::set_params(
-        ctx.runtime_state(),
-        &super::Parameters {
-            max_batch_gas: u64::MAX,
-            max_tx_signers: 8,
-            max_multisig_signers: 8,
-            gas_costs: Default::default(),
-        },
-    );
-
-    let tx = transaction::Transaction {
-        version: 1,
-        call: transaction::Call {
-            method: METHOD_WASTE_GAS.to_owned(),
-            body: cbor::Value::Null,
-        },
-        auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
-            fee: transaction::Fee {
-                amount: token::BaseUnits::new(0.into(), token::Denomination::NATIVE),
-                gas: u64::MAX,
-            },
-        },
-    };
-
-    let est = Core::query_estimate_gas(&mut ctx, tx).expect("query_estimate_gas should succeed");
-    assert_eq!(est, MAX_GAS, "estimated gas should be correct");
 }
 
 #[test]

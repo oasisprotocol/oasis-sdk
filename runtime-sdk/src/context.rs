@@ -15,7 +15,6 @@ use oasis_core_runtime::{
 
 use crate::{
     event::Event,
-    module::MethodRegistry,
     modules::core::Error,
     storage,
     types::{address::Address, message::MessageEventHookInvocation, transaction},
@@ -172,9 +171,6 @@ pub struct DispatchContext<'a> {
     pub(crate) io_ctx: Arc<IoContext>,
     pub(crate) logger: slog::Logger,
 
-    /// The runtime's methods, in case you need to look them up for some reason.
-    pub(crate) methods: &'a MethodRegistry,
-
     pub(crate) block_tags: Tags,
 
     /// Maximum number of messages that can be emitted.
@@ -188,11 +184,7 @@ pub struct DispatchContext<'a> {
 
 impl<'a> DispatchContext<'a> {
     /// Create a new dispatch context from the low-level runtime context.
-    pub(crate) fn from_runtime(
-        ctx: &'a RuntimeContext<'_>,
-        mkvs: &'a mut dyn mkvs::MKVS,
-        methods: &'a MethodRegistry,
-    ) -> Self {
+    pub(crate) fn from_runtime(ctx: &'a RuntimeContext<'_>, mkvs: &'a mut dyn mkvs::MKVS) -> Self {
         let mode = if ctx.check_only {
             Mode::CheckTx
         } else {
@@ -208,7 +200,6 @@ impl<'a> DispatchContext<'a> {
             io_ctx: ctx.io_ctx.clone(),
             logger: get_logger("runtime-sdk")
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
-            methods,
             block_tags: Tags::new(),
             max_messages: ctx.max_messages,
             messages: Vec::new(),

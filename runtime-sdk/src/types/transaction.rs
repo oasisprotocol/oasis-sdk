@@ -190,6 +190,14 @@ impl SignerInfo {
             nonce,
         }
     }
+
+    /// Create a new signer info from a multisig configuration and a nonce.
+    pub fn new_multisig(config: multisig::Config, nonce: u64) -> Self {
+        Self {
+            address_spec: AddressSpec::Multisig(config),
+            nonce,
+        }
+    }
 }
 
 /// Call result.
