@@ -932,7 +932,8 @@ dependencies = [
 
 [[package]]
 name = "oasis-core-runtime"
-version = "0.3.0-alpha"
+version = "0.0.0"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.2#eb15875a11d0694e410be0990a7ade6a055e583a"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -1487,7 +1488,6 @@ dependencies = [
  "chacha20poly1305",
  "rand 0.8.3",
  "rand_core 0.6.2",
- "ring",
  "rustc_version",
  "sha2",
  "subtle",

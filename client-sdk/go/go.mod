@@ -12,8 +12,7 @@ replace (
 require (
 	github.com/btcsuite/btcd v0.21.0-beta
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20210517032302-bdd38cd1c8c0 // indirect
-	github.com/oasisprotocol/oasis-core/go v0.2101.1-0.20210517160830-c287752b61b7
-	github.com/prometheus/common v0.24.0 // indirect
+	github.com/oasisprotocol/oasis-core/go v0.2102.0
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/net v0.0.0-20210510120150-4163338589ed // indirect
 	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015 // indirect
