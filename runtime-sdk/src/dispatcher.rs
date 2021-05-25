@@ -377,19 +377,16 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Perform state migrations if required.
             self.maybe_init_state(&mut ctx);
 
-            match method {
-                "core.EstimateGas" => {
-                    // Run a transaction in simulation and return how much gas it uses. This looks up the method
-                    // in the context's method registry. Transactions that fail still use gas, and this query will
-                    // estimate that and return successfully, so do not use this query to see if a transaction will
-                    // succeed. Failure due to OutOfGas are included, so it's best to set the query argument
-                    // transaction's gas to something high.
-                    let tx = cbor::from_value(args)
-                        .map_err(|_| modules::core::Error::InvalidArgument)?;
-                    let gas = self.estimate_gas(&mut ctx, tx)?;
-                    return Ok(cbor::to_value(gas));
-                }
-                _ => {}
+            if method == "core.EstimateGas" {
+                // Run a transaction in simulation and return how much gas it uses. This looks up the method
+                // in the context's method registry. Transactions that fail still use gas, and this query will
+                // estimate that and return successfully, so do not use this query to see if a transaction will
+                // succeed. Failure due to OutOfGas are included, so it's best to set the query argument
+                // transaction's gas to something high.
+                let tx =
+                    cbor::from_value(args).map_err(|_| modules::core::Error::InvalidArgument)?;
+                let gas = self.estimate_gas(&mut ctx, tx)?;
+                return Ok(cbor::to_value(gas));
             }
 
             // Execute the query.
