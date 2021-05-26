@@ -105,11 +105,11 @@ impl<R: Runtime> Dispatcher<R> {
 
     fn dispatch_call(
         &self,
-        mut ctx: &mut TxContext<'_, '_>,
+        ctx: &mut TxContext<'_, '_>,
         call: types::transaction::Call,
     ) -> types::transaction::CallResult {
         // Use up gas for authenticating the transaction.
-        if let Err(e) = modules::core::Module::use_gas_for_auth(&mut ctx) {
+        if let Err(e) = modules::core::Module::use_gas_for_auth(ctx) {
             return e.to_call_result();
         }
 
@@ -122,7 +122,7 @@ impl<R: Runtime> Dispatcher<R> {
             }
         };
 
-        (method_info.handler)(&method_info, &mut ctx, call.body)
+        (method_info.handler)(&method_info, ctx, call.body)
     }
 
     fn estimate_gas(
@@ -227,7 +227,7 @@ impl<R: Runtime> Dispatcher<R> {
 
     fn dispatch_message(
         &self,
-        mut ctx: &mut DispatchContext<'_>,
+        ctx: &mut DispatchContext<'_>,
         handler_name: String,
         message_event: MessageEvent,
         handler_ctx: cbor::Value,
@@ -238,7 +238,7 @@ impl<R: Runtime> Dispatcher<R> {
             .lookup_handler(&handler_name)
             .ok_or(modules::core::Error::InvalidMethod)?;
 
-        (method_info.handler)(&method_info, &mut ctx, message_event, handler_ctx);
+        (method_info.handler)(&method_info, ctx, message_event, handler_ctx);
 
         Ok(())
     }
