@@ -39,8 +39,9 @@ pub fn gen_method_registration_handler_impl(
 
         let mut inputs = method.sig.inputs.iter();
         let e_needs_ctx =
-            "handler method must have `&TxContext` or `&DispatchContext` as the first argument";
-        let (registrar, method_info) = match inputs.next() {
+            "handler method must have `&mut TxContext` or `&mut DispatchContext` as the first argument";
+        let result_ident = format_ident!("result");
+        let (registrar, method_info, result_encoder) = match inputs.next() {
             Some(syn::FnArg::Typed(syn::PatType {
                 ty:
                     box syn::Type::Reference(syn::TypeReference {
@@ -51,9 +52,16 @@ pub fn gen_method_registration_handler_impl(
             })) => {
                 let ty_ident = &path.segments.last().as_ref().unwrap().ident; // path must have one segment
                 if ty_ident == "TxContext" {
-                    (quote!(register_callable), quote!(CallableMethodInfo))
+                    let result_encoder = quote! {
+                        match #result_ident {
+                            Ok(value) => sdk::types::transaction::CallResult::Ok(value),
+                            Err(err) => err.to_call_result(),
+                        }
+                    };
+                    (quote!(register_callable), quote!(CallableMethodInfo), result_encoder)
                 } else if ty_ident == "DispatchContext" {
-                    (quote!(register_query), quote!(QueryMethodInfo))
+                    let result_encoder = quote!(Ok(cbor::to_value(&#result_ident?)));
+                    (quote!(register_query), quote!(QueryMethodInfo), result_encoder)
                 } else {
                     method.sig.ident.span().unwrap().error(e_needs_ctx).emit();
                     return Some(quote!());
@@ -108,14 +116,11 @@ pub fn gen_method_registration_handler_impl(
             methods.#registrar(sdk::module::#method_info {
                 name: #method_name,
                 handler: |_mi, ctx, body| {
-                    let result = || -> Result<cbor::Value, Error> {
+                    let #result_ident = || -> Result<cbor::Value, Error> {
                         let (#(#arg_names),*) = cbor::from_value(body)?;
                         Ok(cbor::to_value(&Self::#handler_ident(ctx, #(#arg_names),*)?))
                     }();
-                    match result {
-                        Ok(value) => sdk::types::transaction::CallResult::Ok(value),
-                        Err(err) => err.to_call_result(),
-                    }
+                    #result_encoder
                 }
             });
             }
@@ -125,6 +130,7 @@ pub fn gen_method_registration_handler_impl(
     let method_registration = gen::wrap_in_const(quote! {
         use #sdk_crate::{self as sdk, core::common::cbor, error::Error as _};
 
+        #[allow(warnings)]
         impl#module_generics sdk::module::MethodRegistrationHandler for #module_ty {
             fn register_methods(methods: &mut sdk::module::MethodRegistry) {
                 #(#method_registrations)*
