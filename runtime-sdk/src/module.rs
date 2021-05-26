@@ -16,14 +16,24 @@ use crate::{
     },
 };
 
+type CallableMethodHandler =
+    fn(&CallableMethodInfo, &mut TxContext<'_, '_>, cbor::Value) -> CallResult;
+
 /// Metadata of a callable method.
 pub struct CallableMethodInfo {
     /// Method name.
     pub name: &'static str,
 
     /// Method handler function.
-    pub handler: fn(&CallableMethodInfo, &mut TxContext<'_, '_>, cbor::Value) -> CallResult,
+    pub handler: CallableMethodHandler,
 }
+
+type QueryMethodHandler<R> = fn(
+    &QueryMethodInfo<R>,
+    &mut DispatchContext<'_>,
+    &dispatcher::Dispatcher<R>,
+    cbor::Value,
+) -> Result<cbor::Value, error::RuntimeError>;
 
 /// Metadata of a query method.
 pub struct QueryMethodInfo<R: runtime::Runtime> {
@@ -31,12 +41,7 @@ pub struct QueryMethodInfo<R: runtime::Runtime> {
     pub name: &'static str,
 
     /// Method handler function.
-    pub handler: fn(
-        &QueryMethodInfo<R>,
-        &mut DispatchContext<'_>,
-        &dispatcher::Dispatcher<R>,
-        cbor::Value,
-    ) -> Result<cbor::Value, error::RuntimeError>,
+    pub handler: QueryMethodHandler<R>,
 }
 
 /// Registry of methods exposed by the modules.
