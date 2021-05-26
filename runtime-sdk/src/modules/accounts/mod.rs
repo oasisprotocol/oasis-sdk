@@ -9,11 +9,11 @@ use thiserror::Error;
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    context::{Context, DispatchContext, TxContext},
+    context::Context,
     crypto::signature::PublicKey,
     error::{self, Error as _},
     module,
-    module::{CallableMethodInfo, Module as _, QueryMethodInfo},
+    module::Module as _,
     modules,
     modules::core::{Module as Core, API as _},
     storage,
@@ -113,36 +113,6 @@ pub struct Genesis {
     #[serde(rename = "total_supplies")]
     pub total_supplies: BTreeMap<token::Denomination, token::Quantity>,
 }
-
-// TODO: Add a custom macro for easier module derivation.
-
-/*
-module!{
-    #[module(name = MODULE_NAME)]
-    impl Module {
-        type Error = Error;
-        type Event = Event;
-
-        #[module::callable_method(name = "Transfer")]
-        fn tx_transfer(ctx: &mut Context, body: u64) -> Result<(), Error> {
-            //
-            Ok(())
-        }
-
-        #[module::api]
-        fn transfer(ctx: &mut Context, body: u64) -> Result<(), Error> {
-            //
-            Ok(())
-        }
-
-        #[module::api]
-        fn mint(ctx: &mut Context, msg: messages::Mint) -> Result<(), Error> {
-            //
-            Ok(())
-        }
-    }
-}
-*/
 
 /// Interface that can be called from other modules.
 pub trait API {
@@ -333,7 +303,7 @@ impl API for Module {
 }
 
 impl Module {
-    fn tx_transfer(ctx: &mut TxContext<'_, '_>, body: types::Transfer) -> Result<(), Error> {
+    fn tx_transfer<C: Context>(ctx: &mut C, body: types::Transfer) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
 
         // Reject transfers when they are disabled.
@@ -353,50 +323,15 @@ impl Module {
         Ok(())
     }
 
-    fn query_nonce(ctx: &mut DispatchContext<'_>, args: types::NonceQuery) -> Result<u64, Error> {
+    fn query_nonce<C: Context>(ctx: &mut C, args: types::NonceQuery) -> Result<u64, Error> {
         Self::get_nonce(ctx.runtime_state(), args.address)
     }
 
-    fn query_balances(
-        ctx: &mut DispatchContext<'_>,
+    fn query_balances<C: Context>(
+        ctx: &mut C,
         args: types::BalancesQuery,
     ) -> Result<types::AccountBalances, Error> {
         Self::get_balances(ctx.runtime_state(), args.address)
-    }
-}
-
-impl Module {
-    fn _callable_transfer_handler(
-        _mi: &CallableMethodInfo,
-        ctx: &mut TxContext<'_, '_>,
-        body: cbor::Value,
-    ) -> CallResult {
-        let result = || -> Result<cbor::Value, Error> {
-            let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-            Ok(cbor::to_value(&Self::tx_transfer(ctx, args)?))
-        }();
-        match result {
-            Ok(value) => CallResult::Ok(value),
-            Err(err) => err.to_call_result(),
-        }
-    }
-
-    fn _query_nonce_handler(
-        _mi: &QueryMethodInfo,
-        ctx: &mut DispatchContext<'_>,
-        args: cbor::Value,
-    ) -> Result<cbor::Value, error::RuntimeError> {
-        let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-        Ok(cbor::to_value(&Self::query_nonce(ctx, args)?))
-    }
-
-    fn _query_balances_handler(
-        _mi: &QueryMethodInfo,
-        ctx: &mut DispatchContext<'_>,
-        args: cbor::Value,
-    ) -> Result<cbor::Value, error::RuntimeError> {
-        let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-        Ok(cbor::to_value(&Self::query_balances(ctx, args)?))
     }
 }
 
@@ -407,31 +342,49 @@ impl module::Module for Module {
     type Parameters = Parameters;
 }
 
-impl module::MessageHookRegistrationHandler for Module {}
+impl module::MethodHandler for Module {
+    fn dispatch_call<C: Context>(
+        ctx: &mut C,
+        method: &str,
+        body: cbor::Value,
+    ) -> module::DispatchResult<cbor::Value, CallResult> {
+        match method {
+            "accounts.Transfer" => {
+                let result = || -> Result<cbor::Value, Error> {
+                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
+                    Ok(cbor::to_value(&Self::tx_transfer(ctx, args)?))
+                }();
+                match result {
+                    Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
+                    Err(err) => module::DispatchResult::Handled(err.to_call_result()),
+                }
+            }
+            _ => module::DispatchResult::Unhandled(body),
+        }
+    }
 
-impl module::MethodRegistrationHandler for Module {
-    fn register_methods(methods: &mut module::MethodRegistry) {
-        // Callable methods.
-        methods.register_callable(module::CallableMethodInfo {
-            name: "accounts.Transfer",
-            handler: Self::_callable_transfer_handler,
-        });
-
-        // Queries.
-        methods.register_query(module::QueryMethodInfo {
-            name: "accounts.Nonce",
-            handler: Self::_query_nonce_handler,
-        });
-        methods.register_query(module::QueryMethodInfo {
-            name: "accounts.Balances",
-            handler: Self::_query_balances_handler,
-        });
+    fn dispatch_query<C: Context>(
+        ctx: &mut C,
+        method: &str,
+        args: cbor::Value,
+    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
+        match method {
+            "accounts.Nonce" => module::DispatchResult::Handled((|| {
+                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
+                Ok(cbor::to_value(&Self::query_nonce(ctx, args)?))
+            })()),
+            "accounts.Balances" => module::DispatchResult::Handled((|| {
+                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
+                Ok(cbor::to_value(&Self::query_balances(ctx, args)?))
+            })()),
+            _ => module::DispatchResult::Unhandled(args),
+        }
     }
 }
 
 impl Module {
     /// Initialize state from genesis.
-    fn init(ctx: &mut DispatchContext<'_>, genesis: &Genesis) {
+    fn init<C: Context>(ctx: &mut C, genesis: &Genesis) {
         // Create accounts.
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut accounts =
@@ -486,7 +439,7 @@ impl Module {
     }
 
     /// Migrate state from a previous version.
-    fn migrate(_ctx: &mut DispatchContext<'_>, _from: u32) -> bool {
+    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
         // No migrations currently supported.
         false
     }
@@ -495,8 +448,8 @@ impl Module {
 impl module::MigrationHandler for Module {
     type Genesis = Genesis;
 
-    fn init_or_migrate(
-        ctx: &mut DispatchContext<'_>,
+    fn init_or_migrate<C: Context>(
+        ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
         genesis: &Self::Genesis,
     ) -> bool {
@@ -534,8 +487,8 @@ impl FeeAccumulator {
 const CONTEXT_KEY_FEE_ACCUMULATOR: &str = "accounts.FeeAccumulator";
 
 impl module::AuthHandler for Module {
-    fn authenticate_tx(
-        ctx: &mut DispatchContext<'_>,
+    fn authenticate_tx<C: Context>(
+        ctx: &mut C,
         tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
         // Fetch information about each signer.
@@ -578,7 +531,7 @@ impl module::AuthHandler for Module {
 }
 
 impl module::BlockHandler for Module {
-    fn end_block(ctx: &mut DispatchContext<'_>) {
+    fn end_block<C: Context>(ctx: &mut C) {
         // Determine the fees that are available for disbursement from the last block.
         let mut previous_fees = Self::get_balances(ctx.runtime_state(), *ADDRESS_FEE_ACCUMULATOR)
             .expect("get_balances must succeed")

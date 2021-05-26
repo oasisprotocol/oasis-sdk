@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    context::{Context, DispatchContext},
+    context::Context,
     module::{AuthHandler, BlockHandler},
     modules::core,
     testing::{keys, mock},
@@ -199,7 +199,7 @@ fn test_api_tx_transfer_disabled() {
     });
 }
 
-pub(crate) fn init_accounts(ctx: &mut DispatchContext<'_>) {
+pub(crate) fn init_accounts<C: Context>(ctx: &mut C) {
     Accounts::init(
         ctx,
         &Genesis {

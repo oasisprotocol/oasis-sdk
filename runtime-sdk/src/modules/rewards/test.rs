@@ -2,7 +2,7 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    context::{Context, DispatchContext},
+    context::Context,
     module::{BlockHandler, MigrationHandler},
     modules::{
         accounts::{self, Module as Accounts, API as _},
@@ -16,7 +16,7 @@ use super::{types, Genesis, Parameters, ADDRESS_REWARD_POOL};
 
 type Rewards = super::Module<Accounts>;
 
-fn init_accounts(ctx: &mut DispatchContext<'_>) {
+fn init_accounts<C: Context>(ctx: &mut C) {
     Accounts::init_or_migrate(
         ctx,
         &mut core::types::Metadata::default(),
