@@ -27,7 +27,6 @@ use crate::{
     error::{Error as _, RuntimeError},
     module::{AuthHandler, BlockHandler, MessageHandlerRegistry, MethodRegistry},
     modules,
-    modules::core::API as _,
     runtime::Runtime,
     storage, types,
 };
@@ -103,13 +102,12 @@ impl<R: Runtime> Dispatcher<R> {
             .map_err(|_| modules::core::Error::MalformedTransaction)
     }
 
-    fn dispatch_call(
+    pub(super) fn dispatch_call(
         &self,
         ctx: &mut TxContext<'_, '_>,
         call: types::transaction::Call,
     ) -> types::transaction::CallResult {
-        // Use up gas for authenticating the transaction.
-        if let Err(e) = modules::core::Module::use_gas_for_auth(ctx) {
+        if let Err(e) = R::Modules::before_handle_call(ctx, &call) {
             return e.to_call_result();
         }
 
@@ -123,19 +121,6 @@ impl<R: Runtime> Dispatcher<R> {
         };
 
         (method_info.handler)(&method_info, ctx, call.body)
-    }
-
-    fn estimate_gas(
-        &self,
-        ctx: &mut DispatchContext<'_>,
-        tx: types::transaction::Transaction,
-    ) -> Result<u64, modules::core::Error> {
-        ctx.with_tx_simulation(tx, |mut tx_ctx, call| {
-            self.dispatch_call(&mut tx_ctx, call);
-            // Warning: we don't report success or failure. If the call fails, we still report
-            // how much gas it uses while it fails.
-            Ok(modules::core::Module::tx_gas_used(&mut tx_ctx))
-        })
     }
 
     fn dispatch_tx(
@@ -290,7 +275,7 @@ impl<R: Runtime> Dispatcher<R> {
         store.insert(&modules::core::state::MESSAGE_HANDLERS, &message_handlers);
     }
 
-    fn maybe_init_state(&self, ctx: &mut DispatchContext<'_>) {
+    pub(super) fn maybe_init_state(&self, ctx: &mut DispatchContext<'_>) {
         R::migrate(ctx)
     }
 }
@@ -377,18 +362,6 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Perform state migrations if required.
             self.maybe_init_state(&mut ctx);
 
-            if method == "core.EstimateGas" {
-                // Run a transaction in simulation and return how much gas it uses. This looks up the method
-                // in the context's method registry. Transactions that fail still use gas, and this query will
-                // estimate that and return successfully, so do not use this query to see if a transaction will
-                // succeed. Failure due to OutOfGas are included, so it's best to set the query argument
-                // transaction's gas to something high.
-                let tx =
-                    cbor::from_value(args).map_err(|_| modules::core::Error::InvalidArgument)?;
-                let gas = self.estimate_gas(&mut ctx, tx)?;
-                return Ok(cbor::to_value(gas));
-            }
-
             // Execute the query.
             let method_info = self
                 .methods
@@ -396,104 +369,5 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                 .ok_or(modules::core::Error::InvalidMethod)?;
             (method_info.handler)(&method_info, &mut ctx, self, args)
         })
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use oasis_core_runtime::common::cbor;
-
-    use crate::{
-        context,
-        crypto::multisig,
-        module,
-        modules::core::{self, Module as Core, API as _},
-        testing::{keys, mock},
-        types::{token, transaction},
-        Runtime, Version,
-    };
-
-    use super::Dispatcher;
-
-    const AUTH_SIGNATURE_GAS: u64 = 1;
-    const AUTH_MULTISIG_GAS: u64 = 10;
-    const CALL_GAS: u64 = 100;
-
-    struct Runtime1;
-
-    impl Runtime for Runtime1 {
-        const VERSION: Version = Version {
-            major: 1,
-            minor: 0,
-            patch: 0,
-        };
-        type Modules = (Core,);
-
-        fn genesis_state() -> (core::Genesis,) {
-            (core::Genesis {
-                parameters: core::Parameters {
-                    max_batch_gas: u64::MAX,
-                    max_tx_signers: 8,
-                    max_multisig_signers: 8,
-                    gas_costs: core::GasCosts {
-                        auth_signature: AUTH_SIGNATURE_GAS,
-                        auth_multisig_signer: AUTH_MULTISIG_GAS,
-                    },
-                },
-            },)
-        }
-    }
-
-    #[test]
-    fn test_query_estimate_gas() {
-        const METHOD_WASTE_GAS: &str = "test.WasteGas";
-        let mut methods = module::MethodRegistry::new();
-        methods.register_callable(module::CallableMethodInfo {
-            name: METHOD_WASTE_GAS,
-            handler: |_mi, ctx, _args| {
-                Core::use_gas(ctx, CALL_GAS).expect("use_gas should succeed");
-                transaction::CallResult::Ok(cbor::Value::Null)
-            },
-        });
-        let consensus_message_handlers = module::MessageHandlerRegistry::new();
-        let dispatcher = Dispatcher::<Runtime1>::new(methods, consensus_message_handlers);
-
-        let mut mock = mock::Mock::default();
-        let mut ctx = mock.create_ctx();
-        ctx.mode = context::Mode::CheckTx;
-        dispatcher.maybe_init_state(&mut ctx);
-
-        let tx = transaction::Transaction {
-            version: 1,
-            call: transaction::Call {
-                method: METHOD_WASTE_GAS.to_owned(),
-                body: cbor::Value::Null,
-            },
-            auth_info: transaction::AuthInfo {
-                signer_info: vec![
-                    transaction::SignerInfo::new(keys::alice::pk(), 0),
-                    transaction::SignerInfo::new_multisig(
-                        multisig::Config {
-                            signers: vec![multisig::Signer {
-                                public_key: keys::bob::pk(),
-                                weight: 1,
-                            }],
-                            threshold: 1,
-                        },
-                        0,
-                    ),
-                ],
-                fee: transaction::Fee {
-                    amount: token::BaseUnits::new(0.into(), token::Denomination::NATIVE),
-                    gas: u64::MAX,
-                },
-            },
-        };
-
-        let est = dispatcher
-            .estimate_gas(&mut ctx, tx)
-            .expect("estimate_gas should succeed");
-        let reference_gas = AUTH_SIGNATURE_GAS + AUTH_MULTISIG_GAS + CALL_GAS;
-        assert_eq!(est, reference_gas, "estimated gas should be correct");
     }
 }

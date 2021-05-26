@@ -2,10 +2,14 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use oasis_core_runtime::common::cbor;
+
 use crate::{
     context::{Context, DispatchContext, TxContext},
-    module::{self, Module as _},
-    types::transaction::{self, AddressSpec, AuthProof, UnverifiedTransaction},
+    dispatcher, error,
+    module::{self, MethodRegistry, Module as _, QueryMethodInfo},
+    runtime,
+    types::transaction::{self, AddressSpec, AuthProof, Call, UnverifiedTransaction},
 };
 
 #[cfg(test)]
@@ -114,11 +118,6 @@ pub trait API {
     /// increased. Per-transaction gas is not assessed when C is not a transaction processing
     /// context.
     fn use_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error>;
-    /// Returns how much gas the transaction has used.
-    fn tx_gas_used(ctx: &mut TxContext<'_, '_>) -> u64;
-    /// Attempt to use gas as needed to authenticate a transaction. This method is provided for the
-    /// dispatcher to call.
-    fn use_gas_for_auth(ctx: &mut TxContext<'_, '_>) -> Result<(), Error>;
 }
 
 /// Genesis state for the accounts module.
@@ -191,12 +190,69 @@ impl API for Module {
 
         Ok(())
     }
+}
 
-    fn tx_gas_used(ctx: &mut TxContext<'_, '_>) -> u64 {
-        *ctx.value::<u64>(CONTEXT_KEY_GAS_USED)
+impl Module {
+    /// Run a transaction in simulation and return how much gas it uses. This looks up the method
+    /// in the context's method registry. Transactions that fail still use gas, and this query will
+    /// estimate that and return successfully, so do not use this query to see if a transaction will
+    /// succeed. Failure due to OutOfGas are included, so it's best to set the query argument
+    /// transaction's gas to something high.
+    fn query_estimate_gas<R: runtime::Runtime>(
+        ctx: &mut DispatchContext<'_>,
+        dispatcher: &dispatcher::Dispatcher<R>,
+        args: transaction::Transaction,
+    ) -> Result<u64, Error> {
+        ctx.with_tx_simulation(args, |mut tx_ctx, call| {
+            dispatcher.dispatch_call(&mut tx_ctx, call);
+            // Warning: we don't report success or failure. If the call fails, we still report
+            // how much gas it uses while it fails.
+            Ok(*tx_ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).unwrap())
+        })
+    }
+}
+
+impl Module {
+    fn _query_estimate_gas_handler<R: runtime::Runtime>(
+        _mi: &QueryMethodInfo<R>,
+        ctx: &mut DispatchContext<'_>,
+        dispatcher: &dispatcher::Dispatcher<R>,
+        args: cbor::Value,
+    ) -> Result<cbor::Value, error::RuntimeError> {
+        let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
+        Ok(cbor::to_value(&Self::query_estimate_gas(
+            ctx, dispatcher, args,
+        )?))
+    }
+}
+
+impl module::Module for Module {
+    const NAME: &'static str = MODULE_NAME;
+    type Error = Error;
+    type Event = ();
+    type Parameters = Parameters;
+}
+
+impl module::AuthHandler for Module {
+    fn approve_unverified_tx(
+        ctx: &mut DispatchContext<'_>,
+        utx: &UnverifiedTransaction,
+    ) -> Result<(), Error> {
+        let params = Self::params(ctx.runtime_state());
+        if utx.1.len() > params.max_tx_signers as usize {
+            return Err(Error::TooManyAuth);
+        }
+        for auth_proof in &utx.1 {
+            if let AuthProof::Multisig(config) = auth_proof {
+                if config.len() > params.max_multisig_signers as usize {
+                    return Err(Error::MultisigTooManySigners);
+                }
+            }
+        }
+        Ok(())
     }
 
-    fn use_gas_for_auth(ctx: &mut TxContext<'_, '_>) -> Result<(), Error> {
+    fn before_handle_call(ctx: &mut TxContext<'_, '_>, _call: &Call) -> Result<(), Error> {
         let mut num_signature: u64 = 0;
         let mut num_multisig_signer: u64 = 0;
         for si in &ctx.tx_auth_info().unwrap().signer_info {
@@ -226,33 +282,6 @@ impl API for Module {
     }
 }
 
-impl module::Module for Module {
-    const NAME: &'static str = MODULE_NAME;
-    type Error = Error;
-    type Event = ();
-    type Parameters = Parameters;
-}
-
-impl module::AuthHandler for Module {
-    fn approve_unverified_tx(
-        ctx: &mut DispatchContext<'_>,
-        utx: &UnverifiedTransaction,
-    ) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
-        if utx.1.len() > params.max_tx_signers as usize {
-            return Err(Error::TooManyAuth);
-        }
-        for auth_proof in &utx.1 {
-            if let AuthProof::Multisig(config) = auth_proof {
-                if config.len() > params.max_multisig_signers as usize {
-                    return Err(Error::MultisigTooManySigners);
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
 impl module::MigrationHandler for Module {
     type Genesis = Genesis;
 
@@ -274,7 +303,15 @@ impl module::MigrationHandler for Module {
     }
 }
 
-impl module::MethodRegistrationHandler for Module {}
+impl module::MethodRegistrationHandler for Module {
+    fn register_methods<R: runtime::Runtime>(methods: &mut MethodRegistry<R>) {
+        // Queries.
+        methods.register_query(module::QueryMethodInfo {
+            name: "core.EstimateGas",
+            handler: Self::_query_estimate_gas_handler,
+        });
+    }
+}
 
 impl module::BlockHandler for Module {}
 
