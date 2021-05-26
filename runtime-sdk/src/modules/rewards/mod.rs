@@ -10,9 +10,9 @@ use crate::{
     context::{Context, DispatchContext},
     core::{common::cbor, consensus::beacon},
     crypto::signature::PublicKey,
-    error,
+    dispatcher, error,
     module::{self, Module as _, Parameters as _, QueryMethodInfo},
-    modules, storage,
+    modules, runtime, storage,
     types::address::Address,
 };
 
@@ -102,9 +102,10 @@ impl<Accounts: modules::accounts::API> Module<Accounts> {
 }
 
 impl<Accounts: modules::accounts::API> Module<Accounts> {
-    fn _query_parameters_handler(
-        _mi: &QueryMethodInfo,
+    fn _query_parameters_handler<R: runtime::Runtime>(
+        _mi: &QueryMethodInfo<R>,
         ctx: &mut DispatchContext<'_>,
+        _dispatcher: &dispatcher::Dispatcher<R>,
         args: cbor::Value,
     ) -> Result<cbor::Value, error::RuntimeError> {
         let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
@@ -122,7 +123,7 @@ impl<Accounts: modules::accounts::API> module::Module for Module<Accounts> {
 impl<Accounts: modules::accounts::API> module::MessageHookRegistrationHandler for Module<Accounts> {}
 
 impl<Accounts: modules::accounts::API> module::MethodRegistrationHandler for Module<Accounts> {
-    fn register_methods(methods: &mut module::MethodRegistry) {
+    fn register_methods<R: runtime::Runtime>(methods: &mut module::MethodRegistry<R>) {
         // Queries.
         methods.register_query(module::QueryMethodInfo {
             name: "rewards.Parameters",

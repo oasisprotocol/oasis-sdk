@@ -11,12 +11,13 @@ use oasis_core_runtime::common::cbor;
 use crate::{
     context::{Context, DispatchContext, TxContext},
     crypto::signature::PublicKey,
+    dispatcher,
     error::{self, Error as _},
     module,
     module::{CallableMethodInfo, Module as _, QueryMethodInfo},
     modules,
     modules::core::{Module as Core, API as _},
-    storage,
+    runtime, storage,
     types::{
         address::Address,
         token,
@@ -381,18 +382,20 @@ impl Module {
         }
     }
 
-    fn _query_nonce_handler(
-        _mi: &QueryMethodInfo,
+    fn _query_nonce_handler<R: runtime::Runtime>(
+        _mi: &QueryMethodInfo<R>,
         ctx: &mut DispatchContext<'_>,
+        _dispatcher: &dispatcher::Dispatcher<R>,
         args: cbor::Value,
     ) -> Result<cbor::Value, error::RuntimeError> {
         let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
         Ok(cbor::to_value(&Self::query_nonce(ctx, args)?))
     }
 
-    fn _query_balances_handler(
-        _mi: &QueryMethodInfo,
+    fn _query_balances_handler<R: runtime::Runtime>(
+        _mi: &QueryMethodInfo<R>,
         ctx: &mut DispatchContext<'_>,
+        _dispatcher: &dispatcher::Dispatcher<R>,
         args: cbor::Value,
     ) -> Result<cbor::Value, error::RuntimeError> {
         let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
@@ -410,7 +413,7 @@ impl module::Module for Module {
 impl module::MessageHookRegistrationHandler for Module {}
 
 impl module::MethodRegistrationHandler for Module {
-    fn register_methods(methods: &mut module::MethodRegistry) {
+    fn register_methods<R: runtime::Runtime>(methods: &mut module::MethodRegistry<R>) {
         // Callable methods.
         methods.register_callable(module::CallableMethodInfo {
             name: "accounts.Transfer",

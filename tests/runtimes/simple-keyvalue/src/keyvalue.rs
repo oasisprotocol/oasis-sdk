@@ -5,12 +5,14 @@ use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, DispatchContext, TxContext},
     core::common::cbor,
+    dispatcher,
     error::{Error as _, RuntimeError},
     module::{CallableMethodInfo, Module as _, QueryMethodInfo},
     modules::{
         core,
         core::{Module as Core, API as _},
     },
+    runtime,
     types::transaction::CallResult,
 };
 
@@ -93,7 +95,7 @@ impl sdk::module::MessageHookRegistrationHandler for Module {}
 
 impl sdk::module::MethodRegistrationHandler for Module {
     /// Register all supported methods.
-    fn register_methods(methods: &mut sdk::module::MethodRegistry) {
+    fn register_methods<R: runtime::Runtime>(methods: &mut sdk::module::MethodRegistry<R>) {
         methods.register_callable(sdk::module::CallableMethodInfo {
             name: "keyvalue.Insert",
             handler: Self::_callable_insert_handler,
@@ -141,9 +143,10 @@ impl Module {
         }
     }
 
-    fn _query_get_handler(
-        _mi: &QueryMethodInfo,
+    fn _query_get_handler<R: runtime::Runtime>(
+        _mi: &QueryMethodInfo<R>,
         ctx: &mut DispatchContext,
+        _dispatcher: &dispatcher::Dispatcher<R>,
         body: cbor::Value,
     ) -> Result<cbor::Value, RuntimeError> {
         let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;

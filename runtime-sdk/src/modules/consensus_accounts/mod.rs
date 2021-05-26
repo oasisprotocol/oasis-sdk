@@ -9,11 +9,13 @@ use oasis_core_runtime::{common::cbor, consensus::staking::Account as ConsensusA
 
 use crate::{
     context::{Context, DispatchContext, TxContext},
+    dispatcher,
     error::{self, Error as _},
     module,
     module::{CallableMethodInfo, Module as _, QueryMethodInfo},
     modules,
     modules::core::{Module as Core, API as _},
+    runtime,
     types::{
         address::Address,
         message::{MessageEvent, MessageEventHookInvocation},
@@ -279,18 +281,20 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         }
     }
 
-    fn _query_balance_handler(
-        _mi: &QueryMethodInfo,
+    fn _query_balance_handler<R: runtime::Runtime>(
+        _mi: &QueryMethodInfo<R>,
         ctx: &mut DispatchContext<'_>,
+        _dispatcher: &dispatcher::Dispatcher<R>,
         args: cbor::Value,
     ) -> Result<cbor::Value, error::RuntimeError> {
         let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
         Ok(cbor::to_value(&Self::query_balance(ctx, args)?))
     }
 
-    fn _query_consensus_account_handler(
-        _mi: &QueryMethodInfo,
+    fn _query_consensus_account_handler<R: runtime::Runtime>(
+        _mi: &QueryMethodInfo<R>,
         ctx: &mut DispatchContext<'_>,
+        _dispatcher: &dispatcher::Dispatcher<R>,
         args: cbor::Value,
     ) -> Result<cbor::Value, error::RuntimeError> {
         let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
@@ -312,7 +316,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     module::MethodRegistrationHandler for Module<Accounts, Consensus>
 {
-    fn register_methods(methods: &mut module::MethodRegistry) {
+    fn register_methods<R: runtime::Runtime>(methods: &mut module::MethodRegistry<R>) {
         // Callable methods.
         methods.register_callable(module::CallableMethodInfo {
             name: "consensus.Deposit",

@@ -64,7 +64,7 @@ impl From<types::transaction::CallResult> for DispatchResult {
 
 pub struct Dispatcher<R: Runtime> {
     /// Method registry.
-    methods: MethodRegistry,
+    methods: MethodRegistry<R>,
     /// Handlers registered for consensus messages.
     consensus_message_handlers: MessageHandlerRegistry,
 
@@ -73,7 +73,7 @@ pub struct Dispatcher<R: Runtime> {
 
 impl<R: Runtime> Dispatcher<R> {
     pub(super) fn new(
-        methods: MethodRegistry,
+        methods: MethodRegistry<R>,
         consensus_message_handlers: MessageHandlerRegistry,
     ) -> Self {
         Self {
@@ -394,7 +394,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                 .methods
                 .lookup_query(method)
                 .ok_or(modules::core::Error::InvalidMethod)?;
-            (method_info.handler)(&method_info, &mut ctx, args)
+            (method_info.handler)(&method_info, &mut ctx, self, args)
         })
     }
 }

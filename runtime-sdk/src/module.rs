@@ -8,7 +8,7 @@ use oasis_core_runtime::common::cbor;
 
 use crate::{
     context::{DispatchContext, TxContext},
-    error, event, modules, storage,
+    dispatcher, error, event, modules, runtime, storage,
     storage::Store,
     types::{
         message::MessageEvent,
@@ -26,25 +26,26 @@ pub struct CallableMethodInfo {
 }
 
 /// Metadata of a query method.
-pub struct QueryMethodInfo {
+pub struct QueryMethodInfo<R: runtime::Runtime> {
     /// Method name.
     pub name: &'static str,
 
     /// Method handler function.
     pub handler: fn(
-        &QueryMethodInfo,
+        &QueryMethodInfo<R>,
         &mut DispatchContext<'_>,
+        &dispatcher::Dispatcher<R>,
         cbor::Value,
     ) -> Result<cbor::Value, error::RuntimeError>,
 }
 
 /// Registry of methods exposed by the modules.
-pub struct MethodRegistry {
+pub struct MethodRegistry<R: runtime::Runtime> {
     callable_methods: BTreeMap<&'static str, CallableMethodInfo>,
-    query_methods: BTreeMap<&'static str, QueryMethodInfo>,
+    query_methods: BTreeMap<&'static str, QueryMethodInfo<R>>,
 }
 
-impl MethodRegistry {
+impl<R: runtime::Runtime> MethodRegistry<R> {
     /// Create a new method registry.
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
@@ -76,7 +77,7 @@ impl MethodRegistry {
     /// # Panics
     ///
     /// This method will panic in case a method with the same name is already registered.
-    pub fn register_query(&mut self, mi: QueryMethodInfo) {
+    pub fn register_query(&mut self, mi: QueryMethodInfo<R>) {
         if self.query_methods.contains_key(mi.name) {
             panic!("query method already exists: {}", mi.name);
         }
@@ -84,7 +85,7 @@ impl MethodRegistry {
     }
 
     /// Looks up a previously registered callable method.
-    pub fn lookup_query(&self, name: &str) -> Option<&QueryMethodInfo> {
+    pub fn lookup_query(&self, name: &str) -> Option<&QueryMethodInfo<R>> {
         self.query_methods.get(name)
     }
 }
@@ -93,7 +94,7 @@ impl MethodRegistry {
 #[impl_for_tuples(30)]
 pub trait MethodRegistrationHandler {
     /// Register any methods exported by the module.
-    fn register_methods(_methods: &mut MethodRegistry) {
+    fn register_methods<R: runtime::Runtime>(_methods: &mut MethodRegistry<R>) {
         // Default implementation doesn't do anything.
     }
 }
