@@ -11,7 +11,7 @@ use oasis_core_runtime::{
 };
 
 use crate::{
-    context::Context,
+    context::{BatchContext, Context},
     modules::consensus::Module as Consensus,
     testing::{keys, mock},
     types::{

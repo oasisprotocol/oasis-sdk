@@ -8,7 +8,7 @@ use thiserror::Error;
 use oasis_core_runtime::{common::cbor, consensus::staking::Account as ConsensusAccount};
 
 use crate::{
-    context::Context,
+    context::{Context, TxContext},
     error::{self, Error as _},
     module,
     module::Module as _,
@@ -192,14 +192,11 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     Module<Accounts, Consensus>
 {
     /// Deposit in the runtime.
-    fn tx_deposit<C: Context>(ctx: &mut C, body: types::Deposit) -> Result<(), Error> {
+    fn tx_deposit<C: TxContext>(ctx: &mut C, body: types::Deposit) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
-        Core::use_gas(ctx, params.gas_costs.tx_deposit)?;
+        Core::use_tx_gas(ctx, params.gas_costs.tx_deposit)?;
 
-        let signer = &ctx
-            .tx_auth_info()
-            .expect("should be called with a transaction ctx")
-            .signer_info[0];
+        let signer = &ctx.tx_auth_info().signer_info[0];
         Consensus::ensure_compatible_tx_signer(ctx)?;
 
         let address = signer.address_spec.address();
@@ -207,15 +204,12 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     }
 
     /// Withdraw from the runtime.
-    fn tx_withdraw<C: Context>(ctx: &mut C, body: types::Withdraw) -> Result<(), Error> {
+    fn tx_withdraw<C: TxContext>(ctx: &mut C, body: types::Withdraw) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
-        Core::use_gas(ctx, params.gas_costs.tx_withdraw)?;
+        Core::use_tx_gas(ctx, params.gas_costs.tx_withdraw)?;
 
         // Signer.
-        let signer = &ctx
-            .tx_auth_info()
-            .expect("should be called with a transaction context")
-            .signer_info[0];
+        let signer = &ctx.tx_auth_info().signer_info[0];
         Consensus::ensure_compatible_tx_signer(ctx)?;
 
         let address = signer.address_spec.address();
@@ -288,7 +282,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::MethodHandler
     for Module<Accounts, Consensus>
 {
-    fn dispatch_call<C: Context>(
+    fn dispatch_call<C: TxContext>(
         ctx: &mut C,
         method: &str,
         body: cbor::Value,

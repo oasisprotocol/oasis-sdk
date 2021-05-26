@@ -3,7 +3,7 @@ use thiserror::Error;
 
 use oasis_runtime_sdk::{
     self as sdk,
-    context::Context,
+    context::{Context, TxContext},
     core::common::cbor,
     error::{Error as _, RuntimeError},
     module::Module as _,
@@ -91,7 +91,7 @@ impl sdk::module::AuthHandler for Module {}
 impl sdk::module::BlockHandler for Module {}
 
 impl sdk::module::MethodHandler for Module {
-    fn dispatch_call<C: Context>(
+    fn dispatch_call<C: TxContext>(
         ctx: &mut C,
         method: &str,
         body: cbor::Value,
@@ -139,7 +139,7 @@ impl sdk::module::MethodHandler for Module {
 // Actual implementation of this runtime's externally-callable methods.
 impl Module {
     /// Insert given keyvalue into storage.
-    fn tx_insert<C: Context>(ctx: &mut C, body: types::KeyValue) -> Result<(), Error> {
+    fn tx_insert<C: TxContext>(ctx: &mut C, body: types::KeyValue) -> Result<(), Error> {
         if ctx.is_check_only() {
             return Ok(());
         }
@@ -153,7 +153,7 @@ impl Module {
             Some(_) => params.gas_costs.insert_existing,
         };
         // We must drop ts and store so that use_gas can borrow ctx.
-        Core::use_gas(ctx, cost)?;
+        Core::use_tx_gas(ctx, cost)?;
 
         // Recreate store and ts after we get ctx back
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
@@ -165,7 +165,7 @@ impl Module {
     }
 
     /// Remove keyvalue from storage using given key.
-    fn tx_remove<C: Context>(ctx: &mut C, body: types::Key) -> Result<(), Error> {
+    fn tx_remove<C: TxContext>(ctx: &mut C, body: types::Key) -> Result<(), Error> {
         if ctx.is_check_only() {
             return Ok(());
         }
@@ -179,7 +179,7 @@ impl Module {
             Some(_) => params.gas_costs.remove_existing,
         };
         // We must drop ts and store so that use_gas can borrow ctx.
-        Core::use_gas(ctx, cost)?;
+        Core::use_tx_gas(ctx, cost)?;
 
         // Recreate store and ts after we get ctx back
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);

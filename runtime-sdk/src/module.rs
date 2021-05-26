@@ -7,7 +7,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    context::Context,
+    context::{Context, TxContext},
     error, event, modules, storage,
     storage::Store,
     types::{
@@ -36,7 +36,7 @@ impl<B, R> DispatchResult<B, R> {
 /// Method handler.
 pub trait MethodHandler {
     /// Dispatch a call.
-    fn dispatch_call<C: Context>(
+    fn dispatch_call<C: TxContext>(
         _ctx: &mut C,
         _method: &str,
         body: cbor::Value,
@@ -68,7 +68,7 @@ pub trait MethodHandler {
 
 #[impl_for_tuples(30)]
 impl MethodHandler for Tuple {
-    fn dispatch_call<C: Context>(
+    fn dispatch_call<C: TxContext>(
         ctx: &mut C,
         method: &str,
         body: cbor::Value,

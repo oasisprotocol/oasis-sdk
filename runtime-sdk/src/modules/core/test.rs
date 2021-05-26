@@ -1,5 +1,5 @@
 use crate::{
-    context::{Context, Mode},
+    context::{BatchContext, Context, Mode, TxContext},
     core::common::{cbor, version::Version},
     module,
     module::{AuthHandler as _, Module as _},
@@ -25,41 +25,41 @@ fn test_use_gas() {
         },
     );
 
-    Core::use_gas(&mut ctx, 1).expect("using batch gas under limit should succeed");
+    Core::use_batch_gas(&mut ctx, 1).expect("using batch gas under limit should succeed");
 
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = MAX_GAS;
 
     ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
-        Core::use_gas(&mut tx_ctx, MAX_GAS).expect("using gas under limit should succeed");
+        Core::use_tx_gas(&mut tx_ctx, MAX_GAS).expect("using gas under limit should succeed");
     });
 
     ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
-        Core::use_gas(&mut tx_ctx, MAX_GAS)
+        Core::use_tx_gas(&mut tx_ctx, MAX_GAS)
             .expect("gas across separate transactions shouldn't accumulate");
     });
 
     ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
-        Core::use_gas(&mut tx_ctx, MAX_GAS).unwrap();
-        Core::use_gas(&mut tx_ctx, 1).expect_err("gas in same transaction should accumulate");
+        Core::use_tx_gas(&mut tx_ctx, MAX_GAS).unwrap();
+        Core::use_tx_gas(&mut tx_ctx, 1).expect_err("gas in same transaction should accumulate");
     });
 
     ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
-        Core::use_gas(&mut tx_ctx, 1).unwrap();
-        Core::use_gas(&mut tx_ctx, u64::MAX).expect_err("overflow should cause error");
+        Core::use_tx_gas(&mut tx_ctx, 1).unwrap();
+        Core::use_tx_gas(&mut tx_ctx, u64::MAX).expect_err("overflow should cause error");
     });
 
     let mut big_tx = tx.clone();
     big_tx.auth_info.fee.gas = u64::MAX;
     ctx.with_tx(big_tx, |mut tx_ctx, _call| {
-        Core::use_gas(&mut tx_ctx, u64::MAX).expect_err("batch overflow should cause error");
+        Core::use_tx_gas(&mut tx_ctx, u64::MAX).expect_err("batch overflow should cause error");
     });
 
     ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
-        Core::use_gas(&mut tx_ctx, 1).expect_err("batch gas should accumulate");
+        Core::use_tx_gas(&mut tx_ctx, 1).expect_err("batch gas should accumulate");
     });
 
-    Core::use_gas(&mut ctx, 1).expect_err("batch gas should accumulate outside tx");
+    Core::use_batch_gas(&mut ctx, 1).expect_err("batch gas should accumulate outside tx");
 }
 
 // Module that implements the gas waster method.
@@ -78,14 +78,14 @@ impl module::Module for GasWasterModule {
 }
 
 impl module::MethodHandler for GasWasterModule {
-    fn dispatch_call<C: Context>(
+    fn dispatch_call<C: TxContext>(
         ctx: &mut C,
         method: &str,
         body: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, transaction::CallResult> {
         match method {
             Self::METHOD_WASTE_GAS => {
-                Core::use_gas(ctx, Self::MAX_GAS).expect("use_gas should succeed");
+                Core::use_tx_gas(ctx, Self::MAX_GAS).expect("use_gas should succeed");
                 module::DispatchResult::Handled(transaction::CallResult::Ok(cbor::Value::Null))
             }
             _ => module::DispatchResult::Unhandled(body),

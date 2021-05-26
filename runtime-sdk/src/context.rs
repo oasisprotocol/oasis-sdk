@@ -1,6 +1,11 @@
 //! Execution context.
 use core::fmt;
-use std::{any::Any, collections::BTreeMap, marker::PhantomData, sync::Arc};
+use std::{
+    any::Any,
+    collections::btree_map::{BTreeMap, Entry},
+    marker::PhantomData,
+    sync::Arc,
+};
 
 use io_context::Context as IoContext;
 use slog::{self, o};
@@ -86,22 +91,6 @@ pub trait Context {
     /// Current epoch.
     fn epoch(&self) -> consensus::beacon::EpochTime;
 
-    /// Transaction authentication information.
-    ///
-    /// Only present if this is a transaction processing context.
-    fn tx_auth_info(&self) -> Option<&transaction::AuthInfo>;
-
-    /// Authenticated address of the caller.
-    ///
-    /// In case there are multiple signers of a transaction, this will return the address
-    /// corresponding to the first signer.
-    ///
-    /// Only present if this is a transaction processing context.
-    fn tx_caller_address(&self) -> Option<Address> {
-        self.tx_auth_info()
-            .map(|info| info.signer_info[0].address_spec.address())
-    }
-
     /// Emits an event.
     fn emit_event<E: Event>(&mut self, event: E);
 
@@ -131,38 +120,8 @@ pub trait Context {
     /// consumes the transaction context.
     fn commit(self) -> (Tags, Vec<(roothash::Message, MessageEventHookInvocation)>);
 
-    /// Fetches or sets a value associated with the context.
-    fn value<V>(&mut self, key: &'static str) -> &mut V
-    where
-        V: Any + Default;
-
-    /// Takes a value associated with the context.
-    ///
-    /// The previous value is removed so subsequent fetches will return the default value.
-    fn take_value<V>(&mut self, key: &'static str) -> Box<V>
-    where
-        V: Any + Default;
-
-    /// Fetches or sets a value associated with the transaction.
-    ///
-    /// Only present if this is a transaction processing context.
-    fn tx_value<V>(&mut self, key: &'static str) -> Option<&mut V>
-    where
-        V: Any + Default;
-
-    /// Takes a value associated with the transaction.
-    ///
-    /// The previous value is removed so subsequent fetches will return the default value.
-    ///
-    /// Only present if this is a transaction processing context.
-    fn take_tx_value<V>(&mut self, key: &'static str) -> Option<Box<V>>
-    where
-        V: Any + Default;
-
-    /// Executes a function with the transaction-specific context set.
-    fn with_tx<F, Rs>(&mut self, tx: transaction::Transaction, f: F) -> Rs
-    where
-        F: FnOnce(TxContext<'_, '_, Self::Runtime, Self::Store>, transaction::Call) -> Rs;
+    /// Fetches a value entry associated with the context.
+    fn value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V>;
 
     /// Executes a function in a simulation context.
     ///
@@ -171,12 +130,40 @@ pub trait Context {
     fn with_simulation<F, Rs>(&mut self, f: F) -> Rs
     where
         F: FnOnce(
-            DispatchContext<'_, Self::Runtime, storage::OverlayStore<&mut Self::Store>>,
+            RuntimeBatchContext<'_, Self::Runtime, storage::OverlayStore<&mut Self::Store>>,
         ) -> Rs;
 }
 
+/// Runtime SDK batch-wide context.
+pub trait BatchContext: Context {
+    /// Executes a function in a per-transaction context.
+    fn with_tx<F, Rs>(&mut self, tx: transaction::Transaction, f: F) -> Rs
+    where
+        F: FnOnce(
+            RuntimeTxContext<'_, '_, <Self as Context>::Runtime, <Self as Context>::Store>,
+            transaction::Call,
+        ) -> Rs;
+}
+
+/// Runtime SDK transaction context.
+pub trait TxContext: Context {
+    /// Transaction authentication information.
+    fn tx_auth_info(&self) -> &transaction::AuthInfo;
+
+    /// Authenticated address of the caller.
+    ///
+    /// In case there are multiple signers of a transaction, this will return the address
+    /// corresponding to the first signer.
+    fn tx_caller_address(&self) -> Address {
+        self.tx_auth_info().signer_info[0].address_spec.address()
+    }
+
+    /// Fetches an entry pointing to a value associated with the transaction.
+    fn tx_value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V>;
+}
+
 /// Dispatch context for the whole batch.
-pub struct DispatchContext<'a, R: runtime::Runtime, S: storage::Store> {
+pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: storage::Store> {
     mode: Mode,
 
     runtime_header: &'a roothash::Header,
@@ -201,7 +188,7 @@ pub struct DispatchContext<'a, R: runtime::Runtime, S: storage::Store> {
     _runtime: PhantomData<R>,
 }
 
-impl<'a, R: runtime::Runtime, S: storage::Store> DispatchContext<'a, R, S> {
+impl<'a, R: runtime::Runtime, S: storage::Store> RuntimeBatchContext<'a, R, S> {
     /// Create a new dispatch context.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -236,13 +223,13 @@ impl<'a, R: runtime::Runtime, S: storage::Store> DispatchContext<'a, R, S> {
     pub(crate) fn from_runtime(
         ctx: &'a RuntimeContext<'_>,
         mkvs: &'a mut dyn mkvs::MKVS,
-    ) -> DispatchContext<'a, R, storage::MKVSStore<&'a mut dyn mkvs::MKVS>> {
+    ) -> RuntimeBatchContext<'a, R, storage::MKVSStore<&'a mut dyn mkvs::MKVS>> {
         let mode = if ctx.check_only {
             Mode::CheckTx
         } else {
             Mode::ExecuteTx
         };
-        DispatchContext {
+        RuntimeBatchContext {
             mode,
             runtime_header: ctx.header,
             runtime_round_results: ctx.round_results,
@@ -261,7 +248,7 @@ impl<'a, R: runtime::Runtime, S: storage::Store> DispatchContext<'a, R, S> {
     }
 }
 
-impl<'a, R: runtime::Runtime, S: storage::Store> Context for DispatchContext<'a, R, S> {
+impl<'a, R: runtime::Runtime, S: storage::Store> Context for RuntimeBatchContext<'a, R, S> {
     type Runtime = R;
     type Store = S;
 
@@ -293,10 +280,6 @@ impl<'a, R: runtime::Runtime, S: storage::Store> Context for DispatchContext<'a,
         self.epoch
     }
 
-    fn tx_auth_info(&self) -> Option<&transaction::AuthInfo> {
-        None
-    }
-
     fn emit_event<E: Event>(&mut self, event: E) {
         self.block_tags.push(event.to_tag());
     }
@@ -324,81 +307,20 @@ impl<'a, R: runtime::Runtime, S: storage::Store> Context for DispatchContext<'a,
         (self.block_tags, self.messages)
     }
 
-    fn value<V>(&mut self, key: &'static str) -> &mut V
-    where
-        V: Any + Default,
-    {
-        self.values
-            .entry(key)
-            .or_insert_with(|| Box::new(V::default()))
-            .downcast_mut()
-            .expect("type should stay the same")
-    }
-
-    fn take_value<V>(&mut self, key: &'static str) -> Box<V>
-    where
-        V: Any + Default,
-    {
-        self.values
-            .remove(key)
-            .map(|x| x.downcast().expect("type should stay the same"))
-            .unwrap_or_default()
-    }
-
-    fn tx_value<V>(&mut self, _key: &'static str) -> Option<&mut V>
-    where
-        V: Any + Default,
-    {
-        None
-    }
-
-    fn take_tx_value<V>(&mut self, _key: &'static str) -> Option<Box<V>>
-    where
-        V: Any + Default,
-    {
-        None
-    }
-
-    fn with_tx<F, Rs>(&mut self, tx: transaction::Transaction, f: F) -> Rs
-    where
-        F: FnOnce(TxContext<'_, '_, Self::Runtime, Self::Store>, transaction::Call) -> Rs,
-    {
-        // Create a store wrapped by an overlay store so we can either rollback or commit.
-        let store = storage::OverlayStore::new(&mut self.runtime_storage);
-
-        let tx_ctx = TxContext {
-            mode: self.mode,
-            runtime_header: self.runtime_header,
-            runtime_round_results: self.runtime_round_results,
-            consensus_state: self.consensus_state,
-            epoch: self.epoch,
-            store,
-            io_ctx: self.io_ctx.clone(),
-            logger: self
-                .logger
-                .new(o!("ctx" => "transaction", "mode" => Into::<&'static str>::into(&self.mode))),
-            tx_auth_info: tx.auth_info,
-            tags: Tags::new(),
-            // NOTE: Since a limit is enforced (which is a u32) this cast is always safe.
-            max_messages: self.max_messages.saturating_sub(self.messages.len() as u32),
-            messages: Vec::new(),
-            values: &mut self.values,
-            tx_values: BTreeMap::new(),
-            _runtime: PhantomData,
-        };
-        f(tx_ctx, tx.call)
+    fn value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
+        ContextValue::new(self.values.entry(key))
     }
 
     fn with_simulation<F, Rs>(&mut self, f: F) -> Rs
     where
         F: FnOnce(
-            DispatchContext<'_, Self::Runtime, storage::OverlayStore<&mut Self::Store>>,
+            RuntimeBatchContext<'_, Self::Runtime, storage::OverlayStore<&mut Self::Store>>,
         ) -> Rs,
     {
         // Create a store wrapped by an overlay store so any state changes don't leak.
         let store = storage::OverlayStore::new(&mut self.runtime_storage);
 
-        let sim_ctx = DispatchContext {
+        let sim_ctx = RuntimeBatchContext {
             mode: Mode::SimulateTx,
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
@@ -420,17 +342,51 @@ impl<'a, R: runtime::Runtime, S: storage::Store> Context for DispatchContext<'a,
     }
 }
 
+impl<'a, R: runtime::Runtime, S: storage::Store> BatchContext for RuntimeBatchContext<'a, R, S> {
+    fn with_tx<F, Rs>(&mut self, tx: transaction::Transaction, f: F) -> Rs
+    where
+        F: FnOnce(
+            RuntimeTxContext<'_, '_, <Self as Context>::Runtime, <Self as Context>::Store>,
+            transaction::Call,
+        ) -> Rs,
+    {
+        // Create a store wrapped by an overlay store so we can either rollback or commit.
+        let store = storage::OverlayStore::new(&mut self.runtime_storage);
+
+        let tx_ctx = RuntimeTxContext {
+            mode: self.mode,
+            runtime_header: self.runtime_header,
+            runtime_round_results: self.runtime_round_results,
+            consensus_state: self.consensus_state,
+            epoch: self.epoch,
+            store,
+            io_ctx: self.io_ctx.clone(),
+            logger: self
+                .logger
+                .new(o!("ctx" => "transaction", "mode" => Into::<&'static str>::into(&self.mode))),
+            tx_auth_info: tx.auth_info,
+            tags: Tags::new(),
+            // NOTE: Since a limit is enforced (which is a u32) this cast is always safe.
+            max_messages: self.max_messages.saturating_sub(self.messages.len() as u32),
+            messages: Vec::new(),
+            values: &mut self.values,
+            tx_values: BTreeMap::new(),
+            _runtime: PhantomData,
+        };
+        f(tx_ctx, tx.call)
+    }
+}
+
 /// Per-transaction/method dispatch sub-context.
-pub struct TxContext<'a, 'b, R: runtime::Runtime, S: storage::Store> {
+pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: storage::Store> {
     mode: Mode,
 
-    runtime_header: &'a roothash::Header,
-    runtime_round_results: &'a roothash::RoundResults,
-    consensus_state: &'a consensus::state::ConsensusState,
+    runtime_header: &'round roothash::Header,
+    runtime_round_results: &'round roothash::RoundResults,
+    consensus_state: &'round consensus::state::ConsensusState,
     epoch: consensus::beacon::EpochTime,
     // TODO: linked consensus layer block
-    store: storage::OverlayStore<&'b mut S>,
-
+    store: storage::OverlayStore<&'store mut S>,
     io_ctx: Arc<IoContext>,
     logger: slog::Logger,
 
@@ -446,7 +402,7 @@ pub struct TxContext<'a, 'b, R: runtime::Runtime, S: storage::Store> {
     messages: Vec<(roothash::Message, MessageEventHookInvocation)>,
 
     /// Per-context values.
-    values: &'b mut BTreeMap<&'static str, Box<dyn Any>>,
+    values: &'store mut BTreeMap<&'static str, Box<dyn Any>>,
 
     /// Per-transaction values.
     tx_values: BTreeMap<&'static str, Box<dyn Any>>,
@@ -454,9 +410,11 @@ pub struct TxContext<'a, 'b, R: runtime::Runtime, S: storage::Store> {
     _runtime: PhantomData<R>,
 }
 
-impl<'a, 'b, R: runtime::Runtime, S: storage::Store> Context for TxContext<'a, 'b, R, S> {
+impl<'round, 'store, R: runtime::Runtime, S: storage::Store> Context
+    for RuntimeTxContext<'round, 'store, R, S>
+{
     type Runtime = R;
-    type Store = storage::OverlayStore<&'b mut S>;
+    type Store = storage::OverlayStore<&'store mut S>;
 
     fn get_logger(&self, module: &'static str) -> slog::Logger {
         self.logger.new(o!("sdk_module" => module))
@@ -484,10 +442,6 @@ impl<'a, 'b, R: runtime::Runtime, S: storage::Store> Context for TxContext<'a, '
 
     fn epoch(&self) -> consensus::beacon::EpochTime {
         self.epoch
-    }
-
-    fn tx_auth_info(&self) -> Option<&transaction::AuthInfo> {
-        Some(&self.tx_auth_info)
     }
 
     fn emit_event<E: Event>(&mut self, event: E) {
@@ -518,69 +472,20 @@ impl<'a, 'b, R: runtime::Runtime, S: storage::Store> Context for TxContext<'a, '
         (self.tags, self.messages)
     }
 
-    fn value<V>(&mut self, key: &'static str) -> &mut V
-    where
-        V: Any + Default,
-    {
-        self.values
-            .entry(key)
-            .or_insert_with(|| Box::new(V::default()))
-            .downcast_mut()
-            .expect("type should stay the same")
-    }
-
-    fn take_value<V>(&mut self, key: &'static str) -> Box<V>
-    where
-        V: Any + Default,
-    {
-        self.values
-            .remove(key)
-            .map(|x| x.downcast().expect("type should stay the same"))
-            .unwrap_or_default()
-    }
-
-    fn tx_value<V>(&mut self, key: &'static str) -> Option<&mut V>
-    where
-        V: Any + Default,
-    {
-        Some(
-            self.tx_values
-                .entry(key)
-                .or_insert_with(|| Box::new(V::default()))
-                .downcast_mut()
-                .expect("type should stay the same"),
-        )
-    }
-
-    fn take_tx_value<V>(&mut self, key: &'static str) -> Option<Box<V>>
-    where
-        V: Any + Default,
-    {
-        Some(
-            self.tx_values
-                .remove(key)
-                .map(|x| x.downcast().expect("type should stay the same"))
-                .unwrap_or_default(),
-        )
-    }
-
-    fn with_tx<F, Rs>(&mut self, _tx: transaction::Transaction, _f: F) -> Rs
-    where
-        F: FnOnce(TxContext<'_, '_, Self::Runtime, Self::Store>, transaction::Call) -> Rs,
-    {
-        panic!("cannot nest transaction contexts");
+    fn value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
+        ContextValue::new(self.values.entry(key))
     }
 
     fn with_simulation<F, Rs>(&mut self, f: F) -> Rs
     where
         F: FnOnce(
-            DispatchContext<'_, Self::Runtime, storage::OverlayStore<&mut Self::Store>>,
+            RuntimeBatchContext<'_, Self::Runtime, storage::OverlayStore<&mut Self::Store>>,
         ) -> Rs,
     {
         // Create a store wrapped by an overlay store so any state changes don't leak.
         let store = storage::OverlayStore::new(&mut self.store);
 
-        let sim_ctx = DispatchContext {
+        let sim_ctx = RuntimeBatchContext {
             mode: Mode::SimulateTx,
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
@@ -602,7 +507,113 @@ impl<'a, 'b, R: runtime::Runtime, S: storage::Store> Context for TxContext<'a, '
     }
 }
 
+impl<R: runtime::Runtime, S: storage::Store> TxContext for RuntimeTxContext<'_, '_, R, S> {
+    fn tx_auth_info(&self) -> &transaction::AuthInfo {
+        &self.tx_auth_info
+    }
+
+    fn tx_value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
+        ContextValue::new(self.tx_values.entry(key))
+    }
+}
+
+/// A per-context arbitrary value.
+pub struct ContextValue<'a, V> {
+    inner: Entry<'a, &'static str, Box<dyn Any>>,
+    _value: PhantomData<V>,
+}
+
+impl<'a, V: Any> ContextValue<'a, V> {
+    fn new(inner: Entry<'a, &'static str, Box<dyn Any>>) -> Self {
+        Self {
+            inner,
+            _value: PhantomData,
+        }
+    }
+
+    /// Gets a reference to the specified per-context value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the retrieved type is not the type that was stored.
+    pub fn get(self) -> Option<&'a V> {
+        match self.inner {
+            Entry::Occupied(oe) => Some(
+                oe.into_mut()
+                    .downcast_ref()
+                    .expect("type should stay the same"),
+            ),
+            _ => None,
+        }
+    }
+
+    /// Gets a mutable reference to the specifeid per-context value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the retrieved type is not the type that was stored.
+    pub fn get_mut(&mut self) -> Option<&mut V> {
+        match &mut self.inner {
+            Entry::Occupied(oe) => Some(
+                oe.get_mut()
+                    .downcast_mut()
+                    .expect("type should stay the same"),
+            ),
+            _ => None,
+        }
+    }
+
+    /// Sets the context value, returning a mutable reference to the set value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the retrieved type is not the type that was stored.
+    pub fn set(self, value: V) -> &'a mut V {
+        let value = Box::new(value);
+        match self.inner {
+            Entry::Occupied(mut oe) => {
+                oe.insert(value);
+                oe.into_mut()
+            }
+            Entry::Vacant(ve) => ve.insert(value),
+        }
+        .downcast_mut()
+        .expect("type should stay the same")
+    }
+
+    /// Takes the context value, if it exists.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the retrieved type is not the type that was stored.
+    pub fn take(self) -> Option<V> {
+        match self.inner {
+            Entry::Occupied(oe) => {
+                Some(*oe.remove().downcast().expect("type should stay the same"))
+            }
+            Entry::Vacant(_) => None,
+        }
+    }
+}
+
+impl<'a, V: Any + Default> ContextValue<'a, V> {
+    /// Retrieves the existing value or inserts and returns the default.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the retrieved type is not the type that was stored.
+    pub fn or_default(self) -> &'a mut V {
+        match self.inner {
+            Entry::Occupied(oe) => oe.into_mut(),
+            Entry::Vacant(ve) => ve.insert(Box::new(V::default())),
+        }
+        .downcast_mut()
+        .expect("type should stay the same")
+    }
+}
+
 #[cfg(test)]
+#[allow(clippy::many_single_char_names)]
 mod test {
     use oasis_core_runtime::{common::cbor, consensus::staking};
 
@@ -614,18 +625,19 @@ mod test {
         let mut mock = Mock::default();
         let mut ctx = mock.create_ctx();
 
-        let x: &mut Option<u64> = ctx.value("module.TestKey");
-        assert_eq!(x, &None, "default value should be created");
-        *x = Some(42);
+        let x = ctx.value::<u64>("module.TestKey").get();
+        assert_eq!(x, None);
 
-        let y: &mut Option<u64> = ctx.value("module.TestKey");
-        assert_eq!(y, &Some(42));
+        ctx.value::<u64>("module.TestKey").set(42);
 
-        let z: Box<Option<u64>> = ctx.take_value("module.TestKey");
-        assert_eq!(z, Box::new(Some(42)));
+        let y = ctx.value::<u64>("module.TestKey").get();
+        assert_eq!(y, Some(&42u64));
 
-        let y: &mut Option<u64> = ctx.value("module.TestKey");
-        assert_eq!(y, &None);
+        let z = ctx.value::<u64>("module.TestKey").take();
+        assert_eq!(z, Some(42u64));
+
+        let y = ctx.value::<u64>("module.TestKey").get();
+        assert_eq!(y, None);
     }
 
     #[test]
@@ -634,12 +646,8 @@ mod test {
         let mut mock = Mock::default();
         let mut ctx = mock.create_ctx();
 
-        let x: &mut Option<u64> = ctx.value("module.TestKey");
-        assert_eq!(x, &None, "default value should be created");
-        *x = Some(42);
-
-        // Changing the type of a key should result in a panic.
-        ctx.value::<Option<u32>>("module.TestKey");
+        ctx.value::<u64>("module.TestKey").or_default();
+        ctx.value::<u32>("module.TestKey").get();
     }
 
     #[test]
@@ -647,9 +655,7 @@ mod test {
         let mut mock = Mock::default();
         let mut ctx = mock.create_ctx();
 
-        let x: &mut Option<u64> = ctx.value("module.TestKey");
-        assert_eq!(x, &None, "default value should be created");
-        *x = Some(42);
+        ctx.value("module.TestKey").set(42u64);
 
         let tx = transaction::Transaction {
             version: 1,
@@ -666,40 +672,39 @@ mod test {
             },
         };
         ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
-            let y: &mut Option<u64> = tx_ctx.value("module.TestKey");
-            assert_eq!(y, &Some(42));
+            let mut y = tx_ctx.value::<u64>("module.TestKey");
+            let y = y.get_mut().unwrap();
+            assert_eq!(*y, 42);
+            *y = 48;
 
-            *y = Some(48);
+            let a = tx_ctx.tx_value::<u64>("module.TestTxKey").get();
+            assert_eq!(a, None);
+            tx_ctx.tx_value::<u64>("module.TestTxKey").set(65);
 
-            let a: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey").unwrap();
-            assert_eq!(a, &None);
+            let b = tx_ctx.tx_value::<u64>("module.TestTxKey").get();
+            assert_eq!(b, Some(&65));
 
-            *a = Some(65);
-
-            let b: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey").unwrap();
-            assert_eq!(b, &Some(65));
-
-            let c: &mut Option<u64> = tx_ctx.tx_value("module.TestTakeTxKey").unwrap();
-            *c = Some(67);
-            let d: Box<Option<u64>> = tx_ctx.take_tx_value("module.TestTakeTxKey").unwrap();
-            assert_eq!(d, Box::new(Some(67)));
-            let e: &mut Option<u64> = tx_ctx.tx_value("module.TestTakeTxKey").unwrap();
-            assert_eq!(e, &None);
+            let c = tx_ctx.tx_value::<u64>("module.TestTakeTxKey").or_default();
+            *c = 67;
+            let d = tx_ctx.tx_value::<u64>("module.TestTakeTxKey").take();
+            assert_eq!(d, Some(67));
+            let e = tx_ctx.tx_value::<u64>("module.TestTakeTxKey").get();
+            assert_eq!(e, None);
         });
 
-        let x: &mut Option<u64> = ctx.value("module.TestKey");
-        assert_eq!(x, &Some(48));
+        let x = ctx.value::<u64>("module.TestKey").get();
+        assert_eq!(x, Some(&48));
 
         ctx.with_tx(tx, |mut tx_ctx, _call| {
-            let z: Box<Option<u64>> = tx_ctx.take_value("module.TestKey");
-            assert_eq!(z, Box::new(Some(48)));
+            let z = tx_ctx.value::<u64>("module.TestKey").take();
+            assert_eq!(z, Some(48));
 
-            let a: &mut Option<u64> = tx_ctx.tx_value("module.TestTxKey").unwrap();
-            assert_eq!(a, &None);
+            let a = tx_ctx.tx_value::<u64>("module.TestTxKey").get();
+            assert_eq!(a, None);
         });
 
-        let y: &mut Option<u64> = ctx.value("module.TestKey");
-        assert_eq!(y, &None);
+        let y = ctx.value::<u64>("module.TestKey").get();
+        assert_eq!(y, None);
     }
 
     #[test]
@@ -708,9 +713,8 @@ mod test {
         let mut mock = Mock::default();
         let mut ctx = mock.create_ctx();
 
-        let x: &mut Option<u64> = ctx.value("module.TestKey");
-        assert_eq!(x, &None, "default value should be created");
-        *x = Some(42);
+        let x = ctx.value::<u64>("module.TestKey").set(0);
+        *x = 42;
 
         let tx = transaction::Transaction {
             version: 1,
@@ -728,7 +732,7 @@ mod test {
         };
         ctx.with_tx(tx, |mut tx_ctx, _call| {
             // Changing the type of a key should result in a panic.
-            tx_ctx.value::<Option<u32>>("module.TestKey");
+            tx_ctx.value::<Option<u32>>("module.TestKey").get();
         });
     }
 
