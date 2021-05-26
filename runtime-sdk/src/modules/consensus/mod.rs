@@ -14,7 +14,7 @@ use oasis_core_runtime::consensus::{
 };
 
 use crate::{
-    context::Context,
+    context::{Context, TxContext},
     crypto::signature::PublicKey,
     module,
     module::Module as _,
@@ -122,7 +122,7 @@ pub trait API {
     fn consensus_denomination<C: Context>(ctx: &mut C) -> Result<token::Denomination, Error>;
 
     /// Ensures transaction signer is consensus compatible.
-    fn ensure_compatible_tx_signer<C: Context>(ctx: &C) -> Result<(), Error>;
+    fn ensure_compatible_tx_signer<C: TxContext>(ctx: &C) -> Result<(), Error>;
 
     /// Query consensus account info.
     fn account<C: Context>(ctx: &C, addr: Address) -> Result<ConsensusAccount, Error>;
@@ -237,13 +237,8 @@ impl API for Module {
         Ok(params.consensus_denomination)
     }
 
-    fn ensure_compatible_tx_signer<C: Context>(ctx: &C) -> Result<(), Error> {
-        match ctx
-            .tx_auth_info()
-            .expect("should be called with a transaction ctx")
-            .signer_info[0]
-            .address_spec
-        {
+    fn ensure_compatible_tx_signer<C: TxContext>(ctx: &C) -> Result<(), Error> {
+        match ctx.tx_auth_info().signer_info[0].address_spec {
             AddressSpec::Signature(PublicKey::Ed25519(_)) => Ok(()),
             _ => Err(Error::ConsensusIncompatibleSigner),
         }

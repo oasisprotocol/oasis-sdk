@@ -5,7 +5,7 @@ use thiserror::Error;
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    context::Context,
+    context::{Context, TxContext},
     dispatcher, error,
     module::{self, Module as _},
     types::transaction::{self, AuthProof, UnverifiedTransaction},
@@ -99,12 +99,15 @@ impl module::Parameters for Parameters {
 }
 
 pub trait API {
-    /// Attempt to use gas. Gas limits are per-batch (max_batch_gas in Parameters) and
-    /// per-transaction (.ai.fee.gas). If the gas specified would cause either total used to exceed
+    /// Attempt to use gas. If the gas specified would cause either total used to exceed
     /// its limit, fails with Error::OutOfGas or Error::BatchOutOfGas, and neither gas usage is
-    /// increased. Per-transaction gas is not assessed when C is not a transaction processing
-    /// context.
-    fn use_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error>;
+    /// increased.
+    fn use_batch_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error>;
+
+    /// Attempt to use gas. If the gas specified would cause either total used to exceed
+    /// its limit, fails with Error::OutOfGas or Error::BatchOutOfGas, and neither gas usage is
+    /// increased.
+    fn use_tx_gas<C: TxContext>(ctx: &mut C, gas: u64) -> Result<(), Error>;
 }
 
 /// Genesis state for the accounts module.
@@ -142,39 +145,36 @@ impl Module {
 }
 
 impl API for Module {
-    fn use_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error> {
-        let new_gas_used = match (
-            ctx.tx_auth_info().map(|ai| ai.fee.gas),
-            ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).copied(),
-        ) {
-            (Some(gas_limit), Some(gas_used)) => {
-                let sum = gas_used.checked_add(gas).ok_or(Error::GasOverflow)?;
-                if sum > gas_limit {
-                    return Err(Error::OutOfGas);
-                }
-                Some(sum)
-            }
-            (None, None) => None,
-            _ => panic!("inconsistent tx availability"),
-        };
-
+    fn use_batch_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error> {
         let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
-        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
+        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
         let batch_new_gas_used = batch_gas_used
             .checked_add(gas)
             .ok_or(Error::BatchGasOverflow)?;
         if batch_new_gas_used > batch_gas_limit {
-            println!("batch gas limit: {:?}", batch_gas_limit);
             return Err(Error::BatchOutOfGas);
         }
 
-        match (new_gas_used, ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED)) {
-            (Some(sum), Some(gas_used)) => *gas_used = sum,
-            (None, None) => {}
-            _ => panic!("inconsistent tx availability"),
-        }
-        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED);
-        *batch_gas_used = batch_new_gas_used;
+        ctx.value::<u64>(CONTEXT_KEY_GAS_USED)
+            .set(batch_new_gas_used);
+
+        Ok(())
+    }
+
+    fn use_tx_gas<C: TxContext>(ctx: &mut C, gas: u64) -> Result<(), Error> {
+        let gas_limit = ctx.tx_auth_info().fee.gas;
+        let gas_used = ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
+        let new_gas_used = {
+            let sum = gas_used.checked_add(gas).ok_or(Error::GasOverflow)?;
+            if sum > gas_limit {
+                return Err(Error::OutOfGas);
+            }
+            sum
+        };
+
+        Self::use_batch_gas(ctx, gas)?;
+
+        *ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default() = new_gas_used;
 
         Ok(())
     }
@@ -194,7 +194,7 @@ impl Module {
             dispatcher::Dispatcher::<C::Runtime>::dispatch_tx(&mut ctx, args).ok();
             // Warning: we don't report success or failure. If the call fails, we still report
             // how much gas it uses while it fails.
-            Ok(*ctx.value::<u64>(CONTEXT_KEY_GAS_USED))
+            Ok(*ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default())
         })
     }
 }

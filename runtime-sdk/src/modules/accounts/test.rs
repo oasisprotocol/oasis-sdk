@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    context::Context,
+    context::{BatchContext, Context},
     module::{AuthHandler, BlockHandler},
     modules::core,
     testing::{keys, mock},

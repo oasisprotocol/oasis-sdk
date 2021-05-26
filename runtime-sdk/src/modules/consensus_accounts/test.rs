@@ -6,6 +6,7 @@ use oasis_core_runtime::consensus::{
 };
 
 use crate::{
+    context::BatchContext,
     module::MigrationHandler,
     modules::{
         accounts::{Genesis as AccountsGenesis, Module as Accounts, API},
