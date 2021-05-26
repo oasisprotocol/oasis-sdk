@@ -11,8 +11,7 @@ use thiserror::Error;
 use oasis_core_runtime::{
     self,
     common::cbor,
-    consensus::roothash::MessageEvent,
-    storage::context::StorageContext,
+    storage::{context::StorageContext, mkvs},
     transaction::{
         self,
         dispatcher::{ExecuteBatchResult, ExecuteTxResult},
@@ -25,7 +24,7 @@ use oasis_core_runtime::{
 use crate::{
     context::{Context, DispatchContext},
     error::{Error as _, RuntimeError},
-    module::{AuthHandler, BlockHandler, MessageHandlerRegistry, MethodRegistry},
+    module::{self, AuthHandler, BlockHandler, MethodHandler},
     modules,
     runtime::Runtime,
     storage, types,
@@ -47,9 +46,9 @@ pub enum Error {
     MalformedTransactionInBatch(#[source] modules::core::Error),
 }
 
-struct DispatchResult {
-    result: types::transaction::CallResult,
-    tags: Tags,
+pub struct DispatchResult {
+    pub result: types::transaction::CallResult,
+    pub tags: Tags,
 }
 
 impl From<types::transaction::CallResult> for DispatchResult {
@@ -62,29 +61,19 @@ impl From<types::transaction::CallResult> for DispatchResult {
 }
 
 pub struct Dispatcher<R: Runtime> {
-    /// Method registry.
-    methods: MethodRegistry,
-    /// Handlers registered for consensus messages.
-    consensus_message_handlers: MessageHandlerRegistry,
-
     _runtime: PhantomData<R>,
 }
 
 impl<R: Runtime> Dispatcher<R> {
-    pub(super) fn new(
-        methods: MethodRegistry,
-        consensus_message_handlers: MessageHandlerRegistry,
-    ) -> Self {
+    pub(super) fn new() -> Self {
         Self {
-            methods,
-            consensus_message_handlers,
             _runtime: PhantomData,
         }
     }
 
-    fn decode_tx(
-        &self,
-        ctx: &mut DispatchContext<'_>,
+    /// Decode a runtime transaction.
+    pub fn decode_tx<C: Context>(
+        ctx: &mut C,
         tx: &[u8],
     ) -> Result<types::transaction::Transaction, modules::core::Error> {
         // TODO: Check against transaction size limit.
@@ -102,9 +91,9 @@ impl<R: Runtime> Dispatcher<R> {
             .map_err(|_| modules::core::Error::MalformedTransaction)
     }
 
-    fn dispatch_tx(
-        &self,
-        ctx: &mut DispatchContext<'_>,
+    /// Dispatch a runtime transaction in the given context.
+    pub fn dispatch_tx<C: Context>(
+        ctx: &mut C,
         tx: types::transaction::Transaction,
     ) -> Result<DispatchResult, Error> {
         // Run pre-processing hooks.
@@ -112,20 +101,16 @@ impl<R: Runtime> Dispatcher<R> {
             return Ok(err.to_call_result().into());
         }
 
-        // Perform transaction method lookup.
-        let method_info = match self.methods.lookup_callable(&tx.call.method) {
-            Some(method_info) => method_info,
-            None => {
-                // Method not found.
-                return Ok(modules::core::Error::InvalidMethod.to_call_result().into());
-            }
-        };
-
         let (result, messages) = ctx.with_tx(tx, |mut ctx, call| {
-            let result = (method_info.handler)(&method_info, &mut ctx, call.body);
-            if !result.is_success() {
-                return (result.into(), Vec::new());
-            }
+            let result = match R::Modules::dispatch_call(&mut ctx, &call.method, call.body) {
+                module::DispatchResult::Handled(result) => result,
+                module::DispatchResult::Unhandled(_) => {
+                    return (
+                        modules::core::Error::InvalidMethod.to_call_result().into(),
+                        Vec::new(),
+                    )
+                }
+            };
 
             // Commit store and return emitted tags and messages.
             let (tags, messages) = ctx.commit();
@@ -140,8 +125,9 @@ impl<R: Runtime> Dispatcher<R> {
         Ok(result)
     }
 
-    fn check_tx(&self, ctx: &mut DispatchContext<'_>, tx: &[u8]) -> Result<CheckTxResult, Error> {
-        let tx = match self.decode_tx(ctx, &tx) {
+    /// Check whether the given transaction is valid.
+    pub fn check_tx<C: Context>(ctx: &mut C, tx: &[u8]) -> Result<CheckTxResult, Error> {
+        let tx = match Self::decode_tx(ctx, &tx) {
             Ok(tx) => tx,
             Err(err) => {
                 return Ok(CheckTxResult {
@@ -155,7 +141,7 @@ impl<R: Runtime> Dispatcher<R> {
             }
         };
 
-        match self.dispatch_tx(ctx, tx)?.result {
+        match Self::dispatch_tx(ctx, tx)?.result {
             types::transaction::CallResult::Ok(value) => Ok(CheckTxResult {
                 error: Default::default(),
                 meta: Some(value),
@@ -176,21 +162,16 @@ impl<R: Runtime> Dispatcher<R> {
         }
     }
 
-    fn execute_tx(
-        &self,
-        ctx: &mut DispatchContext<'_>,
-        tx: &[u8],
-    ) -> Result<ExecuteTxResult, Error> {
+    /// Execute the given transaction.
+    pub fn execute_tx<C: Context>(ctx: &mut C, tx: &[u8]) -> Result<ExecuteTxResult, Error> {
         // It is an error to include a malformed transaction in a batch. So instead of only
         // reporting a failed execution result, we fail the whole batch. This will make the compute
         // node vote for failure and the round will fail.
         //
         // Correct proposers should only include transactions which have passed check_tx.
-        let tx = self
-            .decode_tx(ctx, &tx)
-            .map_err(Error::MalformedTransactionInBatch)?;
+        let tx = Self::decode_tx(ctx, &tx).map_err(Error::MalformedTransactionInBatch)?;
 
-        let dispatch_result = self.dispatch_tx(ctx, tx)?;
+        let dispatch_result = Self::dispatch_tx(ctx, tx)?;
 
         Ok(ExecuteTxResult {
             output: cbor::to_vec(&dispatch_result.result),
@@ -198,28 +179,7 @@ impl<R: Runtime> Dispatcher<R> {
         })
     }
 
-    fn dispatch_message(
-        &self,
-        mut ctx: &mut DispatchContext<'_>,
-        handler_name: String,
-        message_event: MessageEvent,
-        handler_ctx: cbor::Value,
-    ) -> Result<(), modules::core::Error> {
-        // Perform message handler lookup.
-        let method_info = self
-            .consensus_message_handlers
-            .lookup_handler(&handler_name)
-            .ok_or(modules::core::Error::InvalidMethod)?;
-
-        (method_info.handler)(&method_info, &mut ctx, message_event, handler_ctx);
-
-        Ok(())
-    }
-
-    fn handle_last_round_messages(
-        &self,
-        ctx: &mut DispatchContext<'_>,
-    ) -> Result<(), modules::core::Error> {
+    fn handle_last_round_messages<C: Context>(ctx: &mut C) -> Result<(), modules::core::Error> {
         let message_events = ctx.runtime_round_results().messages.clone();
 
         let store = storage::TypedStore::new(storage::PrefixStore::new(
@@ -234,7 +194,16 @@ impl<R: Runtime> Dispatcher<R> {
             let handler = handlers
                 .remove(&event.index)
                 .ok_or(modules::core::Error::MessageHandlerMissing(event.index))?;
-            self.dispatch_message(ctx, handler.hook_name, event, handler.payload)?;
+
+            R::Modules::dispatch_message_result(
+                ctx,
+                &handler.hook_name,
+                types::message::MessageResult {
+                    event,
+                    context: handler.payload,
+                },
+            )
+            .ok_or(modules::core::Error::InvalidMethod)?;
         }
 
         if !handlers.is_empty() {
@@ -246,7 +215,6 @@ impl<R: Runtime> Dispatcher<R> {
     }
 
     fn save_emitted_message_handlers<S: storage::Store>(
-        &self,
         store: S,
         handlers: Vec<types::message::MessageEventHookInvocation>,
     ) {
@@ -263,7 +231,7 @@ impl<R: Runtime> Dispatcher<R> {
         store.insert(&modules::core::state::MESSAGE_HANDLERS, &message_handlers);
     }
 
-    fn maybe_init_state(&self, ctx: &mut DispatchContext<'_>) {
+    fn maybe_init_state<C: Context>(ctx: &mut C) {
         R::migrate(ctx)
     }
 }
@@ -277,12 +245,15 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         // TODO: Get rid of StorageContext (pass mkvs in ctx).
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
-            let mut ctx = DispatchContext::from_runtime(&rt_ctx, mkvs, &self.methods);
+            let mut ctx =
+                DispatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
+                    &rt_ctx, mkvs,
+                );
             // Perform state migrations if required.
-            self.maybe_init_state(&mut ctx);
+            Self::maybe_init_state(&mut ctx);
 
             // Handle last round message results.
-            self.handle_last_round_messages(&mut ctx)?;
+            Self::handle_last_round_messages(&mut ctx)?;
 
             // Run begin block hooks.
             R::Modules::begin_block(&mut ctx);
@@ -290,7 +261,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Execute the batch.
             let mut results = Vec::with_capacity(batch.len());
             for tx in batch.iter() {
-                results.push(self.execute_tx(&mut ctx, &tx)?);
+                results.push(Self::execute_tx(&mut ctx, &tx)?);
             }
 
             // Run end block hooks.
@@ -301,7 +272,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             let (messages, handlers) = messages.into_iter().unzip();
 
             let state = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), mkvs);
-            self.save_emitted_message_handlers(state, handlers);
+            Self::save_emitted_message_handlers(state, handlers);
 
             Ok(ExecuteBatchResult {
                 results,
@@ -319,14 +290,17 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         // TODO: Get rid of StorageContext (pass mkvs in ctx).
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
-            let mut ctx = DispatchContext::from_runtime(&ctx, mkvs, &self.methods);
+            let mut ctx =
+                DispatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
+                    &ctx, mkvs,
+                );
             // Perform state migrations if required.
-            self.maybe_init_state(&mut ctx);
+            Self::maybe_init_state(&mut ctx);
 
             // Check the batch.
             let mut results = Vec::with_capacity(batch.len());
             for tx in batch.iter() {
-                results.push(self.check_tx(&mut ctx, &tx)?);
+                results.push(Self::check_tx(&mut ctx, &tx)?);
             }
 
             Ok(results)
@@ -346,16 +320,16 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         // TODO: Get rid of StorageContext (pass mkvs in ctx).
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
-            let mut ctx = DispatchContext::from_runtime(&ctx, mkvs, &self.methods);
+            let mut ctx =
+                DispatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
+                    &ctx, mkvs,
+                );
             // Perform state migrations if required.
-            self.maybe_init_state(&mut ctx);
+            Self::maybe_init_state(&mut ctx);
 
             // Execute the query.
-            let method_info = self
-                .methods
-                .lookup_query(method)
-                .ok_or(modules::core::Error::InvalidMethod)?;
-            (method_info.handler)(&method_info, &mut ctx, args)
+            R::Modules::dispatch_query(&mut ctx, method, args)
+                .ok_or(modules::core::Error::InvalidMethod)?
         })
     }
 }
