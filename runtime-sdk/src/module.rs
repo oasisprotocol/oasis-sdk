@@ -1,150 +1,118 @@
 //! Runtime modules.
-use std::{collections::BTreeMap, fmt::Debug};
+use std::fmt::Debug;
 
 use impl_trait_for_tuples::impl_for_tuples;
 use serde::{de::DeserializeOwned, Serialize};
 
-use oasis_core_runtime::common::cbor;
-
 use crate::{
-    context::{DispatchContext, TxContext},
-    dispatcher, error, event, modules, runtime, storage,
+    context::Context,
+    core::common::cbor,
+    error, event, modules, storage,
     storage::Store,
     types::{
-        message::MessageEvent,
+        message::MessageResult,
         transaction::{Call, CallResult, Transaction, UnverifiedTransaction},
     },
 };
 
-type CallableMethodHandler =
-    fn(&CallableMethodInfo, &mut TxContext<'_, '_>, cbor::Value) -> CallResult;
-
-/// Metadata of a callable method.
-pub struct CallableMethodInfo {
-    /// Method name.
-    pub name: &'static str,
-
-    /// Method handler function.
-    pub handler: CallableMethodHandler,
+/// Result of invoking the method handler.
+pub enum DispatchResult<B, R> {
+    Handled(R),
+    Unhandled(B),
 }
 
-type QueryMethodHandler<R> = fn(
-    &QueryMethodInfo<R>,
-    &mut DispatchContext<'_>,
-    &dispatcher::Dispatcher<R>,
-    cbor::Value,
-) -> Result<cbor::Value, error::RuntimeError>;
-
-/// Metadata of a query method.
-pub struct QueryMethodInfo<R: runtime::Runtime> {
-    /// Method name.
-    pub name: &'static str,
-
-    /// Method handler function.
-    pub handler: QueryMethodHandler<R>,
-}
-
-/// Registry of methods exposed by the modules.
-pub struct MethodRegistry<R: runtime::Runtime> {
-    callable_methods: BTreeMap<&'static str, CallableMethodInfo>,
-    query_methods: BTreeMap<&'static str, QueryMethodInfo<R>>,
-}
-
-impl<R: runtime::Runtime> MethodRegistry<R> {
-    /// Create a new method registry.
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self {
-            callable_methods: BTreeMap::new(),
-            query_methods: BTreeMap::new(),
+impl<B, R> DispatchResult<B, R> {
+    /// Transforms `DispatchResult<B, R>` into `Result<R, E>`, mapping `Handled(r)` to `Ok(r)` and
+    /// `Unhandled(_)` to `Err(err)`.
+    pub fn ok_or<E>(self, err: E) -> Result<R, E> {
+        match self {
+            DispatchResult::Handled(result) => Ok(result),
+            DispatchResult::Unhandled(_) => Err(err),
         }
     }
-
-    /// Register a new callable method.
-    ///
-    /// # Panics
-    ///
-    /// This method will panic in case a method with the same name is already registered.
-    pub fn register_callable(&mut self, mi: CallableMethodInfo) {
-        if self.callable_methods.contains_key(mi.name) {
-            panic!("callable method already exists: {}", mi.name);
-        }
-        self.callable_methods.insert(mi.name, mi);
-    }
-
-    /// Looks up a previously registered callable method.
-    pub fn lookup_callable(&self, name: &str) -> Option<&CallableMethodInfo> {
-        self.callable_methods.get(name)
-    }
-
-    /// Register a new query method.
-    ///
-    /// # Panics
-    ///
-    /// This method will panic in case a method with the same name is already registered.
-    pub fn register_query(&mut self, mi: QueryMethodInfo<R>) {
-        if self.query_methods.contains_key(mi.name) {
-            panic!("query method already exists: {}", mi.name);
-        }
-        self.query_methods.insert(mi.name, mi);
-    }
-
-    /// Looks up a previously registered callable method.
-    pub fn lookup_query(&self, name: &str) -> Option<&QueryMethodInfo<R>> {
-        self.query_methods.get(name)
-    }
 }
 
-/// Method registration handler.
-#[impl_for_tuples(30)]
-pub trait MethodRegistrationHandler {
-    /// Register any methods exported by the module.
-    fn register_methods<R: runtime::Runtime>(_methods: &mut MethodRegistry<R>) {
-        // Default implementation doesn't do anything.
-    }
-}
-
-/// Metadata of the consensus message handling callback.
-pub struct MessageHandlerInfo {
-    /// Message handler name.
-    pub name: &'static str,
-    /// Message handler.
-    pub handler: fn(&MessageHandlerInfo, &mut DispatchContext<'_>, MessageEvent, cbor::Value),
-}
-
-/// Registry of message handlers registered by the module.
-pub struct MessageHandlerRegistry {
-    handlers: BTreeMap<&'static str, MessageHandlerInfo>,
-}
-
-impl MessageHandlerRegistry {
-    /// Create a new method registry.
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
-        Self {
-            handlers: BTreeMap::new(),
-        }
+/// Method handler.
+pub trait MethodHandler {
+    /// Dispatch a call.
+    fn dispatch_call<C: Context>(
+        _ctx: &mut C,
+        _method: &str,
+        body: cbor::Value,
+    ) -> DispatchResult<cbor::Value, CallResult> {
+        // Default implementation indicates that the call was not handled.
+        DispatchResult::Unhandled(body)
     }
 
-    /// Register a message handler exposed by the module.
-    pub fn register_handler(&mut self, method_info: MessageHandlerInfo) {
-        if self.handlers.contains_key(method_info.name) {
-            panic!("message handler already exists: {}", method_info.name);
-        }
-        self.handlers.insert(method_info.name, method_info);
+    /// Dispatch a query.
+    fn dispatch_query<C: Context>(
+        _ctx: &mut C,
+        _method: &str,
+        args: cbor::Value,
+    ) -> DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
+        // Default implementation indicates that the query was not handled.
+        DispatchResult::Unhandled(args)
     }
 
-    /// Looks up a previously registered message handler.
-    pub fn lookup_handler(&self, name: &str) -> Option<&MessageHandlerInfo> {
-        self.handlers.get(name)
+    /// Dispatch a message result.
+    fn dispatch_message_result<C: Context>(
+        _ctx: &mut C,
+        _handler_name: &str,
+        result: MessageResult,
+    ) -> DispatchResult<MessageResult, ()> {
+        // Default implementation indicates that the query was not handled.
+        DispatchResult::Unhandled(result)
     }
 }
 
 #[impl_for_tuples(30)]
-pub trait MessageHookRegistrationHandler {
-    /// Register any handlers defined by the module.
-    fn register_handlers(_handlers: &mut MessageHandlerRegistry) {
-        // Default implementation doesn't do anything.
+impl MethodHandler for Tuple {
+    fn dispatch_call<C: Context>(
+        ctx: &mut C,
+        method: &str,
+        body: cbor::Value,
+    ) -> DispatchResult<cbor::Value, CallResult> {
+        // Return on first handler that can handle the method.
+        for_tuples!( #(
+            let body = match Tuple::dispatch_call::<C>(ctx, method, body) {
+                DispatchResult::Handled(result) => return DispatchResult::Handled(result),
+                DispatchResult::Unhandled(body) => body,
+            };
+        )* );
+
+        DispatchResult::Unhandled(body)
+    }
+
+    fn dispatch_query<C: Context>(
+        ctx: &mut C,
+        method: &str,
+        args: cbor::Value,
+    ) -> DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
+        // Return on first handler that can handle the method.
+        for_tuples!( #(
+            let args = match Tuple::dispatch_query::<C>(ctx, method, args) {
+                DispatchResult::Handled(result) => return DispatchResult::Handled(result),
+                DispatchResult::Unhandled(args) => args,
+            };
+        )* );
+
+        DispatchResult::Unhandled(args)
+    }
+
+    fn dispatch_message_result<C: Context>(
+        ctx: &mut C,
+        handler_name: &str,
+        result: MessageResult,
+    ) -> DispatchResult<MessageResult, ()> {
+        // Return on first handler that can handle the method.
+        for_tuples!( #(
+            let result = match Tuple::dispatch_message_result::<C>(ctx, handler_name, result) {
+                DispatchResult::Handled(result) => return DispatchResult::Handled(result),
+                DispatchResult::Unhandled(result) => result,
+            };
+        )* );
+
+        DispatchResult::Unhandled(result)
     }
 }
 
@@ -152,8 +120,8 @@ pub trait MessageHookRegistrationHandler {
 pub trait AuthHandler {
     /// Judge if an unverified transaction is good enough to undergo verification.
     /// This takes place before even verifying signatures.
-    fn approve_unverified_tx(
-        _ctx: &mut DispatchContext<'_>,
+    fn approve_unverified_tx<C: Context>(
+        _ctx: &mut C,
         _utx: &UnverifiedTransaction,
     ) -> Result<(), modules::core::Error> {
         // Default implementation doesn't do any checks.
@@ -163,8 +131,8 @@ pub trait AuthHandler {
     /// Authenticate a transaction.
     ///
     /// Note that any signatures have already been verified.
-    fn authenticate_tx(
-        _ctx: &mut DispatchContext<'_>,
+    fn authenticate_tx<C: Context>(
+        _ctx: &mut C,
         _tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
         // Default implementation doesn't do any checks.
@@ -172,8 +140,8 @@ pub trait AuthHandler {
     }
 
     /// Perform any action after authentication, within the transaction context.
-    fn before_handle_call(
-        _ctx: &mut TxContext<'_, '_>,
+    fn before_handle_call<C: Context>(
+        _ctx: &mut C,
         _call: &Call,
     ) -> Result<(), modules::core::Error> {
         // Default implementation doesn't do anything.
@@ -183,24 +151,24 @@ pub trait AuthHandler {
 
 #[impl_for_tuples(30)]
 impl AuthHandler for Tuple {
-    fn approve_unverified_tx(
-        ctx: &mut DispatchContext<'_>,
+    fn approve_unverified_tx<C: Context>(
+        ctx: &mut C,
         utx: &UnverifiedTransaction,
     ) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::approve_unverified_tx(ctx, utx)?; )* );
         Ok(())
     }
 
-    fn authenticate_tx(
-        ctx: &mut DispatchContext<'_>,
+    fn authenticate_tx<C: Context>(
+        ctx: &mut C,
         tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::authenticate_tx(ctx, tx)?; )* );
         Ok(())
     }
 
-    fn before_handle_call(
-        ctx: &mut TxContext<'_, '_>,
+    fn before_handle_call<C: Context>(
+        ctx: &mut C,
         call: &Call,
     ) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::before_handle_call(ctx, call)?; )* );
@@ -219,11 +187,14 @@ pub trait MigrationHandler {
     /// Initialize state from genesis or perform a migration.
     ///
     /// Should return true in case metadata has been changed.
-    fn init_or_migrate(
-        ctx: &mut DispatchContext<'_>,
-        meta: &mut modules::core::types::Metadata,
-        genesis: &Self::Genesis,
-    ) -> bool;
+    fn init_or_migrate<C: Context>(
+        _ctx: &mut C,
+        _meta: &mut modules::core::types::Metadata,
+        _genesis: &Self::Genesis,
+    ) -> bool {
+        // Default implementation doesn't perform any migrations.
+        false
+    }
 }
 
 #[allow(clippy::type_complexity)]
@@ -231,8 +202,8 @@ pub trait MigrationHandler {
 impl MigrationHandler for Tuple {
     for_tuples!( type Genesis = ( #( Tuple::Genesis ),* ); );
 
-    fn init_or_migrate(
-        ctx: &mut DispatchContext<'_>,
+    fn init_or_migrate<C: Context>(
+        ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
         genesis: &Self::Genesis,
     ) -> bool {
@@ -247,13 +218,13 @@ impl MigrationHandler for Tuple {
 pub trait BlockHandler {
     /// Perform any common actions at the start of the block (before any transactions have been
     /// executed).
-    fn begin_block(_ctx: &mut DispatchContext<'_>) {
+    fn begin_block<C: Context>(_ctx: &mut C) {
         // Default implementation doesn't do anything.
     }
 
     /// Perform any common actions at the end of the block (after all transactions have been
     /// executed).
-    fn end_block(_ctx: &mut DispatchContext<'_>) {
+    fn end_block<C: Context>(_ctx: &mut C) {
         // Default implementation doesn't do anything.
     }
 }

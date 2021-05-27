@@ -8,17 +8,15 @@ use thiserror::Error;
 use oasis_core_runtime::{common::cbor, consensus::staking::Account as ConsensusAccount};
 
 use crate::{
-    context::{Context, DispatchContext, TxContext},
-    dispatcher,
+    context::Context,
     error::{self, Error as _},
     module,
-    module::{CallableMethodInfo, Module as _, QueryMethodInfo},
+    module::Module as _,
     modules,
     modules::core::{Module as Core, API as _},
-    runtime,
     types::{
         address::Address,
-        message::{MessageEvent, MessageEventHookInvocation},
+        message::{MessageEvent, MessageEventHookInvocation, MessageResult},
         token,
         transaction::CallResult,
     },
@@ -194,7 +192,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     Module<Accounts, Consensus>
 {
     /// Deposit in the runtime.
-    fn tx_deposit(ctx: &mut TxContext<'_, '_>, body: types::Deposit) -> Result<(), Error> {
+    fn tx_deposit<C: Context>(ctx: &mut C, body: types::Deposit) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
         Core::use_gas(ctx, params.gas_costs.tx_deposit)?;
 
@@ -209,7 +207,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     }
 
     /// Withdraw from the runtime.
-    fn tx_withdraw(ctx: &mut TxContext<'_, '_>, body: types::Withdraw) -> Result<(), Error> {
+    fn tx_withdraw<C: Context>(ctx: &mut C, body: types::Withdraw) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
         Core::use_gas(ctx, params.gas_costs.tx_withdraw)?;
 
@@ -224,8 +222,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         Self::withdraw(ctx, address, body.amount)
     }
 
-    fn query_balance(
-        ctx: &mut DispatchContext<'_>,
+    fn query_balance<C: Context>(
+        ctx: &mut C,
         args: types::BalanceQuery,
     ) -> Result<types::AccountBalance, Error> {
         let denomination = Consensus::consensus_denomination(ctx)?;
@@ -240,65 +238,39 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         })
     }
 
-    fn query_consensus_account(
-        ctx: &mut DispatchContext<'_>,
+    fn query_consensus_account<C: Context>(
+        ctx: &mut C,
         args: types::ConsensusAccountQuery,
     ) -> Result<ConsensusAccount, Error> {
         Consensus::account(ctx, args.address).map_err(|_| Error::InvalidArgument)
     }
-}
 
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
-    Module<Accounts, Consensus>
-{
-    fn _callable_deposit_handler(
-        _mi: &CallableMethodInfo,
-        ctx: &mut TxContext<'_, '_>,
-        body: cbor::Value,
-    ) -> CallResult {
-        let result = || -> Result<cbor::Value, Error> {
-            let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-            Ok(cbor::to_value(&Self::tx_deposit(ctx, args)?))
-        }();
-        match result {
-            Ok(value) => CallResult::Ok(value),
-            Err(err) => err.to_call_result(),
+    fn message_result_transfer<C: Context>(
+        ctx: &mut C,
+        me: MessageEvent,
+        context: types::ConsensusTransferContext,
+    ) {
+        if !me.is_success() {
+            // Transfer out failed.
+            return;
         }
+
+        // Update runtime state.
+        Accounts::burn(ctx, context.address, &context.amount).expect("should have enough balance");
     }
 
-    fn _callable_withdraw_handler(
-        _mi: &CallableMethodInfo,
-        ctx: &mut TxContext<'_, '_>,
-        body: cbor::Value,
-    ) -> CallResult {
-        let result = || -> Result<cbor::Value, Error> {
-            let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-            Ok(cbor::to_value(&Self::tx_withdraw(ctx, args)?))
-        }();
-        match result {
-            Ok(value) => CallResult::Ok(value),
-            Err(err) => err.to_call_result(),
+    fn message_result_withdraw<C: Context>(
+        ctx: &mut C,
+        me: MessageEvent,
+        context: types::ConsensusWithdrawContext,
+    ) {
+        if !me.is_success() {
+            // Transfer out failed.
+            return;
         }
-    }
 
-    fn _query_balance_handler<R: runtime::Runtime>(
-        _mi: &QueryMethodInfo<R>,
-        ctx: &mut DispatchContext<'_>,
-        _dispatcher: &dispatcher::Dispatcher<R>,
-        args: cbor::Value,
-    ) -> Result<cbor::Value, error::RuntimeError> {
-        let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-        Ok(cbor::to_value(&Self::query_balance(ctx, args)?))
-    }
-
-    fn _query_consensus_account_handler<R: runtime::Runtime>(
-        _mi: &QueryMethodInfo<R>,
-        ctx: &mut DispatchContext<'_>,
-        _dispatcher: &dispatcher::Dispatcher<R>,
-        args: cbor::Value,
-    ) -> Result<cbor::Value, error::RuntimeError> {
-        let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-        Ok(cbor::to_value(&Self::query_consensus_account(ctx, args)?))
+        // Update runtime state.
+        Accounts::mint(ctx, context.address, &context.amount).unwrap();
     }
 }
 
@@ -313,84 +285,81 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
 }
 
 /// Module methods.
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
-    module::MethodRegistrationHandler for Module<Accounts, Consensus>
+impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::MethodHandler
+    for Module<Accounts, Consensus>
 {
-    fn register_methods<R: runtime::Runtime>(methods: &mut module::MethodRegistry<R>) {
-        // Callable methods.
-        methods.register_callable(module::CallableMethodInfo {
-            name: "consensus.Deposit",
-            handler: Self::_callable_deposit_handler,
-        });
-        methods.register_callable(module::CallableMethodInfo {
-            name: "consensus.Withdraw",
-            handler: Self::_callable_withdraw_handler,
-        });
-
-        // Queries.
-        methods.register_query(module::QueryMethodInfo {
-            name: "consensus.Balance",
-            handler: Self::_query_balance_handler,
-        });
-
-        methods.register_query(module::QueryMethodInfo {
-            name: "consensus.Account",
-            handler: Self::_query_consensus_account_handler,
-        })
-    }
-}
-
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
-    Module<Accounts, Consensus>
-{
-    fn _consensus_transfer_handler(
-        _mi: &module::MessageHandlerInfo,
-        ctx: &mut DispatchContext<'_>,
-        me: MessageEvent,
-        h_ctx: cbor::Value,
-    ) {
-        let h_ctx: types::ConsensusTransferContext =
-            cbor::from_value(h_ctx).expect("invalid message handler context");
-
-        // Transfer out succeed.
-        if me.is_success() {
-            // Update runtime state.
-            Accounts::burn(ctx, h_ctx.address, &h_ctx.amount).expect("should have enough balance");
+    fn dispatch_call<C: Context>(
+        ctx: &mut C,
+        method: &str,
+        body: cbor::Value,
+    ) -> module::DispatchResult<cbor::Value, CallResult> {
+        match method {
+            "consensus.Deposit" => {
+                let result = || -> Result<cbor::Value, Error> {
+                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
+                    Ok(cbor::to_value(&Self::tx_deposit(ctx, args)?))
+                }();
+                match result {
+                    Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
+                    Err(err) => module::DispatchResult::Handled(err.to_call_result()),
+                }
+            }
+            "consensus.Withdraw" => {
+                let result = || -> Result<cbor::Value, Error> {
+                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
+                    Ok(cbor::to_value(&Self::tx_withdraw(ctx, args)?))
+                }();
+                match result {
+                    Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
+                    Err(err) => module::DispatchResult::Handled(err.to_call_result()),
+                }
+            }
+            _ => module::DispatchResult::Unhandled(body),
         }
     }
 
-    fn _consensus_withdraw_handler(
-        _mi: &module::MessageHandlerInfo,
-        ctx: &mut DispatchContext<'_>,
-        me: MessageEvent,
-        h_ctx: cbor::Value,
-    ) {
-        let h_ctx: types::ConsensusWithdrawContext =
-            cbor::from_value(h_ctx).expect("invalid message handler context");
-
-        // Deposit in succeed.
-        if me.is_success() {
-            // Update runtime state.
-            Accounts::mint(ctx, h_ctx.address, &h_ctx.amount).unwrap();
+    fn dispatch_query<C: Context>(
+        ctx: &mut C,
+        method: &str,
+        args: cbor::Value,
+    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
+        match method {
+            "consensus.Balance" => module::DispatchResult::Handled((|| {
+                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
+                Ok(cbor::to_value(&Self::query_balance(ctx, args)?))
+            })()),
+            "consensus.Account" => module::DispatchResult::Handled((|| {
+                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
+                Ok(cbor::to_value(&Self::query_consensus_account(ctx, args)?))
+            })()),
+            _ => module::DispatchResult::Unhandled(args),
         }
     }
-}
 
-/// Module message handlers.
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
-    module::MessageHookRegistrationHandler for Module<Accounts, Consensus>
-{
-    // Register message handlers.
-    fn register_handlers(handlers: &mut module::MessageHandlerRegistry) {
-        handlers.register_handler(module::MessageHandlerInfo {
-            name: CONSENSUS_TRANSFER_HANDLER,
-            handler: Self::_consensus_transfer_handler,
-        });
-
-        handlers.register_handler(module::MessageHandlerInfo {
-            name: CONSENSUS_WITHDRAW_HANDLER,
-            handler: Self::_consensus_withdraw_handler,
-        });
+    fn dispatch_message_result<C: Context>(
+        ctx: &mut C,
+        handler_name: &str,
+        result: MessageResult,
+    ) -> module::DispatchResult<MessageResult, ()> {
+        match handler_name {
+            CONSENSUS_TRANSFER_HANDLER => {
+                Self::message_result_transfer(
+                    ctx,
+                    result.event,
+                    cbor::from_value(result.context).expect("invalid message handler context"),
+                );
+                module::DispatchResult::Handled(())
+            }
+            CONSENSUS_WITHDRAW_HANDLER => {
+                Self::message_result_withdraw(
+                    ctx,
+                    result.event,
+                    cbor::from_value(result.context).expect("invalid message handler context"),
+                );
+                module::DispatchResult::Handled(())
+            }
+            _ => module::DispatchResult::Unhandled(result),
+        }
     }
 }
 
@@ -399,8 +368,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
 {
     type Genesis = Genesis;
 
-    fn init_or_migrate(
-        ctx: &mut DispatchContext<'_>,
+    fn init_or_migrate<C: Context>(
+        ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
         genesis: &Self::Genesis,
     ) -> bool {

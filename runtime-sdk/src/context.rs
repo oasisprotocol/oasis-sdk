@@ -1,6 +1,6 @@
 //! Execution context.
 use core::fmt;
-use std::{any::Any, collections::BTreeMap, sync::Arc};
+use std::{any::Any, collections::BTreeMap, marker::PhantomData, sync::Arc};
 
 use io_context::Context as IoContext;
 use slog::{self, o};
@@ -16,7 +16,7 @@ use oasis_core_runtime::{
 use crate::{
     event::Event,
     modules::core::Error,
-    storage,
+    runtime, storage,
     types::{address::Address, message::MessageEventHookInvocation, transaction},
 };
 
@@ -50,8 +50,10 @@ impl From<&Mode> for &'static str {
 
 /// Runtime SDK context.
 pub trait Context {
+    /// Runtime that the context is being invoked in.
+    type Runtime: runtime::Runtime;
     /// Runtime state output type.
-    type S: storage::Store;
+    type Store: storage::Store;
 
     /// Returns a logger.
     fn get_logger(&self, module: &'static str) -> slog::Logger;
@@ -76,7 +78,7 @@ pub trait Context {
     fn runtime_round_results(&self) -> &roothash::RoundResults;
 
     /// Runtime state store.
-    fn runtime_state(&mut self) -> &mut Self::S;
+    fn runtime_state(&mut self) -> &mut Self::Store;
 
     /// Consensus state.
     fn consensus_state(&self) -> &consensus::state::ConsensusState;
@@ -156,41 +158,91 @@ pub trait Context {
     fn take_tx_value<V>(&mut self, key: &'static str) -> Option<Box<V>>
     where
         V: Any + Default;
+
+    /// Executes a function with the transaction-specific context set.
+    fn with_tx<F, Rs>(&mut self, tx: transaction::Transaction, f: F) -> Rs
+    where
+        F: FnOnce(TxContext<'_, '_, Self::Runtime, Self::Store>, transaction::Call) -> Rs;
+
+    /// Executes a function in a simulation context.
+    ///
+    /// The simulation context collects its own messages and starts with an empty set of context
+    /// values.
+    fn with_simulation<F, Rs>(&mut self, f: F) -> Rs
+    where
+        F: FnOnce(
+            DispatchContext<'_, Self::Runtime, storage::OverlayStore<&mut Self::Store>>,
+        ) -> Rs;
 }
 
 /// Dispatch context for the whole batch.
-pub struct DispatchContext<'a> {
-    pub(crate) mode: Mode,
+pub struct DispatchContext<'a, R: runtime::Runtime, S: storage::Store> {
+    mode: Mode,
 
-    pub(crate) runtime_header: &'a roothash::Header,
-    pub(crate) runtime_round_results: &'a roothash::RoundResults,
-    pub(crate) runtime_storage: storage::MKVSStore<&'a mut dyn mkvs::MKVS>,
+    runtime_header: &'a roothash::Header,
+    runtime_round_results: &'a roothash::RoundResults,
+    runtime_storage: S,
     // TODO: linked consensus layer block
-    pub(crate) consensus_state: &'a consensus::state::ConsensusState,
-    pub(crate) epoch: consensus::beacon::EpochTime,
-    pub(crate) io_ctx: Arc<IoContext>,
-    pub(crate) logger: slog::Logger,
+    consensus_state: &'a consensus::state::ConsensusState,
+    epoch: consensus::beacon::EpochTime,
+    io_ctx: Arc<IoContext>,
+    logger: slog::Logger,
 
-    pub(crate) block_tags: Tags,
+    block_tags: Tags,
 
     /// Maximum number of messages that can be emitted.
-    pub(crate) max_messages: u32,
+    max_messages: u32,
     /// Emitted messages.
-    pub(crate) messages: Vec<(roothash::Message, MessageEventHookInvocation)>,
+    messages: Vec<(roothash::Message, MessageEventHookInvocation)>,
 
     /// Per-context values.
-    pub(crate) values: BTreeMap<&'static str, Box<dyn Any>>,
+    values: BTreeMap<&'static str, Box<dyn Any>>,
+
+    _runtime: PhantomData<R>,
 }
 
-impl<'a> DispatchContext<'a> {
+impl<'a, R: runtime::Runtime, S: storage::Store> DispatchContext<'a, R, S> {
+    /// Create a new dispatch context.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        mode: Mode,
+        runtime_header: &'a roothash::Header,
+        runtime_round_results: &'a roothash::RoundResults,
+        runtime_storage: S,
+        consensus_state: &'a consensus::state::ConsensusState,
+        epoch: consensus::beacon::EpochTime,
+        io_ctx: Arc<IoContext>,
+        max_messages: u32,
+    ) -> Self {
+        Self {
+            mode,
+            runtime_header,
+            runtime_round_results,
+            runtime_storage,
+            consensus_state,
+            epoch,
+            io_ctx,
+            logger: get_logger("runtime-sdk")
+                .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
+            block_tags: Tags::new(),
+            max_messages,
+            messages: Vec::new(),
+            values: BTreeMap::new(),
+            _runtime: PhantomData,
+        }
+    }
+
     /// Create a new dispatch context from the low-level runtime context.
-    pub(crate) fn from_runtime(ctx: &'a RuntimeContext<'_>, mkvs: &'a mut dyn mkvs::MKVS) -> Self {
+    pub(crate) fn from_runtime(
+        ctx: &'a RuntimeContext<'_>,
+        mkvs: &'a mut dyn mkvs::MKVS,
+    ) -> DispatchContext<'a, R, storage::MKVSStore<&'a mut dyn mkvs::MKVS>> {
         let mode = if ctx.check_only {
             Mode::CheckTx
         } else {
             Mode::ExecuteTx
         };
-        Self {
+        DispatchContext {
             mode,
             runtime_header: ctx.header,
             runtime_round_results: ctx.round_results,
@@ -204,76 +256,14 @@ impl<'a> DispatchContext<'a> {
             max_messages: ctx.max_messages,
             messages: Vec::new(),
             values: BTreeMap::new(),
+            _runtime: PhantomData,
         }
-    }
-
-    /// Executes a function with the transaction-specific context set.
-    pub fn with_tx<F, R>(&mut self, tx: transaction::Transaction, f: F) -> R
-    where
-        F: FnOnce(TxContext<'_, '_>, transaction::Call) -> R,
-    {
-        // Create a store wrapped by an overlay store so we can either rollback or commit.
-        let store = storage::OverlayStore::new(&mut self.runtime_storage);
-
-        let tx_ctx = TxContext {
-            mode: self.mode,
-            runtime_header: self.runtime_header,
-            runtime_round_results: self.runtime_round_results,
-            consensus_state: self.consensus_state,
-            epoch: self.epoch,
-            store,
-            io_ctx: self.io_ctx.clone(),
-            logger: self
-                .logger
-                .new(o!("ctx" => "transaction", "mode" => Into::<&'static str>::into(&self.mode))),
-            tx_auth_info: tx.auth_info,
-            tags: Tags::new(),
-            // NOTE: Since a limit is enforced (which is a u32) this cast is always safe.
-            max_messages: self.max_messages.saturating_sub(self.messages.len() as u32),
-            messages: Vec::new(),
-            values: &mut self.values,
-            tx_values: BTreeMap::new(),
-        };
-        f(tx_ctx, tx.call)
-    }
-
-    /// Executes a function with the transaction-specific context set in simulation mode.
-    /// The simulation context collects its own messages and starts with an empty set of context
-    /// values.
-    /// Runtime storage is shared with this context, so don't go committing it.
-    pub fn with_tx_simulation<F, R>(&mut self, tx: transaction::Transaction, f: F) -> R
-    where
-        F: FnOnce(TxContext<'_, '_>, transaction::Call) -> R,
-    {
-        // Create a store wrapped by an overlay store so we can either rollback or commit.
-        let store = storage::OverlayStore::new(&mut self.runtime_storage);
-        let mut values = BTreeMap::new();
-
-        let tx_ctx = TxContext {
-            mode: Mode::SimulateTx,
-            runtime_header: self.runtime_header,
-            runtime_round_results: self.runtime_round_results,
-            consensus_state: self.consensus_state,
-            epoch: self.epoch,
-            store,
-            io_ctx: self.io_ctx.clone(),
-            logger: self
-                .logger
-                .new(o!("ctx" => "transaction", "mode" => MODE_SIMULATE_TX)),
-            tx_auth_info: tx.auth_info,
-            // Other than for storage, simulation has a blank slate.
-            tags: Tags::new(),
-            max_messages: self.max_messages,
-            messages: Vec::new(),
-            values: &mut values,
-            tx_values: BTreeMap::new(),
-        };
-        f(tx_ctx, tx.call)
     }
 }
 
-impl<'a> Context for DispatchContext<'a> {
-    type S = storage::MKVSStore<&'a mut dyn mkvs::MKVS>;
+impl<'a, R: runtime::Runtime, S: storage::Store> Context for DispatchContext<'a, R, S> {
+    type Runtime = R;
+    type Store = S;
 
     fn get_logger(&self, module: &'static str) -> slog::Logger {
         self.logger.new(o!("sdk_module" => module))
@@ -291,7 +281,7 @@ impl<'a> Context for DispatchContext<'a> {
         &self.runtime_round_results
     }
 
-    fn runtime_state(&mut self) -> &mut Self::S {
+    fn runtime_state(&mut self) -> &mut Self::Store {
         &mut self.runtime_storage
     }
 
@@ -368,10 +358,70 @@ impl<'a> Context for DispatchContext<'a> {
     {
         None
     }
+
+    fn with_tx<F, Rs>(&mut self, tx: transaction::Transaction, f: F) -> Rs
+    where
+        F: FnOnce(TxContext<'_, '_, Self::Runtime, Self::Store>, transaction::Call) -> Rs,
+    {
+        // Create a store wrapped by an overlay store so we can either rollback or commit.
+        let store = storage::OverlayStore::new(&mut self.runtime_storage);
+
+        let tx_ctx = TxContext {
+            mode: self.mode,
+            runtime_header: self.runtime_header,
+            runtime_round_results: self.runtime_round_results,
+            consensus_state: self.consensus_state,
+            epoch: self.epoch,
+            store,
+            io_ctx: self.io_ctx.clone(),
+            logger: self
+                .logger
+                .new(o!("ctx" => "transaction", "mode" => Into::<&'static str>::into(&self.mode))),
+            tx_auth_info: tx.auth_info,
+            tags: Tags::new(),
+            // NOTE: Since a limit is enforced (which is a u32) this cast is always safe.
+            max_messages: self.max_messages.saturating_sub(self.messages.len() as u32),
+            messages: Vec::new(),
+            values: &mut self.values,
+            tx_values: BTreeMap::new(),
+            _runtime: PhantomData,
+        };
+        f(tx_ctx, tx.call)
+    }
+
+    fn with_simulation<F, Rs>(&mut self, f: F) -> Rs
+    where
+        F: FnOnce(
+            DispatchContext<'_, Self::Runtime, storage::OverlayStore<&mut Self::Store>>,
+        ) -> Rs,
+    {
+        // Create a store wrapped by an overlay store so any state changes don't leak.
+        let store = storage::OverlayStore::new(&mut self.runtime_storage);
+
+        let sim_ctx = DispatchContext {
+            mode: Mode::SimulateTx,
+            runtime_header: self.runtime_header,
+            runtime_round_results: self.runtime_round_results,
+            runtime_storage: store,
+            consensus_state: self.consensus_state,
+            epoch: self.epoch,
+            io_ctx: self.io_ctx.clone(),
+            logger: self
+                .logger
+                .new(o!("ctx" => "dispatch", "mode" => MODE_SIMULATE_TX)),
+            // Other than for storage, simulation has a blank slate.
+            block_tags: Tags::new(),
+            max_messages: self.max_messages,
+            messages: Vec::new(),
+            values: BTreeMap::new(),
+            _runtime: PhantomData,
+        };
+        f(sim_ctx)
+    }
 }
 
 /// Per-transaction/method dispatch sub-context.
-pub struct TxContext<'a, 'b> {
+pub struct TxContext<'a, 'b, R: runtime::Runtime, S: storage::Store> {
     mode: Mode,
 
     runtime_header: &'a roothash::Header,
@@ -379,7 +429,7 @@ pub struct TxContext<'a, 'b> {
     consensus_state: &'a consensus::state::ConsensusState,
     epoch: consensus::beacon::EpochTime,
     // TODO: linked consensus layer block
-    store: storage::OverlayStore<&'b mut storage::MKVSStore<&'a mut dyn mkvs::MKVS>>,
+    store: storage::OverlayStore<&'b mut S>,
 
     io_ctx: Arc<IoContext>,
     logger: slog::Logger,
@@ -400,10 +450,13 @@ pub struct TxContext<'a, 'b> {
 
     /// Per-transaction values.
     tx_values: BTreeMap<&'static str, Box<dyn Any>>,
+
+    _runtime: PhantomData<R>,
 }
 
-impl<'a, 'b> Context for TxContext<'a, 'b> {
-    type S = storage::OverlayStore<&'b mut storage::MKVSStore<&'a mut dyn mkvs::MKVS>>;
+impl<'a, 'b, R: runtime::Runtime, S: storage::Store> Context for TxContext<'a, 'b, R, S> {
+    type Runtime = R;
+    type Store = storage::OverlayStore<&'b mut S>;
 
     fn get_logger(&self, module: &'static str) -> slog::Logger {
         self.logger.new(o!("sdk_module" => module))
@@ -421,7 +474,7 @@ impl<'a, 'b> Context for TxContext<'a, 'b> {
         self.runtime_round_results
     }
 
-    fn runtime_state(&mut self) -> &mut Self::S {
+    fn runtime_state(&mut self) -> &mut Self::Store {
         &mut self.store
     }
 
@@ -486,7 +539,6 @@ impl<'a, 'b> Context for TxContext<'a, 'b> {
             .unwrap_or_default()
     }
 
-    /// Fetches or sets a value associated with the transaction.
     fn tx_value<V>(&mut self, key: &'static str) -> Option<&mut V>
     where
         V: Any + Default,
@@ -500,9 +552,6 @@ impl<'a, 'b> Context for TxContext<'a, 'b> {
         )
     }
 
-    /// Takes a value associated with the transaction.
-    ///
-    /// The previous value is removed so subsequent fetches will return the default value.
     fn take_tx_value<V>(&mut self, key: &'static str) -> Option<Box<V>>
     where
         V: Any + Default,
@@ -513,6 +562,43 @@ impl<'a, 'b> Context for TxContext<'a, 'b> {
                 .map(|x| x.downcast().expect("type should stay the same"))
                 .unwrap_or_default(),
         )
+    }
+
+    fn with_tx<F, Rs>(&mut self, _tx: transaction::Transaction, _f: F) -> Rs
+    where
+        F: FnOnce(TxContext<'_, '_, Self::Runtime, Self::Store>, transaction::Call) -> Rs,
+    {
+        panic!("cannot nest transaction contexts");
+    }
+
+    fn with_simulation<F, Rs>(&mut self, f: F) -> Rs
+    where
+        F: FnOnce(
+            DispatchContext<'_, Self::Runtime, storage::OverlayStore<&mut Self::Store>>,
+        ) -> Rs,
+    {
+        // Create a store wrapped by an overlay store so any state changes don't leak.
+        let store = storage::OverlayStore::new(&mut self.store);
+
+        let sim_ctx = DispatchContext {
+            mode: Mode::SimulateTx,
+            runtime_header: self.runtime_header,
+            runtime_round_results: self.runtime_round_results,
+            runtime_storage: store,
+            consensus_state: self.consensus_state,
+            epoch: self.epoch,
+            io_ctx: self.io_ctx.clone(),
+            logger: self
+                .logger
+                .new(o!("ctx" => "dispatch", "mode" => MODE_SIMULATE_TX)),
+            // Other than for storage, simulation has a blank slate.
+            block_tags: Tags::new(),
+            max_messages: self.max_messages,
+            messages: Vec::new(),
+            values: BTreeMap::new(),
+            _runtime: PhantomData,
+        };
+        f(sim_ctx)
     }
 }
 

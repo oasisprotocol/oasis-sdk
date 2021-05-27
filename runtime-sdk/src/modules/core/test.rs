@@ -1,17 +1,15 @@
-use oasis_core_runtime::common::{cbor, version};
-
 use crate::{
-    context,
-    context::Context,
+    context::{Context, Mode},
+    core::common::{cbor, version::Version},
     crypto::multisig,
-    dispatcher, module,
+    module,
     module::{AuthHandler as _, Module as _},
-    runtime,
+    runtime::Runtime,
     testing::{keys, mock},
     types::{token, transaction},
 };
 
-use super::{GasCosts, Genesis, Module as Core, Parameters, API as _};
+use super::{Module as Core, API as _};
 
 #[test]
 fn test_use_gas() {
@@ -66,58 +64,85 @@ fn test_use_gas() {
     Core::use_gas(&mut ctx, 1).expect_err("batch gas should accumulate outside tx");
 }
 
-const AUTH_SIGNATURE_GAS: u64 = 1;
-const AUTH_MULTISIG_GAS: u64 = 10;
-const CALL_GAS: u64 = 100;
+// Module that implements the gas waster method.
+struct GasWasterModule;
 
-struct Runtime1;
+impl GasWasterModule {
+    const CALL_GAS: u64 = 100;
+    const METHOD_WASTE_GAS: &'static str = "test.WasteGas";
+}
 
-impl runtime::Runtime for Runtime1 {
-    const VERSION: version::Version = version::Version {
-        major: 1,
-        minor: 0,
-        patch: 0,
-    };
-    type Modules = (Core,);
+impl module::Module for GasWasterModule {
+    const NAME: &'static str = "gaswaster";
+    type Error = std::convert::Infallible;
+    type Event = ();
+    type Parameters = ();
+}
 
-    fn genesis_state() -> (Genesis,) {
-        (Genesis {
-            parameters: Parameters {
-                max_batch_gas: u64::MAX,
-                max_tx_signers: 8,
-                max_multisig_signers: 8,
-                gas_costs: GasCosts {
-                    auth_signature: AUTH_SIGNATURE_GAS,
-                    auth_multisig_signer: AUTH_MULTISIG_GAS,
+impl module::MethodHandler for GasWasterModule {
+    fn dispatch_call<C: Context>(
+        ctx: &mut C,
+        method: &str,
+        body: cbor::Value,
+    ) -> module::DispatchResult<cbor::Value, transaction::CallResult> {
+        match method {
+            Self::METHOD_WASTE_GAS => {
+                Core::use_gas(ctx, Self::CALL_GAS).expect("use_gas should succeed");
+                module::DispatchResult::Handled(transaction::CallResult::Ok(cbor::Value::Null))
+            }
+            _ => module::DispatchResult::Unhandled(body),
+        }
+    }
+}
+
+impl module::BlockHandler for GasWasterModule {}
+impl module::AuthHandler for GasWasterModule {}
+impl module::MigrationHandler for GasWasterModule {
+    type Genesis = ();
+}
+
+// Runtime that knows how to waste gas.
+struct GasWasterRuntime;
+
+impl GasWasterRuntime {
+    const AUTH_SIGNATURE_GAS: u64 = 1;
+    const AUTH_MULTISIG_GAS: u64 = 10;
+}
+
+impl Runtime for GasWasterRuntime {
+    const VERSION: Version = Version::new(0, 0, 0);
+
+    type Modules = (Core, GasWasterModule);
+
+    fn genesis_state() -> (super::Genesis, ()) {
+        (
+            super::Genesis {
+                parameters: super::Parameters {
+                    max_batch_gas: u64::MAX,
+                    max_tx_signers: 8,
+                    max_multisig_signers: 8,
+                    gas_costs: super::GasCosts {
+                        auth_signature: Self::AUTH_SIGNATURE_GAS,
+                        auth_multisig_signer: Self::AUTH_MULTISIG_GAS,
+                    },
                 },
             },
-        },)
+            (),
+        )
     }
 }
 
 #[test]
 fn test_query_estimate_gas() {
-    const METHOD_WASTE_GAS: &str = "test.WasteGas";
-    let mut methods = module::MethodRegistry::new();
-    methods.register_callable(module::CallableMethodInfo {
-        name: METHOD_WASTE_GAS,
-        handler: |_mi, ctx, _args| {
-            Core::use_gas(ctx, CALL_GAS).expect("use_gas should succeed");
-            transaction::CallResult::Ok(cbor::Value::Null)
-        },
-    });
-    let consensus_message_handlers = module::MessageHandlerRegistry::new();
-    let dispatcher = dispatcher::Dispatcher::<Runtime1>::new(methods, consensus_message_handlers);
-
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    ctx.mode = context::Mode::CheckTx;
-    dispatcher.maybe_init_state(&mut ctx);
+    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+
+    GasWasterRuntime::migrate(&mut ctx);
 
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
-            method: METHOD_WASTE_GAS.to_owned(),
+            method: GasWasterModule::METHOD_WASTE_GAS.to_owned(),
             body: cbor::Value::Null,
         },
         auth_info: transaction::AuthInfo {
@@ -141,9 +166,10 @@ fn test_query_estimate_gas() {
         },
     };
 
-    let est =
-        Core::query_estimate_gas(&mut ctx, &dispatcher, tx).expect("estimate_gas should succeed");
-    let reference_gas = AUTH_SIGNATURE_GAS + AUTH_MULTISIG_GAS + CALL_GAS;
+    let est = Core::query_estimate_gas(&mut ctx, tx).expect("query_estimate_gas should succeed");
+    let reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
+        + GasWasterRuntime::AUTH_MULTISIG_GAS
+        + GasWasterModule::CALL_GAS;
     assert_eq!(est, reference_gas, "estimated gas should be correct");
 }
 

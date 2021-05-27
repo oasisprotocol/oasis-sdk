@@ -1,20 +1,33 @@
 //! Mock dispatch context for use in tests.
-use std::collections::BTreeMap;
-
 use io_context::Context as IoContext;
 
 use oasis_core_runtime::{
-    common::{cbor, logger::get_logger},
+    common::{cbor, version::Version},
     consensus::{beacon, roothash, state::ConsensusState},
     storage::mkvs,
-    transaction::tags::Tags,
 };
 
 use crate::{
     context::{DispatchContext, Mode},
+    module::MigrationHandler,
+    modules,
+    runtime::Runtime,
     storage,
     types::transaction,
 };
+
+/// A mock runtime that only has the core module.
+pub struct EmptyRuntime;
+
+impl Runtime for EmptyRuntime {
+    const VERSION: Version = Version::new(0, 0, 0);
+
+    type Modules = modules::core::Module;
+
+    fn genesis_state() -> <Self::Modules as MigrationHandler>::Genesis {
+        Default::default()
+    }
+}
 
 /// Mock dispatch context factory.
 pub struct Mock {
@@ -29,24 +42,27 @@ pub struct Mock {
 
 impl Mock {
     /// Create a new mock dispatch context.
-    pub fn create_ctx(&mut self) -> DispatchContext<'_> {
-        DispatchContext {
-            mode: Mode::ExecuteTx,
-            runtime_header: &self.runtime_header,
-            runtime_round_results: &self.runtime_round_results,
-            runtime_storage: storage::MKVSStore::new(
-                IoContext::background().freeze(),
-                self.mkvs.as_mut(),
-            ),
-            consensus_state: &self.consensus_state,
-            epoch: self.epoch,
-            io_ctx: IoContext::background().freeze(),
-            logger: get_logger("mock"),
-            block_tags: Tags::new(),
-            messages: Vec::new(),
-            max_messages: self.max_messages,
-            values: BTreeMap::new(),
-        }
+    pub fn create_ctx(
+        &mut self,
+    ) -> DispatchContext<'_, EmptyRuntime, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
+        self.create_ctx_for_runtime(Mode::ExecuteTx)
+    }
+
+    /// Create a new mock dispatch context.
+    pub fn create_ctx_for_runtime<R: Runtime>(
+        &mut self,
+        mode: Mode,
+    ) -> DispatchContext<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
+        DispatchContext::new(
+            mode,
+            &self.runtime_header,
+            &self.runtime_round_results,
+            storage::MKVSStore::new(IoContext::background().freeze(), self.mkvs.as_mut()),
+            &self.consensus_state,
+            self.epoch,
+            IoContext::background().freeze(),
+            self.max_messages,
+        )
     }
 }
 

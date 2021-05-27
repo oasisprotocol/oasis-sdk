@@ -6,12 +6,9 @@ use oasis_core_runtime::{
 };
 
 use crate::{
-    context::{Context, DispatchContext},
+    context::Context,
     crypto, dispatcher,
-    module::{
-        AuthHandler, BlockHandler, MessageHandlerRegistry, MessageHookRegistrationHandler,
-        MethodRegistrationHandler, MethodRegistry, MigrationHandler,
-    },
+    module::{AuthHandler, BlockHandler, MethodHandler, MigrationHandler},
     modules, storage,
 };
 
@@ -20,17 +17,13 @@ pub trait Runtime {
     /// Runtime version.
     const VERSION: version::Version;
 
-    type Modules: AuthHandler
-        + MigrationHandler
-        + MethodRegistrationHandler
-        + BlockHandler
-        + MessageHookRegistrationHandler;
+    type Modules: AuthHandler + MigrationHandler + MethodHandler + BlockHandler;
 
     /// Genesis state for the runtime.
     fn genesis_state() -> <Self::Modules as MigrationHandler>::Genesis;
 
     /// Perform state migrations if required.
-    fn migrate(ctx: &mut DispatchContext<'_>) {
+    fn migrate<C: Context>(ctx: &mut C) {
         let store = storage::TypedStore::new(storage::PrefixStore::new(
             ctx.runtime_state(),
             &modules::core::MODULE_NAME,
@@ -72,13 +65,7 @@ pub trait Runtime {
             );
 
             // Register runtime's methods.
-            let mut methods = MethodRegistry::new();
-            Self::Modules::register_methods(&mut methods);
-
-            let mut handlers = MessageHandlerRegistry::new();
-            Self::Modules::register_handlers(&mut handlers);
-
-            let dispatcher = dispatcher::Dispatcher::<Self>::new(methods, handlers);
+            let dispatcher = dispatcher::Dispatcher::<Self>::new();
             Some(Box::new(dispatcher))
         };
 

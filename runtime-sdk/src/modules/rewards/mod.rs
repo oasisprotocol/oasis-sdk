@@ -7,12 +7,12 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    context::{Context, DispatchContext},
+    context::Context,
     core::{common::cbor, consensus::beacon},
     crypto::signature::PublicKey,
-    dispatcher, error,
-    module::{self, Module as _, Parameters as _, QueryMethodInfo},
-    modules, runtime, storage,
+    error,
+    module::{self, Module as _, Parameters as _},
+    modules, storage,
     types::address::Address,
 };
 
@@ -96,20 +96,8 @@ pub static ADDRESS_REWARD_POOL: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "reward-pool"));
 
 impl<Accounts: modules::accounts::API> Module<Accounts> {
-    fn query_parameters(ctx: &mut DispatchContext<'_>, _args: ()) -> Result<Parameters, Error> {
+    fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<Parameters, Error> {
         Ok(Self::params(ctx.runtime_state()))
-    }
-}
-
-impl<Accounts: modules::accounts::API> Module<Accounts> {
-    fn _query_parameters_handler<R: runtime::Runtime>(
-        _mi: &QueryMethodInfo<R>,
-        ctx: &mut DispatchContext<'_>,
-        _dispatcher: &dispatcher::Dispatcher<R>,
-        args: cbor::Value,
-    ) -> Result<cbor::Value, error::RuntimeError> {
-        let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-        Ok(cbor::to_value(&Self::query_parameters(ctx, args)?))
     }
 }
 
@@ -120,21 +108,25 @@ impl<Accounts: modules::accounts::API> module::Module for Module<Accounts> {
     type Parameters = Parameters;
 }
 
-impl<Accounts: modules::accounts::API> module::MessageHookRegistrationHandler for Module<Accounts> {}
-
-impl<Accounts: modules::accounts::API> module::MethodRegistrationHandler for Module<Accounts> {
-    fn register_methods<R: runtime::Runtime>(methods: &mut module::MethodRegistry<R>) {
-        // Queries.
-        methods.register_query(module::QueryMethodInfo {
-            name: "rewards.Parameters",
-            handler: Self::_query_parameters_handler,
-        });
+impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts> {
+    fn dispatch_query<C: Context>(
+        ctx: &mut C,
+        method: &str,
+        args: cbor::Value,
+    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
+        match method {
+            "rewards.Parameters" => module::DispatchResult::Handled((|| {
+                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
+                Ok(cbor::to_value(&Self::query_parameters(ctx, args)?))
+            })()),
+            _ => module::DispatchResult::Unhandled(args),
+        }
     }
 }
 
 impl<Accounts: modules::accounts::API> Module<Accounts> {
     /// Initialize state from genesis.
-    fn init(ctx: &mut DispatchContext<'_>, genesis: &Genesis) {
+    fn init<C: Context>(ctx: &mut C, genesis: &Genesis) {
         genesis
             .parameters
             .validate_basic()
@@ -145,7 +137,7 @@ impl<Accounts: modules::accounts::API> Module<Accounts> {
     }
 
     /// Migrate state from a previous version.
-    fn migrate(_ctx: &mut DispatchContext<'_>, _from: u32) -> bool {
+    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
         // No migrations currently supported.
         false
     }
@@ -154,8 +146,8 @@ impl<Accounts: modules::accounts::API> Module<Accounts> {
 impl<Accounts: modules::accounts::API> module::MigrationHandler for Module<Accounts> {
     type Genesis = Genesis;
 
-    fn init_or_migrate(
-        ctx: &mut DispatchContext<'_>,
+    fn init_or_migrate<C: Context>(
+        ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
         genesis: &Self::Genesis,
     ) -> bool {
@@ -175,7 +167,7 @@ impl<Accounts: modules::accounts::API> module::MigrationHandler for Module<Accou
 impl<Accounts: modules::accounts::API> module::AuthHandler for Module<Accounts> {}
 
 impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts> {
-    fn end_block(ctx: &mut DispatchContext<'_>) {
+    fn end_block<C: Context>(ctx: &mut C) {
         let epoch = ctx.epoch();
 
         // Load previous epoch.

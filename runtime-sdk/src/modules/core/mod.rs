@@ -2,13 +2,11 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use oasis_core_runtime::common::cbor;
-
 use crate::{
-    context::{Context, DispatchContext, TxContext},
+    context::Context,
+    core::common::cbor,
     dispatcher, error,
-    module::{self, MethodRegistry, Module as _, QueryMethodInfo},
-    runtime,
+    module::{self, Module as _},
     types::transaction::{self, AddressSpec, AuthProof, Call, UnverifiedTransaction},
 };
 
@@ -142,13 +140,13 @@ const CONTEXT_KEY_GAS_USED: &str = "core.GasUsed";
 
 impl Module {
     /// Initialize state from genesis.
-    fn init(ctx: &mut DispatchContext<'_>, genesis: &Genesis) {
+    fn init<C: Context>(ctx: &mut C, genesis: &Genesis) {
         // Set genesis parameters.
         Self::set_params(ctx.runtime_state(), &genesis.parameters);
     }
 
     /// Migrate state from a previous version.
-    fn migrate(_ctx: &mut DispatchContext<'_>, _from: u32) -> bool {
+    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
         // No migrations currently supported.
         false
     }
@@ -177,6 +175,7 @@ impl API for Module {
             .checked_add(gas)
             .ok_or(Error::BatchGasOverflow)?;
         if batch_new_gas_used > batch_gas_limit {
+            println!("batch gas limit: {:?}", batch_gas_limit);
             return Err(Error::BatchOutOfGas);
         }
 
@@ -198,31 +197,18 @@ impl Module {
     /// estimate that and return successfully, so do not use this query to see if a transaction will
     /// succeed. Failure due to OutOfGas are included, so it's best to set the query argument
     /// transaction's gas to something high.
-    fn query_estimate_gas<R: runtime::Runtime>(
-        ctx: &mut DispatchContext<'_>,
-        dispatcher: &dispatcher::Dispatcher<R>,
+    fn query_estimate_gas<C: Context>(
+        ctx: &mut C,
         args: transaction::Transaction,
     ) -> Result<u64, Error> {
-        ctx.with_tx_simulation(args, |mut tx_ctx, call| {
-            dispatcher.dispatch_call(&mut tx_ctx, call);
-            // Warning: we don't report success or failure. If the call fails, we still report
-            // how much gas it uses while it fails.
-            Ok(*tx_ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).unwrap())
+        ctx.with_simulation(|mut sim_ctx| {
+            sim_ctx.with_tx(args, |mut tx_ctx, call| {
+                let _ = dispatcher::Dispatcher::<C::Runtime>::dispatch_call(&mut tx_ctx, call);
+                // Warning: we don't report success or failure. If the call fails, we still report
+                // how much gas it uses while it fails.
+                Ok(*tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED))
+            })
         })
-    }
-}
-
-impl Module {
-    fn _query_estimate_gas_handler<R: runtime::Runtime>(
-        _mi: &QueryMethodInfo<R>,
-        ctx: &mut DispatchContext<'_>,
-        dispatcher: &dispatcher::Dispatcher<R>,
-        args: cbor::Value,
-    ) -> Result<cbor::Value, error::RuntimeError> {
-        let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-        Ok(cbor::to_value(&Self::query_estimate_gas(
-            ctx, dispatcher, args,
-        )?))
     }
 }
 
@@ -234,8 +220,8 @@ impl module::Module for Module {
 }
 
 impl module::AuthHandler for Module {
-    fn approve_unverified_tx(
-        ctx: &mut DispatchContext<'_>,
+    fn approve_unverified_tx<C: Context>(
+        ctx: &mut C,
         utx: &UnverifiedTransaction,
     ) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
@@ -252,7 +238,7 @@ impl module::AuthHandler for Module {
         Ok(())
     }
 
-    fn before_handle_call(ctx: &mut TxContext<'_, '_>, _call: &Call) -> Result<(), Error> {
+    fn before_handle_call<C: Context>(ctx: &mut C, _call: &Call) -> Result<(), Error> {
         let mut num_signature: u64 = 0;
         let mut num_multisig_signer: u64 = 0;
         for si in &ctx.tx_auth_info().unwrap().signer_info {
@@ -285,8 +271,8 @@ impl module::AuthHandler for Module {
 impl module::MigrationHandler for Module {
     type Genesis = Genesis;
 
-    fn init_or_migrate(
-        ctx: &mut DispatchContext<'_>,
+    fn init_or_migrate<C: Context>(
+        ctx: &mut C,
         meta: &mut types::Metadata,
         genesis: &Self::Genesis,
     ) -> bool {
@@ -303,16 +289,20 @@ impl module::MigrationHandler for Module {
     }
 }
 
-impl module::MethodRegistrationHandler for Module {
-    fn register_methods<R: runtime::Runtime>(methods: &mut MethodRegistry<R>) {
-        // Queries.
-        methods.register_query(module::QueryMethodInfo {
-            name: "core.EstimateGas",
-            handler: Self::_query_estimate_gas_handler,
-        });
+impl module::MethodHandler for Module {
+    fn dispatch_query<C: Context>(
+        ctx: &mut C,
+        method: &str,
+        args: cbor::Value,
+    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
+        match method {
+            "core.EstimateGas" => module::DispatchResult::Handled((|| {
+                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
+                Ok(cbor::to_value(&Self::query_estimate_gas(ctx, args)?))
+            })()),
+            _ => module::DispatchResult::Unhandled(args),
+        }
     }
 }
 
 impl module::BlockHandler for Module {}
-
-impl module::MessageHookRegistrationHandler for Module {}
