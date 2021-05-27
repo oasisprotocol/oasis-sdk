@@ -203,7 +203,7 @@ impl Module {
     ) -> Result<u64, Error> {
         ctx.with_simulation(|mut sim_ctx| {
             sim_ctx.with_tx(args, |mut tx_ctx, call| {
-                let _ = dispatcher::Dispatcher::<C::Runtime>::dispatch_call(&mut tx_ctx, call);
+                let _ = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut tx_ctx, call);
                 // Warning: we don't report success or failure. If the call fails, we still report
                 // how much gas it uses while it fails.
                 Ok(*tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED))

@@ -91,8 +91,9 @@ impl<R: Runtime> Dispatcher<R> {
             .map_err(|_| modules::core::Error::MalformedTransaction)
     }
 
-    /// %%%
-    pub fn dispatch_call<C: Context>(
+    /// Run the dispatch steps inside a transaction context. This includes the before call hooks
+    /// and the call itself.
+    pub fn dispatch_tx_call<C: Context>(
         ctx: &mut C,
         call: types::transaction::Call,
     ) -> types::transaction::CallResult {
@@ -119,7 +120,7 @@ impl<R: Runtime> Dispatcher<R> {
         }
 
         let (result, messages) = ctx.with_tx(tx, |mut ctx, call| {
-            let result = Self::dispatch_call(&mut ctx, call);
+            let result = Self::dispatch_tx_call(&mut ctx, call);
             if !result.is_success() {
                 return (result.into(), Vec::new());
             }
