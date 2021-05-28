@@ -9,7 +9,7 @@ use thiserror::Error;
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    context::Context,
+    context::{Context, TxContext},
     crypto::signature::PublicKey,
     error::{self, Error as _},
     module,
@@ -303,7 +303,7 @@ impl API for Module {
 }
 
 impl Module {
-    fn tx_transfer<C: Context>(ctx: &mut C, body: types::Transfer) -> Result<(), Error> {
+    fn tx_transfer<C: TxContext>(ctx: &mut C, body: types::Transfer) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
 
         // Reject transfers when they are disabled.
@@ -311,14 +311,9 @@ impl Module {
             return Err(Error::Forbidden);
         }
 
-        Core::use_gas(ctx, params.gas_costs.tx_transfer)?;
+        Core::use_tx_gas(ctx, params.gas_costs.tx_transfer)?;
 
-        Self::transfer(
-            ctx,
-            ctx.tx_caller_address().expect("transaction context"),
-            body.to,
-            &body.amount,
-        )?;
+        Self::transfer(ctx, ctx.tx_caller_address(), body.to, &body.amount)?;
 
         Ok(())
     }
@@ -343,7 +338,7 @@ impl module::Module for Module {
 }
 
 impl module::MethodHandler for Module {
-    fn dispatch_call<C: Context>(
+    fn dispatch_call<C: TxContext>(
         ctx: &mut C,
         method: &str,
         body: cbor::Value,
@@ -522,6 +517,7 @@ impl module::AuthHandler for Module {
                 .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
 
             ctx.value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
+                .or_default()
                 .add(&tx.auth_info.fee.amount);
 
             // TODO: Emit event that fee has been paid.
@@ -588,7 +584,10 @@ impl module::BlockHandler for Module {
         }
 
         // Fees for the active block should be transferred to the fee accumulator address.
-        let acc = ctx.take_value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR);
+        let acc = ctx
+            .value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
+            .take()
+            .unwrap_or_default();
         for (denom, amount) in acc.total_fees.into_iter() {
             Self::add_amount(
                 ctx.runtime_state(),

@@ -5,7 +5,7 @@ use impl_trait_for_tuples::impl_for_tuples;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
-    context::Context,
+    context::{Context, TxContext},
     core::common::cbor,
     error, event, modules, storage,
     storage::Store,
@@ -35,7 +35,7 @@ impl<B, R> DispatchResult<B, R> {
 /// Method handler.
 pub trait MethodHandler {
     /// Dispatch a call.
-    fn dispatch_call<C: Context>(
+    fn dispatch_call<C: TxContext>(
         _ctx: &mut C,
         _method: &str,
         body: cbor::Value,
@@ -67,7 +67,7 @@ pub trait MethodHandler {
 
 #[impl_for_tuples(30)]
 impl MethodHandler for Tuple {
-    fn dispatch_call<C: Context>(
+    fn dispatch_call<C: TxContext>(
         ctx: &mut C,
         method: &str,
         body: cbor::Value,
@@ -140,7 +140,7 @@ pub trait AuthHandler {
     }
 
     /// Perform any action after authentication, within the transaction context.
-    fn before_handle_call<C: Context>(
+    fn before_handle_call<C: TxContext>(
         _ctx: &mut C,
         _call: &Call,
     ) -> Result<(), modules::core::Error> {
@@ -167,7 +167,7 @@ impl AuthHandler for Tuple {
         Ok(())
     }
 
-    fn before_handle_call<C: Context>(
+    fn before_handle_call<C: TxContext>(
         ctx: &mut C,
         call: &Call,
     ) -> Result<(), modules::core::Error> {

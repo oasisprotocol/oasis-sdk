@@ -22,12 +22,12 @@ use oasis_core_runtime::{
 };
 
 use crate::{
-    context::{Context, DispatchContext},
+    context::{BatchContext, Context, RuntimeBatchContext},
     error::{Error as _, RuntimeError},
     module::{self, AuthHandler, BlockHandler, MethodHandler},
     modules,
     runtime::Runtime,
-    storage, types,
+    storage, types, TxContext,
 };
 
 /// Unique module name.
@@ -93,7 +93,7 @@ impl<R: Runtime> Dispatcher<R> {
 
     /// Run the dispatch steps inside a transaction context. This includes the before call hooks
     /// and the call itself.
-    pub fn dispatch_tx_call<C: Context>(
+    pub fn dispatch_tx_call<C: TxContext>(
         ctx: &mut C,
         call: types::transaction::Call,
     ) -> types::transaction::CallResult {
@@ -110,7 +110,7 @@ impl<R: Runtime> Dispatcher<R> {
     }
 
     /// Dispatch a runtime transaction in the given context.
-    pub fn dispatch_tx<C: Context>(
+    pub fn dispatch_tx<C: BatchContext>(
         ctx: &mut C,
         tx: types::transaction::Transaction,
     ) -> Result<DispatchResult, Error> {
@@ -139,7 +139,7 @@ impl<R: Runtime> Dispatcher<R> {
     }
 
     /// Check whether the given transaction is valid.
-    pub fn check_tx<C: Context>(ctx: &mut C, tx: &[u8]) -> Result<CheckTxResult, Error> {
+    pub fn check_tx<C: BatchContext>(ctx: &mut C, tx: &[u8]) -> Result<CheckTxResult, Error> {
         let tx = match Self::decode_tx(ctx, &tx) {
             Ok(tx) => tx,
             Err(err) => {
@@ -176,7 +176,7 @@ impl<R: Runtime> Dispatcher<R> {
     }
 
     /// Execute the given transaction.
-    pub fn execute_tx<C: Context>(ctx: &mut C, tx: &[u8]) -> Result<ExecuteTxResult, Error> {
+    pub fn execute_tx<C: BatchContext>(ctx: &mut C, tx: &[u8]) -> Result<ExecuteTxResult, Error> {
         // It is an error to include a malformed transaction in a batch. So instead of only
         // reporting a failed execution result, we fail the whole batch. This will make the compute
         // node vote for failure and the round will fail.
@@ -259,7 +259,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
             let mut ctx =
-                DispatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
+                RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
                     &rt_ctx, mkvs,
                 );
             // Perform state migrations if required.
@@ -304,7 +304,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
             let mut ctx =
-                DispatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
+                RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
                     &ctx, mkvs,
                 );
             // Perform state migrations if required.
@@ -334,7 +334,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
             let mut ctx =
-                DispatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
+                RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
                     &ctx, mkvs,
                 );
             // Perform state migrations if required.

@@ -8,7 +8,7 @@ use oasis_core_runtime::{
 };
 
 use crate::{
-    context::{DispatchContext, Mode},
+    context::{Mode, RuntimeBatchContext},
     module::MigrationHandler,
     modules,
     runtime::Runtime,
@@ -44,7 +44,7 @@ impl Mock {
     /// Create a new mock dispatch context.
     pub fn create_ctx(
         &mut self,
-    ) -> DispatchContext<'_, EmptyRuntime, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
+    ) -> RuntimeBatchContext<'_, EmptyRuntime, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
         self.create_ctx_for_runtime(Mode::ExecuteTx)
     }
 
@@ -52,8 +52,8 @@ impl Mock {
     pub fn create_ctx_for_runtime<R: Runtime>(
         &mut self,
         mode: Mode,
-    ) -> DispatchContext<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
-        DispatchContext::new(
+    ) -> RuntimeBatchContext<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
+        RuntimeBatchContext::new(
             mode,
             &self.runtime_header,
             &self.runtime_round_results,
