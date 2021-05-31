@@ -34,7 +34,7 @@ func (pk PublicKey) MarshalBinary() ([]byte, error) {
 	return bpk.SerializeCompressed(), nil
 }
 
-// UnMarshalBinary decodes a binary marshaled public key.
+// UnmarshalBinary decodes a binary marshaled public key.
 func (pk *PublicKey) UnmarshalBinary(data []byte) error {
 	parsedPK, err := btcec.ParsePubKey(data, btcec.S256())
 	if err != nil {

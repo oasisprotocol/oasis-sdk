@@ -3,6 +3,9 @@
 # For more information, see:
 # https://golangci-lint.run/usage/configuration/.
 
+run:
+  timeout: 5m
+
 linters:
   # Disable all linters except the ones explicitly listed below.
   disable-all: true
@@ -16,8 +19,6 @@ linters:
     - errcheck
     - exhaustive
     - exportloopref
-    - funlen
-    - gocognit
     - goconst
     - gocritic
     - gocyclo
@@ -25,14 +26,13 @@ linters:
     - gofumpt
     - goheader
     - goimports
-    - golint
+    - revive
     - gomodguard
     - goprintffuncname
     - gosec
     - gosimple
     - govet
     - ineffassign
-    - maligned
     - misspell
     - nakedret
     - nestif
@@ -40,7 +40,6 @@ linters:
     - nolintlint
     - prealloc
     - rowserrcheck
-    - scopelint
     - staticcheck
     - structcheck
     - stylecheck
@@ -60,6 +59,3 @@ linters-settings:
   govet:
     # Enabled checking for shadowed variables.
     check-shadowing: true
-  maligned:
-    # Print the suggested struct structure with a more effective memory layout.
-    suggest-new: true
