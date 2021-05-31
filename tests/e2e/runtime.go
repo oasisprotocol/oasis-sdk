@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -39,7 +38,7 @@ const (
 var (
 	// RuntimeParamsDummy is a dummy instance of runtimeScenario used to
 	// register global e2e/runtime flags.
-	RuntimeParamsDummy *runtimeScenario = NewRuntimeScenario("", []RunTestFunction{})
+	RuntimeParamsDummy = NewRuntimeScenario("", []RunTestFunction{})
 
 	// DefaultRuntimeLogWatcherHandlerFactories is a list of default log watcher
 	// handler factories for the basic scenario.
@@ -69,7 +68,7 @@ type runtimeScenario struct {
 
 // NewRuntimeScenario creates a new runtime test scenario using the given
 // runtime and test functions.
-func NewRuntimeScenario(runtimeName string, tests []RunTestFunction) *runtimeScenario {
+func NewRuntimeScenario(runtimeName string, tests []RunTestFunction) scenario.Scenario {
 	sc := &runtimeScenario{
 		E2E:         *e2e.NewE2E(runtimeName),
 		RuntimeName: runtimeName,
@@ -301,12 +300,7 @@ func (sc *runtimeScenario) Run(childEnv *env.Env) error {
 		return fmt.Errorf("client initialization failed")
 	}
 
-	conn, err := grpc.Dial(clients[0].SocketPath(),
-		grpc.WithDefaultCallOptions(grpc.ForceCodec(&cmnGrpc.CBORCodec{})),
-		grpc.WithInsecure(),
-		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
-			return net.DialTimeout("unix", addr, timeout)
-		}))
+	conn, err := cmnGrpc.Dial("unix:"+clients[0].SocketPath(), grpc.WithInsecure())
 	if err != nil {
 		return err
 	}
