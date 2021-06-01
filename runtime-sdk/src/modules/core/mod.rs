@@ -164,7 +164,6 @@ impl API for Module {
             .checked_add(gas)
             .ok_or(Error::BatchGasOverflow)?;
         if batch_new_gas_used > batch_gas_limit {
-            println!("batch gas limit: {:?}", batch_gas_limit);
             return Err(Error::BatchOutOfGas);
         }
 
