@@ -143,9 +143,9 @@ impl Module {
     fn tx_insert<C: TxContext>(ctx: &mut C, body: types::KeyValue) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
 
-        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), MODULE_NAME.as_ref());
         let ts = sdk::storage::TypedStore::new(&mut store);
-        let cost = match ts.get::<_, Vec<u8>>(body.key.as_slice()) {
+        let cost = match ts.get::<Vec<u8>>(body.key.as_slice()) {
             None => params.gas_costs.insert_absent,
             Some(_) => params.gas_costs.insert_existing,
         };
@@ -157,7 +157,7 @@ impl Module {
         }
 
         // Recreate store and ts after we get ctx back
-        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), MODULE_NAME.as_ref());
         let mut ts = sdk::storage::TypedStore::new(&mut store);
         let bc = body.clone();
         ts.insert(&body.key, &body.value);
@@ -169,9 +169,9 @@ impl Module {
     fn tx_remove<C: TxContext>(ctx: &mut C, body: types::Key) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
 
-        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), MODULE_NAME.as_ref());
         let ts = sdk::storage::TypedStore::new(&mut store);
-        let cost = match ts.get::<_, Vec<u8>>(body.key.as_slice()) {
+        let cost = match ts.get::<Vec<u8>>(body.key.as_slice()) {
             None => params.gas_costs.remove_absent,
             Some(_) => params.gas_costs.remove_existing,
         };
@@ -183,7 +183,7 @@ impl Module {
         }
 
         // Recreate store and ts after we get ctx back
-        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), MODULE_NAME.as_ref());
         let mut ts = sdk::storage::TypedStore::new(&mut store);
         let bc = body.clone();
         ts.remove(&body.key);
@@ -193,9 +193,9 @@ impl Module {
 
     /// Fetch keyvalue from storage using given key.
     fn query_get<C: Context>(ctx: &mut C, body: types::Key) -> Result<types::KeyValue, Error> {
-        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), MODULE_NAME.as_ref());
         let ts = sdk::storage::TypedStore::new(&mut store);
-        let v: Vec<u8> = ts.get(body.key.clone()).ok_or(Error::InvalidArgument)?;
+        let v: Vec<u8> = ts.get(&body.key).ok_or(Error::InvalidArgument)?;
         Ok(types::KeyValue {
             key: body.key,
             value: v,
