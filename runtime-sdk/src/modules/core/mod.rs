@@ -257,12 +257,11 @@ impl module::AuthHandler for Module {
         let params = Self::params(ctx.runtime_state());
         let total = num_signature
             .checked_mul(params.gas_costs.auth_signature)
-            .ok_or(Error::GasOverflow)?
-            .checked_add(
-                num_multisig_signer
-                    .checked_mul(params.gas_costs.auth_multisig_signer)
-                    .ok_or(Error::GasOverflow)?,
-            )
+            .and_then(|v| {
+                v.checked_add(
+                    num_multisig_signer.checked_mul(params.gas_costs.auth_multisig_signer)?,
+                )
+            })
             .ok_or(Error::GasOverflow)?;
         Self::use_tx_gas(ctx, total)?;
         Ok(())
