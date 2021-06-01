@@ -37,7 +37,7 @@ func (pk PublicKey) MarshalBinary() ([]byte, error) {
 	return (signature.PublicKey)(pk).MarshalBinary()
 }
 
-// UnMarshalBinary decodes a binary marshaled public key.
+// UnmarshalBinary decodes a binary marshaled public key.
 func (pk *PublicKey) UnmarshalBinary(data []byte) error {
 	return (*signature.PublicKey)(pk).UnmarshalBinary(data)
 }

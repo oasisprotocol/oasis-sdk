@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -37,9 +36,9 @@ const (
 )
 
 var (
-	// RuntimeParamsDummy is a dummy instance of runtimeScenario used to
+	// RuntimeParamsDummy is a dummy instance of RuntimeScenario used to
 	// register global e2e/runtime flags.
-	RuntimeParamsDummy *runtimeScenario = NewRuntimeScenario("", []RunTestFunction{})
+	RuntimeParamsDummy = NewRuntimeScenario("", []RunTestFunction{})
 
 	// DefaultRuntimeLogWatcherHandlerFactories is a list of default log watcher
 	// handler factories for the basic scenario.
@@ -54,10 +53,10 @@ var (
 )
 
 // RunTestFunction is a test function.
-type RunTestFunction func(*logging.Logger, *grpc.ClientConn, client.RuntimeClient) error
+type RunTestFunction func(*RuntimeScenario, *logging.Logger, *grpc.ClientConn, client.RuntimeClient) error
 
-// runtimeScenario is a base class for e2e test scenarios involving runtimes.
-type runtimeScenario struct {
+// RuntimeScenario is a base class for e2e test scenarios involving runtimes.
+type RuntimeScenario struct {
 	e2e.E2E
 
 	// RuntimeName is the name of the runtime binary.
@@ -69,8 +68,8 @@ type runtimeScenario struct {
 
 // NewRuntimeScenario creates a new runtime test scenario using the given
 // runtime and test functions.
-func NewRuntimeScenario(runtimeName string, tests []RunTestFunction) *runtimeScenario {
-	sc := &runtimeScenario{
+func NewRuntimeScenario(runtimeName string, tests []RunTestFunction) *RuntimeScenario {
+	sc := &RuntimeScenario{
 		E2E:         *e2e.NewE2E(runtimeName),
 		RuntimeName: runtimeName,
 		RunTest:     tests,
@@ -82,19 +81,19 @@ func NewRuntimeScenario(runtimeName string, tests []RunTestFunction) *runtimeSce
 	return sc
 }
 
-func (sc *runtimeScenario) Clone() scenario.Scenario {
-	return &runtimeScenario{
+func (sc *RuntimeScenario) Clone() scenario.Scenario {
+	return &RuntimeScenario{
 		E2E:         sc.E2E.Clone(),
 		RuntimeName: sc.RuntimeName,
 		RunTest:     append(make([]RunTestFunction, 0, len(sc.RunTest)), sc.RunTest...),
 	}
 }
 
-func (sc *runtimeScenario) PreInit(childEnv *env.Env) error {
+func (sc *RuntimeScenario) PreInit(childEnv *env.Env) error {
 	return nil
 }
 
-func (sc *runtimeScenario) Fixture() (*oasis.NetworkFixture, error) {
+func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 	f, err := sc.E2E.Fixture()
 	if err != nil {
 		return nil, err
@@ -161,7 +160,7 @@ func (sc *runtimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				},
 				TxnScheduler: registry.TxnSchedulerParameters{
 					Algorithm:         registry.TxnSchedulerSimple,
-					MaxBatchSize:      10,
+					MaxBatchSize:      1000,
 					MaxBatchSizeBytes: 16 * 1024 * 1024, // 16 MB.
 					BatchFlushTimeout: 1 * time.Second,
 					ProposerTimeout:   30,
@@ -223,7 +222,7 @@ func (sc *runtimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 	return ff, nil
 }
 
-func (sc *runtimeScenario) resolveRuntimeBinaries(runtimeBinaries []string) map[node.TEEHardware][]string {
+func (sc *RuntimeScenario) resolveRuntimeBinaries(runtimeBinaries []string) map[node.TEEHardware][]string {
 	binaries := make(map[node.TEEHardware][]string)
 	for _, tee := range []node.TEEHardware{
 		node.TEEHardwareInvalid,
@@ -236,12 +235,12 @@ func (sc *runtimeScenario) resolveRuntimeBinaries(runtimeBinaries []string) map[
 	return binaries
 }
 
-func (sc *runtimeScenario) resolveRuntimeBinary(runtimeBinary string) string {
+func (sc *RuntimeScenario) resolveRuntimeBinary(runtimeBinary string) string {
 	path, _ := sc.Flags.GetString(cfgRuntimeBinaryDirDefault)
 	return filepath.Join(path, runtimeBinary)
 }
 
-func (sc *runtimeScenario) waitNodesSynced() error {
+func (sc *RuntimeScenario) waitNodesSynced() error {
 	ctx := context.Background()
 
 	checkSynced := func(n *oasis.Node) error {
@@ -284,7 +283,7 @@ func (sc *runtimeScenario) waitNodesSynced() error {
 	return nil
 }
 
-func (sc *runtimeScenario) Run(childEnv *env.Env) error {
+func (sc *RuntimeScenario) Run(childEnv *env.Env) error {
 	// Start the test network.
 	if err := sc.Net.Start(); err != nil {
 		return err
@@ -301,12 +300,7 @@ func (sc *runtimeScenario) Run(childEnv *env.Env) error {
 		return fmt.Errorf("client initialization failed")
 	}
 
-	conn, err := grpc.Dial(clients[0].SocketPath(),
-		grpc.WithDefaultCallOptions(grpc.ForceCodec(&cmnGrpc.CBORCodec{})),
-		grpc.WithInsecure(),
-		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
-			return net.DialTimeout("unix", addr, timeout)
-		}))
+	conn, err := cmnGrpc.Dial("unix:"+clients[0].SocketPath(), grpc.WithInsecure())
 	if err != nil {
 		return err
 	}
@@ -317,7 +311,7 @@ func (sc *runtimeScenario) Run(childEnv *env.Env) error {
 		testName := runtime.FuncForPC(reflect.ValueOf(test).Pointer()).Name()
 
 		sc.Logger.Info("running test", "test", testName)
-		if testErr := test(sc.Logger, conn, rtc); testErr != nil {
+		if testErr := test(sc, sc.Logger, conn, rtc); testErr != nil {
 			sc.Logger.Error("test failed",
 				"test", testName,
 				"err", testErr,

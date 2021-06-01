@@ -38,7 +38,7 @@ func ensureStakingEvent(log *logging.Logger, ch <-chan *staking.Event, check fun
 	}
 }
 
-func SimpleConsensusTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 
 	cons := consensus.NewConsensusClient(conn)
@@ -56,7 +56,7 @@ func SimpleConsensusTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.
 		Amount: types.NewBaseUnits(*quantity.NewFromUint64(50), types.Denomination("TEST")),
 	}
 	log.Info("alice depositing into runtime")
-	if err := consAccounts.Deposit(ctx, signer, 0, deposit); err != nil {
+	if err = consAccounts.Deposit(ctx, signer, 0, deposit); err != nil {
 		return err
 	}
 	if err = ensureStakingEvent(log, ch, func(e *staking.Event) bool {
@@ -76,7 +76,7 @@ func SimpleConsensusTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.
 
 	deposit.Amount.Amount = *quantity.NewFromUint64(40)
 	log.Info("bob depositing into runtime")
-	if err := consAccounts.Deposit(ctx, testing.Bob.Signer, 0, deposit); err != nil {
+	if err = consAccounts.Deposit(ctx, testing.Bob.Signer, 0, deposit); err != nil {
 		return err
 	}
 	if err = ensureStakingEvent(log, ch, func(e *staking.Event) bool {
@@ -98,7 +98,7 @@ func SimpleConsensusTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.
 		Amount: types.NewBaseUnits(*quantity.NewFromUint64(25), types.Denomination("TEST")),
 	}
 	log.Info("alice withdrawing")
-	if err := consAccounts.Withdraw(ctx, testing.Alice.Signer, 1, withdraw); err != nil {
+	if err = consAccounts.Withdraw(ctx, testing.Alice.Signer, 1, withdraw); err != nil {
 		return err
 	}
 	if err = ensureStakingEvent(log, ch, func(e *staking.Event) bool {
@@ -118,14 +118,14 @@ func SimpleConsensusTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.
 
 	withdraw.Amount.Amount = *quantity.NewFromUint64(50)
 	log.Info("charlie withdrawing")
-	if err := consAccounts.Withdraw(ctx, testing.Charlie.Signer, 0, withdraw); err != nil {
+	if err = consAccounts.Withdraw(ctx, testing.Charlie.Signer, 0, withdraw); err != nil {
 		log.Info("charlie withdrawing failed (as expected)", "err", err)
 	} else {
 		return fmt.Errorf("charlie withdrawing should fail")
 	}
 
 	log.Info("alice withdrawing with invalid nonce")
-	if err := consAccounts.Withdraw(ctx, testing.Alice.Signer, 1, withdraw); err != nil {
+	if err = consAccounts.Withdraw(ctx, testing.Alice.Signer, 1, withdraw); err != nil {
 		log.Info("alice invalid nonce failed request failed (as expected)", "err", err)
 	} else {
 		return fmt.Errorf("alice withdrawing with invalid nonce should fail")
