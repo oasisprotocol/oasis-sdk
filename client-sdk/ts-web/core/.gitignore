@@ -4,4 +4,3 @@
 /node_modules
 /playground/dist/main.js
 /playground/untracked
-package-lock.json
