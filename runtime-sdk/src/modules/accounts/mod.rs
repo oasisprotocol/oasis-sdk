@@ -226,13 +226,16 @@ impl Module {
         addr: Address,
         amount: &token::BaseUnits,
     ) -> Result<(), Error> {
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let store = storage::PrefixStore::new(state, MODULE_NAME.as_bytes());
         let balances = storage::PrefixStore::new(store, &state::BALANCES);
-        let mut account = storage::TypedStore::new(storage::PrefixStore::new(balances, &addr));
-        let mut value: token::Quantity = account.get(amount.denomination()).unwrap_or_default();
+        let mut account =
+            storage::TypedStore::new(storage::PrefixStore::new(balances, addr.as_ref()));
+        let mut value: token::Quantity = account
+            .get(amount.denomination().as_ref())
+            .unwrap_or_default();
         value += amount.amount();
 
-        account.insert(amount.denomination(), &value);
+        account.insert(amount.denomination().as_ref(), &value);
         Ok(())
     }
 
@@ -242,15 +245,18 @@ impl Module {
         addr: Address,
         amount: &token::BaseUnits,
     ) -> Result<(), Error> {
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let store = storage::PrefixStore::new(state, MODULE_NAME.as_bytes());
         let balances = storage::PrefixStore::new(store, &state::BALANCES);
-        let mut account = storage::TypedStore::new(storage::PrefixStore::new(balances, &addr));
-        let mut value: token::Quantity = account.get(amount.denomination()).unwrap_or_default();
+        let mut account =
+            storage::TypedStore::new(storage::PrefixStore::new(balances, addr.as_ref()));
+        let mut value: token::Quantity = account
+            .get(amount.denomination().as_ref())
+            .unwrap_or_default();
 
         value = value
             .checked_sub(&amount.amount())
             .ok_or(Error::InsufficientBalance)?;
-        account.insert(amount.denomination(), &value);
+        account.insert(amount.denomination().as_ref(), &value);
         Ok(())
     }
 
@@ -259,14 +265,14 @@ impl Module {
         state: S,
         amount: &token::BaseUnits,
     ) -> Result<(), Error> {
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let store = storage::PrefixStore::new(state, MODULE_NAME.as_bytes());
         let mut total_supplies =
             storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
         let mut total_supply: token::Quantity = total_supplies
-            .get(amount.denomination())
+            .get(amount.denomination().as_ref())
             .unwrap_or_default();
         total_supply += amount.amount();
-        total_supplies.insert(amount.denomination(), &total_supply);
+        total_supplies.insert(amount.denomination().as_ref(), &total_supply);
         Ok(())
     }
 
@@ -275,16 +281,16 @@ impl Module {
         state: S,
         amount: &token::BaseUnits,
     ) -> Result<(), Error> {
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let store = storage::PrefixStore::new(state, MODULE_NAME.as_bytes());
         let mut total_supplies =
             storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
         let mut total_supply: token::Quantity = total_supplies
-            .get(amount.denomination())
+            .get(amount.denomination().as_ref())
             .unwrap_or_default();
         total_supply = total_supply
             .checked_sub(&amount.amount())
             .ok_or(Error::InsufficientBalance)?;
-        total_supplies.insert(amount.denomination(), &total_supply);
+        total_supplies.insert(amount.denomination().as_ref(), &total_supply);
         Ok(())
     }
 
@@ -292,7 +298,7 @@ impl Module {
     fn get_all_balances<S: storage::Store>(
         state: S,
     ) -> Result<BTreeMap<Address, BTreeMap<token::Denomination, token::Quantity>>, Error> {
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let store = storage::PrefixStore::new(state, MODULE_NAME.as_ref());
         let balances = storage::TypedStore::new(storage::PrefixStore::new(store, &state::BALANCES));
 
         // Unfortunately, we can't just return balances.iter().collect() here,
@@ -374,9 +380,9 @@ impl API for Module {
     }
 
     fn get_nonce<S: storage::Store>(state: S, address: Address) -> Result<u64, Error> {
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let store = storage::PrefixStore::new(state, MODULE_NAME.as_bytes());
         let accounts = storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
-        let account: types::Account = accounts.get(&address).unwrap_or_default();
+        let account: types::Account = accounts.get(address.as_ref()).unwrap_or_default();
         Ok(account.nonce)
     }
 
@@ -384,9 +390,10 @@ impl API for Module {
         state: S,
         address: Address,
     ) -> Result<types::AccountBalances, Error> {
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let store = storage::PrefixStore::new(state, MODULE_NAME.as_bytes());
         let balances = storage::PrefixStore::new(store, &state::BALANCES);
-        let account = storage::TypedStore::new(storage::PrefixStore::new(balances, &address));
+        let account =
+            storage::TypedStore::new(storage::PrefixStore::new(balances, address.as_ref()));
 
         Ok(types::AccountBalances {
             balances: account.iter().collect(),
@@ -396,7 +403,7 @@ impl API for Module {
     fn get_total_supplies<S: storage::Store>(
         state: S,
     ) -> Result<BTreeMap<token::Denomination, token::Quantity>, Error> {
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let store = storage::PrefixStore::new(state, MODULE_NAME.as_ref());
         let ts = storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
 
         Ok(ts.iter().collect())
@@ -482,11 +489,11 @@ impl Module {
     /// Initialize state from genesis.
     fn init<C: Context>(ctx: &mut C, genesis: &Genesis) {
         // Create accounts.
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let mut store = storage::PrefixStore::new(ctx.runtime_state(), MODULE_NAME.as_bytes());
         let mut accounts =
             storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
         for (address, account) in genesis.accounts.iter() {
-            accounts.insert(address, account);
+            accounts.insert(address.as_ref(), account);
         }
 
         // Create balances.
@@ -494,10 +501,12 @@ impl Module {
         let mut computed_total_supply: BTreeMap<token::Denomination, token::Quantity> =
             BTreeMap::new();
         for (address, denominations) in genesis.balances.iter() {
-            let mut account =
-                storage::TypedStore::new(storage::PrefixStore::new(&mut balances, &address));
+            let mut account = storage::TypedStore::new(storage::PrefixStore::new(
+                &mut balances,
+                address.as_ref(),
+            ));
             for (denomination, value) in denominations {
-                account.insert(denomination, value);
+                account.insert(denomination.as_ref(), value);
 
                 // Update computed total supply.
                 computed_total_supply
@@ -521,7 +530,7 @@ impl Module {
                 );
             }
 
-            total_supplies.insert(denomination, total_supply);
+            total_supplies.insert(denomination.as_ref(), total_supply);
         }
         for (denomination, total_supply) in computed_total_supply.iter() {
             panic!(
@@ -595,13 +604,13 @@ impl module::AuthHandler for Module {
     ) -> Result<(), modules::core::Error> {
         let params = Self::params(ctx.runtime_state());
         // Fetch information about each signer.
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let mut store = storage::PrefixStore::new(ctx.runtime_state(), MODULE_NAME.as_bytes());
         let mut accounts =
             storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
         let mut payee = None;
         for si in tx.auth_info.signer_info.iter() {
             let address = si.address_spec.address();
-            let mut account: types::Account = accounts.get(&address).unwrap_or_default();
+            let mut account: types::Account = accounts.get(address.as_ref()).unwrap_or_default();
             if account.nonce != si.nonce {
                 // Reject unles nonce checking is disabled.
                 if !params.debug_disable_nonce_check {
@@ -617,7 +626,7 @@ impl module::AuthHandler for Module {
             // Update nonce.
             // TODO: Could support an option to defer this.
             account.nonce += 1;
-            accounts.insert(&address, &account);
+            accounts.insert(address.as_ref(), &account);
         }
 
         // Charge the specified amount of fees.

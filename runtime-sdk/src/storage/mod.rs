@@ -9,28 +9,28 @@ mod typed;
 /// A key-value store.
 pub trait Store {
     /// Fetch entry with given key.
-    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Vec<u8>>;
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>>;
 
     /// Update entry with given key to the given value.
-    fn insert<K: AsRef<[u8]>>(&mut self, key: K, value: &[u8]);
+    fn insert(&mut self, key: &[u8], value: &[u8]);
 
     /// Remove entry with given key.
-    fn remove<K: AsRef<[u8]>>(&mut self, key: K);
+    fn remove(&mut self, key: &[u8]);
 
     /// Returns an iterator over the tree.
     fn iter(&self) -> Box<dyn Iterator + '_>;
 }
 
 impl<S: Store + ?Sized> Store for &mut S {
-    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Vec<u8>> {
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         S::get(self, key)
     }
 
-    fn insert<K: AsRef<[u8]>>(&mut self, key: K, value: &[u8]) {
+    fn insert(&mut self, key: &[u8], value: &[u8]) {
         S::insert(self, key, value)
     }
 
-    fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
+    fn remove(&mut self, key: &[u8]) {
         S::remove(self, key)
     }
 

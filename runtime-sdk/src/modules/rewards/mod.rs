@@ -171,7 +171,7 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
         let epoch = ctx.epoch();
 
         // Load previous epoch.
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let mut store = storage::PrefixStore::new(ctx.runtime_state(), MODULE_NAME.as_bytes());
         let mut tstore = storage::TypedStore::new(&mut store);
         let previous_epoch: beacon::EpochTime = tstore.get(&state::LAST_EPOCH).unwrap_or_default();
         tstore.insert(&state::LAST_EPOCH, &epoch);
@@ -179,7 +179,7 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
         // Load rewards accumulator for the current epoch.
         let epochs = storage::TypedStore::new(storage::PrefixStore::new(store, &state::REWARDS));
         let mut rewards: types::EpochRewards =
-            epochs.get(epoch.to_storage_key()).unwrap_or_default();
+            epochs.get(&epoch.to_storage_key()).unwrap_or_default();
 
         // Reward each good entity.
         for entity_id in &ctx.runtime_round_results().good_compute_entities {
@@ -196,7 +196,7 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
         // Disburse any rewards for previous epochs when the epoch changes.
         if epoch != previous_epoch {
             let params = Self::params(ctx.runtime_state());
-            let store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+            let store = storage::PrefixStore::new(ctx.runtime_state(), MODULE_NAME.as_bytes());
             let mut epochs =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::REWARDS));
             let epoch_rewards: Vec<(DecodableEpochTime, types::EpochRewards)> =
@@ -204,7 +204,7 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
 
             // Remove all epochs that we will process.
             for (epoch, _) in &epoch_rewards {
-                epochs.remove(epoch.0.to_storage_key());
+                epochs.remove(&epoch.0.to_storage_key());
             }
 
             // Process accumulated rewards for previous epochs.
@@ -237,10 +237,10 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
         }
 
         // Update rewards for current epoch.
-        let store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let store = storage::PrefixStore::new(ctx.runtime_state(), MODULE_NAME.as_bytes());
         let mut epochs =
             storage::TypedStore::new(storage::PrefixStore::new(store, &state::REWARDS));
-        epochs.insert(epoch.to_storage_key(), &rewards);
+        epochs.insert(&epoch.to_storage_key(), &rewards);
     }
 }
 

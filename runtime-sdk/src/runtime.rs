@@ -34,7 +34,7 @@ pub trait Runtime {
     fn migrate<C: Context>(ctx: &mut C) {
         let store = storage::TypedStore::new(storage::PrefixStore::new(
             ctx.runtime_state(),
-            &modules::core::MODULE_NAME,
+            modules::core::MODULE_NAME.as_bytes(),
         ));
         let mut metadata: modules::core::types::Metadata = store
             .get(modules::core::state::METADATA)
@@ -73,7 +73,7 @@ pub trait Runtime {
         if has_changes {
             let mut store = storage::TypedStore::new(storage::PrefixStore::new(
                 ctx.runtime_state(),
-                &modules::core::MODULE_NAME,
+                modules::core::MODULE_NAME.as_bytes(),
             ));
             store.insert(modules::core::state::METADATA, &metadata);
         }

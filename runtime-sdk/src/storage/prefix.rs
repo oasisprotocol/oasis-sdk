@@ -10,26 +10,22 @@ pub struct PrefixStore<'store, S: Store> {
 
 impl<'store, S: Store> PrefixStore<'store, S> {
     /// Create a new prefix store with the given prefix.
-    pub fn new<K: 'store + AsRef<[u8]>>(parent: S, prefix: &'store K) -> Self {
-        Self {
-            parent,
-            prefix: prefix.as_ref(),
-        }
+    pub fn new(parent: S, prefix: &'store [u8]) -> Self {
+        Self { parent, prefix }
     }
 }
 
 impl<'store, S: Store> Store for PrefixStore<'store, S> {
-    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Vec<u8>> {
-        self.parent.get(&[self.prefix, key.as_ref()].concat())
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        self.parent.get(&[self.prefix, key].concat())
     }
 
-    fn insert<K: AsRef<[u8]>>(&mut self, key: K, value: &[u8]) {
-        self.parent
-            .insert(&[self.prefix, key.as_ref()].concat(), value);
+    fn insert(&mut self, key: &[u8], value: &[u8]) {
+        self.parent.insert(&[self.prefix, key].concat(), value);
     }
 
-    fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
-        self.parent.remove(&[self.prefix, key.as_ref()].concat());
+    fn remove(&mut self, key: &[u8]) {
+        self.parent.remove(&[self.prefix, key].concat());
     }
 
     fn iter(&self) -> Box<dyn mkvs::Iterator + '_> {
