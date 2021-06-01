@@ -1,6 +1,6 @@
 {
     "name": "@oasisprotocol/client",
-    "version": "0.1.0-alpha1",
+    "version": "0.1.0-alpha2",
     "license": "Apache-2.0",
     "files": [
         "dist"
@@ -14,8 +14,8 @@
     },
     "dependencies": {
         "bech32": "^1.1.4",
-        "cborg": "^1.1.2",
         "bip39": "^3.0.4",
+        "cborg": "^1.1.2",
         "grpc-web": "^1.2.1",
         "js-sha512": "^0.8.0",
         "tweetnacl": "^1.0.3"

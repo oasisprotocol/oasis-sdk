@@ -3,13 +3,16 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"fmt"
-	"math"
+	"math/rand"
 	"time"
 
 	"google.golang.org/grpc"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/drbg"
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/mathrand"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
@@ -21,10 +24,15 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
+
+	"github.com/oasisprotocol/oasis-sdk/tests/e2e/txgen"
 )
 
 // EventWaitTimeout specifies how long to wait for an event.
 const EventWaitTimeout = 20 * time.Second
+
+// defaultGasAmount is the default amount of gas to specify.
+const defaultGasAmount = 200
 
 // The kvKey type must match the Key type from the simple-keyvalue runtime
 // in ../runtimes/simple-keyvalue/src/keyvalue/types.rs.
@@ -65,7 +73,7 @@ func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.C
 }
 
 // kvInsert inserts given key-value pair into storage.
-func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key []byte, value []byte) error {
+func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key, value []byte) error {
 	ctx := context.Background()
 	chainCtx, err := GetChainContext(ctx, rtc)
 	if err != nil {
@@ -78,7 +86,7 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key []byte, val
 	}
 
 	tx := types.NewTransaction(&types.Fee{
-		Gas:    math.MaxUint64,
+		Gas: 2 * defaultGasAmount,
 	}, "keyvalue.Insert", kvKeyValue{
 		Key:   key,
 		Value: value,
@@ -92,7 +100,9 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key []byte, val
 	tx.AuthInfo.Fee.Gas = gas
 
 	stx := tx.PrepareForSigning()
-	stx.AppendSign(chainCtx, signer)
+	if err = stx.AppendSign(chainCtx, signer); err != nil {
+		return err
+	}
 
 	if _, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
 		return err
@@ -114,7 +124,7 @@ func kvRemove(rtc client.RuntimeClient, signer signature.Signer, key []byte) err
 	}
 
 	tx := types.NewTransaction(&types.Fee{
-		Gas:    math.MaxUint64,
+		Gas: defaultGasAmount,
 	}, "keyvalue.Remove", kvKey{
 		Key: key,
 	})
@@ -127,7 +137,9 @@ func kvRemove(rtc client.RuntimeClient, signer signature.Signer, key []byte) err
 	tx.AuthInfo.Fee.Gas = gas
 
 	stx := tx.PrepareForSigning()
-	stx.AppendSign(chainCtx, signer)
+	if err = stx.AppendSign(chainCtx, signer); err != nil {
+		return err
+	}
 
 	if _, err := rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
 		return err
@@ -146,7 +158,8 @@ func kvGet(rtc client.RuntimeClient, key []byte) ([]byte, error) {
 	return resp.Value, nil
 }
 
-func SimpleKVTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+// SimpleKVTest does a simple key insert/fetch/remove test.
+func SimpleKVTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("test_key")
@@ -167,7 +180,7 @@ func SimpleKVTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runtime
 	}
 
 	log.Info("removing test key")
-	if err := kvRemove(rtc, signer, testKey); err != nil {
+	if err = kvRemove(rtc, signer, testKey); err != nil {
 		return err
 	}
 
@@ -180,7 +193,8 @@ func SimpleKVTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runtime
 	return nil
 }
 
-func KVEventTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+// KVEventTest tests key insert/remove events.
+func KVEventTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("event_test_key")
@@ -303,7 +317,8 @@ WaitRemoveLoop:
 	return nil
 }
 
-func KVBalanceTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+// KVBalanceTest checks test accounts' default balances.
+func KVBalanceTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
@@ -313,11 +328,11 @@ func KVBalanceTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runtim
 		return err
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(3000)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 3000, got %s)", q.String())
+		if q.Cmp(quantity.NewFromUint64(10003000)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 10003000, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
-		return fmt.Errorf("Alice's account is missing native denomination balance")
+		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
 	}
 
 	log.Info("checking Bob's account balance")
@@ -327,10 +342,10 @@ func KVBalanceTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runtim
 	}
 	if q, ok := bb.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(2000)) != 0 {
-			return fmt.Errorf("Bob's account balance is wrong (expected 2000, got %s)", q.String())
+			return fmt.Errorf("Bob's account balance is wrong (expected 2000, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
-		return fmt.Errorf("Bob's account is missing native denomination balance")
+		return fmt.Errorf("Bob's account is missing native denomination balance") //nolint: stylecheck
 	}
 
 	log.Info("checking Charlie's account balance")
@@ -340,10 +355,10 @@ func KVBalanceTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runtim
 	}
 	if q, ok := cb.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(1000)) != 0 {
-			return fmt.Errorf("Charlie's account balance is wrong (expected 1000, got %s)", q.String())
+			return fmt.Errorf("Charlie's account balance is wrong (expected 1000, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
-		return fmt.Errorf("Charlie's account is missing native denomination balance")
+		return fmt.Errorf("Charlie's account is missing native denomination balance") //nolint: stylecheck
 	}
 
 	log.Info("checking Dave's account balance")
@@ -353,16 +368,17 @@ func KVBalanceTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runtim
 	}
 	if q, ok := db.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(100)) != 0 {
-			return fmt.Errorf("Dave's account balance is wrong (expected 100, got %s)", q.String())
+			return fmt.Errorf("Dave's account balance is wrong (expected 100, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
-		return fmt.Errorf("Dave's account is missing native denomination balance")
+		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
 	}
 
 	return nil
 }
 
-func KVTransferTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+// KVTransferTest does a transfer test and verifies balances.
+func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { // nolint: dupl
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
@@ -378,7 +394,7 @@ func KVTransferTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runti
 
 	log.Info("transferring 100 units from Alice to Bob")
 	tx := types.NewTransaction(&types.Fee{
-		Gas:    200,
+		Gas: defaultGasAmount,
 	}, "accounts.Transfer", struct {
 		To     types.Address   `json:"to"`
 		Amount types.BaseUnits `json:"amount"`
@@ -388,9 +404,11 @@ func KVTransferTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runti
 	})
 	tx.AppendAuthSignature(testing.Alice.Signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
-	stx.AppendSign(chainCtx, testing.Alice.Signer)
+	if err = stx.AppendSign(chainCtx, testing.Alice.Signer); err != nil {
+		return err
+	}
 
-	if _, err := rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
+	if _, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
 		return err
 	}
 
@@ -400,11 +418,11 @@ func KVTransferTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runti
 		return err
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(2900)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 2900, got %s)", q.String())
+		if q.Cmp(quantity.NewFromUint64(10002900)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 10002900, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
-		return fmt.Errorf("Alice's account is missing native denomination balance")
+		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
 	}
 
 	log.Info("checking Bob's account balance")
@@ -414,16 +432,17 @@ func KVTransferTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runti
 	}
 	if q, ok := bb.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(2100)) != 0 {
-			return fmt.Errorf("Bob's account balance is wrong (expected 2100, got %s)", q.String())
+			return fmt.Errorf("Bob's account balance is wrong (expected 2100, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
-		return fmt.Errorf("Bob's account is missing native denomination balance")
+		return fmt.Errorf("Bob's account is missing native denomination balance") //nolint: stylecheck
 	}
 
 	return nil
 }
 
-func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+// KVDaveTest does a tx signing test using the secp256k1 signer.
+func KVDaveTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { // nolint: dupl
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
@@ -439,7 +458,7 @@ func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeCl
 
 	log.Info("transferring 10 units from Dave to Alice")
 	tx := types.NewTransaction(&types.Fee{
-		Gas:    200,
+		Gas: defaultGasAmount,
 	}, "accounts.Transfer", struct {
 		To     types.Address   `json:"to"`
 		Amount types.BaseUnits `json:"amount"`
@@ -449,9 +468,11 @@ func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeCl
 	})
 	tx.AppendAuthSignature(testing.Dave.Signer.Public(), nonce)
 	stx := tx.PrepareForSigning()
-	stx.AppendSign(chainCtx, testing.Dave.Signer)
+	if err = stx.AppendSign(chainCtx, testing.Dave.Signer); err != nil {
+		return err
+	}
 
-	if _, err := rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
+	if _, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
 		return err
 	}
 
@@ -462,10 +483,10 @@ func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeCl
 	}
 	if q, ok := db.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(90)) != 0 {
-			return fmt.Errorf("Dave's account balance is wrong (expected 90, got %s)", q.String())
+			return fmt.Errorf("Dave's account balance is wrong (expected 90, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
-		return fmt.Errorf("Dave's account is missing native denomination balance")
+		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
 	}
 
 	log.Info("checking Alice's account balance")
@@ -474,17 +495,17 @@ func KVDaveTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeCl
 		return err
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(2910)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 2910, got %s)", q.String())
+		if q.Cmp(quantity.NewFromUint64(10002910)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 2910, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
-		return fmt.Errorf("Alice's account is missing native denomination balance")
+		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
 	}
 
 	return nil
 }
 
-func KVMultisigTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVMultisigTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signerA := testing.Alice.Signer
 	signerB := testing.Bob.Signer
 	config := types.MultisigConfig{
@@ -539,7 +560,7 @@ func KVMultisigTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runti
 	return nil
 }
 
-func KVRewardsTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVRewardsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	rw := rewards.NewV1(rtc)
 
@@ -559,5 +580,95 @@ func KVRewardsTest(log *logging.Logger, conn *grpc.ClientConn, rtc client.Runtim
 		return fmt.Errorf("unexpected number of reward schedule steps (expected: %d got: %d)", 1, l)
 	}
 
+	return nil
+}
+
+// KVTxGenTest generates random transactions.
+func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	ac := accounts.NewV1(rtc)
+
+	log.Info("getting Alice's account balance")
+	ab, err := ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return err
+	}
+	var balance uint64
+	if q, ok := ab.Balances[types.NativeDenomination]; ok {
+		// We can do this only because the account's balance fits into an uint64.
+		balance = q.ToBigInt().Uint64()
+	} else {
+		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
+	}
+
+	testDuration, err := sc.Flags.GetDuration(CfgTxGenDuration)
+	if err != nil {
+		log.Error("malformed CfgTxGenDuration flag, using default")
+		testDuration = 60 * time.Second
+	}
+
+	numAccounts, err := sc.Flags.GetInt(CfgTxGenNumAccounts)
+	if err != nil {
+		log.Error("malformed CfgTxGenNumAccounts flag, using default")
+		numAccounts = 10
+	}
+	coinsPerAccount, err := sc.Flags.GetUint64(CfgTxGenCoinsPerAcct)
+	if err != nil {
+		log.Error("malformed CfgTxGenCoinsPerAcct flag, using default")
+		coinsPerAccount = uint64(200)
+	}
+
+	minBalanceRequired := coinsPerAccount * uint64(numAccounts)
+	if balance < minBalanceRequired {
+		return fmt.Errorf("Alice is too broke to fund accounts (balance is %d, need %d)", balance, minBalanceRequired) //nolint: stylecheck
+	}
+
+	// Create RNG.
+	seed := time.Now().UnixNano()
+	rngSrc, err := drbg.New(crypto.SHA512, []byte(fmt.Sprintf("%d%d%d%d", seed, seed, seed, seed)), nil, []byte("KVTxGenTest1min"))
+	if err != nil {
+		return err
+	}
+	rng := rand.New(mathrand.New(rngSrc)) //nolint: gosec
+
+	// Generate accounts.
+	log.Info("generating accounts", "num_accounts", numAccounts, "coins_per_account", coinsPerAccount, "rng_seed", seed)
+	var accts []signature.Signer
+	numT := make(map[string]uint64)
+	for i := 0; i < numAccounts; i++ {
+		// Create account.
+		at := txgen.AccountType(uint8(rng.Intn(int(txgen.AccountTypeMax) + 1)))
+		numT[at.String()]++
+		sig, grr := txgen.CreateAndFundAccount(ctx, rtc, testing.Alice.Signer, i, at, coinsPerAccount)
+		if grr != nil {
+			return grr
+		}
+
+		accts = append(accts, sig)
+	}
+	log.Info("accounts generated", "num_accts_per_type", numT)
+
+	// Generate random transactions for the specified amount of time.
+	log.Info("generating transactions", "duration", testDuration)
+	txgenCtx, cancel := context.WithTimeout(ctx, testDuration)
+	defer cancel()
+
+	// Generate a new random tx every 250ms until txgenCtx timeouts.
+	gens := append([]txgen.GenerateTx{}, txgen.DefaultTxGenerators...)
+	gens = append(gens, DefaultKVTxGenerators...)
+	genErrs, subErrs, ok, err := txgen.Generate(txgenCtx, rtc, rng, accts, gens, 250*time.Millisecond)
+	if err != nil {
+		return err
+	}
+
+	if ok == 0 {
+		return fmt.Errorf("no generated transactions were submitted successfully")
+	}
+
+	// Note that submission errors are fine here, since we're going to get
+	// invalid nonce errors a lot, because the txs are generated in parallel.
+	// Transaction generation errors are also fine, since queries can fail
+	// due to yet nonexisting keys in the keyvalue storage, etc.
+	log.Info("finished", "num_ok_submitted_txs", ok, "num_gen_errs", genErrs, "num_sub_errs", subErrs)
 	return nil
 }

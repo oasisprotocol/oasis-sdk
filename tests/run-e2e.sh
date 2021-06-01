@@ -5,9 +5,6 @@ trap "exit 1" INT
 # Get the root directory of the tests dir inside the repository.
 ROOT="$(cd $(dirname $0); pwd -P)"
 
-# What to use for GNU tar.
-TAR=tar
-
 # ANSI escape codes to brighten up the output.
 RED=$'\e[31;1m'
 GRN=$'\e[32;1m'
@@ -25,17 +22,7 @@ cleanup() {
 }
 trap "cleanup" EXIT
 
-if [[ ! -v TEST_NODE_BINARY ]]; then
-	printf "${RED}### Please set \$TEST_NODE_BINARY variable.${OFF}\n"
-	exit 1
-fi
-
-if [[ ! -v TEST_RUNTIME_LOADER ]]; then
-	printf "${RED}### Please set \$TEST_RUNTIME_LOADER variable.${OFF}\n"
-	exit 1
-fi
-
-# Find build tools.
+# Make sure we have build tools installed.
 if [[ "$(which go)" == "" ]]; then
 	printf "${RED}### Please install 'go'.${OFF}\n"
 	exit 1
@@ -43,6 +30,17 @@ fi
 if [[ "$(which cargo)" == "" ]]; then
 	printf "${RED}### Please install 'cargo'.${OFF}\n"
 	exit 1
+fi
+
+cd "${TEST_BASE_DIR}"
+cp "${ROOT}"/consts.sh .
+
+if [[ ! -v TEST_NODE_BINARY ]] || [[ ! -v TEST_RUNTIME_LOADER ]]; then
+	printf "${CYAN}### Downloading Oasis artifacts...${OFF}\n"
+	${ROOT}/download-artifacts.sh
+	cp "${TEST_BASE_DIR}"/untracked/oasis-{node,core-runtime-loader} "${TEST_BASE_DIR}"
+	export TEST_NODE_BINARY="${TEST_BASE_DIR}/oasis-node"
+	export TEST_RUNTIME_LOADER="${TEST_BASE_DIR}/oasis-core-runtime-loader"
 fi
 
 printf "${CYAN}### Building test simple-keyvalue runtime...${OFF}\n"
@@ -68,7 +66,8 @@ printf "${CYAN}### Running end-to-end tests...${OFF}\n"
 	--basedir.no_cleanup \
 	--e2e.node.binary="${TEST_NODE_BINARY}" \
 	--e2e.runtime.binary_dir.default="${TEST_BASE_DIR}" \
-	--e2e.runtime.loader="${TEST_RUNTIME_LOADER}"
+	--e2e.runtime.loader="${TEST_RUNTIME_LOADER}" \
+	"$@"
 
 cd "${ROOT}"
 rm -rf "${TEST_BASE_DIR}"
