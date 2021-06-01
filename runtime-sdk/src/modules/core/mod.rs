@@ -255,14 +255,14 @@ impl module::AuthHandler for Module {
             }
         }
         let params = Self::params(ctx.runtime_state());
-        let total = num_signature
-            .checked_mul(params.gas_costs.auth_signature)
-            .and_then(|v| {
-                v.checked_add(
-                    num_multisig_signer.checked_mul(params.gas_costs.auth_multisig_signer)?,
-                )
-            })
-            .ok_or(Error::GasOverflow)?;
+        let total = (|| {
+            let signature_cost = num_signature.checked_mul(params.gas_costs.auth_signature)?;
+            let multisig_signer_cost =
+                num_multisig_signer.checked_mul(params.gas_costs.auth_multisig_signer)?;
+            let sum = signature_cost.checked_add(multisig_signer_cost)?;
+            Some(sum)
+        })()
+        .ok_or(Error::GasOverflow)?;
         Self::use_tx_gas(ctx, total)?;
         Ok(())
     }
