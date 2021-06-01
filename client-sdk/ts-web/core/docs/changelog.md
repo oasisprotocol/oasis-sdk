@@ -5,6 +5,7 @@
 New features:
 
 - Compatibility with oasis-core is updated to 21.1.1.
+- A new `hdkey` module implements ADR 0008 key generation.
 
 ## v0.1.0-alpha1
 
