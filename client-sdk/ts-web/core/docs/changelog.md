@@ -1,11 +1,14 @@
 # Changelog
 
-## Unreleased changes
+## v0.1.0-alpha2
+
+Spotlight change:
+
+- A new `hdkey` module implements ADR 0008 key generation.
 
 New features:
 
 - Compatibility with oasis-core is updated to 21.1.1.
-- A new `hdkey` module implements ADR 0008 key generation.
 
 ## v0.1.0-alpha1
 
