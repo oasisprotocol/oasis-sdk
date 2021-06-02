@@ -141,12 +141,6 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "bech32"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dabbe35f96fb9507f7330793dc490461b2962659ac5d427181e451a623751d1"
-
-[[package]]
-name = "bech32"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c7f7096bc256f5e5cb960f60dfc4f4ef979ca65abe7fb9d5a4f77150d3783d4"
@@ -991,7 +985,7 @@ dependencies = [
  "anyhow",
  "arbitrary",
  "base64",
- "bech32 0.8.0",
+ "bech32",
  "bincode",
  "byteorder",
  "chrono",
@@ -1044,7 +1038,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64",
- "bech32 0.7.3",
+ "bech32",
  "curve25519-dalek",
  "hex",
  "impl-trait-for-tuples",
