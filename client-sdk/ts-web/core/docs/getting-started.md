@@ -1,78 +1,9 @@
 # Putting together the pieces
 
-<!-- Authored on https://app.diagrams.net/. -->
-![](ts-web-blocks.svg)
-
 ## Overview
 
-1. Setting up a non-validator node
-1. Getting Envoy
-1. Configuring Envoy
-1. Running Envoy
 1. Getting this SDK and building
 1. Connecting from your web app
-
-## Setting up a node
-
-Setting up a node results in a running process with a Unix domain socket named
-`internal.sock` that allows other programs to interact with the node, and
-through that, the network.
-
-### Connect to an existing network
-
-For use with an existing network such as the Oasis Mainnet, see [our docs on
-how to run a non-validator
-node](https://docs.oasis.dev/general/run-a-node/set-up-your-node/run-non-validator).
-The instructions there set up the socket to be in `/node/data/internal.sock`.
-
-### Create a local testnet
-
-For development, you can alternatively run your own local testnet using
-oasis-net-runner.
-See [our guide on how to use
-oasis-net-runner](https://docs.oasis.dev/oasis-core/development-setup/running-tests-and-development-networks/oasis-net-runner).
-In this case, the net runner creates a "client" node, and you should proceed
-using that node's socket.
-
-## Getting Envoy
-
-See [Installing
-Envoy](https://www.envoyproxy.io/docs/envoy/latest/start/install)
-for a variety of ways to get Envoy.
-
-In our sample setup, we use [the distribution from Get
-Envoy](https://www.getenvoy.io/).
-
-## Configuring Envoy
-
-Notably, need to configure a route to forward requests from the distinctly
-browser-compatible gRPC-web protocol to the Unix domain socket in native gRPC.
-
-See [our sample configuration](../playground/sample-envoy.yaml) for one way to
-do it.
-You'll need to adjust the following:
-
-- `.match.safe_regex.regex` in the route, for setting up a method whitelist
-- `.load_assignment.endpoints[0].lb_endpoints[0].endpoint.address.pipe.path`
-  in the `oasis_node_grpc` cluster, to point to your node's socket
-- `.load_assignment.endpoints[0].lb_endpoints[0].endpoint.address.socket_address`
-  in the `dev_static` cluster, to point to your web server
-
-You can alternatively disable the `dev_static` cluster and its corresponding
-route, enable CORS, and serve your web app from a separate origin.
-
-![](ts-web-blocks-cors.svg)
-
-## Running Envoy
-
-In our sample, we run Envoy and proxy the web app through it.
-
-See [our sample invocation](../playground/sample-run-envoy.sh).
-
-If you're running Envoy in Docker, you can use volume mounts to allow envoy
-to access the YAML config file and the node's UNIX socket, and you can set the
-container to use the "host" network so that Envoy can connect to the web
-server.
 
 ## Getting this SDK and building
 
@@ -141,3 +72,77 @@ they in PascalCase in Go and SCREAMING_SNAKE_CASE here.
 tell anyone.)
 Some constants like signature contexts and errors are structures in oasis-core
 but appear here as multiple primitive values.
+
+# Advanced deployment
+
+<!-- Authored on https://app.diagrams.net/. -->
+![](ts-web-blocks.svg)
+
+## Overview
+
+1. Setting up a non-validator node
+1. Getting Envoy
+1. Configuring Envoy
+1. Running Envoy
+
+## Setting up a node
+
+Setting up a node results in a running process with a Unix domain socket named
+`internal.sock` that allows other programs to interact with the node, and
+through that, the network.
+
+### Connect to an existing network
+
+For use with an existing network such as the Oasis Mainnet, see [our docs on
+how to run a non-validator
+node](https://docs.oasis.dev/general/run-a-node/set-up-your-node/run-non-validator).
+The instructions there set up the socket to be in `/node/data/internal.sock`.
+
+### Create a local testnet
+
+For development, you can alternatively run your own local testnet using
+oasis-net-runner.
+See [our guide on how to use
+oasis-net-runner](https://docs.oasis.dev/oasis-core/development-setup/running-tests-and-development-networks/oasis-net-runner).
+In this case, the net runner creates a "client" node, and you should proceed
+using that node's socket.
+
+## Getting Envoy
+
+See [Installing
+Envoy](https://www.envoyproxy.io/docs/envoy/latest/start/install)
+for a variety of ways to get Envoy.
+
+In our sample setup, we use [the distribution from Get
+Envoy](https://www.getenvoy.io/).
+
+## Configuring Envoy
+
+Notably, need to configure a route to forward requests from the distinctly
+browser-compatible gRPC-web protocol to the Unix domain socket in native gRPC.
+
+See [our sample configuration](../playground/sample-envoy.yaml) for one way to
+do it.
+You'll need to adjust the following:
+
+- `.match.safe_regex.regex` in the route, for setting up a method whitelist
+- `.load_assignment.endpoints[0].lb_endpoints[0].endpoint.address.pipe.path`
+  in the `oasis_node_grpc` cluster, to point to your node's socket
+- `.load_assignment.endpoints[0].lb_endpoints[0].endpoint.address.socket_address`
+  in the `dev_static` cluster, to point to your web server
+
+You can alternatively disable the `dev_static` cluster and its corresponding
+route, enable CORS, and serve your web app from a separate origin.
+
+![](ts-web-blocks-cors.svg)
+
+## Running Envoy
+
+In our sample, we run Envoy and proxy the web app through it.
+
+See [our sample invocation](../playground/sample-run-envoy.sh).
+
+If you're running Envoy in Docker, you can use volume mounts to allow envoy
+to access the YAML config file and the node's UNIX socket, and you can set the
+container to use the "host" network so that Envoy can connect to the web
+server.
