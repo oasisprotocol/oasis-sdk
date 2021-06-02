@@ -1,1 +1,5 @@
-module.exports = require('../jest.config');
+module.exports = {
+    testMatch: ['**/test/**/*.ts'],
+    testEnvironment: 'node',
+    preset: 'ts-jest'
+};

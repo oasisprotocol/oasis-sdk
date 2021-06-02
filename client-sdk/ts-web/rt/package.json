@@ -8,6 +8,8 @@
     "scripts": {
         "prepare": "tsc",
         "check-playground": "cd playground && tsc -p jsconfig.json",
+        "fmt": "prettier --write 'src/**.ts'",
+        "lint": "prettier --check 'src/**.ts'",
         "playground": "cd playground && webpack s -c webpack.config.js"
     },
     "dependencies": {
@@ -17,6 +19,7 @@
     "devDependencies": {
         "@types/elliptic": "^6.4.12",
         "cypress": "^6.6.0",
+        "prettier": "^2.2.1",
         "typescript": "^4.3.2",
         "webpack": "^5.21.2",
         "webpack-cli": "^4.7.0",
