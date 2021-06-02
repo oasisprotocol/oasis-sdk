@@ -6,7 +6,7 @@ use proc_macro::TokenStream;
 mod error_derive;
 mod event_derive;
 mod generators;
-mod handlers_attr;
+mod handler_attrs;
 #[cfg(test)]
 mod test_utils;
 mod version_from_cargo;
@@ -32,20 +32,34 @@ pub fn version_from_cargo(_input: TokenStream) -> TokenStream {
     version_from_cargo::version_from_cargo().into()
 }
 
-/// "Derives" `MethodRegistrationHandler` from an `impl` item.
+/// Creates traits for modules and clients to implement.
 #[proc_macro_attribute]
-pub fn handlers(args: TokenStream, input: TokenStream) -> TokenStream {
-    let input = syn::parse_macro_input!(input as syn::ItemImpl);
+pub fn calls(args: TokenStream, input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input as syn::ItemTrait);
     let args = syn::parse_macro_input!(args as syn::AttributeArgs);
-    handlers_attr::gen_method_registration_handler_impl(input, args).into()
+    handler_attrs::gen_call_items(&input, &args).into()
 }
 
-/// A "helper attribute" for the handlers "derive." This attribute could be stripped
-/// by the `handlers` attribute, but if it's accidentally omitted, not having this
-/// one will give really confusing error messages.
+/// Creates traits for modules and clients to implement.
 #[proc_macro_attribute]
-pub fn handler(_args: TokenStream, input: TokenStream) -> TokenStream {
-    // `sdk::handler` can only be applied to methods, of course.
-    let input = syn::parse_macro_input!(input as syn::ImplItemMethod);
+pub fn queries(args: TokenStream, input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input as syn::ItemTrait);
+    let args = syn::parse_macro_input!(args as syn::AttributeArgs);
+    handler_attrs::gen_query_items(&input, &args).into()
+}
+
+/// "Helper attributes" for the `calls` and `queries` "derives." This attribute could
+/// be stripped by the `calls`/`queries` attributes, but if it's accidentally omitted,
+/// not having this one will give really confusing error messages.
+#[proc_macro_attribute]
+pub fn call(_args: TokenStream, input: TokenStream) -> TokenStream {
+    // `sdk::method` can only be applied to methods, of course.
+    let input = syn::parse_macro_input!(input as syn::TraitItemMethod);
+    quote::quote!(#input).into()
+}
+/// @see [`method`]
+#[proc_macro_attribute]
+pub fn query(_args: TokenStream, input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input as syn::TraitItemMethod);
     quote::quote!(#input).into()
 }
