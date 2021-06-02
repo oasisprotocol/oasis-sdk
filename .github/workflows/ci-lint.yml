@@ -87,10 +87,21 @@ jobs:
         with:
           node-version: "14.x"
 
+      - name: Set up npm
+        run: npm install npm@7 -g
+
       - name: Install Node deps
         working-directory: client-sdk/ts-web
         run: npm ci
 
-      - name: Lint ts-web
-        working-directory: client-sdk/ts-web
+      - name: Lint ts-web/core
+        working-directory: client-sdk/ts-web/core
+        run: npm run-script lint
+
+      - name: Lint ts-web/signer-ledger
+        working-directory: client-sdk/ts-web/signer-ledger
+        run: npm run-script lint
+
+      - name: Lint ts-web/rt
+        working-directory: client-sdk/ts-web/rt
         run: npm run-script lint
