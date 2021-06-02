@@ -191,7 +191,7 @@ impl Module {
         args: transaction::Transaction,
     ) -> Result<u64, Error> {
         ctx.with_simulation(|mut ctx| {
-            let _ = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx(&mut ctx, args);
+            dispatcher::Dispatcher::<C::Runtime>::dispatch_tx(&mut ctx, args).ok();
             // Warning: we don't report success or failure. If the call fails, we still report
             // how much gas it uses while it fails.
             Ok(*ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default())

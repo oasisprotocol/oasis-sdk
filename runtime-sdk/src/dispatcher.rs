@@ -46,6 +46,7 @@ pub enum Error {
     MalformedTransactionInBatch(#[source] modules::core::Error),
 }
 
+/// Result of dispatching a transaction.
 pub struct DispatchResult {
     pub result: types::transaction::CallResult,
     pub tags: Tags,
@@ -60,11 +61,16 @@ impl From<types::transaction::CallResult> for DispatchResult {
     }
 }
 
+/// The runtime dispatcher.
 pub struct Dispatcher<R: Runtime> {
     _runtime: PhantomData<R>,
 }
 
 impl<R: Runtime> Dispatcher<R> {
+    /// Create a new instance of the dispatcher for the given runtime.
+    ///
+    /// Note that the dispatcher is fully static and the constructor is only needed so that the
+    /// instance can be used directly with the dispatcher system provided by Oasis Core.
     pub(super) fn new() -> Self {
         Self {
             _runtime: PhantomData,
@@ -230,10 +236,6 @@ impl<R: Runtime> Dispatcher<R> {
         ));
         store.insert(&modules::core::state::MESSAGE_HANDLERS, &message_handlers);
     }
-
-    fn maybe_init_state<C: Context>(ctx: &mut C) {
-        R::migrate(ctx)
-    }
 }
 
 impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
@@ -250,7 +252,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                     &rt_ctx, mkvs,
                 );
             // Perform state migrations if required.
-            Self::maybe_init_state(&mut ctx);
+            R::migrate(&mut ctx);
 
             // Handle last round message results.
             Self::handle_last_round_messages(&mut ctx)?;
@@ -295,7 +297,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                     &ctx, mkvs,
                 );
             // Perform state migrations if required.
-            Self::maybe_init_state(&mut ctx);
+            R::migrate(&mut ctx);
 
             // Check the batch.
             let mut results = Vec::with_capacity(batch.len());
@@ -325,7 +327,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                     &ctx, mkvs,
                 );
             // Perform state migrations if required.
-            Self::maybe_init_state(&mut ctx);
+            R::migrate(&mut ctx);
 
             // Execute the query.
             R::Modules::dispatch_query(&mut ctx, method, args)
