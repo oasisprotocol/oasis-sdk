@@ -1,7 +1,7 @@
 //! Account address type.
 use std::{convert::TryFrom, fmt};
 
-use bech32::{self, FromBase32, ToBase32};
+use bech32::{self, FromBase32, ToBase32, Variant};
 use thiserror::Error;
 
 use oasis_core_runtime::{
@@ -96,8 +96,11 @@ impl Address {
 
     /// Tries to create a new address from Bech32-encoded string.
     pub fn from_bech32(data: &str) -> Result<Self, Error> {
-        let (hrp, data) = bech32::decode(data).map_err(|_| Error::MalformedAddress)?;
+        let (hrp, data, variant) = bech32::decode(data).map_err(|_| Error::MalformedAddress)?;
         if hrp != ADDRESS_BECH32_HRP {
+            return Err(Error::MalformedAddress);
+        }
+        if variant != Variant::Bech32 {
             return Err(Error::MalformedAddress);
         }
         let data: Vec<u8> = FromBase32::from_base32(&data).map_err(|_| Error::MalformedAddress)?;
@@ -107,7 +110,7 @@ impl Address {
 
     /// Converts an address to Bech32 representation.
     pub fn to_bech32(self) -> String {
-        bech32::encode(ADDRESS_BECH32_HRP, self.0.to_base32()).unwrap()
+        bech32::encode(ADDRESS_BECH32_HRP, self.0.to_base32(), Variant::Bech32).unwrap()
     }
 }
 

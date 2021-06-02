@@ -14,12 +14,12 @@ serde = { version = "1.0.126", features = ["derive"] }
 serde_bytes = "0.11.5"
 curve25519-dalek = "3.0.0"
 sha2 = "0.9.3"
-k256 = { version = "0.6.0", features = ["ecdsa"] }
-thiserror = "1.0.24"
+k256 = { version = "0.7.3", features = ["ecdsa"] }
+thiserror = "1.0.25"
 hex = "0.4.2"
 io-context = "0.2.0"
 anyhow = "1.0.24"
-bech32 = "0.7.2"
+bech32 = "0.8.0"
 num-traits = "0.2.14"
 impl-trait-for-tuples = "0.2.1"
 base64 = "0.13.0"

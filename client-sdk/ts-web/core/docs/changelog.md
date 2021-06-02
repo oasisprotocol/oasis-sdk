@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased changes
+## v0.1.0-alpha2
+
+Spotlight change:
+
+- A new `hdkey` module implements ADR 0008 key generation.
 
 New features:
 

@@ -40,10 +40,10 @@ jobs:
           RUSTFLAGS: -C target-feature=+aes,+ssse3
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1.2.1
+        uses: codecov/codecov-action@v1.5.0
 
       - name: Archive code coverage results
-        uses: actions/upload-artifact@v1
+        uses: actions/upload-artifact@v2.2.3
         with:
           name: code-coverage-report
           path: cobertura.xml
@@ -86,7 +86,7 @@ jobs:
         run: go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v1.2.1
+        uses: codecov/codecov-action@v1.5.0
         with:
           directory: client-sdk/go
 
@@ -99,7 +99,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up Node.js LTS
-        uses: actions/setup-node@v2.1.4
+        uses: actions/setup-node@v2.1.5
         with:
           node-version: "14.x"
 
@@ -143,7 +143,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up Node.js LTS
-        uses: actions/setup-node@v2.1.4
+        uses: actions/setup-node@v2.1.5
         with:
           node-version: "14.x"
 
@@ -195,7 +195,7 @@ jobs:
 
       - name: Upload screenshot
         if: failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v2.2.3
         with:
           name: e2e-ts-web-core-screenshots
           path: client-sdk/ts-web/core/cypress/screenshots
@@ -209,7 +209,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up Node.js LTS
-        uses: actions/setup-node@v2.1.4
+        uses: actions/setup-node@v2.1.5
         with:
           node-version: "14.x"
 
@@ -272,14 +272,14 @@ jobs:
 
       - name: Upload screenshot
         if: failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v2.2.3
         with:
           name: e2e-ts-web-rt-screenshots
           path: client-sdk/ts-web/rt/cypress/screenshots
 
       - name: Upload logs
         if: failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v2.2.3
         with:
           name: e2e-ts-web-rt-logs
           path: |
@@ -326,7 +326,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up Node.js LTS
-        uses: actions/setup-node@v2.1.4
+        uses: actions/setup-node@v2.1.5
         with:
           node-version: "14.x"
 

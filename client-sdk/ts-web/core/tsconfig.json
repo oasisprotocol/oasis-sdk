@@ -7,7 +7,7 @@
         "declaration": true,
         "resolveJsonModule": true
     },
-    "exclude": [
-        "test"
+    "include": [
+        "src/**/*"
     ]
 }
