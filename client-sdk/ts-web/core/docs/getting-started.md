@@ -24,12 +24,23 @@ We have [a sample that uses webpack](../playground/webpack.config.js).
 ```js
 import * as oasis from '@oasisprotocol/client';
 
-const client = new oasis.OasisNodeClient('http://localhost:42280');
+// Use https://grpc-web.oasis.dev/api/testnet to interact with the testnet instead.
+const client = new oasis.OasisNodeClient('https://grpc-web.oasis.dev/api/mainnet');
 ```
+
+This connects to a public oasis-node instance.
+For security and performance reasons, some methods are not permitted.
+See the Advanced deployment section below for how to set up your own node with
+a custom set of enabled methods.
 
 # Example code
 
 We have [a few sample interactions](../playground/src/index.js).
+
+Not all methods used this sample are permitted on the public oasis-node
+instance.
+See the Advanced deployment section below for how to set up your own node with
+a custom set of enabled methods.
 
 # Now what
 
