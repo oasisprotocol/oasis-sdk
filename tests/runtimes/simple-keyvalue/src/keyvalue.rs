@@ -3,10 +3,10 @@ use thiserror::Error;
 
 use oasis_runtime_sdk::{
     self as sdk,
-    context::{Context, DispatchContext, TxContext},
+    context::{Context, TxContext},
     core::common::cbor,
     error::{Error as _, RuntimeError},
-    module::{CallableMethodInfo, Module as _, QueryMethodInfo},
+    module::Module as _,
     modules::{
         core,
         core::{Module as Core, API as _},
@@ -89,72 +89,57 @@ impl sdk::module::Module for Module {
 
 impl sdk::module::AuthHandler for Module {}
 impl sdk::module::BlockHandler for Module {}
-impl sdk::module::MessageHookRegistrationHandler for Module {}
 
-impl sdk::module::MethodRegistrationHandler for Module {
-    /// Register all supported methods.
-    fn register_methods(methods: &mut sdk::module::MethodRegistry) {
-        methods.register_callable(sdk::module::CallableMethodInfo {
-            name: "keyvalue.Insert",
-            handler: Self::_callable_insert_handler,
-        });
-        methods.register_callable(sdk::module::CallableMethodInfo {
-            name: "keyvalue.Remove",
-            handler: Self::_callable_remove_handler,
-        });
-        methods.register_query(sdk::module::QueryMethodInfo {
-            name: "keyvalue.Get",
-            handler: Self::_query_get_handler,
-        });
-    }
-}
-
-// Boilerplate.
-impl Module {
-    fn _callable_insert_handler(
-        _mi: &CallableMethodInfo,
-        ctx: &mut TxContext,
+impl sdk::module::MethodHandler for Module {
+    fn dispatch_call<C: TxContext>(
+        ctx: &mut C,
+        method: &str,
         body: cbor::Value,
-    ) -> CallResult {
-        let result = || -> Result<cbor::Value, Error> {
-            let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-            Ok(cbor::to_value(&Self::insert(ctx, args)?))
-        }();
-        match result {
-            Ok(value) => CallResult::Ok(value),
-            Err(err) => err.to_call_result(),
+    ) -> sdk::module::DispatchResult<cbor::Value, CallResult> {
+        match method {
+            "keyvalue.Insert" => {
+                let result = || -> Result<cbor::Value, Error> {
+                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
+                    Ok(cbor::to_value(&Self::tx_insert(ctx, args)?))
+                }();
+                match result {
+                    Ok(value) => sdk::module::DispatchResult::Handled(CallResult::Ok(value)),
+                    Err(err) => sdk::module::DispatchResult::Handled(err.to_call_result()),
+                }
+            }
+            "keyvalue.Remove" => {
+                let result = || -> Result<cbor::Value, Error> {
+                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
+                    Ok(cbor::to_value(&Self::tx_remove(ctx, args)?))
+                }();
+                match result {
+                    Ok(value) => sdk::module::DispatchResult::Handled(CallResult::Ok(value)),
+                    Err(err) => sdk::module::DispatchResult::Handled(err.to_call_result()),
+                }
+            }
+            _ => sdk::module::DispatchResult::Unhandled(body),
         }
     }
 
-    fn _callable_remove_handler(
-        _mi: &CallableMethodInfo,
-        ctx: &mut TxContext,
-        body: cbor::Value,
-    ) -> CallResult {
-        let result = || -> Result<cbor::Value, Error> {
-            let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-            Ok(cbor::to_value(&Self::remove(ctx, args)?))
-        }();
-        match result {
-            Ok(value) => CallResult::Ok(value),
-            Err(err) => err.to_call_result(),
+    fn dispatch_query<C: Context>(
+        ctx: &mut C,
+        method: &str,
+        args: cbor::Value,
+    ) -> sdk::module::DispatchResult<cbor::Value, Result<cbor::Value, RuntimeError>> {
+        match method {
+            "keyvalue.Get" => sdk::module::DispatchResult::Handled((|| {
+                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
+                Ok(cbor::to_value(&Self::query_get(ctx, args)?))
+            })()),
+            _ => sdk::module::DispatchResult::Unhandled(args),
         }
-    }
-
-    fn _query_get_handler(
-        _mi: &QueryMethodInfo,
-        ctx: &mut DispatchContext,
-        body: cbor::Value,
-    ) -> Result<cbor::Value, RuntimeError> {
-        let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-        Ok(cbor::to_value(&Self::get(ctx, args)?))
     }
 }
 
 // Actual implementation of this runtime's externally-callable methods.
 impl Module {
-    // Insert given keyvalue into storage.
-    fn insert(ctx: &mut TxContext, body: types::KeyValue) -> Result<(), Error> {
+    /// Insert given keyvalue into storage.
+    fn tx_insert<C: TxContext>(ctx: &mut C, body: types::KeyValue) -> Result<(), Error> {
         if ctx.is_check_only() {
             return Ok(());
         }
@@ -168,7 +153,7 @@ impl Module {
             Some(_) => params.gas_costs.insert_existing,
         };
         // We must drop ts and store so that use_gas can borrow ctx.
-        Core::use_gas(ctx, cost)?;
+        Core::use_tx_gas(ctx, cost)?;
 
         // Recreate store and ts after we get ctx back
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
@@ -179,8 +164,8 @@ impl Module {
         Ok(())
     }
 
-    // Remove keyvalue from storage using given key.
-    fn remove(ctx: &mut TxContext, body: types::Key) -> Result<(), Error> {
+    /// Remove keyvalue from storage using given key.
+    fn tx_remove<C: TxContext>(ctx: &mut C, body: types::Key) -> Result<(), Error> {
         if ctx.is_check_only() {
             return Ok(());
         }
@@ -194,7 +179,7 @@ impl Module {
             Some(_) => params.gas_costs.remove_existing,
         };
         // We must drop ts and store so that use_gas can borrow ctx.
-        Core::use_gas(ctx, cost)?;
+        Core::use_tx_gas(ctx, cost)?;
 
         // Recreate store and ts after we get ctx back
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
@@ -205,8 +190,8 @@ impl Module {
         Ok(())
     }
 
-    // Fetch keyvalue from storage using given key.
-    fn get(ctx: &mut DispatchContext, body: types::Key) -> Result<types::KeyValue, Error> {
+    /// Fetch keyvalue from storage using given key.
+    fn query_get<C: Context>(ctx: &mut C, body: types::Key) -> Result<types::KeyValue, Error> {
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let ts = sdk::storage::TypedStore::new(&mut store);
         let v: Vec<u8> = ts.get(body.key.clone()).ok_or(Error::InvalidArgument)?;
@@ -220,8 +205,8 @@ impl Module {
 impl sdk::module::MigrationHandler for Module {
     type Genesis = Genesis;
 
-    fn init_or_migrate(
-        ctx: &mut DispatchContext,
+    fn init_or_migrate<C: Context>(
+        ctx: &mut C,
         meta: &mut sdk::modules::core::types::Metadata,
         genesis: &Self::Genesis,
     ) -> bool {
