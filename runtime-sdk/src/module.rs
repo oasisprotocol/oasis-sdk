@@ -1,5 +1,5 @@
 //! Runtime modules.
-use std::fmt::Debug;
+use std::{collections::BTreeMap, fmt::Debug};
 
 use impl_trait_for_tuples::impl_for_tuples;
 use serde::{de::DeserializeOwned, Serialize};
@@ -11,7 +11,7 @@ use crate::{
     storage::Store,
     types::{
         message::MessageResult,
-        transaction::{Call, CallResult, Transaction, UnverifiedTransaction},
+        transaction::{Call, CallResult, Transaction, TransactionWeight, UnverifiedTransaction},
     },
 };
 
@@ -214,7 +214,6 @@ impl MigrationHandler for Tuple {
 }
 
 /// Block handler.
-#[impl_for_tuples(30)]
 pub trait BlockHandler {
     /// Perform any common actions at the start of the block (before any transactions have been
     /// executed).
@@ -226,6 +225,34 @@ pub trait BlockHandler {
     /// executed).
     fn end_block<C: Context>(_ctx: &mut C) {
         // Default implementation doesn't do anything.
+    }
+
+    /// Returns module per-batch weight limits.
+    fn get_block_weight_limits<C: Context>(_ctx: &mut C) -> BTreeMap<TransactionWeight, u64> {
+        BTreeMap::new()
+    }
+}
+
+#[impl_for_tuples(30)]
+impl BlockHandler for Tuple {
+    fn begin_block<C: Context>(ctx: &mut C) {
+        for_tuples!( #( Tuple::begin_block(ctx); )* );
+    }
+
+    fn end_block<C: Context>(ctx: &mut C) {
+        for_tuples!( #( Tuple::end_block(ctx); )* );
+    }
+
+    // Ignore let and return for the empty tuple case.
+    #[allow(clippy::let_and_return)]
+    fn get_block_weight_limits<C: Context>(ctx: &mut C) -> BTreeMap<TransactionWeight, u64> {
+        let mut result = BTreeMap::new();
+
+        for_tuples!( #(
+            result.extend( Tuple::get_block_weight_limits(ctx) );
+        )* );
+
+        result
     }
 }
 

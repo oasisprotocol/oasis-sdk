@@ -16,7 +16,7 @@ pub mod types;
 
 pub use crate::{
     context::{BatchContext, Context, TxContext},
-    core::{common::version::Version, types::CheckTxWeight},
+    core::common::version::Version,
     module::Module,
     runtime::Runtime,
 };

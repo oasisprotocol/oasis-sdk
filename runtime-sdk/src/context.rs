@@ -94,25 +94,6 @@ pub trait Context {
     /// Emits an event.
     fn emit_event<E: Event>(&mut self, event: E);
 
-    /// Attempts to emit consensus runtime message.
-    fn emit_message(
-        &mut self,
-        msg: roothash::Message,
-        hook: MessageEventHookInvocation,
-    ) -> Result<(), Error>;
-
-    /// Attempts to emit multiple consensus runtime messages.
-    fn emit_messages(
-        &mut self,
-        msgs: Vec<(roothash::Message, MessageEventHookInvocation)>,
-    ) -> Result<(), Error> {
-        for m in msgs {
-            self.emit_message(m.0, m.1)?;
-        }
-
-        Ok(())
-    }
-
     /// Returns a child io_ctx.
     fn io_ctx(&self) -> IoContext;
 
@@ -143,6 +124,11 @@ pub trait BatchContext: Context {
             RuntimeTxContext<'_, '_, <Self as Context>::Runtime, <Self as Context>::Store>,
             transaction::Call,
         ) -> Rs;
+
+    fn emit_messages(
+        &mut self,
+        msgs: Vec<(roothash::Message, MessageEventHookInvocation)>,
+    ) -> Result<(), Error>;
 }
 
 /// Runtime SDK transaction context.
@@ -160,6 +146,13 @@ pub trait TxContext: Context {
 
     /// Fetches an entry pointing to a value associated with the transaction.
     fn tx_value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V>;
+
+    /// Emit a consnesus message.
+    fn emit_message(
+        &mut self,
+        msg: roothash::Message,
+        hook: MessageEventHookInvocation,
+    ) -> Result<(), Error>;
 }
 
 /// Dispatch context for the whole batch.
@@ -284,21 +277,6 @@ impl<'a, R: runtime::Runtime, S: storage::Store> Context for RuntimeBatchContext
         self.block_tags.push(event.to_tag());
     }
 
-    fn emit_message(
-        &mut self,
-        msg: roothash::Message,
-        hook: MessageEventHookInvocation,
-    ) -> Result<(), Error> {
-        // Check against maximum number of messages that can be emitted per round.
-        if self.messages.len() >= self.max_messages as usize {
-            return Err(Error::OutOfMessageSlots);
-        }
-
-        self.messages.push((msg, hook));
-
-        Ok(())
-    }
-
     fn io_ctx(&self) -> IoContext {
         IoContext::create_child(&self.io_ctx)
     }
@@ -375,6 +353,19 @@ impl<'a, R: runtime::Runtime, S: storage::Store> BatchContext for RuntimeBatchCo
         };
         f(tx_ctx, tx.call)
     }
+
+    fn emit_messages(
+        &mut self,
+        msgs: Vec<(roothash::Message, MessageEventHookInvocation)>,
+    ) -> Result<(), Error> {
+        if self.messages.len() + msgs.len() > self.max_messages as usize {
+            return Err(Error::OutOfMessageSlots);
+        }
+
+        self.messages.extend(msgs);
+
+        Ok(())
+    }
 }
 
 /// Per-transaction/method dispatch sub-context.
@@ -448,21 +439,6 @@ impl<'round, 'store, R: runtime::Runtime, S: storage::Store> Context
         self.tags.push(event.to_tag());
     }
 
-    fn emit_message(
-        &mut self,
-        msg: roothash::Message,
-        hook: MessageEventHookInvocation,
-    ) -> Result<(), Error> {
-        // Check against maximum number of messages that can be emitted per round.
-        if self.messages.len() >= self.max_messages as usize {
-            return Err(Error::OutOfMessageSlots);
-        }
-
-        self.messages.push((msg, hook));
-
-        Ok(())
-    }
-
     fn io_ctx(&self) -> IoContext {
         IoContext::create_child(&self.io_ctx)
     }
@@ -514,6 +490,21 @@ impl<R: runtime::Runtime, S: storage::Store> TxContext for RuntimeTxContext<'_, 
 
     fn tx_value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
         ContextValue::new(self.tx_values.entry(key))
+    }
+
+    fn emit_message(
+        &mut self,
+        msg: roothash::Message,
+        hook: MessageEventHookInvocation,
+    ) -> Result<(), Error> {
+        // Check against maximum number of messages that can be emitted per round.
+        if self.messages.len() >= self.max_messages as usize {
+            return Err(Error::OutOfMessageSlots);
+        }
+
+        self.messages.push((msg, hook));
+
+        Ok(())
     }
 }
 
@@ -742,26 +733,24 @@ mod test {
         let max_messages = mock.max_messages;
         let mut ctx = mock.create_ctx();
 
+        let mut messages = Vec::with_capacity(max_messages as usize);
         for _ in 0..max_messages {
-            ctx.emit_message(
+            messages.push((
                 roothash::Message::Staking {
                     v: 0,
                     msg: roothash::StakingMessage::Transfer(staking::Transfer::default()),
                 },
                 MessageEventHookInvocation::new("test".to_string(), ""),
-            )
-            .expect("message should be emitted");
+            ))
         }
 
-        // Another message should error.
-        ctx.emit_message(
-            roothash::Message::Staking {
-                v: 0,
-                msg: roothash::StakingMessage::Transfer(staking::Transfer::default()),
-            },
-            MessageEventHookInvocation::new("test".to_string(), ""),
-        )
-        .expect_err("message emitting should fail");
+        // Emitting messages should work.
+        ctx.emit_messages(messages.clone())
+            .expect("message emitting should work");
+
+        // Emitting more messages should fail.
+        ctx.emit_messages(messages)
+            .expect_err("message emitting should fail");
     }
 
     #[test]
@@ -770,17 +759,8 @@ mod test {
         let max_messages = mock.max_messages;
         let mut ctx = mock.create_ctx();
 
-        ctx.emit_message(
-            roothash::Message::Staking {
-                v: 0,
-                msg: roothash::StakingMessage::Transfer(staking::Transfer::default()),
-            },
-            MessageEventHookInvocation::new("test".to_string(), ""),
-        )
-        .expect("message should be emitted");
-
         ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
-            for _ in 0..max_messages - 1 {
+            for _ in 0..max_messages {
                 tx_ctx
                     .emit_message(
                         roothash::Message::Staking {

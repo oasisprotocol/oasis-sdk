@@ -21,9 +21,11 @@ use crate::{
     modules,
     modules::core::{Module as Core, API as _},
     types::{
-        address::Address, message::MessageEventHookInvocation, token, transaction::AddressSpec,
+        address::Address,
+        message::MessageEventHookInvocation,
+        token,
+        transaction::{AddressSpec, TransactionWeight},
     },
-    CheckTxWeight,
 };
 
 #[cfg(test)]
@@ -89,7 +91,7 @@ pub enum Error {
 /// Interface that can be called from other modules.
 pub trait API {
     /// Transfer an amount from the runtime account.
-    fn transfer<C: Context>(
+    fn transfer<C: TxContext>(
         ctx: &mut C,
         to: Address,
         amount: &token::BaseUnits,
@@ -97,7 +99,7 @@ pub trait API {
     ) -> Result<(), Error>;
 
     /// Withdraw an amount into the runtime account.
-    fn withdraw<C: Context>(
+    fn withdraw<C: TxContext>(
         ctx: &mut C,
         from: Address,
         amount: &token::BaseUnits,
@@ -105,7 +107,7 @@ pub trait API {
     ) -> Result<(), Error>;
 
     /// Escrow an amount of the runtime account funds.
-    fn escrow<C: Context>(
+    fn escrow<C: TxContext>(
         ctx: &mut C,
         to: Address,
         amount: &token::BaseUnits,
@@ -113,7 +115,7 @@ pub trait API {
     ) -> Result<(), Error>;
 
     /// Reclaim an amount of runtime staked shares.
-    fn reclaim_escrow<C: Context>(
+    fn reclaim_escrow<C: TxContext>(
         ctx: &mut C,
         from: Address,
         amount: &token::BaseUnits,
@@ -146,7 +148,7 @@ impl Module {
 }
 
 impl API for Module {
-    fn transfer<C: Context>(
+    fn transfer<C: TxContext>(
         ctx: &mut C,
         to: Address,
         amount: &token::BaseUnits,
@@ -154,8 +156,9 @@ impl API for Module {
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
 
+        Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+
         if ctx.is_check_only() {
-            Core::add_weight(ctx, CheckTxWeight::ConsensusMessages, 1)?;
             return Ok(());
         }
 
@@ -173,7 +176,7 @@ impl API for Module {
         Ok(())
     }
 
-    fn withdraw<C: Context>(
+    fn withdraw<C: TxContext>(
         ctx: &mut C,
         from: Address,
         amount: &token::BaseUnits,
@@ -181,8 +184,9 @@ impl API for Module {
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
 
+        Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+
         if ctx.is_check_only() {
-            Core::add_weight(ctx, CheckTxWeight::ConsensusMessages, 1)?;
             return Ok(());
         }
 
@@ -200,7 +204,7 @@ impl API for Module {
         Ok(())
     }
 
-    fn escrow<C: Context>(
+    fn escrow<C: TxContext>(
         ctx: &mut C,
         to: Address,
         amount: &token::BaseUnits,
@@ -208,8 +212,9 @@ impl API for Module {
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
 
+        Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+
         if ctx.is_check_only() {
-            Core::add_weight(ctx, CheckTxWeight::ConsensusMessages, 1)?;
             return Ok(());
         }
 
@@ -227,7 +232,7 @@ impl API for Module {
         Ok(())
     }
 
-    fn reclaim_escrow<C: Context>(
+    fn reclaim_escrow<C: TxContext>(
         ctx: &mut C,
         from: Address,
         amount: &token::BaseUnits,
@@ -235,8 +240,9 @@ impl API for Module {
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
 
+        Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+
         if ctx.is_check_only() {
-            Core::add_weight(ctx, CheckTxWeight::ConsensusMessages, 1)?;
             return Ok(());
         }
 
