@@ -1,4 +1,4 @@
-# Putting together the pieces
+# Getting started
 
 ## Overview
 
@@ -63,6 +63,9 @@ submodules whose names don't show up in the TypeScript names here.
 Types named the same thing as the module are singly named here; for example,
 `signature.Signature` from oasis-core is just `Signature` here, not
 `SignatureSignature`.
+Most non-structure types don't have dedicated types on the TypeScript side.
+For example, `signature.PublicKey`, `hash.Hash`, and `address.Address` are all
+plain `Uint8Array`s.
 
 **Helpers** are mostly newly written in TypeScript and have slightly different
 style from oasis-core.
@@ -77,14 +80,16 @@ Collections of helpers corresponding to functionality from `go/common/...`
 modules appear in their own module here instead of in `common.ts` when they
 mostly don't correspond to oasis-core functions.
 
-**Constants** are named reminiscent to their oasis-core counterparts, but are
-they in PascalCase in Go and SCREAMING_SNAKE_CASE here.
+**Constants** are named reminiscent to their oasis-core counterparts, but they
+are in PascalCase in Go and SCREAMING_SNAKE_CASE here.
 (We've also nabbed some top secret camelCase Go private constants, but don't
 tell anyone.)
 Some constants like signature contexts and errors are structures in oasis-core
 but appear here as multiple primitive values.
 
 # Advanced deployment
+
+You can also run your own Oasis node with gRPC proxy.
 
 <!-- Authored on https://app.diagrams.net/. -->
 ![](ts-web-blocks.svg)
@@ -95,12 +100,16 @@ but appear here as multiple primitive values.
 1. Getting Envoy
 1. Configuring Envoy
 1. Running Envoy
+1. Using the SDK with your node
 
 ## Setting up a node
 
 Setting up a node results in a running process with a Unix domain socket named
 `internal.sock` that allows other programs to interact with the node, and
 through that, the network.
+We have external documentation both on setting up a node to connect to an
+existing network such as the mainnet or testnet and on setting up an entire
+local testnet of your own.
 
 ### Connect to an existing network
 
@@ -117,6 +126,9 @@ See [our guide on how to use
 oasis-net-runner](https://docs.oasis.dev/oasis-core/development-setup/running-tests-and-development-networks/oasis-net-runner).
 In this case, the net runner creates a "client" node, and you should proceed
 using that node's socket.
+The instructions there set up the socket to be in
+`/tmp/oasis-net-runnerXXXXXXXXX/net-runner/network/client-0/internal.sock`,
+where the `XXXXXXXXX` is a random number.
 
 ## Getting Envoy
 
@@ -157,3 +169,12 @@ If you're running Envoy in Docker, you can use volume mounts to allow envoy
 to access the YAML config file and the node's UNIX socket, and you can set the
 container to use the "host" network so that Envoy can connect to the web
 server.
+
+## Using the SDK with your node
+
+When you create an `OasisNodeClient`, pass the HTTP endpoint of your Envoy
+proxy:
+
+```js
+const client = new oasis.OasisNodeClient('http://localhost:42280');
+```
