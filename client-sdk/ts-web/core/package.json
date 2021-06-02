@@ -8,8 +8,8 @@
     "main": "dist/index.js",
     "scripts": {
         "check-playground": "cd playground && tsc -p jsconfig.json",
-        "fmt": "prettier --write 'src/**.ts' 'test/**.ts'",
-        "lint": "prettier --check 'src/**.ts' 'test/**.ts'",
+        "fmt": "prettier --write playground/src src test",
+        "lint": "prettier --check playground/src src test",
         "playground": "cd playground && webpack s -c webpack.config.js",
         "prepare": "tsc",
         "test": "jest"

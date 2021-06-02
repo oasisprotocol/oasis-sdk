@@ -49,10 +49,11 @@ export const playground = (async function () {
         console.log('computed from genesis', ourChainContext);
         if (ourChainContext !== chainContext) throw new Error('computed chain context mismatch');
 
-        const nonce = await nic.consensusGetSignerNonce({
-            account_address: await oasis.staking.addressFromPublicKey(src.public()),
-            height: oasis.consensus.HEIGHT_LATEST,
-        }) ?? 0;
+        const nonce =
+            (await nic.consensusGetSignerNonce({
+                account_address: await oasis.staking.addressFromPublicKey(src.public()),
+                height: oasis.consensus.HEIGHT_LATEST,
+            })) ?? 0;
         console.log('nonce', nonce);
 
         const account = await nic.stakingAccount({
@@ -88,15 +89,26 @@ export const playground = (async function () {
         // TODO: Make sure this is the block with the transaction we sent above.
         const chainContext = await nic.consensusGetChainContext();
         console.log('chain context', chainContext);
-        const response = await nic.consensusGetTransactionsWithResults(oasis.consensus.HEIGHT_LATEST);
+        const response = await nic.consensusGetTransactionsWithResults(
+            oasis.consensus.HEIGHT_LATEST,
+        );
         const transactions = response.transactions || [];
         const results = response.results || [];
         for (let i = 0; i < transactions.length; i++) {
-            const signedTransaction = /** @type {oasis.types.SignatureSigned} */ (oasis.misc.fromCBOR(transactions[i]));
-            const transaction = await oasis.consensus.openSignedTransaction(chainContext, signedTransaction);
+            const signedTransaction = /** @type {oasis.types.SignatureSigned} */ (
+                oasis.misc.fromCBOR(transactions[i])
+            );
+            const transaction = await oasis.consensus.openSignedTransaction(
+                chainContext,
+                signedTransaction,
+            );
             console.log({
                 hash: await oasis.consensus.hashSignedTransaction(signedTransaction),
-                from: oasis.staking.addressToBech32(await oasis.staking.addressFromPublicKey(signedTransaction.signature.public_key)),
+                from: oasis.staking.addressToBech32(
+                    await oasis.staking.addressFromPublicKey(
+                        signedTransaction.signature.public_key,
+                    ),
+                ),
                 transaction: transaction,
                 feeAmount: oasis.quantity.toBigInt(transaction.fee.amount),
                 result: results[i],
@@ -119,7 +131,7 @@ export const playground = (async function () {
         await new Promise((resolve, reject) => {
             const blocks = nic.consensusWatchBlocks();
             const cancel = setTimeout(() => {
-                console.log('time\'s up, cancelling');
+                console.log("time's up, cancelling");
                 blocks.cancel();
                 resolve();
             }, 5_000);

@@ -8,8 +8,8 @@
     "scripts": {
         "prepare": "tsc",
         "check-playground": "cd playground && tsc -p jsconfig.json",
-        "fmt": "prettier --write 'src/**.ts'",
-        "lint": "prettier --check 'src/**.ts'",
+        "fmt": "prettier --write playground/src src",
+        "lint": "prettier --check playground/src src",
         "playground": "cd playground && webpack s -c webpack.config.js"
     },
     "dependencies": {
