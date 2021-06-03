@@ -1,6 +1,7 @@
 use crate::{
     context::{BatchContext, Context, Mode, TxContext},
     core::common::{cbor, version::Version},
+    crypto::multisig,
     module,
     module::{AuthHandler as _, Module as _},
     runtime::Runtime,
@@ -67,7 +68,7 @@ fn test_use_gas() {
 struct GasWasterModule;
 
 impl GasWasterModule {
-    const MAX_GAS: u64 = 100;
+    const CALL_GAS: u64 = 100;
     const METHOD_WASTE_GAS: &'static str = "test.WasteGas";
 }
 
@@ -86,7 +87,7 @@ impl module::MethodHandler for GasWasterModule {
     ) -> module::DispatchResult<cbor::Value, transaction::CallResult> {
         match method {
             Self::METHOD_WASTE_GAS => {
-                Core::use_tx_gas(ctx, Self::MAX_GAS).expect("use_gas should succeed");
+                Core::use_tx_gas(ctx, Self::CALL_GAS).expect("use_gas should succeed");
                 module::DispatchResult::Handled(transaction::CallResult::Ok(cbor::Value::Null))
             }
             _ => module::DispatchResult::Unhandled(body),
@@ -103,6 +104,11 @@ impl module::MigrationHandler for GasWasterModule {
 // Runtime that knows how to waste gas.
 struct GasWasterRuntime;
 
+impl GasWasterRuntime {
+    const AUTH_SIGNATURE_GAS: u64 = 1;
+    const AUTH_MULTISIG_GAS: u64 = 10;
+}
+
 impl Runtime for GasWasterRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
 
@@ -115,7 +121,10 @@ impl Runtime for GasWasterRuntime {
                     max_batch_gas: u64::MAX,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
-                    gas_costs: Default::default(),
+                    gas_costs: super::GasCosts {
+                        auth_signature: Self::AUTH_SIGNATURE_GAS,
+                        auth_multisig_signer: Self::AUTH_MULTISIG_GAS,
+                    },
                 },
             },
             (),
@@ -137,7 +146,19 @@ fn test_query_estimate_gas() {
             body: cbor::Value::Null,
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![
+                transaction::SignerInfo::new(keys::alice::pk(), 0),
+                transaction::SignerInfo::new_multisig(
+                    multisig::Config {
+                        signers: vec![multisig::Signer {
+                            public_key: keys::bob::pk(),
+                            weight: 1,
+                        }],
+                        threshold: 1,
+                    },
+                    0,
+                ),
+            ],
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0.into(), token::Denomination::NATIVE),
                 gas: u64::MAX,
@@ -146,11 +167,10 @@ fn test_query_estimate_gas() {
     };
 
     let est = Core::query_estimate_gas(&mut ctx, tx).expect("query_estimate_gas should succeed");
-    assert_eq!(
-        est,
-        GasWasterModule::MAX_GAS,
-        "estimated gas should be correct"
-    );
+    let reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
+        + GasWasterRuntime::AUTH_MULTISIG_GAS
+        + GasWasterModule::CALL_GAS;
+    assert_eq!(est, reference_gas, "estimated gas should be correct");
 }
 
 #[test]
