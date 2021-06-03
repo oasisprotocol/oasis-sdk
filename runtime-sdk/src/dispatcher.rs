@@ -22,12 +22,12 @@ use oasis_core_runtime::{
 };
 
 use crate::{
-    context::{BatchContext, Context, RuntimeBatchContext},
+    context::{BatchContext, Context, RuntimeBatchContext, TxContext},
     error::{Error as _, RuntimeError},
     module::{self, AuthHandler, BlockHandler, MethodHandler},
     modules,
     runtime::Runtime,
-    storage, types, TxContext,
+    storage, types,
 };
 
 /// Unique module name.
