@@ -4,10 +4,9 @@ use std::fmt::Debug;
 use impl_trait_for_tuples::impl_for_tuples;
 use serde::{de::DeserializeOwned, Serialize};
 
-use oasis_core_runtime::common::cbor;
-
 use crate::{
     context::{Context, TxContext},
+    core::common::cbor,
     error, event, modules, storage,
     storage::Store,
     types::{

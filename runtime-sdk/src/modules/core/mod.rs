@@ -2,10 +2,9 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use oasis_core_runtime::common::cbor;
-
 use crate::{
     context::{BatchContext, Context, TxContext},
+    core::common::cbor,
     dispatcher, error,
     module::{self, Module as _},
     types::transaction::{self, AddressSpec, AuthProof, Call, UnverifiedTransaction},
