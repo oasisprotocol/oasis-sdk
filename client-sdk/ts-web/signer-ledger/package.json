@@ -19,7 +19,10 @@
         "@oasisprotocol/ledger": "^0.1.0"
     },
     "devDependencies": {
+        "buffer": "^6.0.3",
         "prettier": "^2.2.1",
+        "process": "^0.11.10",
+        "stream-browserify": "^3.0.0",
         "typescript": "^4.3.2",
         "webpack": "^5.38.1",
         "webpack-cli": "^4.7.0",
