@@ -47,7 +47,7 @@ impl PublicKey {
         for byte in &[context, message] {
             digest.update(byte);
         }
-        let sig = ecdsa::Signature::from_asn1(signature.0.as_ref())
+        let sig = ecdsa::Signature::from_der(signature.0.as_ref())
             .map_err(|_| Error::MalformedSignature)?;
         let verify_key = ecdsa::VerifyingKey::from_encoded_point(&self.0)
             .map_err(|_| Error::MalformedPublicKey)?;
