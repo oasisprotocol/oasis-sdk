@@ -20,6 +20,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -31,7 +32,7 @@ import (
 const EventWaitTimeout = 20 * time.Second
 
 // defaultGasAmount is the default amount of gas to specify.
-const defaultGasAmount = 100
+const defaultGasAmount = 200
 
 // The kvKey type must match the Key type from the simple-keyvalue runtime
 // in ../runtimes/simple-keyvalue/src/keyvalue/types.rs.
@@ -91,6 +92,13 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key, value []by
 		Value: value,
 	})
 	tx.AppendAuthSignature(signer.Public(), nonce)
+
+	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
+	if err != nil {
+		return err
+	}
+	tx.AuthInfo.Fee.Gas = gas
+
 	stx := tx.PrepareForSigning()
 	if err = stx.AppendSign(chainCtx, signer); err != nil {
 		return err
@@ -121,6 +129,13 @@ func kvRemove(rtc client.RuntimeClient, signer signature.Signer, key []byte) err
 		Key: key,
 	})
 	tx.AppendAuthSignature(signer.Public(), nonce)
+
+	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
+	if err != nil {
+		return err
+	}
+	tx.AuthInfo.Fee.Gas = gas
+
 	stx := tx.PrepareForSigning()
 	if err = stx.AppendSign(chainCtx, signer); err != nil {
 		return err
@@ -516,7 +531,7 @@ func KVMultisigTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	}
 
 	tx := types.NewTransaction(&types.Fee{
-		Gas: 200,
+		Gas: 300,
 	}, "keyvalue.Insert", kvKeyValue{
 		Key:   []byte("from-KVMultisigTest"),
 		Value: []byte("hi"),

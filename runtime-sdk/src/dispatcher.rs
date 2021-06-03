@@ -27,7 +27,7 @@ use crate::{
     module::{self, AuthHandler, BlockHandler, MethodHandler},
     modules,
     runtime::Runtime,
-    storage, types,
+    storage, types, TxContext,
 };
 
 /// Unique module name.
@@ -97,6 +97,24 @@ impl<R: Runtime> Dispatcher<R> {
             .map_err(|_| modules::core::Error::MalformedTransaction)
     }
 
+    /// Run the dispatch steps inside a transaction context. This includes the before call hooks
+    /// and the call itself.
+    pub fn dispatch_tx_call<C: TxContext>(
+        ctx: &mut C,
+        call: types::transaction::Call,
+    ) -> types::transaction::CallResult {
+        if let Err(e) = R::Modules::before_handle_call(ctx, &call) {
+            return e.to_call_result();
+        }
+
+        match R::Modules::dispatch_call(ctx, &call.method, call.body) {
+            module::DispatchResult::Handled(result) => result,
+            module::DispatchResult::Unhandled(_) => {
+                modules::core::Error::InvalidMethod.to_call_result()
+            }
+        }
+    }
+
     /// Dispatch a runtime transaction in the given context.
     pub fn dispatch_tx<C: BatchContext>(
         ctx: &mut C,
@@ -108,15 +126,10 @@ impl<R: Runtime> Dispatcher<R> {
         }
 
         let (result, messages) = ctx.with_tx(tx, |mut ctx, call| {
-            let result = match R::Modules::dispatch_call(&mut ctx, &call.method, call.body) {
-                module::DispatchResult::Handled(result) => result,
-                module::DispatchResult::Unhandled(_) => {
-                    return (
-                        modules::core::Error::InvalidMethod.to_call_result().into(),
-                        Vec::new(),
-                    )
-                }
-            };
+            let result = Self::dispatch_tx_call(&mut ctx, call);
+            if !result.is_success() {
+                return (result.into(), Vec::new());
+            }
 
             // Commit store and return emitted tags and messages.
             let (tags, messages) = ctx.commit();
