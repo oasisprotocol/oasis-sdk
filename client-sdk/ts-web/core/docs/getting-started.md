@@ -37,7 +37,7 @@ a custom set of enabled methods.
 
 We have [a few sample interactions](../playground/src/index.js).
 
-Not all methods used this sample are permitted on the public oasis-node
+Not all methods used in this sample are permitted on the public oasis-node
 instance.
 See the Advanced deployment section below for how to set up your own node with
 a custom set of enabled methods.
