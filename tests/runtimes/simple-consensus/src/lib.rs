@@ -18,12 +18,9 @@ impl sdk::Runtime for Runtime {
             Default::default(),
             modules::consensus_accounts::Genesis {
                 parameters: modules::consensus_accounts::Parameters {
-                    gas_costs: modules::consensus_accounts::GasCosts {
-                        // These are free, in order to simplify testing. We do test gas accounting
-                        // with other methods elsewhere though.
-                        tx_deposit: 0,
-                        tx_withdraw: 0,
-                    },
+                    // These are free, in order to simplify testing. We do test gas accounting
+                    // with other methods elsewhere though.
+                    gas_costs: Default::default(),
                 },
             },
             modules::core::Genesis {
@@ -31,6 +28,8 @@ impl sdk::Runtime for Runtime {
                     max_batch_gas: 10_000,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
+                    // These are free, in order to simplify testing.
+                    gas_costs: Default::default(),
                 },
             },
         )

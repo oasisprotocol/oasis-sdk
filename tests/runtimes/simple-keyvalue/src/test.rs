@@ -16,6 +16,7 @@ fn test_impl_for_tuple() {
             max_batch_gas: u64::MAX,
             max_tx_signers: 1,
             max_multisig_signers: 1,
+            gas_costs: Default::default(),
         },
     );
     let dummy_bytes = b"you look, you die".to_vec();

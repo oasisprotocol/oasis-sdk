@@ -99,6 +99,7 @@ impl sdk::Runtime for Runtime {
                     max_batch_gas: 10_000,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
+                    gas_costs: Default::default(),
                 },
             },
         )
