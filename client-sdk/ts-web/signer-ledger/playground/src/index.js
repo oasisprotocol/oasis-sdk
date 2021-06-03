@@ -15,13 +15,17 @@ async function play() {
 
             const signerPub = signer.public();
             console.log('ledger public key', signerPub);
-            console.log('ledger staking address', oasis.staking.addressToBech32(await oasis.staking.addressFromPublicKey(signerPub)));
+            console.log(
+                'ledger staking address',
+                oasis.staking.addressToBech32(await oasis.staking.addressFromPublicKey(signerPub)),
+            );
 
             // Dummy value.
             const chainContext = 'test';
             console.log('chain context', chainContext);
 
-            const tw = oasis.staking.transferWrapper()
+            const tw = oasis.staking
+                .transferWrapper()
                 .setNonce(123n)
                 .setFeeAmount(oasis.quantity.fromBigInt(150n))
                 .setFeeGas(1300n)
@@ -35,7 +39,10 @@ async function play() {
             console.log('signed transaction', tw.signedTransaction);
             console.log('hash', await tw.hash());
 
-            console.log('reopened', await oasis.consensus.openSignedTransaction(chainContext, tw.signedTransaction));
+            console.log(
+                'reopened',
+                await oasis.consensus.openSignedTransaction(chainContext, tw.signedTransaction),
+            );
         }
     } catch (e) {
         console.error(e);
