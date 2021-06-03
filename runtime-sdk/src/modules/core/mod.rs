@@ -5,7 +5,7 @@ use thiserror::Error;
 use oasis_core_runtime::common::cbor;
 
 use crate::{
-    context::{Context, TxContext},
+    context::{BatchContext, Context, TxContext},
     dispatcher, error,
     module::{self, Module as _},
     types::transaction::{self, AuthProof, UnverifiedTransaction},
@@ -190,11 +190,13 @@ impl Module {
         ctx: &mut C,
         args: transaction::Transaction,
     ) -> Result<u64, Error> {
-        ctx.with_simulation(|mut ctx| {
-            dispatcher::Dispatcher::<C::Runtime>::dispatch_tx(&mut ctx, args).ok();
-            // Warning: we don't report success or failure. If the call fails, we still report
-            // how much gas it uses while it fails.
-            Ok(*ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default())
+        ctx.with_simulation(|mut sim_ctx| {
+            sim_ctx.with_tx(args, |mut tx_ctx, call| {
+                dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut tx_ctx, call);
+                // Warning: we don't report success or failure. If the call fails, we still report
+                // how much gas it uses while it fails.
+                Ok(*tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default())
+            })
         })
     }
 }
