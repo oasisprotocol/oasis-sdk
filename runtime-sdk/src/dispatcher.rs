@@ -97,11 +97,16 @@ impl<R: Runtime> Dispatcher<R> {
             .map_err(|_| modules::core::Error::MalformedTransaction)
     }
 
-    /// Run the dispatch steps inside a transaction context.
+    /// Run the dispatch steps inside a transaction context. This includes the before call hooks
+    /// and the call itself.
     pub fn dispatch_tx_call<C: TxContext>(
         ctx: &mut C,
         call: types::transaction::Call,
     ) -> types::transaction::CallResult {
+        if let Err(e) = R::Modules::before_handle_call(ctx, &call) {
+            return e.to_call_result();
+        }
+
         match R::Modules::dispatch_call(ctx, &call.method, call.body) {
             module::DispatchResult::Handled(result) => result,
             module::DispatchResult::Unhandled(_) => {

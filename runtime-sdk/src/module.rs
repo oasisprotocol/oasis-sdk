@@ -12,7 +12,7 @@ use crate::{
     storage::Store,
     types::{
         message::MessageResult,
-        transaction::{CallResult, Transaction, UnverifiedTransaction},
+        transaction::{Call, CallResult, Transaction, UnverifiedTransaction},
     },
 };
 
@@ -139,6 +139,15 @@ pub trait AuthHandler {
         // Default implementation doesn't do any checks.
         Ok(())
     }
+
+    /// Perform any action after authentication, within the transaction context.
+    fn before_handle_call<C: TxContext>(
+        _ctx: &mut C,
+        _call: &Call,
+    ) -> Result<(), modules::core::Error> {
+        // Default implementation doesn't do anything.
+        Ok(())
+    }
 }
 
 #[impl_for_tuples(30)]
@@ -156,6 +165,14 @@ impl AuthHandler for Tuple {
         tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::authenticate_tx(ctx, tx)?; )* );
+        Ok(())
+    }
+
+    fn before_handle_call<C: TxContext>(
+        ctx: &mut C,
+        call: &Call,
+    ) -> Result<(), modules::core::Error> {
+        for_tuples!( #( Tuple::before_handle_call(ctx, call)?; )* );
         Ok(())
     }
 }
