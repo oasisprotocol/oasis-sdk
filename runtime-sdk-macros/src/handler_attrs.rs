@@ -188,82 +188,112 @@ fn gen_client_items(
 ) -> Vec<TokenStream> {
     let sdk_crate = gen::sdk_crate_path();
 
-    let mut client_struct_and_ctors: Vec<TokenStream> = generate_once(
+    let mut client_items: Vec<TokenStream> = generate_once(
         &GENERATED_CLIENT_IN_MODS,
         current_module,
         gen_client_struct_and_ctor,
     )
     .unwrap_or_default();
 
-    let rpcs = handler_methods.iter().map(|m| {
-        let cfg_attrs = &m.cfg_attrs;
+    let rpc_signatures: Vec<_> = handler_methods
+        .iter()
+        .map(|m| {
+            let cfg_attrs = &m.cfg_attrs;
 
-        let rpc_ident = format_ident!("{}_{}", handlers_kind.to_string().to_singular(), m.ident);
-        let rpc_method_name = &m.rpc_name;
+            let rpc_ident =
+                format_ident!("{}_{}", handlers_kind.to_string().to_singular(), m.ident);
 
-        let arg_idents: Vec<_> = m.args.iter().map(|arg| &arg.binding).collect();
-        let args_lifetime = syn::Lifetime::new("'a", proc_macro2::Span::call_site());
-        let arg_tys: Vec<_> = m
-            .args
-            .iter()
-            .map(|arg| to_borrowed(arg.ty, &args_lifetime))
-            .collect();
+            let arg_idents: Vec<_> = m.args.iter().map(|arg| &arg.binding).collect();
+            let args_lifetime = syn::Lifetime::new("'a", proc_macro2::Span::call_site());
+            let arg_tys: Vec<_> = m
+                .args
+                .iter()
+                .map(|arg| to_borrowed(arg.ty, &args_lifetime))
+                .collect();
 
-        let res_ty = match &m.method.sig.output {
-            syn::ReturnType::Default => quote!(()),
-            syn::ReturnType::Type(_, box syn::Type::Path(syn::TypePath { path, .. }))
-                if path.segments.last().unwrap().ident == "Result" =>
-            {
-                let ok_ty = extract_generic_ty(&path.segments.last().unwrap().arguments);
-                quote!(#ok_ty)
-            }
-            syn::ReturnType::Type(_, ty) => quote!(#ty),
-        };
-
-        let serde_transparent = (arg_idents.len() == 1).then(|| quote!(#[serde(transparent)]));
-
-        quote! {
-            #(#cfg_attrs)*
-            pub async fn #rpc_ident<#args_lifetime>(
-                &mut self,
-                #(#arg_idents: #arg_tys),*
-            ) -> Result<#res_ty, oasis_client_sdk::Error> {
-                use #sdk_crate::{
-                    types::transaction::CallResult as _CallResult,
-                    core::common::cbor as _cbor,
-                };
-                #[derive(serde::Serialize)]
-                #serde_transparent
-                struct CallArgs<'a> {
-                    #(#arg_idents: #arg_tys),*
+            let res_ty = match &m.method.sig.output {
+                syn::ReturnType::Default => quote!(()),
+                syn::ReturnType::Type(_, box syn::Type::Path(syn::TypePath { path, .. }))
+                    if path.segments.last().unwrap().ident == "Result" =>
+                {
+                    let ok_ty = extract_generic_ty(&path.segments.last().unwrap().arguments);
+                    quote!(#ok_ty)
                 }
-                let serialized_call_result = self.inner.tx(
-                    &format!("{}.{}", #runtime_module_name_path, #rpc_method_name),
-                    &_cbor::to_value(&CallArgs {
-                        #(#arg_idents),*
-                    }),
-                ).await?;
-                match _cbor::from_slice::<_CallResult>(&serialized_call_result)? {
-                    _CallResult::Ok(res) => _cbor::from_value(res).map_err(Into::into),
-                    _CallResult::Failed {
-                        module, code, message
-                    } => {
-                        let message = if message.is_empty() { None } else { Some(message) };
-                        Err(oasis_client_sdk::Error::TxReverted { module, code, message })
+                syn::ReturnType::Type(_, ty) => quote!(#ty),
+            };
+
+            quote! {
+                #(#cfg_attrs)*
+                async fn #rpc_ident<#args_lifetime>(
+                    &mut self,
+                    #(#arg_idents: #arg_tys),*
+                ) -> Result<#res_ty, oasis_client_sdk::Error>
+            }
+        })
+        .collect();
+
+    let rpcs = handler_methods
+        .iter()
+        .zip(rpc_signatures.iter())
+        .map(|(m, sig)| {
+            let rpc_method_name = &m.rpc_name;
+
+            let arg_idents: Vec<_> = m.args.iter().map(|arg| &arg.binding).collect();
+            let args_lifetime = syn::Lifetime::new("'a", proc_macro2::Span::call_site());
+            let arg_tys: Vec<_> = m
+                .args
+                .iter()
+                .map(|arg| to_borrowed(arg.ty, &args_lifetime))
+                .collect();
+
+            let serde_transparent = (arg_idents.len() == 1).then(|| quote!(#[serde(transparent)]));
+
+            quote! {
+                #sig {
+                    use #sdk_crate::{
+                        types::transaction::CallResult as _CallResult,
+                        core::common::cbor as _cbor,
+                    };
+                    #[derive(serde::Serialize)]
+                    #serde_transparent
+                    struct CallArgs<'a> {
+                        #(#arg_idents: #arg_tys),*
+                    }
+                    let serialized_call_result = self.inner.tx(
+                        &format!("{}.{}", #runtime_module_name_path, #rpc_method_name),
+                        &_cbor::to_value(&CallArgs {
+                            #(#arg_idents),*
+                        }),
+                    ).await?;
+                    match _cbor::from_slice::<_CallResult>(&serialized_call_result)? {
+                        _CallResult::Ok(res) => _cbor::from_value(res).map_err(Into::into),
+                        _CallResult::Failed {
+                            module, code, message
+                        } => {
+                            let message = if message.is_empty() { None } else { Some(message) };
+                            Err(oasis_client_sdk::Error::TxReverted { module, code, message })
+                        }
                     }
                 }
             }
+        });
+
+    let trait_ident = format_ident!("Client{}", handlers_kind.to_string().to_pascal_case());
+
+    client_items.push(quote! {
+        #[oasis_client_sdk::async_trait]
+        pub trait #trait_ident {
+            #(#rpc_signatures;)*
         }
     });
-
-    let client_rpcs_impl = gen::wrap_in_const(quote! {
-        impl<S: oasis_client_sdk::signer::Signer> RuntimeClient<S> {
+    client_items.push(quote! {
+        #[oasis_client_sdk::async_trait]
+        impl<S: oasis_client_sdk::signer::Signer + Send + Sync> #trait_ident for RuntimeClient<S> {
             #(#rpcs)*
         }
     });
 
-    client_struct_and_ctors.push(client_rpcs_impl);
-    client_struct_and_ctors
+    client_items
 }
 
 fn generate_once<T, F>(record: &GenerationRecord, current_mod: PathBuf, generator: F) -> Option<T>
@@ -283,7 +313,7 @@ fn gen_client_struct_and_ctor() -> Vec<TokenStream> {
 
     let client_struct = quote! {
         #[derive(Clone)]
-        pub struct RuntimeClient<S: oasis_client_sdk::signer::Signer> {
+        pub struct RuntimeClient<S: oasis_client_sdk::signer::Signer + Send + Sync> {
             inner: oasis_client_sdk::Client<S>
         }
     };
@@ -291,7 +321,7 @@ fn gen_client_struct_and_ctor() -> Vec<TokenStream> {
     let client_impl = gen::wrap_in_const(quote! {
         use #sdk_crate::core::common::namespace::Namespace;
 
-        impl<S: oasis_client_sdk::signer::Signer> RuntimeClient<S> {
+        impl<S: oasis_client_sdk::signer::Signer + Send + Sync> RuntimeClient<S> {
             /// Connects to the oasis-node listening on Unix socket at `sock_path` communicating
             /// with the identified runtime. Transactions will be signed by the `signer`.
             /// Do remember to call `set_fee` as appropriate before making the first call.

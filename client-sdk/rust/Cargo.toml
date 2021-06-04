@@ -9,6 +9,7 @@ license = "Apache-2.0"
 oasis-runtime-sdk = { path = "../../runtime-sdk" }
 
 # Third party.
+async-trait = "0.1.50"
 bytes = { version = "1.0.1", features = ["serde"] }
 paste = "1.0.5"
 serde = { version = "1.0.126", features = ["derive"] }
