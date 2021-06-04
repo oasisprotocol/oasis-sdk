@@ -1,4 +1,4 @@
-import * as bech32 from 'bech32';
+import {bech32} from 'bech32';
 
 import * as hash from './hash';
 import * as misc from './misc';
