@@ -14,6 +14,9 @@ members = [
     "contract-sdk/storage",
     "contract-sdk-macros",
 
+    # Runtime Client
+    "client-sdk/rust",
+
     # Test runtimes.
     "tests/runtimes/benchmarking",
     "tests/runtimes/simple-keyvalue",
