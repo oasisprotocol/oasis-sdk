@@ -2,13 +2,12 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use oasis_core_runtime::common::cbor;
-
 use crate::{
-    context::{Context, TxContext},
+    context::{BatchContext, Context, TxContext},
+    core::common::cbor,
     dispatcher, error,
     module::{self, Module as _},
-    types::transaction::{self, AuthProof, UnverifiedTransaction},
+    types::transaction::{self, AddressSpec, AuthProof, Call, UnverifiedTransaction},
 };
 
 #[cfg(test)]
@@ -82,6 +81,16 @@ pub enum Error {
     MultisigTooManySigners,
 }
 
+/// Gas costs.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GasCosts {
+    #[serde(rename = "auth_signature")]
+    pub auth_signature: u64,
+    #[serde(rename = "auth_multisig_signer")]
+    pub auth_multisig_signer: u64,
+}
+
 /// Parameters for the core module.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -92,6 +101,8 @@ pub struct Parameters {
     pub max_tx_signers: u32,
     #[serde(rename = "max_multisig_signers")]
     pub max_multisig_signers: u32,
+    #[serde(rename = "gas_costs")]
+    pub gas_costs: GasCosts,
 }
 
 impl module::Parameters for Parameters {
@@ -190,11 +201,13 @@ impl Module {
         ctx: &mut C,
         args: transaction::Transaction,
     ) -> Result<u64, Error> {
-        ctx.with_simulation(|mut ctx| {
-            dispatcher::Dispatcher::<C::Runtime>::dispatch_tx(&mut ctx, args).ok();
-            // Warning: we don't report success or failure. If the call fails, we still report
-            // how much gas it uses while it fails.
-            Ok(*ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default())
+        ctx.with_simulation(|mut sim_ctx| {
+            sim_ctx.with_tx(args, |mut tx_ctx, call| {
+                dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut tx_ctx, call);
+                // Warning: we don't report success or failure. If the call fails, we still report
+                // how much gas it uses while it fails.
+                Ok(*tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default())
+            })
         })
     }
 }
@@ -222,6 +235,34 @@ impl module::AuthHandler for Module {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn before_handle_call<C: TxContext>(ctx: &mut C, _call: &Call) -> Result<(), Error> {
+        let mut num_signature: u64 = 0;
+        let mut num_multisig_signer: u64 = 0;
+        for si in &ctx.tx_auth_info().signer_info {
+            match &si.address_spec {
+                AddressSpec::Signature(_) => {
+                    num_signature = num_signature.checked_add(1).ok_or(Error::GasOverflow)?;
+                }
+                AddressSpec::Multisig(config) => {
+                    num_multisig_signer = num_multisig_signer
+                        .checked_add(config.signers.len() as u64)
+                        .ok_or(Error::GasOverflow)?;
+                }
+            }
+        }
+        let params = Self::params(ctx.runtime_state());
+        let total = (|| {
+            let signature_cost = num_signature.checked_mul(params.gas_costs.auth_signature)?;
+            let multisig_signer_cost =
+                num_multisig_signer.checked_mul(params.gas_costs.auth_multisig_signer)?;
+            let sum = signature_cost.checked_add(multisig_signer_cost)?;
+            Some(sum)
+        })()
+        .ok_or(Error::GasOverflow)?;
+        Self::use_tx_gas(ctx, total)?;
         Ok(())
     }
 }

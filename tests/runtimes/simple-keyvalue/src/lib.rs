@@ -99,6 +99,10 @@ impl sdk::Runtime for Runtime {
                     max_batch_gas: 10_000,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
+                    gas_costs: modules::core::GasCosts {
+                        auth_signature: 10,
+                        auth_multisig_signer: 10,
+                    },
                 },
             },
         )
