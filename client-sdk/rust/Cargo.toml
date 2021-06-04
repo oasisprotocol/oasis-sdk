@@ -1,0 +1,19 @@
+[package]
+name = "oasis-client-sdk"
+version = "0.1.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+oasis-runtime-sdk = { path = "../../runtime-sdk" }
+
+# Third party.
+bytes = { version = "1.0.1", features = ["serde"] }
+paste = "1.0.5"
+serde = { version = "1.0.126", features = ["derive"] }
+serde_bytes = "0.11.5"
+thiserror = "1.0.25"
+tokio = { version = "1.6.1", default-features = false, features = ["net"] }
+tonic = { version = "0.4.3", default-features = false, features = ["transport"] }
+tower = { version = "0.4.8", features = ["make"] }
