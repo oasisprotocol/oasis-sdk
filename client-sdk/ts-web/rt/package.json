@@ -18,10 +18,13 @@
     },
     "devDependencies": {
         "@types/elliptic": "^6.4.12",
+        "buffer": "^6.0.3",
         "cypress": "^6.6.0",
         "prettier": "^2.2.1",
+        "process": "^0.11.10",
+        "stream-browserify": "^3.0.0",
         "typescript": "^4.3.2",
-        "webpack": "^5.21.2",
+        "webpack": "^5.38.1",
         "webpack-cli": "^4.7.0",
         "webpack-dev-server": "^4.0.0-beta.3"
     }
