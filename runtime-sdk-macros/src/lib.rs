@@ -1,4 +1,4 @@
-#![feature(box_patterns, proc_macro_diagnostic)]
+#![feature(box_patterns, once_cell, proc_macro_diagnostic, proc_macro_span)]
 #![deny(rust_2018_idioms)]
 
 use proc_macro::TokenStream;
