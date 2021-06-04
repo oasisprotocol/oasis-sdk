@@ -112,6 +112,22 @@ impl Transaction {
     }
 }
 
+/// Transaction that stores references to the parameters.
+/// Useful for serializing without cloning.
+#[derive(Clone, Debug, Serialize)]
+#[serde(deny_unknown_fields)]
+#[doc(hidden)]
+pub struct TransactionRef<'a> {
+    #[serde(rename = "v")]
+    pub version: u16,
+
+    #[serde(rename = "call")]
+    pub call: CallRef<'a>,
+
+    #[serde(rename = "ai")]
+    pub auth_info: AuthInfoRef<'a>,
+}
+
 /// Method call.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -123,6 +139,18 @@ pub struct Call {
     pub body: cbor::Value,
 }
 
+/// Method call that references its arguments. Useful for serializing without cloning.
+#[derive(Clone, Debug, Serialize)]
+#[serde(deny_unknown_fields)]
+#[doc(hidden)]
+pub struct CallRef<'a> {
+    #[serde(rename = "method")]
+    pub method: &'a str,
+
+    #[serde(rename = "body")]
+    pub body: &'a cbor::Value,
+}
+
 /// Transaction authentication information.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -132,6 +160,18 @@ pub struct AuthInfo {
 
     #[serde(rename = "fee")]
     pub fee: Fee,
+}
+
+/// Transaction authentication information that stores references
+/// to the parameters. Useful for serializing without clones.
+#[derive(Clone, Debug, Serialize)]
+#[doc(hidden)]
+pub struct AuthInfoRef<'a> {
+    #[serde(rename = "si")]
+    pub signer_info: &'a [SignerInfo],
+
+    #[serde(rename = "fee")]
+    pub fee: &'a Fee,
 }
 
 /// Transaction fee.
