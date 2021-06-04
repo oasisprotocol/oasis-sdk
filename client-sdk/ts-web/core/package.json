@@ -15,7 +15,7 @@
         "test": "jest"
     },
     "dependencies": {
-        "bech32": "^1.1.4",
+        "bech32": "^2.0.0",
         "bip39": "^3.0.4",
         "cborg": "^1.1.2",
         "grpc-web": "^1.2.1",
