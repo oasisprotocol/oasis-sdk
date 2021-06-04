@@ -3,6 +3,8 @@ members = [
     "runtime-sdk",
     "runtime-sdk-macros",
 
+    "client-sdk/rust",
+
     # Test runtimes.
     "tests/runtimes/benchmarking",
     "tests/runtimes/simple-keyvalue",
