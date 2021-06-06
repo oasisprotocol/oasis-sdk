@@ -1,32 +1,31 @@
-use darling::{util::Flag, FromDeriveInput, FromVariant};
+use darling::FromDeriveInput;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
-use syn::{DeriveInput, Ident};
 
 use crate::generators::{self as gen, CodedVariant};
 
 #[derive(FromDeriveInput)]
 #[darling(supports(enum_any), attributes(sdk_event))]
 struct Event {
-    ident: Ident,
+    ident: syn::Ident,
 
     data: darling::ast::Data<EventVariant, darling::util::Ignored>,
 
     /// The path to a const set to the module name.
     #[darling(default)]
-    module_name: Option<syn::Path>,
+    module_name: Option<syn::LitStr>,
 
     /// Whether to sequentially autonumber the event codes.
     /// This option exists as a convenience for runtimes that
     /// only append events or release only breaking changes.
     #[darling(default, rename = "autonumber")]
-    autonumber: Flag,
+    autonumber: darling::util::Flag,
 }
 
-#[derive(FromVariant)]
+#[derive(darling::FromVariant)]
 #[darling(attributes(sdk_event))]
 struct EventVariant {
-    ident: Ident,
+    ident: syn::Ident,
 
     /// The explicit ID of the event code. Overrides any autonumber set on the event enum.
     #[darling(default, rename = "code")]
@@ -36,7 +35,7 @@ struct EventVariant {
 impl CodedVariant for EventVariant {
     const FIELD_NAME: &'static str = "code";
 
-    fn ident(&self) -> &Ident {
+    fn ident(&self) -> &syn::Ident {
         &self.ident
     }
 
@@ -45,16 +44,17 @@ impl CodedVariant for EventVariant {
     }
 }
 
-pub fn derive_event(input: DeriveInput) -> TokenStream {
+pub fn derive_event(input: syn::DeriveInput) -> TokenStream {
     let event = match Event::from_derive_input(&input) {
         Ok(event) => event,
         Err(e) => return e.write_errors(),
     };
 
     let event_ty_ident = &event.ident;
-    let module_name = event
-        .module_name
-        .unwrap_or_else(|| syn::parse_quote!(MODULE_NAME));
+    let module_name = match gen::module_name(event.module_name.as_ref()) {
+        Ok(expr) => expr,
+        Err(_) => return quote!(),
+    };
 
     let code_converter = gen::enum_code_converter(
         &format_ident!("self"),
