@@ -23,25 +23,22 @@ fn gen_handler_items(
     args: &syn::AttributeArgs,
     handlers_kind: Handlers,
 ) -> TokenStream {
-    let maybe_module_name = find_meta_key(args, "module_name")
-        .ok_or_else(|| {
-            format!(
-                "missing `module_name` arg to #[oasis_runtime_sdk::{}]",
-                handlers_kind,
-            )
-        })
-        .and_then(|meta| match &meta.lit {
-            syn::Lit::Str(module_name) => module_name
-                .parse::<syn::Path>()
-                .map_err(|_| "expected `module_name` to be a valid path".into()),
-            _ => Err("expected `module_name` to be a valid path".into()),
-        });
-    let runtime_module_name_path = match maybe_module_name {
-        Ok(runtime_module_name_path) => runtime_module_name_path,
-        Err(err_msg) => {
-            handlers.ident.span().unwrap().error(&err_msg);
+    let runtime_module_name = match gen::module_name(match find_meta_key(args, "module_name") {
+        Some(syn::MetaNameValue {
+            lit: syn::Lit::Str(m),
+            ..
+        }) => Some(&m),
+        None => None,
+        _ => {
+            proc_macro2::Span::call_site()
+                .unwrap()
+                .error("expected `module_name` to be a valid path")
+                .emit();
             return quote!();
         }
+    }) {
+        Ok(expr) => expr,
+        Err(_) => return quote!(),
     };
 
     let handler_methods = match unpack_handler_methods(handlers, handlers_kind) {
@@ -55,13 +52,13 @@ fn gen_handler_items(
         handlers,
         &handler_methods,
         handlers_kind,
-        &runtime_module_name_path,
+        &runtime_module_name,
     );
 
     let client_items = gen_client_items(
         &handler_methods,
         handlers_kind,
-        &runtime_module_name_path,
+        &runtime_module_name,
         current_module,
     );
 
@@ -77,7 +74,7 @@ fn gen_module_items(
     handlers: &syn::ItemTrait,
     handler_methods: &[HandlerMethod<'_>],
     handlers_kind: Handlers,
-    runtime_module_name_path: &syn::Path,
+    runtime_module_name_path: &syn::Expr,
 ) -> Vec<TokenStream> {
     let sdk_crate = gen::sdk_crate_path();
 
@@ -183,7 +180,7 @@ fn gen_module_items(
 fn gen_client_items(
     handler_methods: &[HandlerMethod<'_>],
     handlers_kind: Handlers,
-    runtime_module_name_path: &syn::Path,
+    runtime_module_name_path: &syn::Expr,
     current_module: PathBuf,
 ) -> Vec<TokenStream> {
     let sdk_crate = gen::sdk_crate_path();
@@ -200,8 +197,7 @@ fn gen_client_items(
         .map(|m| {
             let cfg_attrs = &m.cfg_attrs;
 
-            let rpc_ident =
-                format_ident!("{}_{}", handlers_kind.to_string().to_singular(), m.ident);
+            let rpc_ident = &m.ident;
 
             let arg_idents: Vec<_> = m.args.iter().map(|arg| &arg.binding).collect();
             let args_lifetime = syn::Lifetime::new("'a", proc_macro2::Span::call_site());

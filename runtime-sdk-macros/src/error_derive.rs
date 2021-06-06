@@ -1,20 +1,19 @@
 use darling::{util::Flag, FromDeriveInput, FromField, FromVariant};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, quote_spanned};
-use syn::{DeriveInput, Ident, Index, Member, Path};
 
 use crate::generators::{self as gen, CodedVariant};
 
 #[derive(FromDeriveInput)]
 #[darling(supports(enum_any), attributes(sdk_error))]
 struct Error {
-    ident: Ident,
+    ident: syn::Ident,
 
     data: darling::ast::Data<ErrorVariant, darling::util::Ignored>,
 
     /// The path to a const set to the module name.
     #[darling(default)]
-    module_name: Option<syn::Path>,
+    module_name: Option<syn::LitStr>,
 
     /// Whether to sequentially autonumber the error codes.
     /// This option exists as a convenience for runtimes that
@@ -26,7 +25,7 @@ struct Error {
 #[derive(FromVariant)]
 #[darling(attributes(sdk_error))]
 struct ErrorVariant {
-    ident: Ident,
+    ident: syn::Ident,
 
     fields: darling::ast::Fields<ErrorField>,
 
@@ -41,7 +40,7 @@ struct ErrorVariant {
 impl CodedVariant for ErrorVariant {
     const FIELD_NAME: &'static str = "code";
 
-    fn ident(&self) -> &Ident {
+    fn ident(&self) -> &syn::Ident {
         &self.ident
     }
 
@@ -53,12 +52,12 @@ impl CodedVariant for ErrorVariant {
 #[derive(FromField)]
 #[darling(forward_attrs(source, from))]
 struct ErrorField {
-    ident: Option<Ident>,
+    ident: Option<syn::Ident>,
 
     attrs: Vec<syn::Attribute>,
 }
 
-pub fn derive_error(input: DeriveInput) -> TokenStream {
+pub fn derive_error(input: syn::DeriveInput) -> TokenStream {
     let error = match Error::from_derive_input(&input) {
         Ok(error) => error,
         Err(e) => return e.write_errors(),
@@ -66,13 +65,14 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
 
     let error_ty_ident = &error.ident;
 
-    let module_name = error
-        .module_name
-        .unwrap_or_else(|| syn::parse_quote!(MODULE_NAME));
+    let module_name = match gen::module_name(error.module_name.as_ref()) {
+        Ok(expr) => expr,
+        Err(_) => return quote!(),
+    };
 
     let (module_name_body, code_body) = convert_variants(
         &format_ident!("self"),
-        module_name,
+        &module_name,
         &error.data.as_ref().take_enum().unwrap(),
         error.autonumber.is_some(),
     );
@@ -103,8 +103,8 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
 }
 
 fn convert_variants(
-    enum_binding: &Ident,
-    module_name: Path,
+    enum_binding: &syn::Ident,
+    module_name: &syn::Expr,
     variants: &[&ErrorVariant],
     autonumber: bool,
 ) -> (TokenStream, TokenStream) {
@@ -147,8 +147,8 @@ fn convert_variants(
                 let (field_index, field_ident) = source.unwrap();
 
                 let field = match field_ident {
-                    Some(ident) => Member::Named(ident),
-                    None => Member::Unnamed(Index {
+                    Some(ident) => syn::Member::Named(ident),
+                    None => syn::Member::Unnamed(syn::Index {
                         index: field_index as u32,
                         span: variant_ident.span(),
                     }),
