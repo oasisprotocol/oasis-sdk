@@ -197,7 +197,7 @@ fn gen_client_items(
         .map(|m| {
             let cfg_attrs = &m.cfg_attrs;
 
-            let rpc_ident = &m.ident;
+            let method_ident = &m.client_method_ident;
 
             let arg_idents: Vec<_> = m.args.iter().map(|arg| &arg.binding).collect();
             let args_lifetime = syn::Lifetime::new("'a", proc_macro2::Span::call_site());
@@ -220,7 +220,7 @@ fn gen_client_items(
 
             quote! {
                 #(#cfg_attrs)*
-                async fn #rpc_ident<#args_lifetime>(
+                async fn #method_ident<#args_lifetime>(
                     &mut self,
                     #(#arg_idents: #arg_tys),*
                 ) -> Result<#res_ty, oasis_client_sdk::Error>
@@ -342,9 +342,16 @@ fn gen_client_struct_and_ctor() -> Vec<TokenStream> {
 }
 
 /// Returns the parsed attribute with path ending with `name` or `None` if not found.
-fn find_attr(attrs: &[syn::Attribute], name: &str) -> Option<syn::Meta> {
+fn find_attr(attrs: &[syn::Attribute], attr_path: &[&str]) -> Option<syn::Meta> {
     attrs.iter().find_map(|attr| {
-        if attr.path.segments.last()?.ident == name {
+        if attr
+            .path
+            .segments
+            .iter()
+            .rev()
+            .zip(attr_path.iter().rev())
+            .all(|(seg, expected)| seg.ident == expected)
+        {
             attr.parse_meta().ok()
         } else {
             None
@@ -415,6 +422,7 @@ fn extract_generic_ty(args: &syn::PathArguments) -> &syn::Type {
 struct HandlerMethod<'a> {
     method: &'a syn::TraitItemMethod,
     ident: &'a syn::Ident,
+    client_method_ident: syn::Ident,
     args: Vec<MethodArg<'a>>,
     rpc_name: String,
     cfg_attrs: Vec<&'a syn::Attribute>,
@@ -431,16 +439,46 @@ fn unpack_handler_methods(
             _ => continue,
         };
 
-        let rpc_name = find_attr(&method.attrs, &handlers_kind.to_string().to_singular())
-            .and_then(|handler_meta| match handler_meta {
-                syn::Meta::List(meta) => {
-                    find_meta_key(&meta.nested, "name").and_then(|meta| match &meta.lit {
-                        syn::Lit::Str(name) => Some(name.value()),
-                        _ => None,
-                    })
+        let handlers_attr = &["sdk", &handlers_kind.to_string().to_singular()];
+
+        let handler_metas = match find_attr(&method.attrs, handlers_attr) {
+            Some(syn::Meta::List(metas)) => metas.nested,
+            _ => Default::default(),
+        };
+
+        let client_method_ident = find_meta_key(&handler_metas, "client_method")
+            .map(|meta| match &meta.lit {
+                syn::Lit::Str(name) => name.parse().map_err(|_| {
+                    name.span()
+                        .unwrap()
+                        .error("expected a valid identifier")
+                        .emit();
+                }),
+                _ => {
+                    meta.lit
+                        .span()
+                        .unwrap()
+                        .error("expected a literal string containing valid identifier")
+                        .emit();
+                    Err(())
                 }
-                _ => None,
             })
+            .transpose()?
+            .unwrap_or_else(|| method.sig.ident.clone());
+
+        let rpc_name = find_meta_key(&handler_metas, "name")
+            .map(|meta| match &meta.lit {
+                syn::Lit::Str(name) => Ok(name.value()),
+                _ => {
+                    meta.lit
+                        .span()
+                        .unwrap()
+                        .error("expected a literal string containing valid identifier")
+                        .emit();
+                    Err(())
+                }
+            })
+            .transpose()?
             .unwrap_or_else(|| method.sig.ident.to_string().to_pascal_case());
 
         let cfg_attrs = method
@@ -452,6 +490,7 @@ fn unpack_handler_methods(
         handler_methods.push(HandlerMethod {
             method,
             ident: &method.sig.ident,
+            client_method_ident,
             args: unpack_method_args(&method.sig)?,
             rpc_name,
             cfg_attrs,
