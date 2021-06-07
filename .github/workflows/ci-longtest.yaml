@@ -42,7 +42,4 @@ jobs:
             --e2e/test-runtime-simple-keyvalue.txgen.coins_per_acct=100000 \
             --e2e/test-runtime-simple-keyvalue.txgen.num_accounts=100 \
             --e2e/test-runtime-simple-keyvalue.txgen.duration=15m
-        env:
-          TEST_NODE_BINARY: "${{ github.workspace }}/tests/untracked/oasis-node"
-          TEST_RUNTIME_LOADER: "${{ github.workspace}}/tests/untracked/oasis-core-runtime-loader"
 

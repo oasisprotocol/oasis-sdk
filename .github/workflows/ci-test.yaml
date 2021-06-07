@@ -174,7 +174,7 @@ jobs:
         run: ./sample-run-envoy.sh &
 
       - name: 'testnet: Download artifacts'
-        working-directory: client-sdk/ts-web/core/playground
+        working-directory: tests
         run: ./download-artifacts.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -247,7 +247,7 @@ jobs:
         run: sudo apt-get -y install bubblewrap
 
       - name: 'testnet: Download artifacts'
-        working-directory: client-sdk/ts-web/rt/playground
+        working-directory: tests
         run: ./download-artifacts.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -307,16 +307,13 @@ jobs:
           sudo apt-get install bubblewrap build-essential libseccomp-dev libssl-dev protobuf-compiler
 
       - name: Download artifacts
-        working-directory: tests/
+        working-directory: tests
         run: ./download-artifacts.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run end-to-end tests
         run: ./tests/run-e2e.sh
-        env:
-          TEST_NODE_BINARY: "${{ github.workspace }}/tests/untracked/oasis-node"
-          TEST_RUNTIME_LOADER: "${{ github.workspace}}/tests/untracked/oasis-core-runtime-loader"
 
   jest-ts-web-core:
     name: jest-ts-web-core
