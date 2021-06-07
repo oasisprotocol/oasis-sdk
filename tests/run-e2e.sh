@@ -33,14 +33,10 @@ if [[ "$(which cargo)" == "" ]]; then
 fi
 
 cd "${TEST_BASE_DIR}"
-cp "${TESTS_DIR}"/consts.sh .
 
 if [[ ! -v TEST_NODE_BINARY ]] || [[ ! -v TEST_RUNTIME_LOADER ]]; then
 	printf "${CYAN}### Downloading Oasis artifacts...${OFF}\n"
-	${TESTS_DIR}/download-artifacts.sh
-	cp "${TEST_BASE_DIR}"/untracked/oasis-{node,core-runtime-loader} "${TEST_BASE_DIR}"
-	export TEST_NODE_BINARY="${TEST_BASE_DIR}/oasis-node"
-	export TEST_RUNTIME_LOADER="${TEST_BASE_DIR}/oasis-core-runtime-loader"
+	"${TESTS_DIR}/download-artifacts.sh"
 fi
 
 printf "${CYAN}### Building test simple-keyvalue runtime...${OFF}\n"
@@ -59,6 +55,9 @@ go build
 cp "${TESTS_DIR}"/e2e/e2e "${TEST_BASE_DIR}"/
 
 cd "${TEST_BASE_DIR}"
+
+. "${TESTS_DIR}/consts.sh"
+. "${TESTS_DIR}/paths.sh"
 
 printf "${CYAN}### Running end-to-end tests...${OFF}\n"
 ./e2e --log.level=INFO \
