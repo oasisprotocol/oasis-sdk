@@ -340,15 +340,15 @@ const methodDescriptorRuntimeClientCheckTx = createMethodDescriptorUnary<
 >('RuntimeClient', 'CheckTx');
 const methodDescriptorRuntimeClientGetGenesisBlock = createMethodDescriptorUnary<
     Uint8Array,
-    types.RoothashBlock
+    types.RootHashBlock
 >('RuntimeClient', 'GetGenesisBlock');
 const methodDescriptorRuntimeClientGetBlock = createMethodDescriptorUnary<
     types.RuntimeClientGetBlockRequest,
-    types.RoothashBlock
+    types.RootHashBlock
 >('RuntimeClient', 'GetBlock');
 const methodDescriptorRuntimeClientGetBlockByHash = createMethodDescriptorUnary<
     types.RuntimeClientGetBlockByHashRequest,
-    types.RoothashBlock
+    types.RootHashBlock
 >('RuntimeClient', 'GetBlockByHash');
 const methodDescriptorRuntimeClientGetTx = createMethodDescriptorUnary<
     types.RuntimeClientGetTxRequest,
@@ -384,7 +384,7 @@ const methodDescriptorRuntimeClientWaitBlockIndexed = createMethodDescriptorUnar
 >('RuntimeClient', 'WaitBlockIndexed');
 const methodDescriptorRuntimeClientWatchBlocks = createMethodDescriptorServerStreaming<
     Uint8Array,
-    types.RoothashAnnotatedBlock
+    types.RootHashAnnotatedBlock
 >('RuntimeClient', 'WatchBlocks');
 
 // enclaverpc

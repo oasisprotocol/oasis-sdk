@@ -173,7 +173,7 @@ export interface ConsensusEstimateGasRequest {
 export interface ConsensusEvent {
     staking?: StakingEvent;
     registry?: RegistryEvent;
-    roothash?: RoothashEvent;
+    roothash?: RootHashEvent;
     governance?: GovernanceEvent;
 }
 
@@ -594,7 +594,7 @@ export interface GenesisDocument {
     /**
      * RootHash is the roothash genesis state.
      */
-    roothash: RoothashGenesis;
+    roothash: RootHashGenesis;
     /**
      * Staking is the staking genesis state.
      */
@@ -1671,7 +1671,7 @@ export interface RegistryVersionInfo {
 /**
  * AnnotatedBlock is an annotated roothash block.
  */
-export interface RoothashAnnotatedBlock {
+export interface RootHashAnnotatedBlock {
     /**
      * Height is the underlying roothash backend's block height that
      * generated this block.
@@ -1680,7 +1680,7 @@ export interface RoothashAnnotatedBlock {
     /**
      * Block is the roothash block.
      */
-    block: RoothashBlock;
+    block: RootHashBlock;
 }
 
 /**
@@ -1688,25 +1688,25 @@ export interface RoothashAnnotatedBlock {
  *
  * Keep this in sync with /runtime/src/common/roothash.rs.
  */
-export interface RoothashBlock {
+export interface RootHashBlock {
     /**
      * Header is the block header.
      */
-    header: RoothashHeader;
+    header: RootHashHeader;
 }
 
 /**
  * ComputeBody holds the data signed in a compute worker commitment.
  */
-export interface RoothashComputeBody {
-    header: RoothashComputeResultsHeader;
+export interface RootHashComputeBody {
+    header: RootHashComputeResultsHeader;
     failure?: number;
     txn_sched_sig: Signature;
     input_root: Uint8Array;
     input_storage_sigs: Signature;
     storage_signatures?: Signature[];
     rak_sig?: Uint8Array;
-    messages?: RoothashMessage[];
+    messages?: RootHashMessage[];
 }
 
 /**
@@ -1719,7 +1719,7 @@ export interface RoothashComputeBody {
  *
  * Keep the roothash RAK validation in sync with changes to this structure.
  */
-export interface RoothashComputeResultsHeader {
+export interface RootHashComputeResultsHeader {
     round: longnum;
     previous_hash: Uint8Array;
     io_root?: Uint8Array;
@@ -1730,7 +1730,7 @@ export interface RoothashComputeResultsHeader {
 /**
  * ConsensusParameters are the roothash consensus parameters.
  */
-export interface RoothashConsensusParameters {
+export interface RootHashConsensusParameters {
     /**
      * GasCosts are the roothash transaction gas costs.
      */
@@ -1759,7 +1759,7 @@ export interface RoothashConsensusParameters {
 /**
  * EquivocationBatchEvidence is evidence of executor proposed batch equivocation.
  */
-export interface RoothashEquivocationBatchEvidence {
+export interface RootHashEquivocationBatchEvidence {
     batch_a: SignatureSigned;
     batch_b: SignatureSigned;
 }
@@ -1767,7 +1767,7 @@ export interface RoothashEquivocationBatchEvidence {
 /**
  * EquivocationExecutorEvidence is evidence of executor commitment equivocation.
  */
-export interface RoothashEquivocationExecutorEvidence {
+export interface RootHashEquivocationExecutorEvidence {
     commit_a: SignatureSigned;
     commit_b: SignatureSigned;
 }
@@ -1775,29 +1775,29 @@ export interface RoothashEquivocationExecutorEvidence {
 /**
  * Event is a roothash event.
  */
-export interface RoothashEvent {
+export interface RootHashEvent {
     height?: longnum;
     tx_hash?: Uint8Array;
     runtime_id: Uint8Array;
-    executor_committed?: RoothashExecutorCommittedEvent;
-    execution_discrepancy?: RoothashExecutionDiscrepancyDetectedEvent;
-    finalized?: RoothashFinalizedEvent;
-    message?: RoothashMessageEvent;
+    executor_committed?: RootHashExecutorCommittedEvent;
+    execution_discrepancy?: RootHashExecutionDiscrepancyDetectedEvent;
+    finalized?: RootHashFinalizedEvent;
+    message?: RootHashMessageEvent;
 }
 
 /**
  * Evidence is an evidence of node misbehaviour.
  */
-export interface RoothashEvidence {
+export interface RootHashEvidence {
     id: Uint8Array;
-    equivocation_executor?: RoothashEquivocationExecutorEvidence;
-    equivocation_batch?: RoothashEquivocationBatchEvidence;
+    equivocation_executor?: RootHashEquivocationExecutorEvidence;
+    equivocation_batch?: RootHashEquivocationBatchEvidence;
 }
 
 /**
  * ExecutionDiscrepancyDetectedEvent is an execute discrepancy detected event.
  */
-export interface RoothashExecutionDiscrepancyDetectedEvent {
+export interface RootHashExecutionDiscrepancyDetectedEvent {
     /**
      * Timeout signals whether the discrepancy was due to a timeout.
      */
@@ -1807,7 +1807,7 @@ export interface RoothashExecutionDiscrepancyDetectedEvent {
 /**
  * ExecutorCommit is the argument set for the ExecutorCommit method.
  */
-export interface RoothashExecutorCommit {
+export interface RootHashExecutorCommit {
     id: Uint8Array;
     commits: SignatureSigned[];
 }
@@ -1815,7 +1815,7 @@ export interface RoothashExecutorCommit {
 /**
  * ExecutorCommittedEvent is an event emitted each time an executor node commits.
  */
-export interface RoothashExecutorCommittedEvent {
+export interface RootHashExecutorCommittedEvent {
     /**
      * Commit is the executor commitment.
      */
@@ -1825,7 +1825,7 @@ export interface RoothashExecutorCommittedEvent {
 /**
  * ExecutorProposerTimeoutRequest is an executor proposer timeout request.
  */
-export interface RoothashExecutorProposerTimeoutRequest {
+export interface RootHashExecutorProposerTimeoutRequest {
     id: Uint8Array;
     round: longnum;
 }
@@ -1833,7 +1833,7 @@ export interface RoothashExecutorProposerTimeoutRequest {
 /**
  * FinalizedEvent is a finalized event.
  */
-export interface RoothashFinalizedEvent {
+export interface RootHashFinalizedEvent {
     /**
      * Round is the round that was finalized.
      */
@@ -1853,25 +1853,25 @@ export interface RoothashFinalizedEvent {
 /**
  * Genesis is the roothash genesis state.
  */
-export interface RoothashGenesis {
+export interface RootHashGenesis {
     /**
      * Parameters are the roothash consensus parameters.
      */
-    params: RoothashConsensusParameters;
+    params: RootHashConsensusParameters;
     /**
      * RuntimeStates are the runtime states at genesis.
      */
-    runtime_states?: Map<Uint8Array, RoothashGenesisRuntimeState>;
+    runtime_states?: Map<Uint8Array, RootHashGenesisRuntimeState>;
 }
 
 /**
  * GenesisRuntimeState contains state for runtimes that are restored in a genesis block.
  */
-export interface RoothashGenesisRuntimeState extends RegistryRuntimeGenesis {
+export interface RootHashGenesisRuntimeState extends RegistryRuntimeGenesis {
     /**
      * MessageResults are the message results emitted at the last processed round.
      */
-    message_results?: RoothashMessageEvent[];
+    message_results?: RootHashMessageEvent[];
 }
 
 /**
@@ -1879,7 +1879,7 @@ export interface RoothashGenesisRuntimeState extends RegistryRuntimeGenesis {
  *
  * Keep this in sync with /runtime/src/common/roothash.rs.
  */
-export interface RoothashHeader {
+export interface RootHashHeader {
     /**
      * Version is the protocol version number.
      */
@@ -1926,15 +1926,15 @@ export interface RoothashHeader {
 /**
  * Message is a message that can be sent by a runtime.
  */
-export interface RoothashMessage {
-    staking?: RoothashStakingMessage;
-    registry?: RoothashRegistryMessage;
+export interface RootHashMessage {
+    staking?: RootHashStakingMessage;
+    registry?: RootHashRegistryMessage;
 }
 
 /**
  * MessageEvent is a runtime message processed event.
  */
-export interface RoothashMessageEvent {
+export interface RootHashMessageEvent {
     module?: string;
     code?: number;
     index?: number;
@@ -1947,7 +1947,7 @@ export interface RoothashMessageEvent {
  * Don't forget to bump CommitteeProtocol version in go/common/version
  * if you change anything in this struct.
  */
-export interface RoothashProposedBatch {
+export interface RootHashProposedBatch {
     /**
      * IORoot is the I/O root containing the inputs (transactions) that
      * the executor node should use.
@@ -1960,20 +1960,20 @@ export interface RoothashProposedBatch {
     /**
      * Header is the block header on which the batch should be based.
      */
-    header: RoothashHeader;
+    header: RootHashHeader;
 }
 
 /**
  * RegistryMessage is a runtime message that allows a runtime to perform staking operations.
  */
-export interface RoothashRegistryMessage extends CBORVersioned {
+export interface RootHashRegistryMessage extends CBORVersioned {
     update_runtime?: RegistryRuntime;
 }
 
 /**
  * StakingMessage is a runtime message that allows a runtime to perform staking operations.
  */
-export interface RoothashStakingMessage extends CBORVersioned {
+export interface RootHashStakingMessage extends CBORVersioned {
     transfer?: StakingTransfer;
     withdraw?: StakingWithdraw;
     add_escrow?: StakingEscrow;
@@ -2141,7 +2141,7 @@ export interface RuntimeClientSubmitTxRequest {
  * TxResult is the transaction query result.
  */
 export interface RuntimeClientTxResult {
-    block: RoothashBlock;
+    block: RootHashBlock;
     index: number;
     input: Uint8Array;
     output: Uint8Array;
