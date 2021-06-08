@@ -105,3 +105,15 @@ jobs:
       - name: Lint ts-web/rt
         working-directory: client-sdk/ts-web/rt
         run: npm run-script lint
+
+  lint-markdown:
+    name: lint-markdown
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Lint markdown
+        uses: nosborn/github-action-markdown-cli@v1.1.1
+        with:
+          files: docs
