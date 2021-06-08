@@ -89,7 +89,7 @@ mod tests {
     fn generate_event_impl_auto() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
-                use oasis_runtime_sdk::core::common::cbor;
+                use ::oasis_runtime_sdk::core::common::cbor;
                 impl ::oasis_runtime_sdk::event::Event for MainEvent {
                     fn module_name() -> &'static str {
                         MODULE_NAME
@@ -132,7 +132,7 @@ mod tests {
     fn generate_event_impl_manual() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
-                use oasis_runtime_sdk::core::common::cbor;
+                use ::oasis_runtime_sdk::core::common::cbor;
                 impl ::oasis_runtime_sdk::event::Event for MainEvent {
                     fn module_name() -> &'static str {
                         THE_MODULE_NAME

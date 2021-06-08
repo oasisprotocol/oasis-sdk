@@ -27,12 +27,19 @@ use crate::types::transaction::CallResult;
 /// }
 /// # }
 /// ```
-pub trait Error: std::error::Error {
+pub trait Error: std::error::Error + Sized {
+    /// The variants of this error sans payload used for decoding.
+    type Kinds;
+
     /// Name of the module that emitted the error.
     fn module_name(&self) -> &str;
 
     /// Error code uniquely identifying the error.
     fn code(&self) -> u32;
+
+    /// Returns the error kind for the provided code, if it exists.
+    /// This method is useful to clients when decoding runtime errors.
+    fn kind_for_code(code: u32) -> Option<Self::Kinds>;
 
     /// Converts the error into a call result.
     fn to_call_result(&self) -> CallResult {
@@ -45,12 +52,21 @@ pub trait Error: std::error::Error {
 }
 
 impl Error for std::convert::Infallible {
+    type Kinds = ();
+
     fn module_name(&self) -> &str {
         "(none)"
     }
 
     fn code(&self) -> u32 {
         Default::default()
+    }
+
+    fn kind_for_code(code: u32) -> Option<Self::Kinds> {
+        match code {
+            0 => Some(()),
+            _ => None,
+        }
     }
 }
 

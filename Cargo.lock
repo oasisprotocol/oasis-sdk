@@ -1208,6 +1208,7 @@ dependencies = [
 name = "oasis-client-sdk"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "bytes",
  "oasis-runtime-sdk",
  "paste",
