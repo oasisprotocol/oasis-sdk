@@ -51,13 +51,14 @@ pub fn queries(args: TokenStream, input: TokenStream) -> TokenStream {
 /// "Helper attributes" for the `calls` and `queries` "derives." This attribute could
 /// be stripped by the `calls`/`queries` attributes, but if it's accidentally omitted,
 /// not having this one will give really confusing error messages.
+#[doc(hidden)]
 #[proc_macro_attribute]
 pub fn call(_args: TokenStream, input: TokenStream) -> TokenStream {
     // `sdk::method` can only be applied to methods, of course.
     let input = syn::parse_macro_input!(input as syn::TraitItemMethod);
     quote::quote!(#input).into()
 }
-/// @see [`method`]
+#[doc(hidden)]
 #[proc_macro_attribute]
 pub fn query(_args: TokenStream, input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as syn::TraitItemMethod);
