@@ -96,6 +96,24 @@ export interface BeaconPVSSReveal {
 }
 
 /**
+ * PVSSState is the PVSS backend state.
+ */
+export interface BeaconPVSSState {
+    height?: longnum;
+    epoch?: longnum;
+    round?: longnum;
+    state?: number;
+    instance?: PVSSInstance;
+    participants?: Uint8Array[];
+    entropy?: Uint8Array;
+    bad_participants?: Map<Uint8Array, boolean>;
+    commit_deadline?: longnum;
+    reveal_deadline?: longnum;
+    transition_height?: longnum;
+    runtime_disable_height?: longnum;
+}
+
+/**
  * Versioned is a generic versioned serializable data structure.
  */
 export interface CBORVersioned {
@@ -1118,6 +1136,17 @@ export interface PVSSCommitShare extends PVSSPubVerShare {
      * Share of the public commitment polynomial
      */
     poly_v: Uint8Array;
+}
+
+/**
+ * Instance is an instance of the PVSS protocol.
+ */
+export interface PVSSInstance {
+    participants: Uint8Array[];
+    commits: Map<number, PVSSCommitShare>;
+    reveals: Map<number, PVSSReveal>;
+    decrypted_shares: Map<number, Map<number, PVSSPubVerShare>>;
+    threshold: number;
 }
 
 /**

@@ -62,6 +62,10 @@ const methodDescriptorBeaconConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
     types.BeaconConsensusParameters
 >('Beacon', 'ConsensusParameters');
+const methodDescriptorBeaconGetPVSSState = createMethodDescriptorUnary<
+    types.longnum,
+    types.BeaconPVSSState
+>('Beacon', 'GetPVSSState');
 const methodDescriptorBeaconWatchEpochs = createMethodDescriptorServerStreaming<
     void,
     types.longnum
@@ -621,6 +625,16 @@ export class NodeInternal extends GRPCWrapper {
      */
     beaconConsensusParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorBeaconConsensusParameters, height);
+    }
+
+    /**
+     * GetPVSSState gets the PVSS beacon round state for the
+     * provided block height.  Calling this method with height
+     * `consensus.HeightLatest` should return the beacon for
+     * the latest finalized block.
+     */
+    beaconGetPVSSState(height: types.longnum) {
+        return this.callUnary(methodDescriptorBeaconGetPVSSState, height);
     }
 
     /**
