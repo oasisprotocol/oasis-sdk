@@ -244,6 +244,8 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
     }
 }
 
+impl<Accounts: modules::accounts::API> module::InvariantHandler for Module<Accounts> {}
+
 /// A trait that exists solely to convert `beacon::EpochTime` to bytes for use as a storage key.
 trait ToStorageKey {
     fn to_storage_key(&self) -> [u8; 8];

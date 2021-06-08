@@ -317,3 +317,5 @@ impl module::MigrationHandler for Module {
 impl module::AuthHandler for Module {}
 
 impl module::BlockHandler for Module {}
+
+impl module::InvariantHandler for Module {}

@@ -256,6 +256,24 @@ impl BlockHandler for Tuple {
     }
 }
 
+/// Invariant handler.
+pub trait InvariantHandler {
+    /// Check invariants.
+    fn check_invariants<C: Context>(_ctx: &mut C) -> Result<(), modules::core::Error> {
+        // Default implementation doesn't do anything.
+        Ok(())
+    }
+}
+
+#[impl_for_tuples(30)]
+impl InvariantHandler for Tuple {
+    /// Check the invariants in all modules in the tuple.
+    fn check_invariants<C: Context>(ctx: &mut C) -> Result<(), modules::core::Error> {
+        for_tuples!( #( Tuple::check_invariants(ctx)?; )* );
+        Ok(())
+    }
+}
+
 /// A runtime module.
 pub trait Module {
     /// Module name.

@@ -15,7 +15,7 @@ use crate::{
     module,
     module::Module as _,
     modules,
-    modules::core::{Module as Core, API as _},
+    modules::core::{Error as CoreError, Module as Core, API as _},
     storage,
     types::{
         address::Address,
@@ -139,6 +139,11 @@ pub trait API {
         state: S,
         address: Address,
     ) -> Result<types::AccountBalances, Error>;
+
+    /// Fetch total supplies.
+    fn get_total_supplies<S: storage::Store>(
+        state: S,
+    ) -> Result<BTreeMap<token::Denomination, token::Quantity>, Error>;
 }
 
 /// State schema constants.
@@ -159,6 +164,31 @@ pub static ADDRESS_COMMON_POOL: Lazy<Address> =
 /// Module's address that has the fee accumulator.
 pub static ADDRESS_FEE_ACCUMULATOR: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "fee-accumulator"));
+
+/// This is needed to properly iterate over the BALANCES map.
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord)]
+struct AddressWithDenomination(Address, token::Denomination);
+
+#[derive(Error, Debug)]
+enum AWDError {
+    #[error("malformed address")]
+    MalformedAddress,
+
+    #[error("malformed denomination")]
+    MalformedDenomination,
+}
+
+impl std::convert::TryFrom<&[u8]> for AddressWithDenomination {
+    type Error = AWDError;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        let address =
+            Address::try_from(&bytes[..Address::SIZE]).map_err(|_| AWDError::MalformedAddress)?;
+        let denomination = token::Denomination::try_from(&bytes[Address::SIZE..])
+            .map_err(|_| AWDError::MalformedDenomination)?;
+        Ok(AddressWithDenomination(address, denomination))
+    }
+}
 
 impl Module {
     /// Add given amount of tokens to the specified account's balance.
@@ -227,6 +257,39 @@ impl Module {
             .ok_or(Error::InsufficientBalance)?;
         total_supplies.insert(amount.denomination(), &total_supply);
         Ok(())
+    }
+
+    /// Get all balances.
+    fn get_all_balances<S: storage::Store>(
+        state: S,
+    ) -> Result<BTreeMap<Address, BTreeMap<token::Denomination, token::Quantity>>, Error> {
+        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let balances = storage::TypedStore::new(storage::PrefixStore::new(store, &state::BALANCES));
+
+        // Unfortunately, we can't just return balances.iter().collect() here,
+        // because the stored format doesn't match -- we need this workaround
+        // instead.
+
+        let balmap: BTreeMap<AddressWithDenomination, token::Quantity> = balances.iter().collect();
+
+        let mut b: BTreeMap<Address, BTreeMap<token::Denomination, token::Quantity>> =
+            BTreeMap::new();
+
+        for (addrden, amt) in &balmap {
+            let addr = &addrden.0;
+            let den = &addrden.1;
+
+            // Fetch existing account's balances or insert blank ones.
+            let addr_bals = b.entry(*addr).or_insert_with(BTreeMap::new);
+
+            // Add to given denomination's balance or insert it if new.
+            addr_bals
+                .entry(den.clone())
+                .and_modify(|a| *a += amt)
+                .or_insert_with(|| amt.clone());
+        }
+
+        Ok(b)
     }
 }
 
@@ -299,6 +362,15 @@ impl API for Module {
         Ok(types::AccountBalances {
             balances: account.iter().collect(),
         })
+    }
+
+    fn get_total_supplies<S: storage::Store>(
+        state: S,
+    ) -> Result<BTreeMap<token::Denomination, token::Quantity>, Error> {
+        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let ts = storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
+
+        Ok(ts.iter().collect())
     }
 }
 
@@ -599,6 +671,66 @@ impl module::BlockHandler for Module {
                 &token::BaseUnits::new(amount, denom),
             )
             .expect("add_amount must succeed for transfer to fee accumulator")
+        }
+    }
+}
+
+impl module::InvariantHandler for Module {
+    /// Check invariants.
+    fn check_invariants<C: Context>(ctx: &mut C) -> Result<(), CoreError> {
+        // All account balances should sum up to the total supply for their
+        // corresponding denominations.
+
+        #[allow(clippy::or_fun_call)]
+        let balances = Self::get_all_balances(ctx.runtime_state()).or(Err(
+            CoreError::InvariantViolation("unable to get balances of all accounts".to_string()),
+        ))?;
+        #[allow(clippy::or_fun_call)]
+        let total_supplies = Self::get_total_supplies(ctx.runtime_state()).or(Err(
+            CoreError::InvariantViolation("unable to get total supplies".to_string()),
+        ))?;
+
+        // First, compute total supplies based on account balances.
+        let mut computed_ts: BTreeMap<token::Denomination, token::Quantity> = BTreeMap::new();
+
+        for bals in balances.values() {
+            for (den, amt) in bals {
+                computed_ts
+                    .entry(den.clone())
+                    .and_modify(|a| *a += amt)
+                    .or_insert_with(|| amt.clone());
+            }
+        }
+
+        // Now check if the computed and given total supplies match.
+        for (den, ts) in &total_supplies {
+            // Return error if total supplies have a denomination that we
+            // didn't encounter when computing total supplies based on account
+            // balances.
+            #[allow(clippy::or_fun_call)]
+            let computed = computed_ts
+                .remove(&den)
+                .ok_or(CoreError::InvariantViolation(
+                    "unexpected denomination".to_string(),
+                ))?;
+
+            if &computed != ts {
+                // Computed and actual total supplies don't match.
+                return Err(CoreError::InvariantViolation(
+                    "computed and actual total supplies don't match".to_string(),
+                ));
+            }
+        }
+
+        // There should be no remaining denominations in the computed supplies,
+        // because that would mean that accounts have denominations that don't
+        // appear in the total supplies table, which would obviously be wrong.
+        if computed_ts.is_empty() {
+            Ok(())
+        } else {
+            Err(CoreError::InvariantViolation(
+                "encountered denomination that isn't present in total supplies table".to_string(),
+            ))
         }
     }
 }

@@ -8,10 +8,11 @@ use crate::{
     context::{BatchContext, Context, TxContext},
     core::common::cbor,
     dispatcher, error,
-    module::{self, Module as _},
+    module::{self, InvariantHandler as _, Module as _},
     types::transaction::{
         self, AddressSpec, AuthProof, Call, TransactionWeight, UnverifiedTransaction,
     },
+    Runtime,
 };
 
 #[cfg(test)]
@@ -83,6 +84,10 @@ pub enum Error {
     #[error("multisig too many signers")]
     #[sdk_error(code = 16)]
     MultisigTooManySigners,
+
+    #[error("invariant violation: {0}")]
+    #[sdk_error(code = 17)]
+    InvariantViolation(String),
 }
 
 /// Gas costs.
@@ -273,6 +278,11 @@ impl Module {
             })
         })
     }
+
+    /// Check invariants of all modules in the runtime.
+    fn query_check_invariants<C: Context>(ctx: &mut C) -> Result<(), Error> {
+        <C::Runtime as Runtime>::Modules::check_invariants(ctx)
+    }
 }
 
 impl module::Module for Module {
@@ -362,6 +372,10 @@ impl module::MethodHandler for Module {
                 let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
                 Ok(cbor::to_value(&Self::query_estimate_gas(ctx, args)?))
             })()),
+            "core.CheckInvariants" => module::DispatchResult::Handled((|| {
+                let _ = Self::query_check_invariants(ctx)?;
+                Ok(cbor::to_value(true))
+            })()),
             _ => module::DispatchResult::Unhandled(args),
         }
     }
@@ -377,3 +391,5 @@ impl module::BlockHandler for Module {
         res
     }
 }
+
+impl module::InvariantHandler for Module {}

@@ -11,9 +11,10 @@ use io_context::Context as IoContext;
 use slog::{self, o};
 
 use oasis_core_runtime::{
-    common::logger::get_logger,
+    common::{logger::get_logger, namespace::Namespace},
     consensus,
     consensus::roothash,
+    protocol::HostInfo,
     storage::mkvs,
     transaction::{context::Context as RuntimeContext, tags::Tags},
 };
@@ -74,6 +75,14 @@ pub trait Context {
     /// Whether the transaction is just being simulated.
     fn is_simulation(&self) -> bool {
         self.mode() == Mode::SimulateTx
+    }
+
+    /// Information about the host environment.
+    fn host_info(&self) -> &HostInfo;
+
+    /// Runtime ID.
+    fn runtime_id(&self) -> &Namespace {
+        &self.host_info().runtime_id
     }
 
     /// Last runtime block header.
@@ -159,6 +168,7 @@ pub trait TxContext: Context {
 pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: storage::Store> {
     mode: Mode,
 
+    host_info: &'a HostInfo,
     runtime_header: &'a roothash::Header,
     runtime_round_results: &'a roothash::RoundResults,
     runtime_storage: S,
@@ -186,6 +196,7 @@ impl<'a, R: runtime::Runtime, S: storage::Store> RuntimeBatchContext<'a, R, S> {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         mode: Mode,
+        host_info: &'a HostInfo,
         runtime_header: &'a roothash::Header,
         runtime_round_results: &'a roothash::RoundResults,
         runtime_storage: S,
@@ -196,6 +207,7 @@ impl<'a, R: runtime::Runtime, S: storage::Store> RuntimeBatchContext<'a, R, S> {
     ) -> Self {
         Self {
             mode,
+            host_info,
             runtime_header,
             runtime_round_results,
             runtime_storage,
@@ -216,6 +228,7 @@ impl<'a, R: runtime::Runtime, S: storage::Store> RuntimeBatchContext<'a, R, S> {
     pub(crate) fn from_runtime(
         ctx: &'a RuntimeContext<'_>,
         mkvs: &'a mut dyn mkvs::MKVS,
+        host_info: &'a HostInfo,
     ) -> RuntimeBatchContext<'a, R, storage::MKVSStore<&'a mut dyn mkvs::MKVS>> {
         let mode = if ctx.check_only {
             Mode::CheckTx
@@ -224,6 +237,7 @@ impl<'a, R: runtime::Runtime, S: storage::Store> RuntimeBatchContext<'a, R, S> {
         };
         RuntimeBatchContext {
             mode,
+            host_info,
             runtime_header: ctx.header,
             runtime_round_results: ctx.round_results,
             runtime_storage: storage::MKVSStore::new(ctx.io_ctx.clone(), mkvs),
@@ -251,6 +265,10 @@ impl<'a, R: runtime::Runtime, S: storage::Store> Context for RuntimeBatchContext
 
     fn mode(&self) -> Mode {
         self.mode
+    }
+
+    fn host_info(&self) -> &HostInfo {
+        &self.host_info
     }
 
     fn runtime_header(&self) -> &roothash::Header {
@@ -300,6 +318,7 @@ impl<'a, R: runtime::Runtime, S: storage::Store> Context for RuntimeBatchContext
 
         let sim_ctx = RuntimeBatchContext {
             mode: Mode::SimulateTx,
+            host_info: self.host_info,
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
             runtime_storage: store,
@@ -333,6 +352,7 @@ impl<'a, R: runtime::Runtime, S: storage::Store> BatchContext for RuntimeBatchCo
 
         let tx_ctx = RuntimeTxContext {
             mode: self.mode,
+            host_info: self.host_info,
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
             consensus_state: self.consensus_state,
@@ -372,6 +392,7 @@ impl<'a, R: runtime::Runtime, S: storage::Store> BatchContext for RuntimeBatchCo
 pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: storage::Store> {
     mode: Mode,
 
+    host_info: &'round HostInfo,
     runtime_header: &'round roothash::Header,
     runtime_round_results: &'round roothash::RoundResults,
     consensus_state: &'round consensus::state::ConsensusState,
@@ -413,6 +434,10 @@ impl<'round, 'store, R: runtime::Runtime, S: storage::Store> Context
 
     fn mode(&self) -> Mode {
         self.mode
+    }
+
+    fn host_info(&self) -> &HostInfo {
+        &self.host_info
     }
 
     fn runtime_header(&self) -> &roothash::Header {
@@ -463,6 +488,7 @@ impl<'round, 'store, R: runtime::Runtime, S: storage::Store> Context
 
         let sim_ctx = RuntimeBatchContext {
             mode: Mode::SimulateTx,
+            host_info: self.host_info,
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
             runtime_storage: store,

@@ -11,6 +11,7 @@ use thiserror::Error;
 use oasis_core_runtime::{
     self,
     common::cbor,
+    protocol::HostInfo,
     storage::{context::StorageContext, mkvs},
     transaction::{
         self,
@@ -73,6 +74,7 @@ impl From<types::transaction::CallResult> for DispatchResult {
 
 /// The runtime dispatcher.
 pub struct Dispatcher<R: Runtime> {
+    host_info: HostInfo,
     _runtime: PhantomData<R>,
 }
 
@@ -81,8 +83,9 @@ impl<R: Runtime> Dispatcher<R> {
     ///
     /// Note that the dispatcher is fully static and the constructor is only needed so that the
     /// instance can be used directly with the dispatcher system provided by Oasis Core.
-    pub(super) fn new() -> Self {
+    pub(super) fn new(host_info: HostInfo) -> Self {
         Self {
+            host_info,
             _runtime: PhantomData,
         }
     }
@@ -307,7 +310,9 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Prepare dispatch context.
             let mut ctx =
                 RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
-                    &rt_ctx, mkvs,
+                    &rt_ctx,
+                    mkvs,
+                    &self.host_info,
                 );
             // Perform state migrations if required.
             R::migrate(&mut ctx);
@@ -356,7 +361,9 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Prepare dispatch context.
             let mut ctx =
                 RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
-                    &ctx, mkvs,
+                    &ctx,
+                    mkvs,
+                    &self.host_info,
                 );
             // Perform state migrations if required.
             R::migrate(&mut ctx);
@@ -386,7 +393,9 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Prepare dispatch context.
             let mut ctx =
                 RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
-                    &ctx, mkvs,
+                    &ctx,
+                    mkvs,
+                    &self.host_info,
                 );
             // Perform state migrations if required.
             R::migrate(&mut ctx);

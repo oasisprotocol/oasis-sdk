@@ -13,7 +13,7 @@ use crate::{
     module,
     module::Module as _,
     modules,
-    modules::core::{Module as Core, API as _},
+    modules::core::{Error as CoreError, Module as Core, API as _},
     types::{
         address::Address,
         message::{MessageEvent, MessageEventHookInvocation, MessageResult},
@@ -395,4 +395,39 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::BlockHandler
     for Module<Accounts, Consensus>
 {
+}
+
+impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::InvariantHandler
+    for Module<Accounts, Consensus>
+{
+    /// Check invariants.
+    fn check_invariants<C: Context>(ctx: &mut C) -> Result<(), CoreError> {
+        // Total supply of the designated consensus layer token denomination
+        // should be less than or equal to the balance of the runtime's general
+        // account in the consensus layer.
+
+        let den = Consensus::consensus_denomination(ctx).unwrap();
+        #[allow(clippy::or_fun_call)]
+        let ts = Accounts::get_total_supplies(ctx.runtime_state()).or(Err(
+            CoreError::InvariantViolation("unable to get total supplies".to_string()),
+        ))?;
+
+        let rt_addr = Address::from_runtime_id(ctx.runtime_id());
+        let rt_acct = Consensus::account(ctx, rt_addr).unwrap_or_default();
+        let rt_ga_balance = rt_acct.general.balance;
+
+        match ts.get(&den) {
+            Some(total_supply) => {
+                if total_supply <= &rt_ga_balance {
+                    Ok(())
+                } else {
+                    Err(CoreError::InvariantViolation(
+                        "total supply is greater than runtime's general account balance"
+                            .to_string(),
+                    ))
+                }
+            }
+            None => Ok(()), // Having no total supply also satisfies above invariant.
+        }
+    }
 }

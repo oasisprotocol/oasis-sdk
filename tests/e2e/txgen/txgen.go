@@ -75,6 +75,19 @@ func EstimateGas(ctx context.Context, rtc client.RuntimeClient, tx types.Transac
 	return tx
 }
 
+// CheckInvariants issues a check of invariants in all modules in the runtime.
+func CheckInvariants(ctx context.Context, rtc client.RuntimeClient) error {
+	var ok bool
+	err := rtc.Query(ctx, client.RoundLatest, "core.CheckInvariants", nil, &ok)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("invariants check failed")
+	}
+	return nil
+}
+
 // SignAndSubmitTx signs and submits the given transaction.
 // Gas estimation is done automatically.
 func SignAndSubmitTx(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, tx types.Transaction) error {
@@ -166,10 +179,14 @@ func Generate(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 		okCount     uint64
 	)
 
+	errCh := make(chan error)
+
 	for {
 		select {
 		case <-ctx.Done():
 			return genErrCount, subErrCount, okCount, nil
+		case err := <-errCh:
+			return genErrCount, subErrCount, okCount, err
 		case <-ticker.C:
 			// Choose random account and txn generator.
 			acct := accounts[rng.Intn(len(accounts))]
@@ -193,6 +210,17 @@ func Generate(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 						atomic.AddUint64(&subErrCount, 1)
 					} else {
 						atomic.AddUint64(&okCount, 1)
+					}
+				}
+
+				// Perform an invariants check.
+				if err := CheckInvariants(ctx, rtc); err != nil {
+					// This is wrapped in a select block to make sure that if
+					// multiple goroutines report an error, they don't get
+					// blocked here.
+					select {
+					case errCh <- err:
+					default:
 					}
 				}
 			}(acct, gen)
