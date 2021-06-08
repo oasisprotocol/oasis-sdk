@@ -3150,14 +3150,6 @@ export interface WorkerCommonStatus {
 }
 
 /**
- * ForceFinalizeRequest is a ForceFinalize request.
- */
-export interface WorkerStorageForceFinalizeRequest {
-    runtime_id: Uint8Array;
-    round: longnum;
-}
-
-/**
  * GetLastSyncedRoundRequest is a GetLastSyncedRound request.
  */
 export interface WorkerStorageGetLastSyncedRoundRequest {
@@ -3174,6 +3166,14 @@ export interface WorkerStorageGetLastSyncedRoundResponse {
 }
 
 /**
+ * PauseCheckpointerRequest is a PauseCheckpointer request.
+ */
+export interface WorkerStoragePauseCheckpointerRequest {
+    runtime_id: Uint8Array;
+    pause: boolean;
+}
+
+/**
  * Status is the storage worker status.
  */
 export interface WorkerStorageStatus {
@@ -3181,4 +3181,20 @@ export interface WorkerStorageStatus {
      * LastFinalizedRound is the last synced and finalized round.
      */
     last_finalized_round: longnum;
+}
+
+/**
+ * WaitForRoundRequest is a WaitForStorageRound request.
+ */
+export interface WorkerStorageWaitForRoundRequest {
+    runtime_id: Uint8Array;
+    round: longnum;
+    root: StorageRoot;
+}
+
+/**
+ * WaitForRoundResponse is a WaitForRound response.
+ */
+export interface WorkerStorageWaitForRoundResponse {
+    last_round: longnum;
 }

@@ -350,10 +350,14 @@ const methodDescriptorStorageWorkerGetLastSyncedRound = createMethodDescriptorUn
     types.WorkerStorageGetLastSyncedRoundRequest,
     types.WorkerStorageGetLastSyncedRoundResponse
 >('StorageWorker', 'GetLastSyncedRound');
-const methodDescriptorStorageWorkerForceFinalize = createMethodDescriptorUnary<
-    types.WorkerStorageForceFinalizeRequest,
+const methodDescriptorStorageWorkerWaitForRound = createMethodDescriptorUnary<
+    types.WorkerStorageWaitForRoundRequest,
+    types.WorkerStorageWaitForRoundResponse
+>('StorageWorker', 'WaitForRound');
+const methodDescriptorStorageWorkerPauseCheckpointer = createMethodDescriptorUnary<
+    types.WorkerStoragePauseCheckpointerRequest,
     void
->('StorageWorker', 'ForceFinalize');
+>('StorageWorker', 'PauseCheckpointer');
 
 // runtime/client
 const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorUnary<
@@ -1170,10 +1174,19 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * ForceFinalize forces finalization of a specific round.
+     * WaitForRound waits until the storage worker syncs the given round or root.
+     * It returns the round synced to; this will typically equal the given root's
+     * round, but may be higher.
      */
-    storageWorkerForceFinalize(request: types.WorkerStorageForceFinalizeRequest) {
-        return this.callUnary(methodDescriptorStorageWorkerForceFinalize, request);
+    storageWorkerWaitForRound(request: types.WorkerStorageWaitForRoundRequest) {
+        return this.callUnary(methodDescriptorStorageWorkerWaitForRound, request);
+    }
+
+    /**
+     * PauseCheckpointer pauses or unpauses the storage worker's checkpointer.
+     */
+    storageWorkerPauseCheckpointer(request: types.WorkerStoragePauseCheckpointerRequest) {
+        return this.callUnary(methodDescriptorStorageWorkerPauseCheckpointer, request);
     }
 
     // runtime/client
