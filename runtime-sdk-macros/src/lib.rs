@@ -48,6 +48,24 @@ pub fn queries(args: TokenStream, input: TokenStream) -> TokenStream {
     handler_attrs::gen_query_items(&input, &args).into()
 }
 
+/// Registers the provided user-defined types as `Copy` when generating
+/// handler methods and clients.
+///
+/// This macro must be invoked  before the `queries` or `calls` attribute macros.
+/// Multiple invocations are additive.
+///
+/// ## Example
+/// ```no_run
+/// register_copy_types!(ErrorKind, EncryptionKey)
+/// ```
+#[proc_macro]
+pub fn register_copy_types(input: TokenStream) -> TokenStream {
+    let parser = syn::punctuated::Punctuated::<syn::Ident, syn::Token![,]>::parse_terminated;
+    let input = syn::parse_macro_input!(input with parser);
+    handler_attrs::register_copy_types(&input);
+    TokenStream::new()
+}
+
 /// "Helper attributes" for the `calls` and `queries` "derives." This attribute could
 /// be stripped by the `calls`/`queries` attributes, but if it's accidentally omitted,
 /// not having this one will give really confusing error messages.
