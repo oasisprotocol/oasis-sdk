@@ -522,16 +522,9 @@ impl module::AuthHandler for Module {
 
             // TODO: Emit event that fee has been paid.
 
+            let gas_price = &tx.auth_info.fee.gas_price();
             // Bump transaction priority.
-            Core::add_priority(
-                ctx,
-                tx.auth_info
-                    .fee
-                    .amount
-                    .amount()
-                    .try_into()
-                    .unwrap_or(u64::MAX),
-            )?;
+            Core::add_priority(ctx, gas_price.try_into().unwrap_or(u64::MAX))?;
         }
         Ok(())
     }
