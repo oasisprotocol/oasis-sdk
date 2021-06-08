@@ -243,6 +243,36 @@ const methodDescriptorKeyManagerGetStatuses = createMethodDescriptorUnary<
     types.KeyManagerStatus[]
 >('KeyManager', 'GetStatuses');
 
+// roothash
+const methodDescriptorRootHashGetGenesisBlock = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashBlock
+>('RootHash', 'GetGenesisBlock');
+const methodDescriptorRootHashGetLatestBlock = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashBlock
+>('RootHash', 'GetLatestBlock');
+const methodDescriptorRootHashGetRuntimeState = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashRuntimeState
+>('RootHash', 'GetRuntimeState');
+const methodDescriptorRootHashStateToGenesis = createMethodDescriptorUnary<
+    types.longnum,
+    types.RootHashGenesis
+>('RootHash', 'StateToGenesis');
+const methodDescriptorRootHashGetEvents = createMethodDescriptorUnary<
+    types.longnum,
+    types.RootHashEvent[]
+>('RootHash', 'GetEvents');
+const methodDescriptorRootHashWatchBlocks = createMethodDescriptorServerStreaming<
+    Uint8Array,
+    types.RootHashAnnotatedBlock
+>('RootHash', 'WatchBlocks');
+const methodDescriptorRootHashWatchEvents = createMethodDescriptorServerStreaming<
+    Uint8Array,
+    types.RootHashEvent
+>('RootHash', 'WatchEvents');
+
 // governance
 const methodDescriptorGovernanceActiveProposals = createMethodDescriptorUnary<
     types.longnum,
@@ -968,6 +998,29 @@ export class NodeInternal extends GRPCWrapper {
      */
     keyManagerGetStatuses(height: types.longnum) {
         return this.callUnary(methodDescriptorKeyManagerGetStatuses, height);
+    }
+
+    // roothash
+    rootHashGetGenesisBlock(request: types.RootHashRuntimeRequest) {
+        return this.callUnary(methodDescriptorRootHashGetGenesisBlock, request);
+    }
+    rootHashGetLatestBlock(request: types.RootHashRuntimeRequest) {
+        return this.callUnary(methodDescriptorRootHashGetLatestBlock, request);
+    }
+    rootHashGetRuntimeState(request: types.RootHashRuntimeRequest) {
+        return this.callUnary(methodDescriptorRootHashGetRuntimeState, request);
+    }
+    rootHashHashStateToGenesis(height: types.longnum) {
+        return this.callUnary(methodDescriptorRootHashStateToGenesis, height);
+    }
+    rootHashHashGetEvents(height: types.longnum) {
+        return this.callUnary(methodDescriptorRootHashGetEvents, height);
+    }
+    rootHashWatchBlocks(runtimeID: Uint8Array) {
+        return this.callServerStreaming(methodDescriptorRootHashWatchBlocks, runtimeID);
+    }
+    rootHashWatchEvents(runtimeID: Uint8Array) {
+        return this.callServerStreaming(methodDescriptorRootHashWatchEvents, runtimeID);
     }
 
     // governance

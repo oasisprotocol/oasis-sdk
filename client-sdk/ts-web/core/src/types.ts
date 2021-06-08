@@ -1941,6 +1941,42 @@ export interface RootHashMessageEvent {
 }
 
 /**
+ * Pool is a serializable pool of commitments that can be used to perform
+ * discrepancy detection.
+ *
+ * The pool is not safe for concurrent use.
+ */
+export interface RootHashPool {
+    /**
+     * Runtime is the runtime descriptor this pool is collecting the
+     * commitments for.
+     */
+    runtime: RegistryRuntime;
+    /**
+     * Committee is the committee this pool is collecting the commitments for.
+     */
+    committee: SchedulerCommittee;
+    /**
+     * Round is the current protocol round.
+     */
+    round: longnum;
+    /**
+     * ExecuteCommitments are the commitments in the pool iff Committee.Kind
+     * is scheduler.KindComputeExecutor.
+     */
+    execute_commitments?: Map<Uint8Array, RootHashComputeBody>;
+    /**
+     * Discrepancy is a flag signalling that a discrepancy has been detected.
+     */
+    discrepancy: boolean;
+    /**
+     * NextTimeout is the time when the next call to TryFinalize(true) should
+     * be scheduled to be executed. Zero means that no timeout is to be scheduled.
+     */
+    next_timeout: longnum;
+}
+
+/**
  * ProposedBatch is the message sent from the transaction scheduler
  * to executor workers after a batch is ready to be executed.
  *
@@ -1968,6 +2004,35 @@ export interface RootHashProposedBatch {
  */
 export interface RootHashRegistryMessage extends CBORVersioned {
     update_runtime?: RegistryRuntime;
+}
+
+/**
+ * RuntimeRequest is a generic roothash get request for a specific runtime.
+ */
+export interface RootHashRuntimeRequest {
+    runtime_id: Uint8Array;
+    height: longnum;
+}
+
+/**
+ * RuntimeState is the per-runtime state.
+ */
+export interface RootHashRuntimeState {
+    runtime: RegistryRuntime;
+    suspended?: boolean;
+    genesis_block: RootHashBlock;
+    current_block: RootHashBlock;
+    current_block_height: longnum;
+    /**
+     * LastNormalRound is the runtime round which was normally processed by the runtime. This is
+     * also the round that contains the message results for the last processed runtime messages.
+     */
+    last_normal_round: longnum;
+    /**
+     * LastNormalHeight is the consensus block height corresponding to LastNormalRound.
+     */
+    last_normal_height: longnum;
+    executor_pool: RootHashPool;
 }
 
 /**
