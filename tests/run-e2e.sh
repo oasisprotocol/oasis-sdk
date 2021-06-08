@@ -3,7 +3,7 @@ set -o nounset -o pipefail -o errexit
 trap "exit 1" INT
 
 # Get the root directory of the tests dir inside the repository.
-ROOT="$(cd $(dirname $0); pwd -P)"
+TESTS_DIR="$(cd $(dirname $0); pwd -P)"
 
 # ANSI escape codes to brighten up the output.
 RED=$'\e[31;1m'
@@ -33,32 +33,31 @@ if [[ "$(which cargo)" == "" ]]; then
 fi
 
 cd "${TEST_BASE_DIR}"
-cp "${ROOT}"/consts.sh .
 
 if [[ ! -v TEST_NODE_BINARY ]] || [[ ! -v TEST_RUNTIME_LOADER ]]; then
 	printf "${CYAN}### Downloading Oasis artifacts...${OFF}\n"
-	${ROOT}/download-artifacts.sh
-	cp "${TEST_BASE_DIR}"/untracked/oasis-{node,core-runtime-loader} "${TEST_BASE_DIR}"
-	export TEST_NODE_BINARY="${TEST_BASE_DIR}/oasis-node"
-	export TEST_RUNTIME_LOADER="${TEST_BASE_DIR}/oasis-core-runtime-loader"
+	"${TESTS_DIR}/download-artifacts.sh"
 fi
 
 printf "${CYAN}### Building test simple-keyvalue runtime...${OFF}\n"
-cd "${ROOT}"/runtimes/simple-keyvalue
+cd "${TESTS_DIR}"/runtimes/simple-keyvalue
 cargo build
-cp "${ROOT}"/../target/debug/test-runtime-simple-keyvalue "${TEST_BASE_DIR}"/
+cp "${TESTS_DIR}"/../target/debug/test-runtime-simple-keyvalue "${TEST_BASE_DIR}"/
 
 printf "${CYAN}### Building test simple-consensus runtime...${OFF}\n"
-cd "${ROOT}"/runtimes/simple-consensus
+cd "${TESTS_DIR}"/runtimes/simple-consensus
 cargo build
-cp "${ROOT}"/../target/debug/test-runtime-simple-consensus "${TEST_BASE_DIR}"/
+cp "${TESTS_DIR}"/../target/debug/test-runtime-simple-consensus "${TEST_BASE_DIR}"/
 
 printf "${CYAN}### Building e2e test harness...${OFF}\n"
-cd "${ROOT}"/e2e
+cd "${TESTS_DIR}"/e2e
 go build
-cp "${ROOT}"/e2e/e2e "${TEST_BASE_DIR}"/
+cp "${TESTS_DIR}"/e2e/e2e "${TEST_BASE_DIR}"/
 
 cd "${TEST_BASE_DIR}"
+
+. "${TESTS_DIR}/consts.sh"
+. "${TESTS_DIR}/paths.sh"
 
 printf "${CYAN}### Running end-to-end tests...${OFF}\n"
 ./e2e --log.level=INFO \
@@ -69,7 +68,7 @@ printf "${CYAN}### Running end-to-end tests...${OFF}\n"
 	--e2e.runtime.loader="${TEST_RUNTIME_LOADER}" \
 	"$@"
 
-cd "${ROOT}"
+cd "${TESTS_DIR}"
 rm -rf "${TEST_BASE_DIR}"
 printf "${GRN}### Tests finished.${OFF}\n"
 

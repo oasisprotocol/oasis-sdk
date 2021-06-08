@@ -1,11 +1,13 @@
 #!/bin/sh -eux
 
-NET_RUNNER="${TEST_NET_RUNNER:-./untracked/oasis-net-runner}"
-NODE_BINARY="${TEST_NODE_BINARY:-./untracked/oasis-node}"
+TESTS_DIR=../../../../tests
+. "$TESTS_DIR/consts.sh"
+. "$TESTS_DIR/paths.sh"
 
 mkdir -p /tmp/oasis-net-runner-sdk-core
-"${NET_RUNNER}" \
-    --fixture.default.node.binary "${NODE_BINARY}" \
+"$TEST_NET_RUNNER" \
+    --fixture.default.node.binary "$TEST_NODE_BINARY" \
     --fixture.default.setup_runtimes=false \
+    --fixture.default.runtime.binary='' \
     --basedir /tmp/oasis-net-runner-sdk-core \
     --basedir.no_temp_dir
