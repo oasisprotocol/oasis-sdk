@@ -2089,6 +2089,14 @@ export interface RuntimeClientGetEventsRequest {
 }
 
 /**
+ * GetTransactionsRequest is a GetTransactions request.
+ */
+export interface RuntimeClientGetTransactionsRequest {
+    runtime_id: Uint8Array;
+    round: longnum;
+}
+
+/**
  * GetTxByBlockHashRequest is a GetTxByBlockHash request.
  */
 export interface RuntimeClientGetTxByBlockHashRequest {

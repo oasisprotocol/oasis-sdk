@@ -392,6 +392,10 @@ const methodDescriptorRuntimeClientGetTxs = createMethodDescriptorUnary<
     types.RuntimeClientGetTxsRequest,
     Uint8Array[]
 >('RuntimeClient', 'GetTxs');
+const methodDescriptorRuntimeClientGetTransactions = createMethodDescriptorUnary<
+    types.RuntimeClientGetTransactionsRequest,
+    Uint8Array[]
+>('RuntimeClient', 'GetTransactions');
 const methodDescriptorRuntimeClientGetEvents = createMethodDescriptorUnary<
     types.RuntimeClientGetEventsRequest,
     types.RuntimeClientEvent[]
@@ -1235,9 +1239,19 @@ export class NodeInternal extends GRPCWrapper {
 
     /**
      * GetTxs fetches all runtime transactions in a given block.
+     *
+     * DEPRECATED: This method is deprecated and may be removed in a future release, use
+     *             `GetTransactions` instead.
      */
     runtimeClientGetTxs(request: types.RuntimeClientGetTxsRequest) {
         return this.callUnary(methodDescriptorRuntimeClientGetTxs, request);
+    }
+
+    /**
+     * GetTransactions fetches all runtime transactions in a given block.
+     */
+    runtimeClientGetTransactions(request: types.RuntimeClientGetTransactionsRequest) {
+        return this.callUnary(methodDescriptorRuntimeClientGetTransactions, request);
     }
 
     /**
