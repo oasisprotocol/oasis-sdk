@@ -2412,6 +2412,7 @@ export interface StakingAddEscrowEvent {
     owner: Uint8Array;
     escrow: Uint8Array;
     amount: Uint8Array;
+    new_shares: Uint8Array;
 }
 
 /**
@@ -2744,6 +2745,7 @@ export interface StakingReclaimEscrowEvent {
     owner: Uint8Array;
     escrow: Uint8Array;
     amount: Uint8Array;
+    shares: Uint8Array;
 }
 
 /**
