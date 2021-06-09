@@ -40,17 +40,17 @@ pub fn register_copy_types(copy_types: &syn::punctuated::Punctuated<syn::Ident, 
         .extend(copy_types.iter().map(|ident| ident.to_string()))
 }
 
-pub fn gen_call_items(methods: &syn::ItemTrait, args: &syn::AttributeArgs) -> TokenStream {
+pub fn gen_call_items(methods: &syn::ItemTrait, args: &[syn::NestedMeta]) -> TokenStream {
     gen_handler_items(methods, args, Handlers::Calls)
 }
 
-pub fn gen_query_items(methods: &syn::ItemTrait, args: &syn::AttributeArgs) -> TokenStream {
+pub fn gen_query_items(methods: &syn::ItemTrait, args: &[syn::NestedMeta]) -> TokenStream {
     gen_handler_items(methods, args, Handlers::Queries)
 }
 
 fn gen_handler_items(
     handlers: &syn::ItemTrait,
-    args: &syn::AttributeArgs,
+    args: &[syn::NestedMeta],
     handlers_kind: Handlers,
 ) -> TokenStream {
     let runtime_module_name = match gen::module_name(match find_meta_key(args, "module_name") {
@@ -86,6 +86,7 @@ fn gen_handler_items(
     );
 
     let client_items = gen_client_items(
+        handlers,
         &handler_methods,
         handlers_kind,
         &runtime_module_name,
@@ -109,6 +110,7 @@ fn gen_module_items(
     let sdk_crate = gen::sdk_crate_path();
 
     let trait_ident = &handlers.ident;
+    let trait_attrs = &handlers.attrs;
     let trait_generics = &handlers.generics;
     let supertraits = &handlers.supertraits;
 
@@ -122,10 +124,12 @@ fn gen_module_items(
         let output_ty = &method.sig.output;
         quote! {
             #(#attrs)*
-            fn #handler_ident<#generics>(
-                ctx: &mut impl #sdk_crate::context::#handler_ctx_ty,
+            fn #handler_ident<Context, #generics>(
+                ctx: &mut Context,
                 #inputs
-            ) #output_ty;
+            ) #output_ty
+            where
+                Context: #sdk_crate::context::#handler_ctx_ty;
         }
     });
 
@@ -180,6 +184,7 @@ fn gen_module_items(
     });
 
     let module_trait = quote! {
+        #(#trait_attrs)*
         pub trait #trait_ident #trait_generics : #supertraits {
             #(#module_handlers)*
 
@@ -208,6 +213,7 @@ fn gen_module_items(
 }
 
 fn gen_client_items(
+    handlers: &syn::ItemTrait,
     handler_methods: &[HandlerMethod<'_>],
     handlers_kind: Handlers,
     runtime_module_name_path: &syn::Expr,
@@ -308,8 +314,10 @@ fn gen_client_items(
         });
 
     let trait_ident = format_ident!("Client{}", handlers_kind.to_string().to_pascal_case());
+    let trait_attrs = &handlers.attrs;
 
     client_items.push(quote! {
+        #(#trait_attrs)*
         #[oasis_client_sdk::async_trait]
         pub trait #trait_ident {
             #(#rpc_signatures;)*
