@@ -62,6 +62,10 @@ const methodDescriptorBeaconConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
     types.BeaconConsensusParameters
 >('Beacon', 'ConsensusParameters');
+const methodDescriptorBeaconGetPVSSState = createMethodDescriptorUnary<
+    types.longnum,
+    types.BeaconPVSSState
+>('Beacon', 'GetPVSSState');
 const methodDescriptorBeaconWatchEpochs = createMethodDescriptorServerStreaming<
     void,
     types.longnum
@@ -239,6 +243,36 @@ const methodDescriptorKeyManagerGetStatuses = createMethodDescriptorUnary<
     types.KeyManagerStatus[]
 >('KeyManager', 'GetStatuses');
 
+// roothash
+const methodDescriptorRootHashGetGenesisBlock = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashBlock
+>('RootHash', 'GetGenesisBlock');
+const methodDescriptorRootHashGetLatestBlock = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashBlock
+>('RootHash', 'GetLatestBlock');
+const methodDescriptorRootHashGetRuntimeState = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashRuntimeState
+>('RootHash', 'GetRuntimeState');
+const methodDescriptorRootHashStateToGenesis = createMethodDescriptorUnary<
+    types.longnum,
+    types.RootHashGenesis
+>('RootHash', 'StateToGenesis');
+const methodDescriptorRootHashGetEvents = createMethodDescriptorUnary<
+    types.longnum,
+    types.RootHashEvent[]
+>('RootHash', 'GetEvents');
+const methodDescriptorRootHashWatchBlocks = createMethodDescriptorServerStreaming<
+    Uint8Array,
+    types.RootHashAnnotatedBlock
+>('RootHash', 'WatchBlocks');
+const methodDescriptorRootHashWatchEvents = createMethodDescriptorServerStreaming<
+    Uint8Array,
+    types.RootHashEvent
+>('RootHash', 'WatchEvents');
+
 // governance
 const methodDescriptorGovernanceActiveProposals = createMethodDescriptorUnary<
     types.longnum,
@@ -316,10 +350,14 @@ const methodDescriptorStorageWorkerGetLastSyncedRound = createMethodDescriptorUn
     types.WorkerStorageGetLastSyncedRoundRequest,
     types.WorkerStorageGetLastSyncedRoundResponse
 >('StorageWorker', 'GetLastSyncedRound');
-const methodDescriptorStorageWorkerForceFinalize = createMethodDescriptorUnary<
-    types.WorkerStorageForceFinalizeRequest,
+const methodDescriptorStorageWorkerWaitForRound = createMethodDescriptorUnary<
+    types.WorkerStorageWaitForRoundRequest,
+    types.WorkerStorageWaitForRoundResponse
+>('StorageWorker', 'WaitForRound');
+const methodDescriptorStorageWorkerPauseCheckpointer = createMethodDescriptorUnary<
+    types.WorkerStoragePauseCheckpointerRequest,
     void
->('StorageWorker', 'ForceFinalize');
+>('StorageWorker', 'PauseCheckpointer');
 
 // runtime/client
 const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorUnary<
@@ -336,15 +374,15 @@ const methodDescriptorRuntimeClientCheckTx = createMethodDescriptorUnary<
 >('RuntimeClient', 'CheckTx');
 const methodDescriptorRuntimeClientGetGenesisBlock = createMethodDescriptorUnary<
     Uint8Array,
-    types.RoothashBlock
+    types.RootHashBlock
 >('RuntimeClient', 'GetGenesisBlock');
 const methodDescriptorRuntimeClientGetBlock = createMethodDescriptorUnary<
     types.RuntimeClientGetBlockRequest,
-    types.RoothashBlock
+    types.RootHashBlock
 >('RuntimeClient', 'GetBlock');
 const methodDescriptorRuntimeClientGetBlockByHash = createMethodDescriptorUnary<
     types.RuntimeClientGetBlockByHashRequest,
-    types.RoothashBlock
+    types.RootHashBlock
 >('RuntimeClient', 'GetBlockByHash');
 const methodDescriptorRuntimeClientGetTx = createMethodDescriptorUnary<
     types.RuntimeClientGetTxRequest,
@@ -358,6 +396,10 @@ const methodDescriptorRuntimeClientGetTxs = createMethodDescriptorUnary<
     types.RuntimeClientGetTxsRequest,
     Uint8Array[]
 >('RuntimeClient', 'GetTxs');
+const methodDescriptorRuntimeClientGetTransactions = createMethodDescriptorUnary<
+    types.RuntimeClientGetTransactionsRequest,
+    Uint8Array[]
+>('RuntimeClient', 'GetTransactions');
 const methodDescriptorRuntimeClientGetEvents = createMethodDescriptorUnary<
     types.RuntimeClientGetEventsRequest,
     types.RuntimeClientEvent[]
@@ -380,7 +422,7 @@ const methodDescriptorRuntimeClientWaitBlockIndexed = createMethodDescriptorUnar
 >('RuntimeClient', 'WaitBlockIndexed');
 const methodDescriptorRuntimeClientWatchBlocks = createMethodDescriptorServerStreaming<
     Uint8Array,
-    types.RoothashAnnotatedBlock
+    types.RootHashAnnotatedBlock
 >('RuntimeClient', 'WatchBlocks');
 
 // enclaverpc
@@ -621,6 +663,16 @@ export class NodeInternal extends GRPCWrapper {
      */
     beaconConsensusParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorBeaconConsensusParameters, height);
+    }
+
+    /**
+     * GetPVSSState gets the PVSS beacon round state for the
+     * provided block height.  Calling this method with height
+     * `consensus.HeightLatest` should return the beacon for
+     * the latest finalized block.
+     */
+    beaconGetPVSSState(height: types.longnum) {
+        return this.callUnary(methodDescriptorBeaconGetPVSSState, height);
     }
 
     /**
@@ -956,6 +1008,29 @@ export class NodeInternal extends GRPCWrapper {
         return this.callUnary(methodDescriptorKeyManagerGetStatuses, height);
     }
 
+    // roothash
+    rootHashGetGenesisBlock(request: types.RootHashRuntimeRequest) {
+        return this.callUnary(methodDescriptorRootHashGetGenesisBlock, request);
+    }
+    rootHashGetLatestBlock(request: types.RootHashRuntimeRequest) {
+        return this.callUnary(methodDescriptorRootHashGetLatestBlock, request);
+    }
+    rootHashGetRuntimeState(request: types.RootHashRuntimeRequest) {
+        return this.callUnary(methodDescriptorRootHashGetRuntimeState, request);
+    }
+    rootHashHashStateToGenesis(height: types.longnum) {
+        return this.callUnary(methodDescriptorRootHashStateToGenesis, height);
+    }
+    rootHashHashGetEvents(height: types.longnum) {
+        return this.callUnary(methodDescriptorRootHashGetEvents, height);
+    }
+    rootHashWatchBlocks(runtimeID: Uint8Array) {
+        return this.callServerStreaming(methodDescriptorRootHashWatchBlocks, runtimeID);
+    }
+    rootHashWatchEvents(runtimeID: Uint8Array) {
+        return this.callServerStreaming(methodDescriptorRootHashWatchEvents, runtimeID);
+    }
+
     // governance
 
     /**
@@ -1099,10 +1174,19 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * ForceFinalize forces finalization of a specific round.
+     * WaitForRound waits until the storage worker syncs the given round or root.
+     * It returns the round synced to; this will typically equal the given root's
+     * round, but may be higher.
      */
-    storageWorkerForceFinalize(request: types.WorkerStorageForceFinalizeRequest) {
-        return this.callUnary(methodDescriptorStorageWorkerForceFinalize, request);
+    storageWorkerWaitForRound(request: types.WorkerStorageWaitForRoundRequest) {
+        return this.callUnary(methodDescriptorStorageWorkerWaitForRound, request);
+    }
+
+    /**
+     * PauseCheckpointer pauses or unpauses the storage worker's checkpointer.
+     */
+    storageWorkerPauseCheckpointer(request: types.WorkerStoragePauseCheckpointerRequest) {
+        return this.callUnary(methodDescriptorStorageWorkerPauseCheckpointer, request);
     }
 
     // runtime/client
@@ -1168,9 +1252,19 @@ export class NodeInternal extends GRPCWrapper {
 
     /**
      * GetTxs fetches all runtime transactions in a given block.
+     *
+     * DEPRECATED: This method is deprecated and may be removed in a future release, use
+     *             `GetTransactions` instead.
      */
     runtimeClientGetTxs(request: types.RuntimeClientGetTxsRequest) {
         return this.callUnary(methodDescriptorRuntimeClientGetTxs, request);
+    }
+
+    /**
+     * GetTransactions fetches all runtime transactions in a given block.
+     */
+    runtimeClientGetTransactions(request: types.RuntimeClientGetTransactionsRequest) {
+        return this.callUnary(methodDescriptorRuntimeClientGetTransactions, request);
     }
 
     /**

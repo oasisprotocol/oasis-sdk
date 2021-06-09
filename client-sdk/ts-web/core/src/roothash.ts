@@ -173,14 +173,14 @@ export async function openExecutorCommitment(
         EXECUTOR_SIGNATURE_CONTEXT,
         chainContext,
     )} for runtime ${misc.toHex(runtimeID)}`;
-    return misc.fromCBOR(await signature.openSigned(context, signed)) as types.RoothashComputeBody;
+    return misc.fromCBOR(await signature.openSigned(context, signed)) as types.RootHashComputeBody;
 }
 
 export async function signExecutorCommitment(
     signer: signature.ContextSigner,
     chainContext: string,
     runtimeID: Uint8Array,
-    computeBody: types.RoothashComputeBody,
+    computeBody: types.RootHashComputeBody,
 ) {
     const context = `${signature.combineChainContext(
         EXECUTOR_SIGNATURE_CONTEXT,
@@ -191,7 +191,7 @@ export async function signExecutorCommitment(
 
 export async function verifyComputeResultsHeader(
     rakPub: Uint8Array,
-    header: types.RoothashComputeResultsHeader,
+    header: types.RootHashComputeResultsHeader,
     rakSig: Uint8Array,
 ) {
     return await signature.verify(
@@ -204,7 +204,7 @@ export async function verifyComputeResultsHeader(
 
 export async function signComputeResultsHeader(
     rakSigner: signature.ContextSigner,
-    header: types.RoothashComputeResultsHeader,
+    header: types.RootHashComputeResultsHeader,
 ) {
     return await rakSigner.sign(COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT, misc.toCBOR(header));
 }
@@ -220,14 +220,14 @@ export async function openProposedBatch(
     )} for runtime ${misc.toHex(runtimeID)}`;
     return misc.fromCBOR(
         await signature.openSigned(context, signed),
-    ) as types.RoothashProposedBatch;
+    ) as types.RootHashProposedBatch;
 }
 
 export async function signProposedBatch(
     signer: signature.ContextSigner,
     chainContext: string,
     runtimeID: Uint8Array,
-    proposedBatch: types.RoothashProposedBatch,
+    proposedBatch: types.RootHashProposedBatch,
 ) {
     const context = `${signature.combineChainContext(
         PROPOSED_BATCH_SIGNATURE_CONTEXT,
@@ -237,15 +237,15 @@ export async function signProposedBatch(
 }
 
 export function executorCommitWrapper() {
-    return new consensus.TransactionWrapper<types.RoothashExecutorCommit>(METHOD_EXECUTOR_COMMIT);
+    return new consensus.TransactionWrapper<types.RootHashExecutorCommit>(METHOD_EXECUTOR_COMMIT);
 }
 
 export function executorProposerTimeoutWrapper() {
-    return new consensus.TransactionWrapper<types.RoothashExecutorProposerTimeoutRequest>(
+    return new consensus.TransactionWrapper<types.RootHashExecutorProposerTimeoutRequest>(
         METHOD_EXECUTOR_PROPOSER_TIMEOUT,
     );
 }
 
 export function evidenceWrapper() {
-    return new consensus.TransactionWrapper<types.RoothashEvidence>(METHOD_EVIDENCE);
+    return new consensus.TransactionWrapper<types.RootHashEvidence>(METHOD_EVIDENCE);
 }

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased changes
+
+Breaking changes:
+
+- It's official, `RootHash` is spelled with a capital "H."
+  To celebrate, we're going to break all your references.
+  Yay.
+
+New features:
+
+- Compatibility with oasis-core is updated to 21.2.
+
 ## v0.1.0-alpha2
 
 Spotlight change:
