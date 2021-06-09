@@ -1,5 +1,5 @@
 //! Accounts module.
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, convert::TryInto};
 
 use num_traits::Zero;
 use once_cell::sync::Lazy;
@@ -521,6 +521,10 @@ impl module::AuthHandler for Module {
                 .add(&tx.auth_info.fee.amount);
 
             // TODO: Emit event that fee has been paid.
+
+            let gas_price = &tx.auth_info.fee.gas_price();
+            // Bump transaction priority.
+            Core::add_priority(ctx, gas_price.try_into().unwrap_or(u64::MAX))?;
         }
         Ok(())
     }

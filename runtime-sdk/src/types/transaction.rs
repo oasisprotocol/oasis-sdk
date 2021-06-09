@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use oasis_core_runtime::common::cbor;
+use oasis_core_runtime::common::{cbor, quantity::Quantity};
 
 use crate::{
     crypto::{
@@ -11,6 +11,9 @@ use crate::{
     },
     types::{address::Address, token},
 };
+
+// Re-export TransactionWeight type.
+pub use oasis_core_runtime::types::TransactionWeight;
 
 /// Transaction signature domain separation context base.
 pub const SIGNATURE_CONTEXT_BASE: &[u8] = b"oasis-runtime-sdk/tx: v0";
@@ -135,6 +138,14 @@ pub struct Fee {
     pub gas: u64,
 }
 
+impl Fee {
+    /// Caculates gas price from fee amount and gas.
+    pub fn gas_price(&self) -> Quantity {
+        let amount = self.amount.amount().clone();
+        let gas: Quantity = self.gas.into();
+        amount.checked_div(&gas).unwrap_or_default()
+    }
+}
 /// Common information that specifies an address as well as how to authenticate.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -229,5 +240,67 @@ impl CallResult {
             CallResult::Ok(_) => true,
             CallResult::Failed { .. } => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use num_traits::Zero;
+
+    use crate::types::token::{BaseUnits, Denomination};
+
+    use super::*;
+
+    #[test]
+    fn test_fee_gas_price() {
+        let fee = Fee {
+            amount: Default::default(),
+            gas: 0,
+        };
+        assert_eq!(
+            Quantity::zero(),
+            fee.gas_price(),
+            "empty fee - gas price should be zero",
+        );
+
+        let fee = Fee {
+            amount: Default::default(),
+            gas: 100,
+        };
+        assert_eq!(
+            Quantity::zero(),
+            fee.gas_price(),
+            "empty fee amount - gas price should be zero",
+        );
+
+        let fee = Fee {
+            amount: BaseUnits::new(1_000.into(), Denomination::NATIVE),
+            gas: 0,
+        };
+        assert_eq!(
+            Quantity::zero(),
+            fee.gas_price(),
+            "empty fee 0 - gas price should be zero",
+        );
+
+        let fee = Fee {
+            amount: BaseUnits::new(1_000.into(), Denomination::NATIVE),
+            gas: 10_000,
+        };
+        assert_eq!(
+            Quantity::zero(),
+            fee.gas_price(),
+            "non empty fee - gas price should be zero"
+        );
+
+        let fee = Fee {
+            amount: BaseUnits::new(1_000.into(), Denomination::NATIVE),
+            gas: 500,
+        };
+        assert_eq!(
+            Quantity::from(2),
+            fee.gas_price(),
+            "non empty fee - gas price should match"
+        );
     }
 }

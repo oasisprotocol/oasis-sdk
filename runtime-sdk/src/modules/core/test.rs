@@ -1,15 +1,19 @@
+use std::collections::BTreeMap;
+
+use oasis_core_runtime::types::BATCH_WEIGHT_LIMIT_QUERY_METHOD;
+
 use crate::{
     context::{BatchContext, Context, Mode, TxContext},
     core::common::{cbor, version::Version},
     crypto::multisig,
-    module,
-    module::{AuthHandler as _, Module as _},
+    dispatcher, module,
+    module::{AuthHandler as _, BlockHandler, Module as _},
     runtime::Runtime,
     testing::{keys, mock},
-    types::{token, transaction},
+    types::{token, transaction, transaction::TransactionWeight},
 };
 
-use super::{Module as Core, API as _};
+use super::{Module as Core, API as _, GAS_WEIGHT_NAME};
 
 #[test]
 fn test_use_gas() {
@@ -221,4 +225,160 @@ fn test_approve_unverified_tx() {
         ),
     )
     .expect_err("multisig too many signers");
+}
+
+#[test]
+fn test_add_priority() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    assert_eq!(
+        0,
+        Core::take_priority(&mut ctx),
+        "default priority should be 0"
+    );
+
+    Core::add_priority(&mut ctx, 1).expect("adding priority should succeed");
+    Core::add_priority(&mut ctx, 11).expect("adding priority should succeed");
+
+    let tx = mock::transaction();
+    ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+        Core::add_priority(&mut tx_ctx, 10)
+            .expect("adding priority from tx context should succeed");
+    });
+
+    assert_eq!(
+        22,
+        Core::take_priority(&mut ctx),
+        "adding priority should work"
+    );
+}
+
+#[test]
+fn test_add_priority_overflow() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    Core::add_priority(&mut ctx, u64::MAX).expect("adding priority should succeed");
+    Core::add_priority(&mut ctx, u64::MAX).expect("adding priority should succeed");
+
+    assert_eq!(
+        u64::MAX,
+        Core::take_priority(&mut ctx),
+        "adding priority should work"
+    );
+}
+
+#[test]
+fn test_add_weights() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    assert!(
+        Core::take_weights(&mut ctx).is_empty(),
+        "default weights should be empty"
+    );
+
+    let tx = mock::transaction();
+    ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+        Core::add_weight(&mut tx_ctx, "test_weight".into(), 1)
+            .expect("adding weight should succeed");
+        Core::add_weight(&mut tx_ctx, "test_weight2".into(), 10)
+            .expect("adding weight should succeed");
+        Core::add_weight(&mut tx_ctx, "test_weight".into(), 15)
+            .expect("adding weight should succeed");
+        Core::add_weight(&mut tx_ctx, "test_weight3".into(), 20)
+            .expect("adding weight should succeed");
+        Core::add_weight(&mut tx_ctx, "test_weight4".into(), u64::MAX)
+            .expect("adding weight should succeed");
+        Core::add_weight(&mut tx_ctx, "test_weight4".into(), 5)
+            .expect("adding weight should succeed");
+    });
+
+    let mut expected = BTreeMap::new();
+    expected.insert("test_weight".into(), 1 + 15);
+    expected.insert("test_weight2".into(), 10);
+    expected.insert("test_weight3".into(), 20);
+    expected.insert("test_weight4".into(), u64::MAX);
+
+    assert_eq!(
+        expected,
+        Core::take_weights(&mut ctx),
+        "adding weights should work"
+    );
+}
+
+#[test]
+fn test_get_batch_weight_limits() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+
+    // Empty max batch gas.
+    let mut expected = BTreeMap::new();
+    expected.insert(GAS_WEIGHT_NAME.into(), 0);
+
+    assert_eq!(
+        expected,
+        Core::get_block_weight_limits(&mut ctx),
+        "querying empty weights limits should work"
+    );
+
+    // Update max_batch_gas.
+    Core::set_params(
+        ctx.runtime_state(),
+        &super::Parameters {
+            max_batch_gas: 100,
+            ..Default::default()
+        },
+    );
+    expected.insert(GAS_WEIGHT_NAME.into(), 100);
+    assert_eq!(
+        expected,
+        Core::get_block_weight_limits(&mut ctx),
+        "querying weights limits should work"
+    );
+}
+
+#[test]
+fn test_get_batch_weight_limits_query() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+
+    // Empty max batch gas.
+    let mut expected: BTreeMap<TransactionWeight, u64> = BTreeMap::new();
+    expected.insert(GAS_WEIGHT_NAME.into(), 0);
+
+    let res = dispatcher::Dispatcher::<GasWasterRuntime>::dispatch_query(
+        &mut ctx,
+        BATCH_WEIGHT_LIMIT_QUERY_METHOD,
+        cbor::Value::Null,
+    )
+    .expect("batch weight limit query should work");
+    assert_eq!(
+        expected,
+        cbor::from_value(res).unwrap(),
+        "querying empty weights should return correct limits"
+    );
+
+    // Update max_batch_gas.
+    Core::set_params(
+        ctx.runtime_state(),
+        &super::Parameters {
+            max_batch_gas: 100,
+            ..Default::default()
+        },
+    );
+    expected.insert(GAS_WEIGHT_NAME.into(), 100);
+
+    let res = dispatcher::Dispatcher::<GasWasterRuntime>::dispatch_query(
+        &mut ctx,
+        BATCH_WEIGHT_LIMIT_QUERY_METHOD,
+        cbor::Value::Null,
+    )
+    .expect("batch weight limit query should work");
+    assert_eq!(
+        expected,
+        cbor::from_value(res).unwrap(),
+        "querying weights should return correct limits"
+    );
 }

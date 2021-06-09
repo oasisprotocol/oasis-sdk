@@ -18,7 +18,7 @@ use oasis_core_runtime::{
         tags::Tags,
         types::TxnBatch,
     },
-    types::CheckTxResult,
+    types::{CheckTxMetadata, CheckTxResult, BATCH_WEIGHT_LIMIT_QUERY_METHOD},
 };
 
 use crate::{
@@ -26,8 +26,10 @@ use crate::{
     error::{Error as _, RuntimeError},
     module::{self, AuthHandler, BlockHandler, MethodHandler},
     modules,
+    modules::core::API as _,
     runtime::Runtime,
     storage, types,
+    types::transaction::TransactionWeight,
 };
 
 /// Unique module name.
@@ -48,8 +50,14 @@ pub enum Error {
 
 /// Result of dispatching a transaction.
 pub struct DispatchResult {
+    /// Transaction call result.
     pub result: types::transaction::CallResult,
+    /// Transaction tags.
     pub tags: Tags,
+    /// Transaction priority.
+    pub priority: u64,
+    /// Transaction weights.
+    pub weights: BTreeMap<TransactionWeight, u64>,
 }
 
 impl From<types::transaction::CallResult> for DispatchResult {
@@ -57,6 +65,8 @@ impl From<types::transaction::CallResult> for DispatchResult {
         Self {
             result: v,
             tags: Tags::new(),
+            priority: 0,
+            weights: BTreeMap::new(),
         }
     }
 }
@@ -131,10 +141,22 @@ impl<R: Runtime> Dispatcher<R> {
                 return (result.into(), Vec::new());
             }
 
+            // Load priority, weights.
+            let priority = modules::core::Module::take_priority(&mut ctx);
+            let weights = modules::core::Module::take_weights(&mut ctx);
+
             // Commit store and return emitted tags and messages.
             let (tags, messages) = ctx.commit();
 
-            (DispatchResult { result, tags }, messages)
+            (
+                DispatchResult {
+                    result,
+                    tags,
+                    priority,
+                    weights,
+                },
+                messages,
+            )
         });
 
         // Forward any emitted messages.
@@ -160,10 +182,14 @@ impl<R: Runtime> Dispatcher<R> {
             }
         };
 
-        match Self::dispatch_tx(ctx, tx)?.result {
-            types::transaction::CallResult::Ok(value) => Ok(CheckTxResult {
+        let dispatch = Self::dispatch_tx(ctx, tx)?;
+        match dispatch.result {
+            types::transaction::CallResult::Ok(_value) => Ok(CheckTxResult {
                 error: Default::default(),
-                meta: Some(value),
+                meta: Some(CheckTxMetadata {
+                    priority: dispatch.priority,
+                    weights: Some(dispatch.weights),
+                }),
             }),
 
             types::transaction::CallResult::Failed {
@@ -249,6 +275,25 @@ impl<R: Runtime> Dispatcher<R> {
         ));
         store.insert(&modules::core::state::MESSAGE_HANDLERS, &message_handlers);
     }
+
+    /// Process the given runtime query.
+    pub fn dispatch_query<C: BatchContext>(
+        ctx: &mut C,
+        method: &str,
+        args: cbor::Value,
+    ) -> Result<cbor::Value, RuntimeError> {
+        // Execute the query.
+        match method {
+            // Internal methods.
+            BATCH_WEIGHT_LIMIT_QUERY_METHOD => {
+                let block_weight_limits = R::Modules::get_block_weight_limits(ctx);
+                Ok(cbor::to_value(block_weight_limits))
+            }
+            // Runtime methods.
+            _ => R::Modules::dispatch_query(ctx, method, args)
+                .ok_or(modules::core::Error::InvalidMethod)?,
+        }
+    }
 }
 
 impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
@@ -282,6 +327,9 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Run end block hooks.
             R::Modules::end_block(&mut ctx);
 
+            // Query block weight limits for next round.
+            let block_weight_limits = R::Modules::get_block_weight_limits(&mut ctx);
+
             // Commit the context and retrieve the emitted messages.
             let (block_tags, messages) = ctx.commit();
             let (messages, handlers) = messages.into_iter().unzip();
@@ -293,6 +341,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                 results,
                 messages,
                 block_tags,
+                batch_weight_limits: Some(block_weight_limits),
             })
         })
     }
@@ -342,9 +391,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Perform state migrations if required.
             R::migrate(&mut ctx);
 
-            // Execute the query.
-            R::Modules::dispatch_query(&mut ctx, method, args)
-                .ok_or(modules::core::Error::InvalidMethod)?
+            Self::dispatch_query(&mut ctx, method, args)
         })
     }
 }

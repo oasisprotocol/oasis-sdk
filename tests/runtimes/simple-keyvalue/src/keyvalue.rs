@@ -140,10 +140,6 @@ impl sdk::module::MethodHandler for Module {
 impl Module {
     /// Insert given keyvalue into storage.
     fn tx_insert<C: TxContext>(ctx: &mut C, body: types::KeyValue) -> Result<(), Error> {
-        if ctx.is_check_only() {
-            return Ok(());
-        }
-
         let params = Self::params(ctx.runtime_state());
 
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
@@ -154,6 +150,10 @@ impl Module {
         };
         // We must drop ts and store so that use_gas can borrow ctx.
         Core::use_tx_gas(ctx, cost)?;
+
+        if ctx.is_check_only() {
+            return Ok(());
+        }
 
         // Recreate store and ts after we get ctx back
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
@@ -166,10 +166,6 @@ impl Module {
 
     /// Remove keyvalue from storage using given key.
     fn tx_remove<C: TxContext>(ctx: &mut C, body: types::Key) -> Result<(), Error> {
-        if ctx.is_check_only() {
-            return Ok(());
-        }
-
         let params = Self::params(ctx.runtime_state());
 
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
@@ -180,6 +176,10 @@ impl Module {
         };
         // We must drop ts and store so that use_gas can borrow ctx.
         Core::use_tx_gas(ctx, cost)?;
+
+        if ctx.is_check_only() {
+            return Ok(());
+        }
 
         // Recreate store and ts after we get ctx back
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);

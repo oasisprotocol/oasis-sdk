@@ -18,7 +18,7 @@ use crate::{
         address::Address,
         message::{MessageEvent, MessageEventHookInvocation, MessageResult},
         token,
-        transaction::CallResult,
+        transaction::{CallResult, TransactionWeight},
     },
 };
 
@@ -90,14 +90,14 @@ pub struct Genesis {
 /// Interface that can be called from other modules.
 pub trait API {
     /// Deposit an amount into the runtime account.
-    fn deposit<C: Context>(
+    fn deposit<C: TxContext>(
         ctx: &mut C,
         from: Address,
         amount: token::BaseUnits,
     ) -> Result<(), Error>;
 
     /// Withdraw an amount out from the runtime account.
-    fn withdraw<C: Context>(
+    fn withdraw<C: TxContext>(
         ctx: &mut C,
         to: Address,
         amount: token::BaseUnits,
@@ -119,12 +119,15 @@ const CONSENSUS_WITHDRAW_HANDLER: &str = "consensus.WithdrawIntoRuntime";
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
     for Module<Accounts, Consensus>
 {
-    fn deposit<C: Context>(
+    fn deposit<C: TxContext>(
         ctx: &mut C,
         from: Address,
         amount: token::BaseUnits,
     ) -> Result<(), Error> {
         if ctx.is_check_only() {
+            // In case this is not check only this weight will be emitted from Cosnensus::withdraw
+            // bellow.
+            Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
             return Ok(());
         }
 
@@ -150,12 +153,15 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         Ok(())
     }
 
-    fn withdraw<C: Context>(
+    fn withdraw<C: TxContext>(
         ctx: &mut C,
         to: Address,
         amount: token::BaseUnits,
     ) -> Result<(), Error> {
         if ctx.is_check_only() {
+            // In case this is not check only this weight will be emitted from Cosnensus::transfer
+            // bellow.
+            Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
             return Ok(());
         }
 
