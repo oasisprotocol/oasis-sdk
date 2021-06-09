@@ -7,6 +7,3 @@ license = "Apache-2.0"
 
 [dependencies]
 oasis-runtime-sdk = { path = "../../../runtime-sdk" }
-
-serde = { version = "1.0.118", features = ["derive"] }
-thiserror = "1.0"

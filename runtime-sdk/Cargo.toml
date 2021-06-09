@@ -28,3 +28,4 @@ slog = "2.7.0"
 
 [features]
 default = ["oasis-runtime-sdk-macros"]
+unsafe-allow-debug = []
