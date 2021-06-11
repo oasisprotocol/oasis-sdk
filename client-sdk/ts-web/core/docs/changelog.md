@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased changes
+## v0.1.0-alpha4
 
-Bug fixes:
+Spotlight change:
 
 - We need bech32 at runtime.
   Corrected that in our package.json.
