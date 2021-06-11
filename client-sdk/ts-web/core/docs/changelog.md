@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.0-alpha4
+
+Spotlight change:
+
+- We need bech32 at runtime.
+  Corrected that in our package.json.
+
 ## v0.1.0-alpha3
 
 Spotlight change:
@@ -17,6 +24,19 @@ Breaking changes:
 Spotlight change:
 
 - A new `hdkey` module implements ADR 0008 key generation.
+  The implementation uses `Buffer` and `stream`, so you'll need the following
+  in your configs if you use Webpack like we do:
+  ```js
+  {
+      resolve: { fallback: { stream: require.resolve('stream-browserify') } },
+      plugins: [
+          new webpack.ProvidePlugin({
+              process: 'process/browser',
+              Buffer: ['buffer', 'Buffer'],
+          }),
+      ]
+  }
+  ```
 
 New features:
 
