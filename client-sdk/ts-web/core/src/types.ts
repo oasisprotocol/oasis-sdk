@@ -2607,6 +2607,23 @@ export interface StakingDebondingDelegationInfo extends StakingDebondingDelegati
 }
 
 /**
+ * DebondingStartEvent is the event emitted when the debonding process has
+ * started and the given number of active shares have been moved into the
+ * debonding pool and started debonding.
+ *
+ * Note that the given amount is valid at the time of debonding start and
+ * may not correspond to the final debonded amount in case any escrowed
+ * stake is subject to slashing.
+ */
+export interface StakingDebondingStartEscrowEvent {
+    owner: Uint8Array;
+    escrow: Uint8Array;
+    amount: Uint8Array;
+    active_shares: Uint8Array;
+    debonding_shares: Uint8Array;
+}
+
+/**
  * Delegation is a delegation descriptor.
  */
 export interface StakingDelegation {
@@ -2647,6 +2664,7 @@ export interface StakingEscrowAccount {
 export interface StakingEscrowEvent {
     add?: StakingAddEscrowEvent;
     take?: StakingTakeEscrowEvent;
+    debonding_start?: StakingDebondingStartEscrowEvent;
     reclaim?: StakingReclaimEscrowEvent;
 }
 
