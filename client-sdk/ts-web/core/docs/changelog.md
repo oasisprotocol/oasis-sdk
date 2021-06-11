@@ -10,7 +10,7 @@ Breaking changes:
 
 New features:
 
-- Compatibility with oasis-core is updated to 21.2.
+- Compatibility with oasis-core is updated to 21.2.1.
 
 ## v0.1.0-alpha2
 
