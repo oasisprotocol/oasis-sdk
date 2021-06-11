@@ -1,10 +1,10 @@
 # Changelog
 
-## Unreleased changes
+## v0.2.0-alpha2
 
-New features:
+Spotlight change:
 
-- We added bindings for runtime gas accounting.
+- We made unitemized changes to track the (unversioned) runtime SDK itself.
 
 ## v0.2.0-alpha1
 

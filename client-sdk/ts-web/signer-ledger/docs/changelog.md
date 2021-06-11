@@ -1,11 +1,16 @@
 # Changelog
 
-## Unreleased changes
+## v0.1.0-alpha2
+
+Spotlight change:
+
+- The new `LedgerContextSigner.fromTransport` lets you bring your own
+  transport object.
 
 New features:
 
-- The new `LedgerContextSigner.fromTransport` lets you bring your own transport object.
-- Errors from Ledger now come as `LedgerCodeError` with a `returnCode` property.
+- Errors from Ledger now come as `LedgerCodeError` with a `returnCode`
+  property.
 
 Bug fixes:
 
