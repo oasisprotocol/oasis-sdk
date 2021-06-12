@@ -5,14 +5,14 @@ use oasis_runtime_sdk::core::{common::namespace::Namespace, consensus::roothash:
 
 macro_rules! grpc_methods {
     ($(
-        $name:ident$(<$lifetime:lifetime>)?({
+        $namespace:ident.$name:ident$(<$lifetime:lifetime>)?($({
             $($arg_name:ident: $arg_ty:ty),* $(,)?
-        }) -> $res_ty:ty;
+        })?) -> $res_ty:ty;
     )*) => {
         paste::paste!{$(
             #[derive(Clone, Debug, Serialize, Deserialize)]
             pub(crate) struct [<$name Request>]$(<$lifetime>)? {
-                $(pub(crate) $arg_name: $arg_ty),*
+                $($(pub(crate) $arg_name: $arg_ty),*)?
             }
             impl Request for [<$name Request>] {
                 type Request = Self;
@@ -23,7 +23,7 @@ macro_rules! grpc_methods {
                 }
 
                 fn path() -> &'static str {
-                    concat!("/oasis-core.RuntimeClient/", stringify!($name))
+                    concat!("/oasis-core.", stringify!($namespace), "/", stringify!($name))
                 }
             }
         )*}
@@ -42,20 +42,22 @@ pub(crate) trait Request {
 }
 
 grpc_methods! {
-    SubmitTx({
+    RuntimeClient.SubmitTx({
         runtime_id: Namespace,
         data: ByteBuf,
     }) -> ByteBuf;
 
-    Query({
+    RuntimeClient.Query({
         runtime_id: Namespace,
         round: u64,
         method: String,
         data: ByteBuf,
     }) -> ByteBuf;
 
-    GetBlock({
+    RuntimeClient.GetBlock({
         runtime_id: Namespace,
         round: u64,
     }) -> Block;
+
+    Consensus.GetChainContext() -> ByteBuf;
 }
