@@ -1,50 +1,57 @@
-use tonic;
-use tower;
-
 use std::{marker::PhantomData, sync::Arc};
 
 use bytes::{Buf as _, BufMut as _};
+use futures_util::future::try_join_all;
 use serde::{de::DeserializeOwned, ser::Serialize};
 use serde_bytes::ByteBuf;
+use tonic::{self, client::Grpc, transport::Channel};
 
 use oasis_runtime_sdk::{
     self as sdk,
     core::common::{cbor, namespace::Namespace},
-    types::transaction::{AuthInfoRef, CallRef, Fee, TransactionRef, LATEST_TRANSACTION_VERSION},
+    types::transaction::{
+        AuthInfoRef, CallRef, Fee, SignerInfoRef, TransactionRef, LATEST_TRANSACTION_VERSION,
+    },
 };
 
 use crate::{
-    requests::{Request, SubmitTxRequest},
-    signer::Signer,
+    requests::{GetChainContextRequest, Request, SubmitTxRequest},
+    wallet::Wallet,
 };
 
-#[derive(Clone, Debug)]
-pub struct Client<S> {
-    inner: tonic::client::Grpc<tonic::transport::Channel>, // Cheap to `Clone`, so no `Arc`
+#[derive(Clone)]
+pub struct Client {
+    inner: Grpc<Channel>, // Cheap to `Clone`, so no `Arc`
     runtime_id: Namespace,
-    signer: Arc<S>,
+    wallets: Arc<Vec<Arc<dyn Wallet>>>,
     fee: Arc<Fee>, // Can be expensive to clone if large `quantitity` or `denomination` name.
+    chain_context: Vec<u8>,
 }
 
-impl<S: Signer> Client<S> {
+impl Client {
     /// Connects to the oasis-node listening on Unix socket at `sock_path` communicating
     /// with the identified runtime. Transactions will be signed by the `signer`.
     /// Do remember to call `set_fee` as appropriate before making the first call.
     pub async fn connect(
         sock_path: impl AsRef<std::path::Path> + Clone + Send + Sync + 'static,
         runtime_id: Namespace,
-        signer: S,
-    ) -> Result<Self, tonic::transport::Error> {
-        let channel = tonic::transport::Channel::from_static("*") // Unused, but required to be a URI.
-            .connect_with_connector(tower::service_fn(move |_| {
-                tokio::net::UnixStream::connect(sock_path.clone())
-            }))
-            .await?;
+        wallets: impl IntoIterator<Item = Box<dyn Wallet>>,
+    ) -> Result<Self, Error> {
+        let channel = tonic::transport::Channel::from_static(
+            "*", /* Unused, but required to be a URI. */
+        )
+        .connect_with_connector(tower::service_fn(move |_| {
+            tokio::net::UnixStream::connect(sock_path.clone())
+        }))
+        .await?;
+        let mut grpc = Grpc::new(channel);
+        let chain_context = Self::make_unary(&mut grpc, GetChainContextRequest {}).await?;
         Ok(Self {
-            inner: tonic::client::Grpc::new(channel),
+            inner: grpc,
             runtime_id,
-            signer: Arc::new(signer),
+            wallets: Arc::new(wallets.into_iter().map(Arc::from).collect()),
             fee: Default::default(),
+            chain_context: chain_context.to_vec(),
         })
     }
 
@@ -59,27 +66,53 @@ impl<S: Signer> Client<S> {
 
     /// Sends transaction to scheduler.
     pub async fn tx(&mut self, method: &str, body: &cbor::Value) -> Result<Vec<u8>, Error> {
+        let nonces = try_join_all(self.wallets.iter().map(|wallet| wallet.next_nonce()))
+            .await
+            .map_err(Error::Wallet)?;
+        let signer_info = self
+            .wallets
+            .iter()
+            .zip(nonces.into_iter())
+            .map(|(wallet, nonce)| SignerInfoRef {
+                address_spec: wallet.address(),
+                nonce,
+            })
+            .collect();
         let tx = TransactionRef {
             version: LATEST_TRANSACTION_VERSION,
             call: CallRef { method, body },
             auth_info: AuthInfoRef {
-                signer_info: self.signer.info(),
+                signer_info,
                 fee: &self.fee,
             },
         };
+        let serialized_tx = cbor::to_vec(&tx);
+        let auth_proofs = try_join_all(
+            self.wallets
+                .iter()
+                .map(|wallet| wallet.sign(&self.chain_context, &serialized_tx)),
+        )
+        .await
+        .map_err(Error::Wallet)?;
         let req = SubmitTxRequest {
             runtime_id: self.runtime_id,
-            data: ByteBuf::from(cbor::to_vec(&(cbor::to_vec(&tx), self.signer.sign(tx)?))),
+            data: ByteBuf::from(cbor::to_vec(&(serialized_tx, auth_proofs))),
         };
         Ok(self.unary(req).await?.into_vec())
     }
 
-    async fn unary<M: Request>(&mut self, req: M) -> Result<M::Response, Error> {
-        Ok(self
-            .inner
+    async fn unary<R: Request>(&mut self, req: R) -> Result<R::Response, Error> {
+        Self::make_unary(&mut self.inner, req).await
+    }
+
+    async fn make_unary<R: Request>(
+        channel: &mut Grpc<Channel>,
+        req: R,
+    ) -> Result<R::Response, Error> {
+        Ok(channel
             .unary(
                 tonic::Request::new(cbor::to_vec(&req.body())),
-                M::path().parse().unwrap(),
+                R::path().parse().unwrap(),
                 CborCodec::default(),
             )
             .await?
@@ -95,7 +128,7 @@ pub enum Error {
 
     /// A signer error occured.
     #[error(transparent)]
-    Signature(#[from] crate::signer::Error),
+    Wallet(#[from] anyhow::Error),
 
     /// An error occured in the RPC protocol.
     /// This error can be returned when a transaction was not included in a block (timeout error),
@@ -180,7 +213,8 @@ impl<T: Serialize + Send + Sync> tonic::codec::Encoder for CborEncoder<T> {
         item: Self::Item,
         dst: &mut tonic::codec::EncodeBuf<'_>,
     ) -> Result<(), Self::Error> {
-        Ok(cbor::to_writer(dst.writer(), &item))
+        cbor::to_writer(dst.writer(), &item);
+        Ok(())
     }
 }
 

@@ -168,7 +168,7 @@ pub struct AuthInfo {
 #[doc(hidden)]
 pub struct AuthInfoRef<'a> {
     #[serde(rename = "si")]
-    pub signer_info: &'a [SignerInfo],
+    pub signer_info: Vec<SignerInfoRef<'a>>,
 
     #[serde(rename = "fee")]
     pub fee: &'a Fee,
@@ -265,6 +265,18 @@ impl SignerInfo {
             nonce,
         }
     }
+}
+
+/// Transaction signer information, referenced for zero-clone serialization.
+#[derive(Clone, Debug, Serialize)]
+#[serde(deny_unknown_fields)]
+#[doc(hidden)]
+pub struct SignerInfoRef<'a> {
+    #[serde(rename = "address_spec")]
+    pub address_spec: &'a AddressSpec,
+
+    #[serde(rename = "nonce")]
+    pub nonce: u64,
 }
 
 /// Call result.
