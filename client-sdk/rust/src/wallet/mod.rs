@@ -1,3 +1,4 @@
+pub mod dummy;
 pub mod ed25519;
 
 use anyhow::Result;
