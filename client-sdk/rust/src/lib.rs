@@ -3,7 +3,7 @@
 
 mod client;
 mod requests;
-pub mod signer;
+pub mod wallet;
 
 pub use async_trait::async_trait;
 pub use tonic;

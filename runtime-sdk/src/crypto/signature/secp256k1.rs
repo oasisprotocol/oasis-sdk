@@ -10,7 +10,7 @@ use sha2::Sha512Trunc256;
 use crate::crypto::signature::{Error, Signature};
 
 /// A Secp256k1 public key (in compressed form).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PublicKey(k256::EncodedPoint);
 
 impl PublicKey {
