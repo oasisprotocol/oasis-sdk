@@ -325,7 +325,7 @@ fn gen_client_items(
     });
     client_items.push(quote! {
         #[oasis_client_sdk::async_trait]
-        impl<S: oasis_client_sdk::signer::Signer + Send + Sync> #trait_ident for RuntimeClient<S> {
+        impl #trait_ident for RuntimeClient {
             #(#rpcs)*
         }
     });
@@ -350,25 +350,25 @@ fn gen_client_struct_and_ctor() -> Vec<TokenStream> {
 
     let client_struct = quote! {
         #[derive(Clone)]
-        pub struct RuntimeClient<S: oasis_client_sdk::signer::Signer + Send + Sync> {
-            inner: oasis_client_sdk::Client<S>
+        pub struct RuntimeClient {
+            inner: oasis_client_sdk::Client
         }
     };
 
     let client_impl = gen::wrap_in_const(quote! {
         use #sdk_crate::core::common::namespace::Namespace;
 
-        impl<S: oasis_client_sdk::signer::Signer + Send + Sync> RuntimeClient<S> {
+        impl RuntimeClient {
             /// Connects to the oasis-node listening on Unix socket at `sock_path` communicating
-            /// with the identified runtime. Transactions will be signed by the `signer`.
+            /// with the identified runtime. Transactions will be signed by the wallets, in order.
             /// Do remember to call `set_fee` as appropriate before making the first call.
             pub async fn connect(
                 sock_path: impl AsRef<std::path::Path> + Clone + Send + Sync + 'static,
                 runtime_id: Namespace,
-                signer: S,
+                wallets: impl IntoIterator<Item = Box<dyn oasis_client_sdk::wallet::Wallet>>,
             ) -> Result<Self, oasis_client_sdk::Error> {
                 Ok(Self {
-                    inner: oasis_client_sdk::Client::connect(sock_path, runtime_id, signer).await?
+                    inner: oasis_client_sdk::Client::connect(sock_path, runtime_id, wallets).await?
                 })
             }
 
