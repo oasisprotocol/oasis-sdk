@@ -106,7 +106,7 @@ impl<R: Runtime> Dispatcher<R> {
 
         // Verify transaction signatures.
         // TODO: Support signature verification of the whole transaction batch.
-        utx.verify()
+        utx.verify(R::ALLOW_UNSIGNED_TXS)
             .map_err(|e| modules::core::Error::MalformedTransaction(e.into()))
     }
 

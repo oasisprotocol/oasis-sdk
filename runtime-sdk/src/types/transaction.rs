@@ -52,11 +52,11 @@ pub struct UnverifiedTransaction(
 
 impl UnverifiedTransaction {
     /// Verify and deserialize the unverified transaction.
-    pub fn verify(self) -> Result<Transaction, Error> {
+    pub fn verify(self, allow_unsigned: bool) -> Result<Transaction, Error> {
         // Deserialize the inner body.
         let body: Transaction =
             cbor::from_slice(&self.0).map_err(|e| Error::MalformedTransaction(e.into()))?;
-        body.validate_basic()?;
+        body.validate_basic(allow_unsigned)?;
 
         // Basic structure validation.
         if self.1.len() != body.auth_info.signer_info.len() {
@@ -99,11 +99,11 @@ pub struct Transaction {
 
 impl Transaction {
     /// Perform basic validation on the transaction.
-    pub fn validate_basic(&self) -> Result<(), Error> {
+    pub fn validate_basic(&self, allow_unsigned: bool) -> Result<(), Error> {
         if self.version != LATEST_TRANSACTION_VERSION {
             return Err(Error::UnsupportedVersion);
         }
-        if self.auth_info.signer_info.is_empty() {
+        if !allow_unsigned && self.auth_info.signer_info.is_empty() {
             return Err(Error::MalformedTransaction(anyhow!(
                 "transaction has no signers"
             )));
