@@ -191,11 +191,13 @@ fn test_api_tx_transfer_disabled() {
 
     // Try to transfer.
     ctx.with_tx(tx, |mut tx_ctx, call| {
-        assert_eq!(
-            Err(Error::Forbidden),
-            Accounts::tx_transfer(&mut tx_ctx, cbor::from_value(call.body).unwrap()),
+        assert!(
+            matches!(
+                Accounts::tx_transfer(&mut tx_ctx, cbor::from_value(call.body).unwrap()),
+                Err(Error::Forbidden),
+            ),
             "transfers are forbidden",
-        );
+        )
     });
 }
 

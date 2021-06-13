@@ -23,11 +23,11 @@ pub mod types;
 pub const MODULE_NAME: &str = "core";
 
 /// Errors emitted by the core module.
-#[derive(Error, Debug, PartialEq, oasis_runtime_sdk_macros::Error)]
+#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
 pub enum Error {
-    #[error("malformed transaction")]
+    #[error("malformed transaction: {0}")]
     #[sdk_error(code = 1)]
-    MalformedTransaction,
+    MalformedTransaction(anyhow::Error),
 
     #[error("invalid transaction: {0}")]
     #[sdk_error(code = 2)]

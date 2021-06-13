@@ -98,8 +98,8 @@ impl<R: Runtime> Dispatcher<R> {
         // TODO: Check against transaction size limit.
 
         // Deserialize transaction.
-        let utx: types::transaction::UnverifiedTransaction =
-            cbor::from_slice(&tx).map_err(|_| modules::core::Error::MalformedTransaction)?;
+        let utx: types::transaction::UnverifiedTransaction = cbor::from_slice(&tx)
+            .map_err(|e| modules::core::Error::MalformedTransaction(e.into()))?;
 
         // Perform any checks before signature verification.
         R::Modules::approve_unverified_tx(ctx, &utx)?;
@@ -107,7 +107,7 @@ impl<R: Runtime> Dispatcher<R> {
         // Verify transaction signatures.
         // TODO: Support signature verification of the whole transaction batch.
         utx.verify()
-            .map_err(|_| modules::core::Error::MalformedTransaction)
+            .map_err(|e| modules::core::Error::MalformedTransaction(e.into()))
     }
 
     /// Run the dispatch steps inside a transaction context. This includes the before call hooks

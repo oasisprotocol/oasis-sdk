@@ -1,4 +1,5 @@
 //! Transaction types.
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -21,12 +22,12 @@ pub const SIGNATURE_CONTEXT_BASE: &[u8] = b"oasis-runtime-sdk/tx: v0";
 pub const LATEST_TRANSACTION_VERSION: u16 = 1;
 
 /// Error.
-#[derive(Error, PartialEq, Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
     #[error("unsupported version")]
     UnsupportedVersion,
-    #[error("malformed transaction")]
-    MalformedTransaction,
+    #[error("malformed transaction: {0}")]
+    MalformedTransaction(anyhow::Error),
 }
 
 /// A container for data that authenticates a transaction.
@@ -54,12 +55,16 @@ impl UnverifiedTransaction {
     pub fn verify(self) -> Result<Transaction, Error> {
         // Deserialize the inner body.
         let body: Transaction =
-            cbor::from_slice(&self.0).map_err(|_| Error::MalformedTransaction)?;
+            cbor::from_slice(&self.0).map_err(|e| Error::MalformedTransaction(e.into()))?;
         body.validate_basic()?;
 
         // Basic structure validation.
         if self.1.len() != body.auth_info.signer_info.len() {
-            return Err(Error::MalformedTransaction);
+            return Err(Error::MalformedTransaction(anyhow!(
+                "unexpected number of auth proofs. expected {} but found {}",
+                body.auth_info.signer_info.len(),
+                self.1.len()
+            )));
         }
 
         // Verify all signatures.
@@ -72,7 +77,7 @@ impl UnverifiedTransaction {
             signatures.append(&mut batch_sigs);
         }
         PublicKey::verify_batch_multisig(&ctx, &self.0, &public_keys, &signatures)
-            .map_err(|_| Error::MalformedTransaction)?;
+            .map_err(|e| Error::MalformedTransaction(e.into()))?;
 
         Ok(body)
     }
@@ -99,7 +104,9 @@ impl Transaction {
             return Err(Error::UnsupportedVersion);
         }
         if self.auth_info.signer_info.is_empty() {
-            return Err(Error::MalformedTransaction);
+            return Err(Error::MalformedTransaction(anyhow!(
+                "transaction has no signers"
+            )));
         }
         Ok(())
     }
@@ -170,15 +177,24 @@ impl AddressSpec {
     /// Checks that the address specification and the authentication proof are acceptable.
     /// Returns vectors of public keys and signatures for batch verification of included signatures.
     pub fn batch(&self, auth_proof: &AuthProof) -> Result<(Vec<PublicKey>, Vec<Signature>), Error> {
-        Ok(match (self, auth_proof) {
+        match (self, auth_proof) {
             (AddressSpec::Signature(public_key), AuthProof::Signature(signature)) => {
-                (vec![public_key.clone()], vec![signature.clone()])
+                Ok((vec![public_key.clone()], vec![signature.clone()]))
             }
-            (AddressSpec::Multisig(config), AuthProof::Multisig(signature_set)) => config
+            (AddressSpec::Multisig(config), AuthProof::Multisig(signature_set)) => Ok(config
                 .batch(signature_set)
-                .map_err(|_| Error::MalformedTransaction)?,
-            _ => return Err(Error::MalformedTransaction),
-        })
+                .map_err(|e| Error::MalformedTransaction(e.into()))?),
+            (AddressSpec::Signature(_), AuthProof::Multisig(_)) => {
+                Err(Error::MalformedTransaction(anyhow!(
+                    "transaction signer used a single signature, but auth proof was multisig"
+                )))
+            }
+            (AddressSpec::Multisig(_), AuthProof::Signature(_)) => {
+                Err(Error::MalformedTransaction(anyhow!(
+                    "transaction signer used multisig, but auth proof was a single signature"
+                )))
+            }
+        }
     }
 }
 
