@@ -123,7 +123,7 @@ impl<R: Runtime> Dispatcher<R> {
         match R::Modules::dispatch_call(ctx, &call.method, call.body) {
             module::DispatchResult::Handled(result) => result,
             module::DispatchResult::Unhandled(_) => {
-                modules::core::Error::InvalidMethod.to_call_result()
+                modules::core::Error::InvalidMethod(call.method).to_call_result()
             }
         }
     }
@@ -242,16 +242,17 @@ impl<R: Runtime> Dispatcher<R> {
             let handler = handlers
                 .remove(&event.index)
                 .ok_or(modules::core::Error::MessageHandlerMissing(event.index))?;
+            let hook_name = handler.hook_name.clone();
 
             R::Modules::dispatch_message_result(
                 ctx,
-                &handler.hook_name,
+                &hook_name,
                 types::message::MessageResult {
                     event,
                     context: handler.payload,
                 },
             )
-            .ok_or(modules::core::Error::InvalidMethod)?;
+            .ok_or(modules::core::Error::InvalidMethod(hook_name))?;
         }
 
         if !handlers.is_empty() {
@@ -294,7 +295,7 @@ impl<R: Runtime> Dispatcher<R> {
             }
             // Runtime methods.
             _ => R::Modules::dispatch_query(ctx, method, args)
-                .ok_or(modules::core::Error::InvalidMethod)?,
+                .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?,
         }
     }
 }

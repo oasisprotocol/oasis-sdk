@@ -27,15 +27,15 @@ pub const MODULE_NAME: &str = "core";
 pub enum Error {
     #[error("malformed transaction: {0}")]
     #[sdk_error(code = 1)]
-    MalformedTransaction(anyhow::Error),
+    MalformedTransaction(#[source] anyhow::Error),
 
     #[error("invalid transaction: {0}")]
     #[sdk_error(code = 2)]
     InvalidTransaction(#[from] transaction::Error),
 
-    #[error("invalid method")]
+    #[error("invalid method: {0}")]
     #[sdk_error(code = 3)]
-    InvalidMethod,
+    InvalidMethod(String),
 
     #[error("invalid nonce")]
     #[sdk_error(code = 4)]
@@ -57,9 +57,9 @@ pub enum Error {
     #[sdk_error(code = 9)]
     MessageHandlerMissing(u32),
 
-    #[error("invalid argument")]
+    #[error("invalid argument: {0}")]
     #[sdk_error(code = 10)]
-    InvalidArgument,
+    InvalidArgument(#[source] anyhow::Error),
 
     #[error("gas overflow")]
     #[sdk_error(code = 11)]
@@ -369,7 +369,7 @@ impl module::MethodHandler for Module {
     ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
         match method {
             "core.EstimateGas" => module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
+                let args = cbor::from_value(args).map_err(|e| Error::InvalidArgument(e.into()))?;
                 Ok(cbor::to_value(&Self::query_estimate_gas(ctx, args)?))
             })()),
             "core.CheckInvariants" => module::DispatchResult::Handled((|| {
