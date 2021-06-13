@@ -17,6 +17,9 @@ pub trait Runtime {
     /// Runtime version.
     const VERSION: version::Version;
 
+    /// Whether the runtime accepts unsigned transactions.
+    const ALLOW_UNSIGNED_TXS: bool = false;
+
     type Modules: AuthHandler + MigrationHandler + MethodHandler + BlockHandler + InvariantHandler;
 
     /// Genesis state for the runtime.
