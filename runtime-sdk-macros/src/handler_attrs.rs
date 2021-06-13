@@ -197,8 +197,8 @@ fn gen_module_items(
                 #sdk_crate::core::common::cbor::Value,
                 #handler_err_ty,
             > {
-                let mut method_parts = method.splitn(1, '.');
-                if method_parts.next().map(|p| p == #runtime_module_name_path).unwrap_or_default() {
+                let mut method_parts = method.splitn(2, '.');
+                if method_parts.next() != Some(#runtime_module_name_path) {
                     return #sdk_crate::module::DispatchResult::Unhandled(args);
                 }
                 match method_parts.next() {
