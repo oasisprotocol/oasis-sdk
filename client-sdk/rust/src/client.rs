@@ -38,7 +38,7 @@ impl Client {
         wallets: impl IntoIterator<Item = Box<dyn Wallet>>,
     ) -> Result<Self, Error> {
         let channel = tonic::transport::Channel::from_static(
-            "*", /* Unused, but required to be a URI. */
+            "://.", /* Unused, but required to be a URI. */
         )
         .connect_with_connector(tower::service_fn(move |_| {
             tokio::net::UnixStream::connect(sock_path.clone())
@@ -109,9 +109,10 @@ impl Client {
         channel: &mut Grpc<Channel>,
         req: R,
     ) -> Result<R::Response, Error> {
+        channel.ready().await?;
         Ok(channel
             .unary(
-                tonic::Request::new(cbor::to_vec(&req.body())),
+                tonic::Request::new(req.body()),
                 R::path().parse().unwrap(),
                 CborCodec::default(),
             )

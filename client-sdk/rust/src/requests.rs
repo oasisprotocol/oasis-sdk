@@ -18,7 +18,7 @@ macro_rules! grpc_methods {
                 type Request = Self;
                 type Response = $res_ty;
 
-                fn body(&self) -> &Self::Request {
+                fn body(self) -> Self::Request {
                     self
                 }
 
@@ -35,7 +35,7 @@ pub(crate) trait Request {
     type Response: serde::de::DeserializeOwned + Send + Sync + 'static;
 
     /// Returns the RPC body (aka payload, data).
-    fn body(&self) -> &Self::Request;
+    fn body(self) -> Self::Request;
 
     /// Returns the name of the RPC method.
     fn path() -> &'static str;
