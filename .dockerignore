@@ -1,0 +1,11 @@
+# Ignore everything.
+**
+
+# Allow runtime benchmarking binary.
+!target/debug/test-runtime-benchmarking
+
+# Allow downloaded oasis-core binaries.
+!tests/untracked/
+
+# Allow benchmarks suite.
+!tests/benchmark/
