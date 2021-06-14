@@ -17,6 +17,14 @@ pub trait Runtime {
     /// Runtime version.
     const VERSION: version::Version;
 
+    /// Whether the runtime accepts unsigned transactions.
+    ///
+    /// **Note:** some modules require a signer (e.g., the accounts module
+    /// treats the first signer as the gas payer. If you're using such a
+    /// module setting this flag to `true` will cause erroneous behavior.
+    #[doc(hidden)]
+    const ALLOW_UNSIGNED_TXS: bool = false;
+
     type Modules: AuthHandler + MigrationHandler + MethodHandler + BlockHandler;
 
     /// Genesis state for the runtime.
