@@ -8,7 +8,7 @@ use oasis_core_runtime::{
 use crate::{
     context::Context,
     crypto, dispatcher,
-    module::{AuthHandler, BlockHandler, MethodHandler, MigrationHandler},
+    module::{AuthHandler, BlockHandler, InvariantHandler, MethodHandler, MigrationHandler},
     modules, storage,
 };
 
@@ -17,7 +17,7 @@ pub trait Runtime {
     /// Runtime version.
     const VERSION: version::Version;
 
-    type Modules: AuthHandler + MigrationHandler + MethodHandler + BlockHandler;
+    type Modules: AuthHandler + MigrationHandler + MethodHandler + BlockHandler + InvariantHandler;
 
     /// Genesis state for the runtime.
     fn genesis_state() -> <Self::Modules as MigrationHandler>::Genesis;
@@ -65,7 +65,7 @@ pub trait Runtime {
             );
 
             // Register runtime's methods.
-            let dispatcher = dispatcher::Dispatcher::<Self>::new();
+            let dispatcher = dispatcher::Dispatcher::<Self>::new(hi);
             Some(Box::new(dispatcher))
         };
 

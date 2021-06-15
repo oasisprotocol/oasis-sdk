@@ -5,7 +5,7 @@ use oasis_core_runtime::common::cbor;
 
 use crate::{
     context::{BatchContext, Context},
-    module::{AuthHandler, BlockHandler},
+    module::{AuthHandler, BlockHandler, InvariantHandler},
     modules::core,
     testing::{keys, mock},
     types::{
@@ -485,5 +485,328 @@ fn test_fee_disbursement() {
         bals.balances[&Denomination::NATIVE],
         1.into(),
         "remainder should be disbursed to the common pool"
+    );
+}
+
+#[test]
+fn test_get_all_balances_and_total_supplies_basic() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    let alice = keys::alice::address();
+    let bob = keys::bob::address();
+
+    let gen = Genesis {
+        balances: {
+            let mut balances = BTreeMap::new();
+            // Alice.
+            balances.insert(alice, {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(Denomination::NATIVE, 1_000_000.into());
+                denominations
+            });
+            // Bob.
+            balances.insert(bob, {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(Denomination::NATIVE, 2_000_000.into());
+                denominations
+            });
+            balances
+        },
+        total_supplies: {
+            let mut total_supplies = BTreeMap::new();
+            total_supplies.insert(Denomination::NATIVE, 3_000_000.into());
+            total_supplies
+        },
+        ..Default::default()
+    };
+
+    Accounts::init(&mut ctx, &gen);
+
+    let all_bals =
+        Accounts::get_all_balances(ctx.runtime_state()).expect("get_all_balances should succeed");
+    for (addr, bals) in &all_bals {
+        assert_eq!(bals.len(), 1, "exactly one denomination should be present");
+        assert!(
+            bals.contains_key(&Denomination::NATIVE),
+            "only native denomination should be present"
+        );
+        if addr == &alice {
+            assert_eq!(
+                bals[&Denomination::NATIVE],
+                1_000_000.into(),
+                "Alice's balance should be 1000000"
+            );
+        } else if addr == &bob {
+            assert_eq!(
+                bals[&Denomination::NATIVE],
+                2_000_000.into(),
+                "Bob's balance should be 2000000"
+            );
+        } else {
+            panic!("invalid address");
+        }
+    }
+
+    let ts = Accounts::get_total_supplies(ctx.runtime_state())
+        .expect("get_total_supplies should succeed");
+    assert_eq!(
+        ts.len(),
+        1,
+        "exactly one denomination should be present in total supplies"
+    );
+    assert!(
+        ts.contains_key(&Denomination::NATIVE),
+        "only native denomination should be present in total supplies"
+    );
+    assert_eq!(
+        ts[&Denomination::NATIVE],
+        3_000_000.into(),
+        "total supply should be 3000000"
+    );
+}
+
+#[test]
+fn test_get_all_balances_and_total_supplies_more() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    let dn = Denomination::NATIVE;
+    let d1: Denomination = "den1".parse().unwrap();
+    let d2: Denomination = "den2".parse().unwrap();
+    let d3: Denomination = "den3".parse().unwrap();
+
+    let alice = keys::alice::address();
+    let bob = keys::bob::address();
+
+    let gen = Genesis {
+        balances: {
+            let mut balances = BTreeMap::new();
+            // Alice.
+            balances.insert(alice, {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(dn.clone(), 1_000_000.into());
+                denominations.insert(d1.clone(), 1_000.into());
+                denominations.insert(d2.clone(), 100.into());
+                denominations
+            });
+            // Bob.
+            balances.insert(bob, {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(d1.clone(), 2_000.into());
+                denominations.insert(d3.clone(), 200.into());
+                denominations
+            });
+            balances
+        },
+        total_supplies: {
+            let mut total_supplies = BTreeMap::new();
+            total_supplies.insert(dn.clone(), 1_000_000.into());
+            total_supplies.insert(d1.clone(), 3_000.into());
+            total_supplies.insert(d2.clone(), 100.into());
+            total_supplies.insert(d3.clone(), 200.into());
+            total_supplies
+        },
+        ..Default::default()
+    };
+
+    Accounts::init(&mut ctx, &gen);
+
+    let all_bals =
+        Accounts::get_all_balances(ctx.runtime_state()).expect("get_all_balances should succeed");
+    for (addr, bals) in &all_bals {
+        if addr == &alice {
+            assert_eq!(bals.len(), 3, "Alice should have exactly 3 denominations");
+            assert_eq!(
+                bals[&dn],
+                1_000_000.into(),
+                "Alice's native balance should be 1000000"
+            );
+            assert_eq!(
+                bals[&d1],
+                1_000.into(),
+                "Alice's den1 balance should be 1000"
+            );
+            assert_eq!(bals[&d2], 100.into(), "Alice's den2 balance should be 100");
+        } else if addr == &bob {
+            assert_eq!(bals.len(), 2, "Bob should have exactly 2 denominations");
+            assert_eq!(bals[&d1], 2_000.into(), "Bob's den1 balance should be 2000");
+            assert_eq!(bals[&d3], 200.into(), "Bob's den3 balance should be 200");
+        } else {
+            panic!("invalid address");
+        }
+    }
+
+    let ts = Accounts::get_total_supplies(ctx.runtime_state())
+        .expect("get_total_supplies should succeed");
+    assert_eq!(
+        ts.len(),
+        4,
+        "exactly 4 denominations should be present in total supplies"
+    );
+    assert!(
+        ts.contains_key(&dn),
+        "native denomination should be present in total supplies"
+    );
+    assert!(
+        ts.contains_key(&d1),
+        "den1 denomination should be present in total supplies"
+    );
+    assert!(
+        ts.contains_key(&d2),
+        "den2 denomination should be present in total supplies"
+    );
+    assert!(
+        ts.contains_key(&d3),
+        "den3 denomination should be present in total supplies"
+    );
+    assert_eq!(
+        ts[&dn],
+        1_000_000.into(),
+        "native total supply should be 1000000"
+    );
+    assert_eq!(ts[&d1], 3_000.into(), "den1 total supply should be 3000");
+    assert_eq!(ts[&d2], 100.into(), "den2 total supply should be 100");
+    assert_eq!(ts[&d3], 200.into(), "den3 total supply should be 200");
+}
+
+#[test]
+fn test_check_invariants_basic() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    init_accounts(&mut ctx);
+
+    assert!(
+        Accounts::check_invariants(&mut ctx).is_ok(),
+        "invariants check should succeed"
+    );
+}
+
+#[test]
+fn test_check_invariants_more() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    let dn = Denomination::NATIVE;
+    let d1: Denomination = "den1".parse().unwrap();
+    let d2: Denomination = "den2".parse().unwrap();
+    let d3: Denomination = "den3".parse().unwrap();
+
+    let alice = keys::alice::address();
+    let bob = keys::bob::address();
+    let charlie = keys::charlie::address();
+
+    let gen = Genesis {
+        balances: {
+            let mut balances = BTreeMap::new();
+            // Alice.
+            balances.insert(alice, {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(dn.clone(), 1_000_000.into());
+                denominations.insert(d1.clone(), 1_000.into());
+                denominations.insert(d2.clone(), 100.into());
+                denominations
+            });
+            // Bob.
+            balances.insert(bob, {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(d1.clone(), 2_000.into());
+                denominations.insert(d3.clone(), 200.into());
+                denominations
+            });
+            balances
+        },
+        total_supplies: {
+            let mut total_supplies = BTreeMap::new();
+            total_supplies.insert(dn.clone(), 1_000_000.into());
+            total_supplies.insert(d1.clone(), 3_000.into());
+            total_supplies.insert(d2.clone(), 100.into());
+            total_supplies.insert(d3.clone(), 200.into());
+            total_supplies
+        },
+        ..Default::default()
+    };
+
+    Accounts::init(&mut ctx, &gen);
+    assert!(
+        Accounts::check_invariants(&mut ctx).is_ok(),
+        "initial inv chk should succeed"
+    );
+
+    assert!(
+        Accounts::add_amount(
+            ctx.runtime_state(),
+            charlie,
+            &BaseUnits::new(100.into(), d1.clone())
+        )
+        .is_ok(),
+        "giving Charlie money should succeed"
+    );
+    assert!(
+        Accounts::check_invariants(&mut ctx).is_err(),
+        "inv chk 1 should fail"
+    );
+
+    assert!(
+        Accounts::inc_total_supply(ctx.runtime_state(), &BaseUnits::new(100.into(), d1.clone()))
+            .is_ok(),
+        "increasing total supply should succeed"
+    );
+    assert!(
+        Accounts::check_invariants(&mut ctx).is_ok(),
+        "inv chk 2 should succeed"
+    );
+
+    let d4: Denomination = "den4".parse().unwrap();
+
+    assert!(
+        Accounts::add_amount(
+            ctx.runtime_state(),
+            charlie,
+            &BaseUnits::new(300.into(), d4.clone())
+        )
+        .is_ok(),
+        "giving Charlie more money should succeed"
+    );
+    assert!(
+        Accounts::check_invariants(&mut ctx).is_err(),
+        "inv chk 3 should fail"
+    );
+
+    assert!(
+        Accounts::inc_total_supply(ctx.runtime_state(), &BaseUnits::new(300.into(), d4.clone()))
+            .is_ok(),
+        "increasing total supply should succeed"
+    );
+    assert!(
+        Accounts::check_invariants(&mut ctx).is_ok(),
+        "inv chk 4 should succeed"
+    );
+
+    let d5: Denomination = "den5".parse().unwrap();
+
+    assert!(
+        Accounts::inc_total_supply(ctx.runtime_state(), &BaseUnits::new(123.into(), d5.clone()))
+            .is_ok(),
+        "increasing total supply should succeed"
+    );
+    assert!(
+        Accounts::check_invariants(&mut ctx).is_err(),
+        "inv chk 5 should fail"
+    );
+
+    assert!(
+        Accounts::add_amount(
+            ctx.runtime_state(),
+            charlie,
+            &BaseUnits::new(123.into(), d5.clone())
+        )
+        .is_ok(),
+        "giving Charlie more money should succeed"
+    );
+    assert!(
+        Accounts::check_invariants(&mut ctx).is_ok(),
+        "inv chk 6 should succeed"
     );
 }

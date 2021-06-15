@@ -89,6 +89,7 @@ impl sdk::module::Module for Module {
 
 impl sdk::module::AuthHandler for Module {}
 impl sdk::module::BlockHandler for Module {}
+impl sdk::module::InvariantHandler for Module {}
 
 impl sdk::module::MethodHandler for Module {
     fn dispatch_call<C: TxContext>(

@@ -1,9 +1,12 @@
 //! Mock dispatch context for use in tests.
+use std::collections::BTreeMap;
+
 use io_context::Context as IoContext;
 
 use oasis_core_runtime::{
-    common::{cbor, version::Version},
+    common::{cbor, namespace::Namespace, version::Version},
     consensus::{beacon, roothash, state::ConsensusState},
+    protocol::HostInfo,
     storage::mkvs,
 };
 
@@ -31,6 +34,7 @@ impl Runtime for EmptyRuntime {
 
 /// Mock dispatch context factory.
 pub struct Mock {
+    pub host_info: HostInfo,
     pub runtime_header: roothash::Header,
     pub runtime_round_results: roothash::RoundResults,
     pub mkvs: Box<dyn mkvs::MKVS>,
@@ -55,6 +59,7 @@ impl Mock {
     ) -> RuntimeBatchContext<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
         RuntimeBatchContext::new(
             mode,
+            &self.host_info,
             &self.runtime_header,
             &self.runtime_round_results,
             storage::MKVSStore::new(IoContext::background().freeze(), self.mkvs.as_mut()),
@@ -78,6 +83,13 @@ impl Default for Mock {
             .new(Box::new(mkvs::sync::NoopReadSyncer));
 
         Self {
+            host_info: HostInfo {
+                runtime_id: Namespace::default(),
+                consensus_backend: "mock".to_string(),
+                consensus_protocol_version: Version::default(),
+                consensus_chain_context: "test".to_string(),
+                local_config: BTreeMap::new(),
+            },
             runtime_header: roothash::Header::default(),
             runtime_round_results: roothash::RoundResults::default(),
             mkvs: Box::new(mkvs),

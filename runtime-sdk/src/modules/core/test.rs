@@ -104,6 +104,7 @@ impl module::AuthHandler for GasWasterModule {}
 impl module::MigrationHandler for GasWasterModule {
     type Genesis = ();
 }
+impl module::InvariantHandler for GasWasterModule {}
 
 // Runtime that knows how to waste gas.
 struct GasWasterRuntime;

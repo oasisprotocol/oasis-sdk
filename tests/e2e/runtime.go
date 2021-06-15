@@ -27,6 +27,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/tests/e2e/txgen"
 )
 
 const (
@@ -284,6 +285,8 @@ func (sc *RuntimeScenario) waitNodesSynced() error {
 }
 
 func (sc *RuntimeScenario) Run(childEnv *env.Env) error {
+	ctx := context.Background()
+
 	// Start the test network.
 	if err := sc.Net.Start(); err != nil {
 		return err
@@ -306,6 +309,12 @@ func (sc *RuntimeScenario) Run(childEnv *env.Env) error {
 	}
 	rtc := client.New(conn, runtimeID)
 
+	// Do an initial invariants check.
+	if err = txgen.CheckInvariants(ctx, rtc); err != nil {
+		sc.Logger.Error("initial invariants check failed", "err", err)
+		return err
+	}
+
 	// Run the given tests for this runtime.
 	for _, test := range sc.RunTest {
 		testName := runtime.FuncForPC(reflect.ValueOf(test).Pointer()).Name()
@@ -319,6 +328,14 @@ func (sc *RuntimeScenario) Run(childEnv *env.Env) error {
 			return testErr
 		}
 		sc.Logger.Info("test passed", "test", testName)
+
+		// Do an invariants check after each test.
+		if err = txgen.CheckInvariants(ctx, rtc); err != nil {
+			sc.Logger.Error("invariants check failed after test",
+				"test", testName,
+				"err", err)
+			return err
+		}
 	}
 
 	return sc.Net.CheckLogWatchers()
