@@ -32,7 +32,7 @@ pub mod types;
 const MODULE_NAME: &str = "accounts";
 
 /// Errors emitted by the accounts module.
-#[derive(Error, Debug, PartialEq, oasis_runtime_sdk_macros::Error)]
+#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
 pub enum Error {
     #[error("invalid argument")]
     #[sdk_error(code = 1)]

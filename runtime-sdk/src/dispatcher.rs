@@ -98,8 +98,8 @@ impl<R: Runtime> Dispatcher<R> {
         // TODO: Check against transaction size limit.
 
         // Deserialize transaction.
-        let utx: types::transaction::UnverifiedTransaction =
-            cbor::from_slice(&tx).map_err(|_| modules::core::Error::MalformedTransaction)?;
+        let utx: types::transaction::UnverifiedTransaction = cbor::from_slice(&tx)
+            .map_err(|e| modules::core::Error::MalformedTransaction(e.into()))?;
 
         // Perform any checks before signature verification.
         R::Modules::approve_unverified_tx(ctx, &utx)?;
@@ -107,7 +107,7 @@ impl<R: Runtime> Dispatcher<R> {
         // Verify transaction signatures.
         // TODO: Support signature verification of the whole transaction batch.
         utx.verify()
-            .map_err(|_| modules::core::Error::MalformedTransaction)
+            .map_err(|e| modules::core::Error::MalformedTransaction(e.into()))
     }
 
     /// Run the dispatch steps inside a transaction context. This includes the before call hooks
@@ -123,7 +123,7 @@ impl<R: Runtime> Dispatcher<R> {
         match R::Modules::dispatch_call(ctx, &call.method, call.body) {
             module::DispatchResult::Handled(result) => result,
             module::DispatchResult::Unhandled(_) => {
-                modules::core::Error::InvalidMethod.to_call_result()
+                modules::core::Error::InvalidMethod(call.method).to_call_result()
             }
         }
     }
@@ -242,16 +242,17 @@ impl<R: Runtime> Dispatcher<R> {
             let handler = handlers
                 .remove(&event.index)
                 .ok_or(modules::core::Error::MessageHandlerMissing(event.index))?;
+            let hook_name = handler.hook_name.clone();
 
             R::Modules::dispatch_message_result(
                 ctx,
-                &handler.hook_name,
+                &hook_name,
                 types::message::MessageResult {
                     event,
                     context: handler.payload,
                 },
             )
-            .ok_or(modules::core::Error::InvalidMethod)?;
+            .ok_or(modules::core::Error::InvalidMethod(hook_name))?;
         }
 
         if !handlers.is_empty() {
@@ -294,7 +295,7 @@ impl<R: Runtime> Dispatcher<R> {
             }
             // Runtime methods.
             _ => R::Modules::dispatch_query(ctx, method, args)
-                .ok_or(modules::core::Error::InvalidMethod)?,
+                .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?,
         }
     }
 }

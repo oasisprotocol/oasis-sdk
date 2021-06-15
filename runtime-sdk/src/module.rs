@@ -30,6 +30,15 @@ impl<B, R> DispatchResult<B, R> {
             DispatchResult::Unhandled(_) => Err(err),
         }
     }
+
+    /// Transforms `DispatchResult<B, R>` into `Result<R, E>`, mapping `Handled(r)` to `Ok(r)` and
+    /// `Unhandled(_)` to `Err(err)` using the provided function.
+    pub fn ok_or_else<E, F: FnOnce() -> E>(self, errf: F) -> Result<R, E> {
+        match self {
+            DispatchResult::Handled(result) => Ok(result),
+            DispatchResult::Unhandled(_) => Err(errf()),
+        }
+    }
 }
 
 /// Method handler.
