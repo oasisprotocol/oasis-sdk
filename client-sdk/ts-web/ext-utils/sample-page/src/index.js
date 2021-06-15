@@ -1,31 +1,33 @@
-let messageFrame = null;
-const responseHandlers = {};
-let nextId = 0;
-window.addEventListener('message', (e) => {
-    if (e.origin !== 'chrome-extension://joglombbipnjdfbkimehokiomlbhcobn') return;
-    switch (e.data.type) {
-        case 'oasis-xu-ready':
-            {
-                messageFrame = e.source;
+import * as oasisExt from '../..';
 
-                const id = nextId++;
-                responseHandlers[id] = (/** @type {MessageEvent<any>} */ e) => {
-                    console.log('got public key', e.data.public_key);
-                };
-                messageFrame.postMessage({
-                    type: 'context-signer-public',
-                    id,
-                }, 'chrome-extension://joglombbipnjdfbkimehokiomlbhcobn');
-                break;
-            }
-        case 'oasis-xu-response':
-            {
-                const id = +e.data.id;
-                if (!(id in responseHandlers)) return;
-                const h = responseHandlers[id];
-                delete responseHandlers[id];
-                h(e);
-                break;
-            }
+const SAMPLE_EXT_ORIGIN = 'chrome-extension://joglombbipnjdfbkimehokiomlbhcobn';
+
+function toBase64(u8) {
+    return btoa(String.fromCharCode.apply(null, u8));
+}
+
+(async function () {
+    try {
+        console.log('connecting');
+        const connection = await oasisExt.connection.connect(SAMPLE_EXT_ORIGIN);
+        console.log('connected');
+
+        console.log('requesting signer');
+        const signer = await oasisExt.signature.ExtContextSigner.request(
+            connection,
+            'sample-singleton',
+        );
+        console.log('got signer');
+        console.log('public key base64', toBase64(signer.public()));
+
+        console.log('requesting signature');
+        const signature = await signer.sign(
+            'invalid/sample-message: v0',
+            new Uint8Array([1, 2, 3]),
+        );
+        console.log('got signature');
+        console.log('signature base64', toBase64(signature));
+    } catch (e) {
+        console.error(e);
     }
-});
+})();

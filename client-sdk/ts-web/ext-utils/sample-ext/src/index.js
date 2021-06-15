@@ -2,11 +2,7 @@
 
 import * as oasis from '@oasisprotocol/client';
 
-function logError(/** @type {Promise<any>} */ p) {
-    p.catch((e) => {
-        console.error(e);
-    });
-}
+import * as oasisExt from './../..';
 
 let authorization = 'ask';
 let authorizedOrigin = null;
@@ -23,6 +19,7 @@ function authorize(origin) {
     return authorization === 'allow' && origin === authorizedOrigin;
 }
 
+const SIGNER_ID = 'sample-singleton';
 /** @type {Promise<oasis.signature.ContextSigner>} */
 let signerP = null;
 function getSigner() {
@@ -42,51 +39,34 @@ function getSigner() {
     return signerP;
 }
 
-window.onmessage = (/** @type {MessageEvent<any>} */ e) => {
-    const messageType = e.data.type;
-    switch (messageType) {
-        case 'context-signer-public':
-            if (!authorize(e.origin)) return;
-            logError((async () => {
-                const signer = await getSigner();
-                const publicKey = signer.public();
-                e.source.postMessage({
-                    type: 'oasis-xu-response',
-                    id: +e.data.id,
-                    public_key: publicKey,
-                }, e.origin);
-            })());
-            break;
-        case 'context-signer-sign':
-            if (!authorize(e.origin)) return;
-            logError((async () => {
-                const context = e.data.context;
-                if (typeof context !== 'string') throw new Error('context-signer-sign: .context must be string');
-                const message = e.data.message;
-                if (!(message instanceof Uint8Array)) throw new Error('context-signer-sign: .message must be Uint8Array');
-                // TODO: check context and destructure message
-                const conf = window.confirm(`Signature request\nContext: ${context}\nMessage: ${oasis.misc.toHex(message)}`);
-                if (!conf) {
-                    e.source.postMessage({
-                        type: 'oasis-xu-response',
-                        id: +e.data.id,
-                        approved: false,
-                    }, e.origin);
-                    return;
-                }
-                const signer = await getSigner();
-                const signature = await signer.sign(context, message);
-                e.source.postMessage({
-                    type: 'oasis-xu-response',
-                    id: +e.data.id,
-                    approved: true,
-                    signature,
-                }, e.origin);
-            })());
-            break;
-    }
-};
+// In this sample, if the user doesn't allow the page to see the wallet, we never respond.
+const never = new Promise((resolve, reject) => {});
 
-window.parent.postMessage({
-    type: 'oasis-xu-ready',
-}, '*');
+oasisExt.ext.ready({
+    async contextSignerPublic(origin, req) {
+        if (req.which !== SIGNER_ID) {
+            throw new Error(
+                `sample extension only supports .which === ${JSON.stringify(SIGNER_ID)}`,
+            );
+        }
+        if (!authorize(origin)) return never;
+        const signer = await getSigner();
+        const publicKey = signer.public();
+        return {public_key: publicKey};
+    },
+    async contextSignerSign(origin, req) {
+        if (req.which !== SIGNER_ID) {
+            throw new Error(
+                `sample extension only supports .which === ${JSON.stringify(SIGNER_ID)}`,
+            );
+        }
+        if (!authorize(origin)) return never;
+        const conf = window.confirm(
+            `Signature request\nContext: ${req.context}\nMessage: ${oasis.misc.toHex(req.message)}`,
+        );
+        if (!conf) return {approved: false};
+        const signer = await getSigner();
+        const signature = await signer.sign(req.context, req.message);
+        return {approved: true, signature};
+    },
+});

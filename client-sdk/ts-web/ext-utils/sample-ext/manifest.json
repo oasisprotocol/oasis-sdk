@@ -5,7 +5,7 @@
 
     "web_accessible_resources": [
         {
-            "resources": ["message-frame.html"],
+            "resources": ["oasis-xu-frame.html"],
             "matches": ["<all_urls>"]
         }
     ]

@@ -1,4 +1,17 @@
 {
+    "files": [
+        "dist"
+    ],
+    "main": "dist/index.js",
+    "scripts": {
+        "check-sample-page": "cd sample-page && tsc -p jsconfig.json",
+        "check-sample-ext": "cd sample-ext && tsc -p jsconfig.json",
+        "fmt": "prettier --write sample-ext/src sample-page/src src",
+        "lint": "prettier --check sample-ext/src sample-page/src src",
+        "sample-page": "cd sample-page && webpack s -c webpack.config.js",
+        "sample-ext": "cd sample-ext && webpack w -c webpack.config.js",
+        "prepare": "tsc"
+    },
     "dependencies": {
         "@oasisprotocol/client": "^0.1.0-alpha4"
     },
