@@ -1,16 +1,38 @@
+/**
+ * @file The part to use from within an extension. (The rest of this package
+ * is for use in web content.)
+ *
+ * There's logic here to accept connections from web content and pass requests
+ * to your code and pass responses back to the web content.
+ */
+
 import * as protocol from './protocol';
 
+/**
+ * A collection of methods that web content can access.
+ */
 export interface Handlers {
+    /**
+     * Get the public key of a ContextSigner kept by the extension.
+     * @param origin The origin where the request came from
+     */
     contextSignerPublic(
         origin: string,
         req: protocol.ContextSignerPublicRequest,
     ): Promise<protocol.ContextSignerPublicResponse>;
+    /**
+     * Sign a message with a ContextSigner kept by the extension.
+     * @param origin The origin where the request came from
+     */
     contextSignerSign(
         origin: string,
         req: protocol.ContextSignerSignRequest,
     ): Promise<protocol.ContextSignerSignResponse>;
 }
 
+/**
+ * Call this to let the web content start making requests.
+ */
 export function ready(handlers: Handlers) {
     window.addEventListener('message', async (e: MessageEvent<unknown>) => {
         // @ts-expect-error even if .type is missing, it's fine if we get undefined here

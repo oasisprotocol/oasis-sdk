@@ -1,3 +1,11 @@
+/**
+ * @file Messaging between web content and extension.
+ *
+ * For this, we use a 'web_accessible_resource' page that a web page can embed
+ * in an iframe. The parent content frame and the embedded extension frame can
+ * then `postMessage` with each other.
+ */
+
 import * as protocol from './protocol';
 
 let addedMessageListener = false;
@@ -5,6 +13,15 @@ const connectionsPromised: {[origin: string]: Promise<ExtConnection>} = {};
 const connectionsRequested: {[origin: string]: {resolve: any; reject: any}} = {};
 const responseHandlers: {[handlerKey: string]: {resolve: any; reject: any}} = {};
 
+/**
+ * A communication channel with an extension.
+ *
+ * It supports a basic request-response kind of interaction (web content is
+ * the requester). The meaning of the requests and responses are defined in
+ * another layer of abstraction.
+ *
+ * Use `create` to create one.
+ */
 export class ExtConnection {
     origin: string;
     messageFrame: WindowProxy;
@@ -61,6 +78,22 @@ export function handleMessage(e: MessageEvent<unknown>) {
     }
 }
 
+/**
+ * Set up a connection with an extension, identified by its origin. This
+ * includes adding an iframe to the document. This requires `document.body`
+ * to exist.
+ *
+ * Gives a promise, so await the result. The promise will hang if the user
+ * doesn't have the extension installed.
+ *
+ * This module keeps an inventory of connections that it has already set up,
+ * and it'll give you the the connection promise that it already has if it has
+ * one.
+ *
+ * The connection stays open, and there is no disconnect.
+ *
+ * @param origin This will look like `chrome-extension://xxxxxxxxxxxxxxxxxx`
+ */
 export function connect(origin: string) {
     if (!addedMessageListener) {
         window.addEventListener('message', handleMessage);
