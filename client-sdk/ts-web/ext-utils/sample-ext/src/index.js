@@ -6,7 +6,17 @@ import * as oasisExt from './../..';
 
 let authorization = 'ask';
 let authorizedOrigin = null;
-function authorize(origin) {
+
+const never = new Promise((resolve, reject) => {});
+
+/**
+ * Decide if we allow an origin to access the wallets in our extension. We
+ * await this in request handlers, just return if it's authorized. If not,
+ * either throw or block forever.
+ * @param {string} origin The origin where the request came from
+ * @returns void if authorized
+ */
+async function authorize(origin) {
     if (authorization === 'ask') {
         const conf = window.confirm(`Allow ${origin} to see public key and request signatures?`);
         if (conf) {
@@ -16,7 +26,16 @@ function authorize(origin) {
             authorization = 'ignore';
         }
     }
-    return authorization === 'allow' && origin === authorizedOrigin;
+    if (authorization === 'allow' && origin === authorizedOrigin) {
+        return;
+    } else {
+        // In this sample, if the user doesn't allow the page to see the
+        // wallet, we never respond.
+        return never;
+        // Alternatively, we can explicitly tell the requester that they're
+        // not authorized.
+        //throw new Error('not authorized');
+    }
 }
 
 const KEY_ID = 'sample-singleton';
@@ -39,24 +58,21 @@ function getSigner() {
     return signerP;
 }
 
-// In this sample, if the user doesn't allow the page to see the wallet, we never respond.
-const never = new Promise((resolve, reject) => {});
-
 oasisExt.ext.ready({
     async contextSignerPublic(origin, req) {
+        await authorize(origin);
         if (req.which !== KEY_ID) {
             throw new Error(`sample extension only supports .which === ${JSON.stringify(KEY_ID)}`);
         }
-        if (!authorize(origin)) return never;
         const signer = await getSigner();
         const publicKey = signer.public();
         return {public_key: publicKey};
     },
     async contextSignerSign(origin, req) {
+        await authorize(origin);
         if (req.which !== KEY_ID) {
             throw new Error(`sample extension only supports .which === ${JSON.stringify(KEY_ID)}`);
         }
-        if (!authorize(origin)) return never;
         const conf = window.confirm(
             `Signature request\nContext: ${req.context}\nMessage: ${oasis.misc.toHex(req.message)}`,
         );
