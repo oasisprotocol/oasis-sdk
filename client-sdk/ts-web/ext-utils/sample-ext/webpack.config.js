@@ -17,4 +17,12 @@ module.exports = {
             export: 'playground',
         },
     },
+    // In tests, we serve the extension files as a plain old website.
+    devServer: {
+        devMiddleware: {
+            publicPath: '/dist',
+        },
+        port: 8081,
+        static: '.',
+    },
 };

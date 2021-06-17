@@ -9,7 +9,8 @@
         "fmt": "prettier --write sample-ext/src sample-page/src src",
         "lint": "prettier --check sample-ext/src sample-page/src src",
         "sample-page": "cd sample-page && webpack s -c webpack.config.js",
-        "sample-ext": "cd sample-ext && webpack w -c webpack.config.js",
+        "sample-ext": "cd sample-ext && webpack -c webpack.config.js",
+        "fake-sample-ext": "cd sample-ext && webpack s -c webpack.config.js",
         "prepare": "tsc"
     },
     "dependencies": {
@@ -17,6 +18,7 @@
     },
     "devDependencies": {
         "buffer": "^6.0.3",
+        "cypress": "^7.5.0",
         "prettier": "^2.3.1",
         "process": "^0.11.10",
         "stream-browserify": "^3.0.0",

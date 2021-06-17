@@ -5,6 +5,7 @@ import * as oasis from '@oasisprotocol/client';
 import * as oasisExt from './../..';
 
 let authorization = 'ask';
+/** @type {string} */
 let authorizedOrigin = null;
 
 const never = new Promise((resolve, reject) => {});
