@@ -19,7 +19,7 @@ function authorize(origin) {
     return authorization === 'allow' && origin === authorizedOrigin;
 }
 
-const SIGNER_ID = 'sample-singleton';
+const KEY_ID = 'sample-singleton';
 /** @type {Promise<oasis.signature.ContextSigner>} */
 let signerP = null;
 function getSigner() {
@@ -44,10 +44,8 @@ const never = new Promise((resolve, reject) => {});
 
 oasisExt.ext.ready({
     async contextSignerPublic(origin, req) {
-        if (req.which !== SIGNER_ID) {
-            throw new Error(
-                `sample extension only supports .which === ${JSON.stringify(SIGNER_ID)}`,
-            );
+        if (req.which !== KEY_ID) {
+            throw new Error(`sample extension only supports .which === ${JSON.stringify(KEY_ID)}`);
         }
         if (!authorize(origin)) return never;
         const signer = await getSigner();
@@ -55,10 +53,8 @@ oasisExt.ext.ready({
         return {public_key: publicKey};
     },
     async contextSignerSign(origin, req) {
-        if (req.which !== SIGNER_ID) {
-            throw new Error(
-                `sample extension only supports .which === ${JSON.stringify(SIGNER_ID)}`,
-            );
+        if (req.which !== KEY_ID) {
+            throw new Error(`sample extension only supports .which === ${JSON.stringify(KEY_ID)}`);
         }
         if (!authorize(origin)) return never;
         const conf = window.confirm(
