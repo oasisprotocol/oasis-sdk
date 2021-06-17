@@ -49,3 +49,26 @@ impl<N: NonceProvider> Wallet for Ed25519Wallet<N> {
         &self.address
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn sign_verify() {
+        let keypair = oasis_runtime_sdk::core::common::crypto::signature::PrivateKey::generate();
+        let public_key: oasis_runtime_sdk::crypto::signature::ed25519::PublicKey =
+            keypair.public_key().into();
+        let wallet = Ed25519Wallet::new(
+            keypair.0,
+            crate::wallet::nonce_provider::SimpleNonceProvider::default(),
+        );
+        let context = b"world";
+        let message = b"hello";
+        let signature = match wallet.sign(context, message).await.unwrap() {
+            oasis_runtime_sdk::types::transaction::AuthProof::Signature(sig) => sig,
+            _ => panic!("expected single signature"),
+        };
+        public_key.verify(context, message, &signature).unwrap();
+    }
+}

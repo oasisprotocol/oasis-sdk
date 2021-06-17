@@ -21,3 +21,6 @@ thiserror = "1.0.25"
 tokio = { version = "1.6.1", default-features = false, features = ["net"] }
 tonic = { version = "0.4.3", default-features = false, features = ["transport"] }
 tower = { version = "0.4.8", features = ["make"] }
+
+[dev-dependencies]
+tokio = { version = "1.6.1", default-features = false, features = ["macros"] }
