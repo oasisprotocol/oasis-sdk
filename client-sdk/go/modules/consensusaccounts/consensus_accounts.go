@@ -6,7 +6,6 @@ import (
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -20,13 +19,18 @@ const (
 	methodAccount = "consensus.Account"
 )
 
+// V1 is the v1 consensus accounts module interface.
 type V1 interface {
-	Deposit(ctx context.Context, signer signature.Signer, nonce uint64, deposit *Deposit) error
+	// Deposit generates a consensus.Deposit transaction.
+	Deposit(amount types.BaseUnits) *client.TransactionBuilder
 
-	Withdraw(ctx context.Context, signer signature.Signer, nonce uint64, withdraw *Withdraw) error
+	// Withdraw generates a consensus.Withdraw transaction.
+	Withdraw(amount types.BaseUnits) *client.TransactionBuilder
 
+	// Balance queries the given account's balance of consensus denomination tokens.
 	Balance(ctx context.Context, round uint64, query *BalanceQuery) (*AccountBalance, error)
 
+	// ConsensusAccount queries the given consensus layer account.
 	ConsensusAccount(ctx context.Context, round uint64, query *AccountQuery) (*staking.Account, error)
 }
 
@@ -35,45 +39,17 @@ type v1 struct {
 }
 
 // Implements V1.
-func (a *v1) Deposit(ctx context.Context, signer signature.Signer, nonce uint64, deposit *Deposit) error {
-	info, err := a.rc.GetInfo(ctx)
-	if err != nil {
-		return err
-	}
-
-	tx := types.NewTransaction(nil, methodDeposit, deposit)
-	tx.AppendAuthSignature(signer.Public(), nonce)
-	stx := tx.PrepareForSigning()
-	if err = stx.AppendSign(info.ChainContext, signer); err != nil {
-		return err
-	}
-
-	if _, err = a.rc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
-		return err
-	}
-
-	return nil
+func (a *v1) Deposit(amount types.BaseUnits) *client.TransactionBuilder {
+	return client.NewTransactionBuilder(a.rc, methodDeposit, &Deposit{
+		Amount: amount,
+	})
 }
 
 // Implements V1.
-func (a *v1) Withdraw(ctx context.Context, signer signature.Signer, nonce uint64, withdraw *Withdraw) error {
-	info, err := a.rc.GetInfo(ctx)
-	if err != nil {
-		return err
-	}
-
-	tx := types.NewTransaction(nil, methodWithdraw, withdraw)
-	tx.AppendAuthSignature(signer.Public(), nonce)
-	stx := tx.PrepareForSigning()
-	if err = stx.AppendSign(info.ChainContext, signer); err != nil {
-		return err
-	}
-
-	if _, err = a.rc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
-		return err
-	}
-
-	return nil
+func (a *v1) Withdraw(amount types.BaseUnits) *client.TransactionBuilder {
+	return client.NewTransactionBuilder(a.rc, methodWithdraw, &Withdraw{
+		Amount: amount,
+	})
 }
 
 // Implements V1.
@@ -96,6 +72,17 @@ func (a *v1) ConsensusAccount(ctx context.Context, round uint64, query *AccountQ
 	return &account, nil
 }
 
+// NewV1 generates a V1 client helper for the consensus accounts module.
 func NewV1(rc client.RuntimeClient) V1 {
 	return &v1{rc: rc}
+}
+
+// NewDepositTx generates a new consensus.Deposit transaction.
+func NewDepositTx(fee *types.Fee, body *Deposit) *types.Transaction {
+	return types.NewTransaction(fee, methodDeposit, body)
+}
+
+// NewWithdrawTx generates a new consensus.Withdraw transaction.
+func NewWithdrawTx(fee *types.Fee, body *Withdraw) *types.Transaction {
+	return types.NewTransaction(fee, methodWithdraw, body)
 }

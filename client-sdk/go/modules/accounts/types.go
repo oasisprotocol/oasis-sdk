@@ -4,6 +4,12 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
+// Transfer is the body for the accounts.Transfer call.
+type Transfer struct {
+	To     types.Address   `json:"to"`
+	Amount types.BaseUnits `json:"amount"`
+}
+
 // NonceQuery are the arguments for the accounts.Nonce query.
 type NonceQuery struct {
 	Address types.Address `json:"address"`

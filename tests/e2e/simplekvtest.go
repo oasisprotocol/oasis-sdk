@@ -382,33 +382,17 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
-	chainCtx, err := GetChainContext(ctx, rtc)
-	if err != nil {
-		return err
-	}
-
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
 		return err
 	}
 
 	log.Info("transferring 100 units from Alice to Bob")
-	tx := types.NewTransaction(&types.Fee{
-		Gas: defaultGasAmount,
-	}, "accounts.Transfer", struct {
-		To     types.Address   `json:"to"`
-		Amount types.BaseUnits `json:"amount"`
-	}{
-		To:     testing.Bob.Address,
-		Amount: types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination),
-	})
-	tx.AppendAuthSignature(testing.Alice.Signer.Public(), nonce)
-	stx := tx.PrepareForSigning()
-	if err = stx.AppendSign(chainCtx, testing.Alice.Signer); err != nil {
-		return err
-	}
-
-	if _, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
+	tb := ac.Transfer(testing.Bob.Address, types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination)).
+		SetFeeGas(defaultGasAmount).
+		AppendAuthSignature(testing.Alice.Signer.Public(), nonce)
+	_ = tb.AppendSign(ctx, testing.Alice.Signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
 
@@ -446,33 +430,17 @@ func KVDaveTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn,
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
-	chainCtx, err := GetChainContext(ctx, rtc)
-	if err != nil {
-		return err
-	}
-
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Dave.Address)
 	if err != nil {
 		return err
 	}
 
 	log.Info("transferring 10 units from Dave to Alice")
-	tx := types.NewTransaction(&types.Fee{
-		Gas: defaultGasAmount,
-	}, "accounts.Transfer", struct {
-		To     types.Address   `json:"to"`
-		Amount types.BaseUnits `json:"amount"`
-	}{
-		To:     testing.Alice.Address,
-		Amount: types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination),
-	})
-	tx.AppendAuthSignature(testing.Dave.Signer.Public(), nonce)
-	stx := tx.PrepareForSigning()
-	if err = stx.AppendSign(chainCtx, testing.Dave.Signer); err != nil {
-		return err
-	}
-
-	if _, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
+	tb := ac.Transfer(testing.Alice.Address, types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination)).
+		SetFeeGas(defaultGasAmount).
+		AppendAuthSignature(testing.Dave.Signer.Public(), nonce)
+	_ = tb.AppendSign(ctx, testing.Dave.Signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
 

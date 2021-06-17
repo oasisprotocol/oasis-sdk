@@ -66,22 +66,29 @@ type Event struct {
 }
 
 type runtimeClient struct {
-	cs        consensus.ClientBackend
-	cc        coreClient.RuntimeClient
-	runtimeID common.Namespace
+	cs consensus.ClientBackend
+	cc coreClient.RuntimeClient
+
+	runtimeID   common.Namespace
+	runtimeInfo *types.RuntimeInfo
 }
 
 // Implements RuntimeClient.
 func (rc *runtimeClient) GetInfo(ctx context.Context) (*types.RuntimeInfo, error) {
+	if rc.runtimeInfo != nil {
+		return rc.runtimeInfo, nil
+	}
+
 	chainCtx, err := rc.cs.GetChainContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch consensus layer chain context: %w", err)
 	}
 
-	return &types.RuntimeInfo{
+	rc.runtimeInfo = &types.RuntimeInfo{
 		ID:           rc.runtimeID,
 		ChainContext: signature.DeriveChainContext(rc.runtimeID, chainCtx),
-	}, nil
+	}
+	return rc.runtimeInfo, nil
 }
 
 // Implements RuntimeClient.

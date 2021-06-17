@@ -169,12 +169,14 @@ func (t *Transaction) AppendSignerInfo(addressSpec AddressSpec, nonce uint64) {
 	})
 }
 
-// AppendAuthSignature appends a new transaction signer information with a signature address specification to the transaction.
+// AppendAuthSignature appends a new transaction signer information with a signature address
+// specification to the transaction.
 func (t *Transaction) AppendAuthSignature(pk signature.PublicKey, nonce uint64) {
 	t.AppendSignerInfo(AddressSpec{Signature: &PublicKey{PublicKey: pk}}, nonce)
 }
 
-// AppendAuthMultisig appends n ew transaction signer information with a multisig address specification to the transaction.
+// AppendAuthMultisig appends a new transaction signer information with a multisig address
+// specification to the transaction.
 func (t *Transaction) AppendAuthMultisig(config *MultisigConfig, nonce uint64) {
 	t.AppendSignerInfo(AddressSpec{Multisig: config}, nonce)
 }

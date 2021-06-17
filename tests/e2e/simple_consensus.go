@@ -52,13 +52,15 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	consAccounts := consensusAccounts.NewV1(rtc)
 
 	signer := testing.Alice.Signer
-	deposit := &consensusAccounts.Deposit{
-		Amount: types.NewBaseUnits(*quantity.NewFromUint64(50), types.Denomination("TEST")),
-	}
 	log.Info("alice depositing into runtime")
-	if err = consAccounts.Deposit(ctx, signer, 0, deposit); err != nil {
+	amount := types.NewBaseUnits(*quantity.NewFromUint64(50), types.Denomination("TEST"))
+	tb := consAccounts.Deposit(amount).
+		AppendAuthSignature(signer.Public(), 0)
+	_ = tb.AppendSign(ctx, signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
+
 	if err = ensureStakingEvent(log, ch, func(e *staking.Event) bool {
 		if e.Transfer == nil {
 			return false
@@ -69,14 +71,17 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		if e.Transfer.To != staking.NewRuntimeAddress(runtimeID) {
 			return false
 		}
-		return e.Transfer.Amount.Cmp(&deposit.Amount.Amount) == 0
+		return e.Transfer.Amount.Cmp(&amount.Amount) == 0
 	}); err != nil {
 		return fmt.Errorf("ensuring alice deposit consensus event: %w", err)
 	}
 
-	deposit.Amount.Amount = *quantity.NewFromUint64(40)
+	amount.Amount = *quantity.NewFromUint64(40)
 	log.Info("bob depositing into runtime")
-	if err = consAccounts.Deposit(ctx, testing.Bob.Signer, 0, deposit); err != nil {
+	tb = consAccounts.Deposit(amount).
+		AppendAuthSignature(testing.Bob.Signer.Public(), 0)
+	_ = tb.AppendSign(ctx, testing.Bob.Signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
 	if err = ensureStakingEvent(log, ch, func(e *staking.Event) bool {
@@ -89,16 +94,17 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		if e.Transfer.To != staking.NewRuntimeAddress(runtimeID) {
 			return false
 		}
-		return e.Transfer.Amount.Cmp(&deposit.Amount.Amount) == 0
+		return e.Transfer.Amount.Cmp(&amount.Amount) == 0
 	}); err != nil {
 		return fmt.Errorf("ensuring bob deposit consensus event: %w", err)
 	}
 
-	withdraw := &consensusAccounts.Withdraw{
-		Amount: types.NewBaseUnits(*quantity.NewFromUint64(25), types.Denomination("TEST")),
-	}
+	amount.Amount = *quantity.NewFromUint64(25)
 	log.Info("alice withdrawing")
-	if err = consAccounts.Withdraw(ctx, testing.Alice.Signer, 1, withdraw); err != nil {
+	tb = consAccounts.Withdraw(amount).
+		AppendAuthSignature(testing.Alice.Signer.Public(), 1)
+	_ = tb.AppendSign(ctx, testing.Alice.Signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
 	if err = ensureStakingEvent(log, ch, func(e *staking.Event) bool {
@@ -111,21 +117,27 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		if e.Transfer.From != staking.NewRuntimeAddress(runtimeID) {
 			return false
 		}
-		return e.Transfer.Amount.Cmp(&withdraw.Amount.Amount) == 0
+		return e.Transfer.Amount.Cmp(&amount.Amount) == 0
 	}); err != nil {
 		return fmt.Errorf("ensuring alice withdraw consensus event: %w", err)
 	}
 
-	withdraw.Amount.Amount = *quantity.NewFromUint64(50)
+	amount.Amount = *quantity.NewFromUint64(50)
 	log.Info("charlie withdrawing")
-	if err = consAccounts.Withdraw(ctx, testing.Charlie.Signer, 0, withdraw); err != nil {
+	tb = consAccounts.Withdraw(amount).
+		AppendAuthSignature(testing.Charlie.Signer.Public(), 0)
+	_ = tb.AppendSign(ctx, testing.Charlie.Signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
 		log.Info("charlie withdrawing failed (as expected)", "err", err)
 	} else {
 		return fmt.Errorf("charlie withdrawing should fail")
 	}
 
 	log.Info("alice withdrawing with invalid nonce")
-	if err = consAccounts.Withdraw(ctx, testing.Alice.Signer, 1, withdraw); err != nil {
+	tb = consAccounts.Withdraw(amount).
+		AppendAuthSignature(testing.Alice.Signer.Public(), 1)
+	_ = tb.AppendSign(ctx, testing.Alice.Signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
 		log.Info("alice invalid nonce failed request failed (as expected)", "err", err)
 	} else {
 		return fmt.Errorf("alice withdrawing with invalid nonce should fail")
@@ -135,7 +147,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	balanceQuery := &consensusAccounts.BalanceQuery{
 		Address: testing.Alice.Address,
 	}
-	resp, err := consAccounts.Balance(ctx, 0, balanceQuery)
+	resp, err := consAccounts.Balance(ctx, client.RoundLatest, balanceQuery)
 	if err != nil {
 		return err
 	}
@@ -147,7 +159,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	accountsQuery := &consensusAccounts.AccountQuery{
 		Address: testing.Alice.Address,
 	}
-	acc, err := consAccounts.ConsensusAccount(ctx, 0, accountsQuery)
+	acc, err := consAccounts.ConsensusAccount(ctx, client.RoundLatest, accountsQuery)
 	if err != nil {
 		return err
 	}
@@ -156,8 +168,11 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	}
 
 	log.Info("dave depositing (secp256k1)")
-	deposit.Amount.Amount = *quantity.NewFromUint64(50)
-	if err := consAccounts.Deposit(ctx, testing.Dave.Signer, 0, deposit); err != nil {
+	amount.Amount = *quantity.NewFromUint64(50)
+	tb = consAccounts.Deposit(amount).
+		AppendAuthSignature(testing.Dave.Signer.Public(), 0)
+	_ = tb.AppendSign(ctx, testing.Dave.Signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
 		log.Info("dave depositing failed (as expected)", "err", err)
 	} else {
 		return fmt.Errorf("dave depositing should fail")
