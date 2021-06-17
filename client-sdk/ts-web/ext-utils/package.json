@@ -1,4 +1,7 @@
 {
+    "name": "@oasisprotocol/client-ext-utils",
+    "version": "0.1.0-alpha1",
+    "license": "Apache-2.0",
     "files": [
         "dist"
     ],
