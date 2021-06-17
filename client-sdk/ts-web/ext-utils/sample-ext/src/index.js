@@ -59,6 +59,20 @@ function getSigner() {
 }
 
 oasisExt.ext.ready({
+    async keysList(origin, req) {
+        await authorize(origin);
+        return {
+            keys: [
+                {
+                    which: KEY_ID,
+                    metadata: {
+                        name: 'The only key',
+                        description: 'This sample extension only keeps one key--this one.',
+                    },
+                },
+            ],
+        };
+    },
     async contextSignerPublic(origin, req) {
         await authorize(origin);
         if (req.which !== KEY_ID) {

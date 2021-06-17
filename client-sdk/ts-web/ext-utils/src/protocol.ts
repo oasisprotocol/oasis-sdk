@@ -29,6 +29,29 @@ export interface MessageRequest {
 
 // methods
 
+export const METHOD_KEYS_LIST = 'keys-list';
+
+export interface KeysListRequest {
+    method: typeof METHOD_KEYS_LIST;
+}
+
+export interface KeyInfo {
+    /**
+     * A value for the `which` parameter when requesting a public key or a
+     * signature. It's up to the extension to define how it's structured.
+     */
+    which: any;
+    /**
+     * An extra output, suggested to be used to describe the key. It's up to
+     * the extension to define how it's structured.
+     */
+    metadata: any;
+}
+
+export interface KeysListResponse {
+    keys: KeyInfo[];
+}
+
 export const METHOD_CONTEXT_SIGNER_PUBLIC = 'context-signer-public';
 
 export interface ContextSignerPublicRequest {

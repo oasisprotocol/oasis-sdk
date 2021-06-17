@@ -12,11 +12,13 @@ function toBase64(u8) {
         const connection = await oasisExt.connection.connect(SAMPLE_EXT_ORIGIN);
         console.log('connected');
 
+        console.log('listing keys');
+        const keys = await oasisExt.keys.list(connection);
+        console.log('listed keys');
+        console.log('keys', keys);
+
         console.log('requesting signer');
-        const signer = await oasisExt.signature.ExtContextSigner.request(
-            connection,
-            'sample-singleton',
-        );
+        const signer = await oasisExt.signature.ExtContextSigner.request(connection, keys[0].which);
         console.log('got signer');
         console.log('public key base64', toBase64(signer.public()));
 

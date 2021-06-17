@@ -13,6 +13,12 @@ import * as protocol from './protocol';
  */
 export interface Handlers {
     /**
+     * If the extension can share a list of keys and the web content wants to know
+     * what keys are available, this method retrieves that list.
+     * @param origin The origin where the request came from
+     */
+    keysList(origin: string, req: protocol.KeysListRequest): Promise<protocol.KeysListResponse>;
+    /**
      * Get the public key of a ContextSigner kept by the extension.
      * @param origin The origin where the request came from
      */
@@ -48,6 +54,11 @@ export function ready(handlers: Handlers) {
                     // @ts-expect-error even if .method is missing, it's fine if we get undefined here
                     const method = reqM.body.method;
                     switch (method) {
+                        case protocol.METHOD_KEYS_LIST: {
+                            const req = reqM.body as protocol.KeysListRequest;
+                            resM.body = await handlers.keysList(e.origin, req);
+                            break;
+                        }
                         case protocol.METHOD_CONTEXT_SIGNER_PUBLIC: {
                             const req = reqM.body as protocol.ContextSignerPublicRequest;
                             resM.body = await handlers.contextSignerPublic(e.origin, req);
