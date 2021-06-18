@@ -11,7 +11,7 @@ replace (
 
 require (
 	github.com/btcsuite/btcd v0.22.0-beta
-	github.com/oasisprotocol/oasis-core/go v0.2102.0
+	github.com/oasisprotocol/oasis-core/go v0.2102.3
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/net v0.0.0-20210510120150-4163338589ed // indirect
 	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015 // indirect
