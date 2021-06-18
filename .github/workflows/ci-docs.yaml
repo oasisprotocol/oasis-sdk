@@ -1,0 +1,37 @@
+# NOTE: This name appears in GitHub's Checks API and in workflow's status badge.
+name: ci-docs
+
+# Trigger the workflow when:
+on:
+  # A push occurs to one of the matched branches.
+  push:
+    branches:
+      - main
+
+jobs:
+
+  publish-docs:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: publish-docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+
+      - name: Build docs
+        uses: actions-rs/cargo@v1
+        with:
+          command: doc
+          args: --package oasis-runtime-sdk --package oasis-runtime-sdk-macros --no-deps --all-features
+
+      - name: Publish docs
+        uses: crazy-max/ghaction-github-pages@v2
+        with:
+          target_branch: api-reference
+          build_dir: target/doc
+          commit_message: Deploy API reference
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
