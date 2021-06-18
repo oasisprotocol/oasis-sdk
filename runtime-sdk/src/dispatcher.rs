@@ -407,7 +407,15 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Perform state migrations if required.
             R::migrate(&mut ctx);
 
-            Self::dispatch_query(&mut ctx, method, args)
+            // Run begin block hooks.
+            R::Modules::begin_block(&mut ctx);
+
+            let result = Self::dispatch_query(&mut ctx, method, args);
+
+            // Run end block hooks.
+            R::Modules::end_block(&mut ctx);
+
+            result
         })
     }
 }
