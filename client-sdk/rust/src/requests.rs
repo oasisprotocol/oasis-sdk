@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 
-use oasis_runtime_sdk::core::{common::namespace::Namespace, consensus::roothash::Block};
+use oasis_runtime_sdk::core::{
+    common::{cbor, namespace::Namespace},
+    consensus::roothash::Block,
+};
 
 macro_rules! grpc_methods {
     ($(
@@ -51,8 +54,8 @@ grpc_methods! {
         runtime_id: Namespace,
         round: u64,
         method: String,
-        data: ByteBuf,
-    }) -> ByteBuf;
+        args: cbor::Value,
+    }) -> QueryResponse;
 
     RuntimeClient.GetBlock({
         runtime_id: Namespace,
@@ -60,4 +63,10 @@ grpc_methods! {
     }) -> Block;
 
     Consensus.GetChainContext() -> ByteBuf;
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct QueryResponse {
+    pub(crate) data: cbor::Value,
 }
