@@ -16,6 +16,7 @@ use crate::{
 };
 
 /// Result of invoking the method handler.
+#[derive(Debug)]
 pub enum DispatchResult<B, R> {
     Handled(R),
     Unhandled(B),
