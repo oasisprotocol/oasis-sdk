@@ -264,6 +264,28 @@ fn gen_client_items(
         })
         .collect();
 
+    let (client_method, response_decoder) = match handlers_kind {
+        Handlers::Calls => {
+            let response_decoder = quote! {
+                use #sdk_crate::types::transaction::CallResult as _CallResult;
+                match _cbor::from_slice::<_CallResult>(&response)? {
+                    _CallResult::Ok(res) => _cbor::from_value(res).map_err(Into::into),
+                    _CallResult::Failed {
+                        module, code, message
+                    } => {
+                        let message = if message.is_empty() { None } else { Some(message) };
+                        Err(oasis_client_sdk::Error::TxReverted { module, code, message })
+                    }
+                }
+            };
+            (quote!(tx), response_decoder)
+        }
+        Handlers::Queries => {
+            let response_decoder = quote!(_cbor::from_value(response).map_err(Into::into));
+            (quote!(query), response_decoder)
+        }
+    };
+
     let rpcs = handler_methods
         .iter()
         .zip(rpc_signatures.iter())
@@ -285,30 +307,19 @@ fn gen_client_items(
 
             quote! {
                 #sig {
-                    use #sdk_crate::{
-                        types::transaction::CallResult as _CallResult,
-                        core::common::cbor as _cbor,
-                    };
+                    use #sdk_crate::core::common::cbor as _cbor;
                     #[derive(serde::Serialize)]
                     #serde_transparent
                     struct CallArgs<#struct_lifetime> {
                         #(#arg_idents: #arg_tys),*
                     }
-                    let serialized_call_result = self.inner.tx(
+                    let response = self.inner.#client_method(
                         &format!("{}.{}", #runtime_module_name_path, #rpc_method_name),
                         &_cbor::to_value(&CallArgs {
                             #(#arg_idents),*
                         }),
                     ).await?;
-                    match _cbor::from_slice::<_CallResult>(&serialized_call_result)? {
-                        _CallResult::Ok(res) => _cbor::from_value(res).map_err(Into::into),
-                        _CallResult::Failed {
-                            module, code, message
-                        } => {
-                            let message = if message.is_empty() { None } else { Some(message) };
-                            Err(oasis_client_sdk::Error::TxReverted { module, code, message })
-                        }
-                    }
+                    #response_decoder
                 }
             }
         });
