@@ -15,9 +15,12 @@ use oasis_runtime_sdk::{
 };
 
 use crate::{
-    requests::{GetChainContextRequest, Request, SubmitTxRequest},
+    requests::{GetChainContextRequest, QueryRequest, Request, SubmitTxRequest},
     wallet::Wallet,
 };
+
+/// A sentinel value for the latest round.
+const ROUND_LATEST: u64 = u64::max_value();
 
 #[derive(Clone)]
 pub struct Client {
@@ -64,7 +67,7 @@ impl Client {
         Ok(self.inner.ready().await?)
     }
 
-    /// Sends transaction to scheduler.
+    /// Sends a transaction to the scheduler.
     pub async fn tx(&mut self, method: &str, body: &cbor::Value) -> Result<Vec<u8>, Error> {
         let nonces = try_join_all(self.wallets.iter().map(|wallet| wallet.next_nonce()))
             .await
@@ -99,6 +102,17 @@ impl Client {
             data: ByteBuf::from(cbor::to_vec(&(serialized_tx, auth_proofs))),
         };
         Ok(self.unary(req).await?.into_vec())
+    }
+
+    /// Sends a read-only query to connected node.
+    pub async fn query(&mut self, method: &str, body: &cbor::Value) -> Result<cbor::Value, Error> {
+        let req = QueryRequest {
+            runtime_id: self.runtime_id,
+            round: ROUND_LATEST,
+            method: method.to_string(),
+            args: body.clone(),
+        };
+        Ok(self.unary(req).await?.data)
     }
 
     async fn unary<R: Request>(&mut self, req: R) -> Result<R::Response, Error> {
