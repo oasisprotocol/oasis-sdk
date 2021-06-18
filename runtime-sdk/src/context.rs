@@ -598,6 +598,15 @@ impl<'a, V: Any> ContextValue<'a, V> {
         .expect("type should stay the same")
     }
 
+    /// Ensures a value is present by inserting the default if empty,
+    /// and returns a mutable reference to the value.
+    pub fn or_insert_with<F: FnOnce() -> V>(self, default: F) -> &'a mut V {
+        self.inner
+            .or_insert_with(|| Box::new(default()))
+            .downcast_mut()
+            .expect("type should stay the same")
+    }
+
     /// Takes the context value, if it exists.
     ///
     /// # Panics
