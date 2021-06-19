@@ -8,7 +8,7 @@ use tonic::{self, client::Grpc, transport::Channel};
 
 use oasis_runtime_sdk::{
     self as sdk,
-    core::common::{cbor, namespace::Namespace},
+    core::common::{cbor, crypto::hash::Hash, namespace::Namespace},
     types::transaction::{
         AuthInfoRef, CallRef, Fee, SignerInfoRef, TransactionRef, LATEST_TRANSACTION_VERSION,
     },
@@ -21,6 +21,10 @@ use crate::{
 
 /// A sentinel value for the latest round.
 const ROUND_LATEST: u64 = u64::max_value();
+
+/// The prefix of the runtime chain context including the signature context,
+/// `oasis-runtime-sdk/tx: v1` followed by the separator, ` for chain `.
+const CHAIN_CONTEXT_PREFIX: &str = "oasis-runtime-sdk/tx: v0 for chain";
 
 #[derive(Clone)]
 pub struct Client {
@@ -48,13 +52,19 @@ impl Client {
         }))
         .await?;
         let mut grpc = Grpc::new(channel);
-        let chain_context = Self::make_unary(&mut grpc, GetChainContextRequest {}).await?;
+
+        let consensus_chain_context =
+            Self::make_unary(&mut grpc, GetChainContextRequest {}).await?;
+        let runtime_chain_context =
+            Hash::digest_bytes_list(&[&runtime_id.0, &consensus_chain_context]);
+        let chain_context = format!("{} {:x}", CHAIN_CONTEXT_PREFIX, runtime_chain_context);
+
         Ok(Self {
             inner: grpc,
             runtime_id,
             wallets: Arc::new(wallets.into_iter().map(Arc::from).collect()),
             fee: Default::default(),
-            chain_context: chain_context.to_vec(),
+            chain_context: chain_context.into_bytes(),
         })
     }
 
