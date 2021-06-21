@@ -1,6 +1,10 @@
 import * as oasisExt from '../..';
 
-const extOrigin = new URL(window.location.href).searchParams.get('ext');
+const options = new URL(window.location.href).searchParams;
+const extOrigin = options.get('ext');
+const extPath = options.has('test_noninteractive')
+    ? '/oasis-xu-frame.html?test_noninteractive=1'
+    : undefined;
 
 function toBase64(u8) {
     return btoa(String.fromCharCode.apply(null, u8));
@@ -8,7 +12,7 @@ function toBase64(u8) {
 
 export const playground = (async function () {
     console.log('connecting');
-    const connection = await oasisExt.connection.connect(extOrigin);
+    const connection = await oasisExt.connection.connect(extOrigin, extPath);
     console.log('connected');
 
     console.log('listing keys');

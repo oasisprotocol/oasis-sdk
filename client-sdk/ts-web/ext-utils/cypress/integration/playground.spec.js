@@ -2,7 +2,7 @@
 
 describe('playground', () => {
     it('finishes', () => {
-        cy.visit('http://localhost:8080/?ext=http://localhost:8081');
+        cy.visit('http://localhost:8080/?ext=http://localhost:8081&test_noninteractive=1');
         // This is similar to `.its('playground')`, except that
         // (i) it doesn't retry if `w.playground` rejects, and
         // (ii) it passes when `w.playground` fulfills with `undefined`.

@@ -4,6 +4,8 @@ import * as oasis from '@oasisprotocol/client';
 
 import * as oasisExt from './../..';
 
+const testNoninteractive = new URL(window.location.href).searchParams.has('test_noninteractive');
+
 let authorization = 'ask';
 /** @type {string} */
 let authorizedOrigin = null;
@@ -18,6 +20,16 @@ const never = new Promise((resolve, reject) => {});
  * @returns void if authorized
  */
 async function authorize(origin) {
+    // We run an integration test to exercise the cross-origin messaging
+    // mechanism. Disable the user interactions in that case, due to
+    // limitations in our testing framework. But also be sure not to expose
+    // actual keys. Or better yet, remove this flag altogether in a real
+    // extension.
+    if (testNoninteractive) {
+        console.warn('test_noninteractive: skipping authorization');
+        return;
+    }
+
     if (authorization === 'ask') {
         const conf = window.confirm(`Allow ${origin} to see public key and request signatures?`);
         if (conf) {
@@ -45,11 +57,24 @@ let signerP = null;
 function getSigner() {
     if (!signerP) {
         signerP = (async () => {
-            let mnemonic = window.localStorage.getItem('mnemonic');
-            if (!mnemonic) {
-                mnemonic = oasis.hdkey.HDKey.generateMnemonic();
-                window.localStorage.setItem('mnemonic', mnemonic);
-                alert(`First run, new mnemonic. Back this up if you want:\n${mnemonic}`);
+            let mnemonic;
+            if (testNoninteractive) {
+                // We run an integration test to exercise the cross-origin messaging
+                // mechanism. Disable the user interactions in that case, due to
+                // limitations in our testing framework. But also be sure not to expose
+                // actual keys. Or better yet, remove this flag altogether in a real
+                // extension.
+                console.warn('test_noninteractive: using dummy mnemonic');
+                // The mnemonic used in a test vector from ADR 0008.
+                mnemonic =
+                    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+            } else {
+                mnemonic = window.localStorage.getItem('mnemonic');
+                if (!mnemonic) {
+                    mnemonic = oasis.hdkey.HDKey.generateMnemonic();
+                    window.localStorage.setItem('mnemonic', mnemonic);
+                    alert(`First run, new mnemonic. Back this up if you want:\n${mnemonic}`);
+                }
             }
             const pair = await oasis.hdkey.HDKey.getAccountSigner(mnemonic);
             const rawSigner = new oasis.signature.NaclSigner(pair, 'this key is not important');
@@ -88,10 +113,24 @@ oasisExt.ext.ready({
         if (req.which !== KEY_ID) {
             throw new Error(`sample extension only supports .which === ${JSON.stringify(KEY_ID)}`);
         }
-        const conf = window.confirm(
-            `Signature request\nContext: ${req.context}\nMessage: ${oasis.misc.toHex(req.message)}`,
-        );
-        if (!conf) return {approved: false};
+        const confMessage = `Signature request
+Context: ${req.context}
+Message: ${oasis.misc.toHex(req.message)}`;
+        if (testNoninteractive) {
+            // We run an integration test to exercise the cross-origin messaging
+            // mechanism. Disable the user interactions in that case, due to
+            // limitations in our testing framework. But also be sure not to expose
+            // actual keys. Or better yet, remove this flag altogether in a real
+            // extension.
+            console.warn(
+                'test_noninteractive: skipping approval',
+                'confirmation message',
+                confMessage,
+            );
+        } else {
+            const conf = window.confirm(confMessage);
+            if (!conf) return {approved: false};
+        }
         const signer = await getSigner();
         const signature = await signer.sign(req.context, req.message);
         return {approved: true, signature};
