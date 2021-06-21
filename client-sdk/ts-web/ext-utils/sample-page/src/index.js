@@ -1,3 +1,5 @@
+import * as oasis from '@oasisprotocol/client';
+
 import * as oasisExt from '../..';
 
 const options = new URL(window.location.href).searchParams;
@@ -23,7 +25,12 @@ export const playground = (async function () {
     console.log('requesting signer');
     const signer = await oasisExt.signature.ExtContextSigner.request(connection, keys[0].which);
     console.log('got signer');
-    console.log('public key base64', toBase64(signer.public()));
+    const publicKey = signer.public();
+    console.log('public key base64', toBase64(publicKey));
+    console.log(
+        'address bech32',
+        oasis.staking.addressToBech32(await oasis.staking.addressFromPublicKey(publicKey)),
+    );
 
     console.log('requesting signature');
     const signature = await signer.sign('invalid/sample-message: v0', new Uint8Array([1, 2, 3]));
