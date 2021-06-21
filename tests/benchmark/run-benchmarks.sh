@@ -13,15 +13,7 @@ TESTS_DIR=../
 . "${TESTS_DIR}/consts.sh"
 . "${TESTS_DIR}/paths.sh"
 
-"${TESTS_DIR}/download-artifacts.sh"
-
-echo "Build benchmarks binary."
-go build
-
-echo "Building test benchmarking runtime."
-pushd "${TESTS_DIR}"/runtimes/benchmarking
-    cargo build
-popd
+./build-benchmarks.sh
 
 TEST_BASE_DIR="/tmp/oasis-net-runner-benchmarks"
 CLIENT_SOCK="unix:${TEST_BASE_DIR}/net-runner/network/client-0/internal.sock"
