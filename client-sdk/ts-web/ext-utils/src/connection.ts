@@ -93,8 +93,10 @@ export function handleMessage(e: MessageEvent<unknown>) {
  * The connection stays open, and there is no disconnect.
  *
  * @param origin This will look like `chrome-extension://xxxxxxxxxxxxxxxxxx`
+ * @param path The path plus the origin will be the URL we use to load the
+ * iframe. Default is `/oasis-xu-frame.html`
  */
-export function connect(origin: string) {
+export function connect(origin: string, path = '/oasis-xu-frame.html') {
     if (!addedMessageListener) {
         window.addEventListener('message', handleMessage);
         addedMessageListener = true;
@@ -105,7 +107,7 @@ export function connect(origin: string) {
         });
 
         const iframe = document.createElement('iframe');
-        iframe.src = `${origin}/oasis-xu-frame.html`;
+        iframe.src = `${origin}${path}`;
         iframe.hidden = true;
         document.body.appendChild(iframe);
     }
