@@ -4,8 +4,8 @@
  */
 
 // page <- message frame
-export const MESSAGE_TYPE_READY = 'oasis-xu-ready';
-export const MESSAGE_TYPE_RESPONSE = 'oasis-xu-response';
+export const MESSAGE_TYPE_READY = 'oasis-xu-ready-v1';
+export const MESSAGE_TYPE_RESPONSE = 'oasis-xu-response-v1';
 
 export interface MessageReady {
     type: typeof MESSAGE_TYPE_READY;
@@ -19,7 +19,7 @@ export interface MessageResponse {
 }
 
 // page -> message frame
-export const MESSAGE_TYPE_REQUEST = 'oasis-xu-request';
+export const MESSAGE_TYPE_REQUEST = 'oasis-xu-request-v1';
 
 export interface MessageRequest {
     type: typeof MESSAGE_TYPE_REQUEST;
@@ -29,7 +29,7 @@ export interface MessageRequest {
 
 // methods
 
-export const METHOD_KEYS_LIST = 'keys-list';
+export const METHOD_KEYS_LIST = 'keys-list-v1';
 
 export interface KeysListRequest {
     method: typeof METHOD_KEYS_LIST;
@@ -52,7 +52,7 @@ export interface KeysListResponse {
     keys: KeyInfo[];
 }
 
-export const METHOD_CONTEXT_SIGNER_PUBLIC = 'context-signer-public';
+export const METHOD_CONTEXT_SIGNER_PUBLIC = 'context-signer-public-v1';
 
 export interface ContextSignerPublicRequest {
     method: typeof METHOD_CONTEXT_SIGNER_PUBLIC;
@@ -68,7 +68,7 @@ export interface ContextSignerPublicResponse {
     public_key: Uint8Array;
 }
 
-export const METHOD_CONTEXT_SIGNER_SIGN = 'context-signer-sign';
+export const METHOD_CONTEXT_SIGNER_SIGN = 'context-signer-sign-v1';
 
 export interface ContextSignerSignRequest {
     method: typeof METHOD_CONTEXT_SIGNER_SIGN;
