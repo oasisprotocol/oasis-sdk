@@ -1,3 +1,5 @@
+// @ts-check
+
 import * as oasis from '@oasisprotocol/client';
 
 import * as oasisExt from '../..';
@@ -8,7 +10,7 @@ const extPath = options.has('test_noninteractive')
     ? '/oasis-xu-frame.html?test_noninteractive=1'
     : undefined;
 
-function toBase64(u8) {
+function toBase64(/** @type {Uint8Array} */ u8) {
     return btoa(String.fromCharCode.apply(null, u8));
 }
 
