@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased changes
+
+New features:
+
+- `event.Visitor.visit` now returns whether it had a handler for the given
+  event.
+
 ## v0.2.0-alpha2
 
 Spotlight change:
