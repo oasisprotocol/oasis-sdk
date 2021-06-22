@@ -113,9 +113,93 @@ oasisExt.ext.ready({
         if (req.which !== KEY_ID) {
             throw new Error(`sample extension only supports .which === ${JSON.stringify(KEY_ID)}`);
         }
-        const confMessage = `Signature request
+        let confMessage = `Signature request`;
+        try {
+            const handled = oasis.signature.visitMessage(
+                {
+                    withChainContext:
+                        /** @type {oasis.consensus.SignatureMessageHandlersWithChainContext} */ ({
+                            [oasis.consensus.TRANSACTION_SIGNATURE_CONTEXT]: (chainContext, tx) => {
+                                confMessage += `
+Recognized message type: consensus transaction
+Chain context: ${chainContext}
+Nonce: ${tx.nonce}
+Fee amount: ${oasis.quantity.toBigInt(tx.fee.amount)} base units
+Fee gas: ${tx.fee.gas}`;
+                                const handled = oasis.consensus.visitTransaction(
+                                    /** @type {oasis.staking.ConsensusTransactionHandlers} */ ({
+                                        [oasis.staking.METHOD_TRANSFER]: (body) => {
+                                            confMessage += `
+Recognized method: staking transfer
+To: ${oasis.staking.addressToBech32(body.to)}
+Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
+                                        },
+                                        [oasis.staking.METHOD_BURN]: (body) => {
+                                            confMessage += `
+Recognized method: staking burn
+Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
+                                        },
+                                        [oasis.staking.METHOD_ADD_ESCROW]: (body) => {
+                                            confMessage += `
+Recognized method: staking add escrow
+Account: ${oasis.staking.addressToBech32(body.account)}
+Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
+                                        },
+                                        [oasis.staking.METHOD_RECLAIM_ESCROW]: (body) => {
+                                            confMessage += `
+Recognized method: staking reclaim escrow
+Account: ${oasis.staking.addressToBech32(body.account)}
+Shares: ${oasis.quantity.toBigInt(body.shares)}`;
+                                        },
+                                        [oasis.staking.METHOD_AMEND_COMMISSION_SCHEDULE]: (
+                                            body,
+                                        ) => {
+                                            confMessage += `
+Recognized method: staking amend commission schedule
+Amendment: ${JSON.stringify(body.amendment)}`;
+                                        },
+                                        [oasis.staking.METHOD_ALLOW]: (body) => {
+                                            confMessage += `
+Recognized method: staking allow
+Beneficiary: ${oasis.staking.addressToBech32(body.beneficiary)}
+Amount change: ${body.negative ? '-' : '+'}${oasis.quantity.toBigInt(
+                                                body.amount_change,
+                                            )} base units`;
+                                        },
+                                        [oasis.staking.METHOD_WITHDRAW]: (body) => {
+                                            confMessage += `
+Recognized method: staking withdraw
+From: ${oasis.staking.addressToBech32(body.from)}
+Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
+                                        },
+                                    }),
+                                    tx,
+                                );
+                                if (!handled) {
+                                    confMessage += `
+(pretty printing doesn't support this method)
+Method: ${tx.method}
+Body JSON: ${JSON.stringify(tx.body)}`;
+                                }
+                            },
+                        }),
+                },
+                req.context,
+                req.message,
+            );
+            if (!handled) {
+                confMessage += `
+(pretty printing doesn't support this signature context)
 Context: ${req.context}
-Message: ${oasis.misc.toHex(req.message)}`;
+Message hex: ${oasis.misc.toHex(req.message)}`;
+            }
+        } catch (e) {
+            console.error(e);
+            confMessage += `
+(couldn't parse)`;
+        }
+        confMessage += `
+Sign this message?`;
         if (testNoninteractive) {
             // We run an integration test to exercise the cross-origin messaging
             // mechanism. Disable the user interactions in that case, due to

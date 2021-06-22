@@ -34,10 +34,20 @@ export const playground = (async function () {
         oasis.staking.addressToBech32(await oasis.staking.addressFromPublicKey(publicKey)),
     );
 
+    const dst = oasis.signature.NaclSigner.fromRandom('this key is not important');
+    const tw = oasis.staking
+        .transferWrapper()
+        .setNonce(101n)
+        .setFeeAmount(oasis.quantity.fromBigInt(102n))
+        .setFeeGas(103n)
+        .setBody({
+            to: await oasis.staking.addressFromPublicKey(dst.public()),
+            amount: oasis.quantity.fromBigInt(104n),
+        });
     console.log('requesting signature');
-    const signature = await signer.sign('invalid/sample-message: v0', new Uint8Array([1, 2, 3]));
+    await tw.sign(signer, 'fake-chain-context-for-testing');
     console.log('got signature');
-    console.log('signature base64', toBase64(signature));
+    console.log('signature base64', toBase64(tw.signedTransaction.signature.signature));
 })();
 
 playground.catch((e) => {
