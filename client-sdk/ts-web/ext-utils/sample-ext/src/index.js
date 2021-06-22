@@ -1,6 +1,7 @@
 // @ts-check
 
 import * as oasis from '@oasisprotocol/client';
+import * as oasisRT from '@oasisprotocol/client-rt';
 
 import * as oasisExt from './../..';
 
@@ -84,6 +85,20 @@ function getSigner() {
     return signerP;
 }
 
+function toBase64(/** @type {Uint8Array} */ u8) {
+    return btoa(String.fromCharCode.apply(null, u8));
+}
+
+function toStringUtf8(/** @type {Uint8Array} */ u8) {
+    return new TextDecoder().decode(u8);
+}
+
+function rtBaseUnitsDisplay(/** @type {oasisRT.types.BaseUnits} */ bu) {
+    return `${oasis.quantity.toBigInt(bu[0])} ${
+        bu[1] && bu[1].length ? toStringUtf8(bu[1]) : '(native)'
+    }`;
+}
+
 oasisExt.ext.ready({
     async keysList(origin, req) {
         await authorize(origin);
@@ -118,7 +133,7 @@ oasisExt.ext.ready({
             const handled = oasis.signature.visitMessage(
                 {
                     withChainContext:
-                        /** @type {oasis.consensus.SignatureMessageHandlersWithChainContext} */ ({
+                        /** @type {oasis.consensus.SignatureMessageHandlersWithChainContext & oasisRT.transaction.SignatureMessageHandlersWithChainContext} */ ({
                             [oasis.consensus.TRANSACTION_SIGNATURE_CONTEXT]: (chainContext, tx) => {
                                 confMessage += `
 Recognized message type: consensus transaction
@@ -181,6 +196,55 @@ Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
 Method: ${tx.method}
 Body JSON: ${JSON.stringify(tx.body)}`;
                                 }
+                            },
+                            [oasisRT.transaction.SIGNATURE_CONTEXT_BASE]: (chainContext, tx) => {
+                                confMessage += `
+Recognized message type: runtime transaction
+Chain context: ${chainContext}
+Version: ${tx.v}`;
+                                const handled = oasisRT.transaction.visitCall(
+                                    /** @type {oasisRT.accounts.TransactionCallHandlers & oasisRT.consensusAccounts.TransactionCallHandlers} */ ({
+                                        [oasisRT.accounts.METHOD_TRANSFER]: (body) => {
+                                            confMessage += `
+Recognized method: accounts transfer
+To: ${oasis.staking.addressToBech32(body.to)}
+Amount: ${rtBaseUnitsDisplay(body.amount)} base units`;
+                                        },
+                                        [oasisRT.consensusAccounts.METHOD_DEPOSIT]: (body) => {
+                                            confMessage += `
+Recognized method: consensus accounts deposit
+Amount: ${rtBaseUnitsDisplay(body.amount)} base units`;
+                                        },
+                                        [oasisRT.consensusAccounts.METHOD_WITHDRAW]: (body) => {
+                                            confMessage += `
+Recognized method: consensus accounts withdraw
+Amount: ${rtBaseUnitsDisplay(body.amount)} base units`;
+                                        },
+                                    }),
+                                    tx.call,
+                                );
+                                if (!handled) {
+                                    confMessage += `
+(pretty printing doesn't support this method)
+Method: ${tx.call.method}
+Body JSON: ${JSON.stringify(tx.call.body)}`;
+                                }
+                                for (const si of tx.ai.si) {
+                                    if ('signature' in si.address_spec) {
+                                        if ('ed25519' in si.address_spec.signature) {
+                                            confMessage += `
+Signer: ed25519 signature with public key, base64 ${toBase64(
+                                                si.address_spec.signature.ed25519,
+                                            )}, nonce ${si.nonce}`;
+                                            continue;
+                                        }
+                                    }
+                                    confMessage += `
+Signer: other, JSON ${JSON.stringify(si.address_spec)}, nonce ${si.nonce}`;
+                                }
+                                confMessage += `
+Fee amount: ${rtBaseUnitsDisplay(tx.ai.fee.amount)} base units
+Fee gas: ${tx.ai.fee.gas}`;
                             },
                         }),
                 },
