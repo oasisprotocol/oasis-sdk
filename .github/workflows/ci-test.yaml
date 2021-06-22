@@ -43,7 +43,7 @@ jobs:
         uses: codecov/codecov-action@v1.5.2
 
       - name: Archive code coverage results
-        uses: actions/upload-artifact@v2.2.3
+        uses: actions/upload-artifact@v2.2.4
         with:
           name: code-coverage-report
           path: cobertura.xml
@@ -195,7 +195,7 @@ jobs:
 
       - name: Upload screenshot
         if: failure()
-        uses: actions/upload-artifact@v2.2.3
+        uses: actions/upload-artifact@v2.2.4
         with:
           name: e2e-ts-web-core-screenshots
           path: client-sdk/ts-web/core/cypress/screenshots
@@ -272,14 +272,14 @@ jobs:
 
       - name: Upload screenshot
         if: failure()
-        uses: actions/upload-artifact@v2.2.3
+        uses: actions/upload-artifact@v2.2.4
         with:
           name: e2e-ts-web-rt-screenshots
           path: client-sdk/ts-web/rt/cypress/screenshots
 
       - name: Upload logs
         if: failure()
-        uses: actions/upload-artifact@v2.2.3
+        uses: actions/upload-artifact@v2.2.4
         with:
           name: e2e-ts-web-rt-logs
           path: |
