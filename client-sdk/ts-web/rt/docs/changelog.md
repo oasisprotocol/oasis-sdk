@@ -8,6 +8,8 @@ New features:
   event.
 - Added `transaction.SignatureMessageHandlersWithChainContext` for use with
   `oasis.signature.visitMessage`.
+- Added `transaction.visitCall` for the case where that message is a runtime
+  transaction.
 
 ## v0.2.0-alpha2
 

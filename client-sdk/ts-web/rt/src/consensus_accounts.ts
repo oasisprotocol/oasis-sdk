@@ -1,5 +1,6 @@
 import * as oasis from '@oasisprotocol/client';
 
+import * as transaction from './transaction';
 import * as types from './types';
 import * as wrapper from './wrapper';
 
@@ -42,3 +43,11 @@ export class Wrapper extends wrapper.Base {
         return this.query<types.ConsensusAccountQuery, Uint8Array>(METHOD_ACCOUNT);
     }
 }
+
+/**
+ * Use this as a part of a {@link transaction.CallHandlers}.
+ */
+export type TransactionCallHandlers = {
+    [METHOD_DEPOSIT]?: transaction.CallHandler<types.ConsensusDeposit>;
+    [METHOD_WITHDRAW]?: transaction.CallHandler<types.ConsensusWithdraw>;
+};
