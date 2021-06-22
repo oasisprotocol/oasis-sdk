@@ -178,3 +178,21 @@ export class TransactionWrapper<BODY> {
 export type SignatureMessageHandlersWithChainContext = {
     [TRANSACTION_SIGNATURE_CONTEXT]?: signature.MessageHandlerWithChainContext<types.ConsensusTransaction>;
 };
+
+export type TransactionHandler<BODY> = (body: BODY) => void;
+export type TransactionHandlers = {[method: string]: TransactionHandler<unknown>};
+
+/**
+ * Calls one of the handlers based on the given transaction method.
+ * @param handlers Handlers, use an intersection of other modules'
+ * `ConsensusTransactionHandlers` types to initialize the fields.
+ * @param tx The transaction
+ * @returns `true` if the transaction method matched one of the handlers
+ */
+export function visitTransaction(handlers: TransactionHandlers, tx: types.ConsensusTransaction) {
+    if (tx.method in handlers) {
+        handlers[tx.method](tx.body);
+        return true;
+    }
+    return false;
+}
