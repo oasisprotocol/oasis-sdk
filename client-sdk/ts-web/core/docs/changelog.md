@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased changes
+
+New features:
+
+- Added `signature.visitMessage` for use in code that looks at a message
+  before signing.
+
 ## v0.1.0-alpha4
 
 Spotlight change:

@@ -171,3 +171,10 @@ export class TransactionWrapper<BODY> {
         await nic.consensusSubmitTx(this.signedTransaction);
     }
 }
+
+/**
+ * Use this as a part of a {@link signature.MessageHandlersWithChainContext}.
+ */
+export type SignatureMessageHandlersWithChainContext = {
+    [TRANSACTION_SIGNATURE_CONTEXT]?: signature.MessageHandlerWithChainContext<types.ConsensusTransaction>;
+};
