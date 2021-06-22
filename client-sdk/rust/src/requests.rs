@@ -65,7 +65,7 @@ grpc_methods! {
     Consensus.GetChainContext() -> ByteBuf;
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct QueryResponse {
     pub(crate) data: cbor::Value,

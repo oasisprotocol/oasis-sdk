@@ -274,7 +274,7 @@ fn gen_client_items(
                         module, code, message
                     } => {
                         let message = if message.is_empty() { None } else { Some(message) };
-                        Err(oasis_client_sdk::Error::TxReverted { module, code, message })
+                        Err(oasis_client_sdk::Error::RequestFailed { module, code, message })
                     }
                 }
             };

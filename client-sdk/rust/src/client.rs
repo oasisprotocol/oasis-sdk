@@ -2,6 +2,7 @@ use std::{marker::PhantomData, sync::Arc};
 
 use bytes::{Buf as _, BufMut as _};
 use futures_util::future::try_join_all;
+use prost::Message as _;
 use serde::{de::DeserializeOwned, ser::Serialize};
 use serde_bytes::ByteBuf;
 use tonic::{self, client::Grpc, transport::Channel};
@@ -160,14 +161,14 @@ pub enum Error {
     /// the local transaction preflight check failed, a local read-only query failed, or some other
     /// gRPC error. It will not be returned when a transaction was included in a block but reverted.
     #[error(transparent)]
-    Rpc(#[from] tonic::Status),
+    Rpc(tonic::Status),
 
     /// An error resulting from a completed transaction reverting.
     #[error(
-        "transaction reverted{}",
+        "request failed{}",
         message.as_ref().map(|m| format!(" with message: {}", m)).unwrap_or_default(),
     )]
-    TxReverted {
+    RequestFailed {
         /// The runtime module that generated the reversion.
         module: String,
 
@@ -181,12 +182,50 @@ pub enum Error {
 
 impl Error {
     pub fn from_sdk_error(e: impl sdk::error::Error) -> Self {
-        Self::TxReverted {
+        Self::RequestFailed {
             module: e.module_name().into(),
             code: e.code(),
             message: Some(e.to_string()),
         }
     }
+}
+
+/// @see `oasis-core/go/common/errors/errors.go`
+#[derive(Debug, serde::Deserialize)]
+struct CodedError {
+    module: String,
+    code: u32,
+    #[serde(default)]
+    message: Option<String>,
+}
+
+impl From<tonic::Status> for Error {
+    fn from(status: tonic::Status) -> Self {
+        RpcStatus::decode(status.details())
+            .ok()
+            .and_then(|RpcStatus { details, .. }| {
+                let details = details.first()?;
+                cbor::from_slice::<CodedError>(&details.value).ok()
+            })
+            .map(|ce| Self::RequestFailed {
+                module: ce.module,
+                code: ce.code,
+                message: Some(ce.message.unwrap_or_else(|| status.message().to_string())),
+            })
+            .unwrap_or(Self::Rpc(status))
+    }
+}
+
+/// https://github.com/googleapis/googleapis/blob/master/google/rpc/status.proto
+/// @see `errorToGrpc` in `oasis-core/go/common/grpc/errors.go`.
+#[derive(prost::Message)]
+struct RpcStatus {
+    #[prost(int32, tag = "1")]
+    code: i32,
+    #[prost(string, tag = "2")]
+    message: String,
+    #[prost(message, repeated, tag = "3")]
+    details: Vec<prost_types::Any>,
 }
 
 impl From<cbor::Error> for Error {
