@@ -14,7 +14,7 @@ serde = { version = "1.0.126", features = ["derive"] }
 serde_bytes = "0.11.5"
 curve25519-dalek = "3.0.0"
 sha2 = "0.9.3"
-k256 = { version = "0.9.2" }
+k256 = { version = "0.9.3" }
 thiserror = "1.0.25"
 hex = "0.4.2"
 io-context = "0.2.0"
