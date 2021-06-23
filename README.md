@@ -20,7 +20,7 @@
 
 * **Oasis SDK is in active development so all APIs, protocols and data
   structures are subject to change.**
-* **The SDK currently depends on v21.2.3 of [Oasis Core].**
+* **The SDK currently depends on v21.2.4 of [Oasis Core].**
 * **The code has not yet been audited.**
 
 [Oasis Core]: https://github.com/oasisprotocol/oasis-core
