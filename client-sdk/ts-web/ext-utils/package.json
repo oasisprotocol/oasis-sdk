@@ -17,10 +17,10 @@
         "prepare": "tsc"
     },
     "dependencies": {
-        "@oasisprotocol/client": "^0.1.0-alpha4"
+        "@oasisprotocol/client": "^0.1.0-alpha5"
     },
     "devDependencies": {
-        "@oasisprotocol/client-rt": "^0.2.0-alpha2",
+        "@oasisprotocol/client-rt": "^0.2.0-alpha3",
         "buffer": "^6.0.3",
         "cypress": "^7.5.0",
         "prettier": "^2.3.1",

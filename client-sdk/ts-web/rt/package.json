@@ -1,6 +1,6 @@
 {
     "name": "@oasisprotocol/client-rt",
-    "version": "0.2.0-alpha2",
+    "version": "0.2.0-alpha3",
     "files": [
         "dist"
     ],
@@ -13,7 +13,7 @@
         "playground": "cd playground && webpack s -c webpack.config.js"
     },
     "dependencies": {
-        "@oasisprotocol/client": "^0.1.0-alpha3",
+        "@oasisprotocol/client": "^0.1.0-alpha5",
         "elliptic": "^6.5.3"
     },
     "devDependencies": {

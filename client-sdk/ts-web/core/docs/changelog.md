@@ -1,11 +1,14 @@
 # Changelog
 
-## Unreleased changes
+## v0.1.0-alpha5
 
-New features:
+Spotlight change:
 
 - Added `signature.visitMessage` for use in code that looks at a message
   before signing.
+
+New features:
+
 - Added `consensus.visitTransaction` for the case where that message to sign
   is a consensus transaction.
 

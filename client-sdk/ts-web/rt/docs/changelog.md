@@ -1,13 +1,16 @@
 # Changelog
 
-## Unreleased changes
+## v0.2.0-alpha3
+
+Spotlight change:
+
+- Added `transaction.SignatureMessageHandlersWithChainContext` for use with
+  `oasis.signature.visitMessage`.
 
 New features:
 
 - `event.Visitor.visit` now returns whether it had a handler for the given
   event.
-- Added `transaction.SignatureMessageHandlersWithChainContext` for use with
-  `oasis.signature.visitMessage`.
 - Added `transaction.visitCall` for the case where that message is a runtime
   transaction.
 
