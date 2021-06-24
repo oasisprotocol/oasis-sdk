@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use oasis_runtime_sdk::{
     self as sdk, modules,
     types::token::{BaseUnits, Denomination},
-    Version,
+    Module as _, Version,
 };
 
 pub mod keyvalue;
@@ -16,6 +16,11 @@ pub struct Runtime;
 
 impl sdk::Runtime for Runtime {
     const VERSION: Version = sdk::version_from_cargo!();
+
+    // Force an immediate migration. This is not what you would usually do immediately on genesis
+    // but only in a later version when you need to update some of the parameters. We do this here
+    // to test the migration functionality.
+    const STATE_VERSION: u32 = 1;
 
     type Modules = (
         keyvalue::Module,
@@ -90,8 +95,8 @@ impl sdk::Runtime for Runtime {
                             amount: BaseUnits::new(100.into(), Denomination::NATIVE),
                         }],
                     },
-                    participation_threshold_numerator: 3,
-                    participation_threshold_denominator: 4,
+                    participation_threshold_numerator: 1, // These are updated below.
+                    participation_threshold_denominator: 1,
                 },
             },
             modules::core::Genesis {
@@ -106,5 +111,19 @@ impl sdk::Runtime for Runtime {
                 },
             },
         )
+    }
+
+    fn migrate_state<C: sdk::Context>(ctx: &mut C) {
+        // Fetch current parameters.
+        type Rewards = modules::rewards::Module<modules::accounts::Module>;
+        let mut params = Rewards::params(ctx.runtime_state());
+
+        // Update the participation threshold (one of the E2E tests checks this and would fail
+        // if we don't do this).
+        params.participation_threshold_numerator = 3;
+        params.participation_threshold_denominator = 4;
+
+        // Store parameters.
+        Rewards::set_params(ctx.runtime_state(), &params)
     }
 }

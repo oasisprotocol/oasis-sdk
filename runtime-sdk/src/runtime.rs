@@ -16,11 +16,19 @@ use crate::{
 pub trait Runtime {
     /// Runtime version.
     const VERSION: version::Version;
+    /// State version.
+    const STATE_VERSION: u32 = 0;
 
     type Modules: AuthHandler + MigrationHandler + MethodHandler + BlockHandler + InvariantHandler;
 
     /// Genesis state for the runtime.
     fn genesis_state() -> <Self::Modules as MigrationHandler>::Genesis;
+
+    /// Perform runtime-specific state migration. This method is only called when the recorded
+    /// state version does not match `STATE_VERSION`.
+    fn migrate_state<C: Context>(_ctx: &mut C) {
+        // Default implementation doesn't perform any migration.
+    }
 
     /// Perform state migrations if required.
     fn migrate<C: Context>(ctx: &mut C) {
@@ -33,8 +41,33 @@ pub trait Runtime {
             .unwrap_or_default();
 
         // Perform state migrations/initialization on all modules.
-        let has_changes =
+        let mut has_changes =
             Self::Modules::init_or_migrate(ctx, &mut metadata, &Self::genesis_state());
+
+        // Check if we need to also apply any global state updates.
+        let global_version = metadata
+            .versions
+            .get(modules::core::types::VERSION_GLOBAL_KEY)
+            .copied()
+            .unwrap_or_default();
+        if global_version != Self::STATE_VERSION {
+            if global_version != Self::STATE_VERSION - 1 {
+                panic!(
+                    "inconsistent existing state version (expected: {} got: {})",
+                    Self::STATE_VERSION - 1,
+                    global_version
+                );
+            }
+
+            Self::migrate_state(ctx);
+
+            // Update metadata.
+            metadata.versions.insert(
+                modules::core::types::VERSION_GLOBAL_KEY.to_string(),
+                Self::STATE_VERSION,
+            );
+            has_changes = true;
+        }
 
         // If there are any changes, update metadata.
         if has_changes {
