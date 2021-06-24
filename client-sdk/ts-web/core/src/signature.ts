@@ -4,8 +4,10 @@ import * as hash from './hash';
 import * as misc from './misc';
 import * as types from './types';
 
+export const CHAIN_CONTEXT_SEPARATOR = ' for chain ';
+
 export function combineChainContext(context: string, chainContext: string) {
-    return `${context} for chain ${chainContext}`;
+    return `${context}${CHAIN_CONTEXT_SEPARATOR}${chainContext}`;
 }
 
 export async function prepareSignerMessage(context: string, message: Uint8Array) {
@@ -162,5 +164,47 @@ export class NaclSigner implements Signer {
      */
     async sign(message: Uint8Array): Promise<Uint8Array> {
         return nacl.sign.detached(message, this.key.secretKey);
+    }
+}
+
+export type MessageHandlerBare<PARSED> = (v: PARSED) => void;
+export type MessageHandlersBare = {[context: string]: MessageHandlerBare<unknown>};
+export type MessageHandlerWithChainContext<PARSED> = (chainContext: string, v: PARSED) => void;
+export type MessageHandlersWithChainContext = {
+    [context: string]: MessageHandlerWithChainContext<unknown>;
+};
+export interface MessageHandlers {
+    bare?: MessageHandlersBare;
+    withChainContext?: MessageHandlersWithChainContext;
+    // This doesn't support dynamic suffixes.
+}
+
+/**
+ * Calls one of the handlers based on the given context.
+ * @param handlers Handlers, use an intersection of other modules'
+ * `SignatureMessageHandlers*` types to initialize the fields.
+ * @param context The context string as would be given to `ContextSigner.sign`
+ * @param message The messsage as would be given to `ContextSigner.sign`
+ * @returns `true` if the context matched one of the handlers
+ */
+export function visitMessage(handlers: MessageHandlers, context: string, message: Uint8Array) {
+    // This doesn't support dynamic suffixes.
+    {
+        const parts = context.split(CHAIN_CONTEXT_SEPARATOR);
+        if (parts.length === 2) {
+            const [context2, chainContext] = parts;
+            if (context2 in handlers.withChainContext) {
+                handlers.withChainContext[context2](chainContext, misc.fromCBOR(message));
+                return true;
+            }
+            return false;
+        }
+    }
+    {
+        if (context in handlers.bare) {
+            handlers.bare[context](misc.fromCBOR(message));
+            return true;
+        }
+        return false;
     }
 }

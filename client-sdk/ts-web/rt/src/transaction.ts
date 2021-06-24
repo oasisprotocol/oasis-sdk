@@ -116,3 +116,21 @@ export async function signUnverifiedTransaction(
     }
     return [body, authProofs] as types.UnverifiedTransaction;
 }
+
+/**
+ * Use this as a part of a {@link signature.MessageHandlersWithChainContext}.
+ */
+export type SignatureMessageHandlersWithChainContext = {
+    [SIGNATURE_CONTEXT_BASE]?: oasis.signature.MessageHandlerWithChainContext<types.Transaction>;
+};
+
+export type CallHandler<BODY> = (body: BODY) => void;
+export type CallHandlers = {[method: string]: CallHandler<unknown>};
+
+export function visitCall(handlers: CallHandlers, call: types.Call) {
+    if (call.method in handlers) {
+        handlers[call.method](call.body);
+        return true;
+    }
+    return false;
+}

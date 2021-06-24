@@ -260,3 +260,16 @@ export function allowWrapper() {
 export function withdrawWrapper() {
     return new consensus.TransactionWrapper<types.StakingWithdraw>(METHOD_WITHDRAW);
 }
+
+/**
+ * Use this as a part of a {@link consensus.TransactionHandlers}.
+ */
+export type ConsensusTransactionHandlers = {
+    [METHOD_TRANSFER]?: consensus.TransactionHandler<types.StakingTransfer>;
+    [METHOD_BURN]?: consensus.TransactionHandler<types.StakingBurn>;
+    [METHOD_ADD_ESCROW]?: consensus.TransactionHandler<types.StakingEscrow>;
+    [METHOD_RECLAIM_ESCROW]?: consensus.TransactionHandler<types.StakingReclaimEscrow>;
+    [METHOD_AMEND_COMMISSION_SCHEDULE]?: consensus.TransactionHandler<types.StakingAmendCommissionSchedule>;
+    [METHOD_ALLOW]?: consensus.TransactionHandler<types.StakingAllow>;
+    [METHOD_WITHDRAW]?: consensus.TransactionHandler<types.StakingWithdraw>;
+};

@@ -1,6 +1,7 @@
 // @ts-check
 
 import * as oasis from '@oasisprotocol/client';
+import * as oasisRT from '@oasisprotocol/client-rt';
 
 import * as oasisExt from './../..';
 
@@ -84,6 +85,20 @@ function getSigner() {
     return signerP;
 }
 
+function toBase64(/** @type {Uint8Array} */ u8) {
+    return btoa(String.fromCharCode.apply(null, u8));
+}
+
+function toStringUtf8(/** @type {Uint8Array} */ u8) {
+    return new TextDecoder().decode(u8);
+}
+
+function rtBaseUnitsDisplay(/** @type {oasisRT.types.BaseUnits} */ bu) {
+    return `${oasis.quantity.toBigInt(bu[0])} ${
+        bu[1] && bu[1].length ? toStringUtf8(bu[1]) : '(native)'
+    }`;
+}
+
 oasisExt.ext.ready({
     async keysList(origin, req) {
         await authorize(origin);
@@ -113,9 +128,142 @@ oasisExt.ext.ready({
         if (req.which !== KEY_ID) {
             throw new Error(`sample extension only supports .which === ${JSON.stringify(KEY_ID)}`);
         }
-        const confMessage = `Signature request
+        let confMessage = `Signature request`;
+        try {
+            const handled = oasis.signature.visitMessage(
+                {
+                    withChainContext:
+                        /** @type {oasis.consensus.SignatureMessageHandlersWithChainContext & oasisRT.transaction.SignatureMessageHandlersWithChainContext} */ ({
+                            [oasis.consensus.TRANSACTION_SIGNATURE_CONTEXT]: (chainContext, tx) => {
+                                confMessage += `
+Recognized message type: consensus transaction
+Chain context: ${chainContext}
+Nonce: ${tx.nonce}
+Fee amount: ${oasis.quantity.toBigInt(tx.fee.amount)} base units
+Fee gas: ${tx.fee.gas}`;
+                                const handled = oasis.consensus.visitTransaction(
+                                    /** @type {oasis.staking.ConsensusTransactionHandlers} */ ({
+                                        [oasis.staking.METHOD_TRANSFER]: (body) => {
+                                            confMessage += `
+Recognized method: staking transfer
+To: ${oasis.staking.addressToBech32(body.to)}
+Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
+                                        },
+                                        [oasis.staking.METHOD_BURN]: (body) => {
+                                            confMessage += `
+Recognized method: staking burn
+Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
+                                        },
+                                        [oasis.staking.METHOD_ADD_ESCROW]: (body) => {
+                                            confMessage += `
+Recognized method: staking add escrow
+Account: ${oasis.staking.addressToBech32(body.account)}
+Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
+                                        },
+                                        [oasis.staking.METHOD_RECLAIM_ESCROW]: (body) => {
+                                            confMessage += `
+Recognized method: staking reclaim escrow
+Account: ${oasis.staking.addressToBech32(body.account)}
+Shares: ${oasis.quantity.toBigInt(body.shares)}`;
+                                        },
+                                        [oasis.staking.METHOD_AMEND_COMMISSION_SCHEDULE]: (
+                                            body,
+                                        ) => {
+                                            confMessage += `
+Recognized method: staking amend commission schedule
+Amendment: ${JSON.stringify(body.amendment)}`;
+                                        },
+                                        [oasis.staking.METHOD_ALLOW]: (body) => {
+                                            confMessage += `
+Recognized method: staking allow
+Beneficiary: ${oasis.staking.addressToBech32(body.beneficiary)}
+Amount change: ${body.negative ? '-' : '+'}${oasis.quantity.toBigInt(
+                                                body.amount_change,
+                                            )} base units`;
+                                        },
+                                        [oasis.staking.METHOD_WITHDRAW]: (body) => {
+                                            confMessage += `
+Recognized method: staking withdraw
+From: ${oasis.staking.addressToBech32(body.from)}
+Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
+                                        },
+                                    }),
+                                    tx,
+                                );
+                                if (!handled) {
+                                    confMessage += `
+(pretty printing doesn't support this method)
+Method: ${tx.method}
+Body JSON: ${JSON.stringify(tx.body)}`;
+                                }
+                            },
+                            [oasisRT.transaction.SIGNATURE_CONTEXT_BASE]: (chainContext, tx) => {
+                                confMessage += `
+Recognized message type: runtime transaction
+Chain context: ${chainContext}
+Version: ${tx.v}`;
+                                const handled = oasisRT.transaction.visitCall(
+                                    /** @type {oasisRT.accounts.TransactionCallHandlers & oasisRT.consensusAccounts.TransactionCallHandlers} */ ({
+                                        [oasisRT.accounts.METHOD_TRANSFER]: (body) => {
+                                            confMessage += `
+Recognized method: accounts transfer
+To: ${oasis.staking.addressToBech32(body.to)}
+Amount: ${rtBaseUnitsDisplay(body.amount)} base units`;
+                                        },
+                                        [oasisRT.consensusAccounts.METHOD_DEPOSIT]: (body) => {
+                                            confMessage += `
+Recognized method: consensus accounts deposit
+Amount: ${rtBaseUnitsDisplay(body.amount)} base units`;
+                                        },
+                                        [oasisRT.consensusAccounts.METHOD_WITHDRAW]: (body) => {
+                                            confMessage += `
+Recognized method: consensus accounts withdraw
+Amount: ${rtBaseUnitsDisplay(body.amount)} base units`;
+                                        },
+                                    }),
+                                    tx.call,
+                                );
+                                if (!handled) {
+                                    confMessage += `
+(pretty printing doesn't support this method)
+Method: ${tx.call.method}
+Body JSON: ${JSON.stringify(tx.call.body)}`;
+                                }
+                                for (const si of tx.ai.si) {
+                                    if ('signature' in si.address_spec) {
+                                        if ('ed25519' in si.address_spec.signature) {
+                                            confMessage += `
+Signer: ed25519 signature with public key, base64 ${toBase64(
+                                                si.address_spec.signature.ed25519,
+                                            )}, nonce ${si.nonce}`;
+                                            continue;
+                                        }
+                                    }
+                                    confMessage += `
+Signer: other, JSON ${JSON.stringify(si.address_spec)}, nonce ${si.nonce}`;
+                                }
+                                confMessage += `
+Fee amount: ${rtBaseUnitsDisplay(tx.ai.fee.amount)} base units
+Fee gas: ${tx.ai.fee.gas}`;
+                            },
+                        }),
+                },
+                req.context,
+                req.message,
+            );
+            if (!handled) {
+                confMessage += `
+(pretty printing doesn't support this signature context)
 Context: ${req.context}
-Message: ${oasis.misc.toHex(req.message)}`;
+Message hex: ${oasis.misc.toHex(req.message)}`;
+            }
+        } catch (e) {
+            console.error(e);
+            confMessage += `
+(couldn't parse)`;
+        }
+        confMessage += `
+Sign this message?`;
         if (testNoninteractive) {
             // We run an integration test to exercise the cross-origin messaging
             // mechanism. Disable the user interactions in that case, due to

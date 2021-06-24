@@ -236,6 +236,10 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npm run-script prepare
 
+      - name: Prepare ts-web/rt
+        working-directory: client-sdk/ts-web/rt
+        run: npm run-script prepare
+
       - name: Prepare ts-web/ext-utils
         working-directory: client-sdk/ts-web/ext-utils
         run: npm run-script prepare

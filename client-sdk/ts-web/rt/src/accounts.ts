@@ -1,6 +1,7 @@
 import * as oasis from '@oasisprotocol/client';
 
 import * as event from './event';
+import * as transaction from './transaction';
 import * as types from './types';
 import * as wrapper from './wrapper';
 
@@ -50,3 +51,10 @@ export function moduleEventHandler(codes: {
 }) {
     return [MODULE_NAME, codes] as event.ModuleHandler;
 }
+
+/**
+ * Use this as a part of a {@link transaction.CallHandlers}.
+ */
+export type TransactionCallHandlers = {
+    [METHOD_TRANSFER]?: transaction.CallHandler<types.AccountsTransfer>;
+};

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased changes
+
+New features:
+
+- Added `signature.visitMessage` for use in code that looks at a message
+  before signing.
+- Added `consensus.visitTransaction` for the case where that message to sign
+  is a consensus transaction.
+
 ## v0.1.0-alpha4
 
 Spotlight change:

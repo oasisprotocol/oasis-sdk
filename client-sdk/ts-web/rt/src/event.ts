@@ -22,11 +22,18 @@ export class Visitor {
         }
     }
 
+    /**
+     * Calls one of the handlers based on a given event's key.
+     * @param e The event
+     * @returns `true` if the event matched one of the handlers
+     */
     visit(e: oasis.types.RuntimeClientEvent) {
         const keyHex = oasis.misc.toHex(e.key);
         if (keyHex in this.handlers) {
             const value = oasis.misc.fromCBOR(e.value);
             this.handlers[keyHex](e, value);
+            return true;
         }
+        return false;
     }
 }
