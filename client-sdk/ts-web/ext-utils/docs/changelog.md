@@ -1,7 +1,7 @@
 # Changelog
 
-## Unreleased changes
+## v0.1.0-alpha1
 
-New features:
+Spotlight change:
 
 - Here's our recommendation for communicating with a browser extension.
