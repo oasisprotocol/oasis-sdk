@@ -455,6 +455,9 @@ fn to_borrowed(ty: &syn::Type, lifetime: &syn::Lifetime) -> (bool, TokenStream) 
                 (true, quote!(&#lifetime str))
             } else if last_segment.ident == "PathBuf" {
                 (true, quote!(&#lifetime Path))
+            } else if last_segment.ident == "ByteBuf" {
+                // a la `serde_bytes`
+                (true, quote!(&#lifetime [u8]))
             } else if is_copy_ty(&last_segment.ident) {
                 (false, quote!(#ty))
             } else {
