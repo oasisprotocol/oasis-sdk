@@ -1,0 +1,6 @@
+/cypress/videos
+/cypress/screenshots
+/dist
+/node_modules
+/sample-ext/dist
+/sample-page/dist

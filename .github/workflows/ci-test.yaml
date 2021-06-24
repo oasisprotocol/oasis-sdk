@@ -134,6 +134,18 @@ jobs:
         working-directory: client-sdk/ts-web/rt
         run: npm run-script check-playground
 
+      - name: Prepare ts-web/ext-utils
+        working-directory: client-sdk/ts-web/ext-utils
+        run: npm run-script prepare
+
+      - name: Check ts-web/ext-utils sample-page
+        working-directory: client-sdk/ts-web/ext-utils
+        run: npm run-script check-sample-page
+
+      - name: Check ts-web/ext-utils sample-ext
+        working-directory: client-sdk/ts-web/ext-utils
+        run: npm run-script check-sample-ext
+
   e2e-ts-web-core:
     # NOTE: This name appears in GitHub's Checks API.
     name: e2e-ts-web-core
@@ -199,6 +211,53 @@ jobs:
         with:
           name: e2e-ts-web-core-screenshots
           path: client-sdk/ts-web/core/cypress/screenshots
+
+  e2e-ts-web-ext-utils:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: e2e-ts-web-ext-utils
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js LTS
+        uses: actions/setup-node@v2.1.5
+        with:
+          node-version: "14.x"
+
+      - name: Set up npm
+        run: npm install npm@7 -g
+
+      - name: Install Node deps
+        working-directory: client-sdk/ts-web
+        run: npm ci
+
+      - name: Prepare ts-web/core
+        working-directory: client-sdk/ts-web/core
+        run: npm run-script prepare
+
+      - name: Prepare ts-web/ext-utils
+        working-directory: client-sdk/ts-web/ext-utils
+        run: npm run-script prepare
+
+      - name: 'dev-server sample-page: Start'
+        working-directory: client-sdk/ts-web/ext-utils
+        run: npm run-script sample-page &
+
+      - name: 'dev-server fake-sample-ext: Start'
+        working-directory: client-sdk/ts-web/ext-utils
+        run: npm run-script fake-sample-ext &
+
+      - name: Cypress run
+        working-directory: client-sdk/ts-web/ext-utils
+        run: npx -c 'cypress run'
+
+      - name: Upload screenshot
+        if: failure()
+        uses: actions/upload-artifact@v2.2.3
+        with:
+          name: e2e-ts-web-ext-utils-screenshots
+          path: client-sdk/ts-web/ext-utils/cypress/screenshots
 
   e2e-ts-web-rt:
     # NOTE: This name appears in GitHub's Checks API.

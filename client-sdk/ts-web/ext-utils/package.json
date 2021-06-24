@@ -1,0 +1,32 @@
+{
+    "name": "@oasisprotocol/client-ext-utils",
+    "version": "0.1.0-alpha1",
+    "license": "Apache-2.0",
+    "files": [
+        "dist"
+    ],
+    "main": "dist/index.js",
+    "scripts": {
+        "check-sample-page": "cd sample-page && tsc -p jsconfig.json",
+        "check-sample-ext": "cd sample-ext && tsc -p jsconfig.json",
+        "fmt": "prettier --write sample-ext/src sample-page/src src",
+        "lint": "prettier --check sample-ext/src sample-page/src src",
+        "sample-page": "cd sample-page && webpack s -c webpack.config.js",
+        "sample-ext": "cd sample-ext && webpack -c webpack.config.js",
+        "fake-sample-ext": "cd sample-ext && webpack s -c webpack.config.js",
+        "prepare": "tsc"
+    },
+    "dependencies": {
+        "@oasisprotocol/client": "^0.1.0-alpha4"
+    },
+    "devDependencies": {
+        "buffer": "^6.0.3",
+        "cypress": "^7.5.0",
+        "prettier": "^2.3.1",
+        "process": "^0.11.10",
+        "stream-browserify": "^3.0.0",
+        "typescript": "^4.3.2",
+        "webpack": "^5.38.1",
+        "webpack-cli": "^4.7.2"
+    }
+}

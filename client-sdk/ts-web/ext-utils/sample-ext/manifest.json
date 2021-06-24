@@ -1,0 +1,12 @@
+{
+    "manifest_version": 3,
+    "name": "Extension Signer Sample",
+    "version": "0.0.0",
+
+    "web_accessible_resources": [
+        {
+            "resources": ["oasis-xu-frame.html"],
+            "matches": ["<all_urls>"]
+        }
+    ]
+}
