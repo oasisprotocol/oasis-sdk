@@ -16,6 +16,7 @@ use crate::{
 };
 
 /// Result of invoking the method handler.
+#[derive(Debug)]
 pub enum DispatchResult<B, R> {
     Handled(R),
     Unhandled(B),
@@ -302,14 +303,14 @@ pub trait Module {
 
     /// Return the module's parameters.
     fn params<S: Store>(store: S) -> Self::Parameters {
-        let store = storage::PrefixStore::new(store, &Self::NAME);
+        let store = storage::PrefixStore::new(store, Self::NAME.as_bytes());
         let store = storage::TypedStore::new(store);
         store.get(Self::Parameters::STORE_KEY).unwrap_or_default()
     }
 
     /// Set the module's parameters.
     fn set_params<S: Store>(store: S, params: &Self::Parameters) {
-        let store = storage::PrefixStore::new(store, &Self::NAME);
+        let store = storage::PrefixStore::new(store, Self::NAME.as_bytes());
         let mut store = storage::TypedStore::new(store);
         store.insert(Self::Parameters::STORE_KEY, params);
     }

@@ -24,15 +24,15 @@ impl<M: mkvs::MKVS> MKVSStore<M> {
 }
 
 impl<M: mkvs::MKVS> Store for MKVSStore<M> {
-    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Vec<u8>> {
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         self.parent.get(self.create_ctx(), key.as_ref())
     }
 
-    fn insert<K: AsRef<[u8]>>(&mut self, key: K, value: &[u8]) {
+    fn insert(&mut self, key: &[u8], value: &[u8]) {
         self.parent.insert(self.create_ctx(), key.as_ref(), value);
     }
 
-    fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
+    fn remove(&mut self, key: &[u8]) {
         self.parent.remove(self.create_ctx(), key.as_ref());
     }
 

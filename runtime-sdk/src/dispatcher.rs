@@ -106,7 +106,7 @@ impl<R: Runtime> Dispatcher<R> {
 
         // Verify transaction signatures.
         // TODO: Support signature verification of the whole transaction batch.
-        utx.verify()
+        utx.verify(R::ALLOW_UNSIGNED_TXS)
             .map_err(|e| modules::core::Error::MalformedTransaction(e.into()))
     }
 
@@ -232,7 +232,7 @@ impl<R: Runtime> Dispatcher<R> {
 
         let store = storage::TypedStore::new(storage::PrefixStore::new(
             ctx.runtime_state(),
-            &modules::core::MODULE_NAME,
+            modules::core::MODULE_NAME.as_bytes(),
         ));
         let mut handlers: BTreeMap<u32, types::message::MessageEventHookInvocation> = store
             .get(&modules::core::state::MESSAGE_HANDLERS)
@@ -275,7 +275,7 @@ impl<R: Runtime> Dispatcher<R> {
 
         let mut store = storage::TypedStore::new(storage::PrefixStore::new(
             store,
-            &modules::core::MODULE_NAME,
+            modules::core::MODULE_NAME.as_bytes(),
         ));
         store.insert(&modules::core::state::MESSAGE_HANDLERS, &message_handlers);
     }
@@ -369,11 +369,17 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Perform state migrations if required.
             R::migrate(&mut ctx);
 
+            // Run begin block hooks.
+            R::Modules::begin_block(&mut ctx);
+
             // Check the batch.
             let mut results = Vec::with_capacity(batch.len());
             for tx in batch.iter() {
                 results.push(Self::check_tx(&mut ctx, &tx)?);
             }
+
+            // Run end block hooks.
+            R::Modules::end_block(&mut ctx);
 
             Ok(results)
         })
@@ -401,7 +407,15 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
             // Perform state migrations if required.
             R::migrate(&mut ctx);
 
-            Self::dispatch_query(&mut ctx, method, args)
+            // Run begin block hooks.
+            R::Modules::begin_block(&mut ctx);
+
+            let result = Self::dispatch_query(&mut ctx, method, args);
+
+            // Run end block hooks.
+            R::Modules::end_block(&mut ctx);
+
+            result
         })
     }
 }

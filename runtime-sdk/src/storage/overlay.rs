@@ -26,7 +26,7 @@ impl<S: Store> OverlayStore<S> {
         // Insert all items present in the overlay.
         for (key, value) in self.overlay {
             self.dirty.remove(&key);
-            self.parent.insert(key, &value);
+            self.parent.insert(&key, &value);
         }
 
         // Any remaining dirty items must have been removed.
@@ -37,7 +37,7 @@ impl<S: Store> OverlayStore<S> {
 }
 
 impl<S: Store> Store for OverlayStore<S> {
-    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Vec<u8>> {
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         // For dirty values, check the overlay.
         if self.dirty.contains(key.as_ref()) {
             return self.overlay.get(key.as_ref()).cloned();
@@ -47,13 +47,13 @@ impl<S: Store> Store for OverlayStore<S> {
         self.parent.get(key)
     }
 
-    fn insert<K: AsRef<[u8]>>(&mut self, key: K, value: &[u8]) {
+    fn insert(&mut self, key: &[u8], value: &[u8]) {
         self.overlay
             .insert(key.as_ref().to_owned(), value.to_owned());
         self.dirty.insert(key.as_ref().to_owned());
     }
 
-    fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
+    fn remove(&mut self, key: &[u8]) {
         // For dirty values, remove from the overlay.
         if self.dirty.contains(key.as_ref()) {
             self.overlay.remove(key.as_ref());

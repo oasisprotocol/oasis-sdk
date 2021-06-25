@@ -52,11 +52,11 @@ pub struct UnverifiedTransaction(
 
 impl UnverifiedTransaction {
     /// Verify and deserialize the unverified transaction.
-    pub fn verify(self) -> Result<Transaction, Error> {
+    pub fn verify(self, allow_unsigned: bool) -> Result<Transaction, Error> {
         // Deserialize the inner body.
         let body: Transaction =
             cbor::from_slice(&self.0).map_err(|e| Error::MalformedTransaction(e.into()))?;
-        body.validate_basic()?;
+        body.validate_basic(allow_unsigned)?;
 
         // Basic structure validation.
         if self.1.len() != body.auth_info.signer_info.len() {
@@ -99,17 +99,33 @@ pub struct Transaction {
 
 impl Transaction {
     /// Perform basic validation on the transaction.
-    pub fn validate_basic(&self) -> Result<(), Error> {
+    pub fn validate_basic(&self, allow_unsigned: bool) -> Result<(), Error> {
         if self.version != LATEST_TRANSACTION_VERSION {
             return Err(Error::UnsupportedVersion);
         }
-        if self.auth_info.signer_info.is_empty() {
+        if !allow_unsigned && self.auth_info.signer_info.is_empty() {
             return Err(Error::MalformedTransaction(anyhow!(
                 "transaction has no signers"
             )));
         }
         Ok(())
     }
+}
+
+/// Transaction that stores references to the parameters.
+/// Useful for serializing without cloning.
+#[derive(Clone, Debug, Serialize)]
+#[serde(deny_unknown_fields)]
+#[doc(hidden)]
+pub struct TransactionRef<'a> {
+    #[serde(rename = "v")]
+    pub version: u16,
+
+    #[serde(rename = "call")]
+    pub call: CallRef<'a>,
+
+    #[serde(rename = "ai")]
+    pub auth_info: AuthInfoRef<'a>,
 }
 
 /// Method call.
@@ -123,6 +139,18 @@ pub struct Call {
     pub body: cbor::Value,
 }
 
+/// Method call that references its arguments. Useful for serializing without cloning.
+#[derive(Clone, Debug, Serialize)]
+#[serde(deny_unknown_fields)]
+#[doc(hidden)]
+pub struct CallRef<'a> {
+    #[serde(rename = "method")]
+    pub method: &'a str,
+
+    #[serde(rename = "body")]
+    pub body: &'a cbor::Value,
+}
+
 /// Transaction authentication information.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -132,6 +160,18 @@ pub struct AuthInfo {
 
     #[serde(rename = "fee")]
     pub fee: Fee,
+}
+
+/// Transaction authentication information that stores references
+/// to the parameters. Useful for serializing without clones.
+#[derive(Clone, Debug, Serialize)]
+#[doc(hidden)]
+pub struct AuthInfoRef<'a> {
+    #[serde(rename = "si")]
+    pub signer_info: Vec<SignerInfoRef<'a>>,
+
+    #[serde(rename = "fee")]
+    pub fee: &'a Fee,
 }
 
 /// Transaction fee.
@@ -225,6 +265,18 @@ impl SignerInfo {
             nonce,
         }
     }
+}
+
+/// Transaction signer information, referenced for zero-clone serialization.
+#[derive(Clone, Debug, Serialize)]
+#[serde(deny_unknown_fields)]
+#[doc(hidden)]
+pub struct SignerInfoRef<'a> {
+    #[serde(rename = "address_spec")]
+    pub address_spec: &'a AddressSpec,
+
+    #[serde(rename = "nonce")]
+    pub nonce: u64,
 }
 
 /// Call result.

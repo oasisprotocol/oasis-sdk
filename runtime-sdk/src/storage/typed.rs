@@ -18,19 +18,19 @@ impl<S: Store> TypedStore<S> {
     }
 
     /// Fetch entry with given key.
-    pub fn get<K: AsRef<[u8]>, T: DeserializeOwned>(&self, key: K) -> Option<T> {
+    pub fn get<T: DeserializeOwned>(&self, key: &[u8]) -> Option<T> {
         self.parent
             .get(key)
             .map(|data| cbor::from_slice(&data).unwrap())
     }
 
     /// Update entry with given key to the given value.
-    pub fn insert<K: AsRef<[u8]>, T: Serialize>(&mut self, key: K, value: &T) {
+    pub fn insert<T: Serialize>(&mut self, key: &[u8], value: &T) {
         self.parent.insert(key, &cbor::to_vec(value))
     }
 
     /// Remove entry with given key.
-    pub fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
+    pub fn remove(&mut self, key: &[u8]) {
         self.parent.remove(key)
     }
 

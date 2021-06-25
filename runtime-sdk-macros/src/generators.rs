@@ -93,6 +93,19 @@ pub fn enum_code_converter<V: CodedVariant>(
     }
 }
 
+pub(crate) fn module_name(module_name_lit: Option<&syn::LitStr>) -> Result<syn::Expr, ()> {
+    match module_name_lit {
+        Some(expr_str) => expr_str.parse::<syn::Expr>().map_err(|_| {
+            expr_str
+                .span()
+                .unwrap()
+                .error("expected `module_name` to be a valid expression")
+                .emit();
+        }),
+        None => Ok(syn::parse_quote!(MODULE_NAME)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
