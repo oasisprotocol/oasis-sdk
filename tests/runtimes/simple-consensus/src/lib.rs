@@ -34,4 +34,9 @@ impl sdk::Runtime for Runtime {
             },
         )
     }
+
+    fn migrate_state<C: sdk::Context>(_ctx: &mut C) {
+        // Make sure that there are no spurious state migration invocations.
+        panic!("state migration called when it shouldn't be");
+    }
 }
