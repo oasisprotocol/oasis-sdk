@@ -1,5 +1,28 @@
 # Getting started
 
+## Building a DApp
+
+**The sample DApp.**
+Take a look at the sample code for the DApp side of the overall interface.
+That's in [sample-page/src/index.js](../sample-page/src/index.js).
+
+At a high level, the sample page opens an `oasisExt.connection.ExtConnection`,
+specifying what extension it wants to interact with, in the form of an origin
+string.
+This adds an `iframe` to the page, so you must call it after the `body`
+element exists, i.e. not in a script in the `head` without `defer`.
+It uses functions and classes in `oasisExt`, which require a `connection`
+parameter.
+
+**Your own DApp.**
+Use the `@oasisprotocol/client` and/or `@oasisprotocol/client-rt` to write
+the code for preparing the body of a transaction and submitting it.
+Use this package to connect to an extension.
+Find a key to use with `oasisExt.keys.list`, identified by a "which" value
+(the format may vary depending on the extension).
+Then, get the public key and sign the transaction using
+`oasisExt.signature.ExtContextSigner`.
+
 ## Building an extension
 
 **The sample extension.**
