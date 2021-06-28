@@ -17,7 +17,7 @@ replace (
 
 require (
 	github.com/btcsuite/btcd v0.22.0-beta
-	github.com/oasisprotocol/oasis-core/go v0.2102.3
+	github.com/oasisprotocol/oasis-core/go v0.2102.5
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-20210328195842-4de788c1c6f7
 	google.golang.org/grpc v1.38.0
 )
