@@ -12,8 +12,9 @@ const (
 	methodTransfer = "accounts.Transfer"
 
 	// Queries.
-	methodNonce    = "accounts.Nonce"
-	methodBalances = "accounts.Balances"
+	methodNonce     = "accounts.Nonce"
+	methodBalances  = "accounts.Balances"
+	methodAddresses = "accounts.Addresses"
 )
 
 // V1 is the v1 accounts module interface.
@@ -26,6 +27,9 @@ type V1 interface {
 
 	// Balances queries the given account's balances.
 	Balances(ctx context.Context, round uint64, address types.Address) (*AccountBalances, error)
+
+	// Addresses queries all account addresses.
+	Addresses(ctx context.Context, round uint64, denomination types.Denomination) (Addresses, error)
 }
 
 type v1 struct {
@@ -58,6 +62,16 @@ func (a *v1) Balances(ctx context.Context, round uint64, address types.Address) 
 		return nil, err
 	}
 	return &balances, nil
+}
+
+// Implements V1.
+func (a *v1) Addresses(ctx context.Context, round uint64, denomination types.Denomination) (Addresses, error) {
+	var addresses Addresses
+	err := a.rc.Query(ctx, round, methodAddresses, &AddressesQuery{Denomination: denomination}, &addresses)
+	if err != nil {
+		return nil, err
+	}
+	return addresses, nil
 }
 
 // NewV1 generates a V1 client helper for the accounts module.

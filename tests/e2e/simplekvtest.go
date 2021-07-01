@@ -378,7 +378,7 @@ func KVBalanceTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 }
 
 // KVTransferTest does a transfer test and verifies balances.
-func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { // nolint: dupl
+func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
@@ -422,11 +422,20 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 		return fmt.Errorf("Bob's account is missing native denomination balance") //nolint: stylecheck
 	}
 
+	log.Info("query addresses")
+	addrs, err := ac.Addresses(ctx, client.RoundLatest, types.NativeDenomination)
+	if err != nil {
+		return err
+	}
+	if len(addrs) != 5 { // Alice, Bob, Charlie, Dave, Reward pool.
+		return fmt.Errorf("unexpected number of addresses (expected: %d, got: %d)", 5, len(addrs))
+	}
+
 	return nil
 }
 
 // KVDaveTest does a tx signing test using the secp256k1 signer.
-func KVDaveTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { // nolint: dupl
+func KVDaveTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 

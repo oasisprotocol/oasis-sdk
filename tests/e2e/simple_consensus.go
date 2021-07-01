@@ -13,6 +13,7 @@ import (
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	consensusAccounts "github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensusaccounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -49,11 +50,14 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return err
 	}
 
+	consDenomination := types.Denomination("TEST")
+
 	consAccounts := consensusAccounts.NewV1(rtc)
+	ac := accounts.NewV1(rtc)
 
 	signer := testing.Alice.Signer
 	log.Info("alice depositing into runtime")
-	amount := types.NewBaseUnits(*quantity.NewFromUint64(50), types.Denomination("TEST"))
+	amount := types.NewBaseUnits(*quantity.NewFromUint64(50), consDenomination)
 	tb := consAccounts.Deposit(amount).
 		AppendAuthSignature(signer.Public(), 0)
 	_ = tb.AppendSign(ctx, signer)
@@ -176,6 +180,15 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		log.Info("dave depositing failed (as expected)", "err", err)
 	} else {
 		return fmt.Errorf("dave depositing should fail")
+	}
+
+	log.Info("query consensus addresses")
+	addrs, err := ac.Addresses(ctx, client.RoundLatest, consDenomination)
+	if err != nil {
+		return err
+	}
+	if len(addrs) != 2 { // Alice, Bob (Charlie has 0 balance).
+		return fmt.Errorf("unexpected number of addresses (expected: %d, got: %d)", 2, len(addrs))
 	}
 
 	return nil

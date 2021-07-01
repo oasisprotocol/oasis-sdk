@@ -7,6 +7,7 @@ use thiserror::Error;
 
 use crate::{
     context::{Context, TxContext},
+    core::common::quantity::Quantity,
     crypto::signature::PublicKey,
     error::{self, Error as _},
     module,
@@ -146,6 +147,12 @@ pub trait API {
 
     /// Fetch an account's current nonce.
     fn get_nonce<S: storage::Store>(state: S, address: Address) -> Result<u64, Error>;
+
+    /// Fetch addresses.
+    fn get_addresses<S: storage::Store>(
+        state: S,
+        denomination: token::Denomination,
+    ) -> Result<Vec<Address>, Error>;
 
     /// Fetch an account's current balances.
     fn get_balances<S: storage::Store>(
@@ -363,6 +370,23 @@ impl API for Module {
         Ok(account.nonce)
     }
 
+    fn get_addresses<S: storage::Store>(
+        state: S,
+        denomination: token::Denomination,
+    ) -> Result<Vec<Address>, Error> {
+        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let balances: BTreeMap<AddressWithDenomination, Quantity> =
+            storage::TypedStore::new(storage::PrefixStore::new(store, &state::BALANCES))
+                .iter()
+                .collect();
+
+        Ok(balances
+            .into_keys()
+            .filter(|bal| bal.1 == denomination)
+            .map(|bal| bal.0)
+            .collect())
+    }
+
     fn get_balances<S: storage::Store>(
         state: S,
         address: Address,
@@ -404,6 +428,13 @@ impl Module {
 
     fn query_nonce<C: Context>(ctx: &mut C, args: types::NonceQuery) -> Result<u64, Error> {
         Self::get_nonce(ctx.runtime_state(), args.address)
+    }
+
+    fn query_addresses<C: Context>(
+        ctx: &mut C,
+        args: types::AddressesQuery,
+    ) -> Result<Vec<Address>, Error> {
+        Self::get_addresses(ctx.runtime_state(), args.denomination)
     }
 
     fn query_balances<C: Context>(
@@ -455,6 +486,10 @@ impl module::MethodHandler for Module {
             "accounts.Balances" => module::DispatchResult::Handled((|| {
                 let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
                 Ok(cbor::to_value(Self::query_balances(ctx, args)?))
+            })()),
+            "accounts.Addresses" => module::DispatchResult::Handled((|| {
+                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
+                Ok(cbor::to_value(Self::query_addresses(ctx, args)?))
             })()),
             _ => module::DispatchResult::Unhandled(args),
         }

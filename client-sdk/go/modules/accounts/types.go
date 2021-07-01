@@ -24,3 +24,11 @@ type BalancesQuery struct {
 type AccountBalances struct {
 	Balances map[types.Denomination]types.Quantity `json:"balances"`
 }
+
+// AddressesQuery are the arguments for the accounts.Addresses query.
+type AddressesQuery struct {
+	Denomination types.Denomination `json:"denomination"`
+}
+
+// Addresses is the response of the accounts.Addresses query.
+type Addresses []types.Address

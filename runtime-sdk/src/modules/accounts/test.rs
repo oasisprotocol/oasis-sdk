@@ -1,5 +1,5 @@
 //! Tests for the accounts module.
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, iter::FromIterator};
 
 use crate::{
     context::{BatchContext, Context},
@@ -524,6 +524,73 @@ fn test_fee_disbursement() {
         1,
         "remainder should be disbursed to the common pool"
     );
+}
+
+#[test]
+fn test_query_addresses() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    let dn = Denomination::NATIVE;
+    let d1: Denomination = "den1".parse().unwrap();
+
+    let accs = Accounts::query_addresses(
+        &mut ctx,
+        AddressesQuery {
+            denomination: dn.clone(),
+        },
+    )
+    .expect("query accounts should succeed");
+    assert_eq!(accs.len(), 0, "there should be no accounts initially");
+
+    let gen = Genesis {
+        balances: {
+            let mut balances = BTreeMap::new();
+            // Alice.
+            balances.insert(keys::alice::address(), {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(dn.clone(), 1_000_000);
+                denominations.insert(d1.clone(), 1_000);
+                denominations
+            });
+            // Bob.
+            balances.insert(keys::bob::address(), {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(d1.clone(), 2_000);
+                denominations
+            });
+            balances
+        },
+        total_supplies: {
+            let mut total_supplies = BTreeMap::new();
+            total_supplies.insert(dn.clone(), 1_000_000);
+            total_supplies.insert(d1.clone(), 3_000);
+            total_supplies
+        },
+        ..Default::default()
+    };
+
+    Accounts::init(&mut ctx, gen);
+
+    ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+        let accs = Accounts::query_addresses(&mut tx_ctx, AddressesQuery { denomination: d1 })
+            .expect("query accounts should succeed");
+        assert_eq!(accs.len(), 2, "there should be two addresses");
+        assert_eq!(
+            accs,
+            Vec::from_iter([keys::bob::address(), keys::alice::address()]),
+            "addresses should be correct"
+        );
+
+        let accs = Accounts::query_addresses(&mut tx_ctx, AddressesQuery { denomination: dn })
+            .expect("query accounts should succeed");
+        assert_eq!(accs.len(), 1, "there should be one address");
+        assert_eq!(
+            accs,
+            Vec::from_iter([keys::alice::address()]),
+            "addresses should be correct"
+        );
+    });
 }
 
 #[test]
