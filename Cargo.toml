@@ -3,8 +3,11 @@ members = [
     "runtime-sdk",
     "runtime-sdk-macros",
 
+    "runtime-sdk/modules/evm",
+
     # Test runtimes.
     "tests/runtimes/benchmarking",
     "tests/runtimes/simple-keyvalue",
     "tests/runtimes/simple-consensus",
+    "tests/runtimes/simple-evm",
 ]

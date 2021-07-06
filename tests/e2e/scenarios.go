@@ -29,6 +29,13 @@ var (
 
 	// SimpleConsensusRuntime is the simple-consensus runtime test.
 	SimpleConsensusRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-consensus", []RunTestFunction{SimpleConsensusTest})
+
+	// SimpleEVMRuntime is the simple-evm runtime test.
+	SimpleEVMRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-evm", []RunTestFunction{
+		SimpleEVMTest,
+		SimpleSolEVMTest,
+		SimpleERC20EVMTest,
+	})
 )
 
 // RegisterScenarios registers all oasis-sdk end-to-end runtime tests.
@@ -43,6 +50,7 @@ func RegisterScenarios() error {
 	for _, s := range []scenario.Scenario{
 		SimpleKVRuntime,
 		SimpleConsensusRuntime,
+		SimpleEVMRuntime,
 	} {
 		if err := cmd.Register(s); err != nil {
 			return err

@@ -1,0 +1,14 @@
+[package]
+name = "test-runtime-simple-evm"
+version = "0.1.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+cbor = { version = "0.1.3", package = "oasis-cbor" }
+oasis-runtime-sdk = { path = "../../../runtime-sdk" }
+oasis-runtime-sdk-evm = { path = "../../../runtime-sdk/modules/evm" }
+
+# Third party.
+thiserror = "1.0"

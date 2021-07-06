@@ -1,0 +1,23 @@
+[package]
+name = "oasis-runtime-sdk-evm"
+description = "EVM module for the Oasis Runtime SDK."
+version = "0.1.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+cbor = { version = "0.1.7", package = "oasis-cbor" }
+oasis-runtime-sdk = { path = "../.." }
+
+# Third party.
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Ethereum.
+evm = "0.28.0"
+fixed-hash = "0.7.0"
+primitive-types = { version = "0.9", default-features = false, features = ["rlp", "num-traits"] }
+tiny-keccak = { version = "2.0.2", features = ["keccak"] }
+uint = "0.9.1"
+

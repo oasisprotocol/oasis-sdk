@@ -14,6 +14,7 @@ import (
 	voiSr "github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	coreMemSig "github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/memory"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
@@ -94,18 +95,18 @@ func CheckInvariants(ctx context.Context, rtc client.RuntimeClient) error {
 
 // SignAndSubmitTx signs and submits the given transaction.
 // Gas estimation is done automatically.
-func SignAndSubmitTx(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, tx types.Transaction) error {
+func SignAndSubmitTx(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, tx types.Transaction) (cbor.RawMessage, error) {
 	// Get chain context.
 	chainCtx, err := GetChainContext(ctx, rtc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Get current nonce for the signer's account.
 	ac := accounts.NewV1(rtc)
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	tx.AppendAuthSignature(signer.Public(), nonce)
 
@@ -115,14 +116,15 @@ func SignAndSubmitTx(ctx context.Context, rtc client.RuntimeClient, signer signa
 	// Sign the transaction.
 	stx := etx.PrepareForSigning()
 	if err = stx.AppendSign(chainCtx, signer); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Submit the signed transaction.
-	if _, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
-		return err
+	var result cbor.RawMessage
+	if result, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
+		return nil, err
 	}
-	return nil
+	return result, nil
 }
 
 // CreateAndFundAccount creates a new account and funds it using the
@@ -158,7 +160,7 @@ func CreateAndFundAccount(ctx context.Context, rtc client.RuntimeClient, funder 
 		To:     types.NewAddress(sig.Public()),
 		Amount: types.NewBaseUnits(*quantity.NewFromUint64(fundAmount), types.NativeDenomination),
 	})
-	if err := SignAndSubmitTx(ctx, rtc, funder, *tx); err != nil {
+	if _, err := SignAndSubmitTx(ctx, rtc, funder, *tx); err != nil {
 		return nil, err
 	}
 
@@ -216,7 +218,7 @@ func Generate(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 					}
 
 					// Sign and submit the generated transaction.
-					if err = SignAndSubmitTx(ctx, rtc, acct, *tx); err != nil {
+					if _, err = SignAndSubmitTx(ctx, rtc, acct, *tx); err != nil {
 						atomic.AddUint64(&subErrCount, 1)
 					} else {
 						atomic.AddUint64(&okCount, 1)
