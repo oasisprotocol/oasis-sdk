@@ -136,8 +136,8 @@ See [Installing
 Envoy](https://www.envoyproxy.io/docs/envoy/latest/start/install)
 for a variety of ways to get Envoy.
 
-In our sample setup, we use [the distribution from Get
-Envoy](https://www.getenvoy.io/).
+In our tests, we use [the prebuilt binaries from Tetrate
+Labs](https://github.com/tetratelabs/archive-envoy).
 
 ## Configuring Envoy
 

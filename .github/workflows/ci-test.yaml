@@ -175,11 +175,10 @@ jobs:
         run: npm run-script playground &
 
       - name: 'proxy: Install Envoy'
-        # https://www.getenvoy.io/install/envoy/ubuntu/
+        # https://github.com/tetratelabs/archive-envoy
         run: |
-          curl -sL 'https://www.getenvoy.io/gpg' | sudo apt-key add -
-          sudo add-apt-repository "deb [arch=amd64] https://dl.bintray.com/tetrate/getenvoy-deb $(lsb_release -cs) stable"
-          sudo apt-get update && sudo apt-get install -y getenvoy-envoy
+          curl -sL 'https://github.com/tetratelabs/archive-envoy/releases/download/v1.18.3/envoy-v1.18.3-linux-amd64.tar.xz' | sudo tar -xJC /opt
+          sudo ln -s /opt/envoy-v1.18.3-linux-amd64/bin/envoy /usr/local/bin
 
       - name: 'proxy: Start'
         working-directory: client-sdk/ts-web/core/playground
@@ -296,11 +295,10 @@ jobs:
         run: npm run-script playground &
 
       - name: 'proxy: Install Envoy'
-        # https://www.getenvoy.io/install/envoy/ubuntu/
+        # https://github.com/tetratelabs/archive-envoy
         run: |
-          curl -sL 'https://www.getenvoy.io/gpg' | sudo apt-key add -
-          sudo add-apt-repository "deb [arch=amd64] https://dl.bintray.com/tetrate/getenvoy-deb $(lsb_release -cs) stable"
-          sudo apt-get update && sudo apt-get install -y getenvoy-envoy
+          curl -sL 'https://github.com/tetratelabs/archive-envoy/releases/download/v1.18.3/envoy-v1.18.3-linux-amd64.tar.xz' | sudo tar -xJC /opt
+          sudo ln -s /opt/envoy-v1.18.3-linux-amd64/bin/envoy /usr/local/bin
 
       - name: 'proxy: Start'
         working-directory: client-sdk/ts-web/rt/playground
