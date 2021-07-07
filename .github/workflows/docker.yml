@@ -6,8 +6,7 @@ on:
   # A push occurs to one of the matched branches.
   push:
     branches:
-      - master
-      - ptrus/feature/benchmarks # TODO: remove.
+      - main
 
 jobs:
 
@@ -27,7 +26,7 @@ jobs:
         shell: bash
         run: |
           if [[ -z $GITHUB_BASE_REF ]]; then
-            # On master/stable branches.
+            # On main/stable branches.
             branch=${GITHUB_REF#refs/heads/}
           else
             # On pull request branches.
