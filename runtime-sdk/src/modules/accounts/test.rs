@@ -78,6 +78,43 @@ fn test_init_incorrect_total_supply_2() {
     );
 }
 
+#[cfg(feature = "unsafe-allow-debug")]
+#[test]
+fn test_debug_option_set() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    Accounts::init(
+        &mut ctx,
+        &Genesis {
+            parameters: Parameters {
+                debug_disable_nonce_check: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+}
+
+#[cfg(not(feature = "unsafe-allow-debug"))]
+#[test]
+#[should_panic]
+fn test_debug_option_set() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    Accounts::init(
+        &mut ctx,
+        &Genesis {
+            parameters: Parameters {
+                debug_disable_nonce_check: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+}
+
 #[test]
 fn test_init_1() {
     let mut mock = mock::Mock::default();
@@ -165,6 +202,7 @@ fn test_api_tx_transfer_disabled() {
             },
             parameters: Parameters {
                 transfers_disabled: true,
+                debug_disable_nonce_check: false,
                 gas_costs: Default::default(),
             },
             ..Default::default()

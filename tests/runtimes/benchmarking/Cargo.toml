@@ -1,0 +1,12 @@
+[package]
+name = "test-runtime-benchmarking"
+version = "0.1.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+oasis-runtime-sdk = { path = "../../../runtime-sdk", features = ["unsafe-allow-debug"] }
+
+serde = { version = "1.0.118", features = ["derive"] }
+thiserror = "1.0"

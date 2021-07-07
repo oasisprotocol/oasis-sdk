@@ -1788,12 +1788,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "test-runtime-simple-consensus"
+name = "test-runtime-benchmarking"
 version = "0.1.0"
 dependencies = [
  "oasis-runtime-sdk",
  "serde",
  "thiserror",
+]
+
+[[package]]
+name = "test-runtime-simple-consensus"
+version = "0.1.0"
+dependencies = [
+ "oasis-runtime-sdk",
 ]
 
 [[package]]

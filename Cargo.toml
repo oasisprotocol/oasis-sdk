@@ -4,6 +4,7 @@ members = [
     "runtime-sdk-macros",
 
     # Test runtimes.
+    "tests/runtimes/benchmarking",
     "tests/runtimes/simple-keyvalue",
     "tests/runtimes/simple-consensus",
 ]

@@ -13,7 +13,7 @@ use crate::{
     crypto::signature::PublicKey,
     error::{self, Error as _},
     module,
-    module::Module as _,
+    module::{Module as _, Parameters as _},
     modules,
     modules::core::{Error as CoreError, Module as Core, API as _},
     storage,
@@ -83,6 +83,12 @@ pub struct GasCosts {
     pub tx_transfer: u64,
 }
 
+#[allow(clippy::trivially_copy_pass_by_ref)]
+#[inline]
+const fn is_false(v: &bool) -> bool {
+    !(*v)
+}
+
 /// Parameters for the accounts module.
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -91,10 +97,33 @@ pub struct Parameters {
     pub transfers_disabled: bool,
     #[serde(rename = "gas_costs")]
     pub gas_costs: GasCosts,
+
+    #[serde(rename = "debug_disable_nonce_check")]
+    #[serde(skip_serializing_if = "is_false")]
+    #[serde(default)]
+    pub debug_disable_nonce_check: bool,
+}
+
+/// Errors emitted during rewards parameter validation.
+#[derive(Error, Debug)]
+pub enum ParameterValidationError {
+    #[error("debug option used: {0}")]
+    DebugOptionUsed(String),
 }
 
 impl module::Parameters for Parameters {
-    type Error = ();
+    type Error = ParameterValidationError;
+
+    #[cfg(not(feature = "unsafe-allow-debug"))]
+    fn validate_basic(&self) -> Result<(), Self::Error> {
+        if self.debug_disable_nonce_check {
+            return Err(ParameterValidationError::DebugOptionUsed(
+                "debug_disable_nonce_check".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
 }
 
 /// Genesis state for the accounts module.
@@ -501,6 +530,12 @@ impl Module {
             );
         }
 
+        // Validate genesis parameters.
+        genesis
+            .parameters
+            .validate_basic()
+            .expect("invalid genesis parameters");
+
         // Set genesis parameters.
         Self::set_params(ctx.runtime_state(), &genesis.parameters);
     }
@@ -558,6 +593,7 @@ impl module::AuthHandler for Module {
         ctx: &mut C,
         tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
+        let params = Self::params(ctx.runtime_state());
         // Fetch information about each signer.
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut accounts =
@@ -567,7 +603,10 @@ impl module::AuthHandler for Module {
             let address = si.address_spec.address();
             let mut account: types::Account = accounts.get(&address).unwrap_or_default();
             if account.nonce != si.nonce {
-                return Err(modules::core::Error::InvalidNonce);
+                // Reject unles nonce checking is disabled.
+                if !params.debug_disable_nonce_check {
+                    return Err(modules::core::Error::InvalidNonce);
+                }
             }
 
             // First signer pays for the fees.
