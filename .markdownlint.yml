@@ -11,7 +11,7 @@ line-length:
   strict: true
   line_length: 80
   # Allow longer lines for code blocks.
-  code_block_line_length: 100
+  code_blocks: false
 
 # Do not always require language specifiers with fenced code blocks since they
 # are not part of the Markdown spec.
