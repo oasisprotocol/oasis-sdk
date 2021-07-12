@@ -18,7 +18,7 @@ k256 = { version = "0.9.4" }
 thiserror = "1.0.26"
 hex = "0.4.2"
 io-context = "0.2.0"
-anyhow = "1.0.41"
+anyhow = "1.0.42"
 bech32 = "0.8.1"
 num-traits = "0.2.14"
 impl-trait-for-tuples = "0.2.1"
