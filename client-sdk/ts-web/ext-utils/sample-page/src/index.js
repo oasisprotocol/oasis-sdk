@@ -17,16 +17,16 @@ function toBase64(/** @type {Uint8Array} */ u8) {
 
 export const playground = (async function () {
     console.log('connecting');
-    const connection = await oasisExt.connection.connect(extOrigin, extPath);
+    const conn = await oasisExt.connection.connect(extOrigin, extPath);
     console.log('connected');
 
     console.log('listing keys');
-    const keys = await oasisExt.keys.list(connection);
+    const keys = await oasisExt.keys.list(conn);
     console.log('listed keys');
     console.log('keys', keys);
 
     console.log('requesting signer');
-    const signer = await oasisExt.signature.ExtContextSigner.request(connection, keys[0].which);
+    const signer = await oasisExt.signature.ExtContextSigner.request(conn, keys[0].which);
     console.log('got signer');
     const publicKey = signer.public();
     console.log('public key base64', toBase64(publicKey));
