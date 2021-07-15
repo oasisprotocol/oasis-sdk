@@ -284,3 +284,9 @@ Sign this message?`;
         return {approved: true, signature};
     },
 });
+
+// We only ever have on key that doesn't change, but call this so that we
+// exercise the library code for it. Extension implementors should design
+// their own logic if they wish to notify the web content of changes to the
+// keys list.
+oasisExt.ext.keysChanged();
