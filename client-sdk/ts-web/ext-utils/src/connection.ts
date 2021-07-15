@@ -58,6 +58,7 @@ export function handleMessage(e: MessageEvent<unknown>) {
             const m = e.data as protocol.MessageReady;
             if (!(e.origin in connectionsRequested)) break;
             const {resolve, reject} = connectionsRequested[e.origin];
+            delete connectionsRequested[e.origin];
             const connection = new ExtConnection(e.origin, e.source as WindowProxy);
             resolve(connection);
             break;
