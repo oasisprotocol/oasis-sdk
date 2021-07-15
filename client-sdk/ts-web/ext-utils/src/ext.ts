@@ -93,3 +93,13 @@ export function ready(handlers: Handlers) {
         '*',
     );
 }
+
+function postEvent(event: unknown) {
+    window.parent.postMessage(
+        {
+            type: protocol.MESSAGE_TYPE_EVENT,
+            event: event,
+        } as protocol.MessageEvent,
+        '*',
+    );
+}

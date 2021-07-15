@@ -12,6 +12,7 @@ let addedMessageListener = false;
 const connectionsPromised: {[origin: string]: Promise<ExtConnection>} = {};
 const connectionsRequested: {[origin: string]: {resolve: any; reject: any}} = {};
 const responseHandlers: {[handlerKey: string]: {resolve: any; reject: any}} = {};
+const eventHandlers: {[handlerKey: string]: (event: any) => void} = {};
 
 /**
  * A communication channel with an extension.
@@ -48,6 +49,11 @@ export class ExtConnection {
             );
         });
     }
+
+    setEventHandler(type: string, handler: (event: any) => void) {
+        const eventKey = `${this.origin}/${type}`;
+        eventHandlers[eventKey] = handler;
+    }
 }
 
 export function handleMessage(e: MessageEvent<unknown>) {
@@ -74,6 +80,15 @@ export function handleMessage(e: MessageEvent<unknown>) {
             } else {
                 resolve(m.body);
             }
+            break;
+        }
+        case protocol.MESSAGE_TYPE_EVENT: {
+            const m = e.data as protocol.MessageEvent;
+            // @ts-expect-error if m.event.type is missing and we get undefined, we'll survive
+            const handlerKey = `${e.origin}/${m.event.type}`;
+            if (!(handlerKey in eventHandlers)) break;
+            const handler = eventHandlers[handlerKey];
+            handler(m.event);
             break;
         }
     }
