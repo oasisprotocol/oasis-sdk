@@ -103,3 +103,12 @@ function postEvent(event: unknown) {
         '*',
     );
 }
+
+/**
+ * Call this to tell the web content that the list of available keys has changed.
+ */
+export function keysChanged() {
+    postEvent({
+        type: protocol.EVENT_KEYS_CHANGE,
+    } as protocol.KeysChangeEvent);
+}

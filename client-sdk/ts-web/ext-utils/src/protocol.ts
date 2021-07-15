@@ -96,3 +96,11 @@ export interface ContextSignerSignResponse {
     approved: boolean;
     signature?: Uint8Array;
 }
+
+// events
+
+export const EVENT_KEYS_CHANGE = 'keys-change-v1';
+
+export interface KeysChangeEvent {
+    type: typeof EVENT_KEYS_CHANGE;
+}
