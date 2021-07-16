@@ -52,6 +52,12 @@ impl Mock {
         self.create_ctx_for_runtime(Mode::ExecuteTx)
     }
 
+    pub fn create_check_ctx(
+        &mut self,
+    ) -> RuntimeBatchContext<'_, EmptyRuntime, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
+        self.create_ctx_for_runtime(Mode::CheckTx)
+    }
+
     /// Create a new mock dispatch context.
     pub fn create_ctx_for_runtime<R: Runtime>(
         &mut self,

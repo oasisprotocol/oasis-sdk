@@ -60,4 +60,4 @@ sleep 2
     --address "${CLIENT_SOCK}" \
     --runtime.id "8000000000000000000000000000000000000000000000000000000000000000" \
     --benchmarks accounts_transfers \
-    --benchmarks.concurrency 6000
+    --benchmarks.concurrency 500 # bump after oasis-core is bumped to include check-tx batching.

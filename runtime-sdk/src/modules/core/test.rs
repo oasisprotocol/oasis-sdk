@@ -66,6 +66,14 @@ fn test_use_gas() {
     });
 
     Core::use_batch_gas(&mut ctx, 1).expect_err("batch gas should accumulate outside tx");
+
+    let mut ctx = mock.create_check_ctx();
+    let mut big_tx = tx.clone();
+    big_tx.auth_info.fee.gas = u64::MAX;
+    ctx.with_tx(big_tx, |mut tx_ctx, _call| {
+        Core::use_tx_gas(&mut tx_ctx, u64::MAX)
+            .expect("batch overflow should not happen in check-tx");
+    });
 }
 
 // Module that implements the gas waster method.

@@ -186,6 +186,10 @@ impl Module {
 
 impl API for Module {
     fn use_batch_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error> {
+        // Do not enforce batch limits for check-tx.
+        if ctx.is_check_only() {
+            return Ok(());
+        }
         let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
         let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
         let batch_new_gas_used = batch_gas_used
