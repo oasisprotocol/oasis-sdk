@@ -3,10 +3,7 @@ use std::{collections::BTreeMap, convert::TryInto};
 
 use num_traits::Zero;
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
-
-use oasis_core_runtime::common::cbor;
 
 use crate::{
     context::{Context, TxContext},
@@ -52,8 +49,8 @@ pub enum Error {
 }
 
 /// Events emitted by the accounts module.
-#[derive(Debug, Serialize, Deserialize, oasis_runtime_sdk_macros::Event)]
-#[serde(untagged)]
+#[derive(Debug, cbor::Encode, oasis_runtime_sdk_macros::Event)]
+#[cbor(untagged)]
 pub enum Event {
     #[sdk_event(code = 1)]
     Transfer {
@@ -76,10 +73,8 @@ pub enum Event {
 }
 
 /// Gas costs.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct GasCosts {
-    #[serde(rename = "tx_transfer")]
     pub tx_transfer: u64,
 }
 
@@ -90,17 +85,14 @@ const fn is_false(v: &bool) -> bool {
 }
 
 /// Parameters for the accounts module.
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Default, Debug, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
-    #[serde(rename = "transfers_disabled")]
     pub transfers_disabled: bool,
-    #[serde(rename = "gas_costs")]
     pub gas_costs: GasCosts,
 
-    #[serde(rename = "debug_disable_nonce_check")]
-    #[serde(skip_serializing_if = "is_false")]
-    #[serde(default)]
+    #[cbor(optional)]
+    #[cbor(default)]
+    #[cbor(skip_serializing_if = "is_false")]
     pub debug_disable_nonce_check: bool,
 }
 
@@ -127,20 +119,12 @@ impl module::Parameters for Parameters {
 }
 
 /// Genesis state for the accounts module.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Genesis {
-    #[serde(rename = "parameters")]
     pub parameters: Parameters,
-
-    #[serde(rename = "accounts")]
     pub accounts: BTreeMap<Address, types::Account>,
-
-    #[serde(rename = "balances")]
-    pub balances: BTreeMap<Address, BTreeMap<token::Denomination, token::Quantity>>,
-
-    #[serde(rename = "total_supplies")]
-    pub total_supplies: BTreeMap<token::Denomination, token::Quantity>,
+    pub balances: BTreeMap<Address, BTreeMap<token::Denomination, u128>>,
+    pub total_supplies: BTreeMap<token::Denomination, u128>,
 }
 
 /// Interface that can be called from other modules.
@@ -172,7 +156,7 @@ pub trait API {
     /// Fetch total supplies.
     fn get_total_supplies<S: storage::Store>(
         state: S,
-    ) -> Result<BTreeMap<token::Denomination, token::Quantity>, Error>;
+    ) -> Result<BTreeMap<token::Denomination, u128>, Error>;
 }
 
 /// State schema constants.
@@ -229,10 +213,10 @@ impl Module {
         let store = storage::PrefixStore::new(state, &MODULE_NAME);
         let balances = storage::PrefixStore::new(store, &state::BALANCES);
         let mut account = storage::TypedStore::new(storage::PrefixStore::new(balances, &addr));
-        let mut value: token::Quantity = account.get(amount.denomination()).unwrap_or_default();
+        let mut value: u128 = account.get(amount.denomination()).unwrap_or_default();
         value += amount.amount();
 
-        account.insert(amount.denomination(), &value);
+        account.insert(amount.denomination(), value);
         Ok(())
     }
 
@@ -245,12 +229,12 @@ impl Module {
         let store = storage::PrefixStore::new(state, &MODULE_NAME);
         let balances = storage::PrefixStore::new(store, &state::BALANCES);
         let mut account = storage::TypedStore::new(storage::PrefixStore::new(balances, &addr));
-        let mut value: token::Quantity = account.get(amount.denomination()).unwrap_or_default();
+        let mut value: u128 = account.get(amount.denomination()).unwrap_or_default();
 
         value = value
-            .checked_sub(&amount.amount())
+            .checked_sub(amount.amount())
             .ok_or(Error::InsufficientBalance)?;
-        account.insert(amount.denomination(), &value);
+        account.insert(amount.denomination(), value);
         Ok(())
     }
 
@@ -262,11 +246,11 @@ impl Module {
         let store = storage::PrefixStore::new(state, &MODULE_NAME);
         let mut total_supplies =
             storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
-        let mut total_supply: token::Quantity = total_supplies
+        let mut total_supply: u128 = total_supplies
             .get(amount.denomination())
             .unwrap_or_default();
         total_supply += amount.amount();
-        total_supplies.insert(amount.denomination(), &total_supply);
+        total_supplies.insert(amount.denomination(), total_supply);
         Ok(())
     }
 
@@ -278,20 +262,20 @@ impl Module {
         let store = storage::PrefixStore::new(state, &MODULE_NAME);
         let mut total_supplies =
             storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
-        let mut total_supply: token::Quantity = total_supplies
+        let mut total_supply: u128 = total_supplies
             .get(amount.denomination())
             .unwrap_or_default();
         total_supply = total_supply
-            .checked_sub(&amount.amount())
+            .checked_sub(amount.amount())
             .ok_or(Error::InsufficientBalance)?;
-        total_supplies.insert(amount.denomination(), &total_supply);
+        total_supplies.insert(amount.denomination(), total_supply);
         Ok(())
     }
 
     /// Get all balances.
     fn get_all_balances<S: storage::Store>(
         state: S,
-    ) -> Result<BTreeMap<Address, BTreeMap<token::Denomination, token::Quantity>>, Error> {
+    ) -> Result<BTreeMap<Address, BTreeMap<token::Denomination, u128>>, Error> {
         let store = storage::PrefixStore::new(state, &MODULE_NAME);
         let balances = storage::TypedStore::new(storage::PrefixStore::new(store, &state::BALANCES));
 
@@ -299,10 +283,9 @@ impl Module {
         // because the stored format doesn't match -- we need this workaround
         // instead.
 
-        let balmap: BTreeMap<AddressWithDenomination, token::Quantity> = balances.iter().collect();
+        let balmap: BTreeMap<AddressWithDenomination, u128> = balances.iter().collect();
 
-        let mut b: BTreeMap<Address, BTreeMap<token::Denomination, token::Quantity>> =
-            BTreeMap::new();
+        let mut b: BTreeMap<Address, BTreeMap<token::Denomination, u128>> = BTreeMap::new();
 
         for (addrden, amt) in &balmap {
             let addr = &addrden.0;
@@ -315,7 +298,7 @@ impl Module {
             addr_bals
                 .entry(den.clone())
                 .and_modify(|a| *a += amt)
-                .or_insert_with(|| amt.clone());
+                .or_insert_with(|| *amt);
         }
 
         Ok(b)
@@ -395,7 +378,7 @@ impl API for Module {
 
     fn get_total_supplies<S: storage::Store>(
         state: S,
-    ) -> Result<BTreeMap<token::Denomination, token::Quantity>, Error> {
+    ) -> Result<BTreeMap<token::Denomination, u128>, Error> {
         let store = storage::PrefixStore::new(state, &MODULE_NAME);
         let ts = storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
 
@@ -448,7 +431,7 @@ impl module::MethodHandler for Module {
             "accounts.Transfer" => {
                 let result = || -> Result<cbor::Value, Error> {
                     let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(&Self::tx_transfer(ctx, args)?))
+                    Ok(cbor::to_value(Self::tx_transfer(ctx, args)?))
                 }();
                 match result {
                     Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
@@ -467,11 +450,11 @@ impl module::MethodHandler for Module {
         match method {
             "accounts.Nonce" => module::DispatchResult::Handled((|| {
                 let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(&Self::query_nonce(ctx, args)?))
+                Ok(cbor::to_value(Self::query_nonce(ctx, args)?))
             })()),
             "accounts.Balances" => module::DispatchResult::Handled((|| {
                 let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(&Self::query_balances(ctx, args)?))
+                Ok(cbor::to_value(Self::query_balances(ctx, args)?))
             })()),
             _ => module::DispatchResult::Unhandled(args),
         }
@@ -480,19 +463,18 @@ impl module::MethodHandler for Module {
 
 impl Module {
     /// Initialize state from genesis.
-    fn init<C: Context>(ctx: &mut C, genesis: &Genesis) {
+    fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
         // Create accounts.
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut accounts =
             storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
-        for (address, account) in genesis.accounts.iter() {
+        for (address, account) in genesis.accounts {
             accounts.insert(address, account);
         }
 
         // Create balances.
         let mut balances = storage::PrefixStore::new(&mut store, &state::BALANCES);
-        let mut computed_total_supply: BTreeMap<token::Denomination, token::Quantity> =
-            BTreeMap::new();
+        let mut computed_total_supply: BTreeMap<token::Denomination, u128> = BTreeMap::new();
         for (address, denominations) in genesis.balances.iter() {
             let mut account =
                 storage::TypedStore::new(storage::PrefixStore::new(&mut balances, &address));
@@ -503,7 +485,7 @@ impl Module {
                 computed_total_supply
                     .entry(denomination.clone())
                     .and_modify(|v| *v += value)
-                    .or_insert_with(|| value.clone());
+                    .or_insert_with(|| *value);
             }
         }
 
@@ -537,7 +519,7 @@ impl Module {
             .expect("invalid genesis parameters");
 
         // Set genesis parameters.
-        Self::set_params(ctx.runtime_state(), &genesis.parameters);
+        Self::set_params(ctx.runtime_state(), genesis.parameters);
     }
 
     /// Migrate state from a previous version.
@@ -553,7 +535,7 @@ impl module::MigrationHandler for Module {
     fn init_or_migrate<C: Context>(
         ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
-        genesis: &Self::Genesis,
+        genesis: Self::Genesis,
     ) -> bool {
         let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
         if version == 0 {
@@ -571,7 +553,7 @@ impl module::MigrationHandler for Module {
 /// A fee accumulator that stores fees from all transactions in a block.
 #[derive(Default)]
 struct FeeAccumulator {
-    total_fees: BTreeMap<token::Denomination, token::Quantity>,
+    total_fees: BTreeMap<token::Denomination, u128>,
 }
 
 impl FeeAccumulator {
@@ -617,7 +599,7 @@ impl module::AuthHandler for Module {
             // Update nonce.
             // TODO: Could support an option to defer this.
             account.nonce += 1;
-            accounts.insert(&address, &account);
+            accounts.insert(&address, account);
         }
 
         // Charge the specified amount of fees.
@@ -633,7 +615,7 @@ impl module::AuthHandler for Module {
 
             // TODO: Emit event that fee has been paid.
 
-            let gas_price = &tx.auth_info.fee.gas_price();
+            let gas_price = tx.auth_info.fee.gas_price();
             // Bump transaction priority.
             Core::add_priority(ctx, gas_price.try_into().unwrap_or(u64::MAX))?;
         }
@@ -661,7 +643,7 @@ impl module::BlockHandler for Module {
                 .iter()
                 .filter_map(|(denom, fee)| {
                     let fee = fee
-                        .checked_div(&token::Quantity::from(addrs.len() as u64))
+                        .checked_div(addrs.len() as u128)
                         .expect("addrs is non-empty");
 
                     // Filter out zero-fee entries to avoid needless operations.
@@ -730,14 +712,14 @@ impl module::InvariantHandler for Module {
         ))?;
 
         // First, compute total supplies based on account balances.
-        let mut computed_ts: BTreeMap<token::Denomination, token::Quantity> = BTreeMap::new();
+        let mut computed_ts: BTreeMap<token::Denomination, u128> = BTreeMap::new();
 
         for bals in balances.values() {
             for (den, amt) in bals {
                 computed_ts
                     .entry(den.clone())
                     .and_modify(|a| *a += amt)
-                    .or_insert_with(|| amt.clone());
+                    .or_insert_with(|| *amt);
             }
         }
 

@@ -1,10 +1,8 @@
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
-    core::common::cbor,
     error::Error as _,
     module,
     module::Module as _,
@@ -34,8 +32,7 @@ pub enum Error {
 }
 
 /// Parameters for the consensus module.
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Default, Debug, cbor::Encode, cbor::Decode)]
 pub struct Parameters {}
 
 impl module::Parameters for Parameters {
@@ -43,15 +40,13 @@ impl module::Parameters for Parameters {
 }
 
 /// Events emitted by the consensus module (none so far).
-#[derive(Debug, Serialize, Deserialize, sdk::Event)]
-#[serde(untagged)]
+#[derive(Debug, cbor::Encode, sdk::Event)]
+#[cbor(untagged)]
 pub enum Event {}
 
 /// Genesis state for the consensus module.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Genesis {
-    #[serde(rename = "parameters")]
     pub parameters: Parameters,
 }
 
@@ -102,7 +97,7 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
             "benchmarks.accounts.Mint" => {
                 let result = || -> Result<cbor::Value, Error> {
                     let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(&Self::tx_accounts_mint(ctx, args)?))
+                    Ok(cbor::to_value(Self::tx_accounts_mint(ctx, args)?))
                 }();
                 match result {
                     Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
@@ -112,7 +107,7 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
             "benchmarks.accounts.Transfer" => {
                 let result = || -> Result<cbor::Value, Error> {
                     let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(&Self::tx_accounts_transfer(ctx, args)?))
+                    Ok(cbor::to_value(Self::tx_accounts_transfer(ctx, args)?))
                 }();
                 match result {
                     Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
@@ -130,13 +125,13 @@ impl<Accounts: modules::accounts::API> module::MigrationHandler for Module<Accou
     fn init_or_migrate<C: Context>(
         ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
-        genesis: &Self::Genesis,
+        genesis: Self::Genesis,
     ) -> bool {
         let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
         if version == 0 {
             // Initialize state from genesis.
             // Set genesis parameters.
-            Self::set_params(ctx.runtime_state(), &genesis.parameters);
+            Self::set_params(ctx.runtime_state(), genesis.parameters);
             meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
             return true;
         }

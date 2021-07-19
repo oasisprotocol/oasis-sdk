@@ -2,11 +2,9 @@
 use std::{collections::BTreeMap, fmt::Debug};
 
 use impl_trait_for_tuples::impl_for_tuples;
-use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     context::{Context, TxContext},
-    core::common::cbor,
     error, event, modules, storage,
     storage::Store,
     types::{
@@ -199,7 +197,7 @@ pub trait MigrationHandler {
     fn init_or_migrate<C: Context>(
         _ctx: &mut C,
         _meta: &mut modules::core::types::Metadata,
-        _genesis: &Self::Genesis,
+        _genesis: Self::Genesis,
     ) -> bool {
         // Default implementation doesn't perform any migrations.
         false
@@ -214,9 +212,9 @@ impl MigrationHandler for Tuple {
     fn init_or_migrate<C: Context>(
         ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
-        genesis: &Self::Genesis,
+        genesis: Self::Genesis,
     ) -> bool {
-        [for_tuples!( #( Tuple::init_or_migrate(ctx, meta, &genesis.Tuple) ),* )]
+        [for_tuples!( #( Tuple::init_or_migrate(ctx, meta, genesis.Tuple) ),* )]
             .iter()
             .any(|x| *x)
     }
@@ -308,7 +306,7 @@ pub trait Module {
     }
 
     /// Set the module's parameters.
-    fn set_params<S: Store>(store: S, params: &Self::Parameters) {
+    fn set_params<S: Store>(store: S, params: Self::Parameters) {
         let store = storage::PrefixStore::new(store, &Self::NAME);
         let mut store = storage::TypedStore::new(store);
         store.insert(Self::Parameters::STORE_KEY, params);
@@ -316,7 +314,7 @@ pub trait Module {
 }
 
 /// Parameters for a runtime module.
-pub trait Parameters: Debug + Default + Serialize + DeserializeOwned {
+pub trait Parameters: Debug + Default + cbor::Encode + cbor::Decode {
     type Error;
 
     /// Store key used for storing parameters.

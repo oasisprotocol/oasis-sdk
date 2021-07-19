@@ -24,6 +24,9 @@ pub use crate::{
 // Re-export the appropriate version of the oasis-core-runtime library.
 pub use oasis_core_runtime as core;
 
+// Re-export the cbor crate.
+pub use cbor;
+
 // Re-export the SDK support proc-macros.
 #[cfg(feature = "oasis-runtime-sdk-macros")]
 pub use oasis_runtime_sdk_macros::*;

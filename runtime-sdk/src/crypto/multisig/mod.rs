@@ -1,4 +1,3 @@
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::crypto::signature::{PublicKey, Signature};
@@ -18,14 +17,11 @@ pub enum Error {
 }
 
 /// One of the signers in a multisig configuration.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Signer {
     /// The public key of the signer.
-    #[serde(rename = "public_key")]
     pub public_key: PublicKey,
     /// The weight of the signer.
-    #[serde(rename = "weight")]
     pub weight: u64,
 }
 
@@ -38,14 +34,11 @@ pub type SignatureSetOwned = Vec<Option<Signature>>;
 /// A multisig configuration.
 /// A set of signers with total "weight" greater than or equal to a "threshold" can authenticate
 /// for the configuration.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Config {
     /// The signers.
-    #[serde(rename = "signers")]
     pub signers: Vec<Signer>,
     /// The threshold.
-    #[serde(rename = "threshold")]
     pub threshold: u64,
 }
 

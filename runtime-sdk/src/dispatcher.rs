@@ -10,7 +10,6 @@ use thiserror::Error;
 
 use oasis_core_runtime::{
     self,
-    common::cbor,
     protocol::HostInfo,
     storage::{context::StorageContext, mkvs},
     transaction::{
@@ -222,7 +221,7 @@ impl<R: Runtime> Dispatcher<R> {
         let dispatch_result = Self::dispatch_tx(ctx, tx)?;
 
         Ok(ExecuteTxResult {
-            output: cbor::to_vec(&dispatch_result.result),
+            output: cbor::to_vec(dispatch_result.result),
             tags: dispatch_result.tags,
         })
     }
@@ -277,7 +276,7 @@ impl<R: Runtime> Dispatcher<R> {
             store,
             &modules::core::MODULE_NAME,
         ));
-        store.insert(&modules::core::state::MESSAGE_HANDLERS, &message_handlers);
+        store.insert(&modules::core::state::MESSAGE_HANDLERS, message_handlers);
     }
 
     /// Process the given runtime query.

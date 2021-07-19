@@ -3,14 +3,16 @@
 //! Low level consensus module for communicating with the consensus layer.
 use std::str::FromStr;
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use oasis_core_runtime::consensus::{
-    roothash::{Message, StakingMessage},
-    staking,
-    staking::Account as ConsensusAccount,
-    state::{staking::ImmutableState as StakingImmutableState, StateError},
+use oasis_core_runtime::{
+    common::versioned::Versioned,
+    consensus::{
+        roothash::{Message, StakingMessage},
+        staking,
+        staking::Account as ConsensusAccount,
+        state::{staking::ImmutableState as StakingImmutableState, StateError},
+    },
 };
 
 use crate::{
@@ -35,8 +37,7 @@ mod test;
 const MODULE_NAME: &str = "consensus";
 
 /// Parameters for the consensus module.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
     pub consensus_denomination: token::Denomination,
 }
@@ -53,15 +54,13 @@ impl module::Parameters for Parameters {
     type Error = ();
 }
 /// Events emitted by the consensus module (none so far).
-#[derive(Debug, Serialize, Deserialize, oasis_runtime_sdk_macros::Event)]
-#[serde(untagged)]
+#[derive(Debug, cbor::Encode, oasis_runtime_sdk_macros::Event)]
+#[cbor(untagged)]
 pub enum Event {}
 
 /// Genesis state for the consensus module.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Genesis {
-    #[serde(rename = "parameters")]
     pub parameters: Parameters,
 }
 
@@ -163,13 +162,13 @@ impl API for Module {
         }
 
         ctx.emit_message(
-            Message::Staking {
-                v: 0,
-                msg: StakingMessage::Transfer(staking::Transfer {
+            Message::Staking(Versioned::new(
+                0,
+                StakingMessage::Transfer(staking::Transfer {
                     to: to.into(),
-                    amount: amount.amount().clone(),
+                    amount: amount.amount().into(),
                 }),
-            },
+            )),
             hook,
         )?;
 
@@ -191,13 +190,13 @@ impl API for Module {
         }
 
         ctx.emit_message(
-            Message::Staking {
-                v: 0,
-                msg: StakingMessage::Withdraw(staking::Withdraw {
+            Message::Staking(Versioned::new(
+                0,
+                StakingMessage::Withdraw(staking::Withdraw {
                     from: from.into(),
-                    amount: amount.amount().clone(),
+                    amount: amount.amount().into(),
                 }),
-            },
+            )),
             hook,
         )?;
 
@@ -219,13 +218,13 @@ impl API for Module {
         }
 
         ctx.emit_message(
-            Message::Staking {
-                v: 0,
-                msg: StakingMessage::AddEscrow(staking::Escrow {
+            Message::Staking(Versioned::new(
+                0,
+                StakingMessage::AddEscrow(staking::Escrow {
                     account: to.into(),
-                    amount: amount.amount().clone(),
+                    amount: amount.amount().into(),
                 }),
-            },
+            )),
             hook,
         )?;
 
@@ -247,13 +246,13 @@ impl API for Module {
         }
 
         ctx.emit_message(
-            Message::Staking {
-                v: 0,
-                msg: StakingMessage::ReclaimEscrow(staking::ReclaimEscrow {
+            Message::Staking(Versioned::new(
+                0,
+                StakingMessage::ReclaimEscrow(staking::ReclaimEscrow {
                     account: from.into(),
-                    shares: amount.amount().clone(),
+                    shares: amount.amount().into(),
                 }),
-            },
+            )),
             hook,
         )?;
 
@@ -296,7 +295,7 @@ impl module::MigrationHandler for Module {
     fn init_or_migrate<C: Context>(
         ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
-        genesis: &Self::Genesis,
+        genesis: Self::Genesis,
     ) -> bool {
         let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
         if version == 0 {
@@ -304,7 +303,7 @@ impl module::MigrationHandler for Module {
             // https://github.com/oasisprotocol/oasis-core/issues/3868
 
             // Initialize state from genesis.
-            Self::set_params(ctx.runtime_state(), &genesis.parameters);
+            Self::set_params(ctx.runtime_state(), genesis.parameters);
             meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
             return true;
         }

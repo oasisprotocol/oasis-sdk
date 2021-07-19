@@ -1,9 +1,7 @@
 use std::str::FromStr;
 
-use num_traits::Zero;
-
 use oasis_core_runtime::{
-    common::quantity::Quantity,
+    common::{quantity::Quantity, versioned::Versioned},
     consensus::{
         roothash::{Message, StakingMessage},
         staking,
@@ -29,7 +27,7 @@ fn test_api_transfer_invalid_denomination() {
 
     ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
-        let amount = BaseUnits::new(1_000.into(), Denomination::NATIVE);
+        let amount = BaseUnits::new(1_000, Denomination::NATIVE);
 
         assert!(Consensus::transfer(
             &mut tx_ctx,
@@ -48,7 +46,7 @@ fn test_api_transfer() {
 
     ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
-        let amount = BaseUnits::new(1_000.into(), Denomination::from_str("TEST").unwrap());
+        let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::transfer(
             &mut tx_ctx,
             keys::alice::address(),
@@ -62,13 +60,13 @@ fn test_api_transfer() {
         let (msg, hook) = msgs.first().unwrap();
 
         assert_eq!(
-            &Message::Staking {
-                v: 0,
-                msg: StakingMessage::Transfer(staking::Transfer {
+            &Message::Staking(Versioned::new(
+                0,
+                StakingMessage::Transfer(staking::Transfer {
                     to: keys::alice::address().into(),
-                    amount: amount.amount().clone(),
+                    amount: amount.amount().into(),
                 })
-            },
+            )),
             msg,
             "emitted message should match"
         );
@@ -88,7 +86,7 @@ fn test_api_withdraw() {
 
     ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
-        let amount = BaseUnits::new(1_000.into(), Denomination::from_str("TEST").unwrap());
+        let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::withdraw(
             &mut tx_ctx,
             keys::alice::address(),
@@ -102,13 +100,13 @@ fn test_api_withdraw() {
         let (msg, hook) = msgs.first().unwrap();
 
         assert_eq!(
-            &Message::Staking {
-                v: 0,
-                msg: StakingMessage::Withdraw(staking::Withdraw {
+            &Message::Staking(Versioned::new(
+                0,
+                StakingMessage::Withdraw(staking::Withdraw {
                     from: keys::alice::address().into(),
-                    amount: amount.amount().clone(),
+                    amount: amount.amount().into(),
                 })
-            },
+            )),
             msg,
             "emitted message should match"
         );
@@ -128,7 +126,7 @@ fn test_api_escrow() {
 
     ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
-        let amount = BaseUnits::new(1_000.into(), Denomination::from_str("TEST").unwrap());
+        let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::escrow(
             &mut tx_ctx,
             keys::alice::address(),
@@ -142,13 +140,13 @@ fn test_api_escrow() {
         let (msg, hook) = msgs.first().unwrap();
 
         assert_eq!(
-            &Message::Staking {
-                v: 0,
-                msg: StakingMessage::AddEscrow(staking::Escrow {
+            &Message::Staking(Versioned::new(
+                0,
+                StakingMessage::AddEscrow(staking::Escrow {
                     account: keys::alice::address().into(),
-                    amount: amount.amount().clone(),
+                    amount: amount.amount().into(),
                 })
-            },
+            )),
             msg,
             "emitted message should match"
         );
@@ -168,7 +166,7 @@ fn test_api_reclaim_escrow() {
 
     ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
-        let amount = BaseUnits::new(1_000.into(), Denomination::from_str("TEST").unwrap()); // TODO: shares.
+        let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()); // TODO: shares.
         Consensus::reclaim_escrow(
             &mut tx_ctx,
             keys::alice::address(),
@@ -182,13 +180,13 @@ fn test_api_reclaim_escrow() {
         let (msg, hook) = msgs.first().unwrap();
 
         assert_eq!(
-            &Message::Staking {
-                v: 0,
-                msg: StakingMessage::ReclaimEscrow(staking::ReclaimEscrow {
+            &Message::Staking(Versioned::new(
+                0,
+                StakingMessage::ReclaimEscrow(staking::ReclaimEscrow {
                     account: keys::alice::address().into(),
-                    shares: amount.amount().clone(),
+                    shares: amount.amount().into(),
                 })
-            },
+            )),
             msg,
             "emitted message should match"
         );
@@ -209,7 +207,7 @@ fn test_api_account() {
 
     let acc = Consensus::account(&ctx, keys::alice::address()).expect("query should succeed");
     assert_eq!(
-        Quantity::zero(),
+        Quantity::from(0u128),
         acc.general.balance,
         "consensus balance should be zero"
     )

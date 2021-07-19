@@ -42,7 +42,7 @@ pub trait Runtime {
 
         // Perform state migrations/initialization on all modules.
         let mut has_changes =
-            Self::Modules::init_or_migrate(ctx, &mut metadata, &Self::genesis_state());
+            Self::Modules::init_or_migrate(ctx, &mut metadata, Self::genesis_state());
 
         // Check if we need to also apply any global state updates.
         let global_version = metadata
@@ -75,7 +75,7 @@ pub trait Runtime {
                 ctx.runtime_state(),
                 &modules::core::MODULE_NAME,
             ));
-            store.insert(modules::core::state::METADATA, &metadata);
+            store.insert(modules::core::state::METADATA, metadata);
         }
     }
 

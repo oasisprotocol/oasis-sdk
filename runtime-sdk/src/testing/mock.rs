@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use io_context::Context as IoContext;
 
 use oasis_core_runtime::{
-    common::{cbor, namespace::Namespace, version::Version},
+    common::{namespace::Namespace, version::Version},
     consensus::{beacon, roothash, state::ConsensusState},
     protocol::HostInfo,
     storage::mkvs,
@@ -112,7 +112,7 @@ pub fn transaction() -> transaction::Transaction {
         version: 1,
         call: transaction::Call {
             method: "mock".to_owned(),
-            body: cbor::Value::Null,
+            body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![],

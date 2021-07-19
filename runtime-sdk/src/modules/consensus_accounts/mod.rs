@@ -2,10 +2,11 @@
 //!
 //! This module allows consensus transfers in and out of the runtime account,
 //! while keeping track of amount deposited per account.
-use serde::{Deserialize, Serialize};
+use std::convert::TryInto;
+
 use thiserror::Error;
 
-use oasis_core_runtime::{common::cbor, consensus::staking::Account as ConsensusAccount};
+use oasis_core_runtime::consensus::staking::Account as ConsensusAccount;
 
 use crate::{
     context::{Context, TxContext},
@@ -53,20 +54,15 @@ pub enum Error {
 }
 
 /// Gas costs.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct GasCosts {
-    #[serde(rename = "tx_deposit")]
     pub tx_deposit: u64,
-    #[serde(rename = "tx_withdraw")]
     pub tx_withdraw: u64,
 }
 
 /// Parameters for the consensus module.
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Default, Debug, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
-    #[serde(rename = "gas_costs")]
     pub gas_costs: GasCosts,
 }
 
@@ -75,15 +71,13 @@ impl module::Parameters for Parameters {
 }
 
 /// Events emitted by the consensus module (none so far).
-#[derive(Debug, Serialize, Deserialize, oasis_runtime_sdk_macros::Event)]
-#[serde(untagged)]
+#[derive(Debug, cbor::Encode, oasis_runtime_sdk_macros::Event)]
+#[cbor(untagged)]
 pub enum Event {}
 
 /// Genesis state for the consensus module.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Genesis {
-    #[serde(rename = "parameters")]
     pub parameters: Parameters,
 }
 
@@ -172,7 +166,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
             .balances
             .get(amount.denomination())
             .ok_or(Error::InvalidArgument)?;
-        if balance < amount.amount() {
+        if balance < &amount.amount() {
             return Err(Error::InsufficientWithdrawBalance);
         }
 
@@ -233,9 +227,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
             .balances
             .get(&denomination)
             .ok_or(Error::InvalidArgument)?;
-        Ok(types::AccountBalance {
-            balance: balance.clone(),
-        })
+        Ok(types::AccountBalance { balance: *balance })
     }
 
     fn query_consensus_account<C: Context>(
@@ -297,7 +289,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
             "consensus.Deposit" => {
                 let result = || -> Result<cbor::Value, Error> {
                     let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(&Self::tx_deposit(ctx, args)?))
+                    Ok(cbor::to_value(Self::tx_deposit(ctx, args)?))
                 }();
                 match result {
                     Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
@@ -307,7 +299,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
             "consensus.Withdraw" => {
                 let result = || -> Result<cbor::Value, Error> {
                     let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(&Self::tx_withdraw(ctx, args)?))
+                    Ok(cbor::to_value(Self::tx_withdraw(ctx, args)?))
                 }();
                 match result {
                     Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
@@ -326,11 +318,11 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
         match method {
             "consensus.Balance" => module::DispatchResult::Handled((|| {
                 let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(&Self::query_balance(ctx, args)?))
+                Ok(cbor::to_value(Self::query_balance(ctx, args)?))
             })()),
             "consensus.Account" => module::DispatchResult::Handled((|| {
                 let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(&Self::query_consensus_account(ctx, args)?))
+                Ok(cbor::to_value(Self::query_consensus_account(ctx, args)?))
             })()),
             _ => module::DispatchResult::Unhandled(args),
         }
@@ -371,13 +363,13 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
     fn init_or_migrate<C: Context>(
         ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
-        genesis: &Self::Genesis,
+        genesis: Self::Genesis,
     ) -> bool {
         let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
         if version == 0 {
             // Initialize state from genesis.
             // Set genesis parameters.
-            Self::set_params(ctx.runtime_state(), &genesis.parameters);
+            Self::set_params(ctx.runtime_state(), genesis.parameters);
             meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
             return true;
         }
@@ -415,6 +407,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
         let rt_addr = Address::from_runtime_id(ctx.runtime_id());
         let rt_acct = Consensus::account(ctx, rt_addr).unwrap_or_default();
         let rt_ga_balance = rt_acct.general.balance;
+        let rt_ga_balance: u128 = rt_ga_balance.try_into().unwrap_or(u128::MAX);
 
         match ts.get(&den) {
             Some(total_supply) => {

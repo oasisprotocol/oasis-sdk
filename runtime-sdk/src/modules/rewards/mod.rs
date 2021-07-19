@@ -3,12 +3,11 @@ use std::convert::{Infallible, TryFrom, TryInto};
 
 use num_traits::Zero;
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
     context::Context,
-    core::{common::cbor, consensus::beacon},
+    core::consensus::beacon,
     crypto::signature::PublicKey,
     error,
     module::{self, Module as _, Parameters as _},
@@ -32,15 +31,11 @@ pub enum Error {
 }
 
 /// Parameters for the rewards module.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
-    #[serde(rename = "schedule")]
     pub schedule: types::RewardSchedule,
 
-    #[serde(rename = "participation_threshold_numerator")]
     pub participation_threshold_numerator: u64,
-    #[serde(rename = "participation_threshold_denominator")]
     pub participation_threshold_denominator: u64,
 }
 
@@ -72,10 +67,8 @@ impl module::Parameters for Parameters {
 }
 
 /// Genesis state for the rewards module.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Genesis {
-    #[serde(rename = "parameters")]
     pub parameters: Parameters,
 }
 
@@ -117,7 +110,7 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
         match method {
             "rewards.Parameters" => module::DispatchResult::Handled((|| {
                 let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(&Self::query_parameters(ctx, args)?))
+                Ok(cbor::to_value(Self::query_parameters(ctx, args)?))
             })()),
             _ => module::DispatchResult::Unhandled(args),
         }
@@ -126,14 +119,14 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
 
 impl<Accounts: modules::accounts::API> Module<Accounts> {
     /// Initialize state from genesis.
-    fn init<C: Context>(ctx: &mut C, genesis: &Genesis) {
+    fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
         genesis
             .parameters
             .validate_basic()
             .expect("invalid genesis parameters");
 
         // Set genesis parameters.
-        Self::set_params(ctx.runtime_state(), &genesis.parameters);
+        Self::set_params(ctx.runtime_state(), genesis.parameters);
     }
 
     /// Migrate state from a previous version.
@@ -149,7 +142,7 @@ impl<Accounts: modules::accounts::API> module::MigrationHandler for Module<Accou
     fn init_or_migrate<C: Context>(
         ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
-        genesis: &Self::Genesis,
+        genesis: Self::Genesis,
     ) -> bool {
         let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
         if version == 0 {
@@ -240,7 +233,7 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
         let store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut epochs =
             storage::TypedStore::new(storage::PrefixStore::new(store, &state::REWARDS));
-        epochs.insert(epoch.to_storage_key(), &rewards);
+        epochs.insert(epoch.to_storage_key(), rewards);
     }
 }
 

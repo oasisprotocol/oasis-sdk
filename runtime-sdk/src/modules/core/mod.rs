@@ -1,12 +1,10 @@
 //! Core definitions module.
 use std::collections::BTreeMap;
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
     context::{BatchContext, Context, TxContext},
-    core::common::cbor,
     dispatcher, error,
     module::{self, InvariantHandler as _, Module as _},
     types::transaction::{
@@ -91,26 +89,18 @@ pub enum Error {
 }
 
 /// Gas costs.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct GasCosts {
-    #[serde(rename = "auth_signature")]
     pub auth_signature: u64,
-    #[serde(rename = "auth_multisig_signer")]
     pub auth_multisig_signer: u64,
 }
 
 /// Parameters for the core module.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
-    #[serde(rename = "max_batch_gas")]
     pub max_batch_gas: u64,
-    #[serde(rename = "max_tx_signers")]
     pub max_tx_signers: u32,
-    #[serde(rename = "max_multisig_signers")]
     pub max_multisig_signers: u32,
-    #[serde(rename = "gas_costs")]
     pub gas_costs: GasCosts,
 }
 
@@ -147,10 +137,8 @@ pub trait API {
 }
 
 /// Genesis state for the accounts module.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Genesis {
-    #[serde(rename = "parameters")]
     pub parameters: Parameters,
 }
 
@@ -172,9 +160,9 @@ const GAS_WEIGHT_NAME: &str = "gas";
 
 impl Module {
     /// Initialize state from genesis.
-    fn init<C: Context>(ctx: &mut C, genesis: &Genesis) {
+    fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
         // Set genesis parameters.
-        Self::set_params(ctx.runtime_state(), &genesis.parameters);
+        Self::set_params(ctx.runtime_state(), genesis.parameters);
     }
 
     /// Migrate state from a previous version.
@@ -350,7 +338,7 @@ impl module::MigrationHandler for Module {
     fn init_or_migrate<C: Context>(
         ctx: &mut C,
         meta: &mut types::Metadata,
-        genesis: &Self::Genesis,
+        genesis: Self::Genesis,
     ) -> bool {
         let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
         if version == 0 {
@@ -374,7 +362,7 @@ impl module::MethodHandler for Module {
         match method {
             "core.EstimateGas" => module::DispatchResult::Handled((|| {
                 let args = cbor::from_value(args).map_err(|e| Error::InvalidArgument(e.into()))?;
-                Ok(cbor::to_value(&Self::query_estimate_gas(ctx, args)?))
+                Ok(cbor::to_value(Self::query_estimate_gas(ctx, args)?))
             })()),
             "core.CheckInvariants" => module::DispatchResult::Handled((|| {
                 let _ = Self::query_check_invariants(ctx)?;

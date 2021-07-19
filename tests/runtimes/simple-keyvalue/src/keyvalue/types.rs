@@ -1,21 +1,12 @@
-use serde::{Deserialize, Serialize};
+//! Types for the keyvalue module.
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Key {
-    #[serde(rename = "key")]
-    #[serde(with = "serde_bytes")]
     pub key: Vec<u8>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct KeyValue {
-    #[serde(rename = "key")]
-    #[serde(with = "serde_bytes")]
     pub key: Vec<u8>,
-
-    #[serde(rename = "value")]
-    #[serde(with = "serde_bytes")]
     pub value: Vec<u8>,
 }

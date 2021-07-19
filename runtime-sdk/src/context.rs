@@ -1,8 +1,8 @@
 //! Execution context.
-use core::fmt;
 use std::{
     any::Any,
     collections::btree_map::{BTreeMap, Entry},
+    fmt,
     marker::PhantomData,
     sync::Arc,
 };
@@ -292,7 +292,7 @@ impl<'a, R: runtime::Runtime, S: storage::Store> Context for RuntimeBatchContext
     }
 
     fn emit_event<E: Event>(&mut self, event: E) {
-        self.block_tags.push(event.to_tag());
+        self.block_tags.push(event.into_tag());
     }
 
     fn io_ctx(&self) -> IoContext {
@@ -461,7 +461,7 @@ impl<'round, 'store, R: runtime::Runtime, S: storage::Store> Context
     }
 
     fn emit_event<E: Event>(&mut self, event: E) {
-        self.tags.push(event.to_tag());
+        self.tags.push(event.into_tag());
     }
 
     fn io_ctx(&self) -> IoContext {
@@ -632,7 +632,7 @@ impl<'a, V: Any + Default> ContextValue<'a, V> {
 #[cfg(test)]
 #[allow(clippy::many_single_char_names)]
 mod test {
-    use oasis_core_runtime::{common::cbor, consensus::staking};
+    use oasis_core_runtime::{common::versioned::Versioned, consensus::staking};
 
     use super::*;
     use crate::testing::{mock, mock::Mock};
@@ -678,7 +678,7 @@ mod test {
             version: 1,
             call: transaction::Call {
                 method: "test".to_owned(),
-                body: cbor::Value::Null,
+                body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
             },
             auth_info: transaction::AuthInfo {
                 signer_info: vec![],
@@ -737,7 +737,7 @@ mod test {
             version: 1,
             call: transaction::Call {
                 method: "test".to_owned(),
-                body: cbor::Value::Null,
+                body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
             },
             auth_info: transaction::AuthInfo {
                 signer_info: vec![],
@@ -762,10 +762,10 @@ mod test {
         let mut messages = Vec::with_capacity(max_messages as usize);
         for _ in 0..max_messages {
             messages.push((
-                roothash::Message::Staking {
-                    v: 0,
-                    msg: roothash::StakingMessage::Transfer(staking::Transfer::default()),
-                },
+                roothash::Message::Staking(Versioned::new(
+                    0,
+                    roothash::StakingMessage::Transfer(staking::Transfer::default()),
+                )),
                 MessageEventHookInvocation::new("test".to_string(), ""),
             ))
         }
@@ -789,10 +789,10 @@ mod test {
             for _ in 0..max_messages {
                 tx_ctx
                     .emit_message(
-                        roothash::Message::Staking {
-                            v: 0,
-                            msg: roothash::StakingMessage::Transfer(staking::Transfer::default()),
-                        },
+                        roothash::Message::Staking(Versioned::new(
+                            0,
+                            roothash::StakingMessage::Transfer(staking::Transfer::default()),
+                        )),
                         MessageEventHookInvocation::new("test".to_string(), ""),
                     )
                     .expect("message should be emitted");
@@ -801,10 +801,10 @@ mod test {
             // Another message should error.
             tx_ctx
                 .emit_message(
-                    roothash::Message::Staking {
-                        v: 0,
-                        msg: roothash::StakingMessage::Transfer(staking::Transfer::default()),
-                    },
+                    roothash::Message::Staking(Versioned::new(
+                        0,
+                        roothash::StakingMessage::Transfer(staking::Transfer::default()),
+                    )),
                     MessageEventHookInvocation::new("test".to_string(), ""),
                 )
                 .expect_err("message emitting should fail");

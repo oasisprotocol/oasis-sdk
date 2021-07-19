@@ -1,5 +1,5 @@
 //! Event types for runtimes.
-use oasis_core_runtime::{common::cbor, transaction::tags::Tag};
+use oasis_core_runtime::transaction::tags::Tag;
 
 /// An event emitted by the runtime.
 ///
@@ -7,10 +7,10 @@ use oasis_core_runtime::{common::cbor, transaction::tags::Tag};
 /// ```
 /// # #[cfg(feature = "oasis-runtime-sdk-macros")]
 /// # mod example {
-/// # use serde::{Serialize, Deserialize};
 /// # use oasis_runtime_sdk_macros::Event;
 /// const MODULE_NAME: &str = "my-module";
-/// #[derive(Clone, Debug, Serialize, Deserialize, Event)]
+/// #[derive(Clone, Debug, cbor::Encode, Event)]
+/// #[cbor(untagged)]
 /// #[sdk_event(autonumber)] // `module_name` meta is required if `MODULE_NAME` isn't in scope
 /// enum MyEvent {
 ///    Greeting(String),      // autonumbered to 0
@@ -22,15 +22,15 @@ use oasis_core_runtime::{common::cbor, transaction::tags::Tag};
 /// }
 /// # }
 /// ```
-pub trait Event {
+pub trait Event: Sized {
     /// Name of the module that emitted the event.
     fn module_name() -> &'static str;
 
     /// Code uniquely identifying the event.
     fn code(&self) -> u32;
 
-    /// Serialized event value.
-    fn value(&self) -> cbor::Value;
+    /// CBOR-serialized event value.
+    fn into_value(self) -> cbor::Value;
 
     /// Converts an emitted event into a tag that can be emitted by the runtime.
     ///
@@ -44,12 +44,12 @@ pub trait Event {
     ///
     /// CBOR-serialized event value.
     ///
-    fn to_tag(&self) -> Tag {
+    fn into_tag(self) -> Tag {
         Tag::new(
             [Self::module_name().as_bytes(), &self.code().to_be_bytes()]
                 .concat()
                 .to_vec(),
-            cbor::to_vec(&self.value()),
+            cbor::to_vec(self.into_value()),
         )
     }
 }
@@ -63,7 +63,7 @@ impl Event for () {
         Default::default()
     }
 
-    fn value(&self) -> cbor::Value {
-        cbor::Value::Null
+    fn into_value(self) -> cbor::Value {
+        cbor::Value::Simple(cbor::SimpleValue::NullValue)
     }
 }

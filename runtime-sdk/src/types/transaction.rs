@@ -1,9 +1,6 @@
 //! Transaction types.
 use anyhow::anyhow;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
-
-use oasis_core_runtime::common::{cbor, quantity::Quantity};
 
 use crate::{
     crypto::{
@@ -31,24 +28,19 @@ pub enum Error {
 }
 
 /// A container for data that authenticates a transaction.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub enum AuthProof {
     /// For _signature_ authentication.
-    #[serde(rename = "signature")]
+    #[cbor(rename = "signature")]
     Signature(Signature),
     /// For _multisig_ authentication.
-    #[serde(rename = "multisig")]
+    #[cbor(rename = "multisig")]
     Multisig(multisig::SignatureSetOwned),
 }
 
 /// An unverified signed transaction.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct UnverifiedTransaction(
-    #[serde(with = "serde_bytes")] pub Vec<u8>,
-    pub Vec<AuthProof>,
-);
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct UnverifiedTransaction(pub Vec<u8>, pub Vec<AuthProof>);
 
 impl UnverifiedTransaction {
     /// Verify and deserialize the unverified transaction.
@@ -84,16 +76,14 @@ impl UnverifiedTransaction {
 }
 
 /// Transaction.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Transaction {
-    #[serde(rename = "v")]
+    #[cbor(rename = "v")]
     pub version: u16,
 
-    #[serde(rename = "call")]
     pub call: Call,
 
-    #[serde(rename = "ai")]
+    #[cbor(rename = "ai")]
     pub auth_info: AuthInfo,
 }
 
@@ -113,55 +103,44 @@ impl Transaction {
 }
 
 /// Method call.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Call {
-    #[serde(rename = "method")]
     pub method: String,
-
-    #[serde(rename = "body")]
     pub body: cbor::Value,
 }
 
 /// Transaction authentication information.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct AuthInfo {
-    #[serde(rename = "si")]
+    #[cbor(rename = "si")]
     pub signer_info: Vec<SignerInfo>,
-
-    #[serde(rename = "fee")]
     pub fee: Fee,
 }
 
 /// Transaction fee.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Fee {
-    #[serde(rename = "amount")]
     pub amount: token::BaseUnits,
-
-    #[serde(rename = "gas")]
     pub gas: u64,
 }
 
 impl Fee {
     /// Caculates gas price from fee amount and gas.
-    pub fn gas_price(&self) -> Quantity {
-        let amount = self.amount.amount().clone();
-        let gas: Quantity = self.gas.into();
-        amount.checked_div(&gas).unwrap_or_default()
+    pub fn gas_price(&self) -> u128 {
+        self.amount
+            .amount()
+            .checked_div(self.gas.into())
+            .unwrap_or_default()
     }
 }
 /// Common information that specifies an address as well as how to authenticate.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub enum AddressSpec {
     /// For _signature_ authentication.
-    #[serde(rename = "signature")]
+    #[cbor(rename = "signature")]
     Signature(PublicKey),
     /// For _multisig_ authentication.
-    #[serde(rename = "multisig")]
+    #[cbor(rename = "multisig")]
     Multisig(multisig::Config),
 }
 
@@ -170,7 +149,7 @@ impl AddressSpec {
     pub fn address(&self) -> Address {
         match self {
             AddressSpec::Signature(public_key) => Address::from_pk(public_key),
-            AddressSpec::Multisig(config) => Address::from_multisig(config),
+            AddressSpec::Multisig(config) => Address::from_multisig(config.clone()),
         }
     }
 
@@ -199,13 +178,9 @@ impl AddressSpec {
 }
 
 /// Transaction signer information.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct SignerInfo {
-    #[serde(rename = "address_spec")]
     pub address_spec: AddressSpec,
-
-    #[serde(rename = "nonce")]
     pub nonce: u64,
 }
 
@@ -228,23 +203,19 @@ impl SignerInfo {
 }
 
 /// Call result.
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub enum CallResult {
-    #[serde(rename = "ok")]
+    #[cbor(rename = "ok")]
     Ok(cbor::Value),
 
-    #[serde(rename = "fail")]
+    #[cbor(rename = "fail")]
     Failed {
-        #[serde(rename = "module")]
         module: String,
-
-        #[serde(rename = "code")]
         code: u32,
 
-        #[serde(rename = "message")]
-        #[serde(default)]
-        #[serde(skip_serializing_if = "String::is_empty")]
+        #[cbor(optional)]
+        #[cbor(default)]
+        #[cbor(skip_serializing_if = "String::is_empty")]
         message: String,
     },
 }
@@ -261,8 +232,6 @@ impl CallResult {
 
 #[cfg(test)]
 mod test {
-    use num_traits::Zero;
-
     use crate::types::token::{BaseUnits, Denomination};
 
     use super::*;
@@ -273,50 +242,38 @@ mod test {
             amount: Default::default(),
             gas: 0,
         };
-        assert_eq!(
-            Quantity::zero(),
-            fee.gas_price(),
-            "empty fee - gas price should be zero",
-        );
+        assert_eq!(0, fee.gas_price(), "empty fee - gas price should be zero",);
 
         let fee = Fee {
             amount: Default::default(),
             gas: 100,
         };
         assert_eq!(
-            Quantity::zero(),
+            0,
             fee.gas_price(),
             "empty fee amount - gas price should be zero",
         );
 
         let fee = Fee {
-            amount: BaseUnits::new(1_000.into(), Denomination::NATIVE),
+            amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 0,
         };
-        assert_eq!(
-            Quantity::zero(),
-            fee.gas_price(),
-            "empty fee 0 - gas price should be zero",
-        );
+        assert_eq!(0, fee.gas_price(), "empty fee 0 - gas price should be zero",);
 
         let fee = Fee {
-            amount: BaseUnits::new(1_000.into(), Denomination::NATIVE),
+            amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 10_000,
         };
         assert_eq!(
-            Quantity::zero(),
+            0,
             fee.gas_price(),
             "non empty fee - gas price should be zero"
         );
 
         let fee = Fee {
-            amount: BaseUnits::new(1_000.into(), Denomination::NATIVE),
+            amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 500,
         };
-        assert_eq!(
-            Quantity::from(2),
-            fee.gas_price(),
-            "non empty fee - gas price should match"
-        );
+        assert_eq!(2, fee.gas_price(), "non empty fee - gas price should match");
     }
 }

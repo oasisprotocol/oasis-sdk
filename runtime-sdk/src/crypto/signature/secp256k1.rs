@@ -1,6 +1,4 @@
 //! Secp256k1 signatures.
-use std::fmt;
-
 use k256::{
     self,
     ecdsa::{self, digest::Digest, signature::DigestVerifier},
@@ -64,37 +62,19 @@ impl From<&'static str> for PublicKey {
     }
 }
 
-impl serde::Serialize for PublicKey {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_bytes(self.as_bytes())
+impl cbor::Encode for PublicKey {
+    fn into_cbor_value(self) -> cbor::Value {
+        cbor::Value::ByteString(self.as_bytes().to_vec())
     }
 }
 
-impl<'de> serde::Deserialize<'de> for PublicKey {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct BytesVisitor;
-
-        impl<'de> serde::de::Visitor<'de> for BytesVisitor {
-            type Value = PublicKey;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("bytes expected")
+impl cbor::Decode for PublicKey {
+    fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
+        match value {
+            cbor::Value::ByteString(data) => {
+                Self::from_bytes(&data).map_err(|_| cbor::DecodeError::UnexpectedType)
             }
-
-            fn visit_bytes<E>(self, data: &[u8]) -> Result<PublicKey, E>
-            where
-                E: serde::de::Error,
-            {
-                PublicKey::from_bytes(data).map_err(serde::de::Error::custom)
-            }
+            _ => Err(cbor::DecodeError::UnexpectedType),
         }
-
-        deserializer.deserialize_bytes(BytesVisitor)
     }
 }

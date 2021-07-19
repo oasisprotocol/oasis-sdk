@@ -1,6 +1,5 @@
 //! Ed25519 signatures.
 use curve25519_dalek::edwards::CompressedEdwardsY;
-use serde::{Deserialize, Serialize};
 
 use oasis_core_runtime::common::crypto::signature::{
     PublicKey as CorePublicKey, Signature as CoreSignature,
@@ -9,7 +8,8 @@ use oasis_core_runtime::common::crypto::signature::{
 use crate::crypto::signature::{Error, Signature};
 
 /// An Ed25519 public key.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
+#[cbor(transparent)]
 pub struct PublicKey(CorePublicKey);
 
 impl PublicKey {
