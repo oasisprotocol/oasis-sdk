@@ -102,6 +102,10 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npm run-script lint
 
+      - name: Lint ts-web/ext-utils
+        working-directory: client-sdk/ts-web/ext-utils
+        run: npm run-script lint
+
       - name: Lint ts-web/signer-ledger
         working-directory: client-sdk/ts-web/signer-ledger
         run: npm run-script lint
