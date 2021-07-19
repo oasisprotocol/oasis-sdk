@@ -106,37 +106,25 @@ jobs:
       - name: Set up npm
         run: npm install npm@7 -g
 
-      - name: Install Node deps
+      - name: Install ts-web/core
+        working-directory: client-sdk/ts-web
+        run: npm ci --workspace core
+
+      - name: Install other packages
         working-directory: client-sdk/ts-web
         run: npm ci
-
-      - name: Prepare ts-web/core
-        working-directory: client-sdk/ts-web/core
-        run: npm run-script prepare
 
       - name: Check ts-web/core playground
         working-directory: client-sdk/ts-web/core
         run: npm run-script check-playground
 
-      - name: Prepare ts-web/signer-ledger
-        working-directory: client-sdk/ts-web/signer-ledger
-        run: npm run-script prepare
-
       - name: Check ts-web/signer-ledger playground
         working-directory: client-sdk/ts-web/signer-ledger
         run: npm run-script check-playground
 
-      - name: Prepare ts-web/rt
-        working-directory: client-sdk/ts-web/rt
-        run: npm run-script prepare
-
       - name: Check ts-web/rt playground
         working-directory: client-sdk/ts-web/rt
         run: npm run-script check-playground
-
-      - name: Prepare ts-web/ext-utils
-        working-directory: client-sdk/ts-web/ext-utils
-        run: npm run-script prepare
 
       - name: Check ts-web/ext-utils sample-page
         working-directory: client-sdk/ts-web/ext-utils
@@ -162,13 +150,13 @@ jobs:
       - name: Set up npm
         run: npm install npm@7 -g
 
-      - name: Install Node deps
+      - name: Install ts-web/core
+        working-directory: client-sdk/ts-web
+        run: npm ci --workspace core
+
+      - name: Install other packages
         working-directory: client-sdk/ts-web
         run: npm ci
-
-      - name: Prepare ts-web/core
-        working-directory: client-sdk/ts-web/core
-        run: npm run-script prepare
 
       - name: 'dev-server: Start'
         working-directory: client-sdk/ts-web/core
@@ -227,21 +215,13 @@ jobs:
       - name: Set up npm
         run: npm install npm@7 -g
 
-      - name: Install Node deps
+      - name: Install ts-web/core
+        working-directory: client-sdk/ts-web
+        run: npm ci --workspace core
+
+      - name: Install other packages
         working-directory: client-sdk/ts-web
         run: npm ci
-
-      - name: Prepare ts-web/core
-        working-directory: client-sdk/ts-web/core
-        run: npm run-script prepare
-
-      - name: Prepare ts-web/rt
-        working-directory: client-sdk/ts-web/rt
-        run: npm run-script prepare
-
-      - name: Prepare ts-web/ext-utils
-        working-directory: client-sdk/ts-web/ext-utils
-        run: npm run-script prepare
 
       - name: 'dev-server sample-page: Start'
         working-directory: client-sdk/ts-web/ext-utils
@@ -278,17 +258,13 @@ jobs:
       - name: Set up npm
         run: npm install npm@7 -g
 
-      - name: Install Node deps
+      - name: Install ts-web/core
+        working-directory: client-sdk/ts-web
+        run: npm ci --workspace core
+
+      - name: Install other packages
         working-directory: client-sdk/ts-web
         run: npm ci
-
-      - name: Prepare ts-web/core
-        working-directory: client-sdk/ts-web/core
-        run: npm run-script prepare
-
-      - name: Prepare ts-web/rt
-        working-directory: client-sdk/ts-web/rt
-        run: npm run-script prepare
 
       - name: 'dev-server: Start'
         working-directory: client-sdk/ts-web/rt
@@ -391,7 +367,11 @@ jobs:
       - name: Set up npm
         run: npm install npm@7 -g
 
-      - name: Install Node deps
+      - name: Install ts-web/core
+        working-directory: client-sdk/ts-web
+        run: npm ci --workspace core
+
+      - name: Install other packages
         working-directory: client-sdk/ts-web
         run: npm ci
 
