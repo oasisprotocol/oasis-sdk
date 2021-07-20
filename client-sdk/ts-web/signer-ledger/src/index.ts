@@ -1,6 +1,4 @@
-// @ts-expect-error missing declaration
 import Transport from '@ledgerhq/hw-transport';
-// @ts-expect-error missing declaration
 import TransportWebUSB from '@ledgerhq/hw-transport-webusb';
 // @ts-expect-error missing declaration
 import OasisApp from '@oasisprotocol/ledger';
