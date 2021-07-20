@@ -6,6 +6,7 @@
 // page <- message frame
 export const MESSAGE_TYPE_READY = 'oasis-xu-ready-v1';
 export const MESSAGE_TYPE_RESPONSE = 'oasis-xu-response-v1';
+export const MESSAGE_TYPE_EVENT = 'oasis-xu-event-v1';
 
 export interface MessageReady {
     type: typeof MESSAGE_TYPE_READY;
@@ -16,6 +17,11 @@ export interface MessageResponse {
     id: number;
     body?: unknown;
     err?: unknown;
+}
+
+export interface MessageEvent {
+    type: typeof MESSAGE_TYPE_EVENT;
+    event: unknown;
 }
 
 // page -> message frame
@@ -89,4 +95,12 @@ export interface ContextSignerSignRequest {
 export interface ContextSignerSignResponse {
     approved: boolean;
     signature?: Uint8Array;
+}
+
+// events
+
+export const EVENT_KEYS_CHANGE = 'keys-change-v1';
+
+export interface KeysChangeEvent {
+    type: typeof EVENT_KEYS_CHANGE;
 }

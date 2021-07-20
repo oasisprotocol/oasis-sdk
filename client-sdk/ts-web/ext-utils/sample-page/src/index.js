@@ -17,16 +17,32 @@ function toBase64(/** @type {Uint8Array} */ u8) {
 
 export const playground = (async function () {
     console.log('connecting');
-    const connection = await oasisExt.connection.connect(extOrigin, extPath);
+    const conn = await oasisExt.connection.connect(extOrigin, extPath);
     console.log('connected');
 
+    // Receive one keys change event to test the library code for it. Web
+    // developers should handle this separately if they wish to react to
+    // changes to the keys list.
+    console.log('waiting for keys change event');
+    await new Promise((resolve, reject) => {
+        // Note: Due to the structure of sample-ext calling `ready` and
+        // `keysChanged` in quick succession, keep this in the same task as
+        // when the ready message is received (above in
+        // `await ...connect(...)`). Intervening microtasks are fine.
+        oasisExt.keys.setKeysChangeHandler(conn, (e) => {
+            console.log('keys change', e);
+            resolve();
+        });
+    });
+    console.log('received');
+
     console.log('listing keys');
-    const keys = await oasisExt.keys.list(connection);
+    const keys = await oasisExt.keys.list(conn);
     console.log('listed keys');
     console.log('keys', keys);
 
     console.log('requesting signer');
-    const signer = await oasisExt.signature.ExtContextSigner.request(connection, keys[0].which);
+    const signer = await oasisExt.signature.ExtContextSigner.request(conn, keys[0].which);
     console.log('got signer');
     const publicKey = signer.public();
     console.log('public key base64', toBase64(publicKey));

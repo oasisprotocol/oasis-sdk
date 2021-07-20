@@ -93,3 +93,22 @@ export function ready(handlers: Handlers) {
         '*',
     );
 }
+
+function postEvent(event: unknown) {
+    window.parent.postMessage(
+        {
+            type: protocol.MESSAGE_TYPE_EVENT,
+            event: event,
+        } as protocol.MessageEvent,
+        '*',
+    );
+}
+
+/**
+ * Call this to tell the web content that the list of available keys has changed.
+ */
+export function keysChanged() {
+    postEvent({
+        type: protocol.EVENT_KEYS_CHANGE,
+    } as protocol.KeysChangeEvent);
+}
