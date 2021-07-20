@@ -18,18 +18,18 @@ impl<S: Store> TypedStore<S> {
     /// Fetch entry with given key.
     pub fn get<K: AsRef<[u8]>, T: cbor::Decode>(&self, key: K) -> Option<T> {
         self.parent
-            .get(key)
+            .get(key.as_ref())
             .map(|data| cbor::from_slice(&data).unwrap())
     }
 
     /// Update entry with given key to the given value.
     pub fn insert<K: AsRef<[u8]>, T: cbor::Encode>(&mut self, key: K, value: T) {
-        self.parent.insert(key, &cbor::to_vec(value))
+        self.parent.insert(key.as_ref(), &cbor::to_vec(value))
     }
 
     /// Remove entry with given key.
     pub fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
-        self.parent.remove(key)
+        self.parent.remove(key.as_ref())
     }
 
     pub fn iter<'store, K, V>(&'store self) -> TypedStoreIterator<'store, K, V>

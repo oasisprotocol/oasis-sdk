@@ -1,0 +1,30 @@
+cargo-features = ["strip"]
+
+[package]
+name = "hello"
+version = "0.0.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+oasis-contract-sdk = { path = "../../../contract-sdk" }
+cbor = { version = "0.1.7", package = "oasis-cbor" }
+
+# Third party.
+thiserror = "1.0.26"
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = "abort"
+incremental = false
+overflow-checks = true
+strip = true

@@ -15,8 +15,8 @@ use oasis_core_runtime::transaction::tags::Tag;
 /// enum MyEvent {
 ///    Greeting(String),      // autonumbered to 0
 ///    #[sdk_event(code = 2)] // manually numbered to 2 (`code` is required if not autonumbering)
-///    DontPanic,             // autonumbered to 1
-///    Salutation {           // autonumbered to 3
+///    DontPanic,
+///    Salutation {           // autonumbered to 1
 ///        plural: bool,
 ///    }
 /// }
@@ -42,12 +42,7 @@ pub trait Event: Sized + cbor::Encode {
     /// CBOR-serialized event value.
     ///
     fn into_tag(self) -> Tag {
-        Tag::new(
-            [Self::module_name().as_bytes(), &self.code().to_be_bytes()]
-                .concat()
-                .to_vec(),
-            cbor::to_vec(self),
-        )
+        tag_for_event(Self::module_name(), self.code(), cbor::to_vec(self))
     }
 }
 
@@ -59,4 +54,14 @@ impl Event for () {
     fn code(&self) -> u32 {
         Default::default()
     }
+}
+
+/// Generate an Oasis Core tag corresponding to the passed event triple.
+pub fn tag_for_event(module_name: &str, code: u32, value: Vec<u8>) -> Tag {
+    Tag::new(
+        [module_name.as_bytes(), &code.to_be_bytes()]
+            .concat()
+            .to_vec(),
+        value,
+    )
 }

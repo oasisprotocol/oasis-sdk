@@ -1,0 +1,17 @@
+[package]
+name = "oasis-contract-sdk-types"
+description = "A collection of types for the Oasis Contract SDK."
+version = "0.1.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+cbor = { version = "0.1.7", package = "oasis-cbor" }
+oasis-runtime-sdk = { path = "../../runtime-sdk", optional = true }
+
+# Third party.
+thiserror = "1.0.25"
+
+[dev-dependencies]
+hex = "0.4.2"

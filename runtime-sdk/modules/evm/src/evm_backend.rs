@@ -195,7 +195,7 @@ impl<'c, C: oasis_runtime_sdk::Context> ApplyBackend for Backend<'c, C> {
                             let state = self.ctx.get_mut().runtime_state();
                             let s_store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
                             let mut storages = storage::PrefixStore::new(s_store, &state::STORAGES);
-                            storages.remove(&addr);
+                            storages.remove(addr.as_bytes());
                         }
 
                         for (index, value) in storage {

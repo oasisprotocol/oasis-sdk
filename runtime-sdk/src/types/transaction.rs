@@ -142,6 +142,10 @@ pub enum AddressSpec {
     /// For _multisig_ authentication.
     #[cbor(rename = "multisig")]
     Multisig(multisig::Config),
+
+    /// For internal child calls (cannot be serialized/deserialized).
+    #[cbor(skip)]
+    Internal(Address),
 }
 
 impl AddressSpec {
@@ -150,6 +154,7 @@ impl AddressSpec {
         match self {
             AddressSpec::Signature(public_key) => Address::from_pk(public_key),
             AddressSpec::Multisig(config) => Address::from_multisig(config.clone()),
+            AddressSpec::Internal(address) => *address,
         }
     }
 
@@ -173,6 +178,9 @@ impl AddressSpec {
                     "transaction signer used multisig, but auth proof was a single signature"
                 )))
             }
+            (AddressSpec::Internal(_), _) => Err(Error::MalformedTransaction(anyhow!(
+                "transaction signer used internal address spec"
+            ))),
         }
     }
 }

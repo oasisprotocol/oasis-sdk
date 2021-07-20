@@ -118,7 +118,7 @@ pub fn transaction() -> transaction::Transaction {
             signer_info: vec![],
             fee: transaction::Fee {
                 amount: Default::default(),
-                gas: 0,
+                gas: 1_000_000,
             },
         },
     }

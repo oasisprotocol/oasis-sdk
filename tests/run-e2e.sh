@@ -54,6 +54,11 @@ cd "${TESTS_DIR}"/runtimes/simple-evm
 cargo build
 cp "${TESTS_DIR}"/../target/debug/test-runtime-simple-evm "${TEST_BASE_DIR}"/
 
+printf "${CYAN}### Building test hello contract...${OFF}\n"
+cd "${TESTS_DIR}"/contracts/hello
+cargo build --target wasm32-unknown-unknown --release
+cp "${TESTS_DIR}"/contracts/hello/target/wasm32-unknown-unknown/release/hello.wasm "${TESTS_DIR}"/e2e/contracts/
+
 printf "${CYAN}### Building e2e test harness...${OFF}\n"
 cd "${TESTS_DIR}"/e2e
 go build

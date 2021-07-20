@@ -4,7 +4,7 @@ use io_context::Context;
 
 use oasis_core_runtime::storage::mkvs;
 
-use super::Store;
+use super::{NestedStore, Store};
 
 /// A key-value store backed by MKVS.
 pub struct MKVSStore<M: mkvs::MKVS> {
@@ -30,19 +30,25 @@ impl<M: mkvs::MKVS> MKVSStore<M> {
 }
 
 impl<M: mkvs::MKVS> Store for MKVSStore<M> {
-    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Vec<u8>> {
-        self.parent.get(self.create_ctx(), key.as_ref())
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        self.parent.get(self.create_ctx(), key)
     }
 
-    fn insert<K: AsRef<[u8]>>(&mut self, key: K, value: &[u8]) {
-        self.parent.insert(self.create_ctx(), key.as_ref(), value);
+    fn insert(&mut self, key: &[u8], value: &[u8]) {
+        self.parent.insert(self.create_ctx(), key, value);
     }
 
-    fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
-        self.parent.remove(self.create_ctx(), key.as_ref());
+    fn remove(&mut self, key: &[u8]) {
+        self.parent.remove(self.create_ctx(), key);
     }
 
     fn iter(&self) -> Box<dyn mkvs::Iterator + '_> {
         self.parent.iter(self.create_ctx())
+    }
+}
+
+impl<M: mkvs::MKVS> NestedStore for MKVSStore<M> {
+    fn commit(self) {
+        // Commit is not needed.
     }
 }
