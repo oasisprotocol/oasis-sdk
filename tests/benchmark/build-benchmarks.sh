@@ -12,5 +12,5 @@ go build
 
 echo "Building test benchmarking runtime."
 pushd "${TESTS_DIR}"/runtimes/benchmarking
-    cargo build
+    cargo build --release
 popd
