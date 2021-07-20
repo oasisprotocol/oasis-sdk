@@ -1,0 +1,54 @@
+name: Hash Rust
+description: Build and hash Rust binaries
+inputs:
+  dir:
+    description: The root directory for the Rust sources to build
+    default: ${{ github.workspace }}
+    required: false
+  image:
+    description: The docker image to use for the build
+    default: oasisprotocol/runtime-builder:v0.0
+    required: false
+  binaries:
+    description: The list of all binaries that should be hashed
+    required: true
+  clean:
+    description: Control whether to run cleanup afterwards
+    default: yes
+    required: false
+  sgx:
+    description: Control whether to produce sgxs binaries
+    default: no
+    required: false
+outputs:
+  hashes:
+    description: Comma-separated list of binary hashes
+    value: ${{ steps.build.outputs.hashes }}
+  build-path:
+    description: Path to the output directory, relative to inputs.dir
+    value: ${{ steps.build.outputs.build-path }}
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      id: build
+      run: |
+        docker run --rm -i -v ${{ inputs.dir }}:/src ${{ inputs.image }} /bin/bash <<-'EOF'
+          cd /src
+          CARGO_TARGET_ROOT="/src/target"
+          TARGET=""
+          if [ "${{ inputs.sgx }}" == "yes" ]; then
+            TARGET="x86_64-fortanix-unknown-sgx"
+            export CARGO_TARGET_DIR="$CARGO_TARGET_ROOT/sgx"
+            cargo build --release --target $TARGET
+            cargo elf2sgxs --release
+          else
+            export CARGO_TARGET_DIR="$CARGO_TARGET_ROOT/default"
+            cargo build --release
+          fi
+          echo "::set-output name=hashes::$(cd "$CARGO_TARGET_DIR/$TARGET/release"; shasum -a 512256 -b $(tr ',' ' ' <<< "${{ inputs.binaries }}") | cut -d' ' -f1 | tr '\n' ',' | sed -e 's/,$//g')"
+          echo "::set-output name=build-path::$(sed -e 's/^\/src//g' <<< "$CARGO_TARGET_DIR")/$TARGET/release"
+          if [ "${{ inputs.clean }}" == "yes" ]; then
+            cargo clean
+          fi
+        EOF
