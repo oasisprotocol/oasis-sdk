@@ -1,0 +1,30 @@
+name: Determine Branch Tag
+description: Determine the tag to be used for e.g. building Docker images
+inputs:
+  dir:
+    description: The root directory for the sources to inspect
+    default: ${{ github.workspace }}
+    required: false
+outputs:
+  tag:
+    description: The tag derived from the branch information
+    value: ${{ steps.determine-tag.outputs.tag }}
+  created:
+    description: The timestamp for when the tag was created
+    value: ${{ steps.determine-tag.outputs.created }}
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      id: determine-tag
+      run: |
+        if [[ -z $GITHUB_BASE_REF ]]; then
+          # On master/stable branches.
+          branch=${GITHUB_REF#refs/heads/}
+        else
+          # On pull request branches.
+          branch=pr-$(git describe --always --match '' --abbrev=7)
+        fi
+        branch=${branch//\//-}
+        echo "::set-output name=tag::$(echo ${branch})"
+        echo "::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')"

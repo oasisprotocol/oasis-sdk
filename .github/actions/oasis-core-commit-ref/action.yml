@@ -1,0 +1,14 @@
+name: Determine Oasis Core Commit Reference
+description: Determine the Oasis Core commit that the caller depends on
+outputs:
+  ref:
+    description: The detected reference
+    value: ${{ steps.ref.outputs.ref }}
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      id: ref
+      run: |
+        REF=$(cargo metadata --format-version 1 | jq -cr '.packages[] | select(.name == "oasis-core-runtime") | .source' | grep -o '\?.*#' | cut -d= -f2 | tr -d '#')
+        echo "::set-output name=ref::$(echo ${REF})"
