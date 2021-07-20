@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -o nounset -o pipefail -o errexit -x
 
-
 # Kill all dangling processes on exit.
 cleanup() {
-	pkill -P $$ || true
-	wait || true
+    pkill -P $$ || true
+    wait || true
 }
 trap "cleanup" EXIT
 
@@ -23,8 +22,8 @@ mkdir -p /tmp/oasis-net-runner-benchmarks
     fixture \
     --node.binary "${TEST_NODE_BINARY}" \
     --runtime.id "8000000000000000000000000000000000000000000000000000000000000000" \
-    --runtime.binary ../../target/debug/test-runtime-benchmarking \
-    --runtime.loader "${TEST_RUNTIME_LOADER}" > /tmp/oasis-net-runner-benchmarks/fixture.json
+    --runtime.binary ../../target/release/test-runtime-benchmarking \
+    --runtime.loader "${TEST_RUNTIME_LOADER}" >/tmp/oasis-net-runner-benchmarks/fixture.json
 
 "${TEST_NET_RUNNER}" \
     --fixture.file /tmp/oasis-net-runner-benchmarks/fixture.json \
@@ -47,7 +46,7 @@ echo "Advancing epoch."
 echo "Waiting for all nodes to be registered."
 "${TEST_NODE_BINARY}" debug control wait-nodes \
     --address "${CLIENT_SOCK}" \
-    --nodes 5 \
+    --nodes 4 \
     --wait
 
 echo "Advancing epoch."
@@ -58,7 +57,7 @@ echo "Advancing epoch."
 sleep 2
 
 ./benchmark \
-	--address "${CLIENT_SOCK}" \
-	--runtime.id "8000000000000000000000000000000000000000000000000000000000000000" \
-	--benchmarks accounts_transfers \
-	--benchmarks.concurrency 100
+    --address "${CLIENT_SOCK}" \
+    --runtime.id "8000000000000000000000000000000000000000000000000000000000000000" \
+    --benchmarks accounts_transfers \
+    --benchmarks.concurrency 6000

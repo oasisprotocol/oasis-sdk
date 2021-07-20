@@ -2,7 +2,7 @@
 **
 
 # Allow runtime benchmarking binary.
-!target/debug/test-runtime-benchmarking
+!target/release/test-runtime-benchmarking
 
 # Allow downloaded oasis-core binaries.
 !tests/untracked/

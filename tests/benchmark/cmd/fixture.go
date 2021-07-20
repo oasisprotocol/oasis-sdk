@@ -93,12 +93,14 @@ func fixture() *oasis.NetworkFixture {
 			{NodeFixture: oasis.NodeFixture{ExtraArgs: clientExtraArgs}},
 		},
 		StorageWorkers: []oasis.StorageWorkerFixture{
-			{Entity: 1, Runtimes: []int{0}, Backend: badger.BackendName},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-1"}, Entity: 1, Runtimes: []int{0}, Backend: badger.BackendName},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-2"}, Entity: 1, Runtimes: []int{0}, Backend: badger.BackendName},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-3"}, Entity: 1, Runtimes: []int{0}, Backend: badger.BackendName},
 		},
 		ComputeWorkers: []oasis.ComputeWorkerFixture{
-			{Entity: 1, Runtimes: []int{0}, NodeFixture: oasis.NodeFixture{ExtraArgs: computeExtraArgs}},
-			{Entity: 1, Runtimes: []int{0}, NodeFixture: oasis.NodeFixture{ExtraArgs: computeExtraArgs}},
-			{Entity: 1, Runtimes: []int{0}, NodeFixture: oasis.NodeFixture{ExtraArgs: computeExtraArgs}},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-1", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-2", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-3", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
 		},
 		Seeds: []oasis.SeedFixture{{}},
 		Runtimes: []oasis.RuntimeFixture{
@@ -124,8 +126,8 @@ func fixture() *oasis.NetworkFixture {
 					ProposerTimeout:   5,
 				},
 				Storage: registry.StorageParameters{
-					GroupSize:               1,
-					MinWriteReplication:     1,
+					GroupSize:               3,
+					MinWriteReplication:     3,
 					MaxApplyWriteLogEntries: 100_000,
 					MaxApplyOps:             2,
 				},
