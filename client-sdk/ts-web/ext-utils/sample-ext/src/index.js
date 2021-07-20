@@ -105,6 +105,8 @@ function rtBaseUnitsDisplay(/** @type {oasisRT.types.BaseUnits} */ bu) {
  */
 async function keysList(origin, req) {
     await authorize(origin);
+    const signer = await getSigner();
+    const publicKey = signer.public();
     return {
         keys: [
             {
@@ -112,6 +114,7 @@ async function keysList(origin, req) {
                 metadata: {
                     name: 'The only key',
                     description: 'This sample extension only keeps one key--this one.',
+                    publicKey,
                 },
             },
         ],
