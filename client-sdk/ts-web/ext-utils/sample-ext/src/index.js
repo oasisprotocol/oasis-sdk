@@ -100,39 +100,59 @@ function rtBaseUnitsDisplay(/** @type {oasisRT.types.BaseUnits} */ bu) {
 }
 
 /**
+ * If you prefer not to implement `keysList` and `contextSignerPublic`
+ * separately, you can write a single function like this which gives the keys
+ * list with public keys included. Then use the `keysList` and
+ * `contextSignerPublic` implementations below which automatically extract
+ * what's needed for each call.
+ * @returns {Promise<oasisExt.protocol.KeyInfo[]>}
+ */
+async function getKeysWithPublic() {
+    const signer = await getSigner();
+    const publicKey = signer.public();
+    return [
+        {
+            which: KEY_ID,
+            metadata: {
+                name: 'The only key',
+                description: 'This sample extension only keeps one key--this one.',
+                public_key: publicKey,
+            },
+        },
+    ];
+}
+
+/**
  * @param {string} origin
  * @param {oasisExt.protocol.KeysListRequest} req
+ * @returns {Promise<oasisExt.protocol.KeysListResponse>}
  */
 async function keysList(origin, req) {
     await authorize(origin);
-    const signer = await getSigner();
-    const publicKey = signer.public();
-    return {
-        keys: [
-            {
-                which: KEY_ID,
-                metadata: {
-                    name: 'The only key',
-                    description: 'This sample extension only keeps one key--this one.',
-                    publicKey,
-                },
-            },
-        ],
-    };
+    const keysWithPublic = await getKeysWithPublic();
+    // The public keys are part of the metadata, which doesn't disrupt
+    // anything. We can use it directly.
+    return {keys: keysWithPublic};
 }
 
 /**
  * @param {string} origin
  * @param {oasisExt.protocol.ContextSignerPublicRequest} req
+ * @returns {Promise<oasisExt.protocol.ContextSignerPublicResponse>}
  */
 async function contextSignerPublic(origin, req) {
     await authorize(origin);
-    if (req.which !== KEY_ID) {
-        throw new Error(`sample extension only supports .which === ${JSON.stringify(KEY_ID)}`);
+    const whichJson = JSON.stringify(req.which);
+    const keysWithPublic = await getKeysWithPublic();
+    let found = null;
+    for (const ki of keysWithPublic) {
+        if (JSON.stringify(ki.which) === whichJson) {
+            found = ki;
+            break;
+        }
     }
-    const signer = await getSigner();
-    const publicKey = signer.public();
-    return {public_key: publicKey};
+    if (!found) throw new Error(`no such key ${whichJson}`);
+    return {public_key: found.metadata.public_key};
 }
 
 /**
