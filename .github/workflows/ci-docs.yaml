@@ -22,10 +22,14 @@ jobs:
         uses: actions-rs/toolchain@v1
 
       - name: Build docs
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --package oasis-runtime-sdk --package oasis-runtime-sdk-macros --no-deps --all-features
+        run: |
+          cargo doc \
+            --no-deps --all-features \
+            --package oasis-runtime-sdk \
+            --package oasis-runtime-sdk-macros \
+            --package oasis-runtime-sdk-contracts \
+            --package oasis-contract-sdk \
+            --package oasis-contract-sdk-types
 
       - name: Publish docs
         uses: crazy-max/ghaction-github-pages@v2

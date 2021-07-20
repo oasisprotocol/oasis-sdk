@@ -9,5 +9,8 @@ license = "Apache-2.0"
 oasis-runtime-sdk = { path = "../../../runtime-sdk" }
 cbor = { version = "0.1.3", package = "oasis-cbor" }
 
+# Modules.
+oasis-runtime-sdk-contracts = { path = "../../../runtime-sdk/modules/contracts" }
+
 # Third party.
 thiserror = "1.0"

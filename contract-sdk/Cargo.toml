@@ -1,0 +1,17 @@
+[package]
+name = "oasis-contract-sdk"
+description = "Oasis Contract SDK for use within WebAssembly."
+version = "0.1.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+cbor = { version = "0.1.0", package = "oasis-cbor" }
+oasis-contract-sdk-types = { path = "types" }
+
+# Third party.
+thiserror = "1.0.25"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wee_alloc = "0.4.5"
