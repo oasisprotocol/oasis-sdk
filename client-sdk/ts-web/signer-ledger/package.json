@@ -19,6 +19,7 @@
         "@oasisprotocol/ledger": "^0.2.0"
     },
     "devDependencies": {
+        "@types/w3c-web-usb": "^1.0.5",
         "buffer": "^6.0.3",
         "prettier": "^2.3.2",
         "process": "^0.11.10",
