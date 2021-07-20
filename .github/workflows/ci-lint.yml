@@ -90,12 +90,20 @@ jobs:
       - name: Set up npm
         run: npm install npm@7 -g
 
-      - name: Install Node deps
+      - name: Install ts-web/core
+        working-directory: client-sdk/ts-web
+        run: npm ci --workspace core
+
+      - name: Install other packages
         working-directory: client-sdk/ts-web
         run: npm ci
 
       - name: Lint ts-web/core
         working-directory: client-sdk/ts-web/core
+        run: npm run-script lint
+
+      - name: Lint ts-web/ext-utils
+        working-directory: client-sdk/ts-web/ext-utils
         run: npm run-script lint
 
       - name: Lint ts-web/signer-ledger
