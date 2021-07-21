@@ -99,190 +99,225 @@ function rtBaseUnitsDisplay(/** @type {oasisRT.types.BaseUnits} */ bu) {
     }`;
 }
 
-oasisExt.ext.ready({
-    async keysList(origin, req) {
-        await authorize(origin);
-        return {
-            keys: [
-                {
-                    which: KEY_ID,
-                    metadata: {
-                        name: 'The only key',
-                        description: 'This sample extension only keeps one key--this one.',
-                    },
-                },
-            ],
-        };
-    },
-    async contextSignerPublic(origin, req) {
-        await authorize(origin);
-        if (req.which !== KEY_ID) {
-            throw new Error(`sample extension only supports .which === ${JSON.stringify(KEY_ID)}`);
+/**
+ * If you prefer not to implement `keysList` and `contextSignerPublic`
+ * separately, you can write a single function like this which gives the keys
+ * list with public keys included. Then use the `keysList` and
+ * `contextSignerPublic` implementations below which automatically extract
+ * what's needed for each call.
+ * @returns {Promise<oasisExt.protocol.KeyInfo[]>}
+ */
+async function getKeysWithPublic() {
+    const signer = await getSigner();
+    const publicKey = signer.public();
+    return [
+        {
+            which: KEY_ID,
+            metadata: {
+                name: 'The only key',
+                description: 'This sample extension only keeps one key--this one.',
+                public_key: publicKey,
+            },
+        },
+    ];
+}
+
+/**
+ * @param {string} origin
+ * @param {oasisExt.protocol.KeysListRequest} req
+ * @returns {Promise<oasisExt.protocol.KeysListResponse>}
+ */
+async function keysList(origin, req) {
+    await authorize(origin);
+    const keysWithPublic = await getKeysWithPublic();
+    // The public keys are part of the metadata, which doesn't disrupt
+    // anything. We can use it directly.
+    return {keys: keysWithPublic};
+}
+
+/**
+ * @param {string} origin
+ * @param {oasisExt.protocol.ContextSignerPublicRequest} req
+ * @returns {Promise<oasisExt.protocol.ContextSignerPublicResponse>}
+ */
+async function contextSignerPublic(origin, req) {
+    await authorize(origin);
+    const whichJson = JSON.stringify(req.which);
+    const keysWithPublic = await getKeysWithPublic();
+    let found = null;
+    for (const ki of keysWithPublic) {
+        if (JSON.stringify(ki.which) === whichJson) {
+            found = ki;
+            break;
         }
-        const signer = await getSigner();
-        const publicKey = signer.public();
-        return {public_key: publicKey};
-    },
-    async contextSignerSign(origin, req) {
-        await authorize(origin);
-        if (req.which !== KEY_ID) {
-            throw new Error(`sample extension only supports .which === ${JSON.stringify(KEY_ID)}`);
-        }
-        let confMessage = `Signature request`;
-        try {
-            const handled = oasis.signature.visitMessage(
-                {
-                    withChainContext:
-                        /** @type {oasis.consensus.SignatureMessageHandlersWithChainContext & oasisRT.transaction.SignatureMessageHandlersWithChainContext} */ ({
-                            [oasis.consensus.TRANSACTION_SIGNATURE_CONTEXT]: (chainContext, tx) => {
-                                confMessage += `
+    }
+    if (!found) throw new Error(`no such key ${whichJson}`);
+    return {public_key: found.metadata.public_key};
+}
+
+/**
+ * @param {string} origin
+ * @param {oasisExt.protocol.ContextSignerSignRequest} req
+ */
+async function contextSignerSign(origin, req) {
+    await authorize(origin);
+    if (req.which !== KEY_ID) {
+        throw new Error(`sample extension only supports .which === ${JSON.stringify(KEY_ID)}`);
+    }
+    let confMessage = `Signature request`;
+    try {
+        const handled = oasis.signature.visitMessage(
+            {
+                withChainContext:
+                    /** @type {oasis.consensus.SignatureMessageHandlersWithChainContext & oasisRT.transaction.SignatureMessageHandlersWithChainContext} */ ({
+                        [oasis.consensus.TRANSACTION_SIGNATURE_CONTEXT]: (chainContext, tx) => {
+                            confMessage += `
 Recognized message type: consensus transaction
 Chain context: ${chainContext}
 Nonce: ${tx.nonce}
 Fee amount: ${oasis.quantity.toBigInt(tx.fee.amount)} base units
 Fee gas: ${tx.fee.gas}`;
-                                const handled = oasis.consensus.visitTransaction(
-                                    /** @type {oasis.staking.ConsensusTransactionHandlers} */ ({
-                                        [oasis.staking.METHOD_TRANSFER]: (body) => {
-                                            confMessage += `
+                            const handled = oasis.consensus.visitTransaction(
+                                /** @type {oasis.staking.ConsensusTransactionHandlers} */ ({
+                                    [oasis.staking.METHOD_TRANSFER]: (body) => {
+                                        confMessage += `
 Recognized method: staking transfer
 To: ${oasis.staking.addressToBech32(body.to)}
 Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
-                                        },
-                                        [oasis.staking.METHOD_BURN]: (body) => {
-                                            confMessage += `
+                                    },
+                                    [oasis.staking.METHOD_BURN]: (body) => {
+                                        confMessage += `
 Recognized method: staking burn
 Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
-                                        },
-                                        [oasis.staking.METHOD_ADD_ESCROW]: (body) => {
-                                            confMessage += `
+                                    },
+                                    [oasis.staking.METHOD_ADD_ESCROW]: (body) => {
+                                        confMessage += `
 Recognized method: staking add escrow
 Account: ${oasis.staking.addressToBech32(body.account)}
 Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
-                                        },
-                                        [oasis.staking.METHOD_RECLAIM_ESCROW]: (body) => {
-                                            confMessage += `
+                                    },
+                                    [oasis.staking.METHOD_RECLAIM_ESCROW]: (body) => {
+                                        confMessage += `
 Recognized method: staking reclaim escrow
 Account: ${oasis.staking.addressToBech32(body.account)}
 Shares: ${oasis.quantity.toBigInt(body.shares)}`;
-                                        },
-                                        [oasis.staking.METHOD_AMEND_COMMISSION_SCHEDULE]: (
-                                            body,
-                                        ) => {
-                                            confMessage += `
+                                    },
+                                    [oasis.staking.METHOD_AMEND_COMMISSION_SCHEDULE]: (body) => {
+                                        confMessage += `
 Recognized method: staking amend commission schedule
 Amendment: ${JSON.stringify(body.amendment)}`;
-                                        },
-                                        [oasis.staking.METHOD_ALLOW]: (body) => {
-                                            confMessage += `
+                                    },
+                                    [oasis.staking.METHOD_ALLOW]: (body) => {
+                                        confMessage += `
 Recognized method: staking allow
 Beneficiary: ${oasis.staking.addressToBech32(body.beneficiary)}
 Amount change: ${body.negative ? '-' : '+'}${oasis.quantity.toBigInt(
-                                                body.amount_change,
-                                            )} base units`;
-                                        },
-                                        [oasis.staking.METHOD_WITHDRAW]: (body) => {
-                                            confMessage += `
+                                            body.amount_change,
+                                        )} base units`;
+                                    },
+                                    [oasis.staking.METHOD_WITHDRAW]: (body) => {
+                                        confMessage += `
 Recognized method: staking withdraw
 From: ${oasis.staking.addressToBech32(body.from)}
 Amount: ${oasis.quantity.toBigInt(body.amount)} base units`;
-                                        },
-                                    }),
-                                    tx,
-                                );
-                                if (!handled) {
-                                    confMessage += `
+                                    },
+                                }),
+                                tx,
+                            );
+                            if (!handled) {
+                                confMessage += `
 (pretty printing doesn't support this method)
 Method: ${tx.method}
 Body JSON: ${JSON.stringify(tx.body)}`;
-                                }
-                            },
-                            [oasisRT.transaction.SIGNATURE_CONTEXT_BASE]: (chainContext, tx) => {
-                                confMessage += `
+                            }
+                        },
+                        [oasisRT.transaction.SIGNATURE_CONTEXT_BASE]: (chainContext, tx) => {
+                            confMessage += `
 Recognized message type: runtime transaction
 Chain context: ${chainContext}
 Version: ${tx.v}`;
-                                const handled = oasisRT.transaction.visitCall(
-                                    /** @type {oasisRT.accounts.TransactionCallHandlers & oasisRT.consensusAccounts.TransactionCallHandlers} */ ({
-                                        [oasisRT.accounts.METHOD_TRANSFER]: (body) => {
-                                            confMessage += `
+                            const handled = oasisRT.transaction.visitCall(
+                                /** @type {oasisRT.accounts.TransactionCallHandlers & oasisRT.consensusAccounts.TransactionCallHandlers} */ ({
+                                    [oasisRT.accounts.METHOD_TRANSFER]: (body) => {
+                                        confMessage += `
 Recognized method: accounts transfer
 To: ${oasis.staking.addressToBech32(body.to)}
 Amount: ${rtBaseUnitsDisplay(body.amount)} base units`;
-                                        },
-                                        [oasisRT.consensusAccounts.METHOD_DEPOSIT]: (body) => {
-                                            confMessage += `
+                                    },
+                                    [oasisRT.consensusAccounts.METHOD_DEPOSIT]: (body) => {
+                                        confMessage += `
 Recognized method: consensus accounts deposit
 Amount: ${rtBaseUnitsDisplay(body.amount)} base units`;
-                                        },
-                                        [oasisRT.consensusAccounts.METHOD_WITHDRAW]: (body) => {
-                                            confMessage += `
+                                    },
+                                    [oasisRT.consensusAccounts.METHOD_WITHDRAW]: (body) => {
+                                        confMessage += `
 Recognized method: consensus accounts withdraw
 Amount: ${rtBaseUnitsDisplay(body.amount)} base units`;
-                                        },
-                                    }),
-                                    tx.call,
-                                );
-                                if (!handled) {
-                                    confMessage += `
+                                    },
+                                }),
+                                tx.call,
+                            );
+                            if (!handled) {
+                                confMessage += `
 (pretty printing doesn't support this method)
 Method: ${tx.call.method}
 Body JSON: ${JSON.stringify(tx.call.body)}`;
-                                }
-                                for (const si of tx.ai.si) {
-                                    if ('signature' in si.address_spec) {
-                                        if ('ed25519' in si.address_spec.signature) {
-                                            confMessage += `
+                            }
+                            for (const si of tx.ai.si) {
+                                if ('signature' in si.address_spec) {
+                                    if ('ed25519' in si.address_spec.signature) {
+                                        confMessage += `
 Signer: ed25519 signature with public key, base64 ${toBase64(
-                                                si.address_spec.signature.ed25519,
-                                            )}, nonce ${si.nonce}`;
-                                            continue;
-                                        }
+                                            si.address_spec.signature.ed25519,
+                                        )}, nonce ${si.nonce}`;
+                                        continue;
                                     }
-                                    confMessage += `
-Signer: other, JSON ${JSON.stringify(si.address_spec)}, nonce ${si.nonce}`;
                                 }
                                 confMessage += `
+Signer: other, JSON ${JSON.stringify(si.address_spec)}, nonce ${si.nonce}`;
+                            }
+                            confMessage += `
 Fee amount: ${rtBaseUnitsDisplay(tx.ai.fee.amount)} base units
 Fee gas: ${tx.ai.fee.gas}`;
-                            },
-                        }),
-                },
-                req.context,
-                req.message,
-            );
-            if (!handled) {
-                confMessage += `
+                        },
+                    }),
+            },
+            req.context,
+            req.message,
+        );
+        if (!handled) {
+            confMessage += `
 (pretty printing doesn't support this signature context)
 Context: ${req.context}
 Message hex: ${oasis.misc.toHex(req.message)}`;
-            }
-        } catch (e) {
-            console.error(e);
-            confMessage += `
-(couldn't parse)`;
         }
+    } catch (e) {
+        console.error(e);
         confMessage += `
+(couldn't parse)`;
+    }
+    confMessage += `
 Sign this message?`;
-        if (testNoninteractive) {
-            // We run an integration test to exercise the cross-origin messaging
-            // mechanism. Disable the user interactions in that case, due to
-            // limitations in our testing framework. But also be sure not to expose
-            // actual keys. Or better yet, remove this flag altogether in a real
-            // extension.
-            console.warn(
-                'test_noninteractive: skipping approval',
-                'confirmation message',
-                confMessage,
-            );
-        } else {
-            const conf = window.confirm(confMessage);
-            if (!conf) return {approved: false};
-        }
-        const signer = await getSigner();
-        const signature = await signer.sign(req.context, req.message);
-        return {approved: true, signature};
-    },
+    if (testNoninteractive) {
+        // We run an integration test to exercise the cross-origin messaging
+        // mechanism. Disable the user interactions in that case, due to
+        // limitations in our testing framework. But also be sure not to expose
+        // actual keys. Or better yet, remove this flag altogether in a real
+        // extension.
+        console.warn('test_noninteractive: skipping approval', 'confirmation message', confMessage);
+    } else {
+        const conf = window.confirm(confMessage);
+        if (!conf) return {approved: false};
+    }
+    const signer = await getSigner();
+    const signature = await signer.sign(req.context, req.message);
+    return {approved: true, signature};
+}
+
+oasisExt.ext.ready({
+    keysList,
+    contextSignerPublic,
+    contextSignerSign,
 });
 
 // We only ever have on key that doesn't change, but call this so that we
