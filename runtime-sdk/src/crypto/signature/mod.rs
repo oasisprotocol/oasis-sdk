@@ -4,6 +4,7 @@ use thiserror::Error;
 pub mod context;
 pub mod ed25519;
 pub mod secp256k1;
+pub mod sr25519;
 
 /// A public key used for signing.
 #[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
@@ -13,6 +14,9 @@ pub enum PublicKey {
 
     #[cbor(rename = "secp256k1")]
     Secp256k1(secp256k1::PublicKey),
+
+    #[cbor(rename = "sr25519")]
+    Sr25519(sr25519::PublicKey),
 }
 
 /// Error.
@@ -34,6 +38,7 @@ impl PublicKey {
         match self {
             PublicKey::Ed25519(pk) => pk.as_bytes(),
             PublicKey::Secp256k1(pk) => pk.as_bytes(),
+            PublicKey::Sr25519(pk) => pk.as_bytes(),
         }
     }
 
@@ -47,6 +52,7 @@ impl PublicKey {
         match self {
             PublicKey::Ed25519(pk) => pk.verify(context, message, signature),
             PublicKey::Secp256k1(pk) => pk.verify(context, message, signature),
+            PublicKey::Sr25519(pk) => pk.verify(context, message, signature),
         }
     }
 
