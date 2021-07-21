@@ -11,14 +11,17 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/sr25519"
 )
 
 var (
 	// AddressV0Ed25519Context is the unique context for v0 Ed25519-based addresses.
 	// It is shared with the consensus layer addresses on purpose.
 	AddressV0Ed25519Context = staking.AddressV0Context
-	// AddressV0Secp256k1Context is the unique context for v0 Ed25519-based addresses.
+	// AddressV0Secp256k1Context is the unique context for v0 secp256k1-based addresses.
 	AddressV0Secp256k1Context = address.NewContext("oasis-runtime-sdk/address: secp256k1", 0)
+	// AddressV0Sr25519Context is the unique context for v0 Sr25519-based addresses.
+	AddressV0Sr25519Context = address.NewContext("oasis-runtime-sdk/address: sr25519", 0)
 	// AddressV0MultisigContext is the unique context for v0 multisig addresses.
 	AddressV0MultisigContext = address.NewContext("oasis-runtime-sdk/address: multisig", 0)
 	// AddressBech32HRP is the unique human readable part of Bech32 encoded
@@ -80,6 +83,9 @@ func NewAddress(pk signature.PublicKey) (a Address) {
 		pkData, _ = pk.MarshalBinary()
 	case secp256k1.PublicKey:
 		ctx = AddressV0Secp256k1Context
+		pkData, _ = pk.MarshalBinary()
+	case sr25519.PublicKey:
+		ctx = AddressV0Sr25519Context
 		pkData, _ = pk.MarshalBinary()
 	default:
 		panic("address: unsupported public key type")
