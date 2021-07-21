@@ -23,25 +23,11 @@ jobs:
 
       - name: Determine tag name
         id: determine_tag
-        shell: bash
-        run: |
-          if [[ -z $GITHUB_BASE_REF ]]; then
-            # On main/stable branches.
-            branch=${GITHUB_REF#refs/heads/}
-          else
-            # On pull request branches.
-            branch=pr-$(git describe --always --match '' --abbrev=7)
-          fi
-          branch=${branch//\//-}
-          echo "::set-output name=tag::$(echo ${branch})"
-          echo "::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+        uses: ./.github/actions/determine-tag
 
       - name: Determine oasis-core version
         id: determine_oasis_core_version
-        shell: bash
-        run: |
-          . tests/consts.sh
-          echo "::set-output name=version::$(echo ${OASIS_CORE_VERSION})"
+        uses: ./.github/actions/oasis-core-version
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
