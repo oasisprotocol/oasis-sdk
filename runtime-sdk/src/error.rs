@@ -29,7 +29,7 @@ use crate::types::transaction::CallResult;
 /// ```
 pub trait Error: std::error::Error {
     /// Name of the module that emitted the error.
-    fn module_name(&self) -> &'static str;
+    fn module_name(&self) -> &str;
 
     /// Error code uniquely identifying the error.
     fn code(&self) -> u32;
@@ -45,7 +45,7 @@ pub trait Error: std::error::Error {
 }
 
 impl Error for std::convert::Infallible {
-    fn module_name(&self) -> &'static str {
+    fn module_name(&self) -> &str {
         "(none)"
     }
 

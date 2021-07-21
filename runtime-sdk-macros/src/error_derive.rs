@@ -85,7 +85,7 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
         };
 
         impl sdk::error::Error for #error_ty_ident {
-            fn module_name(&self) -> &'static str {
+            fn module_name(&self) -> &str {
                 #module_name_body
             }
 
@@ -237,7 +237,7 @@ mod tests {
                     self as sdk, core::types::Error as RuntimeError, error::Error as _,
                 };
                 impl sdk::error::Error for Error {
-                    fn module_name(&self) -> &'static str {
+                    fn module_name(&self) -> &str {
                         match self {
                             Self::Error0 { .. } => MODULE_NAME,
                             Self::Error2 { .. } => MODULE_NAME,
@@ -289,7 +289,7 @@ mod tests {
                     self as sdk, core::types::Error as RuntimeError, error::Error as _,
                 };
                 impl sdk::error::Error for Error {
-                    fn module_name(&self) -> &'static str {
+                    fn module_name(&self) -> &str {
                         THE_MODULE_NAME
                     }
                     fn code(&self) -> u32 {
@@ -323,7 +323,7 @@ mod tests {
                     self as sdk, core::types::Error as RuntimeError, error::Error as _,
                 };
                 impl sdk::error::Error for Error {
-                    fn module_name(&self) -> &'static str {
+                    fn module_name(&self) -> &str {
                         match self {
                             Self::Foo { 0: source, .. } => source.module_name(),
                         }
