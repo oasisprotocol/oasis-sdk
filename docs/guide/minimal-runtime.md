@@ -75,8 +75,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-# TODO: Use a released version of the SDK.
-oasis-runtime-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk", branch = "main" }
+oasis-runtime-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "runtime-sdk/v0.1.0" }
 ```
 
 {% hint style="info" %}
