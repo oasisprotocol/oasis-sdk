@@ -1,8 +1,6 @@
 use std::{convert::TryFrom, marker::PhantomData};
 
-use serde::{de::DeserializeOwned, Serialize};
-
-use oasis_core_runtime::{common::cbor, storage::mkvs};
+use oasis_core_runtime::storage::mkvs;
 
 use super::Store;
 
@@ -18,14 +16,14 @@ impl<S: Store> TypedStore<S> {
     }
 
     /// Fetch entry with given key.
-    pub fn get<K: AsRef<[u8]>, T: DeserializeOwned>(&self, key: K) -> Option<T> {
+    pub fn get<K: AsRef<[u8]>, T: cbor::Decode>(&self, key: K) -> Option<T> {
         self.parent
             .get(key)
             .map(|data| cbor::from_slice(&data).unwrap())
     }
 
     /// Update entry with given key to the given value.
-    pub fn insert<K: AsRef<[u8]>, T: Serialize>(&mut self, key: K, value: &T) {
+    pub fn insert<K: AsRef<[u8]>, T: cbor::Encode>(&mut self, key: K, value: T) {
         self.parent.insert(key, &cbor::to_vec(value))
     }
 
@@ -37,7 +35,7 @@ impl<S: Store> TypedStore<S> {
     pub fn iter<'store, K, V>(&'store self) -> TypedStoreIterator<'store, K, V>
     where
         K: for<'k> TryFrom<&'k [u8]>,
-        V: DeserializeOwned,
+        V: cbor::Decode,
     {
         TypedStoreIterator::new(self.parent.iter())
     }
@@ -47,7 +45,7 @@ impl<S: Store> TypedStore<S> {
 pub struct TypedStoreIterator<'store, K, V>
 where
     K: for<'k> TryFrom<&'k [u8]>,
-    V: DeserializeOwned,
+    V: cbor::Decode,
 {
     inner: Box<dyn mkvs::Iterator + 'store>,
 
@@ -58,7 +56,7 @@ where
 impl<'store, K, V> TypedStoreIterator<'store, K, V>
 where
     K: for<'k> TryFrom<&'k [u8]>,
-    V: DeserializeOwned,
+    V: cbor::Decode,
 {
     fn new(inner: Box<dyn mkvs::Iterator + 'store>) -> Self {
         Self {
@@ -73,7 +71,7 @@ impl<'store, K, V, E> Iterator for TypedStoreIterator<'store, K, V>
 where
     K: for<'k> TryFrom<&'k [u8], Error = E>,
     E: std::error::Error,
-    V: DeserializeOwned,
+    V: cbor::Decode,
 {
     type Item = (K, V);
 

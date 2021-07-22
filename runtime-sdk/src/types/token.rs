@@ -1,21 +1,10 @@
 //! Token types.
 use std::{convert::TryFrom, fmt};
 
-use serde::{Deserialize, Serialize};
-
-pub use oasis_core_runtime::common::quantity::Quantity;
-
 /// Name/type of the token.
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
-#[serde(transparent)]
-pub struct Denomination(#[serde(serialize_with = "serde_bytes::serialize")] Vec<u8>);
-
-impl<'de> serde::de::Deserialize<'de> for Denomination {
-    fn deserialize<D: serde::de::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
-        let bytes = serde_bytes::ByteBuf::deserialize(d)?;
-        Self::try_from(bytes.as_ref()).map_err(serde::de::Error::custom)
-    }
-}
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, cbor::Encode)]
+#[cbor(transparent)]
+pub struct Denomination(Vec<u8>);
 
 impl Denomination {
     /// Maximum length of a remote denomination.
@@ -67,6 +56,17 @@ impl TryFrom<&[u8]> for Denomination {
     }
 }
 
+impl cbor::Decode for Denomination {
+    fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
+        match value {
+            cbor::Value::ByteString(data) => {
+                Self::try_from(data.as_ref()).map_err(|_| cbor::DecodeError::UnexpectedType)
+            }
+            _ => Err(cbor::DecodeError::UnexpectedType),
+        }
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(
@@ -77,19 +77,18 @@ pub enum Error {
 }
 
 /// Token amount of given denomination in base units.
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct BaseUnits(Quantity, Denomination);
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, cbor::Encode, cbor::Decode)]
+pub struct BaseUnits(u128, Denomination);
 
 impl BaseUnits {
     /// Creates a new token amount of the given denomination.
-    pub fn new(amount: Quantity, denomination: Denomination) -> Self {
+    pub fn new(amount: u128, denomination: Denomination) -> Self {
         BaseUnits(amount, denomination)
     }
 
     /// Token amount in base units.
-    pub fn amount(&self) -> &Quantity {
-        &self.0
+    pub fn amount(&self) -> u128 {
+        self.0
     }
 
     /// Denomination of the token amount.
@@ -107,8 +106,6 @@ impl fmt::Display for BaseUnits {
 
 #[cfg(test)]
 mod test {
-    use oasis_core_runtime::common::{cbor, quantity::Quantity};
-
     use super::*;
 
     #[test]
@@ -125,8 +122,8 @@ mod test {
         ];
 
         for tc in cases {
-            let token = BaseUnits::new(Quantity::from(tc.0), tc.1);
-            let enc = cbor::to_vec(&token);
+            let token = BaseUnits::new(tc.0, tc.1);
+            let enc = cbor::to_vec(token.clone());
             assert_eq!(hex::encode(&enc), tc.2, "serialization should match");
 
             let dec: BaseUnits = cbor::from_slice(&enc).expect("deserialization should succeed");
@@ -135,10 +132,10 @@ mod test {
     }
 
     #[test]
-    fn test_serde_denomination() {
-        macro_rules! asset_rountrip_ok {
+    fn test_decoding_denomination() {
+        macro_rules! assert_rountrip_ok {
             ($bytes:expr) => {
-                let enc = cbor::to_vec(&serde_bytes::Bytes::new($bytes));
+                let enc = cbor::to_vec($bytes.to_vec());
                 let dec: Denomination = cbor::from_slice(&enc).unwrap();
                 assert_eq!(dec, Denomination::try_from($bytes).unwrap());
                 assert_eq!(dec.0, $bytes);
@@ -147,12 +144,12 @@ mod test {
 
         let bytes_fixture = vec![42u8; Denomination::MAX_LENGTH + 1];
 
-        asset_rountrip_ok!(&bytes_fixture[0..0]);
-        asset_rountrip_ok!(&bytes_fixture[0..1]);
-        asset_rountrip_ok!(&bytes_fixture[0..Denomination::MAX_LENGTH]);
+        assert_rountrip_ok!(&bytes_fixture[0..0]);
+        assert_rountrip_ok!(&bytes_fixture[0..1]);
+        assert_rountrip_ok!(&bytes_fixture[0..Denomination::MAX_LENGTH]);
 
         // Too long denomination:
-        let dec_result: Result<Denomination, _> = cbor::from_slice(&cbor::to_vec(&bytes_fixture));
+        let dec_result: Result<Denomination, _> = cbor::from_slice(&cbor::to_vec(bytes_fixture));
         assert!(dec_result.is_err());
     }
 }

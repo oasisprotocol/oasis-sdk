@@ -10,7 +10,6 @@ use oasis_core_runtime::{
 };
 
 use crate::crypto::{multisig, signature::PublicKey};
-use oasis_core_runtime::common::cbor;
 
 const ADDRESS_VERSION_SIZE: usize = 1;
 const ADDRESS_DATA_SIZE: usize = 20;
@@ -106,7 +105,7 @@ impl Address {
     }
 
     /// Creates a new address from a multisig configuration.
-    pub fn from_multisig(config: &multisig::Config) -> Self {
+    pub fn from_multisig(config: multisig::Config) -> Self {
         let config_vec = cbor::to_vec(config);
         Address::new(ADDRESS_V0_MULTISIG_CONTEXT, ADDRESS_V0_VERSION, &config_vec)
     }
@@ -174,62 +173,19 @@ impl fmt::Display for Address {
     }
 }
 
-impl serde::Serialize for Address {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let is_human_readable = serializer.is_human_readable();
-        if is_human_readable {
-            serializer.serialize_str(&self.to_bech32())
-        } else {
-            serializer.serialize_bytes(&self.0)
-        }
+impl cbor::Encode for Address {
+    fn into_cbor_value(self) -> cbor::Value {
+        cbor::Value::ByteString(self.as_ref().to_vec())
     }
 }
 
-impl<'de> serde::Deserialize<'de> for Address {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct BytesVisitor;
-
-        impl<'de> serde::de::Visitor<'de> for BytesVisitor {
-            type Value = Address;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("bytes or string expected")
+impl cbor::Decode for Address {
+    fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
+        match value {
+            cbor::Value::ByteString(data) => {
+                Self::from_bytes(&data).map_err(|_| cbor::DecodeError::UnexpectedType)
             }
-
-            fn visit_str<E>(self, data: &str) -> Result<Address, E>
-            where
-                E: serde::de::Error,
-            {
-                Address::from_bech32(data).map_err(serde::de::Error::custom)
-            }
-
-            fn visit_bytes<E>(self, data: &[u8]) -> Result<Address, E>
-            where
-                E: serde::de::Error,
-            {
-                if data.len() != ADDRESS_SIZE {
-                    return Err(serde::de::Error::custom(format!(
-                        "invalid address length: {}",
-                        data.len()
-                    )));
-                }
-
-                let mut a = [0; ADDRESS_SIZE];
-                a.copy_from_slice(&data);
-                Ok(Address(a))
-            }
-        }
-
-        if deserializer.is_human_readable() {
-            Ok(deserializer.deserialize_string(BytesVisitor)?)
-        } else {
-            Ok(deserializer.deserialize_bytes(BytesVisitor)?)
+            _ => Err(cbor::DecodeError::UnexpectedType),
         }
     }
 }
@@ -282,7 +238,7 @@ mod test {
             ],
             threshold: 2,
         };
-        let addr = Address::from_multisig(&config);
+        let addr = Address::from_multisig(config);
         assert_eq!(
             addr,
             Address::from_bech32("oasis1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux").unwrap(),

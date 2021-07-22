@@ -12,10 +12,9 @@ use crate::types::transaction::CallResult;
 /// ```
 /// # #[cfg(feature = "oasis-runtime-sdk-macros")]
 /// # mod example {
-/// # use serde::{Serialize, Deserialize};
 /// # use oasis_runtime_sdk_macros::Error;
 /// const MODULE_NAME: &str = "my-module";
-/// #[derive(Clone, Debug, Serialize, Deserialize, Error, thiserror::Error)]
+/// #[derive(Clone, Debug, Error, thiserror::Error)]
 /// #[sdk_error(autonumber)] // `module_name` meta is required if `MODULE_NAME` isn't in scope
 /// enum Error {
 ///    #[error("invalid argument")]

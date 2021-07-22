@@ -20,20 +20,20 @@ fn init_accounts<C: Context>(ctx: &mut C) {
     Accounts::init_or_migrate(
         ctx,
         &mut core::types::Metadata::default(),
-        &accounts::Genesis {
+        accounts::Genesis {
             balances: {
                 let mut balances = BTreeMap::new();
                 // Rewards pool.
                 balances.insert(*ADDRESS_REWARD_POOL, {
                     let mut denominations = BTreeMap::new();
-                    denominations.insert(Denomination::NATIVE, 1_000_000.into());
+                    denominations.insert(Denomination::NATIVE, 1_000_000);
                     denominations
                 });
                 balances
             },
             total_supplies: {
                 let mut total_supplies = BTreeMap::new();
-                total_supplies.insert(Denomination::NATIVE, 1_000_000.into());
+                total_supplies.insert(Denomination::NATIVE, 1_000_000);
                 total_supplies
             },
             ..Default::default()
@@ -50,17 +50,17 @@ fn test_init_incorrect_rewards_schedule() {
     Rewards::init_or_migrate(
         &mut ctx,
         &mut core::types::Metadata::default(),
-        &Genesis {
+        Genesis {
             parameters: Parameters {
                 schedule: types::RewardSchedule {
                     steps: vec![
                         types::RewardStep {
                             until: 10,
-                            amount: BaseUnits::new(1000.into(), Denomination::NATIVE),
+                            amount: BaseUnits::new(1000, Denomination::NATIVE),
                         },
                         types::RewardStep {
                             until: 1, // Not sorted.
-                            amount: BaseUnits::new(1000.into(), Denomination::NATIVE),
+                            amount: BaseUnits::new(1000, Denomination::NATIVE),
                         },
                     ],
                 },
@@ -82,12 +82,12 @@ fn test_init_incorrect_participation_threshold() {
     Rewards::init_or_migrate(
         &mut ctx,
         &mut core::types::Metadata::default(),
-        &Genesis {
+        Genesis {
             parameters: Parameters {
                 schedule: types::RewardSchedule {
                     steps: vec![types::RewardStep {
                         until: 10,
-                        amount: BaseUnits::new(1000.into(), Denomination::NATIVE),
+                        amount: BaseUnits::new(1000, Denomination::NATIVE),
                     }],
                 },
                 participation_threshold_numerator: 10, // Invalid numerator.
@@ -117,12 +117,12 @@ fn test_reward_disbursement() {
     Rewards::init_or_migrate(
         &mut ctx,
         &mut core::types::Metadata::default(),
-        &Genesis {
+        Genesis {
             parameters: Parameters {
                 schedule: types::RewardSchedule {
                     steps: vec![types::RewardStep {
                         until: 1000,
-                        amount: BaseUnits::new(1000.into(), Denomination::NATIVE),
+                        amount: BaseUnits::new(1000, Denomination::NATIVE),
                     }],
                 },
                 participation_threshold_numerator: 3,
@@ -147,7 +147,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        1_000_000.into(),
+        1_000_000,
         "no rewards should be disbursed yet"
     );
 
@@ -163,7 +163,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        998_000.into(),
+        998_000,
         "rewards should have been disbursed"
     );
 
@@ -172,7 +172,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        1_000.into(),
+        1_000,
         "rewards should have been disbursed"
     );
 
@@ -180,7 +180,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        1_000.into(),
+        1_000,
         "rewards should have been disbursed"
     );
 
@@ -211,7 +211,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        998_000.into(),
+        998_000,
         "no rewards should be disbursed yet"
     );
 
@@ -227,7 +227,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        997_000.into(),
+        997_000,
         "rewards should have been disbursed"
     );
 
@@ -236,7 +236,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        2_000.into(),
+        2_000,
         "rewards should have been disbursed to good entities"
     );
 
@@ -244,7 +244,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        1_000.into(),
+        1_000,
         "rewards should not have been disbursed to bad entities"
     );
 
@@ -274,7 +274,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        997_000.into(),
+        997_000,
         "no rewards should be disbursed yet"
     );
 
@@ -290,7 +290,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        996_000.into(),
+        996_000,
         "rewards should have been disbursed"
     );
 
@@ -299,7 +299,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        2_000.into(),
+        2_000,
         "rewards should not have been disbursed to non-participating entities"
     );
 
@@ -307,7 +307,7 @@ fn test_reward_disbursement() {
         .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
-        2_000.into(),
+        2_000,
         "rewards should have been disbursed to participating entities"
     );
 }

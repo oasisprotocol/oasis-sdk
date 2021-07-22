@@ -1,5 +1,4 @@
 //! Cryptographic signatures.
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub mod context;
@@ -7,13 +6,12 @@ pub mod ed25519;
 pub mod secp256k1;
 
 /// A public key used for signing.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 pub enum PublicKey {
-    #[serde(rename = "ed25519")]
+    #[cbor(rename = "ed25519")]
     Ed25519(ed25519::PublicKey),
 
-    #[serde(rename = "secp256k1")]
+    #[cbor(rename = "secp256k1")]
     Secp256k1(secp256k1::PublicKey),
 }
 
@@ -78,8 +76,9 @@ impl AsRef<[u8]> for PublicKey {
 }
 
 /// Variable-length opaque signature.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Signature(#[serde(with = "serde_bytes")] Vec<u8>);
+#[derive(Clone, Debug, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
+#[cbor(transparent)]
+pub struct Signature(Vec<u8>);
 
 impl AsRef<[u8]> for Signature {
     fn as_ref(&self) -> &[u8] {

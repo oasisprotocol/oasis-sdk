@@ -1,10 +1,8 @@
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
-    core::common::cbor,
     error::{Error as _, RuntimeError},
     module::Module as _,
     modules::{
@@ -32,8 +30,8 @@ pub enum Error {
 }
 
 /// Events emitted by the keyvalue module.
-#[derive(Debug, Serialize, Deserialize, sdk::Event)]
-#[serde(untagged)]
+#[derive(Debug, cbor::Encode, sdk::Event)]
+#[cbor(untagged)]
 pub enum Event {
     #[sdk_event(code = 1)]
     Insert { kv: types::KeyValue },
@@ -43,24 +41,17 @@ pub enum Event {
 }
 
 /// Gas costs.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct GasCosts {
-    #[serde(rename = "insert_absent")]
     pub insert_absent: u64,
-    #[serde(rename = "insert_existing")]
     pub insert_existing: u64,
-    #[serde(rename = "remove_absent")]
     pub remove_absent: u64,
-    #[serde(rename = "remove_existing")]
     pub remove_existing: u64,
 }
 
 /// Parameters for the keyvalue module.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
-    #[serde(rename = "gas_costs")]
     pub gas_costs: GasCosts,
 }
 
@@ -69,10 +60,8 @@ impl sdk::module::Parameters for Parameters {
 }
 
 /// Genesis state for the keyvalue module.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Genesis {
-    #[serde(rename = "parameters")]
     pub parameters: Parameters,
 }
 
@@ -101,7 +90,7 @@ impl sdk::module::MethodHandler for Module {
             "keyvalue.Insert" => {
                 let result = || -> Result<cbor::Value, Error> {
                     let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(&Self::tx_insert(ctx, args)?))
+                    Ok(cbor::to_value(Self::tx_insert(ctx, args)?))
                 }();
                 match result {
                     Ok(value) => sdk::module::DispatchResult::Handled(CallResult::Ok(value)),
@@ -111,7 +100,7 @@ impl sdk::module::MethodHandler for Module {
             "keyvalue.Remove" => {
                 let result = || -> Result<cbor::Value, Error> {
                     let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(&Self::tx_remove(ctx, args)?))
+                    Ok(cbor::to_value(Self::tx_remove(ctx, args)?))
                 }();
                 match result {
                     Ok(value) => sdk::module::DispatchResult::Handled(CallResult::Ok(value)),
@@ -130,7 +119,7 @@ impl sdk::module::MethodHandler for Module {
         match method {
             "keyvalue.Get" => sdk::module::DispatchResult::Handled((|| {
                 let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(&Self::query_get(ctx, args)?))
+                Ok(cbor::to_value(Self::query_get(ctx, args)?))
             })()),
             _ => sdk::module::DispatchResult::Unhandled(args),
         }
@@ -160,7 +149,7 @@ impl Module {
         let mut store = sdk::storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut ts = sdk::storage::TypedStore::new(&mut store);
         let bc = body.clone();
-        ts.insert(&body.key, &body.value);
+        ts.insert(&body.key, body.value);
         ctx.emit_event(Event::Insert { kv: bc });
         Ok(())
     }
@@ -209,12 +198,12 @@ impl sdk::module::MigrationHandler for Module {
     fn init_or_migrate<C: Context>(
         ctx: &mut C,
         meta: &mut sdk::modules::core::types::Metadata,
-        genesis: &Self::Genesis,
+        genesis: Self::Genesis,
     ) -> bool {
         let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
         if version == 0 {
             // Initialize state from genesis.
-            Self::set_params(ctx.runtime_state(), &genesis.parameters);
+            Self::set_params(ctx.runtime_state(), genesis.parameters);
             meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
             return true;
         }

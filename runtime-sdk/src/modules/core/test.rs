@@ -4,7 +4,7 @@ use oasis_core_runtime::types::BATCH_WEIGHT_LIMIT_QUERY_METHOD;
 
 use crate::{
     context::{BatchContext, Context, Mode, TxContext},
-    core::common::{cbor, version::Version},
+    core::common::version::Version,
     crypto::multisig,
     dispatcher, module,
     module::{AuthHandler as _, BlockHandler, Module as _},
@@ -13,7 +13,7 @@ use crate::{
     types::{token, transaction, transaction::TransactionWeight},
 };
 
-use super::{Module as Core, API as _, GAS_WEIGHT_NAME};
+use super::{Module as Core, Parameters, API as _, GAS_WEIGHT_NAME};
 
 #[test]
 fn test_use_gas() {
@@ -23,7 +23,7 @@ fn test_use_gas() {
     let mut ctx = mock.create_ctx();
     Core::set_params(
         ctx.runtime_state(),
-        &super::Parameters {
+        Parameters {
             max_batch_gas: BLOCK_MAX_GAS,
             max_tx_signers: 8,
             max_multisig_signers: 8,
@@ -100,7 +100,9 @@ impl module::MethodHandler for GasWasterModule {
         match method {
             Self::METHOD_WASTE_GAS => {
                 Core::use_tx_gas(ctx, Self::CALL_GAS).expect("use_gas should succeed");
-                module::DispatchResult::Handled(transaction::CallResult::Ok(cbor::Value::Null))
+                module::DispatchResult::Handled(transaction::CallResult::Ok(cbor::Value::Simple(
+                    cbor::SimpleValue::NullValue,
+                )))
             }
             _ => module::DispatchResult::Unhandled(body),
         }
@@ -130,7 +132,7 @@ impl Runtime for GasWasterRuntime {
     fn genesis_state() -> (super::Genesis, ()) {
         (
             super::Genesis {
-                parameters: super::Parameters {
+                parameters: Parameters {
                     max_batch_gas: u64::MAX,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
@@ -156,7 +158,7 @@ fn test_query_estimate_gas() {
         version: 1,
         call: transaction::Call {
             method: GasWasterModule::METHOD_WASTE_GAS.to_owned(),
-            body: cbor::Value::Null,
+            body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![
@@ -173,7 +175,7 @@ fn test_query_estimate_gas() {
                 ),
             ],
             fee: transaction::Fee {
-                amount: token::BaseUnits::new(0.into(), token::Denomination::NATIVE),
+                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                 gas: u64::MAX,
             },
         },
@@ -192,7 +194,7 @@ fn test_approve_unverified_tx() {
     let mut ctx = mock.create_ctx();
     Core::set_params(
         ctx.runtime_state(),
-        &super::Parameters {
+        Parameters {
             max_batch_gas: u64::MAX,
             max_tx_signers: 2,
             max_multisig_signers: 2,
@@ -335,7 +337,7 @@ fn test_get_batch_weight_limits() {
     // Update max_batch_gas.
     Core::set_params(
         ctx.runtime_state(),
-        &super::Parameters {
+        Parameters {
             max_batch_gas: 100,
             ..Default::default()
         },
@@ -360,7 +362,7 @@ fn test_get_batch_weight_limits_query() {
     let res = dispatcher::Dispatcher::<GasWasterRuntime>::dispatch_query(
         &mut ctx,
         BATCH_WEIGHT_LIMIT_QUERY_METHOD,
-        cbor::Value::Null,
+        cbor::Value::Simple(cbor::SimpleValue::NullValue),
     )
     .expect("batch weight limit query should work");
     assert_eq!(
@@ -372,7 +374,7 @@ fn test_get_batch_weight_limits_query() {
     // Update max_batch_gas.
     Core::set_params(
         ctx.runtime_state(),
-        &super::Parameters {
+        Parameters {
             max_batch_gas: 100,
             ..Default::default()
         },
@@ -382,7 +384,7 @@ fn test_get_batch_weight_limits_query() {
     let res = dispatcher::Dispatcher::<GasWasterRuntime>::dispatch_query(
         &mut ctx,
         BATCH_WEIGHT_LIMIT_QUERY_METHOD,
-        cbor::Value::Null,
+        cbor::Value::Simple(cbor::SimpleValue::NullValue),
     )
     .expect("batch weight limit query should work");
     assert_eq!(

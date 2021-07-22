@@ -12,7 +12,7 @@ fn test_impl_for_tuple() {
     let mut ctx = mock.create_ctx();
     Core::set_params(
         ctx.runtime_state(),
-        &core::Parameters {
+        core::Parameters {
             max_batch_gas: u64::MAX,
             max_tx_signers: 1,
             max_multisig_signers: 1,

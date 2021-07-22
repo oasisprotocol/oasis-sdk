@@ -1,7 +1,6 @@
 //! Rewards module types.
 use std::collections::BTreeMap;
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
@@ -10,21 +9,15 @@ use crate::{
 };
 
 /// One of the time periods in the reward schedule.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct RewardStep {
-    #[serde(rename = "until")]
     pub until: beacon::EpochTime,
-
-    #[serde(rename = "amount")]
     pub amount: token::BaseUnits,
 }
 
 /// A reward schedule.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct RewardSchedule {
-    #[serde(rename = "steps")]
     pub steps: Vec<RewardStep>,
 }
 
@@ -62,9 +55,7 @@ impl RewardSchedule {
 }
 
 /// Action that should be taken for a given address when disbursing rewards.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[serde(untagged)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RewardAction {
     Reward(u64),
     NoReward,
@@ -103,11 +94,28 @@ impl Default for RewardAction {
     }
 }
 
+impl cbor::Encode for RewardAction {
+    fn into_cbor_value(self) -> cbor::Value {
+        match self {
+            Self::Reward(r) => cbor::Value::Unsigned(r),
+            Self::NoReward => cbor::Value::Simple(cbor::SimpleValue::NullValue),
+        }
+    }
+}
+
+impl cbor::Decode for RewardAction {
+    fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
+        match value {
+            cbor::Value::Unsigned(v) => Ok(Self::Reward(v)),
+            cbor::Value::Simple(cbor::SimpleValue::NullValue) => Ok(Self::NoReward),
+            _ => Err(cbor::DecodeError::UnexpectedType),
+        }
+    }
+}
+
 /// Rewards for the epoch.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct EpochRewards {
-    #[serde(rename = "pending")]
     pub pending: BTreeMap<Address, RewardAction>,
 }
 
@@ -153,7 +161,7 @@ impl EpochRewards {
 
 #[cfg(test)]
 mod test {
-    use crate::{core::common::cbor, testing::keys};
+    use crate::testing::keys;
 
     use super::*;
 
@@ -182,7 +190,7 @@ mod test {
             RewardAction::NoReward,
         ];
         for act in actions {
-            let encoded = &cbor::to_vec(&act);
+            let encoded = &cbor::to_vec(act.clone());
             let round_trip: RewardAction =
                 cbor::from_slice(encoded).expect("round-trip should succeed");
             assert_eq!(round_trip, act, "reward actions should round-trip");
@@ -195,15 +203,15 @@ mod test {
             steps: vec![
                 RewardStep {
                     until: 10,
-                    amount: token::BaseUnits::new(1000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
                 },
                 RewardStep {
                     until: 10,
-                    amount: token::BaseUnits::new(1000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
                 },
                 RewardStep {
                     until: 15,
-                    amount: token::BaseUnits::new(1000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
                 },
             ],
         };
@@ -218,15 +226,15 @@ mod test {
             steps: vec![
                 RewardStep {
                     until: 10,
-                    amount: token::BaseUnits::new(1000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
                 },
                 RewardStep {
                     until: 5,
-                    amount: token::BaseUnits::new(1000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
                 },
                 RewardStep {
                     until: 15,
-                    amount: token::BaseUnits::new(1000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
                 },
             ],
         };
@@ -241,15 +249,15 @@ mod test {
             steps: vec![
                 RewardStep {
                     until: 5,
-                    amount: token::BaseUnits::new(1000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
                 },
                 RewardStep {
                     until: 10,
-                    amount: token::BaseUnits::new(1000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
                 },
                 RewardStep {
                     until: 15,
-                    amount: token::BaseUnits::new(1000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
                 },
             ],
         };
@@ -264,35 +272,29 @@ mod test {
             steps: vec![
                 RewardStep {
                     until: 5,
-                    amount: token::BaseUnits::new(3000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(3000, token::Denomination::NATIVE),
                 },
                 RewardStep {
                     until: 10,
-                    amount: token::BaseUnits::new(2000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(2000, token::Denomination::NATIVE),
                 },
                 RewardStep {
                     until: 15,
-                    amount: token::BaseUnits::new(1000.into(), token::Denomination::NATIVE),
+                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
                 },
             ],
         };
 
-        assert_eq!(schedule.for_epoch(1).amount(), &token::Quantity::from(3000));
-        assert_eq!(schedule.for_epoch(3).amount(), &token::Quantity::from(3000));
-        assert_eq!(schedule.for_epoch(5).amount(), &token::Quantity::from(2000));
-        assert_eq!(schedule.for_epoch(6).amount(), &token::Quantity::from(2000));
-        assert_eq!(schedule.for_epoch(9).amount(), &token::Quantity::from(2000));
-        assert_eq!(
-            schedule.for_epoch(10).amount(),
-            &token::Quantity::from(1000)
-        );
-        assert_eq!(
-            schedule.for_epoch(14).amount(),
-            &token::Quantity::from(1000)
-        );
-        assert_eq!(schedule.for_epoch(15).amount(), &token::Quantity::from(0));
-        assert_eq!(schedule.for_epoch(20).amount(), &token::Quantity::from(0));
-        assert_eq!(schedule.for_epoch(100).amount(), &token::Quantity::from(0));
+        assert_eq!(schedule.for_epoch(1).amount(), 3000);
+        assert_eq!(schedule.for_epoch(3).amount(), 3000);
+        assert_eq!(schedule.for_epoch(5).amount(), 2000);
+        assert_eq!(schedule.for_epoch(6).amount(), 2000);
+        assert_eq!(schedule.for_epoch(9).amount(), 2000);
+        assert_eq!(schedule.for_epoch(10).amount(), 1000);
+        assert_eq!(schedule.for_epoch(14).amount(), 1000);
+        assert_eq!(schedule.for_epoch(15).amount(), 0);
+        assert_eq!(schedule.for_epoch(20).amount(), 0);
+        assert_eq!(schedule.for_epoch(100).amount(), 0);
     }
 
     #[test]

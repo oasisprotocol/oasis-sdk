@@ -51,38 +51,38 @@ impl sdk::Runtime for Runtime {
                     // Alice.
                     b.insert(sdk::testing::keys::alice::address(), {
                         let mut d = BTreeMap::new();
-                        d.insert(Denomination::NATIVE, 10_003_000.into());
+                        d.insert(Denomination::NATIVE, 10_003_000);
                         d
                     });
                     // Bob.
                     b.insert(sdk::testing::keys::bob::address(), {
                         let mut d = BTreeMap::new();
-                        d.insert(Denomination::NATIVE, 2_000.into());
+                        d.insert(Denomination::NATIVE, 2_000);
                         d
                     });
                     // Charlie.
                     b.insert(sdk::testing::keys::charlie::address(), {
                         let mut d = BTreeMap::new();
-                        d.insert(Denomination::NATIVE, 1_000.into());
+                        d.insert(Denomination::NATIVE, 1_000);
                         d
                     });
                     // Dave.
                     b.insert(sdk::testing::keys::dave::address(), {
                         let mut d = BTreeMap::new();
-                        d.insert(Denomination::NATIVE, 100.into());
+                        d.insert(Denomination::NATIVE, 100);
                         d
                     });
                     // Reward pool.
                     b.insert(*modules::rewards::ADDRESS_REWARD_POOL, {
                         let mut d = BTreeMap::new();
-                        d.insert(Denomination::NATIVE, 10_000.into());
+                        d.insert(Denomination::NATIVE, 10_000);
                         d
                     });
                     b
                 },
                 total_supplies: {
                     let mut ts = BTreeMap::new();
-                    ts.insert(Denomination::NATIVE, 10_016_100.into());
+                    ts.insert(Denomination::NATIVE, 10_016_100);
                     ts
                 },
                 ..Default::default()
@@ -92,7 +92,7 @@ impl sdk::Runtime for Runtime {
                     schedule: modules::rewards::types::RewardSchedule {
                         steps: vec![modules::rewards::types::RewardStep {
                             until: 1000,
-                            amount: BaseUnits::new(100.into(), Denomination::NATIVE),
+                            amount: BaseUnits::new(100, Denomination::NATIVE),
                         }],
                     },
                     participation_threshold_numerator: 1, // These are updated below.
@@ -124,6 +124,6 @@ impl sdk::Runtime for Runtime {
         params.participation_threshold_denominator = 4;
 
         // Store parameters.
-        Rewards::set_params(ctx.runtime_state(), &params)
+        Rewards::set_params(ctx.runtime_state(), params)
     }
 }
