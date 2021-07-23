@@ -14,7 +14,7 @@ oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 # Third party.
 curve25519-dalek = "3.0.0"
 sha2 = "0.9.3"
-k256 = { version = "0.9.5" }
+k256 = { version = "0.9.6" }
 thiserror = "1.0.26"
 hex = "0.4.2"
 io-context = "0.2.0"
