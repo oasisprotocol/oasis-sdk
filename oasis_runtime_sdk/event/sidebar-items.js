@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["Event","An event emitted by the runtime."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["MKVSStore","A key-value store backed by MKVS."],["OverlayStore",""],["PrefixStore","A key-value store that prefixes all keys with the given prefix."],["TypedStore","A key-value store that transparently handles serialization/deserialization."]],"trait":[["Store","A key-value store."]]});

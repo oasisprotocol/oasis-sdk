@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["get_chain_context_for","Return the globally configured chain domain separation context."],["set_chain_context","Configure the global chain domain separation context."]]});

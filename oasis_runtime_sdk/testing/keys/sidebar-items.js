@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["alice","Test key  A ."],["bob","Test key  B ."],["charlie","Test key  C ."],["dave","Test key  D ."]]});

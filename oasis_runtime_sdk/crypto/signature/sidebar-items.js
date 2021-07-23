@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Error","Error."],["PublicKey","A public key used for signing."]],"mod":[["context","Domain separation context helpers."],["ed25519","Ed25519 signatures."],["secp256k1","Secp256k1 signatures."]],"struct":[["Signature","Variable-length opaque signature."]]});

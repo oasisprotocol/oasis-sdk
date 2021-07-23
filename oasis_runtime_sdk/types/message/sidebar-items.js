@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["MessageEventHookInvocation","Handler name and context to be called after message is executed."],["MessageResult","Result of a message being processed by the consensus layer combined with the context for the result handler."]],"type":[["MessageEvent","Result of a message being processed by the consensus layer."]]});

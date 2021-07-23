@@ -1,0 +1,1 @@
+initSidebarItems({"derive":[["Error","Derives the `Error` trait on an enum."],["Event","Derives the `Event` trait on an enum."]],"macro":[["version_from_cargo","Constructs an `oasis_sdk::core::common::version::Version` from the Cargo.toml version."]]});

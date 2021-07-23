@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["ACCOUNTS","Map of account addresses to account metadata."],["BALANCES","Map of account addresses to map of denominations to balances."],["TOTAL_SUPPLY","Map of total supplies (per denomination)."]]});

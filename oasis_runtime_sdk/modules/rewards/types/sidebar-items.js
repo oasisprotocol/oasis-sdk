@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["RewardAction","Action that should be taken for a given address when disbursing rewards."],["RewardScheduleError","Errors emitted during reward schedule validation."]],"struct":[["EpochRewards","Rewards for the epoch."],["RewardSchedule","A reward schedule."],["RewardStep","One of the time periods in the reward schedule."]]});

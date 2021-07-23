@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["oasis_runtime_sdk"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/str/traits/trait.FromStr.html\" title=\"trait core::str::traits::FromStr\">FromStr</a> for <a class=\"struct\" href=\"oasis_runtime_sdk/types/token/struct.Denomination.html\" title=\"struct oasis_runtime_sdk::types::token::Denomination\">Denomination</a>","synthetic":false,"types":["oasis_runtime_sdk::types::token::Denomination"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

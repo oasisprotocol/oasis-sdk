@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Error","Error emitted by the dispatch process. Note that this indicates an error in the dispatch process itself and should not be used for any transaction-related errors."]],"struct":[["DispatchResult","Result of dispatching a transaction."],["Dispatcher","The runtime dispatcher."]]});

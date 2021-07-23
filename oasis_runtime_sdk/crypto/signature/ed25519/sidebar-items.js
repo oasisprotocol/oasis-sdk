@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["PublicKey","An Ed25519 public key."]]});

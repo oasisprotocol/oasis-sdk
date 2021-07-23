@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["VERSION_GLOBAL_KEY","Key in the versions map used for the global state version."]],"struct":[["Metadata",""]]});

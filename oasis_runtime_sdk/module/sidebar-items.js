@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["DispatchResult","Result of invoking the method handler."]],"trait":[["AuthHandler","Authentication handler."],["BlockHandler","Block handler."],["InvariantHandler","Invariant handler."],["MethodHandler","Method handler."],["MigrationHandler","Migration handler."],["Module","A runtime module."],["Parameters","Parameters for a runtime module."]]});
