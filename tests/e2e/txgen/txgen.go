@@ -11,6 +11,8 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 
+	voiSr "github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
+
 	"github.com/oasisprotocol/oasis-core/go/common"
 	coreMemSig "github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/memory"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
@@ -20,6 +22,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/sr25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
@@ -33,11 +36,12 @@ type AccountType uint8
 const (
 	AccountEd25519   AccountType = 0
 	AccountSecp256k1 AccountType = 1
-	AccountTypeMax               = AccountSecp256k1
+	AccountSr25519   AccountType = 2
+	AccountTypeMax               = AccountSr25519
 )
 
 func (at AccountType) String() string {
-	return [...]string{"ed25519", "secp256k1"}[at]
+	return [...]string{"ed25519", "secp256k1", "sr25519"}[at]
 }
 
 // NewClient creates a new runtime client.
@@ -136,6 +140,12 @@ func CreateAndFundAccount(ctx context.Context, rtc client.RuntimeClient, funder 
 			return nil, err
 		}
 		sig = secp256k1.NewSigner(pk.Serialize())
+	case AccountSr25519:
+		kp, err := voiSr.GenerateKeyPair(nil)
+		if err != nil {
+			return nil, err
+		}
+		sig = sr25519.NewSignerFromKeyPair(kp)
 	default:
 		return nil, fmt.Errorf("invalid account type")
 	}

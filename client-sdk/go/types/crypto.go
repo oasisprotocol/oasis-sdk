@@ -10,6 +10,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/sr25519"
 )
 
 var (
@@ -27,10 +28,11 @@ type PublicKey struct {
 type serializedPublicKey struct {
 	Ed25519   *ed25519.PublicKey   `json:"ed25519,omitempty"`
 	Secp256k1 *secp256k1.PublicKey `json:"secp256k1,omitempty"`
+	Sr25519   *sr25519.PublicKey   `json:"sr25519,omitempty"`
 }
 
 func (pk *PublicKey) unmarshal(spk *serializedPublicKey) error {
-	if spk.Ed25519 != nil && spk.Secp256k1 != nil {
+	if spk.Ed25519 != nil && spk.Secp256k1 != nil && spk.Sr25519 != nil {
 		return fmt.Errorf("malformed public key")
 	}
 
@@ -39,6 +41,8 @@ func (pk *PublicKey) unmarshal(spk *serializedPublicKey) error {
 		pk.PublicKey = spk.Ed25519
 	case spk.Secp256k1 != nil:
 		pk.PublicKey = spk.Secp256k1
+	case spk.Sr25519 != nil:
+		pk.PublicKey = spk.Sr25519
 	default:
 		return fmt.Errorf("unsupported public key type")
 	}

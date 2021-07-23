@@ -20,6 +20,8 @@ const ADDRESS_V0_VERSION: u8 = 0;
 const ADDRESS_V0_ED25519_CONTEXT: &[u8] = b"oasis-core/address: staking";
 /// V0 Secp256k1 address context.
 const ADDRESS_V0_SECP256K1_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: secp256k1";
+/// V0 Sr25519 address context.
+const ADDRESS_V0_SR25519_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: sr25519";
 
 const ADDRESS_V0_MODULE_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: module";
 
@@ -98,6 +100,11 @@ impl Address {
             ),
             PublicKey::Secp256k1(pk) => Address::new(
                 ADDRESS_V0_SECP256K1_CONTEXT,
+                ADDRESS_V0_VERSION,
+                pk.as_bytes(),
+            ),
+            PublicKey::Sr25519(pk) => Address::new(
+                ADDRESS_V0_SR25519_CONTEXT,
                 ADDRESS_V0_VERSION,
                 pk.as_bytes(),
             ),
