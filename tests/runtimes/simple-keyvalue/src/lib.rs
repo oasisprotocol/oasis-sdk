@@ -6,6 +6,7 @@ use oasis_runtime_sdk::{
     types::token::{BaseUnits, Denomination},
     Module as _, Version,
 };
+use oasis_runtime_sdk_contracts as contracts;
 
 pub mod keyvalue;
 #[cfg(test)]
@@ -27,6 +28,7 @@ impl sdk::Runtime for Runtime {
         modules::accounts::Module,
         modules::rewards::Module<modules::accounts::Module>,
         modules::core::Module,
+        contracts::Module,
     );
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {
@@ -109,6 +111,9 @@ impl sdk::Runtime for Runtime {
                         auth_multisig_signer: 10,
                     },
                 },
+            },
+            contracts::Genesis {
+                parameters: Default::default(),
             },
         )
     }

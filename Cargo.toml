@@ -1,10 +1,22 @@
 [workspace]
 members = [
+    # Runtime SDK Core.
     "runtime-sdk",
     "runtime-sdk-macros",
+
+    # Runtime SDK Modules.
+    "runtime-sdk/modules/contracts",
+
+    # Smart Contract SDK.
+    "contract-sdk",
+    "contract-sdk/types",
 
     # Test runtimes.
     "tests/runtimes/benchmarking",
     "tests/runtimes/simple-keyvalue",
     "tests/runtimes/simple-consensus",
+]
+exclude = [
+    # Test contracts.
+    "tests/contracts"
 ]

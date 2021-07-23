@@ -1,0 +1,23 @@
+[package]
+name = "oasis-runtime-sdk-contracts"
+description = "Smart contracts module for the Oasis Runtime SDK."
+version = "0.1.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+cbor = { version = "0.1.0", package = "oasis-cbor" }
+oasis-runtime-sdk = { path = "../.." }
+
+oasis-contract-sdk-types = { path = "../../../contract-sdk/types", features = ["oasis-runtime-sdk"] }
+# TODO: Use a released version.
+wasm3 = { git = "https://github.com/oasisprotocol/wasm3-rs", branch = "master" }
+walrus = "0.19.0"
+
+# Third party.
+thiserror = "1.0"
+anyhow = "1.0"
+
+[dev-dependencies]
+wat = "1.0"
