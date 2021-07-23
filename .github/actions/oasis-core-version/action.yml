@@ -1,0 +1,14 @@
+name: Determine Oasis Core Version
+description: Determine the required Oasis Core version
+outputs:
+  version:
+    description: The version detected
+    value: ${{ steps.version.outputs.version }}
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      id: version
+      run: |
+        . tests/consts.sh
+        echo "::set-output name=version::$(echo ${OASIS_CORE_VERSION})"

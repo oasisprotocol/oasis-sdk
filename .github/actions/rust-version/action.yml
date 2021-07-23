@@ -1,0 +1,13 @@
+name: Determine Rust Toolchain Version
+description: Determine the required rust toolchain version
+outputs:
+  version:
+    description: The version detected
+    value: ${{ steps.version.outputs.version }}
+runs:
+  using: "composite"
+  steps:
+    - shell: bash
+      id: version
+      run: |
+        echo "::set-output name=version::$(sed -e 's/^nightly-//g' < rust-toolchain)"
