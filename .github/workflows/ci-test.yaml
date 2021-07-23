@@ -106,13 +106,9 @@ jobs:
       - name: Set up npm
         run: npm install npm@7 -g
 
-      - name: Install ts-web/core
+      - name: Install dependencies and build
         working-directory: client-sdk/ts-web
-        run: npm ci --workspace core
-
-      - name: Install other packages
-        working-directory: client-sdk/ts-web
-        run: npm ci
+        run: npm ci --foreground-scripts
 
       - name: Check ts-web/core playground
         working-directory: client-sdk/ts-web/core
@@ -150,13 +146,9 @@ jobs:
       - name: Set up npm
         run: npm install npm@7 -g
 
-      - name: Install ts-web/core
+      - name: Install dependencies and build
         working-directory: client-sdk/ts-web
-        run: npm ci --workspace core
-
-      - name: Install other packages
-        working-directory: client-sdk/ts-web
-        run: npm ci
+        run: npm ci --foreground-scripts
 
       - name: 'dev-server: Start'
         working-directory: client-sdk/ts-web/core
@@ -215,13 +207,9 @@ jobs:
       - name: Set up npm
         run: npm install npm@7 -g
 
-      - name: Install ts-web/core
+      - name: Install dependencies and build
         working-directory: client-sdk/ts-web
-        run: npm ci --workspace core
-
-      - name: Install other packages
-        working-directory: client-sdk/ts-web
-        run: npm ci
+        run: npm ci --foreground-scripts
 
       - name: 'dev-server sample-page: Start'
         working-directory: client-sdk/ts-web/ext-utils
@@ -258,13 +246,9 @@ jobs:
       - name: Set up npm
         run: npm install npm@7 -g
 
-      - name: Install ts-web/core
+      - name: Install dependencies and build
         working-directory: client-sdk/ts-web
-        run: npm ci --workspace core
-
-      - name: Install other packages
-        working-directory: client-sdk/ts-web
-        run: npm ci
+        run: npm ci --foreground-scripts
 
       - name: 'dev-server: Start'
         working-directory: client-sdk/ts-web/rt
@@ -367,13 +351,9 @@ jobs:
       - name: Set up npm
         run: npm install npm@7 -g
 
-      - name: Install ts-web/core
+      - name: Install dependencies and build
         working-directory: client-sdk/ts-web
-        run: npm ci --workspace core
-
-      - name: Install other packages
-        working-directory: client-sdk/ts-web
-        run: npm ci
+        run: npm ci --foreground-scripts
 
       - name: Run tests
         working-directory: client-sdk/ts-web/core
