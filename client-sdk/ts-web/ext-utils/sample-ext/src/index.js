@@ -14,6 +14,80 @@ let authorizedOrigin = null;
 const never = new Promise((resolve, reject) => {});
 
 /**
+ * @param {string} message
+ */
+function fakeAlert(message) {
+    return new Promise((resolve, reject) => {
+        const w = window.open('about:blank', '_blank', 'width=500,height=300');
+        if (!w) {
+            console.log('fakeAlert: popup blocked');
+            resolve();
+            return;
+        }
+        const p1 = w.document.createElement('p');
+        p1.style.whiteSpace = 'pre-wrap';
+        p1.textContent = message;
+        w.document.body.appendChild(p1);
+        const p2 = w.document.createElement('p');
+        p2.style.textAlign = 'end';
+        const ok = w.document.createElement('input');
+        ok.type = 'button';
+        ok.value = 'OK';
+        ok.autofocus = true;
+        ok.onclick = () => {
+            w.close();
+        };
+        p2.appendChild(ok);
+        w.document.body.appendChild(p2);
+        w.onunload = () => {
+            resolve();
+        };
+    });
+}
+
+/**
+ * @param {string} message
+ */
+function fakeConfirm(message) {
+    return new Promise((resolve, reject) => {
+        let result = false;
+        const w = window.open('about:blank', '_blank', 'width=500,height=300');
+        if (!w) {
+            console.log('fakeConfirm: popup blocked');
+            resolve(result);
+            return;
+        }
+        const p1 = w.document.createElement('p');
+        p1.style.whiteSpace = 'pre-wrap';
+        p1.textContent = message;
+        w.document.body.appendChild(p1);
+        const p2 = w.document.createElement('p');
+        p2.style.textAlign = 'end';
+        const cancel = w.document.createElement('input');
+        cancel.type = 'button';
+        cancel.value = 'Cancel';
+        cancel.onclick = () => {
+            result = false;
+            w.close();
+        };
+        p2.appendChild(cancel);
+        const ok = w.document.createElement('input');
+        ok.type = 'button';
+        ok.value = 'OK';
+        ok.autofocus = true;
+        ok.onclick = () => {
+            result = true;
+            w.close();
+        };
+        p2.appendChild(ok);
+        w.document.body.appendChild(p2);
+        w.onunload = () => {
+            resolve(result);
+        };
+    });
+}
+
+/**
  * Decide if we allow an origin to access the wallets in our extension. We
  * await this in request handlers, just return if it's authorized. If not,
  * either throw or block forever.
@@ -32,7 +106,7 @@ async function authorize(origin) {
     }
 
     if (authorization === 'ask') {
-        const conf = window.confirm(`Allow ${origin} to see public key and request signatures?`);
+        const conf = await fakeConfirm(`Allow ${origin} to see public key and request signatures?`);
         if (conf) {
             authorization = 'allow';
             authorizedOrigin = origin;
@@ -74,7 +148,9 @@ function getSigner() {
                 if (!mnemonic) {
                     mnemonic = oasis.hdkey.HDKey.generateMnemonic();
                     window.localStorage.setItem('mnemonic', mnemonic);
-                    alert(`First run, new mnemonic. Back this up if you want:\n${mnemonic}`);
+                    await fakeAlert(
+                        `First run, new mnemonic. Back this up if you want:\n${mnemonic}`,
+                    );
                 }
             }
             const pair = await oasis.hdkey.HDKey.getAccountSigner(mnemonic);
@@ -306,7 +382,7 @@ Sign this message?`;
         // extension.
         console.warn('test_noninteractive: skipping approval', 'confirmation message', confMessage);
     } else {
-        const conf = window.confirm(confMessage);
+        const conf = await fakeConfirm(confMessage);
         if (!conf) return {approved: false};
     }
     const signer = await getSigner();
