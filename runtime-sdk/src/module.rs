@@ -1,15 +1,20 @@
 //! Runtime modules.
-use std::{collections::BTreeMap, fmt::Debug};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Debug,
+};
 
 use impl_trait_for_tuples::impl_for_tuples;
 
 use crate::{
     context::{Context, TxContext},
     error, event, modules, storage,
-    storage::Store,
+    storage::{Prefix, Store},
     types::{
         message::MessageResult,
-        transaction::{Call, CallResult, Transaction, TransactionWeight, UnverifiedTransaction},
+        transaction::{
+            AuthInfo, Call, CallResult, Transaction, TransactionWeight, UnverifiedTransaction,
+        },
     },
 };
 
@@ -41,6 +46,17 @@ impl<B, R> DispatchResult<B, R> {
 
 /// Method handler.
 pub trait MethodHandler {
+    /// Add storage prefixes to prefetch.
+    fn prefetch(
+        _prefixes: &mut BTreeSet<Prefix>,
+        _method: &str,
+        body: cbor::Value,
+        _auth_info: &AuthInfo,
+    ) -> DispatchResult<cbor::Value, Result<(), error::RuntimeError>> {
+        // Default implementation indicates that the call was not handled.
+        DispatchResult::Unhandled(body)
+    }
+
     /// Dispatch a call.
     fn dispatch_call<C: TxContext>(
         _ctx: &mut C,
@@ -74,6 +90,23 @@ pub trait MethodHandler {
 
 #[impl_for_tuples(30)]
 impl MethodHandler for Tuple {
+    fn prefetch(
+        prefixes: &mut BTreeSet<Prefix>,
+        method: &str,
+        body: cbor::Value,
+        auth_info: &AuthInfo,
+    ) -> DispatchResult<cbor::Value, Result<(), error::RuntimeError>> {
+        // Return on first handler that can handle the method.
+        for_tuples!( #(
+            let body = match Tuple::prefetch(prefixes, method, body, auth_info) {
+                DispatchResult::Handled(result) => return DispatchResult::Handled(result),
+                DispatchResult::Unhandled(body) => body,
+            };
+        )* );
+
+        DispatchResult::Unhandled(body)
+    }
+
     fn dispatch_call<C: TxContext>(
         ctx: &mut C,
         method: &str,

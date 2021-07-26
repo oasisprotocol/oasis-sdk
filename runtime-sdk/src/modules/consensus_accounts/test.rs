@@ -1,5 +1,7 @@
 use std::{collections::BTreeMap, str::FromStr};
 
+use anyhow::anyhow;
+
 use oasis_core_runtime::{
     common::versioned::Versioned,
     consensus::{
@@ -10,7 +12,7 @@ use oasis_core_runtime::{
 
 use crate::{
     context::BatchContext,
-    module::MigrationHandler,
+    module::{MethodHandler, MigrationHandler},
     modules::{
         accounts::{Genesis as AccountsGenesis, Module as Accounts, API},
         consensus::Module as Consensus,
@@ -388,4 +390,76 @@ fn test_consensus_withdraw_handler() {
         bals.balances[&denom], 1_000_001,
         "alice balance deposited in"
     )
+}
+
+#[test]
+fn test_prefetch() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    let auth_info = transaction::AuthInfo {
+        signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+        fee: transaction::Fee {
+            amount: Default::default(),
+            gas: 1000,
+        },
+    };
+
+    // Test withdraw.
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            method: "consensus.Withdraw".to_owned(),
+            body: cbor::to_value(Withdraw {
+                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+            }),
+        },
+        auth_info: auth_info.clone(),
+    };
+    // Withdraw should result in one prefix getting prefetched.
+    ctx.with_tx(tx, |mut _tx_ctx, call| {
+        let mut prefixes = BTreeSet::new();
+        let result = Module::<Accounts, Consensus>::prefetch(
+            &mut prefixes,
+            &call.method,
+            call.body,
+            &auth_info,
+        )
+        .ok_or(anyhow!("dispatch failure"))
+        .expect("prefetch should succeed");
+
+        assert!(matches!(result, Ok(())));
+        assert_eq!(prefixes.len(), 1, "there should be 1 prefix to be fetched");
+    });
+
+    // Test deposit.
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            method: "consensus.Deposit".to_owned(),
+            body: cbor::to_value(Deposit {
+                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+            }),
+        },
+        auth_info: auth_info.clone(),
+    };
+    // Deposit should result in zero prefixes.
+    ctx.with_tx(tx, |mut _tx_ctx, call| {
+        let mut prefixes = BTreeSet::new();
+        let result = Module::<Accounts, Consensus>::prefetch(
+            &mut prefixes,
+            &call.method,
+            call.body,
+            &auth_info,
+        )
+        .ok_or(anyhow!("dispatch failure"))
+        .expect("prefetch should succeed");
+
+        assert!(matches!(result, Ok(())));
+        assert_eq!(
+            prefixes.len(),
+            0,
+            "there should be 0 prefixes to be fetched"
+        );
+    });
 }

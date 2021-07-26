@@ -1,14 +1,17 @@
+use std::collections::BTreeSet;
+
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
-    error::Error as _,
+    error::{self, Error as _},
     module,
     module::Module as _,
     modules,
     modules::{accounts, core},
-    types::transaction::CallResult,
+    storage::Prefix,
+    types::transaction::{AuthInfo, CallResult},
 };
 
 pub mod types;
@@ -88,6 +91,82 @@ impl<Accounts: modules::accounts::API> module::Module for Module<Accounts> {
 
 /// Module methods.
 impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts> {
+    fn prefetch(
+        prefixes: &mut BTreeSet<Prefix>,
+        method: &str,
+        body: cbor::Value,
+        auth_info: &AuthInfo,
+    ) -> module::DispatchResult<cbor::Value, Result<(), error::RuntimeError>> {
+        match method {
+            "benchmarks.accounts.Transfer" => {
+                module::DispatchResult::Handled(|| -> Result<(), error::RuntimeError> {
+                    let args: types::AccountsTransfer =
+                        cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
+                    let from = auth_info.signer_info[0].address_spec.address();
+
+                    // Prefetch accounts 'to'.
+                    prefixes.insert(Prefix::from(
+                        [
+                            modules::accounts::Module::NAME.as_bytes(),
+                            &accounts::state::ACCOUNTS,
+                            args.to.as_ref(),
+                        ]
+                        .concat(),
+                    ));
+                    prefixes.insert(Prefix::from(
+                        [
+                            modules::accounts::Module::NAME.as_bytes(),
+                            &accounts::state::BALANCES,
+                            args.to.as_ref(),
+                        ]
+                        .concat(),
+                    ));
+                    // Prefetch accounts 'from'.
+                    prefixes.insert(Prefix::from(
+                        [
+                            modules::accounts::Module::NAME.as_bytes(),
+                            &accounts::state::ACCOUNTS,
+                            from.as_ref(),
+                        ]
+                        .concat(),
+                    ));
+                    prefixes.insert(Prefix::from(
+                        [
+                            modules::accounts::Module::NAME.as_bytes(),
+                            &accounts::state::BALANCES,
+                            from.as_ref(),
+                        ]
+                        .concat(),
+                    ));
+
+                    Ok(())
+                }())
+            }
+            "benchmarks.accounts.Mint" => {
+                // Prefetch minting account and balance.
+                let from = auth_info.signer_info[0].address_spec.address();
+                prefixes.insert(Prefix::from(
+                    [
+                        modules::accounts::Module::NAME.as_bytes(),
+                        &accounts::state::ACCOUNTS,
+                        from.as_ref(),
+                    ]
+                    .concat(),
+                ));
+                prefixes.insert(Prefix::from(
+                    [
+                        modules::accounts::Module::NAME.as_bytes(),
+                        &accounts::state::BALANCES,
+                        from.as_ref(),
+                    ]
+                    .concat(),
+                ));
+                module::DispatchResult::Handled(Ok(()))
+            }
+            _ => module::DispatchResult::Unhandled(body),
+        }
+    }
+
     fn dispatch_call<C: TxContext>(
         ctx: &mut C,
         method: &str,

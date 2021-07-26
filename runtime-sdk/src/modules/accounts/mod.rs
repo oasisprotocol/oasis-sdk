@@ -1,5 +1,8 @@
 //! Accounts module.
-use std::{collections::BTreeMap, convert::TryInto};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    convert::TryInto,
+};
 
 use num_traits::Zero;
 use once_cell::sync::Lazy;
@@ -15,10 +18,11 @@ use crate::{
     modules,
     modules::core::{Error as CoreError, Module as Core, API as _},
     storage,
+    storage::Prefix,
     types::{
         address::Address,
         token,
-        transaction::{CallResult, Transaction},
+        transaction::{AuthInfo, CallResult, Transaction},
     },
 };
 
@@ -453,6 +457,41 @@ impl module::Module for Module {
 }
 
 impl module::MethodHandler for Module {
+    fn prefetch(
+        prefixes: &mut BTreeSet<Prefix>,
+        method: &str,
+        body: cbor::Value,
+        auth_info: &AuthInfo,
+    ) -> module::DispatchResult<cbor::Value, Result<(), error::RuntimeError>> {
+        match method {
+            "accounts.Transfer" => {
+                module::DispatchResult::Handled(|| -> Result<(), error::RuntimeError> {
+                    let args: types::Transfer =
+                        cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
+                    let from = auth_info.signer_info[0].address_spec.address();
+
+                    // Prefetch accounts 'to'.
+                    prefixes.insert(Prefix::from(
+                        [MODULE_NAME.as_bytes(), &state::ACCOUNTS, args.to.as_ref()].concat(),
+                    ));
+                    prefixes.insert(Prefix::from(
+                        [MODULE_NAME.as_bytes(), &state::BALANCES, args.to.as_ref()].concat(),
+                    ));
+                    // Prefetch accounts 'from'.
+                    prefixes.insert(Prefix::from(
+                        [MODULE_NAME.as_bytes(), &state::ACCOUNTS, from.as_ref()].concat(),
+                    ));
+                    prefixes.insert(Prefix::from(
+                        [MODULE_NAME.as_bytes(), &state::BALANCES, from.as_ref()].concat(),
+                    ));
+
+                    Ok(())
+                }())
+            }
+            _ => module::DispatchResult::Unhandled(body),
+        }
+    }
+
     fn dispatch_call<C: TxContext>(
         ctx: &mut C,
         method: &str,

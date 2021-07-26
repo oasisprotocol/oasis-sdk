@@ -21,9 +21,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/worker/common/p2p"
 )
 
-var (
-	fixtureFlags = flag.NewFlagSet("", flag.ContinueOnError)
-)
+var fixtureFlags = flag.NewFlagSet("", flag.ContinueOnError)
 
 const (
 	cfgNodeBinary    = "node.binary"
@@ -37,7 +35,6 @@ func fixture() *oasis.NetworkFixture {
 	rtID := viper.GetString(cfgRuntimeID)
 	if err := runtimeID.UnmarshalHex(rtID); err != nil {
 		cmdCommon.EarlyLogAndExit(fmt.Errorf("invalid runtime ID: %s: %w", rtID, err))
-
 	}
 	computeExtraArgs := []oasis.Argument{
 		{

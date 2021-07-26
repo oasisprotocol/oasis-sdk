@@ -21,6 +21,12 @@ impl<M: mkvs::MKVS> MKVSStore<M> {
     fn create_ctx(&self) -> Context {
         Context::create_child(&self.ctx)
     }
+
+    /// Populate the in-memory tree with nodes for keys starting with given prefixes.
+    pub fn prefetch_prefixes(&mut self, prefixes: Vec<mkvs::Prefix>, limit: u16) {
+        self.parent
+            .prefetch_prefixes(self.create_ctx(), &prefixes, limit)
+    }
 }
 
 impl<M: mkvs::MKVS> Store for MKVSStore<M> {
