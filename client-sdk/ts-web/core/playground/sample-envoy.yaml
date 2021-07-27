@@ -21,7 +21,7 @@ static_resources:
                   safe_regex:
                     google_re2:
                       max_program_size: 1000000
-                    regex: '/oasis-core\.(Registry/(GetNodes)|Staking/(Account|DelegationsTo|GetEvents)|Consensus/(SubmitTx|EstimateGas|GetSignerNonce|GetBlock|GetTransactionsWithResults|GetGenesisDocument|GetChainContext|WatchBlocks)|NodeController/(WaitReady))'
+                    regex: '/oasis-core\.(Registry/(GetNodes)|Staking/(Account|DebondingDelegationInfosFor|DelegationInfosFor|DelegationsTo||GetEvents)|Consensus/(SubmitTx|EstimateGas|GetSignerNonce|GetBlock|GetTransactionsWithResults|GetGenesisDocument|GetChainContext|WatchBlocks)|NodeController/(WaitReady))'
                 route:
                   cluster: oasis_node_grpc
                   timeout: 0s
@@ -41,6 +41,7 @@ static_resources:
               #   allow_origin_string_match:
               #   - exact: '*'
               #   allow_headers: content-type,x-grpc-web,x-user-agent
+              #   expose_headers: grpc-status,grpc-message
               #   max_age: '1728000'
           http_filters:
           - name: envoy.filters.http.grpc_web
