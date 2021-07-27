@@ -36,12 +36,16 @@ jobs:
           echo "::set-output name=tag::$(echo ${branch})"
           echo "::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
 
-      - name: Determine oasis-core version
-        id: determine_oasis_core_version
+      - name: Determine oasis-core artifacts paths
+        id: determine-artifacts-paths
         shell: bash
         run: |
           . tests/consts.sh
-          echo "::set-output name=version::$(echo ${OASIS_CORE_VERSION})"
+          . tests/paths.sh
+          echo "::set-output name=oasis_core_node_binary_path::$(echo ${TEST_NODE_BINARY})"
+          echo "::set-output name=oasis_core_runtime_loader_path::$(echo ${TEST_RUNTIME_LOADER})"
+        env:
+          TESTS_DIR: tests
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
@@ -74,7 +78,8 @@ jobs:
           pull: true
           push: true
           build-args: |
-            OASIS_CORE_VERSION=${{ steps.determine_oasis_core_version.outputs.version }}
+            OASIS_CORE_NODE_BINARY=${{ steps.determine-artifacts-paths.outputs.oasis_core_node_binary_path }}
+            OASIS_CORE_RUNTIME_LOADER=${{ steps.determine-artifacts-paths.outputs.oasis_core_runtime_loader_path }}
           labels: |
             org.opencontainers.image.source=${{ github.event.repository.html_url }}
             org.opencontainers.image.created=${{ steps.determine_tag.outputs.created }}
