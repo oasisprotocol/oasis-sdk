@@ -4,6 +4,24 @@
  *
  * There's logic here to accept connections from web content and pass requests
  * to your code and pass responses back to the web content.
+ *
+ * Run this code in a `web_accessible_resources` page named
+ * `oasis-xu-frame.html`. Each web page creates its own instance of this page,
+ * and this code communicates specifically with its parent web page.
+ *
+ * ```
+ *                web app A
+ *                    |
+ *          +--------------------+
+ *          |                    |
+ *    page-a1.html         page-a2.html      } `oasisExt.connection` et al.
+ *          |                    |
+ * oasis-xu-frame.html  oasis-xu-frame.html  } `oasisExt.ext`
+ *          |                    |
+ *          +--------------------+
+ *                    |
+ *          extension shared state
+ * ```
  */
 
 import * as protocol from './protocol';
