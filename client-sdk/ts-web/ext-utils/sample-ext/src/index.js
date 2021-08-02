@@ -396,8 +396,14 @@ oasisExt.ext.ready({
     contextSignerSign,
 });
 
-// We only ever have on key that doesn't change, but call this so that we
+// We only ever have one key that doesn't change, but call this so that we
 // exercise the library code for it. Extension implementors should design
 // their own logic if they wish to notify the web content of changes to the
 // keys list.
-oasisExt.ext.keysChanged();
+getKeysWithPublic()
+    .then((keys) => {
+        oasisExt.ext.keysChanged(keys);
+    })
+    .catch((e) => {
+        console.error(e);
+    });
