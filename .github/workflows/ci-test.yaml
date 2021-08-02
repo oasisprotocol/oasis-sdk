@@ -33,7 +33,7 @@ jobs:
       - name: Unit tests with coverage
         uses: actions-rs/tarpaulin@v0.1
         with:
-          version: '0.18.0-alpha3'
+          version: '0.18.0'
           args: '--avoid-cfg-tarpaulin -- --test-threads 1'
         env:
           # Required as tarpaulin doesn't honor .cargo/config.
