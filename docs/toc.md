@@ -9,6 +9,7 @@
 * [Getting Started](guide/getting-started.md)
 * [Minimal Runtime](guide/minimal-runtime.md)
 * [Modules](guide/modules.md)
+* [Reproducing Paratimes](guide/reproducing.md)
 
 ## Reference
 

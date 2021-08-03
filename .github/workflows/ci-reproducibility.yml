@@ -1,0 +1,44 @@
+# NOTE: This name appears in GitHub's Checks API and in workflow's status badge.
+name: ci-reproducibility
+
+# Trigger the workflow when:
+on:
+  push:
+    branches:
+      - main
+      - stable/*
+  # Besides pushes on the branches above, also check every day at 00:00 UTC.
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+
+  check-reproducible-build:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: check-reproducibility
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Determine tag name
+        id: determine-tag
+        uses: ./.github/actions/determine-tag
+
+      - name: Build test binaries, 1.
+        id: build-1
+        uses: ./.github/actions/hash-rust
+        with:
+          binaries: test-runtime-simple-consensus,test-runtime-simple-keyvalue
+          image: oasisprotocol/runtime-builder:${{ steps.determine-tag.outputs.tag }}
+
+      - name: Build test binaries, 2.
+        id: build-2
+        uses: ./.github/actions/hash-rust
+        with:
+          binaries: test-runtime-simple-consensus,test-runtime-simple-keyvalue
+          image: oasisprotocol/runtime-builder:${{ steps.determine-tag.outputs.tag }}
+
+      - name: Check binary equality
+        run: |
+          [ "${{ steps.build-1.outputs.hashes }}" == "${{ steps.build-2.outputs.hashes }}" ]
