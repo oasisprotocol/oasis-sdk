@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased changes
+## v0.1.0-alpha3
 
-New features:
+Spotlight change:
 
 - The keys change event now delivers the new keys list as part of the event.
 
