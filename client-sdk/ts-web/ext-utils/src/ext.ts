@@ -124,9 +124,11 @@ function postEvent(event: unknown) {
 
 /**
  * Call this to tell the web content that the list of available keys has changed.
+ * @param keys The new list of available keys, as would be returned from `keysList`
  */
-export function keysChanged() {
+export function keysChanged(keys: protocol.KeyInfo[]) {
     postEvent({
         type: protocol.EVENT_KEYS_CHANGE,
+        keys,
     } as protocol.KeysChangeEvent);
 }

@@ -15,33 +15,6 @@ function toBase64(/** @type {Uint8Array} */ u8) {
     return btoa(String.fromCharCode.apply(null, u8));
 }
 
-/**
- * If you desire to be notified of a change to the keys list _with a copy of
- * the new list of keys_, use this snippet or similar to request the list
- * when the keys changed handler gets called.
- * @param {oasisExt.connection.ExtConnection} conn
- * @param {(keys: oasisExt.protocol.KeyInfo[]) => void} handleNewKeys
- */
-function watchKeys(conn, handleNewKeys) {
-    let lastRequested = 0;
-    oasisExt.keys.setKeysChangeHandler(conn, (_) => {
-        // Save a copy of the counter so we can compare whether another change
-        // came in while we request the new keys list.
-        const requestSeq = ++lastRequested;
-        oasisExt.keys
-            .list(conn)
-            .then((keys) => {
-                // To avoid extraneous handler calls with outdated lists, skip any
-                // key lists that were requested before the latest keys change.
-                if (requestSeq !== lastRequested) return;
-                handleNewKeys(keys);
-            })
-            .catch((e) => {
-                console.error(e);
-            });
-    });
-}
-
 export const playground = (async function () {
     console.log('connecting');
     const conn = await oasisExt.connection.connect(extOrigin, extPath);
@@ -56,13 +29,17 @@ export const playground = (async function () {
         // `keysChanged` in quick succession, keep this in the same task as
         // when the ready message is received (above in
         // `await ...connect(...)`). Intervening microtasks are fine.
-        watchKeys(conn, (newKeys) => {
-            console.log('keys change');
-            resolve(newKeys);
+        oasisExt.keys.setKeysChangeHandler(conn, (event) => {
+            console.log('keys change', event);
+            resolve(event.keys);
         });
     });
     console.log('received');
     console.log('keys', keys);
+
+    console.log('requesting keys again');
+    const keys2 = await oasisExt.keys.list(conn);
+    console.log('keys', keys2);
 
     console.log('requesting signer');
     const signer = await oasisExt.signature.ExtContextSigner.request(conn, keys[0].which);

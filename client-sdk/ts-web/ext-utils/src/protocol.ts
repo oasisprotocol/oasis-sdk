@@ -103,4 +103,8 @@ export const EVENT_KEYS_CHANGE = 'keys-change-v1';
 
 export interface KeysChangeEvent {
     type: typeof EVENT_KEYS_CHANGE;
+    /**
+     * The new list of available keys, as would be returned from `keys.list`.
+     */
+    keys: KeyInfo[];
 }
