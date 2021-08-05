@@ -102,6 +102,8 @@ jobs:
         uses: actions/setup-node@v2.4.0
         with:
           node-version: "14.x"
+          cache: npm
+          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
 
       - name: Set up npm
         run: npm install npm@7 -g
@@ -142,6 +144,8 @@ jobs:
         uses: actions/setup-node@v2.4.0
         with:
           node-version: "14.x"
+          cache: npm
+          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
 
       - name: Set up npm
         run: npm install npm@7 -g
@@ -203,6 +207,8 @@ jobs:
         uses: actions/setup-node@v2.4.0
         with:
           node-version: "14.x"
+          cache: npm
+          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
 
       - name: Set up npm
         run: npm install npm@7 -g
@@ -242,6 +248,8 @@ jobs:
         uses: actions/setup-node@v2.4.0
         with:
           node-version: "14.x"
+          cache: npm
+          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
 
       - name: Set up npm
         run: npm install npm@7 -g
@@ -347,6 +355,8 @@ jobs:
         uses: actions/setup-node@v2.4.0
         with:
           node-version: "14.x"
+          cache: npm
+          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
 
       - name: Set up npm
         run: npm install npm@7 -g
