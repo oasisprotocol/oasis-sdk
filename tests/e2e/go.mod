@@ -4,7 +4,6 @@ go 1.16
 
 // Should be synced with Oasis Core as replace directives are not propagated.
 replace (
-
 	github.com/coreos/etcd => github.com/coreos/etcd v3.3.25+incompatible
 	// Updates the version used by badgerdb, because some of the Go
 	// module caches apparently have a messed up copy that causes
@@ -23,8 +22,8 @@ replace (
 
 require (
 	github.com/btcsuite/btcd v0.22.0-beta
-	github.com/oasisprotocol/curve25519-voi v0.0.0-20210716083614-f38f8e8b0b84 // indirect
+	github.com/oasisprotocol/curve25519-voi v0.0.0-20210716083614-f38f8e8b0b84
 	github.com/oasisprotocol/oasis-core/go v0.2102.5
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-20210328195842-4de788c1c6f7
-	google.golang.org/grpc v1.38.0
+	google.golang.org/grpc v1.39.1
 )
