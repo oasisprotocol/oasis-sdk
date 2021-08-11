@@ -23,7 +23,7 @@
         "tweetnacl": "^1.0.3"
     },
     "devDependencies": {
-        "@types/jest": "^26.0.24",
+        "@types/jest": "^27.0.0",
         "buffer": "^6.0.3",
         "cypress": "^8.2.0",
         "jest": "^27.0.6",
