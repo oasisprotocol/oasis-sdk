@@ -383,6 +383,20 @@ fn gen_client_struct_and_ctor() -> Vec<TokenStream> {
                 })
             }
 
+            /// Like `connect` but connects to the oasis-node through a gRPC channel of your choice.
+            pub async fn connect_through_channel(
+                channel: oasis_client_sdk::tonic::transport::Channel,
+                runtime_id: Namespace,
+                wallets: impl IntoIterator<Item = Box<dyn oasis_client_sdk::wallet::Wallet>>,
+            ) -> Result<Self, oasis_client_sdk::Error> {
+                Ok(Self {
+                    inner: oasis_client_sdk::Client::connect_through_channel(
+                        channel, runtime_id, wallets,
+                    )
+                    .await?,
+                })
+            }
+
             /// Sets the new fee provided with each transaction.
             pub fn set_fee(&mut self, fee: #sdk_crate::types::transaction::Fee) {
                 self.inner.set_fee(fee);
