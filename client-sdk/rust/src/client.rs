@@ -52,6 +52,14 @@ impl Client {
             tokio::net::UnixStream::connect(sock_path.clone())
         }))
         .await?;
+        Self::connect_through_channel(channel, runtime_id, wallets).await
+    }
+
+    pub async fn connect_through_channel(
+        channel: tonic::transport::Channel,
+        runtime_id: Namespace,
+        wallets: impl IntoIterator<Item = Box<dyn Wallet>>,
+    ) -> Result<Self, Error> {
         let mut grpc = Grpc::new(channel);
 
         let consensus_chain_context =
