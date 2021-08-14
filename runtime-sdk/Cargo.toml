@@ -12,7 +12,7 @@ oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", rev 
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
-curve25519-dalek = "3.0.0"
+curve25519-dalek = "3.2.0"
 sha2 = "0.9.3"
 k256 = { version = "0.9.6" }
 schnorrkel = "0.10.1"
