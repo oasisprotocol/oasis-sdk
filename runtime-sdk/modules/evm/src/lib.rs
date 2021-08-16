@@ -32,6 +32,11 @@ pub mod state {
     pub const CODES: &[u8] = &[0x02];
     /// Prefix for Ethereum account storage in our storage (maps H160||H256 -> H256).
     pub const STORAGES: &[u8] = &[0x03];
+    /// Prefix for Ethereum block hashes (only for last BLOCK_HASH_WINDOW_SIZE blocks
+    /// excluding current) storage in our storage (maps Round -> H256).
+    pub const BLOCK_HASHES: &[u8] = &[0x04];
+    /// The number of hash blocks that can be obtained from the current blockchain.
+    pub const BLOCK_HASH_WINDOW_SIZE: u64 = 256;
 }
 
 pub struct Module;
@@ -353,6 +358,24 @@ impl module::MigrationHandler for Module {
 
 impl module::AuthHandler for Module {}
 
-impl module::BlockHandler for Module {}
+impl module::BlockHandler for Module {
+    fn end_block<C: Context>(ctx: &mut C) {
+        let block_number = ctx.runtime_header().round;
+        let block_hash = ctx.runtime_header().encoded_hash();
+        let state = ctx.runtime_state();
+
+        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
+        let hashes = storage::PrefixStore::new(store, &state::BLOCK_HASHES);
+        let mut block_hashes = storage::TypedStore::new(hashes);
+
+        let current_number = block_number;
+        block_hashes.insert(&block_number.to_be_bytes(), block_hash);
+
+        if current_number > state::BLOCK_HASH_WINDOW_SIZE {
+            let start_number = current_number - state::BLOCK_HASH_WINDOW_SIZE;
+            block_hashes.remove(&start_number.to_be_bytes());
+        }
+    }
+}
 
 impl module::InvariantHandler for Module {}
