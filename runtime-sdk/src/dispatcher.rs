@@ -52,6 +52,10 @@ pub enum Error {
     #[error("prefetch failed: {0}")]
     #[sdk_error(code = 3)]
     PrefetchFailed(#[source] RuntimeError),
+
+    #[error("query aborted: {0}")]
+    #[sdk_error(code = 4)]
+    QueryAborted(String),
 }
 
 /// Result of dispatching a transaction.
@@ -284,17 +288,21 @@ impl<R: Runtime> Dispatcher<R> {
         method: &str,
         args: cbor::Value,
     ) -> Result<cbor::Value, RuntimeError> {
-        // Execute the query.
-        match method {
-            // Internal methods.
-            BATCH_WEIGHT_LIMIT_QUERY_METHOD => {
-                let block_weight_limits = R::Modules::get_block_weight_limits(ctx);
-                Ok(cbor::to_value(block_weight_limits))
+        // Catch any panics that occur during query dispatch.
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            // Execute the query.
+            match method {
+                // Internal methods.
+                BATCH_WEIGHT_LIMIT_QUERY_METHOD => {
+                    let block_weight_limits = R::Modules::get_block_weight_limits(ctx);
+                    Ok(cbor::to_value(block_weight_limits))
+                }
+                // Runtime methods.
+                _ => R::Modules::dispatch_query(ctx, method, args)
+                    .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?,
             }
-            // Runtime methods.
-            _ => R::Modules::dispatch_query(ctx, method, args)
-                .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?,
-        }
+        }))
+        .map_err(|err| -> RuntimeError { Error::QueryAborted(format!("{:?}", err)).into() })?
     }
 }
 
