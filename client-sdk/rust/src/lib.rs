@@ -3,6 +3,7 @@
 
 mod client;
 mod requests;
+pub mod types;
 pub mod wallet;
 
 pub use tonic;

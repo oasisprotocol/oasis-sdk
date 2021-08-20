@@ -1,7 +1,15 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::{
+    collections::BTreeMap,
+    marker::PhantomData,
+    ops::{Bound, RangeBounds},
+    sync::Arc,
+};
 
 use bytes::{Buf as _, BufMut as _};
-use futures_util::future::try_join_all;
+use futures_util::{
+    future::try_join_all,
+    stream::{Stream, TryStreamExt},
+};
 use prost::Message as _;
 use serde::{de::DeserializeOwned, ser::Serialize};
 use serde_bytes::ByteBuf;
@@ -9,16 +17,17 @@ use tonic::{self, client::Grpc, transport::Channel};
 
 use oasis_runtime_sdk::{
     self as sdk,
-    core::common::{cbor, crypto::hash::Hash, namespace::Namespace},
+    core::{
+        common::{cbor, crypto::hash::Hash, namespace::Namespace},
+        consensus::roothash::AnnotatedBlock,
+        transaction::tags::Tag,
+    },
     types::transaction::{
         AuthInfoRef, CallRef, Fee, SignerInfoRef, TransactionRef, LATEST_TRANSACTION_VERSION,
     },
 };
 
-use crate::{
-    requests::{GetChainContextRequest, QueryRequest, Request, SubmitTxRequest},
-    wallet::Wallet,
-};
+use crate::{requests::*, wallet::Wallet};
 
 /// A sentinel value for the latest round.
 const ROUND_LATEST: u64 = u64::max_value();
@@ -134,6 +143,68 @@ impl Client {
         Ok(self.unary(req).await?.data)
     }
 
+    /// Sends a request for an event subscription to the connected node.
+    pub async fn watch_blocks(
+        &mut self,
+    ) -> Result<impl Stream<Item = Result<AnnotatedBlock, Error>>, Error> {
+        let block_stream = self
+            .server_streaming(WatchBlocksRequest {
+                runtime_id: self.runtime_id,
+            })
+            .await?;
+        Ok(block_stream.map_err(Into::into))
+    }
+
+    /// Queries at most `limit` transactions matching the provided `conditions`
+    ///
+    /// If a condition with key `key` is provided, only transactions with tags matching any
+    /// of the provided `values` will be returned.
+    pub async fn query_txs(
+        &mut self,
+        round_range: impl RangeBounds<u64>,
+        conditions: &BTreeMap<Vec<u8>, Vec<Vec<u8>>>,
+        limit: Option<u64>,
+    ) -> Result<Vec<crate::types::TxResult>, Error> {
+        use Bound::*;
+        let round_min = match round_range.start_bound() {
+            Included(r) => *r,
+            Excluded(r) => *r + 1,
+            Unbounded => 0,
+        };
+        let round_max = match round_range.end_bound() {
+            Included(r) => *r,
+            Excluded(r) => *r - 1,
+            Unbounded => 0,
+        };
+        let req = QueryTxsRequest {
+            runtime_id: self.runtime_id,
+            query: QueryTxsQuery {
+                round_min,
+                round_max,
+                conditions: conditions
+                    .iter()
+                    .map(|(k, vs)| QueryTxsQueryCondition {
+                        key: ByteBuf::from(k.clone()),
+                        values: vs.iter().map(|v| ByteBuf::from(v.clone())).collect(),
+                    })
+                    .collect(),
+                limit: limit.unwrap_or(0),
+            },
+        };
+        let tx_results = self.unary(req).await?;
+        Ok(tx_results.into_iter().map(Into::into).collect())
+    }
+
+    /// Returns the events emitted by the runtime during the provided `round`.
+    pub async fn get_events(&mut self, round: u64) -> Result<Vec<Tag>, Error> {
+        let req = GetEventsRequest {
+            runtime_id: self.runtime_id,
+            round,
+        };
+        let events = self.unary(req).await?;
+        Ok(events.into_iter().map(Into::into).collect())
+    }
+
     async fn unary<R: Request>(&mut self, req: R) -> Result<R::Response, Error> {
         Self::make_unary(&mut self.inner, req).await
     }
@@ -145,6 +216,22 @@ impl Client {
         channel.ready().await?;
         Ok(channel
             .unary(
+                tonic::Request::new(req.body()),
+                R::path().parse().unwrap(),
+                CborCodec::default(),
+            )
+            .await?
+            .into_inner())
+    }
+
+    async fn server_streaming<R: Request>(
+        &mut self,
+        req: R,
+    ) -> Result<tonic::codec::Streaming<R::Response>, Error> {
+        self.inner.ready().await?;
+        Ok(self
+            .inner
+            .server_streaming(
                 tonic::Request::new(req.body()),
                 R::path().parse().unwrap(),
                 CborCodec::default(),
