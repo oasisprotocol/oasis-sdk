@@ -3,6 +3,7 @@
 
 mod client;
 mod requests;
+pub mod types;
 pub mod wallet;
 
 pub use async_trait::async_trait;
