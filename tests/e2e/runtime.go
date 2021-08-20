@@ -34,6 +34,8 @@ const (
 	cfgRuntimeBinaryDirDefault = "runtime.binary_dir.default"
 	cfgRuntimeLoader           = "runtime.loader"
 	cfgIasMock                 = "ias.mock"
+
+	cfgKeymanagerBinary = "keymanager.binary"
 )
 
 var (
@@ -51,6 +53,9 @@ var (
 
 	runtimeID common.Namespace
 	_         = runtimeID.UnmarshalHex("8000000000000000000000000000000000000000000000000000000000000000")
+
+	keymanagerID common.Namespace
+	_            = keymanagerID.UnmarshalHex("c000000000000000ffffffffffffffffffffffffffffffffffffffffffffffff")
 )
 
 // RunTestFunction is a test function.
@@ -77,6 +82,7 @@ func NewRuntimeScenario(runtimeName string, tests []RunTestFunction) *RuntimeSce
 	}
 	sc.Flags.String(cfgRuntimeBinaryDirDefault, "../../target/debug", "path to the runtime binaries directory")
 	sc.Flags.String(cfgRuntimeLoader, "../../../oasis-core/target/default/debug/oasis-core-runtime-loader", "path to the runtime loader")
+	sc.Flags.String(cfgKeymanagerBinary, "", "path to the keymanager binary")
 	sc.Flags.Bool(cfgIasMock, true, "if mock IAS service should be used")
 
 	return sc
@@ -103,6 +109,10 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 	runtimeBinary := sc.RuntimeName
 	runtimeLoader, _ := sc.Flags.GetString(cfgRuntimeLoader)
 	iasMock, _ := sc.Flags.GetBool(cfgIasMock)
+
+	keymanagerPath, _ := sc.Flags.GetString(cfgKeymanagerBinary)
+	usingKeymanager := len(keymanagerPath) > 0
+
 	ff := &oasis.NetworkFixture{
 		TEE: oasis.TEEFixture{
 			Hardware: node.TEEHardwareInvalid,
@@ -146,6 +156,20 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			{},
 		},
 		Runtimes: []oasis.RuntimeFixture{
+			// Key manager runtime.
+			{
+				ID:         keymanagerID,
+				Kind:       registry.KindKeyManager,
+				Entity:     0,
+				Keymanager: -1,
+				Binaries: map[node.TEEHardware][]string{
+					node.TEEHardwareInvalid: {keymanagerPath},
+				},
+				AdmissionPolicy: registry.RuntimeAdmissionPolicy{
+					AnyNode: &registry.AnyNodeRuntimeAdmissionPolicy{},
+				},
+				GovernanceModel: registry.GovernanceEntity,
+			},
 			// Compute runtime.
 			{
 				ID:         runtimeID,
@@ -209,15 +233,30 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			{Backend: database.BackendNameBadgerDB, Entity: 1},
 		},
 		ComputeWorkers: []oasis.ComputeWorkerFixture{
-			{Entity: 1, Runtimes: []int{0}},
-			{Entity: 1, Runtimes: []int{0}},
-			{Entity: 1, Runtimes: []int{0}},
+			{Entity: 1, Runtimes: []int{1}},
+			{Entity: 1, Runtimes: []int{1}},
+			{Entity: 1, Runtimes: []int{1}},
 		},
 		Sentries: []oasis.SentryFixture{},
 		Seeds:    []oasis.SeedFixture{{}},
 		Clients: []oasis.ClientFixture{
-			{Runtimes: []int{0}},
+			{Runtimes: []int{1}},
 		},
+	}
+
+	if usingKeymanager {
+		for i := range ff.Runtimes {
+			if ff.Runtimes[i].Kind == registry.KindKeyManager {
+				continue
+			}
+			ff.Runtimes[i].Keymanager = 0
+		}
+		ff.KeymanagerPolicies = []oasis.KeymanagerPolicyFixture{
+			{Runtime: 0, Serial: 1},
+		}
+		ff.Keymanagers = []oasis.KeymanagerFixture{
+			{Runtime: 0, Entity: 1},
+		}
 	}
 
 	return ff, nil

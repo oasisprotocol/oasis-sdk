@@ -9,6 +9,9 @@ license = "Apache-2.0"
 cbor = { version = "0.1.7", package = "oasis-cbor" }
 # TODO: Replace with released version once it includes https://github.com/oasisprotocol/oasis-core/pull/4133.
 oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", rev = "a509afa" }
+oasis-core-client = { git = "https://github.com/oasisprotocol/oasis-core", rev = "a509afa" }
+oasis-core-keymanager-api-common = { git = "https://github.com/oasisprotocol/oasis-core", rev = "a509afa" }
+oasis-core-keymanager-client = { git = "https://github.com/oasisprotocol/oasis-core", rev = "a509afa" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
@@ -27,6 +30,7 @@ impl-trait-for-tuples = "0.2.1"
 base64 = "0.13.0"
 once_cell = "1.8.0"
 slog = "2.7.0"
+tokio = { version = "1", features = ["rt"] }
 
 [features]
 default = ["oasis-runtime-sdk-macros"]

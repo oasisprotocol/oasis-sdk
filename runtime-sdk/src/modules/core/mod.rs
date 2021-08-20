@@ -3,6 +3,8 @@ use std::collections::BTreeMap;
 
 use thiserror::Error;
 
+pub use oasis_core_keymanager_api_common::KeyManagerError;
+
 use crate::{
     context::{BatchContext, Context, TxContext},
     dispatcher, error,
@@ -86,6 +88,10 @@ pub enum Error {
     #[error("invariant violation: {0}")]
     #[sdk_error(code = 17)]
     InvariantViolation(String),
+
+    #[error("key manager error")]
+    #[sdk_error(code = 18)]
+    KeyManagerError(#[source] KeyManagerError),
 }
 
 /// Gas costs.

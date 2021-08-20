@@ -1,8 +1,10 @@
 //! Simple keyvalue runtime.
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
 use oasis_runtime_sdk::{
-    self as sdk, modules,
+    self as sdk,
+    keymanager::{PrivateKey, TrustedPolicySigners},
+    modules,
     types::token::{BaseUnits, Denomination},
     Module as _, Version,
 };
@@ -37,6 +39,27 @@ impl sdk::Runtime for Runtime {
         modules::core::Module,
         contracts::Module<ContractsConfig>,
     );
+
+    fn trusted_policy_signers() -> Option<TrustedPolicySigners> {
+        let signers = TrustedPolicySigners {
+            signers: {
+                let mut set = HashSet::new();
+                for seed in [
+                    "ekiden key manager test multisig key 0",
+                    "ekiden key manager test multisig key 1",
+                    "ekiden key manager test multisig key 2",
+                ]
+                .iter()
+                {
+                    let pk = PrivateKey::from_test_seed(seed.to_string());
+                    set.insert(pk.public_key());
+                }
+                set
+            },
+            threshold: 2,
+        };
+        Some(signers)
+    }
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {
         (
