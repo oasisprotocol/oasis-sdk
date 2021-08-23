@@ -1595,6 +1595,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "oasis-contract-sdk-storage"
+version = "0.1.0"
+dependencies = [
+ "oasis-cbor",
+ "oasis-contract-sdk",
+]
+
+[[package]]
 name = "oasis-contract-sdk-types"
 version = "0.1.0"
 dependencies = [
