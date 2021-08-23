@@ -2,7 +2,7 @@
 //!
 //! This module allows consensus transfers in and out of the runtime account,
 //! while keeping track of amount deposited per account.
-use std::convert::TryInto;
+use std::{collections::BTreeSet, convert::TryInto};
 
 use thiserror::Error;
 
@@ -15,11 +15,12 @@ use crate::{
     module::Module as _,
     modules,
     modules::core::{Error as CoreError, Module as Core, API as _},
+    storage::Prefix,
     types::{
         address::Address,
         message::{MessageEvent, MessageEventHookInvocation, MessageResult},
         token,
-        transaction::{CallResult, TransactionWeight},
+        transaction::{AuthInfo, CallResult, TransactionWeight},
     },
 };
 
@@ -280,6 +281,34 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::MethodHandler
     for Module<Accounts, Consensus>
 {
+    fn prefetch(
+        prefixes: &mut BTreeSet<Prefix>,
+        method: &str,
+        body: cbor::Value,
+        auth_info: &AuthInfo,
+    ) -> module::DispatchResult<cbor::Value, Result<(), error::RuntimeError>> {
+        match method {
+            "consensus.Deposit" => {
+                // Nothing to prefetch.
+                module::DispatchResult::Handled(Ok(()))
+            }
+            "consensus.Withdraw" => {
+                // Prefetch withdrawing account balance.
+                let addr = auth_info.signer_info[0].address_spec.address();
+                prefixes.insert(Prefix::from(
+                    [
+                        modules::accounts::Module::NAME.as_bytes(),
+                        &modules::accounts::state::BALANCES,
+                        addr.as_ref(),
+                    ]
+                    .concat(),
+                ));
+                module::DispatchResult::Handled(Ok(()))
+            }
+            _ => module::DispatchResult::Unhandled(body),
+        }
+    }
+
     fn dispatch_call<C: TxContext>(
         ctx: &mut C,
         method: &str,

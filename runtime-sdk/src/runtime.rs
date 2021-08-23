@@ -19,6 +19,9 @@ pub trait Runtime {
     /// State version.
     const STATE_VERSION: u32 = 0;
 
+    /// Prefetch limit. To enable prefetch set it to a non-zero value.
+    const PREFETCH_LIMIT: u16 = 0;
+
     type Modules: AuthHandler + MigrationHandler + MethodHandler + BlockHandler + InvariantHandler;
 
     /// Genesis state for the runtime.

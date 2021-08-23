@@ -1,9 +1,14 @@
 //! Tests for the accounts module.
-use std::{collections::BTreeMap, iter::FromIterator};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    iter::FromIterator,
+};
+
+use anyhow::anyhow;
 
 use crate::{
     context::{BatchContext, Context},
-    module::{AuthHandler, BlockHandler, InvariantHandler},
+    module::{AuthHandler, BlockHandler, InvariantHandler, MethodHandler},
     modules::core,
     testing::{keys, mock},
     types::{
@@ -234,6 +239,46 @@ fn test_api_tx_transfer_disabled() {
             ),
             "transfers are forbidden",
         )
+    });
+}
+
+#[test]
+fn test_prefetch() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    let auth_info = transaction::AuthInfo {
+        signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+        fee: transaction::Fee {
+            amount: Default::default(),
+            gas: 1000,
+        },
+    };
+
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            method: "accounts.Transfer".to_owned(),
+            body: cbor::to_value(Transfer {
+                to: keys::bob::address(),
+                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+            }),
+        },
+        auth_info: auth_info.clone(),
+    };
+    // Transfer tokens from one account to the other and check balances.
+    ctx.with_tx(tx, |mut _tx_ctx, call| {
+        let mut prefixes = BTreeSet::new();
+        let result = Accounts::prefetch(&mut prefixes, &call.method, call.body, &auth_info)
+            .ok_or(anyhow!("dispatch failure"))
+            .expect("prefetch should succeed");
+
+        assert!(matches!(result, Ok(())));
+        assert_eq!(
+            prefixes.len(),
+            4,
+            "there should be 4 prefixes to be fetched"
+        );
     });
 }
 

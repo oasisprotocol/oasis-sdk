@@ -1,6 +1,6 @@
 //! Transaction dispatcher.
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     marker::PhantomData,
     sync::{atomic::AtomicBool, Arc},
 };
@@ -28,8 +28,10 @@ use crate::{
     modules,
     modules::core::API as _,
     runtime::Runtime,
-    storage, types,
-    types::transaction::TransactionWeight,
+    storage,
+    storage::Prefix,
+    types,
+    types::transaction::{Transaction, TransactionWeight},
 };
 
 /// Unique module name.
@@ -46,6 +48,10 @@ pub enum Error {
     #[error("malformed transaction in batch: {0}")]
     #[sdk_error(code = 2)]
     MalformedTransactionInBatch(#[source] modules::core::Error),
+
+    #[error("prefetch failed: {0}")]
+    #[sdk_error(code = 3)]
+    PrefetchFailed(#[source] RuntimeError),
 }
 
 /// Result of dispatching a transaction.
@@ -169,21 +175,7 @@ impl<R: Runtime> Dispatcher<R> {
     }
 
     /// Check whether the given transaction is valid.
-    pub fn check_tx<C: BatchContext>(ctx: &mut C, tx: &[u8]) -> Result<CheckTxResult, Error> {
-        let tx = match Self::decode_tx(ctx, &tx) {
-            Ok(tx) => tx,
-            Err(err) => {
-                return Ok(CheckTxResult {
-                    error: RuntimeError {
-                        module: err.module_name().to_string(),
-                        code: err.code(),
-                        message: err.to_string(),
-                    },
-                    meta: None,
-                })
-            }
-        };
-
+    pub fn check_tx<C: BatchContext>(ctx: &mut C, tx: Transaction) -> Result<CheckTxResult, Error> {
         let dispatch = Self::dispatch_tx(ctx, tx)?;
         match dispatch.result {
             types::transaction::CallResult::Ok(_value) => Ok(CheckTxResult {
@@ -210,20 +202,27 @@ impl<R: Runtime> Dispatcher<R> {
     }
 
     /// Execute the given transaction.
-    pub fn execute_tx<C: BatchContext>(ctx: &mut C, tx: &[u8]) -> Result<ExecuteTxResult, Error> {
-        // It is an error to include a malformed transaction in a batch. So instead of only
-        // reporting a failed execution result, we fail the whole batch. This will make the compute
-        // node vote for failure and the round will fail.
-        //
-        // Correct proposers should only include transactions which have passed check_tx.
-        let tx = Self::decode_tx(ctx, &tx).map_err(Error::MalformedTransactionInBatch)?;
-
+    pub fn execute_tx<C: BatchContext>(
+        ctx: &mut C,
+        tx: Transaction,
+    ) -> Result<ExecuteTxResult, Error> {
         let dispatch_result = Self::dispatch_tx(ctx, tx)?;
 
         Ok(ExecuteTxResult {
             output: cbor::to_vec(dispatch_result.result),
             tags: dispatch_result.tags,
         })
+    }
+
+    /// Prefetch prefixes for the given transaction.
+    pub fn prefetch_tx(
+        prefixes: &mut BTreeSet<Prefix>,
+        tx: types::transaction::Transaction,
+    ) -> Result<(), RuntimeError> {
+        match R::Modules::prefetch(prefixes, &tx.call.method, tx.call.body, &tx.auth_info) {
+            module::DispatchResult::Handled(r) => r,
+            module::DispatchResult::Unhandled(_) => Ok(()), // Unimplemented prefetch is allowed.
+        }
     }
 
     fn handle_last_round_messages<C: Context>(ctx: &mut C) -> Result<(), modules::core::Error> {
@@ -305,6 +304,9 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         rt_ctx: transaction::Context<'_>,
         batch: &TxnBatch,
     ) -> Result<ExecuteBatchResult, RuntimeError> {
+        // If prefetch limit is set enable prefetch.
+        let prefetch_enabled = R::PREFETCH_LIMIT > 0;
+
         // TODO: Get rid of StorageContext (pass mkvs in ctx).
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
@@ -314,8 +316,30 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                     mkvs,
                     &self.host_info,
                 );
+
             // Perform state migrations if required.
             R::migrate(&mut ctx);
+
+            let mut txs = Vec::with_capacity(batch.len());
+            let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
+            for tx in batch.iter() {
+                // It is an error to include a malformed transaction in a batch. So instead of only
+                // reporting a failed execution result, we fail the whole batch. This will make the compute
+                // node vote for failure and the round will fail.
+                //
+                // Correct proposers should only include transactions which have passed check_tx.
+                let tx =
+                    Self::decode_tx(&mut ctx, tx).map_err(Error::MalformedTransactionInBatch)?;
+                txs.push(tx.clone());
+
+                if prefetch_enabled {
+                    Self::prefetch_tx(&mut prefixes, tx)?;
+                }
+            }
+            if prefetch_enabled {
+                ctx.runtime_state()
+                    .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
+            }
 
             // Handle last round message results.
             Self::handle_last_round_messages(&mut ctx)?;
@@ -325,8 +349,8 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
 
             // Execute the batch.
             let mut results = Vec::with_capacity(batch.len());
-            for tx in batch.iter() {
-                results.push(Self::execute_tx(&mut ctx, &tx)?);
+            for tx in txs.into_iter() {
+                results.push(Self::execute_tx(&mut ctx, tx)?);
             }
 
             // Run end block hooks.
@@ -356,6 +380,9 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         ctx: transaction::Context<'_>,
         batch: &TxnBatch,
     ) -> Result<Vec<CheckTxResult>, RuntimeError> {
+        // If prefetch limit is set enable prefetch.
+        let prefetch_enabled = R::PREFETCH_LIMIT > 0;
+
         // TODO: Get rid of StorageContext (pass mkvs in ctx).
         StorageContext::with_current(|mkvs, _| {
             // Prepare dispatch context.
@@ -365,13 +392,41 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                     mkvs,
                     &self.host_info,
                 );
+
             // Perform state migrations if required.
             R::migrate(&mut ctx);
 
+            // Prefetch.
+            let mut txs: Vec<Result<Transaction, RuntimeError>> = Vec::with_capacity(batch.len());
+            let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
+            for tx in batch.iter() {
+                let res = match Self::decode_tx(&mut ctx, tx) {
+                    Ok(tx) => {
+                        if prefetch_enabled {
+                            Self::prefetch_tx(&mut prefixes, tx.clone()).map(|_| tx)
+                        } else {
+                            Ok(tx)
+                        }
+                    }
+                    Err(err) => Err(err.into()),
+                };
+                txs.push(res);
+            }
+            if prefetch_enabled {
+                ctx.runtime_state()
+                    .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
+            }
+
             // Check the batch.
             let mut results = Vec::with_capacity(batch.len());
-            for tx in batch.iter() {
-                results.push(Self::check_tx(&mut ctx, &tx)?);
+            for tx in txs.into_iter() {
+                match tx {
+                    Ok(tx) => results.push(Self::check_tx(&mut ctx, tx)?),
+                    Err(err) => results.push(CheckTxResult {
+                        error: err,
+                        meta: None,
+                    }),
+                }
             }
 
             Ok(results)

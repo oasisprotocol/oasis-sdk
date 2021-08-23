@@ -24,6 +24,15 @@ export const playground = (async function () {
         await nic.nodeControllerWaitReady();
         const waitEnd = Date.now();
         console.log(`ready ${waitEnd - waitStart} ms`);
+
+        // Since the runtimes are using prefetch, runtime requests before epoch 3
+        // will fail the client local CheckTx, because the storage policies are
+        // not yet in place for the runtimes.
+        console.log('waiting for epoch 3 so that runtimes are up and running');
+        const waitStart2 = Date.now();
+        await nic.beaconWaitEpoch(3);
+        const waitEnd2 = Date.now();
+        console.log(`ready ${waitEnd2 - waitStart2} ms`);
     }
 
     // Try consensus accounts runtime.
