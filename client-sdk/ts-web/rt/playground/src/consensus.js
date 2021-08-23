@@ -110,6 +110,20 @@ export const playground = (async function () {
             .setFeeGas(0n);
         await twWithdraw.sign([csAlice], consensusChainContext);
         await twWithdraw.submit(nic);
+
+        console.log('query consensus addresses');
+        const addrs = await accountsWrapper
+            .queryAddresses()
+            .setArgs({
+                denomination: enc.encode('TEST'),
+            })
+            .query(nic);
+
+        if (addrs.length != 1) {
+            // Alice.
+            throw new Error(`unexpected number of addresses, got: ${addrs.length}, expected: ${1}`);
+        }
+        console.log('done');
     }
 })();
 

@@ -19,6 +19,7 @@ export const METHOD_TRANSFER = 'accounts.Transfer';
 // Queries.
 export const METHOD_NONCE = 'accounts.Nonce';
 export const METHOD_BALANCES = 'accounts.Balances';
+export const METHOD_ADDRESSES = 'accounts.Addresses';
 
 export const EVENT_TRANSFER_CODE = 1;
 export const EVENT_BURN_CODE = 2;
@@ -41,6 +42,10 @@ export class Wrapper extends wrapper.Base {
         return this.query<types.AccountsBalancesQuery, types.AccountsAccountBalances>(
             METHOD_BALANCES,
         );
+    }
+
+    queryAddresses() {
+        return this.query<types.AccountsAddressesQuery, Uint8Array[]>(METHOD_ADDRESSES);
     }
 }
 

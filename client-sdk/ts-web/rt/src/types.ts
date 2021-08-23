@@ -32,6 +32,13 @@ export interface AccountsNonceQuery {
 }
 
 /**
+ * Arguments for the Addresses query.
+ */
+export interface AccountsAddressesQuery {
+    denomination: Uint8Array;
+}
+
+/**
  * Transfer call.
  */
 export interface AccountsTransfer {

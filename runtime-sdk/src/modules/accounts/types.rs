@@ -27,6 +27,12 @@ pub struct NonceQuery {
     pub address: Address,
 }
 
+/// Arguments for the Addresses query.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct AddressesQuery {
+    pub denomination: token::Denomination,
+}
+
 /// Arguments for the Balances query.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct BalancesQuery {
