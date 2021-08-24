@@ -1,5 +1,11 @@
 use oasis_runtime_sdk::core::{common::crypto::hash::Hash, consensus::roothash::Block};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Round {
+    Numbered(u64),
+    Latest,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TxResult {
     /// The block containing the transaction.
