@@ -19,7 +19,7 @@ use oasis_runtime_sdk::{
     self as sdk,
     core::{
         common::{cbor, crypto::hash::Hash, namespace::Namespace},
-        consensus::roothash::AnnotatedBlock,
+        consensus::roothash::{AnnotatedBlock, Block},
         transaction::tags::Tag,
     },
     types::transaction::{
@@ -27,7 +27,7 @@ use oasis_runtime_sdk::{
     },
 };
 
-use crate::{requests::*, wallet::Wallet};
+use crate::{requests::*, types::Round, wallet::Wallet};
 
 /// A sentinel value for the latest round.
 const ROUND_LATEST: u64 = u64::max_value();
@@ -93,6 +93,18 @@ impl Client {
     /// Checks if the oasis-node is ready and accepting connections.
     pub async fn ready(&mut self) -> Result<(), Error> {
         Ok(self.inner.ready().await?)
+    }
+
+    /// Returns the block at the requested round.
+    pub async fn get_block(&mut self, round: Round) -> Result<Block, Error> {
+        let req = GetBlockRequest {
+            runtime_id: self.runtime_id,
+            round: match round {
+                Round::Latest => ROUND_LATEST,
+                Round::Numbered(round) => round,
+            },
+        };
+        Ok(self.unary(req).await?)
     }
 
     /// Sends a transaction to the scheduler.
