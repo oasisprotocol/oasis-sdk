@@ -49,6 +49,11 @@ cd "${TESTS_DIR}"/runtimes/simple-consensus
 cargo build
 cp "${TESTS_DIR}"/../target/debug/test-runtime-simple-consensus "${TEST_BASE_DIR}"/
 
+printf "${CYAN}### Building test simple-evm runtime...${OFF}\n"
+cd "${TESTS_DIR}"/runtimes/simple-evm
+cargo build
+cp "${TESTS_DIR}"/../target/debug/test-runtime-simple-evm "${TEST_BASE_DIR}"/
+
 printf "${CYAN}### Building e2e test harness...${OFF}\n"
 cd "${TESTS_DIR}"/e2e
 go build
