@@ -22,15 +22,12 @@ use oasis_core_runtime::transaction::tags::Tag;
 /// }
 /// # }
 /// ```
-pub trait Event: Sized {
+pub trait Event: Sized + cbor::Encode {
     /// Name of the module that emitted the event.
     fn module_name() -> &'static str;
 
     /// Code uniquely identifying the event.
     fn code(&self) -> u32;
-
-    /// CBOR-serialized event value.
-    fn into_value(self) -> cbor::Value;
 
     /// Converts an emitted event into a tag that can be emitted by the runtime.
     ///
@@ -49,7 +46,7 @@ pub trait Event: Sized {
             [Self::module_name().as_bytes(), &self.code().to_be_bytes()]
                 .concat()
                 .to_vec(),
-            cbor::to_vec(self.into_value()),
+            cbor::to_vec(self),
         )
     }
 }
@@ -61,9 +58,5 @@ impl Event for () {
 
     fn code(&self) -> u32 {
         Default::default()
-    }
-
-    fn into_value(self) -> cbor::Value {
-        cbor::Value::Simple(cbor::SimpleValue::NullValue)
     }
 }
