@@ -15,7 +15,7 @@ thiserror = "1.0"
 anyhow = "1.0"
 
 # Ethereum.
-evm = "0.28.0"
+evm = "0.30.1"
 fixed-hash = "0.7.0"
 primitive-types = { version = "0.9", default-features = false, features = ["rlp", "num-traits"] }
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
