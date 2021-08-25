@@ -17,7 +17,7 @@ anyhow = "1.0"
 # Ethereum.
 evm = "0.28.0"
 fixed-hash = "0.7.0"
-primitive-types = { version = "0.9", default-features = false, features = ["rlp", "num-traits"] }
+primitive-types = { version = "0.10", default-features = false, features = ["rlp", "num-traits"] }
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
 uint = "0.9.1"
 

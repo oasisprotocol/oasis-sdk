@@ -702,7 +702,7 @@ dependencies = [
  "ethbloom",
  "fixed-hash",
  "impl-rlp",
- "primitive-types",
+ "primitive-types 0.9.1",
  "uint",
 ]
 
@@ -719,7 +719,7 @@ dependencies = [
  "evm-runtime",
  "log",
  "parity-scale-codec",
- "primitive-types",
+ "primitive-types 0.9.1",
  "rlp",
  "serde",
  "sha3 0.8.2",
@@ -733,7 +733,7 @@ checksum = "7828a238e25e8c5b5a23a2114e6f3863780ffd1dca6f7f74eecfd51271a8c573"
 dependencies = [
  "funty",
  "parity-scale-codec",
- "primitive-types",
+ "primitive-types 0.9.1",
  "serde",
 ]
 
@@ -746,7 +746,7 @@ dependencies = [
  "environmental",
  "evm-core",
  "evm-runtime",
- "primitive-types",
+ "primitive-types 0.9.1",
 ]
 
 [[package]]
@@ -757,7 +757,7 @@ checksum = "4b7b8ae833004b1d619997d8a31b61b291b0bb3a7ed0af709342331a9a217d53"
 dependencies = [
  "environmental",
  "evm-core",
- "primitive-types",
+ "primitive-types 0.9.1",
  "sha3 0.8.2",
 ]
 
@@ -1422,7 +1422,7 @@ dependencies = [
  "fixed-hash",
  "oasis-cbor",
  "oasis-runtime-sdk",
- "primitive-types",
+ "primitive-types 0.10.1",
  "thiserror",
  "tiny-keccak 2.0.2",
  "uint",
@@ -1583,6 +1583,17 @@ checksum = "06345ee39fbccfb06ab45f3a1a5798d9dafa04cb8921a76d227040003a234b0e"
 dependencies = [
  "fixed-hash",
  "impl-codec",
+ "impl-rlp",
+ "uint",
+]
+
+[[package]]
+name = "primitive-types"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05e4722c697a58a99d5d06a08c30821d7c082a4632198de1eaa5a6c22ef42373"
+dependencies = [
+ "fixed-hash",
  "impl-num-traits",
  "impl-rlp",
  "uint",
