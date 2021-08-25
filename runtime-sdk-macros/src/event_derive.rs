@@ -2,7 +2,7 @@ use darling::FromDeriveInput;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 
-use crate::generators::{self as gen, CodedVariant};
+use crate::generators::{self as gen, CodedVariant, EnumCodeConverter};
 
 #[derive(FromDeriveInput)]
 #[darling(supports(enum_any), attributes(sdk_event))]
@@ -56,11 +56,17 @@ pub fn derive_event(input: syn::DeriveInput) -> TokenStream {
         Err(_) => return quote!(),
     };
 
-    let code_converter = gen::enum_code_converter(
+    let EnumCodeConverter {
+        converter: code_converter,
+        used_codes,
+    } = match gen::enum_code_converter(
         &format_ident!("self"),
         &event.data.as_ref().take_enum().unwrap(),
         event.autonumber.is_some(),
-    );
+    ) {
+        Ok(cc) => cc,
+        Err(_) => return quote!(),
+    };
 
     let sdk_crate = gen::sdk_crate_path();
 
@@ -76,8 +82,16 @@ pub fn derive_event(input: syn::DeriveInput) -> TokenStream {
                 #code_converter
             }
 
+            fn has_variant_with_code(code: u32) -> bool {
+                return false #(|| code == #used_codes)*
+            }
+
             fn value(&self) -> cbor::Value {
                 cbor::to_value(self)
+            }
+
+            fn from_value(value: cbor::Value) -> Result<Self, cbor::Error> {
+                cbor::from_value(value)
             }
         }
     })
@@ -102,8 +116,18 @@ mod tests {
                             Self::Event3 { .. } => 3u32,
                         }
                     }
+                    fn has_variant_with_code(code: u32) -> bool {
+                        return false
+                            || code == 0u32
+                            || code == 2u32
+                            || code == 1u32
+                            || code == 3u32;
+                    }
                     fn value(&self) -> cbor::Value {
                         cbor::to_value(self)
+                    }
+                    fn from_value(value: cbor::Value) -> Result<Self, cbor::Error> {
+                        cbor::from_value(value)
                     }
                 }
             };
@@ -140,8 +164,14 @@ mod tests {
                     fn code(&self) -> u32 {
                         0
                     }
+                    fn has_variant_with_code(code: u32) -> bool {
+                        return false || code == 0u32;
+                    }
                     fn value(&self) -> cbor::Value {
                         cbor::to_value(self)
+                    }
+                    fn from_value(value: cbor::Value) -> Result<Self, cbor::Error> {
+                        cbor::from_value(value)
                     }
                 }
             };

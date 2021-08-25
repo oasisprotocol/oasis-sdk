@@ -49,7 +49,10 @@ macro_rules! assert_empty_diff {
                     eprintln!("- {}", expected_lines.next().unwrap());
                     has_diff = true;
                 }
-                diff::Result::Right { .. } => {
+                diff::Result::Right(r) => {
+                    eprintln!("non-empty diff on line {}", i);
+                    eprintln!("+ {}", r);
+                    eprintln!("- {}", actual_lines.next().unwrap());
                     actual_lines.next();
                     has_diff = true;
                 }

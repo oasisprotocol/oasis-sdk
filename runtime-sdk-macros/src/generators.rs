@@ -38,19 +38,25 @@ pub trait CodedVariant {
     fn code(&self) -> Option<u32>;
 }
 
-/// Returns a `match` expression that encodes an enum's variants as integral codes.
-pub fn enum_code_converter<V: CodedVariant>(
+pub(crate) fn enum_code_converter<V: CodedVariant>(
     enum_binding: &Ident,
     variants: &[&V],
     autonumber: bool,
-) -> TokenStream {
+) -> Result<EnumCodeConverter, ()> {
     if variants.is_empty() {
-        return quote!(0); // Early return with default if there are no variants.
+        return Ok(EnumCodeConverter {
+            converter: quote!(0),
+            used_codes: vec![0],
+        });
     }
+
+    let mut used_codes = Vec::with_capacity(variants.len());
+    let mut match_arms = Vec::with_capacity(variants.len());
 
     let mut next_autonumber = 0u32;
     let mut reserved_numbers = std::collections::BTreeSet::new();
-    let match_arms = variants.iter().map(|variant| {
+
+    for variant in variants.iter() {
         let variant_ident = variant.ident();
         let code = match variant.code() {
             Some(code) => {
@@ -60,7 +66,7 @@ pub fn enum_code_converter<V: CodedVariant>(
                         .unwrap()
                         .error(format!("code {} already used", code))
                         .emit();
-                    return quote!({});
+                    return Err(());
                 }
                 reserved_numbers.insert(code);
                 code
@@ -81,16 +87,29 @@ pub fn enum_code_converter<V: CodedVariant>(
                     .unwrap()
                     .error(format!("missing `{}` for variant", V::FIELD_NAME))
                     .emit();
-                return quote!();
+                return Err(());
             }
         };
-        quote!(Self::#variant_ident { .. } => { #code })
-    });
-    quote! {
-        match #enum_binding {
-            #(#match_arms)*
-        }
+        match_arms.push(quote!(Self::#variant_ident { .. } => { #code }));
+        used_codes.push(code);
     }
+
+    Ok(EnumCodeConverter {
+        converter: quote! {
+            match #enum_binding {
+                #(#match_arms)*
+            }
+        },
+        used_codes,
+    })
+}
+
+pub(crate) struct EnumCodeConverter {
+    /// A `match` expression that encodes an enum's variants as integral codes.
+    pub(crate) converter: TokenStream,
+
+    /// The set of codes present in the enum.
+    pub(crate) used_codes: Vec<u32>,
 }
 
 pub(crate) fn module_name(module_name_lit: Option<&syn::LitStr>) -> Result<syn::Expr, ()> {
@@ -125,7 +144,13 @@ mod tests {
         let variants: &[&DummyVariant] = &[];
 
         let expected: syn::Expr = syn::parse_quote!(0);
-        let converter = enum_code_converter(&quote::format_ident!("the_enum"), variants, false);
+
+        let EnumCodeConverter {
+            converter,
+            used_codes,
+        } = enum_code_converter(&quote::format_ident!("the_enum"), variants, false).unwrap();
+        assert_eq!(used_codes, vec![0]);
+
         let actual: syn::Expr = syn::parse2(converter).unwrap();
         assert_eq!(expected, actual);
     }

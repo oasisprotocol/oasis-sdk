@@ -56,7 +56,7 @@ pub fn queries(args: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// ## Example
 /// ```no_run
-//# use crate::register_copy_types;
+/// # use oasis_runtime_sdk_macros::register_copy_types;
 /// register_copy_types!(ErrorKind, EncryptionKey)
 /// ```
 #[proc_macro]
