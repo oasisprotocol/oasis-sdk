@@ -62,11 +62,6 @@ grpc_methods! {
         round: u64,
     }) -> Block;
 
-    RuntimeClient.QueryTxs({
-        runtime_id: Namespace,
-        query: QueryTxsQuery,
-    }) -> Vec<TxResult>;
-
     RuntimeClient.GetEvents({
         runtime_id: Namespace,
         round: u64,
