@@ -8,7 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 cbor = { version = "0.1.3", package = "oasis-cbor" }
 # TODO: Replace with released version once it includes https://github.com/oasisprotocol/oasis-core/pull/4133.
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", rev = "a1c9fe982c32d550e8eac530bf8e79402728d64a" }
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", rev = "a509afa" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
