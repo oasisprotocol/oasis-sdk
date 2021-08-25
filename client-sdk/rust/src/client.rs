@@ -1,9 +1,4 @@
-use std::{
-    collections::BTreeMap,
-    marker::PhantomData,
-    ops::{Bound, RangeBounds},
-    sync::Arc,
-};
+use std::{marker::PhantomData, sync::Arc};
 
 use bytes::{Buf as _, BufMut as _};
 use futures_util::{
@@ -165,46 +160,6 @@ impl Client {
             })
             .await?;
         Ok(block_stream.map_err(Into::into))
-    }
-
-    /// Queries at most `limit` transactions matching the provided `conditions`
-    ///
-    /// If a condition with key `key` is provided, only transactions with tags matching any
-    /// of the provided `values` will be returned.
-    pub async fn query_txs(
-        &mut self,
-        round_range: impl RangeBounds<u64>,
-        conditions: &BTreeMap<Vec<u8>, Vec<Vec<u8>>>,
-        limit: Option<u64>,
-    ) -> Result<Vec<crate::types::TxResult>, Error> {
-        use Bound::*;
-        let round_min = match round_range.start_bound() {
-            Included(r) => *r,
-            Excluded(r) => *r + 1,
-            Unbounded => 0,
-        };
-        let round_max = match round_range.end_bound() {
-            Included(r) => *r,
-            Excluded(r) => *r - 1,
-            Unbounded => 0,
-        };
-        let req = QueryTxsRequest {
-            runtime_id: self.runtime_id,
-            query: QueryTxsQuery {
-                round_min,
-                round_max,
-                conditions: conditions
-                    .iter()
-                    .map(|(k, vs)| QueryTxsQueryCondition {
-                        key: ByteBuf::from(k.clone()),
-                        values: vs.iter().map(|v| ByteBuf::from(v.clone())).collect(),
-                    })
-                    .collect(),
-                limit: limit.unwrap_or(0),
-            },
-        };
-        let tx_results = self.unary(req).await?;
-        Ok(tx_results.into_iter().map(Into::into).collect())
     }
 
     /// Returns the events emitted by the runtime during the provided `round`.
