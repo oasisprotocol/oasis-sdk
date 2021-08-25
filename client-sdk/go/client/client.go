@@ -139,16 +139,9 @@ func (rc *runtimeClient) GetBlock(ctx context.Context, round uint64) (*block.Blo
 
 // Implements RuntimeClient.
 func (rc *runtimeClient) GetTransactions(ctx context.Context, round uint64) ([]*types.UnverifiedTransaction, error) {
-	// XXX: We first need to fetch the block (https://github.com/oasisprotocol/oasis-core/issues/3812).
-	blk, err := rc.GetBlock(ctx, round)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch block for round %d: %w", round, err)
-	}
-
-	rawTxs, err := rc.cc.GetTxs(ctx, &coreClient.GetTxsRequest{
+	rawTxs, err := rc.cc.GetTransactions(ctx, &coreClient.GetTransactionsRequest{
 		RuntimeID: rc.runtimeID,
 		Round:     round,
-		IORoot:    blk.Header.IORoot,
 	})
 	if err != nil {
 		return nil, err
