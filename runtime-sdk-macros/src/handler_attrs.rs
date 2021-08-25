@@ -402,6 +402,20 @@ fn gen_client_struct_and_ctor() -> Vec<TokenStream> {
                 self.inner.set_fee(fee);
             }
         }
+
+        impl std::ops::Deref for RuntimeClient {
+            type Target = oasis_client_sdk::Client;
+
+            fn deref(&self) -> &Self::Target {
+                &self.inner
+            }
+        }
+
+        impl std::ops::DerefMut for RuntimeClient {
+            fn deref_mut(&mut self) -> &mut Self::Target {
+                &mut self.inner
+            }
+        }
     });
 
     vec![client_struct, client_impl]
