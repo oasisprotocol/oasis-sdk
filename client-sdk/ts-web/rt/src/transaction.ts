@@ -13,8 +13,26 @@ export const SIGNATURE_CONTEXT_BASE = 'oasis-runtime-sdk/tx: v0';
  */
 export const LATEST_TRANSACTION_VERSION = 1;
 
+/**
+ * A union of signer types from different algorithms.
+ * Because they all tend to look the same (e.g. have a `sign` method), code
+ * that accepts an AnySigner should consult separate metadata such, such as an
+ * associated {@link types.PublicKey}, to know what algorithm it is.
+ */
 export type AnySigner = oasis.signature.ContextSigner | signatureSecp256k1.ContextSigner;
+/**
+ * An array of signers for producing a multisig {@link types.AuthProof}.
+ * The indicies match the corresponding {@link types.MultisigConfig}'s
+ * signers.
+ * Set each element to an {@link AnySigner} to sign with that signer or `null`
+ * to exclude that signature.
+ */
 export type MultisigSignerSet = AnySigner[];
+/**
+ * A union of types for producing an {@link types.AuthProof}.
+ * Use {@link AnySigner} for a signature proof and {@link MultisigSignerSet}
+ * for a multisig proof.
+ */
 export type ProofProvider = AnySigner | MultisigSignerSet;
 
 export async function deriveChainContext(runtimeID: Uint8Array, consensusChainContext: string) {
@@ -96,6 +114,10 @@ export async function proveAny(
     }
 }
 
+/**
+ * @param proofProviders An array of providers matching the layout of the
+ * transaction's signer info.
+ */
 export async function signUnverifiedTransaction(
     proofProviders: ProofProvider[],
     runtimeID: Uint8Array,
