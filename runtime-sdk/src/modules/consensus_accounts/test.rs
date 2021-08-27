@@ -56,6 +56,7 @@ fn test_api_deposit_invalid_denomination() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "consensus.Deposit".to_owned(),
             body: cbor::to_value(Deposit {
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
@@ -66,6 +67,7 @@ fn test_api_deposit_invalid_denomination() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
+                consensus_messages: 1,
             },
         },
     };
@@ -93,6 +95,7 @@ fn test_api_deposit() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "consensus.Deposit".to_owned(),
             body: cbor::to_value(Deposit {
                 amount: BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()),
@@ -103,6 +106,7 @@ fn test_api_deposit() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
+                consensus_messages: 1,
             },
         },
     };
@@ -154,6 +158,7 @@ fn test_api_withdraw_invalid_denomination() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "consensus.Withdraw".to_owned(),
             body: cbor::to_value(Withdraw {
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
@@ -164,6 +169,7 @@ fn test_api_withdraw_invalid_denomination() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
+                consensus_messages: 1,
             },
         },
     };
@@ -191,6 +197,7 @@ fn test_api_withdraw_insufficient_balance() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "consensus.Withdraw".to_owned(),
             body: cbor::to_value(Withdraw {
                 amount: BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()),
@@ -201,6 +208,7 @@ fn test_api_withdraw_insufficient_balance() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
+                consensus_messages: 1,
             },
         },
     };
@@ -250,6 +258,7 @@ fn test_api_withdraw() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "consensus.Withdraw".to_owned(),
             body: cbor::to_value(Withdraw {
                 amount: BaseUnits::new(1_000_000, denom.clone()),
@@ -260,6 +269,7 @@ fn test_api_withdraw() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
+                consensus_messages: 1,
             },
         },
     };
@@ -402,6 +412,7 @@ fn test_prefetch() {
         fee: transaction::Fee {
             amount: Default::default(),
             gas: 1000,
+            consensus_messages: 1,
         },
     };
 
@@ -409,6 +420,7 @@ fn test_prefetch() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "consensus.Withdraw".to_owned(),
             body: cbor::to_value(Withdraw {
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
@@ -436,6 +448,7 @@ fn test_prefetch() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "consensus.Deposit".to_owned(),
             body: cbor::to_value(Deposit {
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),

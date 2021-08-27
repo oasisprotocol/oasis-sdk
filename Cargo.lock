@@ -1746,6 +1746,7 @@ dependencies = [
  "anyhow",
  "base64",
  "bech32",
+ "byteorder",
  "curve25519-dalek",
  "digest 0.9.0",
  "hex",

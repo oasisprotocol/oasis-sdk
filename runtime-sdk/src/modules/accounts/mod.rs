@@ -14,7 +14,7 @@ use crate::{
     crypto::signature::PublicKey,
     error::{self, Error as _},
     module,
-    module::{Module as _, Parameters as _},
+    module::{CallResult, Module as _, Parameters as _},
     modules,
     modules::core::{Error as CoreError, Module as Core, API as _},
     storage,
@@ -22,7 +22,7 @@ use crate::{
     types::{
         address::Address,
         token,
-        transaction::{AuthInfo, CallResult, Transaction},
+        transaction::{AuthInfo, Transaction},
     },
 };
 

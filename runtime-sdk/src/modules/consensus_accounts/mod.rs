@@ -12,7 +12,7 @@ use crate::{
     context::{Context, TxContext},
     error::{self, Error as _},
     module,
-    module::Module as _,
+    module::{CallResult, Module as _},
     modules,
     modules::core::{Error as CoreError, Module as Core, API as _},
     storage::Prefix,
@@ -20,7 +20,7 @@ use crate::{
         address::Address,
         message::{MessageEvent, MessageEventHookInvocation, MessageResult},
         token,
-        transaction::{AuthInfo, CallResult, TransactionWeight},
+        transaction::{AuthInfo, TransactionWeight},
     },
 };
 

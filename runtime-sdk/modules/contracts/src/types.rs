@@ -126,10 +126,6 @@ pub struct Instantiate {
 
     /// Tokens that should be sent to the contract as part of the instantiate call.
     pub tokens: Vec<token::BaseUnits>,
-
-    /// Maximum amount of consensus messages that can be emitted by subcalls.
-    #[cbor(optional, default, skip_serializing_if = "num_traits::Zero::is_zero")]
-    pub max_consensus_messages: u32,
 }
 
 /// Instantiate call result.
@@ -150,10 +146,6 @@ pub struct Call {
 
     /// Tokens that should be sent to the contract as part of the call.
     pub tokens: Vec<token::BaseUnits>,
-
-    /// Maximum amount of consensus messages that can be emitted by subcalls.
-    #[cbor(optional, default, skip_serializing_if = "num_traits::Zero::is_zero")]
-    pub max_consensus_messages: u32,
 }
 
 /// Contract call result.
@@ -175,10 +167,6 @@ pub struct Upgrade {
 
     /// Tokens that should be sent to the contract as part of the call.
     pub tokens: Vec<token::BaseUnits>,
-
-    /// Maximum amount of consensus messages that can be emitted by subcalls.
-    #[cbor(optional, default, skip_serializing_if = "num_traits::Zero::is_zero")]
-    pub max_consensus_messages: u32,
 }
 
 /// Code information query.

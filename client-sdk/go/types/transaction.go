@@ -208,9 +208,21 @@ func NewTransaction(fee *Fee, method string, body interface{}) *Transaction {
 	return tx
 }
 
+// CallFormat is the format used for encoding the call (and output) information.
+type CallFormat uint8
+
+const (
+	// CallFormatPlain is the plain text call format.
+	CallFormatPlain = CallFormat(0)
+	// CallFormatEncryptedX25519DeoxysII is the encrypted call format using X25519 for key exchange
+	// and Deoxys-II for symmetric encryption.
+	CallFormatEncryptedX25519DeoxysII = CallFormat(1)
+)
+
 // Call is a method call.
 type Call struct {
-	Method string          `json:"method"`
+	Format CallFormat      `json:"format,omitempty"`
+	Method string          `json:"method,omitempty"`
 	Body   cbor.RawMessage `json:"body"`
 }
 
@@ -222,8 +234,9 @@ type AuthInfo struct {
 
 // Fee contains the transaction fee information.
 type Fee struct {
-	Amount BaseUnits `json:"amount"`
-	Gas    uint64    `json:"gas"`
+	Amount            BaseUnits `json:"amount"`
+	Gas               uint64    `json:"gas,omitempty"`
+	ConsensusMessages uint32    `json:"consensus_messages,omitempty"`
 }
 
 // AddressSpec is common information that specifies an address as well as how to authenticate.

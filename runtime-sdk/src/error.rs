@@ -1,7 +1,7 @@
 //! Error types for runtimes.
 pub use oasis_core_runtime::types::Error as RuntimeError;
 
-use crate::types::transaction::CallResult;
+use crate::module::CallResult;
 
 /// A runtime error that gets propagated to the caller.
 ///

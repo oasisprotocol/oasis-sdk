@@ -92,6 +92,10 @@ pub enum Error {
     #[error("key manager error")]
     #[sdk_error(code = 18)]
     KeyManagerError(#[source] KeyManagerError),
+
+    #[error("invalid call format: {0}")]
+    #[sdk_error(code = 19)]
+    InvalidCallFormat(#[source] anyhow::Error),
 }
 
 /// Gas costs.
@@ -344,6 +348,16 @@ impl module::AuthHandler for Module {
         })()
         .ok_or(Error::GasOverflow)?;
         Self::use_tx_gas(ctx, total)?;
+
+        // Attempt to limit the maximum number of consensus messages and add appropriate weights.
+        let consensus_messages = ctx.tx_auth_info().fee.consensus_messages;
+        ctx.limit_max_messages(consensus_messages)?;
+        Self::add_weight(
+            ctx,
+            TransactionWeight::ConsensusMessages,
+            consensus_messages as u64,
+        )?;
+
         Ok(())
     }
 }

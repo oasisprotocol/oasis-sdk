@@ -37,6 +37,13 @@ func (tb *TransactionBuilder) SetFeeGas(gas uint64) *TransactionBuilder {
 	return tb
 }
 
+// SetFeeConsensusMessages configures the maximum number of consensus messages that can be emitted
+// by the transaction.
+func (tb *TransactionBuilder) SetFeeConsensusMessages(consensusMessages uint32) *TransactionBuilder {
+	tb.tx.AuthInfo.Fee.ConsensusMessages = consensusMessages
+	return tb
+}
+
 // AppendAuthSignature appends a new transaction signer information with a signature address
 // specification to the transaction.
 func (tb *TransactionBuilder) AppendAuthSignature(pk signature.PublicKey, nonce uint64) *TransactionBuilder {

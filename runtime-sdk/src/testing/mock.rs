@@ -117,6 +117,7 @@ pub fn transaction() -> transaction::Transaction {
     transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "mock".to_owned(),
             body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
         },
@@ -125,6 +126,7 @@ pub fn transaction() -> transaction::Transaction {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
+                consensus_messages: 32,
             },
         },
     }

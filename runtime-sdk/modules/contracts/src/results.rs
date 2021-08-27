@@ -135,13 +135,19 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                 } else {
                     max_gas
                 };
+                // Calculate how many consensus messages the child call can emit.
+                let remaining_messages = ctx.remaining_messages();
 
                 // Execute a transaction in a child context.
                 let (result, gas, tags, messages) = ctx.with_child(ctx.mode(), |mut ctx| {
-                    // Generate fake transaction.
+                    // Generate an internal transaction.
                     let tx = transaction::Transaction {
                         version: transaction::LATEST_TRANSACTION_VERSION,
-                        call: transaction::Call { method, body },
+                        call: transaction::Call {
+                            format: transaction::CallFormat::Plain,
+                            method,
+                            body,
+                        },
                         auth_info: transaction::AuthInfo {
                             signer_info: vec![transaction::SignerInfo {
                                 // The call is being performed on the contract's behalf.
@@ -154,6 +160,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                                 amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                                 // Limit gas usage inside the child context to the allocated maximum.
                                 gas: max_gas,
+                                consensus_messages: remaining_messages,
                             },
                         },
                     };

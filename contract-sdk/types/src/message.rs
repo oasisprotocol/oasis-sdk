@@ -66,11 +66,11 @@ impl CallResult {
 }
 
 #[cfg(feature = "oasis-runtime-sdk")]
-impl From<oasis_runtime_sdk::types::transaction::CallResult> for CallResult {
-    fn from(r: oasis_runtime_sdk::types::transaction::CallResult) -> Self {
+impl From<oasis_runtime_sdk::module::CallResult> for CallResult {
+    fn from(r: oasis_runtime_sdk::module::CallResult) -> Self {
         match r {
-            oasis_runtime_sdk::types::transaction::CallResult::Ok(value) => Self::Ok(value),
-            oasis_runtime_sdk::types::transaction::CallResult::Failed { module, code, .. } => {
+            oasis_runtime_sdk::module::CallResult::Ok(value) => Self::Ok(value),
+            oasis_runtime_sdk::module::CallResult::Failed { module, code, .. } => {
                 Self::Failed { module, code }
             }
         }

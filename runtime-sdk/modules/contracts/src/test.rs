@@ -36,6 +36,7 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "contracts.Upload".to_owned(),
             body: cbor::to_value(types::Upload {
                 abi: types::ABI::OasisV1,
@@ -48,6 +49,7 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
+                consensus_messages: 0,
             },
         },
     };
@@ -73,6 +75,7 @@ fn deploy_hello_contract<C: BatchContext>(
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "contracts.Instantiate".to_owned(),
             body: cbor::to_value(types::Instantiate {
                 code_id: 0.into(),
@@ -84,7 +87,6 @@ fn deploy_hello_contract<C: BatchContext>(
                     }
                 }),
                 tokens,
-                max_consensus_messages: 0,
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -92,6 +94,7 @@ fn deploy_hello_contract<C: BatchContext>(
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
+                consensus_messages: 0,
             },
         },
     };
@@ -189,6 +192,7 @@ fn test_hello_contract_call() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "contracts.Call".to_owned(),
             body: cbor::to_value(types::Call {
                 id: instance_id,
@@ -199,7 +203,6 @@ fn test_hello_contract_call() {
                     }
                 }),
                 tokens: vec![BaseUnits::new(2_000, Denomination::NATIVE)],
-                max_consensus_messages: 0,
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -207,6 +210,7 @@ fn test_hello_contract_call() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
+                consensus_messages: 0,
             },
         },
     };
@@ -270,6 +274,7 @@ fn test_hello_contract_call() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "contracts.Call".to_owned(),
             body: cbor::to_value(types::Call {
                 id: instance_id,
@@ -280,7 +285,6 @@ fn test_hello_contract_call() {
                     }
                 }),
                 tokens: vec![],
-                max_consensus_messages: 0,
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -288,6 +292,7 @@ fn test_hello_contract_call() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
+                consensus_messages: 0,
             },
         },
     };
@@ -422,12 +427,12 @@ fn test_hello_contract_subcalls() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "contracts.Call".to_owned(),
             body: cbor::to_value(types::Call {
                 id: instance_id,
                 data: cbor::to_vec(cbor::cbor_text!("call_self")), // Needs to conform to contract API.
                 tokens: vec![],
-                max_consensus_messages: 0,
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -435,6 +440,7 @@ fn test_hello_contract_subcalls() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 2_000_000,
+                consensus_messages: 0,
             },
         },
     };
@@ -467,12 +473,12 @@ fn test_hello_contract_query() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "contracts.Call".to_owned(),
             body: cbor::to_value(types::Call {
                 id: instance_id,
                 data: cbor::to_vec(cbor::cbor_text!("query_block_info")), // Needs to conform to contract API.
                 tokens: vec![],
-                max_consensus_messages: 0,
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -480,6 +486,7 @@ fn test_hello_contract_query() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
+                consensus_messages: 0,
             },
         },
     };
@@ -503,12 +510,12 @@ fn test_hello_contract_query() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "contracts.Call".to_owned(),
             body: cbor::to_value(types::Call {
                 id: instance_id,
                 data: cbor::to_vec(cbor::cbor_text!("query_accounts")), // Needs to conform to contract API.
                 tokens: vec![BaseUnits::new(2_000, Denomination::NATIVE)], // For the query below.
-                max_consensus_messages: 0,
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -516,6 +523,7 @@ fn test_hello_contract_query() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
+                consensus_messages: 0,
             },
         },
     };
@@ -550,13 +558,13 @@ fn test_hello_contract_upgrade() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "contracts.Upgrade".to_owned(),
             body: cbor::to_value(types::Upgrade {
                 id: instance_id,
                 code_id: code_2,
                 data: cbor::to_vec(cbor::cbor_text!("upgrade_proceed")), // Needs to conform to contract API.
                 tokens: vec![],
-                max_consensus_messages: 0,
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -564,6 +572,7 @@ fn test_hello_contract_upgrade() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 2_000_000,
+                consensus_messages: 0,
             },
         },
     };
@@ -589,13 +598,13 @@ fn test_hello_contract_upgrade_fail_policy() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "contracts.Upgrade".to_owned(),
             body: cbor::to_value(types::Upgrade {
                 id: instance_id,
                 code_id: code_2,
                 data: cbor::to_vec(cbor::cbor_text!("upgrade_proceed")), // Needs to conform to contract API.
                 tokens: vec![],
-                max_consensus_messages: 0,
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -603,6 +612,7 @@ fn test_hello_contract_upgrade_fail_policy() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 2_000_000,
+                consensus_messages: 0,
             },
         },
     };
@@ -630,13 +640,13 @@ fn test_hello_contract_upgrade_fail_pre() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "contracts.Upgrade".to_owned(),
             body: cbor::to_value(types::Upgrade {
                 id: instance_id,
                 code_id: code_2,
                 data: cbor::to_vec(cbor::cbor_text!("upgrade_fail_pre")), // Needs to conform to contract API.
                 tokens: vec![],
-                max_consensus_messages: 0,
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -644,6 +654,7 @@ fn test_hello_contract_upgrade_fail_pre() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 2_000_000,
+                consensus_messages: 0,
             },
         },
     };
@@ -674,13 +685,13 @@ fn test_hello_contract_upgrade_fail_post() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "contracts.Upgrade".to_owned(),
             body: cbor::to_value(types::Upgrade {
                 id: instance_id,
                 code_id: code_2,
                 data: cbor::to_vec(cbor::cbor_text!("upgrade_fail_post")), // Needs to conform to contract API.
                 tokens: vec![],
-                max_consensus_messages: 0,
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -688,6 +699,7 @@ fn test_hello_contract_upgrade_fail_post() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 2_000_000,
+                consensus_messages: 0,
             },
         },
     };

@@ -6,12 +6,11 @@ use oasis_runtime_sdk::{
     core::common::crypto::hash::Hash,
     error::{Error as _, RuntimeError},
     keymanager::KeyPairId,
-    module::Module as _,
+    module::{CallResult, Module as _},
     modules::{
         core,
         core::{Module as Core, API as _},
     },
-    types::transaction::CallResult,
 };
 
 pub mod types;

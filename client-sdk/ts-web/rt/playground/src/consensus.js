@@ -90,7 +90,8 @@ export const playground = (async function () {
             })
             .setSignerInfo([siAlice1])
             .setFeeAmount(FEE_FREE)
-            .setFeeGas(0n);
+            .setFeeGas(0n)
+            .setFeeConsensusMessages(1);
         await twDeposit.sign([csAlice], consensusChainContext);
         await twDeposit.submit(nic);
 
@@ -116,7 +117,8 @@ export const playground = (async function () {
             })
             .setSignerInfo([siAlice2])
             .setFeeAmount(FEE_FREE)
-            .setFeeGas(0n);
+            .setFeeGas(0n)
+            .setFeeConsensusMessages(1);
         await twWithdraw.sign([csAlice], consensusChainContext);
         await twWithdraw.submit(nic);
 

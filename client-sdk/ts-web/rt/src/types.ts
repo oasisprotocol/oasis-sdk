@@ -132,6 +132,7 @@ export interface Call {
 export interface CallResult {
     ok?: unknown;
     fail?: FailedCallResult;
+    unknown?: Uint8Array;
 }
 
 export interface FailedCallResult {
@@ -146,6 +147,7 @@ export interface FailedCallResult {
 export interface Fee {
     amount: BaseUnits;
     gas: oasis.types.longnum;
+    consensus_messages: number;
 }
 
 /**

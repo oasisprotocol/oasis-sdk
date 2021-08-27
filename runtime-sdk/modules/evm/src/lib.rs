@@ -13,9 +13,9 @@ use oasis_runtime_sdk::{
     context::{Context, TxContext},
     crypto::signature::PublicKey,
     error::{self, Error as _},
-    module::{self, Module as _},
+    module::{self, CallResult, Module as _},
     modules, storage,
-    types::transaction::{AddressSpec, CallResult},
+    types::transaction::AddressSpec,
 };
 
 use evm::backend::ApplyBackend;

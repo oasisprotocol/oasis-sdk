@@ -16,14 +16,13 @@ use oasis_runtime_sdk::{
     core::common::crypto::hash::Hash,
     error::{self, Error as _},
     module,
-    module::Module as _,
+    module::{CallResult, Module as _},
     modules,
     modules::{
         accounts::API as _,
         core::{Module as Core, API as _},
     },
     storage::{self, Store as _},
-    types::transaction::{CallResult, TransactionWeight},
 };
 
 mod abi;
@@ -413,16 +412,6 @@ impl<Cfg: Config> Module<Cfg> {
 
         Core::use_tx_gas(ctx, params.gas_costs.tx_instantiate)?;
 
-        // Configure an appropriate limit for the number of runtime messages that can be emitted
-        // by subcalls. This is limited here to make sure that the correct weight is used during
-        // scheduling.
-        Core::add_weight(
-            ctx,
-            TransactionWeight::ConsensusMessages,
-            body.max_consensus_messages as u64,
-        )?;
-        ctx.limit_max_messages(body.max_consensus_messages)?;
-
         if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
             // Only fast checks are allowed.
             return Ok(types::InstantiateResult::default());
@@ -481,16 +470,6 @@ impl<Cfg: Config> Module<Cfg> {
 
         Core::use_tx_gas(ctx, params.gas_costs.tx_call)?;
 
-        // Configure an appropriate limit for the number of runtime messages that can be emitted
-        // by subcalls. This is limited here to make sure that the correct weight is used during
-        // scheduling.
-        Core::add_weight(
-            ctx,
-            TransactionWeight::ConsensusMessages,
-            body.max_consensus_messages as u64,
-        )?;
-        ctx.limit_max_messages(body.max_consensus_messages)?;
-
         if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
             // Only fast checks are allowed.
             return Ok(types::CallResult::default());
@@ -531,16 +510,6 @@ impl<Cfg: Config> Module<Cfg> {
         let caller = ctx.tx_caller_address();
 
         Core::use_tx_gas(ctx, params.gas_costs.tx_upgrade)?;
-
-        // Configure an appropriate limit for the number of runtime messages that can be emitted
-        // by subcalls. This is limited here to make sure that the correct weight is used during
-        // scheduling.
-        Core::add_weight(
-            ctx,
-            TransactionWeight::ConsensusMessages,
-            body.max_consensus_messages as u64,
-        )?;
-        ctx.limit_max_messages(body.max_consensus_messages)?;
 
         if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
             // Only fast checks are allowed.

@@ -7,11 +7,11 @@ use oasis_runtime_sdk::{
     context::{Context, TxContext},
     error::{self, Error as _},
     module,
-    module::Module as _,
+    module::{CallResult, Module as _},
     modules,
     modules::{accounts, core},
     storage::Prefix,
-    types::transaction::{AuthInfo, CallResult},
+    types::transaction::AuthInfo,
 };
 
 pub mod types;

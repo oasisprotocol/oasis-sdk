@@ -59,6 +59,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	log.Info("alice depositing into runtime")
 	amount := types.NewBaseUnits(*quantity.NewFromUint64(50), consDenomination)
 	tb := consAccounts.Deposit(amount).
+		SetFeeConsensusMessages(1).
 		AppendAuthSignature(signer.Public(), 0)
 	_ = tb.AppendSign(ctx, signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -83,6 +84,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	amount.Amount = *quantity.NewFromUint64(40)
 	log.Info("bob depositing into runtime")
 	tb = consAccounts.Deposit(amount).
+		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Bob.Signer.Public(), 0)
 	_ = tb.AppendSign(ctx, testing.Bob.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -106,6 +108,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	amount.Amount = *quantity.NewFromUint64(25)
 	log.Info("alice withdrawing")
 	tb = consAccounts.Withdraw(amount).
+		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.Signer.Public(), 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -129,6 +132,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	amount.Amount = *quantity.NewFromUint64(50)
 	log.Info("charlie withdrawing")
 	tb = consAccounts.Withdraw(amount).
+		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Charlie.Signer.Public(), 0)
 	_ = tb.AppendSign(ctx, testing.Charlie.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -139,6 +143,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 
 	log.Info("alice withdrawing with invalid nonce")
 	tb = consAccounts.Withdraw(amount).
+		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.Signer.Public(), 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -174,6 +179,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	log.Info("dave depositing (secp256k1)")
 	amount.Amount = *quantity.NewFromUint64(50)
 	tb = consAccounts.Deposit(amount).
+		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Dave.Signer.Public(), 0)
 	_ = tb.AppendSign(ctx, testing.Dave.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {

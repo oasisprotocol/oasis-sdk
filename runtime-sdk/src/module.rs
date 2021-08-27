@@ -13,7 +13,7 @@ use crate::{
     types::{
         message::MessageResult,
         transaction::{
-            AuthInfo, Call, CallResult, Transaction, TransactionWeight, UnverifiedTransaction,
+            self, AuthInfo, Call, Transaction, TransactionWeight, UnverifiedTransaction,
         },
     },
 };
@@ -40,6 +40,48 @@ impl<B, R> DispatchResult<B, R> {
         match self {
             DispatchResult::Handled(result) => Ok(result),
             DispatchResult::Unhandled(_) => Err(errf()),
+        }
+    }
+}
+
+/// A variant of `types::transaction::CallResult` but used for dispatch purposes so the dispatch
+/// process can use a different representation.
+///
+/// Specifically, this type is not serializable.
+#[derive(Clone, Debug)]
+pub enum CallResult {
+    Ok(cbor::Value),
+
+    Failed {
+        module: String,
+        code: u32,
+        message: String,
+    },
+}
+
+impl CallResult {
+    /// Check whether the call result indicates a successful operation or not.
+    pub fn is_success(&self) -> bool {
+        match self {
+            CallResult::Ok(_) => true,
+            CallResult::Failed { .. } => false,
+        }
+    }
+}
+
+impl From<CallResult> for transaction::CallResult {
+    fn from(v: CallResult) -> Self {
+        match v {
+            CallResult::Ok(data) => Self::Ok(data),
+            CallResult::Failed {
+                module,
+                code,
+                message,
+            } => Self::Failed {
+                module,
+                code,
+                message,
+            },
         }
     }
 }

@@ -95,9 +95,6 @@ type Call struct {
 	Data []byte `json:"data"`
 	// Tokens that should be sent to the contract as part of the call.
 	Tokens []types.BaseUnits `json:"tokens"`
-	// MaxConsensusMessages is the maximum amount of consensus messages that can be emitted by
-	// subcalls.
-	MaxConsensusMessages uint32 `json:"max_consensus_messages,omitempty"`
 }
 
 // CallResult is the result of the contracts.Call call.
