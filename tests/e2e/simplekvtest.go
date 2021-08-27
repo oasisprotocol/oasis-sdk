@@ -427,8 +427,10 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	if err != nil {
 		return err
 	}
-	if len(addrs) != 5 { // Alice, Bob, Charlie, Dave, Reward pool.
-		return fmt.Errorf("unexpected number of addresses (expected: %d, got: %d)", 5, len(addrs))
+	// At least the following must exist: Alice, Bob, Charlie, Dave, Reward pool.
+	// More may exist if any reward disbursement happened.
+	if len(addrs) < 5 {
+		return fmt.Errorf("unexpected number of addresses (expected at least: %d, got: %d)", 5, len(addrs))
 	}
 
 	return nil

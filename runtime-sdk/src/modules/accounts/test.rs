@@ -345,6 +345,18 @@ fn test_api_transfer() {
             "there should only be one denomination"
         );
 
+        // Check source account balance.
+        let balance = Accounts::get_balance(
+            tx_ctx.runtime_state(),
+            keys::alice::address(),
+            Denomination::NATIVE,
+        )
+        .expect("get_balance should succeed");
+        assert_eq!(
+            balance, 999_000,
+            "balance in source account should be correct"
+        );
+
         // Check destination account balances.
         let bals = Accounts::get_balances(tx_ctx.runtime_state(), keys::bob::address())
             .expect("get_balances should succeed");

@@ -31,6 +31,13 @@
 * [`client-sdk`]: Client libraries for interacting with the Oasis consensus layer
   and runtimes in different languages.
 * [`runtime-sdk`]: Oasis Runtime SDK that makes it easy to develop new runtimes.
+* [`runtime-sdk/modules`]: A collection of larger modules for the Runtime SDK.
+* [`contract-sdk`]: Oasis Contract SDK that can be used to develop Rust smart
+  contracts that compile to WASM and can be executed inside the [`contracts`]
+  Runtime SDK module.
 
 [`client-sdk`]: client-sdk/
 [`runtime-sdk`]: runtime-sdk/
+[`runtime-sdk/modules`]: runtime-sdk/modules/
+[`contract-sdk`]: contract-sdk/
+[`contracts`]: runtime-sdk/modules/contracts/

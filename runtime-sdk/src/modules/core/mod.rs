@@ -119,6 +119,9 @@ pub trait API {
     /// increased.
     fn use_tx_gas<C: TxContext>(ctx: &mut C, gas: u64) -> Result<(), Error>;
 
+    /// Return the remaining gas.
+    fn remaining_tx_gas<C: TxContext>(ctx: &mut C) -> u64;
+
     /// Increase transaction priority for the provided amount.
     fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error>;
 
@@ -160,7 +163,7 @@ const GAS_WEIGHT_NAME: &str = "gas";
 
 impl Module {
     /// Initialize state from genesis.
-    fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
+    pub fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
         // Set genesis parameters.
         Self::set_params(ctx.runtime_state(), genesis.parameters);
     }
@@ -211,6 +214,12 @@ impl API for Module {
         Self::add_weight(ctx, GAS_WEIGHT_NAME.into(), gas)?;
 
         Ok(())
+    }
+
+    fn remaining_tx_gas<C: TxContext>(ctx: &mut C) -> u64 {
+        let gas_limit = ctx.tx_auth_info().fee.gas;
+        let gas_used = ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
+        gas_limit.saturating_sub(*gas_used)
     }
 
     fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error> {
@@ -316,6 +325,7 @@ impl module::AuthHandler for Module {
                         .checked_add(config.signers.len() as u64)
                         .ok_or(Error::GasOverflow)?;
                 }
+                AddressSpec::Internal(_) => {}
             }
         }
         let params = Self::params(ctx.runtime_state());

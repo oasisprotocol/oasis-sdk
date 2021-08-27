@@ -5,8 +5,9 @@ use std::{
 
 use oasis_core_runtime::storage::mkvs;
 
-use super::Store;
+use super::{NestedStore, Store};
 
+/// An overlay store which keeps values locally until explicitly committed.
 pub struct OverlayStore<S: Store> {
     parent: S,
     overlay: BTreeMap<Vec<u8>, Vec<u8>>,
@@ -14,6 +15,7 @@ pub struct OverlayStore<S: Store> {
 }
 
 impl<S: Store> OverlayStore<S> {
+    /// Create a new overlay store.
     pub fn new(parent: S) -> Self {
         Self {
             parent,
@@ -21,47 +23,48 @@ impl<S: Store> OverlayStore<S> {
             dirty: HashSet::new(),
         }
     }
+}
 
-    pub fn commit(mut self) {
+impl<S: Store> NestedStore for OverlayStore<S> {
+    fn commit(mut self) {
         // Insert all items present in the overlay.
         for (key, value) in self.overlay {
             self.dirty.remove(&key);
-            self.parent.insert(key, &value);
+            self.parent.insert(&key, &value);
         }
 
         // Any remaining dirty items must have been removed.
-        for key in &self.dirty {
-            self.parent.remove(key);
+        for key in self.dirty {
+            self.parent.remove(&key);
         }
     }
 }
 
 impl<S: Store> Store for OverlayStore<S> {
-    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Vec<u8>> {
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         // For dirty values, check the overlay.
-        if self.dirty.contains(key.as_ref()) {
-            return self.overlay.get(key.as_ref()).cloned();
+        if self.dirty.contains(key) {
+            return self.overlay.get(key).cloned();
         }
 
         // Otherwise fetch from parent store.
         self.parent.get(key)
     }
 
-    fn insert<K: AsRef<[u8]>>(&mut self, key: K, value: &[u8]) {
-        self.overlay
-            .insert(key.as_ref().to_owned(), value.to_owned());
-        self.dirty.insert(key.as_ref().to_owned());
+    fn insert(&mut self, key: &[u8], value: &[u8]) {
+        self.overlay.insert(key.to_owned(), value.to_owned());
+        self.dirty.insert(key.to_owned());
     }
 
-    fn remove<K: AsRef<[u8]>>(&mut self, key: K) {
+    fn remove(&mut self, key: &[u8]) {
         // For dirty values, remove from the overlay.
-        if self.dirty.contains(key.as_ref()) {
-            self.overlay.remove(key.as_ref());
+        if self.dirty.contains(key) {
+            self.overlay.remove(key);
             return;
         }
 
         // Since we don't care about the previous value, we can just record an update.
-        self.dirty.insert(key.as_ref().to_owned());
+        self.dirty.insert(key.to_owned());
     }
 
     fn iter(&self) -> Box<dyn mkvs::Iterator + '_> {

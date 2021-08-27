@@ -1,0 +1,2 @@
+# All contracts should be built from source.
+*.wasm

@@ -7,7 +7,7 @@ use std::{convert::TryFrom, fmt};
 pub struct Denomination(Vec<u8>);
 
 impl Denomination {
-    /// Maximum length of a remote denomination.
+    /// Maximum length of a denomination.
     pub const MAX_LENGTH: usize = 32;
     /// Denomination in native token.
     pub const NATIVE: Denomination = Denomination(Vec::new());
@@ -15,6 +15,11 @@ impl Denomination {
     /// Whether the denomination represents the native token.
     pub fn is_native(&self) -> bool {
         self.0.is_empty()
+    }
+
+    /// Raw representation of a denomination.
+    pub fn into_vec(self) -> Vec<u8> {
+        self.0
     }
 }
 
@@ -78,7 +83,7 @@ pub enum Error {
 
 /// Token amount of given denomination in base units.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, cbor::Encode, cbor::Decode)]
-pub struct BaseUnits(u128, Denomination);
+pub struct BaseUnits(pub u128, pub Denomination);
 
 impl BaseUnits {
     /// Creates a new token amount of the given denomination.

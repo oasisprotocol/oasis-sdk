@@ -152,17 +152,24 @@ pub trait API {
     /// Fetch an account's current nonce.
     fn get_nonce<S: storage::Store>(state: S, address: Address) -> Result<u64, Error>;
 
-    /// Fetch addresses.
-    fn get_addresses<S: storage::Store>(
+    /// Fetch an account's balance of the given denomination.
+    fn get_balance<S: storage::Store>(
         state: S,
+        address: Address,
         denomination: token::Denomination,
-    ) -> Result<Vec<Address>, Error>;
+    ) -> Result<u128, Error>;
 
     /// Fetch an account's current balances.
     fn get_balances<S: storage::Store>(
         state: S,
         address: Address,
     ) -> Result<types::AccountBalances, Error>;
+
+    /// Fetch addresses.
+    fn get_addresses<S: storage::Store>(
+        state: S,
+        denomination: token::Denomination,
+    ) -> Result<Vec<Address>, Error>;
 
     /// Fetch total supplies.
     fn get_total_supplies<S: storage::Store>(
@@ -374,6 +381,31 @@ impl API for Module {
         Ok(account.nonce)
     }
 
+    fn get_balance<S: storage::Store>(
+        state: S,
+        address: Address,
+        denomination: token::Denomination,
+    ) -> Result<u128, Error> {
+        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let balances = storage::PrefixStore::new(store, &state::BALANCES);
+        let account = storage::TypedStore::new(storage::PrefixStore::new(balances, &address));
+
+        Ok(account.get(&denomination).unwrap_or_default())
+    }
+
+    fn get_balances<S: storage::Store>(
+        state: S,
+        address: Address,
+    ) -> Result<types::AccountBalances, Error> {
+        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let balances = storage::PrefixStore::new(store, &state::BALANCES);
+        let account = storage::TypedStore::new(storage::PrefixStore::new(balances, &address));
+
+        Ok(types::AccountBalances {
+            balances: account.iter().collect(),
+        })
+    }
+
     fn get_addresses<S: storage::Store>(
         state: S,
         denomination: token::Denomination,
@@ -389,19 +421,6 @@ impl API for Module {
             .filter(|bal| bal.1 == denomination)
             .map(|bal| bal.0)
             .collect())
-    }
-
-    fn get_balances<S: storage::Store>(
-        state: S,
-        address: Address,
-    ) -> Result<types::AccountBalances, Error> {
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
-        let balances = storage::PrefixStore::new(store, &state::BALANCES);
-        let account = storage::TypedStore::new(storage::PrefixStore::new(balances, &address));
-
-        Ok(types::AccountBalances {
-            balances: account.iter().collect(),
-        })
     }
 
     fn get_total_supplies<S: storage::Store>(
@@ -537,7 +556,7 @@ impl module::MethodHandler for Module {
 
 impl Module {
     /// Initialize state from genesis.
-    fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
+    pub fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
         // Create accounts.
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut accounts =

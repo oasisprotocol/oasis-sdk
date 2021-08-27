@@ -68,6 +68,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install libseccomp-dev
 
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          target: wasm32-unknown-unknown # For building test contracts.
+
+      - name: Build test contracts
+        working-directory: tests/contracts/hello
+        run: |
+          cargo build --target wasm32-unknown-unknown --release
+          mv target/wasm32-unknown-unknown/release/hello.wasm ../../e2e/contracts/hello.wasm
+
       - name: Lint E2E tests
         uses: golangci/golangci-lint-action@v2
         with:

@@ -72,12 +72,22 @@ impl Address {
         Ok(Address(a))
     }
 
-    /// Creates a new address for a specific module.
-    pub fn from_module(module: &'static str, kind: &'static str) -> Self {
+    /// Convert the address into raw bytes.
+    pub fn into_bytes(self) -> [u8; ADDRESS_SIZE] {
+        self.0
+    }
+
+    /// Creates a new address for a specific module and kind.
+    pub fn from_module(module: &str, kind: &str) -> Self {
+        Address::from_module_raw(module, kind.as_bytes())
+    }
+
+    /// Creates a new address for a specific module and raw kind.
+    pub fn from_module_raw(module: &str, kind: &[u8]) -> Self {
         Address::new(
             ADDRESS_V0_MODULE_CONTEXT,
             ADDRESS_V0_VERSION,
-            [module, kind].join(".").as_bytes(),
+            &[module.as_bytes(), b".", kind].concat(),
         )
     }
 
