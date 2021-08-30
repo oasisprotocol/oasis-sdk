@@ -3,12 +3,13 @@
 
 extern crate alloc;
 
-use oasis_contract_sdk::{self as sdk, storage::Store, env::Env};
+use oasis_contract_sdk::{self as sdk, env::Env};
 use oasis_contract_sdk::types::{
     env::{AccountsQuery, AccountsResponse, QueryRequest, QueryResponse},
     message::{Message, NotifyReply, Reply},
     token,
 };
+use oasis_contract_sdk_storage::cell::Cell;
 
 /// All possible errors that can be returned by the contract.
 ///
@@ -93,21 +94,14 @@ pub enum Response {
 /// The contract type.
 pub struct HelloWorld;
 
-mod state {
-    /// Name of the storage key under which the counter value is stored.
-    pub const COUNTER: &[u8] = b"counter";
-}
+/// Storage cell for the counter.
+const COUNTER: Cell<u64> = Cell::new(b"counter");
 
 impl HelloWorld {
     /// Increment the counter and return the previous value.
     fn increment_counter<C: sdk::Context>(ctx: &mut C) -> u64 {
-        let counter: u64 = ctx.public_store().get(state::COUNTER)
-            .map(|raw| cbor::from_slice(&raw).unwrap())
-            .unwrap_or_default();
-        ctx.public_store().insert(
-            state::COUNTER,
-            &cbor::to_vec(counter + 1),
-        );
+        let counter = COUNTER.get(ctx.public_store()).unwrap_or_default();
+        COUNTER.set(ctx.public_store(), counter + 1);
 
         counter
     }
@@ -126,7 +120,7 @@ impl sdk::Contract for HelloWorld {
             // We require the caller to always pass the Instantiate request.
             Request::Instantiate => {
                 // Initialize counter to 1.
-                ctx.public_store().insert(state::COUNTER, &cbor::to_vec(1u64));
+                COUNTER.set(ctx.public_store(), 1);
 
                 Ok(())
             }

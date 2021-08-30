@@ -11,8 +11,9 @@ license = "Apache-2.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-oasis-contract-sdk = { path = "../../../contract-sdk" }
 cbor = { version = "0.1.7", package = "oasis-cbor" }
+oasis-contract-sdk = { path = "../../../contract-sdk" }
+oasis-contract-sdk-storage = { path = "../../../contract-sdk/storage" }
 
 # Third party.
 thiserror = "1.0.26"

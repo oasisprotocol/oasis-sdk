@@ -11,6 +11,7 @@ members = [
     # Smart Contract SDK.
     "contract-sdk",
     "contract-sdk/types",
+    "contract-sdk/storage",
     "contract-sdk-macros",
 
     # Test runtimes.

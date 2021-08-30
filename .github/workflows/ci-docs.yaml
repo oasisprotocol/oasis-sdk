@@ -30,7 +30,8 @@ jobs:
             --package oasis-runtime-sdk-macros \
             --package oasis-runtime-sdk-contracts \
             --package oasis-contract-sdk \
-            --package oasis-contract-sdk-types
+            --package oasis-contract-sdk-types \
+            --package oasis-contract-sdk-storage
 
       - name: Publish docs
         uses: crazy-max/ghaction-github-pages@v2
