@@ -6,12 +6,12 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-cbor = { version = "0.1.7", package = "oasis-cbor" }
-# TODO: Replace with released version once it includes https://github.com/oasisprotocol/oasis-core/pull/4133.
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", rev = "a509afa" }
-oasis-core-client = { git = "https://github.com/oasisprotocol/oasis-core", rev = "a509afa" }
-oasis-core-keymanager-api-common = { git = "https://github.com/oasisprotocol/oasis-core", rev = "a509afa" }
-oasis-core-keymanager-client = { git = "https://github.com/oasisprotocol/oasis-core", rev = "a509afa" }
+cbor = { version = "0.1.8", package = "oasis-cbor" }
+# TODO: Replace with released version once it includes https://github.com/oasisprotocol/oasis-core/pull/4244.
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", rev = "029cc22" }
+oasis-core-client = { git = "https://github.com/oasisprotocol/oasis-core", rev = "029cc22" }
+oasis-core-keymanager-api-common = { git = "https://github.com/oasisprotocol/oasis-core", rev = "029cc22" }
+oasis-core-keymanager-client = { git = "https://github.com/oasisprotocol/oasis-core", rev = "029cc22" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.

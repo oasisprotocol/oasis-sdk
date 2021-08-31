@@ -10,7 +10,6 @@ replace (
 	// build failures.
 	// https://github.com/google/flatbuffers/issues/6466
 	github.com/google/flatbuffers => github.com/google/flatbuffers v1.12.1
-	github.com/gorilla/websocket => github.com/gorilla/websocket v1.4.2
 
 	// We want to test the current client-sdk.
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go => ../../client-sdk/go
@@ -23,7 +22,7 @@ replace (
 require (
 	github.com/btcsuite/btcd v0.22.0-beta
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20210716083614-f38f8e8b0b84
-	github.com/oasisprotocol/oasis-core/go v0.2102.5
-	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-20210328195842-4de788c1c6f7
+	github.com/oasisprotocol/oasis-core/go v0.2102.1-0.20210903173012-029cc2215bcf
+	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
 	google.golang.org/grpc v1.40.0
 )
