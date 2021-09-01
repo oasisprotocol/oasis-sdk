@@ -1,9 +1,9 @@
 use thiserror::Error;
 
-use oasis_core_runtime::common::crypto::hash::Hash;
 use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
+    core::common::crypto::hash::Hash,
     error::{Error as _, RuntimeError},
     keymanager::KeyPairId,
     module::Module as _,
