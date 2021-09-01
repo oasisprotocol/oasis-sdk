@@ -86,6 +86,56 @@ impl From<CallResult> for transaction::CallResult {
     }
 }
 
+/// A convenience function for dispatching method calls.
+pub fn dispatch_call<C, B, R, E, F>(
+    ctx: &mut C,
+    body: cbor::Value,
+    f: F,
+) -> DispatchResult<cbor::Value, CallResult>
+where
+    C: TxContext,
+    B: cbor::Decode,
+    R: cbor::Encode,
+    E: error::Error,
+    F: FnOnce(&mut C, B) -> Result<R, E>,
+{
+    DispatchResult::Handled((|| {
+        let args = match cbor::from_value(body)
+            .map_err(|err| modules::core::Error::InvalidArgument(err.into()))
+        {
+            Ok(args) => args,
+            Err(err) => return err.to_call_result(),
+        };
+
+        match f(ctx, args) {
+            Ok(value) => CallResult::Ok(cbor::to_value(value)),
+            Err(err) => err.to_call_result(),
+        }
+    })())
+}
+
+/// A convenience function for dispatching queries.
+pub fn dispatch_query<C, B, R, E, F>(
+    ctx: &mut C,
+    body: cbor::Value,
+    f: F,
+) -> DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>>
+where
+    C: Context,
+    B: cbor::Decode,
+    R: cbor::Encode,
+    E: error::Error,
+    error::RuntimeError: From<E>,
+    F: FnOnce(&mut C, B) -> Result<R, E>,
+{
+    DispatchResult::Handled((|| {
+        let args = cbor::from_value(body).map_err(|err| -> error::RuntimeError {
+            modules::core::Error::InvalidArgument(err.into()).into()
+        })?;
+        Ok(cbor::to_value(f(ctx, args)?))
+    })())
+}
+
 /// Method handler.
 pub trait MethodHandler {
     /// Add storage prefixes to prefetch.

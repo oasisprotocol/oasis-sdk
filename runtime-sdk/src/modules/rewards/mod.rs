@@ -108,10 +108,7 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
         args: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
         match method {
-            "rewards.Parameters" => module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(Self::query_parameters(ctx, args)?))
-            })()),
+            "rewards.Parameters" => module::dispatch_query(ctx, args, Self::query_parameters),
             _ => module::DispatchResult::Unhandled(args),
         }
     }

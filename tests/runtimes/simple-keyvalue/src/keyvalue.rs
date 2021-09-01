@@ -88,36 +88,9 @@ impl sdk::module::MethodHandler for Module {
         body: cbor::Value,
     ) -> sdk::module::DispatchResult<cbor::Value, CallResult> {
         match method {
-            "keyvalue.Insert" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_insert(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => sdk::module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => sdk::module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
-            "keyvalue.Remove" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_remove(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => sdk::module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => sdk::module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
-            "keyvalue.GetCreateKey" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_getcreatekey(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => sdk::module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => sdk::module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
+            "keyvalue.Insert" => sdk::module::dispatch_call(ctx, body, Self::tx_insert),
+            "keyvalue.Remove" => sdk::module::dispatch_call(ctx, body, Self::tx_remove),
+            "keyvalue.GetCreateKey" => sdk::module::dispatch_call(ctx, body, Self::tx_getcreatekey),
             _ => sdk::module::DispatchResult::Unhandled(body),
         }
     }
@@ -128,10 +101,7 @@ impl sdk::module::MethodHandler for Module {
         args: cbor::Value,
     ) -> sdk::module::DispatchResult<cbor::Value, Result<cbor::Value, RuntimeError>> {
         match method {
-            "keyvalue.Get" => sdk::module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(Self::query_get(ctx, args)?))
-            })()),
+            "keyvalue.Get" => sdk::module::dispatch_query(ctx, args, Self::query_get),
             _ => sdk::module::DispatchResult::Unhandled(args),
         }
     }

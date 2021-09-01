@@ -390,10 +390,7 @@ impl module::MethodHandler for Module {
         args: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
         match method {
-            "core.EstimateGas" => module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|e| Error::InvalidArgument(e.into()))?;
-                Ok(cbor::to_value(Self::query_estimate_gas(ctx, args)?))
-            })()),
+            "core.EstimateGas" => module::dispatch_query(ctx, args, Self::query_estimate_gas),
             "core.CheckInvariants" => module::DispatchResult::Handled((|| {
                 let _ = Self::query_check_invariants(ctx)?;
                 Ok(cbor::to_value(true))
