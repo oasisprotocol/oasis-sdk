@@ -89,12 +89,8 @@ pub enum Error {
     #[sdk_error(code = 17)]
     InvariantViolation(String),
 
-    #[error("key manager error")]
-    #[sdk_error(code = 18)]
-    KeyManagerError(#[source] KeyManagerError),
-
     #[error("invalid call format: {0}")]
-    #[sdk_error(code = 19)]
+    #[sdk_error(code = 18)]
     InvalidCallFormat(#[source] anyhow::Error),
 }
 

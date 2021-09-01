@@ -73,6 +73,14 @@ impl From<oasis_runtime_sdk::module::CallResult> for CallResult {
             oasis_runtime_sdk::module::CallResult::Failed { module, code, .. } => {
                 Self::Failed { module, code }
             }
+            oasis_runtime_sdk::module::CallResult::Aborted(err) => {
+                use oasis_runtime_sdk::error::Error;
+
+                Self::Failed {
+                    module: err.module_name().to_string(),
+                    code: err.code(),
+                }
+            }
         }
     }
 }

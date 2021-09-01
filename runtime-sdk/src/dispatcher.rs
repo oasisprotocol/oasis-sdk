@@ -51,13 +51,13 @@ pub enum Error {
     #[sdk_error(code = 2)]
     MalformedTransactionInBatch(#[source] modules::core::Error),
 
-    #[error("prefetch failed: {0}")]
-    #[sdk_error(code = 3)]
-    PrefetchFailed(#[source] RuntimeError),
-
     #[error("query aborted: {0}")]
-    #[sdk_error(code = 4)]
+    #[sdk_error(code = 3)]
     QueryAborted(String),
+
+    #[error("key manager failure: {0}")]
+    #[sdk_error(code = 4)]
+    KeyManagerFailure(#[source] KeyManagerError),
 }
 
 /// Result of dispatching a transaction.
@@ -139,13 +139,13 @@ impl<R: Runtime> Dispatcher<R> {
         call: types::transaction::Call,
     ) -> module::CallResult {
         if let Err(e) = R::Modules::before_handle_call(ctx, &call) {
-            return e.to_call_result();
+            return e.into_call_result();
         }
 
         match R::Modules::dispatch_call(ctx, &call.method, call.body) {
             module::DispatchResult::Handled(result) => result,
             module::DispatchResult::Unhandled(_) => {
-                modules::core::Error::InvalidMethod(call.method).to_call_result()
+                modules::core::Error::InvalidMethod(call.method).into_call_result()
             }
         }
     }
@@ -158,7 +158,7 @@ impl<R: Runtime> Dispatcher<R> {
     ) -> Result<DispatchResult, Error> {
         // Run pre-processing hooks.
         if let Err(err) = R::Modules::authenticate_tx(ctx, &tx) {
-            return Ok(err.to_call_result().into());
+            return Ok(err.into_call_result().into());
         }
 
         let (result, messages) = ctx.with_tx(tx, |mut ctx, call| {
@@ -173,7 +173,7 @@ impl<R: Runtime> Dispatcher<R> {
                         vec![],
                     )
                 }
-                Err(err) => return (err.to_call_result().into(), vec![]),
+                Err(err) => return (err.into_call_result().into(), vec![]),
             };
 
             let result = Self::dispatch_tx_call(&mut ctx, call);
@@ -203,18 +203,9 @@ impl<R: Runtime> Dispatcher<R> {
             )
         });
 
-        // XXX There's no better way to get to the module and code for a given error variant at the moment;
-        // the variable here only exists to get to the metadata for core::Error::KeyManagerError.
-        let dummy_err = modules::core::Error::KeyManagerError(KeyManagerError::NotAuthenticated);
-        if let types::transaction::CallResult::Failed {
-            module: ref err_module,
-            code: err_code,
-            ..
-        } = result.result
-        {
-            if err_module == dummy_err.module_name() && err_code == dummy_err.code() {
-                return Err(Error::Aborted);
-            }
+        // Propagate batch aborts.
+        if let module::CallResult::Aborted(err) = result.result {
+            return Err(err);
         }
 
         // Forward any emitted messages.
@@ -248,6 +239,8 @@ impl<R: Runtime> Dispatcher<R> {
                 },
                 meta: None,
             }),
+
+            module::CallResult::Aborted(err) => Err(err),
         }
     }
 

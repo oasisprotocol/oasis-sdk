@@ -8,7 +8,9 @@ use impl_trait_for_tuples::impl_for_tuples;
 
 use crate::{
     context::{Context, TxContext},
-    error, event, modules, storage,
+    dispatcher, error,
+    error::Error as _,
+    event, modules, storage,
     storage::{Prefix, Store},
     types::{
         message::MessageResult,
@@ -48,24 +50,26 @@ impl<B, R> DispatchResult<B, R> {
 /// process can use a different representation.
 ///
 /// Specifically, this type is not serializable.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum CallResult {
+    /// Call has completed successfully.
     Ok(cbor::Value),
 
+    /// Call has completed with failure.
     Failed {
         module: String,
         code: u32,
         message: String,
     },
+
+    /// A fatal error has occurred and the batch must be aborted.
+    Aborted(dispatcher::Error),
 }
 
 impl CallResult {
     /// Check whether the call result indicates a successful operation or not.
     pub fn is_success(&self) -> bool {
-        match self {
-            CallResult::Ok(_) => true,
-            CallResult::Failed { .. } => false,
-        }
+        matches!(self, CallResult::Ok(_))
     }
 }
 
@@ -81,6 +85,11 @@ impl From<CallResult> for transaction::CallResult {
                 module,
                 code,
                 message,
+            },
+            CallResult::Aborted(err) => Self::Failed {
+                module: err.module_name().to_string(),
+                code: err.code(),
+                message: err.to_string(),
             },
         }
     }
@@ -104,12 +113,12 @@ where
             .map_err(|err| modules::core::Error::InvalidArgument(err.into()))
         {
             Ok(args) => args,
-            Err(err) => return err.to_call_result(),
+            Err(err) => return err.into_call_result(),
         };
 
         match f(ctx, args) {
             Ok(value) => CallResult::Ok(cbor::to_value(value)),
-            Err(err) => err.to_call_result(),
+            Err(err) => err.into_call_result(),
         }
     })())
 }

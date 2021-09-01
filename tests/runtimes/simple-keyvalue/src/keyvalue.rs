@@ -4,7 +4,7 @@ use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
     core::common::crypto::hash::Hash,
-    error::{Error as _, RuntimeError},
+    error::RuntimeError,
     keymanager::KeyPairId,
     module::{CallResult, Module as _},
     modules::{
@@ -28,6 +28,10 @@ pub enum Error {
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] core::Error),
+
+    #[error("{0}")]
+    #[sdk_error(transparent, abort)]
+    Abort(#[source] sdk::dispatcher::Error),
 }
 
 /// Events emitted by the keyvalue module.
@@ -172,7 +176,7 @@ impl Module {
             .get_or_create_keys(KeyPairId::from(Hash::digest_bytes(&body.key).as_ref()));
         match key_result {
             Ok(_) => Ok(()),
-            Err(err) => Err(Error::Core(core::Error::KeyManagerError(err))),
+            Err(err) => Err(Error::Abort(sdk::dispatcher::Error::KeyManagerFailure(err))),
         }
     }
 
