@@ -34,7 +34,13 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --locked -- -D warnings -D clippy::dbg_macro
+          args: |
+            --all-features
+            --locked
+            --
+            -D warnings
+            -D clippy::dbg_macro
+            -A clippy::upper-case-acronyms
 
       - name: Formatting check
         uses: actions-rs/cargo@v1
