@@ -2352,20 +2352,6 @@ export interface SGXEnclaveIdentity {
 }
 
 /**
- * MultiSigned is a blob signed by multiple public keys.
- */
-export interface SignatureMultiSigned {
-    /**
-     * Blob is the signed blob.
-     */
-    untrusted_raw_value: Uint8Array;
-    /**
-     * Signatures are the signatures over the blob.
-     */
-    signatures: Signature[];
-}
-
-/**
  * Signature is a signature, bundled with the signing public key.
  */
 export interface Signature {
@@ -2377,6 +2363,20 @@ export interface Signature {
      * Signature is the actual raw signature.
      */
     signature: Uint8Array;
+}
+
+/**
+ * MultiSigned is a blob signed by multiple public keys.
+ */
+export interface SignatureMultiSigned {
+    /**
+     * Blob is the signed blob.
+     */
+    untrusted_raw_value: Uint8Array;
+    /**
+     * Signatures are the signatures over the blob.
+     */
+    signatures: Signature[];
 }
 
 /**
