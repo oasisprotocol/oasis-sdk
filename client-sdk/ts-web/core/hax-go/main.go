@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"time"
 
@@ -187,7 +188,9 @@ func visitType(t reflect.Type) string {
 }
 
 func write() {
-	// todo: sort
+	sort.Slice(used, func(i, j int) bool {
+		return strings.ToLower(used[i].ref) < strings.ToLower(used[j].ref)
+	})
 	for _, ut := range used {
 		fmt.Print(ut.source)
 	}
