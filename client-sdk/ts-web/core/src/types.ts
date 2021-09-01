@@ -62,7 +62,7 @@ export interface BeaconInsecureParameters {
     /**
      * Interval is the epoch interval (in blocks).
      */
-    interval: longnum;
+    interval?: longnum;
 }
 
 /**
@@ -260,7 +260,7 @@ export interface ConsensusParameters {
     max_tx_size: longnum;
     max_block_size: longnum;
     max_block_gas: longnum;
-    max_evidence_size: number;
+    max_evidence_size: longnum;
     /**
      * StateCheckpointInterval is the expected state checkpoint interval (in blocks).
      */
@@ -753,7 +753,7 @@ export interface GovernanceProposal {
     /**
      * InvalidVotes is the number of invalid votes after tallying.
      */
-    invalid_votes: longnum;
+    invalid_votes?: longnum;
 }
 
 /**
@@ -1481,7 +1481,7 @@ export interface RegistryRuntime extends CBORVersioned {
     /**
      * Constraints are the node scheduling constraints.
      */
-    constraints: Map<number, Map<number, RegistrySchedulingConstraints>>;
+    constraints?: Map<number, Map<number, RegistrySchedulingConstraints>>;
     /**
      * Staking stores the runtime's staking-related parameters.
      */
@@ -2562,7 +2562,7 @@ export interface StakingConsensusParameters {
     /**
      * MaxAllowances is the maximum number of allowances an account can have. Zero means disabled.
      */
-    max_allowances: number;
+    max_allowances?: number;
     /**
      * FeeSplitWeightPropose is the proportion of block fee portions that go to the proposer.
      */
