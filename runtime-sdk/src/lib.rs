@@ -7,6 +7,7 @@ pub mod crypto;
 pub mod dispatcher;
 pub mod error;
 pub mod event;
+pub mod keymanager;
 pub mod module;
 pub mod modules;
 pub mod runtime;

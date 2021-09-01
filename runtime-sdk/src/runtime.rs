@@ -8,6 +8,7 @@ use oasis_core_runtime::{
 use crate::{
     context::Context,
     crypto, dispatcher,
+    keymanager::{KeyManagerClient, TrustedPolicySigners},
     module::{AuthHandler, BlockHandler, InvariantHandler, MethodHandler, MigrationHandler},
     modules, storage,
 };
@@ -23,6 +24,12 @@ pub trait Runtime {
     const PREFETCH_LIMIT: u16 = 0;
 
     type Modules: AuthHandler + MigrationHandler + MethodHandler + BlockHandler + InvariantHandler;
+
+    /// Return the trusted policy signers for this runtime; if None, a key manager connection will not
+    /// be established on startup.
+    fn trusted_policy_signers() -> Option<TrustedPolicySigners> {
+        None
+    }
 
     /// Genesis state for the runtime.
     fn genesis_state() -> <Self::Modules as MigrationHandler>::Genesis;
@@ -89,9 +96,9 @@ pub trait Runtime {
     {
         // Initializer.
         let init = |protocol: &Arc<Protocol>,
-                    _rak: &Arc<RAK>,
+                    rak: &Arc<RAK>,
                     _rpc_demux: &mut RpcDemux,
-                    _rpc: &mut RpcDispatcher|
+                    rpc: &mut RpcDispatcher|
          -> Option<Box<dyn TxnDispatcher>> {
             // Fetch host information and configure domain separation context.
             let hi = protocol.get_host_info();
@@ -100,8 +107,20 @@ pub trait Runtime {
                 &hi.consensus_chain_context,
             );
 
+            // Cobble together a keymanager client.
+            let key_manager = Self::trusted_policy_signers().map(|signers| {
+                KeyManagerClient::new(
+                    hi.runtime_id,
+                    protocol.clone(),
+                    rak.clone(),
+                    rpc,
+                    4096,
+                    signers,
+                )
+            });
+
             // Register runtime's methods.
-            let dispatcher = dispatcher::Dispatcher::<Self>::new(hi);
+            let dispatcher = dispatcher::Dispatcher::<Self>::new(hi, key_manager);
             Some(Box::new(dispatcher))
         };
 

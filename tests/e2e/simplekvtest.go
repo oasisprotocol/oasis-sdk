@@ -72,8 +72,7 @@ func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.C
 	return info.ChainContext, nil
 }
 
-// kvInsert inserts given key-value pair into storage.
-func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key, value []byte) error {
+func sendTx(rtc client.RuntimeClient, signer signature.Signer, tx *types.Transaction) error {
 	ctx := context.Background()
 	chainCtx, err := GetChainContext(ctx, rtc)
 	if err != nil {
@@ -85,12 +84,6 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key, value []by
 		return err
 	}
 
-	tx := types.NewTransaction(&types.Fee{
-		Gas: 2 * defaultGasAmount,
-	}, "keyvalue.Insert", kvKeyValue{
-		Key:   key,
-		Value: value,
-	})
 	tx.AppendAuthSignature(signer.Public(), nonce)
 
 	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
@@ -110,41 +103,37 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key, value []by
 	return nil
 }
 
+// kvInsert inserts given key-value pair into storage.
+func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key, value []byte) error {
+	tx := types.NewTransaction(&types.Fee{
+		Gas: 2 * defaultGasAmount,
+	}, "keyvalue.Insert", kvKeyValue{
+		Key:   key,
+		Value: value,
+	})
+
+	return sendTx(rtc, signer, tx)
+}
+
 // kvRemove removes given key from storage.
 func kvRemove(rtc client.RuntimeClient, signer signature.Signer, key []byte) error {
-	ctx := context.Background()
-	chainCtx, err := GetChainContext(ctx, rtc)
-	if err != nil {
-		return err
-	}
-	ac := accounts.NewV1(rtc)
-	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
-	if err != nil {
-		return err
-	}
-
 	tx := types.NewTransaction(&types.Fee{
 		Gas: defaultGasAmount,
 	}, "keyvalue.Remove", kvKey{
 		Key: key,
 	})
-	tx.AppendAuthSignature(signer.Public(), nonce)
+	return sendTx(rtc, signer, tx)
+}
 
-	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
-	if err != nil {
-		return err
-	}
-	tx.AuthInfo.Fee.Gas = gas
+// kvGetCreateKey gets a key from the key manager.
+func kvGetCreateKey(rtc client.RuntimeClient, signer signature.Signer, key []byte) error {
+	tx := types.NewTransaction(&types.Fee{
+		Gas: defaultGasAmount,
+	}, "keyvalue.GetCreateKey", kvKey{
+		Key: key,
+	})
 
-	stx := tx.PrepareForSigning()
-	if err = stx.AppendSign(chainCtx, signer); err != nil {
-		return err
-	}
-
-	if _, err := rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
-		return err
-	}
-	return nil
+	return sendTx(rtc, signer, tx)
 }
 
 // kvGet gets given key's value from storage.
@@ -188,6 +177,12 @@ func SimpleKVTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCon
 	_, err = kvGet(rtc, testKey)
 	if err == nil {
 		return fmt.Errorf("fetching removed key should fail")
+	}
+
+	log.Info("create new key in the keymanager")
+	err = kvGetCreateKey(rtc, signer, testKey)
+	if err != nil {
+		return err
 	}
 
 	return nil

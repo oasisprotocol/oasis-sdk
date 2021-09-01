@@ -24,6 +24,7 @@ use oasis_core_runtime::{
 use crate::{
     context::{BatchContext, Context, RuntimeBatchContext, TxContext},
     error::{Error as _, RuntimeError},
+    keymanager::{KeyManagerClient, KeyManagerError},
     module::{self, AuthHandler, BlockHandler, MethodHandler},
     modules,
     modules::core::API as _,
@@ -84,6 +85,7 @@ impl From<types::transaction::CallResult> for DispatchResult {
 /// The runtime dispatcher.
 pub struct Dispatcher<R: Runtime> {
     host_info: HostInfo,
+    key_manager: Option<KeyManagerClient>,
     _runtime: PhantomData<R>,
 }
 
@@ -92,9 +94,10 @@ impl<R: Runtime> Dispatcher<R> {
     ///
     /// Note that the dispatcher is fully static and the constructor is only needed so that the
     /// instance can be used directly with the dispatcher system provided by Oasis Core.
-    pub(super) fn new(host_info: HostInfo) -> Self {
+    pub(super) fn new(host_info: HostInfo, key_manager: Option<KeyManagerClient>) -> Self {
         Self {
             host_info,
+            key_manager,
             _runtime: PhantomData,
         }
     }
@@ -170,6 +173,20 @@ impl<R: Runtime> Dispatcher<R> {
                 messages,
             )
         });
+
+        // XXX There's no better way to get to the module and code for a given error variant at the moment;
+        // the variable here only exists to get to the metadata for core::Error::KeyManagerError.
+        let dummy_err = modules::core::Error::KeyManagerError(KeyManagerError::NotAuthenticated);
+        if let types::transaction::CallResult::Failed {
+            module: ref err_module,
+            code: err_code,
+            ..
+        } = result.result
+        {
+            if err_module == dummy_err.module_name() && err_code == dummy_err.code() {
+                return Err(Error::Aborted);
+            }
+        }
 
         // Forward any emitted messages.
         ctx.emit_messages(messages)
@@ -323,6 +340,9 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                     &rt_ctx,
                     mkvs,
                     &self.host_info,
+                    self.key_manager
+                        .as_ref()
+                        .map(|mgr| mgr.with_context(rt_ctx.tokio, rt_ctx.io_ctx.clone())),
                 );
 
             // Perform state migrations if required.
@@ -399,6 +419,9 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                     &ctx,
                     mkvs,
                     &self.host_info,
+                    self.key_manager
+                        .as_ref()
+                        .map(|mgr| mgr.with_context(ctx.tokio, ctx.io_ctx.clone())),
                 );
 
             // Perform state migrations if required.
@@ -459,6 +482,9 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                     &ctx,
                     mkvs,
                     &self.host_info,
+                    self.key_manager
+                        .as_ref()
+                        .map(|mgr| mgr.with_context(ctx.tokio, ctx.io_ctx.clone())),
                 );
             // Perform state migrations if required.
             R::migrate(&mut ctx);

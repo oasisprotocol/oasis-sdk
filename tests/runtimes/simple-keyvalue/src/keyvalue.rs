@@ -1,9 +1,11 @@
 use thiserror::Error;
 
+use oasis_core_runtime::common::crypto::hash::Hash;
 use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
     error::{Error as _, RuntimeError},
+    keymanager::KeyPairId,
     module::Module as _,
     modules::{
         core,
@@ -107,6 +109,16 @@ impl sdk::module::MethodHandler for Module {
                     Err(err) => sdk::module::DispatchResult::Handled(err.to_call_result()),
                 }
             }
+            "keyvalue.GetCreateKey" => {
+                let result = || -> Result<cbor::Value, Error> {
+                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
+                    Ok(cbor::to_value(Self::tx_getcreatekey(ctx, args)?))
+                }();
+                match result {
+                    Ok(value) => sdk::module::DispatchResult::Handled(CallResult::Ok(value)),
+                    Err(err) => sdk::module::DispatchResult::Handled(err.to_call_result()),
+                }
+            }
             _ => sdk::module::DispatchResult::Unhandled(body),
         }
     }
@@ -178,6 +190,21 @@ impl Module {
         ts.remove(&body.key);
         ctx.emit_event(Event::Remove { key: bc });
         Ok(())
+    }
+
+    fn tx_getcreatekey<C: TxContext>(ctx: &mut C, body: types::Key) -> Result<(), Error> {
+        if ctx.is_check_only() || ctx.is_simulation() {
+            return Ok(());
+        }
+
+        let key_result = ctx
+            .key_manager()
+            .unwrap()
+            .get_or_create_keys(KeyPairId::from(Hash::digest_bytes(&body.key).as_ref()));
+        match key_result {
+            Ok(_) => Ok(()),
+            Err(err) => Err(Error::Core(core::Error::KeyManagerError(err))),
+        }
     }
 
     /// Fetch keyvalue from storage using given key.
