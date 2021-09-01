@@ -38,7 +38,7 @@ RUN curl -OL https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz && \
 RUN cd /usr/local/src && \
     curl -OL https://github.com/oasisprotocol/oasis-core/archive/${OASIS_CORE_COMMIT}.tar.gz && \
     tar -xzf ${OASIS_CORE_COMMIT}.tar.gz && cd oasis-core-* && \
-    cargo install --force --path tools && \
+    cargo install --locked --force --path tools && \
     cd .. && rm -rf ${OASIS_CORE_COMMIT}.tar.gz oasis-core-* && rm -rf /cargo/registry
 
 VOLUME /src
