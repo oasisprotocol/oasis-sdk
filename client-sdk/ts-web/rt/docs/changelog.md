@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased chanegs:
+
+Documentation changes:
+- Added doc comments for some signing types and functions.
+
 ## v0.2.0-alpha3
 
 Spotlight change:

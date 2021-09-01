@@ -47,6 +47,10 @@ export class TransactionWrapper<BODY, OK> {
         return this;
     }
 
+    /**
+     * @param proofProviders An array of providers matching the layout of the
+     * transaction's signer info.
+     */
     async sign(proofProviders: transaction.ProofProvider[], consensusChainContext: string) {
         this.unverifiedTransaction = await transaction.signUnverifiedTransaction(
             proofProviders,
