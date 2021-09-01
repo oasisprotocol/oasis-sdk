@@ -108,7 +108,7 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
                     prefixes.insert(Prefix::from(
                         [
                             modules::accounts::Module::NAME.as_bytes(),
-                            &accounts::state::ACCOUNTS,
+                            accounts::state::ACCOUNTS,
                             args.to.as_ref(),
                         ]
                         .concat(),
@@ -116,7 +116,7 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
                     prefixes.insert(Prefix::from(
                         [
                             modules::accounts::Module::NAME.as_bytes(),
-                            &accounts::state::BALANCES,
+                            accounts::state::BALANCES,
                             args.to.as_ref(),
                         ]
                         .concat(),
@@ -125,7 +125,7 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
                     prefixes.insert(Prefix::from(
                         [
                             modules::accounts::Module::NAME.as_bytes(),
-                            &accounts::state::ACCOUNTS,
+                            accounts::state::ACCOUNTS,
                             from.as_ref(),
                         ]
                         .concat(),
@@ -133,7 +133,7 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
                     prefixes.insert(Prefix::from(
                         [
                             modules::accounts::Module::NAME.as_bytes(),
-                            &accounts::state::BALANCES,
+                            accounts::state::BALANCES,
                             from.as_ref(),
                         ]
                         .concat(),
@@ -148,7 +148,7 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
                 prefixes.insert(Prefix::from(
                     [
                         modules::accounts::Module::NAME.as_bytes(),
-                        &accounts::state::ACCOUNTS,
+                        accounts::state::ACCOUNTS,
                         from.as_ref(),
                     ]
                     .concat(),
@@ -156,7 +156,7 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
                 prefixes.insert(Prefix::from(
                     [
                         modules::accounts::Module::NAME.as_bytes(),
-                        &accounts::state::BALANCES,
+                        accounts::state::BALANCES,
                         from.as_ref(),
                     ]
                     .concat(),

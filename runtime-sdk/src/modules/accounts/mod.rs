@@ -491,17 +491,17 @@ impl module::MethodHandler for Module {
 
                     // Prefetch accounts 'to'.
                     prefixes.insert(Prefix::from(
-                        [MODULE_NAME.as_bytes(), &state::ACCOUNTS, args.to.as_ref()].concat(),
+                        [MODULE_NAME.as_bytes(), state::ACCOUNTS, args.to.as_ref()].concat(),
                     ));
                     prefixes.insert(Prefix::from(
-                        [MODULE_NAME.as_bytes(), &state::BALANCES, args.to.as_ref()].concat(),
+                        [MODULE_NAME.as_bytes(), state::BALANCES, args.to.as_ref()].concat(),
                     ));
                     // Prefetch accounts 'from'.
                     prefixes.insert(Prefix::from(
-                        [MODULE_NAME.as_bytes(), &state::ACCOUNTS, from.as_ref()].concat(),
+                        [MODULE_NAME.as_bytes(), state::ACCOUNTS, from.as_ref()].concat(),
                     ));
                     prefixes.insert(Prefix::from(
-                        [MODULE_NAME.as_bytes(), &state::BALANCES, from.as_ref()].concat(),
+                        [MODULE_NAME.as_bytes(), state::BALANCES, from.as_ref()].concat(),
                     ));
 
                     Ok(())
@@ -757,7 +757,7 @@ impl module::BlockHandler for Module {
                         .checked_sub(amount.amount())
                         .expect("there should be enough to disburse");
 
-                    Self::add_amount(ctx.runtime_state(), address, &amount)
+                    Self::add_amount(ctx.runtime_state(), address, amount)
                         .expect("add_amount must succeed for fee disbursement");
                 }
             }
@@ -823,7 +823,7 @@ impl module::InvariantHandler for Module {
             // balances.
             #[allow(clippy::or_fun_call)]
             let computed = computed_ts
-                .remove(&den)
+                .remove(den)
                 .ok_or(CoreError::InvariantViolation(
                     "unexpected denomination".to_string(),
                 ))?;

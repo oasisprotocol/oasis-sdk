@@ -57,7 +57,7 @@ pub(super) fn validate_and_transform<Cfg: Config, C: Context>(
     // Parse code.
     let mut module = walrus::ModuleConfig::new()
         .generate_producers_section(false)
-        .parse(&code)
+        .parse(code)
         .map_err(|_| Error::CodeMalformed)?;
 
     // Validate ABI selection and make sure the code conforms to the specified ABI.

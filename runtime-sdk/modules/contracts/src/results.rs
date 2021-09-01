@@ -219,12 +219,12 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                             params,
                         };
                         let reply_result =
-                            wasm::handle_reply::<Cfg, C>(&mut exec_ctx, &contract, reply);
+                            wasm::handle_reply::<Cfg, C>(&mut exec_ctx, contract, reply);
                         let reply_result = process_execution_result(ctx, reply_result)?;
                         let reply_result = process_execution_success::<Cfg, C>(
                             ctx,
-                            &params,
-                            &contract,
+                            params,
+                            contract,
                             reply_result,
                         )?;
 

@@ -45,7 +45,7 @@ pub(crate) struct PrefixStoreIterator<'store> {
 
 impl<'store> PrefixStoreIterator<'store> {
     fn new(mut inner: Box<dyn mkvs::Iterator + 'store>, prefix: &'store [u8]) -> Self {
-        inner.seek(&prefix);
+        inner.seek(prefix);
         Self { inner, prefix }
     }
 }
@@ -87,7 +87,7 @@ impl<'store> mkvs::Iterator for PrefixStoreIterator<'store> {
     }
 
     fn rewind(&mut self) {
-        self.inner.seek(&self.prefix);
+        self.inner.seek(self.prefix);
     }
 
     fn seek(&mut self, key: &[u8]) {

@@ -33,7 +33,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                             return Err(wasm3::Trap::Abort);
                         }
 
-                        cbor::from_slice(&query).map_err(|_| wasm3::Trap::Abort)
+                        cbor::from_slice(query).map_err(|_| wasm3::Trap::Abort)
                     },
                 )??;
 
