@@ -298,7 +298,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
                 prefixes.insert(Prefix::from(
                     [
                         modules::accounts::Module::NAME.as_bytes(),
-                        &modules::accounts::state::BALANCES,
+                        modules::accounts::state::BALANCES,
                         addr.as_ref(),
                     ]
                     .concat(),

@@ -291,7 +291,7 @@ impl<Cfg: Config> Module<Cfg> {
     ) -> Result<(), Error> {
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut code_store = storage::PrefixStore::new(&mut store, &state::CODE);
-        code_store.insert(&code_id.to_storage_key(), &code);
+        code_store.insert(&code_id.to_storage_key(), code);
 
         Ok(())
     }

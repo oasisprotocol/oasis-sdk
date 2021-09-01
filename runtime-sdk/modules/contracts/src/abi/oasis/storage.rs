@@ -30,7 +30,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 let value = ctx.instance.runtime().try_with_memory(
                     |memory| -> Result<_, wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
-                        ensure_key_size(&ec, key)?;
+                        ensure_key_size(ec, key)?;
                         // TODO: Charge gas per key/value size.
                         Ok(get_instance_store(ec, store)?.get(key))
                     },
@@ -68,8 +68,8 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     .try_with_memory(|memory| -> Result<(), wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
                         let value = Region::from_arg(value).as_slice(&memory)?;
-                        ensure_key_size(&ec, key)?;
-                        ensure_value_size(&ec, value)?;
+                        ensure_key_size(ec, key)?;
+                        ensure_value_size(ec, value)?;
                         // TODO: Charge gas per key/value size.
                         get_instance_store(ec, store)?.insert(key, value);
                         Ok(())
@@ -95,7 +95,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     .runtime()
                     .try_with_memory(|memory| -> Result<(), wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
-                        ensure_key_size(&ec, key)?;
+                        ensure_key_size(ec, key)?;
                         // TODO: Charge gas per key/value size.
                         get_instance_store(ec, store)?.remove(key);
                         Ok(())

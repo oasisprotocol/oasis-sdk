@@ -335,7 +335,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
     }
 
     fn host_info(&self) -> &HostInfo {
-        &self.host_info
+        self.host_info
     }
 
     fn key_manager(&self) -> Option<&KeyManagerClientWithContext<'a>> {
@@ -343,11 +343,11 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
     }
 
     fn runtime_header(&self) -> &roothash::Header {
-        &self.runtime_header
+        self.runtime_header
     }
 
     fn runtime_round_results(&self) -> &roothash::RoundResults {
-        &self.runtime_round_results
+        self.runtime_round_results
     }
 
     fn runtime_state(&mut self) -> &mut Self::Store {
@@ -355,7 +355,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
     }
 
     fn consensus_state(&self) -> &consensus::state::ConsensusState {
-        &self.consensus_state
+        self.consensus_state
     }
 
     fn epoch(&self) -> consensus::beacon::EpochTime {
@@ -535,7 +535,7 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
     }
 
     fn host_info(&self) -> &HostInfo {
-        &self.host_info
+        self.host_info
     }
 
     fn key_manager(&self) -> Option<&KeyManagerClientWithContext<'round>> {

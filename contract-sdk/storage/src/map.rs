@@ -35,7 +35,7 @@ where
         encode_length_prefixed_path(
             self.key,
             &raw_key[..raw_key.len() - 1],
-            &raw_key[raw_key.len() - 1],
+            raw_key[raw_key.len() - 1],
         )
     }
 
@@ -75,7 +75,7 @@ impl MapKey for &str {
 
 impl MapKey for Vec<u8> {
     fn key(&self) -> Vec<&[u8]> {
-        vec![&self]
+        vec![self]
     }
 }
 

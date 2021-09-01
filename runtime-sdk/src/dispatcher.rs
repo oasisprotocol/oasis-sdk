@@ -110,7 +110,7 @@ impl<R: Runtime> Dispatcher<R> {
         // TODO: Check against transaction size limit.
 
         // Deserialize transaction.
-        let utx: types::transaction::UnverifiedTransaction = cbor::from_slice(&tx)
+        let utx: types::transaction::UnverifiedTransaction = cbor::from_slice(tx)
             .map_err(|e| modules::core::Error::MalformedTransaction(e.into()))?;
 
         // Perform any checks before signature verification.

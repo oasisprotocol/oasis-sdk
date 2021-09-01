@@ -36,7 +36,7 @@ pub fn get_chain_context_for(base: &[u8]) -> Vec<u8> {
     ctx[..base.len()].copy_from_slice(base);
     ctx[base.len()..base.len() + CHAIN_CONTEXT_SEPARATOR.len()]
         .copy_from_slice(CHAIN_CONTEXT_SEPARATOR);
-    ctx[base.len() + CHAIN_CONTEXT_SEPARATOR.len()..].copy_from_slice(&chain_context);
+    ctx[base.len() + CHAIN_CONTEXT_SEPARATOR.len()..].copy_from_slice(chain_context);
     ctx
 }
 
