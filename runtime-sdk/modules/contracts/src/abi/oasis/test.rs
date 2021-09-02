@@ -228,7 +228,10 @@ fn test_hello_contract() {
     let result = run_contract_with_defaults(
         HELLO_CONTRACT_CODE,
         1_000_000,
-        cbor::cbor_text!("instantiate"),
+        cbor::cbor_map! {
+        "instantiate" => cbor::cbor_map! {
+            "initial_counter" => cbor::cbor_int!(22)
+        }},
         cbor::cbor_map! { "say_hello" => cbor::cbor_map!{"who" => cbor::cbor_text!("tester")} },
     )
     .expect("contract instantiation and call should succeed");
@@ -236,7 +239,7 @@ fn test_hello_contract() {
         result,
         cbor::cbor_map! {
             "hello" => cbor::cbor_map!{
-                "greeting" => cbor::cbor_text!("hello tester (1)")
+                "greeting" => cbor::cbor_text!("hello tester (22)")
             }
         }
     );
@@ -247,8 +250,14 @@ fn test_hello_contract_invalid_request() {
     let result = run_contract_with_defaults(
         HELLO_CONTRACT_CODE,
         1_000_000,
-        cbor::cbor_text!("instantiate"),
-        cbor::cbor_text!("instantiate"), // This request is invalid.
+        cbor::cbor_map! {
+        "instantiate" => cbor::cbor_map! {
+            "initial_counter" => cbor::cbor_int!(44)
+        }},
+        cbor::cbor_map! {
+        "instantiate" => cbor::cbor_map! {
+            "initial_counter" => cbor::cbor_int!(44)
+        }}, // This request is invalid.
     )
     .expect_err("contract call should fail");
 

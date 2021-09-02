@@ -77,7 +77,12 @@ fn deploy_hello_contract<C: BatchContext>(
             body: cbor::to_value(types::Instantiate {
                 code_id: 0.into(),
                 upgrades_policy: types::Policy::Address(keys::alice::address()),
-                data: cbor::to_vec(cbor::cbor_text!("instantiate")), // Needs to conform to contract API.
+                // Needs to conform to contract API.
+                data: cbor::to_vec(cbor::cbor_map! {
+                    "instantiate" => cbor::cbor_map! {
+                        "initial_counter" => cbor::cbor_int!(33)
+                    }
+                }),
                 tokens,
                 max_consensus_messages: 0,
             }),
@@ -215,7 +220,7 @@ fn test_hello_contract_call() {
             result,
             cbor::cbor_map! {
                 "hello" => cbor::cbor_map!{
-                    "greeting" => cbor::cbor_text!("hello tester (1)")
+                    "greeting" => cbor::cbor_text!("hello tester (33)")
                 }
             }
         );
@@ -296,7 +301,7 @@ fn test_hello_contract_call() {
             result,
             cbor::cbor_map! {
                 "hello" => cbor::cbor_map!{
-                    "greeting" => cbor::cbor_text!("hello second (2)")
+                    "greeting" => cbor::cbor_text!("hello second (34)")
                 }
             }
         );
@@ -359,8 +364,8 @@ fn test_hello_contract_call() {
     .expect("instance storage query should succeed");
     let value = result.value.expect("counter value should be set");
     let value: u64 = cbor::from_slice(&value).expect("counter value should be well-formed");
-    // Value is 3 because it was incremented by last call above.
-    assert_eq!(value, 3, "counter value should be correct");
+    // Value is 35 because it was incremented by last call above.
+    assert_eq!(value, 35, "counter value should be correct");
 }
 
 /// Contract runtime.

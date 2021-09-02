@@ -108,7 +108,7 @@ fn test_debug_option_set() {
 
     Accounts::init(
         &mut ctx,
-        &Genesis {
+        Genesis {
             parameters: Parameters {
                 debug_disable_nonce_check: true,
                 ..Default::default()
