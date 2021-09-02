@@ -3,11 +3,14 @@
 
 extern crate alloc;
 
-use oasis_contract_sdk::{self as sdk, env::Env};
-use oasis_contract_sdk::types::{
-    env::{AccountsQuery, AccountsResponse, QueryRequest, QueryResponse},
-    message::{Message, NotifyReply, Reply},
-    token,
+use oasis_contract_sdk::{
+    self as sdk,
+    env::Env,
+    types::{
+        env::{AccountsQuery, AccountsResponse, QueryRequest, QueryResponse},
+        message::{Message, NotifyReply, Reply},
+        token,
+    },
 };
 use oasis_contract_sdk_storage::cell::Cell;
 
@@ -52,7 +55,7 @@ pub enum Event {
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub enum Request {
     #[cbor(rename = "instantiate")]
-    Instantiate,
+    Instantiate { initial_counter: u64 },
 
     #[cbor(rename = "say_hello")]
     SayHello { who: String },
@@ -118,9 +121,9 @@ impl sdk::Contract for HelloWorld {
         // instantiated. It can be used to initialize the contract state.
         match request {
             // We require the caller to always pass the Instantiate request.
-            Request::Instantiate => {
+            Request::Instantiate { initial_counter } => {
                 // Initialize counter to 1.
-                COUNTER.set(ctx.public_store(), 1);
+                COUNTER.set(ctx.public_store(), initial_counter);
 
                 Ok(())
             }
@@ -268,7 +271,13 @@ mod test {
         let mut ctx: MockContext = ExecutionContext::default().into();
 
         // Instantiate the contract.
-        HelloWorld::instantiate(&mut ctx, Request::Instantiate).expect("instantiation should work");
+        HelloWorld::instantiate(
+            &mut ctx,
+            Request::Instantiate {
+                initial_counter: 11,
+            },
+        )
+        .expect("instantiation should work");
 
         // Dispatch the SayHello message.
         let rsp = HelloWorld::call(
@@ -283,7 +292,7 @@ mod test {
         assert_eq!(
             rsp,
             Response::Hello {
-                greeting: "hello unit test (1)".to_string()
+                greeting: "hello unit test (11)".to_string()
             }
         );
 
@@ -300,7 +309,7 @@ mod test {
         assert_eq!(
             rsp,
             Response::Hello {
-                greeting: "hello second call (2)".to_string()
+                greeting: "hello second call (12)".to_string()
             }
         );
     }

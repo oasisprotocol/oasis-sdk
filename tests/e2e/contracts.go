@@ -20,10 +20,15 @@ import (
 //go:embed contracts/hello.wasm
 var helloContractCode []byte
 
+type HelloInitiate struct {
+	InitialCounter uint64 `json:"initial_counter"`
+}
+
 // ContractsTest does a simple upload/instantiate/call contract test.
 func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 
+	initialCounter := uint64(24)
 	ac := accounts.NewV1(rtc)
 	ct := contracts.NewV1(rtc)
 	signer := testing.Alice.Signer
@@ -47,7 +52,10 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	tb = ct.Instantiate(
 		upload.ID,
 		contracts.Policy{Everyone: &struct{}{}},
-		"instantiate", // This needs to conform to the contract ABI.
+		// This needs to conform to the contract API.
+		map[string]interface{}{
+			"instantiate": &HelloInitiate{initialCounter},
+		},
 		[]types.BaseUnits{},
 	).
 		SetFeeGas(1_000_000).
@@ -81,7 +89,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		return fmt.Errorf("failed to decode contract result: %w", err)
 	}
 
-	if result["hello"]["greeting"] != "hello e2e test (1)" {
+	if result["hello"]["greeting"] != fmt.Sprintf("hello e2e test (%d)", initialCounter) {
 		return fmt.Errorf("unexpected result from contract: %+v", result)
 	}
 
