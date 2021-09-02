@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased changes:
+
+Bug fixes:
+
+- Fixes to type declarations that were inconsistent with the Go types.
+
 ## v0.1.0-alpha5
 
 Spotlight change:
