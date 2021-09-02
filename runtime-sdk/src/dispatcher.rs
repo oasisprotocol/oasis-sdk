@@ -49,7 +49,7 @@ pub enum Error {
 
     #[error("malformed transaction in batch: {0}")]
     #[sdk_error(code = 2)]
-    MalformedTransactionInBatch(#[source] modules::core::Error),
+    MalformedTransactionInBatch(#[source] anyhow::Error),
 
     #[error("query aborted: {0}")]
     #[sdk_error(code = 3)]
@@ -57,7 +57,7 @@ pub enum Error {
 
     #[error("key manager failure: {0}")]
     #[sdk_error(code = 4)]
-    KeyManagerFailure(#[source] KeyManagerError),
+    KeyManagerFailure(#[from] KeyManagerError),
 }
 
 /// Result of dispatching a transaction.
@@ -163,8 +163,7 @@ impl<R: Runtime> Dispatcher<R> {
 
         let (result, messages) = ctx.with_tx(tx, |mut ctx, call| {
             // Decode call based on specified call format.
-            let (call, call_format_metadata) = match callformat::decode_call(&mut ctx, call, index)
-            {
+            let (call, call_format_metadata) = match callformat::decode_call(&ctx, call, index) {
                 Ok(Some(result)) => result,
                 Ok(None) => {
                     return (
@@ -384,8 +383,8 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                 // node vote for failure and the round will fail.
                 //
                 // Correct proposers should only include transactions which have passed check_tx.
-                let tx =
-                    Self::decode_tx(&mut ctx, tx).map_err(Error::MalformedTransactionInBatch)?;
+                let tx = Self::decode_tx(&mut ctx, tx)
+                    .map_err(|err| Error::MalformedTransactionInBatch(err.into()))?;
                 txs.push(tx.clone());
 
                 if prefetch_enabled {

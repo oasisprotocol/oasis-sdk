@@ -1,16 +1,18 @@
 //! Core definitions module.
 use std::collections::BTreeMap;
 
+use anyhow::anyhow;
 use thiserror::Error;
 
 pub use oasis_core_keymanager_api_common::KeyManagerError;
 
 use crate::{
+    callformat,
     context::{BatchContext, Context, TxContext},
     dispatcher, error,
     module::{self, InvariantHandler as _, Module as _},
     types::transaction::{
-        self, AddressSpec, AuthProof, Call, TransactionWeight, UnverifiedTransaction,
+        self, AddressSpec, AuthProof, Call, CallFormat, TransactionWeight, UnverifiedTransaction,
     },
     Runtime,
 };
@@ -92,6 +94,10 @@ pub enum Error {
     #[error("invalid call format: {0}")]
     #[sdk_error(code = 18)]
     InvalidCallFormat(#[source] anyhow::Error),
+
+    #[error("{0}")]
+    #[sdk_error(transparent, abort)]
+    Abort(#[source] dispatcher::Error),
 }
 
 /// Gas costs.
@@ -99,6 +105,8 @@ pub enum Error {
 pub struct GasCosts {
     pub auth_signature: u64,
     pub auth_multisig_signer: u64,
+
+    pub callformat_x25519_deoxysii: u64,
 }
 
 /// Parameters for the core module.
@@ -287,8 +295,24 @@ impl Module {
     }
 
     /// Check invariants of all modules in the runtime.
-    fn query_check_invariants<C: Context>(ctx: &mut C) -> Result<(), Error> {
+    fn query_check_invariants<C: Context>(ctx: &mut C, _args: ()) -> Result<(), Error> {
         <C::Runtime as Runtime>::Modules::check_invariants(ctx)
+    }
+
+    /// Retrieve the public key for encrypting call data.
+    fn query_calldata_public_key<C: Context>(
+        ctx: &mut C,
+        _args: (),
+    ) -> Result<types::CallDataPublicKeyQueryResponse, Error> {
+        let key_manager = ctx
+            .key_manager()
+            .ok_or_else(|| Error::InvalidArgument(anyhow!("key manager not available")))?;
+        let public_key = key_manager
+            .get_public_key(callformat::get_key_pair_id(ctx))
+            .map_err(|err| Error::Abort(err.into()))?
+            .ok_or_else(|| Error::InvalidArgument(anyhow!("key not available")))?;
+
+        Ok(types::CallDataPublicKeyQueryResponse { public_key })
     }
 }
 
@@ -318,7 +342,8 @@ impl module::AuthHandler for Module {
         Ok(())
     }
 
-    fn before_handle_call<C: TxContext>(ctx: &mut C, _call: &Call) -> Result<(), Error> {
+    fn before_handle_call<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {
+        // Charge gas for signature verification.
         let mut num_signature: u64 = 0;
         let mut num_multisig_signer: u64 = 0;
         for si in &ctx.tx_auth_info().signer_info {
@@ -344,6 +369,14 @@ impl module::AuthHandler for Module {
         })()
         .ok_or(Error::GasOverflow)?;
         Self::use_tx_gas(ctx, total)?;
+
+        // Charge gas for callformat.
+        match call.format {
+            CallFormat::Plain => {} // No additional gas required.
+            CallFormat::EncryptedX25519DeoxysII => {
+                Self::use_tx_gas(ctx, params.gas_costs.callformat_x25519_deoxysii)?
+            }
+        }
 
         // Attempt to limit the maximum number of consensus messages and add appropriate weights.
         let consensus_messages = ctx.tx_auth_info().fee.consensus_messages;
@@ -387,10 +420,12 @@ impl module::MethodHandler for Module {
     ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
         match method {
             "core.EstimateGas" => module::dispatch_query(ctx, args, Self::query_estimate_gas),
-            "core.CheckInvariants" => module::DispatchResult::Handled((|| {
-                let _ = Self::query_check_invariants(ctx)?;
-                Ok(cbor::to_value(true))
-            })()),
+            "core.CheckInvariants" => {
+                module::dispatch_query(ctx, args, Self::query_check_invariants)
+            }
+            "core.CallDataPublicKey" => {
+                module::dispatch_query(ctx, args, Self::query_calldata_public_key)
+            }
             _ => module::DispatchResult::Unhandled(args),
         }
     }

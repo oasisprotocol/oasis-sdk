@@ -51,6 +51,7 @@ impl sdk::Runtime for Runtime {
                     gas_costs: modules::core::GasCosts {
                         auth_signature: 0,
                         auth_multisig_signer: 0,
+                        ..Default::default()
                     },
                 },
             },

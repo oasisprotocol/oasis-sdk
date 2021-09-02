@@ -195,6 +195,7 @@ func NewTransaction(fee *Fee, method string, body interface{}) *Transaction {
 	tx := &Transaction{
 		Versioned: cbor.NewVersioned(LatestTransactionVersion),
 		Call: Call{
+			Format: CallFormatPlain,
 			Method: method,
 			Body:   cbor.Marshal(body),
 		},
@@ -280,13 +281,19 @@ type SignerInfo struct {
 
 // CallResult is the method call result.
 type CallResult struct {
-	Ok     cbor.RawMessage   `json:"ok,omitempty"`
-	Failed *FailedCallResult `json:"fail,omitempty"`
+	Ok      cbor.RawMessage   `json:"ok,omitempty"`
+	Failed  *FailedCallResult `json:"fail,omitempty"`
+	Unknown cbor.RawMessage   `json:"unknown,omitempty"`
 }
 
 // IsSuccess checks whether the call result indicates success.
 func (cr *CallResult) IsSuccess() bool {
 	return cr.Failed == nil
+}
+
+// IsUnknown checks whether the call result is unknown.
+func (cr *CallResult) IsUnknown() bool {
+	return cr.Unknown != nil
 }
 
 // FailedCallResult is a failed call result.

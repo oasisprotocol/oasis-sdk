@@ -82,15 +82,7 @@ func EstimateGas(ctx context.Context, rtc client.RuntimeClient, tx types.Transac
 
 // CheckInvariants issues a check of invariants in all modules in the runtime.
 func CheckInvariants(ctx context.Context, rtc client.RuntimeClient) error {
-	var ok bool
-	err := rtc.Query(ctx, client.RoundLatest, "core.CheckInvariants", nil, &ok)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return fmt.Errorf("invariants check failed")
-	}
-	return nil
+	return rtc.Query(ctx, client.RoundLatest, "core.CheckInvariants", nil, nil)
 }
 
 // SignAndSubmitTx signs and submits the given transaction.

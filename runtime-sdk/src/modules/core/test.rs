@@ -139,6 +139,7 @@ impl Runtime for GasWasterRuntime {
                     gas_costs: super::GasCosts {
                         auth_signature: Self::AUTH_SIGNATURE_GAS,
                         auth_multisig_signer: Self::AUTH_MULTISIG_GAS,
+                        callformat_x25519_deoxysii: 0,
                     },
                 },
             },

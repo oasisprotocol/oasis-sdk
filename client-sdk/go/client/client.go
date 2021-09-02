@@ -27,8 +27,15 @@ type RuntimeClient interface {
 	// GetInfo returns information about the runtime.
 	GetInfo(ctx context.Context) (*types.RuntimeInfo, error)
 
+	// SubmitTxRaw submits a transaction to the runtime transaction scheduler and waits
+	// for transaction execution results.
+	SubmitTxRaw(ctx context.Context, tx *types.UnverifiedTransaction) (*types.CallResult, error)
+
 	// SubmitTx submits a transaction to the runtime transaction scheduler and waits
 	// for transaction execution results.
+	//
+	// If there is a possibility that the result is Unknown then the caller must use SubmitTxRaw
+	// instead as this method will return an error.
 	SubmitTx(ctx context.Context, tx *types.UnverifiedTransaction) (cbor.RawMessage, error)
 
 	// SubmitTxNoWait submits a transaction to the runtime transaction scheduler but does
@@ -92,7 +99,7 @@ func (rc *runtimeClient) GetInfo(ctx context.Context) (*types.RuntimeInfo, error
 }
 
 // Implements RuntimeClient.
-func (rc *runtimeClient) SubmitTx(ctx context.Context, tx *types.UnverifiedTransaction) (cbor.RawMessage, error) {
+func (rc *runtimeClient) SubmitTxRaw(ctx context.Context, tx *types.UnverifiedTransaction) (*types.CallResult, error) {
 	raw, err := rc.cc.SubmitTx(ctx, &coreClient.SubmitTxRequest{
 		RuntimeID: rc.runtimeID,
 		Data:      cbor.Marshal(tx),
@@ -105,10 +112,23 @@ func (rc *runtimeClient) SubmitTx(ctx context.Context, tx *types.UnverifiedTrans
 	if err = cbor.Unmarshal(raw, &result); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal call result: %w", err)
 	}
-	if !result.IsSuccess() {
+	return &result, nil
+}
+
+// Implements RuntimeClient.
+func (rc *runtimeClient) SubmitTx(ctx context.Context, tx *types.UnverifiedTransaction) (cbor.RawMessage, error) {
+	result, err := rc.SubmitTxRaw(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case result.IsUnknown():
+		return nil, fmt.Errorf("got unknown result, use SubmitTxRaw to retrieve")
+	case result.IsSuccess():
+		return result.Ok, nil
+	default:
 		return nil, result.Failed
 	}
-	return result.Ok, nil
 }
 
 // Implements RuntimeClient.
@@ -175,8 +195,10 @@ func (rc *runtimeClient) Query(ctx context.Context, round uint64, method string,
 	if err != nil {
 		return err
 	}
-	if err = cbor.Unmarshal(raw.Data, rsp); err != nil {
-		return fmt.Errorf("failed to unmarshal response: %w", err)
+	if rsp != nil {
+		if err = cbor.Unmarshal(raw.Data, rsp); err != nil {
+			return fmt.Errorf("failed to unmarshal response: %w", err)
+		}
 	}
 	return nil
 }

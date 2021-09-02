@@ -256,7 +256,7 @@ pub enum CallResult {
     },
 
     #[cbor(rename = "unknown")]
-    Unknown(Vec<u8>),
+    Unknown(cbor::Value),
 }
 
 impl CallResult {

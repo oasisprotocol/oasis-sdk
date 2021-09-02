@@ -3,7 +3,8 @@ use std::collections::{BTreeMap, HashSet};
 
 use oasis_runtime_sdk::{
     self as sdk,
-    keymanager::{PrivateKey, TrustedPolicySigners},
+    core::common::crypto::signature::PrivateKey,
+    keymanager::TrustedPolicySigners,
     modules,
     types::token::{BaseUnits, Denomination},
     Module as _, Version,
@@ -139,6 +140,7 @@ impl sdk::Runtime for Runtime {
                     gas_costs: modules::core::GasCosts {
                         auth_signature: 10,
                         auth_multisig_signer: 10,
+                        callformat_x25519_deoxysii: 1000,
                     },
                 },
             },

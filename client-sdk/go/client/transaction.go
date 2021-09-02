@@ -15,6 +15,8 @@ type TransactionBuilder struct {
 	rc RuntimeClient
 	tx *types.Transaction
 	ts *types.TransactionSigner
+
+	callMeta interface{}
 }
 
 // NewTransactionBuilder creates a new transaction builder.
@@ -42,6 +44,28 @@ func (tb *TransactionBuilder) SetFeeGas(gas uint64) *TransactionBuilder {
 func (tb *TransactionBuilder) SetFeeConsensusMessages(consensusMessages uint32) *TransactionBuilder {
 	tb.tx.AuthInfo.Fee.ConsensusMessages = consensusMessages
 	return tb
+}
+
+// SetCallFormat changes the transaction's call format.
+//
+// Depending on the call format this operation my require queries into the runtime in order to
+// retrieve the required parameters.
+//
+// This method can only be called as long as the current call format is CallFormatPlain and will
+// fail otherwise.
+func (tb *TransactionBuilder) SetCallFormat(ctx context.Context, format types.CallFormat) error {
+	if tb.tx.Call.Format != types.CallFormatPlain || tb.callMeta != nil {
+		return fmt.Errorf("can only change call format from CallFormatPlain")
+	}
+
+	tb.tx.Call.Format = format
+	encodedCall, meta, err := tb.encodeCall(ctx, &tb.tx.Call)
+	if err != nil {
+		return err
+	}
+	tb.tx.Call = *encodedCall
+	tb.callMeta = meta
+	return nil
 }
 
 // AppendAuthSignature appends a new transaction signer information with a signature address
@@ -84,17 +108,29 @@ func (tb *TransactionBuilder) SubmitTx(ctx context.Context, rsp interface{}) err
 		return fmt.Errorf("unable to submit unsigned transaction")
 	}
 
-	raw, err := tb.rc.SubmitTx(ctx, tb.ts.UnverifiedTransaction())
+	result, err := tb.rc.SubmitTxRaw(ctx, tb.ts.UnverifiedTransaction())
+	if err != nil {
+		return err
+	}
+	result, err = tb.decodeResult(result, tb.callMeta)
 	if err != nil {
 		return err
 	}
 
-	if rsp != nil {
-		if err := cbor.Unmarshal(raw, rsp); err != nil {
-			return fmt.Errorf("failed to unmarshal call result: %w", err)
+	switch {
+	case result.IsUnknown():
+		// This should never happen as the inner result should not be unknown.
+		return fmt.Errorf("got unknown result: %X", result.Unknown)
+	case result.IsSuccess():
+		if rsp != nil {
+			if err := cbor.Unmarshal(result.Ok, rsp); err != nil {
+				return fmt.Errorf("failed to unmarshal call result: %w", err)
+			}
 		}
+		return nil
+	default:
+		return result.Failed
 	}
-	return nil
 }
 
 // SubmitTxNoWait submits a transaction to the runtime transaction scheduler but does not wait for
