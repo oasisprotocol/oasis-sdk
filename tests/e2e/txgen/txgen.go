@@ -65,18 +65,18 @@ func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.C
 
 // EstimateGas estimates the amount of gas the transaction will use.
 // Returns modified transaction that has just the right amount of gas.
-func EstimateGas(ctx context.Context, rtc client.RuntimeClient, tx types.Transaction) types.Transaction {
+func EstimateGas(ctx context.Context, rtc client.RuntimeClient, tx types.Transaction, extraGas uint64) types.Transaction {
 	var gas uint64
 	oldGas := tx.AuthInfo.Fee.Gas
 	// Set the starting gas to something high, so we don't run out.
 	tx.AuthInfo.Fee.Gas = highGasAmount
 	// Estimate gas usage.
 	if err := rtc.Query(ctx, client.RoundLatest, "core.EstimateGas", tx, &gas); err != nil {
-		tx.AuthInfo.Fee.Gas = oldGas
+		tx.AuthInfo.Fee.Gas = oldGas + extraGas
 		return tx
 	}
 	// Specify only as much gas as was estimated.
-	tx.AuthInfo.Fee.Gas = gas
+	tx.AuthInfo.Fee.Gas = gas + extraGas
 	return tx
 }
 
@@ -87,7 +87,7 @@ func CheckInvariants(ctx context.Context, rtc client.RuntimeClient) error {
 
 // SignAndSubmitTx signs and submits the given transaction.
 // Gas estimation is done automatically.
-func SignAndSubmitTx(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, tx types.Transaction) (cbor.RawMessage, error) {
+func SignAndSubmitTx(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, tx types.Transaction, extraGas uint64) (cbor.RawMessage, error) {
 	// Get chain context.
 	chainCtx, err := GetChainContext(ctx, rtc)
 	if err != nil {
@@ -103,7 +103,7 @@ func SignAndSubmitTx(ctx context.Context, rtc client.RuntimeClient, signer signa
 	tx.AppendAuthSignature(signer.Public(), nonce)
 
 	// Estimate gas.
-	etx := EstimateGas(ctx, rtc, tx)
+	etx := EstimateGas(ctx, rtc, tx, extraGas)
 
 	// Sign the transaction.
 	stx := etx.PrepareForSigning()
@@ -152,11 +152,20 @@ func CreateAndFundAccount(ctx context.Context, rtc client.RuntimeClient, funder 
 		To:     types.NewAddress(sig.Public()),
 		Amount: types.NewBaseUnits(*quantity.NewFromUint64(fundAmount), types.NativeDenomination),
 	})
-	if _, err := SignAndSubmitTx(ctx, rtc, funder, *tx); err != nil {
+	if _, err := SignAndSubmitTx(ctx, rtc, funder, *tx, 0); err != nil {
 		return nil, err
 	}
 
 	return sig, nil
+}
+
+// RandomizeFee generates random fee parameters for the transaction.
+func RandomizeFee(ctx context.Context, rng *rand.Rand, tx *types.Transaction) error {
+	const maxBaseUnits = 10
+	feeAmount := rng.Uint64() % maxBaseUnits
+
+	tx.AuthInfo.Fee.Amount = types.NewBaseUnits(*quantity.NewFromUint64(feeAmount), types.NativeDenomination)
+	return nil
 }
 
 // Generate generates and submits a random transaction for the given accounts
@@ -198,7 +207,7 @@ func Generate(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 
 			go func(acct signature.Signer, gen GenerateTx) {
 				// Generate random transaction or perform random query.
-				if tx, err := gen(ctx, rtc, rng, acct, accounts); err != nil {
+				if tx, err := gen(ctx, rtc, rng, acct, accounts); err != nil { //nolint: nestif
 					atomic.AddUint64(&genErrCount, 1)
 				} else {
 					// The tx generator can choose not to generate a tx
@@ -209,8 +218,14 @@ func Generate(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 						return
 					}
 
+					// Randomize transaction fee.
+					if err = RandomizeFee(ctx, rng, tx); err != nil {
+						atomic.AddUint64(&genErrCount, 1)
+						return
+					}
+
 					// Sign and submit the generated transaction.
-					if _, err = SignAndSubmitTx(ctx, rtc, acct, *tx); err != nil {
+					if _, err = SignAndSubmitTx(ctx, rtc, acct, *tx, 0); err != nil {
 						atomic.AddUint64(&subErrCount, 1)
 					} else {
 						atomic.AddUint64(&okCount, 1)

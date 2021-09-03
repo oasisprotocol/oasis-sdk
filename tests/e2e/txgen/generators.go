@@ -22,7 +22,13 @@ type GenerateTx func(context.Context, client.RuntimeClient, *rand.Rand, signatur
 var DefaultTxGenerators = []GenerateTx{GenTransfer, GenNonce}
 
 // GenTransfer generates transfer transactions.
-func GenTransfer(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acct signature.Signer, accts []signature.Signer) (*types.Transaction, error) {
+func GenTransfer(
+	ctx context.Context,
+	rtc client.RuntimeClient,
+	rng *rand.Rand,
+	acct signature.Signer,
+	accts []signature.Signer,
+) (*types.Transaction, error) {
 	// First, query account balance.
 	var balance uint64
 	ac := accounts.NewV1(rtc)

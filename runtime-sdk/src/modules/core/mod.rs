@@ -98,6 +98,10 @@ pub enum Error {
     #[error("{0}")]
     #[sdk_error(transparent, abort)]
     Abort(#[source] dispatcher::Error),
+
+    #[error("no module could authenticate the transaction")]
+    #[sdk_error(code = 19)]
+    NotAuthenticated,
 }
 
 /// Gas costs.

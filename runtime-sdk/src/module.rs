@@ -276,8 +276,8 @@ pub trait AuthHandler {
         _ctx: &mut C,
         _tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
-        // Default implementation doesn't do any checks.
-        Ok(())
+        // Default implementation rejects all transactions.
+        Err(modules::core::Error::NotAuthenticated)
     }
 
     /// Perform any action after authentication, within the transaction context.
@@ -304,8 +304,17 @@ impl AuthHandler for Tuple {
         ctx: &mut C,
         tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
-        for_tuples!( #( Tuple::authenticate_tx(ctx, tx)?; )* );
-        Ok(())
+        // Return on first handler that can successfully authenticate the tx,
+        // skip the ones that return an error (which is also the default
+        // return value for the authenticate_tx handler).
+        for_tuples!( #(
+            let result = match Tuple::authenticate_tx(ctx, tx) {
+                Ok(result) => return Ok(result),
+                Err(result) => 0,
+            };
+        )* );
+        // Return an error if no handlers were successful.
+        Err(modules::core::Error::NotAuthenticated)
     }
 
     fn before_handle_call<C: TxContext>(

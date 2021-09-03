@@ -149,6 +149,47 @@ impl Runtime for GasWasterRuntime {
 }
 
 #[test]
+fn test_reject_txs() {
+    // The gas waster runtime doesn't implement any authenticate_tx handler,
+    // so it should reject all transactions.
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+
+    GasWasterRuntime::migrate(&mut ctx);
+
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: GasWasterModule::METHOD_WASTE_GAS.to_owned(),
+            body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![
+                transaction::SignerInfo::new(keys::alice::pk(), 0),
+                transaction::SignerInfo::new_multisig(
+                    multisig::Config {
+                        signers: vec![multisig::Signer {
+                            public_key: keys::bob::pk(),
+                            weight: 1,
+                        }],
+                        threshold: 1,
+                    },
+                    0,
+                ),
+            ],
+            fee: transaction::Fee {
+                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                gas: u64::MAX,
+                consensus_messages: 0,
+            },
+        },
+    };
+
+    Core::authenticate_tx(&mut ctx, &tx).expect_err("no module could authenticate the transaction");
+}
+
+#[test]
 fn test_query_estimate_gas() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);

@@ -1864,6 +1864,7 @@ dependencies = [
  "fixed-hash",
  "oasis-cbor",
  "oasis-runtime-sdk",
+ "once_cell",
  "primitive-types",
  "thiserror",
  "tiny-keccak 2.0.2",
