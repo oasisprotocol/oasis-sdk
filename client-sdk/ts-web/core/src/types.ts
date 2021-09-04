@@ -8,14 +8,6 @@ export type NotModeled = {[key: string]: unknown};
 export type longnum = number | bigint;
 
 /**
- * EpochTimeState is the epoch state.
- */
-export interface BeaconEpochTimeState {
-    epoch: longnum;
-    height: longnum;
-}
-
-/**
  * ConsensusParameters are the beacon consensus parameters.
  */
 export interface BeaconConsensusParameters {
@@ -39,6 +31,14 @@ export interface BeaconConsensusParameters {
      * PVSSParameters are the beacon parameters for the PVSS backend.
      */
     pvss_parameters?: BeaconPVSSParameters;
+}
+
+/**
+ * EpochTimeState is the epoch state.
+ */
+export interface BeaconEpochTimeState {
+    epoch: longnum;
+    height: longnum;
 }
 
 /**
@@ -1047,6 +1047,20 @@ export interface NodeConsensusInfo {
 }
 
 /**
+ * P2PInfo contains information for connecting to this node via P2P transport.
+ */
+export interface NodeP2PInfo {
+    /**
+     * ID is the unique identifier of the node on the P2P transport.
+     */
+    id: Uint8Array;
+    /**
+     * Addresses is the list of addresses at which the node can be reached.
+     */
+    addresses: NodeAddress[];
+}
+
+/**
  * Runtime represents the runtimes supported by a given Oasis node.
  */
 export interface NodeRuntime {
@@ -1104,20 +1118,6 @@ export interface NodeTLSInfo {
      * Addresses is the list of addresses at which the node can be reached.
      */
     addresses: NodeTLSAddress[];
-}
-
-/**
- * P2PInfo contains information for connecting to this node via P2P transport.
- */
-export interface NodeP2PInfo {
-    /**
-     * ID is the unique identifier of the node on the P2P transport.
-     */
-    id: Uint8Array;
-    /**
-     * Addresses is the list of addresses at which the node can be reached.
-     */
-    addresses: NodeAddress[];
 }
 
 /**
