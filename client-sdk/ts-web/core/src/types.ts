@@ -1964,7 +1964,7 @@ export interface RootHashPool {
      * ExecuteCommitments are the commitments in the pool iff Committee.Kind
      * is scheduler.KindComputeExecutor.
      */
-    execute_commitments?: Map<Uint8Array, RootHashComputeBody>;
+    execute_commitments?: Map<Uint8Array, SignatureSigned>;
     /**
      * Discrepancy is a flag signalling that a discrepancy has been detected.
      */
