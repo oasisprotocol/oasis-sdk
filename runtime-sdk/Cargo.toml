@@ -20,7 +20,7 @@ digest = "0.9.0"
 sha2 = "0.9.6"
 k256 = { version = "0.9.6" }
 schnorrkel = "0.10.1"
-thiserror = "1.0.28"
+thiserror = "1.0.29"
 hex = "0.4.2"
 io-context = "0.2.0"
 anyhow = "1.0.43"
