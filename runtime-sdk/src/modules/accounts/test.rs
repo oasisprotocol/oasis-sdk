@@ -215,6 +215,7 @@ fn test_api_tx_transfer_disabled() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "accounts.Transfer".to_owned(),
             body: cbor::to_value(Transfer {
                 to: keys::bob::address(),
@@ -226,6 +227,7 @@ fn test_api_tx_transfer_disabled() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
+                consensus_messages: 0,
             },
         },
     };
@@ -252,12 +254,14 @@ fn test_prefetch() {
         fee: transaction::Fee {
             amount: Default::default(),
             gas: 1000,
+            consensus_messages: 0,
         },
     };
 
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "accounts.Transfer".to_owned(),
             body: cbor::to_value(Transfer {
                 to: keys::bob::address(),
@@ -383,6 +387,7 @@ fn test_authenticate_tx() {
     let mut tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "accounts.Transfer".to_owned(),
             body: cbor::to_value(Transfer {
                 to: keys::bob::address(),
@@ -394,6 +399,7 @@ fn test_authenticate_tx() {
             fee: transaction::Fee {
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
                 gas: 1000,
+                consensus_messages: 0,
             },
         },
     };
@@ -439,6 +445,7 @@ fn test_tx_transfer() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "accounts.Transfer".to_owned(),
             body: cbor::to_value(Transfer {
                 to: keys::bob::address(),
@@ -450,6 +457,7 @@ fn test_tx_transfer() {
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
+                consensus_messages: 0,
             },
         },
     };
@@ -506,6 +514,7 @@ fn test_fee_disbursement() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: "accounts.Transfer".to_owned(),
             body: cbor::to_value(Transfer {
                 to: keys::bob::address(),
@@ -518,6 +527,7 @@ fn test_fee_disbursement() {
                 // Use an amount that does not split nicely among the good compute entities.
                 amount: BaseUnits::new(1_001, Denomination::NATIVE),
                 gas: 1000,
+                consensus_messages: 0,
             },
         },
     };

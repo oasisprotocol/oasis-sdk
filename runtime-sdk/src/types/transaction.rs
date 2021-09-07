@@ -102,10 +102,32 @@ impl Transaction {
     }
 }
 
+/// Format used for encoding the call (and output) information.
+#[derive(Clone, Copy, Debug, cbor::Encode, cbor::Decode)]
+#[repr(u8)]
+pub enum CallFormat {
+    /// Plain text call data.
+    Plain = 0,
+    /// Encrypted call data using X25519 for key exchange and Deoxys-II for symmetric encryption.
+    EncryptedX25519DeoxysII = 1,
+}
+
+impl Default for CallFormat {
+    fn default() -> Self {
+        Self::Plain
+    }
+}
+
 /// Method call.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Call {
+    /// Call format.
+    #[cbor(optional, default)]
+    pub format: CallFormat,
+    /// Method name.
+    #[cbor(optional, default, skip_serializing_if = "String::is_empty")]
     pub method: String,
+    /// Method body.
     pub body: cbor::Value,
 }
 
@@ -120,8 +142,14 @@ pub struct AuthInfo {
 /// Transaction fee.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Fee {
+    /// Amount of base units paid as fee for transaction processing.
     pub amount: token::BaseUnits,
+    /// Maximum amount of gas paid for.
+    #[cbor(optional, default, skip_serializing_if = "num_traits::Zero::is_zero")]
     pub gas: u64,
+    /// Maximum amount of emitted consensus messages paid for.
+    #[cbor(optional, default, skip_serializing_if = "num_traits::Zero::is_zero")]
+    pub consensus_messages: u32,
 }
 
 impl Fee {
@@ -226,13 +254,16 @@ pub enum CallResult {
         #[cbor(skip_serializing_if = "String::is_empty")]
         message: String,
     },
+
+    #[cbor(rename = "unknown")]
+    Unknown(cbor::Value),
 }
 
 impl CallResult {
     /// Check whether the call result indicates a successful operation or not.
     pub fn is_success(&self) -> bool {
         match self {
-            CallResult::Ok(_) => true,
+            CallResult::Ok(_) | CallResult::Unknown(_) => true,
             CallResult::Failed { .. } => false,
         }
     }
@@ -249,12 +280,14 @@ mod test {
         let fee = Fee {
             amount: Default::default(),
             gas: 0,
+            consensus_messages: 0,
         };
         assert_eq!(0, fee.gas_price(), "empty fee - gas price should be zero",);
 
         let fee = Fee {
             amount: Default::default(),
             gas: 100,
+            consensus_messages: 0,
         };
         assert_eq!(
             0,
@@ -265,12 +298,14 @@ mod test {
         let fee = Fee {
             amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 0,
+            consensus_messages: 0,
         };
         assert_eq!(0, fee.gas_price(), "empty fee 0 - gas price should be zero",);
 
         let fee = Fee {
             amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 10_000,
+            consensus_messages: 0,
         };
         assert_eq!(
             0,
@@ -281,6 +316,7 @@ mod test {
         let fee = Fee {
             amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 500,
+            consensus_messages: 0,
         };
         assert_eq!(2, fee.gas_price(), "non empty fee - gas price should match");
     }

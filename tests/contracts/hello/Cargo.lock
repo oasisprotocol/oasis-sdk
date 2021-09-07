@@ -90,9 +90,9 @@ checksum = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
 
 [[package]]
 name = "oasis-cbor"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a90fea65cb830334fb9fbd2c7a0454cae55b2645b79aa545d9b73944fa1cd412"
+checksum = "7134e2d7da8cd90a1928a9121419ede09624d18bb0a3fcbcac7e7b6232317e3f"
 dependencies = [
  "impl-trait-for-tuples",
  "oasis-cbor-derive",
@@ -102,9 +102,9 @@ dependencies = [
 
 [[package]]
 name = "oasis-cbor-derive"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4abb0014317381bf1f2cae549e46dd6435acf0abeb1efe478938795ec9917f99"
+checksum = "64bbc791abda671bb0c970a8e1b9adeb24689c91a8fe99fc42876a792c99861f"
 dependencies = [
  "darling",
  "proc-macro-crate",

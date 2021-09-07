@@ -5,13 +5,12 @@ use thiserror::Error;
 use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
-    error::{self, Error as _},
-    module,
-    module::Module as _,
+    error, module,
+    module::{CallResult, Module as _},
     modules,
     modules::{accounts, core},
     storage::Prefix,
-    types::transaction::{AuthInfo, CallResult},
+    types::transaction::AuthInfo,
 };
 
 pub mod types;
@@ -173,25 +172,9 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
         body: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, CallResult> {
         match method {
-            "benchmarks.accounts.Mint" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_accounts_mint(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
+            "benchmarks.accounts.Mint" => module::dispatch_call(ctx, body, Self::tx_accounts_mint),
             "benchmarks.accounts.Transfer" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_accounts_transfer(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => module::DispatchResult::Handled(err.to_call_result()),
-                }
+                module::dispatch_call(ctx, body, Self::tx_accounts_transfer)
             }
             _ => module::DispatchResult::Unhandled(body),
         }

@@ -148,6 +148,9 @@ pub trait Context {
     /// Fetches a value entry associated with the context.
     fn value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V>;
 
+    /// Number of consensus messages that can still be emitted.
+    fn remaining_messages(&self) -> u32;
+
     /// Set an upper limit on the number of consensus messages that can be emitted in this context.
     /// Note that the limit can only be decreased and calling this function will return an error
     /// in case the passed `max_messages` is higher than the current limit.
@@ -383,6 +386,10 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
         ContextValue::new(self.values.entry(key))
     }
 
+    fn remaining_messages(&self) -> u32 {
+        self.max_messages.saturating_sub(self.messages.len() as u32)
+    }
+
     fn limit_max_messages(&mut self, max_messages: u32) -> Result<(), Error> {
         if max_messages > self.max_messages {
             return Err(Error::OutOfMessageSlots);
@@ -398,6 +405,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
             RuntimeBatchContext<'_, Self::Runtime, storage::OverlayStore<&mut dyn Store>>,
         ) -> Rs,
     {
+        let remaining_messages = self.remaining_messages();
         // Create a store wrapped by an overlay store so any state changes don't leak.
         let store = storage::OverlayStore::new((&mut self.runtime_storage) as &mut dyn Store);
 
@@ -418,7 +426,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
             block_tags: Tags::new(),
             max_messages: match mode {
                 Mode::SimulateTx => self.max_messages,
-                _ => self.max_messages.saturating_sub(self.messages.len() as u32),
+                _ => remaining_messages,
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
@@ -436,6 +444,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
             transaction::Call,
         ) -> Rs,
     {
+        let remaining_messages = self.remaining_messages();
         // Create a store wrapped by an overlay store so we can either rollback or commit.
         let store = storage::OverlayStore::new(&mut self.runtime_storage);
 
@@ -455,8 +464,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
                 .new(o!("ctx" => "transaction", "mode" => Into::<&'static str>::into(&self.mode))),
             tx_auth_info: tx.auth_info,
             tags: Tags::new(),
-            // NOTE: Since a limit is enforced (which is a u32) this cast is always safe.
-            max_messages: self.max_messages.saturating_sub(self.messages.len() as u32),
+            max_messages: remaining_messages,
             messages: Vec::new(),
             values: &mut self.values,
             tx_values: BTreeMap::new(),
@@ -583,6 +591,10 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
         ContextValue::new(self.values.entry(key))
     }
 
+    fn remaining_messages(&self) -> u32 {
+        self.max_messages.saturating_sub(self.messages.len() as u32)
+    }
+
     fn limit_max_messages(&mut self, max_messages: u32) -> Result<(), Error> {
         if max_messages > self.max_messages {
             return Err(Error::OutOfMessageSlots);
@@ -598,6 +610,7 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
             RuntimeBatchContext<'_, Self::Runtime, storage::OverlayStore<&mut dyn Store>>,
         ) -> Rs,
     {
+        let remaining_messages = self.remaining_messages();
         // Create a store wrapped by an overlay store so any state changes don't leak.
         let store = storage::OverlayStore::new((&mut self.store) as &mut dyn Store);
 
@@ -618,7 +631,7 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
             block_tags: Tags::new(),
             max_messages: match mode {
                 Mode::SimulateTx => self.max_messages,
-                _ => self.max_messages.saturating_sub(self.messages.len() as u32),
+                _ => remaining_messages,
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
@@ -796,6 +809,7 @@ mod test {
         let tx = transaction::Transaction {
             version: 1,
             call: transaction::Call {
+                format: transaction::CallFormat::Plain,
                 method: "test".to_owned(),
                 body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
             },
@@ -804,6 +818,7 @@ mod test {
                 fee: transaction::Fee {
                     amount: Default::default(),
                     gas: 1000,
+                    consensus_messages: 0,
                 },
             },
         };
@@ -855,6 +870,7 @@ mod test {
         let tx = transaction::Transaction {
             version: 1,
             call: transaction::Call {
+                format: transaction::CallFormat::Plain,
                 method: "test".to_owned(),
                 body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
             },
@@ -863,6 +879,7 @@ mod test {
                 fee: transaction::Fee {
                     amount: Default::default(),
                     gas: 1000,
+                    consensus_messages: 0,
                 },
             },
         };
@@ -893,9 +910,13 @@ mod test {
         ctx.emit_messages(messages.clone())
             .expect("message emitting should work");
 
+        assert_eq!(ctx.remaining_messages(), 0);
+
         // Emitting more messages should fail.
         ctx.emit_messages(messages)
             .expect_err("message emitting should fail");
+
+        assert_eq!(ctx.remaining_messages(), 0);
     }
 
     #[test]
@@ -905,7 +926,9 @@ mod test {
         let mut ctx = mock.create_ctx();
 
         ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
-            for _ in 0..max_messages {
+            for i in 0..max_messages {
+                assert_eq!(tx_ctx.remaining_messages(), max_messages - i);
+
                 tx_ctx
                     .emit_message(
                         roothash::Message::Staking(Versioned::new(
@@ -915,6 +938,8 @@ mod test {
                         MessageEventHookInvocation::new("test".to_string(), ""),
                     )
                     .expect("message should be emitted");
+
+                assert_eq!(tx_ctx.remaining_messages(), max_messages - i - 1);
             }
 
             // Another message should error.
@@ -927,6 +952,8 @@ mod test {
                     MessageEventHookInvocation::new("test".to_string(), ""),
                 )
                 .expect_err("message emitting should fail");
+
+            assert_eq!(tx_ctx.remaining_messages(), 0);
         });
     }
 
@@ -937,11 +964,15 @@ mod test {
         let mut ctx = mock.create_ctx();
 
         // Increasing the limit should fail.
+        assert_eq!(ctx.remaining_messages(), max_messages);
         ctx.limit_max_messages(max_messages * 2)
             .expect_err("increasing the max message limit should fail");
+        assert_eq!(ctx.remaining_messages(), max_messages);
+
         // Limiting to a single message should work.
         ctx.limit_max_messages(1)
             .expect("limiting max_messages should work");
+        assert_eq!(ctx.remaining_messages(), 1);
 
         let messages = vec![(
             roothash::Message::Staking(Versioned::new(
@@ -954,16 +985,19 @@ mod test {
         // Emitting messages should work.
         ctx.emit_messages(messages.clone())
             .expect("emitting a message should work");
+        assert_eq!(ctx.remaining_messages(), 0);
 
         // Emitting more messages should fail (we set the limit to a single message).
         ctx.emit_messages(messages.clone())
             .expect_err("emitting a message should fail");
+        assert_eq!(ctx.remaining_messages(), 0);
 
         // Also in transaction contexts.
         ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
             tx_ctx
                 .emit_message(messages[0].0.clone(), messages[0].1.clone())
                 .expect_err("emitting a message should fail");
+            assert_eq!(tx_ctx.remaining_messages(), 0);
         });
 
         // Also in child contexts.
@@ -971,6 +1005,7 @@ mod test {
             child_ctx
                 .emit_messages(messages.clone())
                 .expect_err("emitting a message should fail");
+            assert_eq!(child_ctx.remaining_messages(), 0);
         });
     }
 

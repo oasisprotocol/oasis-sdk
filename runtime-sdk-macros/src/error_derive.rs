@@ -36,6 +36,9 @@ struct ErrorVariant {
 
     #[darling(default, rename = "transparent")]
     transparent: Flag,
+
+    #[darling(default, rename = "abort")]
+    abort: Flag,
 }
 
 impl CodedVariant for ErrorVariant {
@@ -70,7 +73,7 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
         .module_name
         .unwrap_or_else(|| syn::parse_quote!(MODULE_NAME));
 
-    let (module_name_body, code_body) = convert_variants(
+    let (module_name_body, code_body, abort_body) = convert_variants(
         &format_ident!("self"),
         module_name,
         &error.data.as_ref().take_enum().unwrap(),
@@ -80,11 +83,10 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
     let sdk_crate = gen::sdk_crate_path();
 
     gen::wrap_in_const(quote! {
-        use #sdk_crate::{
-            self as sdk, core::types::Error as RuntimeError, error::Error as _,
-        };
+        use #sdk_crate::{self as __sdk, error::Error as _};
 
-        impl sdk::error::Error for #error_ty_ident {
+        #[automatically_derived]
+        impl __sdk::error::Error for #error_ty_ident {
             fn module_name(&self) -> &str {
                 #module_name_body
             }
@@ -92,11 +94,16 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
             fn code(&self) -> u32 {
                 #code_body
             }
+
+            fn into_abort(self) -> Result<__sdk::dispatcher::Error, Self> {
+                #abort_body
+            }
         }
 
-        impl From<#error_ty_ident> for RuntimeError {
-            fn from(err: #error_ty_ident) -> RuntimeError {
-                RuntimeError::new(err.module_name(), err.code(), &err.to_string())
+        #[automatically_derived]
+        impl From<#error_ty_ident> for __sdk::error::RuntimeError {
+            fn from(err: #error_ty_ident) -> Self {
+                Self::new(err.module_name(), err.code(), &err.to_string())
             }
         }
     })
@@ -107,13 +114,43 @@ fn convert_variants(
     module_name: Path,
     variants: &[&ErrorVariant],
     autonumber: bool,
-) -> (TokenStream, TokenStream) {
+) -> (TokenStream, TokenStream, TokenStream) {
     if variants.is_empty() {
-        return (quote!(#module_name), quote!(0));
+        return (quote!(#module_name), quote!(0), quote!(Err(#enum_binding)));
     }
 
     let mut next_autonumber = 0u32;
     let mut reserved_numbers = std::collections::BTreeSet::new();
+
+    let abort_variants: Vec<_> = variants
+        .iter()
+        .filter_map(|variant| {
+            if variant.abort.is_none() {
+                return None;
+            }
+
+            let variant_ident = &variant.ident;
+
+            Some(quote! {
+                match #enum_binding {
+                    Self::#variant_ident(err) => Ok(err),
+                    _ => Err(#enum_binding),
+                }
+            })
+        })
+        .collect();
+    let abort_variant = match abort_variants.len() {
+        0 => quote!(Err(#enum_binding)),
+        1 => abort_variants.into_iter().next().unwrap(),
+        _ => {
+            enum_binding
+                .span()
+                .unwrap()
+                .error("multiple abort variants specified")
+                .emit();
+            return (quote!(), quote!(), quote!());
+        }
+    };
 
     let (module_name_matches, code_matches): (Vec<_>, Vec<_>) = variants
         .iter()
@@ -224,25 +261,26 @@ fn convert_variants(
                 #(#code_matches)*
             }
         },
+        abort_variant,
     )
 }
 
 #[cfg(test)]
 mod tests {
     #[test]
-    fn generate_error_impl_auto() {
+    fn generate_error_impl_auto_abort() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
-                use oasis_runtime_sdk::{
-                    self as sdk, core::types::Error as RuntimeError, error::Error as _,
-                };
-                impl sdk::error::Error for Error {
+                use oasis_runtime_sdk::{self as __sdk, error::Error as _};
+                #[automatically_derived]
+                impl __sdk::error::Error for Error {
                     fn module_name(&self) -> &str {
                         match self {
                             Self::Error0 { .. } => MODULE_NAME,
                             Self::Error2 { .. } => MODULE_NAME,
                             Self::Error1 { .. } => MODULE_NAME,
                             Self::Error3 { .. } => MODULE_NAME,
+                            Self::ErrorAbort { .. } => MODULE_NAME,
                         }
                     }
                     fn code(&self) -> u32 {
@@ -251,12 +289,20 @@ mod tests {
                             Self::Error2 { .. } => 2u32,
                             Self::Error1 { .. } => 1u32,
                             Self::Error3 { .. } => 3u32,
+                            Self::ErrorAbort { .. } => 4u32,
+                        }
+                    }
+                    fn into_abort(self) -> Result<__sdk::dispatcher::Error, Self> {
+                        match self {
+                            Self::ErrorAbort(err) => Ok(err),
+                            _ => Err(self),
                         }
                     }
                 }
-                impl From<Error> for RuntimeError {
-                    fn from(err: Error) -> RuntimeError {
-                        RuntimeError::new(err.module_name(), err.code(), &err.to_string())
+                #[automatically_derived]
+                impl From<Error> for __sdk::error::RuntimeError {
+                    fn from(err: Error) -> Self {
+                        Self::new(err.module_name(), err.code(), &err.to_string())
                     }
                 }
             };
@@ -273,6 +319,8 @@ mod tests {
                 },
                 Error1(String),
                 Error3,
+                #[sdk_error(abort)]
+                ErrorAbort(sdk::dispatcher::Error),
             }
         );
         let error_derivation = super::derive_error(input);
@@ -285,20 +333,23 @@ mod tests {
     fn generate_error_impl_manual() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
-                use oasis_runtime_sdk::{
-                    self as sdk, core::types::Error as RuntimeError, error::Error as _,
-                };
-                impl sdk::error::Error for Error {
+                use oasis_runtime_sdk::{self as __sdk, error::Error as _};
+                #[automatically_derived]
+                impl __sdk::error::Error for Error {
                     fn module_name(&self) -> &str {
                         THE_MODULE_NAME
                     }
                     fn code(&self) -> u32 {
                         0
                     }
+                    fn into_abort(self) -> Result<__sdk::dispatcher::Error, Self> {
+                        Err(self)
+                    }
                 }
-                impl From<Error> for RuntimeError {
-                    fn from(err: Error) -> RuntimeError {
-                        RuntimeError::new(err.module_name(), err.code(), &err.to_string())
+                #[automatically_derived]
+                impl From<Error> for __sdk::error::RuntimeError {
+                    fn from(err: Error) -> Self {
+                        Self::new(err.module_name(), err.code(), &err.to_string())
                     }
                 }
             };
@@ -319,10 +370,9 @@ mod tests {
     fn generate_error_impl_from() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
-                use oasis_runtime_sdk::{
-                    self as sdk, core::types::Error as RuntimeError, error::Error as _,
-                };
-                impl sdk::error::Error for Error {
+                use oasis_runtime_sdk::{self as __sdk, error::Error as _};
+                #[automatically_derived]
+                impl __sdk::error::Error for Error {
                     fn module_name(&self) -> &str {
                         match self {
                             Self::Foo { 0: source, .. } => source.module_name(),
@@ -333,10 +383,14 @@ mod tests {
                             Self::Foo { 0: source, .. } => source.code(),
                         }
                     }
+                    fn into_abort(self) -> Result<__sdk::dispatcher::Error, Self> {
+                        Err(self)
+                    }
                 }
-                impl From<Error> for RuntimeError {
-                    fn from(err: Error) -> RuntimeError {
-                        RuntimeError::new(err.module_name(), err.code(), &err.to_string())
+                #[automatically_derived]
+                impl From<Error> for __sdk::error::RuntimeError {
+                    fn from(err: Error) -> Self {
+                        Self::new(err.module_name(), err.code(), &err.to_string())
                     }
                 }
             };

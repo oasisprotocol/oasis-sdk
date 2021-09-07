@@ -96,11 +96,11 @@ impl module::MethodHandler for GasWasterModule {
         ctx: &mut C,
         method: &str,
         body: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, transaction::CallResult> {
+    ) -> module::DispatchResult<cbor::Value, module::CallResult> {
         match method {
             Self::METHOD_WASTE_GAS => {
                 Core::use_tx_gas(ctx, Self::CALL_GAS).expect("use_gas should succeed");
-                module::DispatchResult::Handled(transaction::CallResult::Ok(cbor::Value::Simple(
+                module::DispatchResult::Handled(module::CallResult::Ok(cbor::Value::Simple(
                     cbor::SimpleValue::NullValue,
                 )))
             }
@@ -139,6 +139,7 @@ impl Runtime for GasWasterRuntime {
                     gas_costs: super::GasCosts {
                         auth_signature: Self::AUTH_SIGNATURE_GAS,
                         auth_multisig_signer: Self::AUTH_MULTISIG_GAS,
+                        callformat_x25519_deoxysii: 0,
                     },
                 },
             },
@@ -157,6 +158,7 @@ fn test_query_estimate_gas() {
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
+            format: transaction::CallFormat::Plain,
             method: GasWasterModule::METHOD_WASTE_GAS.to_owned(),
             body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
         },
@@ -177,6 +179,7 @@ fn test_query_estimate_gas() {
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                 gas: u64::MAX,
+                consensus_messages: 0,
             },
         },
     };

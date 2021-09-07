@@ -1,7 +1,7 @@
 //! Error types for runtimes.
 pub use oasis_core_runtime::types::Error as RuntimeError;
 
-use crate::types::transaction::CallResult;
+use crate::{dispatcher, module::CallResult};
 
 /// A runtime error that gets propagated to the caller.
 ///
@@ -34,12 +34,27 @@ pub trait Error: std::error::Error {
     fn code(&self) -> u32;
 
     /// Converts the error into a call result.
-    fn to_call_result(&self) -> CallResult {
-        CallResult::Failed {
-            module: self.module_name().to_owned(),
-            code: self.code(),
-            message: self.to_string(),
+    fn into_call_result(self) -> CallResult
+    where
+        Self: Sized,
+    {
+        match self.into_abort() {
+            Ok(err) => CallResult::Aborted(err),
+            Err(failed) => CallResult::Failed {
+                module: failed.module_name().to_owned(),
+                code: failed.code(),
+                message: failed.to_string(),
+            },
         }
+    }
+
+    /// Consumes self and returns either `Ok(err)` (where `err` is a dispatcher error) when batch
+    /// should abort or `Err(self)` when this is just a regular error.
+    fn into_abort(self) -> Result<dispatcher::Error, Self>
+    where
+        Self: Sized,
+    {
+        Err(self)
     }
 }
 
@@ -94,7 +109,7 @@ mod test {
     #[test]
     fn test_error_sources_1() {
         let err = ParentError::Nested(ChildError::Error1);
-        let result = err.to_call_result();
+        let result = err.into_call_result();
 
         match result {
             CallResult::Failed {
@@ -109,7 +124,7 @@ mod test {
         }
 
         let err = ParentError::Nested(ChildError::Error2);
-        let result = err.to_call_result();
+        let result = err.into_call_result();
 
         match result {
             CallResult::Failed {
@@ -127,7 +142,7 @@ mod test {
     #[test]
     fn test_error_sources_2() {
         let err = ParentError::NotForwarded(ChildError::Error1);
-        let result = err.to_call_result();
+        let result = err.into_call_result();
 
         match result {
             CallResult::Failed {
@@ -142,7 +157,7 @@ mod test {
         }
 
         let err = ParentError::NotForwarded(ChildError::Error2);
-        let result = err.to_call_result();
+        let result = err.into_call_result();
 
         match result {
             CallResult::Failed {
@@ -160,7 +175,7 @@ mod test {
     #[test]
     fn test_error_sources_3() {
         let err = ParentParentError::Nested(ParentError::Nested(ChildError::Error1));
-        let result = err.to_call_result();
+        let result = err.into_call_result();
 
         match result {
             CallResult::Failed {

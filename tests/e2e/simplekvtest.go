@@ -179,10 +179,43 @@ func SimpleKVTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCon
 		return fmt.Errorf("fetching removed key should fail")
 	}
 
+	return nil
+}
+
+// ConfidentialTest tests functions that require a key manager.
+func ConfidentialTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	signer := testing.Alice.Signer
+
+	testKey := []byte("test_key")
+	testValue := []byte("test_value")
+
 	log.Info("create new key in the keymanager")
-	err = kvGetCreateKey(rtc, signer, testKey)
+	err := kvGetCreateKey(rtc, signer, testKey)
 	if err != nil {
 		return err
+	}
+
+	log.Info("test 'confidential' insert")
+
+	ac := accounts.NewV1(rtc)
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
+	if err != nil {
+		return fmt.Errorf("failed to query nonce: %w", err)
+	}
+
+	tb := client.NewTransactionBuilder(rtc, "keyvalue.Insert", kvKeyValue{
+		Key:   testKey,
+		Value: testValue,
+	})
+	tb.SetFeeGas(10 * defaultGasAmount)
+	if err = tb.SetCallFormat(ctx, types.CallFormatEncryptedX25519DeoxysII); err != nil {
+		return fmt.Errorf("failed to set call format: %w", err)
+	}
+	tb.AppendAuthSignature(signer.Public(), nonce)
+	_ = tb.AppendSign(ctx, signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
+		return fmt.Errorf("failed to submit transaction: %w", err)
 	}
 
 	return nil

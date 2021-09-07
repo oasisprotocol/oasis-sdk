@@ -12,9 +12,8 @@ replace (
 require (
 	github.com/btcsuite/btcd v0.22.0-beta
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20210716083614-f38f8e8b0b84
-	github.com/oasisprotocol/oasis-core/go v0.2102.5
+	github.com/oasisprotocol/deoxysii v0.0.0-20200527154044-851aec403956
+	github.com/oasisprotocol/oasis-core/go v0.2102.1-0.20210903173012-029cc2215bcf
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/net v0.0.0-20210510120150-4163338589ed // indirect
-	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015 // indirect
 	google.golang.org/grpc v1.40.0
 )

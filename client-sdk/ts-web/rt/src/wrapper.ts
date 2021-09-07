@@ -22,6 +22,7 @@ export class TransactionWrapper<BODY, OK> {
                 fee: {
                     amount: [oasis.quantity.fromBigInt(0n), token.NATIVE_DENOMINATION],
                     gas: 0n,
+                    consensus_messages: 0,
                 },
             },
         };
@@ -44,6 +45,11 @@ export class TransactionWrapper<BODY, OK> {
 
     setFeeGas(gas: oasis.types.longnum) {
         this.transaction.ai.fee.gas = gas;
+        return this;
+    }
+
+    setFeeConsensusMessages(maxMessages: number) {
+        this.transaction.ai.fee.consensus_messages = maxMessages;
         return this;
     }
 

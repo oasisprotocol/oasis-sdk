@@ -8,12 +8,14 @@ use impl_trait_for_tuples::impl_for_tuples;
 
 use crate::{
     context::{Context, TxContext},
-    error, event, modules, storage,
+    dispatcher, error,
+    error::Error as _,
+    event, modules, storage,
     storage::{Prefix, Store},
     types::{
         message::MessageResult,
         transaction::{
-            AuthInfo, Call, CallResult, Transaction, TransactionWeight, UnverifiedTransaction,
+            self, AuthInfo, Call, Transaction, TransactionWeight, UnverifiedTransaction,
         },
     },
 };
@@ -42,6 +44,105 @@ impl<B, R> DispatchResult<B, R> {
             DispatchResult::Unhandled(_) => Err(errf()),
         }
     }
+}
+
+/// A variant of `types::transaction::CallResult` but used for dispatch purposes so the dispatch
+/// process can use a different representation.
+///
+/// Specifically, this type is not serializable.
+#[derive(Debug)]
+pub enum CallResult {
+    /// Call has completed successfully.
+    Ok(cbor::Value),
+
+    /// Call has completed with failure.
+    Failed {
+        module: String,
+        code: u32,
+        message: String,
+    },
+
+    /// A fatal error has occurred and the batch must be aborted.
+    Aborted(dispatcher::Error),
+}
+
+impl CallResult {
+    /// Check whether the call result indicates a successful operation or not.
+    pub fn is_success(&self) -> bool {
+        matches!(self, CallResult::Ok(_))
+    }
+}
+
+impl From<CallResult> for transaction::CallResult {
+    fn from(v: CallResult) -> Self {
+        match v {
+            CallResult::Ok(data) => Self::Ok(data),
+            CallResult::Failed {
+                module,
+                code,
+                message,
+            } => Self::Failed {
+                module,
+                code,
+                message,
+            },
+            CallResult::Aborted(err) => Self::Failed {
+                module: err.module_name().to_string(),
+                code: err.code(),
+                message: err.to_string(),
+            },
+        }
+    }
+}
+
+/// A convenience function for dispatching method calls.
+pub fn dispatch_call<C, B, R, E, F>(
+    ctx: &mut C,
+    body: cbor::Value,
+    f: F,
+) -> DispatchResult<cbor::Value, CallResult>
+where
+    C: TxContext,
+    B: cbor::Decode,
+    R: cbor::Encode,
+    E: error::Error,
+    F: FnOnce(&mut C, B) -> Result<R, E>,
+{
+    DispatchResult::Handled((|| {
+        let args = match cbor::from_value(body)
+            .map_err(|err| modules::core::Error::InvalidArgument(err.into()))
+        {
+            Ok(args) => args,
+            Err(err) => return err.into_call_result(),
+        };
+
+        match f(ctx, args) {
+            Ok(value) => CallResult::Ok(cbor::to_value(value)),
+            Err(err) => err.into_call_result(),
+        }
+    })())
+}
+
+/// A convenience function for dispatching queries.
+pub fn dispatch_query<C, B, R, E, F>(
+    ctx: &mut C,
+    body: cbor::Value,
+    f: F,
+) -> DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>>
+where
+    C: Context,
+    B: cbor::Decode,
+    R: cbor::Encode,
+    E: error::Error,
+    error::RuntimeError: From<E>,
+    F: FnOnce(&mut C, B) -> Result<R, E>,
+{
+    DispatchResult::Handled((|| {
+        let args = cbor::from_value(body).map_err(|err| -> error::RuntimeError {
+            modules::core::Error::InvalidArgument(err.into()).into()
+        })?;
+        Ok(cbor::to_value(f(ctx, args)?))
+    })())
 }
 
 /// Method handler.

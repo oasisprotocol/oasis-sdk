@@ -10,9 +10,8 @@ use oasis_core_runtime::consensus::staking::Account as ConsensusAccount;
 
 use crate::{
     context::{Context, TxContext},
-    error::{self, Error as _},
-    module,
-    module::Module as _,
+    error, module,
+    module::{CallResult, Module as _},
     modules,
     modules::core::{Error as CoreError, Module as Core, API as _},
     storage::Prefix,
@@ -20,7 +19,7 @@ use crate::{
         address::Address,
         message::{MessageEvent, MessageEventHookInvocation, MessageResult},
         token,
-        transaction::{AuthInfo, CallResult, TransactionWeight},
+        transaction::{AuthInfo, TransactionWeight},
     },
 };
 
@@ -315,26 +314,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
         body: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, CallResult> {
         match method {
-            "consensus.Deposit" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_deposit(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
-            "consensus.Withdraw" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_withdraw(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
+            "consensus.Deposit" => module::dispatch_call(ctx, body, Self::tx_deposit),
+            "consensus.Withdraw" => module::dispatch_call(ctx, body, Self::tx_withdraw),
             _ => module::DispatchResult::Unhandled(body),
         }
     }
@@ -345,14 +326,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
         args: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
         match method {
-            "consensus.Balance" => module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(Self::query_balance(ctx, args)?))
-            })()),
-            "consensus.Account" => module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(Self::query_consensus_account(ctx, args)?))
-            })()),
+            "consensus.Balance" => module::dispatch_query(ctx, args, Self::query_balance),
+            "consensus.Account" => module::dispatch_query(ctx, args, Self::query_consensus_account),
             _ => module::DispatchResult::Unhandled(args),
         }
     }

@@ -12,10 +12,10 @@ use tiny_keccak::{Hasher, Keccak};
 use oasis_runtime_sdk::{
     context::{Context, TxContext},
     crypto::signature::PublicKey,
-    error::{self, Error as _},
-    module::{self, Module as _},
+    error,
+    module::{self, CallResult, Module as _},
     modules, storage,
-    types::transaction::{AddressSpec, CallResult},
+    types::transaction::AddressSpec,
 };
 
 use evm::backend::ApplyBackend;
@@ -311,26 +311,8 @@ impl module::MethodHandler for Module {
         body: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, CallResult> {
         match method {
-            "evm.Create" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_create(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
-            "evm.Call" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_call(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
+            "evm.Create" => module::dispatch_call(ctx, body, Self::tx_create),
+            "evm.Call" => module::dispatch_call(ctx, body, Self::tx_call),
             _ => module::DispatchResult::Unhandled(body),
         }
     }
@@ -341,14 +323,8 @@ impl module::MethodHandler for Module {
         args: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
         match method {
-            "evm.PeekStorage" => module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(Self::q_peek_storage(ctx, args)?))
-            })()),
-            "evm.PeekCode" => module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(Self::q_peek_code(ctx, args)?))
-            })()),
+            "evm.PeekStorage" => module::dispatch_query(ctx, args, Self::q_peek_storage),
+            "evm.PeekCode" => module::dispatch_query(ctx, args, Self::q_peek_code),
             _ => module::DispatchResult::Unhandled(args),
         }
     }

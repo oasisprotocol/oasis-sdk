@@ -184,7 +184,6 @@ fn run_contract_with_defaults(
             upgrades_policy: types::Policy::Everyone,
             data: cbor::to_vec(instantiate_data),
             tokens: vec![],
-            max_consensus_messages: 0,
         };
         let instance_info = types::Instance {
             id: 1.into(),
@@ -213,7 +212,6 @@ fn run_contract_with_defaults(
             id: 1.into(),
             data: cbor::to_vec(call_data),
             tokens: vec![],
-            max_consensus_messages: 0,
         };
         let result = wasm::call::<ContractsConfig, _>(&mut exec_ctx, &contract, &call).inner?;
         let result: cbor::Value =

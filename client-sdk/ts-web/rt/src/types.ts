@@ -119,9 +119,15 @@ export interface AuthProof {
 export type BaseUnits = [amount: Uint8Array, denomination: Uint8Array];
 
 /**
+ * Format used for encoding the call (and output) information.
+ */
+export type CallFormat = number;
+
+/**
  * Method call.
  */
 export interface Call {
+    format?: CallFormat;
     method: string;
     body: unknown;
 }
@@ -132,6 +138,7 @@ export interface Call {
 export interface CallResult {
     ok?: unknown;
     fail?: FailedCallResult;
+    unknown?: Uint8Array;
 }
 
 export interface FailedCallResult {
@@ -146,6 +153,7 @@ export interface FailedCallResult {
 export interface Fee {
     amount: BaseUnits;
     gas: oasis.types.longnum;
+    consensus_messages: number;
 }
 
 /**
@@ -240,4 +248,21 @@ export interface ConsensusAccountBalance {
  */
 export interface ConsensusAccountQuery {
     address: Uint8Array;
+}
+
+/**
+ * A call envelope when using the CALLFORMAT_ENCRYPTED_X25519DEOXYSII format.
+ */
+export interface CallEnvelopeX25519DeoxysII {
+    pk: Uint8Array;
+    nonce: Uint8Array;
+    data: Uint8Array;
+}
+
+/**
+ * A result envelope when using the CALLFORMAT_ENCRYPTED_X25519DEOXYSII format.
+ */
+export interface ResultEnvelopeX25519DeoxysII {
+    nonce: Uint8Array;
+    data: Uint8Array;
 }

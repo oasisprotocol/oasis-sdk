@@ -2,13 +2,14 @@
 use std::sync::Arc;
 
 use io_context::Context as IoContext;
+use tiny_keccak::{Hasher, TupleHash};
 use tokio::runtime::Runtime as TokioRuntime;
 
-pub use oasis_core_keymanager_api_common::KeyManagerError;
-use oasis_core_keymanager_client::{
-    KeyManagerClient as CoreKeyManagerClient, RemoteClient, SignedPublicKey,
+pub use oasis_core_keymanager_api_common::{
+    KeyManagerError, KeyPair, KeyPairId, PrivateKey, PublicKey, SignedPublicKey,
+    TrustedPolicySigners,
 };
-pub use oasis_core_keymanager_client::{KeyPair, KeyPairId};
+use oasis_core_keymanager_client::{KeyManagerClient as CoreKeyManagerClient, RemoteClient};
 use oasis_core_runtime::{
     common::namespace::Namespace, protocol::Protocol, rak::RAK, RpcDispatcher,
 };
@@ -165,5 +166,17 @@ impl<'a> Clone for KeyManagerClientWithContext<'a> {
     }
 }
 
-pub use oasis_core_keymanager_api_common::TrustedPolicySigners;
-pub use oasis_core_runtime::common::crypto::signature::PrivateKey;
+/// Key pair ID domain separation context.
+pub const KEY_PAIR_ID_CONTEXT: &[u8] = b"oasis-runtime-sdk/keymanager: key pair id";
+
+/// Derive a `KeyPairId` for use with the key manager functions.
+pub fn get_key_pair_id(context: &[&[u8]]) -> KeyPairId {
+    let mut h = TupleHash::v256(KEY_PAIR_ID_CONTEXT);
+    for item in context {
+        h.update(item);
+    }
+    let mut key_pair_id = [0u8; 32];
+    h.finalize(&mut key_pair_id);
+
+    KeyPairId(key_pair_id)
+}

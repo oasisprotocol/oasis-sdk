@@ -26,6 +26,7 @@ var (
 		KVRewardsTest,
 		KVTxGenTest,
 		ContractsTest,
+		ConfidentialTest,
 	})
 
 	// SimpleConsensusRuntime is the simple-consensus runtime test.

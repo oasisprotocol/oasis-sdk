@@ -22,6 +22,7 @@ use oasis_core_runtime::{
 };
 
 use crate::{
+    callformat,
     context::{BatchContext, Context, RuntimeBatchContext, TxContext},
     error::{Error as _, RuntimeError},
     keymanager::{KeyManagerClient, KeyManagerError},
@@ -48,37 +49,46 @@ pub enum Error {
 
     #[error("malformed transaction in batch: {0}")]
     #[sdk_error(code = 2)]
-    MalformedTransactionInBatch(#[source] modules::core::Error),
-
-    #[error("prefetch failed: {0}")]
-    #[sdk_error(code = 3)]
-    PrefetchFailed(#[source] RuntimeError),
+    MalformedTransactionInBatch(#[source] anyhow::Error),
 
     #[error("query aborted: {0}")]
-    #[sdk_error(code = 4)]
+    #[sdk_error(code = 3)]
     QueryAborted(String),
+
+    #[error("key manager failure: {0}")]
+    #[sdk_error(code = 4)]
+    KeyManagerFailure(#[from] KeyManagerError),
 }
 
 /// Result of dispatching a transaction.
 pub struct DispatchResult {
     /// Transaction call result.
-    pub result: types::transaction::CallResult,
+    pub result: module::CallResult,
     /// Transaction tags.
     pub tags: Tags,
     /// Transaction priority.
     pub priority: u64,
     /// Transaction weights.
     pub weights: BTreeMap<TransactionWeight, u64>,
+    /// Call format metadata.
+    pub call_format_metadata: callformat::Metadata,
 }
 
-impl From<types::transaction::CallResult> for DispatchResult {
-    fn from(v: types::transaction::CallResult) -> Self {
+impl DispatchResult {
+    fn new(result: module::CallResult, call_format_metadata: callformat::Metadata) -> Self {
         Self {
-            result: v,
+            result,
             tags: Tags::new(),
             priority: 0,
             weights: BTreeMap::new(),
+            call_format_metadata,
         }
+    }
+}
+
+impl From<module::CallResult> for DispatchResult {
+    fn from(result: module::CallResult) -> Self {
+        Self::new(result, callformat::Metadata::Empty)
     }
 }
 
@@ -127,15 +137,15 @@ impl<R: Runtime> Dispatcher<R> {
     pub fn dispatch_tx_call<C: TxContext>(
         ctx: &mut C,
         call: types::transaction::Call,
-    ) -> types::transaction::CallResult {
+    ) -> module::CallResult {
         if let Err(e) = R::Modules::before_handle_call(ctx, &call) {
-            return e.to_call_result();
+            return e.into_call_result();
         }
 
         match R::Modules::dispatch_call(ctx, &call.method, call.body) {
             module::DispatchResult::Handled(result) => result,
             module::DispatchResult::Unhandled(_) => {
-                modules::core::Error::InvalidMethod(call.method).to_call_result()
+                modules::core::Error::InvalidMethod(call.method).into_call_result()
             }
         }
     }
@@ -144,16 +154,33 @@ impl<R: Runtime> Dispatcher<R> {
     pub fn dispatch_tx<C: BatchContext>(
         ctx: &mut C,
         tx: types::transaction::Transaction,
+        index: usize,
     ) -> Result<DispatchResult, Error> {
         // Run pre-processing hooks.
         if let Err(err) = R::Modules::authenticate_tx(ctx, &tx) {
-            return Ok(err.to_call_result().into());
+            return Ok(err.into_call_result().into());
         }
 
         let (result, messages) = ctx.with_tx(tx, |mut ctx, call| {
+            // Decode call based on specified call format.
+            let (call, call_format_metadata) = match callformat::decode_call(&ctx, call, index) {
+                Ok(Some(result)) => result,
+                Ok(None) => {
+                    return (
+                        module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue))
+                            .into(),
+                        vec![],
+                    )
+                }
+                Err(err) => return (err.into_call_result().into(), vec![]),
+            };
+
             let result = Self::dispatch_tx_call(&mut ctx, call);
             if !result.is_success() {
-                return (result.into(), Vec::new());
+                return (
+                    DispatchResult::new(result, call_format_metadata),
+                    Vec::new(),
+                );
             }
 
             // Load priority, weights.
@@ -169,23 +196,15 @@ impl<R: Runtime> Dispatcher<R> {
                     tags,
                     priority,
                     weights,
+                    call_format_metadata,
                 },
                 messages,
             )
         });
 
-        // XXX There's no better way to get to the module and code for a given error variant at the moment;
-        // the variable here only exists to get to the metadata for core::Error::KeyManagerError.
-        let dummy_err = modules::core::Error::KeyManagerError(KeyManagerError::NotAuthenticated);
-        if let types::transaction::CallResult::Failed {
-            module: ref err_module,
-            code: err_code,
-            ..
-        } = result.result
-        {
-            if err_module == dummy_err.module_name() && err_code == dummy_err.code() {
-                return Err(Error::Aborted);
-            }
+        // Propagate batch aborts.
+        if let module::CallResult::Aborted(err) = result.result {
+            return Err(err);
         }
 
         // Forward any emitted messages.
@@ -197,9 +216,9 @@ impl<R: Runtime> Dispatcher<R> {
 
     /// Check whether the given transaction is valid.
     pub fn check_tx<C: BatchContext>(ctx: &mut C, tx: Transaction) -> Result<CheckTxResult, Error> {
-        let dispatch = Self::dispatch_tx(ctx, tx)?;
+        let dispatch = Self::dispatch_tx(ctx, tx, usize::MAX)?;
         match dispatch.result {
-            types::transaction::CallResult::Ok(_value) => Ok(CheckTxResult {
+            module::CallResult::Ok(_) => Ok(CheckTxResult {
                 error: Default::default(),
                 meta: Some(CheckTxMetadata {
                     priority: dispatch.priority,
@@ -207,7 +226,7 @@ impl<R: Runtime> Dispatcher<R> {
                 }),
             }),
 
-            types::transaction::CallResult::Failed {
+            module::CallResult::Failed {
                 module,
                 code,
                 message,
@@ -219,6 +238,8 @@ impl<R: Runtime> Dispatcher<R> {
                 },
                 meta: None,
             }),
+
+            module::CallResult::Aborted(err) => Err(err),
         }
     }
 
@@ -226,11 +247,17 @@ impl<R: Runtime> Dispatcher<R> {
     pub fn execute_tx<C: BatchContext>(
         ctx: &mut C,
         tx: Transaction,
+        index: usize,
     ) -> Result<ExecuteTxResult, Error> {
-        let dispatch_result = Self::dispatch_tx(ctx, tx)?;
+        let dispatch_result = Self::dispatch_tx(ctx, tx, index)?;
+        let output: types::transaction::CallResult = callformat::encode_result(
+            ctx,
+            dispatch_result.result,
+            dispatch_result.call_format_metadata,
+        );
 
         Ok(ExecuteTxResult {
-            output: cbor::to_vec(dispatch_result.result),
+            output: cbor::to_vec(output),
             tags: dispatch_result.tags,
         })
     }
@@ -356,8 +383,8 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
                 // node vote for failure and the round will fail.
                 //
                 // Correct proposers should only include transactions which have passed check_tx.
-                let tx =
-                    Self::decode_tx(&mut ctx, tx).map_err(Error::MalformedTransactionInBatch)?;
+                let tx = Self::decode_tx(&mut ctx, tx)
+                    .map_err(|err| Error::MalformedTransactionInBatch(err.into()))?;
                 txs.push(tx.clone());
 
                 if prefetch_enabled {
@@ -377,8 +404,8 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
 
             // Execute the batch.
             let mut results = Vec::with_capacity(batch.len());
-            for tx in txs.into_iter() {
-                results.push(Self::execute_tx(&mut ctx, tx)?);
+            for (index, tx) in txs.into_iter().enumerate() {
+                results.push(Self::execute_tx(&mut ctx, tx, index)?);
             }
 
             // Run end block hooks.

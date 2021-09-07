@@ -4,14 +4,13 @@ use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
     core::common::crypto::hash::Hash,
-    error::{Error as _, RuntimeError},
+    error::RuntimeError,
     keymanager::KeyPairId,
-    module::Module as _,
+    module::{CallResult, Module as _},
     modules::{
         core,
         core::{Module as Core, API as _},
     },
-    types::transaction::CallResult,
 };
 
 pub mod types;
@@ -29,6 +28,10 @@ pub enum Error {
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] core::Error),
+
+    #[error("{0}")]
+    #[sdk_error(transparent, abort)]
+    Abort(#[source] sdk::dispatcher::Error),
 }
 
 /// Events emitted by the keyvalue module.
@@ -89,36 +92,9 @@ impl sdk::module::MethodHandler for Module {
         body: cbor::Value,
     ) -> sdk::module::DispatchResult<cbor::Value, CallResult> {
         match method {
-            "keyvalue.Insert" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_insert(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => sdk::module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => sdk::module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
-            "keyvalue.Remove" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_remove(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => sdk::module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => sdk::module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
-            "keyvalue.GetCreateKey" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_getcreatekey(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => sdk::module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => sdk::module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
+            "keyvalue.Insert" => sdk::module::dispatch_call(ctx, body, Self::tx_insert),
+            "keyvalue.Remove" => sdk::module::dispatch_call(ctx, body, Self::tx_remove),
+            "keyvalue.GetCreateKey" => sdk::module::dispatch_call(ctx, body, Self::tx_getcreatekey),
             _ => sdk::module::DispatchResult::Unhandled(body),
         }
     }
@@ -129,10 +105,7 @@ impl sdk::module::MethodHandler for Module {
         args: cbor::Value,
     ) -> sdk::module::DispatchResult<cbor::Value, Result<cbor::Value, RuntimeError>> {
         match method {
-            "keyvalue.Get" => sdk::module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(Self::query_get(ctx, args)?))
-            })()),
+            "keyvalue.Get" => sdk::module::dispatch_query(ctx, args, Self::query_get),
             _ => sdk::module::DispatchResult::Unhandled(args),
         }
     }
@@ -203,7 +176,7 @@ impl Module {
             .get_or_create_keys(KeyPairId::from(Hash::digest_bytes(&body.key).as_ref()));
         match key_result {
             Ok(_) => Ok(()),
-            Err(err) => Err(Error::Core(core::Error::KeyManagerError(err))),
+            Err(err) => Err(Error::Abort(sdk::dispatcher::Error::KeyManagerFailure(err))),
         }
     }
 

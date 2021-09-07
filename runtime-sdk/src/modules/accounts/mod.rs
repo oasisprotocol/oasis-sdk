@@ -12,9 +12,8 @@ use crate::{
     context::{Context, TxContext},
     core::common::quantity::Quantity,
     crypto::signature::PublicKey,
-    error::{self, Error as _},
-    module,
-    module::{Module as _, Parameters as _},
+    error, module,
+    module::{CallResult, Module as _, Parameters as _},
     modules,
     modules::core::{Error as CoreError, Module as Core, API as _},
     storage,
@@ -22,7 +21,7 @@ use crate::{
     types::{
         address::Address,
         token,
-        transaction::{AuthInfo, CallResult, Transaction},
+        transaction::{AuthInfo, Transaction},
     },
 };
 
@@ -517,16 +516,7 @@ impl module::MethodHandler for Module {
         body: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, CallResult> {
         match method {
-            "accounts.Transfer" => {
-                let result = || -> Result<cbor::Value, Error> {
-                    let args = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    Ok(cbor::to_value(Self::tx_transfer(ctx, args)?))
-                }();
-                match result {
-                    Ok(value) => module::DispatchResult::Handled(CallResult::Ok(value)),
-                    Err(err) => module::DispatchResult::Handled(err.to_call_result()),
-                }
-            }
+            "accounts.Transfer" => module::dispatch_call(ctx, body, Self::tx_transfer),
             _ => module::DispatchResult::Unhandled(body),
         }
     }
@@ -537,18 +527,9 @@ impl module::MethodHandler for Module {
         args: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
         match method {
-            "accounts.Nonce" => module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(Self::query_nonce(ctx, args)?))
-            })()),
-            "accounts.Balances" => module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(Self::query_balances(ctx, args)?))
-            })()),
-            "accounts.Addresses" => module::DispatchResult::Handled((|| {
-                let args = cbor::from_value(args).map_err(|_| Error::InvalidArgument)?;
-                Ok(cbor::to_value(Self::query_addresses(ctx, args)?))
-            })()),
+            "accounts.Nonce" => module::dispatch_query(ctx, args, Self::query_nonce),
+            "accounts.Balances" => module::dispatch_query(ctx, args, Self::query_balances),
+            "accounts.Addresses" => module::dispatch_query(ctx, args, Self::query_addresses),
             _ => module::DispatchResult::Unhandled(args),
         }
     }

@@ -195,6 +195,7 @@ func NewTransaction(fee *Fee, method string, body interface{}) *Transaction {
 	tx := &Transaction{
 		Versioned: cbor.NewVersioned(LatestTransactionVersion),
 		Call: Call{
+			Format: CallFormatPlain,
 			Method: method,
 			Body:   cbor.Marshal(body),
 		},
@@ -208,9 +209,21 @@ func NewTransaction(fee *Fee, method string, body interface{}) *Transaction {
 	return tx
 }
 
+// CallFormat is the format used for encoding the call (and output) information.
+type CallFormat uint8
+
+const (
+	// CallFormatPlain is the plain text call format.
+	CallFormatPlain = CallFormat(0)
+	// CallFormatEncryptedX25519DeoxysII is the encrypted call format using X25519 for key exchange
+	// and Deoxys-II for symmetric encryption.
+	CallFormatEncryptedX25519DeoxysII = CallFormat(1)
+)
+
 // Call is a method call.
 type Call struct {
-	Method string          `json:"method"`
+	Format CallFormat      `json:"format,omitempty"`
+	Method string          `json:"method,omitempty"`
 	Body   cbor.RawMessage `json:"body"`
 }
 
@@ -222,8 +235,9 @@ type AuthInfo struct {
 
 // Fee contains the transaction fee information.
 type Fee struct {
-	Amount BaseUnits `json:"amount"`
-	Gas    uint64    `json:"gas"`
+	Amount            BaseUnits `json:"amount"`
+	Gas               uint64    `json:"gas,omitempty"`
+	ConsensusMessages uint32    `json:"consensus_messages,omitempty"`
 }
 
 // AddressSpec is common information that specifies an address as well as how to authenticate.
@@ -267,13 +281,19 @@ type SignerInfo struct {
 
 // CallResult is the method call result.
 type CallResult struct {
-	Ok     cbor.RawMessage   `json:"ok,omitempty"`
-	Failed *FailedCallResult `json:"fail,omitempty"`
+	Ok      cbor.RawMessage   `json:"ok,omitempty"`
+	Failed  *FailedCallResult `json:"fail,omitempty"`
+	Unknown cbor.RawMessage   `json:"unknown,omitempty"`
 }
 
 // IsSuccess checks whether the call result indicates success.
 func (cr *CallResult) IsSuccess() bool {
 	return cr.Failed == nil
+}
+
+// IsUnknown checks whether the call result is unknown.
+func (cr *CallResult) IsUnknown() bool {
+	return cr.Unknown != nil
 }
 
 // FailedCallResult is a failed call result.

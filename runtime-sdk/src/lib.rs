@@ -2,6 +2,7 @@
 #![deny(rust_2018_idioms, unreachable_pub)]
 #![forbid(unsafe_code)]
 
+pub mod callformat;
 pub mod context;
 pub mod crypto;
 pub mod dispatcher;
