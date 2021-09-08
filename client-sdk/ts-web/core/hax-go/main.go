@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"sort"
@@ -10,16 +11,22 @@ import (
 	"time"
 
 	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/pvss"
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
+	control "github.com/oasisprotocol/oasis-core/go/control/api"
 	genesis "github.com/oasisprotocol/oasis-core/go/genesis/api"
 	governance "github.com/oasisprotocol/oasis-core/go/governance/api"
 	keymanager "github.com/oasisprotocol/oasis-core/go/keymanager/api"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
 	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
+	runtimeClient "github.com/oasisprotocol/oasis-core/go/runtime/client/api"
+	enclaverpc "github.com/oasisprotocol/oasis-core/go/runtime/enclaverpc/api"
 	scheduler "github.com/oasisprotocol/oasis-core/go/scheduler/api"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
+	storage "github.com/oasisprotocol/oasis-core/go/storage/api"
 )
 
 type usedType struct {
@@ -40,7 +47,12 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/common/node": "Node",
 	"github.com/oasisprotocol/oasis-core/go/common/sgx": "SGX",
 	"github.com/oasisprotocol/oasis-core/go/common/version": "Version",
+	// todo: api/light.go Parameters should be ConsensusLightParameters
+	"github.com/oasisprotocol/oasis-core/go/consensus/api": "Consensus",
+	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction": "Consensus",
+	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction/results": "Consensus",
 	"github.com/oasisprotocol/oasis-core/go/consensus/genesis": "Consensus",
+	"github.com/oasisprotocol/oasis-core/go/control/api": "Control",
 	"github.com/oasisprotocol/oasis-core/go/genesis/api": "Genesis",
 	"github.com/oasisprotocol/oasis-core/go/governance/api": "Governance",
 	"github.com/oasisprotocol/oasis-core/go/keymanager/api": "KeyManager",
@@ -48,10 +60,18 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/roothash/api": "RootHash",
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block": "RootHash",
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/commitment": "RootHash",
+	"github.com/oasisprotocol/oasis-core/go/runtime/client/api": "RuntimeClient",
+	"github.com/oasisprotocol/oasis-core/go/runtime/enclaverpc/api": "EnclaveRPC",
 	"github.com/oasisprotocol/oasis-core/go/scheduler/api": "Scheduler",
 	"github.com/oasisprotocol/oasis-core/go/staking/api": "Staking",
+	"github.com/oasisprotocol/oasis-core/go/storage/api": "Storage",
+	"github.com/oasisprotocol/oasis-core/go/storage/mkvs/checkpoint": "Storage",
+	"github.com/oasisprotocol/oasis-core/go/storage/mkvs/node": "Storage",
+	"github.com/oasisprotocol/oasis-core/go/storage/mkvs/syncer": "Storage",
 	"github.com/oasisprotocol/oasis-core/go/storage/mkvs/writelog": "Storage",
 	"github.com/oasisprotocol/oasis-core/go/upgrade/api": "Upgrade",
+	"github.com/oasisprotocol/oasis-core/go/worker/common/api": "WorkerCommon",
+	"github.com/oasisprotocol/oasis-core/go/worker/storage/api": "WorkerStorage",
 }
 var prefixConsulted = map[string]bool{}
 
@@ -64,6 +84,12 @@ func visitType(t reflect.Type) string {
 		t = reflect.TypeOf([]byte{})
 	case reflect.TypeOf(pvss.Point{}):
 		t = reflect.TypeOf([]byte{})
+	case reflect.TypeOf((*io.Writer)(nil)).Elem():
+		t = reflect.TypeOf([]byte{})
+	case reflect.TypeOf((*storage.WriteLogIterator)(nil)).Elem():
+		t = reflect.TypeOf(storage.SyncChunk{})
+	case reflect.TypeOf(cbor.RawMessage{}):
+		return "unknown"
 	}
 	if ut, ok := memo[t]; ok {
 		return ut.ref
@@ -215,6 +241,14 @@ func visitType(t reflect.Type) string {
 
 var skipMethods = map[string]bool{
 	"github.com/oasisprotocol/oasis-core/go/roothash/api.Backend.TrackRuntime": true,
+	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized": true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Beacon": true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Registry": true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Staking": true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Scheduler": true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Governance": true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.RootHash": true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.State": true,
 }
 
 func visitClient(t reflect.Type) {
@@ -275,6 +309,12 @@ func main() {
 	visitClient(reflect.TypeOf((*keymanager.Backend)(nil)).Elem())
 	visitClient(reflect.TypeOf((*roothash.Backend)(nil)).Elem())
 	visitClient(reflect.TypeOf((*governance.Backend)(nil)).Elem())
+	visitClient(reflect.TypeOf((*runtimeClient.RuntimeClient)(nil)).Elem())
+	visitClient(reflect.TypeOf((*enclaverpc.Transport)(nil)).Elem())
+	visitClient(reflect.TypeOf((*storage.Backend)(nil)).Elem())
+	visitClient(reflect.TypeOf((*consensus.ClientBackend)(nil)).Elem())
+	visitClient(reflect.TypeOf((*control.NodeController)(nil)).Elem())
+	visitClient(reflect.TypeOf((*control.DebugController)(nil)).Elem())
 	write()
 	for prefix := range prefixByPackage {
 		if !prefixConsulted[prefix] {
