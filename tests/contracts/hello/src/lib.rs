@@ -12,6 +12,7 @@ use oasis_contract_sdk::{
         token,
     },
 };
+use oasis_contract_sdk_oas20_types::ReceiverRequest;
 use oasis_contract_sdk_storage::cell::Cell;
 
 /// All possible errors that can be returned by the contract.
@@ -83,6 +84,9 @@ pub enum Request {
 
     #[cbor(rename = "upgrade_fail_post")]
     UpgradeFailPost,
+
+    #[cbor(embed)]
+    Oas20(ReceiverRequest),
 }
 
 /// All possible responses that the contract can return.
@@ -105,9 +109,9 @@ const COUNTER: Cell<u64> = Cell::new(b"counter");
 
 impl HelloWorld {
     /// Increment the counter and return the previous value.
-    fn increment_counter<C: sdk::Context>(ctx: &mut C) -> u64 {
+    fn increment_counter<C: sdk::Context>(ctx: &mut C, inc: u64) -> u64 {
         let counter = COUNTER.get(ctx.public_store()).unwrap_or_default();
-        COUNTER.set(ctx.public_store(), counter + 1);
+        COUNTER.set(ctx.public_store(), counter + inc);
 
         counter
     }
@@ -140,7 +144,7 @@ impl sdk::Contract for HelloWorld {
         match request {
             Request::SayHello { who } => {
                 // Increment the counter and retrieve the previous value.
-                let counter = Self::increment_counter(ctx);
+                let counter = Self::increment_counter(ctx, 1);
 
                 // Emit a test event.
                 ctx.emit_event(Event::Hello("world".to_string()));
@@ -175,7 +179,7 @@ impl sdk::Contract for HelloWorld {
             }
             Request::IncrementCounter => {
                 // Just increment the counter and return an empty response.
-                Self::increment_counter(ctx);
+                Self::increment_counter(ctx, 1);
 
                 Ok(Response::Empty)
             }
@@ -210,6 +214,18 @@ impl sdk::Contract for HelloWorld {
 
                 _ => Err(Error::QueryFailed),
             },
+            // Handle receiving Oas20 tokens.
+            Request::Oas20(ReceiverRequest::Receive {
+                sender: _,
+                amount: _,
+                data,
+            }) => {
+                // Just increment the counter by the amount specified in the accompanying data.
+                let inc: u64 = cbor::from_value(data).unwrap();
+                Self::increment_counter(ctx, inc);
+
+                Ok(Response::Empty)
+            }
             _ => Err(Error::BadRequest),
         }
     }

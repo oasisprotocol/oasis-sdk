@@ -1,0 +1,19 @@
+[package]
+name = "oasis-contract-sdk-oas20-types"
+version = "0.1.0"
+description = "Definition and types for the OAS-20 interface"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+cbor = { version = "0.2.0", package = "oasis-cbor" }
+oasis-contract-sdk = { path = "../../.." }
+oasis-contract-sdk-storage = { path = "../../../storage" }
+oasis-contract-sdk-types = { path = "../../../types" }
+
+# Third party.
+thiserror = "1.0.28"
+
+[dev-dependencies]
+base64 = "0.13.0"

@@ -7,6 +7,8 @@ pub mod message;
 pub mod storage;
 pub mod token;
 
+pub mod testing;
+
 /// Unique stored code identifier.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, cbor::Decode, cbor::Encode)]
 #[cbor(transparent)]

@@ -13,6 +13,7 @@ members = [
     "contract-sdk/types",
     "contract-sdk/storage",
     "contract-sdk-macros",
+    "contract-sdk/specs/oas20/types",
 
     # Test runtimes.
     "tests/runtimes/benchmarking",
@@ -22,6 +23,9 @@ members = [
 ]
 exclude = [
     # Test contracts.
-    "tests/contracts"
+    "tests/contracts",
+
+    # OAS contracts.
+    "contract-sdk/specs/oas20/contract",
 ]
 resolver = "2"

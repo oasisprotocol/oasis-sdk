@@ -56,17 +56,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
-name = "hello"
-version = "0.0.0"
-dependencies = [
- "oasis-cbor",
- "oasis-contract-sdk",
- "oasis-contract-sdk-oas20-types",
- "oasis-contract-sdk-storage",
- "thiserror",
-]
-
-[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -141,6 +130,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "oasis-contract-sdk-oas20"
+version = "0.1.0"
+dependencies = [
+ "oasis-cbor",
+ "oasis-contract-sdk",
+ "oasis-contract-sdk-oas20-types",
+ "oasis-contract-sdk-storage",
+ "oasis-contract-sdk-types",
+ "thiserror",
 ]
 
 [[package]]

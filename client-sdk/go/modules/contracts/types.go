@@ -1,6 +1,8 @@
 package contracts
 
 import (
+	"encoding/binary"
+
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -11,6 +13,13 @@ type CodeID uint64
 
 // InstanceID is the unique deployed code instance identifier.
 type InstanceID uint64
+
+// Address returns address for the InstanceID.
+func (i *InstanceID) Address() types.Address {
+	id := make([]byte, 8)
+	binary.BigEndian.PutUint64(id, uint64(*i))
+	return types.NewAddressForModule("contracts", id)
+}
 
 // Policy is a generic policy that specifies who is allowed to perform an action.
 type Policy struct {

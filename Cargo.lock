@@ -1748,6 +1748,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "oasis-contract-sdk-oas20-types"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "oasis-cbor",
+ "oasis-contract-sdk",
+ "oasis-contract-sdk-storage",
+ "oasis-contract-sdk-types",
+ "thiserror",
+]
+
+[[package]]
 name = "oasis-contract-sdk-storage"
 version = "0.1.0"
 dependencies = [
