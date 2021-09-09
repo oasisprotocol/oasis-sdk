@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use evm::backend::{Apply, ApplyBackend, Backend as EVMBackend, Basic, Log};
 
 use oasis_runtime_sdk::{
+    core::common::crypto::hash::Hash,
     crypto,
     storage::{self, Store as _},
 };
@@ -53,20 +54,19 @@ impl<'c, C: oasis_runtime_sdk::Context> EVMBackend for Backend<'c, C> {
     fn origin(&self) -> primitive_types::H160 {
         self.vicinity.origin.into()
     }
-    fn block_hash(&self, _number: primitive_types::U256) -> primitive_types::H256 {
-        // Note: This always returns the current block hash, because supporting
-        // arbitrary lookups for any block number would require the runtime-sdk
-        // to implement an indexer with unbounded storage, which would be bad
-        // for obvious reasons.
-        // If arbitrary lookups are really needed, then someone should come up
-        // with a solution for this.
-        primitive_types::H256::from_slice(
-            self.ctx
-                .borrow()
-                .runtime_header()
-                .encoded_hash()
-                .truncated(32),
-        )
+    fn block_hash(&self, number: primitive_types::U256) -> primitive_types::H256 {
+        let mut ctx = self.ctx.borrow_mut();
+        let state = ctx.runtime_state();
+
+        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
+        let hashes = storage::PrefixStore::new(store, &state::BLOCK_HASHES);
+        let block_hashes = storage::TypedStore::new(hashes);
+
+        if let Some(hash) = block_hashes.get::<_, Hash>(&number.as_u64().to_be_bytes()) {
+            primitive_types::H256::from_slice(hash.as_ref())
+        } else {
+            primitive_types::H256::default()
+        }
     }
     fn block_number(&self) -> primitive_types::U256 {
         self.ctx.borrow().runtime_header().round.into()
