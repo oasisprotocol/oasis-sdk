@@ -258,6 +258,7 @@ var skipMethods = map[string]bool{
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.RootHash": true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.State": true,
 }
+var skipMethodsConsulted = map[string]bool{}
 
 func visitClient(t reflect.Type) {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting client %v\n", t)
@@ -266,6 +267,7 @@ func visitClient(t reflect.Type) {
 		_, _ = fmt.Fprintf(os.Stderr, "visiting method %v\n", m)
 		sig := fmt.Sprintf("%s.%s.%s", t.PkgPath(), t.Name(), m.Name)
 		if skipMethods[sig] {
+			skipMethodsConsulted[sig] = true
 			continue
 		}
 		for j := 0; j < m.Type.NumIn(); j++ {
@@ -355,6 +357,11 @@ func main() {
 	for prefix := range prefixByPackage {
 		if !prefixConsulted[prefix] {
 			panic(fmt.Sprintf("unused prefix %s", prefix))
+		}
+	}
+	for sig := range skipMethods {
+		if !skipMethodsConsulted[sig] {
+			panic(fmt.Sprintf("unused skip method %s", sig))
 		}
 	}
 }
