@@ -166,15 +166,19 @@ func visitType(t reflect.Type) string {
 		return "string"
 	case reflect.Struct:
 		ref := getStructName(t)
-		extends := ""
+		var extendsType reflect.Type
+		extendsRef := ""
+		sourceExtends := ""
 		sourceFields := ""
 		mode := "object"
 		for i := 0; i < t.NumField(); i++ {
 			f := t.Field(i)
 			_, _ = fmt.Fprintf(os.Stderr, "visiting field %v\n", f)
 			if f.Anonymous {
-				if extends == "" {
-					extends = fmt.Sprintf(" extends %s", visitType(f.Type))
+				if extendsType == nil {
+					extendsType = f.Type
+					extendsRef = visitType(extendsType)
+					sourceExtends = fmt.Sprintf(" extends %s", extendsRef)
 				} else {
 					panic("multiple embedded types")
 				}
@@ -237,23 +241,23 @@ func visitType(t reflect.Type) string {
 				panic(fmt.Sprintf("unhandled struct field in mode %s", mode))
 			}
 		}
-		if sourceFields == "" && extends != "" {
-			return extends[9:] // todo: less hacky bookkeeping
+		if sourceFields == "" && extendsType != nil {
+			return extendsRef
 		}
-		if mode == "object" && sourceFields == "" && extends == "" {
+		if mode == "object" && sourceFields == "" && extendsType == nil {
 			mode = "empty-map"
 		}
 		var source string
 		switch mode {
 		case "object":
-			source = fmt.Sprintf("export interface %s%s {\n%s}\n", ref, extends, sourceFields)
+			source = fmt.Sprintf("export interface %s%s {\n%s}\n", ref, sourceExtends, sourceFields)
 		case "array":
-			if extends != "" {
+			if extendsType != nil {
 				panic("unhandled extends in mode array")
 			}
 			source = fmt.Sprintf("export type %s = [\n%s];\n", ref, sourceFields)
 		case "empty-map":
-			if extends != "" {
+			if extendsType != nil {
 				panic("unhandled extends in mode empty-map")
 			}
 			if sourceFields != "" {
