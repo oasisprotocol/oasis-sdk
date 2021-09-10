@@ -40,6 +40,11 @@ type usedType struct {
 var used = []*usedType{}
 var memo = map[reflect.Type]*usedType{}
 
+var customStructNames = map[reflect.Type]string{
+	reflect.TypeOf(consensus.Parameters{}): "ConsensusLightParameters",
+}
+var customStructNamesConsulted = map[reflect.Type]bool{}
+
 var prefixByPackage = map[string]string{
 	"net": "Net",
 
@@ -51,7 +56,6 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/common/node": "Node",
 	"github.com/oasisprotocol/oasis-core/go/common/sgx": "SGX",
 	"github.com/oasisprotocol/oasis-core/go/common/version": "Version",
-	// todo: api/light.go Parameters should be ConsensusLightParameters
 	"github.com/oasisprotocol/oasis-core/go/consensus/api": "Consensus",
 	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction": "Consensus",
 	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction/results": "Consensus",
@@ -78,6 +82,22 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/worker/storage/api": "WorkerStorage",
 }
 var prefixConsulted = map[string]bool{}
+
+func getStructName(t reflect.Type) string {
+	if ref, ok := customStructNames[t]; ok {
+		customStructNamesConsulted[t] = true
+		return ref
+	}
+	prefixConsulted[t.PkgPath()] = true
+	prefix, ok := prefixByPackage[t.PkgPath()]
+	if !ok {
+		panic(fmt.Sprintf("unset package prefix %s", t.PkgPath()))
+	}
+	if prefix == t.Name() {
+		return t.Name()
+	}
+	return prefix + t.Name()
+}
 
 func visitType(t reflect.Type) string {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting type %v\n", t)
@@ -131,17 +151,7 @@ func visitType(t reflect.Type) string {
 	case reflect.String:
 		return "string"
 	case reflect.Struct:
-		prefixConsulted[t.PkgPath()] = true
-		prefix, ok := prefixByPackage[t.PkgPath()]
-		if !ok {
-			panic(fmt.Sprintf("unset package prefix %s", t.PkgPath()))
-		}
-		var ref string
-		if prefix == t.Name() {
-			ref = t.Name()
-		} else {
-			ref = prefix + t.Name()
-		}
+		ref := getStructName(t)
 		extends := ""
 		sourceFields := ""
 		mode := "object"
@@ -354,6 +364,11 @@ func main() {
 	visitClient(reflect.TypeOf((*control.DebugController)(nil)).Elem())
 
 	write()
+	for t := range customStructNames {
+		if !customStructNamesConsulted[t] {
+			panic(fmt.Sprintf("unused custom type name %v", t))
+		}
+	}
 	for prefix := range prefixByPackage {
 		if !prefixConsulted[prefix] {
 			panic(fmt.Sprintf("unused prefix %s", prefix))
