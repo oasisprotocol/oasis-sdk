@@ -13,11 +13,13 @@ import (
 	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/pvss"
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
+	"github.com/oasisprotocol/oasis-core/go/common/entity"
+	"github.com/oasisprotocol/oasis-core/go/common/node"
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	control "github.com/oasisprotocol/oasis-core/go/control/api"
-	genesis "github.com/oasisprotocol/oasis-core/go/genesis/api"
 	governance "github.com/oasisprotocol/oasis-core/go/governance/api"
 	keymanager "github.com/oasisprotocol/oasis-core/go/keymanager/api"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
@@ -27,6 +29,7 @@ import (
 	scheduler "github.com/oasisprotocol/oasis-core/go/scheduler/api"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 	storage "github.com/oasisprotocol/oasis-core/go/storage/api"
+	workerStorage "github.com/oasisprotocol/oasis-core/go/worker/storage/api"
 )
 
 type usedType struct {
@@ -42,6 +45,7 @@ var prefixByPackage = map[string]string{
 
 	"github.com/oasisprotocol/oasis-core/go/beacon/api": "Beacon",
 	"github.com/oasisprotocol/oasis-core/go/common/cbor": "CBOR",
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/pvss": "PVSS",
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature": "Signature",
 	"github.com/oasisprotocol/oasis-core/go/common/entity": "Entity",
 	"github.com/oasisprotocol/oasis-core/go/common/node": "Node",
@@ -84,10 +88,14 @@ func visitType(t reflect.Type) string {
 		t = reflect.TypeOf([]byte{})
 	case reflect.TypeOf(pvss.Point{}):
 		t = reflect.TypeOf([]byte{})
+	case reflect.TypeOf(pvss.Scalar{}):
+		t = reflect.TypeOf([]byte{})
 	case reflect.TypeOf((*io.Writer)(nil)).Elem():
 		t = reflect.TypeOf([]byte{})
 	case reflect.TypeOf((*storage.WriteLogIterator)(nil)).Elem():
 		t = reflect.TypeOf(storage.SyncChunk{})
+	case reflect.TypeOf((*signature.Signed)(nil)).Elem():
+		_, _ = fmt.Fprintf(os.Stderr, "signed %v\n", t) // %%%
 	case reflect.TypeOf(cbor.RawMessage{}):
 		return "unknown"
 	}
@@ -301,20 +309,48 @@ func write() {
 }
 
 func main() {
-	visitType(reflect.TypeOf((*genesis.Document)(nil)).Elem())
-	visitClient(reflect.TypeOf((*beacon.Backend)(nil)).Elem())
+	visitClient(reflect.TypeOf((*beacon.PVSSBackend)(nil)).Elem())
+	visitType(reflect.TypeOf((*beacon.PVSSCommit)(nil)).Elem())
+	visitType(reflect.TypeOf((*beacon.PVSSReveal)(nil)).Elem())
+	visitType(reflect.TypeOf((*beacon.EpochTime)(nil)).Elem())
+
 	visitClient(reflect.TypeOf((*scheduler.Backend)(nil)).Elem())
+
 	visitClient(reflect.TypeOf((*registry.Backend)(nil)).Elem())
+	visitType(reflect.TypeOf((*entity.SignedEntity)(nil)).Elem())
+	visitType(reflect.TypeOf((*node.MultiSignedNode)(nil)).Elem())
+	visitType(reflect.TypeOf((*registry.UnfreezeNode)(nil)).Elem())
+	visitType(reflect.TypeOf((*registry.Runtime)(nil)).Elem())
+
 	visitClient(reflect.TypeOf((*staking.Backend)(nil)).Elem())
+	visitType(reflect.TypeOf((*staking.Transfer)(nil)).Elem())
+	visitType(reflect.TypeOf((*staking.Burn)(nil)).Elem())
+	visitType(reflect.TypeOf((*staking.Escrow)(nil)).Elem())
+	visitType(reflect.TypeOf((*staking.ReclaimEscrow)(nil)).Elem())
+	visitType(reflect.TypeOf((*staking.AmendCommissionSchedule)(nil)).Elem())
+	visitType(reflect.TypeOf((*staking.Allow)(nil)).Elem())
+	visitType(reflect.TypeOf((*staking.Withdraw)(nil)).Elem())
+
 	visitClient(reflect.TypeOf((*keymanager.Backend)(nil)).Elem())
+	visitType(reflect.TypeOf((*keymanager.SignedPolicySGX)(nil)).Elem())
+
 	visitClient(reflect.TypeOf((*roothash.Backend)(nil)).Elem())
+	visitType(reflect.TypeOf((*roothash.ExecutorCommit)(nil)).Elem())
+	visitType(reflect.TypeOf((*roothash.ExecutorProposerTimeoutRequest)(nil)).Elem())
+	visitType(reflect.TypeOf((*roothash.Evidence)(nil)).Elem())
+
 	visitClient(reflect.TypeOf((*governance.Backend)(nil)).Elem())
+	visitType(reflect.TypeOf((*governance.ProposalContent)(nil)).Elem())
+	visitType(reflect.TypeOf((*governance.ProposalVote)(nil)).Elem())
+
 	visitClient(reflect.TypeOf((*runtimeClient.RuntimeClient)(nil)).Elem())
 	visitClient(reflect.TypeOf((*enclaverpc.Transport)(nil)).Elem())
 	visitClient(reflect.TypeOf((*storage.Backend)(nil)).Elem())
+	visitClient(reflect.TypeOf((*workerStorage.StorageWorker)(nil)).Elem())
 	visitClient(reflect.TypeOf((*consensus.ClientBackend)(nil)).Elem())
 	visitClient(reflect.TypeOf((*control.NodeController)(nil)).Elem())
 	visitClient(reflect.TypeOf((*control.DebugController)(nil)).Elem())
+
 	write()
 	for prefix := range prefixByPackage {
 		if !prefixConsulted[prefix] {
