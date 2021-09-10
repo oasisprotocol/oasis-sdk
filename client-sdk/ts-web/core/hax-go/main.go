@@ -19,6 +19,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
+	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction"
 	control "github.com/oasisprotocol/oasis-core/go/control/api"
 	governance "github.com/oasisprotocol/oasis-core/go/governance/api"
 	keymanager "github.com/oasisprotocol/oasis-core/go/keymanager/api"
@@ -99,6 +100,19 @@ func getStructName(t reflect.Type) string {
 	return prefix + t.Name()
 }
 
+var mapKeyNames = map[reflect.Type]string {}
+var mapKeyNamesConsulted = map[reflect.Type]bool{}
+
+func getMapKeyName(t reflect.Type) string {
+	switch t.Key() {
+	case reflect.TypeOf(transaction.Op("")):
+		return "op"
+	case reflect.TypeOf(staking.StakeClaim("")):
+		return "claim"
+	}
+	return "key"
+}
+
 func visitType(t reflect.Type) string {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting type %v\n", t)
 	switch t {
@@ -143,7 +157,7 @@ func visitType(t reflect.Type) string {
 	// Interface begone
 	case reflect.Map:
 		if t.Key().Kind() == reflect.String {
-			return fmt.Sprintf("{[key: string]: %s}", visitType(t.Elem()))
+			return fmt.Sprintf("{[%s: string]: %s}", getMapKeyName(t), visitType(t.Elem()))
 		}
 		return fmt.Sprintf("Map<%s, %s>", visitType(t.Key()), visitType(t.Elem()))
 	case reflect.Ptr:
@@ -372,6 +386,11 @@ func main() {
 	for prefix := range prefixByPackage {
 		if !prefixConsulted[prefix] {
 			panic(fmt.Sprintf("unused prefix %s", prefix))
+		}
+	}
+	for t := range mapKeyNames {
+		if !mapKeyNamesConsulted[t] {
+			panic(fmt.Sprintf("unused map key name %v", t))
 		}
 	}
 	for sig := range skipMethods {
