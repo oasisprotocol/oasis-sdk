@@ -74,6 +74,7 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/message": "RootHash",
 	"github.com/oasisprotocol/oasis-core/go/runtime/client/api": "RuntimeClient",
 	"github.com/oasisprotocol/oasis-core/go/runtime/enclaverpc/api": "EnclaveRPC",
+	"github.com/oasisprotocol/oasis-core/go/runtime/host/protocol": "RuntimeHost",
 	"github.com/oasisprotocol/oasis-core/go/scheduler/api": "Scheduler",
 	"github.com/oasisprotocol/oasis-core/go/staking/api": "Staking",
 	"github.com/oasisprotocol/oasis-core/go/storage/api": "Storage",
