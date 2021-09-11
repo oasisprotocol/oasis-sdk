@@ -18,6 +18,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/node"
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+	"github.com/oasisprotocol/oasis-core/go/common/sgx"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction"
 	control "github.com/oasisprotocol/oasis-core/go/control/api"
@@ -25,6 +26,7 @@ import (
 	keymanager "github.com/oasisprotocol/oasis-core/go/keymanager/api"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
 	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
+	"github.com/oasisprotocol/oasis-core/go/roothash/api/commitment"
 	runtimeClient "github.com/oasisprotocol/oasis-core/go/runtime/client/api"
 	enclaverpc "github.com/oasisprotocol/oasis-core/go/runtime/enclaverpc/api"
 	scheduler "github.com/oasisprotocol/oasis-core/go/scheduler/api"
@@ -69,6 +71,7 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/roothash/api": "RootHash",
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block": "RootHash",
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/commitment": "RootHash",
+	"github.com/oasisprotocol/oasis-core/go/roothash/api/message": "RootHash",
 	"github.com/oasisprotocol/oasis-core/go/runtime/client/api": "RuntimeClient",
 	"github.com/oasisprotocol/oasis-core/go/runtime/enclaverpc/api": "EnclaveRPC",
 	"github.com/oasisprotocol/oasis-core/go/scheduler/api": "Scheduler",
@@ -113,6 +116,9 @@ func getMapKeyName(t reflect.Type) string {
 	return "key"
 }
 
+var encounteredVersionInfo = false
+var encounteredExecutorCommitment = false
+
 func visitType(t reflect.Type) string {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting type %v\n", t)
 	switch t {
@@ -128,8 +134,6 @@ func visitType(t reflect.Type) string {
 		t = reflect.TypeOf([]byte{})
 	case reflect.TypeOf((*storage.WriteLogIterator)(nil)).Elem():
 		t = reflect.TypeOf(storage.SyncChunk{})
-	case reflect.TypeOf((*signature.Signed)(nil)).Elem():
-		_, _ = fmt.Fprintf(os.Stderr, "signed %v\n", t) // %%%
 	case reflect.TypeOf(cbor.RawMessage{}):
 		return "unknown"
 	}
@@ -241,7 +245,43 @@ func visitType(t reflect.Type) string {
 				panic(fmt.Sprintf("unhandled struct field in mode %s", mode))
 			}
 		}
+		if t == reflect.TypeOf(registry.VersionInfo{}) {
+			// `.TEE` contains serialized `Constraints` for use with detached
+			// signature
+			visitType(reflect.TypeOf(sgx.Constraints{}))
+			encounteredVersionInfo = true
+		}
 		if sourceFields == "" && extendsType != nil {
+			// there's a convention where we have a struct that wraps
+			// `signature.Signed` with an `Open` method that has an out
+			// pointer to the type of the signed data.
+			if extendsType == reflect.TypeOf(signature.Signed{}) {
+				if t == reflect.TypeOf(commitment.ExecutorCommitment{}) {
+					// this one is unconventional ):
+					visitType(reflect.TypeOf(commitment.ComputeBody{}))
+					encounteredExecutorCommitment = true
+				} else {
+					_, _ = fmt.Fprintf(os.Stderr, "visiting signed wrapper %v\n", t)
+					m, ok := reflect.PtrTo(t).MethodByName("Open")
+					if !ok {
+						panic(fmt.Sprintf("signed wrapper %v has no open method", t))
+					}
+					_, _ = fmt.Fprintf(os.Stderr, "visiting open method %v\n", m)
+					outParams := 0
+					for i := 1; i < m.Type.NumIn(); i++ {
+						u := m.Type.In(i)
+						// skip parameters that couldn't be out pointers
+						if u.Kind() != reflect.Ptr {
+							continue
+						}
+						visitType(u.Elem())
+						outParams++
+					}
+					if outParams != 1 {
+						panic("wrong number of out params")
+					}
+				}
+			}
 			return extendsRef
 		}
 		if mode == "object" && sourceFields == "" && extendsType == nil {
@@ -396,6 +436,12 @@ func main() {
 		if !mapKeyNamesConsulted[t] {
 			panic(fmt.Sprintf("unused map key name %v", t))
 		}
+	}
+	if !encounteredVersionInfo {
+		panic("VersionInfo special case not needed")
+	}
+	if !encounteredExecutorCommitment {
+		panic("ExecutorCommitment special case not needed")
 	}
 	for sig := range skipMethods {
 		if !skipMethodsConsulted[sig] {
