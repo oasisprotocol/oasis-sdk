@@ -1398,6 +1398,7 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "sha2",
+ "sha3 0.9.1",
 ]
 
 [[package]]
@@ -1937,10 +1938,15 @@ dependencies = [
  "blake3",
  "evm",
  "fixed-hash",
+ "hex",
+ "k256",
  "oasis-cbor",
  "oasis-runtime-sdk",
  "once_cell",
  "primitive-types",
+ "ripemd160",
+ "sha2",
+ "sha3 0.9.1",
  "thiserror",
  "tiny-keccak 2.0.2",
  "uint",
@@ -2360,6 +2366,17 @@ name = "regex-syntax"
 version = "0.6.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
+
+[[package]]
+name = "ripemd160"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eca4ecc81b7f313189bf73ce724400a07da2a6dac19588b03c8bd76a2dcc251"
+dependencies = [
+ "block-buffer 0.9.0",
+ "digest 0.9.0",
+ "opaque-debug 0.3.0",
+]
 
 [[package]]
 name = "rlp"

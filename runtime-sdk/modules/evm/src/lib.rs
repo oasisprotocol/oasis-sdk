@@ -1,6 +1,7 @@
 //! EVM module.
 pub mod evm_backend;
 pub mod types;
+pub mod precompile;
 
 use std::collections::BTreeMap;
 
@@ -376,7 +377,7 @@ impl<Cfg: Config> Module<Cfg> {
         let mut backend = evm_backend::Backend::<'_, C>::new(vicinity, ctx);
         let metadata = StackSubstateMetadata::new(gas_limit, &Self::EVM_CONFIG);
         let stackstate = MemoryStackState::new(metadata, &backend);
-        let mut executor = StackExecutor::new(stackstate, &Self::EVM_CONFIG);
+        let mut executor = StackExecutor::new_with_precompile(stackstate, &Self::EVM_CONFIG, precompile::precompiled_contract);
 
         // Run EVM.
         let (exit_reason, exit_value) = f(&mut executor, gas_limit);
