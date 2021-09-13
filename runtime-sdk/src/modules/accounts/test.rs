@@ -566,6 +566,15 @@ fn test_fee_disbursement() {
     // Simulate another block happening.
     Accounts::end_block(&mut ctx);
 
+    // Fees should be removed from the fee accumulator address.
+    let bals = Accounts::get_balances(ctx.runtime_state(), *ADDRESS_FEE_ACCUMULATOR)
+        .expect("get_balances should succeed");
+    assert_eq!(
+        bals.balances[&Denomination::NATIVE],
+        0,
+        "fees should have moved from the fee accumulator address"
+    );
+
     // Check first good compute entity account balances.
     let bals = Accounts::get_balances(ctx.runtime_state(), keys::bob::address())
         .expect("get_balances should succeed");

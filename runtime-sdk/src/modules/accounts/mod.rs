@@ -704,6 +704,16 @@ impl module::BlockHandler for Module {
             .expect("get_balances must succeed")
             .balances;
 
+        // Drain previous fees from the fee accumulator.
+        for (denom, remainder) in &previous_fees {
+            Self::sub_amount(
+                ctx.runtime_state(),
+                *ADDRESS_FEE_ACCUMULATOR,
+                &token::BaseUnits::new(*remainder, denom.clone()),
+            )
+            .expect("sub_amount must succeed");
+        }
+
         // Disburse transaction fees to entities controlling all the good nodes in the committee.
         let addrs: Vec<Address> = ctx
             .runtime_round_results()
