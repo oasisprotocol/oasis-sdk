@@ -174,7 +174,7 @@ var customStructNamesConsulted = map[reflect.Type]bool{}
 var prefixByPackage = map[string]string{
 	"net": "Net",
 
-	"github.com/oasisprotocol/oasis-core/go/beacon/api": "Beacon",
+	"github.com/oasisprotocol/oasis-core/go/beacon": "Beacon",
 	"github.com/oasisprotocol/oasis-core/go/common/cbor": "CBOR",
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/pvss": "PVSS",
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature": "Signature",
@@ -182,32 +182,22 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/common/node": "Node",
 	"github.com/oasisprotocol/oasis-core/go/common/sgx": "SGX",
 	"github.com/oasisprotocol/oasis-core/go/common/version": "Version",
-	"github.com/oasisprotocol/oasis-core/go/consensus/api": "Consensus",
-	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction": "Consensus",
-	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction/results": "Consensus",
-	"github.com/oasisprotocol/oasis-core/go/consensus/genesis": "Consensus",
-	"github.com/oasisprotocol/oasis-core/go/control/api": "Control",
-	"github.com/oasisprotocol/oasis-core/go/genesis/api": "Genesis",
-	"github.com/oasisprotocol/oasis-core/go/governance/api": "Governance",
-	"github.com/oasisprotocol/oasis-core/go/keymanager/api": "KeyManager",
-	"github.com/oasisprotocol/oasis-core/go/registry/api": "Registry",
-	"github.com/oasisprotocol/oasis-core/go/roothash/api": "RootHash",
-	"github.com/oasisprotocol/oasis-core/go/roothash/api/block": "RootHash",
-	"github.com/oasisprotocol/oasis-core/go/roothash/api/commitment": "RootHash",
-	"github.com/oasisprotocol/oasis-core/go/roothash/api/message": "RootHash",
-	"github.com/oasisprotocol/oasis-core/go/runtime/client/api": "RuntimeClient",
-	"github.com/oasisprotocol/oasis-core/go/runtime/enclaverpc/api": "EnclaveRPC",
-	"github.com/oasisprotocol/oasis-core/go/runtime/host/protocol": "RuntimeHost",
-	"github.com/oasisprotocol/oasis-core/go/scheduler/api": "Scheduler",
-	"github.com/oasisprotocol/oasis-core/go/staking/api": "Staking",
-	"github.com/oasisprotocol/oasis-core/go/storage/api": "Storage",
-	"github.com/oasisprotocol/oasis-core/go/storage/mkvs/checkpoint": "Storage",
-	"github.com/oasisprotocol/oasis-core/go/storage/mkvs/node": "Storage",
-	"github.com/oasisprotocol/oasis-core/go/storage/mkvs/syncer": "Storage",
-	"github.com/oasisprotocol/oasis-core/go/storage/mkvs/writelog": "Storage",
-	"github.com/oasisprotocol/oasis-core/go/upgrade/api": "Upgrade",
-	"github.com/oasisprotocol/oasis-core/go/worker/common/api": "WorkerCommon",
-	"github.com/oasisprotocol/oasis-core/go/worker/storage/api": "WorkerStorage",
+	"github.com/oasisprotocol/oasis-core/go/consensus": "Consensus",
+	"github.com/oasisprotocol/oasis-core/go/control": "Control",
+	"github.com/oasisprotocol/oasis-core/go/genesis": "Genesis",
+	"github.com/oasisprotocol/oasis-core/go/governance": "Governance",
+	"github.com/oasisprotocol/oasis-core/go/keymanager": "KeyManager",
+	"github.com/oasisprotocol/oasis-core/go/registry": "Registry",
+	"github.com/oasisprotocol/oasis-core/go/roothash": "RootHash",
+	"github.com/oasisprotocol/oasis-core/go/runtime/client": "RuntimeClient",
+	"github.com/oasisprotocol/oasis-core/go/runtime/enclaverpc": "EnclaveRPC",
+	"github.com/oasisprotocol/oasis-core/go/runtime/host": "RuntimeHost",
+	"github.com/oasisprotocol/oasis-core/go/scheduler": "Scheduler",
+	"github.com/oasisprotocol/oasis-core/go/staking": "Staking",
+	"github.com/oasisprotocol/oasis-core/go/storage": "Storage",
+	"github.com/oasisprotocol/oasis-core/go/upgrade": "Upgrade",
+	"github.com/oasisprotocol/oasis-core/go/worker/common": "WorkerCommon",
+	"github.com/oasisprotocol/oasis-core/go/worker/storage": "WorkerStorage",
 }
 var prefixConsulted = map[string]bool{}
 
@@ -216,10 +206,19 @@ func getStructName(t reflect.Type) string {
 		customStructNamesConsulted[t] = true
 		return ref
 	}
-	prefixConsulted[t.PkgPath()] = true
-	prefix, ok := prefixByPackage[t.PkgPath()]
-	if !ok {
-		panic(fmt.Sprintf("unset package prefix %s", t.PkgPath()))
+	pkgDir := t.PkgPath()
+	var prefix string
+	for {
+		if pkgDir == "." {
+			panic(fmt.Sprintf("unset package prefix %s", t.PkgPath()))
+		}
+		var ok bool
+		prefix, ok = prefixByPackage[pkgDir]
+		if ok {
+			prefixConsulted[pkgDir] = true
+			break
+		}
+		pkgDir = path.Dir(pkgDir)
 	}
 	if prefix == t.Name() {
 		return t.Name()
