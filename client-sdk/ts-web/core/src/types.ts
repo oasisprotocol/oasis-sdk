@@ -2867,10 +2867,7 @@ export interface StorageIterateRequest {
 /**
  * LogEntry is a write log entry.
  */
-export type StorageLogEntry = [
-    Key: Uint8Array,
-    Value: Uint8Array,
-];
+export type StorageLogEntry = [Key: Uint8Array, Value: Uint8Array];
 
 /**
  * Metadata is checkpoint metadata.
