@@ -49,8 +49,10 @@ type usedType struct {
 	source string
 }
 
-var used = []*usedType{}
-var memo = map[reflect.Type]*usedType{}
+var (
+	used = []*usedType{}
+	memo = map[reflect.Type]*usedType{}
+)
 
 func collectPath(fn interface{}, stripComponents string) string {
 	// the idea of sneaking in through runtime.FuncForPC from https://stackoverflow.com/a/54588577/1864688
@@ -70,8 +72,11 @@ var modulePaths = map[string]string{
 
 	"github.com/oasisprotocol/oasis-core/go": collectPath(version.Version.String, "/common/version/version.go"),
 }
-var modulePathsConsulted = map[string]bool{}
-var packageTypes = map[string]map[string]*doc.Type{}
+
+var (
+	modulePathsConsulted = map[string]bool{}
+	packageTypes         = map[string]map[string]*doc.Type{}
+)
 
 func parseDocs(importPath string) {
 	if _, ok := packageTypes[importPath]; ok {
@@ -226,8 +231,10 @@ func getStructName(t reflect.Type) string {
 	return prefix + t.Name()
 }
 
-var mapKeyNames = map[reflect.Type]string{}
-var mapKeyNamesConsulted = map[reflect.Type]bool{}
+var (
+	mapKeyNames          = map[reflect.Type]string{}
+	mapKeyNamesConsulted = map[reflect.Type]bool{}
+)
 
 func getMapKeyName(t reflect.Type) string {
 	switch t.Key() {
@@ -239,8 +246,10 @@ func getMapKeyName(t reflect.Type) string {
 	return "key"
 }
 
-var encounteredVersionInfo = false
-var encounteredExecutorCommitment = false
+var (
+	encounteredVersionInfo        = false
+	encounteredExecutorCommitment = false
+)
 
 func visitType(t reflect.Type) string {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting type %v\n", t)
