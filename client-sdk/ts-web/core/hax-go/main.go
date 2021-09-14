@@ -501,6 +501,7 @@ func write() {
 	})
 	for _, ut := range used {
 		fmt.Print(ut.source)
+		fmt.Print("\n")
 	}
 }
 
