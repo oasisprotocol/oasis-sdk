@@ -1,4 +1,4 @@
-module github.com/oasisprotocol/oasis-sdk/client-sdk/ts-web/core/hax-go
+module github.com/oasisprotocol/oasis-sdk/client-sdk/ts-web/core/reflect-go
 
 go 1.16
 
