@@ -33,6 +33,8 @@ function fakeAlert(message) {
         const ok = w.document.createElement('input');
         ok.type = 'button';
         ok.value = 'OK';
+        // @ts-expect-error waiting for a release with this fix
+        // https://github.com/microsoft/TypeScript-DOM-lib-generator/pull/1111
         ok.autofocus = true;
         ok.onclick = () => {
             w.close();
@@ -74,6 +76,8 @@ function fakeConfirm(message) {
         const ok = w.document.createElement('input');
         ok.type = 'button';
         ok.value = 'OK';
+        // @ts-expect-error waiting for a release with this fix
+        // https://github.com/microsoft/TypeScript-DOM-lib-generator/pull/1111
         ok.autofocus = true;
         ok.onclick = () => {
             result = true;
