@@ -45,7 +45,7 @@ import (
 )
 
 type usedType struct {
-	ref string
+	ref    string
 	source string
 }
 
@@ -174,30 +174,30 @@ var customStructNamesConsulted = map[reflect.Type]bool{}
 var prefixByPackage = map[string]string{
 	"net": "Net",
 
-	"github.com/oasisprotocol/oasis-core/go/beacon": "Beacon",
-	"github.com/oasisprotocol/oasis-core/go/common/cbor": "CBOR",
-	"github.com/oasisprotocol/oasis-core/go/common/crypto/pvss": "PVSS",
+	"github.com/oasisprotocol/oasis-core/go/beacon":                  "Beacon",
+	"github.com/oasisprotocol/oasis-core/go/common/cbor":             "CBOR",
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/pvss":      "PVSS",
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature": "Signature",
-	"github.com/oasisprotocol/oasis-core/go/common/entity": "Entity",
-	"github.com/oasisprotocol/oasis-core/go/common/node": "Node",
-	"github.com/oasisprotocol/oasis-core/go/common/sgx": "SGX",
-	"github.com/oasisprotocol/oasis-core/go/common/version": "Version",
-	"github.com/oasisprotocol/oasis-core/go/consensus": "Consensus",
-	"github.com/oasisprotocol/oasis-core/go/control": "Control",
-	"github.com/oasisprotocol/oasis-core/go/genesis": "Genesis",
-	"github.com/oasisprotocol/oasis-core/go/governance": "Governance",
-	"github.com/oasisprotocol/oasis-core/go/keymanager": "KeyManager",
-	"github.com/oasisprotocol/oasis-core/go/registry": "Registry",
-	"github.com/oasisprotocol/oasis-core/go/roothash": "RootHash",
-	"github.com/oasisprotocol/oasis-core/go/runtime/client": "RuntimeClient",
-	"github.com/oasisprotocol/oasis-core/go/runtime/enclaverpc": "EnclaveRPC",
-	"github.com/oasisprotocol/oasis-core/go/runtime/host": "RuntimeHost",
-	"github.com/oasisprotocol/oasis-core/go/scheduler": "Scheduler",
-	"github.com/oasisprotocol/oasis-core/go/staking": "Staking",
-	"github.com/oasisprotocol/oasis-core/go/storage": "Storage",
-	"github.com/oasisprotocol/oasis-core/go/upgrade": "Upgrade",
-	"github.com/oasisprotocol/oasis-core/go/worker/common": "WorkerCommon",
-	"github.com/oasisprotocol/oasis-core/go/worker/storage": "WorkerStorage",
+	"github.com/oasisprotocol/oasis-core/go/common/entity":           "Entity",
+	"github.com/oasisprotocol/oasis-core/go/common/node":             "Node",
+	"github.com/oasisprotocol/oasis-core/go/common/sgx":              "SGX",
+	"github.com/oasisprotocol/oasis-core/go/common/version":          "Version",
+	"github.com/oasisprotocol/oasis-core/go/consensus":               "Consensus",
+	"github.com/oasisprotocol/oasis-core/go/control":                 "Control",
+	"github.com/oasisprotocol/oasis-core/go/genesis":                 "Genesis",
+	"github.com/oasisprotocol/oasis-core/go/governance":              "Governance",
+	"github.com/oasisprotocol/oasis-core/go/keymanager":              "KeyManager",
+	"github.com/oasisprotocol/oasis-core/go/registry":                "Registry",
+	"github.com/oasisprotocol/oasis-core/go/roothash":                "RootHash",
+	"github.com/oasisprotocol/oasis-core/go/runtime/client":          "RuntimeClient",
+	"github.com/oasisprotocol/oasis-core/go/runtime/enclaverpc":      "EnclaveRPC",
+	"github.com/oasisprotocol/oasis-core/go/runtime/host":            "RuntimeHost",
+	"github.com/oasisprotocol/oasis-core/go/scheduler":               "Scheduler",
+	"github.com/oasisprotocol/oasis-core/go/staking":                 "Staking",
+	"github.com/oasisprotocol/oasis-core/go/storage":                 "Storage",
+	"github.com/oasisprotocol/oasis-core/go/upgrade":                 "Upgrade",
+	"github.com/oasisprotocol/oasis-core/go/worker/common":           "WorkerCommon",
+	"github.com/oasisprotocol/oasis-core/go/worker/storage":          "WorkerStorage",
 }
 var prefixConsulted = map[string]bool{}
 
@@ -226,7 +226,7 @@ func getStructName(t reflect.Type) string {
 	return prefix + t.Name()
 }
 
-var mapKeyNames = map[reflect.Type]string {}
+var mapKeyNames = map[reflect.Type]string{}
 var mapKeyNamesConsulted = map[reflect.Type]bool{}
 
 func getMapKeyName(t reflect.Type) string {
@@ -441,15 +441,15 @@ func visitType(t reflect.Type) string {
 }
 
 var skipMethods = map[string]bool{
-	"github.com/oasisprotocol/oasis-core/go/roothash/api.Backend.TrackRuntime": true,
-	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized": true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Beacon": true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Registry": true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Staking": true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Scheduler": true,
+	"github.com/oasisprotocol/oasis-core/go/roothash/api.Backend.TrackRuntime":      true,
+	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized":        true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Beacon":     true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Registry":   true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Staking":    true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Scheduler":  true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Governance": true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.RootHash": true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.State": true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.RootHash":   true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.State":      true,
 }
 var skipMethodsConsulted = map[string]bool{}
 
