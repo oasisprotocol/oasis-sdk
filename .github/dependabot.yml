@@ -66,3 +66,17 @@ updates:
     labels:
       - c:deps
       - c:client-sdk/typescript
+
+  # Manage client-sdk/ts-web/core/reflect-go package versions.
+  - package-ecosystem: gomod
+    directory: client-sdk/ts-web/core/reflect-go/
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "client/reflect:"
+    labels:
+      - c:deps
+      - c:client-sdk/go
+    ignore:
+      # oasis-core is manually kept up to date.
+      - dependency-name: github.com/oasisprotocol/oasis-core/go
