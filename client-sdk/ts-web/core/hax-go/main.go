@@ -3,9 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"go/ast"
+	"go/doc"
+	"go/parser"
+	"go/token"
 	"io"
+	"net"
 	"os"
+	"path"
 	"reflect"
+	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -19,6 +27,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/common/sgx"
+	"github.com/oasisprotocol/oasis-core/go/common/version"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction"
 	control "github.com/oasisprotocol/oasis-core/go/control/api"
@@ -42,6 +51,120 @@ type usedType struct {
 
 var used = []*usedType{}
 var memo = map[reflect.Type]*usedType{}
+
+func collectPath(fn interface{}, stripComponents string) string {
+	// the idea of sneaking in through runtime.FuncForPC from https://stackoverflow.com/a/54588577/1864688
+	reflectFn := reflect.ValueOf(fn)
+	entryPoint := reflectFn.Pointer()
+	runtimeFn := runtime.FuncForPC(entryPoint)
+	file, _ := runtimeFn.FileLine(entryPoint)
+	splitIdx := len(file) - len(stripComponents)
+	if file[splitIdx:] != stripComponents {
+		panic(fmt.Sprintf("fn %v file %s does not end with %s", fn, file, stripComponents))
+	}
+	return file[:splitIdx]
+}
+
+var modulePaths = map[string]string{
+	"net": collectPath((*net.TCPAddr).String, "/tcpsock.go"),
+
+	"github.com/oasisprotocol/oasis-core/go": collectPath(version.Version.String, "/common/version/version.go"),
+}
+var modulePathsConsulted = map[string]bool{}
+var packageTypes = map[string]map[string]*doc.Type{}
+
+func parseDocs(importPath string) {
+	if _, ok := packageTypes[importPath]; ok {
+		return
+	}
+	module := importPath
+	var pkgPath string
+	for {
+		if module == "." {
+			panic(fmt.Sprintf("package %s path not known", importPath))
+		}
+		if modulePath, ok := modulePaths[module]; ok {
+			modulePathsConsulted[module] = true
+			pkgPath = modulePath + importPath[len(module):]
+			break
+		}
+		module = path.Dir(module)
+	}
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, pkgPath, nil, parser.ParseComments)
+	if err != nil {
+		panic(err)
+	}
+	var files []*ast.File
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			files = append(files, file)
+		}
+	}
+	dpkg, err := doc.NewFromFiles(fset, files, importPath)
+	if err != nil {
+		panic(err)
+	}
+	typesByName := make(map[string]*doc.Type)
+	for _, dt := range dpkg.Types {
+		typesByName[dt.Name] = dt
+	}
+	packageTypes[importPath] = typesByName
+}
+
+func getTypeDoc(t reflect.Type) string {
+	parseDocs(t.PkgPath())
+	typesByName := packageTypes[t.PkgPath()]
+	if dt, ok := typesByName[t.Name()]; ok {
+		return dt.Doc
+	}
+	return ""
+}
+
+var typeFields = map[string]map[string]*ast.Field{}
+
+func getFieldLookup(t reflect.Type) map[string]*ast.Field {
+	sig := fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
+	if fieldsByName, ok := typeFields[sig]; ok {
+		return fieldsByName
+	}
+	fieldsByName := make(map[string]*ast.Field)
+	parseDocs(t.PkgPath())
+	dt := packageTypes[t.PkgPath()][t.Name()]
+	fields := dt.Decl.Specs[0].(*ast.TypeSpec).Type.(*ast.StructType).Fields
+	for _, field := range fields.List {
+		if len(field.Names) > 1 {
+			panic(fmt.Sprintf("type %v field %v unexpected multiple names", t, field))
+		}
+		if len(field.Names) == 0 {
+			continue
+		}
+		fieldsByName[field.Names[0].Name] = field
+	}
+	typeFields[sig] = fieldsByName
+	return fieldsByName
+}
+
+func getFieldDoc(t reflect.Type, name string) string {
+	field, ok := getFieldLookup(t)[name]
+	if !ok {
+		panic(fmt.Sprintf("source for %v field %s not found", t, name))
+	}
+	return field.Doc.Text()
+}
+
+func renderDocComment(godoc string, indent string) string {
+	if godoc == "" {
+		return ""
+	}
+	indented := regexp.MustCompile(`(?m)^(.?)`).ReplaceAllStringFunc(godoc, func(s string) string {
+		if len(s) > 0 {
+			return indent + " * " + s
+		}
+		return indent + " *"
+	})
+	return indent + "/**\n" + indented + "/\n"
+}
 
 var customStructNames = map[reflect.Type]string{
 	reflect.TypeOf(consensus.Parameters{}): "ConsensusLightParameters",
@@ -170,6 +293,7 @@ func visitType(t reflect.Type) string {
 	case reflect.String:
 		return "string"
 	case reflect.Struct:
+		sourceDoc := renderDocComment(getTypeDoc(t), "")
 		ref := getStructName(t)
 		var extendsType reflect.Type
 		extendsRef := ""
@@ -234,14 +358,15 @@ func visitType(t reflect.Type) string {
 				// skip private fields
 				continue
 			}
+			sourceFieldDoc := renderDocComment(getFieldDoc(t, f.Name), "    ")
 			switch mode {
 			case "object":
-				sourceFields += fmt.Sprintf("    %s%s: %s;\n", name, optional, visitType(f.Type))
+				sourceFields += fmt.Sprintf("%s    %s%s: %s;\n", sourceFieldDoc, name, optional, visitType(f.Type))
 			case "array":
 				if optional != "" {
 					panic("unhandled optional in mode array")
 				}
-				sourceFields += fmt.Sprintf("    %s: %s,\n", name, visitType(f.Type))
+				sourceFields += fmt.Sprintf("%s    %s: %s,\n", sourceFieldDoc, name, visitType(f.Type))
 			default:
 				panic(fmt.Sprintf("unhandled struct field in mode %s", mode))
 			}
@@ -291,12 +416,12 @@ func visitType(t reflect.Type) string {
 		var source string
 		switch mode {
 		case "object":
-			source = fmt.Sprintf("export interface %s%s {\n%s}\n", ref, sourceExtends, sourceFields)
+			source = fmt.Sprintf("%sexport interface %s%s {\n%s}\n", sourceDoc, ref, sourceExtends, sourceFields)
 		case "array":
 			if extendsType != nil {
 				panic("unhandled extends in mode array")
 			}
-			source = fmt.Sprintf("export type %s = [\n%s];\n", ref, sourceFields)
+			source = fmt.Sprintf("%sexport type %s = [\n%s];\n", sourceDoc, ref, sourceFields)
 		case "empty-map":
 			if extendsType != nil {
 				panic("unhandled extends in mode empty-map")
@@ -304,7 +429,7 @@ func visitType(t reflect.Type) string {
 			if sourceFields != "" {
 				panic("unhandled source fields in mode empty-map")
 			}
-			source = fmt.Sprintf("export type %s = Map<never, never>;\n", ref)
+			source = fmt.Sprintf("%sexport type %s = Map<never, never>;\n", sourceDoc, ref)
 		}
 		ut := usedType{ref, source}
 		used = append(used, &ut)
@@ -423,6 +548,11 @@ func main() {
 	visitClient(reflect.TypeOf((*control.DebugController)(nil)).Elem())
 
 	write()
+	for p := range modulePaths {
+		if !modulePathsConsulted[p] {
+			panic(fmt.Sprintf("unused module path %s", p))
+		}
+	}
 	for t := range customStructNames {
 		if !customStructNamesConsulted[t] {
 			panic(fmt.Sprintf("unused custom type name %v", t))
