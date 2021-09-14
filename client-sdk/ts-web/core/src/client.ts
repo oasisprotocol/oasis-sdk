@@ -260,6 +260,10 @@ const methodDescriptorRootHashStateToGenesis = createMethodDescriptorUnary<
     types.longnum,
     types.RootHashGenesis
 >('RootHash', 'StateToGenesis');
+const methodDescriptorRootHashConsensusParameters = createMethodDescriptorUnary<
+    types.longnum,
+    types.RootHashConsensusParameters
+>('RootHash', 'ConsensusParameters');
 const methodDescriptorRootHashGetEvents = createMethodDescriptorUnary<
     types.longnum,
     types.RootHashEvent[]
@@ -364,6 +368,10 @@ const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorUnary<
     types.RuntimeClientSubmitTxRequest,
     Uint8Array
 >('RuntimeClient', 'SubmitTx');
+const methodDescriptorRuntimeClientSubmitTxMeta = createMethodDescriptorUnary<
+    types.RuntimeClientSubmitTxRequest,
+    types.RuntimeClientSubmitTxMetaResponse
+>('RuntimeClient', 'SubmitTxMeta');
 const methodDescriptorRuntimeClientSubmitTxNoWait = createMethodDescriptorUnary<
     types.RuntimeClientSubmitTxRequest,
     Uint8Array
@@ -380,22 +388,6 @@ const methodDescriptorRuntimeClientGetBlock = createMethodDescriptorUnary<
     types.RuntimeClientGetBlockRequest,
     types.RootHashBlock
 >('RuntimeClient', 'GetBlock');
-const methodDescriptorRuntimeClientGetBlockByHash = createMethodDescriptorUnary<
-    types.RuntimeClientGetBlockByHashRequest,
-    types.RootHashBlock
->('RuntimeClient', 'GetBlockByHash');
-const methodDescriptorRuntimeClientGetTx = createMethodDescriptorUnary<
-    types.RuntimeClientGetTxRequest,
-    types.RuntimeClientTxResult
->('RuntimeClient', 'GetTx');
-const methodDescriptorRuntimeClientGetTxByBlockHash = createMethodDescriptorUnary<
-    types.RuntimeClientGetTxByBlockHashRequest,
-    types.RuntimeClientTxResult
->('RuntimeClient', 'GetTxByBlockHash');
-const methodDescriptorRuntimeClientGetTxs = createMethodDescriptorUnary<
-    types.RuntimeClientGetTxsRequest,
-    Uint8Array[]
->('RuntimeClient', 'GetTxs');
 const methodDescriptorRuntimeClientGetTransactions = createMethodDescriptorUnary<
     types.RuntimeClientGetTransactionsRequest,
     Uint8Array[]
@@ -408,18 +400,6 @@ const methodDescriptorRuntimeClientQuery = createMethodDescriptorUnary<
     types.RuntimeClientQueryRequest,
     types.RuntimeClientQueryResponse
 >('RuntimeClient', 'Query');
-const methodDescriptorRuntimeClientQueryTx = createMethodDescriptorUnary<
-    types.RuntimeClientQueryTxRequest,
-    types.RuntimeClientTxResult
->('RuntimeClient', 'QueryTx');
-const methodDescriptorRuntimeClientQueryTxs = createMethodDescriptorUnary<
-    types.RuntimeClientQueryTxsRequest,
-    types.RuntimeClientTxResult[]
->('RuntimeClient', 'QueryTxs');
-const methodDescriptorRuntimeClientWaitBlockIndexed = createMethodDescriptorUnary<
-    types.RuntimeClientWaitBlockIndexedRequest,
-    void
->('RuntimeClient', 'WaitBlockIndexed');
 const methodDescriptorRuntimeClientWatchBlocks = createMethodDescriptorServerStreaming<
     Uint8Array,
     types.RootHashAnnotatedBlock
@@ -972,7 +952,7 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * Paremeters returns the staking consensus parameters.
+     * ConsensusParameters returns the staking consensus parameters.
      */
     stakingConsensusParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorStakingConsensusParameters, height);
@@ -1020,6 +1000,9 @@ export class NodeInternal extends GRPCWrapper {
     }
     rootHashHashStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorRootHashStateToGenesis, height);
+    }
+    rootHashHashConsensusParameters(height: types.longnum) {
+        return this.callUnary(methodDescriptorRootHashConsensusParameters, height);
     }
     rootHashHashGetEvents(height: types.longnum) {
         return this.callUnary(methodDescriptorRootHashGetEvents, height);
@@ -1200,6 +1183,17 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * SubmitTxMeta submits a transaction to the runtime transaction scheduler and waits for
+     * transaction execution results.
+     *
+     * Response includes transaction metadata - e.g. round at which the transaction was included
+     * in a block.
+     */
+    runtimeClientSubmitTxMeta(request: types.RuntimeClientSubmitTxRequest) {
+        return this.callUnary(methodDescriptorRuntimeClientSubmitTxMeta, request);
+    }
+
+    /**
      * SubmitTxNoWait submits a transaction to the runtime transaction scheduler but does
      * not wait for transaction execution.
      */
@@ -1229,38 +1223,6 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * GetBlockByHash fetches the given runtime block by its block hash.
-     */
-    runtimeClientGetBlockByHash(request: types.RuntimeClientGetTxByBlockHashRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientGetBlockByHash, request);
-    }
-
-    /**
-     * GetTx fetches the given runtime transaction.
-     */
-    runtimeClientGetTx(request: types.RuntimeClientGetTxRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientGetTx, request);
-    }
-
-    /**
-     * GetTxByBlockHash fetches the given rutnime transaction where the
-     * block is identified by its hash instead of its round number.
-     */
-    runtimeClientGetTxByBlockHash(request: types.RuntimeClientGetTxByBlockHashRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientGetTxByBlockHash, request);
-    }
-
-    /**
-     * GetTxs fetches all runtime transactions in a given block.
-     *
-     * DEPRECATED: This method is deprecated and may be removed in a future release, use
-     *             `GetTransactions` instead.
-     */
-    runtimeClientGetTxs(request: types.RuntimeClientGetTxsRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientGetTxs, request);
-    }
-
-    /**
      * GetTransactions fetches all runtime transactions in a given block.
      */
     runtimeClientGetTransactions(request: types.RuntimeClientGetTransactionsRequest) {
@@ -1279,27 +1241,6 @@ export class NodeInternal extends GRPCWrapper {
      */
     runtimeClientQuery(request: types.RuntimeClientQueryRequest) {
         return this.callUnary(methodDescriptorRuntimeClientQuery, request);
-    }
-
-    /**
-     * QueryTx queries the indexer for a specific runtime transaction.
-     */
-    runtimeClientQueryTx(request: types.RuntimeClientQueryTxRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientQueryTx, request);
-    }
-
-    /**
-     * QueryTxs queries the indexer for specific runtime transactions.
-     */
-    runtimeClientQueryTxs(request: types.RuntimeClientQueryTxsRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientQueryTxs, request);
-    }
-
-    /**
-     * WaitBlockIndexed waits for a runtime block to be indexed by the indexer.
-     */
-    runtimeClientWaitBlockIndexed(request: types.RuntimeClientWaitBlockIndexedRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientWaitBlockIndexed, request);
     }
 
     /**

@@ -205,7 +205,7 @@ export function registerEntityWrapper() {
 }
 
 export function deregisterEntityWrapper() {
-    return new consensus.TransactionWrapper<void>(METHOD_DEREGISTER_ENTITY);
+    return new consensus.TransactionWrapper<types.NotModeled>(METHOD_DEREGISTER_ENTITY);
 }
 
 export function registerNodeWrapper() {
