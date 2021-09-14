@@ -357,7 +357,7 @@ func visitType(t reflect.Type) string { // nolint: gocyclo
 			}
 			var name string
 			var optional string
-			if cborTag, ok := f.Tag.Lookup("cbor"); ok {
+			if cborTag, ok := f.Tag.Lookup("cbor"); ok { // nolint: nestif
 				parts := strings.Split(cborTag, ",")
 				name = parts[0]
 				parts = parts[1:]
