@@ -514,6 +514,7 @@ func main() {
 
 	visitClient(reflect.TypeOf((*registry.Backend)(nil)).Elem())
 	visitType(reflect.TypeOf((*entity.SignedEntity)(nil)).Elem())
+	visitType(reflect.TypeOf((*registry.DeregisterEntity)(nil)).Elem())
 	visitType(reflect.TypeOf((*node.MultiSignedNode)(nil)).Elem())
 	visitType(reflect.TypeOf((*registry.UnfreezeNode)(nil)).Elem())
 	visitType(reflect.TypeOf((*registry.Runtime)(nil)).Elem())
