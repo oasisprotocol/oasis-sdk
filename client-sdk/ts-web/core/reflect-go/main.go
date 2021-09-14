@@ -251,6 +251,12 @@ var (
 	encounteredExecutorCommitment = false
 )
 
+const (
+	structModeObject   = "object"
+	structModeArray    = "array"
+	structModeEmptyMap = "empty-map"
+)
+
 func visitType(t reflect.Type) string {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting type %v\n", t)
 	switch t {
@@ -307,7 +313,7 @@ func visitType(t reflect.Type) string {
 		extendsRef := ""
 		sourceExtends := ""
 		sourceFields := ""
-		mode := "object"
+		mode := structModeObject
 		for i := 0; i < t.NumField(); i++ {
 			f := t.Field(i)
 			_, _ = fmt.Fprintf(os.Stderr, "visiting field %v\n", f)
@@ -334,7 +340,7 @@ func visitType(t reflect.Type) string {
 							if sourceFields != "" {
 								panic("changing struct mode after fields are rendered")
 							}
-							mode = "array"
+							mode = structModeArray
 						default:
 							panic(fmt.Sprintf("unhandled json tag %s", part))
 						}
@@ -368,9 +374,9 @@ func visitType(t reflect.Type) string {
 			}
 			sourceFieldDoc := renderDocComment(getFieldDoc(t, f.Name), "    ")
 			switch mode {
-			case "object":
+			case structModeObject:
 				sourceFields += fmt.Sprintf("%s    %s%s: %s;\n", sourceFieldDoc, name, optional, visitType(f.Type))
-			case "array":
+			case structModeArray:
 				if optional != "" {
 					panic("unhandled optional in mode array")
 				}
@@ -418,19 +424,19 @@ func visitType(t reflect.Type) string {
 			}
 			return extendsRef
 		}
-		if mode == "object" && sourceFields == "" && extendsType == nil {
-			mode = "empty-map"
+		if mode == structModeObject && sourceFields == "" && extendsType == nil {
+			mode = structModeEmptyMap
 		}
 		var source string
 		switch mode {
-		case "object":
+		case structModeObject:
 			source = fmt.Sprintf("%sexport interface %s%s {\n%s}\n", sourceDoc, ref, sourceExtends, sourceFields)
-		case "array":
+		case structModeArray:
 			if extendsType != nil {
 				panic("unhandled extends in mode array")
 			}
 			source = fmt.Sprintf("%sexport type %s = [\n%s];\n", sourceDoc, ref, sourceFields)
-		case "empty-map":
+		case structModeEmptyMap:
 			if extendsType != nil {
 				panic("unhandled extends in mode empty-map")
 			}
