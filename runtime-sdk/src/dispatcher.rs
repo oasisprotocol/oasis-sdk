@@ -11,7 +11,7 @@ use thiserror::Error;
 use oasis_core_runtime::{
     self,
     protocol::HostInfo,
-    storage::{context::StorageContext, mkvs},
+    storage::mkvs,
     transaction::{
         self,
         dispatcher::{ExecuteBatchResult, ExecuteTxResult},
@@ -353,142 +353,138 @@ impl<R: Runtime> Dispatcher<R> {
 impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
     fn execute_batch(
         &self,
-        rt_ctx: transaction::Context<'_>,
+        mut rt_ctx: transaction::Context<'_>,
         batch: &TxnBatch,
     ) -> Result<ExecuteBatchResult, RuntimeError> {
         // If prefetch limit is set enable prefetch.
         let prefetch_enabled = R::PREFETCH_LIMIT > 0;
 
-        // TODO: Get rid of StorageContext (pass mkvs in ctx).
-        StorageContext::with_current(|mkvs, _| {
-            // Prepare dispatch context.
-            let mut ctx =
-                RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
-                    &rt_ctx,
-                    mkvs,
-                    &self.host_info,
-                    self.key_manager
-                        .as_ref()
-                        .map(|mgr| mgr.with_context(rt_ctx.tokio, rt_ctx.io_ctx.clone())),
-                );
+        // Prepare dispatch context.
+        let key_manager = self
+            .key_manager
+            .as_ref()
+            .map(|mgr| mgr.with_context(rt_ctx.tokio, rt_ctx.io_ctx.clone()));
+        let mut ctx =
+            RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
+                &mut rt_ctx,
+                &self.host_info,
+                key_manager,
+            );
 
-            // Perform state migrations if required.
-            R::migrate(&mut ctx);
+        // Perform state migrations if required.
+        R::migrate(&mut ctx);
 
-            let mut txs = Vec::with_capacity(batch.len());
-            let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
-            for tx in batch.iter() {
-                // It is an error to include a malformed transaction in a batch. So instead of only
-                // reporting a failed execution result, we fail the whole batch. This will make the compute
-                // node vote for failure and the round will fail.
-                //
-                // Correct proposers should only include transactions which have passed check_tx.
-                let tx = Self::decode_tx(&mut ctx, tx)
-                    .map_err(|err| Error::MalformedTransactionInBatch(err.into()))?;
-                txs.push(tx.clone());
+        let mut txs = Vec::with_capacity(batch.len());
+        let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
+        for tx in batch.iter() {
+            // It is an error to include a malformed transaction in a batch. So instead of only
+            // reporting a failed execution result, we fail the whole batch. This will make the compute
+            // node vote for failure and the round will fail.
+            //
+            // Correct proposers should only include transactions which have passed check_tx.
+            let tx = Self::decode_tx(&mut ctx, tx)
+                .map_err(|err| Error::MalformedTransactionInBatch(err.into()))?;
+            txs.push(tx.clone());
 
-                if prefetch_enabled {
-                    Self::prefetch_tx(&mut prefixes, tx)?;
-                }
-            }
             if prefetch_enabled {
-                ctx.runtime_state()
-                    .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
+                Self::prefetch_tx(&mut prefixes, tx)?;
             }
+        }
+        if prefetch_enabled {
+            ctx.runtime_state()
+                .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
+        }
 
-            // Handle last round message results.
-            Self::handle_last_round_messages(&mut ctx)?;
+        // Handle last round message results.
+        Self::handle_last_round_messages(&mut ctx)?;
 
-            // Run begin block hooks.
-            R::Modules::begin_block(&mut ctx);
+        // Run begin block hooks.
+        R::Modules::begin_block(&mut ctx);
 
-            // Execute the batch.
-            let mut results = Vec::with_capacity(batch.len());
-            for (index, tx) in txs.into_iter().enumerate() {
-                results.push(Self::execute_tx(&mut ctx, tx, index)?);
-            }
+        // Execute the batch.
+        let mut results = Vec::with_capacity(batch.len());
+        for (index, tx) in txs.into_iter().enumerate() {
+            results.push(Self::execute_tx(&mut ctx, tx, index)?);
+        }
 
-            // Run end block hooks.
-            R::Modules::end_block(&mut ctx);
+        // Run end block hooks.
+        R::Modules::end_block(&mut ctx);
 
-            // Query block weight limits for next round.
-            let block_weight_limits = R::Modules::get_block_weight_limits(&mut ctx);
+        // Query block weight limits for next round.
+        let block_weight_limits = R::Modules::get_block_weight_limits(&mut ctx);
 
-            // Commit the context and retrieve the emitted messages.
-            let (block_tags, messages) = ctx.commit();
-            let (messages, handlers) = messages.into_iter().unzip();
+        // Commit the context and retrieve the emitted messages.
+        let (block_tags, messages) = ctx.commit();
+        let (messages, handlers) = messages.into_iter().unzip();
 
-            let state = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), mkvs);
-            Self::save_emitted_message_handlers(state, handlers);
+        let state = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), &mut rt_ctx.runtime_state);
+        Self::save_emitted_message_handlers(state, handlers);
 
-            Ok(ExecuteBatchResult {
-                results,
-                messages,
-                block_tags,
-                batch_weight_limits: Some(block_weight_limits),
-            })
+        Ok(ExecuteBatchResult {
+            results,
+            messages,
+            block_tags,
+            batch_weight_limits: Some(block_weight_limits),
         })
     }
 
     fn check_batch(
         &self,
-        ctx: transaction::Context<'_>,
+        mut ctx: transaction::Context<'_>,
         batch: &TxnBatch,
     ) -> Result<Vec<CheckTxResult>, RuntimeError> {
         // If prefetch limit is set enable prefetch.
         let prefetch_enabled = R::PREFETCH_LIMIT > 0;
 
-        // TODO: Get rid of StorageContext (pass mkvs in ctx).
-        StorageContext::with_current(|mkvs, _| {
-            // Prepare dispatch context.
-            let mut ctx =
-                RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
-                    &ctx,
-                    mkvs,
-                    &self.host_info,
-                    self.key_manager
-                        .as_ref()
-                        .map(|mgr| mgr.with_context(ctx.tokio, ctx.io_ctx.clone())),
-                );
+        // Prepare dispatch context.
+        let key_manager = self
+            .key_manager
+            .as_ref()
+            .map(|mgr| mgr.with_context(ctx.tokio, ctx.io_ctx.clone()));
+        let mut ctx =
+            RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
+                &mut ctx,
+                &self.host_info,
+                key_manager,
+            );
 
-            // Perform state migrations if required.
-            R::migrate(&mut ctx);
+        // Perform state migrations if required.
+        R::migrate(&mut ctx);
 
-            // Prefetch.
-            let mut txs: Vec<Result<Transaction, RuntimeError>> = Vec::with_capacity(batch.len());
-            let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
-            for tx in batch.iter() {
-                let res = match Self::decode_tx(&mut ctx, tx) {
-                    Ok(tx) => {
-                        if prefetch_enabled {
-                            Self::prefetch_tx(&mut prefixes, tx.clone()).map(|_| tx)
-                        } else {
-                            Ok(tx)
-                        }
+        // Prefetch.
+        let mut txs: Vec<Result<Transaction, RuntimeError>> = Vec::with_capacity(batch.len());
+        let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
+        for tx in batch.iter() {
+            let res = match Self::decode_tx(&mut ctx, tx) {
+                Ok(tx) => {
+                    if prefetch_enabled {
+                        Self::prefetch_tx(&mut prefixes, tx.clone()).map(|_| tx)
+                    } else {
+                        Ok(tx)
                     }
-                    Err(err) => Err(err.into()),
-                };
-                txs.push(res);
-            }
-            if prefetch_enabled {
-                ctx.runtime_state()
-                    .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
-            }
-
-            // Check the batch.
-            let mut results = Vec::with_capacity(batch.len());
-            for tx in txs.into_iter() {
-                match tx {
-                    Ok(tx) => results.push(Self::check_tx(&mut ctx, tx)?),
-                    Err(err) => results.push(CheckTxResult {
-                        error: err,
-                        meta: None,
-                    }),
                 }
-            }
+                Err(err) => Err(err.into()),
+            };
+            txs.push(res);
+        }
+        if prefetch_enabled {
+            ctx.runtime_state()
+                .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
+        }
 
-            Ok(results)
-        })
+        // Check the batch.
+        let mut results = Vec::with_capacity(batch.len());
+        for tx in txs.into_iter() {
+            match tx {
+                Ok(tx) => results.push(Self::check_tx(&mut ctx, tx)?),
+                Err(err) => results.push(CheckTxResult {
+                    error: err,
+                    meta: None,
+                }),
+            }
+        }
+
+        Ok(results)
     }
 
     fn set_abort_batch_flag(&mut self, _abort_batch: Arc<AtomicBool>) {
@@ -497,26 +493,24 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
 
     fn query(
         &self,
-        ctx: transaction::Context<'_>,
+        mut ctx: transaction::Context<'_>,
         method: &str,
         args: cbor::Value,
     ) -> Result<cbor::Value, RuntimeError> {
-        // TODO: Get rid of StorageContext (pass mkvs in ctx).
-        StorageContext::with_current(|mkvs, _| {
-            // Prepare dispatch context.
-            let mut ctx =
-                RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
-                    &ctx,
-                    mkvs,
-                    &self.host_info,
-                    self.key_manager
-                        .as_ref()
-                        .map(|mgr| mgr.with_context(ctx.tokio, ctx.io_ctx.clone())),
-                );
-            // Perform state migrations if required.
-            R::migrate(&mut ctx);
+        // Prepare dispatch context.
+        let key_manager = self
+            .key_manager
+            .as_ref()
+            .map(|mgr| mgr.with_context(ctx.tokio, ctx.io_ctx.clone()));
+        let mut ctx =
+            RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
+                &mut ctx,
+                &self.host_info,
+                key_manager,
+            );
+        // Perform state migrations if required.
+        R::migrate(&mut ctx);
 
-            Self::dispatch_query(&mut ctx, method, args)
-        })
+        Self::dispatch_query(&mut ctx, method, args)
     }
 }
