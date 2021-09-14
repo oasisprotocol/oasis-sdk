@@ -251,6 +251,34 @@ var (
 	encounteredExecutorCommitment = false
 )
 
+func visitSigned(t reflect.Type) {
+	_, _ = fmt.Fprintf(os.Stderr, "visiting signed wrapper %v\n", t)
+	if t == reflect.TypeOf(commitment.ExecutorCommitment{}) {
+		// this one is unconventional ):
+		visitType(reflect.TypeOf(commitment.ComputeBody{}))
+		encounteredExecutorCommitment = true
+	} else {
+		m, ok := reflect.PtrTo(t).MethodByName("Open")
+		if !ok {
+			panic(fmt.Sprintf("signed wrapper %v has no open method", t))
+		}
+		_, _ = fmt.Fprintf(os.Stderr, "visiting open method %v\n", m)
+		outParams := 0
+		for i := 1; i < m.Type.NumIn(); i++ {
+			u := m.Type.In(i)
+			// skip parameters that couldn't be out pointers
+			if u.Kind() != reflect.Ptr {
+				continue
+			}
+			visitType(u.Elem())
+			outParams++
+		}
+		if outParams != 1 {
+			panic("wrong number of out params")
+		}
+	}
+}
+
 const (
 	structModeObject   = "object"
 	structModeArray    = "array"
@@ -396,31 +424,7 @@ func visitType(t reflect.Type) string { // nolint: gocyclo
 			// `signature.Signed` with an `Open` method that has an out
 			// pointer to the type of the signed data.
 			if extendsType == reflect.TypeOf(signature.Signed{}) {
-				if t == reflect.TypeOf(commitment.ExecutorCommitment{}) {
-					// this one is unconventional ):
-					visitType(reflect.TypeOf(commitment.ComputeBody{}))
-					encounteredExecutorCommitment = true
-				} else {
-					_, _ = fmt.Fprintf(os.Stderr, "visiting signed wrapper %v\n", t)
-					m, ok := reflect.PtrTo(t).MethodByName("Open")
-					if !ok {
-						panic(fmt.Sprintf("signed wrapper %v has no open method", t))
-					}
-					_, _ = fmt.Fprintf(os.Stderr, "visiting open method %v\n", m)
-					outParams := 0
-					for i := 1; i < m.Type.NumIn(); i++ {
-						u := m.Type.In(i)
-						// skip parameters that couldn't be out pointers
-						if u.Kind() != reflect.Ptr {
-							continue
-						}
-						visitType(u.Elem())
-						outParams++
-					}
-					if outParams != 1 {
-						panic("wrong number of out params")
-					}
-				}
+				visitSigned(t)
 			}
 			return extendsRef
 		}
