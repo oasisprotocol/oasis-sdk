@@ -1228,6 +1228,11 @@ export interface RegistryConsensusParameters {
 }
 
 /**
+ * DeregisterEntity is a request to deregister an entity.
+ */
+export type RegistryDeregisterEntity = Map<never, never>;
+
+/**
  * EntityEvent is the event that is returned via WatchEntities to signify
  * entity registration changes and updates.
  */
