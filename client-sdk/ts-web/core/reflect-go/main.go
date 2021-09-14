@@ -257,7 +257,7 @@ const (
 	structModeEmptyMap = "empty-map"
 )
 
-func visitType(t reflect.Type) string {
+func visitType(t reflect.Type) string { // nolint: gocyclo
 	_, _ = fmt.Fprintf(os.Stderr, "visiting type %v\n", t)
 	switch t {
 	case reflect.TypeOf(time.Time{}):
