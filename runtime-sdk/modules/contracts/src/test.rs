@@ -542,6 +542,43 @@ fn test_hello_contract_query() {
             }
         );
     });
+
+    // Call the query_address method.
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "contracts.Call".to_owned(),
+            body: cbor::to_value(types::Call {
+                id: instance_id,
+                data: cbor::to_vec(cbor::cbor_text!("query_address")), // Needs to conform to contract API.
+                tokens: vec![],
+            }),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 1_000_000,
+                consensus_messages: 0,
+            },
+        },
+    };
+    ctx.with_tx(tx, |mut tx_ctx, call| {
+        let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            .expect("call should succeed");
+
+        let result: cbor::Value =
+            cbor::from_slice(&result.0).expect("result should be correctly formatted");
+        assert_eq!(
+            result,
+            cbor::cbor_map! {
+                "hello" => cbor::cbor_map!{
+                    "greeting" => cbor::cbor_text!("my address is: oasis1qq08mjlkztsgpgrar082rzzxwjaplxmgjs5ftugn")
+                }
+            }
+        );
+    });
 }
 
 #[test]

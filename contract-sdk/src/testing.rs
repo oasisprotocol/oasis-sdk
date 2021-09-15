@@ -59,6 +59,10 @@ impl Env for MockEnv {
     fn query<Q: Into<QueryRequest>>(&self, _query: Q) -> QueryResponse {
         unimplemented!()
     }
+
+    fn address_for_instance(&self, _instance_id: InstanceId) -> Address {
+        unimplemented!()
+    }
 }
 
 /// A mock contract context suitable for testing.

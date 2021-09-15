@@ -1,10 +1,14 @@
 //! Environment query imports.
-use oasis_contract_sdk_types::env::{AccountsQuery, AccountsResponse, QueryRequest, QueryResponse};
+use oasis_contract_sdk_types::{
+    env::{AccountsQuery, AccountsResponse, QueryRequest, QueryResponse},
+    InstanceId,
+};
 use oasis_runtime_sdk::{context::Context, modules::accounts::API as _};
 
 use super::{memory::Region, OasisV1};
 use crate::{
     abi::{gas, ExecutionContext},
+    types::Instance,
     Config, Error,
 };
 
@@ -47,6 +51,33 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 let result_region = Self::serialize_and_allocate(ctx.instance, result)?;
 
                 Ok(result_region.to_arg())
+            },
+        );
+
+        // env.address_for_instance(instance_id, dst_region)
+        let _ = instance.link_function(
+            "env",
+            "address_for_instance",
+            |ctx, request: (u64, (u32, u32))| -> Result<(), wasm3::Trap> {
+                // Make sure function was called in valid context.
+                let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
+
+                // Charge base gas amount.
+                // TODO: probably separate gas cost.
+                gas::use_gas(ctx.instance, ec.params.gas_costs.wasm_env_query_base)?;
+
+                ctx.instance
+                    .runtime()
+                    .try_with_memory(|mut memory| -> Result<_, wasm3::Trap> {
+                        let instance_id: InstanceId = request.0.into();
+                        let dst = Region::from_arg(request.1).as_slice_mut(&mut memory)?;
+
+                        let address = Instance::address_for(instance_id);
+
+                        dst.copy_from_slice(address.as_ref());
+
+                        Ok(())
+                    })?
             },
         );
 
