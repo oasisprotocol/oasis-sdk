@@ -1635,6 +1635,7 @@ dependencies = [
 name = "oasis-contract-sdk-types"
 version = "0.1.0"
 dependencies = [
+ "bech32",
  "hex",
  "oasis-cbor",
  "oasis-runtime-sdk",

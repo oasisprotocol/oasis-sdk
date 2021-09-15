@@ -1,11 +1,14 @@
 //! A minimal representation of an Oasis Runtime SDK address.
 use std::convert::TryFrom;
 
+use bech32::{self, ToBase32, Variant};
 use thiserror::Error;
 
 const ADDRESS_VERSION_SIZE: usize = 1;
 const ADDRESS_DATA_SIZE: usize = 20;
 const ADDRESS_SIZE: usize = ADDRESS_VERSION_SIZE + ADDRESS_DATA_SIZE;
+
+const ADDRESS_BECH32_HRP: &str = "oasis";
 
 /// Error.
 #[derive(Error, Debug)]
@@ -35,6 +38,11 @@ impl Address {
         a.copy_from_slice(data);
 
         Ok(Self(a))
+    }
+
+    /// Converts an address to Bech32 representation.
+    pub fn to_bech32(self) -> String {
+        bech32::encode(ADDRESS_BECH32_HRP, self.0.to_base32(), Variant::Bech32).unwrap()
     }
 }
 

@@ -1,14 +1,24 @@
 //! Environment query ABI.
+use std::convert::TryFrom;
+
+use oasis_contract_sdk_types::address::Address;
+
 use crate::{
     env::Env,
     memory::{HostRegion, HostRegionRef},
-    types::env::{QueryRequest, QueryResponse},
+    types::{
+        env::{QueryRequest, QueryResponse},
+        InstanceId,
+    },
 };
 
 #[link(wasm_import_module = "env")]
 extern "wasm" {
     #[link_name = "query"]
     fn env_query(query_ptr: u32, query_len: u32) -> HostRegion;
+
+    #[link_name = "address_for_instance"]
+    fn env_address_for_instance(instance_id: u64, dst_ptr: u32, dst_len: u32);
 }
 
 /// Performs an environment query.
@@ -27,5 +37,18 @@ pub struct HostEnv;
 impl Env for HostEnv {
     fn query<Q: Into<QueryRequest>>(&self, q: Q) -> QueryResponse {
         query(q.into())
+    }
+
+    fn address_for_instance(&self, instance_id: InstanceId) -> Address {
+        // Prepare a region for response.
+        let dst = [0; 21];
+        let dst_region = HostRegionRef::from_slice(&dst);
+
+        unsafe {
+            env_address_for_instance(instance_id.as_u64(), dst_region.offset, dst_region.length)
+        };
+
+        // Parse the returned address.
+        Address::try_from(dst.as_ref()).unwrap()
     }
 }

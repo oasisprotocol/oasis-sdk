@@ -80,6 +80,19 @@ impl Region {
 
         Ok(&memory.as_slice()[self.offset..self.offset + self.length])
     }
+
+    /// Returns the memory region as a mutable slice.
+    pub fn as_slice_mut<'mem>(
+        &self,
+        memory: &'mem mut wasm3::Memory<'_>,
+    ) -> Result<&'mem mut [u8], RegionError> {
+        // Make sure the region fits in WASM memory.
+        if (self.offset + self.length) > memory.size() {
+            return Err(RegionError::BadPointer);
+        }
+
+        Ok(&mut memory.as_slice_mut()[self.offset..self.offset + self.length])
+    }
 }
 
 impl<Cfg: Config> OasisV1<Cfg> {

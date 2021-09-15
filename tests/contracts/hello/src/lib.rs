@@ -66,6 +66,9 @@ pub enum Request {
     #[cbor(rename = "increment_counter")]
     IncrementCounter,
 
+    #[cbor(rename = "query_address")]
+    QueryAddress,
+
     #[cbor(rename = "query_block_info")]
     QueryBlockInfo,
 
@@ -175,6 +178,13 @@ impl sdk::Contract for HelloWorld {
                 Self::increment_counter(ctx);
 
                 Ok(Response::Empty)
+            }
+            Request::QueryAddress => {
+                let address = ctx.env().address_for_instance(ctx.instance_id());
+
+                Ok(Response::Hello {
+                    greeting: format!("my address is: {}", address.to_bech32()),
+                })
             }
             Request::QueryBlockInfo => match ctx.env().query(QueryRequest::BlockInfo) {
                 QueryResponse::BlockInfo {
