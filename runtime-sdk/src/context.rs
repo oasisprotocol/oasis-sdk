@@ -289,8 +289,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
 
     /// Create a new dispatch context from the low-level runtime context.
     pub(crate) fn from_runtime(
-        ctx: &'a RuntimeContext<'_>,
-        mkvs: &'a mut dyn mkvs::MKVS,
+        ctx: &'a mut RuntimeContext<'_>,
         host_info: &'a HostInfo,
         key_manager: Option<KeyManagerClientWithContext<'a>>,
     ) -> RuntimeBatchContext<'a, R, storage::MKVSStore<&'a mut dyn mkvs::MKVS>> {
@@ -306,7 +305,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             key_manager,
             runtime_header: ctx.header,
             runtime_round_results: ctx.round_results,
-            runtime_storage: storage::MKVSStore::new(ctx.io_ctx.clone(), mkvs),
+            runtime_storage: storage::MKVSStore::new(ctx.io_ctx.clone(), ctx.runtime_state),
             consensus_state: &ctx.consensus_state,
             epoch: ctx.epoch,
             io_ctx: ctx.io_ctx.clone(),

@@ -2,7 +2,8 @@
 use std::sync::Arc;
 
 use oasis_core_runtime::{
-    common::version, rak::RAK, start_runtime, Protocol, RpcDemux, RpcDispatcher, TxnDispatcher,
+    common::version, consensus::verifier::TrustRoot, rak::RAK, start_runtime, Protocol, RpcDemux,
+    RpcDispatcher, TxnDispatcher,
 };
 
 use crate::{
@@ -25,9 +26,15 @@ pub trait Runtime {
 
     type Modules: AuthHandler + MigrationHandler + MethodHandler + BlockHandler + InvariantHandler;
 
-    /// Return the trusted policy signers for this runtime; if None, a key manager connection will not
-    /// be established on startup.
+    /// Return the trusted policy signers for this runtime; if `None`, a key manager connection will
+    /// not be established on startup.
     fn trusted_policy_signers() -> Option<TrustedPolicySigners> {
+        None
+    }
+
+    /// Return the consensus layer trust root for this runtime; if `None`, consensus layer integrity
+    /// verification will not be performed.
+    fn consensus_trust_root() -> Option<TrustRoot> {
         None
     }
 
@@ -125,6 +132,6 @@ pub trait Runtime {
         };
 
         // Start the runtime.
-        start_runtime(Box::new(init), Self::VERSION);
+        start_runtime(Box::new(init), Self::VERSION, Self::consensus_trust_root());
     }
 }
