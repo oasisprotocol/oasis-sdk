@@ -42,7 +42,7 @@ export interface BeaconEpochTimeState {
 }
 
 /**
- * Genesis is the beacon genesis state.
+ * Genesis is the genesis state.
  */
 export interface BeaconGenesis {
     /**
@@ -72,6 +72,17 @@ export interface BeaconPVSSCommit {
     epoch: longnum;
     round: longnum;
     commit?: PVSSCommit;
+}
+
+/**
+ * PVSSEvent is a PVSS backend event.
+ */
+export interface BeaconPVSSEvent {
+    height?: longnum;
+    epoch?: longnum;
+    round?: longnum;
+    state?: number;
+    participants?: Uint8Array[];
 }
 
 /**
@@ -299,10 +310,6 @@ export interface ConsensusStatus {
      * Version is the version of the consensus protocol that the node is using.
      */
     version: Version;
-    /**
-     * ConsensusVersion is the version of the consensus protocol that the node is using.
-     */
-    consensus_version: string;
     /**
      * Backend is the consensus backend identifier.
      */
@@ -540,34 +547,6 @@ export interface Entity extends CBORVersioned {
 }
 
 /**
- * ConsensusParameters are the epochtime consensus parameters.
- */
-export interface EpochTimeConsensusParameters {
-    /**
-     * Interval is the epoch interval (in blocks).
-     */
-    interval: longnum;
-    /**
-     * DebugMockBackend is flag for enabling mock epochtime backend.
-     */
-    debug_mock_backend?: boolean;
-}
-
-/**
- * Genesis is the initial genesis state for allowing configurable timekeeping.
- */
-export interface EpochTimeGenesis {
-    /**
-     * Parameters are the epochtime consensus parameters.
-     */
-    params: EpochTimeConsensusParameters;
-    /**
-     * Base is the starting epoch.
-     */
-    base: longnum;
-}
-
-/**
  * Document is a genesis document.
  */
 export interface GenesisDocument {
@@ -583,10 +562,6 @@ export interface GenesisDocument {
      * ChainID is the ID of the chain.
      */
     chain_id: string;
-    /**
-     * EpochTime is the timekeeping genesis state.
-     */
-    epochtime: EpochTimeGenesis;
     /**
      * Registry is the registry genesis state.
      */
@@ -635,6 +610,9 @@ export interface GenesisDocument {
  * CancelUpgradeProposal is an upgrade cancellation proposal.
  */
 export interface GovernanceCancelUpgradeProposal {
+    /**
+     * ProposalID is the identifier of the pending upgrade proposal.
+     */
     proposal_id: longnum;
 }
 
@@ -782,6 +760,9 @@ export interface GovernanceProposalFinalizedEvent {
      * ID is the unique identifier of a proposal.
      */
     id: longnum;
+    /**
+     * State is the new proposal state.
+     */
     state: number;
 }
 
@@ -811,7 +792,13 @@ export interface GovernanceProposalSubmittedEvent {
  * ProposalVote is a vote for a proposal.
  */
 export interface GovernanceProposalVote {
+    /**
+     * ID is the unique identifier of a proposal.
+     */
     id: longnum;
+    /**
+     * Vote is the vote.
+     */
     vote: number;
 }
 
@@ -896,7 +883,7 @@ export interface KeyManagerSignedPolicySGX {
 }
 
 /**
- * SignedPolicySGX is a signed SGX key manager access control policy.
+ * Status is the current key manager status.
  */
 export interface KeyManagerStatus {
     /**
@@ -908,7 +895,7 @@ export interface KeyManagerStatus {
      */
     is_initialized: boolean;
     /**
-     * IsInitialized is true iff the key manager is done initializing.
+     * IsSecure is true iff the key manager is secure.
      */
     is_secure: boolean;
     /**
@@ -923,6 +910,15 @@ export interface KeyManagerStatus {
      * Policy is the key manager policy.
      */
     policy: KeyManagerSignedPolicySGX;
+}
+
+/**
+ * TCPAddr represents the address of a TCP end point.
+ */
+export interface NetTCPAddr {
+    IP: Uint8Array;
+    Port: number;
+    Zone: string;
 }
 
 /**
@@ -974,15 +970,13 @@ export interface Node extends CBORVersioned {
 }
 
 /**
- * Address represents a TCP address for the purpose of node descriptors.
+ * BeaconInfo contains information for this node's participation in
+ * the random beacon protocol.
  */
-export interface NodeAddress {
-    IP: Uint8Array;
-    Port: number;
-    Zone: string;
-}
-
 export interface NodeBeaconInfo {
+    /**
+     * Point is the elliptic curve point used for the PVSS algorithm.
+     */
     point: Uint8Array;
 }
 
@@ -1028,7 +1022,7 @@ export interface NodeConsensusAddress {
     /**
      * Address is the address at which the node can be reached.
      */
-    address: NodeAddress;
+    address: NetTCPAddr;
 }
 
 /**
@@ -1057,7 +1051,7 @@ export interface NodeP2PInfo {
     /**
      * Addresses is the list of addresses at which the node can be reached.
      */
-    addresses: NodeAddress[];
+    addresses: NetTCPAddr[];
 }
 
 /**
@@ -1098,7 +1092,7 @@ export interface NodeTLSAddress {
     /**
      * Address is the address at which the node can be reached.
      */
-    address: NodeAddress;
+    address: NetTCPAddr;
 }
 
 /**
@@ -1125,17 +1119,23 @@ export interface NodeTLSInfo {
  */
 export interface PVSSCommit {
     index: number;
-    shares: PVSSCommitShare;
+    shares: PVSSCommitShare[];
 }
 
 /**
  * CommitShare is a commit share.
  */
 export interface PVSSCommitShare extends PVSSPubVerShare {
-    /**
-     * Share of the public commitment polynomial
-     */
     poly_v: Uint8Array;
+}
+
+/**
+ * CommitState is a PVSS commit and the corresponding decrypted share,
+ * if any.
+ */
+export interface PVSSCommitState {
+    commit: PVSSCommit;
+    decrypted_share?: PVSSPubVerShare;
 }
 
 /**
@@ -1143,7 +1143,7 @@ export interface PVSSCommitShare extends PVSSPubVerShare {
  */
 export interface PVSSInstance {
     participants: Uint8Array[];
-    commits: Map<number, PVSSCommitShare>;
+    commits: Map<number, PVSSCommitState>;
     reveals: Map<number, PVSSReveal>;
     decrypted_shares: Map<number, Map<number, PVSSPubVerShare>>;
     threshold: number;
@@ -1153,25 +1153,10 @@ export interface PVSSInstance {
  * PubVerShare is a public verifiable share (`pvss.PubVerShare`)
  */
 export interface PVSSPubVerShare {
-    /**
-     * Encrypted/decrypted share
-     */
     v: Uint8Array;
-    /**
-     * Challenge
-     */
     c: Uint8Array;
-    /**
-     * Response
-     */
     r: Uint8Array;
-    /**
-     * Public commitment with respect to base point G
-     */
     vg: Uint8Array;
-    /**
-     * Public commitment with respect to base point H
-     */
     vh: Uint8Array;
 }
 
@@ -1241,6 +1226,11 @@ export interface RegistryConsensusParameters {
      */
     enable_runtime_governance_models?: Map<number, boolean>;
 }
+
+/**
+ * DeregisterEntity is a request to deregister an entity.
+ */
+export type RegistryDeregisterEntity = Map<never, never>;
 
 /**
  * EntityEvent is the event that is returned via WatchEntities to signify
@@ -1703,7 +1693,7 @@ export interface RootHashComputeBody {
     failure?: number;
     txn_sched_sig: Signature;
     input_root: Uint8Array;
-    input_storage_sigs: Signature;
+    input_storage_sigs: Signature[];
     storage_signatures?: Signature[];
     rak_sig?: Uint8Array;
     messages?: RootHashMessage[];
@@ -2065,14 +2055,6 @@ export interface RuntimeClientEvent {
 }
 
 /**
- * GetBlockByHashRequest is a GetBlockByHash request.
- */
-export interface RuntimeClientGetBlockByHashRequest {
-    runtime_id: Uint8Array;
-    block_hash: Uint8Array;
-}
-
-/**
  * GetBlockRequest is a GetBlock request.
  */
 export interface RuntimeClientGetBlockRequest {
@@ -2097,78 +2079,6 @@ export interface RuntimeClientGetTransactionsRequest {
 }
 
 /**
- * GetTxByBlockHashRequest is a GetTxByBlockHash request.
- */
-export interface RuntimeClientGetTxByBlockHashRequest {
-    runtime_id: Uint8Array;
-    block_hash: Uint8Array;
-    index: number;
-}
-
-/**
- * GetTxRequest is a GetTx request.
- */
-export interface RuntimeClientGetTxRequest {
-    runtime_id: Uint8Array;
-    round: longnum;
-    index: number;
-}
-
-/**
- * GetTxsRequest is a GetTxs request.
- */
-export interface RuntimeClientGetTxsRequest {
-    runtime_id: Uint8Array;
-    round: longnum;
-    io_root: Uint8Array;
-}
-
-/**
- * Query is a complex query against the index.
- */
-export interface RuntimeClientQuery {
-    /**
-     * RoundMin is an optional minimum round (inclusive).
-     */
-    round_min: longnum;
-    /**
-     * RoundMax is an optional maximum round (inclusive).
-     *
-     * A zero value means that there is no upper limit.
-     */
-    round_max: longnum;
-    /**
-     * Conditions are the query conditions.
-     *
-     * They are combined using an AND query which means that all of
-     * the conditions must be satisfied for an item to match.
-     */
-    conditions: RuntimeClientQueryCondition[];
-    /**
-     * Limit is the maximum number of results to return.
-     *
-     * A zero value means that the `maxQueryLimit` limit is used.
-     */
-    limit: longnum;
-}
-
-/**
- * QueryCondition is a query condition.
- */
-export interface RuntimeClientQueryCondition {
-    /**
-     * Key is the tag key that should be matched.
-     */
-    key: Uint8Array;
-    /**
-     * Values are a list of tag values that the given tag key should
-     * have. They are combined using an OR query which means that any
-     * of the values will match.
-     */
-    values: Uint8Array[];
-}
-
-/**
  * QueryRequest is a Query request.
  */
 export interface RuntimeClientQueryRequest {
@@ -2186,20 +2096,25 @@ export interface RuntimeClientQueryResponse {
 }
 
 /**
- * QueryTxRequest is a QueryTx request.
+ * SubmitTxMetaResponse is the SubmitTxMeta response.
  */
-export interface RuntimeClientQueryTxRequest {
-    runtime_id: Uint8Array;
-    key: Uint8Array;
-    value: Uint8Array;
-}
-
-/**
- * QueryTxsRequest is a QueryTxs request.
- */
-export interface RuntimeClientQueryTxsRequest {
-    runtime_id: Uint8Array;
-    query: RuntimeClientQuery;
+export interface RuntimeClientSubmitTxMetaResponse {
+    /**
+     * Output is the transaction output.
+     */
+    data?: Uint8Array;
+    /**
+     * Round is the roothash round in which the transaction was executed.
+     */
+    round?: longnum;
+    /**
+     * BatchOrder is the order of the transaction in the execution batch.
+     */
+    batch_order?: number;
+    /**
+     * CheckTxError is the CheckTx error in case transaction failed the transaction check.
+     */
+    check_tx_error?: RuntimeHostError;
 }
 
 /**
@@ -2211,21 +2126,12 @@ export interface RuntimeClientSubmitTxRequest {
 }
 
 /**
- * TxResult is the transaction query result.
+ * Error is a message body representing an error.
  */
-export interface RuntimeClientTxResult {
-    block: RootHashBlock;
-    index: number;
-    input: Uint8Array;
-    output: Uint8Array;
-}
-
-/**
- * WaitBlockIndexedRequest is a WaitBlockIndexed request.
- */
-export interface RuntimeClientWaitBlockIndexedRequest {
-    runtime_id: Uint8Array;
-    round: longnum;
+export interface RuntimeHostError {
+    module?: string;
+    code?: number;
+    message?: string;
 }
 
 /**
@@ -2288,11 +2194,6 @@ export interface SchedulerConsensusParameters {
      * the staking related checks and operations.
      */
     debug_bypass_stake?: boolean;
-    /**
-     * DebugStaticValidators is true iff the scheduler should use
-     * a static validator set instead of electing anything.
-     */
-    debug_static_validators?: boolean;
     /**
      * RewardFactorEpochElectionAny is the factor for a reward
      * distributed per epoch to entities that have any node considered
@@ -2860,11 +2761,20 @@ export interface StakingWithdraw {
 }
 
 /**
+ * ApplyBatchRequest is an ApplyBatch request.
+ */
+export interface StorageApplyBatchRequest {
+    namespace: Uint8Array;
+    dst_round: longnum;
+    ops: StorageApplyOp[];
+}
+
+/**
  * ApplyOp is an apply operation within a batch of apply operations.
  */
 export interface StorageApplyOp {
     /**
-     * ApplyOp is an apply operation within a batch of apply operations.
+     * RootType is the type of root this operation is for.
      */
     root_type: number;
     /**
@@ -2898,15 +2808,6 @@ export interface StorageApplyRequest {
     dst_round: longnum;
     dst_root: Uint8Array;
     writelog: StorageLogEntry[];
-}
-
-/**
- * ApplyBatchRequest is an ApplyBatch request.
- */
-export interface StorageApplyBatchRequest {
-    namespace: Uint8Array;
-    dst_round: longnum;
-    ops: StorageApplyOp[];
 }
 
 /**
@@ -2969,10 +2870,15 @@ export interface StorageIterateRequest {
 }
 
 /**
+ * LogEntry is a write log entry.
+ */
+export type StorageLogEntry = [Key: Uint8Array, Value: Uint8Array];
+
+/**
  * Metadata is checkpoint metadata.
  */
 export interface StorageMetadata {
-    version: longnum;
+    version: number;
     root: StorageRoot;
     chunks: Uint8Array[];
 }
@@ -3019,7 +2925,7 @@ export interface StorageReceiptBody {
     /**
      * RootTypes are the storage types of the merkle roots in Roots.
      */
-    root_types: number[];
+    root_types: Uint8Array;
     /**
      * Roots are the merkle roots of the merklized data structure that the
      * storage node is certifying to store.
@@ -3069,14 +2975,16 @@ export interface StorageSyncOptions {
  * TreeID identifies a specific tree and a position within that tree.
  */
 export interface StorageTreeID {
+    /**
+     * Root is the Merkle tree root.
+     */
     root: StorageRoot;
+    /**
+     * Position is the caller's position in the tree structure to allow
+     * returning partial proofs if possible.
+     */
     position: Uint8Array;
 }
-
-/**
- * LogEntry is a write log entry.
- */
-export type StorageLogEntry = [key: Uint8Array, value: Uint8Array];
 
 /**
  * Descriptor describes an upgrade.
@@ -3095,6 +3003,7 @@ export interface UpgradeDescriptor extends CBORVersioned {
      */
     epoch: longnum;
 }
+
 /**
  * PendingUpgrade describes a currently pending upgrade and includes the
  * submitted upgrade descriptor.
@@ -3112,7 +3021,7 @@ export interface UpgradePendingUpgrade extends CBORVersioned {
     /**
      * LastCompletedStage is the last upgrade stage that was successfully completed.
      */
-    last_completed_stage: number;
+    last_completed_stage: longnum;
 }
 
 /**
@@ -3152,11 +3061,11 @@ export interface WorkerCommonStatus {
     /**
      * ExecutorRoles are the node's roles in the executor committee.
      */
-    executor_roles: number[];
+    executor_roles: Uint8Array;
     /**
      * StorageRole are the node's roles in the storage committee.
      */
-    storage_roles: number[];
+    storage_roles: Uint8Array;
     /**
      * IsTransactionScheduler indicates whether the node is a transaction scheduler in this round.
      */

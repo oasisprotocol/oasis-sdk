@@ -40,3 +40,11 @@ export const ERR_ALREADY_PENDING_CODE = 5;
  * ErrUpgradeInProgress is the error returned from CancelUpgrade when the upgrade being cancelled is already in progress.
  */
 export const ERR_UPGRADE_IN_PROGRESS_CODE = 6;
+/**
+ * ErrUpgradeNotFound is the error returned when the upgrade in question cannot be found.
+ */
+export const ERR_UPGRADE_NOT_FOUND_CODE = 7;
+/**
+ * ErrBadDescriptor is the error returned when the provided descriptor is bad.
+ */
+export const ERR_BAD_DESCRIPTOR_CODE = 8;
