@@ -382,6 +382,28 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npm test
 
+  ts-web-core-reflect:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: ts-web-core-reflect
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v2.1.4
+        with:
+          go-version: "1.16.x"
+
+      - name: Generate
+        working-directory: client-sdk/ts-web/core/reflect-go
+        run: go run . >/tmp/reflect-out.txt
+
+      - name: Diff
+        working-directory: client-sdk/ts-web/core
+        # This is only advisory. Don't fail if there are differences.
+        run: diff -u --color=always /tmp/reflect-out.txt src/types.ts || true
+
   benchmark-rt:
     # NOTE: This name appears in GitHub's Checks API.
     name: benchmark-rt
