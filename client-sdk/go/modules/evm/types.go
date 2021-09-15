@@ -1,33 +1,46 @@
 package evm
 
-// The CreateTx type must match the CreateTx type from the evm module types
+import (
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
+)
+
+// The types in this file must match the types from the evm module types
 // in runtime-sdk/modules/evm/src/types.rs.
-type CreateTx struct {
+
+// Create is an EVM CREATE transaction.
+type Create struct {
 	Value    []byte `json:"value"`
 	InitCode []byte `json:"init_code"`
-	GasPrice []byte `json:"gas_price"`
-	GasLimit uint64 `json:"gas_limit"`
 }
 
-// The CallTx type must match the CallTx type from the evm module types
-// in runtime-sdk/modules/evm/src/types.rs.
-type CallTx struct {
-	Address  []byte `json:"address"`
-	Value    []byte `json:"value"`
-	Data     []byte `json:"data"`
-	GasPrice []byte `json:"gas_price"`
-	GasLimit uint64 `json:"gas_limit"`
+// Call is an EVM CALL transaction.
+type Call struct {
+	Address []byte `json:"address"`
+	Value   []byte `json:"value"`
+	Data    []byte `json:"data"`
 }
 
-// The PeekStorageQuery type must match the PeekStorageQuery type from the
-// evm module types in runtime-sdk/modules/evm/src/types.rs.
+// Deposit is a transaction that deposits tokens into an EVM account.
+type Deposit struct {
+	From   types.Address   `json:"from"`
+	To     []byte          `json:"to"`
+	Amount types.BaseUnits `json:"amount"`
+}
+
+// Withdraw is a transaction that withdraws tokens from an EVM account.
+type Withdraw struct {
+	From   []byte          `json:"from"`
+	To     types.Address   `json:"to"`
+	Amount types.BaseUnits `json:"amount"`
+}
+
+// PeekStorageQuery queries the EVM storage.
 type PeekStorageQuery struct {
 	Address []byte `json:"address"`
 	Index   []byte `json:"index"`
 }
 
-// The PeekCodeQuery type must match the PeekCodeQuery type from the
-// evm module types in runtime-sdk/modules/evm/src/types.rs.
+// PeekCodeQuery queries the EVM code storage.
 type PeekCodeQuery struct {
 	Address []byte `json:"address"`
 }

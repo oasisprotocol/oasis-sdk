@@ -1,8 +1,10 @@
+use std::collections::BTreeMap;
+
 use oasis_runtime_sdk::{
     module::AuthHandler as _,
     modules::{core, core::Module as Core},
     testing::mock,
-    types::transaction,
+    types::{token, transaction},
     Context as _, Module as _,
 };
 
@@ -17,6 +19,11 @@ fn test_impl_for_tuple() {
             max_tx_signers: 1,
             max_multisig_signers: 1,
             gas_costs: Default::default(),
+            min_gas_price: {
+                let mut mgp = BTreeMap::new();
+                mgp.insert(token::Denomination::NATIVE, 0);
+                mgp
+            },
         },
     );
     let dummy_bytes = b"you look, you die".to_vec();

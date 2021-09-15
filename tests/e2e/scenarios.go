@@ -34,6 +34,7 @@ var (
 
 	// SimpleEVMRuntime is the simple-evm runtime test.
 	SimpleEVMRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-evm", []RunTestFunction{
+		SimpleEVMDepositWithdrawTest,
 		SimpleEVMTest,
 		SimpleSolEVMTest,
 		SimpleERC20EVMTest,

@@ -1,22 +1,35 @@
 //! EVM module types.
+use oasis_runtime_sdk::types::{address::Address, token};
 
 /// Transaction body for creating an EVM contract.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct CreateTx {
+pub struct Create {
     pub value: U256,
     pub init_code: Vec<u8>,
-    pub gas_price: U256,
-    pub gas_limit: u64,
 }
 
 /// Transaction body for calling an EVM contract.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct CallTx {
+pub struct Call {
     pub address: H160,
     pub value: U256,
     pub data: Vec<u8>,
-    pub gas_price: U256,
-    pub gas_limit: u64,
+}
+
+/// Transaction body for depositing SDK account tokens into EVM account.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct Deposit {
+    pub from: Address,
+    pub to: H160,
+    pub amount: token::BaseUnits,
+}
+
+/// Transaction body for withdrawing SDK account tokens from EVM account.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct Withdraw {
+    pub from: H160,
+    pub to: Address,
+    pub amount: token::BaseUnits,
 }
 
 /// Transaction body for peeking into EVM storage.
@@ -41,7 +54,14 @@ pub struct PeekCodeQuery {
 // This `mod` exists solely to place an `#[allow(warnings)]` around the generated code.
 #[allow(warnings)]
 mod eth {
+    use std::convert::TryFrom;
+
+    use thiserror::Error;
+
     use super::*;
+
+    #[derive(Error, Debug)]
+    pub enum NoError {}
 
     macro_rules! construct_fixed_hash {
         ($name:ident($num_bytes:literal)) => {
@@ -61,6 +81,14 @@ mod eth {
                         cbor::Value::ByteString(v) => Ok(Self::from_slice(&v)),
                         _ => Err(cbor::DecodeError::UnexpectedType),
                     }
+                }
+            }
+
+            impl TryFrom<&[u8]> for $name {
+                type Error = NoError;
+
+                fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+                    Ok(Self::from_slice(bytes))
                 }
             }
         };

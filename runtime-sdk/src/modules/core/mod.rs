@@ -11,8 +11,12 @@ use crate::{
     context::{BatchContext, Context, TxContext},
     dispatcher, error,
     module::{self, InvariantHandler as _, Module as _},
-    types::transaction::{
-        self, AddressSpec, AuthProof, Call, CallFormat, TransactionWeight, UnverifiedTransaction,
+    types::{
+        token,
+        transaction::{
+            self, AddressSpec, AuthProof, Call, CallFormat, TransactionWeight,
+            UnverifiedTransaction,
+        },
     },
     Runtime,
 };
@@ -98,6 +102,14 @@ pub enum Error {
     #[error("{0}")]
     #[sdk_error(transparent, abort)]
     Abort(#[source] dispatcher::Error),
+
+    #[error("no module could authenticate the transaction")]
+    #[sdk_error(code = 19)]
+    NotAuthenticated,
+
+    #[error("gas price too low")]
+    #[sdk_error(code = 20)]
+    GasPriceTooLow,
 }
 
 /// Gas costs.
@@ -116,6 +128,7 @@ pub struct Parameters {
     pub max_tx_signers: u32,
     pub max_multisig_signers: u32,
     pub gas_costs: GasCosts,
+    pub min_gas_price: BTreeMap<token::Denomination, u128>,
 }
 
 impl module::Parameters for Parameters {
@@ -343,6 +356,20 @@ impl module::AuthHandler for Module {
     }
 
     fn before_handle_call<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {
+        let params = Self::params(ctx.runtime_state());
+
+        // Check that the fee's denomination is in the min_gas_price map and
+        // that the gas price is higher or equal than the set minimum.
+        let fee = ctx.tx_auth_info().fee.clone();
+        match params.min_gas_price.get(fee.amount.denomination()) {
+            None => return Err(Error::GasPriceTooLow),
+            Some(min_gas_price) => {
+                if &fee.gas_price() < min_gas_price {
+                    return Err(Error::GasPriceTooLow);
+                }
+            }
+        }
+
         // Charge gas for signature verification.
         let mut num_signature: u64 = 0;
         let mut num_multisig_signer: u64 = 0;
@@ -359,7 +386,6 @@ impl module::AuthHandler for Module {
                 AddressSpec::Internal(_) => {}
             }
         }
-        let params = Self::params(ctx.runtime_state());
         let total = (|| {
             let signature_cost = num_signature.checked_mul(params.gas_costs.auth_signature)?;
             let multisig_signer_cost =

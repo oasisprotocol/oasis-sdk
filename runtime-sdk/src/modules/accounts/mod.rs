@@ -174,6 +174,27 @@ pub trait API {
     fn get_total_supplies<S: storage::Store>(
         state: S,
     ) -> Result<BTreeMap<token::Denomination, u128>, Error>;
+
+    /// Move amount from address into fee accumulator.
+    fn move_into_fee_accumulator<C: Context>(
+        ctx: &mut C,
+        from: Address,
+        amount: &token::BaseUnits,
+    ) -> Result<(), modules::core::Error>;
+
+    /// Move amount from fee accumulator into address.
+    fn move_from_fee_accumulator<C: Context>(
+        ctx: &mut C,
+        to: Address,
+        amount: &token::BaseUnits,
+    ) -> Result<(), modules::core::Error>;
+
+    /// Check and update transaction signer account nonces.
+    /// Return payee address.
+    fn check_and_update_signer_nonces<C: Context>(
+        ctx: &mut C,
+        tx: &Transaction,
+    ) -> Result<Option<Address>, modules::core::Error>;
 }
 
 /// State schema constants.
@@ -322,6 +343,39 @@ impl Module {
     }
 }
 
+/// A fee accumulator that stores fees from all transactions in a block.
+#[derive(Default)]
+struct FeeAccumulator {
+    total_fees: BTreeMap<token::Denomination, u128>,
+}
+
+impl FeeAccumulator {
+    /// Add given fee to the accumulator.
+    fn add(&mut self, fee: &token::BaseUnits) {
+        let current = self
+            .total_fees
+            .entry(fee.denomination().clone())
+            .or_default();
+        *current += fee.amount();
+    }
+
+    /// Subtract given fee from the accumulator.
+    fn sub(&mut self, fee: &token::BaseUnits) -> Result<(), Error> {
+        let current = self
+            .total_fees
+            .entry(fee.denomination().clone())
+            .or_default();
+        if *current < fee.amount() {
+            return Err(Error::InsufficientBalance);
+        }
+        *current -= fee.amount();
+        Ok(())
+    }
+}
+
+/// Context key for the fee accumulator.
+const CONTEXT_KEY_FEE_ACCUMULATOR: &str = "accounts.FeeAccumulator";
+
 impl API for Module {
     fn transfer<C: Context>(
         ctx: &mut C,
@@ -429,6 +483,71 @@ impl API for Module {
         let ts = storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
 
         Ok(ts.iter().collect())
+    }
+
+    fn move_into_fee_accumulator<C: Context>(
+        ctx: &mut C,
+        from: Address,
+        amount: &token::BaseUnits,
+    ) -> Result<(), modules::core::Error> {
+        Self::sub_amount(ctx.runtime_state(), from, amount)
+            .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
+
+        ctx.value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
+            .or_default()
+            .add(amount);
+
+        Ok(())
+    }
+
+    fn move_from_fee_accumulator<C: Context>(
+        ctx: &mut C,
+        to: Address,
+        amount: &token::BaseUnits,
+    ) -> Result<(), modules::core::Error> {
+        ctx.value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
+            .or_default()
+            .sub(amount)
+            .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
+
+        Self::add_amount(ctx.runtime_state(), to, amount)
+            .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
+
+        Ok(())
+    }
+
+    fn check_and_update_signer_nonces<C: Context>(
+        ctx: &mut C,
+        tx: &Transaction,
+    ) -> Result<Option<Address>, modules::core::Error> {
+        let params = Self::params(ctx.runtime_state());
+        // Fetch information about each signer.
+        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let mut accounts =
+            storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
+        let mut payee = None;
+        for si in tx.auth_info.signer_info.iter() {
+            let address = si.address_spec.address();
+            let mut account: types::Account = accounts.get(&address).unwrap_or_default();
+            if account.nonce != si.nonce {
+                // Reject unles nonce checking is disabled.
+                if !params.debug_disable_nonce_check {
+                    return Err(modules::core::Error::InvalidNonce);
+                }
+            }
+
+            // First signer pays for the fees.
+            if payee.is_none() {
+                payee = Some(address);
+            }
+
+            // Update nonce.
+            // TODO: Could support an option to defer this.
+            account.nonce += 1;
+            accounts.insert(&address, account);
+        }
+
+        Ok(payee)
     }
 }
 
@@ -624,68 +743,18 @@ impl module::MigrationHandler for Module {
     }
 }
 
-/// A fee accumulator that stores fees from all transactions in a block.
-#[derive(Default)]
-struct FeeAccumulator {
-    total_fees: BTreeMap<token::Denomination, u128>,
-}
-
-impl FeeAccumulator {
-    /// Add given fee to the accumulator.
-    fn add(&mut self, fee: &token::BaseUnits) {
-        let current = self
-            .total_fees
-            .entry(fee.denomination().clone())
-            .or_default();
-        *current += fee.amount();
-    }
-}
-
-/// Context key for the fee accumulator.
-const CONTEXT_KEY_FEE_ACCUMULATOR: &str = "accounts.FeeAccumulator";
-
 impl module::AuthHandler for Module {
     fn authenticate_tx<C: Context>(
         ctx: &mut C,
         tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
-        let params = Self::params(ctx.runtime_state());
-        // Fetch information about each signer.
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let mut accounts =
-            storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
-        let mut payee = None;
-        for si in tx.auth_info.signer_info.iter() {
-            let address = si.address_spec.address();
-            let mut account: types::Account = accounts.get(&address).unwrap_or_default();
-            if account.nonce != si.nonce {
-                // Reject unles nonce checking is disabled.
-                if !params.debug_disable_nonce_check {
-                    return Err(modules::core::Error::InvalidNonce);
-                }
-            }
-
-            // First signer pays for the fees.
-            if payee.is_none() {
-                payee = Some(address);
-            }
-
-            // Update nonce.
-            // TODO: Could support an option to defer this.
-            account.nonce += 1;
-            accounts.insert(&address, account);
-        }
+        let payee = Self::check_and_update_signer_nonces(ctx, tx)?;
 
         // Charge the specified amount of fees.
         if !tx.auth_info.fee.amount.amount().is_zero() {
             let payee = payee.expect("at least one signer is always present");
 
-            Self::sub_amount(ctx.runtime_state(), payee, &tx.auth_info.fee.amount)
-                .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
-
-            ctx.value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
-                .or_default()
-                .add(&tx.auth_info.fee.amount);
+            Self::move_into_fee_accumulator(ctx, payee, &tx.auth_info.fee.amount)?;
 
             // TODO: Emit event that fee has been paid.
 
@@ -703,6 +772,16 @@ impl module::BlockHandler for Module {
         let mut previous_fees = Self::get_balances(ctx.runtime_state(), *ADDRESS_FEE_ACCUMULATOR)
             .expect("get_balances must succeed")
             .balances;
+
+        // Drain previous fees from the fee accumulator.
+        for (denom, remainder) in &previous_fees {
+            Self::sub_amount(
+                ctx.runtime_state(),
+                *ADDRESS_FEE_ACCUMULATOR,
+                &token::BaseUnits::new(*remainder, denom.clone()),
+            )
+            .expect("sub_amount must succeed");
+        }
 
         // Disburse transaction fees to entities controlling all the good nodes in the committee.
         let addrs: Vec<Address> = ctx
@@ -811,9 +890,10 @@ impl module::InvariantHandler for Module {
 
             if &computed != ts {
                 // Computed and actual total supplies don't match.
-                return Err(CoreError::InvariantViolation(
-                    "computed and actual total supplies don't match".to_string(),
-                ));
+                return Err(CoreError::InvariantViolation(format!(
+                    "computed and actual total supplies don't match (computed={}, actual={})",
+                    computed, ts
+                )));
             }
         }
 

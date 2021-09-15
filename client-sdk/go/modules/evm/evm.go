@@ -4,12 +4,15 @@ import (
 	"context"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 const (
 	// Callable methods.
-	methodCreate = "evm.Create"
-	methodCall   = "evm.Call"
+	methodCreate   = "evm.Create"
+	methodCall     = "evm.Call"
+	methodDeposit  = "evm.Deposit"
+	methodWithdraw = "evm.Withdraw"
 
 	// Queries.
 	methodPeekStorage = "evm.PeekStorage"
@@ -19,10 +22,26 @@ const (
 // V1 is the v1 EVM module interface.
 type V1 interface {
 	// Create generates an EVM CREATE transaction.
-	Create(value []byte, initCode []byte, gasPrice []byte, gasLimit uint64) *client.TransactionBuilder
+	// Note that the transaction's gas limit should be set to cover both the
+	// SDK gas limit and the EVM gas limit.  The transaction fee should be
+	// high enough to cover the EVM gas price multiplied by the EVM gas limit.
+	Create(value []byte, initCode []byte) *client.TransactionBuilder
 
 	// Call generates an EVM CALL transaction.
-	Call(address []byte, value []byte, data []byte, gasPrice []byte, gasLimit uint64) *client.TransactionBuilder
+	// Note that the transaction's gas limit should be set to cover both the
+	// SDK gas limit and the EVM gas limit.  The transaction fee should be
+	// high enough to cover the EVM gas price multiplied by the EVM gas limit.
+	Call(address []byte, value []byte, data []byte) *client.TransactionBuilder
+
+	// Deposit generates a deposit transaction that moves tokens from the
+	// given SDK account into the given EVM account.  The denomination must
+	// be identical to the denomination set in the EVM module's parameters.
+	Deposit(from types.Address, to []byte, amount types.BaseUnits) *client.TransactionBuilder
+
+	// Withdraw generates a withdraw transaction that moves tokens from the
+	// given EVM account into the given SDK account.  The denomination must
+	// be identical to the denomination set in the EVM module's parameters.
+	Withdraw(from []byte, to types.Address, amount types.BaseUnits) *client.TransactionBuilder
 
 	// PeekStorage queries the EVM storage.
 	PeekStorage(ctx context.Context, address []byte, index []byte) ([]byte, error)
@@ -36,23 +55,37 @@ type v1 struct {
 }
 
 // Implements V1.
-func (a *v1) Create(value []byte, initCode []byte, gasPrice []byte, gasLimit uint64) *client.TransactionBuilder {
-	return client.NewTransactionBuilder(a.rtc, methodCreate, &CreateTx{
+func (a *v1) Create(value []byte, initCode []byte) *client.TransactionBuilder {
+	return client.NewTransactionBuilder(a.rtc, methodCreate, &Create{
 		Value:    value,
 		InitCode: initCode,
-		GasPrice: gasPrice,
-		GasLimit: gasLimit,
 	})
 }
 
 // Implements V1.
-func (a *v1) Call(address []byte, value []byte, data []byte, gasPrice []byte, gasLimit uint64) *client.TransactionBuilder {
-	return client.NewTransactionBuilder(a.rtc, methodCall, &CallTx{
-		Address:  address,
-		Value:    value,
-		Data:     data,
-		GasPrice: gasPrice,
-		GasLimit: gasLimit,
+func (a *v1) Call(address []byte, value []byte, data []byte) *client.TransactionBuilder {
+	return client.NewTransactionBuilder(a.rtc, methodCall, &Call{
+		Address: address,
+		Value:   value,
+		Data:    data,
+	})
+}
+
+// Implements V1.
+func (a *v1) Deposit(from types.Address, to []byte, amount types.BaseUnits) *client.TransactionBuilder {
+	return client.NewTransactionBuilder(a.rtc, methodDeposit, &Deposit{
+		From:   from,
+		To:     to,
+		Amount: amount,
+	})
+}
+
+// Implements V1.
+func (a *v1) Withdraw(from []byte, to types.Address, amount types.BaseUnits) *client.TransactionBuilder {
+	return client.NewTransactionBuilder(a.rtc, methodWithdraw, &Withdraw{
+		From:   from,
+		To:     to,
+		Amount: amount,
 	})
 }
 

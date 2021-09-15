@@ -11,8 +11,9 @@ cbor = { version = "0.1.8", package = "oasis-cbor" }
 oasis-runtime-sdk = { path = "../.." }
 
 # Third party.
-thiserror = "1.0"
 anyhow = "1.0"
+once_cell = "1.8.0"
+thiserror = "1.0"
 
 # Ethereum.
 evm = "0.30.1"

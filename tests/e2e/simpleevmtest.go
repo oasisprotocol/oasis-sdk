@@ -11,11 +11,14 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
 	"github.com/oasisprotocol/oasis-sdk/tests/e2e/txgen"
 )
@@ -30,9 +33,10 @@ var evmSolTestCompiledHex string
 //go:embed contracts/evm_erc20_test_compiled.hex
 var evmERC20TestCompiledHex string
 
-func evmCreate(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, value []byte, initCode []byte, gasPrice []byte, gasLimit uint64) ([]byte, error) {
-	tx := e.Create(value, initCode, gasPrice, gasLimit).GetTransaction()
-	result, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx)
+func evmCreate(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, value []byte, initCode []byte, gasPrice uint64, gasLimit uint64) ([]byte, error) {
+	tx := e.Create(value, initCode).SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(gasPrice * gasLimit), types.NativeDenomination)).GetTransaction()
+
+	result, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, gasLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -43,9 +47,10 @@ func evmCreate(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer s
 	return out, nil
 }
 
-func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, address []byte, value []byte, data []byte, gasPrice []byte, gasLimit uint64) ([]byte, error) {
-	tx := e.Call(address, value, data, gasPrice, gasLimit).GetTransaction()
-	result, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx)
+func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, address []byte, value []byte, data []byte, gasPrice uint64, gasLimit uint64) ([]byte, error) {
+	tx := e.Call(address, value, data).SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(gasPrice * gasLimit), types.NativeDenomination)).GetTransaction()
+
+	result, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, gasLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +59,24 @@ func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer sig
 		return nil, fmt.Errorf("failed to unmarshal evmCall result: %w", err)
 	}
 	return out, nil
+}
+
+func evmDeposit(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, from types.Address, to []byte, amount types.BaseUnits) error {
+	tx := e.Deposit(from, to, amount).GetTransaction()
+	_, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, 0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func evmWithdraw(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, from []byte, to types.Address, amount types.BaseUnits) error {
+	tx := e.Withdraw(from, to, amount).GetTransaction()
+	_, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, 0)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // This wraps the given EVM bytecode in an unpacker, suitable for
@@ -117,6 +140,70 @@ func evmPack(bytecode []byte) []byte {
 	return packedBytecode
 }
 
+// SimpleEVMDepositWithdrawTest tests deposits and withdrawals.
+func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	signer := testing.Dave.Signer
+	e := evm.NewV1(rtc)
+	ac := accounts.NewV1(rtc)
+
+	daveEVMAddr, err := hex.DecodeString("89519d9720bbedf870ab6ae6fbd4bb8af92f4328")
+	if err != nil {
+		return err
+	}
+
+	log.Info("checking Dave's account balance")
+	b, err := ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := b.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(100000000)) != 0 {
+			return fmt.Errorf("Dave's account balance is wrong (expected 100000000, got %s)", q.String()) //nolint: stylecheck
+		}
+	} else {
+		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
+	}
+
+	log.Info("depositing 10M tokens into Dave's EVM account")
+	if err = evmDeposit(ctx, rtc, e, signer, testing.Dave.Address, daveEVMAddr, types.NewBaseUnits(*quantity.NewFromUint64(10000000), types.NativeDenomination)); err != nil {
+		return err
+	}
+
+	log.Info("re-checking Dave's account balance")
+	b, err = ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := b.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(90000000)) != 0 {
+			return fmt.Errorf("Dave's account balance is wrong (expected 90000000, got %s)", q.String()) //nolint: stylecheck
+		}
+	} else {
+		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
+	}
+
+	log.Info("withdrawing one token from Dave's EVM account")
+	if err = evmWithdraw(ctx, rtc, e, signer, daveEVMAddr, testing.Dave.Address, types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)); err != nil {
+		return err
+	}
+
+	log.Info("re-checking Dave's account balance")
+	b, err = ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := b.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(90000001)) != 0 {
+			return fmt.Errorf("Dave's account balance is wrong (expected 90000001, got %s)", q.String()) //nolint: stylecheck
+		}
+	} else {
+		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
+	}
+
+	return nil
+}
+
 // SimpleEVMTest does a simple EVM test.
 func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
@@ -128,10 +215,7 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		return err
 	}
 
-	gasPrice, err := hex.DecodeString(strings.Repeat("0", 64))
-	if err != nil {
-		return err
-	}
+	gasPrice := uint64(1)
 
 	// Create a simple contract that adds two numbers and stores the result
 	// in slot 0 of its storage.
@@ -235,8 +319,10 @@ func SimpleSolEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 		return err
 	}
 
+	gasPrice := uint64(2)
+
 	// Create the EVM contract.
-	contractAddr, err := evmCreate(ctx, rtc, e, signer, zero, contract, zero, 128000)
+	contractAddr, err := evmCreate(ctx, rtc, e, signer, zero, contract, gasPrice, 128000)
 	if err != nil {
 		return fmt.Errorf("evmCreate failed: %w", err)
 	}
@@ -253,7 +339,7 @@ func SimpleSolEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 	}
 
 	// Call the name method.
-	callResult, err := evmCall(ctx, rtc, e, signer, contractAddr, zero, nameMethod, zero, 22000)
+	callResult, err := evmCall(ctx, rtc, e, signer, contractAddr, zero, nameMethod, gasPrice, 22000)
 	if err != nil {
 		return fmt.Errorf("evmCall failed: %w", err)
 	}
@@ -305,8 +391,10 @@ func SimpleERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cli
 		return err
 	}
 
+	gasPrice := uint64(1)
+
 	// Create the EVM contract.
-	contractAddr, err := evmCreate(ctx, rtc, e, signer, zero, erc20, zero, 1024000)
+	contractAddr, err := evmCreate(ctx, rtc, e, signer, zero, erc20, gasPrice, 1024000)
 	if err != nil {
 		return fmt.Errorf("evmCreate failed: %w", err)
 	}
@@ -323,7 +411,7 @@ func SimpleERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cli
 	}
 
 	// Call the name method.
-	callResult, err := evmCall(ctx, rtc, e, signer, contractAddr, zero, nameMethod, zero, 25000)
+	callResult, err := evmCall(ctx, rtc, e, signer, contractAddr, zero, nameMethod, gasPrice, 25000)
 	if err != nil {
 		return fmt.Errorf("evmCall:name failed: %w", err)
 	}
@@ -344,7 +432,7 @@ func SimpleERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cli
 	if err != nil {
 		return err
 	}
-	callResult, err = evmCall(ctx, rtc, e, signer, contractAddr, zero, transferMethod, zero, 64000)
+	callResult, err = evmCall(ctx, rtc, e, signer, contractAddr, zero, transferMethod, gasPrice, 64000)
 	if err != nil {
 		return fmt.Errorf("evmCall:transfer failed: %w", err)
 	}
@@ -362,7 +450,7 @@ func SimpleERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cli
 	if err != nil {
 		return err
 	}
-	callResult, err = evmCall(ctx, rtc, e, signer, contractAddr, zero, balanceMethod, zero, 32000)
+	callResult, err = evmCall(ctx, rtc, e, signer, contractAddr, zero, balanceMethod, gasPrice, 32000)
 	if err != nil {
 		return fmt.Errorf("evmCall:balanceOf failed: %w", err)
 	}
