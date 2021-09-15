@@ -92,16 +92,12 @@ pub enum Error {
     #[sdk_error(code = 6)]
     GasLimitTooLow(u64),
 
-    #[error("gas price too low")]
-    #[sdk_error(code = 7)]
-    GasPriceTooLow,
-
     #[error("insufficient balance")]
-    #[sdk_error(code = 8)]
+    #[sdk_error(code = 7)]
     InsufficientBalance,
 
     #[error("invalid denomination")]
-    #[sdk_error(code = 9)]
+    #[sdk_error(code = 8)]
     InvalidDenomination,
 
     #[error("core: {0}")]
@@ -119,8 +115,6 @@ pub struct GasCosts {
 /// Parameters for the EVM module.
 #[derive(Clone, Default, Debug, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
-    /// Minimum acceptable gas price for EVM transactions.
-    pub min_gas_price: U256,
     /// Token denomination used for the EVM token.
     pub token_denomination: token::Denomination,
     /// Gas costs.
@@ -349,15 +343,9 @@ impl<Cfg: Config> Module<Cfg> {
     {
         let params = Self::params(ctx.runtime_state());
         let den = params.token_denomination;
-        let min_gas_price: primitive_types::U256 = params.min_gas_price.into();
 
         let gas_limit: u64 = core::Module::remaining_tx_gas(ctx);
         let gas_price: primitive_types::U256 = ctx.tx_auth_info().fee.gas_price().into();
-
-        // Make sure that gas_price >= min_gas_price.
-        if gas_price < min_gas_price {
-            return Err(Error::GasPriceTooLow);
-        }
 
         let vicinity = evm_backend::Vicinity {
             gas_price: gas_price.into(),

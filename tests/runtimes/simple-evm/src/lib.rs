@@ -60,11 +60,15 @@ impl sdk::Runtime for Runtime {
                         auth_multisig_signer: 0,
                         ..Default::default()
                     },
+                    min_gas_price: {
+                        let mut mgp = BTreeMap::new();
+                        mgp.insert(Denomination::NATIVE, 0);
+                        mgp
+                    },
                 },
             },
             evm::Genesis {
                 parameters: evm::Parameters {
-                    min_gas_price: Default::default(),
                     token_denomination: Denomination::NATIVE,
                     gas_costs: evm::GasCosts {
                         tx_deposit: 10,

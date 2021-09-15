@@ -1,5 +1,7 @@
 //! Simple consensus runtime.
-use oasis_runtime_sdk::{self as sdk, modules, Version};
+use std::collections::BTreeMap;
+
+use oasis_runtime_sdk::{self as sdk, modules, types::token::Denomination, Version};
 
 pub mod runtime;
 
@@ -32,6 +34,11 @@ impl sdk::Runtime for Runtime {
                     max_multisig_signers: 8,
                     // These are free, in order to simplify benchmarking.
                     gas_costs: Default::default(),
+                    min_gas_price: {
+                        let mut mgp = BTreeMap::new();
+                        mgp.insert(Denomination::NATIVE, 0);
+                        mgp
+                    },
                 },
             },
         )

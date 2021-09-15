@@ -142,6 +142,11 @@ impl sdk::Runtime for Runtime {
                         auth_multisig_signer: 10,
                         callformat_x25519_deoxysii: 1000,
                     },
+                    min_gas_price: {
+                        let mut mgp = BTreeMap::new();
+                        mgp.insert(Denomination::NATIVE, 0);
+                        mgp
+                    },
                 },
             },
             contracts::Genesis {

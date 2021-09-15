@@ -28,6 +28,11 @@ fn test_use_gas() {
             max_tx_signers: 8,
             max_multisig_signers: 8,
             gas_costs: Default::default(),
+            min_gas_price: {
+                let mut mgp = BTreeMap::new();
+                mgp.insert(token::Denomination::NATIVE, 0);
+                mgp
+            },
         },
     );
 
@@ -141,6 +146,11 @@ impl Runtime for GasWasterRuntime {
                         auth_multisig_signer: Self::AUTH_MULTISIG_GAS,
                         callformat_x25519_deoxysii: 0,
                     },
+                    min_gas_price: {
+                        let mut mgp = BTreeMap::new();
+                        mgp.insert(token::Denomination::NATIVE, 0);
+                        mgp
+                    },
                 },
             },
             (),
@@ -243,6 +253,11 @@ fn test_approve_unverified_tx() {
             max_tx_signers: 2,
             max_multisig_signers: 2,
             gas_costs: Default::default(),
+            min_gas_price: {
+                let mut mgp = BTreeMap::new();
+                mgp.insert(token::Denomination::NATIVE, 0);
+                mgp
+            },
         },
     );
     let dummy_bytes = b"you look, you die".to_vec();
@@ -436,4 +451,68 @@ fn test_get_batch_weight_limits_query() {
         cbor::from_value(res).unwrap(),
         "querying weights should return correct limits"
     );
+}
+
+#[test]
+fn test_min_gas_price() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+
+    Core::set_params(
+        ctx.runtime_state(),
+        Parameters {
+            max_batch_gas: u64::MAX,
+            max_tx_signers: 8,
+            max_multisig_signers: 8,
+            gas_costs: super::GasCosts {
+                auth_signature: GasWasterRuntime::AUTH_SIGNATURE_GAS,
+                auth_multisig_signer: GasWasterRuntime::AUTH_MULTISIG_GAS,
+                callformat_x25519_deoxysii: 0,
+            },
+            min_gas_price: {
+                let mut mgp = BTreeMap::new();
+                mgp.insert(token::Denomination::NATIVE, 1000);
+                mgp
+            },
+        },
+    );
+
+    let mut tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: GasWasterModule::METHOD_WASTE_GAS.to_owned(),
+            body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![
+                transaction::SignerInfo::new(keys::alice::pk(), 0),
+                transaction::SignerInfo::new_multisig(
+                    multisig::Config {
+                        signers: vec![multisig::Signer {
+                            public_key: keys::bob::pk(),
+                            weight: 1,
+                        }],
+                        threshold: 1,
+                    },
+                    0,
+                ),
+            ],
+            fee: transaction::Fee {
+                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                gas: 100,
+                consensus_messages: 0,
+            },
+        },
+    };
+
+    ctx.with_tx(tx.clone(), |mut tx_ctx, call| {
+        Core::before_handle_call(&mut tx_ctx, &call).expect_err("gas price should be too low");
+    });
+
+    tx.auth_info.fee.amount = token::BaseUnits::new(100000, token::Denomination::NATIVE);
+
+    ctx.with_tx(tx.clone(), |mut tx_ctx, call| {
+        Core::before_handle_call(&mut tx_ctx, &call).expect("gas price should be ok");
+    });
 }
