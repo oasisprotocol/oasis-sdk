@@ -13,12 +13,14 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/drbg"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/mathrand"
+	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	sdk "github.com/oasisprotocol/oasis-sdk/client-sdk/go"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
@@ -45,6 +47,21 @@ type kvKey struct {
 type kvKeyValue struct {
 	Key   []byte `json:"key"`
 	Value []byte `json:"value"`
+}
+
+// The kvSpecialGreetingParams type must match the SpecialGreetingParams type from the simple-keyvalue
+// runtime in ../runtimes/simple-keyvalue/src/keyvalue/types.rs.
+type kvSpecialGreetingParams struct {
+	Nonce    uint64 `json:"nonce"`
+	Greeting string `json:"greeting"`
+}
+
+// The kvSpecialGreeting type must match the SpecialGreeting type from the simple-keyvalue
+// runtime in ../runtimes/simple-keyvalue/src/keyvalue/types.rs.
+type kvSpecialGreeting struct {
+	ParamsCBOR []byte                  `json:"params_cbor"`
+	From       coreSignature.PublicKey `json:"from"`
+	Signature  []byte                  `json:"signature"`
 }
 
 // The kvInsertEvent type must match the Event::Insert type from the
@@ -147,6 +164,40 @@ func kvGet(rtc client.RuntimeClient, key []byte) ([]byte, error) {
 	return resp.Value, nil
 }
 
+// kvInsertSpecialGreeting sends a transaction encoded in the keyvalue-special-greeting scheme.
+func kvInsertSpecialGreeting(rtc client.RuntimeClient, signer signature.Signer, greeting string) error {
+	ctx := context.Background()
+
+	ac := accounts.NewV1(rtc)
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
+	if err != nil {
+		return fmt.Errorf("getting nonce for special greeting: %w", err)
+	}
+
+	paramsCBOR := cbor.Marshal(kvSpecialGreetingParams{
+		Nonce:    nonce,
+		Greeting: greeting,
+	})
+	sig, err := signer.ContextSign([]byte("oasis-runtime-sdk-test/simplekv-special-greeting: v0"), paramsCBOR)
+	if err != nil {
+		return fmt.Errorf("signing special greeting: %w", err)
+	}
+	utx := types.UnverifiedTransaction{
+		Body: cbor.Marshal(kvSpecialGreeting{
+			ParamsCBOR: paramsCBOR,
+			From:       coreSignature.PublicKey(signer.Public().(ed25519.PublicKey)),
+			Signature:  sig,
+		}),
+		AuthProofs: []types.AuthProof{
+			{Module: "keyvalue.special-greeting.v0"},
+		},
+	}
+	if _, err = rtc.SubmitTx(ctx, &utx); err != nil {
+		return err
+	}
+	return nil
+}
+
 // SimpleKVTest does a simple key insert/fetch/remove test.
 func SimpleKVTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
@@ -177,6 +228,21 @@ func SimpleKVTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCon
 	_, err = kvGet(rtc, testKey)
 	if err == nil {
 		return fmt.Errorf("fetching removed key should fail")
+	}
+
+	log.Info("inserting special greeting")
+	greeting := "hi from simplekvtest"
+	if err = kvInsertSpecialGreeting(rtc, signer, greeting); err != nil {
+		return err
+	}
+
+	log.Info("fetching special greeting")
+	val, err = kvGet(rtc, []byte("greeting"))
+	if err != nil {
+		return err
+	}
+	if string(val) != greeting {
+		return fmt.Errorf("fetched special greeting does not match the inserted value")
 	}
 
 	return nil
