@@ -12,6 +12,7 @@ oasis-runtime-sdk = { path = "../.." }
 
 # Third party.
 anyhow = "1.0"
+blake3 = { version = "1.0.0", features = ["traits-preview"] }
 once_cell = "1.8.0"
 thiserror = "1.0"
 

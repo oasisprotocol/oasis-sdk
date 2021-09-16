@@ -1860,6 +1860,7 @@ name = "oasis-runtime-sdk-evm"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "blake3",
  "evm",
  "fixed-hash",
  "oasis-cbor",

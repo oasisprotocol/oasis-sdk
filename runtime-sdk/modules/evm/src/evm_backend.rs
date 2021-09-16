@@ -135,7 +135,9 @@ impl<'c, C: oasis_runtime_sdk::Context> EVMBackend for Backend<'c, C> {
 
         let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
         let storages = storage::PrefixStore::new(store, &state::STORAGES);
-        let s = storage::TypedStore::new(storage::PrefixStore::new(storages, &addr));
+        let s = storage::TypedStore::new(storage::HashedStore::<_, blake3::Hasher>::new(
+            storage::PrefixStore::new(storages, &addr),
+        ));
 
         let res: H256 = s.get(&idx).unwrap_or_default();
         res.into()
@@ -205,8 +207,11 @@ impl<'c, C: oasis_runtime_sdk::Context> ApplyBackend for Backend<'c, C> {
                             let state = self.ctx.get_mut().runtime_state();
                             let s_store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
                             let storages = storage::PrefixStore::new(s_store, &state::STORAGES);
-                            let mut s = storage::TypedStore::new(storage::PrefixStore::new(
-                                storages, &addr,
+                            let mut s = storage::TypedStore::new(storage::HashedStore::<
+                                _,
+                                blake3::Hasher,
+                            >::new(
+                                storage::PrefixStore::new(storages, &addr),
                             ));
                             if value == primitive_types::H256::default() {
                                 s.remove(&idx);
