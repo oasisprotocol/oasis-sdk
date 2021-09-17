@@ -315,7 +315,9 @@ impl<Cfg: Config> API for Module<Cfg> {
     fn peek_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
         let store = storage::PrefixStore::new(ctx.runtime_state(), &crate::MODULE_NAME);
         let storages = storage::PrefixStore::new(store, &state::STORAGES);
-        let s = storage::TypedStore::new(storage::PrefixStore::new(storages, &address));
+        let s = storage::TypedStore::new(storage::HashedStore::<_, blake3::Hasher>::new(
+            storage::PrefixStore::new(storages, &address),
+        ));
 
         let result: H256 = s.get(&index).unwrap_or_default();
 
