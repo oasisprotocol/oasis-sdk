@@ -111,6 +111,10 @@ export interface AuthProof {
      * For _multisig_ authentication.
      */
     multisig?: Uint8Array[];
+    /**
+     * A flag to use module-controlled decoding.
+     */
+    module?: String;
 }
 
 /**
