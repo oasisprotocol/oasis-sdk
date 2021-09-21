@@ -36,7 +36,8 @@ pub enum AuthProof {
     /// For _multisig_ authentication.
     #[cbor(rename = "multisig")]
     Multisig(multisig::SignatureSetOwned),
-    /// A flag to use module-controlled decoding.
+    /// A flag to use module-controlled decoding. The string is an encoding scheme name that a
+    /// module must handle. The scheme name must not be empty.
     #[cbor(rename = "module")]
     Module(String),
 }

@@ -22,7 +22,8 @@ type AuthProof struct {
 	Signature []byte `json:"signature,omitempty"`
 	// Multisig is for multisig authentication.
 	Multisig [][]byte `json:"multisig,omitempty"`
-	// Module is a flag to use module-controlled decoding.
+	// Module is a flag to use module-controlled decoding. The string is an encoding scheme name
+	// that a module must handle. When using this variant, the scheme name must not be empty.
 	Module string `json:"module,omitempty"`
 }
 
