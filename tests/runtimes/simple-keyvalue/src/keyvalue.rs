@@ -1,22 +1,30 @@
 use thiserror::Error;
 
+use anyhow::Context as _;
+
 use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
     core::common::crypto::hash::Hash,
+    crypto::signature,
     error::RuntimeError,
     keymanager::KeyPairId,
     module::{CallResult, Module as _},
     modules::{
         core,
-        core::{Module as Core, API as _},
+        core::{Error as CoreError, Module as Core, API as _},
     },
+    types::transaction,
 };
 
 pub mod types;
 
 /// The name of our module.
 const MODULE_NAME: &str = "keyvalue";
+
+/// The signature context used in the special greeting encoding scheme signature.
+const SPECIAL_GREETING_SIGNATURE_CONTEXT: &[u8] =
+    "oasis-runtime-sdk-test/simplekv-special-greeting: v0".as_bytes();
 
 /// Errors emitted by the keyvalue module.
 #[derive(Error, Debug, sdk::Error)]
@@ -81,7 +89,60 @@ impl sdk::module::Module for Module {
     type Parameters = Parameters;
 }
 
-impl sdk::module::AuthHandler for Module {}
+impl sdk::module::AuthHandler for Module {
+    fn decode_tx<C: Context>(
+        _ctx: &mut C,
+        scheme: &str,
+        body: &[u8],
+    ) -> Result<Option<transaction::Transaction>, CoreError> {
+        match scheme {
+            "keyvalue.special-greeting.v0" => {
+                let special_greeting: types::SpecialGreeting = cbor::from_slice(body)
+                    .with_context(|| "decoding special greeting")
+                    .map_err(CoreError::MalformedTransaction)?;
+                special_greeting
+                    .from
+                    .verify(
+                        SPECIAL_GREETING_SIGNATURE_CONTEXT,
+                        &special_greeting.params_cbor,
+                        &special_greeting.signature,
+                    )
+                    .with_context(|| "verifying special greeting signature")
+                    .map_err(CoreError::MalformedTransaction)?;
+                let params: types::SpecialGreetingParams =
+                    cbor::from_slice(&special_greeting.params_cbor)
+                        .with_context(|| "decoding special greeting parameters")
+                        .map_err(CoreError::MalformedTransaction)?;
+                Ok(Some(transaction::Transaction {
+                    version: transaction::LATEST_TRANSACTION_VERSION,
+                    call: transaction::Call {
+                        format: transaction::CallFormat::Plain,
+                        method: "keyvalue.Insert".to_string(),
+                        body: cbor::to_value(types::KeyValue {
+                            key: "greeting".as_bytes().to_owned(),
+                            value: params.greeting.into_bytes(),
+                        }),
+                    },
+                    auth_info: transaction::AuthInfo {
+                        signer_info: vec![transaction::SignerInfo {
+                            address_spec: transaction::AddressSpec::Signature(
+                                signature::PublicKey::Ed25519(special_greeting.from),
+                            ),
+                            nonce: params.nonce,
+                        }],
+                        fee: transaction::Fee {
+                            gas: 400,
+                            ..Default::default()
+                        },
+                    },
+                }))
+                // After we decode this, the accounts module will check the nonce.
+            }
+            _ => Ok(None),
+        }
+    }
+}
+
 impl sdk::module::BlockHandler for Module {}
 impl sdk::module::InvariantHandler for Module {}
 

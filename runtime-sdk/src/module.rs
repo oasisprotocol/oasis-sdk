@@ -269,6 +269,22 @@ pub trait AuthHandler {
         Ok(())
     }
 
+    /// Decode a transaction that was sent with module-controlled decoding and verify any
+    /// signatures.
+    ///
+    /// Postcondition: if returning a Transaction, that transaction must pass `validate_basic`.
+    ///
+    /// Returns Ok(Some(_)) if the module is in charge of the encoding scheme identified by _scheme
+    /// or Ok(None) otherwise.
+    fn decode_tx<C: Context>(
+        _ctx: &mut C,
+        _scheme: &str,
+        _body: &[u8],
+    ) -> Result<Option<Transaction>, modules::core::Error> {
+        // Default implementation is not in charge of any schemes.
+        Ok(None)
+    }
+
     /// Authenticate a transaction.
     ///
     /// Note that any signatures have already been verified.
@@ -298,6 +314,20 @@ impl AuthHandler for Tuple {
     ) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::approve_unverified_tx(ctx, utx)?; )* );
         Ok(())
+    }
+
+    fn decode_tx<C: Context>(
+        ctx: &mut C,
+        scheme: &str,
+        body: &[u8],
+    ) -> Result<Option<Transaction>, modules::core::Error> {
+        for_tuples!( #(
+            let decoded = Tuple::decode_tx(ctx, scheme, body)?;
+            if (decoded.is_some()) {
+                return Ok(decoded);
+            }
+        )* );
+        Ok(None)
     }
 
     fn authenticate_tx<C: Context>(

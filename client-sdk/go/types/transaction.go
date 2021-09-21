@@ -22,6 +22,9 @@ type AuthProof struct {
 	Signature []byte `json:"signature,omitempty"`
 	// Multisig is for multisig authentication.
 	Multisig [][]byte `json:"multisig,omitempty"`
+	// Module is a flag to use module-controlled decoding. The string is an encoding scheme name
+	// that a module must handle. When using this variant, the scheme name must not be empty.
+	Module string `json:"module,omitempty"`
 }
 
 // UnverifiedTransaction is an unverified transaction.
@@ -34,6 +37,10 @@ type UnverifiedTransaction struct {
 
 // Verify verifies and deserializes the unverified transaction.
 func (ut *UnverifiedTransaction) Verify(ctx signature.Context) (*Transaction, error) {
+	if len(ut.AuthProofs) == 1 && ut.AuthProofs[0].Module != "" {
+		return nil, fmt.Errorf("module-controlled decoding (scheme %q) not supported", ut.AuthProofs[0].Module)
+	}
+
 	// Deserialize the inner body.
 	var tx Transaction
 	if err := cbor.Unmarshal(ut.Body, &tx); err != nil {

@@ -2821,6 +2821,7 @@ dependencies = [
 name = "test-runtime-simple-keyvalue"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "futures",
  "oasis-cbor",
  "oasis-runtime-sdk",

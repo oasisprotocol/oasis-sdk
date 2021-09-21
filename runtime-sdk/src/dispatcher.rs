@@ -5,6 +5,7 @@ use std::{
     sync::{atomic::AtomicBool, Arc},
 };
 
+use anyhow::anyhow;
 use slog::error;
 use thiserror::Error;
 
@@ -33,7 +34,7 @@ use crate::{
     storage,
     storage::Prefix,
     types,
-    types::transaction::{Transaction, TransactionWeight},
+    types::transaction::{AuthProof, Transaction, TransactionWeight},
 };
 
 /// Unique module name.
@@ -126,10 +127,19 @@ impl<R: Runtime> Dispatcher<R> {
         // Perform any checks before signature verification.
         R::Modules::approve_unverified_tx(ctx, &utx)?;
 
-        // Verify transaction signatures.
-        // TODO: Support signature verification of the whole transaction batch.
-        utx.verify()
-            .map_err(|e| modules::core::Error::MalformedTransaction(e.into()))
+        match utx.1.as_slice() {
+            [AuthProof::Module(scheme)] => {
+                R::Modules::decode_tx(ctx, scheme, &utx.0)?.ok_or_else(|| {
+                    modules::core::Error::MalformedTransaction(anyhow!(
+                        "module-controlled transaction decoding scheme {} not supported",
+                        scheme
+                    ))
+                })
+            }
+            _ => utx
+                .verify()
+                .map_err(|e| modules::core::Error::MalformedTransaction(e.into())),
+        }
     }
 
     /// Run the dispatch steps inside a transaction context. This includes the before call hooks
