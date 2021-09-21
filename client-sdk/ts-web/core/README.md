@@ -36,9 +36,6 @@ dedicated names in the type system.
 using this SDK with an additional access control component.
 1. Native gRPC is not accessible over the web. The `grpc-web` project suggests setting up an
 [Envoy](https://www.envoyproxy.io/) proxy to allow browsers to connect.
-1. Calls that return `nil` (in Go terms), including void methods, reject when they succeed. We are
-waiting for the fix to be included in an upstream release of `grpc-web`. We suggest using a
-`try ... catch` block around calls known to return `nil`.
 1. Empty structures are deserialized into an empty `Map`, due to a limitation in the heuristic that
 converts structures to objets.
 1. Go prefers to use `nil` instead of some empty values and to serialize them as `null` or missing
