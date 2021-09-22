@@ -1982,6 +1982,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "blake3",
+ "ethereum",
  "evm",
  "fixed-hash",
  "hex",
@@ -1992,6 +1993,7 @@ dependencies = [
  "once_cell",
  "primitive-types",
  "ripemd160",
+ "rlp",
  "sha2",
  "sha3 0.9.1",
  "thiserror",
