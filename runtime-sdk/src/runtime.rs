@@ -2,8 +2,8 @@
 use std::sync::Arc;
 
 use oasis_core_runtime::{
-    common::version, consensus::verifier::TrustRoot, rak::RAK, start_runtime, Protocol, RpcDemux,
-    RpcDispatcher, TxnDispatcher,
+    common::version, config::Config, consensus::verifier::TrustRoot, rak::RAK, start_runtime,
+    Protocol, RpcDemux, RpcDispatcher, TxnDispatcher,
 };
 
 use crate::{
@@ -99,7 +99,7 @@ pub trait Runtime {
     /// Start the runtime.
     fn start()
     where
-        Self: Sized + 'static,
+        Self: Sized + Send + Sync + 'static,
     {
         // Initializer.
         let init = |protocol: &Arc<Protocol>,
@@ -132,6 +132,13 @@ pub trait Runtime {
         };
 
         // Start the runtime.
-        start_runtime(Box::new(init), Self::VERSION, Self::consensus_trust_root());
+        start_runtime(
+            Box::new(init),
+            Config {
+                version: Self::VERSION,
+                trust_root: Self::consensus_trust_root(),
+                ..Default::default()
+            },
+        );
     }
 }

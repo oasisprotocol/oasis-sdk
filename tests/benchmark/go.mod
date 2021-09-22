@@ -15,11 +15,11 @@ replace (
 )
 
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2102.1-0.20210914094712-425f2a41f9c6
+	github.com/oasisprotocol/oasis-core/go v0.2102.1-0.20210923120148-6947544e0d74
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.11.0
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.8.1
+	github.com/spf13/viper v1.9.0
 	google.golang.org/grpc v1.40.0
 )

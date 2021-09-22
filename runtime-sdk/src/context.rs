@@ -9,7 +9,6 @@ use std::{
 
 use io_context::Context as IoContext;
 use slog::{self, o};
-use tokio::runtime::Runtime as TokioRuntime;
 
 use oasis_core_runtime::{
     common::{logger::get_logger, namespace::Namespace},
@@ -73,9 +72,6 @@ pub trait Context {
 
     /// Returns a logger.
     fn get_logger(&self, module: &'static str) -> slog::Logger;
-
-    /// Returns the tokio runtime associated with this context.
-    fn tokio(&self) -> &TokioRuntime;
 
     /// Context mode.
     fn mode(&self) -> Mode;
@@ -222,8 +218,6 @@ pub trait TxContext: Context {
 
 /// Dispatch context for the whole batch.
 pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: NestedStore> {
-    tokio: &'a TokioRuntime,
-
     mode: Mode,
 
     host_info: &'a HostInfo,
@@ -254,7 +248,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
     /// Create a new dispatch context.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        tokio: &'a TokioRuntime,
         mode: Mode,
         host_info: &'a HostInfo,
         key_manager: Option<KeyManagerClientWithContext<'a>>,
@@ -267,7 +260,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
         max_messages: u32,
     ) -> Self {
         Self {
-            tokio,
             mode,
             host_info,
             runtime_header,
@@ -299,7 +291,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             Mode::ExecuteTx
         };
         RuntimeBatchContext {
-            tokio: ctx.tokio,
             mode,
             host_info,
             key_manager,
@@ -326,10 +317,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
 
     fn get_logger(&self, module: &'static str) -> slog::Logger {
         self.logger.new(o!("sdk_module" => module))
-    }
-
-    fn tokio(&self) -> &'a TokioRuntime {
-        self.tokio
     }
 
     fn mode(&self) -> Mode {
@@ -409,7 +396,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
         let store = storage::OverlayStore::new((&mut self.runtime_storage) as &mut dyn Store);
 
         let child_ctx = RuntimeBatchContext {
-            tokio: self.tokio,
             mode,
             host_info: self.host_info,
             key_manager: self.key_manager.clone(),
@@ -448,7 +434,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
         let store = storage::OverlayStore::new(&mut self.runtime_storage);
 
         let tx_ctx = RuntimeTxContext {
-            tokio: self.tokio,
             mode: self.mode,
             host_info: self.host_info,
             key_manager: self.key_manager.clone(),
@@ -488,8 +473,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
 
 /// Per-transaction/method dispatch sub-context.
 pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
-    tokio: &'round TokioRuntime,
-
     mode: Mode,
 
     host_info: &'round HostInfo,
@@ -531,10 +514,6 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
 
     fn get_logger(&self, module: &'static str) -> slog::Logger {
         self.logger.new(o!("sdk_module" => module))
-    }
-
-    fn tokio(&self) -> &'round TokioRuntime {
-        self.tokio
     }
 
     fn mode(&self) -> Mode {
@@ -614,7 +593,6 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
         let store = storage::OverlayStore::new((&mut self.store) as &mut dyn Store);
 
         let child_ctx = RuntimeBatchContext {
-            tokio: self.tokio,
             mode,
             host_info: self.host_info,
             key_manager: self.key_manager.clone(),

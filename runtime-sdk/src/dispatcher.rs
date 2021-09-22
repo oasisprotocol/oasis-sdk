@@ -360,7 +360,7 @@ impl<R: Runtime> Dispatcher<R> {
     }
 }
 
-impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
+impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatcher<R> {
     fn execute_batch(
         &self,
         mut rt_ctx: transaction::Context<'_>,
@@ -373,7 +373,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         let key_manager = self
             .key_manager
             .as_ref()
-            .map(|mgr| mgr.with_context(rt_ctx.tokio, rt_ctx.io_ctx.clone()));
+            .map(|mgr| mgr.with_context(rt_ctx.io_ctx.clone()));
         let mut ctx =
             RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
                 &mut rt_ctx,
@@ -450,7 +450,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         let key_manager = self
             .key_manager
             .as_ref()
-            .map(|mgr| mgr.with_context(ctx.tokio, ctx.io_ctx.clone()));
+            .map(|mgr| mgr.with_context(ctx.io_ctx.clone()));
         let mut ctx =
             RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
                 &mut ctx,
@@ -511,7 +511,7 @@ impl<R: Runtime> transaction::dispatcher::Dispatcher for Dispatcher<R> {
         let key_manager = self
             .key_manager
             .as_ref()
-            .map(|mgr| mgr.with_context(ctx.tokio, ctx.io_ctx.clone()));
+            .map(|mgr| mgr.with_context(ctx.io_ctx.clone()));
         let mut ctx =
             RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
                 &mut ctx,
