@@ -42,13 +42,11 @@ function objsFromMaps(v: unknown): unknown {
 }
 
 export function toCBOR(v: unknown) {
-    // oasis-core uses a special case to marshal `nil` to an empty byte string.
-    if (v == null) return new Uint8Array();
     return cborg.encode(v) as Uint8Array;
 }
 
 export function fromCBOR(u8: Uint8Array) {
-    // oasis-core uses a special case to marshal `nil` to an empty byte string.
+    // oasis-core uses a special case to unmarshal an empty byte string to `nil`.
     if (!u8.length) return undefined;
     return objsFromMaps(cborg.decode(u8, {useMaps: true}));
 }

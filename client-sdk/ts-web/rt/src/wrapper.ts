@@ -85,18 +85,18 @@ export class QueryWrapper<ARGS, DATA> {
             runtime_id: runtimeID,
             round: oasis.runtime.CLIENT_ROUND_LATEST,
             method: method,
-            args: undefined,
+            args: oasis.misc.toCBOR(null),
         };
     }
 
     setArgs(args: ARGS) {
-        this.request.args = args;
+        this.request.args = oasis.misc.toCBOR(args);
         return this;
     }
 
     async query(nic: oasis.client.NodeInternal) {
         const response = await nic.runtimeClientQuery(this.request);
-        return response.data as DATA;
+        return oasis.misc.fromCBOR(response.data) as DATA;
     }
 }
 

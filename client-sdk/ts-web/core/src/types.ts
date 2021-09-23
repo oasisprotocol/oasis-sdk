@@ -2085,14 +2085,14 @@ export interface RuntimeClientQueryRequest {
     runtime_id: Uint8Array;
     round: longnum;
     method: string;
-    args: unknown;
+    args: Uint8Array;
 }
 
 /**
  * QueryResponse is a response to the runtime query.
  */
 export interface RuntimeClientQueryResponse {
-    data: unknown;
+    data: Uint8Array;
 }
 
 /**

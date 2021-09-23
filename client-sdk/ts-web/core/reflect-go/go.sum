@@ -817,8 +817,8 @@ github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+
 github.com/oasisprotocol/curve25519-voi v0.0.0-20210505121811-294cf0fbfb43 h1:qnvTxmtjcuRH5NiI0Kiku6TXi2VReR/PxHFf3ahFYrg=
 github.com/oasisprotocol/curve25519-voi v0.0.0-20210505121811-294cf0fbfb43/go.mod h1:TLJifjWF6eotcfzDjKZsDqWJ+73Uvj/N85MvVyrvynM=
 github.com/oasisprotocol/deoxysii v0.0.0-20200527154044-851aec403956/go.mod h1:cE5EgXTIhq5oAVdZ7LZd1FjTRLALPEzv93CWzBtDkyI=
-github.com/oasisprotocol/oasis-core/go v0.2102.1-0.20210923120148-6947544e0d74 h1:hOM+BRol2DNTFl8k+OnZ5bojEuOFlANlXRSHXWXz5lA=
-github.com/oasisprotocol/oasis-core/go v0.2102.1-0.20210923120148-6947544e0d74/go.mod h1:sg5tnHtwOgucIqmFaSVyV2gGTXW1RpZq2EYNbIf03y8=
+github.com/oasisprotocol/oasis-core/go v0.2102.1-0.20210923195430-855e396abf87 h1:YCQBI84xc7IJq/wBrAhWANRyF9gyMZN4G0z1ScnEG8E=
+github.com/oasisprotocol/oasis-core/go v0.2102.1-0.20210923195430-855e396abf87/go.mod h1:sg5tnHtwOgucIqmFaSVyV2gGTXW1RpZq2EYNbIf03y8=
 github.com/oklog/oklog v0.3.2/go.mod h1:FCV+B7mhrz4o+ueLpx+KqkyXRGMWOYEvfiXtdGtbWGs=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=

@@ -7,7 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 oasis-runtime-sdk = { path = "../../../runtime-sdk", features = ["unsafe-allow-debug"] }
-cbor = { version = "0.2.0", package = "oasis-cbor" }
+cbor = { version = "0.2.1", package = "oasis-cbor" }
 
 # Third party.
 thiserror = "1.0"

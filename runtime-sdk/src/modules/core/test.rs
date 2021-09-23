@@ -421,12 +421,12 @@ fn test_get_batch_weight_limits_query() {
     let res = dispatcher::Dispatcher::<GasWasterRuntime>::dispatch_query(
         &mut ctx,
         BATCH_WEIGHT_LIMIT_QUERY_METHOD,
-        cbor::Value::Simple(cbor::SimpleValue::NullValue),
+        cbor::to_vec(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
     )
     .expect("batch weight limit query should work");
     assert_eq!(
         expected,
-        cbor::from_value(res).unwrap(),
+        cbor::from_slice(&res).unwrap(),
         "querying empty weights should return correct limits"
     );
 
@@ -443,12 +443,12 @@ fn test_get_batch_weight_limits_query() {
     let res = dispatcher::Dispatcher::<GasWasterRuntime>::dispatch_query(
         &mut ctx,
         BATCH_WEIGHT_LIMIT_QUERY_METHOD,
-        cbor::Value::Simple(cbor::SimpleValue::NullValue),
+        cbor::to_vec(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
     )
     .expect("batch weight limit query should work");
     assert_eq!(
         expected,
-        cbor::from_value(res).unwrap(),
+        cbor::from_slice(&res).unwrap(),
         "querying weights should return correct limits"
     );
 }

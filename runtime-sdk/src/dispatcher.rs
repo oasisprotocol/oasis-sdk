@@ -340,8 +340,11 @@ impl<R: Runtime> Dispatcher<R> {
     pub fn dispatch_query<C: BatchContext>(
         ctx: &mut C,
         method: &str,
-        args: cbor::Value,
-    ) -> Result<cbor::Value, RuntimeError> {
+        args: Vec<u8>,
+    ) -> Result<Vec<u8>, RuntimeError> {
+        let args = cbor::from_slice(&args)
+            .map_err(|err| modules::core::Error::InvalidArgument(err.into()))?;
+
         // Catch any panics that occur during query dispatch.
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             // Execute the query.
@@ -357,6 +360,7 @@ impl<R: Runtime> Dispatcher<R> {
             }
         }))
         .map_err(|err| -> RuntimeError { Error::QueryAborted(format!("{:?}", err)).into() })?
+        .map(cbor::to_vec)
     }
 }
 
@@ -505,8 +509,8 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         &self,
         mut ctx: transaction::Context<'_>,
         method: &str,
-        args: cbor::Value,
-    ) -> Result<cbor::Value, RuntimeError> {
+        args: Vec<u8>,
+    ) -> Result<Vec<u8>, RuntimeError> {
         // Prepare dispatch context.
         let key_manager = self
             .key_manager
