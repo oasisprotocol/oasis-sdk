@@ -189,12 +189,18 @@ pub trait API {
         amount: &token::BaseUnits,
     ) -> Result<(), modules::core::Error>;
 
-    /// Check and update transaction signer account nonces.
+    /// Check transaction signer account nonces.
     /// Return payee address.
-    fn check_and_update_signer_nonces<C: Context>(
+    fn check_signer_nonces<C: Context>(
         ctx: &mut C,
         tx: &Transaction,
     ) -> Result<Option<Address>, modules::core::Error>;
+
+    /// Update transaction signer account nonces.
+    fn update_signer_nonces<C: Context>(
+        ctx: &mut C,
+        tx: &Transaction,
+    ) -> Result<(), modules::core::Error>;
 }
 
 /// State schema constants.
@@ -516,19 +522,21 @@ impl API for Module {
         Ok(())
     }
 
-    fn check_and_update_signer_nonces<C: Context>(
+    fn check_signer_nonces<C: Context>(
         ctx: &mut C,
         tx: &Transaction,
     ) -> Result<Option<Address>, modules::core::Error> {
+        // TODO: Optimize the check/update pair so that the accounts are
+        // fetched only once.
         let params = Self::params(ctx.runtime_state());
         // Fetch information about each signer.
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let mut accounts =
+        let accounts =
             storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
         let mut payee = None;
         for si in tx.auth_info.signer_info.iter() {
             let address = si.address_spec.address();
-            let mut account: types::Account = accounts.get(&address).unwrap_or_default();
+            let account: types::Account = accounts.get(&address).unwrap_or_default();
             if account.nonce != si.nonce {
                 // Reject unles nonce checking is disabled.
                 if !params.debug_disable_nonce_check {
@@ -540,14 +548,28 @@ impl API for Module {
             if payee.is_none() {
                 payee = Some(address);
             }
+        }
+        Ok(payee)
+    }
+
+    fn update_signer_nonces<C: Context>(
+        ctx: &mut C,
+        tx: &Transaction,
+    ) -> Result<(), modules::core::Error> {
+        // Fetch information about each signer.
+        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let mut accounts =
+            storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
+        for si in tx.auth_info.signer_info.iter() {
+            let address = si.address_spec.address();
+            let mut account: types::Account = accounts.get(&address).unwrap_or_default();
 
             // Update nonce.
             // TODO: Could support an option to defer this.
             account.nonce += 1;
             accounts.insert(&address, account);
         }
-
-        Ok(payee)
+        Ok(())
     }
 }
 
@@ -748,7 +770,7 @@ impl module::AuthHandler for Module {
         ctx: &mut C,
         tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
-        let payee = Self::check_and_update_signer_nonces(ctx, tx)?;
+        let payee = Self::check_signer_nonces(ctx, tx)?;
 
         // Charge the specified amount of fees.
         if !tx.auth_info.fee.amount.amount().is_zero() {
@@ -762,7 +784,7 @@ impl module::AuthHandler for Module {
             // Bump transaction priority.
             Core::add_priority(ctx, gas_price.try_into().unwrap_or(u64::MAX))?;
         }
-        Ok(())
+        Self::update_signer_nonces(ctx, tx)
     }
 }
 

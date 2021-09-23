@@ -34,14 +34,14 @@ type V1 interface {
 	Call(address []byte, value []byte, data []byte) *client.TransactionBuilder
 
 	// Deposit generates a deposit transaction that moves tokens from the
-	// given SDK account into the given EVM account.  The denomination must
+	// caller's SDK account into the given EVM account.  The denomination must
 	// be identical to the denomination set in the EVM module's parameters.
-	Deposit(from types.Address, to []byte, amount types.BaseUnits) *client.TransactionBuilder
+	Deposit(to []byte, amount types.BaseUnits) *client.TransactionBuilder
 
 	// Withdraw generates a withdraw transaction that moves tokens from the
-	// given EVM account into the given SDK account.  The denomination must
+	// caller's EVM account into the given SDK account.  The denomination must
 	// be identical to the denomination set in the EVM module's parameters.
-	Withdraw(from []byte, to types.Address, amount types.BaseUnits) *client.TransactionBuilder
+	Withdraw(to types.Address, amount types.BaseUnits) *client.TransactionBuilder
 
 	// PeekStorage queries the EVM storage.
 	PeekStorage(ctx context.Context, address []byte, index []byte) ([]byte, error)
@@ -72,18 +72,16 @@ func (a *v1) Call(address []byte, value []byte, data []byte) *client.Transaction
 }
 
 // Implements V1.
-func (a *v1) Deposit(from types.Address, to []byte, amount types.BaseUnits) *client.TransactionBuilder {
+func (a *v1) Deposit(to []byte, amount types.BaseUnits) *client.TransactionBuilder {
 	return client.NewTransactionBuilder(a.rtc, methodDeposit, &Deposit{
-		From:   from,
 		To:     to,
 		Amount: amount,
 	})
 }
 
 // Implements V1.
-func (a *v1) Withdraw(from []byte, to types.Address, amount types.BaseUnits) *client.TransactionBuilder {
+func (a *v1) Withdraw(to types.Address, amount types.BaseUnits) *client.TransactionBuilder {
 	return client.NewTransactionBuilder(a.rtc, methodWithdraw, &Withdraw{
-		From:   from,
 		To:     to,
 		Amount: amount,
 	})
