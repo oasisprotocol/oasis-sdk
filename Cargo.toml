@@ -24,3 +24,4 @@ exclude = [
     # Test contracts.
     "tests/contracts"
 ]
+resolver = "2"

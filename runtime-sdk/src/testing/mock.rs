@@ -34,7 +34,6 @@ impl Runtime for EmptyRuntime {
 
 /// Mock dispatch context factory.
 pub struct Mock {
-    pub tokio: tokio::runtime::Runtime,
     pub host_info: HostInfo,
     pub runtime_header: roothash::Header,
     pub runtime_round_results: roothash::RoundResults,
@@ -65,7 +64,6 @@ impl Mock {
         mode: Mode,
     ) -> RuntimeBatchContext<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
         RuntimeBatchContext::new(
-            &self.tokio,
             mode,
             &self.host_info,
             None,
@@ -92,9 +90,6 @@ impl Default for Mock {
             .new(Box::new(mkvs::sync::NoopReadSyncer));
 
         Self {
-            tokio: tokio::runtime::Builder::new_current_thread()
-                .build()
-                .unwrap(),
             host_info: HostInfo {
                 runtime_id: Namespace::default(),
                 consensus_backend: "mock".to_string(),

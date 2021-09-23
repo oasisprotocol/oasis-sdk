@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use io_context::Context as IoContext;
 use tiny_keccak::{Hasher, TupleHash};
-use tokio::runtime::Runtime as TokioRuntime;
+use tokio::runtime::Handle as TokioHandle;
 
 pub use oasis_core_keymanager_api_common::{
     KeyManagerError, KeyPair, KeyPairId, PrivateKey, PublicKey, SignedPublicKey,
@@ -49,12 +49,8 @@ impl KeyManagerClient {
     }
 
     /// Create a client proxy which will forward calls to the inner client using the given context.
-    pub(crate) fn with_context<'a>(
-        &'a self,
-        tokio: &'a TokioRuntime,
-        ctx: Arc<IoContext>,
-    ) -> KeyManagerClientWithContext<'a> {
-        KeyManagerClientWithContext::new(self, tokio, ctx)
+    pub(crate) fn with_context(&self, ctx: Arc<IoContext>) -> KeyManagerClientWithContext<'_> {
+        KeyManagerClientWithContext::new(self, ctx)
     }
 
     /// Clear local key cache.
@@ -91,17 +87,12 @@ impl KeyManagerClient {
 /// a default io context for all calls.
 pub struct KeyManagerClientWithContext<'a> {
     parent: &'a KeyManagerClient,
-    tokio: &'a TokioRuntime,
     ctx: Arc<IoContext>,
 }
 
 impl<'a> KeyManagerClientWithContext<'a> {
-    fn new(
-        parent: &'a KeyManagerClient,
-        tokio: &'a TokioRuntime,
-        ctx: Arc<IoContext>,
-    ) -> KeyManagerClientWithContext<'a> {
-        KeyManagerClientWithContext { parent, tokio, ctx }
+    fn new(parent: &'a KeyManagerClient, ctx: Arc<IoContext>) -> KeyManagerClientWithContext<'a> {
+        KeyManagerClientWithContext { parent, ctx }
     }
 
     /// Clear local key cache.
@@ -128,8 +119,7 @@ impl<'a> KeyManagerClientWithContext<'a> {
     /// See the oasis-core documentation for details. This variant of the method
     /// synchronously blocks for the result.
     pub fn get_or_create_keys(&self, key_pair_id: KeyPairId) -> Result<KeyPair, KeyManagerError> {
-        self.tokio
-            .block_on(self.get_or_create_keys_async(key_pair_id))
+        TokioHandle::current().block_on(self.get_or_create_keys_async(key_pair_id))
     }
 
     /// Get public key for a key pair id.
@@ -152,7 +142,7 @@ impl<'a> KeyManagerClientWithContext<'a> {
         &self,
         key_pair_id: KeyPairId,
     ) -> Result<Option<SignedPublicKey>, KeyManagerError> {
-        self.tokio.block_on(self.get_public_key_async(key_pair_id))
+        TokioHandle::current().block_on(self.get_public_key_async(key_pair_id))
     }
 }
 
@@ -160,7 +150,6 @@ impl<'a> Clone for KeyManagerClientWithContext<'a> {
     fn clone(&self) -> Self {
         KeyManagerClientWithContext {
             parent: self.parent,
-            tokio: self.tokio,
             ctx: self.ctx.clone(),
         }
     }
