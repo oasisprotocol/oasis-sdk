@@ -16,18 +16,16 @@ pub struct Call {
     pub data: Vec<u8>,
 }
 
-/// Transaction body for depositing SDK account tokens into EVM account.
+/// Transaction body for depositing caller's SDK account tokens into EVM account.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Deposit {
-    pub from: Address,
     pub to: H160,
     pub amount: token::BaseUnits,
 }
 
-/// Transaction body for withdrawing SDK account tokens from EVM account.
+/// Transaction body for withdrawing SDK account tokens from the caller's EVM account.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Withdraw {
-    pub from: H160,
     pub to: Address,
     pub amount: token::BaseUnits,
 }

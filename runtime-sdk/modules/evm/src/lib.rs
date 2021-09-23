@@ -33,6 +33,9 @@ use oasis_runtime_sdk::{
 use evm::backend::ApplyBackend;
 use types::{H160, H256, U256};
 
+#[cfg(test)]
+mod test;
+
 /// Unique module name.
 const MODULE_NAME: &str = "evm";
 
@@ -84,20 +87,16 @@ pub enum Error {
     #[sdk_error(code = 4)]
     FeeOverflow,
 
-    #[error("value withdrawal failed")]
-    #[sdk_error(code = 5)]
-    ValueWithdrawalFailed,
-
     #[error("gas limit too low: {0} required")]
-    #[sdk_error(code = 6)]
+    #[sdk_error(code = 5)]
     GasLimitTooLow(u64),
 
     #[error("insufficient balance")]
-    #[sdk_error(code = 7)]
+    #[sdk_error(code = 6)]
     InsufficientBalance,
 
     #[error("invalid denomination")]
-    #[sdk_error(code = 8)]
+    #[sdk_error(code = 7)]
     InvalidDenomination,
 
     #[error("core: {0}")]
@@ -207,7 +206,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        Self::do_evm(caller, value, ctx, |exec, gas_limit| {
+        Self::do_evm(caller, ctx, |exec, gas_limit| {
             let address = exec.create_address(evm::CreateScheme::Legacy {
                 caller: caller.into(),
             });
@@ -230,7 +229,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        Self::do_evm(caller, value, ctx, |exec, gas_limit| {
+        Self::do_evm(caller, ctx, |exec, gas_limit| {
             exec.transact_call(caller.into(), address.into(), value.into(), data, gas_limit)
         })
     }
@@ -335,7 +334,7 @@ impl<Cfg: Config> API for Module<Cfg> {
 impl<Cfg: Config> Module<Cfg> {
     const EVM_CONFIG: EVMConfig = EVMConfig::istanbul();
 
-    fn do_evm<C, F, V>(source: H160, value: U256, ctx: &mut C, f: F) -> Result<V, Error>
+    fn do_evm<C, F, V>(source: H160, ctx: &mut C, f: F) -> Result<V, Error>
     where
         F: FnOnce(
             &mut StackExecutor<'static, MemoryStackState<'_, 'static, evm_backend::Backend<'_, C>>>,
@@ -363,12 +362,6 @@ impl<Cfg: Config> Module<Cfg> {
         let metadata = StackSubstateMetadata::new(gas_limit, &Self::EVM_CONFIG);
         let stackstate = MemoryStackState::new(metadata, &backend);
         let mut executor = StackExecutor::new(stackstate, &Self::EVM_CONFIG);
-
-        // Withdraw the value from the account.
-        executor
-            .state_mut()
-            .withdraw(source.into(), value.into())
-            .map_err(|_| Error::ValueWithdrawalFailed)?;
 
         // Run EVM.
         let (exit_reason, exit_value) = f(&mut executor, gas_limit);
@@ -452,14 +445,16 @@ impl<Cfg: Config> Module<Cfg> {
         let params = Self::params(ctx.runtime_state());
         core::Module::use_tx_gas(ctx, params.gas_costs.tx_deposit)?;
 
-        Self::deposit(ctx, body.from, body.to, body.amount)
+        Self::deposit(ctx, ctx.tx_caller_address(), body.to, body.amount)
     }
 
     fn tx_withdraw<C: TxContext>(ctx: &mut C, body: types::Withdraw) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
         core::Module::use_tx_gas(ctx, params.gas_costs.tx_withdraw)?;
 
-        Self::withdraw(ctx, body.from, body.to, body.amount)
+        let evm_acct_addr = Self::derive_caller(ctx)?;
+
+        Self::withdraw(ctx, evm_acct_addr, body.to, body.amount)
     }
 
     fn q_peek_storage<C: Context>(
@@ -502,6 +497,20 @@ impl<Cfg: Config> module::MethodHandler for Module<Cfg> {
     }
 }
 
+impl<Cfg: Config> Module<Cfg> {
+    /// Initialize state from genesis.
+    fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
+        // Set genesis parameters.
+        Self::set_params(ctx.runtime_state(), genesis.parameters);
+    }
+
+    /// Migrate state from a previous version.
+    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
+        // No migrations currently supported.
+        false
+    }
+}
+
 impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
     type Genesis = Genesis;
 
@@ -513,13 +522,13 @@ impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
         let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
         if version == 0 {
             // Initialize state from genesis.
-            Self::set_params(ctx.runtime_state(), genesis.parameters);
+            Self::init(ctx, genesis);
             meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
             return true;
         }
 
-        // Migrations are not used.
-        false
+        // Perform migration.
+        Self::migrate(ctx, version)
     }
 }
 
@@ -538,10 +547,10 @@ impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
         let evm_acct_addr = Self::derive_caller_from_tx_auth_info(&tx.auth_info)
             .map_err(|e| CoreError::MalformedTransaction(anyhow::Error::new(e)))?;
 
-        // Check and update nonces on all signer accounts.
+        // Check nonces on all signer accounts.
         // Note that we can ignore the return value because the payee is already
         // checked in the above call that derives the EVM account address.
-        let _payee = Cfg::Accounts::check_and_update_signer_nonces(ctx, tx)?;
+        let _payee = Cfg::Accounts::check_signer_nonces(ctx, tx)?;
 
         // The fee should be set by the user to cover at least:
         //     gas_price * gas_limit + sdk_fees
@@ -572,7 +581,9 @@ impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
             ctx,
             *ADDRESS_EVM_TOKENS,
             &token::BaseUnits::new(fee, den),
-        )
+        )?;
+
+        Cfg::Accounts::update_signer_nonces(ctx, tx)
     }
 }
 

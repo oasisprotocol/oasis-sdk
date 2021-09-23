@@ -22,14 +22,12 @@ type Call struct {
 
 // Deposit is a transaction that deposits tokens into an EVM account.
 type Deposit struct {
-	From   types.Address   `json:"from"`
 	To     []byte          `json:"to"`
 	Amount types.BaseUnits `json:"amount"`
 }
 
 // Withdraw is a transaction that withdraws tokens from an EVM account.
 type Withdraw struct {
-	From   []byte          `json:"from"`
 	To     types.Address   `json:"to"`
 	Amount types.BaseUnits `json:"amount"`
 }

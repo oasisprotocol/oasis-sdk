@@ -61,8 +61,8 @@ func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer sig
 	return out, nil
 }
 
-func evmDeposit(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, from types.Address, to []byte, amount types.BaseUnits) error {
-	tx := e.Deposit(from, to, amount).GetTransaction()
+func evmDeposit(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, to []byte, amount types.BaseUnits) error {
+	tx := e.Deposit(to, amount).GetTransaction()
 	_, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, 0)
 	if err != nil {
 		return err
@@ -70,8 +70,8 @@ func evmDeposit(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer 
 	return nil
 }
 
-func evmWithdraw(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, from []byte, to types.Address, amount types.BaseUnits) error {
-	tx := e.Withdraw(from, to, amount).GetTransaction()
+func evmWithdraw(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, to types.Address, amount types.BaseUnits) error {
+	tx := e.Withdraw(to, amount).GetTransaction()
 	_, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, 0)
 	if err != nil {
 		return err
@@ -166,7 +166,7 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 	}
 
 	log.Info("depositing 10M tokens into Dave's EVM account")
-	if err = evmDeposit(ctx, rtc, e, signer, testing.Dave.Address, daveEVMAddr, types.NewBaseUnits(*quantity.NewFromUint64(10000000), types.NativeDenomination)); err != nil {
+	if err = evmDeposit(ctx, rtc, e, signer, daveEVMAddr, types.NewBaseUnits(*quantity.NewFromUint64(10000000), types.NativeDenomination)); err != nil {
 		return err
 	}
 
@@ -184,7 +184,7 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 	}
 
 	log.Info("withdrawing one token from Dave's EVM account")
-	if err = evmWithdraw(ctx, rtc, e, signer, daveEVMAddr, testing.Dave.Address, types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)); err != nil {
+	if err = evmWithdraw(ctx, rtc, e, signer, testing.Dave.Address, types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)); err != nil {
 		return err
 	}
 
@@ -201,6 +201,68 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
 	}
 
+	log.Info("depositing 89.9M tokens into Dave's EVM account")
+	if err = evmDeposit(ctx, rtc, e, signer, daveEVMAddr, types.NewBaseUnits(*quantity.NewFromUint64(89900000), types.NativeDenomination)); err != nil {
+		return err
+	}
+
+	log.Info("re-checking Dave's account balance")
+	b, err = ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := b.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(100001)) != 0 {
+			return fmt.Errorf("Dave's account balance is wrong (expected 100001, got %s)", q.String()) //nolint: stylecheck
+		}
+	} else {
+		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
+	}
+
+	log.Info("checking Alice's account balance")
+	b, err = ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := b.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(10000000)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 10000000, got %s)", q.String()) //nolint: stylecheck
+		}
+	} else {
+		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
+	}
+
+	log.Info("depositing 10 tokens into Dave's EVM account from Alice's SDK account")
+	if err = evmDeposit(ctx, rtc, e, testing.Alice.Signer, daveEVMAddr, types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination)); err != nil {
+		return err
+	}
+
+	log.Info("re-checking Alice's account balance")
+	b, err = ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := b.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(9999990)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 9999990, got %s)", q.String()) //nolint: stylecheck
+		}
+	} else {
+		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
+	}
+
+	log.Info("re-checking Dave's account balance")
+	b, err = ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
+	if err != nil {
+		return err
+	}
+	if q, ok := b.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(100001)) != 0 {
+			return fmt.Errorf("Dave's account balance is wrong (expected 100001, got %s)", q.String()) //nolint: stylecheck
+		}
+	} else {
+		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
+	}
+
 	return nil
 }
 
@@ -210,7 +272,11 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	signer := testing.Dave.Signer
 	e := evm.NewV1(rtc)
 
-	value, err := hex.DecodeString(strings.Repeat("0", 64))
+	// By setting the value to 1, the EVM will transfer 1 unit from the caller's
+	// EVM account into the contract's EVM account.
+	// The test contract doesn't actually need this, but we want to test value
+	// transfers in our end-to-end tests.
+	value, err := hex.DecodeString(strings.Repeat("0", 64-1) + "1")
 	if err != nil {
 		return err
 	}
