@@ -137,7 +137,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
         .map_err(|err| {
             // Check if call failed due to gas being exhausted and return a proper error.
             if gas::is_gas_limit_exhausted(instance) {
-                core::Error::OutOfGas.into()
+                core::Error::OutOfGas(initial_gas, initial_gas).into()
             } else {
                 err
             }

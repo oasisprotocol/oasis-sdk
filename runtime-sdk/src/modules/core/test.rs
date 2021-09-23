@@ -41,32 +41,32 @@ fn test_use_gas() {
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = MAX_GAS;
 
-    ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, MAX_GAS).expect("using gas under limit should succeed");
     });
 
-    ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, MAX_GAS)
             .expect("gas across separate transactions shouldn't accumulate");
     });
 
-    ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, MAX_GAS).unwrap();
         Core::use_tx_gas(&mut tx_ctx, 1).expect_err("gas in same transaction should accumulate");
     });
 
-    ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, 1).unwrap();
         Core::use_tx_gas(&mut tx_ctx, u64::MAX).expect_err("overflow should cause error");
     });
 
     let mut big_tx = tx.clone();
     big_tx.auth_info.fee.gas = u64::MAX;
-    ctx.with_tx(big_tx, |mut tx_ctx, _call| {
+    ctx.with_tx(0, big_tx, |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, u64::MAX).expect_err("batch overflow should cause error");
     });
 
-    ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, 1).expect_err("batch gas should accumulate");
     });
 
@@ -75,7 +75,7 @@ fn test_use_gas() {
     let mut ctx = mock.create_check_ctx();
     let mut big_tx = tx.clone();
     big_tx.auth_info.fee.gas = u64::MAX;
-    ctx.with_tx(big_tx, |mut tx_ctx, _call| {
+    ctx.with_tx(0, big_tx, |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, u64::MAX)
             .expect("batch overflow should not happen in check-tx");
     });
@@ -142,6 +142,7 @@ impl Runtime for GasWasterRuntime {
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
                     gas_costs: super::GasCosts {
+                        tx_byte: 0,
                         auth_signature: Self::AUTH_SIGNATURE_GAS,
                         auth_multisig_signer: Self::AUTH_MULTISIG_GAS,
                         callformat_x25519_deoxysii: 0,
@@ -312,7 +313,7 @@ fn test_add_priority() {
     Core::add_priority(&mut ctx, 11).expect("adding priority should succeed");
 
     let tx = mock::transaction();
-    ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::add_priority(&mut tx_ctx, 10)
             .expect("adding priority from tx context should succeed");
     });
@@ -350,7 +351,7 @@ fn test_add_weights() {
     );
 
     let tx = mock::transaction();
-    ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::add_weight(&mut tx_ctx, "test_weight".into(), 1)
             .expect("adding weight should succeed");
         Core::add_weight(&mut tx_ctx, "test_weight2".into(), 10)
@@ -465,6 +466,7 @@ fn test_min_gas_price() {
             max_tx_signers: 8,
             max_multisig_signers: 8,
             gas_costs: super::GasCosts {
+                tx_byte: 0,
                 auth_signature: GasWasterRuntime::AUTH_SIGNATURE_GAS,
                 auth_multisig_signer: GasWasterRuntime::AUTH_MULTISIG_GAS,
                 callformat_x25519_deoxysii: 0,
@@ -506,13 +508,13 @@ fn test_min_gas_price() {
         },
     };
 
-    ctx.with_tx(tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
         Core::before_handle_call(&mut tx_ctx, &call).expect_err("gas price should be too low");
     });
 
     tx.auth_info.fee.amount = token::BaseUnits::new(100000, token::Denomination::NATIVE);
 
-    ctx.with_tx(tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
         Core::before_handle_call(&mut tx_ctx, &call).expect("gas price should be ok");
     });
 }

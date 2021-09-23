@@ -124,7 +124,7 @@ fn test_evm_calls() {
             },
         },
     };
-    ctx.with_tx(deposit_tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, deposit_tx, |mut tx_ctx, call| {
         EVM::tx_deposit(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("deposit should succeed");
 
@@ -153,7 +153,7 @@ fn test_evm_calls() {
             },
         },
     };
-    let erc20_addr = ctx.with_tx(create_tx, |mut tx_ctx, call| {
+    let erc20_addr = ctx.with_tx(0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
             &EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("create should succeed"),
@@ -188,7 +188,7 @@ fn test_evm_calls() {
             },
         },
     };
-    let erc20_name = ctx.with_tx(call_name_tx, |mut tx_ctx, call| {
+    let erc20_name = ctx.with_tx(0, call_name_tx, |mut tx_ctx, call| {
         let name = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call name should succeed");
 
@@ -222,7 +222,7 @@ fn test_evm_calls() {
             },
         },
     };
-    ctx.with_tx(withdraw_tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, withdraw_tx, |mut tx_ctx, call| {
         EVM::tx_withdraw(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("withdraw should succeed");
 
@@ -308,7 +308,7 @@ fn test_evm_runtime() {
             },
         },
     };
-    ctx.with_tx(deposit_tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, deposit_tx, |mut tx_ctx, call| {
         EVM::tx_deposit(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("deposit should succeed");
 
@@ -337,7 +337,7 @@ fn test_evm_runtime() {
             },
         },
     };
-    let erc20_addr = ctx.with_tx(create_tx, |mut tx_ctx, call| {
+    let erc20_addr = ctx.with_tx(0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
             &EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("create should succeed"),
@@ -372,7 +372,7 @@ fn test_evm_runtime() {
             },
         },
     };
-    let erc20_name = ctx.with_tx(call_name_tx, |mut tx_ctx, call| {
+    let erc20_name = ctx.with_tx(0, call_name_tx, |mut tx_ctx, call| {
         let name = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call name should succeed");
 
@@ -416,7 +416,7 @@ fn test_evm_runtime() {
             },
         },
     };
-    let transfer_ret = ctx.with_tx(call_transfer_tx, |mut tx_ctx, call| {
+    let transfer_ret = ctx.with_tx(0, call_transfer_tx, |mut tx_ctx, call| {
         let ret = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call transfer should succeed");
 
@@ -451,7 +451,7 @@ fn test_evm_runtime() {
             },
         },
     };
-    ctx.with_tx(withdraw_tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, withdraw_tx, |mut tx_ctx, call| {
         EVM::tx_withdraw(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("withdraw should succeed");
 

@@ -131,7 +131,7 @@ impl sdk::module::AuthHandler for Module {
                             nonce: params.nonce,
                         }],
                         fee: transaction::Fee {
-                            gas: 400,
+                            gas: 500,
                             ..Default::default()
                         },
                     },

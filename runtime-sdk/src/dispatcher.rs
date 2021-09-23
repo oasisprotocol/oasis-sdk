@@ -1,6 +1,7 @@
 //! Transaction dispatcher.
 use std::{
     collections::{BTreeMap, BTreeSet},
+    convert::TryInto,
     marker::PhantomData,
     sync::{atomic::AtomicBool, Arc},
 };
@@ -163,6 +164,7 @@ impl<R: Runtime> Dispatcher<R> {
     /// Dispatch a runtime transaction in the given context.
     pub fn dispatch_tx<C: BatchContext>(
         ctx: &mut C,
+        tx_size: u32,
         tx: types::transaction::Transaction,
         index: usize,
     ) -> Result<DispatchResult, Error> {
@@ -171,7 +173,7 @@ impl<R: Runtime> Dispatcher<R> {
             return Ok(err.into_call_result().into());
         }
 
-        let (result, messages) = ctx.with_tx(tx, |mut ctx, call| {
+        let (result, messages) = ctx.with_tx(tx_size, tx, |mut ctx, call| {
             // Decode call based on specified call format.
             let (call, call_format_metadata) = match callformat::decode_call(&ctx, call, index) {
                 Ok(Some(result)) => result,
@@ -225,8 +227,12 @@ impl<R: Runtime> Dispatcher<R> {
     }
 
     /// Check whether the given transaction is valid.
-    pub fn check_tx<C: BatchContext>(ctx: &mut C, tx: Transaction) -> Result<CheckTxResult, Error> {
-        let dispatch = Self::dispatch_tx(ctx, tx, usize::MAX)?;
+    pub fn check_tx<C: BatchContext>(
+        ctx: &mut C,
+        tx_size: u32,
+        tx: Transaction,
+    ) -> Result<CheckTxResult, Error> {
+        let dispatch = Self::dispatch_tx(ctx, tx_size, tx, usize::MAX)?;
         match dispatch.result {
             module::CallResult::Ok(_) => Ok(CheckTxResult {
                 error: Default::default(),
@@ -256,10 +262,11 @@ impl<R: Runtime> Dispatcher<R> {
     /// Execute the given transaction.
     pub fn execute_tx<C: BatchContext>(
         ctx: &mut C,
+        tx_size: u32,
         tx: Transaction,
         index: usize,
     ) -> Result<ExecuteTxResult, Error> {
-        let dispatch_result = Self::dispatch_tx(ctx, tx, index)?;
+        let dispatch_result = Self::dispatch_tx(ctx, tx_size, tx, index)?;
         let output: types::transaction::CallResult = callformat::encode_result(
             ctx,
             dispatch_result.result,
@@ -391,6 +398,9 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         let mut txs = Vec::with_capacity(batch.len());
         let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
         for tx in batch.iter() {
+            let tx_size = tx.len().try_into().map_err(|_| {
+                Error::MalformedTransactionInBatch(anyhow!("transaction too large"))
+            })?;
             // It is an error to include a malformed transaction in a batch. So instead of only
             // reporting a failed execution result, we fail the whole batch. This will make the compute
             // node vote for failure and the round will fail.
@@ -398,7 +408,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             // Correct proposers should only include transactions which have passed check_tx.
             let tx = Self::decode_tx(&mut ctx, tx)
                 .map_err(|err| Error::MalformedTransactionInBatch(err.into()))?;
-            txs.push(tx.clone());
+            txs.push((tx_size, tx.clone()));
 
             if prefetch_enabled {
                 Self::prefetch_tx(&mut prefixes, tx)?;
@@ -417,8 +427,8 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
 
         // Execute the batch.
         let mut results = Vec::with_capacity(batch.len());
-        for (index, tx) in txs.into_iter().enumerate() {
-            results.push(Self::execute_tx(&mut ctx, tx, index)?);
+        for (index, (tx_size, tx)) in txs.into_iter().enumerate() {
+            results.push(Self::execute_tx(&mut ctx, tx_size, tx, index)?);
         }
 
         // Run end block hooks.
@@ -466,15 +476,18 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         R::migrate(&mut ctx);
 
         // Prefetch.
-        let mut txs: Vec<Result<Transaction, RuntimeError>> = Vec::with_capacity(batch.len());
+        let mut txs: Vec<Result<_, RuntimeError>> = Vec::with_capacity(batch.len());
         let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
         for tx in batch.iter() {
+            let tx_size = tx.len().try_into().map_err(|_| {
+                Error::MalformedTransactionInBatch(anyhow!("transaction too large"))
+            })?;
             let res = match Self::decode_tx(&mut ctx, tx) {
                 Ok(tx) => {
                     if prefetch_enabled {
-                        Self::prefetch_tx(&mut prefixes, tx.clone()).map(|_| tx)
+                        Self::prefetch_tx(&mut prefixes, tx.clone()).map(|_| (tx_size, tx))
                     } else {
-                        Ok(tx)
+                        Ok((tx_size, tx))
                     }
                 }
                 Err(err) => Err(err.into()),
@@ -490,7 +503,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         let mut results = Vec::with_capacity(batch.len());
         for tx in txs.into_iter() {
             match tx {
-                Ok(tx) => results.push(Self::check_tx(&mut ctx, tx)?),
+                Ok((tx_size, tx)) => results.push(Self::check_tx(&mut ctx, tx_size, tx)?),
                 Err(err) => results.push(CheckTxResult {
                     error: err,
                     meta: None,

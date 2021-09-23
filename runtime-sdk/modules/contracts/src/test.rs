@@ -59,7 +59,7 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         let code_id = Contracts::tx_upload(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("upload should succeed")
             .id;
@@ -104,7 +104,7 @@ fn deploy_hello_contract<C: BatchContext>(
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         let instance_id =
             Contracts::tx_instantiate(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("instantiate should succeed")
@@ -220,7 +220,7 @@ fn test_hello_contract_call() {
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
@@ -302,7 +302,7 @@ fn test_hello_contract_call() {
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
@@ -450,7 +450,7 @@ fn test_hello_contract_subcalls() {
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect_err("call should fail");
 
@@ -496,7 +496,7 @@ fn test_hello_contract_query() {
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
@@ -533,7 +533,7 @@ fn test_hello_contract_query() {
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
@@ -570,7 +570,7 @@ fn test_hello_contract_query() {
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
@@ -619,7 +619,7 @@ fn test_hello_contract_upgrade() {
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("upgrade should succeed");
 
@@ -659,7 +659,7 @@ fn test_hello_contract_upgrade_fail_policy() {
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         let result = Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect_err("upgrade should fail");
 
@@ -701,7 +701,7 @@ fn test_hello_contract_upgrade_fail_pre() {
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         let result = Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect_err("upgrade should fail");
 
@@ -746,7 +746,7 @@ fn test_hello_contract_upgrade_fail_post() {
             },
         },
     };
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         let result = Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect_err("upgrade should fail");
 

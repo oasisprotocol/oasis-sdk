@@ -25,7 +25,7 @@ fn test_api_transfer_invalid_denomination() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::NATIVE);
 
@@ -44,7 +44,7 @@ fn test_api_transfer() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::transfer(
@@ -84,7 +84,7 @@ fn test_api_withdraw() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::withdraw(
@@ -124,7 +124,7 @@ fn test_api_escrow() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::escrow(
@@ -164,7 +164,7 @@ fn test_api_reclaim_escrow() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()); // TODO: shares.
         Consensus::reclaim_escrow(
