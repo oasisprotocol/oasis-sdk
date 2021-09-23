@@ -79,6 +79,17 @@ jobs:
           command: build
           args: --target x86_64-fortanix-unknown-sgx
 
+  check-core-versions:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: check-core-versions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Check versions
+        run: ./tests/check-core-versions.sh
+
   test-go:
     # NOTE: This name appears in GitHub's Checks API.
     name: test-go
