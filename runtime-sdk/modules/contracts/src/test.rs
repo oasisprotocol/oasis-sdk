@@ -1,5 +1,5 @@
 //! Tests for the contracts module.
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, io::Write};
 
 use oasis_runtime_sdk::{
     context,
@@ -33,6 +33,12 @@ impl Config for ContractsConfig {
 type Contracts = crate::Module<ContractsConfig>;
 
 fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
+    // Compress contract code.
+    let mut code = Vec::with_capacity(HELLO_CONTRACT_CODE.len() << 3);
+    let mut encoder = snap::write::FrameEncoder::new(&mut code);
+    encoder.write(HELLO_CONTRACT_CODE).unwrap();
+    drop(encoder); // Make sure data is flushed.
+
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
@@ -41,7 +47,7 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
             body: cbor::to_value(types::Upload {
                 abi: types::ABI::OasisV1,
                 instantiate_policy: types::Policy::Everyone,
-                code: HELLO_CONTRACT_CODE.to_vec(),
+                code,
             }),
         },
         auth_info: transaction::AuthInfo {

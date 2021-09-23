@@ -5,7 +5,7 @@
 #[cfg(test)]
 extern crate alloc;
 
-use std::convert::TryInto;
+use std::{convert::TryInto, io::Read};
 
 use thiserror::Error;
 
@@ -25,6 +25,7 @@ use oasis_runtime_sdk::{
 };
 
 mod abi;
+mod code;
 mod results;
 mod store;
 #[cfg(test)]
@@ -269,31 +270,6 @@ impl<Cfg: Config> Module<Cfg> {
         Ok(())
     }
 
-    /// Loads code with the specified code identifier.
-    fn load_code<C: Context>(ctx: &mut C, code_id: types::CodeId) -> Result<Vec<u8>, Error> {
-        // TODO: Spport local untrusted cache to avoid storage queries.
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let code_store = storage::PrefixStore::new(&mut store, &state::CODE);
-        let code = code_store
-            .get(&code_id.to_storage_key())
-            .ok_or_else(|| Error::CodeNotFound(code_id.as_u64()))?;
-
-        Ok(code)
-    }
-
-    /// Stores code with the specified code identifier.
-    fn store_code<C: Context>(
-        ctx: &mut C,
-        code_id: types::CodeId,
-        code: &[u8],
-    ) -> Result<(), Error> {
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let mut code_store = storage::PrefixStore::new(&mut store, &state::CODE);
-        code_store.insert(&code_id.to_storage_key(), code);
-
-        Ok(())
-    }
-
     /// Loads specified instance information.
     fn load_instance_info<C: Context>(
         ctx: &mut C,
@@ -341,6 +317,7 @@ impl<Cfg: Config> Module<Cfg> {
             return Err(Error::CodeTooLarge(code_size, params.max_code_size));
         }
 
+        // Account for base gas.
         Core::use_tx_gas(ctx, params.gas_costs.tx_upload)?;
         Core::use_tx_gas(
             ctx,
@@ -350,13 +327,31 @@ impl<Cfg: Config> Module<Cfg> {
                 .saturating_mul(body.code.len() as u64),
         )?;
 
+        // Decompress code.
+        let mut code = Vec::with_capacity(body.code.len());
+        let decoder = snap::read::FrameDecoder::new(body.code.as_slice());
+        decoder
+            .take(params.max_code_size.into())
+            .read_to_end(&mut code)
+            .map_err(|_| Error::CodeMalformed)?;
+
+        // Account for extra gas needed after decompression.
+        let plain_code_size: u32 = code.len().try_into().unwrap();
+        Core::use_tx_gas(
+            ctx,
+            params
+                .gas_costs
+                .tx_upload_per_byte
+                .saturating_mul(plain_code_size.saturating_sub(code_size) as u64),
+        )?;
+
         if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
             // Only fast checks are allowed.
             return Ok(types::UploadResult::default());
         }
 
         // Validate and transform the code.
-        let code = wasm::validate_and_transform::<Cfg, C>(&body.code, body.abi)?;
+        let code = wasm::validate_and_transform::<Cfg, C>(&code, body.abi)?;
         let hash = Hash::digest_bytes(&code);
 
         // Validate code size again and account for any instrumentation. This is here to avoid any
@@ -373,7 +368,7 @@ impl<Cfg: Config> Module<Cfg> {
             params
                 .gas_costs
                 .tx_upload_per_byte
-                .saturating_mul(inst_code_size.saturating_sub(code_size) as u64),
+                .saturating_mul(inst_code_size.saturating_sub(plain_code_size) as u64),
         )?;
 
         if ctx.is_check_only() {
@@ -387,17 +382,15 @@ impl<Cfg: Config> Module<Cfg> {
         tstore.insert(state::NEXT_CODE_IDENTIFIER, id.increment());
 
         // Store information about uploaded code.
-        Self::store_code_info(
-            ctx,
-            types::Code {
-                id,
-                hash,
-                abi: body.abi,
-                uploader,
-                instantiate_policy: body.instantiate_policy,
-            },
-        )?;
-        Self::store_code(ctx, id, &code)?;
+        let code_info = types::Code {
+            id,
+            hash,
+            abi: body.abi,
+            uploader,
+            instantiate_policy: body.instantiate_policy,
+        };
+        Self::store_code(ctx, &code_info, &code)?;
+        Self::store_code_info(ctx, code_info)?;
 
         Ok(types::UploadResult { id })
     }
@@ -419,7 +412,7 @@ impl<Cfg: Config> Module<Cfg> {
         // Load code information, enforce instantiation policy and load the code.
         let code_info = Self::load_code_info(ctx, body.code_id)?;
         code_info.instantiate_policy.enforce(ctx)?;
-        let code = Self::load_code(ctx, body.code_id)?;
+        let code = Self::load_code(ctx, &code_info)?;
 
         // Assign next identifier.
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
@@ -477,7 +470,7 @@ impl<Cfg: Config> Module<Cfg> {
         // Load instance information and code.
         let instance_info = Self::load_instance_info(ctx, body.id)?;
         let code_info = Self::load_code_info(ctx, instance_info.code_id)?;
-        let code = Self::load_code(ctx, instance_info.code_id)?;
+        let code = Self::load_code(ctx, &code_info)?;
 
         // Transfer any attached tokens.
         for tokens in &body.tokens {
@@ -522,7 +515,7 @@ impl<Cfg: Config> Module<Cfg> {
             return Err(Error::CodeAlreadyUpgraded(body.code_id.as_u64()));
         }
         let code_info = Self::load_code_info(ctx, instance_info.code_id)?;
-        let code = Self::load_code(ctx, instance_info.code_id)?;
+        let code = Self::load_code(ctx, &code_info)?;
 
         // Transfer any attached tokens.
         for tokens in &body.tokens {
@@ -549,7 +542,7 @@ impl<Cfg: Config> Module<Cfg> {
         // Update the contract code.
         instance_info.code_id = body.code_id;
         let code_info = Self::load_code_info(ctx, instance_info.code_id)?;
-        let code = Self::load_code(ctx, instance_info.code_id)?;
+        let code = Self::load_code(ctx, &code_info)?;
         Self::store_instance_info(ctx, instance_info.clone())?;
 
         let contract = wasm::Contract {
@@ -612,7 +605,7 @@ impl<Cfg: Config> Module<Cfg> {
         // Load instance information and code.
         let instance_info = Self::load_instance_info(ctx, args.id)?;
         let code_info = Self::load_code_info(ctx, instance_info.code_id)?;
-        let code = Self::load_code(ctx, instance_info.code_id)?;
+        let code = Self::load_code(ctx, &code_info)?;
 
         // Run query function.
         let contract = wasm::Contract {
