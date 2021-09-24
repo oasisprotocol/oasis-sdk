@@ -273,7 +273,14 @@ fn test_hello_contract_call() {
         assert_eq!(tags.len(), 2, "two events should have been emitted");
         assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
         assert_eq!(tags[1].key, b"contracts.0\x00\x00\x00\x01"); // contracts.1 (code = 1) event
-        assert_eq!(tags[1].value, b"\x65world"); // CBOR-encoded string "world"
+
+        let event: types::ContractEvent =
+            cbor::from_slice(&tags[1].value).expect("contract event should be wrapped");
+        assert_eq!(
+            event.id, instance_id,
+            "instance id in the event should match"
+        );
+        assert_eq!(event.data, b"\x65world"); // CBOR-encoded string "world"
     });
 
     // Second call should increment the counter.
