@@ -32,13 +32,18 @@ type Withdraw struct {
 	Amount types.BaseUnits `json:"amount"`
 }
 
-// PeekStorageQuery queries the EVM storage.
-type PeekStorageQuery struct {
+// StorageQuery queries the EVM storage.
+type StorageQuery struct {
 	Address []byte `json:"address"`
 	Index   []byte `json:"index"`
 }
 
-// PeekCodeQuery queries the EVM code storage.
-type PeekCodeQuery struct {
+// CodeQuery queries the EVM code storage.
+type CodeQuery struct {
+	Address []byte `json:"address"`
+}
+
+// BalanceQuery queries the EVM account balance.
+type BalanceQuery struct {
 	Address []byte `json:"address"`
 }

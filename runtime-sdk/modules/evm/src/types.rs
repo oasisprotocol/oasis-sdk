@@ -32,14 +32,20 @@ pub struct Withdraw {
 
 /// Transaction body for peeking into EVM storage.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct PeekStorageQuery {
+pub struct StorageQuery {
     pub address: H160,
     pub index: H256,
 }
 
 /// Transaction body for peeking into EVM code storage.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct PeekCodeQuery {
+pub struct CodeQuery {
+    pub address: H160,
+}
+
+/// Transaction body for fetching EVM account's balance.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct BalanceQuery {
     pub address: H160,
 }
 

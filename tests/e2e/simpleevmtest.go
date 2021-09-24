@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	_ "embed"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -79,6 +80,15 @@ func evmWithdraw(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer
 	return nil
 }
 
+func evmU256to64(u256 []byte) uint64 {
+	for i := 0; i < 32-8; i++ {
+		if u256[i] != 0 {
+			panic("U256 value too big to fit into uint64")
+		}
+	}
+	return binary.BigEndian.Uint64(u256[32-8 : 32])
+}
+
 // This wraps the given EVM bytecode in an unpacker, suitable for
 // passing as the init code to evmCreate.
 func evmPack(bytecode []byte) []byte {
@@ -141,7 +151,7 @@ func evmPack(bytecode []byte) []byte {
 }
 
 // SimpleEVMDepositWithdrawTest tests deposits and withdrawals.
-func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
 	ctx := context.Background()
 	signer := testing.Dave.Signer
 	e := evm.NewV1(rtc)
@@ -183,6 +193,16 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
 	}
 
+	log.Info("checking Dave's EVM account balance")
+	evmBal, err := e.Balance(ctx, daveEVMAddr)
+	if err != nil {
+		return err
+	}
+	evmBal64 := evmU256to64(evmBal)
+	if evmBal64 != 10000000 {
+		return fmt.Errorf("Dave's EVM account balance is wrong (expected 10000000, got %d)", evmBal64) //nolint: stylecheck
+	}
+
 	log.Info("withdrawing one token from Dave's EVM account")
 	if err = evmWithdraw(ctx, rtc, e, signer, testing.Dave.Address, types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)); err != nil {
 		return err
@@ -201,6 +221,16 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
 	}
 
+	log.Info("re-checking Dave's EVM account balance")
+	evmBal, err = e.Balance(ctx, daveEVMAddr)
+	if err != nil {
+		return err
+	}
+	evmBal64 = evmU256to64(evmBal)
+	if evmBal64 != 9999999 {
+		return fmt.Errorf("Dave's EVM account balance is wrong (expected 9999999, got %d)", evmBal64) //nolint: stylecheck
+	}
+
 	log.Info("depositing 89.9M tokens into Dave's EVM account")
 	if err = evmDeposit(ctx, rtc, e, signer, daveEVMAddr, types.NewBaseUnits(*quantity.NewFromUint64(89900000), types.NativeDenomination)); err != nil {
 		return err
@@ -217,6 +247,16 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 		}
 	} else {
 		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
+	}
+
+	log.Info("re-checking Dave's EVM account balance")
+	evmBal, err = e.Balance(ctx, daveEVMAddr)
+	if err != nil {
+		return err
+	}
+	evmBal64 = evmU256to64(evmBal)
+	if evmBal64 != 99899999 {
+		return fmt.Errorf("Dave's EVM account balance is wrong (expected 99899999, got %d)", evmBal64) //nolint: stylecheck
 	}
 
 	log.Info("checking Alice's account balance")
@@ -261,6 +301,16 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 		}
 	} else {
 		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
+	}
+
+	log.Info("re-checking Dave's EVM account balance")
+	evmBal, err = e.Balance(ctx, daveEVMAddr)
+	if err != nil {
+		return err
+	}
+	evmBal64 = evmU256to64(evmBal)
+	if evmBal64 != 99900009 {
+		return fmt.Errorf("Dave's EVM account balance is wrong (expected 99900009, got %d)", evmBal64) //nolint: stylecheck
 	}
 
 	return nil
@@ -310,16 +360,26 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	log.Info("evmCreate finished", "contract_addr", hex.EncodeToString(contractAddr))
 
 	// Peek into code storage to verify that our contract was indeed stored.
-	storedCode, err := e.PeekCode(ctx, contractAddr)
+	storedCode, err := e.Code(ctx, contractAddr)
 	if err != nil {
-		return fmt.Errorf("PeekCode failed: %w", err)
+		return fmt.Errorf("Code failed: %w", err) //nolint: stylecheck
 	}
 
 	storedCodeHex := hex.EncodeToString(storedCode)
-	log.Info("PeekCode finished", "stored_code", storedCodeHex)
+	log.Info("Code finished", "stored_code", storedCodeHex)
 
 	if storedCodeHex != addSrc {
 		return fmt.Errorf("stored code doesn't match original code")
+	}
+
+	log.Info("checking contract's EVM account balance")
+	evmBal, err := e.Balance(ctx, contractAddr)
+	if err != nil {
+		return err
+	}
+	evmBal64 := evmU256to64(evmBal)
+	if evmBal64 != 1 {
+		return fmt.Errorf("contract's EVM account balance is wrong (expected 1, got %d)", evmBal64)
 	}
 
 	// Call the created EVM contract.
@@ -336,16 +396,26 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		return err
 	}
 
-	storedVal, err := e.PeekStorage(ctx, contractAddr, index)
+	storedVal, err := e.Storage(ctx, contractAddr, index)
 	if err != nil {
-		return fmt.Errorf("PeekStorage failed: %w", err)
+		return fmt.Errorf("Storage failed: %w", err) //nolint: stylecheck
 	}
 
 	storedValHex := hex.EncodeToString(storedVal)
-	log.Info("PeekStorage finished", "stored_value", storedValHex)
+	log.Info("Storage finished", "stored_value", storedValHex)
 
 	if storedValHex != strings.Repeat("0", 62)+"46" {
 		return fmt.Errorf("stored value isn't correct (expected 0x46)")
+	}
+
+	log.Info("re-checking contract's EVM account balance")
+	evmBal, err = e.Balance(ctx, contractAddr)
+	if err != nil {
+		return err
+	}
+	evmBal64 = evmU256to64(evmBal)
+	if evmBal64 != 2 {
+		return fmt.Errorf("contract's EVM account balance is wrong (expected 2, got %d)", evmBal64)
 	}
 
 	return nil
