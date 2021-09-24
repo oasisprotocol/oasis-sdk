@@ -278,7 +278,7 @@ fn test_hello_contract_out_of_gas() {
     assert_eq!(result.code(), 12);
     assert_eq!(
         &result.to_string(),
-        "core: out of gas (limit: 1000 wanted: 1000)"
+        "core: out of gas (limit: 1000 wanted: 1017)"
     );
 }
 
@@ -313,7 +313,7 @@ fn test_bad_contract_infinite_loop_allocate() {
     assert_eq!(result.code(), 12);
     assert_eq!(
         &result.to_string(),
-        "core: out of gas (limit: 1000000 wanted: 1000000)"
+        "core: out of gas (limit: 1000000 wanted: 1000001)"
     );
 }
 
@@ -349,7 +349,7 @@ fn test_bad_contract_infinite_loop_instantiate() {
     assert_eq!(result.code(), 12);
     assert_eq!(
         &result.to_string(),
-        "core: out of gas (limit: 1000000 wanted: 1000000)"
+        "core: out of gas (limit: 1000000 wanted: 1000001)"
     );
 }
 
@@ -463,6 +463,6 @@ fn test_memory_grow() {
     assert_eq!(result.code(), 12);
     assert_eq!(
         &result.to_string(),
-        "core: out of gas (limit: 1000000 wanted: 1000000)"
+        "core: out of gas (limit: 1000000 wanted: 1000001)"
     );
 }
