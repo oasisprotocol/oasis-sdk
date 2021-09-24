@@ -15,8 +15,9 @@ const (
 	methodWithdraw = "evm.Withdraw"
 
 	// Queries.
-	methodPeekStorage = "evm.PeekStorage"
-	methodPeekCode    = "evm.PeekCode"
+	methodStorage = "evm.Storage"
+	methodCode    = "evm.Code"
+	methodBalance = "evm.Balance"
 )
 
 // V1 is the v1 EVM module interface.
@@ -43,11 +44,14 @@ type V1 interface {
 	// be identical to the denomination set in the EVM module's parameters.
 	Withdraw(to types.Address, amount types.BaseUnits) *client.TransactionBuilder
 
-	// PeekStorage queries the EVM storage.
-	PeekStorage(ctx context.Context, address []byte, index []byte) ([]byte, error)
+	// Storage queries the EVM storage.
+	Storage(ctx context.Context, address []byte, index []byte) ([]byte, error)
 
-	// PeekCode queries the EVM code storage.
-	PeekCode(ctx context.Context, address []byte) ([]byte, error)
+	// Code queries the EVM code storage.
+	Code(ctx context.Context, address []byte) ([]byte, error)
+
+	// Balance queries the EVM account balance.
+	Balance(ctx context.Context, address []byte) ([]byte, error)
 }
 
 type v1 struct {
@@ -88,25 +92,37 @@ func (a *v1) Withdraw(to types.Address, amount types.BaseUnits) *client.Transact
 }
 
 // Implements V1.
-func (a *v1) PeekStorage(ctx context.Context, address []byte, index []byte) ([]byte, error) {
+func (a *v1) Storage(ctx context.Context, address []byte, index []byte) ([]byte, error) {
 	var res []byte
-	q := PeekStorageQuery{
+	q := StorageQuery{
 		Address: address,
 		Index:   index,
 	}
-	if err := a.rtc.Query(ctx, client.RoundLatest, methodPeekStorage, q, &res); err != nil {
+	if err := a.rtc.Query(ctx, client.RoundLatest, methodStorage, q, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
 // Implements V1.
-func (a *v1) PeekCode(ctx context.Context, address []byte) ([]byte, error) {
+func (a *v1) Code(ctx context.Context, address []byte) ([]byte, error) {
 	var res []byte
-	q := PeekCodeQuery{
+	q := CodeQuery{
 		Address: address,
 	}
-	if err := a.rtc.Query(ctx, client.RoundLatest, methodPeekCode, q, &res); err != nil {
+	if err := a.rtc.Query(ctx, client.RoundLatest, methodCode, q, &res); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// Implements V1.
+func (a *v1) Balance(ctx context.Context, address []byte) ([]byte, error) {
+	var res []byte
+	q := BalanceQuery{
+		Address: address,
+	}
+	if err := a.rtc.Query(ctx, client.RoundLatest, methodBalance, q, &res); err != nil {
 		return nil, err
 	}
 	return res, nil

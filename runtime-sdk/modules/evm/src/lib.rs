@@ -187,11 +187,15 @@ pub trait API {
     /// Peek into EVM storage.
     /// Returns 256-bit value stored at given contract address and index (slot)
     /// in the storage.
-    fn peek_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error>;
+    fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error>;
 
     /// Peek into EVM code storage.
     /// Returns EVM bytecode of contract at given address.
-    fn peek_code<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error>;
+    fn get_code<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error>;
+
+    /// Get EVM account balance.
+    /// Returns 256-bit big-endian representation of the balance.
+    fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error>;
 }
 
 impl<Cfg: Config> API for Module<Cfg> {
@@ -311,7 +315,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             .map_err(|_| Error::InsufficientBalance)
     }
 
-    fn peek_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
+    fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
         let store = storage::PrefixStore::new(ctx.runtime_state(), &crate::MODULE_NAME);
         let storages = storage::PrefixStore::new(store, &state::STORAGES);
         let s = storage::TypedStore::new(storage::HashedStore::<_, blake3::Hasher>::new(
@@ -323,11 +327,22 @@ impl<Cfg: Config> API for Module<Cfg> {
         Ok(result.as_bytes().to_vec())
     }
 
-    fn peek_code<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error> {
+    fn get_code<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error> {
         let store = storage::PrefixStore::new(ctx.runtime_state(), &crate::MODULE_NAME);
         let codes = storage::TypedStore::new(storage::PrefixStore::new(store, &state::CODES));
 
         Ok(codes.get(&address).unwrap_or_default())
+    }
+
+    fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error> {
+        let state = ctx.runtime_state();
+        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let accounts = storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
+        let account: evm_backend::Account = accounts.get(&address).unwrap_or_default();
+
+        let mut out = [0u8; 32];
+        account.balance.to_big_endian(&mut out);
+        Ok(out.to_vec())
     }
 }
 
@@ -457,15 +472,16 @@ impl<Cfg: Config> Module<Cfg> {
         Self::withdraw(ctx, evm_acct_addr, body.to, body.amount)
     }
 
-    fn q_peek_storage<C: Context>(
-        ctx: &mut C,
-        body: types::PeekStorageQuery,
-    ) -> Result<Vec<u8>, Error> {
-        Self::peek_storage(ctx, body.address, body.index)
+    fn query_storage<C: Context>(ctx: &mut C, body: types::StorageQuery) -> Result<Vec<u8>, Error> {
+        Self::get_storage(ctx, body.address, body.index)
     }
 
-    fn q_peek_code<C: Context>(ctx: &mut C, body: types::PeekCodeQuery) -> Result<Vec<u8>, Error> {
-        Self::peek_code(ctx, body.address)
+    fn query_code<C: Context>(ctx: &mut C, body: types::CodeQuery) -> Result<Vec<u8>, Error> {
+        Self::get_code(ctx, body.address)
+    }
+
+    fn query_balance<C: Context>(ctx: &mut C, body: types::BalanceQuery) -> Result<Vec<u8>, Error> {
+        Self::get_balance(ctx, body.address)
     }
 }
 
@@ -490,8 +506,9 @@ impl<Cfg: Config> module::MethodHandler for Module<Cfg> {
         args: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
         match method {
-            "evm.PeekStorage" => module::dispatch_query(ctx, args, Self::q_peek_storage),
-            "evm.PeekCode" => module::dispatch_query(ctx, args, Self::q_peek_code),
+            "evm.Storage" => module::dispatch_query(ctx, args, Self::query_storage),
+            "evm.Code" => module::dispatch_query(ctx, args, Self::query_code),
+            "evm.Balance" => module::dispatch_query(ctx, args, Self::query_balance),
             _ => module::DispatchResult::Unhandled(args),
         }
     }
