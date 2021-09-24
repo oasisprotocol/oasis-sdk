@@ -16,6 +16,7 @@ use oasis_runtime_sdk::{
 
 use crate::{
     abi::{ExecutionContext, ExecutionResult},
+    types::ContractEvent,
     wasm, Config, Error, Parameters, MODULE_NAME,
 };
 
@@ -68,7 +69,10 @@ fn process_events<C: TxContext>(
                 )
             },
             event.code,
-            event.data,
+            cbor::to_vec(ContractEvent {
+                id: contract.instance_info.id,
+                data: event.data,
+            }),
         ));
     }
 

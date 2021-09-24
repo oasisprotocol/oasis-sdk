@@ -243,3 +243,13 @@ pub struct CustomQuery {
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 #[cbor(transparent)]
 pub struct CustomQueryResult(pub Vec<u8>);
+
+/// An event emitted from a contract, wrapped to include additional metadata.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct ContractEvent {
+    /// Identifier of the instance that emitted the event.
+    pub id: InstanceId,
+    /// Raw event data emitted by the instance.
+    #[cbor(optional, default, skip_serializing_if = "Vec::is_empty")]
+    pub data: Vec<u8>,
+}
