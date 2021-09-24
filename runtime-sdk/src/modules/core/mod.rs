@@ -1,5 +1,5 @@
 //! Core definitions module.
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, convert::TryInto};
 
 use anyhow::anyhow;
 use thiserror::Error;
@@ -71,17 +71,17 @@ pub enum Error {
     #[sdk_error(code = 11)]
     GasOverflow,
 
-    #[error("out of gas")]
+    #[error("out of gas (limit: {0} wanted: {1})")]
     #[sdk_error(code = 12)]
-    OutOfGas,
+    OutOfGas(u64, u64),
 
     #[error("batch gas overflow")]
     #[sdk_error(code = 13)]
     BatchGasOverflow,
 
-    #[error("batch out of gas")]
+    #[error("batch out of gas (limit: {0} wanted: {1})")]
     #[sdk_error(code = 14)]
-    BatchOutOfGas,
+    BatchOutOfGas(u64, u64),
 
     #[error("too many authentication slots")]
     #[sdk_error(code = 15)]
@@ -115,6 +115,8 @@ pub enum Error {
 /// Gas costs.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct GasCosts {
+    pub tx_byte: u64,
+
     pub auth_signature: u64,
     pub auth_multisig_signer: u64,
 
@@ -214,7 +216,7 @@ impl API for Module {
             .checked_add(gas)
             .ok_or(Error::BatchGasOverflow)?;
         if batch_new_gas_used > batch_gas_limit {
-            return Err(Error::BatchOutOfGas);
+            return Err(Error::BatchOutOfGas(batch_gas_limit, batch_new_gas_used));
         }
 
         ctx.value::<u64>(CONTEXT_KEY_GAS_USED)
@@ -229,7 +231,7 @@ impl API for Module {
         let new_gas_used = {
             let sum = gas_used.checked_add(gas).ok_or(Error::GasOverflow)?;
             if sum > gas_limit {
-                return Err(Error::OutOfGas);
+                return Err(Error::OutOfGas(gas_limit, sum));
             }
             sum
         };
@@ -291,14 +293,50 @@ impl Module {
     /// Run a transaction in simulation and return how much gas it uses. This looks up the method
     /// in the context's method registry. Transactions that fail still use gas, and this query will
     /// estimate that and return successfully, so do not use this query to see if a transaction will
-    /// succeed. Failure due to OutOfGas are included, so it's best to set the query argument
-    /// transaction's gas to something high.
+    /// succeed.
     fn query_estimate_gas<C: Context>(
         ctx: &mut C,
-        args: transaction::Transaction,
+        mut args: transaction::Transaction,
     ) -> Result<u64, Error> {
+        // Assume maximum amount of gas and a reasonable maximum fee.
+        args.auth_info.fee.gas = u64::MAX;
+        args.auth_info.fee.amount =
+            token::BaseUnits::new(u64::MAX.into(), token::Denomination::NATIVE);
+        // Estimate transaction size. Since the transaction given to us is not signed, we need to
+        // estimate how large each of the auth proofs would be.
+        let auth_proofs: Result<_, Error> = args
+            .auth_info
+            .signer_info
+            .iter()
+            .map(|si| match si.address_spec {
+                // For the signature address spec we assume a signature auth proof of 64 bytes.
+                transaction::AddressSpec::Signature(_) => {
+                    Ok(transaction::AuthProof::Signature(vec![0; 64].into()))
+                }
+                // For the multisig address spec assume all the signers sign with a 64-byte signature.
+                transaction::AddressSpec::Multisig(ref cfg) => {
+                    Ok(transaction::AuthProof::Multisig(
+                        cfg.signers
+                            .iter()
+                            .map(|_| Some(vec![0; 64].into()))
+                            .collect(),
+                    ))
+                }
+                // Internal address specs should never appear as they are not serializable.
+                transaction::AddressSpec::Internal(_) => Err(Error::MalformedTransaction(anyhow!(
+                    "internal address spec used"
+                ))),
+            })
+            .collect();
+        let tx_envelope =
+            transaction::UnverifiedTransaction(cbor::to_vec(args.clone()), auth_proofs?);
+        let tx_size: u32 = cbor::to_vec(tx_envelope)
+            .len()
+            .try_into()
+            .map_err(|_| Error::InvalidArgument(anyhow!("transaction too large")))?;
+
         ctx.with_simulation(|mut sim_ctx| {
-            sim_ctx.with_tx(args, |mut tx_ctx, call| {
+            sim_ctx.with_tx(tx_size, args, |mut tx_ctx, call| {
                 dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut tx_ctx, call);
                 // Warning: we don't report success or failure. If the call fails, we still report
                 // how much gas it uses while it fails.
@@ -369,6 +407,16 @@ impl module::AuthHandler for Module {
                 }
             }
         }
+
+        // Charge gas for transaction size.
+        Self::use_tx_gas(
+            ctx,
+            params
+                .gas_costs
+                .tx_byte
+                .checked_mul(ctx.tx_size().into())
+                .ok_or(Error::GasOverflow)?,
+        )?;
 
         // Charge gas for signature verification.
         let mut num_signature: u64 = 0;

@@ -125,7 +125,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
         function_name: &str,
     ) -> ExecutionResult {
         // Fetch initial gas counter value so we can determine how much gas was used.
-        let initial_gas = gas::get_remaining_gas(instance).unwrap_or_default();
+        let initial_gas = gas::get_remaining_gas(instance);
 
         let inner = Self::raw_call_with_request_context(
             ctx,
@@ -136,15 +136,19 @@ impl<Cfg: Config> OasisV1<Cfg> {
         )
         .map_err(|err| {
             // Check if call failed due to gas being exhausted and return a proper error.
-            if gas::is_gas_limit_exhausted(instance) {
-                core::Error::OutOfGas.into()
+            let exhausted_gas = gas::get_exhausted_amount(instance);
+            if exhausted_gas != 0 {
+                // Compute how much gas was wanted.
+                let final_gas = gas::get_remaining_gas(instance);
+                let wanted_gas = initial_gas + exhausted_gas.saturating_sub(final_gas);
+                core::Error::OutOfGas(initial_gas, wanted_gas).into()
             } else {
                 err
             }
         });
 
         // Compute how much gas (in SDK units) was actually used.
-        let final_gas = gas::get_remaining_gas(instance).unwrap_or_default();
+        let final_gas = gas::get_remaining_gas(instance);
         let gas_used = initial_gas.saturating_sub(final_gas) / GAS_SCALING_FACTOR;
 
         ExecutionResult { inner, gas_used }

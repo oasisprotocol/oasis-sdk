@@ -178,7 +178,7 @@ pub trait Context {
 /// Runtime SDK batch-wide context.
 pub trait BatchContext: Context {
     /// Executes a function in a per-transaction context.
-    fn with_tx<F, Rs>(&mut self, tx: transaction::Transaction, f: F) -> Rs
+    fn with_tx<F, Rs>(&mut self, tx_size: u32, tx: transaction::Transaction, f: F) -> Rs
     where
         F: FnOnce(
             RuntimeTxContext<'_, '_, <Self as Context>::Runtime, <Self as Context>::Store>,
@@ -194,6 +194,9 @@ pub trait BatchContext: Context {
 
 /// Runtime SDK transaction context.
 pub trait TxContext: Context {
+    /// Transaction size in bytes.
+    fn tx_size(&self) -> u32;
+
     /// Transaction authentication information.
     fn tx_auth_info(&self) -> &transaction::AuthInfo;
 
@@ -422,7 +425,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
 }
 
 impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchContext<'a, R, S> {
-    fn with_tx<F, Rs>(&mut self, tx: transaction::Transaction, f: F) -> Rs
+    fn with_tx<F, Rs>(&mut self, tx_size: u32, tx: transaction::Transaction, f: F) -> Rs
     where
         F: FnOnce(
             RuntimeTxContext<'_, '_, <Self as Context>::Runtime, <Self as Context>::Store>,
@@ -446,6 +449,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
             logger: self
                 .logger
                 .new(o!("ctx" => "transaction", "mode" => Into::<&'static str>::into(&self.mode))),
+            tx_size,
             tx_auth_info: tx.auth_info,
             tags: Tags::new(),
             max_messages: remaining_messages,
@@ -486,6 +490,8 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
     io_ctx: Arc<IoContext>,
     logger: slog::Logger,
 
+    /// Transaction size.
+    tx_size: u32,
     /// Transaction authentication info.
     tx_auth_info: transaction::AuthInfo,
 
@@ -619,6 +625,10 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
 }
 
 impl<R: runtime::Runtime, S: Store> TxContext for RuntimeTxContext<'_, '_, R, S> {
+    fn tx_size(&self) -> u32 {
+        self.tx_size
+    }
+
     fn tx_auth_info(&self) -> &transaction::AuthInfo {
         &self.tx_auth_info
     }
@@ -799,7 +809,7 @@ mod test {
                 },
             },
         };
-        ctx.with_tx(tx.clone(), |mut tx_ctx, _call| {
+        ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
             let mut y = tx_ctx.value::<u64>("module.TestKey");
             let y = y.get_mut().unwrap();
             assert_eq!(*y, 42);
@@ -823,7 +833,7 @@ mod test {
         let x = ctx.value::<u64>("module.TestKey").get();
         assert_eq!(x, Some(&48));
 
-        ctx.with_tx(tx, |mut tx_ctx, _call| {
+        ctx.with_tx(0, tx, |mut tx_ctx, _call| {
             let z = tx_ctx.value::<u64>("module.TestKey").take();
             assert_eq!(z, Some(48));
 
@@ -860,7 +870,7 @@ mod test {
                 },
             },
         };
-        ctx.with_tx(tx, |mut tx_ctx, _call| {
+        ctx.with_tx(0, tx, |mut tx_ctx, _call| {
             // Changing the type of a key should result in a panic.
             tx_ctx.value::<Option<u32>>("module.TestKey").get();
         });
@@ -902,7 +912,7 @@ mod test {
         let max_messages = mock.max_messages;
         let mut ctx = mock.create_ctx();
 
-        ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+        ctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
             for i in 0..max_messages {
                 assert_eq!(tx_ctx.remaining_messages(), max_messages - i);
 
@@ -970,7 +980,7 @@ mod test {
         assert_eq!(ctx.remaining_messages(), 0);
 
         // Also in transaction contexts.
-        ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+        ctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
             tx_ctx
                 .emit_message(messages[0].0.clone(), messages[0].1.clone())
                 .expect_err("emitting a message should fail");
@@ -999,7 +1009,7 @@ mod test {
             MessageEventHookInvocation::new("test".to_string(), ""),
         )];
 
-        ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+        ctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
             tx_ctx.limit_max_messages(1).unwrap();
 
             tx_ctx.with_child(tx_ctx.mode(), |mut child_ctx| {

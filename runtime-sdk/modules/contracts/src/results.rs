@@ -165,7 +165,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         },
                     };
 
-                    let result = ctx.with_tx(tx, |mut ctx, call| {
+                    let result = ctx.with_tx(0, tx, |mut ctx, call| {
                         // Propagate call depth.
                         ctx.value(CONTEXT_KEY_DEPTH).set(current_depth + 1);
 

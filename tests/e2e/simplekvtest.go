@@ -34,7 +34,7 @@ import (
 const EventWaitTimeout = 20 * time.Second
 
 // defaultGasAmount is the default amount of gas to specify.
-const defaultGasAmount = 200
+const defaultGasAmount = 400
 
 // The kvKey type must match the Key type from the simple-keyvalue runtime
 // in ../runtimes/simple-keyvalue/src/keyvalue/types.rs.
@@ -604,12 +604,19 @@ func KVMultisigTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	}
 
 	tx := types.NewTransaction(&types.Fee{
-		Gas: 300,
+		Gas: defaultGasAmount,
 	}, "keyvalue.Insert", kvKeyValue{
 		Key:   []byte("from-KVMultisigTest"),
 		Value: []byte("hi"),
 	})
 	tx.AppendAuthMultisig(&config, nonce1)
+
+	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
+	if err != nil {
+		return err
+	}
+	tx.AuthInfo.Fee.Gas = gas
+
 	stx := tx.PrepareForSigning()
 	if err = stx.AppendSign(chainCtx, signerA); err != nil {
 		return err

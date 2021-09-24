@@ -233,7 +233,7 @@ fn test_api_tx_transfer_disabled() {
     };
 
     // Try to transfer.
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         assert!(
             matches!(
                 Accounts::tx_transfer(&mut tx_ctx, cbor::from_value(call.body).unwrap()),
@@ -271,7 +271,7 @@ fn test_prefetch() {
         auth_info: auth_info.clone(),
     };
     // Transfer tokens from one account to the other and check balances.
-    ctx.with_tx(tx, |mut _tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut _tx_ctx, call| {
         let mut prefixes = BTreeSet::new();
         let result = Accounts::prefetch(&mut prefixes, &call.method, call.body, &auth_info)
             .ok_or(anyhow!("dispatch failure"))
@@ -318,7 +318,7 @@ fn test_api_transfer() {
     init_accounts(&mut ctx);
 
     // Transfer tokens from one account to the other and check balances.
-    ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
         Accounts::transfer(
             &mut tx_ctx,
             keys::alice::address(),
@@ -463,7 +463,7 @@ fn test_tx_transfer() {
     };
 
     // Transfer tokens from one account to the other and check balances.
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         Accounts::tx_transfer(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("transfer should succeed");
 
@@ -648,7 +648,7 @@ fn test_query_addresses() {
 
     Accounts::init(&mut ctx, gen);
 
-    ctx.with_tx(mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
         let accs = Accounts::query_addresses(&mut tx_ctx, AddressesQuery { denomination: d1 })
             .expect("query accounts should succeed");
         assert_eq!(accs.len(), 2, "there should be two addresses");

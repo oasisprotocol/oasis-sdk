@@ -21,18 +21,15 @@ pub fn set_gas_limit<C>(
 }
 
 /// Returns the remaining gas.
-pub fn get_remaining_gas<C>(instance: &wasm3::Instance<'_, '_, C>) -> Result<u64, Error> {
-    instance
-        .get_global(EXPORT_GAS_LIMIT)
-        .map_err(|err| Error::ExecutionFailed(err.into()))
+pub fn get_remaining_gas<C>(instance: &wasm3::Instance<'_, '_, C>) -> u64 {
+    instance.get_global(EXPORT_GAS_LIMIT).unwrap_or_default()
 }
 
-/// Checks whether gas limit has been exhausted while the given instance was executing.
-pub fn is_gas_limit_exhausted<C>(instance: &wasm3::Instance<'_, '_, C>) -> bool {
-    let value: u32 = instance
+/// Returns the amount of gas requested that was over the limit.
+pub fn get_exhausted_amount<C>(instance: &wasm3::Instance<'_, '_, C>) -> u64 {
+    instance
         .get_global(EXPORT_GAS_LIMIT_EXHAUSTED)
-        .unwrap_or_default();
-    value != 0
+        .unwrap_or_default()
 }
 
 /// Attempts to use the given amount of gas.
@@ -41,7 +38,7 @@ pub fn use_gas<C>(instance: &wasm3::Instance<'_, '_, C>, amount: u64) -> Result<
         .get_global(EXPORT_GAS_LIMIT)
         .map_err(|_| wasm3::Trap::Abort)?;
     if gas_limit < amount {
-        let _ = instance.set_global(EXPORT_GAS_LIMIT_EXHAUSTED, 1u32);
+        let _ = instance.set_global(EXPORT_GAS_LIMIT_EXHAUSTED, amount);
         return Err(wasm3::Trap::Abort);
     }
     instance
@@ -58,9 +55,9 @@ pub fn transform(module: &mut Module) {
         walrus::InitExpr::Value(Value::I64(0)),
     );
     let gas_limit_exhausted_global = module.globals.add_local(
-        walrus::ValType::I32,
+        walrus::ValType::I64,
         true,
-        walrus::InitExpr::Value(Value::I32(0)),
+        walrus::InitExpr::Value(Value::I64(0)),
     );
     module.exports.add(EXPORT_GAS_LIMIT, gas_limit_global);
     module
@@ -286,7 +283,7 @@ fn inject_metering(
         .if_else(
             None,
             |then| {
-                then.i32_const(1)
+                then.i64_const(block.cost as i64)
                     .global_set(gas_limit_exhausted_global)
                     .unreachable();
             },
@@ -343,7 +340,7 @@ mod test {
                         (i64.const 1))
                     (then
                         (global.set 1
-                            (i32.const 1))
+                            (i64.const 1))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
@@ -351,7 +348,7 @@ mod test {
                         (i64.const 1)))
                 (i32.const 1))
             (global (;0;) (mut i64) (i64.const 0))
-            (global (;1;) (mut i32) (i32.const 0))
+            (global (;1;) (mut i64) (i64.const 0))
             (export "gas_limit" (global 0))
             (export "gas_limit_exhausted" (global 1)))
         "#
@@ -378,7 +375,7 @@ mod test {
                         (i64.const 6))
                     (then
                         (global.set 1
-                            (i32.const 1))
+                            (i64.const 6))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
@@ -391,7 +388,7 @@ mod test {
                             (drop))))
                 (i32.const 1))
             (global (;0;) (mut i64) (i64.const 0))
-            (global (;1;) (mut i32) (i32.const 0))
+            (global (;1;) (mut i64) (i64.const 0))
             (export "gas_limit" (global 0))
             (export "gas_limit_exhausted" (global 1)))
         "#
@@ -424,7 +421,7 @@ mod test {
                         (i64.const 6))
                     (then
                         (global.set 1
-                            (i32.const 1))
+                            (i64.const 6))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
@@ -442,7 +439,7 @@ mod test {
                                     (i64.const 5))
                                 (then
                                     (global.set 1
-                                        (i32.const 1))
+                                        (i64.const 5))
                                     (unreachable)))
                             (global.set 0
                                 (i64.sub
@@ -459,7 +456,7 @@ mod test {
                         (i64.const 1))
                     (then
                         (global.set 1
-                            (i32.const 1))
+                            (i64.const 1))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
@@ -467,7 +464,7 @@ mod test {
                         (i64.const 1)))
                 (i32.const 1))
             (global (;0;) (mut i64) (i64.const 0))
-            (global (;1;) (mut i32) (i32.const 0))
+            (global (;1;) (mut i64) (i64.const 0))
             (export "gas_limit" (global 0))
             (export "gas_limit_exhausted" (global 1)))
         "#
@@ -499,7 +496,7 @@ mod test {
                         (i64.const 2))
                     (then
                         (global.set 1
-                            (i32.const 1))
+                            (i64.const 2))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
@@ -514,7 +511,7 @@ mod test {
                                 (i64.const 4))
                             (then
                                 (global.set 1
-                                    (i32.const 1))
+                                    (i64.const 4))
                                 (unreachable)))
                         (global.set 0
                             (i64.sub
@@ -532,7 +529,7 @@ mod test {
                                 (i64.const 2))
                             (then
                                 (global.set 1
-                                    (i32.const 1))
+                                    (i64.const 2))
                                 (unreachable)))
                         (global.set 0
                             (i64.sub
@@ -548,7 +545,7 @@ mod test {
                         (i64.const 1))
                     (then
                         (global.set 1
-                            (i32.const 1))
+                            (i64.const 1))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
@@ -556,7 +553,7 @@ mod test {
                         (i64.const 1)))
                 (i32.const 1))
             (global (;0;) (mut i64) (i64.const 0))
-            (global (;1;) (mut i32) (i32.const 0))
+            (global (;1;) (mut i64) (i64.const 0))
             (export "gas_limit" (global 0))
             (export "gas_limit_exhausted" (global 1)))
         "#

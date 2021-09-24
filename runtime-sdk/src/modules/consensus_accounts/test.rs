@@ -72,7 +72,7 @@ fn test_api_deposit_invalid_denomination() {
         },
     };
 
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         assert!(Module::<Accounts, Consensus>::tx_deposit(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -111,7 +111,7 @@ fn test_api_deposit() {
         },
     };
 
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         Module::<Accounts, Consensus>::tx_deposit(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -174,7 +174,7 @@ fn test_api_withdraw_invalid_denomination() {
         },
     };
 
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         assert!(Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -213,7 +213,7 @@ fn test_api_withdraw_insufficient_balance() {
         },
     };
 
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         assert!(Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -274,7 +274,7 @@ fn test_api_withdraw() {
         },
     };
 
-    ctx.with_tx(tx, |mut tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
         Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -429,7 +429,7 @@ fn test_prefetch() {
         auth_info: auth_info.clone(),
     };
     // Withdraw should result in one prefix getting prefetched.
-    ctx.with_tx(tx, |mut _tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut _tx_ctx, call| {
         let mut prefixes = BTreeSet::new();
         let result = Module::<Accounts, Consensus>::prefetch(
             &mut prefixes,
@@ -457,7 +457,7 @@ fn test_prefetch() {
         auth_info: auth_info.clone(),
     };
     // Deposit should result in zero prefixes.
-    ctx.with_tx(tx, |mut _tx_ctx, call| {
+    ctx.with_tx(0, tx, |mut _tx_ctx, call| {
         let mut prefixes = BTreeSet::new();
         let result = Module::<Accounts, Consensus>::prefetch(
             &mut prefixes,

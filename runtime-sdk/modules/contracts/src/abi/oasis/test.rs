@@ -138,7 +138,7 @@ fn test_validate_and_transform() {
 
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
-    ctx.with_tx(mock::transaction(), |ctx, _| {
+    ctx.with_tx(0, mock::transaction(), |ctx, _| {
         test::<ContractsConfig, _>(ctx);
     });
 }
@@ -166,7 +166,7 @@ fn run_contract_with_defaults(
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = gas_limit;
 
-    ctx.with_tx(tx, |mut ctx, _| -> Result<cbor::Value, Error> {
+    ctx.with_tx(0, tx, |mut ctx, _| -> Result<cbor::Value, Error> {
         fn transform<C: TxContext>(_ctx: &mut C, code: &[u8]) -> Vec<u8> {
             wasm::validate_and_transform::<ContractsConfig, C>(code, types::ABI::OasisV1).unwrap()
         }
@@ -276,7 +276,10 @@ fn test_hello_contract_out_of_gas() {
 
     assert_eq!(result.module_name(), "core");
     assert_eq!(result.code(), 12);
-    assert_eq!(&result.to_string(), "core: out of gas");
+    assert_eq!(
+        &result.to_string(),
+        "core: out of gas (limit: 1000 wanted: 1017)"
+    );
 }
 
 #[test]
@@ -308,7 +311,10 @@ fn test_bad_contract_infinite_loop_allocate() {
 
     assert_eq!(result.module_name(), "core");
     assert_eq!(result.code(), 12);
-    assert_eq!(&result.to_string(), "core: out of gas");
+    assert_eq!(
+        &result.to_string(),
+        "core: out of gas (limit: 1000000 wanted: 1000001)"
+    );
 }
 
 #[test]
@@ -341,7 +347,10 @@ fn test_bad_contract_infinite_loop_instantiate() {
 
     assert_eq!(result.module_name(), "core");
     assert_eq!(result.code(), 12);
-    assert_eq!(&result.to_string(), "core: out of gas");
+    assert_eq!(
+        &result.to_string(),
+        "core: out of gas (limit: 1000000 wanted: 1000001)"
+    );
 }
 
 #[test]
@@ -452,5 +461,8 @@ fn test_memory_grow() {
 
     assert_eq!(result.module_name(), "core");
     assert_eq!(result.code(), 12);
-    assert_eq!(&result.to_string(), "core: out of gas");
+    assert_eq!(
+        &result.to_string(),
+        "core: out of gas (limit: 1000000 wanted: 1000001)"
+    );
 }

@@ -1,8 +1,11 @@
 package contracts
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+
+	"github.com/golang/snappy"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
@@ -97,10 +100,19 @@ type v1 struct {
 
 // Implements V1.
 func (a *v1) Upload(abi ABI, instantiatePolicy Policy, code []byte) *client.TransactionBuilder {
+	// Compress code before upload.
+	var compressedCode bytes.Buffer
+	encoder := snappy.NewBufferedWriter(&compressedCode)
+	_, err := encoder.Write(code)
+	if err != nil {
+		panic(err)
+	}
+	encoder.Close()
+
 	return client.NewTransactionBuilder(a.rc, methodUpload, &Upload{
 		ABI:               abi,
 		InstantiatePolicy: instantiatePolicy,
-		Code:              code,
+		Code:              compressedCode.Bytes(),
 	})
 }
 
