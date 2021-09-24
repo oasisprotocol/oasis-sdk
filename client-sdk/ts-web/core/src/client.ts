@@ -3,6 +3,13 @@ import * as grpcWeb from 'grpc-web';
 import * as misc from './misc';
 import * as types from './types';
 
+function toCBOR(v: unknown) {
+    // gRPC cannot handle nil arguments unmarshalled from CBOR, so we use a special case to
+    // marshal `nil` to an empty byte string.
+    if (v == null) return new Uint8Array();
+    return misc.toCBOR(v);
+}
+
 function createMethodDescriptorUnary<REQ, RESP>(serviceName: string, methodName: string) {
     // @ts-expect-error missing declaration
     const MethodType = grpcWeb.MethodType;
@@ -11,7 +18,7 @@ function createMethodDescriptorUnary<REQ, RESP>(serviceName: string, methodName:
         MethodType.UNARY,
         Object,
         Object,
-        misc.toCBOR,
+        toCBOR,
         misc.fromCBOR,
     );
 }
@@ -24,7 +31,7 @@ function createMethodDescriptorServerStreaming<REQ, RESP>(serviceName: string, m
         MethodType.SERVER_STREAMING,
         Object,
         Object,
-        misc.toCBOR,
+        toCBOR,
         misc.fromCBOR,
     );
 }

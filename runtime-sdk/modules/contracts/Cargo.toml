@@ -7,7 +7,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-cbor = { version = "0.2.0", package = "oasis-cbor" }
+cbor = { version = "0.2.1", package = "oasis-cbor" }
 oasis-contract-sdk-types = { path = "../../../contract-sdk/types", features = ["oasis-runtime-sdk"] }
 oasis-runtime-sdk = { path = "../.." }
 
