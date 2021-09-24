@@ -145,6 +145,8 @@ pub struct GasCosts {
     pub wasm_storage_get_base: u64,
     pub wasm_storage_insert_base: u64,
     pub wasm_storage_remove_base: u64,
+    pub wasm_storage_key_byte: u64,
+    pub wasm_storage_value_byte: u64,
     pub wasm_env_query_base: u64,
 }
 
@@ -163,6 +165,8 @@ impl Default for GasCosts {
             wasm_storage_get_base: 20,
             wasm_storage_insert_base: 20,
             wasm_storage_remove_base: 20,
+            wasm_storage_key_byte: 1,
+            wasm_storage_value_byte: 1,
             wasm_env_query_base: 10,
         }
     }

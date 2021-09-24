@@ -23,15 +23,26 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
 
-                // Charge base gas amount.
-                gas::use_gas(ctx.instance, ec.params.gas_costs.wasm_storage_get_base)?;
+                ensure_key_size(ec, key.1)?;
+
+                // Charge base gas amount plus size-dependent gas.
+                let total_gas = (|| {
+                    let base = ec.params.gas_costs.wasm_storage_get_base;
+                    let key = ec
+                        .params
+                        .gas_costs
+                        .wasm_storage_key_byte
+                        .checked_mul(key.1.into())?;
+                    let total = base.checked_add(key)?;
+                    Some(total)
+                })()
+                .ok_or(wasm3::Trap::Abort)?;
+                gas::use_gas(ctx.instance, total_gas)?;
 
                 // Read from contract state.
                 let value = ctx.instance.runtime().try_with_memory(
                     |memory| -> Result<_, wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
-                        ensure_key_size(ec, key)?;
-                        // TODO: Charge gas per key/value size.
                         Ok(get_instance_store(ec, store)?.get(key))
                     },
                 )??;
@@ -41,10 +52,20 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     None => return Ok((0, 0)),
                 };
 
+                // Charge gas for size of value.
+                gas::use_gas(
+                    ctx.instance,
+                    ec.params
+                        .gas_costs
+                        .wasm_storage_value_byte
+                        .checked_mul(value.len().try_into()?)
+                        .ok_or(wasm3::Trap::Abort)?,
+                )?;
+
                 // Create new region by calling `allocate`.
                 //
                 // This makes sure that the call context is unset to avoid any potential issues
-                // with reentrancy as attempting to re-enter one of the linked function will fail.
+                // with reentrancy as attempting to re-enter one of the linked functions will fail.
                 let value_region = Self::allocate_and_copy(ctx.instance, &value)?;
 
                 Ok(value_region.to_arg())
@@ -59,8 +80,27 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
 
-                // Charge base gas amount.
-                gas::use_gas(ctx.instance, ec.params.gas_costs.wasm_storage_insert_base)?;
+                ensure_key_size(ec, key.1)?;
+                ensure_value_size(ec, value.1)?;
+
+                // Charge base gas amount plus size-dependent gas.
+                let total_gas = (|| {
+                    let base = ec.params.gas_costs.wasm_storage_insert_base;
+                    let key = ec
+                        .params
+                        .gas_costs
+                        .wasm_storage_key_byte
+                        .checked_mul(key.1.into())?;
+                    let value = ec
+                        .params
+                        .gas_costs
+                        .wasm_storage_value_byte
+                        .checked_mul(value.1.into())?;
+                    let total = base.checked_add(key)?.checked_add(value)?;
+                    Some(total)
+                })()
+                .ok_or(wasm3::Trap::Abort)?;
+                gas::use_gas(ctx.instance, total_gas)?;
 
                 // Insert into contract state.
                 ctx.instance
@@ -68,9 +108,6 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     .try_with_memory(|memory| -> Result<(), wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
                         let value = Region::from_arg(value).as_slice(&memory)?;
-                        ensure_key_size(ec, key)?;
-                        ensure_value_size(ec, value)?;
-                        // TODO: Charge gas per key/value size.
                         get_instance_store(ec, store)?.insert(key, value);
                         Ok(())
                     })??;
@@ -87,16 +124,27 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
 
-                // Charge base gas amount.
-                gas::use_gas(ctx.instance, ec.params.gas_costs.wasm_storage_remove_base)?;
+                ensure_key_size(ec, key.1)?;
+
+                // Charge base gas amount plus size-dependent gas.
+                let total_gas = (|| {
+                    let base = ec.params.gas_costs.wasm_storage_remove_base;
+                    let key = ec
+                        .params
+                        .gas_costs
+                        .wasm_storage_key_byte
+                        .checked_mul(key.1.into())?;
+                    let total = base.checked_add(key)?;
+                    Some(total)
+                })()
+                .ok_or(wasm3::Trap::Abort)?;
+                gas::use_gas(ctx.instance, total_gas)?;
 
                 // Remove from contract state.
                 ctx.instance
                     .runtime()
                     .try_with_memory(|memory| -> Result<(), wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
-                        ensure_key_size(ec, key)?;
-                        // TODO: Charge gas per key/value size.
                         get_instance_store(ec, store)?.remove(key);
                         Ok(())
                     })??;
@@ -125,11 +173,8 @@ fn get_instance_store<'a, C: Context>(
 }
 
 /// Make sure that the key size is within the range specified in module parameters.
-fn ensure_key_size<C: Context>(
-    ec: &ExecutionContext<'_, C>,
-    key: &[u8],
-) -> Result<(), wasm3::Trap> {
-    if key.len() > ec.params.max_storage_key_size_bytes as usize {
+fn ensure_key_size<C: Context>(ec: &ExecutionContext<'_, C>, size: u32) -> Result<(), wasm3::Trap> {
+    if size > ec.params.max_storage_key_size_bytes {
         // TODO: Consider returning a nicer error message.
         return Err(wasm3::Trap::Abort);
     }
@@ -139,9 +184,9 @@ fn ensure_key_size<C: Context>(
 /// Make sure that the value size is within the range specified in module parameters.
 fn ensure_value_size<C: Context>(
     ec: &ExecutionContext<'_, C>,
-    value: &[u8],
+    size: u32,
 ) -> Result<(), wasm3::Trap> {
-    if value.len() > ec.params.max_storage_value_size_bytes as usize {
+    if size > ec.params.max_storage_value_size_bytes {
         // TODO: Consider returning a nicer error message.
         return Err(wasm3::Trap::Abort);
     }
