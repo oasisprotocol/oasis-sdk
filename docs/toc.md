@@ -4,15 +4,23 @@
 
 <!-- markdownlint-disable line-length -->
 
-## Guide
+* [Introduction](index.md)
 
-* [Getting Started](guide/getting-started.md)
-* [Minimal Runtime](guide/minimal-runtime.md)
-* [Modules](guide/modules.md)
-* [Reproducing Paratimes](guide/reproducing.md)
+## Smart Contracts
+
+* [Build a Smart Contract](contract/getting-started.md)
+* [Hello World](contract/hello-world.md)
+
+## Runtimes
+
+* [Build a Runtime](runtime/getting-started.md)
+* [Minimal Runtime](runtime/minimal-runtime.md)
+* [Modules](runtime/modules.md)
+* [Reproducibility](runtime/reproducibility.md)
 
 ## Reference
 
 * [Runtime SDK](https://api.docs.oasis.dev/oasis-sdk/oasis_runtime_sdk)
+* [Contract SDK](https://api.docs.oasis.dev/oasis-sdk/oasis_contract_sdk)
 * Client SDK
   * [Go](https://pkg.go.dev/github.com/oasisprotocol/oasis-sdk/client-sdk/go/client)

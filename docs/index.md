@@ -6,7 +6,16 @@ types and wire formats for transactions, events, queries, denominations,
 addresses, etc. For composability it separates functionalities into modules
 that can be combined together to form runtimes with the desired functionality.
 
-{% page-ref page="guide/getting-started.md" %}
+It also provides an already built module that can host smart contracts developed
+against the Oasis WebAssembly ABI. This documentation provides guides for
+developing both runtimes and smart contracts that can be deployed in an existing
+runtime. A runtime can be thought of as a separate chain while smart contracts
+are deployed to an already running chain that has the corresponding module
+included.
+
+{% page-ref page="contract/getting-started.md" %}
+
+{% page-ref page="runtime/getting-started.md" %}
 
 <!-- markdownlint-disable line-length -->
 [Oasis Core Runtime Layer]: https://docs.oasis.dev/oasis-core/high-level-components/index-1
@@ -15,11 +24,16 @@ that can be combined together to form runtimes with the desired functionality.
 ## Components
 
 The following are the two main components that allow you to easily build
-runtimes and the supporting frontend applications:
+runtimes, smart contracts and the supporting frontend applications:
 
 * **Runtime SDK** handles the _backend_ part, namely the runtime itself. It
   allows you to build the logic that will be replicated when running alongside
   an Oasis Core node in Rust.
+
+* **Contract SDK** handles the _higher level backend_ part and allows you to
+  deploy WebAssembly-based smart contracts into already deployed runtimes that
+  include the _contracts_ module. This makes it possible to develop applications
+  on top of the Oasis network without the need to develop runtimes yourself.
 
 * **Client SDK** handles the connection of the backend part with the _frontend_
   by providing libraries in different languages that make it easy to generate
