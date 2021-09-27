@@ -4,9 +4,21 @@
 # multiple specifications of the oasis-core dependency. This script checks
 # that they all use the same version.
 
-thedep='github\.com/oasisprotocol/oasis-core/go'
-reference=$(grep "$thedep" client-sdk/go/go.mod)
-printf >&2 'client-sdk/go/go.mod: %s\n' "$reference"
+thedep='github.com/oasisprotocol/oasis-core/go'
+
+get_dep_version() {
+  modfile=$1
+  awk -v "dep=$thedep" '
+    BEGIN { require = 0 }
+    $0 == ")" { require = 0 }
+    require == 1 && $1 == dep { print $2 }
+    $0 == "require (" { require = 1 }
+    $1 == "require" && $2 == dep { print $3 }
+  ' "$modfile"
+}
+
+refversion=$(get_dep_version client-sdk/go/go.mod)
+printf >&2 'client-sdk/go/go.mod: %s\n' "$refversion"
 
 any=''
 for m in \
@@ -14,11 +26,11 @@ for m in \
   tests/benchmark/go.mod \
   tests/e2e/go.mod \
   ; do
-  thisdep=$(grep "$thedep" "$m")
-  if [ "$thisdep" = "$reference" ]; then
+  thisversion=$(get_dep_version "$m")
+  if [ "$thisversion" = "$refversion" ]; then
     printf >&2 '%s: matches\n' "$m"
   else
-    printf >&2 '%s: %s mismatch\n' "$m" "$thisdep"
+    printf >&2 '%s: %s mismatch\n' "$m" "$thisversion"
     any=yes
   fi
 done
