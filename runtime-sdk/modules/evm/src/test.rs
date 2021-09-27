@@ -21,6 +21,7 @@ use oasis_runtime_sdk::{
 };
 
 use crate::{
+    derive_caller,
     types::{self, H160},
     Config, GasCosts, Genesis, Module as EVMModule, Parameters,
 };
@@ -56,7 +57,7 @@ fn check_derivation(seed: &str, priv_hex: &str, addr_hex: &str) {
     let pub_key = priv_key.verifying_key();
     let sdk_pub_key =
         secp256k1::PublicKey::from_bytes(k256::EncodedPoint::from(&pub_key).as_bytes()).unwrap();
-    let addr = EVM::derive_caller_from_public_key(&PublicKey::Secp256k1(sdk_pub_key));
+    let addr = derive_caller::from_public_key(&PublicKey::Secp256k1(sdk_pub_key));
     assert_eq!(addr.as_bytes(), Vec::from_hex(addr_hex).unwrap().as_slice());
 }
 
@@ -76,7 +77,7 @@ fn test_evm_caller_addr_derivation() {
 
     let expected =
         H160::from_slice(&Vec::<u8>::from_hex("dce075e1c39b1ae0b75d554558b6451a226ffe00").unwrap());
-    let derived = EVM::derive_caller_from_public_key(&keys::dave::pk());
+    let derived = derive_caller::from_public_key(&keys::dave::pk());
     assert_eq!(derived, expected);
 }
 
@@ -139,7 +140,7 @@ fn test_evm_calls() {
             format: transaction::CallFormat::Plain,
             method: "evm.Deposit".to_owned(),
             body: cbor::to_value(types::Deposit {
-                to: EVM::derive_caller_from_public_key(&keys::dave::pk()),
+                to: derive_caller::from_public_key(&keys::dave::pk()),
                 amount: BaseUnits::new(999_000, Denomination::NATIVE),
             }),
         },
@@ -323,7 +324,7 @@ fn test_evm_runtime() {
             format: transaction::CallFormat::Plain,
             method: "evm.Deposit".to_owned(),
             body: cbor::to_value(types::Deposit {
-                to: EVM::derive_caller_from_public_key(&keys::dave::pk()),
+                to: derive_caller::from_public_key(&keys::dave::pk()),
                 amount: BaseUnits::new(999_000, Denomination::NATIVE),
             }),
         },

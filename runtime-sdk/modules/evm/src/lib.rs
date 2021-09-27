@@ -1,4 +1,5 @@
 //! EVM module.
+pub mod derive_caller;
 pub mod evm_backend;
 pub mod precompile;
 pub mod types;
@@ -11,11 +12,9 @@ use evm::{
 };
 use once_cell::sync::Lazy;
 use thiserror::Error;
-use tiny_keccak::{Hasher, Keccak};
 
 use oasis_runtime_sdk::{
     context::{Context, TxContext},
-    crypto::signature::{secp256k1, PublicKey},
     error,
     module::{self, CallResult, Module as _},
     modules::{
@@ -24,11 +23,7 @@ use oasis_runtime_sdk::{
         core::{self, Error as CoreError, API as _},
     },
     storage,
-    types::{
-        address::Address,
-        token,
-        transaction::{AddressSpec, AuthInfo, Transaction},
-    },
+    types::{address::Address, token, transaction::Transaction},
 };
 
 use evm::backend::ApplyBackend;
@@ -423,47 +418,11 @@ impl<Cfg: Config> Module<Cfg> {
         Ok(exit_value)
     }
 
-    fn derive_caller_from_bytes(b: &[u8]) -> H160 {
-        // Caller address is derived by doing Keccak-256 on the
-        // secp256k1 public key and taking the last 20 bytes
-        // of the result.
-        let mut k = Keccak::v256();
-        let mut out = [0u8; 32];
-        k.update(b);
-        k.finalize(&mut out);
-        H160::from_slice(&out[32 - 20..])
-    }
-
-    fn derive_caller_from_secp256k1_public_key(public_key: &secp256k1::PublicKey) -> H160 {
-        Self::derive_caller_from_bytes(&public_key.to_uncompressed_untagged_bytes())
-    }
-
-    fn derive_caller_from_non_secp256k1_address(address: &Address) -> H160 {
-        Self::derive_caller_from_bytes(&address.as_ref()[1..])
-    }
-
-    #[cfg(test)]
-    fn derive_caller_from_public_key(pk: &PublicKey) -> H160 {
-        match pk {
-            PublicKey::Secp256k1(pk) => Self::derive_caller_from_secp256k1_public_key(pk),
-            pk => Self::derive_caller_from_non_secp256k1_address(&Address::from_pk(pk)),
-        }
-    }
-
-    fn derive_caller_from_tx_auth_info(ai: &AuthInfo) -> H160 {
-        match &ai.signer_info[0].address_spec {
-            AddressSpec::Signature(PublicKey::Secp256k1(pk)) => {
-                Self::derive_caller_from_secp256k1_public_key(pk)
-            }
-            address_spec => Self::derive_caller_from_non_secp256k1_address(&address_spec.address()),
-        }
-    }
-
     fn derive_caller<C>(ctx: &mut C) -> H160
     where
         C: TxContext,
     {
-        Self::derive_caller_from_tx_auth_info(ctx.tx_auth_info())
+        derive_caller::from_tx_auth_info(ctx.tx_auth_info())
     }
 
     fn tx_create<C: TxContext>(ctx: &mut C, body: types::Create) -> Result<Vec<u8>, Error> {
@@ -579,7 +538,7 @@ impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
         let params = Self::params(ctx.runtime_state());
         let den = params.token_denomination;
 
-        let evm_acct_addr = Self::derive_caller_from_tx_auth_info(&tx.auth_info);
+        let evm_acct_addr = derive_caller::from_tx_auth_info(&tx.auth_info);
 
         // Check nonces on all signer accounts.
         // Note that we can ignore the return value because the payee is already
