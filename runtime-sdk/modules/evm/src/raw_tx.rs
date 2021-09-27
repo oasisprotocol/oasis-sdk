@@ -11,7 +11,7 @@ use oasis_runtime_sdk::{
 
 use crate::types;
 
-pub fn decode(
+fn decode_enveloped(
     body: &[u8],
     expected_chain_id: Option<u64>,
 ) -> Result<transaction::Transaction, anyhow::Error> {
@@ -173,6 +173,20 @@ pub fn decode(
             },
         },
     })
+}
+
+pub fn decode(
+    body: &[u8],
+    expected_chain_id: Option<u64>,
+) -> Result<transaction::Transaction, anyhow::Error> {
+    // `ethereum` crate is broken: it expects EIP-2718 typed transactions to be wrapped in an RLP
+    // item.
+    if let Some(0..=0x7f) = body.first() {
+        // TODO: remove this case
+        decode_enveloped(&rlp::encode(&body), expected_chain_id)
+    } else {
+        decode_enveloped(body, expected_chain_id)
+    }
 }
 
 #[cfg(test)]
