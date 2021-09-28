@@ -194,7 +194,7 @@ impl Default for Parameters {
     fn default() -> Self {
         // TODO: Decide what reasonable defaults should be.
         Parameters {
-            max_code_size: 256 * 1024, // 256 KiB
+            max_code_size: 512 * 1024, // 512 KiB
             max_stack_size: 60 * 1024, // 60 KiB
             max_memory_pages: 20,      // 1280 KiB
 

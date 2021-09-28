@@ -1,0 +1,37 @@
+cargo-features = ["strip"]
+
+[package]
+name = "oasis-contract-sdk-oas20"
+version = "0.1.0"
+description = "OAS-20 contract"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[workspace]
+
+[lib]
+name = "oas20"
+crate-type = ["cdylib"]
+
+[dependencies]
+cbor = { version = "0.2.0", package = "oasis-cbor" }
+oasis-contract-sdk = { path = "../../.." }
+oasis-contract-sdk-storage = { path = "../../../storage" }
+oasis-contract-sdk-types = { path = "../../../types" }
+oasis-contract-sdk-oas20-types = { path = "../types" }
+
+# Third party.
+thiserror = "1.0.28"
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = "abort"
+incremental = false
+overflow-checks = true
+strip = true

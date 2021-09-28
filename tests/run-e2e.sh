@@ -3,7 +3,10 @@ set -o nounset -o pipefail -o errexit
 trap "exit 1" INT
 
 # Get the root directory of the tests dir inside the repository.
-TESTS_DIR="$(cd $(dirname $0); pwd -P)"
+TESTS_DIR="$(
+	cd $(dirname $0)
+	pwd -P
+)"
 
 # ANSI escape codes to brighten up the output.
 RED=$'\e[31;1m'
@@ -59,6 +62,11 @@ cd "${TESTS_DIR}"/contracts/hello
 cargo build --target wasm32-unknown-unknown --release
 cp "${TESTS_DIR}"/contracts/hello/target/wasm32-unknown-unknown/release/hello.wasm "${TESTS_DIR}"/e2e/contracts/
 
+printf "${CYAN}### Building oas20 contract...${OFF}\n"
+cd "${TESTS_DIR}"/../contract-sdk/specs/oas20/contract
+cargo build --target wasm32-unknown-unknown --release
+cp "${TESTS_DIR}"/../contract-sdk/specs/oas20/contract/target/wasm32-unknown-unknown/release/oas20.wasm "${TESTS_DIR}"/e2e/contracts/
+
 printf "${CYAN}### Building e2e test harness...${OFF}\n"
 cd "${TESTS_DIR}"/e2e
 go build
@@ -82,4 +90,3 @@ printf "${CYAN}### Running end-to-end tests...${OFF}\n"
 cd "${TESTS_DIR}"
 rm -rf "${TEST_BASE_DIR}"
 printf "${GRN}### Tests finished.${OFF}\n"
-

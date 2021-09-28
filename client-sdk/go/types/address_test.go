@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -54,4 +55,14 @@ func TestAddressMultisig(t *testing.T) {
 	})
 
 	require.EqualValues("oasis1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux", addr.String())
+}
+
+func TestAddressModule(t *testing.T) {
+	require := require.New(t)
+
+	id := make([]byte, 8)
+
+	binary.BigEndian.PutUint64(id, uint64(42))
+	addr := NewAddressForModule("contracts", id)
+	require.EqualValues("oasis1qq398yyk4wt2zxhtt8c66raynelgt6ngh5yq87xg", addr.String())
 }

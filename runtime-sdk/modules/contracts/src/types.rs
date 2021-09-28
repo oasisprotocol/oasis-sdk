@@ -253,3 +253,39 @@ pub struct ContractEvent {
     #[cbor(optional, default, skip_serializing_if = "Vec::is_empty")]
     pub data: Vec<u8>,
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_instanceid_to_address() {
+        let tcs = vec![
+            (
+                InstanceId::from(0),
+                "oasis1qq08mjlkztsgpgrar082rzzxwjaplxmgjs5ftugn",
+            ),
+            (
+                InstanceId::from(1),
+                "oasis1qpg6jv8mxwlv4z578xyjxl7d793jamltdg9czzkx",
+            ),
+            (
+                InstanceId::from(14324),
+                "oasis1qzasj0kq0hlq6vzw4ajhrwgp3tqx6rnwvg2ylu2v",
+            ),
+            (
+                InstanceId::from(u64::MAX),
+                "oasis1qqr0nxsu5aqpu4k85z4h5z08vrfmawnnqycl6gup",
+            ),
+        ];
+
+        for (id, address) in tcs {
+            let instance_address = Instance::address_for(id);
+            assert_eq!(
+                instance_address.to_bech32(),
+                address.to_string(),
+                "instance address should match"
+            );
+        }
+    }
+}

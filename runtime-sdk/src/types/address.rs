@@ -276,6 +276,32 @@ mod test {
     }
 
     #[test]
+    fn test_address_from_bech32_invalid_hrp() {
+        assert!(matches!(
+            Address::from_bech32("sisoa1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux").unwrap_err(),
+            Error::MalformedAddress,
+        ));
+    }
+
+    #[test]
+    fn test_address_from_bech32_invalid_variant() {
+        let b = vec![42u8; ADDRESS_SIZE];
+        let bech32_addr =
+            bech32::encode(ADDRESS_BECH32_HRP, b.to_base32(), Variant::Bech32).unwrap();
+        let bech32m_addr =
+            bech32::encode(ADDRESS_BECH32_HRP, b.to_base32(), Variant::Bech32m).unwrap();
+
+        assert!(
+            Address::from_bech32(&bech32_addr).is_ok(),
+            "bech32 address should be ok"
+        );
+        assert!(matches!(
+            Address::from_bech32(&bech32m_addr).unwrap_err(),
+            Error::MalformedAddress,
+        ));
+    }
+
+    #[test]
     fn test_address_into_consensus_address() {
         let pk = PublicKey::Ed25519("utrdHlX///////////////////////////////////8=".into());
         let addr = Address::from_pk(&pk);
@@ -292,6 +318,17 @@ mod test {
         assert_eq!(
             addr.to_bech32(),
             "oasis1qpllh99nhwzrd56px4txvl26atzgg4f3a58jzzad"
+        );
+    }
+
+    #[test]
+    fn test_address_from_module() {
+        let id: u64 = 42;
+        let addr = Address::from_module_raw("contracts", &id.to_be_bytes());
+
+        assert_eq!(
+            addr.to_bech32(),
+            "oasis1qq398yyk4wt2zxhtt8c66raynelgt6ngh5yq87xg"
         );
     }
 }

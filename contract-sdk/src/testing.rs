@@ -60,8 +60,13 @@ impl Env for MockEnv {
         unimplemented!()
     }
 
-    fn address_for_instance(&self, _instance_id: InstanceId) -> Address {
-        unimplemented!()
+    fn address_for_instance(&self, instance_id: InstanceId) -> Address {
+        let b = [
+            "test_12345678".as_bytes(),
+            &instance_id.as_u64().to_be_bytes(),
+        ]
+        .concat();
+        Address::from_bytes(&b).unwrap()
     }
 }
 

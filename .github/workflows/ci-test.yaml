@@ -35,23 +35,13 @@ jobs:
         working-directory: tests/contracts/hello
         run: cargo build --target wasm32-unknown-unknown --release
 
-      - name: Unit tests with coverage
-        uses: actions-rs/tarpaulin@v0.1
-        with:
-          version: '0.18.0'
-          args: '--avoid-cfg-tarpaulin -- --test-threads 1'
-        env:
-          # Required as tarpaulin doesn't honor .cargo/config.
-          RUSTFLAGS: -C target-feature=+aes,+ssse3
+      - name: Test Rust code
+        uses: ./.github/actions/test-rust
 
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v2.1.0
-
-      - name: Archive code coverage results
-        uses: actions/upload-artifact@v2.2.4
+      - name: Test OAS-20 contract
+        uses: ./.github/actions/test-rust
         with:
-          name: code-coverage-report
-          path: cobertura.xml
+          manfiest_path: contract-sdk/specs/oas20/contract/Cargo.toml
 
   test-rust-sgx:
     # NOTE: This name appears in GitHub's Checks API.

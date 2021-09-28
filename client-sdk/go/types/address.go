@@ -24,6 +24,8 @@ var (
 	AddressV0Sr25519Context = address.NewContext("oasis-runtime-sdk/address: sr25519", 0)
 	// AddressV0MultisigContext is the unique context for v0 multisig addresses.
 	AddressV0MultisigContext = address.NewContext("oasis-runtime-sdk/address: multisig", 0)
+	// AddressV0ModuleContext is the unique context for v0 module addresses.
+	AddressV0ModuleContext = address.NewContext("oasis-runtime-sdk/address: module", 0)
 	// AddressBech32HRP is the unique human readable part of Bech32 encoded
 	// staking account addresses.
 	AddressBech32HRP = staking.AddressBech32HRP
@@ -91,6 +93,21 @@ func NewAddress(pk signature.PublicKey) (a Address) {
 		panic("address: unsupported public key type")
 	}
 	return (Address)(address.NewAddress(ctx, pkData))
+}
+
+// NewAddressForModule creates a new address for a specific module and raw kind.
+func NewAddressForModule(module string, kind []byte) Address {
+	moduleBytes := []byte(module)
+	sepBytes := []byte(".")
+	data := make([]byte, 0, len(moduleBytes)+len(kind)+1)
+	data = append(data,
+		moduleBytes...)
+	data = append(data,
+		sepBytes...)
+	data = append(data,
+		kind...,
+	)
+	return (Address)(address.NewAddress(AddressV0ModuleContext, data))
 }
 
 // NewAddressFromBech32 creates a new address from the given bech-32 encoded string.
