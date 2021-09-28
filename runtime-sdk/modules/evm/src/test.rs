@@ -47,8 +47,8 @@ fn load_erc20() -> Vec<u8> {
 #[test]
 fn test_evm_caller_addr_derivation() {
     let expected =
-        H160::from_slice(&Vec::<u8>::from_hex("89519d9720bbedf870ab6ae6fbd4bb8af92f4328").unwrap());
-    let derived = EVM::derive_caller_from_bytes(keys::dave::pk().as_bytes());
+        H160::from_slice(&Vec::<u8>::from_hex("dce075e1c39b1ae0b75d554558b6451a226ffe00").unwrap());
+    let derived = EVM::derive_caller_from_public_key(&keys::dave::pk());
     assert_eq!(derived, expected);
 }
 
@@ -111,7 +111,7 @@ fn test_evm_calls() {
             format: transaction::CallFormat::Plain,
             method: "evm.Deposit".to_owned(),
             body: cbor::to_value(types::Deposit {
-                to: EVM::derive_caller_from_bytes(keys::dave::pk().as_bytes()),
+                to: EVM::derive_caller_from_public_key(&keys::dave::pk()),
                 amount: BaseUnits::new(999_000, Denomination::NATIVE),
             }),
         },
@@ -295,7 +295,7 @@ fn test_evm_runtime() {
             format: transaction::CallFormat::Plain,
             method: "evm.Deposit".to_owned(),
             body: cbor::to_value(types::Deposit {
-                to: EVM::derive_caller_from_bytes(keys::dave::pk().as_bytes()),
+                to: EVM::derive_caller_from_public_key(&keys::dave::pk()),
                 amount: BaseUnits::new(999_000, Denomination::NATIVE),
             }),
         },

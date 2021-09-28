@@ -434,10 +434,20 @@ impl<Cfg: Config> Module<Cfg> {
         H160::from_slice(&out[32 - 20..])
     }
 
+    #[cfg(test)]
+    fn derive_caller_from_public_key(pk: &PublicKey) -> H160 {
+        match pk {
+            PublicKey::Secp256k1(pk) => {
+                Self::derive_caller_from_bytes(&pk.to_uncompressed_untagged_bytes())
+            }
+            pk => Self::derive_caller_from_bytes(&Address::from_pk(pk).as_ref()[1..]),
+        }
+    }
+
     fn derive_caller_from_tx_auth_info(ai: &AuthInfo) -> H160 {
         match &ai.signer_info[0].address_spec {
             AddressSpec::Signature(PublicKey::Secp256k1(pk)) => {
-                Self::derive_caller_from_bytes(pk.as_bytes())
+                Self::derive_caller_from_bytes(&pk.to_uncompressed_untagged_bytes())
             }
             address_spec => Self::derive_caller_from_bytes(&address_spec.address().as_ref()[1..]),
         }

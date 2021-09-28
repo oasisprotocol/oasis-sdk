@@ -157,7 +157,7 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 	e := evm.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
 
-	daveEVMAddr, err := hex.DecodeString("89519d9720bbedf870ab6ae6fbd4bb8af92f4328")
+	daveEVMAddr, err := hex.DecodeString("dce075e1c39b1ae0b75d554558b6451a226ffe00")
 	if err != nil {
 		return err
 	}
