@@ -1442,9 +1442,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.102"
+version = "0.2.103"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2a5ac8f984bfcf3a823267e5fde638acc3325f6496633a5da6bb6eb2171e103"
+checksum = "dd8f7255a17a627354f321ef0055d63b898c6fb27eff628af4d1b66b7331edf6"
 
 [[package]]
 name = "libloading"
@@ -1769,7 +1769,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-client"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?rev=855e396#855e396abf87407d58ad1f691c2535f1ac5d1e6d"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3#9f5a3c609a1d700b2fe7cd860bf6bc12a0d6d339"
 dependencies = [
  "anyhow",
  "futures",
@@ -1783,7 +1783,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-keymanager-api-common"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?rev=855e396#855e396abf87407d58ad1f691c2535f1ac5d1e6d"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3#9f5a3c609a1d700b2fe7cd860bf6bc12a0d6d339"
 dependencies = [
  "anyhow",
  "base64",
@@ -1800,7 +1800,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-keymanager-client"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?rev=855e396#855e396abf87407d58ad1f691c2535f1ac5d1e6d"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3#9f5a3c609a1d700b2fe7cd860bf6bc12a0d6d339"
 dependencies = [
  "futures",
  "io-context",
@@ -1815,7 +1815,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-runtime"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?rev=855e396#855e396abf87407d58ad1f691c2535f1ac5d1e6d"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3#9f5a3c609a1d700b2fe7cd860bf6bc12a0d6d339"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -3000,9 +3000,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5241dd6f21443a3606b432718b166d3cedc962fd4b8bea54a8bc7f514ebda986"
+checksum = "f83b2a3d4d9091d0abd7eba4dc2710b1718583bd4d8992e2190720ea38f391f7"
 dependencies = [
  "tinyvec_macros",
 ]
