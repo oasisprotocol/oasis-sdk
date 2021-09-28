@@ -24,5 +24,5 @@ require (
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20210716083614-f38f8e8b0b84
 	github.com/oasisprotocol/oasis-core/go v0.2102.1-0.20210923195430-855e396abf87
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
-	google.golang.org/grpc v1.40.0
+	google.golang.org/grpc v1.41.0
 )

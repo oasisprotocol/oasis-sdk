@@ -16,5 +16,5 @@ require (
 	github.com/oasisprotocol/deoxysii v0.0.0-20200527154044-851aec403956
 	github.com/oasisprotocol/oasis-core/go v0.2102.1-0.20210923195430-855e396abf87
 	github.com/stretchr/testify v1.7.0
-	google.golang.org/grpc v1.40.0
+	google.golang.org/grpc v1.41.0
 )
