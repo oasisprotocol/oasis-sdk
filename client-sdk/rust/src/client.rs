@@ -6,19 +6,17 @@ use futures_util::{
     stream::{Stream, TryStreamExt},
 };
 use prost::Message as _;
-use serde::{de::DeserializeOwned, ser::Serialize};
-use serde_bytes::ByteBuf;
 use tonic::{self, client::Grpc, transport::Channel};
 
 use oasis_runtime_sdk::{
     self as sdk,
     core::{
-        common::{cbor, crypto::hash::Hash, namespace::Namespace},
+        common::{crypto::hash::Hash, namespace::Namespace},
         consensus::roothash::{AnnotatedBlock, Block},
         transaction::tags::Tag,
     },
     types::transaction::{
-        AuthInfoRef, CallRef, Fee, SignerInfoRef, TransactionRef, LATEST_TRANSACTION_VERSION,
+        AuthInfo, Call, CallFormat, Fee, SignerInfo, Transaction, LATEST_TRANSACTION_VERSION,
     },
 };
 
@@ -36,7 +34,7 @@ pub struct Client {
     inner: Grpc<Channel>, // Cheap to `Clone`, so no `Arc`
     runtime_id: Namespace,
     wallets: Arc<Vec<Arc<dyn Wallet>>>,
-    fee: Arc<Fee>, // Can be expensive to clone if large `quantitity` or `denomination` name.
+    fee: Fee,
     chain_context: Vec<u8>,
 }
 
@@ -82,7 +80,7 @@ impl Client {
     }
 
     pub fn set_fee(&mut self, fee: Fee) {
-        self.fee = Arc::new(fee);
+        self.fee = fee;
     }
 
     /// Checks if the oasis-node is ready and accepting connections.
@@ -102,8 +100,19 @@ impl Client {
         Ok(self.unary(req).await?)
     }
 
+    /// Sends an unencrypted transaction to the scheduler.
+    pub async fn tx_plain(&mut self, method: String, body: cbor::Value) -> Result<Vec<u8>, Error> {
+        self.do_tx(method, body, CallFormat::EncryptedX25519DeoxysII)
+            .await
+    }
+
     /// Sends a transaction to the scheduler.
-    pub async fn tx(&mut self, method: &str, body: &cbor::Value) -> Result<Vec<u8>, Error> {
+    async fn do_tx(
+        &mut self,
+        method: String,
+        body: cbor::Value,
+        format: CallFormat,
+    ) -> Result<Vec<u8>, Error> {
         let nonces = try_join_all(self.wallets.iter().map(|wallet| wallet.next_nonce()))
             .await
             .map_err(Error::Wallet)?;
@@ -111,20 +120,24 @@ impl Client {
             .wallets
             .iter()
             .zip(nonces.into_iter())
-            .map(|(wallet, nonce)| SignerInfoRef {
-                address_spec: wallet.address(),
+            .map(|(wallet, nonce)| SignerInfo {
+                address_spec: wallet.address().clone(),
                 nonce,
             })
             .collect();
-        let tx = TransactionRef {
+        let tx = Transaction {
             version: LATEST_TRANSACTION_VERSION,
-            call: CallRef { method, body },
-            auth_info: AuthInfoRef {
+            call: Call {
+                method,
+                body,
+                format,
+            },
+            auth_info: AuthInfo {
                 signer_info,
-                fee: &self.fee,
+                fee: self.fee.clone(),
             },
         };
-        let serialized_tx = cbor::to_vec(&tx);
+        let serialized_tx = cbor::to_vec(tx);
         let auth_proofs = try_join_all(
             self.wallets
                 .iter()
@@ -134,9 +147,9 @@ impl Client {
         .map_err(Error::Wallet)?;
         let req = SubmitTxRequest {
             runtime_id: self.runtime_id,
-            data: ByteBuf::from(cbor::to_vec(&(serialized_tx, auth_proofs))),
+            data: cbor::to_vec((serialized_tx, auth_proofs)),
         };
-        Ok(self.unary(req).await?.into_vec())
+        Ok(self.unary(req).await?)
     }
 
     /// Sends a read-only query to connected node.
@@ -253,11 +266,11 @@ impl Error {
 }
 
 /// @see `oasis-core/go/common/errors/errors.go`
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, cbor::Decode)]
 struct CodedError {
     module: String,
     code: u32,
-    #[serde(default)]
+    #[cbor(default)]
     message: Option<String>,
 }
 
@@ -290,8 +303,8 @@ struct RpcStatus {
     details: Vec<prost_types::Any>,
 }
 
-impl From<cbor::Error> for Error {
-    fn from(e: cbor::Error) -> Self {
+impl From<cbor::DecodeError> for Error {
+    fn from(e: cbor::DecodeError) -> Self {
         Self::Rpc(tonic::Status::internal(e.to_string()))
     }
 }
@@ -300,8 +313,8 @@ struct CborCodec<T, U>(PhantomData<(T, U)>);
 
 impl<T, U> Default for CborCodec<T, U>
 where
-    T: Serialize + Send + 'static,
-    U: DeserializeOwned + Send + 'static,
+    T: cbor::Encode + Send + 'static,
+    U: cbor::Decode + Send + 'static,
 {
     fn default() -> Self {
         Self(PhantomData)
@@ -310,8 +323,8 @@ where
 
 impl<T, U> tonic::codec::Codec for CborCodec<T, U>
 where
-    T: Serialize + Send + Sync + 'static,
-    U: DeserializeOwned + Send + Sync + 'static,
+    T: cbor::Encode + Send + Sync + 'static,
+    U: cbor::Decode + Send + Sync + 'static,
 {
     type Encode = T;
     type Decode = U;
@@ -330,7 +343,7 @@ where
 
 struct CborEncoder<T>(PhantomData<T>);
 
-impl<T: Serialize + Send + Sync> tonic::codec::Encoder for CborEncoder<T> {
+impl<T: cbor::Encode + Send + Sync> tonic::codec::Encoder for CborEncoder<T> {
     type Item = T;
     type Error = tonic::Status;
 
@@ -339,14 +352,14 @@ impl<T: Serialize + Send + Sync> tonic::codec::Encoder for CborEncoder<T> {
         item: Self::Item,
         dst: &mut tonic::codec::EncodeBuf<'_>,
     ) -> Result<(), Self::Error> {
-        cbor::to_writer(dst.writer(), &item);
+        dst.put_slice(&cbor::to_vec(item));
         Ok(())
     }
 }
 
 struct CborDecoder<T>(PhantomData<T>);
 
-impl<T: DeserializeOwned + Send + Sync> tonic::codec::Decoder for CborDecoder<T> {
+impl<T: cbor::Decode + Send + Sync> tonic::codec::Decoder for CborDecoder<T> {
     type Item = T;
     type Error = tonic::Status;
 
@@ -354,6 +367,8 @@ impl<T: DeserializeOwned + Send + Sync> tonic::codec::Decoder for CborDecoder<T>
         &mut self,
         src: &mut tonic::codec::DecodeBuf<'_>,
     ) -> Result<Option<Self::Item>, Self::Error> {
-        cbor::from_reader(src.reader()).map_err(|e| tonic::Status::internal(e.to_string()))
+        let mut src_buf = Vec::with_capacity(src.remaining());
+        src.copy_to_slice(&mut src_buf);
+        cbor::from_slice(&src_buf).map_err(|e| tonic::Status::internal(e.to_string()))
     }
 }

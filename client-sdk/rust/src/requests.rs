@@ -1,8 +1,5 @@
-use serde::{Deserialize, Serialize};
-use serde_bytes::ByteBuf;
-
 use oasis_runtime_sdk::core::{
-    common::{cbor, namespace::Namespace},
+    common::namespace::Namespace,
     consensus::roothash::{AnnotatedBlock, Block},
 };
 
@@ -13,7 +10,7 @@ macro_rules! grpc_methods {
         })?) -> $res_ty:ty;
     )*) => {
         paste::paste!{$(
-            #[derive(Clone, Debug, Serialize)]
+            #[derive(Clone, Debug, cbor::Encode)]
             pub(crate) struct [<$name Request>]$(<$lifetime>)? {
                 $($(pub(crate) $arg_name: $arg_ty),*)?
             }
@@ -34,8 +31,8 @@ macro_rules! grpc_methods {
 }
 
 pub(crate) trait Request {
-    type Request: serde::ser::Serialize + Send + Sync + 'static;
-    type Response: serde::de::DeserializeOwned + Send + Sync + 'static;
+    type Request: cbor::Encode + Send + Sync + 'static;
+    type Response: cbor::Decode + Send + Sync + 'static;
 
     /// Returns the RPC body (aka payload, data).
     fn body(self) -> Self::Request;
@@ -47,8 +44,8 @@ pub(crate) trait Request {
 grpc_methods! {
     RuntimeClient.SubmitTx({
         runtime_id: Namespace,
-        data: ByteBuf,
-    }) -> ByteBuf;
+        data: Vec<u8>,
+    }) -> Vec<u8>;
 
     RuntimeClient.Query({
         runtime_id: Namespace,
@@ -69,16 +66,15 @@ grpc_methods! {
 
     RuntimeClient.WatchBlocks({ runtime_id: Namespace }) -> AnnotatedBlock; // server_streaming
 
-    Consensus.GetChainContext() -> ByteBuf;
+    Consensus.GetChainContext() -> Vec<u8>;
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, cbor::Decode)]
 pub(crate) struct QueryResponse {
     pub(crate) data: cbor::Value,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, cbor::Encode)]
 pub(crate) struct QueryTxsQuery {
     /// The inclusive minimum round. Zero means no limit.
     pub(crate) round_min: u64,
@@ -92,27 +88,25 @@ pub(crate) struct QueryTxsQuery {
     pub(crate) limit: u64,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, cbor::Encode)]
 pub(crate) struct QueryTxsQueryCondition {
-    pub(crate) key: ByteBuf,
+    pub(crate) key: Vec<u8>,
     /// Any tag values that can match for the given key.
-    pub(crate) values: Vec<ByteBuf>,
+    pub(crate) values: Vec<Vec<u8>>,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, cbor::Decode)]
 pub(crate) struct TxResult {
     pub(crate) block: Block,
     /// The index of the transaction in the block.
     pub(crate) index: u32,
-    pub(crate) input: ByteBuf,
-    pub(crate) output: ByteBuf,
+    pub(crate) input: Vec<u8>,
+    pub(crate) output: Vec<u8>,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, cbor::Decode)]
 pub(crate) struct Tag {
-    pub(crate) key: ByteBuf,
-    pub(crate) value: ByteBuf,
+    pub(crate) key: Vec<u8>,
+    pub(crate) value: Vec<u8>,
     pub(crate) tx_hash: [u8; 32],
 }

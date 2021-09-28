@@ -245,18 +245,6 @@ impl SignerInfo {
     }
 }
 
-/// Transaction signer information, referenced for zero-clone serialization.
-#[derive(Clone, Debug, Serialize)]
-#[serde(deny_unknown_fields)]
-#[doc(hidden)]
-pub struct SignerInfoRef<'a> {
-    #[serde(rename = "address_spec")]
-    pub address_spec: &'a AddressSpec,
-
-    #[serde(rename = "nonce")]
-    pub nonce: u64,
-}
-
 /// Call result.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub enum CallResult {
