@@ -240,7 +240,11 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 		Sentries: []oasis.SentryFixture{},
 		Seeds:    []oasis.SeedFixture{{}},
 		Clients: []oasis.ClientFixture{
-			{Runtimes: []int{1}},
+			{Runtimes: []int{1}, RuntimeConfig: map[int]map[string]interface{}{
+				1: {
+					"allow_expensive_queries": true,
+				},
+			}},
 		},
 	}
 

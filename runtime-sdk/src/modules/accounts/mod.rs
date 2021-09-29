@@ -597,6 +597,10 @@ impl Module {
         ctx: &mut C,
         args: types::AddressesQuery,
     ) -> Result<Vec<Address>, Error> {
+        if !ctx.are_expensive_queries_allowed() {
+            return Err(Error::Forbidden);
+        }
+
         Self::get_addresses(ctx.runtime_state(), args.denomination)
     }
 
