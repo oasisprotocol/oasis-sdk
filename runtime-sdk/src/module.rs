@@ -337,14 +337,16 @@ impl AuthHandler for Tuple {
         // Return on first handler that can successfully authenticate the tx,
         // skip the ones that return an error (which is also the default
         // return value for the authenticate_tx handler).
+        let mut last_error = modules::core::Error::NotAuthenticated;
         for_tuples!( #(
             let result = match Tuple::authenticate_tx(ctx, tx) {
                 Ok(result) => return Ok(result),
-                Err(result) => 0,
+                Err(modules::core::Error::NotAuthenticated) => {},
+                Err(result) => last_error = result,
             };
         )* );
-        // Return an error if no handlers were successful.
-        Err(modules::core::Error::NotAuthenticated)
+        // Return the last error if no handlers were successful.
+        Err(last_error)
     }
 
     fn before_handle_call<C: TxContext>(

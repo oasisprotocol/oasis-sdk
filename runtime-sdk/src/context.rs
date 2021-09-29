@@ -95,11 +95,26 @@ pub trait Context {
             return true;
         }
 
+        self.local_config(LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES)
+            .unwrap_or_default()
+    }
+
+    /// Returns node operator-provided local configuration.
+    ///
+    /// This method will always return `None` if `is_check_only` returns `false` to avoid any bugs
+    /// that would cause non-determinism in non-check-tx contexts.
+    fn local_config<T>(&self, key: &str) -> Option<T>
+    where
+        T: cbor::Decode,
+    {
+        if !self.is_check_only() {
+            return None;
+        }
+
         self.host_info()
             .local_config
-            .get(LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES)
-            .map(|v| cbor::from_value(v.clone()).unwrap_or_default())
-            .unwrap_or_default()
+            .get(key)
+            .and_then(|v| cbor::from_value(v.clone()).ok())
     }
 
     /// Information about the host environment.
