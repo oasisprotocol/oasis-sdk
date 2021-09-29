@@ -15,7 +15,7 @@ use tiny_keccak::{Hasher, Keccak};
 
 use oasis_runtime_sdk::{
     context::{Context, TxContext},
-    crypto::signature::PublicKey,
+    crypto::signature::{secp256k1, PublicKey},
     error,
     module::{self, CallResult, Module as _},
     modules::{
@@ -434,22 +434,28 @@ impl<Cfg: Config> Module<Cfg> {
         H160::from_slice(&out[32 - 20..])
     }
 
+    fn derive_caller_from_secp256k1_public_key(public_key: &secp256k1::PublicKey) -> H160 {
+        Self::derive_caller_from_bytes(&public_key.to_uncompressed_untagged_bytes())
+    }
+
+    fn derive_caller_from_non_secp256k1_address(address: &Address) -> H160 {
+        Self::derive_caller_from_bytes(&address.as_ref()[1..])
+    }
+
     #[cfg(test)]
     fn derive_caller_from_public_key(pk: &PublicKey) -> H160 {
         match pk {
-            PublicKey::Secp256k1(pk) => {
-                Self::derive_caller_from_bytes(&pk.to_uncompressed_untagged_bytes())
-            }
-            pk => Self::derive_caller_from_bytes(&Address::from_pk(pk).as_ref()[1..]),
+            PublicKey::Secp256k1(pk) => Self::derive_caller_from_secp256k1_public_key(pk),
+            pk => Self::derive_caller_from_non_secp256k1_address(&Address::from_pk(pk)),
         }
     }
 
     fn derive_caller_from_tx_auth_info(ai: &AuthInfo) -> H160 {
         match &ai.signer_info[0].address_spec {
             AddressSpec::Signature(PublicKey::Secp256k1(pk)) => {
-                Self::derive_caller_from_bytes(&pk.to_uncompressed_untagged_bytes())
+                Self::derive_caller_from_secp256k1_public_key(pk)
             }
-            address_spec => Self::derive_caller_from_bytes(&address_spec.address().as_ref()[1..]),
+            address_spec => Self::derive_caller_from_non_secp256k1_address(&address_spec.address()),
         }
     }
 
