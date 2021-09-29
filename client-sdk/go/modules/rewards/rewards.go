@@ -7,10 +7,13 @@ import (
 )
 
 const (
+	// Queries.
 	methodParameters = "rewards.Parameters"
 )
 
+// V1 is the v1 rewards module interface.
 type V1 interface {
+	// Parameters queries the rewards module parameters.
 	Parameters(ctx context.Context, round uint64) (*Parameters, error)
 }
 
@@ -28,6 +31,7 @@ func (a *v1) Parameters(ctx context.Context, round uint64) (*Parameters, error) 
 	return &params, nil
 }
 
+// NewV1 generates a V1 client helper for the rewards module.
 func NewV1(rc client.RuntimeClient) V1 {
 	return &v1{rc: rc}
 }
