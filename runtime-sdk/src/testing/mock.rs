@@ -95,7 +95,13 @@ impl Default for Mock {
                 consensus_backend: "mock".to_string(),
                 consensus_protocol_version: Version::default(),
                 consensus_chain_context: "test".to_string(),
-                local_config: BTreeMap::new(),
+                local_config: {
+                    let mut local_config = BTreeMap::new();
+                    // Allow expensive queries in tests to make it easier.
+                    local_config
+                        .insert("allow_expensive_queries".to_string(), cbor::to_value(true));
+                    local_config
+                },
             },
             runtime_header: roothash::Header::default(),
             runtime_round_results: roothash::RoundResults::default(),

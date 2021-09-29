@@ -221,6 +221,22 @@ pub struct Genesis {
     pub parameters: Parameters,
 }
 
+/// Local configuration that can be provided by the node operator.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct LocalConfig {
+    /// Gas limit for custom queries that invoke smart contracts.
+    #[cbor(optional, default)]
+    pub query_custom_max_gas: u64,
+}
+
+impl Default for LocalConfig {
+    fn default() -> Self {
+        Self {
+            query_custom_max_gas: 10_000_000,
+        }
+    }
+}
+
 /// State schema constants.
 pub mod state {
     /// Next code identifier (u64).
@@ -604,12 +620,19 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         args: types::CustomQuery,
     ) -> Result<types::CustomQueryResult, Error> {
+        if !ctx.are_expensive_queries_allowed() {
+            return Err(Error::Forbidden);
+        }
+
         let params = Self::params(ctx.runtime_state());
 
         // Load instance information and code.
         let instance_info = Self::load_instance_info(ctx, args.id)?;
         let code_info = Self::load_code_info(ctx, instance_info.code_id)?;
         let code = Self::load_code(ctx, &code_info)?;
+
+        // Load local configuration.
+        let cfg: LocalConfig = ctx.local_config(MODULE_NAME).unwrap_or_default();
 
         // Run query function.
         let contract = wasm::Contract {
@@ -619,7 +642,7 @@ impl<Cfg: Config> Module<Cfg> {
         };
         let mut exec_ctx = abi::ExecutionContext {
             caller_address: Default::default(), // No caller for queries.
-            gas_limit: 1_000_000,               // TODO: Configuration parameter?
+            gas_limit: cfg.query_custom_max_gas,
             instance_info: &instance_info,
             tx_context: ctx,
             params: &params,
