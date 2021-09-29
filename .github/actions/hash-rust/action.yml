@@ -34,6 +34,7 @@ runs:
       id: build
       run: |
         docker run --rm -i -v ${{ inputs.dir }}:/src ${{ inputs.image }} /bin/bash <<-'EOF'
+          set -e
           cd /src
           CARGO_TARGET_ROOT="/src/target"
           TARGET=""
