@@ -742,7 +742,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4cccf60bb98c0fca115a581f894aed0e43fa55bf289fdac5599bec440bb4fd6"
 dependencies = [
  "nom 6.2.1",
- "num-bigint",
+ "num-bigint 0.4.2",
  "num-traits",
  "syn",
 ]
@@ -755,7 +755,7 @@ checksum = "2d7ededb7525bb4114bc209685ce7894edc2965f4914312a1ea578a645a237f0"
 dependencies = [
  "der-oid-macro",
  "nom 6.2.1",
- "num-bigint",
+ "num-bigint 0.4.2",
  "num-traits",
  "rusticata-macros",
 ]
@@ -1398,6 +1398,7 @@ dependencies = [
  "ecdsa",
  "elliptic-curve",
  "sha2",
+ "sha3 0.9.1",
 ]
 
 [[package]]
@@ -1618,6 +1619,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "num"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8b7a8e9be5e039e2ff869df49155f1c06bd01ade2117ec783e56ab0932b67a8f"
+dependencies = [
+ "num-bigint 0.3.3",
+ "num-complex",
+ "num-integer",
+ "num-iter",
+ "num-rational",
+ "num-traits",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5f6f7833f2cbf2360a6cfd58cd41a53aa7a90bd4c202f5b1c7dd2ed73c57b2c3"
+dependencies = [
+ "autocfg 1.0.1",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
 name = "num-bigint"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1644,6 +1670,15 @@ dependencies = [
  "rand 0.8.4",
  "smallvec",
  "zeroize",
+]
+
+[[package]]
+name = "num-complex"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "747d632c0c558b87dbabbe6a82f3b4ae03720d0646ac5b7b4dae89394be5f2c5"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
@@ -1674,6 +1709,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b2021c8337a54d21aca0d59a92577a029af9431cb59b909b03252b9c164fad59"
 dependencies = [
  "autocfg 1.0.1",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-rational"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12ac428b1cb17fce6f731001d307d351ec70a6d202fc2e60f7d4c5e42d8f4f07"
+dependencies = [
+ "autocfg 1.0.1",
+ "num-bigint 0.3.3",
  "num-integer",
  "num-traits",
 ]
@@ -1850,7 +1897,7 @@ dependencies = [
  "lazy_static",
  "log",
  "lru",
- "num-bigint",
+ "num-bigint 0.4.2",
  "num-traits",
  "oasis-cbor",
  "oid-registry",
@@ -1937,10 +1984,16 @@ dependencies = [
  "blake3",
  "evm",
  "fixed-hash",
+ "hex",
+ "k256",
+ "num",
  "oasis-cbor",
  "oasis-runtime-sdk",
  "once_cell",
  "primitive-types",
+ "ripemd160",
+ "sha2",
+ "sha3 0.9.1",
  "thiserror",
  "tiny-keccak 2.0.2",
  "uint",
@@ -2360,6 +2413,17 @@ name = "regex-syntax"
 version = "0.6.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
+
+[[package]]
+name = "ripemd160"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eca4ecc81b7f313189bf73ce724400a07da2a6dac19588b03c8bd76a2dcc251"
+dependencies = [
+ "block-buffer 0.9.0",
+ "digest 0.9.0",
+ "opaque-debug 0.3.0",
+]
 
 [[package]]
 name = "rlp"
