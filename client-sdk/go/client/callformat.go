@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 
 	"github.com/oasisprotocol/deoxysii"
@@ -84,9 +85,15 @@ func (tb *TransactionBuilder) decodeResult(result *types.CallResult, meta interf
 		// In case of plain-text data format, we simply pass on the result unchanged.
 		return result, nil
 	case *metaEncryptedX25519DeoxysII:
-		// Make sure the result is unknown and not something else.
-		if !result.IsUnknown() {
-			return nil, fmt.Errorf("callformat: unexpected result")
+		// Make sure the result makes sense in this context.
+		switch {
+		case result.IsUnknown():
+		case result.IsSuccess():
+			// Unexpected as a successful result shouldn't be plain.
+			return nil, fmt.Errorf("callformat: unexpected result: %s", base64.StdEncoding.EncodeToString(result.Ok))
+		default:
+			// Submission could fail before call format processing so the result would be plain.
+			return nil, result.Failed
 		}
 
 		var envelope types.ResultEnvelopeX25519DeoxysII
