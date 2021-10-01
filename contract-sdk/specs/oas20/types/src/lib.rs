@@ -1,6 +1,9 @@
+extern crate alloc;
+
 use oasis_contract_sdk::{self as sdk};
 use oasis_contract_sdk_types::{address::Address, InstanceId};
 
+pub mod helpers;
 #[cfg(test)]
 mod test;
 

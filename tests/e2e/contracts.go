@@ -248,5 +248,47 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		return fmt.Errorf("unexpected OAS20 query contract balance response: %v", response.Balance)
 	}
 
+	// Instantiate oas20 via the hello contract.
+	tb = ct.Call(
+		instance.ID,
+		map[string]map[string]interface{}{
+			"instantiate_oas20": {
+				"code_id": uploadOas20.ID,
+				"token_instantiation": &oas20.Instantiate{
+					Name:     "Hello Test token",
+					Symbol:   "HELLO",
+					Decimals: 2,
+					InitialBalances: []oas20.InitialBalance{
+						{
+							Address: types.NewAddress(signer.Public()),
+							Amount:  *quantity.NewFromUint64(10_000),
+						},
+					},
+				},
+			},
+		},
+		[]types.BaseUnits{},
+	).
+		SetFeeGas(1_000_000).
+		AppendAuthSignature(signer.Public(), nonce+8)
+	_ = tb.AppendSign(ctx, signer)
+	if err := tb.SubmitTx(ctx, &rawResult); err != nil {
+		return fmt.Errorf("failed to call hello contract: %w", err)
+	}
+
+	var instantiateResponse map[string]map[string]interface{}
+	if err := cbor.Unmarshal(rawResult, &instantiateResponse); err != nil {
+		return fmt.Errorf("failed to decode contract result: %w", err)
+	}
+	if instantiateResponse["instantiate_oas20"] == nil {
+		return fmt.Errorf("invalid instantiate_oas20 response: %v", instantiateResponse)
+	}
+	if instantiateResponse["instantiate_oas20"]["instance_id"] != uint64(2) {
+		return fmt.Errorf("unexpected instantiate_oas20 instance_id response: %v", instantiateResponse["instantiate_oas20"]["instance_id"])
+	}
+	if instantiateResponse["instantiate_oas20"]["data"] != "some test data" {
+		return fmt.Errorf("unexpected instantiate_oas20 data response: %v", instantiateResponse["instantiate_oas20"]["data"])
+	}
+
 	return nil
 }
