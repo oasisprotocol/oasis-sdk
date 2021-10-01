@@ -126,6 +126,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
         match msg {
             Message::Call {
                 id,
+                data,
                 reply,
                 method,
                 body,
@@ -221,6 +222,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         let reply = Reply::Call {
                             id,
                             result: result.into(),
+                            data,
                         };
                         let mut exec_ctx = ExecutionContext {
                             caller_address: ctx.tx_caller_address(),

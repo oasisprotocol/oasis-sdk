@@ -19,6 +19,8 @@ pub enum Message {
         body: cbor::Value,
         #[cbor(optional)]
         max_gas: Option<u64>,
+        #[cbor(optional)]
+        data: Option<cbor::Value>,
     },
 }
 
@@ -42,6 +44,8 @@ pub enum Reply {
         #[cbor(optional, default)]
         id: u64,
         result: CallResult,
+        #[cbor(optional)]
+        data: Option<cbor::Value>,
     },
 }
 

@@ -698,7 +698,7 @@ impl<'a, V: Any> ContextValue<'a, V> {
         }
     }
 
-    /// Gets a mutable reference to the specifeid per-context value.
+    /// Gets a mutable reference to the specified per-context value.
     ///
     /// # Panics
     ///

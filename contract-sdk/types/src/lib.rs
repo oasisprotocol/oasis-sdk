@@ -4,6 +4,7 @@ pub mod address;
 pub mod env;
 pub mod event;
 pub mod message;
+pub mod modules;
 pub mod storage;
 pub mod token;
 
