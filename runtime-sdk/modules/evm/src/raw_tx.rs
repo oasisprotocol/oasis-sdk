@@ -249,4 +249,39 @@ mod test {
             0,
         );
     }
+
+    #[test]
+    fn test_decode_types() {
+        // https://github.com/ethereum/tests/blob/v10.0/BlockchainTests/ValidBlocks/bcEIP1559/transType.json
+        decode_expect_call(
+            "f861018203e882c35094cccccccccccccccccccccccccccccccccccccccc80801ca021539ef96c70ab75350c594afb494458e211c8c722a7a0ffb7025c03b87ad584a01d5395fe48edb306f614f0cd682b8c2537537f5fd3e3275243c42e9deff8e93d",
+            "cccccccccccccccccccccccccccccccccccccccc",
+            0,
+            "",
+            50_000,
+            1_000,
+            "d02d72e067e77158444ef2020ff2d325f929b363",
+            1,
+        );
+        decode_expect_call(
+            "01f86301028203e882c35094cccccccccccccccccccccccccccccccccccccccc8080c080a0260f95e555a1282ef49912ff849b2007f023c44529dc8fb7ecca7693cccb64caa06252cf8af2a49f4cb76fd7172feaece05124edec02db242886b36963a30c2606",
+            "cccccccccccccccccccccccccccccccccccccccc",
+            0,
+            "",
+            50_000,
+            1_000,
+            "d02d72e067e77158444ef2020ff2d325f929b363",
+            2,
+        );
+        decode_expect_call(
+            "02f8640103648203e882c35094cccccccccccccccccccccccccccccccccccccccc8080c001a08480e6848952a15ae06192b8051d213d689bdccdf8f14cf69f61725e44e5e80aa057c2af627175a2ac812dab661146dfc7b9886e885c257ad9c9175c3fcec2202e",
+            "cccccccccccccccccccccccccccccccccccccccc",
+            0,
+            "",
+            50_000,
+            100,
+            "d02d72e067e77158444ef2020ff2d325f929b363",
+            3,
+        );
+    }
 }
