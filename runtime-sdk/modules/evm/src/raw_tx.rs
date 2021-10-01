@@ -12,6 +12,17 @@ use oasis_runtime_sdk::{
 
 use crate::types;
 
+pub fn recover_low(
+    sig: &k256::ecdsa::recoverable::Signature,
+    sig_digest: sha3::Keccak256,
+) -> Result<k256::ecdsa::VerifyingKey, anyhow::Error> {
+    if sig.s().is_high().into() {
+        return Err(anyhow!("signature s high"));
+    }
+    sig.recover_verify_key_from_digest(sig_digest)
+        .with_context(|| "recover verify key from digest")
+}
+
 fn decode_enveloped(
     body: &[u8],
     expected_chain_id: Option<u64>,
@@ -165,9 +176,7 @@ fn decode_enveloped(
             }),
         ),
     };
-    let key = sig
-        .recover_verify_key_from_digest(sig_digest)
-        .with_context(|| "recover verify key from digest")?;
+    let key = recover_low(&sig, sig_digest)?;
     let nonce: u64 = eth_nonce
         .try_into()
         .map_err(|e| anyhow!("converting nonce: {}", e))?;
