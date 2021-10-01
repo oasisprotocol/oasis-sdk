@@ -222,6 +222,26 @@ mod test {
         assert_eq!(tx.auth_info.fee.gas, expected_gas_limit);
     }
 
+    fn decode_expect_invalid(raw: &str) {
+        let e = decode(&Vec::from_hex(raw).unwrap()).unwrap_err();
+        eprintln!("Decoding error (expected): {:?}", e);
+    }
+
+    fn decode_expect_from_mismatch(raw: &str, unexpected_from: &str) {
+        match decode(&Vec::from_hex(raw).unwrap()) {
+            Ok(tx) => {
+                assert_ne!(
+                    derive_caller::from_tx_auth_info(&tx.auth_info),
+                    types::H160::from_str(unexpected_from).unwrap(),
+                );
+            }
+            Err(e) => {
+                // Returning Err is fine too.
+                eprintln!("Decoding error (expected): {:?}", e);
+            }
+        }
+    }
+
     #[test]
     fn test_decode_basic() {
         // https://github.com/ethereum/tests/blob/v10.0/BasicTests/txtest.json
@@ -282,6 +302,19 @@ mod test {
             100,
             "d02d72e067e77158444ef2020ff2d325f929b363",
             3,
+        );
+    }
+
+    #[test]
+    fn test_decode_verify() {
+        // Altered signature, out of bounds r = n.
+        decode_expect_invalid("f86b8085e8d4a510008227109413978aee95f38490e9769c39b2773ed763d9cd5f872386f26fc10000801ba0fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141a014a569d327dcda4b29f74f93c0e9729d2f49ad726e703f9cd90dbb0fbf6649f1");
+        // Altered signature, high s.
+        decode_expect_invalid("f86b8085e8d4a510008227109413978aee95f38490e9769c39b2773ed763d9cd5f872386f26fc10000801ca0eab47c1a49bf2fe5d40e01d313900e19ca485867d462fe06e139e3a536c6d4f4a0eb5a962cd82325b4d608b06c3f168d618b652f7440d8609ee6c4a37d10cff750");
+        // Altered signature, s decreased by one.
+        decode_expect_from_mismatch(
+            "f86b8085e8d4a510008227109413978aee95f38490e9769c39b2773ed763d9cd5f872386f26fc10000801ba0eab47c1a49bf2fe5d40e01d313900e19ca485867d462fe06e139e3a536c6d4f4a014a569d327dcda4b29f74f93c0e9729d2f49ad726e703f9cd90dbb0fbf6649f0",
+            "cd2a3d9f938e13cd947ec05abc7fe734df8dd826",
         );
     }
 }
