@@ -56,7 +56,8 @@ pub trait Config: 'static {
     /// Module that is used for accessing accounts.
     type Accounts: modules::accounts::API;
 
-    /// The chain ID to supply when a contract requests it.
+    /// The chain ID to supply when a contract requests it. Ethereum-format transactions must use
+    /// this chain ID.
     const CHAIN_ID: u64;
 }
 
@@ -539,7 +540,8 @@ impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
     ) -> Result<Option<Transaction>, CoreError> {
         match scheme {
             "evm.ethereum.v0" => Ok(Some(
-                raw_tx::decode(body).map_err(CoreError::MalformedTransaction)?,
+                raw_tx::decode(body, Some(Cfg::CHAIN_ID))
+                    .map_err(CoreError::MalformedTransaction)?,
             )),
             _ => Ok(None),
         }
