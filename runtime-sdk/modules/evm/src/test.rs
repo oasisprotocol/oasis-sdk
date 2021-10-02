@@ -34,6 +34,8 @@ struct EVMConfig;
 
 impl Config for EVMConfig {
     type Accounts = Accounts;
+
+    const CHAIN_ID: u64 = 0xa515;
 }
 
 type EVM = EVMModule<EVMConfig>;

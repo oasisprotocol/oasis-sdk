@@ -12,6 +12,8 @@ pub struct EVMConfig;
 
 impl evm::Config for EVMConfig {
     type Accounts = modules::accounts::Module;
+
+    const CHAIN_ID: u64 = 0xa515;
 }
 
 impl sdk::Runtime for Runtime {
