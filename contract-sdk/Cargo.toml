@@ -11,6 +11,9 @@ cbor = { version = "0.2.1", package = "oasis-cbor" }
 oasis-contract-sdk-types = { path = "types" }
 oasis-contract-sdk-macros = { path = "../contract-sdk-macros", optional = true }
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+oasis-contract-sdk-crypto = { path = "crypto" }
+
 # Third party.
 thiserror = "1.0.28"
 

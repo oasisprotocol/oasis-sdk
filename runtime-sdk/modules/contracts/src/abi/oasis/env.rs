@@ -1,4 +1,7 @@
 //! Environment query imports.
+use std::convert::TryInto;
+
+use oasis_contract_sdk_crypto as crypto;
 use oasis_contract_sdk_types::{
     env::{AccountsQuery, AccountsResponse, QueryRequest, QueryResponse},
     InstanceId,
@@ -131,5 +134,47 @@ fn dispatch_accounts_query<Cfg: Config, C: Context>(
             code: 1,
             message: "query not supported".to_string(),
         },
+    }
+}
+
+impl<Cfg: Config> OasisV1<Cfg> {
+    /// Link crypto helper functions.
+    pub fn link_crypto<C: Context>(
+        instance: &mut wasm3::Instance<'_, '_, ExecutionContext<'_, C>>,
+    ) -> Result<(), Error> {
+        // crypto.ecdsa_recover(input) -> response
+        let _ = instance.link_function(
+            "crypto",
+            "ecdsa_recover",
+            |ctx, request: ((u32, u32), (u32, u32))| -> Result<(), wasm3::Trap> {
+                // Make sure function was called in valid context.
+                let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
+
+                // Charge gas.
+                gas::use_gas(ctx.instance, ec.params.gas_costs.wasm_crypto_ecdsa_recover)?;
+
+                ctx.instance
+                    .runtime()
+                    .try_with_memory(|mut memory| -> Result<_, wasm3::Trap> {
+                        let input = Region::from_arg(request.0)
+                            .as_slice(&memory)
+                            .map_err(|_| wasm3::Trap::Abort)?
+                            .to_vec();
+
+                        let output: &mut [u8; 65] = Region::from_arg(request.1)
+                            .as_slice_mut(&mut memory)
+                            .map_err(|_| wasm3::Trap::Abort)?
+                            .try_into()
+                            .map_err(|_| wasm3::Trap::Abort)?;
+
+                        let key = crypto::ecdsa::recover(&input).unwrap_or_else(|_| [0; 65]);
+                        output.copy_from_slice(&key);
+
+                        Ok(())
+                    })?
+            },
+        );
+
+        Ok(())
     }
 }

@@ -10,6 +10,7 @@ members = [
 
     # Smart Contract SDK.
     "contract-sdk",
+    "contract-sdk/crypto",
     "contract-sdk/types",
     "contract-sdk/storage",
     "contract-sdk-macros",

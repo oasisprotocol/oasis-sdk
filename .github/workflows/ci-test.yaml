@@ -38,6 +38,11 @@ jobs:
       - name: Test Rust code
         uses: ./.github/actions/test-rust
 
+      - name: Test Hello contract code
+        uses: ./.github/actions/test-rust
+        with:
+          manfiest_path: tests/contracts/hello/Cargo.toml
+
       - name: Test OAS-20 contract
         uses: ./.github/actions/test-rust
         with:

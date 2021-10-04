@@ -4,7 +4,8 @@ use std::convert::TryFrom;
 use oasis_contract_sdk_types::address::Address;
 
 use crate::{
-    env::Env,
+    abi::crypto,
+    env::{Crypto, Env},
     memory::{HostRegion, HostRegionRef},
     types::{
         env::{QueryRequest, QueryResponse},
@@ -50,5 +51,25 @@ impl Env for HostEnv {
 
         // Parse the returned address.
         Address::try_from(dst.as_ref()).unwrap()
+    }
+}
+
+impl Crypto for HostEnv {
+    fn ecdsa_recover(&self, input: &[u8]) -> [u8; 65] {
+        let input_region = HostRegionRef::from_slice(input);
+        // Prepare a region for response.
+        let dst = [0; 65];
+        let dst_region = HostRegionRef::from_slice(&dst);
+
+        unsafe {
+            crypto::crypto_ecdsa_recover(
+                input_region.offset,
+                input_region.length,
+                dst_region.offset,
+                dst_region.length,
+            )
+        };
+
+        dst
     }
 }

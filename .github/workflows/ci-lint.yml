@@ -35,7 +35,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Lint hello test contract code
+      - name: Lint Hello contract code
         uses: ./.github/actions/lint-rust
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

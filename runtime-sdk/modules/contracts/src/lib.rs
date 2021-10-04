@@ -148,6 +148,9 @@ pub struct GasCosts {
     pub wasm_storage_key_byte: u64,
     pub wasm_storage_value_byte: u64,
     pub wasm_env_query_base: u64,
+
+    // Crypto operations.
+    pub wasm_crypto_ecdsa_recover: u64,
 }
 
 impl Default for GasCosts {
@@ -168,6 +171,8 @@ impl Default for GasCosts {
             wasm_storage_key_byte: 1,
             wasm_storage_value_byte: 1,
             wasm_env_query_base: 10,
+
+            wasm_crypto_ecdsa_recover: 20,
         }
     }
 }
