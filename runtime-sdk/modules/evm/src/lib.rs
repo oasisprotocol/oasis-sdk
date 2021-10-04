@@ -2,6 +2,7 @@
 pub mod derive_caller;
 pub mod evm_backend;
 pub mod precompile;
+pub mod raw_tx;
 pub mod types;
 
 use std::collections::BTreeMap;
@@ -55,7 +56,8 @@ pub trait Config: 'static {
     /// Module that is used for accessing accounts.
     type Accounts: modules::accounts::API;
 
-    /// The chain ID to supply when a contract requests it.
+    /// The chain ID to supply when a contract requests it. Ethereum-format transactions must use
+    /// this chain ID.
     const CHAIN_ID: u64;
 }
 
@@ -531,6 +533,20 @@ impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
 }
 
 impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
+    fn decode_tx<C: Context>(
+        _ctx: &mut C,
+        scheme: &str,
+        body: &[u8],
+    ) -> Result<Option<Transaction>, CoreError> {
+        match scheme {
+            "evm.ethereum.v0" => Ok(Some(
+                raw_tx::decode(body, Some(Cfg::CHAIN_ID))
+                    .map_err(CoreError::MalformedTransaction)?,
+            )),
+            _ => Ok(None),
+        }
+    }
+
     fn authenticate_tx<C: Context>(ctx: &mut C, tx: &Transaction) -> Result<(), CoreError> {
         // We're only interested in transactions that can be paid with tokens
         // from the corresponding EVM account.
