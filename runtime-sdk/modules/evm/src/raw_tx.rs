@@ -304,6 +304,16 @@ mod test {
     }
 
     #[test]
+    fn test_decode_chain_id() {
+        // Test with mismatching expect_chain_id to exercise our check.
+        decode_expect_invalid(
+            // Taken from test_decode_basic.
+            "f86b8085e8d4a510008227109413978aee95f38490e9769c39b2773ed763d9cd5f872386f26fc10000801ba0eab47c1a49bf2fe5d40e01d313900e19ca485867d462fe06e139e3a536c6d4f4a014a569d327dcda4b29f74f93c0e9729d2f49ad726e703f9cd90dbb0fbf6649f1",
+            Some(5),
+        );
+    }
+
+    #[test]
     fn test_decode_types() {
         // https://github.com/ethereum/tests/blob/v10.0/BlockchainTests/ValidBlocks/bcEIP1559/transType.json
         decode_expect_call(
