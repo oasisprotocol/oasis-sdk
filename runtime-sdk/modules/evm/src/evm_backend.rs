@@ -5,7 +5,6 @@ use evm::backend::{Apply, ApplyBackend, Backend as EVMBackend, Basic, Log};
 
 use oasis_runtime_sdk::{
     core::common::crypto::hash::Hash,
-    crypto,
     storage::{self, Store as _},
 };
 
@@ -14,14 +13,12 @@ use crate::{
     types::{H160, H256, U256},
 };
 
-/// EVM chain domain separation context.
-const EVM_CHAIN_CONTEXT: &[u8] = b"oasis-runtime-sdk/evm: chain id";
-
 /// Information required by the evm crate.
 #[derive(Clone, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 pub struct Vicinity {
     pub gas_price: U256,
     pub origin: H160,
+    pub chain_id: U256,
 }
 
 /// Details specific to Ethereum accounts.  Information managed by SDK modules
@@ -84,7 +81,7 @@ impl<'c, C: oasis_runtime_sdk::Context> EVMBackend for Backend<'c, C> {
         primitive_types::U256::zero()
     }
     fn chain_id(&self) -> primitive_types::U256 {
-        crypto::signature::context::get_chain_context_for(EVM_CHAIN_CONTEXT)[..32].into()
+        self.vicinity.chain_id.into()
     }
     fn exists(&self, address: primitive_types::H160) -> bool {
         let acct = self.basic(address);

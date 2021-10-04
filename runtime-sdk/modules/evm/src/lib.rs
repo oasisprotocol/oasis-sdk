@@ -54,6 +54,9 @@ pub mod state {
 pub trait Config: 'static {
     /// Module that is used for accessing accounts.
     type Accounts: modules::accounts::API;
+
+    /// The chain ID to supply when a contract requests it.
+    const CHAIN_ID: u64;
 }
 
 pub struct Module<Cfg: Config> {
@@ -362,6 +365,7 @@ impl<Cfg: Config> Module<Cfg> {
         let vicinity = evm_backend::Vicinity {
             gas_price: gas_price.into(),
             origin: source,
+            chain_id: Cfg::CHAIN_ID.into(),
         };
 
         // The maximum gas fee has already been withdrawn in authenticate_tx().
