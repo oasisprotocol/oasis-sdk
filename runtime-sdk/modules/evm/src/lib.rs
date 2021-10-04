@@ -205,7 +205,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         value: U256,
         init_code: Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
-        let caller = Self::derive_caller(ctx)?;
+        let caller = Self::derive_caller(ctx);
 
         if ctx.is_check_only() {
             return Ok(vec![]);
@@ -228,7 +228,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         value: U256,
         data: Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
-        let caller = Self::derive_caller(ctx)?;
+        let caller = Self::derive_caller(ctx);
 
         if ctx.is_check_only() {
             return Ok(vec![]);
@@ -434,19 +434,16 @@ impl<Cfg: Config> Module<Cfg> {
         H160::from_slice(&out[32 - 20..])
     }
 
-    fn derive_caller_from_tx_auth_info(ai: &AuthInfo) -> Result<H160, Error> {
+    fn derive_caller_from_tx_auth_info(ai: &AuthInfo) -> H160 {
         match &ai.signer_info[0].address_spec {
             AddressSpec::Signature(PublicKey::Secp256k1(pk)) => {
-                Ok(Self::derive_caller_from_bytes(pk.as_bytes()))
+                Self::derive_caller_from_bytes(pk.as_bytes())
             }
-            AddressSpec::Signature(PublicKey::Ed25519(_)) => Ok(Self::derive_caller_from_bytes(
-                &ai.signer_info[0].address_spec.address().as_ref()[1..],
-            )),
-            _ => Err(Error::InvalidSignerType),
+            address_spec => Self::derive_caller_from_bytes(&address_spec.address().as_ref()[1..]),
         }
     }
 
-    fn derive_caller<C>(ctx: &mut C) -> Result<H160, Error>
+    fn derive_caller<C>(ctx: &mut C) -> H160
     where
         C: TxContext,
     {
@@ -472,7 +469,7 @@ impl<Cfg: Config> Module<Cfg> {
         let params = Self::params(ctx.runtime_state());
         core::Module::use_tx_gas(ctx, params.gas_costs.tx_withdraw)?;
 
-        let evm_acct_addr = Self::derive_caller(ctx)?;
+        let evm_acct_addr = Self::derive_caller(ctx);
 
         Self::withdraw(ctx, evm_acct_addr, body.to, body.amount)
     }
@@ -566,8 +563,7 @@ impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
         let params = Self::params(ctx.runtime_state());
         let den = params.token_denomination;
 
-        let evm_acct_addr = Self::derive_caller_from_tx_auth_info(&tx.auth_info)
-            .map_err(|e| CoreError::MalformedTransaction(anyhow::Error::new(e)))?;
+        let evm_acct_addr = Self::derive_caller_from_tx_auth_info(&tx.auth_info);
 
         // Check nonces on all signer accounts.
         // Note that we can ignore the return value because the payee is already
