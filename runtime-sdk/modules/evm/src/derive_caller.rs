@@ -1,4 +1,4 @@
-use tiny_keccak::{Hasher, Keccak};
+use sha3::Digest as _;
 
 use oasis_runtime_sdk::{
     crypto::signature::{secp256k1, PublicKey},
@@ -11,14 +11,7 @@ use oasis_runtime_sdk::{
 use crate::types::H160;
 
 pub fn from_bytes(b: &[u8]) -> H160 {
-    // Caller address is derived by doing Keccak-256 on the
-    // secp256k1 public key and taking the last 20 bytes
-    // of the result.
-    let mut k = Keccak::v256();
-    let mut out = [0u8; 32];
-    k.update(b);
-    k.finalize(&mut out);
-    H160::from_slice(&out[32 - 20..])
+    H160::from_slice(&sha3::Keccak256::digest(b)[32 - 20..])
 }
 
 pub fn from_secp256k1_public_key(public_key: &secp256k1::PublicKey) -> H160 {
