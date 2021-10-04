@@ -1,10 +1,12 @@
 //! Tests for the EVM module.
 use std::collections::BTreeMap;
 
+use sha3::Digest as _;
 use uint::hex::FromHex;
 
 use oasis_runtime_sdk::{
     context,
+    crypto::signature::{secp256k1, PublicKey},
     module::{self, InvariantHandler as _},
     modules::{
         accounts::{self, Module as Accounts},
@@ -44,11 +46,37 @@ fn load_erc20() -> Vec<u8> {
     .expect("compiled ERC20 contract should be a valid hex string")
 }
 
+fn check_derivation(seed: &str, priv_hex: &str, addr_hex: &str) {
+    let priv_bytes = sha3::Keccak256::digest(seed.as_bytes());
+    assert_eq!(
+        priv_bytes.as_slice(),
+        Vec::from_hex(priv_hex).unwrap().as_slice()
+    );
+    let priv_key = k256::ecdsa::SigningKey::from_bytes(&priv_bytes).unwrap();
+    let pub_key = priv_key.verifying_key();
+    let sdk_pub_key =
+        secp256k1::PublicKey::from_bytes(k256::EncodedPoint::from(&pub_key).as_bytes()).unwrap();
+    let addr = EVM::derive_caller_from_public_key(&PublicKey::Secp256k1(sdk_pub_key));
+    assert_eq!(addr.as_bytes(), Vec::from_hex(addr_hex).unwrap().as_slice());
+}
+
 #[test]
 fn test_evm_caller_addr_derivation() {
+    // https://github.com/ethereum/tests/blob/v10.0/BasicTests/keyaddrtest.json
+    check_derivation(
+        "cow",
+        "c85ef7d79691fe79573b1a7064c19c1a9819ebdbd1faaab1a8ec92344438aaf4",
+        "cd2a3d9f938e13cd947ec05abc7fe734df8dd826",
+    );
+    check_derivation(
+        "horse",
+        "c87f65ff3f271bf5dc8643484f66b200109caffe4bf98c4cb393dc35740b28c0",
+        "13978aee95f38490e9769c39b2773ed763d9cd5f",
+    );
+
     let expected =
-        H160::from_slice(&Vec::<u8>::from_hex("89519d9720bbedf870ab6ae6fbd4bb8af92f4328").unwrap());
-    let derived = EVM::derive_caller_from_bytes(keys::dave::pk().as_bytes());
+        H160::from_slice(&Vec::<u8>::from_hex("dce075e1c39b1ae0b75d554558b6451a226ffe00").unwrap());
+    let derived = EVM::derive_caller_from_public_key(&keys::dave::pk());
     assert_eq!(derived, expected);
 }
 
@@ -111,7 +139,7 @@ fn test_evm_calls() {
             format: transaction::CallFormat::Plain,
             method: "evm.Deposit".to_owned(),
             body: cbor::to_value(types::Deposit {
-                to: EVM::derive_caller_from_bytes(keys::dave::pk().as_bytes()),
+                to: EVM::derive_caller_from_public_key(&keys::dave::pk()),
                 amount: BaseUnits::new(999_000, Denomination::NATIVE),
             }),
         },
@@ -295,7 +323,7 @@ fn test_evm_runtime() {
             format: transaction::CallFormat::Plain,
             method: "evm.Deposit".to_owned(),
             body: cbor::to_value(types::Deposit {
-                to: EVM::derive_caller_from_bytes(keys::dave::pk().as_bytes()),
+                to: EVM::derive_caller_from_public_key(&keys::dave::pk()),
                 amount: BaseUnits::new(999_000, Denomination::NATIVE),
             }),
         },

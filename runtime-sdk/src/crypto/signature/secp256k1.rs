@@ -17,6 +17,12 @@ impl PublicKey {
         self.0.as_bytes()
     }
 
+    /// Return an alternative byte representation used in deriving Ethereum-compatible addresses.
+    pub fn to_uncompressed_untagged_bytes(&self) -> Vec<u8> {
+        // Our wrapper type only accepts compressed points, so we shouldn't get None.
+        self.0.to_untagged_bytes().unwrap().to_vec()
+    }
+
     /// Construct a public key from a slice of bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() != 33 {
