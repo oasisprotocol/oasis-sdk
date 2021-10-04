@@ -56,8 +56,15 @@ impl MockEnv {
 }
 
 impl Env for MockEnv {
-    fn query<Q: Into<QueryRequest>>(&self, _query: Q) -> QueryResponse {
-        unimplemented!()
+    fn query<Q: Into<QueryRequest>>(&self, query: Q) -> QueryResponse {
+        match query.into() {
+            QueryRequest::BlockInfo => QueryResponse::BlockInfo {
+                round: 42,
+                epoch: 2,
+                timestamp: 100_000,
+            },
+            _ => unimplemented!(),
+        }
     }
 
     fn address_for_instance(&self, instance_id: InstanceId) -> Address {
@@ -74,6 +81,8 @@ impl Env for MockEnv {
 pub struct MockContext {
     /// Execution context.
     pub ec: ExecutionContext,
+
+    pub deposited_tokens: Vec<token::BaseUnits>,
 
     /// Public store.
     pub public_store: MockStore,
@@ -92,6 +101,7 @@ impl From<ExecutionContext> for MockContext {
     fn from(ec: ExecutionContext) -> Self {
         Self {
             ec,
+            deposited_tokens: Vec::new(),
             public_store: MockStore::new(),
             confidential_store: MockStore::new(),
             env: MockEnv::new(),
@@ -119,7 +129,7 @@ impl Context for MockContext {
     }
 
     fn deposited_tokens(&self) -> &[token::BaseUnits] {
-        &self.ec.deposited_tokens
+        &self.deposited_tokens
     }
 
     fn emit_message(&mut self, msg: Message) {

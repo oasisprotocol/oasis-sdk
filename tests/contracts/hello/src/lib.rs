@@ -8,11 +8,14 @@ use oasis_contract_sdk::{
     env::Env,
     types::{
         env::{AccountsQuery, AccountsResponse, QueryRequest, QueryResponse},
-        message::{Message, NotifyReply, Reply},
-        token,
+        message::{CallResult, Message, NotifyReply, Reply},
+        modules::contracts::InstantiateResult,
+        token, CodeId, InstanceId,
     },
 };
-use oasis_contract_sdk_oas20_types::ReceiverRequest;
+use oasis_contract_sdk_oas20_types::{
+    ReceiverRequest, Request as Oas20Request, TokenInstantiation,
+};
 use oasis_contract_sdk_storage::cell::Cell;
 
 /// All possible errors that can be returned by the contract.
@@ -67,6 +70,12 @@ pub enum Request {
     #[cbor(rename = "increment_counter")]
     IncrementCounter,
 
+    #[cbor(rename = "instantiate_oas20")]
+    InstantiateOas20 {
+        code_id: CodeId,
+        token_instantiation: TokenInstantiation,
+    },
+
     #[cbor(rename = "query_address")]
     QueryAddress,
 
@@ -96,6 +105,12 @@ pub enum Request {
 pub enum Response {
     #[cbor(rename = "hello")]
     Hello { greeting: String },
+
+    #[cbor(rename = "instantiate_oas20")]
+    InstantiateOas20 {
+        instance_id: InstanceId,
+        data: String,
+    },
 
     #[cbor(rename = "empty")]
     Empty,
@@ -174,12 +189,38 @@ impl sdk::Contract for HelloWorld {
                         "tokens" => cbor::cbor_array![],
                     },
                     max_gas: None,
+                    data: None,
                 });
                 Ok(Response::Empty)
             }
             Request::IncrementCounter => {
                 // Just increment the counter and return an empty response.
                 Self::increment_counter(ctx, 1);
+
+                Ok(Response::Empty)
+            }
+            Request::InstantiateOas20 {
+                code_id,
+                token_instantiation,
+            } => {
+                use cbor::cbor_map;
+                ctx.emit_message(Message::Call {
+                    id: 42,
+                    reply: NotifyReply::Always,
+                    method: "contracts.Instantiate".to_string(),
+                    body: cbor::cbor_map! {
+                        "code_id" => cbor::cbor_int!(code_id.as_u64() as i64),
+                        "upgrades_policy" => cbor::cbor_map!{
+                            "everyone" => cbor::cbor_map!{},
+                        },
+                        "data" => cbor::cbor_bytes!(cbor::to_vec(
+                            cbor::to_value(Oas20Request::Instantiate(token_instantiation)),
+                        )),
+                        "tokens" => cbor::cbor_array![],
+                    },
+                    max_gas: None,
+                    data: Some(cbor::to_value("some test data".to_string())),
+                });
 
                 Ok(Response::Empty)
             }
@@ -242,7 +283,7 @@ impl sdk::Contract for HelloWorld {
     ) -> Result<Option<Self::Response>, Error> {
         // This method is called to handle any replies for emitted messages.
         match reply {
-            Reply::Call { result, .. } => {
+            Reply::Call { id, result, .. } if id == 0 => {
                 // Propagate all failures.
                 if !result.is_success() {
                     return Err(Error::SubcallFailed);
@@ -250,6 +291,18 @@ impl sdk::Contract for HelloWorld {
 
                 // Do not modify the result.
                 Ok(None)
+            }
+            Reply::Call { id, result, data } if id == 42 => {
+                let data = cbor::from_value(data.unwrap()).unwrap();
+
+                let result: InstantiateResult = match result {
+                    CallResult::Ok(val) => Ok(cbor::from_value(val).unwrap()),
+                    _ => Err(Error::QueryFailed),
+                }?;
+                Ok(Some(Response::InstantiateOas20 {
+                    instance_id: result.id,
+                    data,
+                }))
             }
 
             _ => Err(Error::BadRequest),

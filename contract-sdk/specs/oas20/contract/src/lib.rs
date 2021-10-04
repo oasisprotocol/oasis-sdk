@@ -3,11 +3,7 @@
 
 extern crate alloc;
 
-use oasis_contract_sdk::{
-    self as sdk,
-    env::Env,
-    types::message::{Message, NotifyReply},
-};
+use oasis_contract_sdk::{self as sdk, types::message::NotifyReply};
 use oasis_contract_sdk_oas20_types as types;
 use oasis_contract_sdk_oas20_types::{Error, Event, Request, Response};
 use oasis_contract_sdk_storage::{cell::Cell, map::Map};
@@ -18,166 +14,10 @@ pub struct Oas20Token;
 
 /// Storage cell for the token information.
 const TOKEN_INFO: Cell<types::TokenInformation> = Cell::new(b"token_info");
+/// Storage map for account balances.
 const BALANCES: Map<Address, u128> = Map::new(b"balances");
+/// Storage map for allowances.
 const ALLOWANCES: Map<(Address, Address), u128> = Map::new(b"allowances");
-
-impl Oas20Token {
-    /// Transfer the `amount` of funds from `from` to `to` address.
-    fn transfer<C: sdk::Context>(
-        ctx: &mut C,
-        from: Address,
-        to: Address,
-        amount: u128,
-    ) -> Result<(), Error> {
-        if amount == 0 {
-            return Err(Error::ZeroAmount);
-        }
-
-        let mut from_balance = BALANCES.get(ctx.public_store(), from).unwrap_or_default();
-        let mut to_balance = BALANCES.get(ctx.public_store(), to).unwrap_or_default();
-
-        from_balance = from_balance
-            .checked_sub(amount)
-            .ok_or(Error::InsufficientFunds)?;
-        to_balance += amount;
-
-        BALANCES.insert(ctx.public_store(), from, from_balance);
-        BALANCES.insert(ctx.public_store(), to, to_balance);
-
-        Ok(())
-    }
-
-    /// Burns the `amount` of funds from `from`.
-    fn burn<C: sdk::Context>(ctx: &mut C, from: Address, amount: u128) -> Result<(), Error> {
-        if amount == 0 {
-            return Err(Error::ZeroAmount);
-        }
-
-        // Remove from account balance.
-        let mut from_balance = BALANCES.get(ctx.public_store(), from).unwrap_or_default();
-        from_balance = from_balance
-            .checked_sub(amount)
-            .ok_or(Error::InsufficientFunds)?;
-
-        // Decrease the supply.
-        // Token info should always be present.
-        let mut token_info = TOKEN_INFO.get(ctx.public_store()).unwrap();
-        // Shouldn't ever overflow.
-        token_info.total_supply = token_info.total_supply.checked_sub(amount).unwrap();
-
-        BALANCES.insert(ctx.public_store(), from, from_balance);
-        TOKEN_INFO.set(ctx.public_store(), token_info);
-
-        Ok(())
-    }
-
-    /// Update the `beneficiary` allownace by the `amount`.
-    fn allow<C: sdk::Context>(
-        ctx: &mut C,
-        allower: Address,
-        beneficiary: Address,
-        negative: bool,
-        amount: u128,
-    ) -> Result<(u128, u128), Error> {
-        if amount == 0 {
-            return Err(Error::ZeroAmount);
-        }
-
-        if allower == beneficiary {
-            return Err(Error::SameAllowerAndBeneficiary);
-        }
-
-        let allowance = ALLOWANCES
-            .get(ctx.public_store(), (allower, beneficiary))
-            .unwrap_or_default();
-
-        let (new_allowance, change) = match negative {
-            true => {
-                let new = allowance.saturating_sub(amount);
-                (new, allowance - new)
-            }
-            false => {
-                let new = allowance.saturating_add(amount);
-                (new, new - allowance)
-            }
-        };
-
-        ALLOWANCES.insert(ctx.public_store(), (allower, beneficiary), new_allowance);
-
-        Ok((new_allowance, change))
-    }
-
-    /// Withdraw the `amunt` of funds from `from` to `to`.
-    fn withdraw<C: sdk::Context>(
-        ctx: &mut C,
-        from: Address,
-        to: Address,
-        amount: u128,
-    ) -> Result<(), Error> {
-        if amount == 0 {
-            return Err(Error::ZeroAmount);
-        }
-
-        if from == to {
-            return Err(Error::SameAllowerAndBeneficiary);
-        }
-
-        let mut allowance = ALLOWANCES
-            .get(ctx.public_store(), (from, to))
-            .unwrap_or_default();
-        allowance = allowance
-            .checked_sub(amount)
-            .ok_or(Error::InsufficientAllowance)?;
-
-        Self::transfer(ctx, from, to, amount)?;
-
-        ALLOWANCES.insert(ctx.public_store(), (from, to), allowance);
-
-        Ok(())
-    }
-
-    /// Mints the `amount` of tokens to `to`.
-    fn mint<C: sdk::Context>(ctx: &mut C, to: Address, amount: u128) -> Result<(), Error> {
-        if amount == 0 {
-            return Err(Error::ZeroAmount);
-        }
-
-        // Token info should always be present.
-        let mut token_info = TOKEN_INFO.get(ctx.public_store()).unwrap();
-        // Ensure token supports minting and new supply cap is bellow mint cap.
-        match token_info.minting.as_ref() {
-            Some(info) => {
-                let cap = info.cap.unwrap_or(u128::MAX);
-                match token_info.total_supply.checked_add(amount) {
-                    Some(new_cap) => {
-                        if new_cap > cap {
-                            return Err(Error::MintOverCap);
-                        }
-                    }
-                    None => return Err(Error::TotalSupplyOverflow),
-                }
-                if &info.minter != ctx.caller_address() {
-                    return Err(Error::MintingForbidden);
-                }
-            }
-            None => return Err(Error::MintingForbidden),
-        }
-
-        // Add to account balance.
-        let mut to_balance = BALANCES.get(ctx.public_store(), to).unwrap_or_default();
-        // Cannot overflow due to the total supply overflow check above.
-        to_balance = to_balance.checked_add(amount).unwrap();
-
-        // Increase the supply.
-        // Overflow already checked above.
-        token_info.total_supply = token_info.total_supply.checked_add(amount).unwrap();
-
-        BALANCES.insert(ctx.public_store(), to, to_balance);
-        TOKEN_INFO.set(ctx.public_store(), token_info);
-
-        Ok(())
-    }
-}
 
 // Implementation of the sdk::Contract trait is required in order for the type to be a contract.
 impl sdk::Contract for Oas20Token {
@@ -191,25 +31,8 @@ impl sdk::Contract for Oas20Token {
         match request {
             // We require the caller to always pass the Instantiate request.
             Request::Instantiate(token_instantiation) => {
-                // Setup initial balances and compute the total supply.
-                let mut total_supply: u128 = 0;
-                for types::InitialBalance { address, amount } in
-                    token_instantiation.initial_balances
-                {
-                    total_supply = total_supply
-                        .checked_add(amount)
-                        .ok_or(Error::TotalSupplyOverflow)?;
-                    BALANCES.insert(ctx.public_store(), address, amount);
-                }
-
-                let token_information = types::TokenInformation {
-                    name: token_instantiation.name,
-                    symbol: token_instantiation.symbol,
-                    decimals: token_instantiation.decimals,
-                    minting: token_instantiation.minting,
-                    total_supply,
-                };
-                TOKEN_INFO.set(ctx.public_store(), token_information.clone());
+                let token_information =
+                    types::helpers::instantiate(ctx, BALANCES, TOKEN_INFO, token_instantiation)?;
 
                 ctx.emit_event(Event::Oas20Instantiated { token_information });
 
@@ -226,40 +49,17 @@ impl sdk::Contract for Oas20Token {
             Request::Transfer { to, amount } => {
                 // Transfers the `amount` of funds from caller to `to` address.
                 let from = ctx.caller_address().to_owned();
-                Self::transfer(ctx, from, to, amount)?;
+                types::helpers::transfer(ctx, BALANCES, from, to, amount)?;
 
                 ctx.emit_event(Event::Oas20Transferred { from, to, amount });
 
                 Ok(Response::Empty)
             }
             Request::Send { to, amount, data } => {
-                // Transfers the `amount` of funds from caller to `to` contract instande identifier
-                // and calls `ReceiveOas20` on the receiving contract.
-
-                // Transfers the `amount` of funds from caller to `to` address.
                 let from = ctx.caller_address().to_owned();
-                let to_address = ctx.env().address_for_instance(to);
-                Self::transfer(ctx, from, to_address, amount)?;
-
-                // There should be high-level helpers for calling methods of other contracts that follow a similar
-                // "standard" API - maybe define an API and helper methods in an OAS-0 document.
-
-                // Emit a message through which we instruct the runtime to make a call on the
-                // contract's behalf
-                use cbor::cbor_map;
-                ctx.emit_message(Message::Call {
-                    id: 0,
-                    reply: NotifyReply::Never,
-                    method: "contracts.Call".to_string(),
-                    body: cbor::cbor_map! {
-                        "id" => cbor::cbor_int!(to.as_u64() as i64),
-                        "data" => cbor::cbor_bytes!(cbor::to_vec(
-                            cbor::to_value(types::ReceiverRequest::Receive{sender: from, amount, data}),
-                        )),
-                        "tokens" => cbor::cbor_array![],
-                    },
-                    max_gas: None,
-                });
+                // Transfers the `amount` of funds from caller to `to` contract instance identifier
+                // and calls `ReceiveOas20` on the receiving contract.
+                types::helpers::send(ctx, BALANCES, from, to, amount, data, 0, NotifyReply::Never)?;
 
                 ctx.emit_event(Event::Oas20Sent { from, to, amount });
 
@@ -267,14 +67,14 @@ impl sdk::Contract for Oas20Token {
             }
             Request::Burn { amount } => {
                 let from = ctx.caller_address().to_owned();
-                Self::burn(ctx, from, amount)?;
+                types::helpers::burn(ctx, BALANCES, TOKEN_INFO, from, amount)?;
 
                 ctx.emit_event(Event::Oas20Burned { from, amount });
 
                 Ok(Response::Empty)
             }
             Request::Mint { to, amount } => {
-                Self::mint(ctx, to, amount)?;
+                types::helpers::mint(ctx, BALANCES, TOKEN_INFO, to, amount)?;
 
                 ctx.emit_event(Event::Oas20Minted { to, amount });
 
@@ -286,8 +86,14 @@ impl sdk::Contract for Oas20Token {
                 amount_change,
             } => {
                 let owner = ctx.caller_address().to_owned();
-                let (new_allowance, amount_change) =
-                    Self::allow(ctx, owner, beneficiary, negative, amount_change)?;
+                let (new_allowance, amount_change) = types::helpers::allow(
+                    ctx,
+                    ALLOWANCES,
+                    owner,
+                    beneficiary,
+                    negative,
+                    amount_change,
+                )?;
 
                 ctx.emit_event(Event::Oas20AllowanceChanged {
                     owner,
@@ -301,7 +107,7 @@ impl sdk::Contract for Oas20Token {
             }
             Request::Withdraw { from, amount } => {
                 let to = ctx.caller_address().to_owned();
-                Self::withdraw(ctx, from, to, amount)?;
+                types::helpers::withdraw(ctx, BALANCES, ALLOWANCES, from, to, amount)?;
 
                 ctx.emit_event(Event::Oas20Withdraw { from, to, amount });
 
@@ -436,7 +242,7 @@ mod test {
                 to: bob.into(),
             },
         )
-        .expect_err("minting should zero tokens should fail");
+        .expect_err("minting zero tokens should fail");
 
         // Minting more than cap should fail.
         Oas20Token::call(
@@ -446,7 +252,7 @@ mod test {
                 to: bob.into(),
             },
         )
-        .expect_err("minting should zero tokens should fail");
+        .expect_err("minting over cap should fail");
 
         // Mint some tokens as minter.
         Oas20Token::call(
@@ -652,7 +458,7 @@ mod test {
             Request::Allow {
                 beneficiary: bob,
                 negative: false,
-                amount_change: 10,
+                amount_change: 100_000,
             },
         )
         .expect("allowing should work");
@@ -688,6 +494,16 @@ mod test {
         )
         .expect_err("withdrawing from self should fail");
 
+        // Withdrawing more than available balance should fail.
+        Oas20Token::call(
+            &mut ctx,
+            Request::Withdraw {
+                from: alice,
+                amount: 500,
+            },
+        )
+        .expect_err("withdrawing should fail");
+
         // Withdrawing should work.
         Oas20Token::call(
             &mut ctx,
@@ -709,7 +525,7 @@ mod test {
         .expect("token allowance query should work");
         assert_eq!(
             rsp,
-            Response::Allowance { allowance: 7 },
+            Response::Allowance { allowance: 99997 },
             "token allowance query response should be correct"
         );
     }
