@@ -17,7 +17,6 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
-	sdk "github.com/oasisprotocol/oasis-sdk/client-sdk/go"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
@@ -70,7 +69,7 @@ type kvInsertEvent struct {
 	KV kvKeyValue `json:"kv"`
 }
 
-var kvInsertEventKey = sdk.NewEventKey("keyvalue", 1)
+var kvInsertEventKey = types.NewEventKey("keyvalue", 1)
 
 // The kvRemoveEvent type must match the Event::Remove type from the
 // simple-keyvalue runtime in ../runtimes/simple-keyvalue/src/keyvalue.rs.
@@ -78,7 +77,7 @@ type kvRemoveEvent struct {
 	Key kvKey `json:"key"`
 }
 
-var kvRemoveEventKey = sdk.NewEventKey("keyvalue", 2)
+var kvRemoveEventKey = types.NewEventKey("keyvalue", 2)
 
 // GetChainContext returns the chain context.
 func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.Context, error) {

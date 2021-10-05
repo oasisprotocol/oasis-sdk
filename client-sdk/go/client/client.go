@@ -8,7 +8,6 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
-	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
@@ -51,6 +50,10 @@ type RuntimeClient interface {
 	// GetTransactions returns all transactions that are part of a given block.
 	GetTransactions(ctx context.Context, round uint64) ([]*types.UnverifiedTransaction, error)
 
+	// GetTransactionsWithResults returns all transactions that are part of a given block together
+	// with their results and emitted events.
+	GetTransactionsWithResults(ctx context.Context, round uint64) ([]*TransactionWithResults, error)
+
 	// GetEvents returns all events emitted in a given block.
 	GetEvents(ctx context.Context, round uint64) ([]*coreClient.Event, error)
 
@@ -61,15 +64,11 @@ type RuntimeClient interface {
 	Query(ctx context.Context, round uint64, method string, args, rsp interface{}) error
 }
 
-// Event is an event emitted by a runtime in the form of a runtime transaction tag.
-//
-// Key and value semantics are runtime-dependent.
-// TODO: More high-level wrapper for SDK events.
-type Event struct {
-	Module string
-	Code   uint32
-	TxHash hash.Hash
-	Value  cbor.RawMessage
+// TransactionWithResults is an SDK transaction together with its results and emitted events.
+type TransactionWithResults struct {
+	Tx     types.UnverifiedTransaction
+	Result types.CallResult
+	Events []*types.Event
 }
 
 type runtimeClient struct {
@@ -171,6 +170,36 @@ func (rc *runtimeClient) GetTransactions(ctx context.Context, round uint64) ([]*
 	for i, rawTx := range rawTxs {
 		var tx types.UnverifiedTransaction
 		_ = cbor.Unmarshal(rawTx, &tx) // Ignore errors as there can be invalid transactions.
+		txs[i] = &tx
+	}
+	return txs, nil
+}
+
+// Implements RuntimeClient.
+func (rc *runtimeClient) GetTransactionsWithResults(ctx context.Context, round uint64) ([]*TransactionWithResults, error) {
+	rawTxs, err := rc.cc.GetTransactionsWithResults(ctx, &coreClient.GetTransactionsRequest{
+		RuntimeID: rc.runtimeID,
+		Round:     round,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	txs := make([]*TransactionWithResults, len(rawTxs))
+	for i, raw := range rawTxs {
+		var tx TransactionWithResults
+		_ = cbor.Unmarshal(raw.Tx, &tx.Tx) // Ignore errors as there can be invalid transactions.
+		_ = cbor.Unmarshal(raw.Result, &tx.Result)
+
+		for _, rawEv := range raw.Events {
+			var ev types.Event
+			if err := ev.UnmarshalRaw(rawEv.Key, rawEv.Value); err != nil {
+				continue
+			}
+
+			tx.Events = append(tx.Events, &ev)
+		}
+
 		txs[i] = &tx
 	}
 	return txs, nil
