@@ -1995,7 +1995,6 @@ dependencies = [
  "sha2",
  "sha3 0.9.1",
  "thiserror",
- "tiny-keccak 2.0.2",
  "uint",
 ]
 
