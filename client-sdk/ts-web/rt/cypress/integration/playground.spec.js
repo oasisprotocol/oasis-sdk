@@ -2,7 +2,7 @@
 
 describe('playground', () => {
     it('finishes simple-keyvalue', () => {
-        cy.visit('http://localhost:42280/');
+        cy.visit('http://localhost:8080/');
         // This is similar to `.its('playground')`, except that
         // (i) it doesn't retry if `w.playground` rejects, and
         // (ii) it passes when `w.playground` fulfills with `undefined`.
@@ -14,7 +14,7 @@ describe('playground', () => {
     });
 
     it('finishes simple-consensus', () => {
-        cy.visit('http://localhost:42280/consensus.html');
+        cy.visit('http://localhost:8080/consensus.html');
         // This is similar to `.its('playground')`, except that
         // (i) it doesn't retry if `w.playground` rejects, and
         // (ii) it passes when `w.playground` fulfills with `undefined`.

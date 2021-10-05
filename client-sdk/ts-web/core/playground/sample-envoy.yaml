@@ -33,19 +33,15 @@ static_resources:
                   status: 404
                   body:
                     inline_string: 'You have to list every method you use in the envoy matcher.'
-              - match:
-                  prefix: '/'
-                route:
-                  cluster: dev_static
-              # cors:
-              #   allow_origin_string_match:
-              #   - exact: '*'
-              #   allow_headers: content-type,x-grpc-web,x-user-agent
-              #   expose_headers: grpc-status,grpc-message
-              #   max_age: '1728000'
+              cors:
+                allow_origin_string_match:
+                - exact: '*'
+                allow_headers: content-type,x-grpc-web,x-user-agent
+                expose_headers: grpc-status,grpc-message
+                max_age: '1728000'
           http_filters:
           - name: envoy.filters.http.grpc_web
-          # - name: envoy.filters.http.cors
+          - name: envoy.filters.http.cors
           - name: envoy.filters.http.router
   clusters:
   - name: oasis_node_grpc
@@ -59,17 +55,6 @@ static_resources:
               pipe:
                 path: /tmp/oasis-net-runner-sdk-core/net-runner/network/client-0/internal.sock
     http2_protocol_options: {}
-  - name: dev_static
-    connect_timeout: 0.25s
-    load_assignment:
-      cluster_name: cluster_1
-      endpoints:
-      - lb_endpoints:
-        - endpoint:
-            address:
-              socket_address:
-                address: 127.0.0.1
-                port_value: 8080
 # admin:
 #   access_log_path: /dev/null
 #   address:
