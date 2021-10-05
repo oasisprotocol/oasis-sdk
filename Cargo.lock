@@ -1491,6 +1491,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "lru"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c748cfe47cb8da225c37595b3108bea1c198c84aaae8ea0ba76d01dda9fc803"
+dependencies = [
+ "hashbrown",
+]
+
+[[package]]
 name = "matches"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1863,7 +1872,7 @@ source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3#9f5a3c609a1d
 dependencies = [
  "futures",
  "io-context",
- "lru",
+ "lru 0.6.6",
  "oasis-cbor",
  "oasis-core-client",
  "oasis-core-keymanager-api-common",
@@ -1896,7 +1905,7 @@ dependencies = [
  "io-context",
  "lazy_static",
  "log",
- "lru",
+ "lru 0.6.6",
  "num-bigint 0.4.2",
  "num-traits",
  "oasis-cbor",
@@ -1963,7 +1972,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "blake3",
- "lru",
+ "lru 0.7.0",
  "num-traits",
  "oasis-cbor",
  "oasis-contract-sdk-types",
