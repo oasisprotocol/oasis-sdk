@@ -1,6 +1,8 @@
 import * as grpcWeb from 'grpc-web';
 
 import * as misc from './misc';
+// @ts-expect-error missing declaration
+import * as statusPB from './proto/grpc/status/status_pb';
 import * as types from './types';
 
 function toCBOR(v: unknown) {
@@ -538,6 +540,15 @@ const methodDescriptorDebugControllerWaitNodesRegistered = createMethodDescripto
     void
 >('DebugController', 'WaitNodesRegistered');
 
+// see oasis-core/go/common/grpc/errors.go
+/**
+ * grpcError is a serializable error.
+ */
+interface GRPCError {
+    module?: string;
+    code?: number;
+}
+
 export class GRPCWrapper {
     client: grpcWeb.AbstractClientBase;
     base: string;
@@ -560,6 +571,22 @@ export class GRPCWrapper {
                 // todo: unhack this when they release with our change
                 // https://github.com/grpc/grpc-web/pull/1025
                 return undefined;
+            }
+            if (e.metadata && 'grpc-status-details-bin' in e.metadata) {
+                const statusU8 = misc.fromBase64(e.metadata['grpc-status-details-bin']);
+                const status = statusPB.Status.deserializeBinary(statusU8);
+                const details = status.getDetailsList();
+                // `errorFromGrpc` from oasis-core checks for exactly one entry in Details.
+                // We additionally check that the type URL is empty, consistent with how
+                // `errorToGrpc` leaves it blank.
+                if (details.length === 1 && details[0].getTypeUrl() === '') {
+                    const grpcError = misc.fromCBOR(details[0].getValue_asU8()) as GRPCError;
+                    if (!e.message) {
+                        e.message = `Message missing, module=${grpcError.module} code=${grpcError.code}`;
+                    }
+                    e.oasisCode = grpcError.code;
+                    e.oasisModule = grpcError.module;
+                }
             }
             // grpc-web gives us a plain object with no stack trace, which is less helpful.
             // Transfer it to an Error.
