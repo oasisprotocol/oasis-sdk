@@ -1,9 +1,11 @@
 //! Utilities for testing smart contracts.
 use std::collections::BTreeMap;
 
+use oasis_contract_sdk_crypto as crypto;
+
 use crate::{
     context::Context,
-    env::Env,
+    env::{Crypto, Env},
     event::Event,
     storage::Store,
     types::{
@@ -74,6 +76,12 @@ impl Env for MockEnv {
         ]
         .concat();
         Address::from_bytes(&b).unwrap()
+    }
+}
+
+impl Crypto for MockEnv {
+    fn ecdsa_recover(&self, input: &[u8]) -> [u8; 65] {
+        crypto::ecdsa::recover(input).unwrap()
     }
 }
 

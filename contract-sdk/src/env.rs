@@ -14,3 +14,9 @@ pub trait Env {
     /// Returns an address for the contract instance id.
     fn address_for_instance(&self, instance_id: InstanceId) -> Address;
 }
+
+/// Crypto helpers trait.
+pub trait Crypto {
+    /// ECDSA public key recovery function.
+    fn ecdsa_recover(&self, input: &[u8]) -> [u8; 65];
+}

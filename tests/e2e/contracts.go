@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
+	"encoding/hex"
 	"fmt"
 
 	"google.golang.org/grpc"
@@ -30,7 +32,7 @@ type HelloInitiate struct {
 }
 
 // ContractsTest does a simple upload/instantiate/call contract test.
-func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { // nolint: gocyclo
 	ctx := context.Background()
 
 	counter := uint64(24)
@@ -49,7 +51,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		AppendAuthSignature(signer.Public(), nonce)
 	_ = tb.AppendSign(ctx, signer)
 	var upload contracts.UploadResult
-	if err := tb.SubmitTx(ctx, &upload); err != nil {
+	if err = tb.SubmitTx(ctx, &upload); err != nil {
 		return fmt.Errorf("failed to upload contract: %w", err)
 	}
 
@@ -67,7 +69,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		AppendAuthSignature(signer.Public(), nonce+1)
 	_ = tb.AppendSign(ctx, signer)
 	var instance contracts.InstantiateResult
-	if err := tb.SubmitTx(ctx, &instance); err != nil {
+	if err = tb.SubmitTx(ctx, &instance); err != nil {
 		return fmt.Errorf("failed to instantiate hello contract: %w", err)
 	}
 
@@ -85,12 +87,12 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		AppendAuthSignature(signer.Public(), nonce+2)
 	_ = tb.AppendSign(ctx, signer)
 	var rawResult contracts.CallResult
-	if err := tb.SubmitTx(ctx, &rawResult); err != nil {
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
 		return fmt.Errorf("failed to call contract: %w", err)
 	}
 
 	var result map[string]map[string]string
-	if err := cbor.Unmarshal(rawResult, &result); err != nil {
+	if err = cbor.Unmarshal(rawResult, &result); err != nil {
 		return fmt.Errorf("failed to decode contract result: %w", err)
 	}
 
@@ -106,7 +108,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		AppendAuthSignature(signer.Public(), nonce+3)
 	_ = tb.AppendSign(ctx, signer)
 	var uploadOas20 contracts.UploadResult
-	if err := tb.SubmitTx(ctx, &uploadOas20); err != nil {
+	if err = tb.SubmitTx(ctx, &uploadOas20); err != nil {
 		return fmt.Errorf("failed to upload contract: %w", err)
 	}
 
@@ -134,7 +136,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		AppendAuthSignature(signer.Public(), nonce+4)
 	_ = tb.AppendSign(ctx, signer)
 	var instanceOas20 contracts.InstantiateResult
-	if err := tb.SubmitTx(ctx, &instanceOas20); err != nil {
+	if err = tb.SubmitTx(ctx, &instanceOas20); err != nil {
 		return fmt.Errorf("failed to instantiate OAS20 contract: %w", err)
 	}
 
@@ -152,14 +154,14 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		SetFeeGas(1_000_000).
 		AppendAuthSignature(signer.Public(), nonce+5)
 	_ = tb.AppendSign(ctx, signer)
-	if err := tb.SubmitTx(ctx, &rawResult); err != nil {
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
 		return fmt.Errorf("failed to call OAS20 transfer: %w", err)
 	}
 
 	// TODO: watch emitted event.
 
 	var response *oas20.Response
-	if err := ct.Custom(
+	if err = ct.Custom(
 		ctx,
 		client.RoundLatest,
 		instanceOas20.ID,
@@ -194,7 +196,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		SetFeeGas(1_000_000).
 		AppendAuthSignature(signer.Public(), nonce+6)
 	_ = tb.AppendSign(ctx, signer)
-	if err := tb.SubmitTx(ctx, &rawResult); err != nil {
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
 		return fmt.Errorf("failed to call OAS20 send: %w", err)
 	}
 	// Sending to hello contract bumps the counter.
@@ -213,11 +215,11 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		SetFeeGas(1_000_000).
 		AppendAuthSignature(signer.Public(), nonce+7)
 	_ = tb.AppendSign(ctx, signer)
-	if err := tb.SubmitTx(ctx, &rawResult); err != nil {
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
 		return fmt.Errorf("failed to call hello contract: %w", err)
 	}
 
-	if err := cbor.Unmarshal(rawResult, &result); err != nil {
+	if err = cbor.Unmarshal(rawResult, &result); err != nil {
 		return fmt.Errorf("failed to decode contract result: %w", err)
 	}
 
@@ -228,7 +230,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	// counter++
 
 	// Query contract OAS20 balance.
-	if err := ct.Custom(
+	if err = ct.Custom(
 		ctx,
 		client.RoundLatest,
 		instanceOas20.ID,
@@ -272,22 +274,68 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		SetFeeGas(1_000_000).
 		AppendAuthSignature(signer.Public(), nonce+8)
 	_ = tb.AppendSign(ctx, signer)
-	if err := tb.SubmitTx(ctx, &rawResult); err != nil {
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
 		return fmt.Errorf("failed to call hello contract: %w", err)
 	}
 
 	var instantiateResponse map[string]map[string]interface{}
-	if err := cbor.Unmarshal(rawResult, &instantiateResponse); err != nil {
+	if err = cbor.Unmarshal(rawResult, &instantiateResponse); err != nil {
 		return fmt.Errorf("failed to decode contract result: %w", err)
 	}
-	if instantiateResponse["instantiate_oas20"] == nil {
+	instantiate := instantiateResponse["instantiate_oas20"]
+	if instantiate == nil {
 		return fmt.Errorf("invalid instantiate_oas20 response: %v", instantiateResponse)
 	}
-	if instantiateResponse["instantiate_oas20"]["instance_id"] != uint64(2) {
-		return fmt.Errorf("unexpected instantiate_oas20 instance_id response: %v", instantiateResponse["instantiate_oas20"]["instance_id"])
+	if instantiate["instance_id"] != uint64(2) {
+		return fmt.Errorf("unexpected instantiate_oas20 instance_id response: %v", instantiate["instance_id"])
 	}
-	if instantiateResponse["instantiate_oas20"]["data"] != "some test data" {
-		return fmt.Errorf("unexpected instantiate_oas20 data response: %v", instantiateResponse["instantiate_oas20"]["data"])
+	if instantiate["data"] != "some test data" {
+		return fmt.Errorf("unexpected instantiate_oas20 data response: %v", instantiate["data"])
+	}
+
+	// Test crypto ecdsa_recover contract.
+	// Taken from: https://github.com/ethereum/go-ethereum/blob/d8ff53dfb8a516f47db37dbc7fd7ad18a1e8a125/crypto/signature_test.go
+	testMsg, err := hex.DecodeString("ce0677bb30baa8cf067c88db9811f4333d131bf8bcf12fe7065d211dce971008")
+	if err != nil {
+		return err
+	}
+	testSig, err := hex.DecodeString("90f27b8b488db00b00606796d2987f6a5f59ae62ea05effe84fef5b8b0e549984a691139ad57a3f0b906637673aa2f63d1f55cb1a69199d4009eea23ceaddc9301")
+	if err != nil {
+		return err
+	}
+	testPubKey, err := hex.DecodeString("04e32df42865e97135acfb65f3bae71bdc86f4d49150ad6a440b6f15878109880a0a2b2667f7e725ceea70c673093bf67663e0312623c8e091b13cf2c0f11ef652")
+	if err != nil {
+		return err
+	}
+	input := []byte{}
+	input = append(input, testMsg...)
+	input = append(input, testSig...)
+	tb = ct.Call(
+		instance.ID,
+		map[string]map[string]interface{}{
+			"ecdsa_recover": {
+				"input": input,
+			},
+		},
+		[]types.BaseUnits{},
+	).
+		SetFeeGas(1_000_000).
+		AppendAuthSignature(signer.Public(), nonce+9)
+	_ = tb.AppendSign(ctx, signer)
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
+		return fmt.Errorf("failed to call hello contract: %w", err)
+	}
+
+	var ecdsaResponse map[string]map[string][]byte
+	if err = cbor.Unmarshal(rawResult, &ecdsaResponse); err != nil {
+		return fmt.Errorf("failed to decode contract result: %w", err)
+	}
+	ecdsaOutput := ecdsaResponse["ecdsa_recover"]
+	if ecdsaOutput == nil {
+		return fmt.Errorf("invalid ecdsa_recover response: %v", ecdsaResponse)
+	}
+	if !bytes.Equal(testPubKey, ecdsaOutput["output"]) {
+		return fmt.Errorf("unexpected ecdsa_recover result: %v", ecdsaOutput["output"])
 	}
 
 	return nil

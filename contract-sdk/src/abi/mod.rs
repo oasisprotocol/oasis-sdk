@@ -1,6 +1,7 @@
 //! Oasis WASM ABI implementation.
 use crate::memory;
 
+pub mod crypto;
 pub mod dispatch;
 pub mod env;
 pub mod storage;

@@ -1,6 +1,6 @@
 //! Contract execution context.
 use crate::{
-    env::Env,
+    env::{Crypto, Env},
     event::Event,
     storage::Store,
     types::{address::Address, message::Message, token, InstanceId},
@@ -13,7 +13,7 @@ pub trait Context {
     /// The confidential store.
     type ConfidentialStore: Store;
     /// The environment.
-    type Env: Env;
+    type Env: Env + Crypto;
 
     /// Contract instance identifier.
     fn instance_id(&self) -> InstanceId;

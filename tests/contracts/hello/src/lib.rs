@@ -5,7 +5,7 @@ extern crate alloc;
 
 use oasis_contract_sdk::{
     self as sdk,
-    env::Env,
+    env::{Crypto, Env},
     types::{
         env::{AccountsQuery, AccountsResponse, QueryRequest, QueryResponse},
         message::{CallResult, Message, NotifyReply, Reply},
@@ -76,6 +76,9 @@ pub enum Request {
         token_instantiation: TokenInstantiation,
     },
 
+    #[cbor(rename = "ecdsa_recover")]
+    ECDSARecover { input: Vec<u8> },
+
     #[cbor(rename = "query_address")]
     QueryAddress,
 
@@ -111,6 +114,9 @@ pub enum Response {
         instance_id: InstanceId,
         data: String,
     },
+
+    #[cbor(rename = "ecdsa_recover")]
+    ECDSARecover { output: [u8; 65] },
 
     #[cbor(rename = "empty")]
     Empty,
@@ -223,6 +229,11 @@ impl sdk::Contract for HelloWorld {
                 });
 
                 Ok(Response::Empty)
+            }
+            Request::ECDSARecover { input } => {
+                let output = ctx.env().ecdsa_recover(&input);
+
+                Ok(Response::ECDSARecover { output })
             }
             Request::QueryAddress => {
                 let address = ctx.env().address_for_instance(ctx.instance_id());

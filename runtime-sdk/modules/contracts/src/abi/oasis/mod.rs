@@ -199,6 +199,8 @@ impl<Cfg: Config, C: Context> ABI<C> for OasisV1<Cfg> {
         Self::link_storage(instance)?;
         // Environment imports.
         Self::link_env(instance)?;
+        // Crypto imports.
+        Self::link_crypto(instance)?;
 
         Ok(())
     }
