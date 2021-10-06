@@ -68,6 +68,24 @@ export function fromHex(hex: string) {
     return u8;
 }
 
+export function toBase64(u8: Uint8Array) {
+    return btoa(String.fromCharCode.apply(null, u8));
+}
+
+export function fromBase64(base64: string) {
+    const binaryStr = atob(base64);
+    const byteLength = binaryStr.length;
+    const u8 = new Uint8Array(byteLength);
+    for (let i = 0; i < byteLength; i++) {
+        u8[i] = binaryStr.charCodeAt(i);
+    }
+    return u8;
+}
+
+export function toStringUTF8(u8: Uint8Array) {
+    return new TextDecoder().decode(u8);
+}
+
 export function fromString(str: string) {
     return new TextEncoder().encode(str);
 }
