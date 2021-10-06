@@ -50,15 +50,14 @@ fn call_ecrecover(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exi
     let mut sig = [0u8; 65];
 
     // input encoded as [hash, v, r, s]
-    msg[0..32].copy_from_slice(&input[0..32]);
-    sig[0..32].copy_from_slice(&input[64..96]);
-    sig[32..64].copy_from_slice(&input[96..128]);
+    msg.copy_from_slice(&padding[0..32]);
+    sig[0..64].copy_from_slice(&padding[64..]);
 
     // Check EIP-155
-    if input[63] > 26 {
-        sig[64] = input[63] - 27;
+    if padding[63] > 26 {
+        sig[64] = padding[63] - 27;
     } else {
-        sig[64] = input[63];
+        sig[64] = padding[63];
     }
 
     let dsa_sig = match recoverable::Signature::try_from(&sig[..]) {
@@ -72,6 +71,16 @@ fn call_ecrecover(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exi
             });
         }
     };
+
+    // Reject high s to make consistent with our Ethereum transaction signature verification.
+    if dsa_sig.s().is_high().into() {
+        return Ok(PrecompileOutput {
+            exit_status: ExitSucceed::Returned,
+            cost: gas_cost,
+            output: [0u8; 0].to_vec(),
+            logs: Default::default(),
+        });
+    }
 
     let result = match dsa_sig.recover_verify_key_from_digest_bytes(&msg.into()) {
         Ok(recovered_key) => {
