@@ -1946,10 +1946,12 @@ dependencies = [
  "anyhow",
  "base64",
  "bech32",
+ "blake3",
  "byteorder",
  "curve25519-dalek",
  "digest 0.9.0",
  "hex",
+ "hmac",
  "impl-trait-for-tuples",
  "io-context",
  "k256",
@@ -1968,6 +1970,7 @@ dependencies = [
  "thiserror",
  "tiny-keccak 2.0.2",
  "tokio",
+ "zeroize",
 ]
 
 [[package]]

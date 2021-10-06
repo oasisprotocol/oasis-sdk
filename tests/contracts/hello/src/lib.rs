@@ -126,11 +126,22 @@ pub struct HelloWorld;
 /// Storage cell for the counter.
 const COUNTER: Cell<u64> = Cell::new(b"counter");
 
+/// Storage cell for the confidential counter.
+const CONFIDENTIAL_COUNTER: Cell<u64> = Cell::new(b"confidential_counter");
+
 impl HelloWorld {
     /// Increment the counter and return the previous value.
     fn increment_counter<C: sdk::Context>(ctx: &mut C, inc: u64) -> u64 {
         let counter = COUNTER.get(ctx.public_store()).unwrap_or_default();
         COUNTER.set(ctx.public_store(), counter + inc);
+
+        let confidential_counter = CONFIDENTIAL_COUNTER
+            .get(ctx.confidential_store())
+            .unwrap_or_default();
+        if confidential_counter != counter {
+            return u64::MAX;
+        }
+        CONFIDENTIAL_COUNTER.set(ctx.confidential_store(), confidential_counter + inc);
 
         counter
     }
@@ -150,6 +161,7 @@ impl sdk::Contract for HelloWorld {
             Request::Instantiate { initial_counter } => {
                 // Initialize counter to 1.
                 COUNTER.set(ctx.public_store(), initial_counter);
+                CONFIDENTIAL_COUNTER.set(ctx.confidential_store(), initial_counter);
 
                 Ok(())
             }

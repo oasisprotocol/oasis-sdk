@@ -105,7 +105,7 @@ impl From<module::CallResult> for DispatchResult {
 /// The runtime dispatcher.
 pub struct Dispatcher<R: Runtime> {
     host_info: HostInfo,
-    key_manager: Option<KeyManagerClient>,
+    key_manager: Option<Arc<KeyManagerClient>>,
     schedule_control_host: Arc<dyn ScheduleControlHost>,
     _runtime: PhantomData<R>,
 }
@@ -117,7 +117,7 @@ impl<R: Runtime> Dispatcher<R> {
     /// instance can be used directly with the dispatcher system provided by Oasis Core.
     pub(super) fn new(
         host_info: HostInfo,
-        key_manager: Option<KeyManagerClient>,
+        key_manager: Option<Arc<KeyManagerClient>>,
         schedule_control_host: Arc<dyn ScheduleControlHost>,
     ) -> Self {
         Self {

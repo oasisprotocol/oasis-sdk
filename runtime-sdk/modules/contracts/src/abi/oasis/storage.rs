@@ -162,7 +162,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
 fn get_instance_store<'a, C: Context>(
     ec: &'a mut ExecutionContext<'_, C>,
     store_kind: u32,
-) -> Result<impl Store + 'a, wasm3::Trap> {
+) -> Result<Box<dyn Store + 'a>, wasm3::Trap> {
     // Determine which store we should be using.
     let store_kind: StoreKind = store_kind.try_into().map_err(|_| wasm3::Trap::Abort)?;
 

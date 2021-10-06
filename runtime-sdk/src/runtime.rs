@@ -128,14 +128,14 @@ pub trait Runtime {
 
             // Cobble together a keymanager client.
             let key_manager = Self::trusted_policy_signers().map(|signers| {
-                KeyManagerClient::new(
+                Arc::new(KeyManagerClient::new(
                     hi.runtime_id,
                     protocol.clone(),
                     rak.clone(),
                     rpc,
                     4096,
                     signers,
-                )
+                ))
             });
 
             // Register runtime's methods.
