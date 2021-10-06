@@ -1,0 +1,42 @@
+cargo-features = ["strip"]
+
+[package]
+name = "oasis-wormhole"
+version = "0.1.0"
+description = "Wormhole contract"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+cbor = { version = "0.2.0", package = "oasis-cbor" }
+oasis-contract-sdk = { path = "../../../../contract-sdk" }
+oasis-contract-sdk-storage = { path = "../../../../contract-sdk/storage" }
+oasis-contract-sdk-types = { path = "../../../../contract-sdk/types" }
+oasis-wormhole-types = { path = "../types" }
+
+# Third party.
+thiserror = "1.0.28"
+anyhow = "1.0"
+sha3 = { version = "0.9.1", default-features = false }
+# k256 = { version = "0.9.6", default-features = false, features = ["keccak256", "ecdsa"] }
+
+[dev-dependencies]
+ethsign = "0.8.0"
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = "abort"
+incremental = false
+overflow-checks = true
+strip = true
