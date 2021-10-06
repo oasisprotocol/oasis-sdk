@@ -9,6 +9,7 @@ Breaking changes:
 New features:
 
 - `oasis.misc` now has `toBase64`, `fromBase64`, and `toStringUTF8`.
+- Errors from GRPC are now wrapped to include a stack trace.
 
 Bug fixes:
 
