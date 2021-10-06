@@ -90,8 +90,6 @@ pub struct MockContext {
     /// Execution context.
     pub ec: ExecutionContext,
 
-    pub deposited_tokens: Vec<token::BaseUnits>,
-
     /// Public store.
     pub public_store: MockStore,
     /// "Confidential" store.
@@ -109,7 +107,6 @@ impl From<ExecutionContext> for MockContext {
     fn from(ec: ExecutionContext) -> Self {
         Self {
             ec,
-            deposited_tokens: Vec::new(),
             public_store: MockStore::new(),
             confidential_store: MockStore::new(),
             env: MockEnv::new(),
@@ -137,7 +134,7 @@ impl Context for MockContext {
     }
 
     fn deposited_tokens(&self) -> &[token::BaseUnits] {
-        &self.deposited_tokens
+        &self.ec.deposited_tokens
     }
 
     fn emit_message(&mut self, msg: Message) {
