@@ -78,10 +78,9 @@ export const playground = (async function () {
         const consensusChainContext = await nic.consensusGetChainContext();
 
         console.log('alice deposit into runtime');
-        var enc = new TextEncoder();
         const DEPOSIT_AMNT = /** @type {oasisRT.types.BaseUnits} */ ([
             oasis.quantity.fromBigInt(50n),
-            enc.encode('TEST'),
+            oasis.misc.fromString('TEST'),
         ]);
         const twDeposit = consensusWrapper
             .callDeposit()
@@ -108,7 +107,7 @@ export const playground = (async function () {
         });
         const WITHDRAW_AMNT = /** @type {oasisRT.types.BaseUnits} */ ([
             oasis.quantity.fromBigInt(25n),
-            enc.encode('TEST'),
+            oasis.misc.fromString('TEST'),
         ]);
         const twWithdraw = consensusWrapper
             .callWithdraw()
@@ -126,7 +125,7 @@ export const playground = (async function () {
         const addrs = await accountsWrapper
             .queryAddresses()
             .setArgs({
-                denomination: enc.encode('TEST'),
+                denomination: oasis.misc.fromString('TEST'),
             })
             .query(nic);
 

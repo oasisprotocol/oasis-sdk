@@ -6,6 +6,11 @@ Breaking changes:
 
 - The `NodeAddress` type is replaced with the equivalent `NetTCPAddr`.
 
+New features:
+
+- `oasis.misc` now has `toBase64`, `fromBase64`, and `toStringUTF8`.
+- Errors from GRPC are now wrapped to include a stack trace.
+
 Bug fixes:
 
 - Fixes to type declarations that were inconsistent with the Go types.

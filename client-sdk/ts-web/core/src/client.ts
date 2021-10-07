@@ -560,9 +560,12 @@ export class GRPCWrapper {
                 // todo: unhack this when they release with our change
                 // https://github.com/grpc/grpc-web/pull/1025
                 return undefined;
-            } else {
-                throw e;
             }
+            // grpc-web gives us a plain object with no stack trace, which is less helpful.
+            // Transfer it to an Error.
+            const error = new Error(e.message);
+            Object.assign(error, e);
+            throw error;
         });
     }
 

@@ -165,17 +165,9 @@ function getSigner() {
     return signerP;
 }
 
-function toBase64(/** @type {Uint8Array} */ u8) {
-    return btoa(String.fromCharCode.apply(null, u8));
-}
-
-function toStringUtf8(/** @type {Uint8Array} */ u8) {
-    return new TextDecoder().decode(u8);
-}
-
 function rtBaseUnitsDisplay(/** @type {oasisRT.types.BaseUnits} */ bu) {
     return `${oasis.quantity.toBigInt(bu[0])} ${
-        bu[1] && bu[1].length ? toStringUtf8(bu[1]) : '(native)'
+        bu[1] && bu[1].length ? oasis.misc.toStringUTF8(bu[1]) : '(native)'
     }`;
 }
 
@@ -347,7 +339,7 @@ Body JSON: ${JSON.stringify(tx.call.body)}`;
                                 if ('signature' in si.address_spec) {
                                     if ('ed25519' in si.address_spec.signature) {
                                         confMessage += `
-Signer: ed25519 signature with public key, base64 ${toBase64(
+Signer: ed25519 signature with public key, base64 ${oasis.misc.toBase64(
                                             si.address_spec.signature.ed25519,
                                         )}, nonce ${si.nonce}`;
                                         continue;
