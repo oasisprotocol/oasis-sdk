@@ -3,7 +3,9 @@
     "version": "0.1.0-alpha5",
     "license": "Apache-2.0",
     "files": [
-        "dist"
+        "dist",
+        "proto/index.js",
+        "proto/index.d.ts"
     ],
     "main": "dist/index.js",
     "scripts": {
@@ -11,7 +13,7 @@
         "fmt": "prettier --write playground/src src test",
         "lint": "prettier --check playground/src src test",
         "playground": "cd playground && webpack s -c webpack.config.js",
-        "prepare": "tsc",
+        "prepare": "./compile-proto.sh && tsc",
         "test": "jest"
     },
     "dependencies": {
@@ -20,6 +22,7 @@
         "cborg": "^1.5.1",
         "grpc-web": "^1.2.1",
         "js-sha512": "^0.8.0",
+        "protobufjs": "~6.11.2",
         "tweetnacl": "^1.0.3"
     },
     "devDependencies": {
