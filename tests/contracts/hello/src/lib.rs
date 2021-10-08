@@ -222,7 +222,8 @@ impl sdk::Contract for HelloWorld {
                         "data" => cbor::cbor_bytes!(cbor::to_vec(
                             cbor::to_value(Oas20Request::Instantiate(token_instantiation)),
                         )),
-                        "tokens" => cbor::cbor_array![],
+                        // Forward any deposited native tokens, as an example of sending native tokens.
+                        "tokens" => cbor::to_value(ctx.deposited_tokens().to_vec()),
                     },
                     max_gas: None,
                     data: Some(cbor::to_value("some test data".to_string())),
