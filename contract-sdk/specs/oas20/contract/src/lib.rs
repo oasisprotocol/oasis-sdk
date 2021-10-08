@@ -3,7 +3,7 @@
 
 extern crate alloc;
 
-use oasis_contract_sdk::{self as sdk, types::message::NotifyReply};
+use oasis_contract_sdk::{self as sdk};
 use oasis_contract_sdk_oas20_types as types;
 use oasis_contract_sdk_oas20_types::{Error, Event, Request, Response};
 use oasis_contract_sdk_storage::{cell::Cell, map::Map};
@@ -43,107 +43,11 @@ impl sdk::Contract for Oas20Token {
     }
 
     fn call<C: sdk::Context>(ctx: &mut C, request: Request) -> Result<Response, Error> {
-        // This method is called for each contracts.Call call. It is supposed to handle the request
-        // and return a response.
-        match request {
-            Request::Transfer { to, amount } => {
-                // Transfers the `amount` of funds from caller to `to` address.
-                let from = ctx.caller_address().to_owned();
-                types::helpers::transfer(ctx, BALANCES, from, to, amount)?;
-
-                ctx.emit_event(Event::Oas20Transferred { from, to, amount });
-
-                Ok(Response::Empty)
-            }
-            Request::Send { to, amount, data } => {
-                let from = ctx.caller_address().to_owned();
-                // Transfers the `amount` of funds from caller to `to` contract instance identifier
-                // and calls `ReceiveOas20` on the receiving contract.
-                types::helpers::send(ctx, BALANCES, from, to, amount, data, 0, NotifyReply::Never)?;
-
-                ctx.emit_event(Event::Oas20Sent { from, to, amount });
-
-                Ok(Response::Empty)
-            }
-            Request::Burn { amount } => {
-                let from = ctx.caller_address().to_owned();
-                types::helpers::burn(ctx, BALANCES, TOKEN_INFO, from, amount)?;
-
-                ctx.emit_event(Event::Oas20Burned { from, amount });
-
-                Ok(Response::Empty)
-            }
-            Request::Mint { to, amount } => {
-                types::helpers::mint(ctx, BALANCES, TOKEN_INFO, to, amount)?;
-
-                ctx.emit_event(Event::Oas20Minted { to, amount });
-
-                Ok(Response::Empty)
-            }
-            Request::Allow {
-                beneficiary,
-                negative,
-                amount_change,
-            } => {
-                let owner = ctx.caller_address().to_owned();
-                let (new_allowance, amount_change) = types::helpers::allow(
-                    ctx,
-                    ALLOWANCES,
-                    owner,
-                    beneficiary,
-                    negative,
-                    amount_change,
-                )?;
-
-                ctx.emit_event(Event::Oas20AllowanceChanged {
-                    owner,
-                    beneficiary,
-                    allowance: new_allowance,
-                    negative,
-                    amount_change,
-                });
-
-                Ok(Response::Empty)
-            }
-            Request::Withdraw { from, amount } => {
-                let to = ctx.caller_address().to_owned();
-                types::helpers::withdraw(ctx, BALANCES, ALLOWANCES, from, to, amount)?;
-
-                ctx.emit_event(Event::Oas20Withdraw { from, to, amount });
-
-                Ok(Response::Empty)
-            }
-            _ => Err(Error::BadRequest),
-        }
+        types::helpers::handle_call(ctx, TOKEN_INFO, BALANCES, ALLOWANCES, request)
     }
 
     fn query<C: sdk::Context>(ctx: &mut C, request: Request) -> Result<Response, Error> {
-        // This method is called for each contracts.Query query. It is supposed to handle the
-        // request and return a response.
-        match request {
-            Request::TokenInformation => {
-                // Token info should always be present.
-                let token_info = TOKEN_INFO.get(ctx.public_store()).unwrap();
-
-                Ok(Response::TokenInformation {
-                    token_information: token_info,
-                })
-            }
-            Request::Balance { address } => Ok(Response::Balance {
-                balance: BALANCES
-                    .get(ctx.public_store(), address)
-                    .unwrap_or_default(),
-            }),
-            Request::Allowance {
-                allower,
-                beneficiary,
-            } => Ok(Response::Allowance {
-                allowance: ALLOWANCES
-                    .get(ctx.public_store(), (allower, beneficiary))
-                    .unwrap_or_default(),
-            }),
-            _ => Err(Error::BadRequest),
-        }
+        types::helpers::handle_query(ctx, TOKEN_INFO, BALANCES, ALLOWANCES, request)
     }
 }
 
