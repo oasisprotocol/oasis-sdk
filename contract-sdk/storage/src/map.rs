@@ -61,6 +61,12 @@ pub trait MapKey {
     fn key(&self) -> Vec<&[u8]>;
 }
 
+impl<const N: usize> MapKey for [u8; N] {
+    fn key(&self) -> Vec<&[u8]> {
+        vec![self]
+    }
+}
+
 impl MapKey for &[u8] {
     fn key(&self) -> Vec<&[u8]> {
         vec![self]
