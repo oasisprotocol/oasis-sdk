@@ -9,7 +9,116 @@ use oasis_contract_sdk::{
 use oasis_contract_sdk_storage::{cell::Cell, map::Map};
 use oasis_contract_sdk_types::address::Address;
 
-use crate::{Error, InitialBalance, ReceiverRequest, TokenInformation, TokenInstantiation};
+use crate::{
+    Error, Event, InitialBalance, ReceiverRequest, Request, Response, TokenInformation,
+    TokenInstantiation,
+};
+
+/// Handles an OAS20 request call.
+pub fn handle_call<C: sdk::Context>(
+    ctx: &mut C,
+    token_info: Cell<TokenInformation>,
+    balances: Map<Address, u128>,
+    allowances: Map<(Address, Address), u128>,
+    request: Request,
+) -> Result<Response, Error> {
+    match request {
+        Request::Transfer { to, amount } => {
+            // Transfers the `amount` of funds from caller to `to` address.
+            let from = ctx.caller_address().to_owned();
+            transfer(ctx, balances, from, to, amount)?;
+
+            ctx.emit_event(Event::Oas20Transferred { from, to, amount });
+
+            Ok(Response::Empty)
+        }
+        Request::Send { to, amount, data } => {
+            let from = ctx.caller_address().to_owned();
+            send(ctx, balances, from, to, amount, data, 0, NotifyReply::Never)?;
+
+            ctx.emit_event(Event::Oas20Sent { from, to, amount });
+
+            Ok(Response::Empty)
+        }
+        Request::Burn { amount } => {
+            let from = ctx.caller_address().to_owned();
+            burn(ctx, balances, token_info, from, amount)?;
+
+            ctx.emit_event(Event::Oas20Burned { from, amount });
+
+            Ok(Response::Empty)
+        }
+        Request::Mint { to, amount } => {
+            mint(ctx, balances, token_info, to, amount)?;
+
+            ctx.emit_event(Event::Oas20Minted { to, amount });
+
+            Ok(Response::Empty)
+        }
+        Request::Allow {
+            beneficiary,
+            negative,
+            amount_change,
+        } => {
+            let owner = ctx.caller_address().to_owned();
+            let (new_allowance, amount_change) =
+                allow(ctx, allowances, owner, beneficiary, negative, amount_change)?;
+
+            ctx.emit_event(Event::Oas20AllowanceChanged {
+                owner,
+                beneficiary,
+                allowance: new_allowance,
+                negative,
+                amount_change,
+            });
+
+            Ok(Response::Empty)
+        }
+        Request::Withdraw { from, amount } => {
+            let to = ctx.caller_address().to_owned();
+            withdraw(ctx, balances, allowances, from, to, amount)?;
+
+            ctx.emit_event(Event::Oas20Withdraw { from, to, amount });
+
+            Ok(Response::Empty)
+        }
+        _ => Err(Error::BadRequest),
+    }
+}
+
+/// Handles an OAS20 request query.
+pub fn handle_query<C: sdk::Context>(
+    ctx: &mut C,
+    token_info: Cell<TokenInformation>,
+    balances: Map<Address, u128>,
+    allowances: Map<(Address, Address), u128>,
+    request: Request,
+) -> Result<Response, Error> {
+    match request {
+        Request::TokenInformation => {
+            // Token info should always be present.
+            let token_info = token_info.get(ctx.public_store()).unwrap();
+
+            Ok(Response::TokenInformation {
+                token_information: token_info,
+            })
+        }
+        Request::Balance { address } => Ok(Response::Balance {
+            balance: balances
+                .get(ctx.public_store(), address)
+                .unwrap_or_default(),
+        }),
+        Request::Allowance {
+            allower,
+            beneficiary,
+        } => Ok(Response::Allowance {
+            allowance: allowances
+                .get(ctx.public_store(), (allower, beneficiary))
+                .unwrap_or_default(),
+        }),
+        _ => Err(Error::BadRequest),
+    }
+}
 
 /// Instantiates the contract state.
 pub fn instantiate<C: sdk::Context>(
