@@ -185,8 +185,8 @@ github.com/dgraph-io/badger v1.6.2 h1:mNw0qs90GVgGGWylh0umH5iag1j6n/PeJtNvL6KY/x
 github.com/dgraph-io/badger v1.6.2/go.mod h1:JW2yswe3V058sS0kZ2h/AXeDSqFjxnZcRrVH//y2UQE=
 github.com/dgraph-io/badger/v2 v2.2007.2 h1:EjjK0KqwaFMlPin1ajhP943VPENHJdEz1KLIegjaI3k=
 github.com/dgraph-io/badger/v2 v2.2007.2/go.mod h1:26P/7fbL4kUZVEVKLAKXkBXKOydDmM2p1e+NhhnBCAE=
-github.com/dgraph-io/badger/v3 v3.2103.1 h1:zaX53IRg7ycxVlkd5pYdCeFp1FynD6qBGQoQql3R3Hk=
-github.com/dgraph-io/badger/v3 v3.2103.1/go.mod h1:dULbq6ehJ5K0cGW/1TQ9iSfUk0gbSiToDWmWmTsJ53E=
+github.com/dgraph-io/badger/v3 v3.2103.2 h1:dpyM5eCJAtQCBcMCZcT4UBZchuTJgCywerHHgmxfxM8=
+github.com/dgraph-io/badger/v3 v3.2103.2/go.mod h1:RHo4/GmYcKKh5Lxu63wLEMHJ70Pac2JqZRYGhlyAo2M=
 github.com/dgraph-io/ristretto v0.0.2/go.mod h1:KPxhHT9ZxKefz+PCeOGsrHpl1qZ7i70dGTu2u+Ahh6E=
 github.com/dgraph-io/ristretto v0.0.3-0.20200630154024-f66de99634de/go.mod h1:KPxhHT9ZxKefz+PCeOGsrHpl1qZ7i70dGTu2u+Ahh6E=
 github.com/dgraph-io/ristretto v0.1.0 h1:Jv3CGQHp9OjuMBSne1485aDpUkTKEcUqF+jm/LuerPI=
@@ -930,8 +930,8 @@ github.com/oasisprotocol/deoxysii v0.0.0-20200527154044-851aec403956 h1:etZXZf8f
 github.com/oasisprotocol/deoxysii v0.0.0-20200527154044-851aec403956/go.mod h1:cE5EgXTIhq5oAVdZ7LZd1FjTRLALPEzv93CWzBtDkyI=
 github.com/oasisprotocol/ed25519 v0.0.0-20210127160119-f7017427c1ea h1:r4MhxgqQ1bed0fQhRINBM50Rbwsgma6oEjG4zQ444Lw=
 github.com/oasisprotocol/ed25519 v0.0.0-20210127160119-f7017427c1ea/go.mod h1:IZbb50w3AB72BVobEF6qG93NNSrTw/V2QlboxqSu3Xw=
-github.com/oasisprotocol/oasis-core/go v0.2103.0 h1:zqY8XJ5P/eFxQedYU3KMHGUJflik0L3dH8riFp4Ikyw=
-github.com/oasisprotocol/oasis-core/go v0.2103.0/go.mod h1:aWl+Kf5zIWvD+zbyKjIPnpusrlkhfztXWoEFdSXGuS4=
+github.com/oasisprotocol/oasis-core/go v0.2103.1 h1:ljCZ4Hj9+t/dboZZwr/7J1/PSYREPOhcJiYQ2zPzkIw=
+github.com/oasisprotocol/oasis-core/go v0.2103.1/go.mod h1:X8I4m5T7qlEmFR0nLTE9Fwm6HKIuVlrZ8BBmBIxkCKk=
 github.com/oasisprotocol/safeopen v0.0.0-20200528085122-e01cfdfc7661 h1:MB73kGMtuMGS+6VDoU/mitzff7Cu+aZo9ta5wabuxVA=
 github.com/oasisprotocol/safeopen v0.0.0-20200528085122-e01cfdfc7661/go.mod h1:SwBxaVibf6Sr2IZ6M3WnUue0yp8dPLAo1riQRNQ60+g=
 github.com/oasisprotocol/tendermint v0.34.9-oasis2 h1:wVFJjLnmen7QXpIAznbiGHOeVrX5oNtJMUk0rrpSmG8=
