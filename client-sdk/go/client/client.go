@@ -30,12 +30,29 @@ type RuntimeClient interface {
 	// for transaction execution results.
 	SubmitTxRaw(ctx context.Context, tx *types.UnverifiedTransaction) (*types.CallResult, error)
 
+	// SubmitTxRawMeta submits a transaction to the runtime transaction scheduler and waits
+	// for transaction execution results.
+	//
+	// Response includes transaction metadata - e.g. round at which the transaction was included
+	// in a block.
+	SubmitTxRawMeta(ctx context.Context, tx *types.UnverifiedTransaction) (*SubmitTxRawMeta, error)
+
 	// SubmitTx submits a transaction to the runtime transaction scheduler and waits
 	// for transaction execution results.
 	//
 	// If there is a possibility that the result is Unknown then the caller must use SubmitTxRaw
 	// instead as this method will return an error.
 	SubmitTx(ctx context.Context, tx *types.UnverifiedTransaction) (cbor.RawMessage, error)
+
+	// SubmitTx submits a transaction to the runtime transaction scheduler and waits
+	// for transaction execution results.
+	//
+	// If there is a possibility that the result is Unknown then the caller must use SubmitTxRaw
+	// instead as this method will return an error.
+	//
+	// Response includes transaction metadata - e.g. round at which the transaction was included
+	// in a block.
+	SubmitTxMeta(ctx context.Context, tx *types.UnverifiedTransaction) (*SubmitTxMeta, error)
 
 	// SubmitTxNoWait submits a transaction to the runtime transaction scheduler but does
 	// not wait for transaction execution.
@@ -62,6 +79,40 @@ type RuntimeClient interface {
 
 	// Query makes a runtime-specific query.
 	Query(ctx context.Context, round uint64, method string, args, rsp interface{}) error
+}
+
+// TransactionMeta are the metadata about transaction execution.
+type TransactionMeta struct {
+	// Round is the roothash round in which the transaction was executed.
+	Round uint64
+	// BatchOrder is the order of the transaction in the execution batch.
+	BatchOrder uint32
+
+	// CheckTxError is the CheckTx error in case transaction failed the transaction check.
+	CheckTxError *CheckTxError
+}
+
+// CheckTxError describes an error that happened during transaction check.
+type CheckTxError struct {
+	Module  string
+	Code    uint32
+	Message string
+}
+
+// SubmitTxRawMeta is the result of SubmitTxRawMeta call.
+type SubmitTxRawMeta struct {
+	TransactionMeta
+
+	// Result is the call result.
+	Result types.CallResult
+}
+
+// SubmitTxMeta is the result of SubmitTxMeta call.
+type SubmitTxMeta struct {
+	TransactionMeta
+
+	// Result is the call result.
+	Result cbor.RawMessage
 }
 
 // TransactionWithResults is an SDK transaction together with its results and emitted events.
@@ -115,6 +166,42 @@ func (rc *runtimeClient) SubmitTxRaw(ctx context.Context, tx *types.UnverifiedTr
 }
 
 // Implements RuntimeClient.
+func (rc *runtimeClient) SubmitTxRawMeta(ctx context.Context, tx *types.UnverifiedTransaction) (*SubmitTxRawMeta, error) {
+	meta, err := rc.cc.SubmitTxMeta(ctx, &coreClient.SubmitTxRequest{
+		RuntimeID: rc.runtimeID,
+		Data:      cbor.Marshal(tx),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if an error was encountered during transaction checks.
+	if meta.CheckTxError != nil {
+		return &SubmitTxRawMeta{
+			TransactionMeta: TransactionMeta{
+				CheckTxError: &CheckTxError{
+					Module:  meta.CheckTxError.Module,
+					Code:    meta.CheckTxError.Code,
+					Message: meta.CheckTxError.Message,
+				},
+			},
+		}, nil
+	}
+
+	var result types.CallResult
+	if err = cbor.Unmarshal(meta.Output, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal call result: %w", err)
+	}
+	return &SubmitTxRawMeta{
+		Result: result,
+		TransactionMeta: TransactionMeta{
+			Round:      meta.Round,
+			BatchOrder: meta.BatchOrder,
+		},
+	}, nil
+}
+
+// Implements RuntimeClient.
 func (rc *runtimeClient) SubmitTx(ctx context.Context, tx *types.UnverifiedTransaction) (cbor.RawMessage, error) {
 	result, err := rc.SubmitTxRaw(ctx, tx)
 	if err != nil {
@@ -127,6 +214,31 @@ func (rc *runtimeClient) SubmitTx(ctx context.Context, tx *types.UnverifiedTrans
 		return result.Ok, nil
 	default:
 		return nil, result.Failed
+	}
+}
+
+// Implements RuntimeClient.
+func (rc *runtimeClient) SubmitTxMeta(ctx context.Context, tx *types.UnverifiedTransaction) (*SubmitTxMeta, error) {
+	meta, err := rc.SubmitTxRawMeta(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if an error was encountered during transaction checks.
+	if meta.CheckTxError != nil {
+		return &SubmitTxMeta{TransactionMeta: meta.TransactionMeta}, nil
+	}
+
+	switch {
+	case meta.Result.IsUnknown():
+		return nil, fmt.Errorf("got unknown result, use SubmitTxRawMeta to retrieve")
+	case meta.Result.IsSuccess():
+		return &SubmitTxMeta{
+			Result:          meta.Result.Ok,
+			TransactionMeta: meta.TransactionMeta,
+		}, nil
+	default:
+		return &SubmitTxMeta{TransactionMeta: meta.TransactionMeta}, meta.Result.Failed
 	}
 }
 
