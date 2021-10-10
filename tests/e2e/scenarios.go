@@ -27,6 +27,7 @@ var (
 		KVTxGenTest,
 		ContractsTest,
 		ConfidentialTest,
+		TransactionsQueryTest,
 	})
 
 	// SimpleConsensusRuntime is the simple-consensus runtime test.

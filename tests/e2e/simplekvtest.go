@@ -286,6 +286,58 @@ func ConfidentialTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 	return nil
 }
 
+// TransactionsQueryTest tests SubmitTx*Meta and GetTransactionsWithResults functions.
+func TransactionsQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	signer := testing.Alice.Signer
+
+	testKey := []byte("test_key")
+	testValue := []byte("test_value")
+
+	ac := accounts.NewV1(rtc)
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
+	if err != nil {
+		return fmt.Errorf("failed to query nonce: %w", err)
+	}
+
+	tb := client.NewTransactionBuilder(rtc, "keyvalue.Insert", kvKeyValue{
+		Key:   testKey,
+		Value: testValue,
+	})
+	tb.SetFeeGas(10 * defaultGasAmount)
+	tb.AppendAuthSignature(signer.Public(), nonce)
+	_ = tb.AppendSign(ctx, signer)
+	var meta *client.TransactionMeta
+	if meta, err = tb.SubmitTxMeta(ctx, nil); err != nil {
+		return fmt.Errorf("failed to submit transaction: %w", err)
+	}
+	if meta.CheckTxError != nil {
+		return fmt.Errorf("unexpected error during transaction check: %+v", meta.CheckTxError)
+	}
+
+	// Query transactions for the round in which the transaction was executed.
+	txs, err := rtc.GetTransactionsWithResults(ctx, meta.Round)
+	if err != nil {
+		return fmt.Errorf("failed to get transactions with results: %w", err)
+	}
+
+	if len(txs) <= int(meta.BatchOrder) {
+		return fmt.Errorf("transaction index %d not found in block with %d transactions", meta.BatchOrder, len(txs))
+	}
+
+	tx := txs[meta.BatchOrder]
+	if len(tx.Events) != 1 {
+		return fmt.Errorf("expected 1 event got %d events", len(tx.Events))
+	}
+
+	event := tx.Events[0]
+	if event.Module != "keyvalue" || event.Code != 1 {
+		return fmt.Errorf("expected event module 'keyvalue' with code 1 got module '%s' with code %d", event.Module, event.Code)
+	}
+
+	return nil
+}
+
 // KVEventTest tests key insert/remove events.
 func KVEventTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
