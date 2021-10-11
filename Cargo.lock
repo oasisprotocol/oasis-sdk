@@ -1837,7 +1837,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-client"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3#9f5a3c609a1d700b2fe7cd860bf6bc12a0d6d339"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.1#788987aeb2552aa8ba9f57e694a29eb44d49b6f1"
 dependencies = [
  "anyhow",
  "futures",
@@ -1851,7 +1851,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-keymanager-api-common"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3#9f5a3c609a1d700b2fe7cd860bf6bc12a0d6d339"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.1#788987aeb2552aa8ba9f57e694a29eb44d49b6f1"
 dependencies = [
  "anyhow",
  "base64",
@@ -1868,7 +1868,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-keymanager-client"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3#9f5a3c609a1d700b2fe7cd860bf6bc12a0d6d339"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.1#788987aeb2552aa8ba9f57e694a29eb44d49b6f1"
 dependencies = [
  "futures",
  "io-context",
@@ -1883,7 +1883,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-runtime"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3#9f5a3c609a1d700b2fe7cd860bf6bc12a0d6d339"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.1#788987aeb2552aa8ba9f57e694a29eb44d49b6f1"
 dependencies = [
  "anyhow",
  "arbitrary",

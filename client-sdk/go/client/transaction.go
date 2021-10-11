@@ -133,6 +133,47 @@ func (tb *TransactionBuilder) SubmitTx(ctx context.Context, rsp interface{}) err
 	}
 }
 
+// SubmitTxMeta submits a transaction to the runtime transaction scheduler and waits for transaction
+// execution results.
+//
+// Response includes transaction metadata - e.g. round at which the transaction was included
+// in a block.
+func (tb *TransactionBuilder) SubmitTxMeta(ctx context.Context, rsp interface{}) (*TransactionMeta, error) {
+	if tb.ts == nil {
+		return nil, fmt.Errorf("unable to submit unsigned transaction")
+	}
+
+	meta, err := tb.rc.SubmitTxRawMeta(ctx, tb.ts.UnverifiedTransaction())
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if an error was encountered during transaction checks.
+	if meta.CheckTxError != nil {
+		return &meta.TransactionMeta, nil
+	}
+
+	result, err := tb.decodeResult(&meta.Result, tb.callMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	switch {
+	case result.IsUnknown():
+		// This should never happen as the inner result should not be unknown.
+		return nil, fmt.Errorf("got unknown result: %X", result.Unknown)
+	case result.IsSuccess():
+		if rsp != nil {
+			if err := cbor.Unmarshal(result.Ok, rsp); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal call result: %w", err)
+			}
+		}
+		return &meta.TransactionMeta, nil
+	default:
+		return &meta.TransactionMeta, result.Failed
+	}
+}
+
 // SubmitTxNoWait submits a transaction to the runtime transaction scheduler but does not wait for
 // transaction execution.
 func (tb *TransactionBuilder) SubmitTxNoWait(ctx context.Context) error {

@@ -17,7 +17,6 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
-	sdk "github.com/oasisprotocol/oasis-sdk/client-sdk/go"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
@@ -70,7 +69,7 @@ type kvInsertEvent struct {
 	KV kvKeyValue `json:"kv"`
 }
 
-var kvInsertEventKey = sdk.NewEventKey("keyvalue", 1)
+var kvInsertEventKey = types.NewEventKey("keyvalue", 1)
 
 // The kvRemoveEvent type must match the Event::Remove type from the
 // simple-keyvalue runtime in ../runtimes/simple-keyvalue/src/keyvalue.rs.
@@ -78,7 +77,7 @@ type kvRemoveEvent struct {
 	Key kvKey `json:"key"`
 }
 
-var kvRemoveEventKey = sdk.NewEventKey("keyvalue", 2)
+var kvRemoveEventKey = types.NewEventKey("keyvalue", 2)
 
 // GetChainContext returns the chain context.
 func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.Context, error) {
@@ -282,6 +281,58 @@ func ConfidentialTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 	_ = tb.AppendSign(ctx, signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return fmt.Errorf("failed to submit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// TransactionsQueryTest tests SubmitTx*Meta and GetTransactionsWithResults functions.
+func TransactionsQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	signer := testing.Alice.Signer
+
+	testKey := []byte("test_key")
+	testValue := []byte("test_value")
+
+	ac := accounts.NewV1(rtc)
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
+	if err != nil {
+		return fmt.Errorf("failed to query nonce: %w", err)
+	}
+
+	tb := client.NewTransactionBuilder(rtc, "keyvalue.Insert", kvKeyValue{
+		Key:   testKey,
+		Value: testValue,
+	})
+	tb.SetFeeGas(10 * defaultGasAmount)
+	tb.AppendAuthSignature(signer.Public(), nonce)
+	_ = tb.AppendSign(ctx, signer)
+	var meta *client.TransactionMeta
+	if meta, err = tb.SubmitTxMeta(ctx, nil); err != nil {
+		return fmt.Errorf("failed to submit transaction: %w", err)
+	}
+	if meta.CheckTxError != nil {
+		return fmt.Errorf("unexpected error during transaction check: %+v", meta.CheckTxError)
+	}
+
+	// Query transactions for the round in which the transaction was executed.
+	txs, err := rtc.GetTransactionsWithResults(ctx, meta.Round)
+	if err != nil {
+		return fmt.Errorf("failed to get transactions with results: %w", err)
+	}
+
+	if len(txs) <= int(meta.BatchOrder) {
+		return fmt.Errorf("transaction index %d not found in block with %d transactions", meta.BatchOrder, len(txs))
+	}
+
+	tx := txs[meta.BatchOrder]
+	if len(tx.Events) != 1 {
+		return fmt.Errorf("expected 1 event got %d events", len(tx.Events))
+	}
+
+	event := tx.Events[0]
+	if event.Module != "keyvalue" || event.Code != 1 {
+		return fmt.Errorf("expected event module 'keyvalue' with code 1 got module '%s' with code %d", event.Module, event.Code)
 	}
 
 	return nil
