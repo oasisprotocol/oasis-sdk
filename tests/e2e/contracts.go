@@ -269,7 +269,9 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 				},
 			},
 		},
-		[]types.BaseUnits{},
+		[]types.BaseUnits{
+			types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination),
+		},
 	).
 		SetFeeGas(1_000_000).
 		AppendAuthSignature(signer.Public(), nonce+8)
@@ -291,6 +293,18 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 	if instantiate["data"] != "some test data" {
 		return fmt.Errorf("unexpected instantiate_oas20 data response: %v", instantiate["data"])
+	}
+	instanceID := contracts.InstanceID(instantiate["instance_id"].(uint64))
+	b, err := ac.Balances(ctx, client.RoundLatest, instanceID.Address())
+	if err != nil {
+		return err
+	}
+	if q, ok := b.Balances[types.NativeDenomination]; ok {
+		if q.Cmp(quantity.NewFromUint64(10)) != 0 {
+			return fmt.Errorf("OAS20 contract's account balance is wrong (expected 10, got %s)", q.String())
+		}
+	} else {
+		return fmt.Errorf("OAS20 contract's account is missing native denomination balance")
 	}
 
 	// Test crypto ecdsa_recover contract.
