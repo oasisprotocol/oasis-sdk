@@ -3,3 +3,5 @@
 /dist
 /node_modules
 /playground/dist/main.js
+/proto/index.js
+/proto/index.d.ts
