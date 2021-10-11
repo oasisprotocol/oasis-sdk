@@ -2,6 +2,9 @@ package accounts
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -19,6 +22,8 @@ const (
 
 // V1 is the v1 accounts module interface.
 type V1 interface {
+	client.EventDecoder
+
 	// Transfer generates an accounts.Transfer transaction.
 	Transfer(to types.Address, amount types.BaseUnits) *client.TransactionBuilder
 
@@ -30,6 +35,9 @@ type V1 interface {
 
 	// Addresses queries all account addresses.
 	Addresses(ctx context.Context, round uint64, denomination types.Denomination) (Addresses, error)
+
+	// GetEvents returns all account events emitted in a given block.
+	GetEvents(ctx context.Context, round uint64) ([]*Event, error)
 }
 
 type v1 struct {
@@ -72,6 +80,63 @@ func (a *v1) Addresses(ctx context.Context, round uint64, denomination types.Den
 		return nil, err
 	}
 	return addresses, nil
+}
+
+// Implements V1.
+func (a *v1) GetEvents(ctx context.Context, round uint64) ([]*Event, error) {
+	rawEvs, err := a.rc.GetEventsRaw(ctx, round)
+	if err != nil {
+		return nil, err
+	}
+
+	evs := make([]*Event, 0)
+	for _, rawEv := range rawEvs {
+		ev, err := a.DecodeEvent(rawEv)
+		if err != nil {
+			return nil, err
+		}
+		if ev == nil {
+			continue
+		}
+		evs = append(evs, ev.(*Event))
+	}
+
+	return evs, nil
+}
+
+// Implements client.EventDecoder.
+func (a *v1) DecodeEvent(event *types.Event) (client.DecodedEvent, error) {
+	if event.Module != ModuleName {
+		return nil, nil
+	}
+	switch event.Code {
+	case TransferEventCode:
+		var ev *TransferEvent
+		if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+			return nil, fmt.Errorf("decode account transfer event value: %w", err)
+		}
+		return &Event{
+			Transfer: ev,
+		}, nil
+	case BurnEventCode:
+		var ev *BurnEvent
+		if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+			return nil, fmt.Errorf("decode account burn event value: %w", err)
+		}
+		return &Event{
+			Burn: ev,
+		}, nil
+	case MintEventCode:
+		var ev *MintEvent
+		if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+			return nil, fmt.Errorf("decode account mint event value: %w", err)
+		}
+		return &Event{
+			Mint: ev,
+		}, nil
+	default:
+		return nil, fmt.Errorf("invalid accounts event code: %v", event.Code)
+	}
 }
 
 // NewV1 generates a V1 client helper for the accounts module.

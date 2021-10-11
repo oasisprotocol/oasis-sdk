@@ -183,3 +183,14 @@ type CustomQuery struct {
 
 // CustomQueryResult is the result of the contracts.Custom query.
 type CustomQueryResult []byte
+
+// ModuleName is the contracts module name.
+const ModuleName = "contracts"
+
+// Event is an event emitted by a contract.
+type Event struct {
+	// ID is the instance identifier.
+	ID InstanceID `json:"id"`
+	// Data is the cbor serialized event data.
+	Data []byte `json:"data,omitempty"`
+}

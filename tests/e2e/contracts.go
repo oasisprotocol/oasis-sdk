@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -135,9 +136,37 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		SetFeeGas(1_000_000).
 		AppendAuthSignature(signer.Public(), nonce+4)
 	_ = tb.AppendSign(ctx, signer)
+	var meta *client.TransactionMeta
 	var instanceOas20 contracts.InstantiateResult
-	if err = tb.SubmitTx(ctx, &instanceOas20); err != nil {
+	if meta, err = tb.SubmitTxMeta(ctx, &instanceOas20); err != nil {
 		return fmt.Errorf("failed to instantiate OAS20 contract: %w", err)
+	}
+
+	// Ensure oas20 instantiated event got emitted.
+	events, err := rtc.GetEvents(ctx, meta.Round, []client.EventDecoder{oas20.EventDecoder(uploadOas20.ID, instanceOas20.ID)}, false)
+	if err != nil {
+		return fmt.Errorf("failed to fetch OAS20 events: %w", err)
+	}
+	if len(events) != 1 {
+		return fmt.Errorf("unexpected number of events fetched, expected: %v, got: %v", 1, len(events))
+	}
+	expected := oas20.InstantiatedEvent{
+		TokenInformation: oas20.TokenInformationResponse{
+			Name:        "OAS20 Test token",
+			Symbol:      "OAS20TEST",
+			Decimals:    2,
+			TotalSupply: *quantity.NewFromUint64(10_000),
+		},
+	}
+	ev := events[0].(*oas20.Event).Instantiated
+	if ev == nil || !ev.TokenInformation.Equal(&expected.TokenInformation) {
+		return fmt.Errorf("unexpected event, expected: %v, got: %v", expected, ev)
+	}
+
+	// Watch events.
+	eventsCh, err := rtc.WatchEvents(ctx, []client.EventDecoder{oas20.EventDecoder(uploadOas20.ID, instanceOas20.ID)}, false)
+	if err != nil {
+		return fmt.Errorf("failed to watch events: %w", err)
 	}
 
 	// Tansfer some tokens.
@@ -154,11 +183,39 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		SetFeeGas(1_000_000).
 		AppendAuthSignature(signer.Public(), nonce+5)
 	_ = tb.AppendSign(ctx, signer)
-	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
+	if meta, err = tb.SubmitTxMeta(ctx, &rawResult); err != nil {
 		return fmt.Errorf("failed to call OAS20 transfer: %w", err)
 	}
 
-	// TODO: watch emitted event.
+	// Ensure WatchEvents works.
+OUTER:
+	for {
+		select {
+		case blockEvs := <-eventsCh:
+			if blockEvs.Round < meta.Round {
+				continue OUTER
+			}
+			if blockEvs.Round > meta.Round {
+				return fmt.Errorf("past expected block")
+			}
+			events := blockEvs.Events
+			if len(events) != 1 {
+				return fmt.Errorf("unexpected number of events, expected: %v, got: %v", 1, len(events))
+			}
+			expected := oas20.TransferredEvent{
+				From:   testing.Alice.Address,
+				To:     testing.Charlie.Address,
+				Amount: *quantity.NewFromUint64(10),
+			}
+			ev := events[0].(*oas20.Event).Transferred
+			if ev == nil || ev.From != expected.From || ev.To != expected.To || ev.Amount.Cmp(&expected.Amount) != 0 {
+				return fmt.Errorf("unexpected event, expected: %v, got: %v", expected, ev)
+			}
+			break OUTER
+		case <-time.After(5 * time.Second):
+			return fmt.Errorf("timed out waiting for OAS20 event")
+		}
+	}
 
 	var response *oas20.Response
 	if err = ct.Custom(

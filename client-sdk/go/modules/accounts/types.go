@@ -32,3 +32,41 @@ type AddressesQuery struct {
 
 // Addresses is the response of the accounts.Addresses query.
 type Addresses []types.Address
+
+// ModuleName is the accounts module name.
+const ModuleName = "accounts"
+
+const (
+	// TransferEventCode is the event code for the transfer event.
+	TransferEventCode = 1
+	// BurnEventCode is the event code for the burn event.
+	BurnEventCode = 2
+	// MintEventCode is the event code for the mint event.
+	MintEventCode = 3
+)
+
+// TransferEvent is the transfer event.
+type TransferEvent struct {
+	From   types.Address   `json:"from"`
+	To     types.Address   `json:"to"`
+	Amount types.BaseUnits `json:"amount"`
+}
+
+// BurnEvent is the burn event.
+type BurnEvent struct {
+	Owner  types.Address   `json:"owner"`
+	Amount types.BaseUnits `json:"amount"`
+}
+
+// MintEvent is the mint event.
+type MintEvent struct {
+	Owner  types.Address   `json:"owner"`
+	Amount types.BaseUnits `json:"amount"`
+}
+
+// Event is an account event.
+type Event struct {
+	Transfer *TransferEvent `json:"transfer,omitempty"`
+	Burn     *BurnEvent     `json:"burn,omitempty"`
+	Mint     *MintEvent     `json:"mint,omitempty"`
+}

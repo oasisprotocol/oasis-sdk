@@ -130,7 +130,7 @@ pub enum Event {
     },
 
     #[sdk_event(code = 6)]
-    Oas20Withdraw {
+    Oas20Withdrew {
         from: Address,
         to: Address,
         amount: u128,

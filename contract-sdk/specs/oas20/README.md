@@ -225,11 +225,11 @@ Oas20AllowanceChanged {
 
 Emitted on a successful OAS-20 allow.
 
-### OAS-20 Withdraw event
+### OAS-20 Withdrew event
 
 ```rust
 #[sdk_event(code = 6)]
-Oas20Withdraw {
+Oas20Withdrew {
     from: Address,
     to: Address,
     amount: u128,

@@ -71,14 +71,38 @@ type RuntimeClient interface {
 	// with their results and emitted events.
 	GetTransactionsWithResults(ctx context.Context, round uint64) ([]*TransactionWithResults, error)
 
-	// GetEvents returns all events emitted in a given block.
-	GetEvents(ctx context.Context, round uint64) ([]*coreClient.Event, error)
+	// GetEventsRaw returns all events emitted in a given block.
+	GetEventsRaw(ctx context.Context, round uint64) ([]*types.Event, error)
+
+	// GetEvents returns and decodes events emitted in a given block with the provided decoders.
+	GetEvents(ctx context.Context, round uint64, decoders []EventDecoder, includeUndecoded bool) ([]DecodedEvent, error)
 
 	// WatchBlocks subscribes to blocks for a specific runtimes.
 	WatchBlocks(ctx context.Context) (<-chan *roothash.AnnotatedBlock, pubsub.ClosableSubscription, error)
 
+	// WatchEvents subscribes and decodes runtime events.
+	WatchEvents(ctx context.Context, decoders []EventDecoder, includeUndecoded bool) (<-chan *BlockEvents, error)
+
 	// Query makes a runtime-specific query.
 	Query(ctx context.Context, round uint64, method string, args, rsp interface{}) error
+}
+
+// EventDecoder is an event decoder interface.
+type EventDecoder interface {
+	// DecodeEvent decodes an event. In case the event is not relevant, `nil, nil` should be returned.
+	DecodeEvent(*types.Event) (DecodedEvent, error)
+}
+
+// DecodedEvent is a decoded event.
+type DecodedEvent interface{}
+
+// BlockEvents are the events emitted in a block.
+type BlockEvents struct {
+	// Round is the round of the block.
+	Round uint64
+
+	// Events are the decoded events.
+	Events []DecodedEvent
 }
 
 // TransactionMeta are the metadata about transaction execution.
@@ -318,11 +342,97 @@ func (rc *runtimeClient) GetTransactionsWithResults(ctx context.Context, round u
 }
 
 // Implements RuntimeClient.
-func (rc *runtimeClient) GetEvents(ctx context.Context, round uint64) ([]*coreClient.Event, error) {
-	return rc.cc.GetEvents(ctx, &coreClient.GetEventsRequest{
+func (rc *runtimeClient) GetEventsRaw(ctx context.Context, round uint64) ([]*types.Event, error) {
+	rawEvs, err := rc.cc.GetEvents(ctx, &coreClient.GetEventsRequest{
 		RuntimeID: rc.runtimeID,
 		Round:     round,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	evs := make([]*types.Event, len(rawEvs))
+	for i, rawEv := range rawEvs {
+		var ev types.Event
+		if err := ev.UnmarshalRaw(rawEv.Key, rawEv.Value); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal event '%v': %w", rawEv, err)
+		}
+		evs[i] = &ev
+	}
+
+	return evs, nil
+}
+
+// Implements RuntimeClient.
+func (rc *runtimeClient) GetEvents(ctx context.Context, round uint64, decoders []EventDecoder, includeUndecoded bool) ([]DecodedEvent, error) {
+	rawEvs, err := rc.cc.GetEvents(ctx, &coreClient.GetEventsRequest{
+		RuntimeID: rc.runtimeID,
+		Round:     round,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	evs := make([]DecodedEvent, 0)
+OUTER:
+	for _, rawEv := range rawEvs {
+		var ev types.Event
+		if err := ev.UnmarshalRaw(rawEv.Key, rawEv.Value); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal event '%v': %w", rawEv, err)
+		}
+		for _, decoder := range decoders {
+			decoded, err := decoder.DecodeEvent(&ev)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode event: %w", err)
+			}
+			if decoded != nil {
+				evs = append(evs, decoded)
+				continue OUTER
+			}
+		}
+		if includeUndecoded {
+			evs = append(evs, &ev)
+		}
+	}
+
+	return evs, nil
+}
+
+// Implements RuntimeClient.
+func (rc *runtimeClient) WatchEvents(ctx context.Context, decoders []EventDecoder, includeUndecoded bool) (<-chan *BlockEvents, error) {
+	ch := make(chan *BlockEvents)
+
+	blkCh, blkSub, err := rc.cc.WatchBlocks(ctx, rc.runtimeID)
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		defer blkSub.Close()
+		defer close(ch)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case blk, ok := <-blkCh:
+				if !ok {
+					return
+				}
+
+				events, err := rc.GetEvents(ctx, blk.Block.Header.Round, decoders, includeUndecoded)
+				if err != nil {
+					return
+				}
+				ch <- &BlockEvents{
+					Round:  blk.Block.Header.Round,
+					Events: events,
+				}
+			}
+		}
+	}()
+
+	return ch, nil
 }
 
 // Implements RuntimeClient.
