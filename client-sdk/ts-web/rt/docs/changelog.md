@@ -1,8 +1,13 @@
 # Changelog
 
-## Unreleased chanegs:
+## v0.2.0-alpha4:
+
+Spotlight change:
+
+- We made unitemized changes to track the (unversioned) runtime SDK itself.
 
 Documentation changes:
+
 - Added doc comments for some signing types and functions.
 
 ## v0.2.0-alpha3
