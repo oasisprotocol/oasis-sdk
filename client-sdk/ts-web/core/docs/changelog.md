@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased changes:
+## v0.1.0-alpha6:
+
+Spotlight change:
+
+- Errors from oasis-core with code and module now have `oasisCode` and `oasisModule` fields.
 
 Breaking changes:
 
@@ -10,7 +14,6 @@ New features:
 
 - `oasis.misc` now has `toBase64`, `fromBase64`, and `toStringUTF8`.
 - Errors from GRPC are now wrapped to include a stack trace.
-- Errors from oasis-core with code and module now have `oasisCode` and `oasisModule` fields.
 
 Bug fixes:
 
