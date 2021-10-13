@@ -2,7 +2,7 @@
 pbjs \
     -t static-module \
     -o proto/index.js \
-    -w es6 \
+    -w commonjs \
     --no-create \
     --no-encode \
     --no-verify \
