@@ -979,3 +979,88 @@ fn test_check_invariants_more() {
         "inv chk 6 should succeed"
     );
 }
+
+#[test]
+fn test_fee_acc() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    init_accounts(&mut ctx);
+
+    // Check that Accounts::move_{into,from}_fee_accumulator work.
+    ctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
+        Accounts::move_into_fee_accumulator(
+            &mut tx_ctx,
+            keys::alice::address(),
+            &BaseUnits::new(1_000, Denomination::NATIVE),
+        )
+        .expect("move into should succeed");
+
+        let ab = Accounts::get_balance(
+            tx_ctx.runtime_state(),
+            keys::alice::address(),
+            Denomination::NATIVE,
+        )
+        .expect("get_balance should succeed");
+        assert_eq!(ab, 999_000, "balance in source account should be correct");
+
+        Accounts::move_from_fee_accumulator(
+            &mut tx_ctx,
+            keys::alice::address(),
+            &BaseUnits::new(1_000, Denomination::NATIVE),
+        )
+        .expect("move from should succeed");
+
+        let ab = Accounts::get_balance(
+            tx_ctx.runtime_state(),
+            keys::alice::address(),
+            Denomination::NATIVE,
+        )
+        .expect("get_balance should succeed");
+        assert_eq!(ab, 1_000_000, "balance in source account should be correct");
+    });
+}
+
+#[test]
+fn test_fee_acc_sim() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    init_accounts(&mut ctx);
+
+    // Check that Accounts::move_{into,from}_fee_accumulator don't do
+    // anything in simulation mode.
+    ctx.with_simulation(|mut sctx| {
+        sctx.with_tx(0, mock::transaction(), |mut tx_ctx, _call| {
+            Accounts::move_into_fee_accumulator(
+                &mut tx_ctx,
+                keys::alice::address(),
+                &BaseUnits::new(1_000, Denomination::NATIVE),
+            )
+            .expect("move into should succeed");
+
+            let ab = Accounts::get_balance(
+                tx_ctx.runtime_state(),
+                keys::alice::address(),
+                Denomination::NATIVE,
+            )
+            .expect("get_balance should succeed");
+            assert_eq!(ab, 1_000_000, "balance in source account should be correct");
+
+            Accounts::move_from_fee_accumulator(
+                &mut tx_ctx,
+                keys::alice::address(),
+                &BaseUnits::new(1_000, Denomination::NATIVE),
+            )
+            .expect("move from should succeed");
+
+            let ab = Accounts::get_balance(
+                tx_ctx.runtime_state(),
+                keys::alice::address(),
+                Denomination::NATIVE,
+            )
+            .expect("get_balance should succeed");
+            assert_eq!(ab, 1_000_000, "balance in source account should be correct");
+        });
+    });
+}

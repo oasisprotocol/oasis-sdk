@@ -49,6 +49,17 @@ pub struct BalanceQuery {
     pub address: H160,
 }
 
+/// Transaction body for simulating an EVM call.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct SimulateCallQuery {
+    pub gas_price: U256,
+    pub gas_limit: u64,
+    pub caller: H160,
+    pub address: H160,
+    pub value: U256,
+    pub data: Vec<u8>,
+}
+
 // The rest of the file contains wrappers for primitive_types::{H160, H256, U256},
 // so that we can implement cbor::{Encode, Decode} for them, ugh.
 // Remove this once oasis-cbor#8 is implemented.

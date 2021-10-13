@@ -15,7 +15,7 @@ use once_cell::sync::Lazy;
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
-    context::{Context, TxContext},
+    context::{BatchContext, Context, TxContext},
     error,
     module::{self, CallResult, Module as _},
     modules::{
@@ -24,7 +24,7 @@ use oasis_runtime_sdk::{
         core::{self, Error as CoreError, API as _},
     },
     storage,
-    types::{address::Address, token, transaction::Transaction},
+    types::{address::Address, token, transaction, transaction::Transaction},
 };
 
 use evm::backend::ApplyBackend;
@@ -197,6 +197,17 @@ pub trait API {
     /// Get EVM account balance.
     /// Returns 256-bit big-endian representation of the balance.
     fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error>;
+
+    /// Simulate an Ethereum CALL.
+    fn simulate_call<C: Context>(
+        ctx: &mut C,
+        gas_price: U256,
+        gas_limit: u64,
+        caller: H160,
+        address: H160,
+        value: U256,
+        data: Vec<u8>,
+    ) -> Result<Vec<u8>, Error>;
 }
 
 impl<Cfg: Config> API for Module<Cfg> {
@@ -345,6 +356,53 @@ impl<Cfg: Config> API for Module<Cfg> {
         account.balance.to_big_endian(&mut out);
         Ok(out.to_vec())
     }
+
+    fn simulate_call<C: Context>(
+        ctx: &mut C,
+        gas_price: U256,
+        gas_limit: u64,
+        caller: H160,
+        address: H160,
+        value: U256,
+        data: Vec<u8>,
+    ) -> Result<Vec<u8>, Error> {
+        let params = Self::params(ctx.runtime_state());
+        let den = params.token_denomination;
+
+        ctx.with_simulation(|mut sctx| {
+            let call_tx = transaction::Transaction {
+                version: 1,
+                call: transaction::Call {
+                    format: transaction::CallFormat::Plain,
+                    method: "evm.Call".to_owned(),
+                    body: cbor::to_value(types::Call {
+                        address,
+                        value,
+                        data: data.clone(),
+                    }),
+                },
+                auth_info: transaction::AuthInfo {
+                    signer_info: vec![],
+                    fee: transaction::Fee {
+                        amount: token::BaseUnits::new(
+                            gas_price
+                                .checked_mul(U256::from(gas_limit))
+                                .ok_or(Error::FeeOverflow)?
+                                .as_u128(),
+                            den,
+                        ),
+                        gas: gas_limit,
+                        consensus_messages: 0,
+                    },
+                },
+            };
+            sctx.with_tx(0, call_tx, |mut txctx, _call| {
+                Self::do_evm(caller, &mut txctx, |exec, gas_limit| {
+                    exec.transact_call(caller.into(), address.into(), value.into(), data, gas_limit)
+                })
+            })
+        })
+    }
 }
 
 impl<Cfg: Config> Module<Cfg> {
@@ -466,6 +524,21 @@ impl<Cfg: Config> Module<Cfg> {
     fn query_balance<C: Context>(ctx: &mut C, body: types::BalanceQuery) -> Result<Vec<u8>, Error> {
         Self::get_balance(ctx, body.address)
     }
+
+    fn query_simulate_call<C: Context>(
+        ctx: &mut C,
+        body: types::SimulateCallQuery,
+    ) -> Result<Vec<u8>, Error> {
+        Self::simulate_call(
+            ctx,
+            body.gas_price,
+            body.gas_limit,
+            body.caller,
+            body.address,
+            body.value,
+            body.data,
+        )
+    }
 }
 
 impl<Cfg: Config> module::MethodHandler for Module<Cfg> {
@@ -492,6 +565,7 @@ impl<Cfg: Config> module::MethodHandler for Module<Cfg> {
             "evm.Storage" => module::dispatch_query(ctx, args, Self::query_storage),
             "evm.Code" => module::dispatch_query(ctx, args, Self::query_code),
             "evm.Balance" => module::dispatch_query(ctx, args, Self::query_balance),
+            "evm.SimulateCall" => module::dispatch_query(ctx, args, Self::query_simulate_call),
             _ => module::DispatchResult::Unhandled(args),
         }
     }

@@ -496,6 +496,10 @@ impl API for Module {
         from: Address,
         amount: &token::BaseUnits,
     ) -> Result<(), modules::core::Error> {
+        if ctx.is_simulation() {
+            return Ok(());
+        }
+
         Self::sub_amount(ctx.runtime_state(), from, amount)
             .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
 
@@ -511,6 +515,10 @@ impl API for Module {
         to: Address,
         amount: &token::BaseUnits,
     ) -> Result<(), modules::core::Error> {
+        if ctx.is_simulation() {
+            return Ok(());
+        }
+
         ctx.value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
             .or_default()
             .sub(amount)
