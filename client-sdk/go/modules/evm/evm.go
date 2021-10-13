@@ -15,9 +15,10 @@ const (
 	methodWithdraw = "evm.Withdraw"
 
 	// Queries.
-	methodStorage = "evm.Storage"
-	methodCode    = "evm.Code"
-	methodBalance = "evm.Balance"
+	methodStorage      = "evm.Storage"
+	methodCode         = "evm.Code"
+	methodBalance      = "evm.Balance"
+	methodSimulateCall = "evm.SimulateCall"
 )
 
 // V1 is the v1 EVM module interface.
@@ -52,6 +53,9 @@ type V1 interface {
 
 	// Balance queries the EVM account balance.
 	Balance(ctx context.Context, address []byte) ([]byte, error)
+
+	// SimulateCall simulates an EVM CALL.
+	SimulateCall(ctx context.Context, gasPrice []byte, gasLimit uint64, caller []byte, address []byte, value []byte, data []byte) ([]byte, error)
 }
 
 type v1 struct {
@@ -123,6 +127,23 @@ func (a *v1) Balance(ctx context.Context, address []byte) ([]byte, error) {
 		Address: address,
 	}
 	if err := a.rtc.Query(ctx, client.RoundLatest, methodBalance, q, &res); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// Implements V1.
+func (a *v1) SimulateCall(ctx context.Context, gasPrice []byte, gasLimit uint64, caller []byte, address []byte, value []byte, data []byte) ([]byte, error) {
+	var res []byte
+	q := SimulateCallQuery{
+		GasPrice: gasPrice,
+		GasLimit: gasLimit,
+		Caller:   caller,
+		Address:  address,
+		Value:    value,
+		Data:     data,
+	}
+	if err := a.rtc.Query(ctx, client.RoundLatest, methodSimulateCall, q, &res); err != nil {
 		return nil, err
 	}
 	return res, nil

@@ -47,3 +47,13 @@ type CodeQuery struct {
 type BalanceQuery struct {
 	Address []byte `json:"address"`
 }
+
+// SimulateCallQuery simulates an EVM CALL.
+type SimulateCallQuery struct {
+	GasPrice []byte `json:"gas_price"`
+	GasLimit uint64 `json:"gas_limit"`
+	Caller   []byte `json:"caller"`
+	Address  []byte `json:"address"`
+	Value    []byte `json:"value"`
+	Data     []byte `json:"data"`
+}

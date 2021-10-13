@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/binary"
@@ -382,6 +383,20 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		return fmt.Errorf("contract's EVM account balance is wrong (expected 1, got %d)", evmBal64)
 	}
 
+	// Simulate the call first.
+	gasPriceU256, err := hex.DecodeString(strings.Repeat("0", 64-1) + "1")
+	if err != nil {
+		return err
+	}
+	daveEVMAddr, err := hex.DecodeString("dce075e1c39b1ae0b75d554558b6451a226ffe00")
+	if err != nil {
+		return err
+	}
+	simCallResult, err := e.SimulateCall(ctx, gasPriceU256, 64000, daveEVMAddr, contractAddr, value, []byte{})
+	if err != nil {
+		return fmt.Errorf("SimulateCall failed: %w", err)
+	}
+
 	// Call the created EVM contract.
 	callResult, err := evmCall(ctx, rtc, e, signer, contractAddr, value, []byte{}, gasPrice, 64000)
 	if err != nil {
@@ -389,6 +404,11 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 
 	log.Info("evmCall finished", "call_result", hex.EncodeToString(callResult))
+
+	// Make sure that the result is the same that we got when simulating the call.
+	if !bytes.Equal(callResult, simCallResult) {
+		return fmt.Errorf("SimulateCall and evmCall returned different results")
+	}
 
 	// Peek at the EVM storage to get the final result we stored there.
 	index, err := hex.DecodeString(strings.Repeat("0", 64))
@@ -563,11 +583,27 @@ func SimpleERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cli
 		return fmt.Errorf("returned value is incorrect (expected '454657374', got '%s')", resName[127:136])
 	}
 
-	// Call transfer(0x123, 0x42).
+	// Assemble the transfer(0x123, 0x42) call.
 	transferMethod, err := hex.DecodeString("a9059cbb" + strings.Repeat("0", 64-3) + "123" + strings.Repeat("0", 64-2) + "42")
 	if err != nil {
 		return err
 	}
+
+	// Simulate the transfer call first.
+	gasPriceU256, err := hex.DecodeString(strings.Repeat("0", 64-1) + "1")
+	if err != nil {
+		return err
+	}
+	daveEVMAddr, err := hex.DecodeString("dce075e1c39b1ae0b75d554558b6451a226ffe00")
+	if err != nil {
+		return err
+	}
+	simCallResult, err := e.SimulateCall(ctx, gasPriceU256, 64000, daveEVMAddr, contractAddr, zero, transferMethod)
+	if err != nil {
+		return fmt.Errorf("SimulateCall failed: %w", err)
+	}
+
+	// Call transfer(0x123, 0x42).
 	callResult, err = evmCall(ctx, rtc, e, signer, contractAddr, zero, transferMethod, gasPrice, 64000)
 	if err != nil {
 		return fmt.Errorf("evmCall:transfer failed: %w", err)
@@ -579,6 +615,11 @@ func SimpleERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cli
 	// Return value should be true.
 	if resTransfer != strings.Repeat("0", 64-1)+"1" {
 		return fmt.Errorf("return value of transfer method call should be true")
+	}
+
+	// Result of transfer call should match what was simulated.
+	if !bytes.Equal(callResult, simCallResult) {
+		return fmt.Errorf("SimulateCall and evmCall returned different results")
 	}
 
 	// Call balanceOf(0x123).
