@@ -81,6 +81,31 @@ fn test_use_gas() {
     });
 }
 
+#[test]
+fn test_query_min_gas_price() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+    Core::set_params(
+        ctx.runtime_state(),
+        Parameters {
+            max_batch_gas: 10000,
+            max_tx_signers: 8,
+            max_multisig_signers: 8,
+            gas_costs: Default::default(),
+            min_gas_price: {
+                let mut mgp = BTreeMap::new();
+                mgp.insert(token::Denomination::NATIVE, 123);
+                mgp
+            },
+        },
+    );
+
+    let mgp = Core::query_min_gas_price(&mut ctx, ()).expect("query_min_gas_price should succeed");
+    assert!(mgp.len() == 1);
+    assert!(mgp.contains_key(&token::Denomination::NATIVE));
+    assert!(*mgp.get(&token::Denomination::NATIVE).unwrap() == 123);
+}
+
 // Module that implements the gas waster method.
 struct GasWasterModule;
 

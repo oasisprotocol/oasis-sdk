@@ -18,6 +18,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -322,6 +323,7 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	ctx := context.Background()
 	signer := testing.Dave.Signer
 	e := evm.NewV1(rtc)
+	c := core.NewV1(rtc)
 
 	// By setting the value to 1, the EVM will transfer 1 unit from the caller's
 	// EVM account into the contract's EVM account.
@@ -333,6 +335,16 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 
 	gasPrice := uint64(1)
+
+	// Check min gas price.
+	mgp, err := c.MinGasPrice(ctx)
+	if err != nil {
+		return err
+	}
+	nativeMGP := mgp[types.NativeDenomination]
+	if !nativeMGP.IsZero() {
+		return fmt.Errorf("minimum gas price is wrong (expected 0, got %s)", mgp[types.NativeDenomination].String())
+	}
 
 	// Create a simple contract that adds two numbers and stores the result
 	// in slot 0 of its storage.
