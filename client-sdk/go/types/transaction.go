@@ -109,7 +109,7 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 	for i, si := range ts.tx.AuthInfo.SignerInfo {
 		switch {
 		case si.AddressSpec.Signature != nil:
-			if !si.AddressSpec.Signature.Equal(pk) {
+			if !si.AddressSpec.Signature.PublicKey().Equal(pk) {
 				continue
 			}
 
@@ -178,8 +178,8 @@ func (t *Transaction) AppendSignerInfo(addressSpec AddressSpec, nonce uint64) {
 
 // AppendAuthSignature appends a new transaction signer information with a signature address
 // specification to the transaction.
-func (t *Transaction) AppendAuthSignature(pk signature.PublicKey, nonce uint64) {
-	t.AppendSignerInfo(AddressSpec{Signature: &PublicKey{PublicKey: pk}}, nonce)
+func (t *Transaction) AppendAuthSignature(spec SignatureAddressSpec, nonce uint64) {
+	t.AppendSignerInfo(AddressSpec{Signature: &spec}, nonce)
 }
 
 // AppendAuthMultisig appends a new transaction signer information with a multisig address
@@ -250,7 +250,7 @@ type Fee struct {
 // AddressSpec is common information that specifies an address as well as how to authenticate.
 type AddressSpec struct {
 	// Signature is for signature authentication.
-	Signature *PublicKey `json:"signature,omitempty"`
+	Signature *SignatureAddressSpec `json:"signature,omitempty"`
 	// Multisig is for multisig authentication.
 	Multisig *MultisigConfig `json:"multisig,omitempty"`
 }
@@ -259,7 +259,7 @@ type AddressSpec struct {
 func (as *AddressSpec) Address() (Address, error) {
 	switch {
 	case as.Signature != nil:
-		return NewAddress(as.Signature), nil
+		return NewAddress(*as.Signature), nil
 	case as.Multisig != nil:
 		return NewAddressFromMultisig(as.Multisig), nil
 	default:
@@ -272,7 +272,7 @@ func (as *AddressSpec) Address() (Address, error) {
 func (as *AddressSpec) Batch(ap AuthProof) ([]PublicKey, [][]byte, error) {
 	switch {
 	case as.Signature != nil && ap.Signature != nil:
-		return []PublicKey{*as.Signature}, [][]byte{ap.Signature}, nil
+		return []PublicKey{as.Signature.PublicKey()}, [][]byte{ap.Signature}, nil
 	case as.Multisig != nil && ap.Multisig != nil:
 		return as.Multisig.Batch(ap.Multisig)
 	default:

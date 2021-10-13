@@ -8,11 +8,10 @@ use thiserror::Error;
 use crate::{
     context::Context,
     core::consensus::beacon,
-    crypto::signature::PublicKey,
     error,
     module::{self, Module as _, Parameters as _},
     modules, storage,
-    types::address::Address,
+    types::address::{Address, SignatureAddressSpec},
 };
 
 #[cfg(test)]
@@ -173,13 +172,13 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
 
         // Reward each good entity.
         for entity_id in &ctx.runtime_round_results().good_compute_entities {
-            let address = Address::from_pk(&PublicKey::Ed25519(entity_id.into()));
+            let address = Address::from_sigspec(&SignatureAddressSpec::Ed25519(entity_id.into()));
             rewards.pending.entry(address).or_default().increment();
         }
 
         // Punish each bad entity by forbidding rewards for this epoch.
         for entity_id in &ctx.runtime_round_results().bad_compute_entities {
-            let address = Address::from_pk(&PublicKey::Ed25519(entity_id.into()));
+            let address = Address::from_sigspec(&SignatureAddressSpec::Ed25519(entity_id.into()));
             rewards.pending.entry(address).or_default().forbid();
         }
 

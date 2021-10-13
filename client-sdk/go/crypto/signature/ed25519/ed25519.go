@@ -2,9 +2,7 @@ package ed25519
 
 import (
 	"encoding"
-	"encoding/json"
 
-	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 
 	sdkSignature "github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -19,18 +17,6 @@ var (
 
 // PublicKey is an Ed25519 public key.
 type PublicKey signature.PublicKey
-
-type serializedPublicKey struct {
-	Ed25519 signature.PublicKey `json:"ed25519"`
-}
-
-func (pk PublicKey) MarshalCBOR() ([]byte, error) {
-	return cbor.Marshal(serializedPublicKey{Ed25519: signature.PublicKey(pk)}), nil
-}
-
-func (pk PublicKey) MarshalJSON() ([]byte, error) {
-	return json.Marshal(serializedPublicKey{Ed25519: signature.PublicKey(pk)})
-}
 
 // MarshalBinary encodes a public key into binary form.
 func (pk PublicKey) MarshalBinary() ([]byte, error) {

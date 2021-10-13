@@ -68,12 +68,18 @@ export async function signAny(
 }
 
 export async function proveSignature(
-    pk: types.PublicKey,
+    spec: types.SignatureAddressSpec,
     signer: AnySigner,
     context: string,
     body: Uint8Array,
 ) {
-    return {signature: await signAny(pk, signer, context, body)};
+    if ('ed25519' in spec) {
+        return {signature: await (signer as oasis.signature.ContextSigner).sign(context, body)};
+    } else if ('secp256k1eth' in spec) {
+        return {signature: await (signer as signatureSecp256k1.ContextSigner).sign(context, body)};
+    } else {
+        throw new Error('unsupported signature address specification type');
+    }
 }
 
 export async function proveMultisig(

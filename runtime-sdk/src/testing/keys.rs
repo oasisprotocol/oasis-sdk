@@ -11,7 +11,7 @@ macro_rules! test_key_ed25519 {
         pub mod $name {
             use crate::{
                 crypto::signature::{ed25519, PublicKey},
-                types::address::Address,
+                types::address::{Address, SignatureAddressSpec},
             };
 
             #[doc = " Test public key "]
@@ -28,11 +28,18 @@ macro_rules! test_key_ed25519 {
                 $pk.into()
             }
 
+            #[doc = " Test address derivation information "]
+            #[doc=$doc]
+            #[doc = "."]
+            pub fn sigspec() -> SignatureAddressSpec {
+                SignatureAddressSpec::Ed25519(pk_ed25519())
+            }
+
             #[doc = " Test address "]
             #[doc=$doc]
             #[doc = "."]
             pub fn address() -> Address {
-                Address::from_pk(&pk())
+                Address::from_sigspec(&sigspec())
             }
         }
     };
@@ -47,7 +54,7 @@ macro_rules! test_key_secp256k1 {
         pub mod $name {
             use crate::{
                 crypto::signature::{secp256k1, PublicKey},
-                types::address::Address,
+                types::address::{Address, SignatureAddressSpec},
             };
 
             #[doc = " Test public key "]
@@ -64,11 +71,18 @@ macro_rules! test_key_secp256k1 {
                 $pk.into()
             }
 
+            #[doc = " Test address derivation information "]
+            #[doc=$doc]
+            #[doc = "."]
+            pub fn sigspec() -> SignatureAddressSpec {
+                SignatureAddressSpec::Secp256k1Eth(pk_secp256k1())
+            }
+
             #[doc = " Test address "]
             #[doc=$doc]
             #[doc = "."]
             pub fn address() -> Address {
-                Address::from_pk(&pk())
+                Address::from_sigspec(&sigspec())
             }
         }
     };

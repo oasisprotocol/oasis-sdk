@@ -32,7 +32,7 @@ func GenTransfer(
 	// First, query account balance.
 	var balance uint64
 	ac := accounts.NewV1(rtc)
-	b, err := ac.Balances(ctx, client.RoundLatest, types.NewAddress(acct.Public()))
+	b, err := ac.Balances(ctx, client.RoundLatest, types.NewAddress(sigspecForSigner(acct)))
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func GenTransfer(
 		To     types.Address   `json:"to"`
 		Amount types.BaseUnits `json:"amount"`
 	}{
-		To:     types.NewAddress(accts[rng.Intn(len(accts))].Public()),
+		To:     types.NewAddress(sigspecForSigner(accts[rng.Intn(len(accts))])),
 		Amount: types.NewBaseUnits(*quantity.NewFromUint64(uint64(rng.Int63n(int64(balance)))), types.NativeDenomination),
 	})
 	return tx, nil
@@ -61,7 +61,9 @@ func GenNonce(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 	// We already have a helper for this, but do it manually here just to
 	// illustrate the concept.
 	var nonce uint64
-	if err := rtc.Query(ctx, client.RoundLatest, "accounts.Nonce", accounts.NonceQuery{Address: types.NewAddress(acct.Public())}, &nonce); err != nil {
+	if err := rtc.Query(ctx, client.RoundLatest, "accounts.Nonce", accounts.NonceQuery{
+		Address: types.NewAddress(sigspecForSigner(acct)),
+	}, &nonce); err != nil {
 		return nil, err
 	}
 	return nil, nil

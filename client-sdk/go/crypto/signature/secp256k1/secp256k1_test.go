@@ -87,14 +87,6 @@ func TestSecp256k1PubKeySerDes(t *testing.T) {
 	pk, ok := spk.(PublicKey)
 	require.True(ok, "signer public key should be a secp256k1 public key")
 
-	mcbor, err := pk.MarshalCBOR()
-	require.NoError(err, "MarshalCBOR")
-	require.NotNil(mcbor, "MarshalCBOR")
-
-	mjson, err := pk.MarshalJSON()
-	require.NoError(err, "MarshalJSON")
-	require.NotNil(mjson, "MarshalJSON")
-
 	mstr := pk.String()
 	require.NotNil(mstr, "String")
 

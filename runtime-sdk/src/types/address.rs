@@ -2,6 +2,7 @@
 use std::{convert::TryFrom, fmt};
 
 use bech32::{self, FromBase32, ToBase32, Variant};
+use digest::Digest;
 use thiserror::Error;
 
 use oasis_core_runtime::{
@@ -9,7 +10,10 @@ use oasis_core_runtime::{
     consensus::address::Address as ConsensusAddress,
 };
 
-use crate::crypto::{multisig, signature::PublicKey};
+use crate::crypto::{
+    multisig,
+    signature::{ed25519, secp256k1, sr25519, PublicKey},
+};
 
 const ADDRESS_VERSION_SIZE: usize = 1;
 const ADDRESS_DATA_SIZE: usize = 20;
@@ -19,7 +23,7 @@ const ADDRESS_V0_VERSION: u8 = 0;
 /// V0 Ed25519 addres context (shared with consensus layer).
 const ADDRESS_V0_ED25519_CONTEXT: &[u8] = b"oasis-core/address: staking";
 /// V0 Secp256k1 address context.
-const ADDRESS_V0_SECP256K1_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: secp256k1";
+const ADDRESS_V0_SECP256K1ETH_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: secp256k1eth";
 /// V0 Sr25519 address context.
 const ADDRESS_V0_SR25519_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: sr25519";
 
@@ -33,6 +37,33 @@ const ADDRESS_RUNTIME_V0_VERSION: u8 = 0;
 const ADDRESS_V0_MULTISIG_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: multisig";
 
 const ADDRESS_BECH32_HRP: &str = "oasis";
+
+/// Information for signature-based authentication and public key-based address derivation.
+#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
+pub enum SignatureAddressSpec {
+    /// Ed25519 address derivation compatible with the consensus layer.
+    #[cbor(rename = "ed25519")]
+    Ed25519(ed25519::PublicKey),
+
+    /// Ethereum-compatible address derivation from Secp256k1 public keys.
+    #[cbor(rename = "secp256k1eth")]
+    Secp256k1Eth(secp256k1::PublicKey),
+
+    /// Sr25519 address derivation.
+    #[cbor(rename = "sr25519")]
+    Sr25519(sr25519::PublicKey),
+}
+
+impl SignatureAddressSpec {
+    /// Public key of the authentication/address derivation specification.
+    pub fn public_key(&self) -> PublicKey {
+        match self {
+            Self::Ed25519(pk) => PublicKey::Ed25519(pk.clone()),
+            Self::Secp256k1Eth(pk) => PublicKey::Secp256k1(pk.clone()),
+            Self::Sr25519(pk) => PublicKey::Sr25519(pk.clone()),
+        }
+    }
+}
 
 /// Error.
 #[derive(Error, Debug)]
@@ -101,19 +132,21 @@ impl Address {
     }
 
     /// Creates a new address from a public key.
-    pub fn from_pk(pk: &PublicKey) -> Self {
-        match pk {
-            PublicKey::Ed25519(pk) => Address::new(
+    pub fn from_sigspec(spec: &SignatureAddressSpec) -> Self {
+        match spec {
+            SignatureAddressSpec::Ed25519(pk) => Address::new(
                 ADDRESS_V0_ED25519_CONTEXT,
                 ADDRESS_V0_VERSION,
                 pk.as_bytes(),
             ),
-            PublicKey::Secp256k1(pk) => Address::new(
-                ADDRESS_V0_SECP256K1_CONTEXT,
+            SignatureAddressSpec::Secp256k1Eth(pk) => Address::new(
+                ADDRESS_V0_SECP256K1ETH_CONTEXT,
                 ADDRESS_V0_VERSION,
-                pk.as_bytes(),
+                // Use a scheme such that we can compute Secp256k1 addresses from Ethereum
+                // addresses as this makes things more interoperable.
+                &sha3::Keccak256::digest(&pk.to_uncompressed_untagged_bytes())[32 - 20..],
             ),
-            PublicKey::Sr25519(pk) => Address::new(
+            SignatureAddressSpec::Sr25519(pk) => Address::new(
                 ADDRESS_V0_SR25519_CONTEXT,
                 ADDRESS_V0_VERSION,
                 pk.as_bytes(),
@@ -216,13 +249,14 @@ impl From<Address> for ConsensusAddress {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{crypto::signature::PublicKey, testing::keys};
+    use crate::testing::keys;
 
     #[test]
     fn test_address_ed25519() {
-        let pk = PublicKey::Ed25519("utrdHlX///////////////////////////////////8=".into());
+        let spec =
+            SignatureAddressSpec::Ed25519("utrdHlX///////////////////////////////////8=".into());
 
-        let addr = Address::from_pk(&pk);
+        let addr = Address::from_sigspec(&spec);
         assert_eq!(
             addr.to_bech32(),
             "oasis1qryqqccycvckcxp453tflalujvlf78xymcdqw4vz"
@@ -230,13 +264,15 @@ mod test {
     }
 
     #[test]
-    fn test_address_secp256k1() {
-        let pk = PublicKey::Secp256k1("Arra3R5V////////////////////////////////////".into());
+    fn test_address_secp256k1eth() {
+        let spec = SignatureAddressSpec::Secp256k1Eth(
+            "Arra3R5V////////////////////////////////////".into(),
+        );
 
-        let addr = Address::from_pk(&pk);
+        let addr = Address::from_sigspec(&spec);
         assert_eq!(
             addr.to_bech32(),
-            "oasis1qr4cd0sr32m3xcez37ym7rmjp5g88muu8sdfx8u3"
+            "oasis1qzd7akz24n6fxfhdhtk977s5857h3c6gf5583mcg"
         );
     }
 
@@ -303,8 +339,9 @@ mod test {
 
     #[test]
     fn test_address_into_consensus_address() {
-        let pk = PublicKey::Ed25519("utrdHlX///////////////////////////////////8=".into());
-        let addr = Address::from_pk(&pk);
+        let spec =
+            SignatureAddressSpec::Ed25519("utrdHlX///////////////////////////////////8=".into());
+        let addr = Address::from_sigspec(&spec);
 
         let consensus_addr: ConsensusAddress = addr.into();
         assert_eq!(addr.to_bech32(), consensus_addr.to_bech32())

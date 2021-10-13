@@ -79,6 +79,15 @@ type kvRemoveEvent struct {
 
 var kvRemoveEventKey = types.NewEventKey("keyvalue", 2)
 
+func sigspecForSigner(signer signature.Signer) types.SignatureAddressSpec {
+	switch pk := signer.Public().(type) {
+	case ed25519.PublicKey:
+		return types.NewSignatureAddressSpecEd25519(pk)
+	default:
+		panic(fmt.Sprintf("unsupported signer type: %T", pk))
+	}
+}
+
 // GetChainContext returns the chain context.
 func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.Context, error) {
 	info, err := rtc.GetInfo(ctx)
@@ -95,12 +104,12 @@ func sendTx(rtc client.RuntimeClient, signer signature.Signer, tx *types.Transac
 		return err
 	}
 	ac := accounts.NewV1(rtc)
-	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(sigspecForSigner(signer)))
 	if err != nil {
 		return err
 	}
 
-	tx.AppendAuthSignature(signer.Public(), nonce)
+	tx.AppendAuthSignature(sigspecForSigner(signer), nonce)
 
 	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
 	if err != nil {
@@ -168,7 +177,7 @@ func kvInsertSpecialGreeting(rtc client.RuntimeClient, signer signature.Signer, 
 	ctx := context.Background()
 
 	ac := accounts.NewV1(rtc)
-	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(sigspecForSigner(signer)))
 	if err != nil {
 		return fmt.Errorf("getting nonce for special greeting: %w", err)
 	}
@@ -264,7 +273,7 @@ func ConfidentialTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 	log.Info("test 'confidential' insert")
 
 	ac := accounts.NewV1(rtc)
-	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(sigspecForSigner(signer)))
 	if err != nil {
 		return fmt.Errorf("failed to query nonce: %w", err)
 	}
@@ -277,7 +286,7 @@ func ConfidentialTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 	if err = tb.SetCallFormat(ctx, types.CallFormatEncryptedX25519DeoxysII); err != nil {
 		return fmt.Errorf("failed to set call format: %w", err)
 	}
-	tb.AppendAuthSignature(signer.Public(), nonce)
+	tb.AppendAuthSignature(sigspecForSigner(signer), nonce)
 	_ = tb.AppendSign(ctx, signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return fmt.Errorf("failed to submit transaction: %w", err)
@@ -295,7 +304,7 @@ func TransactionsQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.
 	testValue := []byte("test_value")
 
 	ac := accounts.NewV1(rtc)
-	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(sigspecForSigner(signer)))
 	if err != nil {
 		return fmt.Errorf("failed to query nonce: %w", err)
 	}
@@ -305,7 +314,7 @@ func TransactionsQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.
 		Value: testValue,
 	})
 	tb.SetFeeGas(10 * defaultGasAmount)
-	tb.AppendAuthSignature(signer.Public(), nonce)
+	tb.AppendAuthSignature(sigspecForSigner(signer), nonce)
 	_ = tb.AppendSign(ctx, signer)
 	var meta *client.TransactionMeta
 	if meta, err = tb.SubmitTxMeta(ctx, nil); err != nil {
@@ -535,7 +544,7 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	log.Info("transferring 100 units from Alice to Bob")
 	tb := ac.Transfer(testing.Bob.Address, types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination)).
 		SetFeeGas(defaultGasAmount).
-		AppendAuthSignature(testing.Alice.Signer.Public(), nonce)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	var meta *client.TransactionMeta
 	if meta, err = tb.SubmitTxMeta(ctx, nil); err != nil {
@@ -619,7 +628,7 @@ func KVDaveTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn,
 	log.Info("transferring 10 units from Dave to Alice")
 	tb := ac.Transfer(testing.Alice.Address, types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination)).
 		SetFeeGas(defaultGasAmount).
-		AppendAuthSignature(testing.Dave.Signer.Public(), nonce)
+		AppendAuthSignature(testing.Dave.SigSpec, nonce)
 	_ = tb.AppendSign(ctx, testing.Dave.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err

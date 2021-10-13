@@ -17,13 +17,12 @@ use oasis_core_runtime::{
 
 use crate::{
     context::{Context, TxContext},
-    crypto::signature::PublicKey,
     module,
     module::Module as _,
     modules,
     modules::core::{Module as Core, API as _},
     types::{
-        address::Address,
+        address::{Address, SignatureAddressSpec},
         message::MessageEventHookInvocation,
         token,
         transaction::{AddressSpec, TransactionWeight},
@@ -266,7 +265,7 @@ impl API for Module {
 
     fn ensure_compatible_tx_signer<C: TxContext>(ctx: &C) -> Result<(), Error> {
         match ctx.tx_auth_info().signer_info[0].address_spec {
-            AddressSpec::Signature(PublicKey::Ed25519(_)) => Ok(()),
+            AddressSpec::Signature(SignatureAddressSpec::Ed25519(_)) => Ok(()),
             _ => Err(Error::ConsensusIncompatibleSigner),
         }
     }

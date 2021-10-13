@@ -220,5 +220,4 @@ func benchmarkInit(cmd *cobra.Command) {
 	} {
 		fn(cmd)
 	}
-
 }

@@ -51,7 +51,10 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
@@ -96,7 +99,10 @@ fn deploy_hello_contract<C: BatchContext>(
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
@@ -212,7 +218,10 @@ fn test_hello_contract_call() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
@@ -301,7 +310,10 @@ fn test_hello_contract_call() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
@@ -449,7 +461,10 @@ fn test_hello_contract_subcalls() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 2_000_000,
@@ -495,7 +510,10 @@ fn test_hello_contract_query() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
@@ -532,7 +550,10 @@ fn test_hello_contract_query() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
@@ -569,7 +590,10 @@ fn test_hello_contract_query() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1_000_000,
@@ -618,7 +642,10 @@ fn test_hello_contract_upgrade() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 2_000_000,
@@ -658,7 +685,10 @@ fn test_hello_contract_upgrade_fail_policy() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::bob::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::bob::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 2_000_000,
@@ -700,7 +730,10 @@ fn test_hello_contract_upgrade_fail_pre() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 2_000_000,
@@ -745,7 +778,10 @@ fn test_hello_contract_upgrade_fail_post() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 2_000_000,

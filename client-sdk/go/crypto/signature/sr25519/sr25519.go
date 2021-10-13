@@ -3,10 +3,8 @@ package sr25519
 import (
 	"crypto/sha512"
 	"encoding/base64"
-	"encoding/json"
 
 	"github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
-	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 )
@@ -14,20 +12,6 @@ import (
 // PublicKey is an Sr25519 public key.
 type PublicKey struct {
 	inner *sr25519.PublicKey
-}
-
-type serializedPublicKey struct {
-	Sr25519 []byte `json:"sr25519"`
-}
-
-func (pk PublicKey) MarshalCBOR() ([]byte, error) {
-	b, _ := pk.MarshalBinary()
-	return cbor.Marshal(serializedPublicKey{Sr25519: b}), nil
-}
-
-func (pk PublicKey) MarshalJSON() ([]byte, error) {
-	b, _ := pk.MarshalBinary()
-	return json.Marshal(serializedPublicKey{Sr25519: b})
 }
 
 // MarshalBinary encodes a public key into binary form.

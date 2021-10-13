@@ -11,7 +11,6 @@ use thiserror::Error;
 use crate::{
     context::{Context, TxContext},
     core::common::quantity::Quantity,
-    crypto::signature::PublicKey,
     error, module,
     module::{CallResult, Module as _, Parameters as _},
     modules,
@@ -19,7 +18,7 @@ use crate::{
     storage,
     storage::Prefix,
     types::{
-        address::Address,
+        address::{Address, SignatureAddressSpec},
         token,
         transaction::{AuthInfo, Transaction},
     },
@@ -822,7 +821,7 @@ impl module::BlockHandler for Module {
             .runtime_round_results()
             .good_compute_entities
             .iter()
-            .map(|pk| Address::from_pk(&PublicKey::Ed25519(pk.into())))
+            .map(|pk| Address::from_sigspec(&SignatureAddressSpec::Ed25519(pk.into())))
             .collect();
 
         if !addrs.is_empty() {

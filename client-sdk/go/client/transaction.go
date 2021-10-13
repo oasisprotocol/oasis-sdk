@@ -70,8 +70,8 @@ func (tb *TransactionBuilder) SetCallFormat(ctx context.Context, format types.Ca
 
 // AppendAuthSignature appends a new transaction signer information with a signature address
 // specification to the transaction.
-func (tb *TransactionBuilder) AppendAuthSignature(pk signature.PublicKey, nonce uint64) *TransactionBuilder {
-	tb.tx.AppendAuthSignature(pk, nonce)
+func (tb *TransactionBuilder) AppendAuthSignature(spec types.SignatureAddressSpec, nonce uint64) *TransactionBuilder {
+	tb.tx.AppendAuthSignature(spec, nonce)
 	return tb
 }
 

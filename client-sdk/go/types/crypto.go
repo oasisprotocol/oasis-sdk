@@ -31,6 +31,21 @@ type serializedPublicKey struct {
 	Sr25519   *sr25519.PublicKey   `json:"sr25519,omitempty"`
 }
 
+func (pk *PublicKey) marshal() (*serializedPublicKey, error) {
+	var spk serializedPublicKey
+	switch inner := pk.PublicKey.(type) {
+	case ed25519.PublicKey:
+		spk.Ed25519 = &inner
+	case secp256k1.PublicKey:
+		spk.Secp256k1 = &inner
+	case sr25519.PublicKey:
+		spk.Sr25519 = &inner
+	default:
+		return nil, fmt.Errorf("unsupported public key type")
+	}
+	return &spk, nil
+}
+
 func (pk *PublicKey) unmarshal(spk *serializedPublicKey) error {
 	if spk.Ed25519 != nil && spk.Secp256k1 != nil && spk.Sr25519 != nil {
 		return fmt.Errorf("malformed public key")
@@ -51,7 +66,11 @@ func (pk *PublicKey) unmarshal(spk *serializedPublicKey) error {
 
 // MarshalCBOR encodes the public key as CBOR.
 func (pk *PublicKey) MarshalCBOR() ([]byte, error) {
-	return cbor.Marshal(pk.PublicKey), nil
+	spk, err := pk.marshal()
+	if err != nil {
+		return nil, err
+	}
+	return cbor.Marshal(spk), nil
 }
 
 // UnmarshalCBOR decodes the public key from CBOR.
@@ -65,7 +84,11 @@ func (pk *PublicKey) UnmarshalCBOR(data []byte) error {
 
 // MarshalJSON encodes the public key as JSON.
 func (pk *PublicKey) MarshalJSON() ([]byte, error) {
-	return json.Marshal(pk.PublicKey)
+	spk, err := pk.marshal()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(spk)
 }
 
 // UnmarshalJSON decodes the public key from JSON.
