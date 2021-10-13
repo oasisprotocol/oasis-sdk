@@ -369,6 +369,16 @@ impl Module {
 
         Ok(types::CallDataPublicKeyQueryResponse { public_key })
     }
+
+    /// Query the minimum gas price.
+    fn query_min_gas_price<C: Context>(
+        ctx: &mut C,
+        _args: (),
+    ) -> Result<BTreeMap<token::Denomination, u128>, Error> {
+        let params = Self::params(ctx.runtime_state());
+
+        Ok(params.min_gas_price)
+    }
 }
 
 impl module::Module for Module {
@@ -504,6 +514,7 @@ impl module::MethodHandler for Module {
             "core.CallDataPublicKey" => {
                 module::dispatch_query(ctx, args, Self::query_calldata_public_key)
             }
+            "core.MinGasPrice" => module::dispatch_query(ctx, args, Self::query_min_gas_price),
             _ => module::DispatchResult::Unhandled(args),
         }
     }
