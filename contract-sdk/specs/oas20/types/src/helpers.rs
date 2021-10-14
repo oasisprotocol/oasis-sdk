@@ -78,7 +78,7 @@ pub fn handle_call<C: sdk::Context>(
             let to = ctx.caller_address().to_owned();
             withdraw(ctx, balances, allowances, from, to, amount)?;
 
-            ctx.emit_event(Event::Oas20Withdraw { from, to, amount });
+            ctx.emit_event(Event::Oas20Withdrew { from, to, amount });
 
             Ok(Response::Empty)
         }

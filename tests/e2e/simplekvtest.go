@@ -372,7 +372,7 @@ WaitInsertLoop:
 				return fmt.Errorf("failed to get block from channel")
 			}
 
-			events, err := rtc.GetEvents(ctx, blk.Block.Header.Round)
+			events, err := rtc.GetEventsRaw(ctx, blk.Block.Header.Round)
 			if err != nil {
 				log.Error("failed to get events",
 					"err", err,
@@ -383,7 +383,7 @@ WaitInsertLoop:
 
 			for _, ev := range events {
 				switch {
-				case kvInsertEventKey.IsEqual(ev.Key):
+				case kvInsertEventKey.IsEqual(ev.Key()):
 					var ie kvInsertEvent
 					if err = cbor.Unmarshal(ev.Value, &ie); err != nil {
 						log.Error("failed to unmarshal insert event",
@@ -425,7 +425,7 @@ WaitRemoveLoop:
 				return fmt.Errorf("failed to get block from channel")
 			}
 
-			events, err := rtc.GetEvents(ctx, blk.Block.Header.Round)
+			events, err := rtc.GetEventsRaw(ctx, blk.Block.Header.Round)
 			if err != nil {
 				log.Error("failed to get events",
 					"err", err,
@@ -436,7 +436,7 @@ WaitRemoveLoop:
 
 			for _, ev := range events {
 				switch {
-				case kvRemoveEventKey.IsEqual(ev.Key):
+				case kvRemoveEventKey.IsEqual(ev.Key()):
 					var re kvRemoveEvent
 					if err = cbor.Unmarshal(ev.Value, &re); err != nil {
 						log.Error("failed to unmarshal remove event",
@@ -537,8 +537,33 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 		SetFeeGas(defaultGasAmount).
 		AppendAuthSignature(testing.Alice.Signer.Public(), nonce)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
-	if err = tb.SubmitTx(ctx, nil); err != nil {
+	var meta *client.TransactionMeta
+	if meta, err = tb.SubmitTxMeta(ctx, nil); err != nil {
 		return err
+	}
+
+	evs, err := ac.GetEvents(ctx, meta.Round)
+	if err != nil {
+		return fmt.Errorf("failed to fetch events: %w", err)
+	}
+	expected := accounts.TransferEvent{
+		From:   testing.Alice.Address,
+		To:     testing.Bob.Address,
+		Amount: types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination),
+	}
+	var gotTransfer bool
+	for _, ev := range evs {
+		if ev.Transfer == nil {
+			continue
+		}
+		transfer := ev.Transfer
+		if transfer.From != expected.From || transfer.To != expected.To || transfer.Amount.Amount.Cmp(&expected.Amount.Amount) != 0 {
+			return fmt.Errorf("unexpected event, expected: %v, got: %v", expected, transfer)
+		}
+		gotTransfer = true
+	}
+	if !gotTransfer {
+		return fmt.Errorf("did not receive the expected transfer event")
 	}
 
 	log.Info("checking Alice's account balance")

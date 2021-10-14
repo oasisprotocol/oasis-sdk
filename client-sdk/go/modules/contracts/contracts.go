@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/golang/snappy"
 
@@ -30,6 +31,8 @@ const (
 
 // V1 is the v1 contracts module interface.
 type V1 interface {
+	client.EventDecoder
+
 	// Upload generates a contracts.Upload transaction.
 	Upload(abi ABI, instantiatePolicy Policy, code []byte) *client.TransactionBuilder
 
@@ -92,6 +95,9 @@ type V1 interface {
 	//
 	// This method will encode the specified data using CBOR as defined by the Oasis ABI.
 	Custom(ctx context.Context, round uint64, id InstanceID, data, rsp interface{}) error
+
+	// GetEvents returns events emitted by the contract at the provided round.
+	GetEvents(ctx context.Context, instanceID InstanceID, round uint64) ([]*Event, error)
 }
 
 type v1 struct {
@@ -220,6 +226,44 @@ func (a *v1) Custom(ctx context.Context, round uint64, id InstanceID, data, rsp 
 		return fmt.Errorf("failed to unmarshal response from contract: %w", err)
 	}
 	return nil
+}
+
+// Implements V1.
+func (a *v1) GetEvents(ctx context.Context, instanceID InstanceID, round uint64) ([]*Event, error) {
+	rawEvs, err := a.rc.GetEventsRaw(ctx, round)
+	if err != nil {
+		return nil, err
+	}
+
+	evs := make([]*Event, 0)
+	for _, rawEv := range rawEvs {
+		ev, err := a.DecodeEvent(rawEv)
+		if err != nil {
+			return nil, err
+		}
+		if ev == nil {
+			continue
+		}
+		if ev.(*Event).ID != instanceID {
+			continue
+		}
+		evs = append(evs, ev.(*Event))
+	}
+
+	return evs, nil
+}
+
+// Implements client.EventDecoder.
+func (a *v1) DecodeEvent(event *types.Event) (client.DecodedEvent, error) {
+	// "contracts" or "contracts.<...>".
+	if event.Module != ModuleName && !strings.HasPrefix(event.Module, ModuleName+".") {
+		return nil, nil
+	}
+	var ev *Event
+	if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+		return nil, fmt.Errorf("decode contract event value: %w", err)
+	}
+	return ev, nil
 }
 
 // NewV1 generates a V1 client helper for the contracts module.

@@ -27,6 +27,11 @@ func (ev *Event) UnmarshalRaw(key, value []byte) error {
 	return nil
 }
 
+// Key returns the event key.
+func (ev *Event) Key() EventKey {
+	return NewEventKey(ev.Module, ev.Code)
+}
+
 // EventKey is an event tag key.
 type EventKey []byte
 
