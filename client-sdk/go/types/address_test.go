@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -58,4 +59,12 @@ func TestAddressModule(t *testing.T) {
 	binary.BigEndian.PutUint64(id, uint64(42))
 	addr := NewAddressForModule("contracts", id)
 	require.EqualValues("oasis1qq398yyk4wt2zxhtt8c66raynelgt6ngh5yq87xg", addr.String())
+}
+
+func TestAddressRaw(t *testing.T) {
+	require := require.New(t)
+
+	ethAddress, _ := hex.DecodeString("dce075e1c39b1ae0b75d554558b6451a226ffe00")
+	addr := NewAddressRaw(AddressV0Secp256k1EthContext, ethAddress)
+	require.EqualValues("oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt", addr.String())
 }

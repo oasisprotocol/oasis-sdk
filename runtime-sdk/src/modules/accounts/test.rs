@@ -1079,3 +1079,49 @@ fn test_fee_acc_sim() {
         });
     });
 }
+
+#[test]
+fn test_get_set_nonce() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    init_accounts(&mut ctx);
+
+    let nonce = Accounts::get_nonce(ctx.runtime_state(), keys::alice::address()).unwrap();
+    assert_eq!(nonce, 0);
+
+    Accounts::set_nonce(ctx.runtime_state(), keys::alice::address(), 2);
+
+    let nonce = Accounts::get_nonce(ctx.runtime_state(), keys::alice::address()).unwrap();
+    assert_eq!(nonce, 2);
+}
+
+#[test]
+fn test_get_set_balance() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    init_accounts(&mut ctx);
+
+    let balance = Accounts::get_balance(
+        ctx.runtime_state(),
+        keys::alice::address(),
+        Denomination::NATIVE,
+    )
+    .unwrap();
+    assert_eq!(balance, 1_000_000);
+
+    Accounts::set_balance(
+        ctx.runtime_state(),
+        keys::alice::address(),
+        &BaseUnits::new(500_000, Denomination::NATIVE),
+    );
+
+    let balance = Accounts::get_balance(
+        ctx.runtime_state(),
+        keys::alice::address(),
+        Denomination::NATIVE,
+    )
+    .unwrap();
+    assert_eq!(balance, 500_000);
+}

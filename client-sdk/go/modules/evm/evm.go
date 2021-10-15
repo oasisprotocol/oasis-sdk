@@ -9,10 +9,8 @@ import (
 
 const (
 	// Callable methods.
-	methodCreate   = "evm.Create"
-	methodCall     = "evm.Call"
-	methodDeposit  = "evm.Deposit"
-	methodWithdraw = "evm.Withdraw"
+	methodCreate = "evm.Create"
+	methodCall   = "evm.Call"
 
 	// Queries.
 	methodStorage      = "evm.Storage"
@@ -35,16 +33,6 @@ type V1 interface {
 	// high enough to cover the EVM gas price multiplied by the EVM gas limit.
 	Call(address []byte, value []byte, data []byte) *client.TransactionBuilder
 
-	// Deposit generates a deposit transaction that moves tokens from the
-	// caller's SDK account into the given EVM account.  The denomination must
-	// be identical to the denomination set in the EVM module's parameters.
-	Deposit(to []byte, amount types.BaseUnits) *client.TransactionBuilder
-
-	// Withdraw generates a withdraw transaction that moves tokens from the
-	// caller's EVM account into the given SDK account.  The denomination must
-	// be identical to the denomination set in the EVM module's parameters.
-	Withdraw(to types.Address, amount types.BaseUnits) *client.TransactionBuilder
-
 	// Storage queries the EVM storage.
 	Storage(ctx context.Context, address []byte, index []byte) ([]byte, error)
 
@@ -52,7 +40,7 @@ type V1 interface {
 	Code(ctx context.Context, address []byte) ([]byte, error)
 
 	// Balance queries the EVM account balance.
-	Balance(ctx context.Context, address []byte) ([]byte, error)
+	Balance(ctx context.Context, address []byte) (*types.Quantity, error)
 
 	// SimulateCall simulates an EVM CALL.
 	SimulateCall(ctx context.Context, gasPrice []byte, gasLimit uint64, caller []byte, address []byte, value []byte, data []byte) ([]byte, error)
@@ -76,22 +64,6 @@ func (a *v1) Call(address []byte, value []byte, data []byte) *client.Transaction
 		Address: address,
 		Value:   value,
 		Data:    data,
-	})
-}
-
-// Implements V1.
-func (a *v1) Deposit(to []byte, amount types.BaseUnits) *client.TransactionBuilder {
-	return client.NewTransactionBuilder(a.rtc, methodDeposit, &Deposit{
-		To:     to,
-		Amount: amount,
-	})
-}
-
-// Implements V1.
-func (a *v1) Withdraw(to types.Address, amount types.BaseUnits) *client.TransactionBuilder {
-	return client.NewTransactionBuilder(a.rtc, methodWithdraw, &Withdraw{
-		To:     to,
-		Amount: amount,
 	})
 }
 
@@ -121,15 +93,15 @@ func (a *v1) Code(ctx context.Context, address []byte) ([]byte, error) {
 }
 
 // Implements V1.
-func (a *v1) Balance(ctx context.Context, address []byte) ([]byte, error) {
-	var res []byte
+func (a *v1) Balance(ctx context.Context, address []byte) (*types.Quantity, error) {
+	var res types.Quantity
 	q := BalanceQuery{
 		Address: address,
 	}
 	if err := a.rtc.Query(ctx, client.RoundLatest, methodBalance, q, &res); err != nil {
 		return nil, err
 	}
-	return res, nil
+	return &res, nil
 }
 
 // Implements V1.

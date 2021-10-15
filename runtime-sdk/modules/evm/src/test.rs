@@ -13,18 +13,14 @@ use oasis_runtime_sdk::{
         core::{self, Module as Core},
     },
     testing::{keys, mock},
-    types::{
-        address::SignatureAddressSpec,
-        token::{BaseUnits, Denomination},
-        transaction,
-    },
+    types::{address::SignatureAddressSpec, token::Denomination, transaction},
     BatchContext, Context, Runtime, Version,
 };
 
 use crate::{
     derive_caller,
     types::{self, H160},
-    Config, GasCosts, Genesis, Module as EVMModule, Parameters,
+    Config, Genesis, Module as EVMModule,
 };
 
 /// Test contract code.
@@ -37,6 +33,8 @@ impl Config for EVMConfig {
     type Accounts = Accounts;
 
     const CHAIN_ID: u64 = 0xa515;
+
+    const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
 }
 
 type EVM = EVMModule<EVMConfig>;
@@ -60,7 +58,8 @@ fn check_derivation(seed: &str, priv_hex: &str, addr_hex: &str) {
     let pub_key = priv_key.verifying_key();
     let sdk_pub_key =
         secp256k1::PublicKey::from_bytes(k256::EncodedPoint::from(&pub_key).as_bytes()).unwrap();
-    let addr = derive_caller::from_sigspec(&SignatureAddressSpec::Secp256k1Eth(sdk_pub_key));
+    let addr =
+        derive_caller::from_sigspec(&SignatureAddressSpec::Secp256k1Eth(sdk_pub_key)).unwrap();
     assert_eq!(addr.as_bytes(), Vec::from_hex(addr_hex).unwrap().as_slice());
 }
 
@@ -80,7 +79,7 @@ fn test_evm_caller_addr_derivation() {
 
     let expected =
         H160::from_slice(&Vec::<u8>::from_hex("dce075e1c39b1ae0b75d554558b6451a226ffe00").unwrap());
-    let derived = derive_caller::from_sigspec(&keys::dave::sigspec());
+    let derived = derive_caller::from_sigspec(&keys::dave::sigspec()).unwrap();
     assert_eq!(derived, expected);
 }
 
@@ -124,49 +123,11 @@ fn test_evm_calls() {
     EVM::init(
         &mut ctx,
         Genesis {
-            parameters: Parameters {
-                token_denomination: Denomination::NATIVE,
-                gas_costs: GasCosts {
-                    tx_deposit: 100,
-                    tx_withdraw: 100,
-                },
-            },
+            parameters: Default::default(),
         },
     );
 
     let erc20 = load_erc20();
-
-    // Test the Deposit transaction.
-    let deposit_tx = transaction::Transaction {
-        version: 1,
-        call: transaction::Call {
-            format: transaction::CallFormat::Plain,
-            method: "evm.Deposit".to_owned(),
-            body: cbor::to_value(types::Deposit {
-                to: derive_caller::from_sigspec(&keys::dave::sigspec()),
-                amount: BaseUnits::new(999_000, Denomination::NATIVE),
-            }),
-        },
-        auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new_sigspec(
-                keys::dave::sigspec(),
-                0,
-            )],
-            fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 100,
-                consensus_messages: 0,
-            },
-        },
-    };
-    ctx.with_tx(0, deposit_tx, |mut tx_ctx, call| {
-        EVM::tx_deposit(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-            .expect("deposit should succeed");
-
-        EVM::check_invariants(&mut tx_ctx).expect("invariants should hold");
-
-        tx_ctx.commit();
-    });
 
     // Test the Create transaction.
     let create_tx = transaction::Transaction {
@@ -242,38 +203,6 @@ fn test_evm_calls() {
     assert_eq!(erc20_name.len(), 96);
     assert_eq!(erc20_name[63], 0x04); // Name is 4 bytes long.
     assert_eq!(erc20_name[64..68], vec![0x54, 0x65, 0x73, 0x74]); // "Test".
-
-    // Test the Withdraw transaction.
-    let withdraw_tx = transaction::Transaction {
-        version: 1,
-        call: transaction::Call {
-            format: transaction::CallFormat::Plain,
-            method: "evm.Withdraw".to_owned(),
-            body: cbor::to_value(types::Withdraw {
-                to: keys::dave::address(),
-                amount: BaseUnits::new(1_000, Denomination::NATIVE),
-            }),
-        },
-        auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new_sigspec(
-                keys::dave::sigspec(),
-                0,
-            )],
-            fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 100,
-                consensus_messages: 0,
-            },
-        },
-    };
-    ctx.with_tx(0, withdraw_tx, |mut tx_ctx, call| {
-        EVM::tx_withdraw(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-            .expect("withdraw should succeed");
-
-        EVM::check_invariants(&mut tx_ctx).expect("invariants should hold");
-
-        tx_ctx.commit();
-    });
 }
 
 /// EVM test runtime.
@@ -311,13 +240,7 @@ impl Runtime for EVMRuntime {
                 ..Default::default()
             },
             Genesis {
-                parameters: Parameters {
-                    token_denomination: Denomination::NATIVE,
-                    gas_costs: GasCosts {
-                        tx_deposit: 100,
-                        tx_withdraw: 100,
-                    },
-                },
+                parameters: Default::default(),
             },
         )
     }
@@ -331,38 +254,6 @@ fn test_evm_runtime() {
     EVMRuntime::migrate(&mut ctx);
 
     let erc20 = load_erc20();
-
-    // Test the Deposit transaction.
-    let deposit_tx = transaction::Transaction {
-        version: 1,
-        call: transaction::Call {
-            format: transaction::CallFormat::Plain,
-            method: "evm.Deposit".to_owned(),
-            body: cbor::to_value(types::Deposit {
-                to: derive_caller::from_sigspec(&keys::dave::sigspec()),
-                amount: BaseUnits::new(999_000, Denomination::NATIVE),
-            }),
-        },
-        auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new_sigspec(
-                keys::dave::sigspec(),
-                0,
-            )],
-            fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 100,
-                consensus_messages: 0,
-            },
-        },
-    };
-    ctx.with_tx(0, deposit_tx, |mut tx_ctx, call| {
-        EVM::tx_deposit(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-            .expect("deposit should succeed");
-
-        EVM::check_invariants(&mut tx_ctx).expect("invariants should hold");
-
-        tx_ctx.commit();
-    });
 
     // Test the Create transaction.
     let create_tx = transaction::Transaction {
@@ -486,36 +377,4 @@ fn test_evm_runtime() {
         transfer_ret,
         Vec::<u8>::from_hex("0".repeat(64 - 1) + &"1".to_owned()).unwrap()
     ); // OK.
-
-    // Test the Withdraw transaction.
-    let withdraw_tx = transaction::Transaction {
-        version: 1,
-        call: transaction::Call {
-            format: transaction::CallFormat::Plain,
-            method: "evm.Withdraw".to_owned(),
-            body: cbor::to_value(types::Withdraw {
-                to: keys::dave::address(),
-                amount: BaseUnits::new(1_000, Denomination::NATIVE),
-            }),
-        },
-        auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new_sigspec(
-                keys::dave::sigspec(),
-                0,
-            )],
-            fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 100,
-                consensus_messages: 0,
-            },
-        },
-    };
-    ctx.with_tx(0, withdraw_tx, |mut tx_ctx, call| {
-        EVM::tx_withdraw(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-            .expect("withdraw should succeed");
-
-        EVM::check_invariants(&mut tx_ctx).expect("invariants should hold");
-
-        tx_ctx.commit();
-    });
 }

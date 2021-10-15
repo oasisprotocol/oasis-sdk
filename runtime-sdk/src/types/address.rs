@@ -19,24 +19,28 @@ const ADDRESS_VERSION_SIZE: usize = 1;
 const ADDRESS_DATA_SIZE: usize = 20;
 const ADDRESS_SIZE: usize = ADDRESS_VERSION_SIZE + ADDRESS_DATA_SIZE;
 
-const ADDRESS_V0_VERSION: u8 = 0;
+/// V0 address version.
+pub const ADDRESS_V0_VERSION: u8 = 0;
 /// V0 Ed25519 addres context (shared with consensus layer).
-const ADDRESS_V0_ED25519_CONTEXT: &[u8] = b"oasis-core/address: staking";
+pub const ADDRESS_V0_ED25519_CONTEXT: &[u8] = b"oasis-core/address: staking";
 /// V0 Secp256k1 address context.
-const ADDRESS_V0_SECP256K1ETH_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: secp256k1eth";
+pub const ADDRESS_V0_SECP256K1ETH_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: secp256k1eth";
 /// V0 Sr25519 address context.
-const ADDRESS_V0_SR25519_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: sr25519";
+pub const ADDRESS_V0_SR25519_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: sr25519";
 
-const ADDRESS_V0_MODULE_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: module";
+/// V0 module address context.
+pub const ADDRESS_V0_MODULE_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: module";
 
-// V0 runtime address.
-const ADDRESS_RUNTIME_V0_CONTEXT: &[u8] = b"oasis-core/address: runtime";
-const ADDRESS_RUNTIME_V0_VERSION: u8 = 0;
+/// V0 runtime address context.
+pub const ADDRESS_RUNTIME_V0_CONTEXT: &[u8] = b"oasis-core/address: runtime";
+/// V0 runtime address version.
+pub const ADDRESS_RUNTIME_V0_VERSION: u8 = 0;
 
 /// V0 multisig address context.
-const ADDRESS_V0_MULTISIG_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: multisig";
+pub const ADDRESS_V0_MULTISIG_CONTEXT: &[u8] = b"oasis-runtime-sdk/address: multisig";
 
-const ADDRESS_BECH32_HRP: &str = "oasis";
+/// Human readable part for Bech32-encoded addresses.
+pub const ADDRESS_BECH32_HRP: &str = "oasis";
 
 /// Information for signature-based authentication and public key-based address derivation.
 #[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
@@ -366,6 +370,20 @@ mod test {
         assert_eq!(
             addr.to_bech32(),
             "oasis1qq398yyk4wt2zxhtt8c66raynelgt6ngh5yq87xg"
+        );
+    }
+
+    #[test]
+    fn test_address_raw() {
+        let eth_address = hex::decode("dce075e1c39b1ae0b75d554558b6451a226ffe00").unwrap();
+        let addr = Address::new(
+            ADDRESS_V0_SECP256K1ETH_CONTEXT,
+            ADDRESS_V0_VERSION,
+            &eth_address,
+        );
+        assert_eq!(
+            addr.to_bech32(),
+            "oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt"
         );
     }
 }

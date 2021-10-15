@@ -1,17 +1,15 @@
 //! EVM module.
+
+pub mod backend;
 pub mod derive_caller;
-pub mod evm_backend;
 pub mod precompile;
 pub mod raw_tx;
 pub mod types;
-
-use std::collections::BTreeMap;
 
 use evm::{
     executor::{MemoryStackState, StackExecutor, StackSubstateMetadata},
     Config as EVMConfig,
 };
-use once_cell::sync::Lazy;
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
@@ -24,7 +22,11 @@ use oasis_runtime_sdk::{
         core::{self, Error as CoreError, API as _},
     },
     storage,
-    types::{address::Address, token, transaction, transaction::Transaction},
+    types::{
+        address::{self, Address},
+        token, transaction,
+        transaction::Transaction,
+    },
 };
 
 use evm::backend::ApplyBackend;
@@ -38,17 +40,45 @@ const MODULE_NAME: &str = "evm";
 
 /// State schema constants.
 pub mod state {
-    /// Prefix for Ethereum accounts in our storage (maps H160 -> Account).
-    pub const ACCOUNTS: &[u8] = &[0x01];
+    use super::{storage, H160};
+
     /// Prefix for Ethereum account code in our storage (maps H160 -> Vec<u8>).
-    pub const CODES: &[u8] = &[0x02];
+    pub const CODES: &[u8] = &[0x01];
     /// Prefix for Ethereum account storage in our storage (maps H160||H256 -> H256).
-    pub const STORAGES: &[u8] = &[0x03];
+    pub const STORAGES: &[u8] = &[0x02];
     /// Prefix for Ethereum block hashes (only for last BLOCK_HASH_WINDOW_SIZE blocks
     /// excluding current) storage in our storage (maps Round -> H256).
-    pub const BLOCK_HASHES: &[u8] = &[0x04];
+    pub const BLOCK_HASHES: &[u8] = &[0x03];
     /// The number of hash blocks that can be obtained from the current blockchain.
     pub const BLOCK_HASH_WINDOW_SIZE: u64 = 256;
+
+    /// Get a typed store for the given address' storage.
+    pub fn storage<'a, S: storage::Store + 'a>(
+        state: S,
+        address: &'a H160,
+    ) -> storage::TypedStore<impl storage::Store + 'a> {
+        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
+        let storages = storage::PrefixStore::new(store, &STORAGES);
+        storage::TypedStore::new(storage::HashedStore::<_, blake3::Hasher>::new(
+            storage::PrefixStore::new(storages, address),
+        ))
+    }
+
+    /// Get a typed store for codes of all contracts.
+    pub fn codes<'a, S: storage::Store + 'a>(
+        state: S,
+    ) -> storage::TypedStore<impl storage::Store + 'a> {
+        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
+        storage::TypedStore::new(storage::PrefixStore::new(store, &CODES))
+    }
+
+    /// Get a typed store for historic block hashes.
+    pub fn block_hashes<'a, S: storage::Store + 'a>(
+        state: S,
+    ) -> storage::TypedStore<impl storage::Store + 'a> {
+        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
+        storage::TypedStore::new(storage::PrefixStore::new(store, &BLOCK_HASHES))
+    }
 }
 
 /// Module configuration.
@@ -59,15 +89,23 @@ pub trait Config: 'static {
     /// The chain ID to supply when a contract requests it. Ethereum-format transactions must use
     /// this chain ID.
     const CHAIN_ID: u64;
+
+    /// Token denomination used as the native EVM token.
+    const TOKEN_DENOMINATION: token::Denomination;
+
+    /// Maps an Ethereum address into an SDK account address.
+    fn map_address(address: primitive_types::H160) -> Address {
+        Address::new(
+            address::ADDRESS_V0_SECP256K1ETH_CONTEXT,
+            address::ADDRESS_V0_VERSION,
+            address.as_ref(),
+        )
+    }
 }
 
 pub struct Module<Cfg: Config> {
     _cfg: std::marker::PhantomData<Cfg>,
 }
-
-/// EVM token pool address.
-pub static ADDRESS_EVM_TOKENS: Lazy<Address> =
-    Lazy::new(|| Address::from_module(MODULE_NAME, "evm-tokens"));
 
 /// Errors emitted by the EVM module.
 #[derive(Error, Debug, oasis_runtime_sdk::Error)]
@@ -96,10 +134,6 @@ pub enum Error {
     #[sdk_error(code = 6)]
     InsufficientBalance,
 
-    #[error("invalid denomination")]
-    #[sdk_error(code = 7)]
-    InvalidDenomination,
-
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] CoreError),
@@ -107,16 +141,11 @@ pub enum Error {
 
 /// Gas costs.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-pub struct GasCosts {
-    pub tx_deposit: u64,
-    pub tx_withdraw: u64,
-}
+pub struct GasCosts {}
 
 /// Parameters for the EVM module.
 #[derive(Clone, Default, Debug, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
-    /// Token denomination used for the EVM token.
-    pub token_denomination: token::Denomination,
     /// Gas costs.
     pub gas_costs: GasCosts,
 }
@@ -169,22 +198,6 @@ pub trait API {
         data: Vec<u8>,
     ) -> Result<Vec<u8>, Error>;
 
-    /// Deposit tokens from SDK account into EVM account.
-    fn deposit<C: TxContext>(
-        ctx: &mut C,
-        from: Address,
-        to: H160,
-        amount: token::BaseUnits,
-    ) -> Result<(), Error>;
-
-    /// Withdraw tokens from EVM account into SDK account.
-    fn withdraw<C: TxContext>(
-        ctx: &mut C,
-        from: H160,
-        to: Address,
-        amount: token::BaseUnits,
-    ) -> Result<(), Error>;
-
     /// Peek into EVM storage.
     /// Returns 256-bit value stored at given contract address and index (slot)
     /// in the storage.
@@ -195,8 +208,7 @@ pub trait API {
     fn get_code<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error>;
 
     /// Get EVM account balance.
-    /// Returns 256-bit big-endian representation of the balance.
-    fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error>;
+    fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<u128, Error>;
 
     /// Simulate an Ethereum CALL.
     fn simulate_call<C: Context>(
@@ -216,7 +228,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         value: U256,
         init_code: Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
-        let caller = Self::derive_caller(ctx);
+        let caller = Self::derive_caller(ctx)?;
 
         if ctx.is_check_only() {
             return Ok(vec![]);
@@ -239,7 +251,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         value: U256,
         data: Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
-        let caller = Self::derive_caller(ctx);
+        let caller = Self::derive_caller(ctx)?;
 
         if ctx.is_check_only() {
             return Ok(vec![]);
@@ -248,83 +260,6 @@ impl<Cfg: Config> API for Module<Cfg> {
         Self::do_evm(caller, ctx, |exec, gas_limit| {
             exec.transact_call(caller.into(), address.into(), value.into(), data, gas_limit)
         })
-    }
-
-    fn deposit<C: TxContext>(
-        ctx: &mut C,
-        from: Address,
-        to: H160,
-        amount: token::BaseUnits,
-    ) -> Result<(), Error> {
-        // Make sure that the denomination is the same as is set in our params.
-        let params = Self::params(ctx.runtime_state());
-        if amount.denomination() != &params.token_denomination {
-            return Err(Error::InvalidDenomination);
-        }
-
-        if ctx.is_check_only() {
-            let bal =
-                Cfg::Accounts::get_balance(ctx.runtime_state(), from, params.token_denomination)
-                    .unwrap();
-            if bal < amount.amount() {
-                return Err(Error::InsufficientBalance);
-            }
-            return Ok(());
-        }
-
-        // Transfer tokens from SDK account into EVM pool.
-        Cfg::Accounts::transfer(ctx, from, *ADDRESS_EVM_TOKENS, &amount)
-            .map_err(|_| Error::InsufficientBalance)?;
-
-        // Increase EVM account's balance by the amount of tokens transferred.
-        let state = ctx.runtime_state();
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
-        let mut accounts =
-            storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
-        let mut account: evm_backend::Account = accounts.get(&to).unwrap_or_default();
-
-        account.balance += amount.amount().into();
-        accounts.insert(&to, account);
-
-        Ok(())
-    }
-
-    fn withdraw<C: TxContext>(
-        ctx: &mut C,
-        from: H160,
-        to: Address,
-        amount: token::BaseUnits,
-    ) -> Result<(), Error> {
-        let is_check_only = ctx.is_check_only();
-
-        // Make sure that the denomination is the same as is set in our params.
-        let params = Self::params(ctx.runtime_state());
-        if amount.denomination() != &params.token_denomination {
-            return Err(Error::InvalidDenomination);
-        }
-
-        // Check EVM account's balance.
-        let state = ctx.runtime_state();
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
-        let mut accounts =
-            storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
-        let mut account: evm_backend::Account = accounts.get(&from).unwrap_or_default();
-
-        if account.balance < amount.amount().into() {
-            return Err(Error::InsufficientBalance);
-        }
-
-        if is_check_only {
-            return Ok(());
-        }
-
-        // Decrease EVM account's balance by the amount of tokens requested.
-        account.balance -= amount.amount().into();
-        accounts.insert(&from, account);
-
-        // Transfer tokens from EVM pool into SDK account.
-        Cfg::Accounts::transfer(ctx, *ADDRESS_EVM_TOKENS, to, &amount)
-            .map_err(|_| Error::InsufficientBalance)
     }
 
     fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
@@ -346,15 +281,10 @@ impl<Cfg: Config> API for Module<Cfg> {
         Ok(codes.get(&address).unwrap_or_default())
     }
 
-    fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error> {
+    fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<u128, Error> {
         let state = ctx.runtime_state();
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
-        let accounts = storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
-        let account: evm_backend::Account = accounts.get(&address).unwrap_or_default();
-
-        let mut out = [0u8; 32];
-        account.balance.to_big_endian(&mut out);
-        Ok(out.to_vec())
+        let address = Cfg::map_address(address.into());
+        Ok(Cfg::Accounts::get_balance(state, address, Cfg::TOKEN_DENOMINATION).unwrap_or_default())
     }
 
     fn simulate_call<C: Context>(
@@ -366,9 +296,6 @@ impl<Cfg: Config> API for Module<Cfg> {
         value: U256,
         data: Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
-        let params = Self::params(ctx.runtime_state());
-        let den = params.token_denomination;
-
         ctx.with_simulation(|mut sctx| {
             let call_tx = transaction::Transaction {
                 version: 1,
@@ -389,7 +316,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                                 .checked_mul(U256::from(gas_limit))
                                 .ok_or(Error::FeeOverflow)?
                                 .as_u128(),
-                            den,
+                            Cfg::TOKEN_DENOMINATION,
                         ),
                         gas: gas_limit,
                         consensus_messages: 0,
@@ -411,21 +338,18 @@ impl<Cfg: Config> Module<Cfg> {
     fn do_evm<C, F, V>(source: H160, ctx: &mut C, f: F) -> Result<V, Error>
     where
         F: FnOnce(
-            &mut StackExecutor<'static, MemoryStackState<'_, 'static, evm_backend::Backend<'_, C>>>,
+            &mut StackExecutor<'static, MemoryStackState<'_, 'static, backend::Backend<'_, C, Cfg>>>,
             u64,
         ) -> (evm::ExitReason, V),
         C: TxContext,
     {
-        let params = Self::params(ctx.runtime_state());
-        let den = params.token_denomination;
-
         let gas_limit: u64 = core::Module::remaining_tx_gas(ctx);
         let gas_price: primitive_types::U256 = ctx.tx_auth_info().fee.gas_price().into();
+        let fee_denomination = ctx.tx_auth_info().fee.amount.denomination().clone();
 
-        let vicinity = evm_backend::Vicinity {
+        let vicinity = backend::Vicinity {
             gas_price: gas_price.into(),
             origin: source,
-            chain_id: Cfg::CHAIN_ID.into(),
         };
 
         // The maximum gas fee has already been withdrawn in authenticate_tx().
@@ -433,7 +357,7 @@ impl<Cfg: Config> Module<Cfg> {
             .checked_mul(primitive_types::U256::from(gas_limit))
             .ok_or(Error::FeeOverflow)?;
 
-        let mut backend = evm_backend::Backend::<'_, C>::new(vicinity, ctx);
+        let mut backend = backend::Backend::<'_, C, Cfg>::new(ctx, vicinity);
         let metadata = StackSubstateMetadata::new(gas_limit, &Self::EVM_CONFIG);
         let stackstate = MemoryStackState::new(metadata, &backend);
         let mut executor = StackExecutor::new_with_precompile(
@@ -452,37 +376,35 @@ impl<Cfg: Config> Module<Cfg> {
         let gas_used = executor.used_gas();
 
         if gas_used > gas_limit {
-            core::Module::use_tx_gas(ctx, gas_limit).map_err(Error::Core)?;
+            // NOTE: This should never happen as the gas was accounted for in advance.
+            core::Module::use_tx_gas(ctx, gas_limit)?;
             return Err(Error::GasLimitTooLow(gas_used));
         }
 
+        // Return the difference between the pre-paid max_gas and actually used gas.
         let fee = executor.fee(gas_price);
-
-        // Return the difference between the pre-paid max_gas and actually
-        // used gas.
         let return_fee = max_gas_fee
             .checked_sub(fee)
             .ok_or(Error::InsufficientBalance)?;
-        executor.state_mut().deposit(source.into(), return_fee);
 
         let (vals, logs) = executor.into_state().deconstruct();
         backend.apply(vals, logs, true);
 
-        core::Module::use_tx_gas(ctx, gas_used).map_err(Error::Core)?;
+        core::Module::use_tx_gas(ctx, gas_used)?;
 
-        // Move the difference from the fee accumulator back into the
-        // EVM token pool.
+        // Move the difference from the fee accumulator back to the caller.
+        let caller_address = Cfg::map_address(source.into());
         Cfg::Accounts::move_from_fee_accumulator(
             ctx,
-            *ADDRESS_EVM_TOKENS,
-            &token::BaseUnits::new(return_fee.as_u128(), den),
+            caller_address,
+            &token::BaseUnits::new(return_fee.as_u128(), fee_denomination),
         )
         .map_err(|_| Error::InsufficientBalance)?;
 
         Ok(exit_value)
     }
 
-    fn derive_caller<C>(ctx: &mut C) -> H160
+    fn derive_caller<C>(ctx: &mut C) -> Result<H160, Error>
     where
         C: TxContext,
     {
@@ -497,22 +419,6 @@ impl<Cfg: Config> Module<Cfg> {
         Self::call(ctx, body.address, body.value, body.data)
     }
 
-    fn tx_deposit<C: TxContext>(ctx: &mut C, body: types::Deposit) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
-        core::Module::use_tx_gas(ctx, params.gas_costs.tx_deposit)?;
-
-        Self::deposit(ctx, ctx.tx_caller_address(), body.to, body.amount)
-    }
-
-    fn tx_withdraw<C: TxContext>(ctx: &mut C, body: types::Withdraw) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
-        core::Module::use_tx_gas(ctx, params.gas_costs.tx_withdraw)?;
-
-        let evm_acct_addr = Self::derive_caller(ctx);
-
-        Self::withdraw(ctx, evm_acct_addr, body.to, body.amount)
-    }
-
     fn query_storage<C: Context>(ctx: &mut C, body: types::StorageQuery) -> Result<Vec<u8>, Error> {
         Self::get_storage(ctx, body.address, body.index)
     }
@@ -521,7 +427,7 @@ impl<Cfg: Config> Module<Cfg> {
         Self::get_code(ctx, body.address)
     }
 
-    fn query_balance<C: Context>(ctx: &mut C, body: types::BalanceQuery) -> Result<Vec<u8>, Error> {
+    fn query_balance<C: Context>(ctx: &mut C, body: types::BalanceQuery) -> Result<u128, Error> {
         Self::get_balance(ctx, body.address)
     }
 
@@ -550,8 +456,6 @@ impl<Cfg: Config> module::MethodHandler for Module<Cfg> {
         match method {
             "evm.Create" => module::dispatch_call(ctx, body, Self::tx_create),
             "evm.Call" => module::dispatch_call(ctx, body, Self::tx_call),
-            "evm.Deposit" => module::dispatch_call(ctx, body, Self::tx_deposit),
-            "evm.Withdraw" => module::dispatch_call(ctx, body, Self::tx_withdraw),
             _ => module::DispatchResult::Unhandled(body),
         }
     }
@@ -620,69 +524,14 @@ impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
             _ => Ok(None),
         }
     }
-
-    fn authenticate_tx<C: Context>(ctx: &mut C, tx: &Transaction) -> Result<(), CoreError> {
-        // We're only interested in transactions that can be paid with tokens
-        // from the corresponding EVM account.
-        match tx.call.method.as_str() {
-            "evm.Create" | "evm.Call" | "evm.Withdraw" => {}
-            _ => return Err(CoreError::NotAuthenticated),
-        }
-
-        let params = Self::params(ctx.runtime_state());
-        let den = params.token_denomination;
-
-        let evm_acct_addr = derive_caller::from_tx_auth_info(&tx.auth_info);
-
-        // Check nonces on all signer accounts.
-        // Note that we can ignore the return value because the payee is already
-        // checked in the above call that derives the EVM account address.
-        let _payee = Cfg::Accounts::check_signer_nonces(ctx, tx)?;
-
-        // The fee should be set by the user to cover at least:
-        //     gas_price * gas_limit + sdk_fees
-        // And the gas should be set to:
-        //     gas_limit + sdk_gas_limit
-        // The difference between the paid fee and the actually used gas
-        // will be returned in do_evm() above after execution is complete
-        // and the EVM has calculated the actual amount of gas used.
-        let fee = tx.auth_info.fee.amount.amount();
-
-        // Take the tokens from the EVM account and move them into the
-        // fee accumulator.
-        let state = ctx.runtime_state();
-        let store = storage::PrefixStore::new(state, &MODULE_NAME);
-        let mut accounts =
-            storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
-        let mut account: evm_backend::Account = accounts.get(&evm_acct_addr).unwrap_or_default();
-
-        if account.balance < fee.into() {
-            return Err(CoreError::InsufficientFeeBalance);
-        }
-
-        account.nonce += 1.into();
-        account.balance -= fee.into();
-        accounts.insert(&evm_acct_addr, account);
-
-        Cfg::Accounts::move_into_fee_accumulator(
-            ctx,
-            *ADDRESS_EVM_TOKENS,
-            &token::BaseUnits::new(fee, den),
-        )?;
-
-        Cfg::Accounts::update_signer_nonces(ctx, tx)
-    }
 }
 
 impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
     fn end_block<C: Context>(ctx: &mut C) {
+        // Update the list of historic block hashes.
         let block_number = ctx.runtime_header().round;
         let block_hash = ctx.runtime_header().encoded_hash();
-        let state = ctx.runtime_state();
-
-        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-        let hashes = storage::PrefixStore::new(store, &state::BLOCK_HASHES);
-        let mut block_hashes = storage::TypedStore::new(hashes);
+        let mut block_hashes = state::block_hashes(ctx.runtime_state());
 
         let current_number = block_number;
         block_hashes.insert(&block_number.to_be_bytes(), block_hash);
@@ -694,52 +543,4 @@ impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
     }
 }
 
-impl<Cfg: Config> module::InvariantHandler for Module<Cfg> {
-    /// Check invariants.
-    fn check_invariants<C: Context>(ctx: &mut C) -> Result<(), CoreError> {
-        // All EVM account balances should sum up to the balance
-        // of the EVM token pool.
-
-        let params = Self::params(ctx.runtime_state());
-
-        // Get balance of EVM token pool.
-        #[allow(clippy::or_fun_call)]
-        let pool_balance = Cfg::Accounts::get_balance(
-            ctx.runtime_state(),
-            *ADDRESS_EVM_TOKENS,
-            params.token_denomination,
-        )
-        .or(Err(CoreError::InvariantViolation(
-            "unable to get EVM token pool balance".to_string(),
-        )))?;
-
-        // Get all EVM accounts.
-        let store = storage::PrefixStore::new(ctx.runtime_state(), &crate::MODULE_NAME);
-        let astore = storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
-
-        let accounts: BTreeMap<H160, evm_backend::Account> = astore.iter().collect();
-
-        // Compute the total balance of all EVM accounts.
-        let mut evm_balance: U256 = U256::zero();
-        for acct in accounts.values() {
-            match evm_balance.checked_add(acct.balance) {
-                Some(eb) => evm_balance = eb,
-                None => {
-                    return Err(CoreError::InvariantViolation(
-                        "U256 overflow when computing total balance of all EVM accounts"
-                            .to_string(),
-                    ))
-                }
-            }
-        }
-
-        if evm_balance != pool_balance.into() {
-            Err(CoreError::InvariantViolation(format!(
-                "token pool balance mismatch: evm_balance={}, pool_balance={}",
-                evm_balance, pool_balance,
-            )))
-        } else {
-            Ok(())
-        }
-    }
-}
+impl<Cfg: Config> module::InvariantHandler for Module<Cfg> {}

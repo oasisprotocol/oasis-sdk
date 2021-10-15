@@ -26,7 +26,9 @@ impl<S: Store> OverlayStore<S> {
 }
 
 impl<S: Store> NestedStore for OverlayStore<S> {
-    fn commit(mut self) {
+    type Inner = S;
+
+    fn commit(mut self) -> Self::Inner {
         // Insert all items present in the overlay.
         for (key, value) in self.overlay {
             self.dirty.remove(&key);
@@ -37,6 +39,8 @@ impl<S: Store> NestedStore for OverlayStore<S> {
         for key in self.dirty {
             self.parent.remove(&key);
         }
+
+        self.parent
     }
 }
 

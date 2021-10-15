@@ -48,7 +48,10 @@ impl<M: mkvs::MKVS> Store for MKVSStore<M> {
 }
 
 impl<M: mkvs::MKVS> NestedStore for MKVSStore<M> {
-    fn commit(self) {
+    type Inner = M;
+
+    fn commit(self) -> Self::Inner {
         // Commit is not needed.
+        self.parent
     }
 }

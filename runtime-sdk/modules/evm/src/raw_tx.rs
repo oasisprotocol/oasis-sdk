@@ -263,7 +263,7 @@ mod test {
         assert_eq!(body.data, Vec::from_hex(expected_data).unwrap());
         assert_eq!(tx.auth_info.signer_info.len(), 1);
         assert_eq!(
-            derive_caller::from_tx_auth_info(&tx.auth_info),
+            derive_caller::from_tx_auth_info(&tx.auth_info).unwrap(),
             types::H160::from_str(expected_from).unwrap(),
         );
         assert_eq!(tx.auth_info.signer_info[0].nonce, expected_nonce);
@@ -293,7 +293,7 @@ mod test {
         assert_eq!(body.init_code, Vec::from_hex(expected_init_code).unwrap());
         assert_eq!(tx.auth_info.signer_info.len(), 1);
         assert_eq!(
-            derive_caller::from_tx_auth_info(&tx.auth_info),
+            derive_caller::from_tx_auth_info(&tx.auth_info).unwrap(),
             types::H160::from_str(expected_from).unwrap(),
         );
         assert_eq!(tx.auth_info.signer_info[0].nonce, expected_nonce);
@@ -318,7 +318,7 @@ mod test {
         match decode(&Vec::from_hex(raw).unwrap(), expected_chain_id) {
             Ok(tx) => {
                 assert_ne!(
-                    derive_caller::from_tx_auth_info(&tx.auth_info),
+                    derive_caller::from_tx_auth_info(&tx.auth_info).unwrap(),
                     types::H160::from_str(unexpected_from).unwrap(),
                 );
             }

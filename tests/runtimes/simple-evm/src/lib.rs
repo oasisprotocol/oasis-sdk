@@ -14,6 +14,8 @@ impl evm::Config for EVMConfig {
     type Accounts = modules::accounts::Module;
 
     const CHAIN_ID: u64 = 0xa515;
+
+    const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
 }
 
 impl sdk::Runtime for Runtime {
@@ -71,11 +73,7 @@ impl sdk::Runtime for Runtime {
             },
             evm::Genesis {
                 parameters: evm::Parameters {
-                    token_denomination: Denomination::NATIVE,
-                    gas_costs: evm::GasCosts {
-                        tx_deposit: 10,
-                        tx_withdraw: 20,
-                    },
+                    gas_costs: Default::default(),
                 },
             },
         )
