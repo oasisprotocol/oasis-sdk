@@ -84,16 +84,18 @@ pub struct Genesis {
 
 /// Interface that can be called from other modules.
 pub trait API {
-    /// Deposit an amount into the runtime account.
+    /// Transfer from consensus staking account to runtime account.
     fn deposit<C: TxContext>(
         ctx: &mut C,
         from: Address,
+        to: Address,
         amount: token::BaseUnits,
     ) -> Result<(), Error>;
 
-    /// Withdraw an amount out from the runtime account.
+    /// Transfer from runtime account to consensus staking account.
     fn withdraw<C: TxContext>(
         ctx: &mut C,
+        from: Address,
         to: Address,
         amount: token::BaseUnits,
     ) -> Result<(), Error>;
@@ -121,6 +123,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
     fn deposit<C: TxContext>(
         ctx: &mut C,
         from: Address,
+        to: Address,
         amount: token::BaseUnits,
     ) -> Result<(), Error> {
         if ctx.is_check_only() {
@@ -143,7 +146,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
             MessageEventHookInvocation::new(
                 CONSENSUS_WITHDRAW_HANDLER.to_string(),
                 types::ConsensusWithdrawContext {
-                    address: from,
+                    address: to,
                     amount: amount.clone(),
                 },
             ),
@@ -154,6 +157,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
 
     fn withdraw<C: TxContext>(
         ctx: &mut C,
+        from: Address,
         to: Address,
         amount: token::BaseUnits,
     ) -> Result<(), Error> {
@@ -166,7 +170,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
 
         // Transfer the given amount to the module's withdrawal account to make sure the tokens
         // remain available until actually withdrawn.
-        Accounts::transfer(ctx, to, *ADDRESS_PENDING_WITHDRAWAL, &amount)
+        Accounts::transfer(ctx, from, *ADDRESS_PENDING_WITHDRAWAL, &amount)
             .map_err(|_| Error::InsufficientWithdrawBalance)?;
 
         // Transfer out of runtime account and update the account state if successful.
@@ -177,7 +181,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
             MessageEventHookInvocation::new(
                 CONSENSUS_TRANSFER_HANDLER.to_string(),
                 types::ConsensusTransferContext {
-                    address: to,
+                    address: from,
                     amount: amount.clone(),
                 },
             ),
@@ -199,7 +203,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         Consensus::ensure_compatible_tx_signer(ctx)?;
 
         let address = signer.address_spec.address();
-        Self::deposit(ctx, address, body.amount)
+        Self::deposit(ctx, address, body.to, body.amount)
     }
 
     /// Withdraw from the runtime.
@@ -212,7 +216,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         Consensus::ensure_compatible_tx_signer(ctx)?;
 
         let address = signer.address_spec.address();
-        Self::withdraw(ctx, address, body.amount)
+        Self::withdraw(ctx, address, body.to, body.amount)
     }
 
     fn query_balance<C: Context>(
