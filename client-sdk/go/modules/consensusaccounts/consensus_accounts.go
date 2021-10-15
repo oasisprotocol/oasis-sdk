@@ -22,10 +22,10 @@ const (
 // V1 is the v1 consensus accounts module interface.
 type V1 interface {
 	// Deposit generates a consensus.Deposit transaction.
-	Deposit(amount types.BaseUnits) *client.TransactionBuilder
+	Deposit(to types.Address, amount types.BaseUnits) *client.TransactionBuilder
 
 	// Withdraw generates a consensus.Withdraw transaction.
-	Withdraw(amount types.BaseUnits) *client.TransactionBuilder
+	Withdraw(to types.Address, amount types.BaseUnits) *client.TransactionBuilder
 
 	// Balance queries the given account's balance of consensus denomination tokens.
 	Balance(ctx context.Context, round uint64, query *BalanceQuery) (*AccountBalance, error)
@@ -39,15 +39,17 @@ type v1 struct {
 }
 
 // Implements V1.
-func (a *v1) Deposit(amount types.BaseUnits) *client.TransactionBuilder {
+func (a *v1) Deposit(to types.Address, amount types.BaseUnits) *client.TransactionBuilder {
 	return client.NewTransactionBuilder(a.rc, methodDeposit, &Deposit{
+		To:     to,
 		Amount: amount,
 	})
 }
 
 // Implements V1.
-func (a *v1) Withdraw(amount types.BaseUnits) *client.TransactionBuilder {
+func (a *v1) Withdraw(to types.Address, amount types.BaseUnits) *client.TransactionBuilder {
 	return client.NewTransactionBuilder(a.rc, methodWithdraw, &Withdraw{
+		To:     to,
 		Amount: amount,
 	})
 }
