@@ -1,6 +1,7 @@
 //! EVM module.
+
+pub mod backend;
 pub mod derive_caller;
-pub mod evm_backend;
 pub mod precompile;
 pub mod raw_tx;
 pub mod types;
@@ -337,10 +338,7 @@ impl<Cfg: Config> Module<Cfg> {
     fn do_evm<C, F, V>(source: H160, ctx: &mut C, f: F) -> Result<V, Error>
     where
         F: FnOnce(
-            &mut StackExecutor<
-                'static,
-                MemoryStackState<'_, 'static, evm_backend::Backend<'_, C, Cfg>>,
-            >,
+            &mut StackExecutor<'static, MemoryStackState<'_, 'static, backend::Backend<'_, C, Cfg>>>,
             u64,
         ) -> (evm::ExitReason, V),
         C: TxContext,
@@ -349,7 +347,7 @@ impl<Cfg: Config> Module<Cfg> {
         let gas_price: primitive_types::U256 = ctx.tx_auth_info().fee.gas_price().into();
         let fee_denomination = ctx.tx_auth_info().fee.amount.denomination().clone();
 
-        let vicinity = evm_backend::Vicinity {
+        let vicinity = backend::Vicinity {
             gas_price: gas_price.into(),
             origin: source,
         };
@@ -359,7 +357,7 @@ impl<Cfg: Config> Module<Cfg> {
             .checked_mul(primitive_types::U256::from(gas_limit))
             .ok_or(Error::FeeOverflow)?;
 
-        let mut backend = evm_backend::Backend::<'_, C, Cfg>::new(ctx, vicinity);
+        let mut backend = backend::Backend::<'_, C, Cfg>::new(ctx, vicinity);
         let metadata = StackSubstateMetadata::new(gas_limit, &Self::EVM_CONFIG);
         let stackstate = MemoryStackState::new(metadata, &backend);
         let mut executor = StackExecutor::new_with_precompile(
