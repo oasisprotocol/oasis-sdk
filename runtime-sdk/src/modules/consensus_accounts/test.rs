@@ -59,6 +59,9 @@ fn test_api_deposit_invalid_denomination() {
             format: transaction::CallFormat::Plain,
             method: "consensus.Deposit".to_owned(),
             body: cbor::to_value(Deposit {
+                // It's probably more common to withdraw into your own account, but we're using a
+                // separate `to` account to make sure everything is hooked up to the right places.
+                to: keys::bob::address(),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
         },
@@ -86,6 +89,7 @@ fn test_api_deposit_invalid_denomination() {
 
 #[test]
 fn test_api_deposit() {
+    let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
     let mut meta = Metadata {
@@ -101,7 +105,10 @@ fn test_api_deposit() {
             format: transaction::CallFormat::Plain,
             method: "consensus.Deposit".to_owned(),
             body: cbor::to_value(Deposit {
-                amount: BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()),
+                // It's probably more common to deposit into your own account, but we're using a
+                // separate `to` account to make sure everything is hooked up to the right places.
+                to: keys::bob::address(),
+                amount: BaseUnits::new(1_000, denom.clone()),
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -117,19 +124,19 @@ fn test_api_deposit() {
         },
     };
 
-    ctx.with_tx(0, tx, |mut tx_ctx, call| {
+    let hook = ctx.with_tx(0, tx, |mut tx_ctx, call| {
         Module::<Accounts, Consensus>::tx_deposit(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
         )
         .expect("deposit tx should succeed");
 
-        let (_, msgs) = tx_ctx.commit();
+        let (_, mut msgs) = tx_ctx.commit();
         assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.first().unwrap();
+        let (msg, hook) = msgs.pop().unwrap();
 
         assert_eq!(
-            &Message::Staking(Versioned::new(
+            Message::Staking(Versioned::new(
                 0,
                 StakingMessage::Withdraw(staking::Withdraw {
                     from: keys::alice::address().into(),
@@ -144,10 +151,33 @@ fn test_api_deposit() {
             CONSENSUS_WITHDRAW_HANDLER.to_string(),
             hook.hook_name,
             "emitted hook should match"
-        )
+        );
 
-        // TODO: support advancing the round. And ensure message is correctly processed.
+        hook
     });
+
+    // Simulate the message being processed and make sure withdrawal is successfully completed.
+    let me = Default::default();
+    Module::<Accounts, Consensus>::message_result_withdraw(
+        &mut ctx,
+        me,
+        cbor::from_value(hook.payload).unwrap(),
+    );
+
+    // Ensure runtime balance is updated.
+    let balance = Accounts::get_balance(
+        ctx.runtime_state(),
+        test::keys::bob::address(),
+        denom.clone(),
+    )
+    .unwrap();
+    assert_eq!(balance, 1_000u128, "deposited balance should be minted");
+    let total_supplies = Accounts::get_total_supplies(ctx.runtime_state()).unwrap();
+    assert_eq!(total_supplies.len(), 1);
+    assert_eq!(
+        total_supplies[&denom], 1_000u128,
+        "deposited balance should be minted"
+    );
 }
 
 #[test]
@@ -167,6 +197,9 @@ fn test_api_withdraw_invalid_denomination() {
             format: transaction::CallFormat::Plain,
             method: "consensus.Withdraw".to_owned(),
             body: cbor::to_value(Withdraw {
+                // It's probably more common to withdraw into your own account, but we're using a
+                // separate `to` account to make sure everything is hooked up to the right places.
+                to: keys::bob::address(),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
         },
@@ -209,6 +242,9 @@ fn test_api_withdraw_insufficient_balance() {
             format: transaction::CallFormat::Plain,
             method: "consensus.Withdraw".to_owned(),
             body: cbor::to_value(Withdraw {
+                // It's probably more common to withdraw into your own account, but we're using a
+                // separate `to` account to make sure everything is hooked up to the right places.
+                to: keys::bob::address(),
                 amount: BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()),
             }),
         },
@@ -273,6 +309,9 @@ fn test_api_withdraw() {
             format: transaction::CallFormat::Plain,
             method: "consensus.Withdraw".to_owned(),
             body: cbor::to_value(Withdraw {
+                // It's probably more common to withdraw into your own account, but we're using a
+                // separate `to` account to make sure everything is hooked up to the right places.
+                to: keys::bob::address(),
                 amount: BaseUnits::new(1_000_000, denom.clone()),
             }),
         },
@@ -304,7 +343,7 @@ fn test_api_withdraw() {
             Message::Staking(Versioned::new(
                 0,
                 StakingMessage::Transfer(staking::Transfer {
-                    to: keys::alice::address().into(),
+                    to: keys::bob::address().into(),
                     amount: 1_000_000u128.into(),
                 })
             )),
@@ -400,6 +439,9 @@ fn test_api_withdraw_handler_failure() {
             format: transaction::CallFormat::Plain,
             method: "consensus.Withdraw".to_owned(),
             body: cbor::to_value(Withdraw {
+                // It's probably more common to withdraw into your own account, but we're using a
+                // separate `to` account to make sure everything is hooked up to the right places.
+                to: keys::bob::address().into(),
                 amount: BaseUnits::new(1_000_000, denom.clone()),
             }),
         },
@@ -431,7 +473,7 @@ fn test_api_withdraw_handler_failure() {
             Message::Staking(Versioned::new(
                 0,
                 StakingMessage::Transfer(staking::Transfer {
-                    to: keys::alice::address().into(),
+                    to: keys::bob::address().into(),
                     amount: 1_000_000u128.into(),
                 })
             )),
@@ -568,6 +610,9 @@ fn test_prefetch() {
             format: transaction::CallFormat::Plain,
             method: "consensus.Withdraw".to_owned(),
             body: cbor::to_value(Withdraw {
+                // It's probably more common to withdraw into your own account, but we're using a
+                // separate `to` account to make sure everything is hooked up to the right places.
+                to: keys::bob::address(),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
         },
@@ -596,6 +641,9 @@ fn test_prefetch() {
             format: transaction::CallFormat::Plain,
             method: "consensus.Deposit".to_owned(),
             body: cbor::to_value(Deposit {
+                // It's probably more common to withdraw into your own account, but we're using a
+                // separate `to` account to make sure everything is hooked up to the right places.
+                to: keys::bob::address(),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
         },
