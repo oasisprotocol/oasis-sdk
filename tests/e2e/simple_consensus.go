@@ -55,9 +55,9 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	consAccounts := consensusAccounts.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
 
-	log.Info("alice depositing into runtime")
+	log.Info("alice depositing into runtime to bob")
 	amount := types.NewBaseUnits(*quantity.NewFromUint64(50), consDenomination)
-	tb := consAccounts.Deposit(amount).
+	tb := consAccounts.Deposit(testing.Bob.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
@@ -80,9 +80,19 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return fmt.Errorf("ensuring alice deposit consensus event: %w", err)
 	}
 
+	resp, err := consAccounts.Balance(ctx, client.RoundLatest, &consensusAccounts.BalanceQuery{
+		Address: testing.Bob.Address,
+	})
+	if err != nil {
+		return err
+	}
+	if resp.Balance.Cmp(quantity.NewFromUint64(50)) != 0 {
+		return fmt.Errorf("after deposit, expected bob balance 50, got %s", resp.Balance)
+	}
+
 	amount.Amount = *quantity.NewFromUint64(40)
-	log.Info("bob depositing into runtime")
-	tb = consAccounts.Deposit(amount).
+	log.Info("bob depositing into runtime to alice")
+	tb = consAccounts.Deposit(testing.Alice.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Bob.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Bob.Signer)
@@ -103,10 +113,19 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	}); err != nil {
 		return fmt.Errorf("ensuring bob deposit consensus event: %w", err)
 	}
+	resp, err = consAccounts.Balance(ctx, client.RoundLatest, &consensusAccounts.BalanceQuery{
+		Address: testing.Alice.Address,
+	})
+	if err != nil {
+		return err
+	}
+	if resp.Balance.Cmp(quantity.NewFromUint64(40)) != 0 {
+		return fmt.Errorf("after deposit, expected alice balance 40, got %s", resp.Balance)
+	}
 
 	amount.Amount = *quantity.NewFromUint64(25)
-	log.Info("alice withdrawing")
-	tb = consAccounts.Withdraw(amount).
+	log.Info("alice withdrawing to bob")
+	tb = consAccounts.Withdraw(testing.Bob.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
@@ -117,7 +136,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		if e.Transfer == nil {
 			return false
 		}
-		if e.Transfer.To != staking.Address(testing.Alice.Address) {
+		if e.Transfer.To != staking.Address(testing.Bob.Address) {
 			return false
 		}
 		if e.Transfer.From != staking.NewRuntimeAddress(runtimeID) {
@@ -130,7 +149,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 
 	amount.Amount = *quantity.NewFromUint64(50)
 	log.Info("charlie withdrawing")
-	tb = consAccounts.Withdraw(amount).
+	tb = consAccounts.Withdraw(testing.Charlie.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Charlie.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Charlie.Signer)
@@ -141,7 +160,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	}
 
 	log.Info("alice withdrawing with invalid nonce")
-	tb = consAccounts.Withdraw(amount).
+	tb = consAccounts.Withdraw(testing.Bob.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
@@ -155,29 +174,29 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	balanceQuery := &consensusAccounts.BalanceQuery{
 		Address: testing.Alice.Address,
 	}
-	resp, err := consAccounts.Balance(ctx, client.RoundLatest, balanceQuery)
+	resp, err = consAccounts.Balance(ctx, client.RoundLatest, balanceQuery)
 	if err != nil {
 		return err
 	}
-	if resp.Balance.Cmp(quantity.NewFromUint64(25)) != 0 {
+	if resp.Balance.Cmp(quantity.NewFromUint64(40-25)) != 0 {
 		return fmt.Errorf("unexpected alice balance, got: %s", resp.Balance)
 	}
 
-	log.Info("query alice consensus account")
+	log.Info("query bob consensus account")
 	accountsQuery := &consensusAccounts.AccountQuery{
-		Address: testing.Alice.Address,
+		Address: testing.Bob.Address,
 	}
 	acc, err := consAccounts.ConsensusAccount(ctx, client.RoundLatest, accountsQuery)
 	if err != nil {
 		return err
 	}
-	if acc.General.Balance.Cmp(quantity.NewFromUint64(75)) != 0 {
-		return fmt.Errorf("unexpected alice consensus account balance, got: %s", acc.General.Balance)
+	if acc.General.Balance.Cmp(quantity.NewFromUint64(100-40+25)) != 0 {
+		return fmt.Errorf("unexpected bob consensus account balance, got: %s", acc.General.Balance)
 	}
 
 	log.Info("dave depositing (secp256k1)")
 	amount.Amount = *quantity.NewFromUint64(50)
-	tb = consAccounts.Deposit(amount).
+	tb = consAccounts.Deposit(testing.Dave.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Dave.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Dave.Signer)
