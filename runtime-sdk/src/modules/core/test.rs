@@ -202,7 +202,7 @@ fn test_reject_txs() {
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![
-                transaction::SignerInfo::new(keys::alice::pk(), 0),
+                transaction::SignerInfo::new_sigspec(keys::alice::sigspec(), 0),
                 transaction::SignerInfo::new_multisig(
                     multisig::Config {
                         signers: vec![multisig::Signer {
@@ -241,7 +241,7 @@ fn test_query_estimate_gas() {
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![
-                transaction::SignerInfo::new(keys::alice::pk(), 0),
+                transaction::SignerInfo::new_sigspec(keys::alice::sigspec(), 0),
                 transaction::SignerInfo::new_multisig(
                     multisig::Config {
                         signers: vec![multisig::Signer {
@@ -513,7 +513,7 @@ fn test_min_gas_price() {
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![
-                transaction::SignerInfo::new(keys::alice::pk(), 0),
+                transaction::SignerInfo::new_sigspec(keys::alice::sigspec(), 0),
                 transaction::SignerInfo::new_multisig(
                     multisig::Config {
                         signers: vec![multisig::Signer {

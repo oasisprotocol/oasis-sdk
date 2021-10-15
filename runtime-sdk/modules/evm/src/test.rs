@@ -6,7 +6,7 @@ use uint::hex::FromHex;
 
 use oasis_runtime_sdk::{
     context,
-    crypto::signature::{secp256k1, PublicKey},
+    crypto::signature::secp256k1,
     module::{self, InvariantHandler as _},
     modules::{
         accounts::{self, Module as Accounts},
@@ -14,6 +14,7 @@ use oasis_runtime_sdk::{
     },
     testing::{keys, mock},
     types::{
+        address::SignatureAddressSpec,
         token::{BaseUnits, Denomination},
         transaction,
     },
@@ -59,7 +60,7 @@ fn check_derivation(seed: &str, priv_hex: &str, addr_hex: &str) {
     let pub_key = priv_key.verifying_key();
     let sdk_pub_key =
         secp256k1::PublicKey::from_bytes(k256::EncodedPoint::from(&pub_key).as_bytes()).unwrap();
-    let addr = derive_caller::from_public_key(&PublicKey::Secp256k1(sdk_pub_key));
+    let addr = derive_caller::from_sigspec(&SignatureAddressSpec::Secp256k1Eth(sdk_pub_key));
     assert_eq!(addr.as_bytes(), Vec::from_hex(addr_hex).unwrap().as_slice());
 }
 
@@ -79,7 +80,7 @@ fn test_evm_caller_addr_derivation() {
 
     let expected =
         H160::from_slice(&Vec::<u8>::from_hex("dce075e1c39b1ae0b75d554558b6451a226ffe00").unwrap());
-    let derived = derive_caller::from_public_key(&keys::dave::pk());
+    let derived = derive_caller::from_sigspec(&keys::dave::sigspec());
     assert_eq!(derived, expected);
 }
 
@@ -142,12 +143,15 @@ fn test_evm_calls() {
             format: transaction::CallFormat::Plain,
             method: "evm.Deposit".to_owned(),
             body: cbor::to_value(types::Deposit {
-                to: derive_caller::from_public_key(&keys::dave::pk()),
+                to: derive_caller::from_sigspec(&keys::dave::sigspec()),
                 amount: BaseUnits::new(999_000, Denomination::NATIVE),
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::dave::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 100,
@@ -176,7 +180,10 @@ fn test_evm_calls() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::dave::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000000,
@@ -211,7 +218,10 @@ fn test_evm_calls() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::dave::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 25000,
@@ -245,7 +255,10 @@ fn test_evm_calls() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::dave::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 100,
@@ -326,12 +339,15 @@ fn test_evm_runtime() {
             format: transaction::CallFormat::Plain,
             method: "evm.Deposit".to_owned(),
             body: cbor::to_value(types::Deposit {
-                to: derive_caller::from_public_key(&keys::dave::pk()),
+                to: derive_caller::from_sigspec(&keys::dave::sigspec()),
                 amount: BaseUnits::new(999_000, Denomination::NATIVE),
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::dave::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 100,
@@ -360,7 +376,10 @@ fn test_evm_runtime() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::dave::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000000,
@@ -395,7 +414,10 @@ fn test_evm_runtime() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::dave::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 25000,
@@ -439,7 +461,10 @@ fn test_evm_runtime() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::dave::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 64000,
@@ -474,7 +499,10 @@ fn test_evm_runtime() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::dave::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 100,

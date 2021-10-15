@@ -7,7 +7,7 @@ use sha3::{self, Digest as _};
 
 use oasis_runtime_sdk::{
     crypto::signature,
-    types::{token, transaction},
+    types::{address, token, transaction},
 };
 
 use crate::types;
@@ -198,12 +198,14 @@ fn decode_enveloped(
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo {
-                address_spec: transaction::AddressSpec::Signature(signature::PublicKey::Secp256k1(
-                    signature::secp256k1::PublicKey::from_bytes(
-                        k256::EncodedPoint::from(&key).as_bytes(),
-                    )
-                    .with_context(|| "sdk secp256k1 public key from bytes")?,
-                )),
+                address_spec: transaction::AddressSpec::Signature(
+                    address::SignatureAddressSpec::Secp256k1Eth(
+                        signature::secp256k1::PublicKey::from_bytes(
+                            k256::EncodedPoint::from(&key).as_bytes(),
+                        )
+                        .with_context(|| "sdk secp256k1 public key from bytes")?,
+                    ),
+                ),
                 nonce,
             }],
             fee: transaction::Fee {

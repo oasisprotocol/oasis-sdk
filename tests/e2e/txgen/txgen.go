@@ -45,6 +45,19 @@ func (at AccountType) String() string {
 	return [...]string{"ed25519", "secp256k1", "sr25519"}[at]
 }
 
+func sigspecForSigner(signer signature.Signer) types.SignatureAddressSpec {
+	switch pk := signer.Public().(type) {
+	case ed25519.PublicKey:
+		return types.NewSignatureAddressSpecEd25519(pk)
+	case secp256k1.PublicKey:
+		return types.NewSignatureAddressSpecSecp256k1Eth(pk)
+	case sr25519.PublicKey:
+		return types.NewSignatureAddressSpecSr25519(pk)
+	default:
+		panic(fmt.Sprintf("unsupported signer type: %T", pk))
+	}
+}
+
 // NewClient creates a new runtime client.
 func NewClient(clientNodeUnixSocketPath string, runtimeID common.Namespace) (client.RuntimeClient, error) {
 	conn, err := cmnGrpc.Dial("unix:"+clientNodeUnixSocketPath, grpc.WithInsecure())
@@ -96,11 +109,11 @@ func SignAndSubmitTx(ctx context.Context, rtc client.RuntimeClient, signer signa
 
 	// Get current nonce for the signer's account.
 	ac := accounts.NewV1(rtc)
-	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(sigspecForSigner(signer)))
 	if err != nil {
 		return nil, err
 	}
-	tx.AppendAuthSignature(signer.Public(), nonce)
+	tx.AppendAuthSignature(sigspecForSigner(signer), nonce)
 
 	// Estimate gas.
 	etx := EstimateGas(ctx, rtc, tx, extraGas)
@@ -149,7 +162,7 @@ func CreateAndFundAccount(ctx context.Context, rtc client.RuntimeClient, funder 
 		To     types.Address   `json:"to"`
 		Amount types.BaseUnits `json:"amount"`
 	}{
-		To:     types.NewAddress(sig.Public()),
+		To:     types.NewAddress(sigspecForSigner(sig)),
 		Amount: types.NewBaseUnits(*quantity.NewFromUint64(fundAmount), types.NativeDenomination),
 	})
 	if _, err := SignAndSubmitTx(ctx, rtc, funder, *tx, 0); err != nil {

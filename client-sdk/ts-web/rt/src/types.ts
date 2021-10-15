@@ -84,11 +84,25 @@ export interface AddressSpec {
     /**
      * For _signature_ authentication.
      */
-    signature?: PublicKey;
+    signature?: SignatureAddressSpec;
     /**
      * For _multisig_ authentication.
      */
     multisig?: MultisigConfig;
+}
+
+/**
+ * Information for signature-based authentication and public key-based address derivation.
+ */
+export interface SignatureAddressSpec {
+    /**
+     * Ed25519 address derivation compatible with the consensus layer.
+     */
+    ed25519?: Uint8Array;
+    /**
+     * Ethereum-compatible address derivation from Secp256k1 public keys.
+     */
+    secp256k1eth?: Uint8Array;
 }
 
 /**

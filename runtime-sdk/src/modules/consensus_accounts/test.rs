@@ -63,7 +63,10 @@ fn test_api_deposit_invalid_denomination() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
@@ -102,7 +105,10 @@ fn test_api_deposit() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
@@ -165,7 +171,10 @@ fn test_api_withdraw_invalid_denomination() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
@@ -204,7 +213,10 @@ fn test_api_withdraw_insufficient_balance() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
@@ -265,7 +277,10 @@ fn test_api_withdraw() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
@@ -408,7 +423,10 @@ fn test_prefetch() {
     let mut ctx = mock.create_ctx();
 
     let auth_info = transaction::AuthInfo {
-        signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+        signer_info: vec![transaction::SignerInfo::new_sigspec(
+            keys::alice::sigspec(),
+            0,
+        )],
         fee: transaction::Fee {
             amount: Default::default(),
             gas: 1000,

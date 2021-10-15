@@ -388,6 +388,31 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npm test
 
+  jest-ts-web-rt:
+    name: jest-ts-web-rt
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js LTS
+        uses: actions/setup-node@v2.4.1
+        with:
+          node-version: "14.x"
+          cache: npm
+          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
+
+      - name: Set up npm
+        run: npm install npm@7 -g
+
+      - name: Install dependencies and build
+        working-directory: client-sdk/ts-web
+        run: npm ci --foreground-scripts
+
+      - name: Run tests
+        working-directory: client-sdk/ts-web/rt
+        run: npm test
+
   ts-web-core-reflect:
     # NOTE: This name appears in GitHub's Checks API.
     name: ts-web-core-reflect

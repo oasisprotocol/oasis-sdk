@@ -55,13 +55,12 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	consAccounts := consensusAccounts.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
 
-	signer := testing.Alice.Signer
 	log.Info("alice depositing into runtime")
 	amount := types.NewBaseUnits(*quantity.NewFromUint64(50), consDenomination)
 	tb := consAccounts.Deposit(amount).
 		SetFeeConsensusMessages(1).
-		AppendAuthSignature(signer.Public(), 0)
-	_ = tb.AppendSign(ctx, signer)
+		AppendAuthSignature(testing.Alice.SigSpec, 0)
+	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
@@ -85,7 +84,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	log.Info("bob depositing into runtime")
 	tb = consAccounts.Deposit(amount).
 		SetFeeConsensusMessages(1).
-		AppendAuthSignature(testing.Bob.Signer.Public(), 0)
+		AppendAuthSignature(testing.Bob.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Bob.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
@@ -109,7 +108,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	log.Info("alice withdrawing")
 	tb = consAccounts.Withdraw(amount).
 		SetFeeConsensusMessages(1).
-		AppendAuthSignature(testing.Alice.Signer.Public(), 1)
+		AppendAuthSignature(testing.Alice.SigSpec, 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
@@ -133,7 +132,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	log.Info("charlie withdrawing")
 	tb = consAccounts.Withdraw(amount).
 		SetFeeConsensusMessages(1).
-		AppendAuthSignature(testing.Charlie.Signer.Public(), 0)
+		AppendAuthSignature(testing.Charlie.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Charlie.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		log.Info("charlie withdrawing failed (as expected)", "err", err)
@@ -144,7 +143,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	log.Info("alice withdrawing with invalid nonce")
 	tb = consAccounts.Withdraw(amount).
 		SetFeeConsensusMessages(1).
-		AppendAuthSignature(testing.Alice.Signer.Public(), 1)
+		AppendAuthSignature(testing.Alice.SigSpec, 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		log.Info("alice invalid nonce failed request failed (as expected)", "err", err)
@@ -180,7 +179,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	amount.Amount = *quantity.NewFromUint64(50)
 	tb = consAccounts.Deposit(amount).
 		SetFeeConsensusMessages(1).
-		AppendAuthSignature(testing.Dave.Signer.Public(), 0)
+		AppendAuthSignature(testing.Dave.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Dave.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		log.Info("dave depositing failed (as expected)", "err", err)

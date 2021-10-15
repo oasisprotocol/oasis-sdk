@@ -223,7 +223,10 @@ fn test_api_tx_transfer_disabled() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
@@ -250,7 +253,10 @@ fn test_prefetch() {
     let mut ctx = mock.create_ctx();
 
     let auth_info = transaction::AuthInfo {
-        signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+        signer_info: vec![transaction::SignerInfo::new_sigspec(
+            keys::alice::sigspec(),
+            0,
+        )],
         fee: transaction::Fee {
             amount: Default::default(),
             gas: 1000,
@@ -395,7 +401,10 @@ fn test_authenticate_tx() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
                 gas: 1000,
@@ -453,7 +462,10 @@ fn test_tx_transfer() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
@@ -522,7 +534,10 @@ fn test_fee_disbursement() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new(keys::alice::pk(), 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
             fee: transaction::Fee {
                 // Use an amount that does not split nicely among the good compute entities.
                 amount: BaseUnits::new(1_001, Denomination::NATIVE),

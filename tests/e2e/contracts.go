@@ -42,14 +42,14 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	signer := testing.Alice.Signer
 
 	// Upload hello contract code.
-	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(signer.Public()))
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
 		return fmt.Errorf("failed to get nonce: %w", err)
 	}
 
 	tb := ct.Upload(contracts.ABIOasisV1, contracts.Policy{Everyone: &struct{}{}}, helloContractCode).
 		SetFeeGas(1_000_000).
-		AppendAuthSignature(signer.Public(), nonce)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce)
 	_ = tb.AppendSign(ctx, signer)
 	var upload contracts.UploadResult
 	if err = tb.SubmitTx(ctx, &upload); err != nil {
@@ -67,7 +67,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		[]types.BaseUnits{},
 	).
 		SetFeeGas(1_000_000).
-		AppendAuthSignature(signer.Public(), nonce+1)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+1)
 	_ = tb.AppendSign(ctx, signer)
 	var instance contracts.InstantiateResult
 	if err = tb.SubmitTx(ctx, &instance); err != nil {
@@ -85,7 +85,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		[]types.BaseUnits{},
 	).
 		SetFeeGas(1_000_000).
-		AppendAuthSignature(signer.Public(), nonce+2)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+2)
 	_ = tb.AppendSign(ctx, signer)
 	var rawResult contracts.CallResult
 	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
@@ -106,7 +106,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	// Upload OAS20 contract code.
 	tb = ct.Upload(contracts.ABIOasisV1, contracts.Policy{Everyone: &struct{}{}}, oas20ContractCode).
 		SetFeeGas(1_000_000).
-		AppendAuthSignature(signer.Public(), nonce+3)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+3)
 	_ = tb.AppendSign(ctx, signer)
 	var uploadOas20 contracts.UploadResult
 	if err = tb.SubmitTx(ctx, &uploadOas20); err != nil {
@@ -125,7 +125,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 				Decimals: 2,
 				InitialBalances: []oas20.InitialBalance{
 					{
-						Address: types.NewAddress(signer.Public()),
+						Address: testing.Alice.Address,
 						Amount:  *quantity.NewFromUint64(10_000),
 					},
 				},
@@ -134,7 +134,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		[]types.BaseUnits{},
 	).
 		SetFeeGas(1_000_000).
-		AppendAuthSignature(signer.Public(), nonce+4)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+4)
 	_ = tb.AppendSign(ctx, signer)
 	var meta *client.TransactionMeta
 	var instanceOas20 contracts.InstantiateResult
@@ -181,7 +181,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		[]types.BaseUnits{},
 	).
 		SetFeeGas(1_000_000).
-		AppendAuthSignature(signer.Public(), nonce+5)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+5)
 	_ = tb.AppendSign(ctx, signer)
 	if meta, err = tb.SubmitTxMeta(ctx, &rawResult); err != nil {
 		return fmt.Errorf("failed to call OAS20 transfer: %w", err)
@@ -251,7 +251,7 @@ OUTER:
 		[]types.BaseUnits{},
 	).
 		SetFeeGas(1_000_000).
-		AppendAuthSignature(signer.Public(), nonce+6)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+6)
 	_ = tb.AppendSign(ctx, signer)
 	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
 		return fmt.Errorf("failed to call OAS20 send: %w", err)
@@ -270,7 +270,7 @@ OUTER:
 		[]types.BaseUnits{},
 	).
 		SetFeeGas(1_000_000).
-		AppendAuthSignature(signer.Public(), nonce+7)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+7)
 	_ = tb.AppendSign(ctx, signer)
 	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
 		return fmt.Errorf("failed to call hello contract: %w", err)
@@ -319,7 +319,7 @@ OUTER:
 					Decimals: 2,
 					InitialBalances: []oas20.InitialBalance{
 						{
-							Address: types.NewAddress(signer.Public()),
+							Address: testing.Alice.Address,
 							Amount:  *quantity.NewFromUint64(10_000),
 						},
 					},
@@ -331,7 +331,7 @@ OUTER:
 		},
 	).
 		SetFeeGas(1_000_000).
-		AppendAuthSignature(signer.Public(), nonce+8)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+8)
 	_ = tb.AppendSign(ctx, signer)
 	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
 		return fmt.Errorf("failed to call hello contract: %w", err)
@@ -391,7 +391,7 @@ OUTER:
 		[]types.BaseUnits{},
 	).
 		SetFeeGas(1_000_000).
-		AppendAuthSignature(signer.Public(), nonce+9)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+9)
 	_ = tb.AppendSign(ctx, signer)
 	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
 		return fmt.Errorf("failed to call hello contract: %w", err)

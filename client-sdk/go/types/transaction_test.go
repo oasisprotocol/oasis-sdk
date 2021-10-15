@@ -47,8 +47,8 @@ func TestTransactionSigning(t *testing.T) {
 	signer2 := ed25519.WrapSigner(memorySigner.NewTestSigner("oasis-runtime-sdk/test-keys: tx signing 2"))
 
 	tx := NewTransaction(nil, "hello.World", nil)
-	tx.AppendAuthSignature(signer.Public(), 42)
-	tx.AppendAuthSignature(signer2.Public(), 43)
+	tx.AppendAuthSignature(NewSignatureAddressSpecEd25519(signer.Public().(ed25519.PublicKey)), 42)
+	tx.AppendAuthSignature(NewSignatureAddressSpecEd25519(signer2.Public().(ed25519.PublicKey)), 43)
 	tx.AppendAuthMultisig(&MultisigConfig{
 		Signers: []MultisigSigner{
 			{PublicKey: PublicKey{PublicKey: signer.Public()}, Weight: 1},

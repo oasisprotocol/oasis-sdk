@@ -15,22 +15,27 @@ import (
 type TestKey struct {
 	Signer  signature.Signer
 	Address types.Address
+	SigSpec types.SignatureAddressSpec
 }
 
 func newEd25519TestKey(seed string) TestKey {
 	signer := ed25519.WrapSigner(memorySigner.NewTestSigner(seed))
+	sigspec := types.NewSignatureAddressSpecEd25519(signer.Public().(ed25519.PublicKey))
 	return TestKey{
 		Signer:  signer,
-		Address: types.NewAddress(signer.Public()),
+		Address: types.NewAddress(sigspec),
+		SigSpec: sigspec,
 	}
 }
 
 func newSecp256k1TestKey(seed string) TestKey {
 	pk := sha512.Sum512_256([]byte(seed))
 	signer := secp256k1.NewSigner(pk[:])
+	sigspec := types.NewSignatureAddressSpecSecp256k1Eth(signer.Public().(secp256k1.PublicKey))
 	return TestKey{
 		Signer:  signer,
-		Address: types.NewAddress(signer.Public()),
+		Address: types.NewAddress(sigspec),
+		SigSpec: sigspec,
 	}
 }
 

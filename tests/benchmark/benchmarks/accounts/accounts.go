@@ -11,6 +11,7 @@ import (
 	memorySigner "github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/memory"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -23,6 +24,10 @@ var (
 	mintAmount     = types.NewBaseUnits(*quantity.NewFromUint64(100_0000_000), types.NativeDenomination)
 	transferAmount = types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)
 )
+
+func sigspecForSigner(signer signature.Signer) types.SignatureAddressSpec {
+	return types.NewSignatureAddressSpecEd25519(signer.Public().(ed25519.PublicKey))
+}
 
 type benchAccountsTransfers struct {
 	nonce uint64
@@ -39,11 +44,12 @@ func (bench *benchAccountsTransfers) Name() string {
 
 func (bench *benchAccountsTransfers) Prepare(ctx context.Context, state *api.State) error {
 	signer := ed25519.WrapSigner(memorySigner.NewTestSigner(fmt.Sprintf("oasis-runtime-sdk/benchmarking/%d", state.Id)))
-	to := types.NewAddress(ed25519.WrapSigner(memorySigner.NewTestSigner(fmt.Sprintf("oasis-runtime-sdk/benchmarking/to/%d", state.Id))).Public())
+	signerTo := ed25519.WrapSigner(memorySigner.NewTestSigner(fmt.Sprintf("oasis-runtime-sdk/benchmarking/to/%d", state.Id)))
+	to := types.NewAddress(sigspecForSigner(signerTo))
 	state.State = &benchState{
 		account: &testing.TestKey{
 			Signer:  signer,
-			Address: types.NewAddress(signer.Public()),
+			Address: types.NewAddress(sigspecForSigner(signer)),
 		},
 		to: to,
 	}
@@ -66,7 +72,7 @@ func (bench *benchAccountsTransfers) BulkPrepare(ctx context.Context, states []*
 			rtc := runtime.NewV1(state.Client)
 			state.Logger.Info("minting")
 			tb := rtc.AccountsMint(mintAmount).
-				AppendAuthSignature(benchState.account.Signer.Public(), 0)
+				AppendAuthSignature(sigspecForSigner(benchState.account.Signer), 0)
 			_ = tb.AppendSign(ctx, benchState.account.Signer)
 			if err := tb.SubmitTx(ctx, nil); err != nil {
 				state.Logger.Error("failed to submit transaction",
@@ -95,7 +101,7 @@ func (bench *benchAccountsTransfers) Scenario(ctx context.Context, state *api.St
 	benchState := (state.State).(*benchState)
 	rtc := runtime.NewV1(state.Client)
 	tb := rtc.AccountsTransfer(benchState.to, transferAmount).
-		AppendAuthSignature(benchState.account.Signer.Public(), bench.nonce)
+		AppendAuthSignature(sigspecForSigner(benchState.account.Signer), bench.nonce)
 	_ = tb.AppendSign(ctx, benchState.account.Signer)
 	if err := tb.SubmitTx(ctx, nil); err != nil {
 		return 0, err

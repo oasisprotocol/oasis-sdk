@@ -7,7 +7,10 @@ use crate::{
         multisig,
         signature::{self, PublicKey, Signature},
     },
-    types::{address::Address, token},
+    types::{
+        address::{Address, SignatureAddressSpec},
+        token,
+    },
 };
 
 // Re-export TransactionWeight type.
@@ -165,12 +168,13 @@ impl Fee {
             .unwrap_or_default()
     }
 }
+
 /// Common information that specifies an address as well as how to authenticate.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub enum AddressSpec {
     /// For _signature_ authentication.
     #[cbor(rename = "signature")]
-    Signature(PublicKey),
+    Signature(SignatureAddressSpec),
     /// For _multisig_ authentication.
     #[cbor(rename = "multisig")]
     Multisig(multisig::Config),
@@ -184,7 +188,7 @@ impl AddressSpec {
     /// Derives the address.
     pub fn address(&self) -> Address {
         match self {
-            AddressSpec::Signature(public_key) => Address::from_pk(public_key),
+            AddressSpec::Signature(spec) => Address::from_sigspec(spec),
             AddressSpec::Multisig(config) => Address::from_multisig(config.clone()),
             AddressSpec::Internal(address) => *address,
         }
@@ -194,8 +198,8 @@ impl AddressSpec {
     /// Returns vectors of public keys and signatures for batch verification of included signatures.
     pub fn batch(&self, auth_proof: &AuthProof) -> Result<(Vec<PublicKey>, Vec<Signature>), Error> {
         match (self, auth_proof) {
-            (AddressSpec::Signature(public_key), AuthProof::Signature(signature)) => {
-                Ok((vec![public_key.clone()], vec![signature.clone()]))
+            (AddressSpec::Signature(spec), AuthProof::Signature(signature)) => {
+                Ok((vec![spec.public_key()], vec![signature.clone()]))
             }
             (AddressSpec::Multisig(config), AuthProof::Multisig(signature_set)) => Ok(config
                 .batch(signature_set)
@@ -228,10 +232,10 @@ pub struct SignerInfo {
 }
 
 impl SignerInfo {
-    /// Create a new signer info from public key and nonce.
-    pub fn new(public_key: PublicKey, nonce: u64) -> Self {
+    /// Create a new signer info from a signature address specification and nonce.
+    pub fn new_sigspec(spec: SignatureAddressSpec, nonce: u64) -> Self {
         Self {
-            address_spec: AddressSpec::Signature(public_key),
+            address_spec: AddressSpec::Signature(spec),
             nonce,
         }
     }

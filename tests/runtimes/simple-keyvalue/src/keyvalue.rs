@@ -6,7 +6,6 @@ use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
     core::common::crypto::hash::Hash,
-    crypto::signature,
     error::RuntimeError,
     keymanager::KeyPairId,
     module::{CallResult, Module as _},
@@ -14,7 +13,7 @@ use oasis_runtime_sdk::{
         core,
         core::{Error as CoreError, Module as Core, API as _},
     },
-    types::transaction,
+    types::{address, transaction},
 };
 
 pub mod types;
@@ -126,7 +125,7 @@ impl sdk::module::AuthHandler for Module {
                     auth_info: transaction::AuthInfo {
                         signer_info: vec![transaction::SignerInfo {
                             address_spec: transaction::AddressSpec::Signature(
-                                signature::PublicKey::Ed25519(special_greeting.from),
+                                address::SignatureAddressSpec::Ed25519(special_greeting.from),
                             ),
                             nonce: params.nonce,
                         }],

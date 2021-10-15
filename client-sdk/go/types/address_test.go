@@ -7,32 +7,25 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 )
 
 func TestAddressEd25519(t *testing.T) {
 	require := require.New(t)
 
 	pk := ed25519.NewPublicKey("utrdHlX///////////////////////////////////8=")
-	addr := NewAddress(pk)
+	addr := NewAddress(NewSignatureAddressSpecEd25519(pk))
 
 	require.EqualValues("oasis1qryqqccycvckcxp453tflalujvlf78xymcdqw4vz", addr.String())
 }
 
-func TestAddressSecp256k1(t *testing.T) {
-	/*
-			#[test]
-		    fn test_address_secp256k1() {
-		        let pk = PublicKey::Secp256k1(
-		            "02badadd1e55ffffffffffffffffffffffffffffffffffffffffffffffffffffff".into(),
-		        );
+func TestAddressSecp256k1Eth(t *testing.T) {
+	require := require.New(t)
 
-		        let addr = Address::from_pk(&pk);
-		        assert_eq!(
-		            addr.to_bech32(),
-		            "oasis1qr4cd0sr32m3xcez37ym7rmjp5g88muu8sdfx8u3"
-		        );
-		    }
-	*/
+	pk := secp256k1.NewPublicKey("Arra3R5V////////////////////////////////////")
+	addr := NewAddress(NewSignatureAddressSpecSecp256k1Eth(pk))
+
+	require.EqualValues("oasis1qzd7akz24n6fxfhdhtk977s5857h3c6gf5583mcg", addr.String())
 }
 
 func TestAddressMultisig(t *testing.T) {

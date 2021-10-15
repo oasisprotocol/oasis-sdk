@@ -2,11 +2,8 @@ package secp256k1
 
 import (
 	"encoding/base64"
-	"encoding/json"
 
 	"github.com/btcsuite/btcd/btcec"
-
-	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
 	sdkSignature "github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 )
@@ -14,24 +11,16 @@ import (
 // PublicKey is a Secp256k1 public key.
 type PublicKey btcec.PublicKey
 
-type serializedPublicKey struct {
-	Secp256k1 []byte `json:"secp256k1"`
-}
-
-func (pk PublicKey) MarshalCBOR() ([]byte, error) {
-	bpk := btcec.PublicKey(pk)
-	return cbor.Marshal(serializedPublicKey{Secp256k1: bpk.SerializeCompressed()}), nil
-}
-
-func (pk PublicKey) MarshalJSON() ([]byte, error) {
-	bpk := btcec.PublicKey(pk)
-	return json.Marshal(serializedPublicKey{Secp256k1: bpk.SerializeCompressed()})
-}
-
 // MarshalBinary encodes a public key into binary form.
 func (pk PublicKey) MarshalBinary() ([]byte, error) {
 	bpk := btcec.PublicKey(pk)
 	return bpk.SerializeCompressed(), nil
+}
+
+// MarshalBinaryUncompressedUntagged encodes a public key into an uncompressed untagged binary form.
+func (pk PublicKey) MarshalBinaryUncompressedUntagged() ([]byte, error) {
+	bpk := btcec.PublicKey(pk)
+	return bpk.SerializeUncompressed()[1:], nil
 }
 
 // UnmarshalBinary decodes a binary marshaled public key.
@@ -88,4 +77,12 @@ func (pk PublicKey) Verify(context, message, signature []byte) bool {
 	}
 	bpk := btcec.PublicKey(pk)
 	return sig.Verify(data, &bpk)
+}
+
+// NewPublicKey creates a new public key from the given Base64 representation or panics.
+func NewPublicKey(text string) (pk PublicKey) {
+	if err := pk.UnmarshalText([]byte(text)); err != nil {
+		panic(err)
+	}
+	return
 }
