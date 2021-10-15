@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -62,33 +61,6 @@ func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer sig
 		return nil, fmt.Errorf("failed to unmarshal evmCall result: %w", err)
 	}
 	return out, nil
-}
-
-func evmDeposit(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, to []byte, amount types.BaseUnits) error {
-	tx := e.Deposit(to, amount).GetTransaction()
-	_, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, 0)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func evmWithdraw(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, to types.Address, amount types.BaseUnits) error {
-	tx := e.Withdraw(to, amount).GetTransaction()
-	_, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, 0)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func evmU256to64(u256 []byte) uint64 {
-	for i := 0; i < 32-8; i++ {
-		if u256[i] != 0 {
-			panic("U256 value too big to fit into uint64")
-		}
-	}
-	return binary.BigEndian.Uint64(u256[32-8 : 32])
 }
 
 // This wraps the given EVM bytecode in an unpacker, suitable for
@@ -153,9 +125,8 @@ func evmPack(bytecode []byte) []byte {
 }
 
 // SimpleEVMDepositWithdrawTest tests deposits and withdrawals.
-func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
+func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
-	signer := testing.Dave.Signer
 	e := evm.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
 
@@ -177,88 +148,13 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("depositing 10M tokens into Dave's EVM account")
-	if err = evmDeposit(ctx, rtc, e, signer, daveEVMAddr, types.NewBaseUnits(*quantity.NewFromUint64(10000000), types.NativeDenomination)); err != nil {
-		return err
-	}
-
-	log.Info("re-checking Dave's account balance")
-	b, err = ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
-	if err != nil {
-		return err
-	}
-	if q, ok := b.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(90000000)) != 0 {
-			return fmt.Errorf("Dave's account balance is wrong (expected 90000000, got %s)", q.String()) //nolint: stylecheck
-		}
-	} else {
-		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
-	}
-
 	log.Info("checking Dave's EVM account balance")
 	evmBal, err := e.Balance(ctx, daveEVMAddr)
 	if err != nil {
 		return err
 	}
-	evmBal64 := evmU256to64(evmBal)
-	if evmBal64 != 10000000 {
-		return fmt.Errorf("Dave's EVM account balance is wrong (expected 10000000, got %d)", evmBal64) //nolint: stylecheck
-	}
-
-	log.Info("withdrawing one token from Dave's EVM account")
-	if err = evmWithdraw(ctx, rtc, e, signer, testing.Dave.Address, types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)); err != nil {
-		return err
-	}
-
-	log.Info("re-checking Dave's account balance")
-	b, err = ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
-	if err != nil {
-		return err
-	}
-	if q, ok := b.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(90000001)) != 0 {
-			return fmt.Errorf("Dave's account balance is wrong (expected 90000001, got %s)", q.String()) //nolint: stylecheck
-		}
-	} else {
-		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
-	}
-
-	log.Info("re-checking Dave's EVM account balance")
-	evmBal, err = e.Balance(ctx, daveEVMAddr)
-	if err != nil {
-		return err
-	}
-	evmBal64 = evmU256to64(evmBal)
-	if evmBal64 != 9999999 {
-		return fmt.Errorf("Dave's EVM account balance is wrong (expected 9999999, got %d)", evmBal64) //nolint: stylecheck
-	}
-
-	log.Info("depositing 89.9M tokens into Dave's EVM account")
-	if err = evmDeposit(ctx, rtc, e, signer, daveEVMAddr, types.NewBaseUnits(*quantity.NewFromUint64(89900000), types.NativeDenomination)); err != nil {
-		return err
-	}
-
-	log.Info("re-checking Dave's account balance")
-	b, err = ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
-	if err != nil {
-		return err
-	}
-	if q, ok := b.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(100001)) != 0 {
-			return fmt.Errorf("Dave's account balance is wrong (expected 100001, got %s)", q.String()) //nolint: stylecheck
-		}
-	} else {
-		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
-	}
-
-	log.Info("re-checking Dave's EVM account balance")
-	evmBal, err = e.Balance(ctx, daveEVMAddr)
-	if err != nil {
-		return err
-	}
-	evmBal64 = evmU256to64(evmBal)
-	if evmBal64 != 99899999 {
-		return fmt.Errorf("Dave's EVM account balance is wrong (expected 99899999, got %d)", evmBal64) //nolint: stylecheck
+	if evmBal.Cmp(quantity.NewFromUint64(100000000)) != 0 {
+		return fmt.Errorf("Dave's EVM account balance is wrong (expected 100000000, got %s)", evmBal) //nolint: stylecheck
 	}
 
 	log.Info("checking Alice's account balance")
@@ -274,9 +170,14 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("depositing 10 tokens into Dave's EVM account from Alice's SDK account")
-	if err = evmDeposit(ctx, rtc, e, testing.Alice.Signer, daveEVMAddr, types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination)); err != nil {
-		return err
+	log.Info("transferring 10 tokens into Dave's account from Alice's account")
+	tx := ac.Transfer(
+		testing.Dave.Address,
+		types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination),
+	)
+	_, err = txgen.SignAndSubmitTx(ctx, rtc, testing.Alice.Signer, *tx.GetTransaction(), 0)
+	if err != nil {
+		return fmt.Errorf("failed to transfer from alice to dave: %w", err)
 	}
 
 	log.Info("re-checking Alice's account balance")
@@ -298,8 +199,8 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 		return err
 	}
 	if q, ok := b.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(100001)) != 0 {
-			return fmt.Errorf("Dave's account balance is wrong (expected 100001, got %s)", q.String()) //nolint: stylecheck
+		if q.Cmp(quantity.NewFromUint64(100000010)) != 0 {
+			return fmt.Errorf("Dave's account balance is wrong (expected 100000010, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
 		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
@@ -310,9 +211,8 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 	if err != nil {
 		return err
 	}
-	evmBal64 = evmU256to64(evmBal)
-	if evmBal64 != 99900009 {
-		return fmt.Errorf("Dave's EVM account balance is wrong (expected 99900009, got %d)", evmBal64) //nolint: stylecheck
+	if evmBal.Cmp(quantity.NewFromUint64(100000010)) != 0 {
+		return fmt.Errorf("Dave's EVM account balance is wrong (expected 100000010, got %s)", evmBal) //nolint: stylecheck
 	}
 
 	return nil
@@ -390,9 +290,8 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	if err != nil {
 		return err
 	}
-	evmBal64 := evmU256to64(evmBal)
-	if evmBal64 != 1 {
-		return fmt.Errorf("contract's EVM account balance is wrong (expected 1, got %d)", evmBal64)
+	if evmBal.Cmp(quantity.NewFromUint64(1)) != 0 {
+		return fmt.Errorf("contract's EVM account balance is wrong (expected 1, got %s)", evmBal)
 	}
 
 	// Simulate the call first.
@@ -445,9 +344,8 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	if err != nil {
 		return err
 	}
-	evmBal64 = evmU256to64(evmBal)
-	if evmBal64 != 2 {
-		return fmt.Errorf("contract's EVM account balance is wrong (expected 2, got %d)", evmBal64)
+	if evmBal.Cmp(quantity.NewFromUint64(2)) != 0 {
+		return fmt.Errorf("contract's EVM account balance is wrong (expected 2, got %s)", evmBal)
 	}
 
 	return nil

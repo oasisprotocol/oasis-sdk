@@ -143,6 +143,11 @@ func NewAddress(spec SignatureAddressSpec) (a Address) {
 	return (Address)(address.NewAddress(ctx, pkData))
 }
 
+// NewAddressRaw creates a new address from passed address context and data.
+func NewAddressRaw(ctx address.Context, data []byte) Address {
+	return (Address)(address.NewAddress(ctx, data))
+}
+
 // NewAddressForModule creates a new address for a specific module and raw kind.
 func NewAddressForModule(module string, kind []byte) Address {
 	moduleBytes := []byte(module)

@@ -2001,7 +2001,6 @@ dependencies = [
  "num",
  "oasis-cbor",
  "oasis-runtime-sdk",
- "once_cell",
  "primitive-types",
  "ripemd160",
  "rlp",

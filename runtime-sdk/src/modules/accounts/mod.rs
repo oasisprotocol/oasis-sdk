@@ -147,8 +147,14 @@ pub trait API {
     fn burn<C: Context>(ctx: &mut C, from: Address, amount: &token::BaseUnits)
         -> Result<(), Error>;
 
+    /// Sets an account's nonce.
+    fn set_nonce<S: storage::Store>(state: S, address: Address, nonce: u64);
+
     /// Fetch an account's current nonce.
     fn get_nonce<S: storage::Store>(state: S, address: Address) -> Result<u64, Error>;
+
+    /// Sets an account's balance of the given denomination.
+    fn set_balance<S: storage::Store>(state: S, address: Address, amount: &token::BaseUnits);
 
     /// Fetch an account's balance of the given denomination.
     fn get_balance<S: storage::Store>(
@@ -432,11 +438,27 @@ impl API for Module {
         Ok(())
     }
 
+    fn set_nonce<S: storage::Store>(state: S, address: Address, nonce: u64) {
+        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let mut accounts =
+            storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
+        let mut account: types::Account = accounts.get(&address).unwrap_or_default();
+        account.nonce = nonce;
+        accounts.insert(&address, account);
+    }
+
     fn get_nonce<S: storage::Store>(state: S, address: Address) -> Result<u64, Error> {
         let store = storage::PrefixStore::new(state, &MODULE_NAME);
         let accounts = storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
         let account: types::Account = accounts.get(&address).unwrap_or_default();
         Ok(account.nonce)
+    }
+
+    fn set_balance<S: storage::Store>(state: S, address: Address, amount: &token::BaseUnits) {
+        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let balances = storage::PrefixStore::new(store, &state::BALANCES);
+        let mut account = storage::TypedStore::new(storage::PrefixStore::new(balances, &address));
+        account.insert(amount.denomination(), amount.amount());
     }
 
     fn get_balance<S: storage::Store>(

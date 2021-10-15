@@ -1,16 +1,16 @@
 //! EVM backend.
-use std::cell::RefCell;
+use std::{cell::RefCell, marker::PhantomData};
 
 use evm::backend::{Apply, ApplyBackend, Backend as EVMBackend, Basic, Log};
 
 use oasis_runtime_sdk::{
-    core::common::crypto::hash::Hash,
-    storage::{self, Store as _},
+    core::common::crypto::hash::Hash, modules::accounts::API as _, types::token, Context,
 };
 
 use crate::{
     state,
     types::{H160, H256, U256},
+    Config,
 };
 
 /// Information required by the evm crate.
@@ -18,33 +18,26 @@ use crate::{
 pub struct Vicinity {
     pub gas_price: U256,
     pub origin: H160,
-    pub chain_id: U256,
-}
-
-/// Details specific to Ethereum accounts.  Information managed by SDK modules
-/// are held by the respective modules (e.g. core).
-#[derive(Clone, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
-pub struct Account {
-    pub nonce: U256,
-    pub balance: U256,
 }
 
 /// Backend for the evm crate that enables the use of our storage.
-pub struct Backend<'c, C: oasis_runtime_sdk::Context> {
+pub struct Backend<'ctx, C: Context, Cfg: Config> {
     vicinity: Vicinity,
-    ctx: RefCell<&'c mut C>,
+    ctx: RefCell<&'ctx mut C>,
+    _cfg: PhantomData<Cfg>,
 }
 
-impl<'c, C: oasis_runtime_sdk::Context> Backend<'c, C> {
-    pub fn new(vicinity: Vicinity, ctx: &'c mut C) -> Self {
+impl<'ctx, C: Context, Cfg: Config> Backend<'ctx, C, Cfg> {
+    pub fn new(ctx: &'ctx mut C, vicinity: Vicinity) -> Self {
         Self {
             vicinity,
             ctx: RefCell::new(ctx),
+            _cfg: PhantomData,
         }
     }
 }
 
-impl<'c, C: oasis_runtime_sdk::Context> EVMBackend for Backend<'c, C> {
+impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
     fn gas_price(&self) -> primitive_types::U256 {
         self.vicinity.gas_price.into()
     }
@@ -53,11 +46,7 @@ impl<'c, C: oasis_runtime_sdk::Context> EVMBackend for Backend<'c, C> {
     }
     fn block_hash(&self, number: primitive_types::U256) -> primitive_types::H256 {
         let mut ctx = self.ctx.borrow_mut();
-        let state = ctx.runtime_state();
-
-        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-        let hashes = storage::PrefixStore::new(store, &state::BLOCK_HASHES);
-        let block_hashes = storage::TypedStore::new(hashes);
+        let block_hashes = state::block_hashes(ctx.runtime_state());
 
         if let Some(hash) = block_hashes.get::<_, Hash>(&number.as_u64().to_be_bytes()) {
             primitive_types::H256::from_slice(hash.as_ref())
@@ -81,7 +70,7 @@ impl<'c, C: oasis_runtime_sdk::Context> EVMBackend for Backend<'c, C> {
         primitive_types::U256::zero()
     }
     fn chain_id(&self) -> primitive_types::U256 {
-        self.vicinity.chain_id.into()
+        Cfg::CHAIN_ID.into()
     }
     fn exists(&self, address: primitive_types::H160) -> bool {
         let acct = self.basic(address);
@@ -91,32 +80,28 @@ impl<'c, C: oasis_runtime_sdk::Context> EVMBackend for Backend<'c, C> {
     }
 
     fn basic(&self, address: primitive_types::H160) -> Basic {
-        let addr: H160 = address.into();
-
         let mut ctx = self.ctx.borrow_mut();
-        let state = ctx.runtime_state();
+        let mut state = ctx.runtime_state();
 
-        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-        let accounts = storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
-
-        let a: Account = accounts.get(&addr).unwrap_or_default();
+        // Derive SDK account address from the Ethereum address.
+        let address = Cfg::map_address(address);
+        // Fetch balance and nonce from SDK accounts. Note that these can never fail.
+        let balance =
+            Cfg::Accounts::get_balance(&mut state, address, Cfg::TOKEN_DENOMINATION).unwrap();
+        let nonce = Cfg::Accounts::get_nonce(&mut state, address).unwrap();
 
         Basic {
-            nonce: a.nonce.into(),
-            balance: a.balance.into(),
+            nonce: nonce.into(),
+            balance: balance.into(),
         }
     }
 
     fn code(&self, address: primitive_types::H160) -> Vec<u8> {
-        let addr: H160 = address.into();
+        let address: H160 = address.into();
 
         let mut ctx = self.ctx.borrow_mut();
-        let state = ctx.runtime_state();
-
-        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-        let codes = storage::TypedStore::new(storage::PrefixStore::new(store, &state::CODES));
-
-        codes.get(&addr).unwrap_or_default()
+        let store = state::codes(ctx.runtime_state());
+        store.get(&address).unwrap_or_default()
     }
 
     fn storage(
@@ -124,38 +109,36 @@ impl<'c, C: oasis_runtime_sdk::Context> EVMBackend for Backend<'c, C> {
         address: primitive_types::H160,
         index: primitive_types::H256,
     ) -> primitive_types::H256 {
-        let addr: H160 = address.into();
+        let address: H160 = address.into();
         let idx: H256 = index.into();
 
         let mut ctx = self.ctx.borrow_mut();
-        let state = ctx.runtime_state();
-
-        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-        let storages = storage::PrefixStore::new(store, &state::STORAGES);
-        let s = storage::TypedStore::new(storage::HashedStore::<_, blake3::Hasher>::new(
-            storage::PrefixStore::new(storages, &addr),
-        ));
-
-        let res: H256 = s.get(&idx).unwrap_or_default();
+        let store = state::storage(ctx.runtime_state(), &address);
+        let res: H256 = store.get(&idx).unwrap_or_default();
         res.into()
     }
 
     fn original_storage(
         &self,
-        address: primitive_types::H160,
-        index: primitive_types::H256,
+        _address: primitive_types::H160,
+        _index: primitive_types::H256,
     ) -> Option<primitive_types::H256> {
-        Some(self.storage(address, index))
+        None
     }
 }
 
-impl<'c, C: oasis_runtime_sdk::Context> ApplyBackend for Backend<'c, C> {
-    fn apply<A, I, L>(&mut self, values: A, logs: L, delete_empty: bool)
+impl<'c, C: Context, Cfg: Config> ApplyBackend for Backend<'c, C, Cfg> {
+    fn apply<A, I, L>(&mut self, values: A, logs: L, _delete_empty: bool)
     where
         A: IntoIterator<Item = Apply<I>>,
         I: IntoIterator<Item = (primitive_types::H256, primitive_types::H256)>,
         L: IntoIterator<Item = Log>,
     {
+        // Keep track of the total supply change as a paranoid sanity check as it seems to be cheap
+        // enough to do (all balances should already be in the storage cache).
+        let mut total_supply_add = 0u128;
+        let mut total_supply_sub = 0u128;
+
         for apply in values {
             match apply {
                 Apply::Modify {
@@ -166,84 +149,69 @@ impl<'c, C: oasis_runtime_sdk::Context> ApplyBackend for Backend<'c, C> {
                     reset_storage,
                 } => {
                     let addr: H160 = address.into();
-                    let is_empty = {
+                    // Derive SDK account address from the Ethereum address.
+                    let address = Cfg::map_address(address);
+
+                    // Update account balance and nonce.
+                    let mut state = self.ctx.get_mut().runtime_state();
+                    let amount = basic.balance.as_u128();
+                    let old_amount =
+                        Cfg::Accounts::get_balance(&mut state, address, Cfg::TOKEN_DENOMINATION)
+                            .unwrap();
+                    if amount > old_amount {
+                        total_supply_add =
+                            total_supply_add.checked_add(amount - old_amount).unwrap();
+                    } else {
+                        total_supply_sub =
+                            total_supply_sub.checked_add(old_amount - amount).unwrap();
+                    }
+                    let amount = token::BaseUnits::new(amount, Cfg::TOKEN_DENOMINATION);
+                    // Setting the balance like this is dangerous, but we have a sanity check below
+                    // to ensure that this never results in any tokens being either minted or
+                    // burned.
+                    Cfg::Accounts::set_balance(&mut state, address, &amount);
+                    Cfg::Accounts::set_nonce(state, address, basic.nonce.as_u64());
+
+                    // Handle code updates.
+                    if let Some(code) = code {
                         let state = self.ctx.get_mut().runtime_state();
-                        let a_store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-                        let mut accounts = storage::TypedStore::new(storage::PrefixStore::new(
-                            a_store,
-                            &state::ACCOUNTS,
-                        ));
-                        let mut account: Account = accounts.get(&addr).unwrap_or_default();
+                        let mut store = state::codes(state);
+                        store.insert(&addr, code);
+                    }
 
-                        account.balance = basic.balance.into();
-                        account.nonce = basic.nonce.into();
+                    // Handle storage reset.
+                    if reset_storage {
+                        // NOTE: Storage cannot be efficiently reset as this would require iterating
+                        //       over all of the storage keys. We could add this if remove_prefix
+                        //       existed.
+                    }
 
-                        accounts.insert(&addr, account.clone());
+                    // Handle storage updates.
+                    for (index, value) in storage {
+                        let idx: H256 = index.into();
+                        let val: H256 = value.into();
 
-                        if let Some(code) = code {
-                            let state = self.ctx.get_mut().runtime_state();
-                            let c_store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-                            let mut codes = storage::TypedStore::new(storage::PrefixStore::new(
-                                c_store,
-                                &state::CODES,
-                            ));
-                            codes.insert(&addr, code);
+                        let mut store = state::storage(self.ctx.get_mut().runtime_state(), &addr);
+                        if value == primitive_types::H256::default() {
+                            store.remove(&idx);
+                        } else {
+                            store.insert(&idx, val);
                         }
-
-                        if reset_storage {
-                            let state = self.ctx.get_mut().runtime_state();
-                            let s_store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-                            let mut storages = storage::PrefixStore::new(s_store, &state::STORAGES);
-                            storages.remove(addr.as_bytes());
-                        }
-
-                        for (index, value) in storage {
-                            let idx: H256 = index.into();
-                            let val: H256 = value.into();
-
-                            let state = self.ctx.get_mut().runtime_state();
-                            let s_store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-                            let storages = storage::PrefixStore::new(s_store, &state::STORAGES);
-                            let mut s = storage::TypedStore::new(storage::HashedStore::<
-                                _,
-                                blake3::Hasher,
-                            >::new(
-                                storage::PrefixStore::new(storages, &addr),
-                            ));
-                            if value == primitive_types::H256::default() {
-                                s.remove(&idx);
-                            } else {
-                                s.insert(&idx, val);
-                            }
-                        }
-
-                        account.balance == primitive_types::U256::zero().into()
-                            && account.nonce == primitive_types::U256::zero().into()
-                    };
-
-                    if is_empty && delete_empty {
-                        let state = self.ctx.get_mut().runtime_state();
-                        let a2_store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-                        let mut accounts = storage::TypedStore::new(storage::PrefixStore::new(
-                            a2_store,
-                            &state::ACCOUNTS,
-                        ));
-
-                        accounts.remove(&addr);
                     }
                 }
-                Apply::Delete { address } => {
-                    let addr: H160 = address.into();
-                    let state = self.ctx.get_mut().runtime_state();
-                    let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-                    let mut accounts = storage::TypedStore::new(storage::PrefixStore::new(
-                        store,
-                        &state::ACCOUNTS,
-                    ));
-
-                    accounts.remove(&addr);
+                Apply::Delete { .. } => {
+                    // Accounts cannot be deleted.
                 }
             }
+        }
+
+        if total_supply_add != total_supply_sub {
+            // NOTE: This should never happen and if it does it would cause an invariant violation
+            //       so we better abort to avoid corrupting state.
+            panic!(
+                "evm execution would lead to invariant violation ({} != {})",
+                total_supply_add, total_supply_sub
+            );
         }
 
         // Emit logs as events.

@@ -24,10 +24,13 @@ pub trait Store {
 
 /// A key-value store that supports the commit operation.
 pub trait NestedStore: Store {
+    /// Type of the inner store.
+    type Inner;
+
     /// Commit any changes to the underlying store.
     ///
     /// If this method is not called the changes may be discarded by the store.
-    fn commit(self);
+    fn commit(self) -> Self::Inner;
 }
 
 impl<S: Store + ?Sized> Store for &mut S {
