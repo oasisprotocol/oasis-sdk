@@ -19,7 +19,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
         let _ = instance.link_function(
             "storage",
             "get",
-            |ctx, (store, key): (u32, (u32, u32))| -> Result<(u32, u32), wasm3::Trap> {
+            |ctx, (store, key): (u32, (u32, u32))| -> Result<u32, wasm3::Trap> {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
 
@@ -49,7 +49,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
 
                 let value = match value {
                     Some(value) => value,
-                    None => return Ok((0, 0)),
+                    None => return Ok(0),
                 };
 
                 // Charge gas for size of value.
@@ -68,7 +68,8 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 // with reentrancy as attempting to re-enter one of the linked functions will fail.
                 let value_region = Self::allocate_and_copy(ctx.instance, &value)?;
 
-                Ok(value_region.to_arg())
+                // Return a pointer to the region.
+                Self::allocate_region(ctx.instance, value_region).map_err(|e| e.into())
             },
         );
 

@@ -79,12 +79,18 @@ impl<Cfg: Config> OasisV1<Cfg> {
             //   fn(ctx: &contract_sdk::ExecutionContext, request: &[u8]) -> contract_sdk::ExecutionResult
             //
             let func = instance
-                .find_function::<((u32, u32), (u32, u32)), (u32, u32)>(function_name)
+                .find_function::<((u32, u32), (u32, u32)), u32>(function_name)
                 .map_err(|err| Error::ExecutionFailed(err.into()))?;
             let result = func
                 .call_with_context(ctx, (context_dst.to_arg(), request_dst.to_arg()))
                 .map_err(|err| Error::ExecutionFailed(err.into()))?;
-            memory::Region::from_arg(result)
+            instance
+                .runtime()
+                .try_with_memory(|memory| -> Result<_, Error> {
+                    memory::Region::deref(&memory, result)
+                        .map_err(|err| Error::ExecutionFailed(err.into()))
+                })
+                .unwrap()?
         };
 
         // Enforce maximum result size limit before attempting to deserialize it.

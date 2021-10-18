@@ -102,7 +102,7 @@ where
     (ctx, request)
 }
 
-fn handle_result<R, E>(ctx: Context, result: Result<Option<R>, E>) -> HostRegion
+fn handle_result<R, E>(ctx: Context, result: Result<Option<R>, E>) -> *const HostRegion
 where
     R: cbor::Encode,
     E: error::Error,
@@ -116,7 +116,7 @@ where
         Err(err) => err.to_execution_result(),
     };
 
-    HostRegion::from_vec(cbor::to_vec(result))
+    Box::into_raw(Box::new(HostRegion::from_vec(cbor::to_vec(result))))
 }
 
 /// Internal helper for calling the contract's `instantiate` function.
@@ -126,7 +126,7 @@ pub fn instantiate<C: Contract>(
     ctx_len: u32,
     request_ptr: u32,
     request_len: u32,
-) -> HostRegion {
+) -> *const HostRegion {
     let (mut ctx, request) = load_request_context(ctx_ptr, ctx_len, request_ptr, request_len);
     let result = C::instantiate(&mut ctx, request).map(Option::Some);
     handle_result(ctx, result)
@@ -139,7 +139,7 @@ pub fn call<C: Contract>(
     ctx_len: u32,
     request_ptr: u32,
     request_len: u32,
-) -> HostRegion {
+) -> *const HostRegion {
     let (mut ctx, request) = load_request_context(ctx_ptr, ctx_len, request_ptr, request_len);
     let result = C::call(&mut ctx, request).map(Option::Some);
     handle_result(ctx, result)
@@ -152,7 +152,7 @@ pub fn handle_reply<C: Contract>(
     ctx_len: u32,
     request_ptr: u32,
     request_len: u32,
-) -> HostRegion {
+) -> *const HostRegion {
     let (mut ctx, reply) = load_request_context(ctx_ptr, ctx_len, request_ptr, request_len);
     let result = C::handle_reply(&mut ctx, reply);
     handle_result(ctx, result)
@@ -165,7 +165,7 @@ pub fn pre_upgrade<C: Contract>(
     ctx_len: u32,
     request_ptr: u32,
     request_len: u32,
-) -> HostRegion {
+) -> *const HostRegion {
     let (mut ctx, request) = load_request_context(ctx_ptr, ctx_len, request_ptr, request_len);
     let result = C::pre_upgrade(&mut ctx, request).map(Option::Some);
     handle_result(ctx, result)
@@ -178,7 +178,7 @@ pub fn post_upgrade<C: Contract>(
     ctx_len: u32,
     request_ptr: u32,
     request_len: u32,
-) -> HostRegion {
+) -> *const HostRegion {
     let (mut ctx, request) = load_request_context(ctx_ptr, ctx_len, request_ptr, request_len);
     let result = C::post_upgrade(&mut ctx, request).map(Option::Some);
     handle_result(ctx, result)
@@ -191,7 +191,7 @@ pub fn query<C: Contract>(
     ctx_len: u32,
     request_ptr: u32,
     request_len: u32,
-) -> HostRegion {
+) -> *const HostRegion {
     let (mut ctx, request) = load_request_context(ctx_ptr, ctx_len, request_ptr, request_len);
     let result = C::query(&mut ctx, request).map(Option::Some);
     handle_result(ctx, result)
@@ -202,62 +202,62 @@ pub fn query<C: Contract>(
 macro_rules! create_contract {
     ($name:ty) => {
         #[no_mangle]
-        pub extern "wasm" fn instantiate(
+        pub extern "C" fn instantiate(
             ctx_ptr: u32,
             ctx_len: u32,
             request_ptr: u32,
             request_len: u32,
-        ) -> $crate::memory::HostRegion {
+        ) -> *const $crate::memory::HostRegion {
             $crate::abi::dispatch::instantiate::<$name>(ctx_ptr, ctx_len, request_ptr, request_len)
         }
 
         #[no_mangle]
-        pub extern "wasm" fn call(
+        pub extern "C" fn call(
             ctx_ptr: u32,
             ctx_len: u32,
             request_ptr: u32,
             request_len: u32,
-        ) -> $crate::memory::HostRegion {
+        ) -> *const $crate::memory::HostRegion {
             $crate::abi::dispatch::call::<$name>(ctx_ptr, ctx_len, request_ptr, request_len)
         }
 
         #[no_mangle]
-        pub extern "wasm" fn handle_reply(
+        pub extern "C" fn handle_reply(
             ctx_ptr: u32,
             ctx_len: u32,
             request_ptr: u32,
             request_len: u32,
-        ) -> $crate::memory::HostRegion {
+        ) -> *const $crate::memory::HostRegion {
             $crate::abi::dispatch::handle_reply::<$name>(ctx_ptr, ctx_len, request_ptr, request_len)
         }
 
         #[no_mangle]
-        pub extern "wasm" fn pre_upgrade(
+        pub extern "C" fn pre_upgrade(
             ctx_ptr: u32,
             ctx_len: u32,
             request_ptr: u32,
             request_len: u32,
-        ) -> $crate::memory::HostRegion {
+        ) -> *const $crate::memory::HostRegion {
             $crate::abi::dispatch::pre_upgrade::<$name>(ctx_ptr, ctx_len, request_ptr, request_len)
         }
 
         #[no_mangle]
-        pub extern "wasm" fn post_upgrade(
+        pub extern "C" fn post_upgrade(
             ctx_ptr: u32,
             ctx_len: u32,
             request_ptr: u32,
             request_len: u32,
-        ) -> $crate::memory::HostRegion {
+        ) -> *const $crate::memory::HostRegion {
             $crate::abi::dispatch::post_upgrade::<$name>(ctx_ptr, ctx_len, request_ptr, request_len)
         }
 
         #[no_mangle]
-        pub extern "wasm" fn query(
+        pub extern "C" fn query(
             ctx_ptr: u32,
             ctx_len: u32,
             request_ptr: u32,
             request_len: u32,
-        ) -> $crate::memory::HostRegion {
+        ) -> *const $crate::memory::HostRegion {
             $crate::abi::dispatch::query::<$name>(ctx_ptr, ctx_len, request_ptr, request_len)
         }
     };

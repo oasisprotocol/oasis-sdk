@@ -6,9 +6,9 @@ use crate::{
 };
 
 #[link(wasm_import_module = "storage")]
-extern "wasm" {
+extern "C" {
     #[link_name = "get"]
-    fn storage_get(store: u32, key_ptr: u32, key_len: u32) -> HostRegion;
+    fn storage_get(store: u32, key_ptr: u32, key_len: u32) -> *const HostRegion;
 
     #[link_name = "insert"]
     fn storage_insert(store: u32, key_ptr: u32, key_len: u32, value_ptr: u32, value_len: u32);
@@ -20,13 +20,14 @@ extern "wasm" {
 /// Fetches a given key from contract storage.
 pub fn get(store: StoreKind, key: &[u8]) -> Option<Vec<u8>> {
     let key_region = HostRegionRef::from_slice(key);
-    let value_region = unsafe { storage_get(store as u32, key_region.offset, key_region.length) };
-    // Special value of (0, 0) is treated as if the key doesn't exist.
-    if value_region.offset == 0 && value_region.length == 0 {
+    let rsp_ptr = unsafe { storage_get(store as u32, key_region.offset, key_region.length) };
+
+    // Special value of 0 is treated as if the key doesn't exist.
+    if rsp_ptr as u32 == 0 {
         return None;
     }
 
-    Some(value_region.into_vec())
+    Some(unsafe { HostRegion::deref(rsp_ptr) }.into_vec())
 }
 
 /// Inserts a given key/value pair into contract storage.

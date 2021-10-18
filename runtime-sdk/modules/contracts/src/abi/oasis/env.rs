@@ -24,7 +24,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
         let _ = instance.link_function(
             "env",
             "query",
-            |ctx, query: (u32, u32)| -> Result<(u32, u32), wasm3::Trap> {
+            |ctx, query: (u32, u32)| -> Result<u32, wasm3::Trap> {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
 
@@ -51,9 +51,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 //
                 // This makes sure that the call context is unset to avoid any potential issues
                 // with reentrancy as attempting to re-enter one of the linked function will fail.
-                let result_region = Self::serialize_and_allocate(ctx.instance, result)?;
-
-                Ok(result_region.to_arg())
+                Self::serialize_and_allocate_as_ptr(ctx.instance, result).map_err(|err| err.into())
             },
         );
 

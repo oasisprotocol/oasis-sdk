@@ -46,6 +46,28 @@ impl Region {
         }
     }
 
+    /// Dereferences a pointer to the region.
+    pub fn deref(memory: &wasm3::Memory<'_>, arg: u32) -> Result<Self, RegionError> {
+        let arg = arg as usize;
+
+        // Make sure the pointer is within WASM memory.
+        if arg + 8 > memory.size() {
+            return Err(RegionError::BadPointer);
+        }
+
+        // WASM uses little-endian encoding.
+        let dst = memory.as_slice();
+        let offset = u32::from_le_bytes(dst[arg..arg + 4].try_into().unwrap()) as usize;
+        let length = u32::from_le_bytes(dst[arg + 4..arg + 8].try_into().unwrap()) as usize;
+
+        // Ensure that the dereferenced region fits in WASM memory.
+        if offset + length > memory.size() {
+            return Err(RegionError::BadPointer);
+        }
+
+        Ok(Region { offset, length })
+    }
+
     /// Copies slice content into a previously allocated WASM memory region.
     pub fn copy_from_slice(
         &self,
@@ -93,6 +115,14 @@ impl Region {
 
         Ok(&mut memory.as_slice_mut()[self.offset..self.offset + self.length])
     }
+
+    /// Returns the serialized region.
+    pub fn serialize(&self) -> [u8; 8] {
+        let mut data = [0u8; 8];
+        data[..4].copy_from_slice(&(self.offset as u32).to_le_bytes());
+        data[4..].copy_from_slice(&(self.length as u32).to_le_bytes());
+        data
+    }
 }
 
 impl<Cfg: Config> OasisV1<Cfg> {
@@ -116,7 +146,19 @@ impl<Cfg: Config> OasisV1<Cfg> {
             offset: offset as usize,
             length: length as usize,
         };
-        // TODO: Validate region early.
+
+        // Validate returned region.
+        instance
+            .runtime()
+            .try_with_memory(|memory| -> Result<(), RegionError> {
+                // Make sure the region fits in WASM memory.
+                if (region.offset + region.length) > memory.size() {
+                    return Err(RegionError::BadPointer);
+                }
+                Ok(())
+            })
+            .unwrap()?;
+
         Ok(region)
     }
 
@@ -151,5 +193,65 @@ impl<Cfg: Config> OasisV1<Cfg> {
     {
         let data = cbor::to_vec(data);
         Self::allocate_and_copy(instance, &data)
+    }
+
+    /// Serializes the given type into CBOR, allocates a chunk of memory inside the WASM instance
+    /// and copies the region and serialized data into it. Returns a pointer to the serialized region.
+    ///
+    /// This method is useful when you need to a pointer to the region of the serialized data,
+    /// since it avoids an additional allocation for the region itself as it pre-allocates it with the data.
+    /// This is an optimized version of calling `serialize_and_allocate` followed by `allocate_region`
+    /// which does two separate allocations.
+    pub fn serialize_and_allocate_as_ptr<C, T>(
+        instance: &wasm3::Instance<'_, '_, ExecutionContext<'_, C>>,
+        data: T,
+    ) -> Result<u32, RegionError>
+    where
+        C: Context,
+        T: cbor::Encode,
+    {
+        let data = cbor::to_vec(data);
+        // Allocate enough for the data and the serialized region.
+        let outer = Self::allocate(instance, data.len() + 8)?;
+        // First 8 bytes are reserved for the region itself. Inner is the region
+        // for the actual data.
+        let inner = Region {
+            offset: outer.offset + 8,
+            length: outer.length - 8,
+        };
+
+        instance
+            .runtime()
+            .try_with_memory(|mut memory| -> Result<(), RegionError> {
+                inner.copy_from_slice(&mut memory, &data)?;
+
+                let dst = &mut memory.as_slice_mut()[outer.offset..outer.offset + 8];
+                dst.copy_from_slice(&inner.serialize());
+
+                Ok(())
+            })
+            .unwrap()?;
+
+        Ok(outer.offset as u32)
+    }
+
+    /// Allocates a region in WASM memory and returns a pointer to it.
+    pub fn allocate_region<C: Context>(
+        instance: &wasm3::Instance<'_, '_, ExecutionContext<'_, C>>,
+        region: Region,
+    ) -> Result<u32, RegionError> {
+        let data = region.serialize();
+
+        // Allocate memory for the destination buffer.
+        let dst = Self::allocate(instance, data.len())?;
+        instance
+            .runtime()
+            .try_with_memory(|mut memory| -> Result<(), RegionError> {
+                dst.copy_from_slice(&mut memory, &data)?;
+                Ok(())
+            })
+            .unwrap()?;
+
+        Ok(dst.offset as u32)
     }
 }

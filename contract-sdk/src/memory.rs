@@ -48,6 +48,21 @@ impl HostRegion {
 
         unsafe { Vec::from_raw_parts(ptr, self.length as usize, self.length as usize) }
     }
+
+    /// Returns a new region by dereferencing a pointer to the region.
+    ///
+    /// This does not yet transfer memory ownership from the host.
+    ///
+    /// # Safety
+    ///
+    /// This is safe as long as the pointer is a valid pointer to the region struct.
+    pub unsafe fn deref(arg: *const HostRegion) -> Self {
+        let hr = &*arg;
+        HostRegion {
+            offset: hr.offset,
+            length: hr.length,
+        }
+    }
 }
 
 /// Reference to a host region.
