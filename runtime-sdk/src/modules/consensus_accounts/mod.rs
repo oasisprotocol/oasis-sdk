@@ -226,8 +226,9 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         let balance = balances
             .balances
             .get(&denomination)
-            .ok_or(Error::InvalidArgument)?;
-        Ok(types::AccountBalance { balance: *balance })
+            .copied()
+            .unwrap_or_default();
+        Ok(types::AccountBalance { balance })
     }
 
     fn query_consensus_account<C: Context>(

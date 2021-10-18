@@ -94,6 +94,18 @@ export const playground = (async function () {
         await twDeposit.sign([csAlice], consensusChainContext);
         await twDeposit.submit(nic);
 
+        console.log('alice balance');
+        const balanceResult = await consensusWrapper
+            .queryBalance()
+            .setArgs({
+                address: await oasis.staking.addressFromPublicKey(alice.public()),
+            })
+            .query(nic);
+        console.log('balance', oasis.quantity.toBigInt(balanceResult.balance));
+        console.log(
+            "we just deposited, but it's okay if this is zero before the roothash callback runs",
+        );
+
         console.log('alice withdrawing from runtime');
         const nonce2 = await accountsWrapper
             .queryNonce()
