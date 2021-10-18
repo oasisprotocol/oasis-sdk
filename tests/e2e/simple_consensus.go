@@ -80,7 +80,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 
 	log.Info("alice depositing into runtime to bob")
 	amount := types.NewBaseUnits(*quantity.NewFromUint64(50), consDenomination)
-	tb := consAccounts.Deposit(testing.Bob.Address, amount).
+	tb := consAccounts.Deposit(&testing.Bob.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
@@ -137,7 +137,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 
 	amount.Amount = *quantity.NewFromUint64(40)
 	log.Info("bob depositing into runtime to alice")
-	tb = consAccounts.Deposit(testing.Alice.Address, amount).
+	tb = consAccounts.Deposit(&testing.Alice.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Bob.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Bob.Signer)
@@ -193,7 +193,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 
 	amount.Amount = *quantity.NewFromUint64(25)
 	log.Info("alice withdrawing to bob")
-	tb = consAccounts.Withdraw(testing.Bob.Address, amount).
+	tb = consAccounts.Withdraw(&testing.Bob.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
@@ -237,7 +237,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 
 	amount.Amount = *quantity.NewFromUint64(50)
 	log.Info("charlie withdrawing")
-	tb = consAccounts.Withdraw(testing.Charlie.Address, amount).
+	tb = consAccounts.Withdraw(&testing.Charlie.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Charlie.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Charlie.Signer)
@@ -248,7 +248,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	}
 
 	log.Info("alice withdrawing with invalid nonce")
-	tb = consAccounts.Withdraw(testing.Bob.Address, amount).
+	tb = consAccounts.Withdraw(&testing.Bob.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
@@ -284,7 +284,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 
 	log.Info("dave depositing (secp256k1)")
 	amount.Amount = *quantity.NewFromUint64(50)
-	tb = consAccounts.Deposit(testing.Dave.Address, amount).
+	tb = consAccounts.Deposit(&testing.Dave.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Dave.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Dave.Signer)

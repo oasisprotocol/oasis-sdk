@@ -203,7 +203,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         Consensus::ensure_compatible_tx_signer(ctx)?;
 
         let address = signer.address_spec.address();
-        Self::deposit(ctx, address, body.to, body.amount)
+        Self::deposit(ctx, address, body.to.unwrap_or(address), body.amount)
     }
 
     /// Withdraw from the runtime.
@@ -216,7 +216,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         Consensus::ensure_compatible_tx_signer(ctx)?;
 
         let address = signer.address_spec.address();
-        Self::withdraw(ctx, address, body.to, body.amount)
+        Self::withdraw(ctx, address, body.to.unwrap_or(address), body.amount)
     }
 
     fn query_balance<C: Context>(

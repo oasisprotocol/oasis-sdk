@@ -7,7 +7,8 @@ use crate::types::{address::Address, token};
 /// address. The `to` address runtime account gets the tokens.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Deposit {
-    pub to: Address,
+    #[cbor(optional)]
+    pub to: Option<Address>,
     pub amount: token::BaseUnits,
 }
 
@@ -16,7 +17,8 @@ pub struct Deposit {
 /// The `to` address consensus staking account gets the tokens.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Withdraw {
-    pub to: Address,
+    #[cbor(optional)]
+    pub to: Option<Address>,
     pub amount: token::BaseUnits,
 }
 

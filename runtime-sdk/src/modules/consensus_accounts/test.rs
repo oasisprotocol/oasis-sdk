@@ -61,7 +61,7 @@ fn test_api_deposit_invalid_denomination() {
             body: cbor::to_value(Deposit {
                 // It's probably more common to withdraw into your own account, but we're using a
                 // separate `to` account to make sure everything is hooked up to the right places.
-                to: keys::bob::address(),
+                to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
         },
@@ -107,7 +107,7 @@ fn test_api_deposit() {
             body: cbor::to_value(Deposit {
                 // It's probably more common to deposit into your own account, but we're using a
                 // separate `to` account to make sure everything is hooked up to the right places.
-                to: keys::bob::address(),
+                to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, denom.clone()),
             }),
         },
@@ -199,7 +199,7 @@ fn test_api_withdraw_invalid_denomination() {
             body: cbor::to_value(Withdraw {
                 // It's probably more common to withdraw into your own account, but we're using a
                 // separate `to` account to make sure everything is hooked up to the right places.
-                to: keys::bob::address(),
+                to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
         },
@@ -244,7 +244,7 @@ fn test_api_withdraw_insufficient_balance() {
             body: cbor::to_value(Withdraw {
                 // It's probably more common to withdraw into your own account, but we're using a
                 // separate `to` account to make sure everything is hooked up to the right places.
-                to: keys::bob::address(),
+                to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()),
             }),
         },
@@ -311,7 +311,7 @@ fn test_api_withdraw() {
             body: cbor::to_value(Withdraw {
                 // It's probably more common to withdraw into your own account, but we're using a
                 // separate `to` account to make sure everything is hooked up to the right places.
-                to: keys::bob::address(),
+                to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000_000, denom.clone()),
             }),
         },
@@ -612,7 +612,7 @@ fn test_prefetch() {
             body: cbor::to_value(Withdraw {
                 // It's probably more common to withdraw into your own account, but we're using a
                 // separate `to` account to make sure everything is hooked up to the right places.
-                to: keys::bob::address(),
+                to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
         },
@@ -643,7 +643,7 @@ fn test_prefetch() {
             body: cbor::to_value(Deposit {
                 // It's probably more common to withdraw into your own account, but we're using a
                 // separate `to` account to make sure everything is hooked up to the right places.
-                to: keys::bob::address(),
+                to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
         },

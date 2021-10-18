@@ -86,7 +86,6 @@ export const playground = (async function () {
         const twDeposit = consensusWrapper
             .callDeposit()
             .setBody({
-                to: aliceAddr,
                 amount: DEPOSIT_AMNT,
             })
             .setSignerInfo([siAlice1])
@@ -126,7 +125,6 @@ export const playground = (async function () {
         const twWithdraw = consensusWrapper
             .callWithdraw()
             .setBody({
-                to: aliceAddr,
                 amount: WITHDRAW_AMNT,
             })
             .setSignerInfo([siAlice2])
