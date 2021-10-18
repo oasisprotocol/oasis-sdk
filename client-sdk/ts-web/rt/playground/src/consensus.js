@@ -62,12 +62,13 @@ export const playground = (async function () {
             'this key is not important',
         );
         const csAlice = new oasis.signature.BlindContextSigner(alice);
+        const aliceAddr = await oasis.staking.addressFromPublicKey(alice.public());
 
         // Fetch nonce for Alice's account.
         const nonce1 = await accountsWrapper
             .queryNonce()
             .setArgs({
-                address: await oasis.staking.addressFromPublicKey(alice.public()),
+                address: aliceAddr,
             })
             .query(nic);
         const siAlice1 = /** @type {oasisRT.types.SignerInfo} */ ({
@@ -85,6 +86,7 @@ export const playground = (async function () {
         const twDeposit = consensusWrapper
             .callDeposit()
             .setBody({
+                to: aliceAddr,
                 amount: DEPOSIT_AMNT,
             })
             .setSignerInfo([siAlice1])
@@ -98,7 +100,7 @@ export const playground = (async function () {
         const balanceResult = await consensusWrapper
             .queryBalance()
             .setArgs({
-                address: await oasis.staking.addressFromPublicKey(alice.public()),
+                address: aliceAddr,
             })
             .query(nic);
         console.log('balance', oasis.quantity.toBigInt(balanceResult.balance));
@@ -110,7 +112,7 @@ export const playground = (async function () {
         const nonce2 = await accountsWrapper
             .queryNonce()
             .setArgs({
-                address: await oasis.staking.addressFromPublicKey(alice.public()),
+                address: aliceAddr,
             })
             .query(nic);
         const siAlice2 = /** @type {oasisRT.types.SignerInfo} */ ({
@@ -124,6 +126,7 @@ export const playground = (async function () {
         const twWithdraw = consensusWrapper
             .callWithdraw()
             .setBody({
+                to: aliceAddr,
                 amount: WITHDRAW_AMNT,
             })
             .setSignerInfo([siAlice2])
