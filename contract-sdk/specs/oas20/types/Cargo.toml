@@ -13,7 +13,7 @@ oasis-contract-sdk-storage = { path = "../../../storage" }
 oasis-contract-sdk-types = { path = "../../../types" }
 
 # Third party.
-thiserror = "1.0.28"
+thiserror = "1.0.30"
 
 [dev-dependencies]
 base64 = "0.13.0"
