@@ -289,19 +289,19 @@ fn test_api_withdraw() {
         },
     };
 
-    ctx.with_tx(0, tx, |mut tx_ctx, call| {
+    let hook = ctx.with_tx(0, tx, |mut tx_ctx, call| {
         Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
         )
         .expect("withdraw tx should succeed");
 
-        let (_, msgs) = tx_ctx.commit();
+        let (_, mut msgs) = tx_ctx.commit();
         assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.first().unwrap();
+        let (msg, hook) = msgs.pop().unwrap();
 
         assert_eq!(
-            &Message::Staking(Versioned::new(
+            Message::Staking(Versioned::new(
                 0,
                 StakingMessage::Transfer(staking::Transfer {
                     to: keys::alice::address().into(),
@@ -318,12 +318,51 @@ fn test_api_withdraw() {
             "emitted hook should match"
         );
 
-        // TODO: support advancing the round. And ensure message is correctly processed.
+        hook
     });
+
+    // Make sure that withdrawn balance is in the module's pending withdrawal account.
+    let balance =
+        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+    assert_eq!(balance, 0u128, "withdrawn balance should be locked");
+
+    let balance = Accounts::get_balance(
+        ctx.runtime_state(),
+        *ADDRESS_PENDING_WITHDRAWAL,
+        denom.clone(),
+    )
+    .unwrap();
+    assert_eq!(balance, 1_000_000u128, "withdrawn balance should be locked");
+
+    // Simulate the message being processed and make sure withdrawal is successfully completed.
+    let me = Default::default();
+    Module::<Accounts, Consensus>::message_result_transfer(
+        &mut ctx,
+        me,
+        cbor::from_value(hook.payload).unwrap(),
+    );
+
+    // Ensure runtime balance is updated.
+    let balance = Accounts::get_balance(
+        ctx.runtime_state(),
+        *ADDRESS_PENDING_WITHDRAWAL,
+        denom.clone(),
+    )
+    .unwrap();
+    assert_eq!(balance, 0u128, "withdrawn balance should be burned");
+    let balance =
+        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+    assert_eq!(balance, 0u128, "withdrawn balance should be burned");
+    let total_supplies = Accounts::get_total_supplies(ctx.runtime_state()).unwrap();
+    assert_eq!(total_supplies.len(), 1);
+    assert_eq!(
+        total_supplies[&denom], 0u128,
+        "withdrawn balance should be burned"
+    );
 }
 
 #[test]
-fn test_consensus_transfer_handler() {
+fn test_api_withdraw_handler_failure() {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
@@ -355,17 +394,105 @@ fn test_consensus_transfer_handler() {
     );
     Module::<Accounts, Consensus>::init_or_migrate(&mut ctx, &mut meta, Default::default());
 
-    // Simulate successful event.
-    let me = Default::default();
-    let h_ctx = types::ConsensusTransferContext {
-        address: keys::alice::address(),
-        amount: BaseUnits::new(999_999, denom.clone()),
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "consensus.Withdraw".to_owned(),
+            body: cbor::to_value(Withdraw {
+                amount: BaseUnits::new(1_000_000, denom.clone()),
+            }),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 1000,
+                consensus_messages: 1,
+            },
+        },
     };
-    Module::<Accounts, Consensus>::message_result_transfer(&mut ctx, me, h_ctx);
 
-    // Ensure runtime balance is updated.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::alice::address()).unwrap();
-    assert_eq!(bals.balances[&denom], 1, "alice balance transferred out")
+    let hook = ctx.with_tx(0, tx, |mut tx_ctx, call| {
+        Module::<Accounts, Consensus>::tx_withdraw(
+            &mut tx_ctx,
+            cbor::from_value(call.body).unwrap(),
+        )
+        .expect("withdraw tx should succeed");
+
+        let (_, mut msgs) = tx_ctx.commit();
+        assert_eq!(1, msgs.len(), "one message should be emitted");
+        let (msg, hook) = msgs.pop().unwrap();
+
+        assert_eq!(
+            Message::Staking(Versioned::new(
+                0,
+                StakingMessage::Transfer(staking::Transfer {
+                    to: keys::alice::address().into(),
+                    amount: 1_000_000u128.into(),
+                })
+            )),
+            msg,
+            "emitted message should match"
+        );
+
+        assert_eq!(
+            CONSENSUS_TRANSFER_HANDLER.to_string(),
+            hook.hook_name,
+            "emitted hook should match"
+        );
+
+        hook
+    });
+
+    // Make sure that withdrawn balance is in the module's pending withdrawal account.
+    let balance =
+        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+    assert_eq!(balance, 0u128, "withdrawn balance should be locked");
+
+    let balance = Accounts::get_balance(
+        ctx.runtime_state(),
+        *ADDRESS_PENDING_WITHDRAWAL,
+        denom.clone(),
+    )
+    .unwrap();
+    assert_eq!(balance, 1_000_000u128, "withdrawn balance should be locked");
+
+    // Simulate the message failing and make sure withdrawal amount is refunded.
+    let me = MessageEvent {
+        module: "staking".to_string(),
+        code: 1, // Any non-zero code is treated as an error.
+        index: 0,
+    };
+    Module::<Accounts, Consensus>::message_result_transfer(
+        &mut ctx,
+        me,
+        cbor::from_value(hook.payload).unwrap(),
+    );
+
+    // Ensure amount is refunded.
+    let balance = Accounts::get_balance(
+        ctx.runtime_state(),
+        *ADDRESS_PENDING_WITHDRAWAL,
+        denom.clone(),
+    )
+    .unwrap();
+    assert_eq!(balance, 0u128, "withdrawn balance should be refunded");
+    let balance =
+        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+    assert_eq!(
+        balance, 1_000_000u128,
+        "withdrawn balance should be refunded"
+    );
+    let total_supplies = Accounts::get_total_supplies(ctx.runtime_state()).unwrap();
+    assert_eq!(total_supplies.len(), 1);
+    assert_eq!(
+        total_supplies[&denom], 1_000_000u128,
+        "withdrawn balance should be refunded"
+    );
 }
 
 #[test]
