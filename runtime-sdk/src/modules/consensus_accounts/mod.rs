@@ -4,6 +4,7 @@
 //! while keeping track of amount deposited per account.
 use std::{collections::BTreeSet, convert::TryInto};
 
+use once_cell::sync::Lazy;
 use thiserror::Error;
 
 use oasis_core_runtime::consensus::staking::Account as ConsensusAccount;
@@ -107,6 +108,10 @@ pub struct Module<Accounts: modules::accounts::API, Consensus: modules::consensu
     _consensus: std::marker::PhantomData<Consensus>,
 }
 
+/// Module's address that has the tokens pending withdrawal.
+pub static ADDRESS_PENDING_WITHDRAWAL: Lazy<Address> =
+    Lazy::new(|| Address::from_module(MODULE_NAME, "pending-withdrawal"));
+
 const CONSENSUS_TRANSFER_HANDLER: &str = "consensus.TransferFromRuntime";
 const CONSENSUS_WITHDRAW_HANDLER: &str = "consensus.WithdrawIntoRuntime";
 
@@ -159,16 +164,10 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
             return Ok(());
         }
 
-        // Check internal store if account has enough balance to withdraw.
-        let balances =
-            Accounts::get_balances(ctx.runtime_state(), to).map_err(|_| Error::InvalidArgument)?;
-        let balance = balances
-            .balances
-            .get(amount.denomination())
-            .ok_or(Error::InvalidArgument)?;
-        if balance < &amount.amount() {
-            return Err(Error::InsufficientWithdrawBalance);
-        }
+        // Transfer the given amount to the module's withdrawal account to make sure the tokens
+        // remain available until actually withdrawn.
+        Accounts::transfer(ctx, to, *ADDRESS_PENDING_WITHDRAWAL, &amount)
+            .map_err(|_| Error::InsufficientWithdrawBalance)?;
 
         // Transfer out of runtime account and update the account state if successful.
         Consensus::transfer(
@@ -244,12 +243,20 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         context: types::ConsensusTransferContext,
     ) {
         if !me.is_success() {
-            // Transfer out failed.
+            // Transfer out failed, refund the balance.
+            Accounts::transfer(
+                ctx,
+                *ADDRESS_PENDING_WITHDRAWAL,
+                context.address,
+                &context.amount,
+            )
+            .expect("should have enough balance");
             return;
         }
 
-        // Update runtime state.
-        Accounts::burn(ctx, context.address, &context.amount).expect("should have enough balance");
+        // Burn the withdrawn tokens.
+        Accounts::burn(ctx, *ADDRESS_PENDING_WITHDRAWAL, &context.amount)
+            .expect("should have enough balance");
     }
 
     fn message_result_withdraw<C: Context>(
@@ -258,7 +265,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         context: types::ConsensusWithdrawContext,
     ) {
         if !me.is_success() {
-            // Transfer out failed.
+            // Transfer in failed.
             return;
         }
 

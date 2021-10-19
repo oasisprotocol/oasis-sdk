@@ -141,9 +141,9 @@ export const playground = (async function () {
             })
             .query(nic);
 
-        if (addrs.length != 1) {
-            // Alice.
-            throw new Error(`unexpected number of addresses, got: ${addrs.length}, expected: ${1}`);
+        if (addrs.length != 2) {
+            // Alice, pending withdrawals.
+            throw new Error(`unexpected number of addresses, got: ${addrs.length}, expected: ${2}`);
         }
         console.log('done');
     }

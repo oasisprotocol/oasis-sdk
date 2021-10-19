@@ -192,8 +192,8 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	if err != nil {
 		return err
 	}
-	if len(addrs) != 2 { // Alice, Bob (Charlie has 0 balance).
-		return fmt.Errorf("unexpected number of addresses (expected: %d, got: %d)", 2, len(addrs))
+	if len(addrs) != 3 { // Alice, Bob (Charlie has 0 balance), pending withdrawals.
+		return fmt.Errorf("unexpected number of addresses (expected: %d, got: %d)", 3, len(addrs))
 	}
 
 	return nil
