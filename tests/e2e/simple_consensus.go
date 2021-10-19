@@ -39,6 +39,24 @@ func ensureStakingEvent(log *logging.Logger, ch <-chan *staking.Event, check fun
 	}
 }
 
+func ensureRuntimeEvent(log *logging.Logger, ch <-chan *client.BlockEvents, check func(event client.DecodedEvent) bool) error {
+	log.Info("waiting for expected runtime event...")
+	for {
+		select {
+		case bev := <-ch:
+			log.Debug("received event", "block_event", bev)
+			for _, ev := range bev.Events {
+				if check(ev) {
+					return nil
+				}
+			}
+
+		case <-time.After(timeout):
+			return fmt.Errorf("timeout waiting for event")
+		}
+	}
+}
+
 func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 
@@ -54,6 +72,11 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 
 	consAccounts := consensusAccounts.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
+
+	acCh, err := rtc.WatchEvents(ctx, []client.EventDecoder{ac}, false)
+	if err != nil {
+		return err
+	}
 
 	log.Info("alice depositing into runtime to bob")
 	amount := types.NewBaseUnits(*quantity.NewFromUint64(50), consDenomination)
@@ -78,6 +101,28 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return e.Transfer.Amount.Cmp(&amount.Amount) == 0
 	}); err != nil {
 		return fmt.Errorf("ensuring alice deposit consensus event: %w", err)
+	}
+
+	if err := ensureRuntimeEvent(log, acCh, func(e client.DecodedEvent) bool {
+		ae, ok := e.(*accounts.Event)
+		if !ok {
+			return false
+		}
+		if ae.Mint == nil {
+			return false
+		}
+		if !ae.Mint.Owner.Equal(testing.Bob.Address) {
+			return false
+		}
+		if ae.Mint.Amount.Amount.Cmp(&amount.Amount) != 0 {
+			return false
+		}
+		if ae.Mint.Amount.Denomination != amount.Denomination {
+			return false
+		}
+		return true
+	}); err != nil {
+		return fmt.Errorf("ensuring alice deposit runtime event: %w", err)
 	}
 
 	resp, err := consAccounts.Balance(ctx, client.RoundLatest, &consensusAccounts.BalanceQuery{
@@ -113,6 +158,29 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	}); err != nil {
 		return fmt.Errorf("ensuring bob deposit consensus event: %w", err)
 	}
+
+	if err := ensureRuntimeEvent(log, acCh, func(e client.DecodedEvent) bool {
+		ae, ok := e.(*accounts.Event)
+		if !ok {
+			return false
+		}
+		if ae.Mint == nil {
+			return false
+		}
+		if !ae.Mint.Owner.Equal(testing.Alice.Address) {
+			return false
+		}
+		if ae.Mint.Amount.Amount.Cmp(&amount.Amount) != 0 {
+			return false
+		}
+		if ae.Mint.Amount.Denomination != amount.Denomination {
+			return false
+		}
+		return true
+	}); err != nil {
+		return fmt.Errorf("ensuring bob deposit runtime event: %w", err)
+	}
+
 	resp, err = consAccounts.Balance(ctx, client.RoundLatest, &consensusAccounts.BalanceQuery{
 		Address: testing.Alice.Address,
 	})
@@ -145,6 +213,26 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return e.Transfer.Amount.Cmp(&amount.Amount) == 0
 	}); err != nil {
 		return fmt.Errorf("ensuring alice withdraw consensus event: %w", err)
+	}
+
+	if err := ensureRuntimeEvent(log, acCh, func(e client.DecodedEvent) bool {
+		ae, ok := e.(*accounts.Event)
+		if !ok {
+			return false
+		}
+		if ae.Burn == nil {
+			return false
+		}
+		// No check for the owner, but it would be the pending withdrawals holding account.
+		if ae.Burn.Amount.Amount.Cmp(&amount.Amount) != 0 {
+			return false
+		}
+		if ae.Burn.Amount.Denomination != amount.Denomination {
+			return false
+		}
+		return true
+	}); err != nil {
+		return fmt.Errorf("ensuring alice withdraw runtime event: %w", err)
 	}
 
 	amount.Amount = *quantity.NewFromUint64(50)
