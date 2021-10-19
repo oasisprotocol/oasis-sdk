@@ -382,7 +382,7 @@ const methodDescriptorRuntimeClientSubmitTxMeta = createMethodDescriptorUnary<
 >('RuntimeClient', 'SubmitTxMeta');
 const methodDescriptorRuntimeClientSubmitTxNoWait = createMethodDescriptorUnary<
     types.RuntimeClientSubmitTxRequest,
-    Uint8Array
+    void
 >('RuntimeClient', 'SubmitTxNoWait');
 const methodDescriptorRuntimeClientCheckTx = createMethodDescriptorUnary<
     types.RuntimeClientCheckTxRequest,
