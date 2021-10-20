@@ -12,7 +12,7 @@ oasis-runtime-sdk = { path = "../../runtime-sdk", optional = true }
 
 # Third party.
 bech32 = "0.8.1"
-thiserror = "1.0.28"
+thiserror = "1.0.30"
 
 [dev-dependencies]
 hex = "0.4.2"

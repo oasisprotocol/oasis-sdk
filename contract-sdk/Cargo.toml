@@ -15,7 +15,7 @@ oasis-contract-sdk-macros = { path = "../contract-sdk-macros", optional = true }
 oasis-contract-sdk-crypto = { path = "crypto" }
 
 # Third party.
-thiserror = "1.0.28"
+thiserror = "1.0.30"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wee_alloc = "0.4.5"
