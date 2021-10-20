@@ -1,6 +1,12 @@
 # Changelog
 
-## v0.2.0-alpha4:
+## Unreleased changes
+
+New features:
+
+- You can now use SubmitTxNoWait from a transaction wrapper.
+
+## v0.2.0-alpha4
 
 Spotlight change:
 

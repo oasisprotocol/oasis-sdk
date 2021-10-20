@@ -75,6 +75,13 @@ export class TransactionWrapper<BODY, OK> {
         if (result.fail) throw result.fail;
         return result.ok as OK;
     }
+
+    async submitNoWait(nic: oasis.client.NodeInternal) {
+        await nic.runtimeClientSubmitTxNoWait({
+            runtime_id: this.runtimeID,
+            data: oasis.misc.toCBOR(this.unverifiedTransaction),
+        });
+    }
 }
 
 export class QueryWrapper<ARGS, DATA> {
