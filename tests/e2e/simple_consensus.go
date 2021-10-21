@@ -39,6 +39,21 @@ func ensureStakingEvent(log *logging.Logger, ch <-chan *staking.Event, check fun
 	}
 }
 
+func makeTransferCheck(from, to staking.Address, amount *quantity.Quantity) func(e *staking.Event) bool {
+	return func(e *staking.Event) bool {
+		if e.Transfer == nil {
+			return false
+		}
+		if e.Transfer.From != from {
+			return false
+		}
+		if e.Transfer.To != to {
+			return false
+		}
+		return e.Transfer.Amount.Cmp(amount) == 0
+	}
+}
+
 func ensureRuntimeEvent(log *logging.Logger, ch <-chan *client.BlockEvents, check func(event client.DecodedEvent) bool) error {
 	log.Info("waiting for expected runtime event...")
 	for {
@@ -54,6 +69,50 @@ func ensureRuntimeEvent(log *logging.Logger, ch <-chan *client.BlockEvents, chec
 		case <-time.After(timeout):
 			return fmt.Errorf("timeout waiting for event")
 		}
+	}
+}
+
+func makeAccountsMintCheck(owner types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
+	return func(e client.DecodedEvent) bool {
+		ae, ok := e.(*accounts.Event)
+		if !ok {
+			return false
+		}
+		if ae.Mint == nil {
+			return false
+		}
+		if !ae.Mint.Owner.Equal(owner) {
+			return false
+		}
+		if ae.Mint.Amount.Amount.Cmp(&amount.Amount) != 0 {
+			return false
+		}
+		if ae.Mint.Amount.Denomination != amount.Denomination {
+			return false
+		}
+		return true
+	}
+}
+
+func makeBurnCheck(owner types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
+	return func(e client.DecodedEvent) bool {
+		ae, ok := e.(*accounts.Event)
+		if !ok {
+			return false
+		}
+		if ae.Burn == nil {
+			return false
+		}
+		if !ae.Burn.Owner.Equal(owner) {
+			return false
+		}
+		if ae.Burn.Amount.Amount.Cmp(&amount.Amount) != 0 {
+			return false
+		}
+		if ae.Burn.Amount.Denomination != amount.Denomination {
+			return false
+		}
+		return true
 	}
 }
 
@@ -78,6 +137,9 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return err
 	}
 
+	runtimeAddr := staking.NewRuntimeAddress(runtimeID)
+	pendingWithdrawalAddr := types.NewAddressForModule("consensus_accounts", []byte("pending-withdrawal"))
+
 	log.Info("alice depositing into runtime to bob")
 	amount := types.NewBaseUnits(*quantity.NewFromUint64(50), consDenomination)
 	tb := consAccounts.Deposit(&testing.Bob.Address, amount).
@@ -88,40 +150,11 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return err
 	}
 
-	if err = ensureStakingEvent(log, ch, func(e *staking.Event) bool {
-		if e.Transfer == nil {
-			return false
-		}
-		if e.Transfer.From != staking.Address(testing.Alice.Address) {
-			return false
-		}
-		if e.Transfer.To != staking.NewRuntimeAddress(runtimeID) {
-			return false
-		}
-		return e.Transfer.Amount.Cmp(&amount.Amount) == 0
-	}); err != nil {
+	if err = ensureStakingEvent(log, ch, makeTransferCheck(staking.Address(testing.Alice.Address), runtimeAddr, &amount.Amount)); err != nil {
 		return fmt.Errorf("ensuring alice deposit consensus event: %w", err)
 	}
 
-	if err := ensureRuntimeEvent(log, acCh, func(e client.DecodedEvent) bool {
-		ae, ok := e.(*accounts.Event)
-		if !ok {
-			return false
-		}
-		if ae.Mint == nil {
-			return false
-		}
-		if !ae.Mint.Owner.Equal(testing.Bob.Address) {
-			return false
-		}
-		if ae.Mint.Amount.Amount.Cmp(&amount.Amount) != 0 {
-			return false
-		}
-		if ae.Mint.Amount.Denomination != amount.Denomination {
-			return false
-		}
-		return true
-	}); err != nil {
+	if err = ensureRuntimeEvent(log, acCh, makeAccountsMintCheck(testing.Bob.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring alice deposit runtime event: %w", err)
 	}
 
@@ -144,40 +177,11 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
-	if err = ensureStakingEvent(log, ch, func(e *staking.Event) bool {
-		if e.Transfer == nil {
-			return false
-		}
-		if e.Transfer.From != staking.Address(testing.Bob.Address) {
-			return false
-		}
-		if e.Transfer.To != staking.NewRuntimeAddress(runtimeID) {
-			return false
-		}
-		return e.Transfer.Amount.Cmp(&amount.Amount) == 0
-	}); err != nil {
+	if err = ensureStakingEvent(log, ch, makeTransferCheck(staking.Address(testing.Bob.Address), runtimeAddr, &amount.Amount)); err != nil {
 		return fmt.Errorf("ensuring bob deposit consensus event: %w", err)
 	}
 
-	if err := ensureRuntimeEvent(log, acCh, func(e client.DecodedEvent) bool {
-		ae, ok := e.(*accounts.Event)
-		if !ok {
-			return false
-		}
-		if ae.Mint == nil {
-			return false
-		}
-		if !ae.Mint.Owner.Equal(testing.Alice.Address) {
-			return false
-		}
-		if ae.Mint.Amount.Amount.Cmp(&amount.Amount) != 0 {
-			return false
-		}
-		if ae.Mint.Amount.Denomination != amount.Denomination {
-			return false
-		}
-		return true
-	}); err != nil {
+	if err = ensureRuntimeEvent(log, acCh, makeAccountsMintCheck(testing.Alice.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring bob deposit runtime event: %w", err)
 	}
 
@@ -200,38 +204,10 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
-	if err = ensureStakingEvent(log, ch, func(e *staking.Event) bool {
-		if e.Transfer == nil {
-			return false
-		}
-		if e.Transfer.To != staking.Address(testing.Bob.Address) {
-			return false
-		}
-		if e.Transfer.From != staking.NewRuntimeAddress(runtimeID) {
-			return false
-		}
-		return e.Transfer.Amount.Cmp(&amount.Amount) == 0
-	}); err != nil {
+	if err = ensureStakingEvent(log, ch, makeTransferCheck(runtimeAddr, staking.Address(testing.Bob.Address), &amount.Amount)); err != nil {
 		return fmt.Errorf("ensuring alice withdraw consensus event: %w", err)
 	}
-
-	if err := ensureRuntimeEvent(log, acCh, func(e client.DecodedEvent) bool {
-		ae, ok := e.(*accounts.Event)
-		if !ok {
-			return false
-		}
-		if ae.Burn == nil {
-			return false
-		}
-		// No check for the owner, but it would be the pending withdrawals holding account.
-		if ae.Burn.Amount.Amount.Cmp(&amount.Amount) != 0 {
-			return false
-		}
-		if ae.Burn.Amount.Denomination != amount.Denomination {
-			return false
-		}
-		return true
-	}); err != nil {
+	if err = ensureRuntimeEvent(log, acCh, makeBurnCheck(pendingWithdrawalAddr, amount)); err != nil {
 		return fmt.Errorf("ensuring alice withdraw runtime event: %w", err)
 	}
 
