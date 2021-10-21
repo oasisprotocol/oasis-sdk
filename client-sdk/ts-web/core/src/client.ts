@@ -563,10 +563,9 @@ export class GRPCWrapper {
         const name = desc.name;
         return this.client.thenableCall(this.base + name, request, null, desc).catch((e) => {
             if (e.message === 'Incomplete response') {
-                // This is normal. grpc-web freaks out if the response is `== null`, which it
-                // always is for a void method.
-                // todo: unhack this when they release with our change
-                // https://github.com/grpc/grpc-web/pull/1025
+                // This seems to be normal. Void methods don't send back anything, which makes
+                // grpc-web freak out. I don't know why we don't send a CBOR undefined or
+                // something.
                 return undefined;
             }
             if (e.metadata && 'grpc-status-details-bin' in e.metadata) {
