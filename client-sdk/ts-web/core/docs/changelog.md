@@ -1,10 +1,18 @@
 # Changelog
 
+## v0.1.0-alpha7:
+
+Spotlight change:
+
+- We changed the protobuf scripts to be commonjs for better compatibility with
+  various tools.
+
 ## v0.1.0-alpha6:
 
 Spotlight change:
 
-- Errors from oasis-core with code and module now have `oasisCode` and `oasisModule` fields.
+- Errors from oasis-core with code and module now have `oasisCode` and
+  `oasisModule` fields.
 
 Breaking changes:
 
