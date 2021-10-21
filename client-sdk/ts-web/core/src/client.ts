@@ -12,7 +12,6 @@ function toCBOR(v: unknown) {
 }
 
 function createMethodDescriptorUnary<REQ, RESP>(serviceName: string, methodName: string) {
-    // @ts-expect-error missing declaration
     const MethodType = grpcWeb.MethodType;
     return new grpcWeb.MethodDescriptor<REQ, RESP>(
         `/oasis-core.${serviceName}/${methodName}`,
@@ -25,7 +24,6 @@ function createMethodDescriptorUnary<REQ, RESP>(serviceName: string, methodName:
 }
 
 function createMethodDescriptorServerStreaming<REQ, RESP>(serviceName: string, methodName: string) {
-    // @ts-expect-error missing declaration
     const MethodType = grpcWeb.MethodType;
     return new grpcWeb.MethodDescriptor<REQ, RESP>(
         `/oasis-core.${serviceName}/${methodName}`,
