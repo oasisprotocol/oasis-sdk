@@ -1,6 +1,4 @@
 //! An OAS20 contract.
-#![feature(wasm_abi)]
-
 extern crate alloc;
 
 use oasis_contract_sdk::{self as sdk};

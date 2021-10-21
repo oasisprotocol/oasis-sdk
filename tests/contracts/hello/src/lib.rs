@@ -1,6 +1,4 @@
 //! An example hello world contract also used in unit tests.
-#![feature(wasm_abi)]
-
 extern crate alloc;
 
 use oasis_contract_sdk::{

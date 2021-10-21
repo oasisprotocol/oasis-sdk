@@ -278,7 +278,7 @@ fn test_hello_contract_out_of_gas() {
     assert_eq!(result.code(), 12);
     assert_eq!(
         &result.to_string(),
-        "core: out of gas (limit: 1000 wanted: 1004)"
+        "core: out of gas (limit: 1000 wanted: 1007)"
     );
 }
 
@@ -324,10 +324,10 @@ fn test_bad_contract_infinite_loop_instantiate() {
         (module
             (type (;0;) (func))
             (type (;1;) (func (param i32) (result i32)))
-            (type (;2;) (func (param i32 i32 i32 i32) (result i32 i32)))
+            (type (;2;) (func (param i32 i32 i32 i32) (result i32)))
             (func (;0;) (type 0))
             (func (;1;) (type 1) (param $p0 i32) (result i32) (i32.const 0))
-            (func (;2;) (type 2) (param $p0 i32) (param $p1 i32) (param $p2 i32) (param $p3 i32) (result i32 i32) (loop (br 0)) (i32.const 0) (i32.const 0))
+            (func (;2;) (type 2) (param $p0 i32) (param $p1 i32) (param $p2 i32) (param $p3 i32) (result i32) (loop (br 0)) (i32.const 0))
 
             (memory $memory (export "memory") 17)
             (export "allocate" (func 1))
@@ -389,6 +389,41 @@ fn test_bad_contract_div_by_zero() {
         &result.to_string(),
         "execution failed: region allocation failed: division by zero"
     );
+}
+
+#[test]
+fn test_bad_allocation_from_host() {
+    let code = wat::parse_str(
+        r#"
+        (module
+            (type (;0;) (func))
+            (type (;1;) (func (param i32) (result i32)))
+            (func (;0;) (type 0))
+            (func (;1;) (type 1) (param $p0 i32) (result i32)
+                (i32.const 1000000000)
+                (i32.const 1000000000)
+                (i32.add)
+            )
+
+            (export "allocate" (func 1))
+            (export "deallocate" (func 0))
+            (export "instantiate" (func 0))
+            (export "call" (func 0))
+        )"#,
+    )
+    .unwrap();
+
+    let result = run_contract_with_defaults(
+        &code[..],
+        1_000_000,
+        cbor::cbor_text!("instantiate"),
+        cbor::cbor_map! { "say_hello" => cbor::cbor_map!{"who" => cbor::cbor_text!("tester")} },
+    )
+    .expect_err("contract call should fail");
+
+    assert_eq!(result.module_name(), "contracts");
+    assert_eq!(result.code(), 12);
+    assert_eq!(&result.to_string(), "execution failed: bad region pointer");
 }
 
 #[test]

@@ -7,11 +7,11 @@ pub mod env;
 pub mod storage;
 
 #[no_mangle]
-pub extern "wasm" fn allocate(length: u32) -> u32 {
+pub extern "C" fn allocate(length: u32) -> u32 {
     memory::allocate_host(length)
 }
 
 #[no_mangle]
-pub extern "wasm" fn deallocate(offset: u32, length: u32) {
+pub extern "C" fn deallocate(offset: u32, length: u32) {
     memory::deallocate_host(offset, length)
 }
