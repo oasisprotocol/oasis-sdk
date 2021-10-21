@@ -420,6 +420,12 @@ impl API for Module {
         // Increase total supply.
         Self::inc_total_supply(ctx.runtime_state(), amount)?;
 
+        // Emit a mint event.
+        ctx.emit_event(Event::Mint {
+            owner: to,
+            amount: amount.clone(),
+        });
+
         Ok(())
     }
 
@@ -434,6 +440,12 @@ impl API for Module {
         // Decrease total supply.
         Self::dec_total_supply(ctx.runtime_state(), amount)
             .expect("target account had enough balance so total supply should not underflow");
+
+        // Emit a burn event.
+        ctx.emit_event(Event::Burn {
+            owner: from,
+            amount: amount.clone(),
+        });
 
         Ok(())
     }
