@@ -84,11 +84,20 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
         let mut state = ctx.runtime_state();
 
         // Derive SDK account address from the Ethereum address.
-        let address = Cfg::map_address(address);
+        let sdk_address = Cfg::map_address(address);
         // Fetch balance and nonce from SDK accounts. Note that these can never fail.
         let balance =
-            Cfg::Accounts::get_balance(&mut state, address, Cfg::TOKEN_DENOMINATION).unwrap();
-        let nonce = Cfg::Accounts::get_nonce(&mut state, address).unwrap();
+            Cfg::Accounts::get_balance(&mut state, sdk_address, Cfg::TOKEN_DENOMINATION).unwrap();
+        let mut nonce = Cfg::Accounts::get_nonce(&mut state, sdk_address).unwrap();
+
+        // If this is the caller's address and this is not a simulation context, return the nonce
+        // decremented by one to cancel out the SDK nonce changes.
+        if address == self.origin() && !ctx.is_simulation() {
+            // NOTE: This should not overflow as in non-simulation context the nonce should have
+            //       been incremented by the authentication handler. Tests should make sure to
+            //       either configure simulation mode or set up the nonce correctly.
+            nonce -= 1;
+        }
 
         Basic {
             nonce: nonce.into(),
@@ -138,6 +147,9 @@ impl<'c, C: Context, Cfg: Config> ApplyBackend for Backend<'c, C, Cfg> {
         // enough to do (all balances should already be in the storage cache).
         let mut total_supply_add = 0u128;
         let mut total_supply_sub = 0u128;
+        // Keep origin handy for nonce sanity checks.
+        let origin = self.vicinity.origin;
+        let is_simulation = self.ctx.get_mut().is_simulation();
 
         for apply in values {
             match apply {
@@ -170,7 +182,28 @@ impl<'c, C: Context, Cfg: Config> ApplyBackend for Backend<'c, C, Cfg> {
                     // to ensure that this never results in any tokens being either minted or
                     // burned.
                     Cfg::Accounts::set_balance(&mut state, address, &amount);
-                    Cfg::Accounts::set_nonce(state, address, basic.nonce.as_u64());
+
+                    // Sanity check nonce updates to make sure that they behave exactly the same as
+                    // what we do anyway when authenticating transactions.
+                    let nonce = basic.nonce.as_u64();
+                    if !is_simulation {
+                        let old_nonce = Cfg::Accounts::get_nonce(&mut state, address).unwrap();
+
+                        if addr == origin {
+                            // Origin's nonce must stay the same as we cancelled out the changes. Note
+                            // that in reality this means that the nonce has been incremented by one.
+                            if nonce != old_nonce {
+                                panic!("evm execution would not increment origin nonce correctly ({} -> {})", old_nonce, nonce);
+                            }
+                        } else {
+                            // Other nonces must increment by one or stay the same. Note that even
+                            // non-origin nonces may increment due to `create_increase_nonce` config.
+                            if nonce != old_nonce && nonce != old_nonce + 1 {
+                                panic!("evm execution would not update non-origin nonce correctly ({} -> {})", old_nonce, nonce);
+                            }
+                        }
+                    }
+                    Cfg::Accounts::set_nonce(&mut state, address, nonce);
 
                     // Handle code updates.
                     if let Some(code) = code {

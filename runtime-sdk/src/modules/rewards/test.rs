@@ -311,3 +311,12 @@ fn test_reward_disbursement() {
         "rewards should have been disbursed to participating entities"
     );
 }
+
+#[test]
+fn test_reward_pool_address() {
+    // Make sure the reward pool address doesn't change.
+    assert_eq!(
+        ADDRESS_REWARD_POOL.to_bech32(),
+        "oasis1qp7x0q9qahahhjas0xde8w0v04ctp4pqzu5mhjav"
+    );
+}
