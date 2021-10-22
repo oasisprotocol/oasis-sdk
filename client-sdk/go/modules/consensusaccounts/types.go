@@ -4,11 +4,13 @@ import "github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
 // Deposit are the arguments for consensus.Deposit method.
 type Deposit struct {
+	To     *types.Address  `json:"to,omitempty"`
 	Amount types.BaseUnits `json:"amount"`
 }
 
-// Withdraw are the arguments for consensus.Deposit method.
+// Withdraw are the arguments for consensus.Withdraw method.
 type Withdraw struct {
+	To     *types.Address  `json:"to,omitempty"`
 	Amount types.BaseUnits `json:"amount"`
 }
 

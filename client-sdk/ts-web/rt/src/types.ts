@@ -238,6 +238,7 @@ export type UnverifiedTransaction = [body: Uint8Array, authProofs: AuthProof[]];
  * Consensus deposit call.
  */
 export interface ConsensusDeposit {
+    to?: Uint8Array;
     amount: BaseUnits;
 }
 
@@ -245,6 +246,7 @@ export interface ConsensusDeposit {
  * Consensus withdraw call.
  */
 export interface ConsensusWithdraw {
+    to?: Uint8Array;
     amount: BaseUnits;
 }
 

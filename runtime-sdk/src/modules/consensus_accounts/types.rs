@@ -2,14 +2,23 @@
 use crate::types::{address::Address, token};
 
 /// Deposit into runtime call.
+/// Transfer from consensus staking to an account in this runtime.
+/// The transaction signer has a consensus layer allowance benefiting this runtime's staking
+/// address. The `to` address runtime account gets the tokens.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Deposit {
+    #[cbor(optional)]
+    pub to: Option<Address>,
     pub amount: token::BaseUnits,
 }
 
 /// Withdraw from runtime call.
+/// Transfer from an account in this runtime to consensus staking.
+/// The `to` address consensus staking account gets the tokens.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Withdraw {
+    #[cbor(optional)]
+    pub to: Option<Address>,
     pub amount: token::BaseUnits,
 }
 
