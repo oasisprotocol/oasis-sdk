@@ -532,6 +532,25 @@ func SimpleERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cli
 		return fmt.Errorf("SimulateCall and evmCall returned different results")
 	}
 
+	evs, err := e.GetEvents(ctx)
+	if err != nil {
+		return fmt.Errorf("GetEvents failed: %w", err)
+	}
+
+	if len(evs) != 1 {
+		return fmt.Errorf("expected 1 event, got %d", len(evs))
+	}
+
+	if !bytes.Equal(evs[0].Address, contractAddr) {
+		return fmt.Errorf("address in event is wrong")
+	}
+
+	fortytwo := make([]byte, 32)
+	fortytwo[31] = 0x42
+	if !bytes.Equal(evs[0].Data, fortytwo) {
+		return fmt.Errorf("data in event is wrong")
+	}
+
 	// Call balanceOf(0x123).
 	balanceMethod, err := hex.DecodeString("70a08231" + strings.Repeat("0", 64-3) + "123")
 	if err != nil {

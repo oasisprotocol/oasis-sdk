@@ -2,6 +2,9 @@ package evm
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -21,6 +24,8 @@ const (
 
 // V1 is the v1 EVM module interface.
 type V1 interface {
+	client.EventDecoder
+
 	// Create generates an EVM CREATE transaction.
 	// Note that the transaction's gas limit should be set to cover both the
 	// SDK gas limit and the EVM gas limit.  The transaction fee should be
@@ -44,6 +49,9 @@ type V1 interface {
 
 	// SimulateCall simulates an EVM CALL.
 	SimulateCall(ctx context.Context, gasPrice []byte, gasLimit uint64, caller []byte, address []byte, value []byte, data []byte) ([]byte, error)
+
+	// GetEvents returns events emitted by the EVM module.
+	GetEvents(ctx context.Context) ([]*Event, error)
 }
 
 type v1 struct {
@@ -119,6 +127,40 @@ func (a *v1) SimulateCall(ctx context.Context, gasPrice []byte, gasLimit uint64,
 		return nil, err
 	}
 	return res, nil
+}
+
+// Implements V1.
+func (a *v1) GetEvents(ctx context.Context) ([]*Event, error) {
+	revs, err := a.rtc.GetEventsRaw(ctx, client.RoundLatest)
+	if err != nil {
+		return nil, err
+	}
+
+	evs := make([]*Event, 0)
+	for _, rev := range revs {
+		ev, err := a.DecodeEvent(rev)
+		if err != nil {
+			return nil, err
+		}
+		if ev == nil {
+			continue
+		}
+		evs = append(evs, ev.(*Event))
+	}
+
+	return evs, nil
+}
+
+// Implements client.EventDecoder.
+func (a *v1) DecodeEvent(event *types.Event) (client.DecodedEvent, error) {
+	if event.Module != ModuleName && event.Code != 1 {
+		return nil, nil
+	}
+	var ev *Event
+	if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+		return nil, fmt.Errorf("evm event value unmarshal failed: %w", err)
+	}
+	return ev, nil
 }
 
 // NewV1 generates a V1 client helper for the EVM module.

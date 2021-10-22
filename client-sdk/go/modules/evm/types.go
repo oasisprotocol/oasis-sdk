@@ -41,3 +41,13 @@ type SimulateCallQuery struct {
 	Value    []byte `json:"value"`
 	Data     []byte `json:"data"`
 }
+
+// ModuleName is the EVM module name.
+const ModuleName = "evm"
+
+// Event is an event emitted by the EVM module.
+type Event struct {
+	Address []byte   `json:"address"`
+	Topics  [][]byte `json:"topics"`
+	Data    []byte   `json:"data"`
+}
