@@ -86,7 +86,7 @@ if [ -n "$BUILD_NUMBER" ]; then
     if [ ! -x "$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER/simple-keymanager" ]; then
         (
             cd "$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER"
-            KEY_MANAGER_RUNTIME_JOB_ID=$(jq <"$BUILD_NUMBER.json" -r '.jobs[] | select(.name == "Build key manager runtime") | .id')
+            KEY_MANAGER_RUNTIME_JOB_ID=$(jq <"$BUILD_NUMBER.json" -r '.jobs[] | select(.name == "Build runtimes") | .id')
             KEY_MANAGER_RUNTIME_ARTIFACTS_JSON=$(curl -sf "https://buildkite.com/organizations/$ORGANIZATION/pipelines/$PIPELINE/builds/$BUILD_NUMBER/jobs/$KEY_MANAGER_RUNTIME_JOB_ID/artifacts")
             SIMPLE_KEYMANAGER_URL=$(printf '%s' "$KEY_MANAGER_RUNTIME_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "simple-keymanager") | .url')
 
