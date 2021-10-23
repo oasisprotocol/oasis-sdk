@@ -12,6 +12,15 @@ const FEE_FREE = /** @type {oasisRT.types.BaseUnits} */ ([
     oasisRT.token.NATIVE_DENOMINATION,
 ]);
 
+/**
+ * @param {number} duration
+ */
+function delay(duration) {
+    return new Promise((resolve, reject) => {
+        setTimeout(resolve, duration);
+    });
+}
+
 const nic = new oasis.client.NodeInternal('http://localhost:42280');
 const accountsWrapper = new oasisRT.accounts.Wrapper(CONSENSUS_RT_ID);
 const consensusWrapper = new oasisRT.consensusAccounts.Wrapper(CONSENSUS_RT_ID);
@@ -93,7 +102,77 @@ export const playground = (async function () {
             .setFeeGas(0n)
             .setFeeConsensusMessages(1);
         await twDeposit.sign([csAlice], consensusChainContext);
+
+        const addrAliceBech32 = oasis.staking.addressToBech32(aliceAddr);
+        const depositAmountBI = oasis.quantity.toBigInt(DEPOSIT_AMNT[0]);
+        const depositDenominationHex = oasis.misc.toHex(DEPOSIT_AMNT[1]);
+        const startBlock = await nic.runtimeClientGetBlock({
+            runtime_id: CONSENSUS_RT_ID,
+            round: oasis.runtime.CLIENT_ROUND_LATEST,
+        });
+        const eventsTask = (async () => {
+            let eventFound = false;
+            const eventVisitor = new oasisRT.event.Visitor([
+                oasisRT.accounts.moduleEventHandler({
+                    [oasisRT.accounts.EVENT_MINT_CODE]: (e, mintEvent) => {
+                        console.log('polled mint event', mintEvent);
+                        const eventOwnerBech32 = oasis.staking.addressToBech32(mintEvent.owner);
+                        if (eventOwnerBech32 !== addrAliceBech32) {
+                            console.log('address mismatch');
+                            return;
+                        }
+                        const eventAmountBI = oasis.quantity.toBigInt(mintEvent.amount[0]);
+                        if (eventAmountBI !== depositAmountBI) {
+                            console.log('amount mismatch');
+                            return;
+                        }
+                        const eventDenominationHex = oasis.misc.toHex(mintEvent.amount[1]);
+                        if (eventDenominationHex !== depositDenominationHex) {
+                            console.log('denomination mismatch');
+                            return;
+                        }
+                        console.log('match');
+                        eventFound = true;
+                    },
+                }),
+            ]);
+            let nextRound = BigInt(startBlock.header.round) + 1n;
+            poll_blocks: while (true) {
+                // Local testnet runs faster. Use ~6_000 for Oasis testnet and mainnet.
+                await delay(1_000);
+                let events;
+                try {
+                    events = await nic.runtimeClientGetEvents({
+                        runtime_id: CONSENSUS_RT_ID,
+                        round: nextRound,
+                    });
+                } catch (e) {
+                    if (
+                        e.oasisModule === oasis.roothash.MODULE_NAME &&
+                        e.oasisCode === oasis.roothash.ERR_NOT_FOUND_CODE
+                    ) {
+                        // Block doesn't exist yet. Wait and fetch again.
+                        continue;
+                    }
+                    throw e;
+                }
+                console.log('polled block', nextRound);
+                if (events) {
+                    for (const e of events) {
+                        eventVisitor.visit(e);
+                        if (eventFound) break poll_blocks;
+                    }
+                }
+                nextRound++;
+            }
+            console.log('done polling for event');
+        })();
+
+        console.log('submitting');
         await twDeposit.submit(nic);
+
+        console.log('waiting for mint event');
+        await eventsTask;
 
         console.log('alice balance');
         const balanceResult = await consensusWrapper
@@ -103,9 +182,6 @@ export const playground = (async function () {
             })
             .query(nic);
         console.log('balance', oasis.quantity.toBigInt(balanceResult.balance));
-        console.log(
-            "we just deposited, but it's okay if this is zero before the roothash callback runs",
-        );
 
         console.log('alice withdrawing from runtime');
         const nonce2 = await accountsWrapper
