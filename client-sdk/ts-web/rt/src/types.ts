@@ -272,6 +272,63 @@ export interface ConsensusAccountQuery {
 }
 
 /**
+ * Transaction body for creating an EVM contract.
+ */
+export interface EVMCreate {
+    value: Uint8Array;
+    init_code: Uint8Array;
+}
+
+/**
+ * Transaction body for calling an EVM contract.
+ */
+export interface EVMCall {
+    address: Uint8Array;
+    value: Uint8Array;
+    data: Uint8Array;
+}
+
+/**
+ * Transaction body for peeking into EVM storage.
+ */
+export interface EVMStorageQuery {
+    address: Uint8Array;
+    index: Uint8Array;
+}
+
+/**
+ * Transaction body for peeking into EVM code storage.
+ */
+export interface EVMCodeQuery {
+    address: Uint8Array;
+}
+
+/**
+ * Transaction body for fetching EVM account's balance.
+ */
+export interface EVMBalanceQuery {
+    address: Uint8Array;
+}
+
+/**
+ * Transaction body for simulating an EVM call.
+ */
+export interface EVMSimulateCallQuery {
+    gas_price: Uint8Array;
+    gas_limit: oasis.types.longnum;
+    caller: Uint8Array;
+    address: Uint8Array;
+    value: Uint8Array;
+    data: Uint8Array;
+}
+
+export interface EVMLogEvent {
+    address: Uint8Array;
+    topics: Uint8Array[];
+    data: Uint8Array;
+}
+
+/**
  * A call envelope when using the CALLFORMAT_ENCRYPTED_X25519DEOXYSII format.
  */
 export interface CallEnvelopeX25519DeoxysII {
