@@ -187,7 +187,7 @@ impl Runtime for GasWasterRuntime {
 #[test]
 fn test_reject_txs() {
     // The gas waster runtime doesn't implement any authenticate_tx handler,
-    // so it should reject all transactions.
+    // so it should accept all transactions.
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
 
@@ -222,7 +222,7 @@ fn test_reject_txs() {
         },
     };
 
-    Core::authenticate_tx(&mut ctx, &tx).expect_err("no module could authenticate the transaction");
+    Core::authenticate_tx(&mut ctx, &tx).expect("authenticate should pass if all modules accept");
 }
 
 #[test]

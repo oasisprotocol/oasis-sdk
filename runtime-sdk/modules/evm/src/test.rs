@@ -7,7 +7,7 @@ use uint::hex::FromHex;
 use oasis_runtime_sdk::{
     context,
     crypto::signature::secp256k1,
-    module::{self, InvariantHandler as _},
+    module::{self, AuthHandler as _, InvariantHandler as _},
     modules::{
         accounts::{self, Module as Accounts},
         core::{self, Module as Core},
@@ -152,6 +152,9 @@ fn test_evm_calls() {
             },
         },
     };
+    // Run authentication handler to simulate nonce increments.
+    Accounts::authenticate_tx(&mut ctx, &create_tx).unwrap();
+
     let erc20_addr = ctx.with_tx(0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
             &EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
@@ -181,7 +184,7 @@ fn test_evm_calls() {
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
                 keys::dave::sigspec(),
-                0,
+                1,
             )],
             fee: transaction::Fee {
                 amount: Default::default(),
@@ -190,6 +193,9 @@ fn test_evm_calls() {
             },
         },
     };
+    // Run authentication handler to simulate nonce increments.
+    Accounts::authenticate_tx(&mut ctx, &call_name_tx).unwrap();
+
     let erc20_name = ctx.with_tx(0, call_name_tx, |mut tx_ctx, call| {
         let name = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call name should succeed");
@@ -278,6 +284,9 @@ fn test_evm_runtime() {
             },
         },
     };
+    // Run authentication handler to simulate nonce increments.
+    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &create_tx).unwrap();
+
     let erc20_addr = ctx.with_tx(0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
             &EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
@@ -307,7 +316,7 @@ fn test_evm_runtime() {
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
                 keys::dave::sigspec(),
-                0,
+                1,
             )],
             fee: transaction::Fee {
                 amount: Default::default(),
@@ -316,6 +325,9 @@ fn test_evm_runtime() {
             },
         },
     };
+    // Run authentication handler to simulate nonce increments.
+    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &call_name_tx).unwrap();
+
     let erc20_name = ctx.with_tx(0, call_name_tx, |mut tx_ctx, call| {
         let name = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call name should succeed");
@@ -354,7 +366,7 @@ fn test_evm_runtime() {
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
                 keys::dave::sigspec(),
-                0,
+                2,
             )],
             fee: transaction::Fee {
                 amount: Default::default(),
@@ -363,6 +375,9 @@ fn test_evm_runtime() {
             },
         },
     };
+    // Run authentication handler to simulate nonce increments.
+    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &call_transfer_tx).unwrap();
+
     let transfer_ret = ctx.with_tx(0, call_transfer_tx, |mut tx_ctx, call| {
         let ret = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call transfer should succeed");

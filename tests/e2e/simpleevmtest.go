@@ -224,6 +224,7 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	signer := testing.Dave.Signer
 	e := evm.NewV1(rtc)
 	c := core.NewV1(rtc)
+	ac := accounts.NewV1(rtc)
 
 	// By setting the value to 1, the EVM will transfer 1 unit from the caller's
 	// EVM account into the contract's EVM account.
@@ -264,6 +265,12 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 	addPackedBytecode := evmPack(addBytecode)
 
+	// Fetch nonce at start.
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Dave.Address)
+	if err != nil {
+		return fmt.Errorf("failed to get nonce: %w", err)
+	}
+
 	// Create the EVM contract.
 	contractAddr, err := evmCreate(ctx, rtc, e, signer, value, addPackedBytecode, gasPrice, 64000)
 	if err != nil {
@@ -271,6 +278,16 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 
 	log.Info("evmCreate finished", "contract_addr", hex.EncodeToString(contractAddr))
+
+	// Fetch nonce after create.
+	newNonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Dave.Address)
+	if err != nil {
+		return fmt.Errorf("failed to get nonce: %w", err)
+	}
+
+	if newNonce != nonce+1 {
+		return fmt.Errorf("nonce updated incorrectly: %d -> %d", nonce, newNonce)
+	}
 
 	// Peek into code storage to verify that our contract was indeed stored.
 	storedCode, err := e.Code(ctx, contractAddr)
