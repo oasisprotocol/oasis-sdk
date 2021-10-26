@@ -22,7 +22,7 @@ sha3 = { version = "0.9", default-features = false }
 num = { version = "0.4", features = ["alloc"], default-features = false }
 
 # Ethereum.
-ethereum = "0.9.0"
+ethereum = "0.10.0"
 evm = "0.30.1"
 fixed-hash = "0.7.0"
 primitive-types = { version = "0.10.1", default-features = false, features = ["rlp", "num-traits"] }
