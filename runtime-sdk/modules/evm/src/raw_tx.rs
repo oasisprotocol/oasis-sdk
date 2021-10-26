@@ -3,7 +3,6 @@ use std::convert::TryInto;
 use anyhow::{anyhow, Context as _};
 use ethereum;
 use k256;
-use sha3::{self, Digest as _};
 
 use oasis_runtime_sdk::{
     crypto::signature,
@@ -14,12 +13,12 @@ use crate::types;
 
 pub fn recover_low(
     sig: &k256::ecdsa::recoverable::Signature,
-    sig_digest: sha3::Keccak256,
+    sig_hash: &primitive_types::H256,
 ) -> Result<k256::ecdsa::VerifyingKey, anyhow::Error> {
     if sig.s().is_high().into() {
         return Err(anyhow!("signature s high"));
     }
-    sig.recover_verify_key_from_digest(sig_digest)
+    sig.recover_verify_key_from_digest_bytes(sig_hash.as_fixed_bytes().into())
         .with_context(|| "recover verify key from digest")
 }
 
@@ -30,7 +29,7 @@ fn decode_enveloped(
     let (
         chain_id,
         sig,
-        sig_digest,
+        sig_hash,
         eth_action,
         eth_value,
         eth_input,
@@ -53,14 +52,10 @@ fn decode_enveloped(
             .with_context(|| "recoverable signature new")?;
             let message = ethereum::LegacyTransactionMessage::from(eth_tx);
 
-            // TODO: replace this with message.hash()
-            let mut sig_digest = sha3::Keccak256::new();
-            sig_digest.update(&rlp::encode(&message));
-
             (
                 message.chain_id,
                 sig,
-                sig_digest,
+                message.hash(),
                 message.action,
                 message.value,
                 message.input,
@@ -82,17 +77,10 @@ fn decode_enveloped(
             .with_context(|| "recoverable signature new")?;
             let message = ethereum::EIP2930TransactionMessage::from(eth_tx);
 
-            // `ethereum` crate is broken: it excludes the transaction type byte when hashing an
-            // EIP-2930 transaction.
-            // TODO: replace this with message.hash()
-            let mut sig_digest = sha3::Keccak256::new();
-            sig_digest.update(&[1]);
-            sig_digest.update(&rlp::encode(&message));
-
             (
                 Some(message.chain_id),
                 sig,
-                sig_digest,
+                message.hash(),
                 message.action,
                 message.value,
                 message.input,
@@ -114,35 +102,13 @@ fn decode_enveloped(
             .with_context(|| "recoverable signature new")?;
             let message = ethereum::EIP1559TransactionMessage::from(eth_tx);
 
-            // `ethereum` crate is broken: it uses a list of the wrong length when encoding an
-            // EIP-1559 transaction's signing message.
-            // TODO: replace this with rlp::encode(&message)
-            let mut message_rlp = rlp::RlpStream::new_list(9);
-            message_rlp.append(&message.chain_id);
-            message_rlp.append(&message.nonce);
-            message_rlp.append(&message.max_priority_fee_per_gas);
-            message_rlp.append(&message.max_fee_per_gas);
-            message_rlp.append(&message.gas_limit);
-            message_rlp.append(&message.action);
-            message_rlp.append(&message.value);
-            message_rlp.append(&message.input);
-            message_rlp.append_list(&message.access_list);
-            let message_buf = message_rlp.out();
-
-            // `ethereum` crate is broken: it excludes the transaction type byte when hashing an
-            // EIP-1559 transaction.
-            // TODO: replace this with message.hash()
-            let mut sig_digest = sha3::Keccak256::new();
-            sig_digest.update(&[2]);
-            sig_digest.update(&message_buf);
-
             // Base fee is zero. Allocate only priority fee.
             let resolved_gas_price =
                 std::cmp::min(message.max_fee_per_gas, message.max_priority_fee_per_gas);
             (
                 Some(message.chain_id),
                 sig,
-                sig_digest,
+                message.hash(),
                 message.action,
                 message.value,
                 message.input,
@@ -176,7 +142,7 @@ fn decode_enveloped(
             }),
         ),
     };
-    let key = recover_low(&sig, sig_digest)?;
+    let key = recover_low(&sig, &sig_hash)?;
     let nonce: u64 = eth_nonce
         .try_into()
         .map_err(|e| anyhow!("converting nonce: {}", e))?;
