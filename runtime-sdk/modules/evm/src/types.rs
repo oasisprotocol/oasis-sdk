@@ -1,5 +1,4 @@
 //! EVM module types.
-use oasis_runtime_sdk::types::{address::Address, token};
 
 /// Transaction body for creating an EVM contract.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
@@ -14,20 +13,6 @@ pub struct Call {
     pub address: H160,
     pub value: U256,
     pub data: Vec<u8>,
-}
-
-/// Transaction body for depositing caller's SDK account tokens into EVM account.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct Deposit {
-    pub to: H160,
-    pub amount: token::BaseUnits,
-}
-
-/// Transaction body for withdrawing SDK account tokens from the caller's EVM account.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct Withdraw {
-    pub to: Address,
-    pub amount: token::BaseUnits,
 }
 
 /// Transaction body for peeking into EVM storage.
