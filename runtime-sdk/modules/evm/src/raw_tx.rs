@@ -114,27 +114,12 @@ fn decode_enveloped(
             .with_context(|| "recoverable signature new")?;
             let message = ethereum::EIP1559TransactionMessage::from(eth_tx);
 
-            // `ethereum` crate is broken: it uses a list of the wrong length when encoding an
-            // EIP-1559 transaction's signing message.
-            // TODO: replace this with rlp::encode(&message)
-            let mut message_rlp = rlp::RlpStream::new_list(9);
-            message_rlp.append(&message.chain_id);
-            message_rlp.append(&message.nonce);
-            message_rlp.append(&message.max_priority_fee_per_gas);
-            message_rlp.append(&message.max_fee_per_gas);
-            message_rlp.append(&message.gas_limit);
-            message_rlp.append(&message.action);
-            message_rlp.append(&message.value);
-            message_rlp.append(&message.input);
-            message_rlp.append_list(&message.access_list);
-            let message_buf = message_rlp.out();
-
             // `ethereum` crate is broken: it excludes the transaction type byte when hashing an
             // EIP-1559 transaction.
             // TODO: replace this with message.hash()
             let mut sig_digest = sha3::Keccak256::new();
             sig_digest.update(&[2]);
-            sig_digest.update(&message_buf);
+            sig_digest.update(&rlp::encode(&message));
 
             // Base fee is zero. Allocate only priority fee.
             let resolved_gas_price =
