@@ -4,9 +4,13 @@ use std::{
     ops::BitAnd,
 };
 
-use evm::{executor::PrecompileOutput, Context, ExitError, ExitSucceed};
+use evm::{
+    executor::{Precompile, PrecompileOutput},
+    Context, ExitError, ExitSucceed,
+};
 use k256::{ecdsa::recoverable, EncodedPoint};
 use num::{BigUint, FromPrimitive, One, ToPrimitive, Zero};
+use once_cell::sync::Lazy;
 use primitive_types::H160;
 use ripemd160::Ripemd160;
 use sha2::Sha256;
@@ -37,10 +41,15 @@ const PRECOMPILE_BIGMODEXP: H160 = H160([
 // https://eips.ethereum.org/EIPS/eip-2565
 const MIN_GAS_COST: u64 = 200;
 
-fn call_ecrecover(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitError> {
+fn call_ecrecover(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> Result<PrecompileOutput, ExitError> {
     use sha3::Digest;
 
-    let gas_cost = linear_cost(Some(target_gas), input.len() as u64, 3000, 0)?;
+    let gas_cost = linear_cost(target_gas, input.len() as u64, 3000, 0)?;
 
     // Make right padding for input
     let mut padding = [0u8; 128];
@@ -103,10 +112,15 @@ fn call_ecrecover(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exi
     })
 }
 
-fn call_sha256(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitError> {
+fn call_sha256(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> Result<PrecompileOutput, ExitError> {
     use sha2::Digest;
 
-    let gas_cost = linear_cost(Some(target_gas), input.len() as u64, 60, 12)?;
+    let gas_cost = linear_cost(target_gas, input.len() as u64, 60, 12)?;
 
     let mut hasher = Sha256::new();
     hasher.update(input);
@@ -120,10 +134,15 @@ fn call_sha256(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitEr
     })
 }
 
-fn call_ripemd160(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitError> {
+fn call_ripemd160(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> Result<PrecompileOutput, ExitError> {
     use ripemd160::Digest;
 
-    let gas_cost = linear_cost(Some(target_gas), input.len() as u64, 600, 120)?;
+    let gas_cost = linear_cost(target_gas, input.len() as u64, 600, 120)?;
 
     let mut hasher = Ripemd160::new();
     hasher.update(input);
@@ -138,8 +157,13 @@ fn call_ripemd160(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exi
     })
 }
 
-fn call_datacopy(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitError> {
-    let gas_cost = linear_cost(Some(target_gas), input.len() as u64, 15, 3)?;
+fn call_datacopy(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> Result<PrecompileOutput, ExitError> {
+    let gas_cost = linear_cost(target_gas, input.len() as u64, 15, 3)?;
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
@@ -149,7 +173,12 @@ fn call_datacopy(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exit
     })
 }
 
-fn call_bigmodexp(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitError> {
+fn call_bigmodexp(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> Result<PrecompileOutput, ExitError> {
     if input.len() < 96 {
         return Err(ExitError::Other(
             "input must contain at least 96 bytes".into(),
@@ -209,8 +238,10 @@ fn call_bigmodexp(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exi
         let gas_cost =
             calculate_modexp_gas_cost(base_len as u64, exp_len as u64, mod_len as u64, &exponent)?;
 
-        if target_gas < gas_cost {
-            return Err(ExitError::OutOfGas);
+        if let Some(target_gas) = target_gas {
+            if target_gas < gas_cost {
+                return Err(ExitError::OutOfGas);
+            }
         }
 
         let mod_start = exp_start + exp_len;
@@ -250,29 +281,15 @@ fn call_bigmodexp(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exi
     }
 }
 
-pub fn precompiled_contract(
-    address: H160,
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-) -> Option<Result<PrecompileOutput, ExitError>> {
-    if address == PRECOMPILE_ECRECOVER {
-        return Some(call_ecrecover(input, target_gas.unwrap()));
-    }
-    if address == PRECOMPILE_SHA256 {
-        return Some(call_sha256(input, target_gas.unwrap()));
-    }
-    if address == PRECOMPILE_RIPEMD160 {
-        return Some(call_ripemd160(input, target_gas.unwrap()));
-    }
-    if address == PRECOMPILE_DATACOPY {
-        return Some(call_datacopy(input, target_gas.unwrap()));
-    }
-    if address == PRECOMPILE_BIGMODEXP {
-        return Some(call_bigmodexp(input, target_gas.unwrap()));
-    }
-    None
-}
+pub static PRECOMPILED_CONTRACT: Lazy<Precompile> = Lazy::new(|| {
+    Precompile::from([
+        (PRECOMPILE_ECRECOVER, call_ecrecover as fn(&[u8], Option<u64>, &Context, bool) -> Result<PrecompileOutput, ExitError>),
+        (PRECOMPILE_SHA256, call_sha256),
+        (PRECOMPILE_RIPEMD160, call_ripemd160),
+        (PRECOMPILE_DATACOPY, call_datacopy),
+        (PRECOMPILE_BIGMODEXP, call_bigmodexp),
+    ])
+});
 
 /// Linear gas cost
 fn linear_cost(target_gas: Option<u64>, len: u64, base: u64, word: u64) -> Result<u64, ExitError> {

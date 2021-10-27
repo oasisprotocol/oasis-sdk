@@ -244,7 +244,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                 caller: caller.into(),
             });
             (
-                exec.transact_create(caller.into(), value.into(), init_code, gas_limit),
+                exec.transact_create(caller.into(), value.into(), init_code, gas_limit, vec![]),
                 address.as_bytes().to_vec(),
             )
         })
@@ -264,7 +264,14 @@ impl<Cfg: Config> API for Module<Cfg> {
         }
 
         Self::do_evm(caller, ctx, |exec, gas_limit| {
-            exec.transact_call(caller.into(), address.into(), value.into(), data, gas_limit)
+            exec.transact_call(
+                caller.into(),
+                address.into(),
+                value.into(),
+                data,
+                gas_limit,
+                vec![],
+            )
         })
     }
 
@@ -335,7 +342,14 @@ impl<Cfg: Config> API for Module<Cfg> {
             };
             sctx.with_tx(0, call_tx, |mut txctx, _call| {
                 Self::do_evm(caller, &mut txctx, |exec, gas_limit| {
-                    exec.transact_call(caller.into(), address.into(), value.into(), data, gas_limit)
+                    exec.transact_call(
+                        caller.into(),
+                        address.into(),
+                        value.into(),
+                        data,
+                        gas_limit,
+                        vec![],
+                    )
                 })
             })
         })
@@ -373,7 +387,7 @@ impl<Cfg: Config> Module<Cfg> {
         let mut executor = StackExecutor::new_with_precompile(
             stackstate,
             &Self::EVM_CONFIG,
-            precompile::precompiled_contract,
+            precompile::PRECOMPILED_CONTRACT.clone(),
         );
 
         // Run EVM.
