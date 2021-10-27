@@ -221,7 +221,7 @@ export const playground = (async function () {
         console.log('  estimate gas');
         const estimatedGas1 = await coreWrapper
             .queryEstimateGas()
-            .setArgs(twInsert.transaction)
+            .setArgs({tx: twInsert.transaction})
             .query(nic);
         console.log('  estimated gas', estimatedGas1);
         twInsert.setFeeGas(estimatedGas1);
@@ -268,7 +268,7 @@ export const playground = (async function () {
         console.log('  estimate gas');
         const estimatedGas2 = await coreWrapper
             .queryEstimateGas()
-            .setArgs(twRemove.transaction)
+            .setArgs({tx: twRemove.transaction})
             .query(nic);
         console.log('  estimated gas', estimatedGas2);
         twRemove.setFeeGas(estimatedGas2);

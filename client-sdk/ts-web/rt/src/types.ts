@@ -1,6 +1,14 @@
 import * as oasis from '@oasisprotocol/client';
 
 /**
+ * Arguments for the EstimateGas query.
+ */
+export interface CoreEstimateGasQuery {
+    caller?: Uint8Array;
+    tx: Transaction;
+}
+
+/**
  * Balances in an account.
  */
 export interface AccountsAccountBalances {

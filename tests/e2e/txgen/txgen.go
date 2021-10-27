@@ -25,6 +25,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/sr25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -84,7 +85,8 @@ func EstimateGas(ctx context.Context, rtc client.RuntimeClient, tx types.Transac
 	// Set the starting gas to something high, so we don't run out.
 	tx.AuthInfo.Fee.Gas = highGasAmount
 	// Estimate gas usage.
-	if err := rtc.Query(ctx, client.RoundLatest, "core.EstimateGas", tx, &gas); err != nil {
+	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, &tx)
+	if err != nil {
 		tx.AuthInfo.Fee.Gas = oldGas + extraGas
 		return tx
 	}
