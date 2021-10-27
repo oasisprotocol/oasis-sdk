@@ -16,29 +16,29 @@ use ripemd160::Ripemd160;
 use sha2::Sha256;
 use sha3::Keccak256;
 
-// Address of ECDSA public key recovery function
+/// Address of ECDSA public key recovery function
 const PRECOMPILE_ECRECOVER: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01,
 ]);
-// Address of of SHA2-256 hash function
+/// Address of of SHA2-256 hash function
 const PRECOMPILE_SHA256: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02,
 ]);
-// Address of RIPEMD-160 hash functions
+/// Address of RIPEMD-160 hash functions
 const PRECOMPILE_RIPEMD160: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
 ]);
-// Address of identity which defines the output as the input
+/// Address of identity which defines the output as the input
 const PRECOMPILE_DATACOPY: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04,
 ]);
-// Big integer modular exponentiation in EIP-198
+/// Big integer modular exponentiation in EIP-198
 const PRECOMPILE_BIGMODEXP: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
 ]);
 
-// Minimum gas cost of ModExp contract from eip-2565
-// https://eips.ethereum.org/EIPS/eip-2565
+/// Minimum gas cost of ModExp contract from eip-2565
+/// https://eips.ethereum.org/EIPS/eip-2565
 const MIN_GAS_COST: u64 = 200;
 
 fn call_ecrecover(
@@ -342,8 +342,8 @@ fn calculate_iteration_count(exp_length: u64, exponent: &BigUint) -> u64 {
     max(iteration_count, 1)
 }
 
-// Calculate ModExp gas cost according to EIP 2565:
-// https://eips.ethereum.org/EIPS/eip-2565
+/// Calculate ModExp gas cost according to EIP 2565:
+/// https://eips.ethereum.org/EIPS/eip-2565
 fn calculate_modexp_gas_cost(
     base_length: u64,
     exp_length: u64,
