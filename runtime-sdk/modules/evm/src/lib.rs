@@ -134,6 +134,10 @@ pub enum Error {
     #[sdk_error(code = 6)]
     InsufficientBalance,
 
+    #[error("forbidden by policy")]
+    #[sdk_error(code = 7)]
+    Forbidden,
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] CoreError),
@@ -230,7 +234,8 @@ impl<Cfg: Config> API for Module<Cfg> {
     ) -> Result<Vec<u8>, Error> {
         let caller = Self::derive_caller(ctx)?;
 
-        if ctx.is_check_only() {
+        if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
+            // Only fast checks are allowed.
             return Ok(vec![]);
         }
 
@@ -253,7 +258,8 @@ impl<Cfg: Config> API for Module<Cfg> {
     ) -> Result<Vec<u8>, Error> {
         let caller = Self::derive_caller(ctx)?;
 
-        if ctx.is_check_only() {
+        if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
+            // Only fast checks are allowed.
             return Ok(vec![]);
         }
 
@@ -296,6 +302,10 @@ impl<Cfg: Config> API for Module<Cfg> {
         value: U256,
         data: Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
+        if !ctx.are_expensive_queries_allowed() {
+            return Err(Error::Forbidden);
+        }
+
         ctx.with_simulation(|mut sctx| {
             let call_tx = transaction::Transaction {
                 version: 1,
