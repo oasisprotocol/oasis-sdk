@@ -1,6 +1,9 @@
 use std::collections::BTreeMap;
 
-use crate::keymanager::SignedPublicKey;
+use crate::{
+    keymanager::SignedPublicKey,
+    types::{address::Address, transaction::Transaction},
+};
 
 /// Key in the versions map used for the global state version.
 pub const VERSION_GLOBAL_KEY: &str = "";
@@ -10,6 +13,17 @@ pub const VERSION_GLOBAL_KEY: &str = "";
 pub struct Metadata {
     /// A set of state versions for all supported modules.
     pub versions: BTreeMap<String, u32>,
+}
+
+/// Arguments for the EstimateGas query.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct EstimateGasQuery {
+    /// The address of the caller for which to do estimation. If not specified the authentication
+    /// information from the passed transaction is used.
+    #[cbor(optional)]
+    pub caller: Option<Address>,
+    /// The unsigned transaction to estimate.
+    pub tx: Transaction,
 }
 
 /// Response to the call data public key query.

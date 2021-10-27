@@ -103,19 +103,32 @@ func sendTx(rtc client.RuntimeClient, signer signature.Signer, tx *types.Transac
 	if err != nil {
 		return err
 	}
+
 	ac := accounts.NewV1(rtc)
-	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(sigspecForSigner(signer)))
+	caller := types.NewAddress(sigspecForSigner(signer))
+
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, caller)
 	if err != nil {
 		return err
 	}
 
 	tx.AppendAuthSignature(sigspecForSigner(signer), nonce)
 
+	// Estimate gas by passing the transaction.
 	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
 	if err != nil {
 		return err
 	}
 	tx.AuthInfo.Fee.Gas = gas
+
+	// Estimate gas by passing the caller address.
+	gasForCaller, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, caller, tx)
+	if err != nil {
+		return err
+	}
+	if gas != gasForCaller {
+		return fmt.Errorf("gas estimation mismatch (plain: %d for caller: %d)", gas, gasForCaller)
+	}
 
 	stx := tx.PrepareForSigning()
 	if err = stx.AppendSign(chainCtx, signer); err != nil {

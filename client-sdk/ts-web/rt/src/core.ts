@@ -30,6 +30,6 @@ export class Wrapper extends wrapper.Base {
     }
 
     queryEstimateGas() {
-        return this.query<types.Transaction, oasis.types.longnum>(METHOD_ESTIMATE_GAS);
+        return this.query<types.CoreEstimateGasQuery, oasis.types.longnum>(METHOD_ESTIMATE_GAS);
     }
 }

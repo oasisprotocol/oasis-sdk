@@ -296,15 +296,16 @@ impl Module {
     /// succeed.
     fn query_estimate_gas<C: Context>(
         ctx: &mut C,
-        mut args: transaction::Transaction,
+        mut args: types::EstimateGasQuery,
     ) -> Result<u64, Error> {
         // Assume maximum amount of gas and a reasonable maximum fee.
-        args.auth_info.fee.gas = u64::MAX;
-        args.auth_info.fee.amount =
+        args.tx.auth_info.fee.gas = u64::MAX;
+        args.tx.auth_info.fee.amount =
             token::BaseUnits::new(u64::MAX.into(), token::Denomination::NATIVE);
         // Estimate transaction size. Since the transaction given to us is not signed, we need to
         // estimate how large each of the auth proofs would be.
         let auth_proofs: Result<_, Error> = args
+            .tx
             .auth_info
             .signer_info
             .iter()
@@ -329,18 +330,40 @@ impl Module {
             })
             .collect();
         let tx_envelope =
-            transaction::UnverifiedTransaction(cbor::to_vec(args.clone()), auth_proofs?);
+            transaction::UnverifiedTransaction(cbor::to_vec(args.tx.clone()), auth_proofs?);
         let tx_size: u32 = cbor::to_vec(tx_envelope)
             .len()
             .try_into()
             .map_err(|_| Error::InvalidArgument(anyhow!("transaction too large")))?;
 
+        // Update the address used within the transaction when caller address is passed.
+        let mut extra_gas = 0;
+        if let Some(caller) = args.caller {
+            let address_spec = transaction::AddressSpec::Internal(caller);
+            match args.tx.auth_info.signer_info.first_mut() {
+                Some(si) => si.address_spec = address_spec,
+                None => {
+                    // If no existing auth info, push some.
+                    args.tx.auth_info.signer_info.push(transaction::SignerInfo {
+                        address_spec,
+                        nonce: 0,
+                    });
+                }
+            }
+
+            // When passing an address we don't know what scheme is used for authenticating the
+            // address so the estimate may be off. Assume a regular signature for now.
+            let params = Self::params(ctx.runtime_state());
+            extra_gas += params.gas_costs.auth_signature;
+        }
+
         ctx.with_simulation(|mut sim_ctx| {
-            sim_ctx.with_tx(tx_size, args, |mut tx_ctx, call| {
+            sim_ctx.with_tx(tx_size, args.tx, |mut tx_ctx, call| {
                 dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut tx_ctx, call);
                 // Warning: we don't report success or failure. If the call fails, we still report
                 // how much gas it uses while it fails.
-                Ok(*tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default())
+                let gas_used = *tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
+                Ok(gas_used + extra_gas)
             })
         })
     }

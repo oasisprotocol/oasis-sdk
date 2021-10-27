@@ -13,7 +13,7 @@ use crate::{
     types::{token, transaction, transaction::TransactionWeight},
 };
 
-use super::{Module as Core, Parameters, API as _, GAS_WEIGHT_NAME};
+use super::{types, Module as Core, Parameters, API as _, GAS_WEIGHT_NAME};
 
 #[test]
 fn test_use_gas() {
@@ -261,7 +261,25 @@ fn test_query_estimate_gas() {
         },
     };
 
-    let est = Core::query_estimate_gas(&mut ctx, tx).expect("query_estimate_gas should succeed");
+    // Test estimation with caller derived from the transaction.
+    let args = types::EstimateGasQuery {
+        caller: None,
+        tx: tx.clone(),
+    };
+
+    let est = Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+    let reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
+        + GasWasterRuntime::AUTH_MULTISIG_GAS
+        + GasWasterModule::CALL_GAS;
+    assert_eq!(est, reference_gas, "estimated gas should be correct");
+
+    // Test estimation with specified caller.
+    let args = types::EstimateGasQuery {
+        caller: Some(keys::alice::address()),
+        tx,
+    };
+
+    let est = Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
     let reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
         + GasWasterRuntime::AUTH_MULTISIG_GAS
         + GasWasterModule::CALL_GAS;
