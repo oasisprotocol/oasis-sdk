@@ -4,43 +4,56 @@ use std::{
     ops::BitAnd,
 };
 
-use evm::{executor::PrecompileOutput, Context, ExitError, ExitSucceed};
+use evm::{
+    executor::{Precompile, PrecompileOutput},
+    Context, ExitError, ExitSucceed,
+};
 use k256::{ecdsa::recoverable, EncodedPoint};
 use num::{BigUint, FromPrimitive, One, ToPrimitive, Zero};
+use once_cell::sync::Lazy;
 use primitive_types::H160;
 use ripemd160::Ripemd160;
 use sha2::Sha256;
 use sha3::Keccak256;
 
-// Address of ECDSA public key recovery function
+// Some types matching evm::executor::stack
+type PrecompileResult = Result<PrecompileOutput, ExitError>;
+type PrecompileFn = fn(&[u8], Option<u64>, &Context, bool) -> PrecompileResult;
+
+/// Address of ECDSA public key recovery function
 const PRECOMPILE_ECRECOVER: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01,
 ]);
-// Address of of SHA2-256 hash function
+/// Address of of SHA2-256 hash function
 const PRECOMPILE_SHA256: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02,
 ]);
-// Address of RIPEMD-160 hash functions
+/// Address of RIPEMD-160 hash functions
 const PRECOMPILE_RIPEMD160: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
 ]);
-// Address of identity which defines the output as the input
+/// Address of identity which defines the output as the input
 const PRECOMPILE_DATACOPY: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04,
 ]);
-// Big integer modular exponentiation in EIP-198
+/// Big integer modular exponentiation in EIP-198
 const PRECOMPILE_BIGMODEXP: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
 ]);
 
-// Minimum gas cost of ModExp contract from eip-2565
-// https://eips.ethereum.org/EIPS/eip-2565
+/// Minimum gas cost of ModExp contract from eip-2565
+/// https://eips.ethereum.org/EIPS/eip-2565
 const MIN_GAS_COST: u64 = 200;
 
-fn call_ecrecover(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitError> {
+fn call_ecrecover(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> PrecompileResult {
     use sha3::Digest;
 
-    let gas_cost = linear_cost(Some(target_gas), input.len() as u64, 3000, 0)?;
+    let gas_cost = linear_cost(target_gas, input.len() as u64, 3000, 0)?;
 
     // Make right padding for input
     let mut padding = [0u8; 128];
@@ -103,10 +116,15 @@ fn call_ecrecover(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exi
     })
 }
 
-fn call_sha256(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitError> {
+fn call_sha256(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> PrecompileResult {
     use sha2::Digest;
 
-    let gas_cost = linear_cost(Some(target_gas), input.len() as u64, 60, 12)?;
+    let gas_cost = linear_cost(target_gas, input.len() as u64, 60, 12)?;
 
     let mut hasher = Sha256::new();
     hasher.update(input);
@@ -120,10 +138,15 @@ fn call_sha256(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitEr
     })
 }
 
-fn call_ripemd160(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitError> {
+fn call_ripemd160(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> PrecompileResult {
     use ripemd160::Digest;
 
-    let gas_cost = linear_cost(Some(target_gas), input.len() as u64, 600, 120)?;
+    let gas_cost = linear_cost(target_gas, input.len() as u64, 600, 120)?;
 
     let mut hasher = Ripemd160::new();
     hasher.update(input);
@@ -138,8 +161,13 @@ fn call_ripemd160(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exi
     })
 }
 
-fn call_datacopy(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitError> {
-    let gas_cost = linear_cost(Some(target_gas), input.len() as u64, 15, 3)?;
+fn call_datacopy(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> PrecompileResult {
+    let gas_cost = linear_cost(target_gas, input.len() as u64, 15, 3)?;
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
@@ -149,7 +177,12 @@ fn call_datacopy(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exit
     })
 }
 
-fn call_bigmodexp(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, ExitError> {
+fn call_bigmodexp(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> PrecompileResult {
     if input.len() < 96 {
         return Err(ExitError::Other(
             "input must contain at least 96 bytes".into(),
@@ -209,8 +242,10 @@ fn call_bigmodexp(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exi
         let gas_cost =
             calculate_modexp_gas_cost(base_len as u64, exp_len as u64, mod_len as u64, &exponent)?;
 
-        if target_gas < gas_cost {
-            return Err(ExitError::OutOfGas);
+        if let Some(target_gas) = target_gas {
+            if target_gas < gas_cost {
+                return Err(ExitError::OutOfGas);
+            }
         }
 
         let mod_start = exp_start + exp_len;
@@ -250,29 +285,15 @@ fn call_bigmodexp(input: &[u8], target_gas: u64) -> Result<PrecompileOutput, Exi
     }
 }
 
-pub fn precompiled_contract(
-    address: H160,
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-) -> Option<Result<PrecompileOutput, ExitError>> {
-    if address == PRECOMPILE_ECRECOVER {
-        return Some(call_ecrecover(input, target_gas.unwrap()));
-    }
-    if address == PRECOMPILE_SHA256 {
-        return Some(call_sha256(input, target_gas.unwrap()));
-    }
-    if address == PRECOMPILE_RIPEMD160 {
-        return Some(call_ripemd160(input, target_gas.unwrap()));
-    }
-    if address == PRECOMPILE_DATACOPY {
-        return Some(call_datacopy(input, target_gas.unwrap()));
-    }
-    if address == PRECOMPILE_BIGMODEXP {
-        return Some(call_bigmodexp(input, target_gas.unwrap()));
-    }
-    None
-}
+pub static PRECOMPILED_CONTRACT: Lazy<Precompile> = Lazy::new(|| {
+    Precompile::from([
+        (PRECOMPILE_ECRECOVER, call_ecrecover as PrecompileFn),
+        (PRECOMPILE_SHA256, call_sha256),
+        (PRECOMPILE_RIPEMD160, call_ripemd160),
+        (PRECOMPILE_DATACOPY, call_datacopy),
+        (PRECOMPILE_BIGMODEXP, call_bigmodexp),
+    ])
+});
 
 /// Linear gas cost
 fn linear_cost(target_gas: Option<u64>, len: u64, base: u64, word: u64) -> Result<u64, ExitError> {
@@ -325,8 +346,8 @@ fn calculate_iteration_count(exp_length: u64, exponent: &BigUint) -> u64 {
     max(iteration_count, 1)
 }
 
-// Calculate ModExp gas cost according to EIP 2565:
-// https://eips.ethereum.org/EIPS/eip-2565
+/// Calculate ModExp gas cost according to EIP 2565:
+/// https://eips.ethereum.org/EIPS/eip-2565
 fn calculate_modexp_gas_cost(
     base_length: u64,
     exp_length: u64,
@@ -351,17 +372,15 @@ mod test {
     use super::*;
     // The following test data is from "go-ethereum/core/vm/contracts_test.go"
 
-    pub fn call_contract(
-        address: H160,
-        input: &[u8],
-        target_gas: u64,
-    ) -> Option<Result<PrecompileOutput, ExitError>> {
+    pub fn call_contract(address: H160, input: &[u8], target_gas: u64) -> Option<PrecompileResult> {
         let context: Context = Context {
             address: Default::default(),
             caller: Default::default(),
             apparent_value: From::from(0),
         };
-        return precompiled_contract(address, input, Some(target_gas), &context);
+        PRECOMPILED_CONTRACT
+            .get(&address)
+            .map(|pf| pf(input, Some(target_gas), &context, false))
     }
 
     #[test]
