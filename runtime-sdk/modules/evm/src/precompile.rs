@@ -16,6 +16,10 @@ use ripemd160::Ripemd160;
 use sha2::Sha256;
 use sha3::Keccak256;
 
+// Some types matching evm::executor::stack
+type PrecompileResult = Result<PrecompileOutput, ExitError>;
+type PrecompileFn = fn(&[u8], Option<u64>, &Context, bool) -> PrecompileResult;
+
 /// Address of ECDSA public key recovery function
 const PRECOMPILE_ECRECOVER: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01,
@@ -46,7 +50,7 @@ fn call_ecrecover(
     target_gas: Option<u64>,
     _context: &Context,
     _is_static: bool,
-) -> Result<PrecompileOutput, ExitError> {
+) -> PrecompileResult {
     use sha3::Digest;
 
     let gas_cost = linear_cost(target_gas, input.len() as u64, 3000, 0)?;
@@ -117,7 +121,7 @@ fn call_sha256(
     target_gas: Option<u64>,
     _context: &Context,
     _is_static: bool,
-) -> Result<PrecompileOutput, ExitError> {
+) -> PrecompileResult {
     use sha2::Digest;
 
     let gas_cost = linear_cost(target_gas, input.len() as u64, 60, 12)?;
@@ -139,7 +143,7 @@ fn call_ripemd160(
     target_gas: Option<u64>,
     _context: &Context,
     _is_static: bool,
-) -> Result<PrecompileOutput, ExitError> {
+) -> PrecompileResult {
     use ripemd160::Digest;
 
     let gas_cost = linear_cost(target_gas, input.len() as u64, 600, 120)?;
@@ -162,7 +166,7 @@ fn call_datacopy(
     target_gas: Option<u64>,
     _context: &Context,
     _is_static: bool,
-) -> Result<PrecompileOutput, ExitError> {
+) -> PrecompileResult {
     let gas_cost = linear_cost(target_gas, input.len() as u64, 15, 3)?;
 
     Ok(PrecompileOutput {
@@ -178,7 +182,7 @@ fn call_bigmodexp(
     target_gas: Option<u64>,
     _context: &Context,
     _is_static: bool,
-) -> Result<PrecompileOutput, ExitError> {
+) -> PrecompileResult {
     if input.len() < 96 {
         return Err(ExitError::Other(
             "input must contain at least 96 bytes".into(),
@@ -283,7 +287,7 @@ fn call_bigmodexp(
 
 pub static PRECOMPILED_CONTRACT: Lazy<Precompile> = Lazy::new(|| {
     Precompile::from([
-        (PRECOMPILE_ECRECOVER, call_ecrecover as fn(&[u8], Option<u64>, &Context, bool) -> Result<PrecompileOutput, ExitError>),
+        (PRECOMPILE_ECRECOVER, call_ecrecover as PrecompileFn),
         (PRECOMPILE_SHA256, call_sha256),
         (PRECOMPILE_RIPEMD160, call_ripemd160),
         (PRECOMPILE_DATACOPY, call_datacopy),
@@ -368,11 +372,7 @@ mod test {
     use super::*;
     // The following test data is from "go-ethereum/core/vm/contracts_test.go"
 
-    pub fn call_contract(
-        address: H160,
-        input: &[u8],
-        target_gas: u64,
-    ) -> Option<Result<PrecompileOutput, ExitError>> {
+    pub fn call_contract(address: H160, input: &[u8], target_gas: u64) -> Option<PrecompileResult> {
         let context: Context = Context {
             address: Default::default(),
             caller: Default::default(),
