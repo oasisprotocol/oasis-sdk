@@ -378,7 +378,9 @@ mod test {
             caller: Default::default(),
             apparent_value: From::from(0),
         };
-        return precompiled_contract(address, input, Some(target_gas), &context);
+        PRECOMPILED_CONTRACT
+            .get(&address)
+            .map(|pf| pf(input, Some(target_gas), &context, false))
     }
 
     #[test]
