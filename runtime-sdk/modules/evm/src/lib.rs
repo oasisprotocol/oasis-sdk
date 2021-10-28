@@ -6,8 +6,10 @@ pub mod precompile;
 pub mod raw_tx;
 pub mod types;
 
+use std::collections::BTreeMap;
+
 use evm::{
-    executor::{MemoryStackState, StackExecutor, StackSubstateMetadata},
+    executor::{MemoryStackState, PrecompileFn, StackExecutor, StackSubstateMetadata},
     Config as EVMConfig,
 };
 use thiserror::Error;
@@ -362,7 +364,12 @@ impl<Cfg: Config> Module<Cfg> {
     fn do_evm<C, F, V>(source: H160, ctx: &mut C, f: F) -> Result<V, Error>
     where
         F: FnOnce(
-            &mut StackExecutor<'static, MemoryStackState<'_, 'static, backend::Backend<'_, C, Cfg>>>,
+            &mut StackExecutor<
+                'static,
+                '_,
+                MemoryStackState<'_, 'static, backend::Backend<'_, C, Cfg>>,
+                BTreeMap<primitive_types::H160, PrecompileFn>,
+            >,
             u64,
         ) -> (evm::ExitReason, V),
         C: TxContext,
@@ -384,10 +391,10 @@ impl<Cfg: Config> Module<Cfg> {
         let mut backend = backend::Backend::<'_, C, Cfg>::new(ctx, vicinity);
         let metadata = StackSubstateMetadata::new(gas_limit, &Self::EVM_CONFIG);
         let stackstate = MemoryStackState::new(metadata, &backend);
-        let mut executor = StackExecutor::new_with_precompile(
+        let mut executor = StackExecutor::new_with_precompiles(
             stackstate,
             &Self::EVM_CONFIG,
-            precompile::PRECOMPILED_CONTRACT.clone(),
+            &*precompile::PRECOMPILED_CONTRACT,
         );
 
         // Run EVM.

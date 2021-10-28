@@ -1,11 +1,12 @@
 use std::{
     cmp::{max, min, Ordering},
+    collections::BTreeMap,
     convert::TryFrom,
     ops::BitAnd,
 };
 
 use evm::{
-    executor::{Precompile, PrecompileOutput},
+    executor::{PrecompileFailure, PrecompileFn, PrecompileOutput},
     Context, ExitError, ExitSucceed,
 };
 use k256::{ecdsa::recoverable, EncodedPoint};
@@ -16,27 +17,26 @@ use ripemd160::Ripemd160;
 use sha2::Sha256;
 use sha3::Keccak256;
 
-// Some types matching evm::executor::stack
-type PrecompileResult = Result<PrecompileOutput, ExitError>;
-type PrecompileFn = fn(&[u8], Option<u64>, &Context, bool) -> PrecompileResult;
+// Some types matching evm::executor::stack.
+type PrecompileResult = Result<PrecompileOutput, PrecompileFailure>;
 
-/// Address of ECDSA public key recovery function
+/// Address of ECDSA public key recovery function.
 const PRECOMPILE_ECRECOVER: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01,
 ]);
-/// Address of of SHA2-256 hash function
+/// Address of of SHA2-256 hash function.
 const PRECOMPILE_SHA256: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02,
 ]);
-/// Address of RIPEMD-160 hash functions
+/// Address of RIPEMD-160 hash functions.
 const PRECOMPILE_RIPEMD160: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
 ]);
-/// Address of identity which defines the output as the input
+/// Address of identity which defines the output as the input.
 const PRECOMPILE_DATACOPY: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04,
 ]);
-/// Big integer modular exponentiation in EIP-198
+/// Big integer modular exponentiation in EIP-198.
 const PRECOMPILE_BIGMODEXP: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
 ]);
@@ -184,9 +184,9 @@ fn call_bigmodexp(
     _is_static: bool,
 ) -> PrecompileResult {
     if input.len() < 96 {
-        return Err(ExitError::Other(
-            "input must contain at least 96 bytes".into(),
-        ));
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("input must contain at least 96 bytes".into()),
+        });
     };
 
     // reasonable assumption: this must fit within the Ethereum EVM's max stack size
@@ -196,23 +196,25 @@ fn call_bigmodexp(
     buf.copy_from_slice(&input[0..32]);
     let base_len_big = BigUint::from_bytes_be(&buf);
     if base_len_big > max_size_big {
-        return Err(ExitError::Other("unreasonably large base length".into()));
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("unreasonably large base length".into()),
+        });
     }
 
     buf.copy_from_slice(&input[32..64]);
     let exp_len_big = BigUint::from_bytes_be(&buf);
     if exp_len_big > max_size_big {
-        return Err(ExitError::Other(
-            "unreasonably large exponent length".into(),
-        ));
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("unreasonably large exponent length".into()),
+        });
     }
 
     buf.copy_from_slice(&input[64..96]);
     let mod_len_big = BigUint::from_bytes_be(&buf);
     if mod_len_big > max_size_big {
-        return Err(ExitError::Other(
-            "unreasonably large exponent length".into(),
-        ));
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("unreasonably large exponent length".into()),
+        });
     }
 
     // bounds check handled above
@@ -223,7 +225,9 @@ fn call_bigmodexp(
     // input length should be at least 96 + user-specified length of base + exp + mod
     let total_len = base_len + exp_len + mod_len + 96;
     if input.len() < total_len {
-        return Err(ExitError::Other("insufficient input size".into()));
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("insufficient input size".into()),
+        });
     }
 
     // Gas formula allows arbitrary large exp_len when base and modulus are empty, so we need to handle empty base first.
@@ -244,7 +248,9 @@ fn call_bigmodexp(
 
         if let Some(target_gas) = target_gas {
             if target_gas < gas_cost {
-                return Err(ExitError::OutOfGas);
+                return Err(PrecompileFailure::Error {
+                    exit_status: ExitError::OutOfGas,
+                });
             }
         }
 
@@ -281,12 +287,15 @@ fn call_bigmodexp(
                 logs: Default::default(),
             })
         }
-        Ordering::Greater => Err(ExitError::Other("failed".into())),
+        Ordering::Greater => Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("failed".into()),
+        }),
     }
 }
 
-pub static PRECOMPILED_CONTRACT: Lazy<Precompile> = Lazy::new(|| {
-    Precompile::from([
+/// A set of precompiles.
+pub static PRECOMPILED_CONTRACT: Lazy<BTreeMap<H160, PrecompileFn>> = Lazy::new(|| {
+    BTreeMap::from([
         (PRECOMPILE_ECRECOVER, call_ecrecover as PrecompileFn),
         (PRECOMPILE_SHA256, call_sha256),
         (PRECOMPILE_RIPEMD160, call_ripemd160),
@@ -296,17 +305,27 @@ pub static PRECOMPILED_CONTRACT: Lazy<Precompile> = Lazy::new(|| {
 });
 
 /// Linear gas cost
-fn linear_cost(target_gas: Option<u64>, len: u64, base: u64, word: u64) -> Result<u64, ExitError> {
+fn linear_cost(
+    target_gas: Option<u64>,
+    len: u64,
+    base: u64,
+    word: u64,
+) -> Result<u64, PrecompileFailure> {
     let cost = base
-        .checked_add(
-            word.checked_mul(len.saturating_add(31) / 32)
-                .ok_or(ExitError::OutOfGas)?,
-        )
-        .ok_or(ExitError::OutOfGas)?;
+        .checked_add(word.checked_mul(len.saturating_add(31) / 32).ok_or(
+            PrecompileFailure::Error {
+                exit_status: ExitError::OutOfGas,
+            },
+        )?)
+        .ok_or(PrecompileFailure::Error {
+            exit_status: ExitError::OutOfGas,
+        })?;
 
     if let Some(target_gas) = target_gas {
         if cost > target_gas {
-            return Err(ExitError::OutOfGas);
+            return Err(PrecompileFailure::Error {
+                exit_status: ExitError::OutOfGas,
+            });
         }
     }
 
@@ -316,7 +335,7 @@ fn linear_cost(target_gas: Option<u64>, len: u64, base: u64, word: u64) -> Resul
 fn calculate_multiplication_complexity(
     base_length: u64,
     mod_length: u64,
-) -> Result<u64, ExitError> {
+) -> Result<u64, PrecompileFailure> {
     let max_length = max(base_length, mod_length);
     let mut words = max_length / 8;
     if max_length % 8 > 0 {
@@ -324,7 +343,9 @@ fn calculate_multiplication_complexity(
     }
 
     // prevent overflow
-    words.checked_mul(words).ok_or(ExitError::OutOfGas)
+    words.checked_mul(words).ok_or(PrecompileFailure::Error {
+        exit_status: ExitError::OutOfGas,
+    })
 }
 
 fn calculate_iteration_count(exp_length: u64, exponent: &BigUint) -> u64 {
@@ -353,14 +374,16 @@ fn calculate_modexp_gas_cost(
     exp_length: u64,
     mod_length: u64,
     exponent: &BigUint,
-) -> Result<u64, ExitError> {
+) -> Result<u64, PrecompileFailure> {
     let multiplication_complexity = calculate_multiplication_complexity(base_length, mod_length)?;
     let iteration_count = calculate_iteration_count(exp_length, exponent);
     let gas = max(
         MIN_GAS_COST,
         multiplication_complexity
             .checked_mul(iteration_count)
-            .ok_or(ExitError::OutOfGas)?
+            .ok_or(PrecompileFailure::Error {
+                exit_status: ExitError::OutOfGas,
+            })?
             / 3,
     );
 
@@ -481,7 +504,12 @@ mod test {
                 panic!("Test not expected to pass");
             }
             Err(e) => {
-                assert_eq!(e, ExitError::OutOfGas);
+                assert_eq!(
+                    e,
+                    PrecompileFailure::Error {
+                        exit_status: ExitError::OutOfGas
+                    }
+                );
             }
         }
     }
