@@ -36,6 +36,16 @@ const (
 	ABIOasisV1 = ABI(1)
 )
 
+// String returns a string representation of an ABI.
+func (a ABI) String() string {
+	switch a {
+	case ABIOasisV1:
+		return "Oasis v1"
+	default:
+		return "[unknown]"
+	}
+}
+
 // Code is stored code information.
 type Code struct {
 	// ID is the unique code identifier.
@@ -68,7 +78,7 @@ type Upload struct {
 	ABI ABI `json:"abi"`
 	// InstantiatePolicy is the policy on Who is allowed to instantiate this code.
 	InstantiatePolicy Policy `json:"instantiate_policy"`
-	// Code is the compiled contract code.
+	// Code is the compressed compiled contract code.
 	Code []byte `json:"code"`
 }
 

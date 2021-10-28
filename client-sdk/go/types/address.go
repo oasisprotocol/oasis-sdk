@@ -116,6 +116,11 @@ func (a Address) String() string {
 	return bech32Addr
 }
 
+// ConsensusAddress converts this address into a consensus-layer address type.
+func (a Address) ConsensusAddress() staking.Address {
+	return (staking.Address)((address.Address)(a))
+}
+
 // NewAddress creates a new address from the given signature address specification.
 func NewAddress(spec SignatureAddressSpec) (a Address) {
 	var (
@@ -177,4 +182,9 @@ func NewAddressFromBech32(data string) (a Address) {
 // NewAddressFromMultisig creates a new address from the given multisig configuration.
 func NewAddressFromMultisig(config *MultisigConfig) Address {
 	return (Address)(address.NewAddress(AddressV0MultisigContext, cbor.Marshal(config)))
+}
+
+// NewAddressFromConsensus converts a consensus layer address into an address.
+func NewAddressFromConsensus(addr staking.Address) Address {
+	return (Address)((address.Address)(addr))
 }

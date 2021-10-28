@@ -25,6 +25,7 @@ for m in \
   client-sdk/ts-web/core/reflect-go/go.mod \
   tests/benchmark/go.mod \
   tests/e2e/go.mod \
+  cli/go.mod \
   ; do
   thisversion=$(get_dep_version "$m")
   if [ "$thisversion" = "$refversion" ]; then

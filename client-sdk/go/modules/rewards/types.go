@@ -6,6 +6,9 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
+// RewardPoolAddress is the address of the reward pool.
+var RewardPoolAddress = types.NewAddressForModule("rewards", []byte("reward-pool"))
+
 // RewardStep is one of the time periods in the reward schedule.
 type RewardStep struct {
 	Until  beacon.EpochTime `json:"until"`

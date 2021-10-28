@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -33,6 +34,11 @@ type UnverifiedTransaction struct {
 
 	Body       []byte
 	AuthProofs []AuthProof
+}
+
+// Hash returns the cryptographic hash of the encoded transaction.
+func (ut *UnverifiedTransaction) Hash() hash.Hash {
+	return hash.NewFrom(ut)
 }
 
 // Verify verifies and deserializes the unverified transaction.
