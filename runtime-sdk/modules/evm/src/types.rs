@@ -78,7 +78,13 @@ mod eth {
             impl cbor::Decode for $name {
                 fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
                     match value {
-                        cbor::Value::ByteString(v) => Ok(Self::from_slice(&v)),
+                        cbor::Value::ByteString(v) => {
+                            if v.len() == $num_bytes {
+                                Ok(Self::from_slice(&v))
+                            } else {
+                                Err(cbor::DecodeError::UnexpectedIntegerSize)
+                            }
+                        }
                         _ => Err(cbor::DecodeError::UnexpectedType),
                     }
                 }
@@ -111,7 +117,13 @@ mod eth {
             impl cbor::Decode for $name {
                 fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
                     match value {
-                        cbor::Value::ByteString(v) => Ok(Self::from_big_endian(&v)),
+                        cbor::Value::ByteString(v) => {
+                            if v.len() <= $num_words * 8 {
+                                Ok(Self::from_big_endian(&v))
+                            } else {
+                                Err(cbor::DecodeError::UnexpectedIntegerSize)
+                            }
+                        }
                         _ => Err(cbor::DecodeError::UnexpectedType),
                     }
                 }
