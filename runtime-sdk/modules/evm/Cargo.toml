@@ -24,7 +24,7 @@ once_cell = "1.8.0"
 
 # Ethereum.
 ethereum = "0.10.0"
-evm = "0.31.1"
+evm = "0.32.0"
 fixed-hash = "0.7.0"
 primitive-types = { version = "0.10.1", default-features = false, features = ["rlp", "num-traits"] }
 rlp = "0.5.1"

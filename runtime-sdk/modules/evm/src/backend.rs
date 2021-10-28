@@ -69,6 +69,9 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
     fn block_gas_limit(&self) -> primitive_types::U256 {
         primitive_types::U256::zero()
     }
+    fn block_base_fee_per_gas(&self) -> primitive_types::U256 {
+        primitive_types::U256::zero()
+    }
     fn chain_id(&self) -> primitive_types::U256 {
         Cfg::CHAIN_ID.into()
     }
