@@ -359,7 +359,7 @@ impl<Cfg: Config> API for Module<Cfg> {
 }
 
 impl<Cfg: Config> Module<Cfg> {
-    const EVM_CONFIG: EVMConfig = EVMConfig::istanbul();
+    const EVM_CONFIG: EVMConfig = EVMConfig::london();
 
     fn do_evm<C, F, V>(source: H160, ctx: &mut C, f: F) -> Result<V, Error>
     where
