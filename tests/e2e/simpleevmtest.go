@@ -149,7 +149,7 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 	}
 
 	log.Info("checking Dave's EVM account balance")
-	evmBal, err := e.Balance(ctx, daveEVMAddr)
+	evmBal, err := e.Balance(ctx, client.RoundLatest, daveEVMAddr)
 	if err != nil {
 		return err
 	}
@@ -207,7 +207,7 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 	}
 
 	log.Info("re-checking Dave's EVM account balance")
-	evmBal, err = e.Balance(ctx, daveEVMAddr)
+	evmBal, err = e.Balance(ctx, client.RoundLatest, daveEVMAddr)
 	if err != nil {
 		return err
 	}
@@ -290,7 +290,7 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 
 	// Peek into code storage to verify that our contract was indeed stored.
-	storedCode, err := e.Code(ctx, contractAddr)
+	storedCode, err := e.Code(ctx, client.RoundLatest, contractAddr)
 	if err != nil {
 		return fmt.Errorf("Code failed: %w", err) //nolint: stylecheck
 	}
@@ -303,7 +303,7 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 
 	log.Info("checking contract's EVM account balance")
-	evmBal, err := e.Balance(ctx, contractAddr)
+	evmBal, err := e.Balance(ctx, client.RoundLatest, contractAddr)
 	if err != nil {
 		return err
 	}
@@ -320,7 +320,7 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	if err != nil {
 		return err
 	}
-	simCallResult, err := e.SimulateCall(ctx, gasPriceU256, 64000, daveEVMAddr, contractAddr, value, []byte{})
+	simCallResult, err := e.SimulateCall(ctx, client.RoundLatest, gasPriceU256, 64000, daveEVMAddr, contractAddr, value, []byte{})
 	if err != nil {
 		return fmt.Errorf("SimulateCall failed: %w", err)
 	}
@@ -344,7 +344,7 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		return err
 	}
 
-	storedVal, err := e.Storage(ctx, contractAddr, index)
+	storedVal, err := e.Storage(ctx, client.RoundLatest, contractAddr, index)
 	if err != nil {
 		return fmt.Errorf("Storage failed: %w", err) //nolint: stylecheck
 	}
@@ -357,7 +357,7 @@ func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 
 	log.Info("re-checking contract's EVM account balance")
-	evmBal, err = e.Balance(ctx, contractAddr)
+	evmBal, err = e.Balance(ctx, client.RoundLatest, contractAddr)
 	if err != nil {
 		return err
 	}
@@ -525,7 +525,7 @@ func SimpleERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cli
 	if err != nil {
 		return err
 	}
-	simCallResult, err := e.SimulateCall(ctx, gasPriceU256, 64000, daveEVMAddr, contractAddr, zero, transferMethod)
+	simCallResult, err := e.SimulateCall(ctx, client.RoundLatest, gasPriceU256, 64000, daveEVMAddr, contractAddr, zero, transferMethod)
 	if err != nil {
 		return fmt.Errorf("SimulateCall failed: %w", err)
 	}
@@ -549,7 +549,7 @@ func SimpleERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cli
 		return fmt.Errorf("SimulateCall and evmCall returned different results")
 	}
 
-	evs, err := e.GetEvents(ctx)
+	evs, err := e.GetEvents(ctx, client.RoundLatest)
 	if err != nil {
 		return fmt.Errorf("GetEvents failed: %w", err)
 	}
