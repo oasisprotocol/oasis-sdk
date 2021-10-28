@@ -102,7 +102,7 @@ mod eth {
 
             impl cbor::Encode for $name {
                 fn into_cbor_value(self) -> cbor::Value {
-                    let mut out = [0u8; 32];
+                    let mut out = [0u8; $num_words * 8];
                     self.to_big_endian(&mut out);
                     cbor::Value::ByteString(out.to_vec())
                 }
