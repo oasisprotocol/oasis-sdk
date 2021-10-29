@@ -36,7 +36,15 @@ var evmSolTestCompiledHex string
 var evmERC20TestCompiledHex string
 
 func evmCreate(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, value []byte, initCode []byte, gasPrice uint64, gasLimit uint64) ([]byte, error) {
-	tx := e.Create(value, initCode).SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(gasPrice * gasLimit), types.NativeDenomination)).GetTransaction()
+	tx := e.Create(value, initCode).
+		SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(gasPrice * gasLimit), types.NativeDenomination)).
+		GetTransaction()
+
+	// Check if gas estimation works.
+	_, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, testing.Dave.Address, tx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to estimate gas: %w", err)
+	}
 
 	result, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, gasLimit)
 	if err != nil {
@@ -50,7 +58,15 @@ func evmCreate(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer s
 }
 
 func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, address []byte, value []byte, data []byte, gasPrice uint64, gasLimit uint64) ([]byte, error) {
-	tx := e.Call(address, value, data).SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(gasPrice * gasLimit), types.NativeDenomination)).GetTransaction()
+	tx := e.Call(address, value, data).
+		SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(gasPrice * gasLimit), types.NativeDenomination)).
+		GetTransaction()
+
+	// Check if gas estimation works.
+	_, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, testing.Dave.Address, tx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to estimate gas: %w", err)
+	}
 
 	result, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, gasLimit)
 	if err != nil {
