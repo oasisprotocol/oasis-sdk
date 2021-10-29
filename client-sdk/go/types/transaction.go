@@ -213,6 +213,9 @@ func NewTransaction(fee *Fee, method string, body interface{}) *Transaction {
 		// Set up a default amount to avoid invalid serialization.
 		tx.AuthInfo.Fee.Amount = NewBaseUnits(*quantity.NewFromUint64(0), NativeDenomination)
 	}
+	// Initialize SignerInfo to avoid it being set to null in case there are no signers specified
+	// which is valid in some queries.
+	tx.AuthInfo.SignerInfo = []SignerInfo{}
 	return tx
 }
 
