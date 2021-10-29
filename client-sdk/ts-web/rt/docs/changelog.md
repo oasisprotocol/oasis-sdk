@@ -5,6 +5,7 @@
 New features:
 
 - You can now use SubmitTxNoWait from a transaction wrapper.
+- Added `setRound` to query wrapper for convenient call chaining.
 
 ## v0.2.0-alpha4
 

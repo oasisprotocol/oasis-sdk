@@ -101,6 +101,11 @@ export class QueryWrapper<ARGS, DATA> {
         return this;
     }
 
+    setRound(round: oasis.types.longnum) {
+        this.request.round = round;
+        return this;
+    }
+
     async query(nic: oasis.client.NodeInternal) {
         const response = await nic.runtimeClientQuery(this.request);
         return oasis.misc.fromCBOR(response.data) as DATA;

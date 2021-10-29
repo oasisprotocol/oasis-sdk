@@ -39,19 +39,19 @@ type V1 interface {
 	Call(address []byte, value []byte, data []byte) *client.TransactionBuilder
 
 	// Storage queries the EVM storage.
-	Storage(ctx context.Context, address []byte, index []byte) ([]byte, error)
+	Storage(ctx context.Context, round uint64, address []byte, index []byte) ([]byte, error)
 
 	// Code queries the EVM code storage.
-	Code(ctx context.Context, address []byte) ([]byte, error)
+	Code(ctx context.Context, round uint64, address []byte) ([]byte, error)
 
 	// Balance queries the EVM account balance.
-	Balance(ctx context.Context, address []byte) (*types.Quantity, error)
+	Balance(ctx context.Context, round uint64, address []byte) (*types.Quantity, error)
 
 	// SimulateCall simulates an EVM CALL.
-	SimulateCall(ctx context.Context, gasPrice []byte, gasLimit uint64, caller []byte, address []byte, value []byte, data []byte) ([]byte, error)
+	SimulateCall(ctx context.Context, round uint64, gasPrice []byte, gasLimit uint64, caller []byte, address []byte, value []byte, data []byte) ([]byte, error)
 
 	// GetEvents returns events emitted by the EVM module.
-	GetEvents(ctx context.Context) ([]*Event, error)
+	GetEvents(ctx context.Context, round uint64) ([]*Event, error)
 }
 
 type v1 struct {
@@ -76,44 +76,44 @@ func (a *v1) Call(address []byte, value []byte, data []byte) *client.Transaction
 }
 
 // Implements V1.
-func (a *v1) Storage(ctx context.Context, address []byte, index []byte) ([]byte, error) {
+func (a *v1) Storage(ctx context.Context, round uint64, address []byte, index []byte) ([]byte, error) {
 	var res []byte
 	q := StorageQuery{
 		Address: address,
 		Index:   index,
 	}
-	if err := a.rtc.Query(ctx, client.RoundLatest, methodStorage, q, &res); err != nil {
+	if err := a.rtc.Query(ctx, round, methodStorage, q, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
 // Implements V1.
-func (a *v1) Code(ctx context.Context, address []byte) ([]byte, error) {
+func (a *v1) Code(ctx context.Context, round uint64, address []byte) ([]byte, error) {
 	var res []byte
 	q := CodeQuery{
 		Address: address,
 	}
-	if err := a.rtc.Query(ctx, client.RoundLatest, methodCode, q, &res); err != nil {
+	if err := a.rtc.Query(ctx, round, methodCode, q, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
 // Implements V1.
-func (a *v1) Balance(ctx context.Context, address []byte) (*types.Quantity, error) {
+func (a *v1) Balance(ctx context.Context, round uint64, address []byte) (*types.Quantity, error) {
 	var res types.Quantity
 	q := BalanceQuery{
 		Address: address,
 	}
-	if err := a.rtc.Query(ctx, client.RoundLatest, methodBalance, q, &res); err != nil {
+	if err := a.rtc.Query(ctx, round, methodBalance, q, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
 }
 
 // Implements V1.
-func (a *v1) SimulateCall(ctx context.Context, gasPrice []byte, gasLimit uint64, caller []byte, address []byte, value []byte, data []byte) ([]byte, error) {
+func (a *v1) SimulateCall(ctx context.Context, round uint64, gasPrice []byte, gasLimit uint64, caller []byte, address []byte, value []byte, data []byte) ([]byte, error) {
 	var res []byte
 	q := SimulateCallQuery{
 		GasPrice: gasPrice,
@@ -123,15 +123,15 @@ func (a *v1) SimulateCall(ctx context.Context, gasPrice []byte, gasLimit uint64,
 		Value:    value,
 		Data:     data,
 	}
-	if err := a.rtc.Query(ctx, client.RoundLatest, methodSimulateCall, q, &res); err != nil {
+	if err := a.rtc.Query(ctx, round, methodSimulateCall, q, &res); err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
 // Implements V1.
-func (a *v1) GetEvents(ctx context.Context) ([]*Event, error) {
-	revs, err := a.rtc.GetEventsRaw(ctx, client.RoundLatest)
+func (a *v1) GetEvents(ctx context.Context, round uint64) ([]*Event, error) {
+	revs, err := a.rtc.GetEventsRaw(ctx, round)
 	if err != nil {
 		return nil, err
 	}
