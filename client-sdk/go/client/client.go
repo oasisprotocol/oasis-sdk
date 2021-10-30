@@ -64,6 +64,9 @@ type RuntimeClient interface {
 	// GetBlock fetches the given runtime block.
 	GetBlock(ctx context.Context, round uint64) (*block.Block, error)
 
+	// GetLastRetainedBlock returns the last retained block.
+	GetLastRetainedBlock(ctx context.Context) (*block.Block, error)
+
 	// GetTransactions returns all transactions that are part of a given block.
 	GetTransactions(ctx context.Context, round uint64) ([]*types.UnverifiedTransaction, error)
 
@@ -290,6 +293,11 @@ func (rc *runtimeClient) GetBlock(ctx context.Context, round uint64) (*block.Blo
 		RuntimeID: rc.runtimeID,
 		Round:     round,
 	})
+}
+
+// Implements RuntimeClient.
+func (rc *runtimeClient) GetLastRetainedBlock(ctx context.Context) (*block.Block, error) {
+	return rc.cc.GetLastRetainedBlock(ctx, rc.runtimeID)
 }
 
 // Implements RuntimeClient.
