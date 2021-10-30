@@ -360,6 +360,27 @@ func TransactionsQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.
 	return nil
 }
 
+// BlockQueryTest tests block queries.
+func BlockQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+
+	genBlk, err := rtc.GetGenesisBlock(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get genesis block: %w", err)
+	}
+
+	lrBlk, err := rtc.GetLastRetainedBlock(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get last retained block: %w", err)
+	}
+
+	if genBlk.Header.Round != lrBlk.Header.Round {
+		return fmt.Errorf("expected genesis block round (%d) to equal last retained block round (%d)", genBlk.Header.Round, lrBlk.Header.Round)
+	}
+
+	return nil
+}
+
 // KVEventTest tests key insert/remove events.
 func KVEventTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer

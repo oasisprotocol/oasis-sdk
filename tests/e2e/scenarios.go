@@ -28,6 +28,7 @@ var (
 		ContractsTest,
 		ConfidentialTest,
 		TransactionsQueryTest,
+		BlockQueryTest,
 	})
 
 	// SimpleConsensusRuntime is the simple-consensus runtime test.
