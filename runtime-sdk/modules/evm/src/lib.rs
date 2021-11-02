@@ -241,7 +241,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        Self::do_evm(caller, ctx, |exec, gas_limit| {
+        let rsp = Self::do_evm(caller, ctx, |exec, gas_limit| {
             let address = exec.create_address(evm::CreateScheme::Legacy {
                 caller: caller.into(),
             });
@@ -249,7 +249,14 @@ impl<Cfg: Config> API for Module<Cfg> {
                 exec.transact_create(caller.into(), value.into(), init_code, gas_limit, vec![]),
                 address.as_bytes().to_vec(),
             )
-        })
+        });
+
+        // Always return success in CheckTx, as we might not have up-to-date state.
+        if ctx.is_check_only() {
+            rsp.or_else(|_| Ok(vec![]))
+        } else {
+            rsp
+        }
     }
 
     fn call<C: TxContext>(
@@ -265,7 +272,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        Self::do_evm(caller, ctx, |exec, gas_limit| {
+        let rsp = Self::do_evm(caller, ctx, |exec, gas_limit| {
             exec.transact_call(
                 caller.into(),
                 address.into(),
@@ -274,7 +281,14 @@ impl<Cfg: Config> API for Module<Cfg> {
                 gas_limit,
                 vec![],
             )
-        })
+        });
+
+        // Always return success in CheckTx, as we might not have up-to-date state.
+        if ctx.is_check_only() {
+            rsp.or_else(|_| Ok(vec![]))
+        } else {
+            rsp
+        }
     }
 
     fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {

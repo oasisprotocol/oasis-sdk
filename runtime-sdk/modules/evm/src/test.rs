@@ -256,6 +256,8 @@ impl Runtime for EVMRuntime {
 fn test_evm_runtime() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime>(context::Mode::ExecuteTx);
+    let mut mock = mock::Mock::default();
+    let mut check_ctx = mock.create_ctx_for_runtime::<EVMRuntime>(context::Mode::CheckTx);
 
     EVMRuntime::migrate(&mut ctx);
 
@@ -269,7 +271,7 @@ fn test_evm_runtime() {
             method: "evm.Create".to_owned(),
             body: cbor::to_value(types::Create {
                 value: 0.into(),
-                init_code: erc20,
+                init_code: erc20.clone(),
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -286,6 +288,7 @@ fn test_evm_runtime() {
     };
     // Run authentication handler to simulate nonce increments.
     <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &create_tx).unwrap();
+    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut check_ctx, &create_tx).unwrap();
 
     let erc20_addr = ctx.with_tx(0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
@@ -298,6 +301,50 @@ fn test_evm_runtime() {
         tx_ctx.commit();
 
         addr
+    });
+
+    // Submitting an invalid create transaction should fail.
+    let out_of_gas_create = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "evm.Create".to_owned(),
+            body: cbor::to_value(types::Create {
+                value: 0.into(),
+                init_code: erc20,
+            }),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                1,
+            )],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 10, // Not enough gas.
+                consensus_messages: 0,
+            },
+        },
+    };
+    // Run authentication handler to simulate nonce increments.
+    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_create).unwrap();
+    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut check_ctx, &out_of_gas_create).unwrap();
+
+    ctx.with_tx(0, out_of_gas_create.clone(), |mut tx_ctx, call| {
+        EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            .expect_err("call transfer should fail");
+    });
+
+    // CheckTx should not fail.
+    check_ctx.with_tx(0, out_of_gas_create, |mut tx_ctx, call| {
+        let rsp = EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            .expect("call should succeed with empty result");
+
+        assert_eq!(
+            rsp,
+            Vec::<u8>::new(),
+            "check tx should return an empty response"
+        )
     });
 
     // Test the Call transaction.
@@ -316,7 +363,7 @@ fn test_evm_runtime() {
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
                 keys::dave::sigspec(),
-                1,
+                2,
             )],
             fee: transaction::Fee {
                 amount: Default::default(),
@@ -327,8 +374,9 @@ fn test_evm_runtime() {
     };
     // Run authentication handler to simulate nonce increments.
     <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &call_name_tx).unwrap();
+    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut check_ctx, &call_name_tx).unwrap();
 
-    let erc20_name = ctx.with_tx(0, call_name_tx, |mut tx_ctx, call| {
+    let erc20_name = ctx.with_tx(0, call_name_tx.clone(), |mut tx_ctx, call| {
         let name = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call name should succeed");
 
@@ -360,13 +408,13 @@ fn test_evm_runtime() {
             body: cbor::to_value(types::Call {
                 address: erc20_addr,
                 value: 0.into(),
-                data: transfer_method,
+                data: transfer_method.clone(),
             }),
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
                 keys::dave::sigspec(),
-                2,
+                3,
             )],
             fee: transaction::Fee {
                 amount: Default::default(),
@@ -377,8 +425,9 @@ fn test_evm_runtime() {
     };
     // Run authentication handler to simulate nonce increments.
     <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &call_transfer_tx).unwrap();
+    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut check_ctx, &call_transfer_tx).unwrap();
 
-    let transfer_ret = ctx.with_tx(0, call_transfer_tx, |mut tx_ctx, call| {
+    let transfer_ret = ctx.with_tx(0, call_transfer_tx.clone(), |mut tx_ctx, call| {
         let ret = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call transfer should succeed");
 
@@ -392,4 +441,48 @@ fn test_evm_runtime() {
         transfer_ret,
         Vec::<u8>::from_hex("0".repeat(64 - 1) + &"1".to_owned()).unwrap()
     ); // OK.
+
+    // Submitting an invalid call transaction should fail.
+    let out_of_gas_tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "evm.Call".to_owned(),
+            body: cbor::to_value(types::Call {
+                address: erc20_addr,
+                value: 0.into(),
+                data: transfer_method,
+            }),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                4,
+            )],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 10, // Not enough gas.
+                consensus_messages: 0,
+            },
+        },
+    };
+    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_tx).unwrap();
+    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut check_ctx, &out_of_gas_tx).unwrap();
+
+    ctx.with_tx(0, out_of_gas_tx.clone(), |mut tx_ctx, call| {
+        EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            .expect_err("call transfer should fail");
+    });
+
+    // CheckTx should not fail.
+    check_ctx.with_tx(0, out_of_gas_tx, |mut tx_ctx, call| {
+        let rsp = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            .expect("call should succeed with empty result");
+
+        assert_eq!(
+            rsp,
+            Vec::<u8>::new(),
+            "check tx should return an empty response"
+        )
+    });
 }
