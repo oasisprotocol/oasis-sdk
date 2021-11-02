@@ -11,13 +11,36 @@ impl sdk::Runtime for Runtime {
 
     type Modules = (
         modules::accounts::Module,
+        modules::consensus::Module,
         modules::consensus_accounts::Module<modules::accounts::Module, modules::consensus::Module>,
         modules::core::Module,
     );
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {
         (
-            Default::default(),
+            modules::accounts::Genesis {
+                parameters: modules::accounts::Parameters {
+                    denomination_infos: {
+                        let mut denomination_infos = BTreeMap::new();
+                        denomination_infos.insert(
+                            "TEST".parse().unwrap(),
+                            modules::accounts::types::DenominationInfo {
+                                decimals: 12, // Consensus layer has 9 and we use a scaling factor of 1000.
+                            },
+                        );
+                        denomination_infos
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            modules::consensus::Genesis {
+                parameters: modules::consensus::Parameters {
+                    consensus_denomination: "TEST".parse().unwrap(),
+                    // Test scaling consensus base units when transferring them into the runtime.
+                    consensus_scaling_factor: 1000,
+                },
+            },
             modules::consensus_accounts::Genesis {
                 parameters: modules::consensus_accounts::Parameters {
                     // These are free, in order to simplify testing. We do test gas accounting

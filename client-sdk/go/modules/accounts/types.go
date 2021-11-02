@@ -30,6 +30,17 @@ type AddressesQuery struct {
 	Denomination types.Denomination `json:"denomination"`
 }
 
+// DenominationInfoQuery are the arguments for the accounts.DenominationInfo query.
+type DenominationInfoQuery struct {
+	Denomination types.Denomination `json:"denomination"`
+}
+
+// DenominationInfo represents information about a denomination.
+type DenominationInfo struct {
+	// Decimals is the number of decimals that the denomination is using.
+	Decimals uint8 `json:"decimals"`
+}
+
 // Addresses is the response of the accounts.Addresses query.
 type Addresses []types.Address
 

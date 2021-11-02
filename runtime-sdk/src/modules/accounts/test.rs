@@ -206,7 +206,7 @@ fn test_api_tx_transfer_disabled() {
             parameters: Parameters {
                 transfers_disabled: true,
                 debug_disable_nonce_check: false,
-                gas_costs: Default::default(),
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -310,6 +310,15 @@ pub(crate) fn init_accounts<C: Context>(ctx: &mut C) {
                 let mut total_supplies = BTreeMap::new();
                 total_supplies.insert(Denomination::NATIVE, 1_000_000);
                 total_supplies
+            },
+            parameters: Parameters {
+                denomination_infos: {
+                    let mut denomination_infos = BTreeMap::new();
+                    denomination_infos
+                        .insert(Denomination::NATIVE, DenominationInfo { decimals: 9 });
+                    denomination_infos
+                },
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1124,4 +1133,30 @@ fn test_get_set_balance() {
     )
     .unwrap();
     assert_eq!(balance, 500_000);
+}
+
+#[test]
+fn test_query_denomination_info() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    init_accounts(&mut ctx);
+
+    let di = Accounts::query_denomination_info(
+        &mut ctx,
+        DenominationInfoQuery {
+            denomination: Denomination::NATIVE,
+        },
+    )
+    .unwrap();
+    assert_eq!(di.decimals, 9);
+
+    // Query for missing info should fail.
+    Accounts::query_denomination_info(
+        &mut ctx,
+        DenominationInfoQuery {
+            denomination: "MISSING".parse().unwrap(),
+        },
+    )
+    .unwrap_err();
 }

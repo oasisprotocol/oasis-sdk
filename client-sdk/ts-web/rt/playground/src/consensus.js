@@ -87,9 +87,22 @@ export const playground = (async function () {
 
         const consensusChainContext = await nic.consensusGetChainContext();
 
+        console.log('query denomination info');
+        const di = await accountsWrapper
+            .queryDenominationInfo()
+            .setArgs({
+                denomination: oasis.misc.fromString('TEST'),
+            })
+            .query(nic);
+        if (di.decimals !== 12) {
+            throw new Error(`unexpected number of decimals (expected: 12 got: ${di.decimals})`);
+        }
+
         console.log('alice deposit into runtime');
+        // NOTE: The test runtime uses a scaling factor of 1000 so all balances in the runtime are
+        //       1000x larger than in the consensus layer.
         const DEPOSIT_AMNT = /** @type {oasisRT.types.BaseUnits} */ ([
-            oasis.quantity.fromBigInt(50n),
+            oasis.quantity.fromBigInt(50_000n),
             oasis.misc.fromString('TEST'),
         ]);
         const twDeposit = consensusWrapper
@@ -195,7 +208,7 @@ export const playground = (async function () {
             nonce: nonce2,
         });
         const WITHDRAW_AMNT = /** @type {oasisRT.types.BaseUnits} */ ([
-            oasis.quantity.fromBigInt(25n),
+            oasis.quantity.fromBigInt(25_000n),
             oasis.misc.fromString('TEST'),
         ]);
         const twWithdraw = consensusWrapper

@@ -47,6 +47,20 @@ export interface AccountsAddressesQuery {
 }
 
 /**
+ * Arguments for the DenominationInfo query.
+ */
+export interface AccountsDenominationInfoQuery {
+    denomination: Uint8Array;
+}
+
+/**
+ * Information about a denomination.
+ */
+export interface AccountsDenominationInfo {
+    decimals: number;
+}
+
+/**
  * Transfer call.
  */
 export interface AccountsTransfer {
