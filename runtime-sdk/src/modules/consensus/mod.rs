@@ -1,7 +1,7 @@
 //! Consensus module.
 //!
 //! Low level consensus module for communicating with the consensus layer.
-use std::str::FromStr;
+use std::{convert::TryInto, str::FromStr};
 
 use thiserror::Error;
 
@@ -17,8 +17,8 @@ use oasis_core_runtime::{
 
 use crate::{
     context::{Context, TxContext},
-    module,
-    module::Module as _,
+    error, module,
+    module::{Module as _, Parameters as _},
     modules,
     modules::core::{Module as Core, API as _},
     types::{
@@ -36,21 +36,46 @@ mod test;
 const MODULE_NAME: &str = "consensus";
 
 /// Parameters for the consensus module.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
     pub consensus_denomination: token::Denomination,
+    pub consensus_scaling_factor: u64,
 }
 
 impl Default for Parameters {
     fn default() -> Self {
         Self {
             consensus_denomination: token::Denomination::from_str("TEST").unwrap(),
+            consensus_scaling_factor: 1,
         }
     }
 }
 
+/// Errors emitted during rewards parameter validation.
+#[derive(Error, Debug)]
+pub enum ParameterValidationError {
+    #[error("consensus scaling factor set to zero")]
+    ZeroScalingFactor,
+
+    #[error("consensus scaling factor is not a power of 10")]
+    ScalingFactorNotPowerOf10,
+}
+
 impl module::Parameters for Parameters {
-    type Error = ();
+    type Error = ParameterValidationError;
+
+    fn validate_basic(&self) -> Result<(), Self::Error> {
+        if self.consensus_scaling_factor == 0 {
+            return Err(ParameterValidationError::ZeroScalingFactor);
+        }
+
+        let log = self.consensus_scaling_factor.log10();
+        if 10u64.pow(log.try_into().unwrap()) != self.consensus_scaling_factor {
+            return Err(ParameterValidationError::ScalingFactorNotPowerOf10);
+        }
+
+        Ok(())
+    }
 }
 /// Events emitted by the consensus module (none so far).
 #[derive(Debug, cbor::Encode, oasis_runtime_sdk_macros::Event)]
@@ -84,6 +109,10 @@ pub enum Error {
     #[error("consensus incompatible signer")]
     #[sdk_error(code = 4)]
     ConsensusIncompatibleSigner,
+
+    #[error("amount not representable")]
+    #[sdk_error(code = 5)]
+    AmountNotRepresentable,
 }
 
 /// Interface that can be called from other modules.
@@ -116,7 +145,7 @@ pub trait API {
     fn reclaim_escrow<C: TxContext>(
         ctx: &mut C,
         from: Address,
-        amount: &token::BaseUnits,
+        amount: u128,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error>;
 
@@ -128,6 +157,12 @@ pub trait API {
 
     /// Query consensus account info.
     fn account<C: Context>(ctx: &C, addr: Address) -> Result<ConsensusAccount, Error>;
+
+    /// Convert runtime amount to consensus amount, scaling as needed.
+    fn amount_from_consensus<C: Context>(ctx: &mut C, amount: u128) -> Result<u128, Error>;
+
+    /// Convert consensus amount to runtime amount, scaling as needed.
+    fn amount_to_consensus<C: Context>(ctx: &mut C, amount: u128) -> Result<u128, Error>;
 }
 
 pub struct Module;
@@ -143,6 +178,10 @@ impl Module {
 
         Ok(())
     }
+
+    fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<Parameters, Error> {
+        Ok(Self::params(ctx.runtime_state()))
+    }
 }
 
 impl API for Module {
@@ -153,6 +192,7 @@ impl API for Module {
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
+        let amount = Self::amount_to_consensus(ctx, amount.amount())?;
 
         Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
 
@@ -165,7 +205,7 @@ impl API for Module {
                 0,
                 StakingMessage::Transfer(staking::Transfer {
                     to: to.into(),
-                    amount: amount.amount().into(),
+                    amount: amount.into(),
                 }),
             )),
             hook,
@@ -181,6 +221,7 @@ impl API for Module {
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
+        let amount = Self::amount_to_consensus(ctx, amount.amount())?;
 
         Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
 
@@ -193,7 +234,7 @@ impl API for Module {
                 0,
                 StakingMessage::Withdraw(staking::Withdraw {
                     from: from.into(),
-                    amount: amount.amount().into(),
+                    amount: amount.into(),
                 }),
             )),
             hook,
@@ -209,6 +250,7 @@ impl API for Module {
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
+        let amount = Self::amount_to_consensus(ctx, amount.amount())?;
 
         Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
 
@@ -221,7 +263,7 @@ impl API for Module {
                 0,
                 StakingMessage::AddEscrow(staking::Escrow {
                     account: to.into(),
-                    amount: amount.amount().into(),
+                    amount: amount.into(),
                 }),
             )),
             hook,
@@ -233,11 +275,9 @@ impl API for Module {
     fn reclaim_escrow<C: TxContext>(
         ctx: &mut C,
         from: Address,
-        amount: &token::BaseUnits,
+        shares: u128,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
-        Self::ensure_consensus_denomination(ctx, amount.denomination())?;
-
         Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
 
         if ctx.is_check_only() {
@@ -249,7 +289,7 @@ impl API for Module {
                 0,
                 StakingMessage::ReclaimEscrow(staking::ReclaimEscrow {
                     account: from.into(),
-                    shares: amount.amount().into(),
+                    shares: shares.into(),
                 }),
             )),
             hook,
@@ -276,6 +316,32 @@ impl API for Module {
             .account(ctx.io_ctx(), addr.into())
             .map_err(Error::InternalStateError)
     }
+
+    fn amount_from_consensus<C: Context>(ctx: &mut C, amount: u128) -> Result<u128, Error> {
+        let params = Self::params(ctx.runtime_state());
+        let scaling_factor = params.consensus_scaling_factor;
+        amount
+            .checked_mul(scaling_factor.into())
+            .ok_or(Error::AmountNotRepresentable)
+    }
+
+    fn amount_to_consensus<C: Context>(ctx: &mut C, amount: u128) -> Result<u128, Error> {
+        let params = Self::params(ctx.runtime_state());
+        let scaling_factor = params.consensus_scaling_factor;
+        let scaled = amount
+            .checked_div(scaling_factor.into())
+            .ok_or(Error::AmountNotRepresentable)?;
+
+        // Ensure there is no remainder as that is not representable in the consensus layer.
+        let remainder = amount
+            .checked_rem(scaling_factor.into())
+            .ok_or(Error::AmountNotRepresentable)?;
+        if remainder != 0 {
+            return Err(Error::AmountNotRepresentable);
+        }
+
+        Ok(scaled)
+    }
 }
 
 impl module::Module for Module {
@@ -286,7 +352,41 @@ impl module::Module for Module {
     type Parameters = Parameters;
 }
 
-impl module::MethodHandler for Module {}
+impl module::MethodHandler for Module {
+    fn dispatch_query<C: Context>(
+        ctx: &mut C,
+        method: &str,
+        args: cbor::Value,
+    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
+        match method {
+            "consensus.Parameters" => module::dispatch_query(ctx, args, Self::query_parameters),
+            _ => module::DispatchResult::Unhandled(args),
+        }
+    }
+}
+
+impl Module {
+    /// Initialize state from genesis.
+    fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
+        // TODO: enable loading consensus denomination from consensus state after:
+        // https://github.com/oasisprotocol/oasis-core/issues/3868
+
+        // Validate genesis parameters.
+        genesis
+            .parameters
+            .validate_basic()
+            .expect("invalid genesis parameters");
+
+        // Set genesis parameters.
+        Self::set_params(ctx.runtime_state(), genesis.parameters);
+    }
+
+    /// Migrate state from a previous version.
+    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
+        // No migrations currently supported.
+        false
+    }
+}
 
 impl module::MigrationHandler for Module {
     type Genesis = Genesis;
@@ -298,17 +398,14 @@ impl module::MigrationHandler for Module {
     ) -> bool {
         let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
         if version == 0 {
-            // TODO: enable loading consensus denomination from consensus state after:
-            // https://github.com/oasisprotocol/oasis-core/issues/3868
-
             // Initialize state from genesis.
-            Self::set_params(ctx.runtime_state(), genesis.parameters);
+            Self::init(ctx, genesis);
             meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
             return true;
         }
 
-        // Migrations are not supported.
-        false
+        // Perform migration.
+        Self::migrate(ctx, version)
     }
 }
 

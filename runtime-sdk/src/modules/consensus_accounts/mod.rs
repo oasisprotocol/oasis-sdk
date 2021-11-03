@@ -127,9 +127,10 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         amount: token::BaseUnits,
     ) -> Result<(), Error> {
         if ctx.is_check_only() {
-            // In case this is not check only this weight will be emitted from Cosnensus::withdraw
-            // bellow.
+            // In case this is not check only this weight will be emitted from Consensus::withdraw
+            // below, same as the amount conversion check.
             Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+            Consensus::amount_to_consensus(ctx, amount.amount())?;
             return Ok(());
         }
 
@@ -162,9 +163,10 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         amount: token::BaseUnits,
     ) -> Result<(), Error> {
         if ctx.is_check_only() {
-            // In case this is not check only this weight will be emitted from Cosnensus::transfer
-            // bellow.
+            // In case this is not check only this weight will be emitted from Consensus::transfer
+            // below, same as the amount conversion check.
             Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+            Consensus::amount_to_consensus(ctx, amount.amount())?;
             return Ok(());
         }
 
@@ -424,6 +426,12 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
         let rt_acct = Consensus::account(ctx, rt_addr).unwrap_or_default();
         let rt_ga_balance = rt_acct.general.balance;
         let rt_ga_balance: u128 = rt_ga_balance.try_into().unwrap_or(u128::MAX);
+
+        let rt_ga_balance = Consensus::amount_from_consensus(ctx, rt_ga_balance).map_err(|_| {
+            CoreError::InvariantViolation(
+                "runtime's consensus balance is not representable".to_string(),
+            )
+        })?;
 
         match ts.get(&den) {
             Some(total_supply) => {

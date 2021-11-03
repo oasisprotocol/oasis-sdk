@@ -15,9 +15,10 @@ const (
 	methodTransfer = "accounts.Transfer"
 
 	// Queries.
-	methodNonce     = "accounts.Nonce"
-	methodBalances  = "accounts.Balances"
-	methodAddresses = "accounts.Addresses"
+	methodNonce            = "accounts.Nonce"
+	methodBalances         = "accounts.Balances"
+	methodAddresses        = "accounts.Addresses"
+	methodDenominationInfo = "accounts.DenominationInfo"
 )
 
 // V1 is the v1 accounts module interface.
@@ -35,6 +36,9 @@ type V1 interface {
 
 	// Addresses queries all account addresses.
 	Addresses(ctx context.Context, round uint64, denomination types.Denomination) (Addresses, error)
+
+	// DenominationInfo queries the information about a given denomination.
+	DenominationInfo(ctx context.Context, round uint64, denomination types.Denomination) (*DenominationInfo, error)
 
 	// GetEvents returns all account events emitted in a given block.
 	GetEvents(ctx context.Context, round uint64) ([]*Event, error)
@@ -80,6 +84,16 @@ func (a *v1) Addresses(ctx context.Context, round uint64, denomination types.Den
 		return nil, err
 	}
 	return addresses, nil
+}
+
+// Implements V1.
+func (a *v1) DenominationInfo(ctx context.Context, round uint64, denomination types.Denomination) (*DenominationInfo, error) {
+	var info DenominationInfo
+	err := a.rc.Query(ctx, round, methodDenominationInfo, &DenominationInfoQuery{Denomination: denomination}, &info)
+	if err != nil {
+		return nil, err
+	}
+	return &info, nil
 }
 
 // Implements V1.

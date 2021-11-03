@@ -14,6 +14,7 @@ import (
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
+	consensusMod "github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensus"
 	consensusAccounts "github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensusaccounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -130,7 +131,28 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	consDenomination := types.Denomination("TEST")
 
 	consAccounts := consensusAccounts.NewV1(rtc)
+	consMod := consensusMod.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
+
+	// Query parameters to make sure it is configured correctly.
+	params, err := consMod.Parameters(ctx, client.RoundLatest)
+	if err != nil {
+		return fmt.Errorf("failed to query parameters: %w", err)
+	}
+	if params.ConsensusDenomination != consDenomination {
+		return fmt.Errorf("unexpected consensus denomination (expected: %s got: %s)", consDenomination, params.ConsensusDenomination)
+	}
+	if params.ConsensusScalingFactor != 1000 {
+		return fmt.Errorf("unexpected consensus scaling factor (expected: %d got: %d)", 1000, params.ConsensusScalingFactor)
+	}
+
+	di, err := ac.DenominationInfo(ctx, client.RoundLatest, consDenomination)
+	if err != nil {
+		return fmt.Errorf("failed to query denomination info: %w", err)
+	}
+	if di.Decimals != 12 {
+		return fmt.Errorf("unexpected decimal count in denomination info (expected: %d got: %d)", 12, di.Decimals)
+	}
 
 	acCh, err := rtc.WatchEvents(ctx, []client.EventDecoder{ac}, false)
 	if err != nil {
@@ -141,7 +163,10 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	pendingWithdrawalAddr := types.NewAddressForModule("consensus_accounts", []byte("pending-withdrawal"))
 
 	log.Info("alice depositing into runtime to bob")
-	amount := types.NewBaseUnits(*quantity.NewFromUint64(50), consDenomination)
+	// NOTE: The test runtime uses a scaling factor of 1000 so all balances in the runtime are
+	//       1000x larger than in the consensus layer.
+	amount := types.NewBaseUnits(*quantity.NewFromUint64(50_000), consDenomination)
+	consensusAmount := quantity.NewFromUint64(50)
 	tb := consAccounts.Deposit(&testing.Bob.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, 0)
@@ -150,7 +175,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return err
 	}
 
-	if err = ensureStakingEvent(log, ch, makeTransferCheck(staking.Address(testing.Alice.Address), runtimeAddr, &amount.Amount)); err != nil {
+	if err = ensureStakingEvent(log, ch, makeTransferCheck(staking.Address(testing.Alice.Address), runtimeAddr, consensusAmount)); err != nil {
 		return fmt.Errorf("ensuring alice deposit consensus event: %w", err)
 	}
 
@@ -164,11 +189,12 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	if err != nil {
 		return err
 	}
-	if resp.Balance.Cmp(quantity.NewFromUint64(50)) != 0 {
-		return fmt.Errorf("after deposit, expected bob balance 50, got %s", resp.Balance)
+	if resp.Balance.Cmp(quantity.NewFromUint64(50_000)) != 0 {
+		return fmt.Errorf("after deposit, expected bob balance 50000, got %s", resp.Balance)
 	}
 
-	amount.Amount = *quantity.NewFromUint64(40)
+	amount.Amount = *quantity.NewFromUint64(40_000)
+	consensusAmount = quantity.NewFromUint64(40)
 	log.Info("bob depositing into runtime to alice")
 	tb = consAccounts.Deposit(&testing.Alice.Address, amount).
 		SetFeeConsensusMessages(1).
@@ -177,7 +203,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
-	if err = ensureStakingEvent(log, ch, makeTransferCheck(staking.Address(testing.Bob.Address), runtimeAddr, &amount.Amount)); err != nil {
+	if err = ensureStakingEvent(log, ch, makeTransferCheck(staking.Address(testing.Bob.Address), runtimeAddr, consensusAmount)); err != nil {
 		return fmt.Errorf("ensuring bob deposit consensus event: %w", err)
 	}
 
@@ -191,11 +217,12 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	if err != nil {
 		return err
 	}
-	if resp.Balance.Cmp(quantity.NewFromUint64(40)) != 0 {
+	if resp.Balance.Cmp(quantity.NewFromUint64(40_000)) != 0 {
 		return fmt.Errorf("after deposit, expected alice balance 40, got %s", resp.Balance)
 	}
 
-	amount.Amount = *quantity.NewFromUint64(25)
+	amount.Amount = *quantity.NewFromUint64(25_000)
+	consensusAmount = quantity.NewFromUint64(25)
 	log.Info("alice withdrawing to bob")
 	tb = consAccounts.Withdraw(&testing.Bob.Address, amount).
 		SetFeeConsensusMessages(1).
@@ -204,14 +231,14 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
-	if err = ensureStakingEvent(log, ch, makeTransferCheck(runtimeAddr, staking.Address(testing.Bob.Address), &amount.Amount)); err != nil {
+	if err = ensureStakingEvent(log, ch, makeTransferCheck(runtimeAddr, staking.Address(testing.Bob.Address), consensusAmount)); err != nil {
 		return fmt.Errorf("ensuring alice withdraw consensus event: %w", err)
 	}
 	if err = ensureRuntimeEvent(log, acCh, makeBurnCheck(pendingWithdrawalAddr, amount)); err != nil {
 		return fmt.Errorf("ensuring alice withdraw runtime event: %w", err)
 	}
 
-	amount.Amount = *quantity.NewFromUint64(50)
+	amount.Amount = *quantity.NewFromUint64(50_000)
 	log.Info("charlie withdrawing")
 	tb = consAccounts.Withdraw(&testing.Charlie.Address, amount).
 		SetFeeConsensusMessages(1).
@@ -242,7 +269,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	if err != nil {
 		return err
 	}
-	if resp.Balance.Cmp(quantity.NewFromUint64(40-25)) != 0 {
+	if resp.Balance.Cmp(quantity.NewFromUint64(40_000-25_000)) != 0 {
 		return fmt.Errorf("unexpected alice balance, got: %s", resp.Balance)
 	}
 
@@ -254,12 +281,13 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	if err != nil {
 		return err
 	}
+	// NOTE: Balances in the consensus layer should be unscaled.
 	if acc.General.Balance.Cmp(quantity.NewFromUint64(100-40+25)) != 0 {
 		return fmt.Errorf("unexpected bob consensus account balance, got: %s", acc.General.Balance)
 	}
 
 	log.Info("dave depositing (secp256k1)")
-	amount.Amount = *quantity.NewFromUint64(50)
+	amount.Amount = *quantity.NewFromUint64(50_000)
 	tb = consAccounts.Deposit(&testing.Dave.Address, amount).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Dave.SigSpec, 0)

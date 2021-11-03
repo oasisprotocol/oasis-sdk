@@ -44,3 +44,16 @@ pub struct BalancesQuery {
 pub struct AccountBalances {
     pub balances: BTreeMap<token::Denomination, u128>,
 }
+
+/// Arguments for the DenominationInfo query.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct DenominationInfoQuery {
+    pub denomination: token::Denomination,
+}
+
+/// Information about a denomination.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct DenominationInfo {
+    /// Number of decimals that the denomination is using.
+    pub decimals: u8,
+}

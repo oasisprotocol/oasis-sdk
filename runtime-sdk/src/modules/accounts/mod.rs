@@ -46,6 +46,10 @@ pub enum Error {
     #[sdk_error(code = 3)]
     Forbidden,
 
+    #[error("not found")]
+    #[sdk_error(code = 4)]
+    NotFound,
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),
@@ -97,6 +101,9 @@ pub struct Parameters {
     #[cbor(default)]
     #[cbor(skip_serializing_if = "is_false")]
     pub debug_disable_nonce_check: bool,
+
+    #[cbor(optional, default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub denomination_infos: BTreeMap<token::Denomination, types::DenominationInfo>,
 }
 
 /// Errors emitted during rewards parameter validation.
@@ -179,6 +186,12 @@ pub trait API {
     fn get_total_supplies<S: storage::Store>(
         state: S,
     ) -> Result<BTreeMap<token::Denomination, u128>, Error>;
+
+    /// Fetch information about a denomination.
+    fn get_denomination_info<S: storage::Store>(
+        state: S,
+        denomination: &token::Denomination,
+    ) -> Result<types::DenominationInfo, Error>;
 
     /// Move amount from address into fee accumulator.
     fn move_into_fee_accumulator<C: Context>(
@@ -524,6 +537,18 @@ impl API for Module {
         Ok(ts.iter().collect())
     }
 
+    fn get_denomination_info<S: storage::Store>(
+        state: S,
+        denomination: &token::Denomination,
+    ) -> Result<types::DenominationInfo, Error> {
+        let params = Self::params(state);
+        params
+            .denomination_infos
+            .get(denomination)
+            .cloned()
+            .ok_or(Error::NotFound)
+    }
+
     fn move_into_fee_accumulator<C: Context>(
         ctx: &mut C,
         from: Address,
@@ -651,6 +676,13 @@ impl Module {
     ) -> Result<types::AccountBalances, Error> {
         Self::get_balances(ctx.runtime_state(), args.address)
     }
+
+    fn query_denomination_info<C: Context>(
+        ctx: &mut C,
+        args: types::DenominationInfoQuery,
+    ) -> Result<types::DenominationInfo, Error> {
+        Self::get_denomination_info(ctx.runtime_state(), &args.denomination)
+    }
 }
 
 impl module::Module for Module {
@@ -716,6 +748,9 @@ impl module::MethodHandler for Module {
             "accounts.Nonce" => module::dispatch_query(ctx, args, Self::query_nonce),
             "accounts.Balances" => module::dispatch_query(ctx, args, Self::query_balances),
             "accounts.Addresses" => module::dispatch_query(ctx, args, Self::query_addresses),
+            "accounts.DenominationInfo" => {
+                module::dispatch_query(ctx, args, Self::query_denomination_info)
+            }
             _ => module::DispatchResult::Unhandled(args),
         }
     }

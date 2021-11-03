@@ -1,6 +1,7 @@
 //! Oasis runtime SDK.
 #![deny(rust_2018_idioms, unreachable_pub)]
 #![forbid(unsafe_code)]
+#![feature(int_log)]
 
 pub mod callformat;
 pub mod context;
