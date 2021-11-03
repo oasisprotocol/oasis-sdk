@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased changes
+## v0.2.0-alpha5
+
+Spotlight change:
+
+- We usually don't itemize changes that come from the SDK itself in this
+  client package's release notes, but the new `address.fromSigspec` is here,
+  and it's kind of a big deal.
 
 New features:
 
