@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.0-alpha3
+
+Spotlight change:
+
+- We're upgrading to a newer version of our Ledger library, which will support
+  the next version of the Oasis Ledger app.
+
 ## v0.1.0-alpha2
 
 Spotlight change:
