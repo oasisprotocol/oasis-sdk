@@ -396,6 +396,47 @@ fn test_hello_contract_call() {
     let value: u64 = cbor::from_slice(&value).expect("counter value should be well-formed");
     // Value is 35 because it was incremented by last call above.
     assert_eq!(value, 35, "counter value should be correct");
+
+    // Invalid call should fail.
+    let invalid_tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "contracts.Call".to_owned(),
+            body: cbor::to_value(types::Call {
+                id: instance_id,
+                // Needs to conform to contract API.
+                data: cbor::to_vec(cbor::cbor_map! {
+                    "say_hello" => cbor::cbor_map!{
+                        "whooo" => cbor::cbor_text!("second") // Invalid method.
+                    }
+                }),
+                tokens: vec![],
+            }),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 1_000_000,
+                consensus_messages: 0,
+            },
+        },
+    };
+    ctx.with_tx(0, invalid_tx.clone(), |mut tx_ctx, call| {
+        Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            .expect_err("invalid call should fail");
+    });
+
+    ctx.with_child(context::Mode::CheckTx, |mut check_ctx| {
+        check_ctx.with_tx(0, invalid_tx, |mut tx_ctx, call| {
+            Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+                .expect("invalid call should succeed check-tx");
+        });
+    })
 }
 
 /// Contract runtime.
