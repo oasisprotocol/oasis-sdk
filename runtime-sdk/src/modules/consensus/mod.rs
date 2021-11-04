@@ -1,7 +1,7 @@
 //! Consensus module.
 //!
 //! Low level consensus module for communicating with the consensus layer.
-use std::{convert::TryInto, str::FromStr};
+use std::str::FromStr;
 
 use thiserror::Error;
 
@@ -70,7 +70,7 @@ impl module::Parameters for Parameters {
         }
 
         let log = self.consensus_scaling_factor.log10();
-        if 10u64.pow(log.try_into().unwrap()) != self.consensus_scaling_factor {
+        if 10u64.pow(log) != self.consensus_scaling_factor {
             return Err(ParameterValidationError::ScalingFactorNotPowerOf10);
         }
 

@@ -791,12 +791,12 @@ impl Module {
             let computed = computed_total_supply
                 .remove(denomination)
                 .expect("unexpected total supply");
-            if &computed != total_supply {
-                panic!(
-                    "unexpected total supply (expected: {} got: {})",
-                    total_supply, computed
-                );
-            }
+            assert!(
+                &computed == total_supply,
+                "unexpected total supply (expected: {} got: {})",
+                total_supply,
+                computed
+            );
 
             total_supplies.insert(denomination, total_supply);
         }

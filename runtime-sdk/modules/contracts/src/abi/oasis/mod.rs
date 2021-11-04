@@ -8,7 +8,7 @@ use oasis_runtime_sdk::{
     types::token,
 };
 
-use super::{gas, ExecutionContext, ExecutionResult, ABI};
+use super::{gas, Abi, ExecutionContext, ExecutionResult};
 use crate::{wasm::ContractError, Config, Error};
 
 mod env;
@@ -161,7 +161,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
     }
 }
 
-impl<Cfg: Config, C: Context> ABI<C> for OasisV1<Cfg> {
+impl<Cfg: Config, C: Context> Abi<C> for OasisV1<Cfg> {
     fn validate(&self, module: &mut walrus::Module) -> Result<(), Error> {
         // Verify that all required exports are there.
         let exports: BTreeSet<&str> = module

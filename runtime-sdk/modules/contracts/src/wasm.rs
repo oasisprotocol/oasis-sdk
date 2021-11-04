@@ -3,7 +3,7 @@ use oasis_contract_sdk_types::message::Reply;
 use oasis_runtime_sdk::context::Context;
 
 use super::{
-    abi::{oasis::OasisV1, ExecutionContext, ExecutionResult, ABI},
+    abi::{oasis::OasisV1, Abi, ExecutionContext, ExecutionResult},
     types, Config, Error, MODULE_NAME,
 };
 
@@ -79,7 +79,7 @@ where
     C: Context,
     F: FnOnce(
         &mut ExecutionContext<'ctx, C>,
-        &Box<dyn ABI<C>>,
+        &Box<dyn Abi<C>>,
         &wasm3::Instance<'_, '_, ExecutionContext<'ctx, C>>,
     ) -> ExecutionResult,
 {
@@ -188,7 +188,7 @@ pub(super) fn query<'ctx, Cfg: Config, C: Context>(
 }
 
 /// Create the appropriate ABI based on contract configuration.
-fn create_abi<Cfg: Config, C: Context>(abi: types::ABI) -> Result<Box<dyn ABI<C>>, Error> {
+fn create_abi<Cfg: Config, C: Context>(abi: types::ABI) -> Result<Box<dyn Abi<C>>, Error> {
     match abi {
         types::ABI::OasisV1 => Ok(Box::new(OasisV1::<Cfg>::new())),
     }

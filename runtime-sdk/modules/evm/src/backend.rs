@@ -195,15 +195,13 @@ impl<'c, C: Context, Cfg: Config> ApplyBackend for Backend<'c, C, Cfg> {
                         if addr == origin {
                             // Origin's nonce must stay the same as we cancelled out the changes. Note
                             // that in reality this means that the nonce has been incremented by one.
-                            if nonce != old_nonce {
-                                panic!("evm execution would not increment origin nonce correctly ({} -> {})", old_nonce, nonce);
-                            }
+                            assert!(nonce == old_nonce,
+                                "evm execution would not increment origin nonce correctly ({} -> {})", old_nonce, nonce);
                         } else {
                             // Other nonces must increment by one or stay the same. Note that even
                             // non-origin nonces may increment due to `create_increase_nonce` config.
-                            if nonce != old_nonce && nonce != old_nonce + 1 {
-                                panic!("evm execution would not update non-origin nonce correctly ({} -> {})", old_nonce, nonce);
-                            }
+                            assert!(nonce == old_nonce || nonce == old_nonce + 1,
+                                "evm execution would not update non-origin nonce correctly ({} -> {})", old_nonce, nonce);
                         }
                     }
                     Cfg::Accounts::set_nonce(&mut state, address, nonce);
@@ -241,14 +239,14 @@ impl<'c, C: Context, Cfg: Config> ApplyBackend for Backend<'c, C, Cfg> {
             }
         }
 
-        if total_supply_add != total_supply_sub {
-            // NOTE: This should never happen and if it does it would cause an invariant violation
-            //       so we better abort to avoid corrupting state.
-            panic!(
-                "evm execution would lead to invariant violation ({} != {})",
-                total_supply_add, total_supply_sub
-            );
-        }
+        // NOTE: This should never happen and if it does it would cause an invariant violation
+        //       so we better abort to avoid corrupting state.
+        assert!(
+            total_supply_add == total_supply_sub,
+            "evm execution would lead to invariant violation ({} != {})",
+            total_supply_add,
+            total_supply_sub
+        );
 
         // Emit logs as events.
         for log in logs {
