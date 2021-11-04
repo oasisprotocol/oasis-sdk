@@ -1850,7 +1850,21 @@ dependencies = [
  "futures",
  "io-context",
  "oasis-cbor",
- "oasis-core-runtime",
+ "oasis-core-runtime 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.4)",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "oasis-core-client"
+version = "0.0.0"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.5#65eaee3d2219898e761c62beb44d87a40474a2a6"
+dependencies = [
+ "anyhow",
+ "futures",
+ "io-context",
+ "oasis-cbor",
+ "oasis-core-runtime 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.5)",
  "thiserror",
  "tokio",
 ]
@@ -1864,7 +1878,7 @@ dependencies = [
  "base64",
  "lazy_static",
  "oasis-cbor",
- "oasis-core-runtime",
+ "oasis-core-runtime 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.4)",
  "rand 0.7.3",
  "rustc-hex",
  "thiserror",
@@ -1881,9 +1895,9 @@ dependencies = [
  "io-context",
  "lru 0.6.6",
  "oasis-cbor",
- "oasis-core-client",
+ "oasis-core-client 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.4)",
  "oasis-core-keymanager-api-common",
- "oasis-core-runtime",
+ "oasis-core-runtime 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.4)",
  "thiserror",
 ]
 
@@ -1891,6 +1905,62 @@ dependencies = [
 name = "oasis-core-runtime"
 version = "0.0.0"
 source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.4#aa6167c56ed7fb9b2edb86adea69400cc4a9a22c"
+dependencies = [
+ "anyhow",
+ "arbitrary",
+ "base64",
+ "base64-serde",
+ "bech32",
+ "bincode",
+ "byteorder",
+ "chrono",
+ "crossbeam",
+ "curve25519-dalek",
+ "deoxysii",
+ "ed25519-dalek",
+ "futures",
+ "hmac",
+ "honggfuzz",
+ "impl-trait-for-tuples",
+ "intrusive-collections",
+ "io-context",
+ "lazy_static",
+ "log",
+ "lru 0.6.6",
+ "num-bigint",
+ "num-traits",
+ "oasis-cbor",
+ "oid-registry",
+ "percent-encoding",
+ "rand 0.7.3",
+ "rsa",
+ "rustc-hex",
+ "serde",
+ "serde_json",
+ "sgx-isa",
+ "sha2",
+ "slog",
+ "slog-json",
+ "slog-scope",
+ "slog-stdlog",
+ "snow",
+ "sp800-185",
+ "tendermint",
+ "tendermint-light-client",
+ "tendermint-proto",
+ "tendermint-rpc",
+ "thiserror",
+ "tiny-keccak 2.0.2",
+ "tokio",
+ "x25519-dalek",
+ "x509-parser",
+ "zeroize",
+]
+
+[[package]]
+name = "oasis-core-runtime"
+version = "0.0.0"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.5#65eaee3d2219898e761c62beb44d87a40474a2a6"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -1959,10 +2029,10 @@ dependencies = [
  "k256",
  "num-traits",
  "oasis-cbor",
- "oasis-core-client",
+ "oasis-core-client 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.5)",
  "oasis-core-keymanager-api-common",
  "oasis-core-keymanager-client",
- "oasis-core-runtime",
+ "oasis-core-runtime 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.4)",
  "oasis-runtime-sdk-macros",
  "once_cell",
  "schnorrkel",
