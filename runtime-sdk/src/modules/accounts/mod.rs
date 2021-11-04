@@ -161,6 +161,10 @@ pub trait API {
     fn get_nonce<S: storage::Store>(state: S, address: Address) -> Result<u64, Error>;
 
     /// Sets an account's balance of the given denomination.
+    ///
+    /// # Warning
+    ///
+    /// This method is dangerous as it can result in invariant violations.
     fn set_balance<S: storage::Store>(state: S, address: Address, amount: &token::BaseUnits);
 
     /// Fetch an account's balance of the given denomination.
@@ -186,6 +190,13 @@ pub trait API {
     fn get_total_supplies<S: storage::Store>(
         state: S,
     ) -> Result<BTreeMap<token::Denomination, u128>, Error>;
+
+    /// Sets the total supply for the given denomination.
+    ///
+    /// # Warning
+    ///
+    /// This method is dangerous as it can result in invariant violations.
+    fn set_total_supply<S: storage::Store>(state: S, amount: &token::BaseUnits);
 
     /// Fetch information about a denomination.
     fn get_denomination_info<S: storage::Store>(
@@ -535,6 +546,13 @@ impl API for Module {
         let ts = storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
 
         Ok(ts.iter().collect())
+    }
+
+    fn set_total_supply<S: storage::Store>(state: S, amount: &token::BaseUnits) {
+        let store = storage::PrefixStore::new(state, &MODULE_NAME);
+        let mut total_supplies =
+            storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
+        total_supplies.insert(amount.denomination(), amount.amount());
     }
 
     fn get_denomination_info<S: storage::Store>(
