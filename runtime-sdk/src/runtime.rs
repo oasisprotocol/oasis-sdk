@@ -68,13 +68,12 @@ pub trait Runtime {
             .copied()
             .unwrap_or_default();
         if global_version != Self::STATE_VERSION {
-            if global_version != Self::STATE_VERSION - 1 {
-                panic!(
-                    "inconsistent existing state version (expected: {} got: {})",
-                    Self::STATE_VERSION - 1,
-                    global_version
-                );
-            }
+            assert!(
+                global_version == Self::STATE_VERSION - 1,
+                "inconsistent existing state version (expected: {} got: {})",
+                Self::STATE_VERSION - 1,
+                global_version
+            );
 
             Self::migrate_state(ctx);
 
