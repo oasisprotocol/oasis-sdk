@@ -1136,6 +1136,54 @@ fn test_get_set_balance() {
 }
 
 #[test]
+fn test_get_set_total_supply() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    init_accounts(&mut ctx);
+
+    let ts = Accounts::get_total_supplies(ctx.runtime_state())
+        .expect("get_total_supplies should succeed");
+    assert_eq!(
+        ts.len(),
+        1,
+        "exactly one denomination should be present in total supplies"
+    );
+    assert!(
+        ts.contains_key(&Denomination::NATIVE),
+        "only native denomination should be present in total supplies"
+    );
+    assert_eq!(
+        ts[&Denomination::NATIVE],
+        1_000_000,
+        "total supply should be 1000000"
+    );
+
+    // Set total supply to 2m, note that this violates invariants.
+    Accounts::set_total_supply(
+        ctx.runtime_state(),
+        &BaseUnits::new(2_000_000, Denomination::NATIVE),
+    );
+
+    let ts = Accounts::get_total_supplies(ctx.runtime_state())
+        .expect("get_total_supplies should succeed");
+    assert_eq!(
+        ts.len(),
+        1,
+        "exactly one denomination should be present in total supplies"
+    );
+    assert!(
+        ts.contains_key(&Denomination::NATIVE),
+        "only native denomination should be present in total supplies"
+    );
+    assert_eq!(
+        ts[&Denomination::NATIVE],
+        2_000_000,
+        "total supply should be 2000000"
+    );
+}
+
+#[test]
 fn test_query_denomination_info() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
