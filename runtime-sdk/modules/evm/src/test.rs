@@ -256,8 +256,6 @@ impl Runtime for EVMRuntime {
 fn test_evm_runtime() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime>(context::Mode::ExecuteTx);
-    let mut mock = mock::Mock::default();
-    let mut check_ctx = mock.create_ctx_for_runtime::<EVMRuntime>(context::Mode::CheckTx);
 
     EVMRuntime::migrate(&mut ctx);
 
@@ -288,7 +286,6 @@ fn test_evm_runtime() {
     };
     // Run authentication handler to simulate nonce increments.
     <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &create_tx).unwrap();
-    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut check_ctx, &create_tx).unwrap();
 
     let erc20_addr = ctx.with_tx(0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
@@ -328,7 +325,6 @@ fn test_evm_runtime() {
     };
     // Run authentication handler to simulate nonce increments.
     <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_create).unwrap();
-    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut check_ctx, &out_of_gas_create).unwrap();
 
     ctx.with_tx(0, out_of_gas_create.clone(), |mut tx_ctx, call| {
         EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
@@ -336,15 +332,17 @@ fn test_evm_runtime() {
     });
 
     // CheckTx should not fail.
-    check_ctx.with_tx(0, out_of_gas_create, |mut tx_ctx, call| {
-        let rsp = EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-            .expect("call should succeed with empty result");
+    ctx.with_child(context::Mode::CheckTx, |mut check_ctx| {
+        check_ctx.with_tx(0, out_of_gas_create, |mut tx_ctx, call| {
+            let rsp = EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+                .expect("call should succeed with empty result");
 
-        assert_eq!(
-            rsp,
-            Vec::<u8>::new(),
-            "check tx should return an empty response"
-        )
+            assert_eq!(
+                rsp,
+                Vec::<u8>::new(),
+                "check tx should return an empty response"
+            );
+        });
     });
 
     // Test the Call transaction.
@@ -374,7 +372,23 @@ fn test_evm_runtime() {
     };
     // Run authentication handler to simulate nonce increments.
     <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &call_name_tx).unwrap();
-    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut check_ctx, &call_name_tx).unwrap();
+
+    // Test transaction call in simulate mode.
+    ctx.with_child(context::Mode::SimulateTx, |mut sim_ctx| {
+        let erc20_name = sim_ctx.with_tx(0, call_name_tx.clone(), |mut tx_ctx, call| {
+            let name = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+                .expect("call name should succeed");
+
+            EVM::check_invariants(&mut tx_ctx).expect("invariants should hold");
+
+            tx_ctx.commit();
+
+            name
+        });
+        assert_eq!(erc20_name.len(), 96);
+        assert_eq!(erc20_name[63], 0x04); // Name is 4 bytes long.
+        assert_eq!(erc20_name[64..68], vec![0x54, 0x65, 0x73, 0x74]); // "Test".
+    });
 
     let erc20_name = ctx.with_tx(0, call_name_tx.clone(), |mut tx_ctx, call| {
         let name = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
@@ -425,7 +439,6 @@ fn test_evm_runtime() {
     };
     // Run authentication handler to simulate nonce increments.
     <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &call_transfer_tx).unwrap();
-    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut check_ctx, &call_transfer_tx).unwrap();
 
     let transfer_ret = ctx.with_tx(0, call_transfer_tx.clone(), |mut tx_ctx, call| {
         let ret = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
@@ -467,7 +480,6 @@ fn test_evm_runtime() {
         },
     };
     <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_tx).unwrap();
-    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut check_ctx, &out_of_gas_tx).unwrap();
 
     ctx.with_tx(0, out_of_gas_tx.clone(), |mut tx_ctx, call| {
         EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
@@ -475,15 +487,17 @@ fn test_evm_runtime() {
     });
 
     // CheckTx should not fail.
-    check_ctx.with_tx(0, out_of_gas_tx, |mut tx_ctx, call| {
-        let rsp = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-            .expect("call should succeed with empty result");
+    ctx.with_child(context::Mode::CheckTx, |mut check_ctx| {
+        check_ctx.with_tx(0, out_of_gas_tx, |mut tx_ctx, call| {
+            let rsp = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+                .expect("call should succeed with empty result");
 
-        assert_eq!(
-            rsp,
-            Vec::<u8>::new(),
-            "check tx should return an empty response"
-        )
+            assert_eq!(
+                rsp,
+                Vec::<u8>::new(),
+                "check tx should return an empty response"
+            )
+        });
     });
 }
 
