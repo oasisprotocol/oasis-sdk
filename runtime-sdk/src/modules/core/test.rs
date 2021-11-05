@@ -10,7 +10,10 @@ use crate::{
     module::{AuthHandler as _, BlockHandler, Module as _},
     runtime::Runtime,
     testing::{keys, mock},
-    types::{token, transaction, transaction::TransactionWeight},
+    types::{
+        token, transaction,
+        transaction::{CallerAddress, TransactionWeight},
+    },
 };
 
 use super::{types, Module as Core, Parameters, API as _, GAS_WEIGHT_NAME};
@@ -301,7 +304,7 @@ fn test_query_estimate_gas() {
 
     // Test estimation with specified caller.
     let args = types::EstimateGasQuery {
-        caller: Some(keys::alice::address()),
+        caller: Some(CallerAddress::Address(keys::alice::address())),
         tx,
     };
 

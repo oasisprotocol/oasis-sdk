@@ -250,6 +250,14 @@ type Fee struct {
 	ConsensusMessages uint32    `json:"consensus_messages,omitempty"`
 }
 
+// CallerAddress is a caller address.
+type CallerAddress struct {
+	// Address is an oasis address.
+	Address *Address `json:"address,omitempty"`
+	// EthAddress is an ethereum address.
+	EthAddress *[20]byte `json:"eth_address,omitempty"`
+}
+
 // AddressSpec is common information that specifies an address as well as how to authenticate.
 type AddressSpec struct {
 	// Signature is for signature authentication.

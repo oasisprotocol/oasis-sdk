@@ -4,8 +4,16 @@ import * as oasis from '@oasisprotocol/client';
  * Arguments for the EstimateGas query.
  */
 export interface CoreEstimateGasQuery {
-    caller?: Uint8Array;
+    caller?: CallerAddress;
     tx: Transaction;
+}
+
+/**
+ * Caller address.
+ */
+export interface CallerAddress {
+    address?: Uint8Array;
+    eth_address?: Uint8Array;
 }
 
 /**

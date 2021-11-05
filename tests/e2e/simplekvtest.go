@@ -122,7 +122,7 @@ func sendTx(rtc client.RuntimeClient, signer signature.Signer, tx *types.Transac
 	tx.AuthInfo.Fee.Gas = gas
 
 	// Estimate gas by passing the caller address.
-	gasForCaller, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, caller, tx)
+	gasForCaller, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &caller}, tx)
 	if err != nil {
 		return err
 	}

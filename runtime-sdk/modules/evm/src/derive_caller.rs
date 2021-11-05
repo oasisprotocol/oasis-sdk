@@ -4,7 +4,7 @@ use oasis_runtime_sdk::{
     crypto::signature::secp256k1,
     types::{
         address::SignatureAddressSpec,
-        transaction::{AddressSpec, AuthInfo},
+        transaction::{AddressSpec, AuthInfo, CallerAddress},
     },
 };
 
@@ -28,6 +28,7 @@ pub fn from_sigspec(spec: &SignatureAddressSpec) -> Result<H160, Error> {
 pub fn from_tx_auth_info(ai: &AuthInfo) -> Result<H160, Error> {
     match &ai.signer_info[0].address_spec {
         AddressSpec::Signature(spec) => from_sigspec(spec),
+        AddressSpec::Internal(CallerAddress::EthAddress(address)) => Ok(address.into()),
         _ => Err(Error::InvalidSignerType),
     }
 }

@@ -3,6 +3,8 @@ package testing
 import (
 	"crypto/sha512"
 
+	"golang.org/x/crypto/sha3"
+
 	memorySigner "github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/memory"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -16,6 +18,9 @@ type TestKey struct {
 	Signer  signature.Signer
 	Address types.Address
 	SigSpec types.SignatureAddressSpec
+
+	// EthAddress is the corresponding Ethereum address if the key is secp256k1.
+	EthAddress [20]byte
 }
 
 func newEd25519TestKey(seed string) TestKey {
@@ -32,10 +37,18 @@ func newSecp256k1TestKey(seed string) TestKey {
 	pk := sha512.Sum512_256([]byte(seed))
 	signer := secp256k1.NewSigner(pk[:])
 	sigspec := types.NewSignatureAddressSpecSecp256k1Eth(signer.Public().(secp256k1.PublicKey))
+
+	h := sha3.NewLegacyKeccak256()
+	untaggedPk, _ := sigspec.Secp256k1Eth.MarshalBinaryUncompressedUntagged()
+	h.Write(untaggedPk)
+	var ethAddress [20]byte
+	copy(ethAddress[:], h.Sum(nil)[32-20:])
+
 	return TestKey{
-		Signer:  signer,
-		Address: types.NewAddress(sigspec),
-		SigSpec: sigspec,
+		Signer:     signer,
+		Address:    types.NewAddress(sigspec),
+		SigSpec:    sigspec,
+		EthAddress: ethAddress,
 	}
 }
 

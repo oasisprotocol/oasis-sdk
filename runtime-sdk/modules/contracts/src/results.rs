@@ -11,7 +11,7 @@ use oasis_runtime_sdk::{
     dispatcher,
     event::tag_for_event,
     modules::core::{self, API as _},
-    types::{token, transaction},
+    types::{token, transaction, transaction::CallerAddress},
 };
 
 use crate::{
@@ -157,7 +157,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                             signer_info: vec![transaction::SignerInfo {
                                 // The call is being performed on the contract's behalf.
                                 address_spec: transaction::AddressSpec::Internal(
-                                    contract.instance_info.address(),
+                                    CallerAddress::Address(contract.instance_info.address()),
                                 ),
                                 nonce: 0,
                             }],
