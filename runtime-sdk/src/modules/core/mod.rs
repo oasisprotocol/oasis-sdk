@@ -310,10 +310,11 @@ impl Module {
         ctx: &mut C,
         mut args: types::EstimateGasQuery,
     ) -> Result<u64, Error> {
-        // Assume maximum amount of gas and a reasonable maximum fee.
-        args.tx.auth_info.fee.gas = u64::MAX;
+        // Assume maximum amount of gas in a batch, a reasonable maximum fee and maximum amount of consensus messages.
+        args.tx.auth_info.fee.gas = Self::params(ctx.runtime_state()).max_batch_gas;
         args.tx.auth_info.fee.amount =
             token::BaseUnits::new(u64::MAX.into(), token::Denomination::NATIVE);
+        args.tx.auth_info.fee.consensus_messages = ctx.remaining_messages();
         // Estimate transaction size. Since the transaction given to us is not signed, we need to
         // estimate how large each of the auth proofs would be.
         let auth_proofs: Result<_, Error> = args
