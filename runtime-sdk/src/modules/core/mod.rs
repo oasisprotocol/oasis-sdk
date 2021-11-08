@@ -148,7 +148,10 @@ pub trait API {
     /// increased.
     fn use_tx_gas<C: TxContext>(ctx: &mut C, gas: u64) -> Result<(), Error>;
 
-    /// Return the remaining gas.
+    /// Returns the remaining batch-wide gas.
+    fn remaining_batch_gas<C: Context>(ctx: &mut C) -> u64;
+
+    /// Return the remaining tx-wide gas.
     fn remaining_tx_gas<C: TxContext>(ctx: &mut C) -> u64;
 
     /// Increase transaction priority for the provided amount.
@@ -245,10 +248,19 @@ impl API for Module {
         Ok(())
     }
 
+    fn remaining_batch_gas<C: Context>(ctx: &mut C) -> u64 {
+        let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
+        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
+        batch_gas_limit.saturating_sub(*batch_gas_used)
+    }
+
     fn remaining_tx_gas<C: TxContext>(ctx: &mut C) -> u64 {
         let gas_limit = ctx.tx_auth_info().fee.gas;
         let gas_used = ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
-        gas_limit.saturating_sub(*gas_used)
+        let remaining_tx = gas_limit.saturating_sub(*gas_used);
+        // Also check remaining batch gas limit and return the minimum of the two.
+        let remaining_batch = Self::remaining_batch_gas(ctx);
+        std::cmp::min(remaining_tx, remaining_batch)
     }
 
     fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error> {

@@ -37,26 +37,52 @@ fn test_use_gas() {
     );
 
     Core::use_batch_gas(&mut ctx, 1).expect("using batch gas under limit should succeed");
+    assert_eq!(Core::remaining_batch_gas(&mut ctx), BLOCK_MAX_GAS - 1);
 
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = MAX_GAS;
 
     ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, MAX_GAS).expect("using gas under limit should succeed");
+        assert_eq!(
+            Core::remaining_batch_gas(&mut tx_ctx),
+            BLOCK_MAX_GAS - 1 - MAX_GAS
+        );
+        assert_eq!(Core::remaining_tx_gas(&mut tx_ctx), 0);
     });
 
     ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, MAX_GAS)
             .expect("gas across separate transactions shouldn't accumulate");
+        assert_eq!(
+            Core::remaining_batch_gas(&mut tx_ctx),
+            BLOCK_MAX_GAS - 1 - 2 * MAX_GAS
+        );
+        assert_eq!(Core::remaining_tx_gas(&mut tx_ctx), 0);
     });
 
     ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, MAX_GAS).unwrap();
         Core::use_tx_gas(&mut tx_ctx, 1).expect_err("gas in same transaction should accumulate");
+        assert_eq!(Core::remaining_tx_gas(&mut tx_ctx), 0);
     });
+
+    assert_eq!(
+        Core::remaining_batch_gas(&mut ctx),
+        BLOCK_MAX_GAS - 1 - 3 * MAX_GAS
+    );
 
     ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, 1).unwrap();
+        assert_eq!(
+            Core::remaining_batch_gas(&mut tx_ctx),
+            BLOCK_MAX_GAS - 1 - 3 * MAX_GAS - 1
+        );
+        assert_eq!(
+            Core::remaining_tx_gas(&mut tx_ctx),
+            0,
+            "remaining tx gas should take batch limit into account"
+        );
         Core::use_tx_gas(&mut tx_ctx, u64::MAX).expect_err("overflow should cause error");
     });
 
