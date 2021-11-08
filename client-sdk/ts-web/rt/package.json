@@ -1,6 +1,6 @@
 {
     "name": "@oasisprotocol/client-rt",
-    "version": "0.2.0-alpha5",
+    "version": "0.2.0-alpha6",
     "files": [
         "dist"
     ],
