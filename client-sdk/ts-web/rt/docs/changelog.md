@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.2.0-alpha6
+
+Spotlight change:
+
+- Another addition from the SDK itself,
+  `accounts.Wrapper.queryDenominationInfo` is here, and it's a "biiiiiiiiig"
+  deal. That's 9 "i"s, if you wanted to know that too.
+
 ## v0.2.0-alpha5
 
 Spotlight change:
