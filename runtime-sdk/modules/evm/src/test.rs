@@ -18,9 +18,9 @@ use oasis_runtime_sdk::{
 };
 
 use crate::{
-    derive_caller,
+    derive_caller, process_evm_result,
     types::{self, H160},
-    Config, Genesis, Module as EVMModule,
+    Config, Error, Genesis, Module as EVMModule,
 };
 
 /// Test contract code.
@@ -485,4 +485,79 @@ fn test_evm_runtime() {
             "check tx should return an empty response"
         )
     });
+}
+
+#[test]
+fn test_revert_reason_decoding() {
+    let long_reason = vec![0x61; 1050];
+    let long_reason_hex = hex::encode(&long_reason);
+    let long_reason_str = String::from_utf8(long_reason).unwrap();
+    let long_reason_hex = &[
+        "08c379a0\
+        0000000000000000000000000000000000000000000000000000000000000020\
+        000000000000000000000000000000000000000000000000000000000000041a",
+        &long_reason_hex,
+    ]
+    .concat();
+
+    let tcs = vec![
+        // Valid values.
+        (
+            "08c379a0\
+            0000000000000000000000000000000000000000000000000000000000000020\
+            0000000000000000000000000000000000000000000000000000000000000018\
+            4461692f696e73756666696369656e742d62616c616e63650000000000000000",
+            "Dai/insufficient-balance",
+        ),
+        (
+            "08c379a0\
+            0000000000000000000000000000000000000000000000000000000000000020\
+            0000000000000000000000000000000000000000000000000000000000000047\
+            6d7946756e6374696f6e206f6e6c79206163636570747320617267756d656e74\
+            7320776869636820617265206772656174686572207468616e206f7220657175\
+            616c20746f203500000000000000000000000000000000000000000000000000",
+            "myFunction only accepts arguments which are greather than or equal to 5",
+        ),
+        // Valid value, empty reason.
+        (
+            "08c379a0\
+            0000000000000000000000000000000000000000000000000000000000000020\
+            0000000000000000000000000000000000000000000000000000000000000000",
+            "",
+        ),
+        // Valid value, reason too long and should be truncated.
+        (long_reason_hex, &long_reason_str[..1024]),
+        // Malformed output.
+        ("", "unknown"),
+        // Malformed output, incorrect selector and bad length.
+        ("BADBADBADBADBADBAD", "unknown"),
+        // Malformed output, bad selector.
+        (
+            "BAAAAAAD\
+            0000000000000000000000000000000000000000000000000000000000000020\
+            0000000000000000000000000000000000000000000000000000000000000018\
+            4461692f696e73756666696369656e742d62616c616e63650000000000000000",
+            "unknown",
+        ),
+        // Malformed output, corrupted length.
+        (
+            "08c379a0\
+            0000000000000000000000000000000000000000000000000000000000000020\
+            00000000000000000000000000000000000000000000000000000000FFFFFFFF\
+            4461692f696e73756666696369656e742d62616c616e63650000000000000000",
+            "unknown",
+        ),
+    ];
+
+    for tc in tcs {
+        let raw = hex::decode(tc.0).unwrap();
+        let err = process_evm_result(evm::ExitReason::Revert(evm::ExitRevert::Reverted), raw)
+            .unwrap_err();
+        match err {
+            Error::Reverted(reason) => {
+                assert_eq!(&reason, tc.1, "revert reason should be decoded correctly");
+            }
+            _ => panic!("expected Error::Reverted(_) variant"),
+        }
+    }
 }
