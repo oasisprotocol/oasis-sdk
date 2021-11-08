@@ -16,7 +16,7 @@
     "dependencies": {
         "@ledgerhq/hw-transport-webusb": "^6.11.0",
         "@oasisprotocol/client": "^0.1.0-alpha7",
-        "@oasisprotocol/ledger": "^0.2.0"
+        "@oasisprotocol/ledger": "^0.2.1"
     },
     "devDependencies": {
         "@types/w3c-web-usb": "^1.0.5",
