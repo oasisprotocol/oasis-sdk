@@ -178,8 +178,8 @@ fn test_api_deposit() {
         },
     };
 
-    let hook = ctx.with_tx(0, tx, |mut tx_ctx, call| {
-        Module::<Accounts, Consensus>::tx_deposit(
+    let (id, hook) = ctx.with_tx(0, tx, |mut tx_ctx, call| {
+        let id = Module::<Accounts, Consensus>::tx_deposit(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
         )
@@ -207,7 +207,7 @@ fn test_api_deposit() {
             "emitted hook should match"
         );
 
-        hook
+        (id, hook)
     });
 
     // Simulate the message being processed and make sure withdrawal is successfully completed.
@@ -232,6 +232,30 @@ fn test_api_deposit() {
         total_supplies[&denom], 1_000u128,
         "deposited balance should be minted"
     );
+
+    // Make sure events were emitted.
+    let (tags, _) = ctx.commit();
+    assert_eq!(tags.len(), 2, "deposit and mint events should be emitted");
+    assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x03"); // accounts.Mint (code = 3) event
+    assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x01"); // consensus_accounts.Deposit (code = 1) event
+
+    // Decode deposit event.
+    #[derive(Debug, cbor::Decode)]
+    struct DepositEvent {
+        id: u64,
+        from: Address,
+        to: Address,
+        amount: token::BaseUnits,
+        #[cbor(optional)]
+        error: Option<types::ConsensusError>,
+    }
+    let event: DepositEvent = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(event.id, id);
+    assert_eq!(event.from, keys::alice::address());
+    assert_eq!(event.to, keys::bob::address());
+    assert_eq!(event.amount.amount(), 1_000);
+    assert_eq!(event.amount.denomination(), &denom);
+    assert_eq!(event.error, None);
 }
 
 #[test]
@@ -454,8 +478,8 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
         },
     };
 
-    let hook = ctx.with_tx(0, tx, |mut tx_ctx, call| {
-        Module::<Accounts, Consensus>::tx_withdraw(
+    let (id, hook) = ctx.with_tx(0, tx, |mut tx_ctx, call| {
+        let id = Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
         )
@@ -483,7 +507,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
             "emitted hook should match"
         );
 
-        hook
+        (id, hook)
     });
 
     // Make sure that withdrawn balance is in the module's pending withdrawal account.
@@ -524,6 +548,30 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
         total_supplies[&denom], 0u128,
         "withdrawn balance should be burned"
     );
+
+    // Make sure events were emitted.
+    let (tags, _) = ctx.commit();
+    assert_eq!(tags.len(), 2, "withdraw and burn events should be emitted");
+    assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x02"); // accounts.Burn (code = 2) event
+    assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x02"); // consensus_accounts.Withdraw (code = 2) event
+
+    // Decode withdraw event.
+    #[derive(Debug, cbor::Decode)]
+    struct WithdrawEvent {
+        id: u64,
+        from: Address,
+        to: Address,
+        amount: token::BaseUnits,
+        #[cbor(optional)]
+        error: Option<types::ConsensusError>,
+    }
+    let event: WithdrawEvent = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(event.id, id);
+    assert_eq!(event.from, signer_address);
+    assert_eq!(event.to, keys::bob::address());
+    assert_eq!(event.amount.amount(), 1_000_000);
+    assert_eq!(event.amount.denomination(), &denom);
+    assert_eq!(event.error, None);
 }
 
 #[test]
@@ -594,8 +642,8 @@ fn test_api_withdraw_handler_failure() {
         },
     };
 
-    let hook = ctx.with_tx(0, tx, |mut tx_ctx, call| {
-        Module::<Accounts, Consensus>::tx_withdraw(
+    let (id, hook) = ctx.with_tx(0, tx, |mut tx_ctx, call| {
+        let id = Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
         )
@@ -623,7 +671,7 @@ fn test_api_withdraw_handler_failure() {
             "emitted hook should match"
         );
 
-        hook
+        (id, hook)
     });
 
     // Make sure that withdrawn balance is in the module's pending withdrawal account.
@@ -671,6 +719,40 @@ fn test_api_withdraw_handler_failure() {
         total_supplies[&denom], 1_000_000u128,
         "withdrawn balance should be refunded"
     );
+
+    // Make sure events were emitted.
+    let (tags, _) = ctx.commit();
+    assert_eq!(
+        tags.len(),
+        2,
+        "withdraw and transfer events should be emitted"
+    );
+    assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
+    assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x02"); // consensus_accounts.Withdraw (code = 2) event
+
+    // Decode withdraw event.
+    #[derive(Debug, cbor::Decode)]
+    struct WithdrawEvent {
+        id: u64,
+        from: Address,
+        to: Address,
+        amount: token::BaseUnits,
+        #[cbor(optional)]
+        error: Option<types::ConsensusError>,
+    }
+    let event: WithdrawEvent = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(event.id, id);
+    assert_eq!(event.from, keys::alice::address());
+    assert_eq!(event.to, keys::bob::address());
+    assert_eq!(event.amount.amount(), 1_000_000);
+    assert_eq!(event.amount.denomination(), &denom);
+    assert_eq!(
+        event.error,
+        Some(types::ConsensusError {
+            module: "staking".to_string(),
+            code: 1,
+        })
+    );
 }
 
 #[test]
@@ -709,6 +791,8 @@ fn test_consensus_withdraw_handler() {
     // Simulate successful event.
     let me = Default::default();
     let h_ctx = types::ConsensusWithdrawContext {
+        id: 0,
+        from: keys::alice::address(),
         address: keys::alice::address(),
         amount: BaseUnits::new(1, denom.clone()),
     };
@@ -804,4 +888,15 @@ fn test_prefetch() {
             "there should be 0 prefixes to be fetched"
         );
     });
+}
+
+#[test]
+fn test_state_new_identifier() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    assert_eq!(state::new_identifier(ctx.runtime_state()), 0);
+    assert_eq!(state::new_identifier(ctx.runtime_state()), 1);
+    assert_eq!(state::new_identifier(ctx.runtime_state()), 2);
+    assert_eq!(state::new_identifier(ctx.runtime_state()), 3);
 }

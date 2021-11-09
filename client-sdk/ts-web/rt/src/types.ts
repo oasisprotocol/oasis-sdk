@@ -301,6 +301,27 @@ export interface ConsensusAccountQuery {
     address: Uint8Array;
 }
 
+export interface ConsensusAccountsConsensusError {
+    module?: string;
+    code: number;
+}
+
+export interface ConsensusAccountsDepositEvent {
+    id: number;
+    from: Uint8Array;
+    to: Uint8Array;
+    amount: BaseUnits;
+    error?: ConsensusAccountsConsensusError;
+}
+
+export interface ConsensusAccountsWithdrawEvent {
+    id: number;
+    from: Uint8Array;
+    to: Uint8Array;
+    amount: BaseUnits;
+    error?: ConsensusAccountsConsensusError;
+}
+
 /**
  * Transaction body for creating an EVM contract.
  */

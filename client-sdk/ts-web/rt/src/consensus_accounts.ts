@@ -1,5 +1,6 @@
 import * as oasis from '@oasisprotocol/client';
 
+import * as event from './event';
 import * as transaction from './transaction';
 import * as types from './types';
 import * as wrapper from './wrapper';
@@ -20,17 +21,21 @@ export const METHOD_WITHDRAW = 'consensus.Withdraw';
 export const METHOD_BALANCE = 'consensus.Balance';
 export const METHOD_ACCOUNT = 'consensus.Account';
 
+// Events.
+export const EVENT_DEPOSIT_CODE = 1;
+export const EVENT_WITHDRAW_CODE = 2;
+
 export class Wrapper extends wrapper.Base {
     constructor(runtimeID: Uint8Array) {
         super(runtimeID);
     }
 
     callDeposit() {
-        return this.call<types.ConsensusDeposit, void>(METHOD_DEPOSIT);
+        return this.call<types.ConsensusDeposit, number>(METHOD_DEPOSIT);
     }
 
     callWithdraw() {
-        return this.call<types.ConsensusWithdraw, void>(METHOD_WITHDRAW);
+        return this.call<types.ConsensusWithdraw, number>(METHOD_WITHDRAW);
     }
 
     queryBalance() {
@@ -42,6 +47,13 @@ export class Wrapper extends wrapper.Base {
     queryAccount() {
         return this.query<types.ConsensusAccountQuery, Uint8Array>(METHOD_ACCOUNT);
     }
+}
+
+export function moduleEventHandler(codes: {
+    [EVENT_DEPOSIT_CODE]?: event.Handler<types.ConsensusAccountsDepositEvent>;
+    [EVENT_WITHDRAW_CODE]?: event.Handler<types.ConsensusAccountsWithdrawEvent>;
+}) {
+    return [MODULE_NAME, codes] as event.ModuleHandler;
 }
 
 /**
