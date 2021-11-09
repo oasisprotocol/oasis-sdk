@@ -15,11 +15,12 @@ use crate::{
     module::{MethodHandler, MigrationHandler},
     modules::{
         accounts::{Genesis as AccountsGenesis, Module as Accounts, API},
-        consensus::Module as Consensus,
+        consensus::{Error as ConsensusError, Module as Consensus},
         core::types::Metadata,
     },
     testing::{keys, mock},
     types::{
+        address::SignatureAddressSpec,
         token::{BaseUnits, Denomination},
         transaction,
     },
@@ -79,11 +80,64 @@ fn test_api_deposit_invalid_denomination() {
     };
 
     ctx.with_tx(0, tx, |mut tx_ctx, call| {
-        assert!(Module::<Accounts, Consensus>::tx_deposit(
+        let result = Module::<Accounts, Consensus>::tx_deposit(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
         )
-        .is_err());
+        .unwrap_err();
+        assert!(matches!(
+            result,
+            Error::Consensus(ConsensusError::InvalidDenomination)
+        ));
+    });
+}
+
+#[test]
+fn test_api_deposit_incompatible_signer() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+    let mut meta = Metadata {
+        ..Default::default()
+    };
+    let genesis = Default::default();
+
+    Module::<Accounts, Consensus>::init_or_migrate(&mut ctx, &mut meta, genesis);
+
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "consensus.Deposit".to_owned(),
+            body: cbor::to_value(Deposit {
+                // It's probably more common to withdraw into your own account, but we're using a
+                // separate `to` account to make sure everything is hooked up to the right places.
+                to: Some(keys::bob::address()),
+                amount: BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()),
+            }),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 1000,
+                consensus_messages: 1,
+            },
+        },
+    };
+
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
+        let result = Module::<Accounts, Consensus>::tx_deposit(
+            &mut tx_ctx,
+            cbor::from_value(call.body).unwrap(),
+        )
+        .unwrap_err();
+        assert!(matches!(
+            result,
+            Error::Consensus(ConsensusError::ConsensusIncompatibleSigner)
+        ));
     });
 }
 
@@ -189,6 +243,28 @@ fn test_api_withdraw_invalid_denomination() {
     };
     let genesis = Default::default();
 
+    Accounts::init_or_migrate(
+        &mut ctx,
+        &mut meta,
+        AccountsGenesis {
+            balances: {
+                let mut balances = BTreeMap::new();
+                // Alice.
+                balances.insert(keys::alice::address(), {
+                    let mut denominations = BTreeMap::new();
+                    denominations.insert(Denomination::NATIVE, 1_000_000);
+                    denominations
+                });
+                balances
+            },
+            total_supplies: {
+                let mut total_supplies = BTreeMap::new();
+                total_supplies.insert(Denomination::NATIVE, 1_000_000);
+                total_supplies
+            },
+            ..Default::default()
+        },
+    );
     Module::<Accounts, Consensus>::init_or_migrate(&mut ctx, &mut meta, genesis);
 
     let tx = transaction::Transaction {
@@ -217,11 +293,15 @@ fn test_api_withdraw_invalid_denomination() {
     };
 
     ctx.with_tx(0, tx, |mut tx_ctx, call| {
-        assert!(Module::<Accounts, Consensus>::tx_withdraw(
+        let result = Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
         )
-        .is_err());
+        .unwrap_err();
+        assert!(matches!(
+            result,
+            Error::Consensus(ConsensusError::InvalidDenomination)
+        ));
     });
 }
 
@@ -262,16 +342,65 @@ fn test_api_withdraw_insufficient_balance() {
     };
 
     ctx.with_tx(0, tx, |mut tx_ctx, call| {
-        assert!(Module::<Accounts, Consensus>::tx_withdraw(
+        let result = Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
         )
-        .is_err());
+        .unwrap_err();
+        assert!(matches!(result, Error::InsufficientWithdrawBalance));
     });
 }
 
 #[test]
-fn test_api_withdraw() {
+fn test_api_withdraw_incompatible_signer() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+    let mut meta = Metadata {
+        ..Default::default()
+    };
+    let genesis = Default::default();
+
+    Module::<Accounts, Consensus>::init_or_migrate(&mut ctx, &mut meta, genesis);
+
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "consensus.Withdraw".to_owned(),
+            body: cbor::to_value(Withdraw {
+                to: None,
+                amount: BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()),
+            }),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 1000,
+                consensus_messages: 1,
+            },
+        },
+    };
+
+    ctx.with_tx(0, tx, |mut tx_ctx, call| {
+        let result = Module::<Accounts, Consensus>::tx_withdraw(
+            &mut tx_ctx,
+            cbor::from_value(call.body).unwrap(),
+        )
+        .unwrap_err();
+        assert!(matches!(
+            result,
+            Error::Consensus(ConsensusError::ConsensusIncompatibleSigner)
+        ));
+    });
+}
+
+fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
+    let signer_address = Address::from_sigspec(&signer_sigspec);
+
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
@@ -286,7 +415,7 @@ fn test_api_withdraw() {
             balances: {
                 let mut balances = BTreeMap::new();
                 // Alice.
-                balances.insert(keys::alice::address(), {
+                balances.insert(signer_address, {
                     let mut denominations = BTreeMap::new();
                     denominations.insert(denom.clone(), 1_000_000);
                     denominations
@@ -316,10 +445,7 @@ fn test_api_withdraw() {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new_sigspec(
-                keys::alice::sigspec(),
-                0,
-            )],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(signer_sigspec, 0)],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
@@ -362,7 +488,7 @@ fn test_api_withdraw() {
 
     // Make sure that withdrawn balance is in the module's pending withdrawal account.
     let balance =
-        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+        Accounts::get_balance(ctx.runtime_state(), signer_address, denom.clone()).unwrap();
     assert_eq!(balance, 0u128, "withdrawn balance should be locked");
 
     let balance = Accounts::get_balance(
@@ -390,7 +516,7 @@ fn test_api_withdraw() {
     .unwrap();
     assert_eq!(balance, 0u128, "withdrawn balance should be burned");
     let balance =
-        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+        Accounts::get_balance(ctx.runtime_state(), signer_address, denom.clone()).unwrap();
     assert_eq!(balance, 0u128, "withdrawn balance should be burned");
     let total_supplies = Accounts::get_total_supplies(ctx.runtime_state()).unwrap();
     assert_eq!(total_supplies.len(), 1);
@@ -398,6 +524,16 @@ fn test_api_withdraw() {
         total_supplies[&denom], 0u128,
         "withdrawn balance should be burned"
     );
+}
+
+#[test]
+fn test_api_withdraw_ed25519() {
+    test_api_withdraw(keys::alice::sigspec());
+}
+
+#[test]
+fn test_api_withdraw_secp256k1() {
+    test_api_withdraw(keys::dave::sigspec());
 }
 
 #[test]
