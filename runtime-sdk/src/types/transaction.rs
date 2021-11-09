@@ -8,6 +8,7 @@ use crate::{
         signature::{self, PublicKey, Signature},
     },
     types::{
+        address,
         address::{Address, SignatureAddressSpec},
         token,
     },
@@ -169,6 +170,29 @@ impl Fee {
     }
 }
 
+/// A caller address.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub enum CallerAddress {
+    #[cbor(rename = "address")]
+    Address(Address),
+    #[cbor(rename = "eth_address")]
+    EthAddress([u8; 20]),
+}
+
+impl CallerAddress {
+    /// Derives the address.
+    pub fn address(&self) -> Address {
+        match self {
+            CallerAddress::Address(address) => *address,
+            CallerAddress::EthAddress(address) => Address::new(
+                address::ADDRESS_V0_SECP256K1ETH_CONTEXT,
+                address::ADDRESS_V0_VERSION,
+                address.as_ref(),
+            ),
+        }
+    }
+}
+
 /// Common information that specifies an address as well as how to authenticate.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub enum AddressSpec {
@@ -181,7 +205,7 @@ pub enum AddressSpec {
 
     /// For internal child calls (cannot be serialized/deserialized).
     #[cbor(skip)]
-    Internal(Address),
+    Internal(CallerAddress),
 }
 
 impl AddressSpec {
@@ -190,7 +214,7 @@ impl AddressSpec {
         match self {
             AddressSpec::Signature(spec) => Address::from_sigspec(spec),
             AddressSpec::Multisig(config) => Address::from_multisig(config.clone()),
-            AddressSpec::Internal(address) => *address,
+            AddressSpec::Internal(caller) => caller.address(),
         }
     }
 

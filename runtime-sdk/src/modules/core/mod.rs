@@ -351,7 +351,7 @@ impl Module {
 
         // Update the address used within the transaction when caller address is passed.
         let mut extra_gas = 0;
-        if let Some(caller) = args.caller {
+        if let Some(caller) = args.caller.clone() {
             let address_spec = transaction::AddressSpec::Internal(caller);
             match args.tx.auth_info.signer_info.first_mut() {
                 Some(si) => si.address_spec = address_spec,

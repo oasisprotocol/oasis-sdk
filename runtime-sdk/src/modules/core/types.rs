@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::{
     keymanager::SignedPublicKey,
-    types::{address::Address, transaction::Transaction},
+    types::transaction::{CallerAddress, Transaction},
 };
 
 /// Key in the versions map used for the global state version.
@@ -21,7 +21,7 @@ pub struct EstimateGasQuery {
     /// The address of the caller for which to do estimation. If not specified the authentication
     /// information from the passed transaction is used.
     #[cbor(optional)]
-    pub caller: Option<Address>,
+    pub caller: Option<CallerAddress>,
     /// The unsigned transaction to estimate.
     pub tx: Transaction,
 }

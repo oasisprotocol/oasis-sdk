@@ -20,7 +20,7 @@ type V1 interface {
 
 	// EstimateGasForCaller performs gas estimation for executing the given transaction as if the
 	// caller specified by address had executed it.
-	EstimateGasForCaller(ctx context.Context, round uint64, caller types.Address, tx *types.Transaction) (uint64, error)
+	EstimateGasForCaller(ctx context.Context, round uint64, caller types.CallerAddress, tx *types.Transaction) (uint64, error)
 
 	// MinGasPrice returns the minimum gas price.
 	MinGasPrice(ctx context.Context) (map[types.Denomination]types.Quantity, error)
@@ -41,7 +41,7 @@ func (a *v1) EstimateGas(ctx context.Context, round uint64, tx *types.Transactio
 }
 
 // Implements V1.
-func (a *v1) EstimateGasForCaller(ctx context.Context, round uint64, caller types.Address, tx *types.Transaction) (uint64, error) {
+func (a *v1) EstimateGasForCaller(ctx context.Context, round uint64, caller types.CallerAddress, tx *types.Transaction) (uint64, error) {
 	var gas uint64
 	args := EstimateGasQuery{
 		Caller: &caller,
