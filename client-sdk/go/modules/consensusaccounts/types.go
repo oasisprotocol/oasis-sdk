@@ -47,8 +47,8 @@ const (
 
 // DepositEvent is a deposit event.
 type DepositEvent struct {
-	ID     uint64          `json:"id"`
 	From   types.Address   `json:"from"`
+	Nonce  uint64          `json:"nonce"`
 	To     types.Address   `json:"to"`
 	Amount types.BaseUnits `json:"amount"`
 	Error  *ConsensusError `json:"error,omitempty"`
@@ -61,8 +61,8 @@ func (de *DepositEvent) IsSuccess() bool {
 
 // WithdrawEvent is a withdraw event.
 type WithdrawEvent struct {
-	ID     uint64          `json:"id"`
 	From   types.Address   `json:"from"`
+	Nonce  uint64          `json:"nonce"`
 	To     types.Address   `json:"to"`
 	Amount types.BaseUnits `json:"amount"`
 	Error  *ConsensusError `json:"error,omitempty"`
