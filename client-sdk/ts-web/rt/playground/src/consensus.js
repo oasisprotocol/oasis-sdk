@@ -82,8 +82,9 @@ export const playground = (async function () {
         const davePrivExpected = await oasis.hash.hash(
             oasis.misc.fromString('oasis-runtime-sdk/test-keys: dave'),
         );
-        if (davePrivHex !== oasis.misc.toHex(davePrivExpected))
+        if (davePrivHex !== oasis.misc.toHex(davePrivExpected)) {
             throw new Error('dave private key mismatch');
+        }
 
         // Import the key into a signer.
         const dave = oasisRT.signatureSecp256k1.EllipticSigner.fromPrivate(
@@ -101,15 +102,17 @@ export const playground = (async function () {
             daveEthAddrU8,
         );
         const addrDaveBech32 = oasis.staking.addressToBech32(daveAddr);
-        if (addrDaveBech32 !== 'oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt')
+        if (addrDaveBech32 !== 'oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt') {
             throw new Error('dave address from Ethereum mismatch');
+        }
 
         // Make sure derivation from sigspec is consistent.
         const daveAddrFromSigspec = await oasisRT.address.fromSigspec({
             secp256k1eth: csDave.public(),
         });
-        if (oasis.staking.addressToBech32(daveAddrFromSigspec) !== addrDaveBech32)
+        if (oasis.staking.addressToBech32(daveAddrFromSigspec) !== addrDaveBech32) {
             throw new Error('dave address mismatch');
+        }
 
         // Fetch nonce for Alice's account.
         const nonce1 = await accountsWrapper
