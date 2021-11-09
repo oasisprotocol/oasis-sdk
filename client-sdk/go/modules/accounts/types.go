@@ -77,7 +77,7 @@ type MintEvent struct {
 
 // Event is an account event.
 type Event struct {
-	Transfer *TransferEvent `json:"transfer,omitempty"`
-	Burn     *BurnEvent     `json:"burn,omitempty"`
-	Mint     *MintEvent     `json:"mint,omitempty"`
+	Transfer *TransferEvent
+	Burn     *BurnEvent
+	Mint     *MintEvent
 }

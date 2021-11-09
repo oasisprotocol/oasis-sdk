@@ -1,5 +1,5 @@
 //! Consensus module types.
-use crate::types::{address::Address, token};
+use crate::types::{address::Address, message::MessageEvent, token};
 
 /// Deposit into runtime call.
 /// Transfer from consensus staking to an account in this runtime.
@@ -42,13 +42,40 @@ pub struct AccountBalance {
 /// Context for consensus transfer message handler.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode, Default)]
 pub struct ConsensusTransferContext {
+    #[cbor(optional, default)]
+    pub id: u64,
     pub address: Address,
+    #[cbor(optional, default)]
+    pub to: Address,
     pub amount: token::BaseUnits,
 }
 
 /// Context for consensus withdraw message handler.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode, Default)]
 pub struct ConsensusWithdrawContext {
+    #[cbor(optional, default)]
+    pub id: u64,
+    #[cbor(optional, default)]
+    pub from: Address,
     pub address: Address,
     pub amount: token::BaseUnits,
+}
+
+/// Error details from the consensus layer.
+#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode, Default)]
+pub struct ConsensusError {
+    #[cbor(optional, default, skip_serializing_if = "String::is_empty")]
+    pub module: String,
+
+    #[cbor(optional, default)]
+    pub code: u32,
+}
+
+impl From<MessageEvent> for ConsensusError {
+    fn from(me: MessageEvent) -> Self {
+        Self {
+            module: me.module,
+            code: me.code,
+        }
+    }
 }

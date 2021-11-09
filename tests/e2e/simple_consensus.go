@@ -73,44 +73,50 @@ func ensureRuntimeEvent(log *logging.Logger, ch <-chan *client.BlockEvents, chec
 	}
 }
 
-func makeAccountsMintCheck(owner types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
+func makeDepositCheck(id uint64, to types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
 	return func(e client.DecodedEvent) bool {
-		ae, ok := e.(*accounts.Event)
+		ae, ok := e.(*consensusAccounts.Event)
 		if !ok {
 			return false
 		}
-		if ae.Mint == nil {
+		if ae.Deposit == nil {
 			return false
 		}
-		if !ae.Mint.Owner.Equal(owner) {
+		if ae.Deposit.ID != id {
 			return false
 		}
-		if ae.Mint.Amount.Amount.Cmp(&amount.Amount) != 0 {
+		if !ae.Deposit.To.Equal(to) {
 			return false
 		}
-		if ae.Mint.Amount.Denomination != amount.Denomination {
+		if ae.Deposit.Amount.Amount.Cmp(&amount.Amount) != 0 {
+			return false
+		}
+		if ae.Deposit.Amount.Denomination != amount.Denomination {
 			return false
 		}
 		return true
 	}
 }
 
-func makeBurnCheck(owner types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
+func makeWithdrawCheck(id uint64, to types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
 	return func(e client.DecodedEvent) bool {
-		ae, ok := e.(*accounts.Event)
+		ae, ok := e.(*consensusAccounts.Event)
 		if !ok {
 			return false
 		}
-		if ae.Burn == nil {
+		if ae.Withdraw == nil {
 			return false
 		}
-		if !ae.Burn.Owner.Equal(owner) {
+		if ae.Withdraw.ID != id {
 			return false
 		}
-		if ae.Burn.Amount.Amount.Cmp(&amount.Amount) != 0 {
+		if !ae.Withdraw.To.Equal(to) {
 			return false
 		}
-		if ae.Burn.Amount.Denomination != amount.Denomination {
+		if ae.Withdraw.Amount.Amount.Cmp(&amount.Amount) != 0 {
+			return false
+		}
+		if ae.Withdraw.Amount.Denomination != amount.Denomination {
 			return false
 		}
 		return true
@@ -154,13 +160,12 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return fmt.Errorf("unexpected decimal count in denomination info (expected: %d got: %d)", 12, di.Decimals)
 	}
 
-	acCh, err := rtc.WatchEvents(ctx, []client.EventDecoder{ac}, false)
+	acCh, err := rtc.WatchEvents(ctx, []client.EventDecoder{consAccounts}, false)
 	if err != nil {
 		return err
 	}
 
 	runtimeAddr := staking.NewRuntimeAddress(runtimeID)
-	pendingWithdrawalAddr := types.NewAddressForModule("consensus_accounts", []byte("pending-withdrawal"))
 
 	log.Info("alice depositing into runtime to bob")
 	// NOTE: The test runtime uses a scaling factor of 1000 so all balances in the runtime are
@@ -171,7 +176,8 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
-	if err = tb.SubmitTx(ctx, nil); err != nil {
+	var id uint64
+	if err = tb.SubmitTx(ctx, &id); err != nil {
 		return err
 	}
 
@@ -179,7 +185,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return fmt.Errorf("ensuring alice deposit consensus event: %w", err)
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeAccountsMintCheck(testing.Bob.Address, amount)); err != nil {
+	if err = ensureRuntimeEvent(log, acCh, makeDepositCheck(id, testing.Bob.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring alice deposit runtime event: %w", err)
 	}
 
@@ -200,14 +206,14 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Bob.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Bob.Signer)
-	if err = tb.SubmitTx(ctx, nil); err != nil {
+	if err = tb.SubmitTx(ctx, &id); err != nil {
 		return err
 	}
 	if err = ensureStakingEvent(log, ch, makeTransferCheck(staking.Address(testing.Bob.Address), runtimeAddr, consensusAmount)); err != nil {
 		return fmt.Errorf("ensuring bob deposit consensus event: %w", err)
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeAccountsMintCheck(testing.Alice.Address, amount)); err != nil {
+	if err = ensureRuntimeEvent(log, acCh, makeDepositCheck(id, testing.Alice.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring bob deposit runtime event: %w", err)
 	}
 
@@ -228,13 +234,13 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
-	if err = tb.SubmitTx(ctx, nil); err != nil {
+	if err = tb.SubmitTx(ctx, &id); err != nil {
 		return err
 	}
 	if err = ensureStakingEvent(log, ch, makeTransferCheck(runtimeAddr, staking.Address(testing.Bob.Address), consensusAmount)); err != nil {
 		return fmt.Errorf("ensuring alice withdraw consensus event: %w", err)
 	}
-	if err = ensureRuntimeEvent(log, acCh, makeBurnCheck(pendingWithdrawalAddr, amount)); err != nil {
+	if err = ensureRuntimeEvent(log, acCh, makeWithdrawCheck(id, testing.Bob.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring alice withdraw runtime event: %w", err)
 	}
 

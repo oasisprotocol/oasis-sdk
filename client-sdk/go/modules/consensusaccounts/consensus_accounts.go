@@ -2,7 +2,9 @@ package consensusaccounts
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
@@ -21,6 +23,8 @@ const (
 
 // V1 is the v1 consensus accounts module interface.
 type V1 interface {
+	client.EventDecoder
+
 	// Deposit generates a consensus.Deposit transaction.
 	Deposit(to *types.Address, amount types.BaseUnits) *client.TransactionBuilder
 
@@ -32,6 +36,9 @@ type V1 interface {
 
 	// ConsensusAccount queries the given consensus layer account.
 	ConsensusAccount(ctx context.Context, round uint64, query *AccountQuery) (*staking.Account, error)
+
+	// GetEvents returns all consensus accounts events emitted in a given block.
+	GetEvents(ctx context.Context, round uint64) ([]*Event, error)
 }
 
 type v1 struct {
@@ -72,6 +79,55 @@ func (a *v1) ConsensusAccount(ctx context.Context, round uint64, query *AccountQ
 		return nil, err
 	}
 	return &account, nil
+}
+
+// Implements V1.
+func (a *v1) GetEvents(ctx context.Context, round uint64) ([]*Event, error) {
+	rawEvs, err := a.rc.GetEventsRaw(ctx, round)
+	if err != nil {
+		return nil, err
+	}
+
+	evs := make([]*Event, 0)
+	for _, rawEv := range rawEvs {
+		ev, err := a.DecodeEvent(rawEv)
+		if err != nil {
+			return nil, err
+		}
+		if ev == nil {
+			continue
+		}
+		evs = append(evs, ev.(*Event))
+	}
+
+	return evs, nil
+}
+
+// Implements client.EventDecoder.
+func (a *v1) DecodeEvent(event *types.Event) (client.DecodedEvent, error) {
+	if event.Module != ModuleName {
+		return nil, nil
+	}
+	switch event.Code {
+	case DepositEventCode:
+		var ev *DepositEvent
+		if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+			return nil, fmt.Errorf("decode consensus accounts deposit event value: %w", err)
+		}
+		return &Event{
+			Deposit: ev,
+		}, nil
+	case WithdrawEventCode:
+		var ev *WithdrawEvent
+		if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+			return nil, fmt.Errorf("decode consensus accounts withdraw event value: %w", err)
+		}
+		return &Event{
+			Withdraw: ev,
+		}, nil
+	default:
+		return nil, fmt.Errorf("invalid consensus accounts event code: %v", event.Code)
+	}
 }
 
 // NewV1 generates a V1 client helper for the consensus accounts module.
