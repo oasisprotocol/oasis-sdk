@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.2.0-alpha7
+
+Spotlight change:
+
+- Fixes to `signatureSecp256k1.EllipticSigner` to match the Rust side.
+
 ## v0.2.0-alpha6
 
 Spotlight change:
