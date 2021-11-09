@@ -65,7 +65,7 @@ export class EllipticSigner implements Signer {
     }
 
     async sign(message: Uint8Array): Promise<Uint8Array> {
-        const sig = this.key.sign(Array.from(message));
+        const sig = this.key.sign(Array.from(message), {canonical: true});
         return new Uint8Array(sig.toDER());
     }
 }
