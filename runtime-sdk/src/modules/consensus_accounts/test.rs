@@ -153,6 +153,7 @@ fn test_api_deposit() {
 
     Module::<Accounts, Consensus>::init_or_migrate(&mut ctx, &mut meta, genesis);
 
+    let nonce = 123;
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
@@ -168,7 +169,7 @@ fn test_api_deposit() {
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
                 keys::alice::sigspec(),
-                0,
+                nonce,
             )],
             fee: transaction::Fee {
                 amount: Default::default(),
@@ -178,8 +179,8 @@ fn test_api_deposit() {
         },
     };
 
-    let (id, hook) = ctx.with_tx(0, tx, |mut tx_ctx, call| {
-        let id = Module::<Accounts, Consensus>::tx_deposit(
+    let hook = ctx.with_tx(0, tx, |mut tx_ctx, call| {
+        Module::<Accounts, Consensus>::tx_deposit(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
         )
@@ -207,7 +208,7 @@ fn test_api_deposit() {
             "emitted hook should match"
         );
 
-        (id, hook)
+        hook
     });
 
     // Simulate the message being processed and make sure withdrawal is successfully completed.
@@ -242,16 +243,16 @@ fn test_api_deposit() {
     // Decode deposit event.
     #[derive(Debug, cbor::Decode)]
     struct DepositEvent {
-        id: u64,
         from: Address,
+        nonce: u64,
         to: Address,
         amount: token::BaseUnits,
         #[cbor(optional)]
         error: Option<types::ConsensusError>,
     }
     let event: DepositEvent = cbor::from_slice(&tags[1].value).unwrap();
-    assert_eq!(event.id, id);
     assert_eq!(event.from, keys::alice::address());
+    assert_eq!(event.nonce, nonce);
     assert_eq!(event.to, keys::bob::address());
     assert_eq!(event.amount.amount(), 1_000);
     assert_eq!(event.amount.denomination(), &denom);
@@ -456,6 +457,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
     );
     Module::<Accounts, Consensus>::init_or_migrate(&mut ctx, &mut meta, Default::default());
 
+    let nonce = 123;
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
@@ -469,7 +471,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
             }),
         },
         auth_info: transaction::AuthInfo {
-            signer_info: vec![transaction::SignerInfo::new_sigspec(signer_sigspec, 0)],
+            signer_info: vec![transaction::SignerInfo::new_sigspec(signer_sigspec, nonce)],
             fee: transaction::Fee {
                 amount: Default::default(),
                 gas: 1000,
@@ -478,8 +480,8 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
         },
     };
 
-    let (id, hook) = ctx.with_tx(0, tx, |mut tx_ctx, call| {
-        let id = Module::<Accounts, Consensus>::tx_withdraw(
+    let hook = ctx.with_tx(0, tx, |mut tx_ctx, call| {
+        Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
         )
@@ -507,7 +509,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
             "emitted hook should match"
         );
 
-        (id, hook)
+        hook
     });
 
     // Make sure that withdrawn balance is in the module's pending withdrawal account.
@@ -558,16 +560,16 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
     // Decode withdraw event.
     #[derive(Debug, cbor::Decode)]
     struct WithdrawEvent {
-        id: u64,
         from: Address,
+        nonce: u64,
         to: Address,
         amount: token::BaseUnits,
         #[cbor(optional)]
         error: Option<types::ConsensusError>,
     }
     let event: WithdrawEvent = cbor::from_slice(&tags[1].value).unwrap();
-    assert_eq!(event.id, id);
     assert_eq!(event.from, signer_address);
+    assert_eq!(event.nonce, nonce);
     assert_eq!(event.to, keys::bob::address());
     assert_eq!(event.amount.amount(), 1_000_000);
     assert_eq!(event.amount.denomination(), &denom);
@@ -617,6 +619,7 @@ fn test_api_withdraw_handler_failure() {
     );
     Module::<Accounts, Consensus>::init_or_migrate(&mut ctx, &mut meta, Default::default());
 
+    let nonce = 123;
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
@@ -632,7 +635,7 @@ fn test_api_withdraw_handler_failure() {
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
                 keys::alice::sigspec(),
-                0,
+                nonce,
             )],
             fee: transaction::Fee {
                 amount: Default::default(),
@@ -642,8 +645,8 @@ fn test_api_withdraw_handler_failure() {
         },
     };
 
-    let (id, hook) = ctx.with_tx(0, tx, |mut tx_ctx, call| {
-        let id = Module::<Accounts, Consensus>::tx_withdraw(
+    let hook = ctx.with_tx(0, tx, |mut tx_ctx, call| {
+        Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
         )
@@ -671,7 +674,7 @@ fn test_api_withdraw_handler_failure() {
             "emitted hook should match"
         );
 
-        (id, hook)
+        hook
     });
 
     // Make sure that withdrawn balance is in the module's pending withdrawal account.
@@ -733,16 +736,16 @@ fn test_api_withdraw_handler_failure() {
     // Decode withdraw event.
     #[derive(Debug, cbor::Decode)]
     struct WithdrawEvent {
-        id: u64,
         from: Address,
+        nonce: u64,
         to: Address,
         amount: token::BaseUnits,
         #[cbor(optional)]
         error: Option<types::ConsensusError>,
     }
     let event: WithdrawEvent = cbor::from_slice(&tags[1].value).unwrap();
-    assert_eq!(event.id, id);
     assert_eq!(event.from, keys::alice::address());
+    assert_eq!(event.nonce, nonce);
     assert_eq!(event.to, keys::bob::address());
     assert_eq!(event.amount.amount(), 1_000_000);
     assert_eq!(event.amount.denomination(), &denom);
@@ -791,8 +794,8 @@ fn test_consensus_withdraw_handler() {
     // Simulate successful event.
     let me = Default::default();
     let h_ctx = types::ConsensusWithdrawContext {
-        id: 0,
         from: keys::alice::address(),
+        nonce: 0,
         address: keys::alice::address(),
         amount: BaseUnits::new(1, denom.clone()),
     };
@@ -888,15 +891,4 @@ fn test_prefetch() {
             "there should be 0 prefixes to be fetched"
         );
     });
-}
-
-#[test]
-fn test_state_new_identifier() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-
-    assert_eq!(state::new_identifier(ctx.runtime_state()), 0);
-    assert_eq!(state::new_identifier(ctx.runtime_state()), 1);
-    assert_eq!(state::new_identifier(ctx.runtime_state()), 2);
-    assert_eq!(state::new_identifier(ctx.runtime_state()), 3);
 }
