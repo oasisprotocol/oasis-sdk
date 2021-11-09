@@ -73,6 +73,44 @@ export const playground = (async function () {
         const csAlice = new oasis.signature.BlindContextSigner(alice);
         const aliceAddr = await oasis.staking.addressFromPublicKey(alice.public());
 
+        // Suppose this were the private key pasted in from a Metamask export.
+        // (This is the "dave" test account.)
+        const davePrivHex = 'c0e43d8755f201b715fd5a9ce0034c568442543ae0a0ee1aec2985ffe40edb99';
+        const davePriv = oasis.misc.fromHex(davePrivHex);
+
+        // Make sure this private key is in sync with the Rust and Go codebases.
+        const davePrivExpected = await oasis.hash.hash(
+            oasis.misc.fromString('oasis-runtime-sdk/test-keys: dave'),
+        );
+        if (davePrivHex !== oasis.misc.toHex(davePrivExpected))
+            throw new Error('dave private key mismatch');
+
+        // Import the key into a signer.
+        const dave = oasisRT.signatureSecp256k1.EllipticSigner.fromPrivate(
+            davePriv,
+            'this key is not important',
+        );
+        const csDave = new oasisRT.signatureSecp256k1.BlindContextSigner(dave);
+
+        // Check address derivation from Ethereum address.
+        const daveEthAddr = '0xDce075E1C39b1ae0b75D554558b6451A226ffe00';
+        const daveEthAddrU8 = oasis.misc.fromHex(daveEthAddr.slice(2));
+        const daveAddr = await oasis.address.fromData(
+            oasisRT.address.V0_SECP256K1ETH_CONTEXT_IDENTIFIER,
+            oasisRT.address.V0_SECP256K1ETH_CONTEXT_VERSION,
+            daveEthAddrU8,
+        );
+        const addrDaveBech32 = oasis.staking.addressToBech32(daveAddr);
+        if (addrDaveBech32 !== 'oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt')
+            throw new Error('dave address from Ethereum mismatch');
+
+        // Make sure derivation from sigspec is consistent.
+        const daveAddrFromSigspec = await oasisRT.address.fromSigspec({
+            secp256k1eth: csDave.public(),
+        });
+        if (oasis.staking.addressToBech32(daveAddrFromSigspec) !== addrDaveBech32)
+            throw new Error('dave address mismatch');
+
         // Fetch nonce for Alice's account.
         const nonce1 = await accountsWrapper
             .queryNonce()
@@ -108,6 +146,7 @@ export const playground = (async function () {
         const twDeposit = consensusWrapper
             .callDeposit()
             .setBody({
+                to: daveAddr,
                 amount: DEPOSIT_AMNT,
             })
             .setSignerInfo([siAlice1])
@@ -130,7 +169,7 @@ export const playground = (async function () {
                     [oasisRT.accounts.EVENT_MINT_CODE]: (e, mintEvent) => {
                         console.log('polled mint event', mintEvent);
                         const eventOwnerBech32 = oasis.staking.addressToBech32(mintEvent.owner);
-                        if (eventOwnerBech32 !== addrAliceBech32) {
+                        if (eventOwnerBech32 !== addrDaveBech32) {
                             console.log('address mismatch');
                             return;
                         }
@@ -187,24 +226,24 @@ export const playground = (async function () {
         console.log('waiting for mint event');
         await eventsTask;
 
-        console.log('alice balance');
+        console.log('dave balance');
         const balanceResult = await consensusWrapper
             .queryBalance()
             .setArgs({
-                address: aliceAddr,
+                address: daveAddr,
             })
             .query(nic);
         console.log('balance', oasis.quantity.toBigInt(balanceResult.balance));
 
-        console.log('alice withdrawing from runtime');
+        console.log('dave withdrawing from runtime');
         const nonce2 = await accountsWrapper
             .queryNonce()
             .setArgs({
-                address: aliceAddr,
+                address: daveAddr,
             })
             .query(nic);
-        const siAlice2 = /** @type {oasisRT.types.SignerInfo} */ ({
-            address_spec: {signature: {ed25519: csAlice.public()}},
+        const siDave2 = /** @type {oasisRT.types.SignerInfo} */ ({
+            address_spec: {signature: {secp256k1eth: csDave.public()}},
             nonce: nonce2,
         });
         const WITHDRAW_AMNT = /** @type {oasisRT.types.BaseUnits} */ ([
@@ -214,13 +253,14 @@ export const playground = (async function () {
         const twWithdraw = consensusWrapper
             .callWithdraw()
             .setBody({
+                to: aliceAddr,
                 amount: WITHDRAW_AMNT,
             })
-            .setSignerInfo([siAlice2])
+            .setSignerInfo([siDave2])
             .setFeeAmount(FEE_FREE)
             .setFeeGas(0n)
             .setFeeConsensusMessages(1);
-        await twWithdraw.sign([csAlice], consensusChainContext);
+        await twWithdraw.sign([csDave], consensusChainContext);
         await twWithdraw.submit(nic);
 
         console.log('query consensus addresses');
@@ -232,7 +272,7 @@ export const playground = (async function () {
             .query(nic);
 
         if (addrs.length != 2) {
-            // Alice, pending withdrawals.
+            // Dave, pending withdrawals.
             throw new Error(`unexpected number of addresses, got: ${addrs.length}, expected: ${2}`);
         }
         console.log('done');
