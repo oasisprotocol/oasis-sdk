@@ -215,7 +215,12 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
         // Signer.
         let signer = &ctx.tx_auth_info().signer_info[0];
-        Consensus::ensure_compatible_tx_signer(ctx)?;
+        if body.to.is_none() {
+            // If no `to` field is specified, i.e. withdrawing to the transaction sender's account,
+            // only allow the consensus-compatible single-Ed25519-key signer type. Otherwise, the
+            // tokens would get stuck in an account that you can't sign for on the consensus layer.
+            Consensus::ensure_compatible_tx_signer(ctx)?;
+        }
 
         let address = signer.address_spec.address();
         Self::withdraw(ctx, address, body.to.unwrap_or(address), body.amount)
