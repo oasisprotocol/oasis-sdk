@@ -307,16 +307,16 @@ export interface ConsensusAccountsConsensusError {
 }
 
 export interface ConsensusAccountsDepositEvent {
-    id: number;
     from: Uint8Array;
+    nonce: oasis.types.longnum;
     to: Uint8Array;
     amount: BaseUnits;
     error?: ConsensusAccountsConsensusError;
 }
 
 export interface ConsensusAccountsWithdrawEvent {
-    id: number;
     from: Uint8Array;
+    nonce: oasis.types.longnum;
     to: Uint8Array;
     amount: BaseUnits;
     error?: ConsensusAccountsConsensusError;

@@ -31,11 +31,11 @@ export class Wrapper extends wrapper.Base {
     }
 
     callDeposit() {
-        return this.call<types.ConsensusDeposit, number>(METHOD_DEPOSIT);
+        return this.call<types.ConsensusDeposit, void>(METHOD_DEPOSIT);
     }
 
     callWithdraw() {
-        return this.call<types.ConsensusWithdraw, number>(METHOD_WITHDRAW);
+        return this.call<types.ConsensusWithdraw, void>(METHOD_WITHDRAW);
     }
 
     queryBalance() {
