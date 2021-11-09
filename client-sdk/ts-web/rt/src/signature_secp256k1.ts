@@ -61,7 +61,7 @@ export class EllipticSigner implements Signer {
     }
 
     public(): Uint8Array {
-        return new Uint8Array(this.key.getPublic('array'));
+        return new Uint8Array(this.key.getPublic(true, 'array'));
     }
 
     async sign(message: Uint8Array): Promise<Uint8Array> {
