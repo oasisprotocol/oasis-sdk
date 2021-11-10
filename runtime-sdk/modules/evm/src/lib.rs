@@ -12,6 +12,7 @@ use evm::{
     executor::{MemoryStackState, PrecompileFn, StackExecutor, StackSubstateMetadata},
     Config as EVMConfig,
 };
+use once_cell::sync::Lazy;
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
@@ -333,15 +334,21 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        let rsp = Self::do_evm(caller, ctx, |exec, gas_limit| {
-            let address = exec.create_address(evm::CreateScheme::Legacy {
-                caller: caller.into(),
-            });
-            (
-                exec.transact_create(caller.into(), value.into(), init_code, gas_limit, vec![]),
-                address.as_bytes().to_vec(),
-            )
-        });
+        let rsp = Self::do_evm(
+            caller,
+            ctx,
+            |exec, gas_limit| {
+                let address = exec.create_address(evm::CreateScheme::Legacy {
+                    caller: caller.into(),
+                });
+                (
+                    exec.transact_create(caller.into(), value.into(), init_code, gas_limit, vec![]),
+                    address.as_bytes().to_vec(),
+                )
+            },
+            // If in simulation, this must be EstimateGas query.
+            ctx.is_simulation(),
+        );
 
         // Always return success in CheckTx, as we might not have up-to-date state.
         if ctx.is_check_only() {
@@ -364,16 +371,22 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        let rsp = Self::do_evm(caller, ctx, |exec, gas_limit| {
-            exec.transact_call(
-                caller.into(),
-                address.into(),
-                value.into(),
-                data,
-                gas_limit,
-                vec![],
-            )
-        });
+        let rsp = Self::do_evm(
+            caller,
+            ctx,
+            |exec, gas_limit| {
+                exec.transact_call(
+                    caller.into(),
+                    address.into(),
+                    value.into(),
+                    data,
+                    gas_limit,
+                    vec![],
+                )
+            },
+            // If in simulation, this must be EstimateGas query.
+            ctx.is_simulation(),
+        );
 
         // Always return success in CheckTx, as we might not have up-to-date state.
         if ctx.is_check_only() {
@@ -449,25 +462,41 @@ impl<Cfg: Config> API for Module<Cfg> {
                 },
             };
             sctx.with_tx(0, call_tx, |mut txctx, _call| {
-                Self::do_evm(caller, &mut txctx, |exec, gas_limit| {
-                    exec.transact_call(
-                        caller.into(),
-                        address.into(),
-                        value.into(),
-                        data,
-                        gas_limit,
-                        vec![],
-                    )
-                })
+                Self::do_evm(
+                    caller,
+                    &mut txctx,
+                    |exec, gas_limit| {
+                        exec.transact_call(
+                            caller.into(),
+                            address.into(),
+                            value.into(),
+                            data,
+                            gas_limit,
+                            vec![],
+                        )
+                    },
+                    // Simulate call is never called from EstimateGas.
+                    false,
+                )
             })
         })
     }
 }
 
-impl<Cfg: Config> Module<Cfg> {
-    const EVM_CONFIG: EVMConfig = EVMConfig::london();
+// Config used by the EVM.
+static EVM_CONFIG: EVMConfig = EVMConfig::london();
+// Config used by the EVM for estimation.
+static EVM_CONFIG_ESTIMATE: Lazy<EVMConfig> = Lazy::new(|| {
+    let mut cfg = EVM_CONFIG.clone();
+    // Without `estimate=true` the EVM underestimates the gas needed for transactions using CREATE calls: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-150.md
+    // However by having `estimate=true` the said transaction costs are GREATLY overestimated in the estimateGas call: ~by around 1/64 of the estimate call gas_limit.
+    // https://github.com/rust-blockchain/evm/issues/8
+    cfg.estimate = true;
+    cfg
+});
 
-    fn do_evm<C, F>(source: H160, ctx: &mut C, f: F) -> Result<Vec<u8>, Error>
+impl<Cfg: Config> Module<Cfg> {
+    fn do_evm<C, F>(source: H160, ctx: &mut C, f: F, estimate_gas: bool) -> Result<Vec<u8>, Error>
     where
         F: FnOnce(
             &mut StackExecutor<
@@ -480,6 +509,12 @@ impl<Cfg: Config> Module<Cfg> {
         ) -> (evm::ExitReason, Vec<u8>),
         C: TxContext,
     {
+        let cfg = if estimate_gas {
+            &*EVM_CONFIG_ESTIMATE
+        } else {
+            &EVM_CONFIG
+        };
+
         let gas_limit: u64 = core::Module::remaining_tx_gas(ctx);
         let gas_price: primitive_types::U256 = ctx.tx_auth_info().fee.gas_price().into();
         let fee_denomination = ctx.tx_auth_info().fee.amount.denomination().clone();
@@ -495,11 +530,11 @@ impl<Cfg: Config> Module<Cfg> {
             .ok_or(Error::FeeOverflow)?;
 
         let mut backend = backend::Backend::<'_, C, Cfg>::new(ctx, vicinity);
-        let metadata = StackSubstateMetadata::new(gas_limit, &Self::EVM_CONFIG);
+        let metadata = StackSubstateMetadata::new(gas_limit, cfg);
         let stackstate = MemoryStackState::new(metadata, &backend);
         let mut executor = StackExecutor::new_with_precompiles(
             stackstate,
-            &Self::EVM_CONFIG,
+            cfg,
             &*precompile::PRECOMPILED_CONTRACT,
         );
 
