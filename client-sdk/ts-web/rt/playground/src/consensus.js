@@ -159,35 +159,30 @@ export const playground = (async function () {
         await twDeposit.sign([csAlice], consensusChainContext);
 
         const addrAliceBech32 = oasis.staking.addressToBech32(aliceAddr);
-        const depositAmountBI = oasis.quantity.toBigInt(DEPOSIT_AMNT[0]);
-        const depositDenominationHex = oasis.misc.toHex(DEPOSIT_AMNT[1]);
         const startBlock = await nic.runtimeClientGetBlock({
             runtime_id: CONSENSUS_RT_ID,
             round: oasis.runtime.CLIENT_ROUND_LATEST,
         });
         const eventsTask = (async () => {
-            let eventFound = false;
+            /** @type {oasisRT.types.ConsensusAccountsDepositEvent} */
+            let found = null;
             const eventVisitor = new oasisRT.event.Visitor([
-                oasisRT.accounts.moduleEventHandler({
-                    [oasisRT.accounts.EVENT_MINT_CODE]: (e, mintEvent) => {
-                        console.log('polled mint event', mintEvent);
-                        const eventOwnerBech32 = oasis.staking.addressToBech32(mintEvent.owner);
-                        if (eventOwnerBech32 !== addrDaveBech32) {
+                oasisRT.consensusAccounts.moduleEventHandler({
+                    [oasisRT.consensusAccounts.EVENT_DEPOSIT_CODE]: (e, depositEvent) => {
+                        console.log('polled deposit event', depositEvent);
+                        const eventFromBech32 = oasis.staking.addressToBech32(depositEvent.from);
+                        if (eventFromBech32 !== addrAliceBech32) {
                             console.log('address mismatch');
                             return;
                         }
-                        const eventAmountBI = oasis.quantity.toBigInt(mintEvent.amount[0]);
-                        if (eventAmountBI !== depositAmountBI) {
-                            console.log('amount mismatch');
-                            return;
-                        }
-                        const eventDenominationHex = oasis.misc.toHex(mintEvent.amount[1]);
-                        if (eventDenominationHex !== depositDenominationHex) {
-                            console.log('denomination mismatch');
+                        // Note: oasis.types.longnum allows number and BigInt, so we're using
+                        // non-strict equality here.
+                        if (depositEvent.nonce != nonce1) {
+                            console.log('nonce mismatch');
                             return;
                         }
                         console.log('match');
-                        eventFound = true;
+                        found = depositEvent;
                     },
                 }),
             ]);
@@ -215,19 +210,23 @@ export const playground = (async function () {
                 if (events) {
                     for (const e of events) {
                         eventVisitor.visit(e);
-                        if (eventFound) break poll_blocks;
+                        if (found) break poll_blocks;
                     }
                 }
                 nextRound++;
             }
             console.log('done polling for event');
+            return found;
         })();
 
         console.log('submitting');
         await twDeposit.submit(nic);
 
-        console.log('waiting for mint event');
-        await eventsTask;
+        console.log('waiting for deposit event');
+        const depositEvent = await eventsTask;
+        if (depositEvent.error) {
+            throw new Error(`deposit failed. module=${depositEvent.error.module} code=${depositEvent.error.code}`);
+        }
 
         console.log('dave balance');
         const balanceResult = await consensusWrapper
