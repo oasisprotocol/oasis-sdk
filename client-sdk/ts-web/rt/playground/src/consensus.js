@@ -25,6 +25,51 @@ const nic = new oasis.client.NodeInternal('http://localhost:42280');
 const accountsWrapper = new oasisRT.accounts.Wrapper(CONSENSUS_RT_ID);
 const consensusWrapper = new oasisRT.consensusAccounts.Wrapper(CONSENSUS_RT_ID);
 
+/**
+ * Await this so that this function can get the starting block before you go on.
+ * Callback should return false to stop.
+ * Returns a promise for when polling stops, wrapped in an object to prevent automatic resolving.
+ * @param {(e: oasis.types.RuntimeClientEvent) => boolean} cb
+ */
+async function pollEvents(cb) {
+    const startBlock = await nic.runtimeClientGetBlock({
+        runtime_id: CONSENSUS_RT_ID,
+        round: oasis.runtime.CLIENT_ROUND_LATEST,
+    });
+    const done = (async () => {
+        let nextRound = BigInt(startBlock.header.round) + 1n;
+        poll_blocks: while (true) {
+            // Local testnet runs faster. Use ~6_000 for Oasis testnet and mainnet.
+            await delay(1_000);
+            let events;
+            try {
+                events = await nic.runtimeClientGetEvents({
+                    runtime_id: CONSENSUS_RT_ID,
+                    round: nextRound,
+                });
+            } catch (e) {
+                if (
+                    e.oasisModule === oasis.roothash.MODULE_NAME &&
+                    e.oasisCode === oasis.roothash.ERR_NOT_FOUND_CODE
+                ) {
+                    // Block doesn't exist yet. Wait and fetch again.
+                    continue;
+                }
+                throw e;
+            }
+            console.log('polled block', nextRound);
+            if (events) {
+                for (const e of events) {
+                    if (!cb(e)) break poll_blocks;
+                }
+            }
+            nextRound++;
+        }
+        console.log('done polling for event');
+    })();
+    return {done};
+}
+
 export const playground = (async function () {
     // Wait for ready.
     {
@@ -159,73 +204,44 @@ export const playground = (async function () {
         await twDeposit.sign([csAlice], consensusChainContext);
 
         const addrAliceBech32 = oasis.staking.addressToBech32(aliceAddr);
-        const startBlock = await nic.runtimeClientGetBlock({
-            runtime_id: CONSENSUS_RT_ID,
-            round: oasis.runtime.CLIENT_ROUND_LATEST,
-        });
-        const eventsTask = (async () => {
-            /** @type {oasisRT.types.ConsensusAccountsDepositEvent} */
-            let found = null;
-            const eventVisitor = new oasisRT.event.Visitor([
-                oasisRT.consensusAccounts.moduleEventHandler({
-                    [oasisRT.consensusAccounts.EVENT_DEPOSIT_CODE]: (e, depositEvent) => {
-                        console.log('polled deposit event', depositEvent);
-                        const eventFromBech32 = oasis.staking.addressToBech32(depositEvent.from);
-                        if (eventFromBech32 !== addrAliceBech32) {
-                            console.log('address mismatch');
-                            return;
-                        }
-                        // Note: oasis.types.longnum allows number and BigInt, so we're using
-                        // non-strict equality here.
-                        if (depositEvent.nonce != nonce1) {
-                            console.log('nonce mismatch');
-                            return;
-                        }
-                        console.log('match');
-                        found = depositEvent;
-                    },
-                }),
-            ]);
-            let nextRound = BigInt(startBlock.header.round) + 1n;
-            poll_blocks: while (true) {
-                // Local testnet runs faster. Use ~6_000 for Oasis testnet and mainnet.
-                await delay(1_000);
-                let events;
-                try {
-                    events = await nic.runtimeClientGetEvents({
-                        runtime_id: CONSENSUS_RT_ID,
-                        round: nextRound,
-                    });
-                } catch (e) {
-                    if (
-                        e.oasisModule === oasis.roothash.MODULE_NAME &&
-                        e.oasisCode === oasis.roothash.ERR_NOT_FOUND_CODE
-                    ) {
-                        // Block doesn't exist yet. Wait and fetch again.
-                        continue;
+        /** @type {oasisRT.types.ConsensusAccountsDepositEvent} */
+        let depositEvent = null;
+        const depositEventVisitor = new oasisRT.event.Visitor([
+            oasisRT.consensusAccounts.moduleEventHandler({
+                [oasisRT.consensusAccounts.EVENT_DEPOSIT_CODE]: (e, depositEv) => {
+                    console.log('polled deposit event', depositEv);
+                    const eventFromBech32 = oasis.staking.addressToBech32(depositEv.from);
+                    if (eventFromBech32 !== addrAliceBech32) {
+                        console.log('address mismatch');
+                        return;
                     }
-                    throw e;
-                }
-                console.log('polled block', nextRound);
-                if (events) {
-                    for (const e of events) {
-                        eventVisitor.visit(e);
-                        if (found) break poll_blocks;
+                    // Note: oasis.types.longnum allows number and BigInt, so we're using
+                    // non-strict equality here.
+                    if (depositEv.nonce != nonce1) {
+                        console.log('nonce mismatch');
+                        return;
                     }
-                }
-                nextRound++;
-            }
-            console.log('done polling for event');
-            return found;
-        })();
+                    console.log('match');
+                    depositEvent = depositEv;
+                },
+            }),
+        ]);
+        const depositDone = (
+            await pollEvents((e) => {
+                depositEventVisitor.visit(e);
+                return !depositEvent;
+            })
+        ).done;
 
         console.log('submitting');
         await twDeposit.submit(nic);
 
         console.log('waiting for deposit event');
-        const depositEvent = await eventsTask;
+        await depositDone;
         if (depositEvent.error) {
-            throw new Error(`deposit failed. module=${depositEvent.error.module} code=${depositEvent.error.code}`);
+            throw new Error(
+                `deposit failed. module=${depositEvent.error.module} code=${depositEvent.error.code}`,
+            );
         }
 
         console.log('dave balance');
