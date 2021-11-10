@@ -28,19 +28,24 @@ const consensusWrapper = new oasisRT.consensusAccounts.Wrapper(CONSENSUS_RT_ID);
 /**
  * Await this so that this function can get the starting block before you go on.
  * Callback should return false to stop.
- * Returns a promise for when polling stops, wrapped in an object to prevent automatic resolving.
+ * Returns an async function that you call to start polling from the starting block.
  * @param {(e: oasis.types.RuntimeClientEvent) => boolean} cb
  */
-async function pollEvents(cb) {
+async function prepareEventPoller(cb) {
     const startBlock = await nic.runtimeClientGetBlock({
         runtime_id: CONSENSUS_RT_ID,
         round: oasis.runtime.CLIENT_ROUND_LATEST,
     });
-    const done = (async () => {
+    return async () => {
         let nextRound = BigInt(startBlock.header.round) + 1n;
+        let useDelay = false;
         poll_blocks: while (true) {
-            // Local testnet runs faster. Use ~6_000 for Oasis testnet and mainnet.
-            await delay(1_000);
+            // In case some time passed between creating this event poller and starting it, first
+            // fetch without waiting until we catch up.
+            if (useDelay) {
+                // Local testnet runs faster. Use ~6_000 for Oasis testnet and mainnet.
+                await delay(1_000);
+            }
             let events;
             try {
                 events = await nic.runtimeClientGetEvents({
@@ -53,6 +58,7 @@ async function pollEvents(cb) {
                     e.oasisCode === oasis.roothash.ERR_NOT_FOUND_CODE
                 ) {
                     // Block doesn't exist yet. Wait and fetch again.
+                    useDelay = true;
                     continue;
                 }
                 throw e;
@@ -66,8 +72,7 @@ async function pollEvents(cb) {
             nextRound++;
         }
         console.log('done polling for event');
-    })();
-    return {done};
+    };
 }
 
 export const playground = (async function () {
@@ -226,18 +231,16 @@ export const playground = (async function () {
                 },
             }),
         ]);
-        const depositDone = (
-            await pollEvents((e) => {
-                depositEventVisitor.visit(e);
-                return !depositEvent;
-            })
-        ).done;
+        const pollDeposit = await prepareEventPoller((e) => {
+            depositEventVisitor.visit(e);
+            return !depositEvent;
+        });
 
         console.log('submitting');
         await twDeposit.submit(nic);
 
         console.log('waiting for deposit event');
-        await depositDone;
+        await pollDeposit();
         if (depositEvent.error) {
             throw new Error(
                 `deposit failed. module=${depositEvent.error.module} code=${depositEvent.error.code}`,
@@ -302,12 +305,10 @@ export const playground = (async function () {
                 },
             }),
         ]);
-        const withdrawDone = (
-            await pollEvents((e) => {
-                withdrawEventVisitor.visit(e);
-                return !withdrawEvent;
-            })
-        ).done;
+        const pollWithdraw = await prepareEventPoller((e) => {
+            withdrawEventVisitor.visit(e);
+            return !withdrawEvent;
+        });
 
         console.log('submitting');
         await twWithdraw.submit(nic);
@@ -326,7 +327,7 @@ export const playground = (async function () {
         }
 
         console.log('waiting for withdraw event');
-        await withdrawDone;
+        await pollWithdraw();
         if (withdrawEvent.error) {
             throw new Error(
                 `withdraw failed. module=${withdrawEvent.error.module} code=${withdrawEvent.error.code}`,
