@@ -279,6 +279,37 @@ export const playground = (async function () {
             .setFeeGas(0n)
             .setFeeConsensusMessages(1);
         await twWithdraw.sign([csDave], consensusChainContext);
+
+        /** @type {oasisRT.types.ConsensusAccountsWithdrawEvent} */
+        let withdrawEvent = null;
+        const withdrawEventVisitor = new oasisRT.event.Visitor([
+            oasisRT.consensusAccounts.moduleEventHandler({
+                [oasisRT.consensusAccounts.EVENT_WITHDRAW_CODE]: (e, withdrawEv) => {
+                    console.log('polled deposit event', withdrawEv);
+                    const eventFromBech32 = oasis.staking.addressToBech32(withdrawEv.from);
+                    if (eventFromBech32 !== addrDaveBech32) {
+                        console.log('address mismatch');
+                        return;
+                    }
+                    // Note: oasis.types.longnum allows number and BigInt, so we're using
+                    // non-strict equality here.
+                    if (withdrawEv.nonce != nonce2) {
+                        console.log('nonce mismatch');
+                        return;
+                    }
+                    console.log('match');
+                    withdrawEvent = withdrawEv;
+                },
+            }),
+        ]);
+        const withdrawDone = (
+            await pollEvents((e) => {
+                withdrawEventVisitor.visit(e);
+                return !withdrawEvent;
+            })
+        ).done;
+
+        console.log('submitting');
         await twWithdraw.submit(nic);
 
         console.log('query consensus addresses');
@@ -293,6 +324,15 @@ export const playground = (async function () {
             // Dave, pending withdrawals.
             throw new Error(`unexpected number of addresses, got: ${addrs.length}, expected: ${2}`);
         }
+
+        console.log('waiting for withdraw event');
+        await withdrawDone;
+        if (withdrawEvent.error) {
+            throw new Error(
+                `withdraw failed. module=${withdrawEvent.error.module} code=${withdrawEvent.error.code}`,
+            );
+        }
+
         console.log('done');
     }
 })();
