@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.0-alpha8
+
+Spotlight change:
+
+- We've added new event visitor types for the consensus accounts module, to go
+  with the newly added deposit/withdraw events in the SDK itself.
+
 ## v0.2.0-alpha7
 
 Spotlight change:
