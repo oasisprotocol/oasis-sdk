@@ -73,7 +73,7 @@ func ensureRuntimeEvent(log *logging.Logger, ch <-chan *client.BlockEvents, chec
 	}
 }
 
-func makeDepositCheck(id uint64, to types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
+func makeDepositCheck(from types.Address, nonce uint64, to types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
 	return func(e client.DecodedEvent) bool {
 		ae, ok := e.(*consensusAccounts.Event)
 		if !ok {
@@ -82,7 +82,10 @@ func makeDepositCheck(id uint64, to types.Address, amount types.BaseUnits) func(
 		if ae.Deposit == nil {
 			return false
 		}
-		if ae.Deposit.ID != id {
+		if !ae.Deposit.From.Equal(from) {
+			return false
+		}
+		if ae.Deposit.Nonce != nonce {
 			return false
 		}
 		if !ae.Deposit.To.Equal(to) {
@@ -98,7 +101,7 @@ func makeDepositCheck(id uint64, to types.Address, amount types.BaseUnits) func(
 	}
 }
 
-func makeWithdrawCheck(id uint64, to types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
+func makeWithdrawCheck(from types.Address, nonce uint64, to types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
 	return func(e client.DecodedEvent) bool {
 		ae, ok := e.(*consensusAccounts.Event)
 		if !ok {
@@ -107,7 +110,10 @@ func makeWithdrawCheck(id uint64, to types.Address, amount types.BaseUnits) func
 		if ae.Withdraw == nil {
 			return false
 		}
-		if ae.Withdraw.ID != id {
+		if !ae.Withdraw.From.Equal(from) {
+			return false
+		}
+		if ae.Withdraw.Nonce != nonce {
 			return false
 		}
 		if !ae.Withdraw.To.Equal(to) {
@@ -176,8 +182,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
-	var id uint64
-	if err = tb.SubmitTx(ctx, &id); err != nil {
+	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
 
@@ -185,7 +190,7 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return fmt.Errorf("ensuring alice deposit consensus event: %w", err)
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeDepositCheck(id, testing.Bob.Address, amount)); err != nil {
+	if err = ensureRuntimeEvent(log, acCh, makeDepositCheck(testing.Alice.Address, 0, testing.Bob.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring alice deposit runtime event: %w", err)
 	}
 
@@ -206,14 +211,14 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Bob.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Bob.Signer)
-	if err = tb.SubmitTx(ctx, &id); err != nil {
+	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
 	if err = ensureStakingEvent(log, ch, makeTransferCheck(staking.Address(testing.Bob.Address), runtimeAddr, consensusAmount)); err != nil {
 		return fmt.Errorf("ensuring bob deposit consensus event: %w", err)
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeDepositCheck(id, testing.Alice.Address, amount)); err != nil {
+	if err = ensureRuntimeEvent(log, acCh, makeDepositCheck(testing.Bob.Address, 0, testing.Alice.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring bob deposit runtime event: %w", err)
 	}
 
@@ -234,13 +239,13 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
-	if err = tb.SubmitTx(ctx, &id); err != nil {
+	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
 	if err = ensureStakingEvent(log, ch, makeTransferCheck(runtimeAddr, staking.Address(testing.Bob.Address), consensusAmount)); err != nil {
 		return fmt.Errorf("ensuring alice withdraw consensus event: %w", err)
 	}
-	if err = ensureRuntimeEvent(log, acCh, makeWithdrawCheck(id, testing.Bob.Address, amount)); err != nil {
+	if err = ensureRuntimeEvent(log, acCh, makeWithdrawCheck(testing.Alice.Address, 1, testing.Bob.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring alice withdraw runtime event: %w", err)
 	}
 

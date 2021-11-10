@@ -15,7 +15,7 @@ use crate::{
     module::{CallResult, Module as _},
     modules,
     modules::core::{Error as CoreError, Module as Core, API as _},
-    storage::{self, Prefix},
+    storage::Prefix,
     types::{
         address::Address,
         message::{MessageEvent, MessageEventHookInvocation, MessageResult},
@@ -77,8 +77,8 @@ impl module::Parameters for Parameters {
 pub enum Event {
     #[sdk_event(code = 1)]
     Deposit {
-        id: u64,
         from: Address,
+        nonce: u64,
         to: Address,
         amount: token::BaseUnits,
         #[cbor(optional)]
@@ -87,8 +87,8 @@ pub enum Event {
 
     #[sdk_event(code = 2)]
     Withdraw {
-        id: u64,
         from: Address,
+        nonce: u64,
         to: Address,
         amount: token::BaseUnits,
         #[cbor(optional)]
@@ -105,41 +105,36 @@ pub struct Genesis {
 /// Interface that can be called from other modules.
 pub trait API {
     /// Transfer from consensus staking account to runtime account.
+    ///
+    /// # Arguments
+    ///
+    /// * `nonce`: A caller-provided sequence number that will help identify the success/fail events.
+    ///   When called from a deposit transaction, we use the signer nonce.
     fn deposit<C: TxContext>(
         ctx: &mut C,
         from: Address,
+        nonce: u64,
         to: Address,
         amount: token::BaseUnits,
-    ) -> Result<u64, Error>;
+    ) -> Result<(), Error>;
 
     /// Transfer from runtime account to consensus staking account.
+    ///
+    /// # Arguments
+    ///
+    /// * `nonce`: A caller-provided sequence number that will help identify the success/fail events.
+    ///   When called from a withdraw transaction, we use the signer nonce.
     fn withdraw<C: TxContext>(
         ctx: &mut C,
         from: Address,
+        nonce: u64,
         to: Address,
         amount: token::BaseUnits,
-    ) -> Result<u64, Error>;
+    ) -> Result<(), Error>;
 
     // TODO:
     //  - Add/reclaim deposited escrow.
     //      - need a way to get escrow events in runtime: https://github.com/oasisprotocol/oasis-core/issues/3862
-}
-
-/// State schema constants.
-pub mod state {
-    use super::storage;
-
-    /// Next identifier for linking events to origin transactions.
-    pub const NEXT_IDENTIFIER: &[u8] = &[0x01];
-
-    /// Assign next identifier.
-    pub fn new_identifier<S: storage::Store>(state: S) -> u64 {
-        let mut store = storage::PrefixStore::new(state, &super::MODULE_NAME);
-        let mut tstore = storage::TypedStore::new(&mut store);
-        let id: u64 = tstore.get(NEXT_IDENTIFIER).unwrap_or_default();
-        tstore.insert(NEXT_IDENTIFIER, id + 1);
-        id
-    }
 }
 
 pub struct Module<Accounts: modules::accounts::API, Consensus: modules::consensus::API> {
@@ -160,23 +155,21 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
     fn deposit<C: TxContext>(
         ctx: &mut C,
         from: Address,
+        nonce: u64,
         to: Address,
         amount: token::BaseUnits,
-    ) -> Result<u64, Error> {
+    ) -> Result<(), Error> {
         if ctx.is_check_only() {
             // In case this is not check only this weight will be emitted from Consensus::withdraw
             // below, same as the amount conversion check.
             Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
             Consensus::amount_to_consensus(ctx, amount.amount())?;
-            return Ok(0);
+            return Ok(());
         }
 
         // XXX: could check consensus state if allowance for the runtime account
         // exists, but consensus state could be outdated since last block, so
         // just try to withdraw.
-
-        // Create a new identifier for easier linking of later events.
-        let id = state::new_identifier(ctx.runtime_state());
 
         // Do withdraw from the consensus account and update the account state if
         // successful.
@@ -187,38 +180,36 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
             MessageEventHookInvocation::new(
                 CONSENSUS_WITHDRAW_HANDLER.to_string(),
                 types::ConsensusWithdrawContext {
-                    id,
                     from,
+                    nonce,
                     address: to,
                     amount: amount.clone(),
                 },
             ),
         )?;
 
-        Ok(id)
+        Ok(())
     }
 
     fn withdraw<C: TxContext>(
         ctx: &mut C,
         from: Address,
+        nonce: u64,
         to: Address,
         amount: token::BaseUnits,
-    ) -> Result<u64, Error> {
+    ) -> Result<(), Error> {
         if ctx.is_check_only() {
             // In case this is not check only this weight will be emitted from Consensus::transfer
             // below, same as the amount conversion check.
             Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
             Consensus::amount_to_consensus(ctx, amount.amount())?;
-            return Ok(0);
+            return Ok(());
         }
 
         // Transfer the given amount to the module's withdrawal account to make sure the tokens
         // remain available until actually withdrawn.
         Accounts::transfer(ctx, from, *ADDRESS_PENDING_WITHDRAWAL, &amount)
             .map_err(|_| Error::InsufficientWithdrawBalance)?;
-
-        // Create a new identifier for easier linking of later events.
-        let id = state::new_identifier(ctx.runtime_state());
 
         // Transfer out of runtime account and update the account state if successful.
         Consensus::transfer(
@@ -228,15 +219,15 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
             MessageEventHookInvocation::new(
                 CONSENSUS_TRANSFER_HANDLER.to_string(),
                 types::ConsensusTransferContext {
-                    id,
                     to,
+                    nonce,
                     address: from,
                     amount: amount.clone(),
                 },
             ),
         )?;
 
-        Ok(id)
+        Ok(())
     }
 }
 
@@ -244,7 +235,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     Module<Accounts, Consensus>
 {
     /// Deposit in the runtime.
-    fn tx_deposit<C: TxContext>(ctx: &mut C, body: types::Deposit) -> Result<u64, Error> {
+    fn tx_deposit<C: TxContext>(ctx: &mut C, body: types::Deposit) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
         Core::use_tx_gas(ctx, params.gas_costs.tx_deposit)?;
 
@@ -252,11 +243,12 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         Consensus::ensure_compatible_tx_signer(ctx)?;
 
         let address = signer.address_spec.address();
-        Self::deposit(ctx, address, body.to.unwrap_or(address), body.amount)
+        let nonce = signer.nonce;
+        Self::deposit(ctx, address, nonce, body.to.unwrap_or(address), body.amount)
     }
 
     /// Withdraw from the runtime.
-    fn tx_withdraw<C: TxContext>(ctx: &mut C, body: types::Withdraw) -> Result<u64, Error> {
+    fn tx_withdraw<C: TxContext>(ctx: &mut C, body: types::Withdraw) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
         Core::use_tx_gas(ctx, params.gas_costs.tx_withdraw)?;
 
@@ -270,7 +262,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         }
 
         let address = signer.address_spec.address();
-        Self::withdraw(ctx, address, body.to.unwrap_or(address), body.amount)
+        let nonce = signer.nonce;
+        Self::withdraw(ctx, address, nonce, body.to.unwrap_or(address), body.amount)
     }
 
     fn query_balance<C: Context>(
@@ -312,8 +305,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
             // Emit withdraw failed event.
             ctx.emit_event(Event::Withdraw {
-                id: context.id,
                 from: context.address,
+                nonce: context.nonce,
                 to: context.to,
                 amount: context.amount.clone(),
                 error: Some(me.into()),
@@ -327,8 +320,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
         // Emit withdraw successful event.
         ctx.emit_event(Event::Withdraw {
-            id: context.id,
             from: context.address,
+            nonce: context.nonce,
             to: context.to,
             amount: context.amount.clone(),
             error: None,
@@ -343,8 +336,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         if !me.is_success() {
             // Transfer in failed, emit deposit failed event.
             ctx.emit_event(Event::Deposit {
-                id: context.id,
                 from: context.from,
+                nonce: context.nonce,
                 to: context.address,
                 amount: context.amount.clone(),
                 error: Some(me.into()),
@@ -357,8 +350,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
         // Emit deposit successful event.
         ctx.emit_event(Event::Deposit {
-            id: context.id,
             from: context.from,
+            nonce: context.nonce,
             to: context.address,
             amount: context.amount.clone(),
             error: None,

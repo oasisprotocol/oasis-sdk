@@ -42,9 +42,9 @@ pub struct AccountBalance {
 /// Context for consensus transfer message handler.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode, Default)]
 pub struct ConsensusTransferContext {
-    #[cbor(optional, default)]
-    pub id: u64,
     pub address: Address,
+    #[cbor(optional, default)]
+    pub nonce: u64,
     #[cbor(optional, default)]
     pub to: Address,
     pub amount: token::BaseUnits,
@@ -54,9 +54,9 @@ pub struct ConsensusTransferContext {
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode, Default)]
 pub struct ConsensusWithdrawContext {
     #[cbor(optional, default)]
-    pub id: u64,
-    #[cbor(optional, default)]
     pub from: Address,
+    #[cbor(optional, default)]
+    pub nonce: u64,
     pub address: Address,
     pub amount: token::BaseUnits,
 }

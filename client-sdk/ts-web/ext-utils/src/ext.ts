@@ -84,10 +84,12 @@ export function ready(handlers: Handlers) {
                         }
                         case protocol.METHOD_CONTEXT_SIGNER_SIGN: {
                             const req = reqM.body as protocol.ContextSignerSignRequest;
-                            if (typeof req.context !== 'string')
+                            if (typeof req.context !== 'string') {
                                 throw new Error(`${method}: .context must be string`);
-                            if (!(req.message instanceof Uint8Array))
+                            }
+                            if (!(req.message instanceof Uint8Array)) {
                                 throw new Error(`${method}: .message must be Uint8Array`);
+                            }
                             resM.body = await handlers.contextSignerSign(e.origin, req);
                             break;
                         }

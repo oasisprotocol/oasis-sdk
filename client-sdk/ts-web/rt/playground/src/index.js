@@ -238,10 +238,12 @@ export const playground = (async function () {
             })
             .query(nic);
         console.log('ok', getResult.key, getResult.value);
-        if (oasis.misc.toHex(getResult.key) !== oasis.misc.toHex(THE_KEY))
+        if (oasis.misc.toHex(getResult.key) !== oasis.misc.toHex(THE_KEY)) {
             throw new Error('Key mismatch');
-        if (oasis.misc.toHex(getResult.value) !== oasis.misc.toHex(THE_VALUE))
+        }
+        if (oasis.misc.toHex(getResult.value) !== oasis.misc.toHex(THE_VALUE)) {
             throw new Error('Value mismatch');
+        }
 
         // Fetch nonce for Alice's account again.
         const nonce2 = await accountsWrapper
@@ -282,10 +284,12 @@ export const playground = (async function () {
     {
         console.log('query rewards parameters');
         const params = await rewardsWrapper.queryParameters().query(nic);
-        if (params.participation_threshold_numerator !== 3)
+        if (params.participation_threshold_numerator !== 3) {
             throw new Error('participation threshold numerator mismatch');
-        if (params.participation_threshold_denominator !== 4)
+        }
+        if (params.participation_threshold_denominator !== 4) {
             throw new Error('participation threshold denominator mismatch');
+        }
         console.log('ok');
     }
 
