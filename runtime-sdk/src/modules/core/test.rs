@@ -456,9 +456,11 @@ fn test_get_batch_weight_limits() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
 
-    // Empty max batch gas.
+    GasWasterRuntime::migrate(&mut ctx);
+
+    // Max batch gas as in runtime genesis (u64::MAX).
     let mut expected = BTreeMap::new();
-    expected.insert(GAS_WEIGHT_NAME.into(), 0);
+    expected.insert(GAS_WEIGHT_NAME.into(), u64::MAX);
 
     assert_eq!(
         expected,
@@ -487,9 +489,9 @@ fn test_get_batch_weight_limits_query() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
 
-    // Empty max batch gas.
+    // Max batch gas as in runtime genesis (u64::MAX).
     let mut expected: BTreeMap<TransactionWeight, u64> = BTreeMap::new();
-    expected.insert(GAS_WEIGHT_NAME.into(), 0);
+    expected.insert(GAS_WEIGHT_NAME.into(), u64::MAX);
 
     let res = dispatcher::Dispatcher::<GasWasterRuntime>::dispatch_query(
         &mut ctx,
