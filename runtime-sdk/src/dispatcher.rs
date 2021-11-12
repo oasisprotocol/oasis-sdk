@@ -354,6 +354,9 @@ impl<R: Runtime> Dispatcher<R> {
 
         // Catch any panics that occur during query dispatch.
         std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            // Perform state migrations if required.
+            R::migrate(ctx);
+
             // Execute the query.
             match method {
                 // Internal methods.
@@ -535,8 +538,6 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                 &self.host_info,
                 key_manager,
             );
-        // Perform state migrations if required.
-        R::migrate(&mut ctx);
 
         Self::dispatch_query(&mut ctx, method, args)
     }
