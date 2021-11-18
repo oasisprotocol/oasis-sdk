@@ -7,10 +7,10 @@ license = "Apache-2.0"
 
 [dependencies]
 cbor = { version = "0.2.1", package = "oasis-cbor" }
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.3.5" }
-oasis-core-client = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.3.5" }
-oasis-core-keymanager-api-common = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.3.5" }
-oasis-core-keymanager-client = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.3.5" }
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.3.6" }
+oasis-core-client = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.3.6" }
+oasis-core-keymanager-api-common = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.3.6" }
+oasis-core-keymanager-client = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v21.3.6" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
