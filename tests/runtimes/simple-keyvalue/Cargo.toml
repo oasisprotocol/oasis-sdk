@@ -13,6 +13,6 @@ cbor = { version = "0.2.1", package = "oasis-cbor" }
 oasis-runtime-sdk-contracts = { path = "../../../runtime-sdk/modules/contracts" }
 
 # Third party.
-anyhow = "1.0.44"
+anyhow = "1.0.48"
 thiserror = "1.0"
 futures = "0.3.17"
