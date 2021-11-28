@@ -3333,8 +3333,8 @@ checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
 
 [[package]]
 name = "wasm3"
-version = "0.2.0"
-source = "git+https://github.com/oasisprotocol/wasm3-rs?tag=v0.2.1#eb08659c447b6b2b26b2a5bb9d952a20db9e491b"
+version = "0.3.0"
+source = "git+https://github.com/oasisprotocol/wasm3-rs?tag=v0.3.0#93bb9f2b1a0789099c7eab6c96c92e47b065f8f8"
 dependencies = [
  "cty",
  "impl-trait-for-tuples",
@@ -3345,8 +3345,8 @@ dependencies = [
 
 [[package]]
 name = "wasm3-sys"
-version = "0.2.0"
-source = "git+https://github.com/oasisprotocol/wasm3-rs?tag=v0.2.1#eb08659c447b6b2b26b2a5bb9d952a20db9e491b"
+version = "0.3.0"
+source = "git+https://github.com/oasisprotocol/wasm3-rs?tag=v0.3.0#93bb9f2b1a0789099c7eab6c96c92e47b065f8f8"
 dependencies = [
  "bindgen",
  "cc",
