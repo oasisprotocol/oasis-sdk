@@ -249,6 +249,11 @@ func Generate(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 
 				// Perform an invariants check.
 				if err := CheckInvariants(ctx, rtc); err != nil {
+					if ctx.Err() != nil {
+						// Ignore context cancellation as this just means the test should finish.
+						return
+					}
+
 					// This is wrapped in a select block to make sure that if
 					// multiple goroutines report an error, they don't get
 					// blocked here.
