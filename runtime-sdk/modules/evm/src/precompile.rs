@@ -6,7 +6,7 @@ use std::{
 };
 
 use evm::{
-    executor::{PrecompileFailure, PrecompileFn, PrecompileOutput},
+    executor::stack::{PrecompileFailure, PrecompileFn, PrecompileOutput},
     Context, ExitError, ExitSucceed,
 };
 use k256::{ecdsa::recoverable, EncodedPoint};

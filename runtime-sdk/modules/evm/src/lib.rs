@@ -9,7 +9,7 @@ pub mod types;
 use std::collections::BTreeMap;
 
 use evm::{
-    executor::{MemoryStackState, PrecompileFn, StackExecutor, StackSubstateMetadata},
+    executor::stack::{MemoryStackState, PrecompileFn, StackExecutor, StackSubstateMetadata},
     Config as EVMConfig,
 };
 use once_cell::sync::Lazy;
