@@ -65,8 +65,8 @@ present) and output something similar to:
 active toolchain
 ----------------
 
-nightly-2021-08-17-x86_64-unknown-linux-gnu (overridden by '/code/rust-toolchain')
-rustc 1.56.0-nightly (0035d9dce 2021-08-16)
+nightly-2021-11-04-x86_64-unknown-linux-gnu (overridden by '/code/rust-toolchain')
+rustc 1.58.0-nightly (baba6687d 2021-11-03)
   ```
 
 #### (OPTIONAL) Fortanix SGX Rust Target
@@ -94,18 +94,18 @@ rustup target add x86_64-fortanix-unknown-sgx
 
 _Required if you want to use the Go Client SDK._
 
-At least version **1.16.3** is required. If your distribution provides a
+At least version **1.17.3** is required. If your distribution provides a
 new-enough version of Go, just use that.
 
 Otherwise:
 
 * install the Go version provided by your distribution,
 * [ensure `$GOPATH/bin` is in your `PATH`],
-* [install the desired version of Go], e.g. 1.16.3, with:
+* [install the desired version of Go], e.g. 1.17.3, with:
 
   ```
-  go get golang.org/dl/go1.16.3
-  go1.16.3 download
+  go get golang.org/dl/go1.17.3
+  go1.17.3 download
     ```
 
 <!-- markdownlint-disable line-length -->
@@ -119,18 +119,18 @@ Otherwise:
 The SDK requires utilities provided by [Oasis Core] in order to be able to run
 a local test network for development purposes.
 
-The recommended way is to download a pre-built release (at least version 21.2.5)
+The recommended way is to download a pre-built release (at least version 21.3.6)
 from the [Oasis Core releases page]. After downloading the binary release (e.g.
-into `~/Downloads/oasis_core_21.2.5_linux_amd64.tar.gz`), unpack it into a local
-directory (this guide will use `~/.oasis/core/v21.2.5/bin`) as follows:
+into `~/Downloads/oasis_core_21.3.6_linux_amd64.tar.gz`), unpack it into a local
+directory (this guide will use `~/.oasis/core/v21.3.6/bin`) as follows:
 
 ```bash
 # This environment variable is used throughout this guide.
-export OASIS_CORE_PATH=~/.oasis/core/v21.2.5
+export OASIS_CORE_PATH=~/.oasis/core/v21.3.6
 
 mkdir -p ${OASIS_CORE_PATH}/bin
 cd ${OASIS_CORE_PATH}/bin
-tar xf ~/Downloads/oasis_core_21.2.5_linux_amd64.tar.gz --strip-components=1
+tar xf ~/Downloads/oasis_core_21.3.6_linux_amd64.tar.gz --strip-components=1
 ```
 
 [Oasis Core]: https://docs.oasis.dev/oasis-core
