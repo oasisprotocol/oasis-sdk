@@ -265,6 +265,14 @@ export interface Transaction extends oasis.types.CBORVersioned {
 export type UnverifiedTransaction = [body: Uint8Array, authProofs: AuthProof[]];
 
 /**
+ * Parameters for the consensus module.
+ */
+export interface ConsensusParameters {
+    consensus_denomination: Uint8Array;
+    consensus_scaling_factor: oasis.types.longnum;
+}
+
+/**
  * Consensus deposit call.
  */
 export interface ConsensusDeposit {
