@@ -1,5 +1,5 @@
 //! Processing of execution results.
-use std::convert::TryInto;
+use std::{collections::BTreeMap, convert::TryInto};
 
 use oasis_contract_sdk_types::{
     event::Event,
@@ -9,7 +9,7 @@ use oasis_contract_sdk_types::{
 use oasis_runtime_sdk::{
     context::{BatchContext, Context, TxContext},
     dispatcher,
-    event::tag_for_event,
+    event::etag_for_event,
     modules::core::{self, API as _},
     types::{token, transaction, transaction::CallerAddress},
 };
@@ -57,7 +57,7 @@ fn process_events<C: TxContext>(
 ) -> Result<(), Error> {
     // Transform contract events into tags using the SDK scheme.
     for event in events {
-        ctx.emit_tag(tag_for_event(
+        ctx.emit_etag(etag_for_event(
             &if event.module.is_empty() {
                 format!("{}.{}", MODULE_NAME, contract.code_info.id.as_u64())
             } else {
@@ -69,7 +69,7 @@ fn process_events<C: TxContext>(
                 )
             },
             event.code,
-            cbor::to_vec(ContractEvent {
+            cbor::to_value(ContractEvent {
                 id: contract.instance_info.id,
                 data: event.data,
             }),
@@ -144,7 +144,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                 let remaining_messages = ctx.remaining_messages();
 
                 // Execute a transaction in a child context.
-                let (result, gas, tags, messages) = ctx.with_child(ctx.mode(), |mut ctx| {
+                let (result, gas, etags, messages) = ctx.with_child(ctx.mode(), |mut ctx| {
                     // Generate an internal transaction.
                     let tx = transaction::Transaction {
                         version: transaction::LATEST_TRANSACTION_VERSION,
@@ -183,11 +183,11 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         // Commit store and return emitted tags and messages on successful dispatch,
                         // otherwise revert state and ignore any emitted events/messages.
                         if result.is_success() {
-                            let (tags, messages) = ctx.commit();
-                            (result, gas, tags, messages)
+                            let (etags, messages) = ctx.commit();
+                            (result, gas, etags, messages)
                         } else {
                             // Ignore tags/messages on failure.
-                            (result, gas, vec![], vec![])
+                            (result, gas, BTreeMap::new(), vec![])
                         }
                     });
 
@@ -202,10 +202,8 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                 // preconfigured the amount of available gas.
                 core::Module::use_tx_gas(ctx, max_gas.saturating_sub(gas))?;
 
-                // Forward any emitted tags.
-                for tag in tags {
-                    ctx.emit_tag(tag);
-                }
+                // Forward any emitted event tags.
+                ctx.emit_etags(etags);
 
                 // Forward any emitted runtime messages.
                 for (msg, hook) in messages {

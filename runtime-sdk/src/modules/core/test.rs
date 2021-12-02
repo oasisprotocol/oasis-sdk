@@ -6,8 +6,9 @@ use crate::{
     context::{BatchContext, Context, Mode, TxContext},
     core::common::version::Version,
     crypto::multisig,
-    dispatcher, module,
-    module::{AuthHandler as _, BlockHandler, Module as _},
+    dispatcher,
+    event::IntoTags,
+    module::{self, AuthHandler as _, BlockHandler, Module as _},
     runtime::Runtime,
     testing::{keys, mock},
     types::{
@@ -591,4 +592,61 @@ fn test_min_gas_price() {
     ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
         Core::before_handle_call(&mut tx_ctx, &call).expect("gas price should be ok");
     });
+}
+
+#[test]
+fn test_emit_events() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+    #[derive(Debug, cbor::Encode, cbor::Decode, PartialEq, Eq)]
+    struct TestEvent {
+        i: u64,
+    }
+
+    impl crate::event::Event for TestEvent {
+        fn module_name() -> &'static str {
+            "testevent"
+        }
+        fn code(&self) -> u32 {
+            match self {
+                TestEvent { .. } => 0u32,
+            }
+        }
+    }
+
+    ctx.emit_event(TestEvent { i: 42 });
+    let etags = ctx.with_tx(0, mock::transaction(), |mut ctx, _| {
+        ctx.emit_event(TestEvent { i: 2 });
+        ctx.emit_event(TestEvent { i: 3 });
+        ctx.emit_event(TestEvent { i: 1 });
+
+        let (etags, _) = ctx.commit();
+        let tags = etags.clone().into_tags();
+        assert_eq!(tags.len(), 1, "1 emitted tag expected");
+
+        let events: Vec<TestEvent> = cbor::from_slice(&tags[0].value).unwrap();
+        assert_eq!(events.len(), 3, "3 emitted events expected");
+        assert_eq!(TestEvent { i: 2 }, events[0], "expected events emitted");
+        assert_eq!(TestEvent { i: 3 }, events[1], "expected events emitted");
+        assert_eq!(TestEvent { i: 1 }, events[2], "expected events emitted");
+
+        etags
+    });
+    // Forward tx emitted etags.
+    ctx.emit_etags(etags);
+    // Emit one more event.
+    ctx.emit_event(TestEvent { i: 0 });
+
+    let (etags, _) = ctx.commit();
+    println! {"etags: {:?}", etags};
+    let tags = etags.into_tags();
+    assert_eq!(tags.len(), 1, "1 emitted tag expected");
+
+    let events: Vec<TestEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 5, "5 emitted events expected");
+    assert_eq!(TestEvent { i: 42 }, events[0], "expected events emitted");
+    assert_eq!(TestEvent { i: 2 }, events[1], "expected events emitted");
+    assert_eq!(TestEvent { i: 3 }, events[2], "expected events emitted");
+    assert_eq!(TestEvent { i: 1 }, events[3], "expected events emitted");
+    assert_eq!(TestEvent { i: 0 }, events[4], "expected events emitted");
 }
