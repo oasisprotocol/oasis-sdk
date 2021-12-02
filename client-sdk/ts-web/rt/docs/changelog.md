@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased changes
+## v0.2.0-alpha9
+
+Spotlight change:
+
+- We had an `evm` module all along but didn't export it.
+  Now it's exported 🤦
 
 Breaking changes:
 
