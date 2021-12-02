@@ -1,5 +1,3 @@
-import * as oasis from '@oasisprotocol/client';
-
 import * as types from './types';
 import * as wrapper from './wrapper';
 

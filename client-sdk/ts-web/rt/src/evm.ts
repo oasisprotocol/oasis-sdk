@@ -9,11 +9,13 @@ import * as wrapper from './wrapper';
 export const MODULE_NAME = 'evm';
 
 export const ERR_INVALID_ARGUMENT_CODE = 1;
-export const ERR_EVM_ERROR_CODE = 2;
+export const ERR_EXECUTION_FAILED_CODE = 2;
 export const ERR_INVALID_SIGNER_TYPE_CODE = 3;
 export const ERR_FEE_OVERFLOW_CODE = 4;
 export const ERR_GAS_LIMIT_TOO_LOW_CODE = 5;
 export const ERR_INSUFFICIENT_BALANCE_CODE = 6;
+export const ERROR_FORBIDDEN_CODE = 7;
+export const ERROR_REVERTED_CODE = 8;
 
 export const EVENT_LOG_CODE = 1;
 

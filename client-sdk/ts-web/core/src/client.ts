@@ -394,10 +394,18 @@ const methodDescriptorRuntimeClientGetBlock = createMethodDescriptorUnary<
     types.RuntimeClientGetBlockRequest,
     types.RootHashBlock
 >('RuntimeClient', 'GetBlock');
+const methodDescriptorRuntimeClientGetLastRetainedBlock = createMethodDescriptorUnary<
+    Uint8Array,
+    types.RootHashBlock
+>('RuntimeClient', 'GetLastRetainedBlock');
 const methodDescriptorRuntimeClientGetTransactions = createMethodDescriptorUnary<
     types.RuntimeClientGetTransactionsRequest,
     Uint8Array[]
 >('RuntimeClient', 'GetTransactions');
+const methodDescriptorRuntimeClientGetTransactionsWithResults = createMethodDescriptorUnary<
+    types.RuntimeClientGetTransactionsRequest,
+    types.RuntimeClientTransactionWithResults
+>('RuntimeClient', 'GetTransactionsWithResults');
 const methodDescriptorRuntimeClientGetEvents = createMethodDescriptorUnary<
     types.RuntimeClientGetEventsRequest,
     types.RuntimeClientEvent[]
@@ -1256,10 +1264,25 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * GetLastRetainedBlock returns the last retained block.
+     */
+    runtimeClientGetLastRetainedBlock(runtimeID: Uint8Array) {
+        return this.callUnary(methodDescriptorRuntimeClientGetLastRetainedBlock, runtimeID);
+    }
+
+    /**
      * GetTransactions fetches all runtime transactions in a given block.
      */
     runtimeClientGetTransactions(request: types.RuntimeClientGetTransactionsRequest) {
         return this.callUnary(methodDescriptorRuntimeClientGetTransactions, request);
+    }
+
+    /**
+     * GetTransactionsWithResults fetches all runtime transactions in a given block together with
+     * its results (outputs and emitted events).
+     */
+    runtimeClientGetTransactionsWithResults(request: types.RuntimeClientGetTransactionsRequest) {
+        return this.callUnary(methodDescriptorRuntimeClientGetTransactionsWithResults, request);
     }
 
     /**

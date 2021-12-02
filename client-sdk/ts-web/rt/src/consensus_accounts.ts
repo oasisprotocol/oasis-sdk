@@ -1,5 +1,3 @@
-import * as oasis from '@oasisprotocol/client';
-
 import * as event from './event';
 import * as transaction from './transaction';
 import * as types from './types';

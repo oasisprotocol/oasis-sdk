@@ -9,11 +9,41 @@ export interface CoreEstimateGasQuery {
 }
 
 /**
+ * Response to the call data public key query.
+ */
+export interface CoreCallDataPublicKeyQueryResponse {
+    /**
+     * Public key used for deriving the shared secret for encrypting call data.
+     */
+    public_key: KeyManagerSignedPublicKey;
+}
+
+/**
  * Caller address.
  */
 export interface CallerAddress {
     address?: Uint8Array;
     eth_address?: Uint8Array;
+}
+
+// The below is imported from oasis-core (Rust), but it's never used from the oasis-node side.
+// So I'm putting this here in the runtime package.
+/**
+ * Signed public key.
+ */
+export interface KeyManagerSignedPublicKey {
+    /**
+     * Public key.
+     */
+    key: Uint8Array;
+    /**
+     * Checksum of the key manager state.
+     */
+    checksum: Uint8Array;
+    /**
+     * Sign(sk, (key || checksum)) from the key manager.
+     */
+    signature: Uint8Array;
 }
 
 /**
@@ -263,6 +293,14 @@ export interface Transaction extends oasis.types.CBORVersioned {
  * An unverified signed transaction.
  */
 export type UnverifiedTransaction = [body: Uint8Array, authProofs: AuthProof[]];
+
+/**
+ * Parameters for the consensus module.
+ */
+export interface ConsensusParameters {
+    consensus_denomination: Uint8Array;
+    consensus_scaling_factor: oasis.types.longnum;
+}
 
 /**
  * Consensus deposit call.
