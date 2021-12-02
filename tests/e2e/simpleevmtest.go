@@ -30,6 +30,11 @@ import (
 //go:embed contracts/evm_sol_test_compiled.hex
 var evmSolTestCompiledHex string
 
+// We store the compiled EVM bytecode for the SimpleSolEVMTestCreateMulti in a separate
+// file (in hex) to preserve readability of this file.
+//go:embed contracts/evm_create_multi.hex
+var evmSolCreateMultiCompiledHex string
+
 // We store the compiled EVM bytecode for the SimpleERC20EVMTest in a separate
 // file (in hex) to preserve readability of this file.
 //go:embed contracts/evm_erc20_test_compiled.hex
@@ -451,6 +456,59 @@ func SimpleSolEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 		// The returned string is packed as length (4) + "test" in hex.
 		return fmt.Errorf("returned value is incorrect (expected '474657374', got '%s')", res[127:136])
 	}
+
+	return nil
+}
+
+// SimpleSolEVMTestCreateMulti does a test of a contract that creates two contracts.
+func SimpleSolEVMTestCreateMulti(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	signer := testing.Dave.Signer
+	e := evm.NewV1(rtc)
+
+	// To generate the contract bytecode below, use https://remix.ethereum.org/
+	// with the following settings:
+	//     Compiler: 0.8.7+commit.e28d00a7
+	//     EVM version: london
+	//     Enable optimization: no
+	// on the following source:
+	/*
+		pragma solidity ^0.8.0;
+
+		contract A {
+		    constructor() {}
+		}
+
+		contract Foo {
+		    A public a1;
+		    A public a2;
+
+		    constructor() {
+		        a1 = new A();
+		        a2 = new A();
+		    }
+		}
+	*/
+
+	contract, err := hex.DecodeString(strings.TrimSpace(evmSolCreateMultiCompiledHex))
+	if err != nil {
+		return err
+	}
+
+	zero, err := hex.DecodeString(strings.Repeat("0", 64))
+	if err != nil {
+		return err
+	}
+
+	gasPrice := uint64(2)
+
+	// Create the EVM contract.
+	contractAddr, err := evmCreate(ctx, rtc, e, signer, zero, contract, gasPrice)
+	if err != nil {
+		return fmt.Errorf("evmCreate failed: %w", err)
+	}
+
+	log.Info("evmCreate finished", "contract_addr", hex.EncodeToString(contractAddr))
 
 	return nil
 }
