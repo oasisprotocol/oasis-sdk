@@ -3,6 +3,7 @@ export * as address from './address';
 export * as callformat from './callformat';
 export * as consensus from './consensus';
 export * as consensusAccounts from './consensus_accounts';
+export * as contracts from './contracts';
 export * as core from './core';
 export * as event from './event';
 export * as evm from './evm';

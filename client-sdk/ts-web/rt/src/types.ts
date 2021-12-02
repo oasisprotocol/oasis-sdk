@@ -433,3 +433,244 @@ export interface ResultEnvelopeX25519DeoxysII {
     nonce: Uint8Array;
     data: Uint8Array;
 }
+
+export interface ContractsPolicy {
+    nobody?: {};
+    address?: Uint8Array;
+    everyone?: {};
+}
+
+/**
+ * Upload call.
+ */
+export interface ContractsUpload {
+    /**
+     * ABI.
+     */
+    abi: number;
+    /**
+     * Who is allowed to instantiate this code.
+     */
+    instantiate_policy: ContractsPolicy;
+    /**
+     * Compiled contract code.
+     */
+    code: Uint8Array;
+}
+
+/**
+ * Upload call result.
+ */
+export interface ContractsUploadResult {
+    /**
+     * Assigned code identifier.
+     */
+    id: oasis.types.longnum;
+}
+
+/**
+ * Instantiate call.
+ */
+export interface ContractsInstantiate {
+    /**
+     * Identifier of code used by the instance.
+     */
+    code_id: oasis.types.longnum;
+    /**
+     * Who is allowed to upgrade this instance.
+     */
+    upgrades_policy: ContractsPolicy;
+    /**
+     * Arguments to contract's instantiation function.
+     */
+    data: Uint8Array;
+    /**
+     * Tokens that should be sent to the contract as part of the instantiate call.
+     */
+    tokens: BaseUnits[];
+}
+
+/**
+ * Instantiate call result.
+ */
+export interface ContractsInstantiateResult {
+    /**
+     * Assigned instance identifier.
+     */
+    id: oasis.types.longnum;
+}
+
+/**
+ * Contract call.
+ */
+export interface ContractsCall {
+    /**
+     * Instance identifier.
+     */
+    id: oasis.types.longnum;
+    /**
+     * Call arguments.
+     */
+    data: Uint8Array;
+    /**
+     * Tokens that should be sent to the contract as part of the call.
+     */
+    tokens: BaseUnits[];
+}
+
+/**
+ * Upgrade call.
+ */
+export interface ContractsUpgrade {
+    /**
+     * Instance identifier.
+     */
+    id: oasis.types.longnum;
+    /**
+     * Updated code identifier.
+     */
+    code_id: oasis.types.longnum;
+    /**
+     * Arguments to contract's upgrade function.
+     */
+    data: Uint8Array;
+    /**
+     * Tokens that should be sent to the contract as part of the call.
+     */
+    tokens: BaseUnits[];
+}
+
+/**
+ * Code information query.
+ */
+export interface ContractsCodeQuery {
+    /**
+     * Code identifier.
+     */
+    id: oasis.types.longnum;
+}
+
+/**
+ * Stored code information.
+ */
+export interface ContractsCode {
+    /**
+     * Unique code identifier.
+     */
+    id: oasis.types.longnum;
+    /**
+     * Code hash.
+     */
+    hash: Uint8Array;
+    /**
+     * ABI.
+     */
+    abi: number;
+    /**
+     * Code uploader address.
+     */
+    uploader: Uint8Array;
+    /**
+     * Who is allowed to instantiate this code.
+     */
+    instantiate_policy: ContractsPolicy;
+}
+
+/**
+ * Instance information query.
+ */
+export interface ContractsInstanceQuery {
+    /**
+     * Instance identifier.
+     */
+    id: oasis.types.longnum;
+}
+
+/**
+ * Deployed code instance information.
+ */
+export interface ContractsInstance {
+    /**
+     * Unique instance identifier.
+     */
+    id: oasis.types.longnum;
+    /**
+     * Identifier of code used by the instance.
+     */
+    code_id: oasis.types.longnum;
+    /**
+     * Instance creator address.
+     */
+    creator: Uint8Array;
+    /**
+     * Who is allowed to upgrade this instance.
+     */
+    upgrades_policy: ContractsPolicy;
+}
+
+/**
+ * Instance storage query.
+ */
+export interface ContractsInstanceStorageQuery {
+    /**
+     * Instance identifier.
+     */
+    id: oasis.types.longnum;
+    /**
+     * Storage key.
+     */
+    key: Uint8Array;
+}
+
+export interface ContractsInstanceStorageQueryResult {
+    /**
+     * Storage value or `None` if key doesn't exist.
+     */
+    value: Uint8Array | null;
+}
+
+/**
+ * Public key query.
+ */
+export interface ContractsPublicKeyQuery {
+    /**
+     * Instance identifier.
+     */
+    id: oasis.types.longnum;
+    /**
+     * Kind of public key.
+     */
+    kind: number;
+}
+
+/**
+ * Public key query result.
+ */
+export interface ContractsPublicKeyQueryResult {
+    /**
+     * Public key.
+     */
+    key: Uint8Array;
+    /**
+     * Checksum of the key manager state.
+     */
+    checksum: Uint8Array;
+    /**
+     * Sign(sk, (key || checksum)) from the key manager.
+     */
+    signature: Uint8Array;
+}
+
+/**
+ * Custom contract query.
+ */
+export interface ContractsCustomQuery {
+    /**
+     * Instance identifier.
+     */
+    id: oasis.types.longnum;
+    /**
+     * Query arguments.
+     */
+    data: Uint8Array;
+}
