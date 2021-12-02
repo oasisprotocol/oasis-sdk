@@ -30,8 +30,10 @@ export class Visitor {
     visit(e: oasis.types.RuntimeClientEvent) {
         const keyHex = oasis.misc.toHex(e.key);
         if (keyHex in this.handlers) {
-            const value = oasis.misc.fromCBOR(e.value);
-            this.handlers[keyHex](e, value);
+            const values = oasis.misc.fromCBOR(e.value) as Array<any>;
+            for (const value of values) {
+                this.handlers[keyHex](e, value);
+            }
             return true;
         }
         return false;
