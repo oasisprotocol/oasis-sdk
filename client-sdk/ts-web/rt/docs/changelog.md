@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased changes
+
+Breaking changes:
+
+- Some error code constants from the core module were missing the `_CODE` prefix.
+  We've corrected that omission.
+
 ## v0.2.0-alpha8
 
 Spotlight change:
