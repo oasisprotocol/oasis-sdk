@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased changes:
+
+New features:
+
+- Errors from `client` are now wrapped to show what method you were calling.
+  Use the `.cause` property in newer browsers to get the original error.
+- `client` methods additionally create a stack trace before making the
+  request, to help you figure out what called the method in browsers that
+  don't automatically hook up asynchronous stack traces.
+  Which is most of them.
+
 ## v0.1.0-alpha7:
 
 Spotlight change:
