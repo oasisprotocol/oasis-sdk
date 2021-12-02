@@ -141,77 +141,69 @@ func EventDecoder(codeID contracts.CodeID, instanceID contracts.InstanceID) clie
 }
 
 // Implements client.EventDecoder.
-func (ed *eventDecoder) DecodeEvent(event *types.Event) (client.DecodedEvent, error) {
+func (ed *eventDecoder) DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
 	if !strings.HasPrefix(event.Module, fmt.Sprintf("%s.%d", contracts.ModuleName, ed.codeID)) {
 		return nil, nil
 	}
-	var contractEvent *contracts.Event
-	if err := cbor.Unmarshal(event.Value, &contractEvent); err != nil {
+	var contractEvents []*contracts.Event
+	if err := cbor.Unmarshal(event.Value, &contractEvents); err != nil {
 		return nil, fmt.Errorf("decode contract event value: %w", err)
 	}
-	if contractEvent.ID != ed.instanceID {
-		return nil, nil
+
+	var events []client.DecodedEvent
+	for _, contractEvent := range contractEvents {
+		if contractEvent.ID != ed.instanceID {
+			return nil, nil
+		}
+
+		switch event.Code {
+		case InstantiatedEventCode:
+			var ev InstantiatedEvent
+			if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
+				return nil, fmt.Errorf("decode OAS20 instantiated event value: %w", err)
+			}
+			events = append(events, &Event{Instantiated: &ev})
+		case TransferredEventCode:
+			var ev TransferredEvent
+			if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
+				return nil, fmt.Errorf("decode OAS20 transferred event value: %w", err)
+			}
+			events = append(events, &Event{Transferred: &ev})
+		case SentEventCode:
+			var ev SentEvent
+			if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
+				return nil, fmt.Errorf("decode OAS20 sent event value: %w", err)
+			}
+			events = append(events, &Event{Sent: &ev})
+		case BurnedEventCode:
+			var ev BurnedEvent
+			if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
+				return nil, fmt.Errorf("decode OAS20 burned event value: %w", err)
+			}
+			events = append(events, &Event{Burned: &ev})
+		case AllowanceChangedEventCode:
+			var ev AllowanceChangedEvent
+			if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
+				return nil, fmt.Errorf("decode OAS20 allowance changed event value: %w", err)
+			}
+			events = append(events, &Event{AllowanceChanged: &ev})
+		case WithdrewEventCode:
+			var ev WithdrewEvent
+			if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
+				return nil, fmt.Errorf("decode OAS20 withdew event value: %w", err)
+			}
+			events = append(events, &Event{Withdrew: &ev})
+		case MintedEventCode:
+			var ev MintedEvent
+			if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
+				return nil, fmt.Errorf("decode OAS20 minted event value: %w", err)
+			}
+			events = append(events, &Event{Minted: &ev})
+		default:
+			return nil, fmt.Errorf("invalid OAS20 event code: %v", event.Code)
+		}
 	}
-	switch event.Code {
-	case InstantiatedEventCode:
-		var ev *InstantiatedEvent
-		if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
-			return nil, fmt.Errorf("decode OAS20 instantiated event value: %w", err)
-		}
-		return &Event{
-			Instantiated: ev,
-		}, nil
-	case TransferredEventCode:
-		var ev *TransferredEvent
-		if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
-			return nil, fmt.Errorf("decode OAS20 transferred event value: %w", err)
-		}
-		return &Event{
-			Transferred: ev,
-		}, nil
-	case SentEventCode:
-		var ev *SentEvent
-		if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
-			return nil, fmt.Errorf("decode OAS20 sent event value: %w", err)
-		}
-		return &Event{
-			Sent: ev,
-		}, nil
-	case BurnedEventCode:
-		var ev *BurnedEvent
-		if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
-			return nil, fmt.Errorf("decode OAS20 burned event value: %w", err)
-		}
-		return &Event{
-			Burned: ev,
-		}, nil
-	case AllowanceChangedEventCode:
-		var ev *AllowanceChangedEvent
-		if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
-			return nil, fmt.Errorf("decode OAS20 allowance changed event value: %w", err)
-		}
-		return &Event{
-			AllowanceChanged: ev,
-		}, nil
-	case WithdrewEventCode:
-		var ev *WithdrewEvent
-		if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
-			return nil, fmt.Errorf("decode OAS20 withdew event value: %w", err)
-		}
-		return &Event{
-			Withdrew: ev,
-		}, nil
-	case MintedEventCode:
-		var ev *MintedEvent
-		if err := cbor.Unmarshal(contractEvent.Data, &ev); err != nil {
-			return nil, fmt.Errorf("decode OAS20 minted event value: %w", err)
-		}
-		return &Event{
-			Minted: ev,
-		}, nil
-	default:
-		return nil, fmt.Errorf("invalid OAS20 event code: %v", event.Code)
-	}
+	return events, nil
 }
 
 const (

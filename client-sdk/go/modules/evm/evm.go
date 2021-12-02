@@ -142,25 +142,28 @@ func (a *v1) GetEvents(ctx context.Context, round uint64) ([]*Event, error) {
 		if err != nil {
 			return nil, err
 		}
-		if ev == nil {
-			continue
+		for _, e := range ev {
+			evs = append(evs, e.(*Event))
 		}
-		evs = append(evs, ev.(*Event))
 	}
 
 	return evs, nil
 }
 
 // Implements client.EventDecoder.
-func (a *v1) DecodeEvent(event *types.Event) (client.DecodedEvent, error) {
+func (a *v1) DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
 	if event.Module != ModuleName && event.Code != 1 {
 		return nil, nil
 	}
-	var ev *Event
-	if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+	var evs []*Event
+	if err := cbor.Unmarshal(event.Value, &evs); err != nil {
 		return nil, fmt.Errorf("evm event value unmarshal failed: %w", err)
 	}
-	return ev, nil
+	events := make([]client.DecodedEvent, len(evs))
+	for i, ev := range evs {
+		events[i] = ev
+	}
+	return events, nil
 }
 
 // NewV1 generates a V1 client helper for the EVM module.

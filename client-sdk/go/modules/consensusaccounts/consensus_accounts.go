@@ -97,37 +97,41 @@ func (a *v1) GetEvents(ctx context.Context, round uint64) ([]*Event, error) {
 		if ev == nil {
 			continue
 		}
-		evs = append(evs, ev.(*Event))
+		for _, e := range ev {
+			evs = append(evs, e.(*Event))
+		}
 	}
 
 	return evs, nil
 }
 
 // Implements client.EventDecoder.
-func (a *v1) DecodeEvent(event *types.Event) (client.DecodedEvent, error) {
+func (a *v1) DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
 	if event.Module != ModuleName {
 		return nil, nil
 	}
+	var events []client.DecodedEvent
 	switch event.Code {
 	case DepositEventCode:
-		var ev *DepositEvent
-		if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+		var evs []*DepositEvent
+		if err := cbor.Unmarshal(event.Value, &evs); err != nil {
 			return nil, fmt.Errorf("decode consensus accounts deposit event value: %w", err)
 		}
-		return &Event{
-			Deposit: ev,
-		}, nil
+		for _, ev := range evs {
+			events = append(events, &Event{Deposit: ev})
+		}
 	case WithdrawEventCode:
-		var ev *WithdrawEvent
-		if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+		var evs []*WithdrawEvent
+		if err := cbor.Unmarshal(event.Value, &evs); err != nil {
 			return nil, fmt.Errorf("decode consensus accounts withdraw event value: %w", err)
 		}
-		return &Event{
-			Withdraw: ev,
-		}, nil
+		for _, ev := range evs {
+			events = append(events, &Event{Withdraw: ev})
+		}
 	default:
 		return nil, fmt.Errorf("invalid consensus accounts event code: %v", event.Code)
 	}
+	return events, nil
 }
 
 // NewV1 generates a V1 client helper for the consensus accounts module.
