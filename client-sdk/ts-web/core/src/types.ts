@@ -477,6 +477,14 @@ export interface ControlRuntimeStatus {
      */
     genesis_hash: Uint8Array;
     /**
+     * LastRetainedRound is the round of the oldest retained block.
+     */
+    last_retained_round: longnum;
+    /**
+     * LastRetainedHash is the hash of the oldest retained block.
+     */
+    last_retained_hash: Uint8Array;
+    /**
      * Committee contains the runtime worker status in case this node is a (candidate) member of a
      * runtime committee (e.g., compute or storage).
      */
@@ -2079,6 +2087,17 @@ export interface RuntimeClientGetTransactionsRequest {
 }
 
 /**
+ * PlainEvent is an event emitted by a runtime in the form of a runtime transaction tag. It
+ * does not include the transaction hash.
+ *
+ * Key and value semantics are runtime-dependent.
+ */
+export interface RuntimeClientPlainEvent {
+    key: Uint8Array;
+    value: Uint8Array;
+}
+
+/**
  * QueryRequest is a Query request.
  */
 export interface RuntimeClientQueryRequest {
@@ -2123,6 +2142,15 @@ export interface RuntimeClientSubmitTxMetaResponse {
 export interface RuntimeClientSubmitTxRequest {
     runtime_id: Uint8Array;
     data: Uint8Array;
+}
+
+/**
+ * TransactionWithResults is a transaction with its raw result and emitted events.
+ */
+export interface RuntimeClientTransactionWithResults {
+    tx: Uint8Array;
+    result: Uint8Array;
+    events?: RuntimeClientPlainEvent[];
 }
 
 /**
