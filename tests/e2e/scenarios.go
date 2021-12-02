@@ -39,6 +39,7 @@ var (
 		SimpleEVMDepositWithdrawTest,
 		SimpleEVMTest,
 		SimpleSolEVMTest,
+		SimpleSolEVMTestCreateMulti,
 		SimpleERC20EVMTest,
 	})
 )

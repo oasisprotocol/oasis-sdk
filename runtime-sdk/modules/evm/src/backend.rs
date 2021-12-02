@@ -198,9 +198,8 @@ impl<'c, C: Context, Cfg: Config> ApplyBackend for Backend<'c, C, Cfg> {
                             assert!(nonce == old_nonce,
                                 "evm execution would not increment origin nonce correctly ({} -> {})", old_nonce, nonce);
                         } else {
-                            // Other nonces must increment by one or stay the same. Note that even
-                            // non-origin nonces may increment due to `create_increase_nonce` config.
-                            assert!(nonce == old_nonce || nonce == old_nonce + 1,
+                            // Other nonces must either stay the same or increment.
+                            assert!(nonce >= old_nonce,
                                 "evm execution would not update non-origin nonce correctly ({} -> {})", old_nonce, nonce);
                         }
                     }
