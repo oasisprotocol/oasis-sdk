@@ -110,6 +110,10 @@ pub enum Error {
     #[error("gas price too low")]
     #[sdk_error(code = 20)]
     GasPriceTooLow,
+
+    #[error("forbidden in secure build")]
+    #[sdk_error(code = 21)]
+    ForbiddenInSecureBuild,
 }
 
 /// Gas costs.
