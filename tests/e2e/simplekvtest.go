@@ -427,15 +427,19 @@ WaitInsertLoop:
 			for _, ev := range events {
 				switch {
 				case kvInsertEventKey.IsEqual(ev.Key()):
-					var ie kvInsertEvent
-					if err = cbor.Unmarshal(ev.Value, &ie); err != nil {
+					var ies []*kvInsertEvent
+					if err = cbor.Unmarshal(ev.Value, &ies); err != nil {
 						log.Error("failed to unmarshal insert event",
 							"err", err,
 						)
 						continue
 					}
+					if len(ies) != 1 {
+						log.Error("unexpected number of insert events")
+						continue
+					}
 
-					if bytes.Equal(ie.KV.Key, testKey) && bytes.Equal(ie.KV.Value, testValue) {
+					if bytes.Equal(ies[0].KV.Key, testKey) && bytes.Equal(ies[0].KV.Value, testValue) {
 						gotEvent = true
 						log.Info("got our insert event")
 						break WaitInsertLoop
@@ -480,15 +484,19 @@ WaitRemoveLoop:
 			for _, ev := range events {
 				switch {
 				case kvRemoveEventKey.IsEqual(ev.Key()):
-					var re kvRemoveEvent
-					if err = cbor.Unmarshal(ev.Value, &re); err != nil {
+					var res []*kvRemoveEvent
+					if err = cbor.Unmarshal(ev.Value, &res); err != nil {
 						log.Error("failed to unmarshal remove event",
 							"err", err,
 						)
 						continue
 					}
+					if len(res) != 1 {
+						log.Error("unexpected number of remove events")
+						continue
+					}
 
-					if bytes.Equal(re.Key.Key, testKey) {
+					if bytes.Equal(res[0].Key.Key, testKey) {
 						gotEvent = true
 						log.Info("got our remove event")
 						break WaitRemoveLoop

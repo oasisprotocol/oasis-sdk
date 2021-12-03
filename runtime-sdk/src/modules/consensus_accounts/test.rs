@@ -12,6 +12,7 @@ use oasis_core_runtime::{
 
 use crate::{
     context::BatchContext,
+    event::IntoTags,
     module::{MethodHandler, MigrationHandler},
     modules::{
         accounts::{Genesis as AccountsGenesis, Module as Accounts, API},
@@ -235,7 +236,8 @@ fn test_api_deposit() {
     );
 
     // Make sure events were emitted.
-    let (tags, _) = ctx.commit();
+    let (etags, _) = ctx.commit();
+    let tags = etags.into_tags();
     assert_eq!(tags.len(), 2, "deposit and mint events should be emitted");
     assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x03"); // accounts.Mint (code = 3) event
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x01"); // consensus_accounts.Deposit (code = 1) event
@@ -250,7 +252,10 @@ fn test_api_deposit() {
         #[cbor(optional)]
         error: Option<types::ConsensusError>,
     }
-    let event: DepositEvent = cbor::from_slice(&tags[1].value).unwrap();
+
+    let mut events: Vec<DepositEvent> = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(events.len(), 1);
+    let event = events.pop().unwrap();
     assert_eq!(event.from, keys::alice::address());
     assert_eq!(event.nonce, nonce);
     assert_eq!(event.to, keys::bob::address());
@@ -552,7 +557,8 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
     );
 
     // Make sure events were emitted.
-    let (tags, _) = ctx.commit();
+    let (etags, _) = ctx.commit();
+    let tags = etags.into_tags();
     assert_eq!(tags.len(), 2, "withdraw and burn events should be emitted");
     assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x02"); // accounts.Burn (code = 2) event
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x02"); // consensus_accounts.Withdraw (code = 2) event
@@ -567,7 +573,9 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
         #[cbor(optional)]
         error: Option<types::ConsensusError>,
     }
-    let event: WithdrawEvent = cbor::from_slice(&tags[1].value).unwrap();
+    let mut events: Vec<WithdrawEvent> = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(events.len(), 1);
+    let event = events.pop().unwrap();
     assert_eq!(event.from, signer_address);
     assert_eq!(event.nonce, nonce);
     assert_eq!(event.to, keys::bob::address());
@@ -724,7 +732,8 @@ fn test_api_withdraw_handler_failure() {
     );
 
     // Make sure events were emitted.
-    let (tags, _) = ctx.commit();
+    let (etags, _) = ctx.commit();
+    let tags = etags.into_tags();
     assert_eq!(
         tags.len(),
         2,
@@ -743,7 +752,9 @@ fn test_api_withdraw_handler_failure() {
         #[cbor(optional)]
         error: Option<types::ConsensusError>,
     }
-    let event: WithdrawEvent = cbor::from_slice(&tags[1].value).unwrap();
+    let mut events: Vec<WithdrawEvent> = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(events.len(), 1);
+    let event = events.pop().unwrap();
     assert_eq!(event.from, keys::alice::address());
     assert_eq!(event.nonce, nonce);
     assert_eq!(event.to, keys::bob::address());

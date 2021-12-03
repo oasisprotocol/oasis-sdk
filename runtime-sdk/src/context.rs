@@ -16,14 +16,11 @@ use oasis_core_runtime::{
     consensus::roothash,
     protocol::HostInfo,
     storage::mkvs,
-    transaction::{
-        context::Context as RuntimeContext,
-        tags::{Tag, Tags},
-    },
+    transaction::context::Context as RuntimeContext,
 };
 
 use crate::{
-    event::Event,
+    event::{Event, EventTag, EventTags},
     keymanager::KeyManagerClientWithContext,
     modules::core::Error,
     runtime,
@@ -147,14 +144,22 @@ pub trait Context {
     fn emit_event<E: Event>(&mut self, event: E);
 
     /// Emits a tag.
-    fn emit_tag(&mut self, tag: Tag);
+    fn emit_etag(&mut self, etag: EventTag);
+
+    /// Emits event tags.
+    fn emit_etags(&mut self, etags: EventTags);
 
     /// Returns a child io_ctx.
     fn io_ctx(&self) -> IoContext;
 
     /// Commit any changes made to storage, return any emitted tags and runtime messages. It
     /// consumes the transaction context.
-    fn commit(self) -> (Tags, Vec<(roothash::Message, MessageEventHookInvocation)>);
+    fn commit(
+        self,
+    ) -> (
+        EventTags,
+        Vec<(roothash::Message, MessageEventHookInvocation)>,
+    );
 
     /// Fetches a value entry associated with the context.
     fn value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V>;
@@ -249,7 +254,9 @@ pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: NestedStore> {
     io_ctx: Arc<IoContext>,
     logger: slog::Logger,
 
-    block_tags: Tags,
+    /// Block emitted event tags. Events are aggregated by tag key, the value
+    /// is a list of all emitted event values.
+    block_etags: EventTags,
 
     /// Maximum number of messages that can be emitted.
     max_messages: u32,
@@ -289,7 +296,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             key_manager,
             logger: get_logger("runtime-sdk")
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
-            block_tags: Tags::new(),
+            block_etags: EventTags::new(),
             max_messages,
             messages: Vec::new(),
             values: BTreeMap::new(),
@@ -320,7 +327,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             io_ctx: ctx.io_ctx.clone(),
             logger: get_logger("runtime-sdk")
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
-            block_tags: Tags::new(),
+            block_etags: EventTags::new(),
             max_messages: ctx.max_messages,
             messages: Vec::new(),
             values: BTreeMap::new(),
@@ -370,20 +377,35 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
     }
 
     fn emit_event<E: Event>(&mut self, event: E) {
-        self.block_tags.push(event.into_tag());
+        let etag = event.into_event_tag();
+        let tag = self.block_etags.entry(etag.key).or_insert_with(Vec::new);
+        tag.push(etag.value);
     }
 
-    fn emit_tag(&mut self, tag: Tag) {
-        self.block_tags.push(tag);
+    fn emit_etag(&mut self, etag: EventTag) {
+        let tag = self.block_etags.entry(etag.key).or_insert_with(Vec::new);
+        tag.push(etag.value);
+    }
+
+    fn emit_etags(&mut self, etags: EventTags) {
+        for (key, val) in etags {
+            let tag = self.block_etags.entry(key).or_insert_with(Vec::new);
+            tag.extend(val)
+        }
     }
 
     fn io_ctx(&self) -> IoContext {
         IoContext::create_child(&self.io_ctx)
     }
 
-    fn commit(self) -> (Tags, Vec<(roothash::Message, MessageEventHookInvocation)>) {
+    fn commit(
+        self,
+    ) -> (
+        EventTags,
+        Vec<(roothash::Message, MessageEventHookInvocation)>,
+    ) {
         self.runtime_storage.commit();
-        (self.block_tags, self.messages)
+        (self.block_etags, self.messages)
     }
 
     fn value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
@@ -426,7 +448,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
             logger: self
                 .logger
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
-            block_tags: Tags::new(),
+            block_etags: EventTags::new(),
             max_messages: match mode {
                 Mode::SimulateTx => self.max_messages,
                 _ => remaining_messages,
@@ -466,7 +488,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
                 .new(o!("ctx" => "transaction", "mode" => Into::<&'static str>::into(&self.mode))),
             tx_size,
             tx_auth_info: tx.auth_info,
-            tags: Tags::new(),
+            etags: BTreeMap::new(),
             max_messages: remaining_messages,
             messages: Vec::new(),
             values: &mut self.values,
@@ -510,8 +532,9 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
     /// Transaction authentication info.
     tx_auth_info: transaction::AuthInfo,
 
-    /// Emitted tags.
-    tags: Tags,
+    /// Emitted event tags. Events are aggregated by tag key, the value
+    /// is a list of all emitted event values.
+    etags: EventTags,
 
     /// Maximum number of messages that can be emitted.
     max_messages: u32,
@@ -570,20 +593,35 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
     }
 
     fn emit_event<E: Event>(&mut self, event: E) {
-        self.tags.push(event.into_tag());
+        let etag = event.into_event_tag();
+        let tag = self.etags.entry(etag.key).or_insert_with(Vec::new);
+        tag.push(etag.value);
     }
 
-    fn emit_tag(&mut self, tag: Tag) {
-        self.tags.push(tag);
+    fn emit_etag(&mut self, etag: EventTag) {
+        let tag = self.etags.entry(etag.key).or_insert_with(Vec::new);
+        tag.push(etag.value);
+    }
+
+    fn emit_etags(&mut self, etags: EventTags) {
+        for (key, val) in etags {
+            let tag = self.etags.entry(key).or_insert_with(Vec::new);
+            tag.extend(val)
+        }
     }
 
     fn io_ctx(&self) -> IoContext {
         IoContext::create_child(&self.io_ctx)
     }
 
-    fn commit(self) -> (Tags, Vec<(roothash::Message, MessageEventHookInvocation)>) {
+    fn commit(
+        self,
+    ) -> (
+        EventTags,
+        Vec<(roothash::Message, MessageEventHookInvocation)>,
+    ) {
         self.store.commit();
-        (self.tags, self.messages)
+        (self.etags, self.messages)
     }
 
     fn value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
@@ -626,7 +664,7 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
             logger: self
                 .logger
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
-            block_tags: Tags::new(),
+            block_etags: EventTags::new(),
             max_messages: match mode {
                 Mode::SimulateTx => self.max_messages,
                 _ => remaining_messages,

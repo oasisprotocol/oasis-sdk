@@ -4,6 +4,7 @@ use std::{collections::BTreeMap, io::Write};
 use oasis_runtime_sdk::{
     context,
     error::Error,
+    event::IntoTags,
     module,
     modules::{
         accounts::{self, Module as Accounts, API as _},
@@ -275,7 +276,8 @@ fn test_hello_contract_call() {
             "there should only be one denomination"
         );
 
-        let (tags, messages) = tx_ctx.commit();
+        let (etags, messages) = tx_ctx.commit();
+        let tags = etags.into_tags();
         // Make sure no runtime messages got emitted.
         assert!(messages.is_empty(), "no runtime messages should be emitted");
         // Make sure a contract event was emitted and is properly formatted.
@@ -283,8 +285,10 @@ fn test_hello_contract_call() {
         assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
         assert_eq!(tags[1].key, b"contracts.0\x00\x00\x00\x01"); // contracts.1 (code = 1) event
 
-        let event: types::ContractEvent =
-            cbor::from_slice(&tags[1].value).expect("contract event should be wrapped");
+        let mut events: Vec<types::ContractEvent> =
+            cbor::from_slice(&tags[1].value).expect("contract events should be wrapped");
+        assert_eq!(events.len(), 1);
+        let event = events.pop().unwrap();
         assert_eq!(
             event.id, instance_id,
             "instance id in the event should match"

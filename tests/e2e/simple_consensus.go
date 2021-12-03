@@ -28,12 +28,14 @@ func ensureStakingEvent(log *logging.Logger, ch <-chan *staking.Event, check fun
 	log.Info("waiting for expected staking event...")
 	for {
 		select {
-		case ev := <-ch:
+		case ev, ok := <-ch:
+			if !ok {
+				return fmt.Errorf("channel closed")
+			}
 			log.Debug("received event", "event", ev)
 			if check(ev) {
 				return nil
 			}
-
 		case <-time.After(timeout):
 			return fmt.Errorf("timeout waiting for event")
 		}
@@ -59,14 +61,16 @@ func ensureRuntimeEvent(log *logging.Logger, ch <-chan *client.BlockEvents, chec
 	log.Info("waiting for expected runtime event...")
 	for {
 		select {
-		case bev := <-ch:
+		case bev, ok := <-ch:
+			if !ok {
+				return fmt.Errorf("channel closed")
+			}
 			log.Debug("received event", "block_event", bev)
 			for _, ev := range bev.Events {
 				if check(ev) {
 					return nil
 				}
 			}
-
 		case <-time.After(timeout):
 			return fmt.Errorf("timeout waiting for event")
 		}
@@ -130,7 +134,8 @@ func makeWithdrawCheck(from types.Address, nonce uint64, to types.Address, amoun
 }
 
 func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
 	cons := consensus.NewConsensusClient(conn)
 	stakingClient := cons.Staking()

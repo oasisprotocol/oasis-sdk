@@ -93,7 +93,7 @@ type RuntimeClient interface {
 // EventDecoder is an event decoder interface.
 type EventDecoder interface {
 	// DecodeEvent decodes an event. In case the event is not relevant, `nil, nil` should be returned.
-	DecodeEvent(*types.Event) (DecodedEvent, error)
+	DecodeEvent(*types.Event) ([]DecodedEvent, error)
 }
 
 // DecodedEvent is a decoded event.
@@ -394,7 +394,7 @@ OUTER:
 				return nil, fmt.Errorf("failed to decode event: %w", err)
 			}
 			if decoded != nil {
-				evs = append(evs, decoded)
+				evs = append(evs, decoded...)
 				continue OUTER
 			}
 		}

@@ -109,48 +109,49 @@ func (a *v1) GetEvents(ctx context.Context, round uint64) ([]*Event, error) {
 		if err != nil {
 			return nil, err
 		}
-		if ev == nil {
-			continue
+		for _, e := range ev {
+			evs = append(evs, e.(*Event))
 		}
-		evs = append(evs, ev.(*Event))
 	}
 
 	return evs, nil
 }
 
 // Implements client.EventDecoder.
-func (a *v1) DecodeEvent(event *types.Event) (client.DecodedEvent, error) {
+func (a *v1) DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
 	if event.Module != ModuleName {
 		return nil, nil
 	}
+	var events []client.DecodedEvent
 	switch event.Code {
 	case TransferEventCode:
-		var ev *TransferEvent
-		if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+		var evs []*TransferEvent
+		if err := cbor.Unmarshal(event.Value, &evs); err != nil {
 			return nil, fmt.Errorf("decode account transfer event value: %w", err)
 		}
-		return &Event{
-			Transfer: ev,
-		}, nil
+		for _, ev := range evs {
+			events = append(events, &Event{Transfer: ev})
+		}
 	case BurnEventCode:
-		var ev *BurnEvent
-		if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+		var evs []*BurnEvent
+		if err := cbor.Unmarshal(event.Value, &evs); err != nil {
 			return nil, fmt.Errorf("decode account burn event value: %w", err)
 		}
-		return &Event{
-			Burn: ev,
-		}, nil
+		for _, ev := range evs {
+			events = append(events, &Event{Burn: ev})
+		}
 	case MintEventCode:
-		var ev *MintEvent
-		if err := cbor.Unmarshal(event.Value, &ev); err != nil {
+		var evs []*MintEvent
+		if err := cbor.Unmarshal(event.Value, &evs); err != nil {
 			return nil, fmt.Errorf("decode account mint event value: %w", err)
 		}
-		return &Event{
-			Mint: ev,
-		}, nil
+		for _, ev := range evs {
+			events = append(events, &Event{Mint: ev})
+		}
 	default:
 		return nil, fmt.Errorf("invalid accounts event code: %v", event.Code)
 	}
+	return events, nil
 }
 
 // NewV1 generates a V1 client helper for the accounts module.

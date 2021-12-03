@@ -27,6 +27,7 @@ use crate::{
     callformat,
     context::{BatchContext, Context, RuntimeBatchContext, TxContext},
     error::{Error as _, RuntimeError},
+    event::IntoTags,
     keymanager::{KeyManagerClient, KeyManagerError},
     module::{self, AuthHandler, BlockHandler, MethodHandler},
     modules,
@@ -200,12 +201,11 @@ impl<R: Runtime> Dispatcher<R> {
             let weights = modules::core::Module::take_weights(&mut ctx);
 
             // Commit store and return emitted tags and messages.
-            let (tags, messages) = ctx.commit();
-
+            let (etags, messages) = ctx.commit();
             (
                 DispatchResult {
                     result,
-                    tags,
+                    tags: etags.into_tags(),
                     priority,
                     weights,
                     call_format_metadata,
@@ -450,7 +450,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         Ok(ExecuteBatchResult {
             results,
             messages,
-            block_tags,
+            block_tags: block_tags.into_tags(),
             batch_weight_limits: Some(block_weight_limits),
         })
     }
