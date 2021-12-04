@@ -20,7 +20,7 @@
         "@oasisprotocol/client": "^0.1.0-alpha7"
     },
     "devDependencies": {
-        "@oasisprotocol/client-rt": "^0.2.0-alpha8",
+        "@oasisprotocol/client-rt": "^0.2.0-alpha10",
         "buffer": "^6.0.3",
         "cypress": "^9.1.0",
         "prettier": "^2.5.0",
