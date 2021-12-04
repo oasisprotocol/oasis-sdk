@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.0-alpha10
+
+Spotlight change:
+
+- `event.Visitor` now iterates through event arrays, which is newly added in
+  the SDK itself.
+
 ## v0.2.0-alpha9
 
 Spotlight change:
