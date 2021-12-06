@@ -554,6 +554,11 @@ interface GRPCError {
     code?: number;
 }
 
+export class OasisCodedError extends Error {
+    oasisCode: number;
+    oasisModule: string;
+}
+
 export class GRPCWrapper {
     client: grpcWeb.AbstractClientBase;
     base: string;
@@ -569,7 +574,11 @@ export class GRPCWrapper {
     ): Promise<RESP> {
         // @ts-expect-error missing declaration
         const name = desc.name;
-        return this.client.thenableCall(this.base + name, request, null, desc).catch((e) => {
+        const method = this.base + name;
+        // Some browsers with enormous market share aren't able to preserve the stack between here
+        // and our `.catch` callback below. Save a copy explicitly.
+        const invocationStack = new Error().stack;
+        return this.client.thenableCall(method, request, null, desc).catch((e) => {
             if (e.message === 'Incomplete response') {
                 // This seems to be normal. Void methods don't send back anything, which makes
                 // grpc-web freak out. I don't know why we don't send a CBOR undefined or
@@ -585,18 +594,31 @@ export class GRPCWrapper {
                 // `errorToGrpc` leaves it blank.
                 if (details.length === 1 && details[0].type_url === '' && details[0].value) {
                     const grpcError = misc.fromCBOR(details[0].value) as GRPCError;
-                    if (!e.message) {
-                        e.message = `Message missing, module=${grpcError.module} code=${grpcError.code}`;
-                    }
-                    e.oasisCode = grpcError.code;
-                    e.oasisModule = grpcError.module;
+                    const innerMessage =
+                        e.message ||
+                        `Message missing, module=${grpcError.module} code=${grpcError.code}`;
+                    const message = `callUnary method ${method}: ${innerMessage}
+Invocation stack:
+${invocationStack}
+End of invocation stack`;
+                    // @ts-expect-error options and cause not modeled
+                    const wrapped = new OasisCodedError(message, {cause: e});
+                    wrapped.oasisCode = grpcError.code;
+                    wrapped.oasisModule = grpcError.module;
+                    throw wrapped;
                 }
             }
-            // grpc-web gives us a plain object with no stack trace, which is less helpful.
-            // Transfer it to an Error.
-            const error = new Error(e.message);
-            Object.assign(error, e);
-            throw error;
+            // Just in case there's some non-Error rejection reason that doesn't come with metadata
+            // from oasis-core as expected above, try using JSON to stringify it so that we don't
+            // end up with [object Object].
+            const innerMessage = e instanceof Error ? e.toString() : JSON.stringify(e);
+            const message = `callUnary method ${method}: ${innerMessage}
+Invocation stack:
+${invocationStack}
+End of invocation stack`;
+            // @ts-expect-error options and cause not modeled
+            const wrapped = new Error(message, {cause: e});
+            throw wrapped;
         });
     }
 
