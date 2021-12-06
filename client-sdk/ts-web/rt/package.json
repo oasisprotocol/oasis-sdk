@@ -14,7 +14,7 @@
         "test": "jest"
     },
     "dependencies": {
-        "@oasisprotocol/client": "^0.1.0-alpha7",
+        "@oasisprotocol/client": "^0.1.0-alpha8",
         "elliptic": "^6.5.3",
         "sha3": "^2.1.4"
     },
