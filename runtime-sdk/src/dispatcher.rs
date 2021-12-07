@@ -21,6 +21,7 @@ use oasis_core_runtime::{
         types::TxnBatch,
     },
     types::{CheckTxMetadata, CheckTxResult, BATCH_WEIGHT_LIMIT_QUERY_METHOD},
+    BUILD_INFO,
 };
 
 use crate::{
@@ -365,8 +366,19 @@ impl<R: Runtime> Dispatcher<R> {
                     Ok(cbor::to_value(block_weight_limits))
                 }
                 // Runtime methods.
-                _ => R::Modules::dispatch_query(ctx, method, args)
-                    .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?,
+                _ => {
+                    // Even though queries are not allowed to perform any private key ops, we
+                    // reduce the attack surface by completely disallowing them in secure builds.
+                    //
+                    // If one needs to perform runtime queries, she should use a regular build of
+                    // the runtime for that.
+                    if BUILD_INFO.is_secure {
+                        return Err(modules::core::Error::ForbiddenInSecureBuild.into());
+                    }
+
+                    R::Modules::dispatch_query(ctx, method, args)
+                        .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?
+                }
             }
         }))
         .map_err(|err| -> RuntimeError { Error::QueryAborted(format!("{:?}", err)).into() })?
@@ -387,7 +399,8 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         let key_manager = self
             .key_manager
             .as_ref()
-            .map(|mgr| mgr.with_context(rt_ctx.io_ctx.clone()));
+            // NOTE: We are explicitly allowing private key operations during execution.
+            .map(|mgr| mgr.with_private_context(rt_ctx.io_ctx.clone()));
         let mut ctx =
             RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
                 &mut rt_ctx,

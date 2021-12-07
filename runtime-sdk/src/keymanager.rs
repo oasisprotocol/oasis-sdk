@@ -49,8 +49,18 @@ impl KeyManagerClient {
     }
 
     /// Create a client proxy which will forward calls to the inner client using the given context.
+    /// Only public key queries will be allowed.
     pub(crate) fn with_context(&self, ctx: Arc<IoContext>) -> KeyManagerClientWithContext<'_> {
-        KeyManagerClientWithContext::new(self, ctx)
+        KeyManagerClientWithContext::new(self, ctx, false)
+    }
+
+    /// Create a client proxy which will forward calls to the inner client using the given context.
+    /// Public and private key queries will be allowed.
+    pub(crate) fn with_private_context(
+        &self,
+        ctx: Arc<IoContext>,
+    ) -> KeyManagerClientWithContext<'_> {
+        KeyManagerClientWithContext::new(self, ctx, true)
     }
 
     /// Clear local key cache.
@@ -85,14 +95,24 @@ impl KeyManagerClient {
 
 /// Convenience wrapper around an existing KeyManagerClient instance which uses
 /// a default io context for all calls.
+#[derive(Clone)]
 pub struct KeyManagerClientWithContext<'a> {
     parent: &'a KeyManagerClient,
+    allow_private: bool,
     ctx: Arc<IoContext>,
 }
 
 impl<'a> KeyManagerClientWithContext<'a> {
-    fn new(parent: &'a KeyManagerClient, ctx: Arc<IoContext>) -> KeyManagerClientWithContext<'a> {
-        KeyManagerClientWithContext { parent, ctx }
+    fn new(
+        parent: &'a KeyManagerClient,
+        ctx: Arc<IoContext>,
+        allow_private: bool,
+    ) -> KeyManagerClientWithContext<'a> {
+        KeyManagerClientWithContext {
+            parent,
+            ctx,
+            allow_private,
+        }
     }
 
     /// Clear local key cache.
@@ -109,6 +129,10 @@ impl<'a> KeyManagerClientWithContext<'a> {
         &self,
         key_pair_id: KeyPairId,
     ) -> Result<KeyPair, KeyManagerError> {
+        if !self.allow_private {
+            return Err(KeyManagerError::NotAuthenticated);
+        }
+
         self.parent
             .get_or_create_keys(IoContext::create_child(&self.ctx), key_pair_id)
             .await
@@ -143,15 +167,6 @@ impl<'a> KeyManagerClientWithContext<'a> {
         key_pair_id: KeyPairId,
     ) -> Result<Option<SignedPublicKey>, KeyManagerError> {
         TokioHandle::current().block_on(self.get_public_key_async(key_pair_id))
-    }
-}
-
-impl<'a> Clone for KeyManagerClientWithContext<'a> {
-    fn clone(&self) -> Self {
-        KeyManagerClientWithContext {
-            parent: self.parent,
-            ctx: self.ctx.clone(),
-        }
     }
 }
 
