@@ -597,14 +597,18 @@ export class GRPCWrapper {
                     const innerMessage =
                         e.message ||
                         `Message missing, module=${grpcError.module} code=${grpcError.code}`;
-                    const message = `callUnary method ${method}: ${innerMessage}
-Invocation stack:
-${invocationStack}
-End of invocation stack`;
+                    const message = `callUnary method ${method}: ${innerMessage}`;
                     // @ts-expect-error options and cause not modeled
                     const wrapped = new OasisCodedError(message, {cause: e});
                     wrapped.oasisCode = grpcError.code;
                     wrapped.oasisModule = grpcError.module;
+                    wrapped.stack += `
+Cause stack:
+${e.stack}
+End of cause stack
+Invocation stack:
+${invocationStack}
+End of invocation stack`;
                     throw wrapped;
                 }
             }
@@ -612,12 +616,16 @@ End of invocation stack`;
             // from oasis-core as expected above, try using JSON to stringify it so that we don't
             // end up with [object Object].
             const innerMessage = e instanceof Error ? e.toString() : JSON.stringify(e);
-            const message = `callUnary method ${method}: ${innerMessage}
+            const message = `callUnary method ${method}: ${innerMessage}`;
+            // @ts-expect-error options and cause not modeled
+            const wrapped = new Error(message, {cause: e});
+            wrapped.stack += `
+Cause stack:
+${e.stack}
+End of cause stack
 Invocation stack:
 ${invocationStack}
 End of invocation stack`;
-            // @ts-expect-error options and cause not modeled
-            const wrapped = new Error(message, {cause: e});
             throw wrapped;
         });
     }
