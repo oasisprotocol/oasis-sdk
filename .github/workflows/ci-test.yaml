@@ -210,7 +210,7 @@ jobs:
 
       - name: Upload screenshot
         if: failure()
-        uses: actions/upload-artifact@v2.2.4
+        uses: actions/upload-artifact@v2.3.1
         with:
           name: e2e-ts-web-core-screenshots
           path: client-sdk/ts-web/core/cypress/screenshots
@@ -251,7 +251,7 @@ jobs:
 
       - name: Upload screenshot
         if: failure()
-        uses: actions/upload-artifact@v2.2.3
+        uses: actions/upload-artifact@v2.3.1
         with:
           name: e2e-ts-web-ext-utils-screenshots
           path: client-sdk/ts-web/ext-utils/cypress/screenshots
@@ -321,14 +321,14 @@ jobs:
 
       - name: Upload screenshot
         if: failure()
-        uses: actions/upload-artifact@v2.2.4
+        uses: actions/upload-artifact@v2.3.1
         with:
           name: e2e-ts-web-rt-screenshots
           path: client-sdk/ts-web/rt/cypress/screenshots
 
       - name: Upload logs
         if: failure()
-        uses: actions/upload-artifact@v2.2.4
+        uses: actions/upload-artifact@v2.3.1
         with:
           name: e2e-ts-web-rt-logs
           path: |
