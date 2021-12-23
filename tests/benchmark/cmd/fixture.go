@@ -17,7 +17,6 @@ import (
 	cmdCommon "github.com/oasisprotocol/oasis-core/go/oasis-node/cmd/common"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
-	runtimeRegistry "github.com/oasisprotocol/oasis-core/go/runtime/registry"
 	"github.com/oasisprotocol/oasis-core/go/worker/common/p2p"
 )
 
@@ -54,15 +53,6 @@ func fixture() *oasis.NetworkFixture {
 			Values: []string{"100_000"},
 		},
 	}
-	clientExtraArgs := []oasis.Argument{
-		// We manually set the client runtime, as we only set the supproted
-		// runtime flag (and not the runtime binary), to skip CheckTx on the client.
-		{
-			Name:   runtimeRegistry.CfgSupported,
-			Values: []string{rtID},
-		},
-	}
-	clientExtraArgs = append(clientExtraArgs, computeExtraArgs...)
 
 	fixture := &oasis.NetworkFixture{
 		Network: oasis.NetworkCfg{
@@ -87,7 +77,15 @@ func fixture() *oasis.NetworkFixture {
 			{Entity: 1},
 		},
 		Clients: []oasis.ClientFixture{
-			{NodeFixture: oasis.NodeFixture{ExtraArgs: clientExtraArgs}},
+			{
+				RuntimeConfig: map[int]map[string]interface{}{
+
+					0: {
+						"allow_expensive_queries": true,
+					},
+				},
+				Runtimes: []int{0},
+			},
 		},
 		StorageWorkers: []oasis.StorageWorkerFixture{
 			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-1"}, Entity: 1, Runtimes: []int{0}, Backend: badger.BackendName},
