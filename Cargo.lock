@@ -3012,6 +3012,7 @@ version = "0.1.0"
 dependencies = [
  "oasis-cbor",
  "oasis-runtime-sdk",
+ "oasis-runtime-sdk-evm",
  "thiserror",
 ]
 
