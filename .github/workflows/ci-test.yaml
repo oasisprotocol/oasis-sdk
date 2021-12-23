@@ -97,7 +97,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up Go 1.17
-        uses: actions/setup-go@v2.1.4
+        uses: actions/setup-go@v2.1.5
         with:
           go-version: "1.17.x"
 
@@ -348,7 +348,7 @@ jobs:
           target: wasm32-unknown-unknown # For building test contracts.
 
       - name: Set up Go 1.17
-        uses: actions/setup-go@v2.1.4
+        uses: actions/setup-go@v2.1.5
         with:
           go-version: "1.17.x"
 
@@ -425,7 +425,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up Go 1.17
-        uses: actions/setup-go@v2.1.4
+        uses: actions/setup-go@v2.1.5
         with:
           go-version: "1.17.x"
 
@@ -450,7 +450,7 @@ jobs:
         uses: actions-rs/toolchain@v1
 
       - name: Set up Go 1.17
-        uses: actions/setup-go@v2.1.4
+        uses: actions/setup-go@v2.1.5
         with:
           go-version: "1.17.x"
 
