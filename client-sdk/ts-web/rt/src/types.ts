@@ -674,3 +674,17 @@ export interface ContractsCustomQuery {
      */
     data: Uint8Array;
 }
+
+/**
+ * An event emitted from a contract, wrapped to include additional metadata.
+ */
+export interface ContractsContractEvent {
+    /**
+     * Identifier of the instance that emitted the event.
+     */
+    id: oasis.types.longnum;
+    /**
+     * Raw event data emitted by the instance.
+     */
+    data?: Uint8Array;
+}
