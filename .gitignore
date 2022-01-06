@@ -24,3 +24,5 @@ coverage-e2e-*.txt
 examples/user-witness-flow/main
 tests/e2e/e2e
 tests/benchmark/benchmark
+cli/cli
+cli/oasis

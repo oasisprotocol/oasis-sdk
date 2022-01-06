@@ -42,6 +42,21 @@ updates:
       # client-sdk is replaced with the local up-to-date version.
       - dependency-name: github.com/oasisprotocol/oasis-sdk/client-sdk/go
 
+  # Manage cli package versions.
+  - package-ecosystem: gomod
+    directory: cli
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "cli:"
+    labels:
+      - c:deps
+    ignore:
+      # oasis-core is manually kept up to date.
+      - dependency-name: github.com/oasisprotocol/oasis-core/go
+      # client-sdk is replaced with the local up-to-date version.
+      - dependency-name: github.com/oasisprotocol/oasis-sdk/client-sdk/go
+
   # Manage Rust package versions.
   - package-ecosystem: cargo
     directory: /

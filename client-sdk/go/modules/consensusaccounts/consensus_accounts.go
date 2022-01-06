@@ -141,10 +141,14 @@ func NewV1(rc client.RuntimeClient) V1 {
 
 // NewDepositTx generates a new consensus.Deposit transaction.
 func NewDepositTx(fee *types.Fee, body *Deposit) *types.Transaction {
-	return types.NewTransaction(fee, methodDeposit, body)
+	tx := types.NewTransaction(fee, methodDeposit, body)
+	tx.AuthInfo.Fee.ConsensusMessages = 1
+	return tx
 }
 
 // NewWithdrawTx generates a new consensus.Withdraw transaction.
 func NewWithdrawTx(fee *types.Fee, body *Withdraw) *types.Transaction {
-	return types.NewTransaction(fee, methodWithdraw, body)
+	tx := types.NewTransaction(fee, methodWithdraw, body)
+	tx.AuthInfo.Fee.ConsensusMessages = 1
+	return tx
 }

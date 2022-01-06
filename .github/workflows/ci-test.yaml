@@ -110,6 +110,32 @@ jobs:
         with:
           directory: client-sdk/go
 
+  test-go-cli:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: test-cli
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Go 1.17
+        uses: actions/setup-go@v2.1.5
+        with:
+          go-version: "1.17.x"
+
+      - name: Test build
+        working-directory: cli
+        run: go build
+
+      - name: Unit tests with coverage
+        working-directory: cli
+        run: go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
+
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v2.1.0
+        with:
+          directory: cli
+
   typecheck:
     # NOTE: This name appears in GitHub's Checks API.
     name: typecheck

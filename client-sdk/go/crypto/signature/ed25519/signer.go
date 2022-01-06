@@ -26,6 +26,10 @@ func (w wrappedSigner) Reset() {
 	w.signer.Reset()
 }
 
+func (w wrappedSigner) Unwrap() coreSignature.Signer {
+	return w.signer
+}
+
 // WrapSigner wraps an Oasis Core Ed25519 signer.
 func WrapSigner(signer coreSignature.Signer) signature.Signer {
 	return wrappedSigner{signer: signer}
