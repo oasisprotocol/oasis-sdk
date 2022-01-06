@@ -17,7 +17,7 @@ oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 byteorder = "1.4.3"
 curve25519-dalek = "3.2.0"
 digest = "0.9.0"
-sha2 = "0.9.8"
+sha2 = "0.10.0"
 sha3 = { version = "0.9", default-features = false }
 k256 = { version = "0.9.6" }
 schnorrkel = "0.10.2"
