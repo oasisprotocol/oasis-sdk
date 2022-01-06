@@ -170,6 +170,6 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Lint markdown
-        uses: nosborn/github-action-markdown-cli@v2
+        uses: nosborn/github-action-markdown-cli@v3.0.1
         with:
           files: docs
