@@ -202,6 +202,8 @@ func PrintTransactionBeforeSigning(npw *NPWSelection, tx interface{}) {
 			fmt.Printf(" (%s)", npw.ParaTime.Description)
 		}
 		fmt.Println()
+	} else {
+		fmt.Println("Paratime: none (consensus layer)")
 	}
 
 	// Ask the user to confirm signing this transaction.
