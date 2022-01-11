@@ -14,6 +14,8 @@ var (
 	selectedNetwork  string
 	selectedParaTime string
 	selectedWallet   string
+
+	noParaTime bool
 )
 
 // SelectorFlags contains the common selector flags for network/paratime/wallet.
@@ -46,14 +48,16 @@ func GetNPWSelection(cfg *cliConfig.Config) *NPWSelection {
 		cobra.CheckErr(fmt.Errorf("network '%s' does not exist", s.NetworkName))
 	}
 
-	s.ParaTimeName = s.Network.ParaTimes.Default
-	if selectedParaTime != "" {
-		s.ParaTimeName = selectedParaTime
-	}
-	if s.ParaTimeName != "" {
-		s.ParaTime = s.Network.ParaTimes.All[s.ParaTimeName]
-		if s.ParaTime == nil {
-			cobra.CheckErr(fmt.Errorf("paratime '%s' does not exist", s.ParaTimeName))
+	if !noParaTime {
+		s.ParaTimeName = s.Network.ParaTimes.Default
+		if selectedParaTime != "" {
+			s.ParaTimeName = selectedParaTime
+		}
+		if s.ParaTimeName != "" {
+			s.ParaTime = s.Network.ParaTimes.All[s.ParaTimeName]
+			if s.ParaTime == nil {
+				cobra.CheckErr(fmt.Errorf("paratime '%s' does not exist", s.ParaTimeName))
+			}
 		}
 	}
 
@@ -75,5 +79,6 @@ func init() {
 	SelectorFlags = flag.NewFlagSet("", flag.ContinueOnError)
 	SelectorFlags.StringVar(&selectedNetwork, "network", "", "explicitly set network to use")
 	SelectorFlags.StringVar(&selectedParaTime, "paratime", "", "explicitly set paratime to use")
+	SelectorFlags.BoolVar(&noParaTime, "no-paratime", false, "explicitly set that no paratime should be used")
 	SelectorFlags.StringVar(&selectedWallet, "wallet", "", "explicitly set wallet to use")
 }

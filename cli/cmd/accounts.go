@@ -339,10 +339,6 @@ var (
 			if npw.Wallet == nil {
 				cobra.CheckErr("no wallets configured")
 			}
-			if npw.ParaTime == nil {
-				// TODO: Support consensus layer transfers as well.
-				cobra.CheckErr("no paratimes configured")
-			}
 
 			// When not in offline mode, connect to the given network endpoint.
 			ctx := context.Background()
@@ -357,21 +353,39 @@ var (
 			toAddr, err := helpers.ResolveAddress(npw.Network, to)
 			cobra.CheckErr(err)
 
-			// Parse amount.
-			// TODO: This should actually query the ParaTime (or config) to check what the consensus
-			//       layer denomination is in the ParaTime. Assume NATIVE for now.
-			amountBaseUnits, err := helpers.ParseParaTimeDenomination(npw.ParaTime, amount, types.NativeDenomination)
-			cobra.CheckErr(err)
-
-			// Prepare transaction.
-			tx := accounts.NewTransferTx(nil, &accounts.Transfer{
-				To:     *toAddr,
-				Amount: *amountBaseUnits,
-			})
-
 			wallet := common.LoadWallet(cfg, npw.WalletName)
-			sigTx, err := common.SignParaTimeTransaction(ctx, npw, wallet, conn, tx)
-			cobra.CheckErr(err)
+
+			var sigTx interface{}
+			switch npw.ParaTime {
+			case nil:
+				// Consensus layer transfer.
+				amount, err := helpers.ParseConsensusDenomination(npw.Network, amount)
+				cobra.CheckErr(err)
+
+				// Prepare transaction.
+				tx := staking.NewTransferTx(0, nil, &staking.Transfer{
+					To:     toAddr.ConsensusAddress(),
+					Amount: *amount,
+				})
+
+				sigTx, err = common.SignConsensusTransaction(ctx, npw, wallet, conn, tx)
+				cobra.CheckErr(err)
+			default:
+				// ParaTime transfer.
+				// TODO: This should actually query the ParaTime (or config) to check what the consensus
+				//       layer denomination is in the ParaTime. Assume NATIVE for now.
+				amountBaseUnits, err := helpers.ParseParaTimeDenomination(npw.ParaTime, amount, types.NativeDenomination)
+				cobra.CheckErr(err)
+
+				// Prepare transaction.
+				tx := accounts.NewTransferTx(nil, &accounts.Transfer{
+					To:     *toAddr,
+					Amount: *amountBaseUnits,
+				})
+
+				sigTx, err = common.SignParaTimeTransaction(ctx, npw, wallet, conn, tx)
+				cobra.CheckErr(err)
+			}
 
 			common.BroadcastTransaction(ctx, npw.ParaTime, conn, sigTx, nil)
 		},
