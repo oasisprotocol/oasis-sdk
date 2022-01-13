@@ -19,8 +19,7 @@ static_resources:
               routes:
               - match:
                   safe_regex:
-                    google_re2:
-                      max_program_size: 1000000
+                    google_re2: {}
                     regex: '/oasis-core\.(Registry/(GetNodes)|Staking/(Account|DebondingDelegationInfosFor|DelegationInfosFor|DelegationsTo|GetEvents)|Consensus/(SubmitTx|EstimateGas|GetSignerNonce|GetBlock|GetTransactionsWithResults|GetGenesisDocument|GetChainContext|WatchBlocks)|NodeController/(WaitReady))'
                 route:
                   cluster: oasis_node_grpc
@@ -55,6 +54,13 @@ static_resources:
               pipe:
                 path: /tmp/oasis-net-runner-sdk-core/net-runner/network/client-0/internal.sock
     http2_protocol_options: {}
+layered_runtime:
+  layers:
+  - name: static
+    static_layer:
+      re2:
+        max_program_size:
+          error_level: 1000000
 # admin:
 #   access_log_path: /dev/null
 #   address:
