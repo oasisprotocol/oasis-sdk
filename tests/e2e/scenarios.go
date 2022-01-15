@@ -17,18 +17,18 @@ const (
 var (
 	// SimpleKVRuntime is the basic network + client test case with runtime support.
 	SimpleKVRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-keyvalue", []RunTestFunction{
-		SimpleKVTest,
-		KVEventTest,
-		KVBalanceTest,
-		KVTransferTest,
-		KVDaveTest,
-		KVMultisigTest,
-		KVRewardsTest,
+		// SimpleKVTest,
+		// KVEventTest,
+		// KVBalanceTest,
+		// KVTransferTest,
+		// KVDaveTest,
+		// KVMultisigTest,
+		// KVRewardsTest,
 		KVTxGenTest,
-		ContractsTest,
-		ConfidentialTest,
-		TransactionsQueryTest,
-		BlockQueryTest,
+		// ContractsTest,
+		// ConfidentialTest,
+		// TransactionsQueryTest,
+		// BlockQueryTest,
 	})
 
 	// SimpleConsensusRuntime is the simple-consensus runtime test.

@@ -212,6 +212,37 @@ func Generate(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 	for {
 		select {
 		case <-ctx.Done():
+			ctx2 := context.TODO()
+			block, err := rtc.GetBlock(ctx2, client.RoundLatest)
+			if err != nil {
+				panic(err)
+			}
+			middleRound := block.Header.Round - 5
+			transactions, err := rtc.GetTransactions(ctx2, middleRound)
+			if err != nil {
+				panic(err)
+			}
+			for i := 1; i < len(transactions); i++ {
+				priortySim := func(utx *types.UnverifiedTransaction) uint64 {
+					var tx types.Transaction
+					cbor.Unmarshal(utx.Body, &tx)
+					r := tx.AuthInfo.Fee.Amount.Amount.Clone()
+					if err = r.Quo(quantity.NewFromUint64(tx.AuthInfo.Fee.Gas)); err != nil {
+						panic(err)
+					}
+					rbi := r.ToBigInt()
+					if !rbi.IsUint64() {
+						panic(fmt.Sprintf("priority %v too high", r))
+					}
+					return rbi.Uint64()
+				}
+				rPrev := priortySim(transactions[i-1])
+				r := priortySim(transactions[i])
+				if r > rPrev {
+					panic(fmt.Sprintf("priority wrong %v -- %v", rPrev, r))
+				}
+			}
+			panic(fmt.Sprintf("priority correct %d", len(transactions)))
 			return genErrCount, subErrCount, okCount, nil
 		case err := <-errCh:
 			return genErrCount, subErrCount, okCount, err
@@ -222,7 +253,7 @@ func Generate(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 
 			go func(acct signature.Signer, gen GenerateTx) {
 				// Generate random transaction or perform random query.
-				if tx, err := gen(ctx, rtc, rng, acct, accounts); err != nil { //nolint: nestif
+				if tx, err := gen(ctx, rtc, rng, acct, accounts); err != nil { // nolint: nestif
 					atomic.AddUint64(&genErrCount, 1)
 				} else {
 					// The tx generator can choose not to generate a tx

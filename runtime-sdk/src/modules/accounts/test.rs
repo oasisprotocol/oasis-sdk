@@ -16,6 +16,7 @@ use crate::{
         transaction,
     },
 };
+use crate::modules::core::API;
 
 use super::{
     types::*, Error, Genesis, Module as Accounts, Parameters, ADDRESS_COMMON_POOL,
@@ -441,6 +442,9 @@ fn test_authenticate_tx() {
     let nonce = Accounts::get_nonce(ctx.runtime_state(), keys::alice::address())
         .expect("get_nonce should succeed");
     assert_eq!(nonce, 1, "nonce should be incremented");
+    // Check priority
+    let priority = core::Module::take_priority(&mut ctx);
+    assert_eq!(priority, 1, "priority should be whatever");
 
     // Should fail with an invalid nonce.
     let result = Accounts::authenticate_tx(&mut ctx, &tx);
