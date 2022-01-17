@@ -530,6 +530,69 @@ fn test_get_batch_weight_limits_query() {
 }
 
 #[test]
+fn test_check_weights() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+
+    Core::set_params(
+        ctx.runtime_state(),
+        Parameters {
+            max_batch_gas: u64::MAX,
+            max_tx_signers: 8,
+            max_multisig_signers: 8,
+            gas_costs: super::GasCosts {
+                tx_byte: 0,
+                auth_signature: GasWasterRuntime::AUTH_SIGNATURE_GAS,
+                auth_multisig_signer: GasWasterRuntime::AUTH_MULTISIG_GAS,
+                callformat_x25519_deoxysii: 0,
+            },
+            min_gas_price: {
+                let mut mgp = BTreeMap::new();
+                mgp.insert(token::Denomination::NATIVE, 0);
+                mgp
+            },
+        },
+    );
+
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: GasWasterModule::METHOD_WASTE_GAS.to_owned(),
+            body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
+            fee: transaction::Fee {
+                amount: token::BaseUnits::new(10_000, token::Denomination::NATIVE),
+                gas: 1_000,
+                consensus_messages: 1,
+            },
+        },
+    };
+
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+        Core::before_handle_call(&mut tx_ctx, &call).unwrap();
+
+        let weights = Core::take_weights(&mut tx_ctx);
+
+        assert_eq!(
+            weights.get(&GAS_WEIGHT_NAME.into()),
+            Some(&1_000),
+            "gas weight should be correct"
+        );
+        assert_eq!(
+            weights.get(&TransactionWeight::ConsensusMessages),
+            Some(&1),
+            "consensus messages weight should be correct"
+        );
+    });
+}
+
+#[test]
 fn test_min_gas_price() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
