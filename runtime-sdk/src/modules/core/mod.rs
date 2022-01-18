@@ -247,8 +247,6 @@ impl API for Module {
 
         *ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default() = new_gas_used;
 
-        Self::add_weight(ctx, GAS_WEIGHT_NAME.into(), gas)?;
-
         Ok(())
     }
 
@@ -505,6 +503,10 @@ impl module::AuthHandler for Module {
                 Self::use_tx_gas(ctx, params.gas_costs.callformat_x25519_deoxysii)?
             }
         }
+
+        // Set weight based on configured gas limit.
+        let gas = ctx.tx_auth_info().fee.gas;
+        Self::add_weight(ctx, GAS_WEIGHT_NAME.into(), gas)?;
 
         // Attempt to limit the maximum number of consensus messages and add appropriate weights.
         let consensus_messages = ctx.tx_auth_info().fee.consensus_messages;
