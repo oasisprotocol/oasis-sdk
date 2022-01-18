@@ -220,9 +220,11 @@ impl<R: Runtime> Dispatcher<R> {
             return Err(err);
         }
 
-        // Forward any emitted messages.
-        ctx.emit_messages(messages)
-            .expect("per-tx context has already enforced the limits");
+        // Forward any emitted messages if we are not in check tx context.
+        if !ctx.is_check_only() {
+            ctx.emit_messages(messages)
+                .expect("per-tx context has already enforced the limits");
+        }
 
         Ok(result)
     }

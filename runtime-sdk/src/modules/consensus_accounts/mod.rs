@@ -21,7 +21,7 @@ use crate::{
         address::Address,
         message::{MessageEvent, MessageEventHookInvocation, MessageResult},
         token,
-        transaction::{AuthInfo, TransactionWeight},
+        transaction::AuthInfo,
     },
 };
 
@@ -160,18 +160,6 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         to: Address,
         amount: token::BaseUnits,
     ) -> Result<(), Error> {
-        if ctx.is_check_only() {
-            // In case this is not check only this weight will be emitted from Consensus::withdraw
-            // below, same as the amount conversion check.
-            <C::Runtime as Runtime>::Core::add_weight(
-                ctx,
-                TransactionWeight::ConsensusMessages,
-                1,
-            )?;
-            Consensus::amount_to_consensus(ctx, amount.amount())?;
-            return Ok(());
-        }
-
         // XXX: could check consensus state if allowance for the runtime account
         // exists, but consensus state could be outdated since last block, so
         // just try to withdraw.
@@ -203,23 +191,6 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         to: Address,
         amount: token::BaseUnits,
     ) -> Result<(), Error> {
-        if ctx.is_check_only() {
-            // In case this is not check only this weight will be emitted from Consensus::transfer
-            // below, same as the amount conversion check.
-            <C::Runtime as Runtime>::Core::add_weight(
-                ctx,
-                TransactionWeight::ConsensusMessages,
-                1,
-            )?;
-            Consensus::amount_to_consensus(ctx, amount.amount())?;
-            return Ok(());
-        }
-
-        // Transfer the given amount to the module's withdrawal account to make sure the tokens
-        // remain available until actually withdrawn.
-        Accounts::transfer(ctx, from, *ADDRESS_PENDING_WITHDRAWAL, &amount)
-            .map_err(|_| Error::InsufficientWithdrawBalance)?;
-
         // Transfer out of runtime account and update the account state if successful.
         Consensus::transfer(
             ctx,
@@ -235,6 +206,15 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
                 },
             ),
         )?;
+
+        if ctx.is_check_only() {
+            return Ok(());
+        }
+
+        // Transfer the given amount to the module's withdrawal account to make sure the tokens
+        // remain available until actually withdrawn.
+        Accounts::transfer(ctx, from, *ADDRESS_PENDING_WITHDRAWAL, &amount)
+            .map_err(|_| Error::InsufficientWithdrawBalance)?;
 
         Ok(())
     }
