@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use oasis_runtime_sdk::{
     module::AuthHandler as _,
-    modules::{core, core::Module as Core},
+    modules::core,
     testing::mock,
     types::{token, transaction},
     Context as _, Module as _,
@@ -12,7 +12,7 @@ use oasis_runtime_sdk::{
 fn test_impl_for_tuple() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
-    Core::set_params(
+    <super::Runtime as oasis_runtime_sdk::Runtime>::Core::set_params(
         ctx.runtime_state(),
         core::Parameters {
             max_batch_gas: u64::MAX,

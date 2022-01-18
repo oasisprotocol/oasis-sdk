@@ -14,7 +14,8 @@ use crate::{
     error, module,
     module::{CallResult, Module as _, Parameters as _},
     modules,
-    modules::core::{Error as CoreError, Module as Core, API as _},
+    modules::core::{Error as CoreError, API as _},
+    runtime::Runtime,
     storage,
     storage::Prefix,
     types::{
@@ -666,7 +667,7 @@ impl Module {
             return Err(Error::Forbidden);
         }
 
-        Core::use_tx_gas(ctx, params.gas_costs.tx_transfer)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_transfer)?;
 
         Self::transfer(ctx, ctx.tx_caller_address(), body.to, &body.amount)?;
 
@@ -880,7 +881,10 @@ impl module::AuthHandler for Module {
 
             let gas_price = tx.auth_info.fee.gas_price();
             // Bump transaction priority.
-            Core::add_priority(ctx, gas_price.try_into().unwrap_or(u64::MAX))?;
+            <C::Runtime as Runtime>::Core::add_priority(
+                ctx,
+                gas_price.try_into().unwrap_or(u64::MAX),
+            )?;
         }
         Self::update_signer_nonces(ctx, tx)
     }

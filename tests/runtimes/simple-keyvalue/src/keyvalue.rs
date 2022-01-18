@@ -11,8 +11,9 @@ use oasis_runtime_sdk::{
     module::{CallResult, Module as _},
     modules::{
         core,
-        core::{Error as CoreError, Module as Core, API as _},
+        core::{Error as CoreError, API as _},
     },
+    runtime::Runtime,
     types::{address, transaction},
 };
 
@@ -184,7 +185,7 @@ impl Module {
             Some(_) => params.gas_costs.insert_existing,
         };
         // We must drop ts and store so that use_gas can borrow ctx.
-        Core::use_tx_gas(ctx, cost)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, cost)?;
 
         if ctx.is_check_only() {
             return Ok(());
@@ -210,7 +211,7 @@ impl Module {
             Some(_) => params.gas_costs.remove_existing,
         };
         // We must drop ts and store so that use_gas can borrow ctx.
-        Core::use_tx_gas(ctx, cost)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, cost)?;
 
         if ctx.is_check_only() {
             return Ok(());

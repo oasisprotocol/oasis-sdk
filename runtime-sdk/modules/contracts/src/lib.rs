@@ -17,10 +17,8 @@ use oasis_runtime_sdk::{
     error, module,
     module::{CallResult, Module as _},
     modules,
-    modules::{
-        accounts::API as _,
-        core::{Module as Core, API as _},
-    },
+    modules::{accounts::API as _, core::API as _},
+    runtime::Runtime,
     storage::{self, Store as _},
 };
 
@@ -343,8 +341,8 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Account for base gas.
-        Core::use_tx_gas(ctx, params.gas_costs.tx_upload)?;
-        Core::use_tx_gas(
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_upload)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(
             ctx,
             params
                 .gas_costs
@@ -362,7 +360,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Account for extra gas needed after decompression.
         let plain_code_size: u32 = code.len().try_into().unwrap();
-        Core::use_tx_gas(
+        <C::Runtime as Runtime>::Core::use_tx_gas(
             ctx,
             params
                 .gas_costs
@@ -388,7 +386,7 @@ impl<Cfg: Config> Module<Cfg> {
         if inst_code_size > params.max_code_size {
             return Err(Error::CodeTooLarge(inst_code_size, params.max_code_size));
         }
-        Core::use_tx_gas(
+        <C::Runtime as Runtime>::Core::use_tx_gas(
             ctx,
             params
                 .gas_costs
@@ -427,7 +425,7 @@ impl<Cfg: Config> Module<Cfg> {
         let params = Self::params(ctx.runtime_state());
         let creator = ctx.tx_caller_address();
 
-        Core::use_tx_gas(ctx, params.gas_costs.tx_instantiate)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_instantiate)?;
 
         if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
             // Only fast checks are allowed.
@@ -469,7 +467,7 @@ impl<Cfg: Config> Module<Cfg> {
         };
         let mut exec_ctx = abi::ExecutionContext {
             caller_address: ctx.tx_caller_address(),
-            gas_limit: Core::remaining_tx_gas(ctx),
+            gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
             instance_info: &instance_info,
             tx_context: ctx,
             params: &params,
@@ -494,7 +492,7 @@ impl<Cfg: Config> Module<Cfg> {
         let params = Self::params(ctx.runtime_state());
         let caller = ctx.tx_caller_address();
 
-        Core::use_tx_gas(ctx, params.gas_costs.tx_call)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_call)?;
 
         if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
             // Only fast checks are allowed.
@@ -519,7 +517,7 @@ impl<Cfg: Config> Module<Cfg> {
         };
         let mut exec_ctx = abi::ExecutionContext {
             caller_address: ctx.tx_caller_address(),
-            gas_limit: Core::remaining_tx_gas(ctx),
+            gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
             instance_info: &instance_info,
             tx_context: ctx,
             params: &params,
@@ -545,7 +543,7 @@ impl<Cfg: Config> Module<Cfg> {
         let params = Self::params(ctx.runtime_state());
         let caller = ctx.tx_caller_address();
 
-        Core::use_tx_gas(ctx, params.gas_costs.tx_upgrade)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_upgrade)?;
 
         if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
             // Only fast checks are allowed.
@@ -574,7 +572,7 @@ impl<Cfg: Config> Module<Cfg> {
         };
         let mut exec_ctx = abi::ExecutionContext {
             caller_address: ctx.tx_caller_address(),
-            gas_limit: Core::remaining_tx_gas(ctx),
+            gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
             instance_info: &instance_info,
             tx_context: ctx,
             params: &params,
@@ -598,7 +596,7 @@ impl<Cfg: Config> Module<Cfg> {
             };
             let mut exec_ctx = abi::ExecutionContext {
                 caller_address: ctx.tx_caller_address(),
-                gas_limit: Core::remaining_tx_gas(ctx),
+                gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
                 instance_info: &instance_info,
                 tx_context: ctx,
                 params: &params,
