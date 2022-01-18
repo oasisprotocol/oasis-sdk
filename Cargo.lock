@@ -949,8 +949,7 @@ dependencies = [
 [[package]]
 name = "evm"
 version = "0.33.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "408ffdd509e16de15ea9b51f5333748f6086601f29d445d2ba53dd7e95565574"
+source = "git+https://github.com/oasisprotocol/evm?tag=v0.33.1-oasis#020f1e66ff2246f5558aa7e57d1e64c082989bcb"
 dependencies = [
  "auto_impl",
  "environmental",
@@ -970,8 +969,7 @@ dependencies = [
 [[package]]
 name = "evm-core"
 version = "0.33.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4dfe4f2a56c4c05a8107b8596380e2332fc2019ffcf56b8f2d01971393a30c4d"
+source = "git+https://github.com/oasisprotocol/evm?tag=v0.33.1-oasis#020f1e66ff2246f5558aa7e57d1e64c082989bcb"
 dependencies = [
  "funty",
  "parity-scale-codec",
@@ -983,8 +981,7 @@ dependencies = [
 [[package]]
 name = "evm-gasometer"
 version = "0.33.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c446679607eacac4e8c8738e20c97ea9b3c86eddd8b43666744b05f416037bd9"
+source = "git+https://github.com/oasisprotocol/evm?tag=v0.33.1-oasis#020f1e66ff2246f5558aa7e57d1e64c082989bcb"
 dependencies = [
  "environmental",
  "evm-core",
@@ -995,9 +992,9 @@ dependencies = [
 [[package]]
 name = "evm-runtime"
 version = "0.33.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "419e8434ac6e850a8a4bc09a19406264582d1940913b2920be2af948f4ffc49b"
+source = "git+https://github.com/oasisprotocol/evm?tag=v0.33.1-oasis#020f1e66ff2246f5558aa7e57d1e64c082989bcb"
 dependencies = [
+ "auto_impl",
  "environmental",
  "evm-core",
  "primitive-types",
