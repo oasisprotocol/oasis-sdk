@@ -1,5 +1,8 @@
 //! Core definitions module.
-use std::{collections::BTreeMap, convert::TryInto};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    convert::TryInto,
+};
 
 use anyhow::anyhow;
 use thiserror::Error;
@@ -181,6 +184,14 @@ pub struct Genesis {
     pub parameters: Parameters,
 }
 
+/// Local configuration that can be provided by the node operator.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct LocalConfig {
+    /// Minimum gas price to accept.
+    #[cbor(optional, default)]
+    pub min_gas_price: BTreeMap<token::Denomination, u128>,
+}
+
 /// State schema constants.
 pub mod state {
     /// Runtime metadata.
@@ -190,7 +201,18 @@ pub mod state {
 }
 
 /// Module configuration.
-pub trait Config: 'static {}
+#[allow(clippy::declare_interior_mutable_const)]
+pub trait Config: 'static {
+    /// Default local minimum gas price configuration that is used in case no overrides are set in
+    /// local per-node configuration.
+    const DEFAULT_LOCAL_MIN_GAS_PRICE: once_cell::unsync::Lazy<
+        BTreeMap<token::Denomination, u128>,
+    > = once_cell::unsync::Lazy::new(BTreeMap::new);
+
+    /// Methods which are exempt from minimum gas price requirements.
+    const MIN_GAS_PRICE_EXEMPT_METHODS: once_cell::unsync::Lazy<BTreeSet<&'static str>> =
+        once_cell::unsync::Lazy::new(BTreeSet::new);
+}
 
 pub struct Module<Cfg: Config> {
     _cfg: std::marker::PhantomData<Cfg>,
@@ -420,7 +442,60 @@ impl<Cfg: Config> Module<Cfg> {
     ) -> Result<BTreeMap<token::Denomination, u128>, Error> {
         let params = Self::params(ctx.runtime_state());
 
-        Ok(params.min_gas_price)
+        // Generate a combined view with local overrides.
+        let mut mgp = params.min_gas_price;
+        for (denom, price) in mgp.iter_mut() {
+            let local_mgp = Self::get_local_min_gas_price(ctx, denom);
+            if local_mgp > *price {
+                *price = local_mgp;
+            }
+        }
+
+        Ok(mgp)
+    }
+
+    fn get_local_min_gas_price<C: Context>(ctx: &mut C, denom: &token::Denomination) -> u128 {
+        #[allow(clippy::borrow_interior_mutable_const)]
+        ctx.local_config(MODULE_NAME)
+            .as_ref()
+            .map(|cfg: &LocalConfig| cfg.min_gas_price.get(denom).copied())
+            .unwrap_or_else(|| Cfg::DEFAULT_LOCAL_MIN_GAS_PRICE.get(denom).copied())
+            .unwrap_or_default()
+    }
+
+    fn enforce_min_gas_price<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {
+        // If the method is exempt from min gas price requirements, checks always pass.
+        #[allow(clippy::borrow_interior_mutable_const)]
+        if Cfg::MIN_GAS_PRICE_EXEMPT_METHODS.contains(call.method.as_str()) {
+            return Ok(());
+        }
+
+        let params = Self::params(ctx.runtime_state());
+        let fee = ctx.tx_auth_info().fee.clone();
+        let denom = fee.amount.denomination();
+
+        match params.min_gas_price.get(denom) {
+            // If the denomination is not among the global set, reject.
+            None => return Err(Error::GasPriceTooLow),
+
+            // Otherwise, allow overrides during local checks.
+            Some(min_gas_price) => {
+                if ctx.is_check_only() {
+                    let local_mgp = Self::get_local_min_gas_price(ctx, denom);
+
+                    // Reject during local checks.
+                    if fee.gas_price() < local_mgp {
+                        return Err(Error::GasPriceTooLow);
+                    }
+                }
+
+                if &fee.gas_price() < min_gas_price {
+                    return Err(Error::GasPriceTooLow);
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -451,21 +526,11 @@ impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
     }
 
     fn before_handle_call<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
-
-        // Check that the fee's denomination is in the min_gas_price map and
-        // that the gas price is higher or equal than the set minimum.
-        let fee = ctx.tx_auth_info().fee.clone();
-        match params.min_gas_price.get(fee.amount.denomination()) {
-            None => return Err(Error::GasPriceTooLow),
-            Some(min_gas_price) => {
-                if &fee.gas_price() < min_gas_price {
-                    return Err(Error::GasPriceTooLow);
-                }
-            }
-        }
+        // Enforce minimum gas price constraints.
+        Self::enforce_min_gas_price(ctx, call)?;
 
         // Charge gas for transaction size.
+        let params = Self::params(ctx.runtime_state());
         Self::use_tx_gas(
             ctx,
             params
