@@ -88,7 +88,7 @@ impl sdk::Runtime for Runtime {
                     // Alice.
                     b.insert(sdk::testing::keys::alice::address(), {
                         let mut d = BTreeMap::new();
-                        d.insert(Denomination::NATIVE, 10_003_000);
+                        d.insert(Denomination::NATIVE, 100_003_000);
                         d
                     });
                     // Bob.
@@ -119,7 +119,7 @@ impl sdk::Runtime for Runtime {
                 },
                 total_supplies: {
                     let mut ts = BTreeMap::new();
-                    ts.insert(Denomination::NATIVE, 10_016_100);
+                    ts.insert(Denomination::NATIVE, 100_016_100);
                     ts
                 },
                 ..Default::default()

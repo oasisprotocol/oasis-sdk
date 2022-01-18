@@ -50,7 +50,7 @@ func RegisterScenarios() error {
 	cmd.RegisterScenarioParams(RuntimeParamsDummy.Name(), RuntimeParamsDummy.Parameters())
 
 	SimpleKVRuntime.Flags.Int(CfgTxGenNumAccounts, 10, "number of accounts to use in txgen test")
-	SimpleKVRuntime.Flags.Uint64(CfgTxGenCoinsPerAcct, 200, "number of coins to allocate to each account in txgen test")
+	SimpleKVRuntime.Flags.Uint64(CfgTxGenCoinsPerAcct, 1_000_000, "number of coins to allocate to each account in txgen test")
 	SimpleKVRuntime.Flags.Duration(CfgTxGenDuration, 60*time.Second, "duration of txgen test")
 
 	for _, s := range []scenario.Scenario{

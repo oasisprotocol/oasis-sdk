@@ -176,7 +176,7 @@ func CreateAndFundAccount(ctx context.Context, rtc client.RuntimeClient, funder 
 
 // RandomizeFee generates random fee parameters for the transaction.
 func RandomizeFee(ctx context.Context, rng *rand.Rand, tx *types.Transaction) error {
-	const maxBaseUnits = 10
+	const maxBaseUnits = 20_000
 	feeAmount := rng.Uint64() % maxBaseUnits
 
 	tx.AuthInfo.Fee.Amount = types.NewBaseUnits(*quantity.NewFromUint64(feeAmount), types.NativeDenomination)

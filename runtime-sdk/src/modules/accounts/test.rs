@@ -9,7 +9,7 @@ use anyhow::anyhow;
 use crate::{
     context::{BatchContext, Context},
     module::{AuthHandler, BlockHandler, InvariantHandler, MethodHandler},
-    modules::core,
+    modules::{core, core::API as _},
     testing::{keys, mock},
     types::{
         token::{BaseUnits, Denomination},
@@ -441,6 +441,9 @@ fn test_authenticate_tx() {
     let nonce = Accounts::get_nonce(ctx.runtime_state(), keys::alice::address())
         .expect("get_nonce should succeed");
     assert_eq!(nonce, 1, "nonce should be incremented");
+    // Check priority.
+    let priority = core::Module::<mock::Config>::take_priority(&mut ctx);
+    assert_eq!(priority, 1, "priority should be equal to gas price");
 
     // Should fail with an invalid nonce.
     let result = Accounts::authenticate_tx(&mut ctx, &tx);
