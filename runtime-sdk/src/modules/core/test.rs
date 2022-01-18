@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use oasis_core_runtime::types::BATCH_WEIGHT_LIMIT_QUERY_METHOD;
 
@@ -127,15 +127,41 @@ fn test_query_min_gas_price() {
             min_gas_price: {
                 let mut mgp = BTreeMap::new();
                 mgp.insert(token::Denomination::NATIVE, 123);
+                mgp.insert("SMALLER".parse().unwrap(), 1000);
                 mgp
             },
         },
     );
 
     let mgp = Core::query_min_gas_price(&mut ctx, ()).expect("query_min_gas_price should succeed");
-    assert!(mgp.len() == 1);
+    assert!(mgp.len() == 2);
     assert!(mgp.contains_key(&token::Denomination::NATIVE));
     assert!(*mgp.get(&token::Denomination::NATIVE).unwrap() == 123);
+    assert!(mgp.contains_key(&"SMALLER".parse().unwrap()));
+    assert!(*mgp.get(&"SMALLER".parse().unwrap()).unwrap() == 1000);
+
+    // Test local override.
+    struct MinGasPriceOverride;
+
+    impl super::Config for MinGasPriceOverride {
+        const DEFAULT_LOCAL_MIN_GAS_PRICE: once_cell::unsync::Lazy<
+            BTreeMap<token::Denomination, u128>,
+        > = once_cell::unsync::Lazy::new(|| {
+            BTreeMap::from([
+                (token::Denomination::NATIVE, 10_000),
+                ("TEST".parse().unwrap(), 1_000),
+                ("SMALLER".parse().unwrap(), 10),
+            ])
+        });
+    }
+
+    let mgp = super::Module::<MinGasPriceOverride>::query_min_gas_price(&mut ctx, ())
+        .expect("query_min_gas_price should succeed");
+    assert!(mgp.len() == 2);
+    assert!(mgp.contains_key(&token::Denomination::NATIVE));
+    assert!(*mgp.get(&token::Denomination::NATIVE).unwrap() == 10_000);
+    assert!(mgp.contains_key(&"SMALLER".parse().unwrap()));
+    assert!(*mgp.get(&"SMALLER".parse().unwrap()).unwrap() == 1000);
 }
 
 // Module that implements the gas waster method.
@@ -621,6 +647,7 @@ fn test_min_gas_price() {
             min_gas_price: {
                 let mut mgp = BTreeMap::new();
                 mgp.insert(token::Denomination::NATIVE, 1000);
+                mgp.insert("SMALLER".parse().unwrap(), 100);
                 mgp
             },
         },
@@ -663,6 +690,65 @@ fn test_min_gas_price() {
 
     ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
         Core::before_handle_call(&mut tx_ctx, &call).expect("gas price should be ok");
+    });
+
+    // Test local override.
+    struct MinGasPriceOverride;
+
+    impl super::Config for MinGasPriceOverride {
+        const DEFAULT_LOCAL_MIN_GAS_PRICE: once_cell::unsync::Lazy<
+            BTreeMap<token::Denomination, u128>,
+        > = once_cell::unsync::Lazy::new(|| {
+            BTreeMap::from([
+                (token::Denomination::NATIVE, 10_000),
+                ("SMALLER".parse().unwrap(), 10),
+            ])
+        });
+
+        const MIN_GAS_PRICE_EXEMPT_METHODS: once_cell::unsync::Lazy<BTreeSet<&'static str>> =
+            once_cell::unsync::Lazy::new(|| BTreeSet::from(["exempt.Method"]));
+    }
+
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
+            .expect_err("gas price should be too low");
+    });
+
+    tx.auth_info.fee.amount = token::BaseUnits::new(1_000_000, token::Denomination::NATIVE);
+
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
+            .expect("gas price should be ok");
+    });
+
+    tx.auth_info.fee.amount = token::BaseUnits::new(1_000, "SMALLER".parse().unwrap());
+
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
+            .expect_err("gas price should be too low");
+    });
+
+    tx.auth_info.fee.amount = token::BaseUnits::new(10_000, "SMALLER".parse().unwrap());
+
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
+            .expect("gas price should be ok");
+    });
+
+    // Test exempt methods.
+    tx.call.method = "exempt.Method".into();
+    tx.auth_info.fee.amount = token::BaseUnits::new(100_000, token::Denomination::NATIVE);
+
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
+            .expect("method should be gas price exempt");
+    });
+
+    tx.auth_info.fee.amount = token::BaseUnits::new(0, token::Denomination::NATIVE);
+
+    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
+            .expect("method should be gas price exempt");
     });
 }
 
