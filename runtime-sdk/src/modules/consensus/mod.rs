@@ -20,13 +20,11 @@ use crate::{
     error, module,
     module::{Module as _, Parameters as _},
     modules,
-    modules::core::API as _,
-    runtime::Runtime,
     types::{
         address::{Address, SignatureAddressSpec},
         message::MessageEventHookInvocation,
         token,
-        transaction::{AddressSpec, TransactionWeight},
+        transaction::AddressSpec,
     },
 };
 
@@ -195,12 +193,6 @@ impl API for Module {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
         let amount = Self::amount_to_consensus(ctx, amount.amount())?;
 
-        <C::Runtime as Runtime>::Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
-
-        if ctx.is_check_only() {
-            return Ok(());
-        }
-
         ctx.emit_message(
             Message::Staking(Versioned::new(
                 0,
@@ -223,12 +215,6 @@ impl API for Module {
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
         let amount = Self::amount_to_consensus(ctx, amount.amount())?;
-
-        <C::Runtime as Runtime>::Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
-
-        if ctx.is_check_only() {
-            return Ok(());
-        }
 
         ctx.emit_message(
             Message::Staking(Versioned::new(
@@ -253,12 +239,6 @@ impl API for Module {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
         let amount = Self::amount_to_consensus(ctx, amount.amount())?;
 
-        <C::Runtime as Runtime>::Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
-
-        if ctx.is_check_only() {
-            return Ok(());
-        }
-
         ctx.emit_message(
             Message::Staking(Versioned::new(
                 0,
@@ -279,12 +259,6 @@ impl API for Module {
         shares: u128,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
-        <C::Runtime as Runtime>::Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
-
-        if ctx.is_check_only() {
-            return Ok(());
-        }
-
         ctx.emit_message(
             Message::Staking(Versioned::new(
                 0,
