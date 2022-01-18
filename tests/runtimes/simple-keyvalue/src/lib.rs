@@ -18,10 +18,12 @@ mod test;
 /// Simple keyvalue runtime.
 pub struct Runtime;
 
-/// Configuration for the contracts module.
-pub struct ContractsConfig;
+/// Runtime configuration.
+pub struct Config;
 
-impl contracts::Config for ContractsConfig {
+impl modules::core::Config for Config {}
+
+impl contracts::Config for Config {
     type Accounts = modules::accounts::Module;
 }
 
@@ -33,12 +35,14 @@ impl sdk::Runtime for Runtime {
     // to test the migration functionality.
     const STATE_VERSION: u32 = 1;
 
+    type Core = modules::core::Module<Config>;
+
     type Modules = (
         keyvalue::Module,
         modules::accounts::Module,
         modules::rewards::Module<modules::accounts::Module>,
-        modules::core::Module,
-        contracts::Module<ContractsConfig>,
+        modules::core::Module<Config>,
+        contracts::Module<Config>,
     );
 
     fn trusted_policy_signers() -> Option<TrustedPolicySigners> {

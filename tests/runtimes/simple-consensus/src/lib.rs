@@ -3,17 +3,23 @@ use std::collections::BTreeMap;
 
 use oasis_runtime_sdk::{self as sdk, modules, types::token::Denomination, Version};
 
+pub struct Config;
+
+impl modules::core::Config for Config {}
+
 /// Simple consensus runtime.
 pub struct Runtime;
 
 impl sdk::Runtime for Runtime {
     const VERSION: Version = sdk::version_from_cargo!();
 
+    type Core = modules::core::Module<Config>;
+
     type Modules = (
         modules::accounts::Module,
         modules::consensus::Module,
         modules::consensus_accounts::Module<modules::accounts::Module, modules::consensus::Module>,
-        modules::core::Module,
+        modules::core::Module<Config>,
     );
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {

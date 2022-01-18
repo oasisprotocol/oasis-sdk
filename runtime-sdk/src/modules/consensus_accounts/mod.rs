@@ -14,7 +14,8 @@ use crate::{
     error, module,
     module::{CallResult, Module as _},
     modules,
-    modules::core::{Error as CoreError, Module as Core, API as _},
+    modules::core::{Error as CoreError, API as _},
+    runtime::Runtime,
     storage::Prefix,
     types::{
         address::Address,
@@ -162,7 +163,11 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         if ctx.is_check_only() {
             // In case this is not check only this weight will be emitted from Consensus::withdraw
             // below, same as the amount conversion check.
-            Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+            <C::Runtime as Runtime>::Core::add_weight(
+                ctx,
+                TransactionWeight::ConsensusMessages,
+                1,
+            )?;
             Consensus::amount_to_consensus(ctx, amount.amount())?;
             return Ok(());
         }
@@ -201,7 +206,11 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         if ctx.is_check_only() {
             // In case this is not check only this weight will be emitted from Consensus::transfer
             // below, same as the amount conversion check.
-            Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+            <C::Runtime as Runtime>::Core::add_weight(
+                ctx,
+                TransactionWeight::ConsensusMessages,
+                1,
+            )?;
             Consensus::amount_to_consensus(ctx, amount.amount())?;
             return Ok(());
         }
@@ -237,7 +246,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     /// Deposit in the runtime.
     fn tx_deposit<C: TxContext>(ctx: &mut C, body: types::Deposit) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
-        Core::use_tx_gas(ctx, params.gas_costs.tx_deposit)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_deposit)?;
 
         let signer = &ctx.tx_auth_info().signer_info[0];
         Consensus::ensure_compatible_tx_signer(ctx)?;
@@ -250,7 +259,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     /// Withdraw from the runtime.
     fn tx_withdraw<C: TxContext>(ctx: &mut C, body: types::Withdraw) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
-        Core::use_tx_gas(ctx, params.gas_costs.tx_withdraw)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_withdraw)?;
 
         // Signer.
         let signer = &ctx.tx_auth_info().signer_info[0];

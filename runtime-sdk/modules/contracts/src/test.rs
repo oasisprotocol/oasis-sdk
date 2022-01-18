@@ -128,7 +128,7 @@ fn test_hello_contract_call() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    Core::init(
+    Core::<CoreConfig>::init(
         &mut ctx,
         core::Genesis {
             parameters: core::Parameters {
@@ -443,13 +443,19 @@ fn test_hello_contract_call() {
     })
 }
 
+struct CoreConfig;
+
+impl core::Config for CoreConfig {}
+
 /// Contract runtime.
 struct ContractRuntime;
 
 impl Runtime for ContractRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
 
-    type Modules = (Core, Accounts, Contracts);
+    type Core = Core<CoreConfig>;
+
+    type Modules = (Core<CoreConfig>, Accounts, Contracts);
 
     fn genesis_state() -> <Self::Modules as module::MigrationHandler>::Genesis {
         (

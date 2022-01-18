@@ -198,8 +198,8 @@ impl<R: Runtime> Dispatcher<R> {
             }
 
             // Load priority, weights.
-            let priority = modules::core::Module::take_priority(&mut ctx);
-            let weights = modules::core::Module::take_weights(&mut ctx);
+            let priority = R::Core::take_priority(&mut ctx);
+            let weights = R::Core::take_weights(&mut ctx);
 
             // Commit store and return emitted tags and messages.
             let (etags, messages) = ctx.commit();

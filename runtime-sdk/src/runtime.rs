@@ -24,6 +24,10 @@ pub trait Runtime {
     /// Prefetch limit. To enable prefetch set it to a non-zero value.
     const PREFETCH_LIMIT: u16 = 0;
 
+    /// Module that provides the core API.
+    type Core: modules::core::API;
+
+    /// Supported modules.
     type Modules: AuthHandler + MigrationHandler + MethodHandler + BlockHandler + InvariantHandler;
 
     /// Return the trusted policy signers for this runtime; if `None`, a key manager connection will

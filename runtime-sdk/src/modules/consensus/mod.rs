@@ -20,7 +20,8 @@ use crate::{
     error, module,
     module::{Module as _, Parameters as _},
     modules,
-    modules::core::{Module as Core, API as _},
+    modules::core::API as _,
+    runtime::Runtime,
     types::{
         address::{Address, SignatureAddressSpec},
         message::MessageEventHookInvocation,
@@ -194,7 +195,7 @@ impl API for Module {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
         let amount = Self::amount_to_consensus(ctx, amount.amount())?;
 
-        Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+        <C::Runtime as Runtime>::Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
 
         if ctx.is_check_only() {
             return Ok(());
@@ -223,7 +224,7 @@ impl API for Module {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
         let amount = Self::amount_to_consensus(ctx, amount.amount())?;
 
-        Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+        <C::Runtime as Runtime>::Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
 
         if ctx.is_check_only() {
             return Ok(());
@@ -252,7 +253,7 @@ impl API for Module {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
         let amount = Self::amount_to_consensus(ctx, amount.amount())?;
 
-        Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+        <C::Runtime as Runtime>::Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
 
         if ctx.is_check_only() {
             return Ok(());
@@ -278,7 +279,7 @@ impl API for Module {
         shares: u128,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
-        Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
+        <C::Runtime as Runtime>::Core::add_weight(ctx, TransactionWeight::ConsensusMessages, 1)?;
 
         if ctx.is_check_only() {
             return Ok(());

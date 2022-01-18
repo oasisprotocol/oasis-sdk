@@ -88,7 +88,7 @@ fn test_evm_calls() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    Core::init(
+    Core::<CoreConfig>::init(
         &mut ctx,
         core::Genesis {
             parameters: core::Parameters {
@@ -211,13 +211,19 @@ fn test_evm_calls() {
     assert_eq!(erc20_name[64..68], vec![0x54, 0x65, 0x73, 0x74]); // "Test".
 }
 
+struct CoreConfig;
+
+impl core::Config for CoreConfig {}
+
 /// EVM test runtime.
 struct EVMRuntime;
 
 impl Runtime for EVMRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
 
-    type Modules = (Core, Accounts, EVM);
+    type Core = Core<CoreConfig>;
+
+    type Modules = (Core<CoreConfig>, Accounts, EVM);
 
     fn genesis_state() -> <Self::Modules as module::MigrationHandler>::Genesis {
         (

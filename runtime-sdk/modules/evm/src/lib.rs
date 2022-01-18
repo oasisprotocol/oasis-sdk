@@ -22,8 +22,9 @@ use oasis_runtime_sdk::{
     modules::{
         self,
         accounts::API as _,
-        core::{self, Error as CoreError, API as _},
+        core::{Error as CoreError, API as _},
     },
+    runtime::Runtime,
     storage,
     types::{
         address::{self, Address},
@@ -515,7 +516,7 @@ impl<Cfg: Config> Module<Cfg> {
             &EVM_CONFIG
         };
 
-        let gas_limit: u64 = core::Module::remaining_tx_gas(ctx);
+        let gas_limit: u64 = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
         let gas_price: primitive_types::U256 = ctx.tx_auth_info().fee.gas_price().into();
         let fee_denomination = ctx.tx_auth_info().fee.amount.denomination().clone();
 
@@ -546,7 +547,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         if gas_used > gas_limit {
             // NOTE: This should never happen as the gas was accounted for in advance.
-            core::Module::use_tx_gas(ctx, gas_limit)?;
+            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_limit)?;
             return Err(Error::GasLimitTooLow(gas_used));
         }
 
@@ -559,7 +560,7 @@ impl<Cfg: Config> Module<Cfg> {
         let (vals, logs) = executor.into_state().deconstruct();
         backend.apply(vals, logs, true);
 
-        core::Module::use_tx_gas(ctx, gas_used)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
 
         // Move the difference from the fee accumulator back to the caller.
         let caller_address = Cfg::map_address(source.into());

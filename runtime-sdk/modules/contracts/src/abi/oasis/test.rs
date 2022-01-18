@@ -22,6 +22,10 @@ impl Config for ContractsConfig {
     type Accounts = modules::accounts::Module;
 }
 
+struct CoreConfig;
+
+impl core::Config for CoreConfig {}
+
 #[test]
 fn test_validate_and_transform() {
     fn test<Cfg: Config, C: TxContext>(_ctx: C) {
@@ -153,7 +157,7 @@ fn run_contract_with_defaults(
     let mut ctx = mock.create_ctx();
     let params = Parameters::default();
 
-    core::Module::init(
+    core::Module::<CoreConfig>::init(
         &mut ctx,
         core::Genesis {
             parameters: core::Parameters {

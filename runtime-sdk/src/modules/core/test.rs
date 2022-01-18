@@ -17,7 +17,9 @@ use crate::{
     },
 };
 
-use super::{types, Module as Core, Parameters, API as _, GAS_WEIGHT_NAME};
+use super::{types, Parameters, API as _, GAS_WEIGHT_NAME};
+
+type Core = super::Module<Config>;
 
 #[test]
 fn test_use_gas() {
@@ -159,7 +161,8 @@ impl module::MethodHandler for GasWasterModule {
     ) -> module::DispatchResult<cbor::Value, module::CallResult> {
         match method {
             Self::METHOD_WASTE_GAS => {
-                Core::use_tx_gas(ctx, Self::CALL_GAS).expect("use_gas should succeed");
+                <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS)
+                    .expect("use_gas should succeed");
                 module::DispatchResult::Handled(module::CallResult::Ok(cbor::Value::Simple(
                     cbor::SimpleValue::NullValue,
                 )))
@@ -176,6 +179,10 @@ impl module::MigrationHandler for GasWasterModule {
 }
 impl module::InvariantHandler for GasWasterModule {}
 
+struct Config;
+
+impl super::Config for Config {}
+
 // Runtime that knows how to waste gas.
 struct GasWasterRuntime;
 
@@ -186,6 +193,8 @@ impl GasWasterRuntime {
 
 impl Runtime for GasWasterRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
+
+    type Core = Core;
 
     type Modules = (Core, GasWasterModule);
 

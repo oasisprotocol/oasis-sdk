@@ -11,6 +11,8 @@ pub struct Config;
 /// Benchmarking runtime.
 pub struct Runtime;
 
+impl modules::core::Config for Config {}
+
 impl oasis_runtime_sdk_evm::Config for Config {
     type Accounts = modules::accounts::Module;
 
@@ -22,9 +24,12 @@ impl oasis_runtime_sdk_evm::Config for Config {
 impl sdk::Runtime for Runtime {
     const VERSION: Version = sdk::version_from_cargo!();
 
+    type Core = modules::core::Module<Config>;
+
+    #[allow(clippy::type_complexity)]
     type Modules = (
         // Core.
-        modules::core::Module,
+        modules::core::Module<Config>,
         // Accounts.
         modules::accounts::Module,
         // Consensus layer interface.

@@ -7,10 +7,12 @@ use oasis_runtime_sdk_evm as evm;
 /// Simple EVM runtime.
 pub struct Runtime;
 
-/// Configuration for the EVM module.
-pub struct EVMConfig;
+/// Runtime configuration.
+pub struct Config;
 
-impl evm::Config for EVMConfig {
+impl modules::core::Config for Config {}
+
+impl evm::Config for Config {
     type Accounts = modules::accounts::Module;
 
     const CHAIN_ID: u64 = 0xa515;
@@ -21,10 +23,12 @@ impl evm::Config for EVMConfig {
 impl sdk::Runtime for Runtime {
     const VERSION: Version = sdk::version_from_cargo!();
 
+    type Core = modules::core::Module<Config>;
+
     type Modules = (
         modules::accounts::Module,
-        modules::core::Module,
-        evm::Module<EVMConfig>,
+        modules::core::Module<Config>,
+        evm::Module<Config>,
     );
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {

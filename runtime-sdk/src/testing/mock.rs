@@ -19,13 +19,19 @@ use crate::{
     types::transaction,
 };
 
+pub struct Config;
+
+impl modules::core::Config for Config {}
+
 /// A mock runtime that only has the core module.
 pub struct EmptyRuntime;
 
 impl Runtime for EmptyRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
 
-    type Modules = modules::core::Module;
+    type Core = modules::core::Module<Config>;
+
+    type Modules = modules::core::Module<Config>;
 
     fn genesis_state() -> <Self::Modules as MigrationHandler>::Genesis {
         Default::default()

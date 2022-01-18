@@ -189,7 +189,12 @@ pub mod state {
     pub const MESSAGE_HANDLERS: &[u8] = &[0x02];
 }
 
-pub struct Module;
+/// Module configuration.
+pub trait Config: 'static {}
+
+pub struct Module<Cfg: Config> {
+    _cfg: std::marker::PhantomData<Cfg>,
+}
 
 const CONTEXT_KEY_GAS_USED: &str = "core.GasUsed";
 const CONTEXT_KEY_PRIORITY: &str = "core.Priority";
@@ -197,7 +202,7 @@ const CONTEXT_KEY_WEIGHTS: &str = "core.Weights";
 
 const GAS_WEIGHT_NAME: &str = "gas";
 
-impl Module {
+impl<Cfg: Config> Module<Cfg> {
     /// Initialize state from genesis.
     pub fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
         // Set genesis parameters.
@@ -211,7 +216,7 @@ impl Module {
     }
 }
 
-impl API for Module {
+impl<Cfg: Config> API for Module<Cfg> {
     fn use_batch_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error> {
         // Do not enforce batch limits for check-tx.
         if ctx.is_check_only() {
@@ -303,7 +308,7 @@ impl API for Module {
     }
 }
 
-impl Module {
+impl<Cfg: Config> Module<Cfg> {
     /// Run a transaction in simulation and return how much gas it uses. This looks up the method
     /// in the context's method registry. Transactions that fail still use gas, and this query will
     /// estimate that and return successfully, so do not use this query to see if a transaction will
@@ -419,14 +424,14 @@ impl Module {
     }
 }
 
-impl module::Module for Module {
+impl<Cfg: Config> module::Module for Module<Cfg> {
     const NAME: &'static str = MODULE_NAME;
     type Error = Error;
     type Event = ();
     type Parameters = Parameters;
 }
 
-impl module::AuthHandler for Module {
+impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
     fn approve_unverified_tx<C: Context>(
         ctx: &mut C,
         utx: &UnverifiedTransaction,
@@ -521,7 +526,7 @@ impl module::AuthHandler for Module {
     }
 }
 
-impl module::MigrationHandler for Module {
+impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
     type Genesis = Genesis;
 
     fn init_or_migrate<C: Context>(
@@ -542,7 +547,7 @@ impl module::MigrationHandler for Module {
     }
 }
 
-impl module::MethodHandler for Module {
+impl<Cfg: Config> module::MethodHandler for Module<Cfg> {
     fn dispatch_query<C: Context>(
         ctx: &mut C,
         method: &str,
@@ -562,7 +567,7 @@ impl module::MethodHandler for Module {
     }
 }
 
-impl module::BlockHandler for Module {
+impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
     fn get_block_weight_limits<C: Context>(ctx: &mut C) -> BTreeMap<TransactionWeight, u64> {
         let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
 
@@ -573,4 +578,4 @@ impl module::BlockHandler for Module {
     }
 }
 
-impl module::InvariantHandler for Module {}
+impl<Cfg: Config> module::InvariantHandler for Module<Cfg> {}

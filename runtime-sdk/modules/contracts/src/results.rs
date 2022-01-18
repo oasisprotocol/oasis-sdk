@@ -10,7 +10,8 @@ use oasis_runtime_sdk::{
     context::{BatchContext, Context, TxContext},
     dispatcher,
     event::etag_for_event,
-    modules::core::{self, API as _},
+    modules::core::API as _,
+    runtime::Runtime,
     types::{token, transaction, transaction::CallerAddress},
 };
 
@@ -30,7 +31,7 @@ pub(crate) fn process_execution_result<C: TxContext>(
     result: ExecutionResult,
 ) -> Result<ExecutionOk, Error> {
     // The following call should never fail as we accounted for all the gas in advance.
-    core::Module::use_tx_gas(ctx, result.gas_used)?;
+    <C::Runtime as Runtime>::Core::use_tx_gas(ctx, result.gas_used)?;
 
     result.inner
 }
@@ -101,7 +102,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
     let mut result_data = data;
 
     // Charge gas for each emitted message.
-    core::Module::use_tx_gas(
+    <C::Runtime as Runtime>::Core::use_tx_gas(
         ctx,
         params
             .gas_costs
@@ -133,7 +134,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                 max_gas,
             } => {
                 // Calculate how much gas the child message can use.
-                let remaining_gas = core::Module::remaining_tx_gas(ctx);
+                let remaining_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
                 let max_gas = max_gas.unwrap_or(remaining_gas);
                 let max_gas = if max_gas > remaining_gas {
                     remaining_gas
@@ -178,7 +179,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         let result =
                             dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut ctx, call);
                         // Retrieve remaining gas.
-                        let gas = core::Module::remaining_tx_gas(&mut ctx);
+                        let gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(&mut ctx);
 
                         // Commit store and return emitted tags and messages on successful dispatch,
                         // otherwise revert state and ignore any emitted events/messages.
@@ -200,7 +201,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
 
                 // Use any gas that was used inside the child context. This should never fail as we
                 // preconfigured the amount of available gas.
-                core::Module::use_tx_gas(ctx, max_gas.saturating_sub(gas))?;
+                <C::Runtime as Runtime>::Core::use_tx_gas(ctx, max_gas.saturating_sub(gas))?;
 
                 // Forward any emitted event tags.
                 ctx.emit_etags(etags);
@@ -224,7 +225,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         };
                         let mut exec_ctx = ExecutionContext {
                             caller_address: ctx.tx_caller_address(),
-                            gas_limit: core::Module::remaining_tx_gas(ctx),
+                            gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
                             instance_info: contract.instance_info,
                             tx_context: ctx,
                             params,
