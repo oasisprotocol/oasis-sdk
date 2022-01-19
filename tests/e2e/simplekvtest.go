@@ -897,8 +897,11 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 			return fmt.Errorf("failed to fetch transactions for round %d: %w", round, err)
 		}
 
-		// Ensure all transactions are ordered correctly.
-		var gasPrices []uint64
+		// Ensure all transactions are ordered correctly and gas weights are respected.
+		var (
+			gasPrices, gasLimits []uint64
+			totalGas             uint64
+		)
 		for _, utx := range txs {
 			var tx types.Transaction
 			if err = cbor.Unmarshal(utx.Body, &tx); err != nil {
@@ -907,17 +910,26 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 
 			gasPrice := tx.AuthInfo.Fee.GasPrice().ToBigInt().Uint64()
 			gasPrices = append(gasPrices, gasPrice)
+			gasLimits = append(gasLimits, tx.AuthInfo.Fee.Gas)
+			totalGas += tx.AuthInfo.Fee.Gas
 		}
 
-		log.Info("got gas prices",
+		log.Info("got gas prices and limits",
 			"round", round,
 			"prices", gasPrices,
+			"limits", gasLimits,
+			"total_gas", totalGas,
 		)
 
 		if !sort.SliceIsSorted(gasPrices, func(i, j int) bool {
 			return gasPrices[i] > gasPrices[j]
 		}) {
 			return fmt.Errorf("transactions in round %d not sorted by gas price", round)
+		}
+
+		// See tests/runtimes/simple-keyvalue/lib.rs for the batch gas limit.
+		if totalGas > 2_000 {
+			return fmt.Errorf("batch over gas limit in round %d (total gas: %d)", round, totalGas)
 		}
 	}
 
