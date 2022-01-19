@@ -256,6 +256,26 @@ type Fee struct {
 	ConsensusMessages uint32    `json:"consensus_messages,omitempty"`
 }
 
+// GasPrice returns the gas price implied by the amount and gas.
+func (f *Fee) GasPrice() *quantity.Quantity {
+	if f.Amount.Amount.IsZero() || f.Gas == 0 {
+		return quantity.NewQuantity()
+	}
+
+	var gasQ quantity.Quantity
+	if err := gasQ.FromUint64(f.Gas); err != nil {
+		// Should never happen.
+		panic(err)
+	}
+
+	amt := f.Amount.Amount.Clone()
+	if err := amt.Quo(&gasQ); err != nil {
+		// Should never happen.
+		panic(err)
+	}
+	return amt
+}
+
 // CallerAddress is a caller address.
 type CallerAddress struct {
 	// Address is an oasis address.

@@ -1495,15 +1495,6 @@ dependencies = [
 
 [[package]]
 name = "lru"
-version = "0.6.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ea2d928b485416e8908cff2d97d621db22b27f7b3b6729e438bcf42c671ba91"
-dependencies = [
- "hashbrown",
-]
-
-[[package]]
-name = "lru"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "274353858935c992b13c0ca408752e2121da852d07dec7ce5f108c77dfa14d1f"
@@ -1849,7 +1840,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-client"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.6#bfd2892412c8e6e06ec3a766a6687c9fc25c81f8"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.8#1d50e3c6630678c80fd61e41bed7feee160fe23c"
 dependencies = [
  "anyhow",
  "futures",
@@ -1863,7 +1854,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-keymanager-api-common"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.6#bfd2892412c8e6e06ec3a766a6687c9fc25c81f8"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.8#1d50e3c6630678c80fd61e41bed7feee160fe23c"
 dependencies = [
  "anyhow",
  "base64",
@@ -1880,11 +1871,11 @@ dependencies = [
 [[package]]
 name = "oasis-core-keymanager-client"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.6#bfd2892412c8e6e06ec3a766a6687c9fc25c81f8"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.8#1d50e3c6630678c80fd61e41bed7feee160fe23c"
 dependencies = [
  "futures",
  "io-context",
- "lru 0.6.6",
+ "lru",
  "oasis-cbor",
  "oasis-core-client",
  "oasis-core-keymanager-api-common",
@@ -1895,7 +1886,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-runtime"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.6#bfd2892412c8e6e06ec3a766a6687c9fc25c81f8"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v21.3.8#1d50e3c6630678c80fd61e41bed7feee160fe23c"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -1917,7 +1908,7 @@ dependencies = [
  "io-context",
  "lazy_static",
  "log",
- "lru 0.6.6",
+ "lru",
  "num-bigint",
  "num-traits",
  "oasis-cbor",
@@ -1985,7 +1976,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "blake3",
- "lru 0.7.2",
+ "lru",
  "num-traits",
  "oasis-cbor",
  "oasis-contract-sdk-crypto",

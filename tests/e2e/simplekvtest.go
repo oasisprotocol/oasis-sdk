@@ -6,6 +6,7 @@ import (
 	"crypto"
 	"fmt"
 	"math/rand"
+	"sort"
 	"time"
 
 	"google.golang.org/grpc"
@@ -524,8 +525,8 @@ func KVBalanceTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		return err
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(10003000)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 10003000, got %s)", q.String()) //nolint: stylecheck
+		if q.Cmp(quantity.NewFromUint64(100_003_000)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 100003000, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
@@ -623,8 +624,8 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 		return err
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(10002900)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 10002900, got %s)", q.String()) //nolint: stylecheck
+		if q.Cmp(quantity.NewFromUint64(100_002_900)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 100002900, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
@@ -695,8 +696,8 @@ func KVDaveTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn,
 		return err
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(10002910)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 2910, got %s)", q.String()) //nolint: stylecheck
+		if q.Cmp(quantity.NewFromUint64(100_002_910)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 100002910, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
@@ -795,6 +796,14 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
+	// Determine initial round.
+	blk, err := rtc.GetBlock(ctx, client.RoundLatest)
+	if err != nil {
+		return fmt.Errorf("failed to fetch latest block: %w", err)
+	}
+	initialRound := blk.Header.Round
+	log.Info("determined initial round", "round", initialRound)
+
 	log.Info("getting Alice's account balance")
 	ab, err := ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
@@ -822,7 +831,7 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 	coinsPerAccount, err := sc.Flags.GetUint64(CfgTxGenCoinsPerAcct)
 	if err != nil {
 		log.Error("malformed CfgTxGenCoinsPerAcct flag, using default")
-		coinsPerAccount = uint64(200)
+		coinsPerAccount = uint64(1_000_000)
 	}
 
 	minBalanceRequired := coinsPerAccount * uint64(numAccounts)
@@ -870,6 +879,46 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 
 	if ok == 0 {
 		return fmt.Errorf("no generated transactions were submitted successfully")
+	}
+
+	// Inspect blocks to make sure that transactions were ordered correctly.
+	blk, err = rtc.GetBlock(ctx, client.RoundLatest)
+	if err != nil {
+		return fmt.Errorf("failed to fetch latest block: %w", err)
+	}
+
+	log.Info("verifying transaction priority order",
+		"round_start", initialRound,
+		"round_end", blk.Header.Round,
+	)
+	for round := initialRound; round <= blk.Header.Round; round++ {
+		txs, err := rtc.GetTransactions(ctx, round)
+		if err != nil {
+			return fmt.Errorf("failed to fetch transactions for round %d: %w", round, err)
+		}
+
+		// Ensure all transactions are ordered correctly.
+		var gasPrices []uint64
+		for _, utx := range txs {
+			var tx types.Transaction
+			if err = cbor.Unmarshal(utx.Body, &tx); err != nil {
+				return fmt.Errorf("bad transaction in round %d: %w", round, err)
+			}
+
+			gasPrice := tx.AuthInfo.Fee.GasPrice().ToBigInt().Uint64()
+			gasPrices = append(gasPrices, gasPrice)
+		}
+
+		log.Info("got gas prices",
+			"round", round,
+			"prices", gasPrices,
+		)
+
+		if !sort.SliceIsSorted(gasPrices, func(i, j int) bool {
+			return gasPrices[i] > gasPrices[j]
+		}) {
+			return fmt.Errorf("transactions in round %d not sorted by gas price", round)
+		}
 	}
 
 	// Note that submission errors are fine here, since we're going to get
