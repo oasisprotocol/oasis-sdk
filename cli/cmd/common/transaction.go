@@ -13,6 +13,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	consensusPretty "github.com/oasisprotocol/oasis-core/go/common/prettyprint"
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	consensusTx "github.com/oasisprotocol/oasis-core/go/consensus/api/transaction"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/connection"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/helpers"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -28,6 +30,7 @@ var (
 	txOffline  bool
 	txNonce    uint64
 	txGasLimit uint64
+	txGasPrice string
 )
 
 const (
@@ -66,6 +69,15 @@ func SignConsensusTransaction(
 	}
 	tx.Fee.Gas = consensusTx.Gas(txGasLimit)
 
+	gasPrice := quantity.NewQuantity()
+	if txGasPrice != "" {
+		var err error
+		gasPrice, err = helpers.ParseConsensusDenomination(npw.Network, txGasPrice)
+		if err != nil {
+			return nil, fmt.Errorf("bad gas price: %w", err)
+		}
+	}
+
 	if !txOffline { // nolint: nestif
 		// Query nonce if not specified.
 		if tx.Nonce == invalidNonce {
@@ -97,7 +109,11 @@ func SignConsensusTransaction(
 		return nil, fmt.Errorf("nonce and/or gas limit must be specified in offline mode")
 	}
 
-	// TODO: Gas price.
+	// Compute fee amount based on gas price.
+	if err := gasPrice.Mul(quantity.NewFromUint64(uint64(tx.Fee.Gas))); err != nil {
+		return nil, err
+	}
+	tx.Fee.Amount = *gasPrice
 
 	PrintTransactionBeforeSigning(npw, tx)
 
@@ -130,24 +146,50 @@ func SignParaTimeTransaction(
 	nonce := txNonce
 	tx.AuthInfo.Fee.Gas = txGasLimit
 
-	if !txOffline {
-		// Query nonce.
+	gasPrice := &types.BaseUnits{}
+	if txGasPrice != "" {
+		// TODO: Support different denominations for gas fees.
 		var err error
-		nonce, err = conn.Runtime(npw.ParaTime).Accounts.Nonce(ctx, client.RoundLatest, wallet.Address())
+		gasPrice, err = helpers.ParseParaTimeDenomination(npw.ParaTime, txGasPrice, types.NativeDenomination)
 		if err != nil {
-			return nil, fmt.Errorf("failed to query nonce: %w", err)
+			return nil, fmt.Errorf("bad gas price: %w", err)
+		}
+	}
+
+	if !txOffline {
+		// Query nonce if not specified.
+		if nonce == invalidNonce {
+			var err error
+			nonce, err = conn.Runtime(npw.ParaTime).Accounts.Nonce(ctx, client.RoundLatest, wallet.Address())
+			if err != nil {
+				return nil, fmt.Errorf("failed to query nonce: %w", err)
+			}
 		}
 	}
 
 	// Prepare the transaction before (optional) gas estimation to ensure correct estimation.
 	tx.AppendAuthSignature(wallet.SignatureAddressSpec(), nonce)
 
-	if !txOffline {
-		// Gas estimation.
-		var err error
-		tx.AuthInfo.Fee.Gas, err = conn.Runtime(npw.ParaTime).Core.EstimateGas(ctx, client.RoundLatest, tx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to estimate gas: %w", err)
+	if !txOffline { // nolint: nestif
+		// Gas estimation if not specified.
+		if tx.AuthInfo.Fee.Gas == invalidGasLimit {
+			var err error
+			tx.AuthInfo.Fee.Gas, err = conn.Runtime(npw.ParaTime).Core.EstimateGas(ctx, client.RoundLatest, tx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to estimate gas: %w", err)
+			}
+		}
+
+		// Gas price determination if not specified.
+		if txGasPrice == "" {
+			mgp, err := conn.Runtime(npw.ParaTime).Core.MinGasPrice(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to query minimum gas price: %w", err)
+			}
+
+			// TODO: Support different denominations for gas fees.
+			denom := types.NativeDenomination
+			*gasPrice = types.NewBaseUnits(mgp[denom], denom)
 		}
 	}
 
@@ -156,7 +198,12 @@ func SignParaTimeTransaction(
 		return nil, fmt.Errorf("nonce and/or gas limit must be specified in offline mode")
 	}
 
-	// TODO: Gas price.
+	// Compute fee amount based on gas price.
+	if err := gasPrice.Amount.Mul(quantity.NewFromUint64(tx.AuthInfo.Fee.Gas)); err != nil {
+		return nil, err
+	}
+	tx.AuthInfo.Fee.Amount.Amount = gasPrice.Amount
+	tx.AuthInfo.Fee.Amount.Denomination = gasPrice.Denomination
 
 	// TODO: Support confidential transactions (only in online mode).
 
@@ -319,4 +366,5 @@ func init() {
 	TransactionFlags.BoolVar(&txOffline, "offline", false, "do not perform any operations requiring network access")
 	TransactionFlags.Uint64Var(&txNonce, "nonce", invalidNonce, "override nonce to use")
 	TransactionFlags.Uint64Var(&txGasLimit, "gas-limit", invalidGasLimit, "override gas limit to use (disable estimation)")
+	TransactionFlags.StringVar(&txGasPrice, "gas-price", "", "override gas price to use")
 }
