@@ -264,7 +264,6 @@ Create a `tests` directory and move into it, creating a Go module:
 
 ```bash
 go mod init example.com/oasisprotocol/minimal-runtime-client
-go mod tidy
 ```
 
 Then create a `test.go` file with the following content:
@@ -419,9 +418,22 @@ func main() {
 }
 ```
 
-And build it using:
+Finally, edit `mod.go` to pin oasis dependencies to the same version as our
+minimal runtime is using. The file should contain the following:
+
+```
+module example.com/oasisprotocol/minimal-runtime-client
+
+require (
+	github.com/oasisprotocol/oasis-core/go v0.2102.5
+	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.0
+)
+```
+
+Now update the dependencies and build the test using:
 
 ```bash
+go mod tidy
 go build
 ```
 
