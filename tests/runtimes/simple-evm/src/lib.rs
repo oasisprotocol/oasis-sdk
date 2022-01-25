@@ -1,7 +1,7 @@
 //! Simple EVM runtime.
 use std::collections::BTreeMap;
 
-use oasis_runtime_sdk::{self as sdk, modules, types::token::Denomination, Version};
+use oasis_runtime_sdk::{self as sdk, config, modules, types::token::Denomination, Version};
 use oasis_runtime_sdk_evm as evm;
 
 /// Simple EVM runtime.
@@ -22,6 +22,14 @@ impl evm::Config for Config {
 
 impl sdk::Runtime for Runtime {
     const VERSION: Version = sdk::version_from_cargo!();
+
+    // Enable the runtime schedule control feature.
+    const SCHEDULE_CONTROL: Option<config::ScheduleControl> = Some(config::ScheduleControl {
+        initial_batch_size: 50,
+        batch_size: 50,
+        min_remaining_gas: 100,
+        max_tx_count: 1000,
+    });
 
     type Core = modules::core::Module<Config>;
 

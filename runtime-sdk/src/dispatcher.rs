@@ -12,6 +12,7 @@ use thiserror::Error;
 
 use oasis_core_runtime::{
     self,
+    common::crypto::hash::Hash,
     protocol::HostInfo,
     storage::mkvs,
     transaction::{
@@ -34,6 +35,7 @@ use crate::{
     modules,
     modules::core::API as _,
     runtime::Runtime,
+    schedule_control::ScheduleControlHost,
     storage,
     storage::Prefix,
     types,
@@ -100,6 +102,7 @@ impl From<module::CallResult> for DispatchResult {
 pub struct Dispatcher<R: Runtime> {
     host_info: HostInfo,
     key_manager: Option<KeyManagerClient>,
+    schedule_control_host: Arc<dyn ScheduleControlHost>,
     _runtime: PhantomData<R>,
 }
 
@@ -108,10 +111,15 @@ impl<R: Runtime> Dispatcher<R> {
     ///
     /// Note that the dispatcher is fully static and the constructor is only needed so that the
     /// instance can be used directly with the dispatcher system provided by Oasis Core.
-    pub(super) fn new(host_info: HostInfo, key_manager: Option<KeyManagerClient>) -> Self {
+    pub(super) fn new(
+        host_info: HostInfo,
+        key_manager: Option<KeyManagerClient>,
+        schedule_control_host: Arc<dyn ScheduleControlHost>,
+    ) -> Self {
         Self {
             host_info,
             key_manager,
+            schedule_control_host,
             _runtime: PhantomData,
         }
     }
@@ -386,17 +394,17 @@ impl<R: Runtime> Dispatcher<R> {
         .map_err(|err| -> RuntimeError { Error::QueryAborted(format!("{:?}", err)).into() })?
         .map(cbor::to_vec)
     }
-}
 
-impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatcher<R> {
-    fn execute_batch(
+    fn execute_batch_common<F>(
         &self,
         mut rt_ctx: transaction::Context<'_>,
-        batch: &TxnBatch,
-    ) -> Result<ExecuteBatchResult, RuntimeError> {
-        // If prefetch limit is set enable prefetch.
-        let prefetch_enabled = R::PREFETCH_LIMIT > 0;
-
+        f: F,
+    ) -> Result<ExecuteBatchResult, RuntimeError>
+    where
+        F: FnOnce(
+            &mut RuntimeBatchContext<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>,
+        ) -> Result<Vec<ExecuteTxResult>, RuntimeError>,
+    {
         // Prepare dispatch context.
         let key_manager = self
             .key_manager
@@ -413,41 +421,13 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         // Perform state migrations if required.
         R::migrate(&mut ctx);
 
-        let mut txs = Vec::with_capacity(batch.len());
-        let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
-        for tx in batch.iter() {
-            let tx_size = tx.len().try_into().map_err(|_| {
-                Error::MalformedTransactionInBatch(anyhow!("transaction too large"))
-            })?;
-            // It is an error to include a malformed transaction in a batch. So instead of only
-            // reporting a failed execution result, we fail the whole batch. This will make the compute
-            // node vote for failure and the round will fail.
-            //
-            // Correct proposers should only include transactions which have passed check_tx.
-            let tx = Self::decode_tx(&mut ctx, tx)
-                .map_err(|err| Error::MalformedTransactionInBatch(err.into()))?;
-            txs.push((tx_size, tx.clone()));
-
-            if prefetch_enabled {
-                Self::prefetch_tx(&mut prefixes, tx)?;
-            }
-        }
-        if prefetch_enabled {
-            ctx.runtime_state()
-                .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
-        }
-
         // Handle last round message results.
         Self::handle_last_round_messages(&mut ctx)?;
 
         // Run begin block hooks.
         R::Modules::begin_block(&mut ctx);
 
-        // Execute the batch.
-        let mut results = Vec::with_capacity(batch.len());
-        for (index, (tx_size, tx)) in txs.into_iter().enumerate() {
-            results.push(Self::execute_tx(&mut ctx, tx_size, tx, index)?);
-        }
+        let results = f(&mut ctx)?;
 
         // Run end block hooks.
         R::Modules::end_block(&mut ctx);
@@ -467,7 +447,149 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             messages,
             block_tags: block_tags.into_tags(),
             batch_weight_limits: Some(block_weight_limits),
+            tx_reject_hashes: vec![],
         })
+    }
+}
+
+impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatcher<R> {
+    fn execute_batch(
+        &self,
+        rt_ctx: transaction::Context<'_>,
+        batch: &TxnBatch,
+    ) -> Result<ExecuteBatchResult, RuntimeError> {
+        self.execute_batch_common(
+            rt_ctx,
+            |ctx| -> Result<Vec<ExecuteTxResult>, RuntimeError> {
+                // If prefetch limit is set enable prefetch.
+                let prefetch_enabled = R::PREFETCH_LIMIT > 0;
+
+                let mut txs = Vec::with_capacity(batch.len());
+                let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
+                for tx in batch.iter() {
+                    let tx_size = tx.len().try_into().map_err(|_| {
+                        Error::MalformedTransactionInBatch(anyhow!("transaction too large"))
+                    })?;
+                    // It is an error to include a malformed transaction in a batch. So instead of only
+                    // reporting a failed execution result, we fail the whole batch. This will make the compute
+                    // node vote for failure and the round will fail.
+                    //
+                    // Correct proposers should only include transactions which have passed check_tx.
+                    let tx = Self::decode_tx(ctx, tx)
+                        .map_err(|err| Error::MalformedTransactionInBatch(err.into()))?;
+                    txs.push((tx_size, tx.clone()));
+
+                    if prefetch_enabled {
+                        Self::prefetch_tx(&mut prefixes, tx)?;
+                    }
+                }
+                if prefetch_enabled {
+                    ctx.runtime_state()
+                        .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
+                }
+
+                // Execute the batch.
+                let mut results = Vec::with_capacity(batch.len());
+                for (index, (tx_size, tx)) in txs.into_iter().enumerate() {
+                    results.push(Self::execute_tx(ctx, tx_size, tx, index)?);
+                }
+
+                Ok(results)
+            },
+        )
+    }
+
+    fn schedule_and_execute_batch(
+        &self,
+        rt_ctx: transaction::Context<'_>,
+        batch: &mut TxnBatch,
+    ) -> Result<ExecuteBatchResult, RuntimeError> {
+        let cfg = R::SCHEDULE_CONTROL.unwrap(); // Must succeed otherwise we wouldn't be here.
+        let mut tx_reject_hashes = Vec::new();
+
+        let mut result = self.execute_batch_common(
+            rt_ctx,
+            |ctx| -> Result<Vec<ExecuteTxResult>, RuntimeError> {
+                // Schedule and execute the batch.
+                //
+                // The idea is to keep scheduling transactions as long as we have some space
+                // available in the block as determined by gas use.
+                let mut new_batch = Vec::new();
+                let mut results = Vec::with_capacity(batch.len());
+                let mut requested_batch_len = cfg.initial_batch_size;
+                'batch: loop {
+                    // Remember length of last batch.
+                    let last_batch_len = batch.len();
+                    let last_batch_tx_hash = batch.last().map(|raw_tx| Hash::digest_bytes(raw_tx));
+
+                    for raw_tx in batch.drain(..) {
+                        // If we don't have enough gas for processing even the cheapest transaction
+                        // we are done. Same if we reached the runtime-imposed maximum tx count.
+                        let remaining_gas = R::Core::remaining_batch_gas(ctx);
+                        if remaining_gas < cfg.min_remaining_gas
+                            || new_batch.len() >= cfg.max_tx_count
+                        {
+                            break 'batch;
+                        }
+
+                        // Decode transaction.
+                        let tx = match Self::decode_tx(ctx, &raw_tx) {
+                            Ok(tx) => tx,
+                            Err(_) => {
+                                // Transaction is malformed, make sure it gets removed from the
+                                // queue and don't include it in a block.
+                                tx_reject_hashes.push(Hash::digest_bytes(&raw_tx));
+                                continue;
+                            }
+                        };
+                        let tx_size = raw_tx.len().try_into().unwrap();
+
+                        // If we don't have enough gas remaining to process this transaction, just
+                        // skip it.
+                        if tx.auth_info.fee.gas > remaining_gas {
+                            continue;
+                        }
+                        // Same if we don't have enough consensus message slots.
+                        if tx.auth_info.fee.consensus_messages > ctx.remaining_messages() {
+                            continue;
+                        }
+
+                        // Determine the current transaction index.
+                        let index = new_batch.len();
+
+                        new_batch.push(raw_tx);
+                        results.push(Self::execute_tx(ctx, tx_size, tx, index)?);
+                    }
+
+                    // If there's more room in the block and we got the maximum number of
+                    // transactions, request more transactions.
+                    if last_batch_tx_hash.is_some()
+                        && last_batch_len >= requested_batch_len as usize
+                    {
+                        if let Some(fetched_batch) = self
+                            .schedule_control_host
+                            .fetch_tx_batch(last_batch_tx_hash, cfg.batch_size)?
+                        {
+                            *batch = fetched_batch;
+                            requested_batch_len = cfg.batch_size;
+                            continue;
+                        }
+                        // No more transactions, let's just finish.
+                    }
+                    break;
+                }
+
+                // Replace input batch with newly generated batch.
+                *batch = new_batch.into();
+
+                Ok(results)
+            },
+        )?;
+
+        // Include rejected transaction hashes in the final result.
+        result.tx_reject_hashes = tx_reject_hashes;
+
+        Ok(result)
     }
 
     fn check_batch(

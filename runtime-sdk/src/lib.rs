@@ -4,6 +4,7 @@
 #![feature(int_log)]
 
 pub mod callformat;
+pub mod config;
 pub mod context;
 pub mod crypto;
 pub mod dispatcher;
@@ -13,6 +14,7 @@ pub mod keymanager;
 pub mod module;
 pub mod modules;
 pub mod runtime;
+pub mod schedule_control;
 pub mod storage;
 pub mod testing;
 pub mod types;

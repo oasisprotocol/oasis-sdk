@@ -2,7 +2,7 @@
 use std::collections::{BTreeMap, HashSet};
 
 use oasis_runtime_sdk::{
-    self as sdk,
+    self as sdk, config,
     core::common::crypto::signature::PrivateKey,
     keymanager::TrustedPolicySigners,
     modules,
@@ -34,6 +34,14 @@ impl sdk::Runtime for Runtime {
     // but only in a later version when you need to update some of the parameters. We do this here
     // to test the migration functionality.
     const STATE_VERSION: u32 = 1;
+
+    // Enable the runtime schedule control feature.
+    const SCHEDULE_CONTROL: Option<config::ScheduleControl> = Some(config::ScheduleControl {
+        initial_batch_size: 2,
+        batch_size: 50,
+        min_remaining_gas: 100,
+        max_tx_count: 1000,
+    });
 
     type Core = modules::core::Module<Config>;
 

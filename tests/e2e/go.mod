@@ -22,7 +22,7 @@ replace (
 require (
 	github.com/btcsuite/btcd v0.22.0-beta
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20210716083614-f38f8e8b0b84
-	github.com/oasisprotocol/oasis-core/go v0.2103.8
+	github.com/oasisprotocol/oasis-core/go v0.2103.9
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
 	google.golang.org/grpc v1.41.0
 )

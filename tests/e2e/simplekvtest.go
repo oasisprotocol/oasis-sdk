@@ -898,7 +898,11 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 		}
 
 		// Ensure all transactions are ordered correctly.
-		var gasPrices []uint64
+		var (
+			gasPrices     []uint64
+			gasLimits     []uint64
+			totalGasLimit uint64
+		)
 		for _, utx := range txs {
 			var tx types.Transaction
 			if err = cbor.Unmarshal(utx.Body, &tx); err != nil {
@@ -907,12 +911,18 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 
 			gasPrice := tx.AuthInfo.Fee.GasPrice().ToBigInt().Uint64()
 			gasPrices = append(gasPrices, gasPrice)
+			gasLimits = append(gasLimits, tx.AuthInfo.Fee.Gas)
+			totalGasLimit += tx.AuthInfo.Fee.Gas
 		}
 
-		log.Info("got gas prices",
+		log.Info("got batch gas information",
 			"round", round,
 			"prices", gasPrices,
+			"limits", gasLimits,
+			"total_limit", totalGasLimit,
 		)
+		// NOTE: The sum of gasLimits can be greater than the batch limit as the transaction could
+		//       have used less than the limit during actual execution.
 
 		if !sort.SliceIsSorted(gasPrices, func(i, j int) bool {
 			return gasPrices[i] > gasPrices[j]
