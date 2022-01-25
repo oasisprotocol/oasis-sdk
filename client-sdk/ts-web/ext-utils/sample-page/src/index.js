@@ -11,10 +11,6 @@ const extPath = options.has('test_noninteractive')
     ? '/oasis-xu-frame.html?test_noninteractive=1'
     : undefined;
 
-function toBase64(/** @type {Uint8Array} */ u8) {
-    return btoa(String.fromCharCode.apply(null, u8));
-}
-
 export const playground = (async function () {
     console.log('connecting');
     const conn = await oasisExt.connection.connect(extOrigin, extPath);
@@ -45,7 +41,7 @@ export const playground = (async function () {
     const signer = await oasisExt.signature.ExtContextSigner.request(conn, keys[0].which);
     console.log('got signer');
     const publicKey = signer.public();
-    console.log('public key base64', toBase64(publicKey));
+    console.log('public key base64', oasis.misc.toBase64(publicKey));
     console.log(
         'address bech32',
         oasis.staking.addressToBech32(await oasis.staking.addressFromPublicKey(publicKey)),
@@ -64,7 +60,7 @@ export const playground = (async function () {
     console.log('requesting signature');
     await tw.sign(signer, 'fake-chain-context-for-testing');
     console.log('got signature');
-    console.log('signature base64', toBase64(tw.signedTransaction.signature.signature));
+    console.log('signature base64', oasis.misc.toBase64(tw.signedTransaction.signature.signature));
 
     const rtw = new oasisRT.accounts.Wrapper(oasis.misc.fromString('fake-runtime-id-for-testing'))
         .callTransfer()
@@ -83,7 +79,7 @@ export const playground = (async function () {
     console.log('requesting signature');
     await rtw.sign([signer], 'fake-chain-context-for-testing');
     console.log('got signature');
-    console.log('signature base64', toBase64(rtw.unverifiedTransaction[1][0].signature));
+    console.log('signature base64', oasis.misc.toBase64(rtw.unverifiedTransaction[1][0].signature));
 })();
 
 playground.catch((e) => {
