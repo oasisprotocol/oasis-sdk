@@ -2,6 +2,9 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::Ident;
 
+/// Wraps the given code block into an anonymous const code block. Useful when
+/// the code block `use`s stuff that should not leak into the containing scope.
+/// See also https://github.com/serde-rs/serde/issues/159#issuecomment-214002626
 pub fn wrap_in_const(tokens: TokenStream) -> TokenStream {
     quote! {
         const _: () = {

@@ -8,18 +8,19 @@ use once_cell::sync::Lazy;
 use thiserror::Error;
 
 use oasis_core_runtime::consensus::staking::Account as ConsensusAccount;
+use oasis_runtime_sdk_macros::{handler, sdk_derive};
 
 use crate::{
     context::{Context, TxContext},
     error, module,
-    module::{CallResult, Module as _},
+    module::Module as _,
     modules,
     modules::core::{Error as CoreError, API as _},
     runtime::Runtime,
     storage::Prefix,
     types::{
         address::Address,
-        message::{MessageEvent, MessageEventHookInvocation, MessageResult},
+        message::{MessageEvent, MessageEventHookInvocation},
         token,
         transaction::AuthInfo,
     },
@@ -220,10 +221,12 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
     }
 }
 
+#[sdk_derive(MethodHandler)]
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     Module<Accounts, Consensus>
 {
     /// Deposit in the runtime.
+    #[handler(call = "consensus.Deposit")]
     fn tx_deposit<C: TxContext>(ctx: &mut C, body: types::Deposit) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_deposit)?;
@@ -237,6 +240,26 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     }
 
     /// Withdraw from the runtime.
+    #[handler(prefetch = "consensus.Withdraw")]
+    fn prefetch_withdraw(
+        add_prefix: &mut dyn FnMut(Prefix),
+        _body: cbor::Value,
+        auth_info: &AuthInfo,
+    ) -> Result<(), error::RuntimeError> {
+        // Prefetch withdrawing account balance.
+        let addr = auth_info.signer_info[0].address_spec.address();
+        add_prefix(Prefix::from(
+            [
+                modules::accounts::Module::NAME.as_bytes(),
+                modules::accounts::state::BALANCES,
+                addr.as_ref(),
+            ]
+            .concat(),
+        ));
+        Ok(())
+    }
+
+    #[handler(call = "consensus.Withdraw")]
     fn tx_withdraw<C: TxContext>(ctx: &mut C, body: types::Withdraw) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_withdraw)?;
@@ -255,6 +278,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         Self::withdraw(ctx, address, nonce, body.to.unwrap_or(address), body.amount)
     }
 
+    #[handler(query = "consensus.Balance")]
     fn query_balance<C: Context>(
         ctx: &mut C,
         args: types::BalanceQuery,
@@ -270,6 +294,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         Ok(types::AccountBalance { balance })
     }
 
+    #[handler(query = "consensus.Account")]
     fn query_consensus_account<C: Context>(
         ctx: &mut C,
         args: types::ConsensusAccountQuery,
@@ -277,6 +302,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         Consensus::account(ctx, args.address).map_err(|_| Error::InvalidArgument)
     }
 
+    #[handler(message_result = CONSENSUS_TRANSFER_HANDLER)]
     fn message_result_transfer<C: Context>(
         ctx: &mut C,
         me: MessageEvent,
@@ -317,6 +343,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         });
     }
 
+    #[handler(message_result = CONSENSUS_WITHDRAW_HANDLER)]
     fn message_result_withdraw<C: Context>(
         ctx: &mut C,
         me: MessageEvent,
@@ -359,87 +386,6 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
 }
 
 /// Module methods.
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::MethodHandler
-    for Module<Accounts, Consensus>
-{
-    fn prefetch(
-        prefixes: &mut BTreeSet<Prefix>,
-        method: &str,
-        body: cbor::Value,
-        auth_info: &AuthInfo,
-    ) -> module::DispatchResult<cbor::Value, Result<(), error::RuntimeError>> {
-        match method {
-            "consensus.Deposit" => {
-                // Nothing to prefetch.
-                module::DispatchResult::Handled(Ok(()))
-            }
-            "consensus.Withdraw" => {
-                // Prefetch withdrawing account balance.
-                let addr = auth_info.signer_info[0].address_spec.address();
-                prefixes.insert(Prefix::from(
-                    [
-                        modules::accounts::Module::NAME.as_bytes(),
-                        modules::accounts::state::BALANCES,
-                        addr.as_ref(),
-                    ]
-                    .concat(),
-                ));
-                module::DispatchResult::Handled(Ok(()))
-            }
-            _ => module::DispatchResult::Unhandled(body),
-        }
-    }
-
-    fn dispatch_call<C: TxContext>(
-        ctx: &mut C,
-        method: &str,
-        body: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, CallResult> {
-        match method {
-            "consensus.Deposit" => module::dispatch_call(ctx, body, Self::tx_deposit),
-            "consensus.Withdraw" => module::dispatch_call(ctx, body, Self::tx_withdraw),
-            _ => module::DispatchResult::Unhandled(body),
-        }
-    }
-
-    fn dispatch_query<C: Context>(
-        ctx: &mut C,
-        method: &str,
-        args: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
-        match method {
-            "consensus.Balance" => module::dispatch_query(ctx, args, Self::query_balance),
-            "consensus.Account" => module::dispatch_query(ctx, args, Self::query_consensus_account),
-            _ => module::DispatchResult::Unhandled(args),
-        }
-    }
-
-    fn dispatch_message_result<C: Context>(
-        ctx: &mut C,
-        handler_name: &str,
-        result: MessageResult,
-    ) -> module::DispatchResult<MessageResult, ()> {
-        match handler_name {
-            CONSENSUS_TRANSFER_HANDLER => {
-                Self::message_result_transfer(
-                    ctx,
-                    result.event,
-                    cbor::from_value(result.context).expect("invalid message handler context"),
-                );
-                module::DispatchResult::Handled(())
-            }
-            CONSENSUS_WITHDRAW_HANDLER => {
-                Self::message_result_withdraw(
-                    ctx,
-                    result.event,
-                    cbor::from_value(result.context).expect("invalid message handler context"),
-                );
-                module::DispatchResult::Handled(())
-            }
-            _ => module::DispatchResult::Unhandled(result),
-        }
-    }
-}
 
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::MigrationHandler
     for Module<Accounts, Consensus>
