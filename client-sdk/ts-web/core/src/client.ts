@@ -1069,13 +1069,13 @@ export class NodeInternal extends GRPCWrapper {
     rootHashGetRuntimeState(request: types.RootHashRuntimeRequest) {
         return this.callUnary(methodDescriptorRootHashGetRuntimeState, request);
     }
-    rootHashHashStateToGenesis(height: types.longnum) {
+    rootHashStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorRootHashStateToGenesis, height);
     }
-    rootHashHashConsensusParameters(height: types.longnum) {
+    rootHashConsensusParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorRootHashConsensusParameters, height);
     }
-    rootHashHashGetEvents(height: types.longnum) {
+    rootHashGetEvents(height: types.longnum) {
         return this.callUnary(methodDescriptorRootHashGetEvents, height);
     }
     rootHashWatchBlocks(runtimeID: Uint8Array) {
