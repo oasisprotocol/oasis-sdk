@@ -296,7 +296,7 @@ func ConfidentialTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 		Key:   testKey,
 		Value: testValue,
 	})
-	tb.SetFeeGas(10 * defaultGasAmount)
+	tb.SetFeeGas(2 * defaultGasAmount)
 	if err = tb.SetCallFormat(ctx, types.CallFormatEncryptedX25519DeoxysII); err != nil {
 		return fmt.Errorf("failed to set call format: %w", err)
 	}
@@ -327,7 +327,7 @@ func TransactionsQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.
 		Key:   testKey,
 		Value: testValue,
 	})
-	tb.SetFeeGas(10 * defaultGasAmount)
+	tb.SetFeeGas(2 * defaultGasAmount)
 	tb.AppendAuthSignature(sigspecForSigner(signer), nonce)
 	_ = tb.AppendSign(ctx, signer)
 	var meta *client.TransactionMeta
@@ -892,27 +892,40 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 		"round_end", blk.Header.Round,
 	)
 	for round := initialRound; round <= blk.Header.Round; round++ {
-		txs, err := rtc.GetTransactions(ctx, round)
+		txs, err := rtc.GetTransactionsWithResults(ctx, round)
 		if err != nil {
 			return fmt.Errorf("failed to fetch transactions for round %d: %w", round, err)
 		}
 
 		// Ensure all transactions are ordered correctly.
-		var gasPrices []uint64
-		for _, utx := range txs {
+		var (
+			gasPrices     []uint64
+			gasLimits     []uint64
+			results       []bool
+			totalGasLimit uint64
+		)
+		for _, rtx := range txs {
 			var tx types.Transaction
-			if err = cbor.Unmarshal(utx.Body, &tx); err != nil {
+			if err = cbor.Unmarshal(rtx.Tx.Body, &tx); err != nil {
 				return fmt.Errorf("bad transaction in round %d: %w", round, err)
 			}
 
 			gasPrice := tx.AuthInfo.Fee.GasPrice().ToBigInt().Uint64()
 			gasPrices = append(gasPrices, gasPrice)
+			gasLimits = append(gasLimits, tx.AuthInfo.Fee.Gas)
+			totalGasLimit += tx.AuthInfo.Fee.Gas
+			results = append(results, rtx.Result.IsSuccess())
 		}
 
-		log.Info("got gas prices",
+		log.Info("got batch gas information",
 			"round", round,
 			"prices", gasPrices,
+			"limits", gasLimits,
+			"total_limit", totalGasLimit,
+			"results", results,
 		)
+		// NOTE: The sum of gasLimits can be greater than the batch limit as the transaction could
+		//       have used less than the limit during actual execution.
 
 		if !sort.SliceIsSorted(gasPrices, func(i, j int) bool {
 			return gasPrices[i] > gasPrices[j]

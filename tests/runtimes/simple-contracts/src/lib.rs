@@ -1,8 +1,8 @@
-//! Simple EVM runtime.
+//! Simple WASM contracts runtime.
 use std::collections::BTreeMap;
 
 use oasis_runtime_sdk::{self as sdk, config, modules, types::token::Denomination, Version};
-use oasis_runtime_sdk_evm as evm;
+use oasis_runtime_sdk_contracts as contracts;
 
 /// Simple EVM runtime.
 pub struct Runtime;
@@ -12,12 +12,8 @@ pub struct Config;
 
 impl modules::core::Config for Config {}
 
-impl evm::Config for Config {
+impl contracts::Config for Config {
     type Accounts = modules::accounts::Module;
-
-    const CHAIN_ID: u64 = 0xa515;
-
-    const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
 }
 
 impl sdk::Runtime for Runtime {
@@ -36,7 +32,7 @@ impl sdk::Runtime for Runtime {
     type Modules = (
         modules::accounts::Module,
         modules::core::Module<Config>,
-        evm::Module<Config>,
+        contracts::Module<Config>,
     );
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {
@@ -68,7 +64,7 @@ impl sdk::Runtime for Runtime {
             },
             modules::core::Genesis {
                 parameters: modules::core::Parameters {
-                    max_batch_gas: 1_000_000,
+                    max_batch_gas: 10_000_000,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
                     gas_costs: modules::core::GasCosts {
@@ -83,10 +79,8 @@ impl sdk::Runtime for Runtime {
                     },
                 },
             },
-            evm::Genesis {
-                parameters: evm::Parameters {
-                    gas_costs: Default::default(),
-                },
+            contracts::Genesis {
+                parameters: Default::default(),
             },
         )
     }

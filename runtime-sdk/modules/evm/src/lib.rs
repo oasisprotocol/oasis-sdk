@@ -541,18 +541,18 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Run EVM and process the result.
         let (exit_reason, exit_value) = f(&mut executor, gas_limit);
-        let exit_value = process_evm_result(exit_reason, exit_value)?;
-
         let gas_used = executor.used_gas();
+        let fee = executor.fee(gas_price);
 
-        if gas_used > gas_limit {
-            // NOTE: This should never happen as the gas was accounted for in advance.
-            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_limit)?;
-            return Err(Error::GasLimitTooLow(gas_used));
-        }
+        let exit_value = match process_evm_result(exit_reason, exit_value) {
+            Ok(exit_value) => exit_value,
+            Err(err) => {
+                <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
+                return Err(err);
+            }
+        };
 
         // Return the difference between the pre-paid max_gas and actually used gas.
-        let fee = executor.fee(gas_price);
         let return_fee = max_gas_fee
             .checked_sub(fee)
             .ok_or(Error::InsufficientBalance)?;

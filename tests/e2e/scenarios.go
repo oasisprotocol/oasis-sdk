@@ -25,7 +25,6 @@ var (
 		KVMultisigTest,
 		KVRewardsTest,
 		KVTxGenTest,
-		ContractsTest,
 		ConfidentialTest,
 		TransactionsQueryTest,
 		BlockQueryTest,
@@ -42,6 +41,11 @@ var (
 		SimpleSolEVMTestCreateMulti,
 		SimpleERC20EVMTest,
 	})
+
+	// SimpleContractsRuntime is the simple-contracts runtime test.
+	SimpleContractsRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-contracts", []RunTestFunction{
+		ContractsTest,
+	})
 )
 
 // RegisterScenarios registers all oasis-sdk end-to-end runtime tests.
@@ -57,6 +61,7 @@ func RegisterScenarios() error {
 		SimpleKVRuntime,
 		SimpleConsensusRuntime,
 		SimpleEVMRuntime,
+		SimpleContractsRuntime,
 	} {
 		if err := cmd.Register(s); err != nil {
 			return err

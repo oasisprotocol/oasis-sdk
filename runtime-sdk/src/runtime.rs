@@ -2,11 +2,17 @@
 use std::sync::Arc;
 
 use oasis_core_runtime::{
-    common::version, config::Config, consensus::verifier::TrustRoot, rak::RAK, start_runtime,
+    common::version,
+    config::Config,
+    consensus::verifier::TrustRoot,
+    rak::RAK,
+    start_runtime,
+    types::{FeatureScheduleControl, Features},
     Protocol, RpcDemux, RpcDispatcher, TxnDispatcher,
 };
 
 use crate::{
+    config,
     context::Context,
     crypto, dispatcher,
     keymanager::{KeyManagerClient, TrustedPolicySigners},
@@ -23,6 +29,9 @@ pub trait Runtime {
 
     /// Prefetch limit. To enable prefetch set it to a non-zero value.
     const PREFETCH_LIMIT: u16 = 0;
+
+    /// Whether the runtime should take control of transaction scheduling.
+    const SCHEDULE_CONTROL: Option<config::ScheduleControl> = None;
 
     /// Module that provides the core API.
     type Core: modules::core::API;
@@ -130,9 +139,17 @@ pub trait Runtime {
             });
 
             // Register runtime's methods.
-            let dispatcher = dispatcher::Dispatcher::<Self>::new(hi, key_manager);
+            let dispatcher = dispatcher::Dispatcher::<Self>::new(hi, key_manager, protocol.clone());
             Some(Box::new(dispatcher))
         };
+
+        // Configure the runtime features.
+        let mut features = Features::default();
+        if let Some(cfg) = Self::SCHEDULE_CONTROL {
+            features.schedule_control = Some(FeatureScheduleControl {
+                initial_batch_size: cfg.initial_batch_size,
+            });
+        }
 
         // Start the runtime.
         start_runtime(
@@ -140,6 +157,7 @@ pub trait Runtime {
             Config {
                 version: Self::VERSION,
                 trust_root: Self::consensus_trust_root(),
+                features: Some(features),
                 ..Default::default()
             },
         );

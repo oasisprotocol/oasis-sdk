@@ -526,11 +526,17 @@ impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
     }
 
     fn before_handle_call<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {
+        // Ensure that specified gas limit is not greater than batch gas limit.
+        let params = Self::params(ctx.runtime_state());
+        let gas = ctx.tx_auth_info().fee.gas;
+        if gas > params.max_batch_gas {
+            return Err(Error::GasOverflow);
+        }
+
         // Enforce minimum gas price constraints.
         Self::enforce_min_gas_price(ctx, call)?;
 
         // Charge gas for transaction size.
-        let params = Self::params(ctx.runtime_state());
         Self::use_tx_gas(
             ctx,
             params
@@ -575,7 +581,6 @@ impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
         }
 
         // Set weight based on configured gas limit.
-        let gas = ctx.tx_auth_info().fee.gas;
         Self::add_weight(ctx, GAS_WEIGHT_NAME.into(), gas)?;
 
         // Attempt to limit the maximum number of consensus messages and add appropriate weights.

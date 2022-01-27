@@ -2,14 +2,13 @@
 use std::collections::{BTreeMap, HashSet};
 
 use oasis_runtime_sdk::{
-    self as sdk,
+    self as sdk, config,
     core::common::crypto::signature::PrivateKey,
     keymanager::TrustedPolicySigners,
     modules,
     types::token::{BaseUnits, Denomination},
     Module as _, Version,
 };
-use oasis_runtime_sdk_contracts as contracts;
 
 pub mod keyvalue;
 #[cfg(test)]
@@ -23,10 +22,6 @@ pub struct Config;
 
 impl modules::core::Config for Config {}
 
-impl contracts::Config for Config {
-    type Accounts = modules::accounts::Module;
-}
-
 impl sdk::Runtime for Runtime {
     const VERSION: Version = sdk::version_from_cargo!();
 
@@ -35,6 +30,14 @@ impl sdk::Runtime for Runtime {
     // to test the migration functionality.
     const STATE_VERSION: u32 = 1;
 
+    // Enable the runtime schedule control feature.
+    const SCHEDULE_CONTROL: Option<config::ScheduleControl> = Some(config::ScheduleControl {
+        initial_batch_size: 2,
+        batch_size: 50,
+        min_remaining_gas: 100,
+        max_tx_count: 1000,
+    });
+
     type Core = modules::core::Module<Config>;
 
     type Modules = (
@@ -42,7 +45,6 @@ impl sdk::Runtime for Runtime {
         modules::accounts::Module,
         modules::rewards::Module<modules::accounts::Module>,
         modules::core::Module<Config>,
-        contracts::Module<Config>,
     );
 
     fn trusted_policy_signers() -> Option<TrustedPolicySigners> {
@@ -138,14 +140,14 @@ impl sdk::Runtime for Runtime {
             },
             modules::core::Genesis {
                 parameters: modules::core::Parameters {
-                    max_batch_gas: 10_000_000,
+                    max_batch_gas: 2_000,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
                     gas_costs: modules::core::GasCosts {
                         tx_byte: 1,
                         auth_signature: 10,
                         auth_multisig_signer: 10,
-                        callformat_x25519_deoxysii: 1000,
+                        callformat_x25519_deoxysii: 50,
                     },
                     min_gas_price: {
                         let mut mgp = BTreeMap::new();
@@ -153,9 +155,6 @@ impl sdk::Runtime for Runtime {
                         mgp
                     },
                 },
-            },
-            contracts::Genesis {
-                parameters: Default::default(),
             },
         )
     }
