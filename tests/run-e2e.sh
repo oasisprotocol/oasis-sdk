@@ -57,6 +57,11 @@ cd "${TESTS_DIR}"/runtimes/simple-evm
 cargo build
 cp "${TESTS_DIR}"/../target/debug/test-runtime-simple-evm "${TEST_BASE_DIR}"/
 
+printf "${CYAN}### Building test simple-contracts runtime...${OFF}\n"
+cd "${TESTS_DIR}"/runtimes/simple-contracts
+cargo build
+cp "${TESTS_DIR}"/../target/debug/test-runtime-simple-contracts "${TEST_BASE_DIR}"/
+
 printf "${CYAN}### Building test hello contract...${OFF}\n"
 cd "${TESTS_DIR}"/contracts/hello
 cargo build --target wasm32-unknown-unknown --release

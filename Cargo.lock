@@ -3065,6 +3065,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-runtime-simple-contracts"
+version = "0.1.0"
+dependencies = [
+ "oasis-cbor",
+ "oasis-runtime-sdk",
+ "oasis-runtime-sdk-contracts",
+ "thiserror",
+]
+
+[[package]]
 name = "test-runtime-simple-evm"
 version = "0.1.0"
 dependencies = [
@@ -3082,7 +3092,6 @@ dependencies = [
  "futures",
  "oasis-cbor",
  "oasis-runtime-sdk",
- "oasis-runtime-sdk-contracts",
  "thiserror",
 ]
 

@@ -21,6 +21,7 @@ members = [
     "tests/runtimes/simple-keyvalue",
     "tests/runtimes/simple-consensus",
     "tests/runtimes/simple-evm",
+    "tests/runtimes/simple-contracts",
 ]
 exclude = [
     # Test contracts.

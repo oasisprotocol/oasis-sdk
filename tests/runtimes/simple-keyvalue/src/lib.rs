@@ -9,7 +9,6 @@ use oasis_runtime_sdk::{
     types::token::{BaseUnits, Denomination},
     Module as _, Version,
 };
-use oasis_runtime_sdk_contracts as contracts;
 
 pub mod keyvalue;
 #[cfg(test)]
@@ -22,10 +21,6 @@ pub struct Runtime;
 pub struct Config;
 
 impl modules::core::Config for Config {}
-
-impl contracts::Config for Config {
-    type Accounts = modules::accounts::Module;
-}
 
 impl sdk::Runtime for Runtime {
     const VERSION: Version = sdk::version_from_cargo!();
@@ -50,7 +45,6 @@ impl sdk::Runtime for Runtime {
         modules::accounts::Module,
         modules::rewards::Module<modules::accounts::Module>,
         modules::core::Module<Config>,
-        contracts::Module<Config>,
     );
 
     fn trusted_policy_signers() -> Option<TrustedPolicySigners> {
@@ -161,9 +155,6 @@ impl sdk::Runtime for Runtime {
                         mgp
                     },
                 },
-            },
-            contracts::Genesis {
-                parameters: Default::default(),
             },
         )
     }
