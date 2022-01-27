@@ -12,7 +12,7 @@ const FEE_FREE = /** @type {oasisRT.types.BaseUnits} */ ([
     oasis.quantity.fromBigInt(0n),
     oasisRT.token.NATIVE_DENOMINATION,
 ]);
-const GAS_HIGH = 1_000_000n;
+const GAS_HIGH = 800n;
 
 /**
  * The name of our module.
