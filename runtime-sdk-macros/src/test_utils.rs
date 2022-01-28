@@ -18,13 +18,17 @@ pub fn rustfmt(code: &str) -> String {
         .expect("unable to communicate with rustfmt");
 
     let output = cp.wait_with_output().unwrap();
-    if !output.status.success() {
-        panic!(
-            "unable to rustfmt\n{}",
-            String::from_utf8(output.stderr).unwrap_or_default()
-        );
-    }
-    String::from_utf8(output.stdout).unwrap()
+    assert!(
+        output.status.success(),
+        "unable to rustfmt\n{}",
+        String::from_utf8(output.stderr).unwrap_or_default()
+    );
+    let output = String::from_utf8(output.stdout).unwrap();
+    // Remove the "const _: () = ..." wrapper we added above
+    let mut output =
+        output.split('\n').collect::<Vec<_>>()[1..output.matches('\n').count() - 1].join("\n");
+    output.pop();
+    output
 }
 
 #[macro_export]
@@ -35,30 +39,11 @@ macro_rules! assert_empty_diff {
         let actual_code = crate::test_utils::rustfmt(&$actual.to_token_stream().to_string());
         let expected_code = crate::test_utils::rustfmt(&$expected.to_token_stream().to_string());
 
-        let diffs = diff::lines(&actual_code, &expected_code);
+        let diff = difference::Changeset::new(&expected_code, &actual_code, "\n");
 
-        let mut has_diff = false;
-        let mut actual_lines = actual_code.split('\n');
-        let mut expected_lines = expected_code.split('\n');
-
-        for (i, diff) in diffs.iter().enumerate() {
-            match diff {
-                diff::Result::Left(l) => {
-                    eprintln!("non-empty diff on line {}", i);
-                    eprintln!("+ {}", l);
-                    eprintln!("- {}", expected_lines.next().unwrap());
-                    has_diff = true;
-                }
-                diff::Result::Right { .. } => {
-                    actual_lines.next();
-                    has_diff = true;
-                }
-                diff::Result::Both { .. } => {
-                    actual_lines.next();
-                    expected_lines.next();
-                }
-            }
+        if diff.distance > 0 {
+            eprintln!("Diff:\n{}\n\nActual output:\n{}\n", diff, actual_code);
         }
-        assert!(!has_diff);
+        assert!(diff.distance == 0);
     }};
 }
