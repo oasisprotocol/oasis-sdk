@@ -279,6 +279,7 @@ import (
     "time"
 
     "google.golang.org/grpc"
+    "google.golang.org/grpc/credentials/insecure"
 
     "github.com/oasisprotocol/oasis-core/go/common"
     cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
@@ -349,7 +350,7 @@ func main() {
 
     // Establish a gRPC connection with the client node.
     logger.Info("connecting to local node")
-    conn, err := cmnGrpc.Dial(nodeAddress, grpc.WithInsecure())
+    conn, err := cmnGrpc.Dial(nodeAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
     if err != nil {
         logger.Error("failed to establish connection",
             "addr", nodeAddress,
