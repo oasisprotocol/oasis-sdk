@@ -15,6 +15,7 @@ const (
 	methodParameters  = "core.Parameters"
 	methodEstimateGas = "core.EstimateGas"
 	methodMinGasPrice = "core.MinGasPrice"
+	methodRuntimeInfo = "core.RuntimeInfo"
 )
 
 // V1 is the v1 core module interface.
@@ -34,6 +35,9 @@ type V1 interface {
 
 	// GetEvents returns all core events emitted in a given block.
 	GetEvents(ctx context.Context, round uint64) ([]*Event, error)
+
+	// RuntimeInfo returns basic info about the module and the containing runtime.
+	RuntimeInfo(ctx context.Context) (*RuntimeInfoResponse, error)
 }
 
 type v1 struct {
@@ -132,6 +136,16 @@ func DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
 		return nil, fmt.Errorf("invalid core event code: %v", event.Code)
 	}
 	return events, nil
+}
+
+// Implements V1.
+func (a *v1) RuntimeInfo(ctx context.Context) (*RuntimeInfoResponse, error) {
+	var info RuntimeInfoResponse
+	err := a.rc.Query(ctx, client.RoundLatest, methodRuntimeInfo, nil, &info)
+	if err != nil {
+		return nil, err
+	}
+	return &info, nil
 }
 
 // NewV1 generates a V1 client helper for the core module.

@@ -1,8 +1,9 @@
 package core
 
 import (
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
-
+	"github.com/oasisprotocol/oasis-core/go/common/version"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -49,3 +50,40 @@ type GasUsedEvent struct {
 type Event struct {
 	GasUsed *GasUsedEvent
 }
+
+// RuntimeInfoResponse is the response of the core.RuntimeInfo query
+// and provides basic introspection information about the runtime.
+type RuntimeInfoResponse struct {
+	RuntimeVersion *version.Version `json:"runtime_version"`
+	// StateVersion is the version of the schema used by the runtime for keeping its state.
+	StateVersion uint32 `json:"state_version"`
+	// Modules are the SDK modules that comprise this runtime.
+	Modules map[string]ModuleInfo `json:"modules"`
+}
+
+// ModuleInfo is the information about a single module within the runtime.
+type ModuleInfo struct {
+	// Version is the version of the module.
+	Version uint32 `json:"version"`
+	// Params are the initial parameters of the module.
+	Params cbor.RawMessage `json:"params"`
+	// Methods are the RPC methods exposed by the module.
+	Methods []MethodHandlerInfo `json:"methods"`
+}
+
+// MethodHandlerInfo describes a single RPC.
+type MethodHandlerInfo struct {
+	// Name is the name of the RPC.
+	Name string `json:"name"`
+	// Kind is the kind of the RPC.
+	Kind methodHandlerKind `json:"kind"`
+}
+
+type methodHandlerKind string
+
+// These constants represent the kinds of methods that handlers handle.
+const (
+	MethodHandlerKindCall          methodHandlerKind = "call"
+	MethodHandlerKindQuery         methodHandlerKind = "query"
+	MethodHandlerKindMessageResult methodHandlerKind = "message_result"
+)

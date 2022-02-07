@@ -14,7 +14,7 @@ use crate::{
     callformat,
     context::{BatchContext, Context, TxContext},
     dispatcher,
-    module::{self, InvariantHandler as _, Module as _},
+    module::{self, InvariantHandler as _, Module as _, ModuleInfoHandler as _},
     types::{
         token,
         transaction::{
@@ -24,6 +24,8 @@ use crate::{
     },
     Runtime,
 };
+
+use self::types::RuntimeInfoResponse;
 
 #[cfg(test)]
 mod test;
@@ -468,6 +470,19 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         Ok(mgp)
+    }
+
+    /// Return basic information about the module and the containing runtime.
+    #[handler(query = "core.RuntimeInfo")]
+    fn query_runtime_info<C: Context>(
+        ctx: &mut C,
+        _args: (),
+    ) -> Result<RuntimeInfoResponse, Error> {
+        Ok(RuntimeInfoResponse {
+            runtime_version: <C::Runtime as Runtime>::VERSION,
+            state_version: <C::Runtime as Runtime>::STATE_VERSION,
+            modules: <C::Runtime as Runtime>::Modules::module_info(ctx),
+        })
     }
 }
 
