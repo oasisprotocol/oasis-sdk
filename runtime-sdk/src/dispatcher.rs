@@ -64,6 +64,10 @@ pub enum Error {
     #[error("key manager failure: {0}")]
     #[sdk_error(code = 4)]
     KeyManagerFailure(#[from] KeyManagerError),
+
+    #[error("batch out of gas")]
+    #[sdk_error(code = 5)]
+    BatchOutOfGas,
 }
 
 /// Result of dispatching a transaction.

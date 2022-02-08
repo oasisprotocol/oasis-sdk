@@ -78,14 +78,6 @@ pub enum Error {
     #[sdk_error(code = 12)]
     OutOfGas(u64, u64),
 
-    #[error("batch gas overflow")]
-    #[sdk_error(code = 13)]
-    BatchGasOverflow,
-
-    #[error("batch out of gas (limit: {0} wanted: {1})")]
-    #[sdk_error(code = 14)]
-    BatchOutOfGas(u64, u64),
-
     #[error("too many authentication slots")]
     #[sdk_error(code = 15)]
     TooManyAuth,
@@ -246,11 +238,14 @@ impl<Cfg: Config> API for Module<Cfg> {
         }
         let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
         let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
+        // NOTE: Going over the batch limit should trigger an abort as the scheduler should never
+        //       allow scheduling past the batch limit but a malicious proposer might include too
+        //       many transactions. Make sure to vote for failure in this case.
         let batch_new_gas_used = batch_gas_used
             .checked_add(gas)
-            .ok_or(Error::BatchGasOverflow)?;
+            .ok_or(Error::Abort(dispatcher::Error::BatchOutOfGas))?;
         if batch_new_gas_used > batch_gas_limit {
-            return Err(Error::BatchOutOfGas(batch_gas_limit, batch_new_gas_used));
+            return Err(Error::Abort(dispatcher::Error::BatchOutOfGas));
         }
 
         ctx.value::<u64>(CONTEXT_KEY_GAS_USED)
