@@ -7,6 +7,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
@@ -71,7 +72,7 @@ func Connect(ctx context.Context, net *config.Network) (Connection, error) {
 	switch net.IsLocalRPC() {
 	case true:
 		// No TLS needed for local nodes.
-		dialOpts = append(dialOpts, grpc.WithInsecure())
+		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	case false:
 		// Configure TLS for non-local nodes.
 		creds := credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})

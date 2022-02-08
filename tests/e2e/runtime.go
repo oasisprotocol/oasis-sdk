@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
@@ -346,7 +347,7 @@ func (sc *RuntimeScenario) Run(childEnv *env.Env) error {
 		return fmt.Errorf("client initialization failed")
 	}
 
-	conn, err := cmnGrpc.Dial("unix:"+clients[0].SocketPath(), grpc.WithInsecure())
+	conn, err := cmnGrpc.Dial("unix:"+clients[0].SocketPath(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
 	}

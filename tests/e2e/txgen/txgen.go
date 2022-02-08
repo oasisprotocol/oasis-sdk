@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"google.golang.org/grpc"
-
 	"github.com/btcsuite/btcd/btcec"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	voiSr "github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
 
@@ -61,7 +61,7 @@ func sigspecForSigner(signer signature.Signer) types.SignatureAddressSpec {
 
 // NewClient creates a new runtime client.
 func NewClient(clientNodeUnixSocketPath string, runtimeID common.Namespace) (client.RuntimeClient, error) {
-	conn, err := cmnGrpc.Dial("unix:"+clientNodeUnixSocketPath, grpc.WithInsecure())
+	conn, err := cmnGrpc.Dial("unix:"+clientNodeUnixSocketPath, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
