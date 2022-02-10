@@ -14,11 +14,12 @@ use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
     core::common::crypto::hash::Hash,
-    error, module,
-    module::{CallResult, Module as _},
+    handler, module,
+    module::Module as _,
     modules,
     modules::{accounts::API as _, core::API as _},
     runtime::Runtime,
+    sdk_derive,
     storage::{self, Store as _},
 };
 
@@ -322,7 +323,9 @@ impl<Cfg: Config> Module<Cfg> {
     }
 }
 
+#[sdk_derive(MethodHandler)]
 impl<Cfg: Config> Module<Cfg> {
+    #[handler(call = "contracts.Upload")]
     fn tx_upload<C: TxContext>(
         ctx: &mut C,
         body: types::Upload,
@@ -418,6 +421,7 @@ impl<Cfg: Config> Module<Cfg> {
         Ok(types::UploadResult { id })
     }
 
+    #[handler(call = "contracts.Instantiate")]
     fn tx_instantiate<C: TxContext>(
         ctx: &mut C,
         body: types::Instantiate,
@@ -488,6 +492,7 @@ impl<Cfg: Config> Module<Cfg> {
         }
     }
 
+    #[handler(call = "contracts.Call")]
     fn tx_call<C: TxContext>(ctx: &mut C, body: types::Call) -> Result<types::CallResult, Error> {
         let params = Self::params(ctx.runtime_state());
         let caller = ctx.tx_caller_address();
@@ -539,6 +544,7 @@ impl<Cfg: Config> Module<Cfg> {
         }
     }
 
+    #[handler(call = "contracts.Upgrade")]
     fn tx_upgrade<C: TxContext>(ctx: &mut C, body: types::Upgrade) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
         let caller = ctx.tx_caller_address();
@@ -616,10 +622,12 @@ impl<Cfg: Config> Module<Cfg> {
         }
     }
 
+    #[handler(query = "contracts.Code")]
     fn query_code<C: Context>(ctx: &mut C, args: types::CodeQuery) -> Result<types::Code, Error> {
         Self::load_code_info(ctx, args.id)
     }
 
+    #[handler(query = "contracts.Instance")]
     fn query_instance<C: Context>(
         ctx: &mut C,
         args: types::InstanceQuery,
@@ -627,6 +635,7 @@ impl<Cfg: Config> Module<Cfg> {
         Self::load_instance_info(ctx, args.id)
     }
 
+    #[handler(query = "contracts.InstanceStorage")]
     fn query_instance_storage<C: Context>(
         ctx: &mut C,
         args: types::InstanceStorageQuery,
@@ -640,6 +649,7 @@ impl<Cfg: Config> Module<Cfg> {
         })
     }
 
+    #[handler(query = "contracts.PublicKey")]
     fn query_public_key<C: Context>(
         _ctx: &mut C,
         _args: types::PublicKeyQuery,
@@ -647,6 +657,7 @@ impl<Cfg: Config> Module<Cfg> {
         Err(Error::Unsupported)
     }
 
+    #[handler(query = "contracts.Custom")]
     fn query_custom<C: Context>(
         ctx: &mut C,
         args: types::CustomQuery,
@@ -689,39 +700,6 @@ impl<Cfg: Config> module::Module for Module<Cfg> {
     type Error = Error;
     type Event = Event;
     type Parameters = Parameters;
-}
-
-impl<Cfg: Config> module::MethodHandler for Module<Cfg> {
-    fn dispatch_call<C: TxContext>(
-        ctx: &mut C,
-        method: &str,
-        body: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, CallResult> {
-        match method {
-            "contracts.Upload" => module::dispatch_call(ctx, body, Self::tx_upload),
-            "contracts.Instantiate" => module::dispatch_call(ctx, body, Self::tx_instantiate),
-            "contracts.Call" => module::dispatch_call(ctx, body, Self::tx_call),
-            "contracts.Upgrade" => module::dispatch_call(ctx, body, Self::tx_upgrade),
-            _ => module::DispatchResult::Unhandled(body),
-        }
-    }
-
-    fn dispatch_query<C: Context>(
-        ctx: &mut C,
-        method: &str,
-        args: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
-        match method {
-            "contracts.Code" => module::dispatch_query(ctx, args, Self::query_code),
-            "contracts.Instance" => module::dispatch_query(ctx, args, Self::query_instance),
-            "contracts.InstanceStorage" => {
-                module::dispatch_query(ctx, args, Self::query_instance_storage)
-            }
-            "contracts.PublicKey" => module::dispatch_query(ctx, args, Self::query_public_key),
-            "contracts.Custom" => module::dispatch_query(ctx, args, Self::query_custom),
-            _ => module::DispatchResult::Unhandled(args),
-        }
-    }
 }
 
 impl<Cfg: Config> Module<Cfg> {

@@ -17,9 +17,9 @@ use oasis_core_runtime::{
 
 use crate::{
     context::{Context, TxContext},
-    error, module,
+    handler, module,
     module::{Module as _, Parameters as _},
-    modules,
+    modules, sdk_derive,
     types::{
         address::{Address, SignatureAddressSpec},
         message::MessageEventHookInvocation,
@@ -177,7 +177,11 @@ impl Module {
 
         Ok(())
     }
+}
 
+#[sdk_derive(MethodHandler)]
+impl Module {
+    #[handler(query = "consensus.Parameters")]
     fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<Parameters, Error> {
         Ok(Self::params(ctx.runtime_state()))
     }
@@ -325,19 +329,6 @@ impl module::Module for Module {
     type Error = Error;
     type Event = Event;
     type Parameters = Parameters;
-}
-
-impl module::MethodHandler for Module {
-    fn dispatch_query<C: Context>(
-        ctx: &mut C,
-        method: &str,
-        args: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
-        match method {
-            "consensus.Parameters" => module::dispatch_query(ctx, args, Self::query_parameters),
-            _ => module::DispatchResult::Unhandled(args),
-        }
-    }
 }
 
 impl Module {

@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::anyhow;
+use oasis_runtime_sdk_macros::{handler, sdk_derive};
 use thiserror::Error;
 
 pub use oasis_core_keymanager_api_common::KeyManagerError;
@@ -12,7 +13,7 @@ pub use oasis_core_keymanager_api_common::KeyManagerError;
 use crate::{
     callformat,
     context::{BatchContext, Context, TxContext},
-    dispatcher, error,
+    dispatcher,
     module::{self, InvariantHandler as _, Module as _},
     types::{
         token,
@@ -325,11 +326,13 @@ impl<Cfg: Config> API for Module<Cfg> {
     }
 }
 
+#[sdk_derive(MethodHandler)]
 impl<Cfg: Config> Module<Cfg> {
     /// Run a transaction in simulation and return how much gas it uses. This looks up the method
     /// in the context's method registry. Transactions that fail still use gas, and this query will
     /// estimate that and return successfully, so do not use this query to see if a transaction will
     /// succeed.
+    #[handler(query = "core.EstimateGas")]
     fn query_estimate_gas<C: Context>(
         ctx: &mut C,
         mut args: types::EstimateGasQuery,
@@ -406,6 +409,7 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     /// Check invariants of all modules in the runtime.
+    #[handler(query = "core.CheckInvariants")]
     fn query_check_invariants<C: Context>(ctx: &mut C, _args: ()) -> Result<(), Error> {
         if !ctx.are_expensive_queries_allowed() {
             return Err(Error::InvalidArgument(anyhow!("query not allowed")));
@@ -415,6 +419,7 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     /// Retrieve the public key for encrypting call data.
+    #[handler(query = "core.CallDataPublicKey")]
     fn query_calldata_public_key<C: Context>(
         ctx: &mut C,
         _args: (),
@@ -431,6 +436,7 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     /// Query the minimum gas price.
+    #[handler(query = "core.MinGasPrice")]
     fn query_min_gas_price<C: Context>(
         ctx: &mut C,
         _args: (),
@@ -448,7 +454,9 @@ impl<Cfg: Config> Module<Cfg> {
 
         Ok(mgp)
     }
+}
 
+impl<Cfg: Config> Module<Cfg> {
     fn get_local_min_gas_price<C: Context>(ctx: &mut C, denom: &token::Denomination) -> u128 {
         #[allow(clippy::borrow_interior_mutable_const)]
         ctx.local_config(MODULE_NAME)
@@ -609,26 +617,6 @@ impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
 
         // Perform migration.
         Self::migrate(ctx, version)
-    }
-}
-
-impl<Cfg: Config> module::MethodHandler for Module<Cfg> {
-    fn dispatch_query<C: Context>(
-        ctx: &mut C,
-        method: &str,
-        args: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
-        match method {
-            "core.EstimateGas" => module::dispatch_query(ctx, args, Self::query_estimate_gas),
-            "core.CheckInvariants" => {
-                module::dispatch_query(ctx, args, Self::query_check_invariants)
-            }
-            "core.CallDataPublicKey" => {
-                module::dispatch_query(ctx, args, Self::query_calldata_public_key)
-            }
-            "core.MinGasPrice" => module::dispatch_query(ctx, args, Self::query_min_gas_price),
-            _ => module::DispatchResult::Unhandled(args),
-        }
     }
 }
 

@@ -17,15 +17,15 @@ use thiserror::Error;
 
 use oasis_runtime_sdk::{
     context::{BatchContext, Context, TxContext},
-    error,
-    module::{self, CallResult, Module as _},
+    handler,
+    module::{self, Module as _},
     modules::{
         self,
         accounts::API as _,
         core::{Error as CoreError, API as _},
     },
     runtime::Runtime,
-    storage,
+    sdk_derive, storage,
     types::{
         address::{self, Address},
         token, transaction,
@@ -580,27 +580,36 @@ impl<Cfg: Config> Module<Cfg> {
     {
         derive_caller::from_tx_auth_info(ctx.tx_auth_info())
     }
+}
 
+#[sdk_derive(MethodHandler)]
+impl<Cfg: Config> Module<Cfg> {
+    #[handler(call = "evm.Create")]
     fn tx_create<C: TxContext>(ctx: &mut C, body: types::Create) -> Result<Vec<u8>, Error> {
         Self::create(ctx, body.value, body.init_code)
     }
 
+    #[handler(call = "evm.Call")]
     fn tx_call<C: TxContext>(ctx: &mut C, body: types::Call) -> Result<Vec<u8>, Error> {
         Self::call(ctx, body.address, body.value, body.data)
     }
 
+    #[handler(query = "evm.Storage")]
     fn query_storage<C: Context>(ctx: &mut C, body: types::StorageQuery) -> Result<Vec<u8>, Error> {
         Self::get_storage(ctx, body.address, body.index)
     }
 
+    #[handler(query = "evm.Code")]
     fn query_code<C: Context>(ctx: &mut C, body: types::CodeQuery) -> Result<Vec<u8>, Error> {
         Self::get_code(ctx, body.address)
     }
 
+    #[handler(query = "evm.Balance")]
     fn query_balance<C: Context>(ctx: &mut C, body: types::BalanceQuery) -> Result<u128, Error> {
         Self::get_balance(ctx, body.address)
     }
 
+    #[handler(query = "evm.SimulateCall")]
     fn query_simulate_call<C: Context>(
         ctx: &mut C,
         body: types::SimulateCallQuery,
@@ -614,34 +623,6 @@ impl<Cfg: Config> Module<Cfg> {
             body.value,
             body.data,
         )
-    }
-}
-
-impl<Cfg: Config> module::MethodHandler for Module<Cfg> {
-    fn dispatch_call<C: TxContext>(
-        ctx: &mut C,
-        method: &str,
-        body: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, CallResult> {
-        match method {
-            "evm.Create" => module::dispatch_call(ctx, body, Self::tx_create),
-            "evm.Call" => module::dispatch_call(ctx, body, Self::tx_call),
-            _ => module::DispatchResult::Unhandled(body),
-        }
-    }
-
-    fn dispatch_query<C: Context>(
-        ctx: &mut C,
-        method: &str,
-        args: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
-        match method {
-            "evm.Storage" => module::dispatch_query(ctx, args, Self::query_storage),
-            "evm.Code" => module::dispatch_query(ctx, args, Self::query_code),
-            "evm.Balance" => module::dispatch_query(ctx, args, Self::query_balance),
-            "evm.SimulateCall" => module::dispatch_query(ctx, args, Self::query_simulate_call),
-            _ => module::DispatchResult::Unhandled(args),
-        }
     }
 }
 

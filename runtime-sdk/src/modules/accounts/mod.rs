@@ -11,12 +11,12 @@ use thiserror::Error;
 use crate::{
     context::{Context, TxContext},
     core::common::quantity::Quantity,
-    error, module,
-    module::{CallResult, Module as _, Parameters as _},
+    handler, module,
+    module::{Module as _, Parameters as _},
     modules,
     modules::core::{Error as CoreError, API as _},
     runtime::Runtime,
-    storage,
+    sdk_derive, storage,
     storage::Prefix,
     types::{
         address::{Address, SignatureAddressSpec},
@@ -658,7 +658,35 @@ impl API for Module {
     }
 }
 
+#[sdk_derive(MethodHandler)]
 impl Module {
+    #[handler(prefetch = "accounts.Transfer")]
+    fn prefetch_transfer(
+        add_prefix: &mut dyn FnMut(Prefix),
+        body: cbor::Value,
+        auth_info: &AuthInfo,
+    ) -> Result<(), crate::error::RuntimeError> {
+        let args: types::Transfer = cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
+        let from = auth_info.signer_info[0].address_spec.address();
+
+        // Prefetch accounts 'to'.
+        add_prefix(Prefix::from(
+            [MODULE_NAME.as_bytes(), state::ACCOUNTS, args.to.as_ref()].concat(),
+        ));
+        add_prefix(Prefix::from(
+            [MODULE_NAME.as_bytes(), state::BALANCES, args.to.as_ref()].concat(),
+        ));
+        // Prefetch accounts 'from'.
+        add_prefix(Prefix::from(
+            [MODULE_NAME.as_bytes(), state::ACCOUNTS, from.as_ref()].concat(),
+        ));
+        add_prefix(Prefix::from(
+            [MODULE_NAME.as_bytes(), state::BALANCES, from.as_ref()].concat(),
+        ));
+
+        Ok(())
+    }
+    #[handler(call = "accounts.Transfer")]
     fn tx_transfer<C: TxContext>(ctx: &mut C, body: types::Transfer) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
 
@@ -674,10 +702,12 @@ impl Module {
         Ok(())
     }
 
+    #[handler(query = "accounts.Nonce")]
     fn query_nonce<C: Context>(ctx: &mut C, args: types::NonceQuery) -> Result<u64, Error> {
         Self::get_nonce(ctx.runtime_state(), args.address)
     }
 
+    #[handler(query = "accounts.Addresses")]
     fn query_addresses<C: Context>(
         ctx: &mut C,
         args: types::AddressesQuery,
@@ -689,6 +719,7 @@ impl Module {
         Self::get_addresses(ctx.runtime_state(), args.denomination)
     }
 
+    #[handler(query = "accounts.Balances")]
     fn query_balances<C: Context>(
         ctx: &mut C,
         args: types::BalancesQuery,
@@ -696,6 +727,7 @@ impl Module {
         Self::get_balances(ctx.runtime_state(), args.address)
     }
 
+    #[handler(query = "accounts.DenominationInfo")]
     fn query_denomination_info<C: Context>(
         ctx: &mut C,
         args: types::DenominationInfoQuery,
@@ -709,70 +741,6 @@ impl module::Module for Module {
     type Error = Error;
     type Event = Event;
     type Parameters = Parameters;
-}
-
-impl module::MethodHandler for Module {
-    fn prefetch(
-        prefixes: &mut BTreeSet<Prefix>,
-        method: &str,
-        body: cbor::Value,
-        auth_info: &AuthInfo,
-    ) -> module::DispatchResult<cbor::Value, Result<(), error::RuntimeError>> {
-        match method {
-            "accounts.Transfer" => {
-                module::DispatchResult::Handled(|| -> Result<(), error::RuntimeError> {
-                    let args: types::Transfer =
-                        cbor::from_value(body).map_err(|_| Error::InvalidArgument)?;
-                    let from = auth_info.signer_info[0].address_spec.address();
-
-                    // Prefetch accounts 'to'.
-                    prefixes.insert(Prefix::from(
-                        [MODULE_NAME.as_bytes(), state::ACCOUNTS, args.to.as_ref()].concat(),
-                    ));
-                    prefixes.insert(Prefix::from(
-                        [MODULE_NAME.as_bytes(), state::BALANCES, args.to.as_ref()].concat(),
-                    ));
-                    // Prefetch accounts 'from'.
-                    prefixes.insert(Prefix::from(
-                        [MODULE_NAME.as_bytes(), state::ACCOUNTS, from.as_ref()].concat(),
-                    ));
-                    prefixes.insert(Prefix::from(
-                        [MODULE_NAME.as_bytes(), state::BALANCES, from.as_ref()].concat(),
-                    ));
-
-                    Ok(())
-                }())
-            }
-            _ => module::DispatchResult::Unhandled(body),
-        }
-    }
-
-    fn dispatch_call<C: TxContext>(
-        ctx: &mut C,
-        method: &str,
-        body: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, CallResult> {
-        match method {
-            "accounts.Transfer" => module::dispatch_call(ctx, body, Self::tx_transfer),
-            _ => module::DispatchResult::Unhandled(body),
-        }
-    }
-
-    fn dispatch_query<C: Context>(
-        ctx: &mut C,
-        method: &str,
-        args: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
-        match method {
-            "accounts.Nonce" => module::dispatch_query(ctx, args, Self::query_nonce),
-            "accounts.Balances" => module::dispatch_query(ctx, args, Self::query_balances),
-            "accounts.Addresses" => module::dispatch_query(ctx, args, Self::query_addresses),
-            "accounts.DenominationInfo" => {
-                module::dispatch_query(ctx, args, Self::query_denomination_info)
-            }
-            _ => module::DispatchResult::Unhandled(args),
-        }
-    }
 }
 
 impl Module {
