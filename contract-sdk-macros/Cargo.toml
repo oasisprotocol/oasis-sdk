@@ -16,5 +16,5 @@ syn = "1.0.80"
 proc-macro-crate = "1.0.0"
 
 [dev-dependencies]
-diff = "0.1.12"
+difference = "2.0.0"
 syn = { version = "1.0.80", features = ["extra-traits"] }
