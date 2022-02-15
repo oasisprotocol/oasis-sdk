@@ -12,10 +12,12 @@ use oasis_core_runtime::{
 
 use crate::{
     context::{Mode, RuntimeBatchContext},
+    keymanager::KeyManager,
     module::MigrationHandler,
     modules,
     runtime::Runtime,
     storage,
+    testing::keymanager::MockKeyManagerClient,
     types::transaction,
 };
 
@@ -72,7 +74,7 @@ impl Mock {
         RuntimeBatchContext::new(
             mode,
             &self.host_info,
-            None,
+            Some(Box::new(MockKeyManagerClient::new()) as Box<dyn KeyManager>),
             &self.runtime_header,
             &self.runtime_round_results,
             storage::MKVSStore::new(IoContext::background().freeze(), self.mkvs.as_mut()),

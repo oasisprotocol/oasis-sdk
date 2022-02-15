@@ -49,6 +49,21 @@ type kvKeyValue struct {
 	Value []byte `json:"value"`
 }
 
+// The kvConfidentialKey type must match the ConfidentialKey type from the simple-keyvalue
+// runtime in ../runtimes/simple-keyvalue/src/keyvalue/types.rs.
+type kvConfidentialKey struct {
+	KeyID []byte `json:"key_id"`
+	Key   []byte `json:"key"`
+}
+
+// The kvConfidentialKeyValue type must match the ConfidentialKeyValue type from the simple-keyvalue
+// runtime in ../runtimes/simple-keyvalue/src/keyvalue/types.rs.
+type kvConfidentialKeyValue struct {
+	KeyID []byte `json:"key_id"`
+	Key   []byte `json:"key"`
+	Value []byte `json:"value"`
+}
+
 // The kvSpecialGreetingParams type must match the SpecialGreetingParams type from the simple-keyvalue
 // runtime in ../runtimes/simple-keyvalue/src/keyvalue/types.rs.
 type kvSpecialGreetingParams struct {
@@ -170,6 +185,88 @@ func kvGetCreateKey(rtc client.RuntimeClient, signer signature.Signer, key []byt
 		Gas: defaultGasAmount,
 	}, "keyvalue.GetCreateKey", kvKey{
 		Key: key,
+	})
+
+	return sendTx(rtc, signer, tx)
+}
+
+// kvConfidentialGet gets the given key from confidential storage.
+func kvConfidentialGet(rtc client.RuntimeClient, signer signature.Signer, keyID []byte, key []byte) ([]byte, error) {
+	tx := types.NewTransaction(&types.Fee{
+		Gas: defaultGasAmount,
+	}, "keyvalue.ConfidentialGet", kvConfidentialKey{
+		KeyID: keyID,
+		Key:   key,
+	})
+
+	ctx := context.Background()
+	chainCtx, err := GetChainContext(ctx, rtc)
+	if err != nil {
+		return nil, err
+	}
+
+	ac := accounts.NewV1(rtc)
+	caller := types.NewAddress(sigspecForSigner(signer))
+
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, caller)
+	if err != nil {
+		return nil, err
+	}
+
+	tx.AppendAuthSignature(sigspecForSigner(signer), nonce)
+
+	// Estimate gas by passing the transaction.
+	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
+	if err != nil {
+		return nil, err
+	}
+	tx.AuthInfo.Fee.Gas = gas
+
+	// Estimate gas by passing the caller address.
+	gasForCaller, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &caller}, tx)
+	if err != nil {
+		return nil, err
+	}
+	if gas != gasForCaller {
+		return nil, fmt.Errorf("gas estimation mismatch (plain: %d for caller: %d)", gas, gasForCaller)
+	}
+
+	stx := tx.PrepareForSigning()
+	if err = stx.AppendSign(chainCtx, signer); err != nil {
+		return nil, err
+	}
+
+	var result cbor.RawMessage
+	if result, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
+		return nil, err
+	}
+	var kvResult kvKeyValue
+	if err = cbor.Unmarshal(result, &kvResult); err != nil {
+		return nil, err
+	}
+	return kvResult.Value, nil
+}
+
+// kvConfidentialInsert inserts the given key into confidential storage.
+func kvConfidentialInsert(rtc client.RuntimeClient, signer signature.Signer, keyID []byte, key []byte, value []byte) error {
+	tx := types.NewTransaction(&types.Fee{
+		Gas: 3 * defaultGasAmount,
+	}, "keyvalue.ConfidentialInsert", kvConfidentialKeyValue{
+		KeyID: keyID,
+		Key:   key,
+		Value: value,
+	})
+
+	return sendTx(rtc, signer, tx)
+}
+
+// kvConfidentialRemove remove the given key from confidential storage.
+func kvConfidentialRemove(rtc client.RuntimeClient, signer signature.Signer, keyID []byte, key []byte) error {
+	tx := types.NewTransaction(&types.Fee{
+		Gas: 2 * defaultGasAmount,
+	}, "keyvalue.ConfidentialRemove", kvConfidentialKey{
+		KeyID: keyID,
+		Key:   key,
 	})
 
 	return sendTx(rtc, signer, tx)
@@ -304,6 +401,33 @@ func ConfidentialTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 	_ = tb.AppendSign(ctx, signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return fmt.Errorf("failed to submit transaction: %w", err)
+	}
+
+	log.Info("test confidential storage")
+	keyID := []byte("test_key_id")
+	log.Info("inserting test key")
+	if err = kvConfidentialInsert(rtc, signer, keyID, testKey, testValue); err != nil {
+		return err
+	}
+
+	log.Info("fetching test key")
+	val, err := kvConfidentialGet(rtc, signer, keyID, testKey)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(val, testValue) {
+		return fmt.Errorf("fetched value does not match inserted value")
+	}
+
+	log.Info("removing test key")
+	if err = kvConfidentialRemove(rtc, signer, keyID, testKey); err != nil {
+		return err
+	}
+
+	log.Info("fetching removed key should fail")
+	_, err = kvConfidentialGet(rtc, signer, keyID, testKey)
+	if err == nil {
+		return fmt.Errorf("fetching removed key should fail")
 	}
 
 	return nil

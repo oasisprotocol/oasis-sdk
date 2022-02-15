@@ -6,7 +6,7 @@ use tiny_keccak::{Hasher, TupleHash};
 use tokio::runtime::Handle as TokioHandle;
 
 pub use oasis_core_keymanager_api_common::{
-    KeyManagerError, KeyPair, KeyPairId, PrivateKey, PublicKey, SignedPublicKey,
+    KeyManagerError, KeyPair, KeyPairId, PrivateKey, PublicKey, SignedPublicKey, StateKey,
     TrustedPolicySigners,
 };
 use oasis_core_keymanager_client::{KeyManagerClient as CoreKeyManagerClient, RemoteClient};
@@ -50,17 +50,17 @@ impl KeyManagerClient {
 
     /// Create a client proxy which will forward calls to the inner client using the given context.
     /// Only public key queries will be allowed.
-    pub(crate) fn with_context(&self, ctx: Arc<IoContext>) -> KeyManagerClientWithContext<'_> {
-        KeyManagerClientWithContext::new(self, ctx, false)
+    pub(crate) fn with_context(self: &Arc<Self>, ctx: Arc<IoContext>) -> Box<dyn KeyManager> {
+        Box::new(KeyManagerClientWithContext::new(self.clone(), ctx, false)) as Box<dyn KeyManager>
     }
 
     /// Create a client proxy which will forward calls to the inner client using the given context.
     /// Public and private key queries will be allowed.
     pub(crate) fn with_private_context(
-        &self,
+        self: &Arc<Self>,
         ctx: Arc<IoContext>,
-    ) -> KeyManagerClientWithContext<'_> {
-        KeyManagerClientWithContext::new(self, ctx, true)
+    ) -> Box<dyn KeyManager> {
+        Box::new(KeyManagerClientWithContext::new(self.clone(), ctx, true)) as Box<dyn KeyManager>
     }
 
     /// Clear local key cache.
@@ -93,21 +93,52 @@ impl KeyManagerClient {
     }
 }
 
+/// Key manager interface.
+pub trait KeyManager {
+    /// Clear local key cache.
+    ///
+    /// See the oasis-core documentation for details.
+    fn clear_cache(&self);
+
+    /// Get or create named key pair.
+    ///
+    /// See the oasis-core documentation for details. This variant of the method
+    /// synchronously blocks for the result.
+    fn get_or_create_keys(&self, key_pair_id: KeyPairId) -> Result<KeyPair, KeyManagerError>;
+
+    /// Get public key for a key pair id.
+    ///
+    /// See the oasis-core documentation for details. This variant of the method
+    /// synchronously blocks for the result.
+    fn get_public_key(
+        &self,
+        key_pair_id: KeyPairId,
+    ) -> Result<Option<SignedPublicKey>, KeyManagerError>;
+
+    fn box_clone(&self) -> Box<dyn KeyManager>;
+}
+
+impl Clone for Box<dyn KeyManager> {
+    fn clone(&self) -> Box<dyn KeyManager> {
+        self.box_clone()
+    }
+}
+
 /// Convenience wrapper around an existing KeyManagerClient instance which uses
 /// a default io context for all calls.
 #[derive(Clone)]
-pub struct KeyManagerClientWithContext<'a> {
-    parent: &'a KeyManagerClient,
+pub struct KeyManagerClientWithContext {
+    parent: Arc<KeyManagerClient>,
     allow_private: bool,
     ctx: Arc<IoContext>,
 }
 
-impl<'a> KeyManagerClientWithContext<'a> {
+impl KeyManagerClientWithContext {
     fn new(
-        parent: &'a KeyManagerClient,
+        parent: Arc<KeyManagerClient>,
         ctx: Arc<IoContext>,
         allow_private: bool,
-    ) -> KeyManagerClientWithContext<'a> {
+    ) -> KeyManagerClientWithContext {
         KeyManagerClientWithContext {
             parent,
             ctx,
@@ -115,17 +146,10 @@ impl<'a> KeyManagerClientWithContext<'a> {
         }
     }
 
-    /// Clear local key cache.
-    ///
-    /// See the oasis-core documentation for details.
-    pub fn clear_cache(&self) {
-        self.parent.clear_cache()
-    }
-
     /// Get or create named key pair.
     ///
     /// See the oasis-core documentation for details.
-    pub async fn get_or_create_keys_async(
+    async fn get_or_create_keys_async(
         &self,
         key_pair_id: KeyPairId,
     ) -> Result<KeyPair, KeyManagerError> {
@@ -138,18 +162,10 @@ impl<'a> KeyManagerClientWithContext<'a> {
             .await
     }
 
-    /// Get or create named key pair.
-    ///
-    /// See the oasis-core documentation for details. This variant of the method
-    /// synchronously blocks for the result.
-    pub fn get_or_create_keys(&self, key_pair_id: KeyPairId) -> Result<KeyPair, KeyManagerError> {
-        TokioHandle::current().block_on(self.get_or_create_keys_async(key_pair_id))
-    }
-
     /// Get public key for a key pair id.
     ///
     /// See the oasis-core documentation for details.
-    pub async fn get_public_key_async(
+    async fn get_public_key_async(
         &self,
         key_pair_id: KeyPairId,
     ) -> Result<Option<SignedPublicKey>, KeyManagerError> {
@@ -157,16 +173,26 @@ impl<'a> KeyManagerClientWithContext<'a> {
             .get_public_key(IoContext::create_child(&self.ctx), key_pair_id)
             .await
     }
+}
 
-    /// Get public key for a key pair id.
-    ///
-    /// See the oasis-core documentation for details. This variant of the method
-    /// synchronously blocks for the result.
-    pub fn get_public_key(
+impl KeyManager for KeyManagerClientWithContext {
+    fn clear_cache(&self) {
+        self.parent.clear_cache();
+    }
+
+    fn get_or_create_keys(&self, key_pair_id: KeyPairId) -> Result<KeyPair, KeyManagerError> {
+        TokioHandle::current().block_on(self.get_or_create_keys_async(key_pair_id))
+    }
+
+    fn get_public_key(
         &self,
         key_pair_id: KeyPairId,
     ) -> Result<Option<SignedPublicKey>, KeyManagerError> {
         TokioHandle::current().block_on(self.get_public_key_async(key_pair_id))
+    }
+
+    fn box_clone(&self) -> Box<dyn KeyManager> {
+        Box::new(self.clone())
     }
 }
 

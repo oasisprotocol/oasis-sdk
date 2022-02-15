@@ -25,6 +25,10 @@ use crate::{
 /// not exceeded as that could result in a stack overflow.
 const CONTEXT_KEY_DEPTH: &str = "contracts.CallDepth";
 
+pub(crate) fn get_current_subcall_depth<C: Context>(ctx: &mut C) -> u16 {
+    *ctx.value(CONTEXT_KEY_DEPTH).or_default()
+}
+
 /// Process an execution result by performing gas accounting and returning the inner result.
 pub(crate) fn process_execution_result<C: TxContext>(
     ctx: &mut C,

@@ -21,7 +21,7 @@ use oasis_core_runtime::{
 
 use crate::{
     event::{Event, EventTag, EventTags},
-    keymanager::KeyManagerClientWithContext,
+    keymanager::KeyManager,
     modules::core::Error,
     runtime,
     storage::{self, NestedStore, Store},
@@ -123,7 +123,7 @@ pub trait Context {
     }
 
     /// The key manager, if the runtime is confidential.
-    fn key_manager(&self) -> Option<&KeyManagerClientWithContext<'_>>;
+    fn key_manager(&self) -> Option<&dyn KeyManager>;
 
     /// Last runtime block header.
     fn runtime_header(&self) -> &roothash::Header;
@@ -244,7 +244,7 @@ pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: NestedStore> {
     mode: Mode,
 
     host_info: &'a HostInfo,
-    key_manager: Option<KeyManagerClientWithContext<'a>>,
+    key_manager: Option<Box<dyn KeyManager>>,
     runtime_header: &'a roothash::Header,
     runtime_round_results: &'a roothash::RoundResults,
     runtime_storage: S,
@@ -275,7 +275,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
     pub fn new(
         mode: Mode,
         host_info: &'a HostInfo,
-        key_manager: Option<KeyManagerClientWithContext<'a>>,
+        key_manager: Option<Box<dyn KeyManager>>,
         runtime_header: &'a roothash::Header,
         runtime_round_results: &'a roothash::RoundResults,
         runtime_storage: S,
@@ -308,7 +308,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
     pub(crate) fn from_runtime(
         ctx: &'a mut RuntimeContext<'_>,
         host_info: &'a HostInfo,
-        key_manager: Option<KeyManagerClientWithContext<'a>>,
+        key_manager: Option<Box<dyn KeyManager>>,
     ) -> RuntimeBatchContext<'a, R, storage::MKVSStore<&'a mut dyn mkvs::MKVS>> {
         let mode = if ctx.check_only {
             Mode::CheckTx
@@ -352,8 +352,8 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
         self.host_info
     }
 
-    fn key_manager(&self) -> Option<&KeyManagerClientWithContext<'a>> {
-        self.key_manager.as_ref()
+    fn key_manager(&self) -> Option<&dyn KeyManager> {
+        self.key_manager.as_ref().map(Box::as_ref)
     }
 
     fn runtime_header(&self) -> &roothash::Header {
@@ -517,7 +517,7 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
     mode: Mode,
 
     host_info: &'round HostInfo,
-    key_manager: Option<KeyManagerClientWithContext<'round>>,
+    key_manager: Option<Box<dyn KeyManager>>,
     runtime_header: &'round roothash::Header,
     runtime_round_results: &'round roothash::RoundResults,
     consensus_state: &'round consensus::state::ConsensusState,
@@ -568,8 +568,8 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
         self.host_info
     }
 
-    fn key_manager(&self) -> Option<&KeyManagerClientWithContext<'round>> {
-        self.key_manager.as_ref()
+    fn key_manager(&self) -> Option<&dyn KeyManager> {
+        self.key_manager.as_ref().map(Box::as_ref)
     }
 
     fn runtime_header(&self) -> &roothash::Header {

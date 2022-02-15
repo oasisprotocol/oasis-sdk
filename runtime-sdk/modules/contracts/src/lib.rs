@@ -19,8 +19,7 @@ use oasis_runtime_sdk::{
     modules,
     modules::{accounts::API as _, core::API as _},
     runtime::Runtime,
-    sdk_derive,
-    storage::{self, Store as _},
+    sdk_derive, storage,
 };
 
 mod abi;
@@ -113,6 +112,10 @@ pub enum Error {
     #[error("instance is already using code {0}")]
     #[sdk_error(code = 19)]
     CodeAlreadyUpgraded(u64),
+
+    #[error("abort: {0}")]
+    #[sdk_error(code = 20, abort)]
+    Abort(#[from] sdk::dispatcher::Error),
 
     #[error("core: {0}")]
     #[sdk_error(transparent)]
