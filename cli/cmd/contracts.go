@@ -66,7 +66,7 @@ var (
 
 	contractsShowCodeCmd = &cobra.Command{
 		Use:   "show-code <code-id>",
-		Short: "Show information about uploaded cotract code",
+		Short: "Show information about uploaded contract code",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := cliConfig.Global()
