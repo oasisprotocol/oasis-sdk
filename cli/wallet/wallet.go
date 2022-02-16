@@ -44,6 +44,9 @@ type Factory interface {
 	// Remove removes an existing wallet.
 	Remove(name string, cfg map[string]interface{}) error
 
+	// Rename renames an existing wallet.
+	Rename(old, new string, cfg map[string]interface{}) error
+
 	// Import creates a new wallet from imported key material.
 	Import(name string, passphrase string, cfg map[string]interface{}, src *ImportSource) (Wallet, error)
 }

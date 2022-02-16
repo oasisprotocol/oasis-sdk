@@ -131,6 +131,22 @@ var (
 		},
 	}
 
+	walletRenameCmd = &cobra.Command{
+		Use:   "rename <old> <new>",
+		Short: "Rename an existing wallet",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := config.Global()
+			oldName, newName := args[0], args[1]
+
+			err := cfg.Wallets.Rename(oldName, newName)
+			cobra.CheckErr(err)
+
+			err = cfg.Save()
+			cobra.CheckErr(err)
+		},
+	}
+
 	walletSetDefaultCmd = &cobra.Command{
 		Use:   "set-default <name>",
 		Short: "Sets the given wallet as the default wallet",
@@ -258,6 +274,7 @@ func init() {
 	walletCmd.AddCommand(walletCreateCmd)
 	walletCmd.AddCommand(walletShowCmd)
 	walletCmd.AddCommand(walletRmCmd)
+	walletCmd.AddCommand(walletRenameCmd)
 	walletCmd.AddCommand(walletSetDefaultCmd)
 	walletCmd.AddCommand(walletImportCmd)
 	walletCmd.AddCommand(walletExportCmd)

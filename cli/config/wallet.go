@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/oasisprotocol/oasis-sdk/cli/wallet"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -25,8 +26,8 @@ func (w *Wallets) Validate() error {
 
 	// Make sure all wallets are valid.
 	for name, wallet := range w.All {
-		if name == "" {
-			return fmt.Errorf("malformed wallet name '%s'", name)
+		if err := config.ValidateIdentifier(name); err != nil {
+			return fmt.Errorf("malformed wallet name '%s': %w", name, err)
 		}
 
 		if err := wallet.Validate(); err != nil {
@@ -41,6 +42,10 @@ func (w *Wallets) Validate() error {
 func (w *Wallets) Create(name string, passphrase string, nw *Wallet) error {
 	if _, exists := w.All[name]; exists {
 		return fmt.Errorf("wallet '%s' already exists", name)
+	}
+
+	if err := config.ValidateIdentifier(name); err != nil {
+		return fmt.Errorf("malformed wallet name '%s': %w", name, err)
 	}
 
 	wf, err := wallet.Load(nw.Kind)
@@ -79,6 +84,10 @@ func (w *Wallets) Load(name string, passphrase string) (wallet.Wallet, error) {
 		return nil, fmt.Errorf("wallet '%s' does not exist", name)
 	}
 
+	if err := config.ValidateIdentifier(name); err != nil {
+		return nil, fmt.Errorf("malformed wallet name '%s': %w", name, err)
+	}
+
 	wf, err := wallet.Load(cfg.Kind)
 	if err != nil {
 		return nil, err
@@ -107,6 +116,10 @@ func (w *Wallets) Remove(name string) error {
 		return fmt.Errorf("wallet '%s' does not exist", name)
 	}
 
+	if err := config.ValidateIdentifier(name); err != nil {
+		return fmt.Errorf("malformed wallet name '%s': %w", name, err)
+	}
+
 	wf, err := wallet.Load(cfg.Kind)
 	if err != nil {
 		return err
@@ -126,10 +139,52 @@ func (w *Wallets) Remove(name string) error {
 	return nil
 }
 
+// Rename renames an existing wallet.
+func (w *Wallets) Rename(old, new string) error {
+	cfg, exists := w.All[old]
+	if !exists {
+		return fmt.Errorf("wallet '%s' does not exist", old)
+	}
+
+	if _, exists = w.All[new]; exists {
+		return fmt.Errorf("wallet '%s' already exists", new)
+	}
+
+	if err := config.ValidateIdentifier(old); err != nil {
+		return fmt.Errorf("malformed old wallet name '%s': %w", old, err)
+	}
+	if err := config.ValidateIdentifier(new); err != nil {
+		return fmt.Errorf("malformed new wallet name '%s': %w", new, err)
+	}
+
+	wf, err := wallet.Load(cfg.Kind)
+	if err != nil {
+		return err
+	}
+
+	if err := wf.Rename(old, new, cfg.Config); err != nil {
+		return err
+	}
+
+	w.All[new] = cfg
+	delete(w.All, old)
+
+	// Update default if set to this wallet.
+	if w.Default == old {
+		w.Default = new
+	}
+
+	return nil
+}
+
 // Import imports an existing wallet.
 func (w *Wallets) Import(name string, passphrase string, nw *Wallet, src *wallet.ImportSource) error {
 	if _, exists := w.All[name]; exists {
 		return fmt.Errorf("wallet '%s' already exists", name)
+	}
+
+	if err := config.ValidateIdentifier(name); err != nil {
+		return fmt.Errorf("malformed wallet name '%s': %w", name, err)
 	}
 
 	wf, err := wallet.Load(nw.Kind)
@@ -165,6 +220,10 @@ func (w *Wallets) Import(name string, passphrase string, nw *Wallet, src *wallet
 func (w *Wallets) SetDefault(name string) error {
 	if _, exists := w.All[name]; !exists {
 		return fmt.Errorf("wallet '%s' does not exist", name)
+	}
+
+	if err := config.ValidateIdentifier(name); err != nil {
+		return fmt.Errorf("malformed wallet name '%s': %w", name, err)
 	}
 
 	w.Default = name

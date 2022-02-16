@@ -320,6 +320,10 @@ func (wf *fileWalletFactory) Remove(name string, rawCfg map[string]interface{}) 
 	return os.Remove(getWalletFilename(name))
 }
 
+func (wf *fileWalletFactory) Rename(old, new string, rawCfg map[string]interface{}) error {
+	return os.Rename(getWalletFilename(old), getWalletFilename(new))
+}
+
 func (wf *fileWalletFactory) Import(name string, passphrase string, rawCfg map[string]interface{}, src *wallet.ImportSource) (wallet.Wallet, error) {
 	cfg, err := wf.unmarshalConfig(rawCfg)
 	if err != nil {
