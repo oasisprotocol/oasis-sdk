@@ -16,8 +16,8 @@ function createMethodDescriptorUnary<REQ, RESP>(serviceName: string, methodName:
     return new grpcWeb.MethodDescriptor<REQ, RESP>(
         `/oasis-core.${serviceName}/${methodName}`,
         MethodType.UNARY,
-        Object,
-        Object,
+        null,
+        null,
         toCBOR,
         misc.fromCBOR,
     );
@@ -28,8 +28,8 @@ function createMethodDescriptorServerStreaming<REQ, RESP>(serviceName: string, m
     return new grpcWeb.MethodDescriptor<REQ, RESP>(
         `/oasis-core.${serviceName}/${methodName}`,
         MethodType.SERVER_STREAMING,
-        Object,
-        Object,
+        null,
+        null,
         toCBOR,
         misc.fromCBOR,
     );
