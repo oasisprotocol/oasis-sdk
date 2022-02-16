@@ -11,7 +11,8 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/oasisprotocol/oasis-sdk/cli/config"
-	_ "github.com/oasisprotocol/oasis-sdk/cli/wallet/file" // Register file wallet backend.
+	_ "github.com/oasisprotocol/oasis-sdk/cli/wallet/file"   // Register file wallet backend.
+	_ "github.com/oasisprotocol/oasis-sdk/cli/wallet/ledger" // Register ledger wallet backend.
 )
 
 var (

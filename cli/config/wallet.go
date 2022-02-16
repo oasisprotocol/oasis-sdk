@@ -84,7 +84,20 @@ func (w *Wallets) Load(name string, passphrase string) (wallet.Wallet, error) {
 		return nil, err
 	}
 
-	return wf.Load(name, passphrase, cfg.Config)
+	wl, err := wf.Load(name, passphrase, cfg.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	// Make sure the address matches what we have in the config.
+	if expected, actual := cfg.GetAddress(), wl.Address(); !actual.Equal(expected) {
+		return nil, fmt.Errorf("address mismatch after loading wallet (expected: %s got: %s)",
+			expected,
+			actual,
+		)
+	}
+
+	return wl, nil
 }
 
 // Remove removes the given wallet.

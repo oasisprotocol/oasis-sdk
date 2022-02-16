@@ -29,8 +29,8 @@ const (
 	// Kind is the wallet kind for the file-backed wallet.
 	Kind = "file"
 
-	cfgAlgorithm = "algorithm"
-	cfgNumber    = "number"
+	cfgAlgorithm = "file.algorithm"
+	cfgNumber    = "file.number"
 
 	// AlgorithmEd25519Adr8 is the Ed25519 algorithm using the ADR-0008 derivation.
 	AlgorithmEd25519Adr8 = "ed25519-adr8"
@@ -189,8 +189,8 @@ func (wf *fileWalletFactory) Flags() *flag.FlagSet {
 
 func (wf *fileWalletFactory) GetConfigFromFlags() (map[string]interface{}, error) {
 	cfg := make(map[string]interface{})
-	cfg[cfgAlgorithm], _ = wf.flags.GetString(cfgAlgorithm)
-	cfg[cfgNumber], _ = wf.flags.GetUint32(cfgNumber)
+	cfg["algorithm"], _ = wf.flags.GetString(cfgAlgorithm)
+	cfg["number"], _ = wf.flags.GetUint32(cfgNumber)
 	return cfg, nil
 }
 

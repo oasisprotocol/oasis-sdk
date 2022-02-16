@@ -255,6 +255,8 @@ func PrintTransactionBeforeSigning(npw *NPWSelection, tx interface{}) {
 
 	// Ask the user to confirm signing this transaction.
 	Confirm("Sign this transaction?", "signing aborted")
+
+	fmt.Println("(In case you are using a hardware-based signer you may need to confirm on device.)")
 }
 
 // PrintSignedTransaction prints a signed transaction.

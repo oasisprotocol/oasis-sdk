@@ -59,13 +59,19 @@ var (
 			cfg := config.Global()
 			name := args[0]
 
+			wf, err := wallet.Load(walletKind)
+			cobra.CheckErr(err)
+
 			// Ask for passphrase to encrypt the wallet with.
-			passphrase := common.AskNewPassphrase()
+			var passphrase string
+			if wf.RequiresPassphrase() {
+				passphrase = common.AskNewPassphrase()
+			}
 
 			walletCfg := &config.Wallet{
 				Kind: walletKind,
 			}
-			err := walletCfg.SetConfigFromFlags()
+			err = walletCfg.SetConfigFromFlags()
 			cobra.CheckErr(err)
 
 			err = cfg.Wallets.Create(name, passphrase, walletCfg)
