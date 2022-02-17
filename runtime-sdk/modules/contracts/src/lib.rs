@@ -329,7 +329,7 @@ impl<Cfg: Config> Module<Cfg> {
 #[sdk_derive(MethodHandler)]
 impl<Cfg: Config> Module<Cfg> {
     #[handler(call = "contracts.Upload")]
-    fn tx_upload<C: TxContext>(
+    pub fn tx_upload<C: TxContext>(
         ctx: &mut C,
         body: types::Upload,
     ) -> Result<types::UploadResult, Error> {
@@ -425,7 +425,7 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(call = "contracts.Instantiate")]
-    fn tx_instantiate<C: TxContext>(
+    pub fn tx_instantiate<C: TxContext>(
         ctx: &mut C,
         body: types::Instantiate,
     ) -> Result<types::InstantiateResult, Error> {
@@ -496,7 +496,10 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(call = "contracts.Call")]
-    fn tx_call<C: TxContext>(ctx: &mut C, body: types::Call) -> Result<types::CallResult, Error> {
+    pub fn tx_call<C: TxContext>(
+        ctx: &mut C,
+        body: types::Call,
+    ) -> Result<types::CallResult, Error> {
         let params = Self::params(ctx.runtime_state());
         let caller = ctx.tx_caller_address();
 
@@ -548,7 +551,7 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(call = "contracts.Upgrade")]
-    fn tx_upgrade<C: TxContext>(ctx: &mut C, body: types::Upgrade) -> Result<(), Error> {
+    pub fn tx_upgrade<C: TxContext>(ctx: &mut C, body: types::Upgrade) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
         let caller = ctx.tx_caller_address();
 
@@ -626,12 +629,15 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(query = "contracts.Code")]
-    fn query_code<C: Context>(ctx: &mut C, args: types::CodeQuery) -> Result<types::Code, Error> {
+    pub fn query_code<C: Context>(
+        ctx: &mut C,
+        args: types::CodeQuery,
+    ) -> Result<types::Code, Error> {
         Self::load_code_info(ctx, args.id)
     }
 
     #[handler(query = "contracts.Instance")]
-    fn query_instance<C: Context>(
+    pub fn query_instance<C: Context>(
         ctx: &mut C,
         args: types::InstanceQuery,
     ) -> Result<types::Instance, Error> {
@@ -639,7 +645,7 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(query = "contracts.InstanceStorage")]
-    fn query_instance_storage<C: Context>(
+    pub fn query_instance_storage<C: Context>(
         ctx: &mut C,
         args: types::InstanceStorageQuery,
     ) -> Result<types::InstanceStorageQueryResult, Error> {
@@ -653,7 +659,7 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(query = "contracts.PublicKey")]
-    fn query_public_key<C: Context>(
+    pub fn query_public_key<C: Context>(
         _ctx: &mut C,
         _args: types::PublicKeyQuery,
     ) -> Result<types::PublicKeyQueryResult, Error> {
@@ -661,7 +667,7 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(query = "contracts.Custom")]
-    fn query_custom<C: Context>(
+    pub fn query_custom<C: Context>(
         ctx: &mut C,
         args: types::CustomQuery,
     ) -> Result<types::CustomQueryResult, Error> {
@@ -707,13 +713,13 @@ impl<Cfg: Config> module::Module for Module<Cfg> {
 
 impl<Cfg: Config> Module<Cfg> {
     /// Initialize state from genesis.
-    fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
+    pub fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
         // Set genesis parameters.
         Self::set_params(ctx.runtime_state(), genesis.parameters);
     }
 
     /// Migrate state from a previous version.
-    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
+    pub fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
         // No migrations currently supported.
         false
     }
