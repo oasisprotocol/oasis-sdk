@@ -82,6 +82,24 @@ impl<Cfg: Config> OasisV1<Cfg> {
             },
         );
 
+        // env.debug_print(messsage, len)
+        #[cfg(feature = "debug-utils")]
+        let _ = instance.link_function(
+            "env",
+            "debug_print",
+            |ctx, request: (u32, u32)| -> Result<(), wasm3::Trap> {
+                ctx.instance
+                    .runtime()
+                    .try_with_memory(|memory| -> Result<_, wasm3::Trap> {
+                        let msg_bytes = Region::from_arg(request).as_slice(&memory)?;
+                        if let Ok(msg) = std::str::from_utf8(msg_bytes) {
+                            eprintln!("{}", msg);
+                        }
+                        Ok(())
+                    })?
+            },
+        );
+
         Ok(())
     }
 }
