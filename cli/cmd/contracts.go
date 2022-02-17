@@ -348,7 +348,7 @@ func init() {
 	contractsUploadCmd.Flags().AddFlagSet(common.TransactionFlags)
 
 	contractsCallFlags := flag.NewFlagSet("", flag.ContinueOnError)
-	contractsCallFlags.StringVar(&contractsData, "data", "", "contract request data")
+	contractsCallFlags.StringVar(&contractsData, "data", "", "YAML-encoded contract request data")
 	contractsCallFlags.StringSliceVar(&contractsTokens, "tokens", []string{}, "token amounts to send to a contract")
 
 	contractsInstantiateFlags := flag.NewFlagSet("", flag.ContinueOnError)
