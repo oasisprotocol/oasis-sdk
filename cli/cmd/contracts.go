@@ -213,7 +213,6 @@ var (
 
 	contractsCallCmd = &cobra.Command{
 		Use:     "call <instance-id> <data-yaml> [--tokens TOKENS]",
-		Aliases: []string{"inst"},
 		Short:   "Call WebAssembly smart contract",
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
