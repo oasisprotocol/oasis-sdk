@@ -212,9 +212,9 @@ var (
 	}
 
 	contractsCallCmd = &cobra.Command{
-		Use:     "call <instance-id> <data-yaml> [--tokens TOKENS]",
-		Short:   "Call WebAssembly smart contract",
-		Args:    cobra.ExactArgs(2),
+		Use:   "call <instance-id> <data-yaml> [--tokens TOKENS]",
+		Short: "Call WebAssembly smart contract",
+		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := cliConfig.Global()
 			npw := common.GetNPWSelection(cfg)
