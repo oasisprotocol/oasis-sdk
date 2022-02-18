@@ -23,7 +23,7 @@ to specify a version to use by creating a special file called `rust-toolchain`
 containing the following information:
 
 ```
-nightly-2021-05-20
+nightly-2021-08-17
 ```
 
 Additionally, due to the requirements of some upstream dependencies, you need to

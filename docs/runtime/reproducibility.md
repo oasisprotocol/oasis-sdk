@@ -1,4 +1,4 @@
-# Reproducing Paratimes
+# Reproducibility
 
 If you wish to build paratime binaries yourself, you can use the
 environment provided as part of the SDK. This way you can also verify
