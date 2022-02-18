@@ -26,7 +26,6 @@ import (
 var (
 	contractsInstantiatePolicy string
 	contractsUpgradesPolicy    string
-	contractsData              string
 	contractsTokens            []string
 
 	contractsCmd = &cobra.Command{
@@ -151,15 +150,16 @@ var (
 	}
 
 	contractsInstantiateCmd = &cobra.Command{
-		Use:     "instantiate <code-id> [--data DATA] [--tokens TOKENS] [--upgrades-policy POLICY]",
+		Use:     "instantiate <code-id> <data-yaml> [--tokens TOKENS] [--upgrades-policy POLICY]",
 		Aliases: []string{"inst"},
 		Short:   "Instantiate WebAssembly smart contract",
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := cliConfig.Global()
 			npw := common.GetNPWSelection(cfg)
 			txCfg := common.GetTransactionConfig()
 			strCodeID := args[0]
+			strData := args[1]
 
 			if npw.Wallet == nil {
 				cobra.CheckErr("no wallets configured")
@@ -171,6 +171,9 @@ var (
 			codeID, err := strconv.ParseUint(strCodeID, 10, 64)
 			cobra.CheckErr(err)
 
+			// Parse instantiation arguments.
+			data := parseData(strData)
+
 			// When not in offline mode, connect to the given network endpoint.
 			ctx := context.Background()
 			var conn connection.Connection
@@ -181,9 +184,6 @@ var (
 
 			// Parse upgrades policy.
 			upgradesPolicy := parsePolicy(npw.Network, npw.Wallet, contractsUpgradesPolicy)
-
-			// Parse instantiation arguments.
-			data := parseData(contractsData)
 
 			// Parse tokens that should be sent to the contract.
 			tokens := parseTokens(npw.ParaTime, contractsTokens)
@@ -212,15 +212,15 @@ var (
 	}
 
 	contractsCallCmd = &cobra.Command{
-		Use:     "call <instance-id> [--data DATA] [--tokens TOKENS]",
-		Aliases: []string{"inst"},
-		Short:   "Call WebAssembly smart contract",
-		Args:    cobra.ExactArgs(1),
+		Use:   "call <instance-id> <data-yaml> [--tokens TOKENS]",
+		Short: "Call WebAssembly smart contract",
+		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := cliConfig.Global()
 			npw := common.GetNPWSelection(cfg)
 			txCfg := common.GetTransactionConfig()
 			strInstanceID := args[0]
+			strData := args[0]
 
 			if npw.Wallet == nil {
 				cobra.CheckErr("no wallets configured")
@@ -232,6 +232,9 @@ var (
 			instanceID, err := strconv.ParseUint(strInstanceID, 10, 64)
 			cobra.CheckErr(err)
 
+			// Parse call arguments.
+			data := parseData(strData)
+
 			// When not in offline mode, connect to the given network endpoint.
 			ctx := context.Background()
 			var conn connection.Connection
@@ -239,9 +242,6 @@ var (
 				conn, err = connection.Connect(ctx, npw.Network)
 				cobra.CheckErr(err)
 			}
-
-			// Parse call arguments.
-			data := parseData(contractsData)
 
 			// Parse tokens that should be sent to the contract.
 			tokens := parseTokens(npw.ParaTime, contractsTokens)
@@ -348,7 +348,6 @@ func init() {
 	contractsUploadCmd.Flags().AddFlagSet(common.TransactionFlags)
 
 	contractsCallFlags := flag.NewFlagSet("", flag.ContinueOnError)
-	contractsCallFlags.StringVar(&contractsData, "data", "", "contract request data")
 	contractsCallFlags.StringSliceVar(&contractsTokens, "tokens", []string{}, "token amounts to send to a contract")
 
 	contractsInstantiateFlags := flag.NewFlagSet("", flag.ContinueOnError)
