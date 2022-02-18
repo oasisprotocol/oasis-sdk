@@ -13,6 +13,10 @@ pub trait Env {
 
     /// Returns an address for the contract instance id.
     fn address_for_instance(&self, instance_id: InstanceId) -> Address;
+
+    /// Prints a message to the console. Useful when debugging.
+    #[cfg(feature = "debug-utils")]
+    fn debug_print(&self, msg: &str);
 }
 
 /// Crypto helpers trait.
