@@ -1,0 +1,29 @@
+cargo-features = ["strip"]
+
+[package]
+name = "oasis-contract-sdk-oas173"
+version = "0.1.0"
+description = "OAS-173 contract"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[workspace]
+
+[lib]
+name = "oas173"
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+cbor = { version = "0.2.0", package = "oasis-cbor" }
+oasis-contract-sdk = { path = "../../.." }
+oasis-contract-sdk-storage = { path = "../../../storage" }
+oasis-contract-sdk-types = { path = "../../../types" }
+
+# Third party.
+thiserror = "1.0.30"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
