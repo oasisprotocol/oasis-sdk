@@ -78,10 +78,12 @@ edition = "2018"
 oasis-runtime-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "runtime-sdk/v0.1.0" }
 ```
 
-{% hint style="info" %}
+:::info
+
 We are using Git tags for releases instead of releasing Rust packages on
 crates.io.
-{% endhint %}
+
+:::
 
 After you have declared the dependency on the Runtime SDK the next thing is to
 define the minimal runtime. To do this, create `src/lib.rs` with the following
@@ -162,11 +164,13 @@ the runtime. We are populating the state with some initial accounts so that we
 will be able to test things later. The accounts use test keys provided by the
 SDK.
 
-{% hint style="danger" %}
+:::danger
+
 While the test keys are nice for testing they should never be used in production
 versions of the runtimes as the private keys are generated from publicly known
 seeds.
-{% endhint %}
+
+:::
 
 In order to be able to build a runtime binary that can be loaded by an Oasis
 Node, we need to add some boilerplate into `src/main.rs` as follows:
@@ -191,12 +195,14 @@ cargo build
 This will generate a binary under `target/debug/minimal-runtime` which will
 contain the runtime.
 
-{% hint style="info" %}
+:::info
+
 For simplicity, we are building a non-confidential runtime which results in a
 regular ELF binary. In order to build a runtime that requires the use of a TEE
 like Intel SGX you need to perform some additional steps which are described in
 later sections of the guide.
-{% endhint %}
+
+:::
 
 You can also try to run your runtime using:
 
@@ -248,11 +254,13 @@ level=info module=net-runner caller=root.go:152 ts=2021-06-14T08:42:47.219513806
 ```
 <!-- markdownlint-enable line-length -->
 
-{% hint style="info" %}
+:::info
+
 The local network runner will take control of the current terminal until you
 terminate it via Ctrl+C. For the rest of the guide keep the local network
 running and use a separate terminal to run the client.
-{% endhint %}
+
+:::
 
 ## Testing From a Client
 

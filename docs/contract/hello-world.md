@@ -79,10 +79,12 @@ overflow-checks = true
 strip = true
 ```
 
-{% hint style="info" %}
+:::info
+
 We are using Git tags for releases instead of releasing Rust packages on
 crates.io.
-{% endhint %}
+
+:::
 
 After you have updated your `Cargo.toml` the next thing is to define the hello
 world smart contract. To do this, edit `src/lib.rs` with the following
