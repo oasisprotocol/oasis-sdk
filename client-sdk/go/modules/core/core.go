@@ -2,6 +2,9 @@ package core
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -24,6 +27,9 @@ type V1 interface {
 
 	// MinGasPrice returns the minimum gas price.
 	MinGasPrice(ctx context.Context) (map[types.Denomination]types.Quantity, error)
+
+	// GetEvents returns all core events emitted in a given block.
+	GetEvents(ctx context.Context, round uint64) ([]*Event, error)
 }
 
 type v1 struct {
@@ -62,6 +68,51 @@ func (a *v1) MinGasPrice(ctx context.Context) (map[types.Denomination]types.Quan
 		return nil, err
 	}
 	return mgp, nil
+}
+
+// Implements V1.
+func (a *v1) GetEvents(ctx context.Context, round uint64) ([]*Event, error) {
+	rawEvs, err := a.rc.GetEventsRaw(ctx, round)
+	if err != nil {
+		return nil, err
+	}
+
+	evs := make([]*Event, 0)
+	for _, rawEv := range rawEvs {
+		ev, err := a.DecodeEvent(rawEv)
+		if err != nil {
+			return nil, err
+		}
+		if ev == nil {
+			continue
+		}
+		for _, e := range ev {
+			evs = append(evs, e.(*Event))
+		}
+	}
+
+	return evs, nil
+}
+
+// Implements client.EventDecoder.
+func (a *v1) DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
+	if event.Module != ModuleName {
+		return nil, nil
+	}
+	var events []client.DecodedEvent
+	switch event.Code {
+	case GasUsedEventCode:
+		var evs []*GasUsedEvent
+		if err := cbor.Unmarshal(event.Value, &evs); err != nil {
+			return nil, fmt.Errorf("decode core gas used event value: %w", err)
+		}
+		for _, ev := range evs {
+			events = append(events, &Event{GasUsed: ev})
+		}
+	default:
+		return nil, fmt.Errorf("invalid core event code: %v", event.Code)
+	}
+	return events, nil
 }
 
 // NewV1 generates a V1 client helper for the core module.

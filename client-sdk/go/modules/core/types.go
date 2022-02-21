@@ -12,3 +12,21 @@ type EstimateGasQuery struct {
 	// Tx is the unsigned transaction to estimate.
 	Tx *types.Transaction `json:"tx"`
 }
+
+// ModuleName is the core module name.
+const ModuleName = "core"
+
+const (
+	// GasUsedEventCode is the event code for the gas used event.
+	GasUsedEventCode = 1
+)
+
+// GasUsedEvent is a gas used event.
+type GasUsedEvent struct {
+	Amount uint64 `json:"amount"`
+}
+
+// Event is a core module event.
+type Event struct {
+	GasUsed *GasUsedEvent
+}

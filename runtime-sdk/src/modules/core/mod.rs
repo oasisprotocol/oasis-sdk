@@ -112,6 +112,14 @@ pub enum Error {
     ForbiddenInSecureBuild,
 }
 
+/// Events emitted by the core module.
+#[derive(Debug, PartialEq, Eq, cbor::Encode, oasis_runtime_sdk_macros::Event)]
+#[cbor(untagged)]
+pub enum Event {
+    #[sdk_event(code = 1)]
+    GasUsed { amount: u64 },
+}
+
 /// Gas costs.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct GasCosts {
@@ -153,6 +161,9 @@ pub trait API {
 
     /// Return the remaining tx-wide gas.
     fn remaining_tx_gas<C: TxContext>(ctx: &mut C) -> u64;
+
+    /// Return the used tx-wide gas.
+    fn used_tx_gas<C: TxContext>(ctx: &mut C) -> u64;
 
     /// Increase transaction priority for the provided amount.
     fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error>;
@@ -286,6 +297,10 @@ impl<Cfg: Config> API for Module<Cfg> {
         // Also check remaining batch gas limit and return the minimum of the two.
         let remaining_batch = Self::remaining_batch_gas(ctx);
         std::cmp::min(remaining_tx, remaining_batch)
+    }
+
+    fn used_tx_gas<C: TxContext>(ctx: &mut C) -> u64 {
+        *ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default()
     }
 
     fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error> {
@@ -505,7 +520,7 @@ impl<Cfg: Config> Module<Cfg> {
 impl<Cfg: Config> module::Module for Module<Cfg> {
     const NAME: &'static str = MODULE_NAME;
     type Error = Error;
-    type Event = ();
+    type Event = Event;
     type Parameters = Parameters;
 }
 
@@ -594,6 +609,14 @@ impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
             TransactionWeight::ConsensusMessages,
             consensus_messages as u64,
         )?;
+
+        Ok(())
+    }
+
+    fn after_handle_call<C: TxContext>(ctx: &mut C) -> Result<(), Error> {
+        // Emit gas used event.
+        let used_gas = Self::used_tx_gas(ctx);
+        ctx.emit_event(Event::GasUsed { amount: used_gas });
 
         Ok(())
     }

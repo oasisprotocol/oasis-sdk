@@ -152,7 +152,7 @@ func (a *v1) GetEvents(ctx context.Context, round uint64) ([]*Event, error) {
 
 // Implements client.EventDecoder.
 func (a *v1) DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
-	if event.Module != ModuleName && event.Code != 1 {
+	if event.Module != ModuleName || event.Code != 1 {
 		return nil, nil
 	}
 	var evs []*Event

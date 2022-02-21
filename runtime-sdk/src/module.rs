@@ -304,6 +304,13 @@ pub trait AuthHandler {
         // Default implementation doesn't do anything.
         Ok(())
     }
+
+    /// Perform any action after call, within the transaction context.
+    /// TODO: maybe move into a separate trait, or rename AuthHandler to something like "CallHandler".
+    fn after_handle_call<C: TxContext>(_ctx: &mut C) -> Result<(), modules::core::Error> {
+        // Default implementation doesn't do anything.
+        Ok(())
+    }
 }
 
 #[impl_for_tuples(30)]
@@ -343,6 +350,11 @@ impl AuthHandler for Tuple {
         call: &Call,
     ) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::before_handle_call(ctx, call)?; )* );
+        Ok(())
+    }
+
+    fn after_handle_call<C: TxContext>(ctx: &mut C) -> Result<(), modules::core::Error> {
+        for_tuples!( #( Tuple::after_handle_call(ctx)?; )* );
         Ok(())
     }
 }
