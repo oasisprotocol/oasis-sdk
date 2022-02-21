@@ -31,7 +31,7 @@ use crate::{
     error::{Error as _, RuntimeError},
     event::IntoTags,
     keymanager::{KeyManagerClient, KeyManagerError},
-    module::{self, AuthHandler, BlockHandler, MethodHandler},
+    module::{self, BlockHandler, MethodHandler, TransactionHandler},
     modules,
     modules::core::API as _,
     runtime::Runtime,

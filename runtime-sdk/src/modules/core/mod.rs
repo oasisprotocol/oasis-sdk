@@ -524,7 +524,7 @@ impl<Cfg: Config> module::Module for Module<Cfg> {
     type Parameters = Parameters;
 }
 
-impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
+impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
     fn approve_unverified_tx<C: Context>(
         ctx: &mut C,
         utx: &UnverifiedTransaction,

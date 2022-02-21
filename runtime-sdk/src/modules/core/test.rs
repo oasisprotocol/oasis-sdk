@@ -8,7 +8,7 @@ use crate::{
     crypto::multisig,
     dispatcher,
     event::IntoTags,
-    module::{self, AuthHandler as _, BlockHandler, Module as _},
+    module::{self, BlockHandler, Module as _, TransactionHandler as _},
     runtime::Runtime,
     testing::{keys, mock},
     types::{
@@ -204,7 +204,7 @@ impl module::MethodHandler for GasWasterModule {
 }
 
 impl module::BlockHandler for GasWasterModule {}
-impl module::AuthHandler for GasWasterModule {}
+impl module::TransactionHandler for GasWasterModule {}
 impl module::MigrationHandler for GasWasterModule {
     type Genesis = ();
 }

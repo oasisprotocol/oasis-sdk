@@ -99,7 +99,7 @@ impl sdk::module::Module for Module {
     type Parameters = Parameters;
 }
 
-impl sdk::module::AuthHandler for Module {
+impl sdk::module::TransactionHandler for Module {
     fn decode_tx<C: Context>(
         _ctx: &mut C,
         scheme: &str,

@@ -7,7 +7,7 @@ use uint::hex::FromHex;
 use oasis_runtime_sdk::{
     context,
     crypto::signature::secp256k1,
-    module::{self, AuthHandler as _, InvariantHandler as _},
+    module::{self, InvariantHandler as _, TransactionHandler as _},
     modules::{
         accounts::{self, Module as Accounts},
         core::{self, Module as Core},

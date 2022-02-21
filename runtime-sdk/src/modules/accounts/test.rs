@@ -8,7 +8,7 @@ use anyhow::anyhow;
 
 use crate::{
     context::{BatchContext, Context},
-    module::{AuthHandler, BlockHandler, InvariantHandler, MethodHandler},
+    module::{BlockHandler, InvariantHandler, MethodHandler, TransactionHandler},
     modules::{core, core::API as _},
     testing::{keys, mock},
     types::{
