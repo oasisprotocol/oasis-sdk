@@ -12,7 +12,7 @@ let addedMessageListener = false;
 const connectionsPromised: {[origin: string]: Promise<ExtConnection>} = {};
 const connectionsRequested: {[origin: string]: {resolve: any; reject: any}} = {};
 const responseHandlers: {[handlerKey: string]: {resolve: any; reject: any}} = {};
-const eventHandlers: {[handlerKey: string]: (event: any) => void} = {};
+const eventHandlers: {[handlerKey: string]: (event: never) => void} = {};
 
 /**
  * A communication channel with an extension.
@@ -50,7 +50,7 @@ export class ExtConnection {
         });
     }
 
-    setEventHandler(type: string, handler: (event: any) => void) {
+    setEventHandler(type: string, handler: (event: never) => void) {
         const eventKey = `${this.origin}/${type}`;
         eventHandlers[eventKey] = handler;
     }
@@ -62,7 +62,7 @@ export function handleMessage(e: MessageEvent<unknown>) {
     switch (messageType) {
         case protocol.MESSAGE_TYPE_READY: {
             const m = e.data as protocol.MessageReady;
-            if (!(e.origin in connectionsRequested)) break;
+            if (!connectionsRequested[e.origin]) break;
             const {resolve, reject} = connectionsRequested[e.origin];
             delete connectionsRequested[e.origin];
             const connection = new ExtConnection(e.origin, e.source as WindowProxy);
@@ -72,7 +72,7 @@ export function handleMessage(e: MessageEvent<unknown>) {
         case protocol.MESSAGE_TYPE_RESPONSE: {
             const m = e.data as protocol.MessageResponse;
             const handlerKey = `${e.origin}/${m.id}`;
-            if (!(handlerKey in responseHandlers)) break;
+            if (!responseHandlers[handlerKey]) break;
             const {resolve, reject} = responseHandlers[handlerKey];
             delete responseHandlers[handlerKey];
             if ('err' in m) {
@@ -86,9 +86,9 @@ export function handleMessage(e: MessageEvent<unknown>) {
             const m = e.data as protocol.MessageEvent;
             // @ts-expect-error if m.event.type is missing and we get undefined, we'll survive
             const handlerKey = `${e.origin}/${m.event.type}`;
-            if (!(handlerKey in eventHandlers)) break;
+            if (!eventHandlers[handlerKey]) break;
             const handler = eventHandlers[handlerKey];
-            handler(m.event);
+            handler(m.event as never);
             break;
         }
     }
@@ -117,7 +117,7 @@ export function connect(origin: string, path = '/oasis-xu-frame.html') {
         window.addEventListener('message', handleMessage);
         addedMessageListener = true;
     }
-    if (!(origin in connectionsPromised)) {
+    if (!connectionsPromised[origin]) {
         connectionsPromised[origin] = new Promise((resolve, reject) => {
             connectionsRequested[origin] = {resolve, reject};
         });

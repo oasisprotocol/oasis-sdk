@@ -53,9 +53,13 @@ async function prepareEventPoller(cb) {
                     round: nextRound,
                 });
             } catch (e) {
+                // @ts-expect-error even if .oasisModule is missing, it's fine if we get undefined here
+                const errorModule = e.oasisModule;
+                // @ts-expect-error even if .oasisCode is missing, it's fine if we get undefined here
+                const errorCode = e.oasisCode;
                 if (
-                    e.oasisModule === oasis.roothash.MODULE_NAME &&
-                    e.oasisCode === oasis.roothash.ERR_NOT_FOUND_CODE
+                    errorModule === oasis.roothash.MODULE_NAME &&
+                    errorCode === oasis.roothash.ERR_NOT_FOUND_CODE
                 ) {
                     // Block doesn't exist yet. Wait and fetch again.
                     useDelay = true;
@@ -210,7 +214,7 @@ export const playground = (async function () {
 
         const addrAliceBech32 = oasis.staking.addressToBech32(aliceAddr);
         /** @type {oasisRT.types.ConsensusAccountsDepositEvent} */
-        let depositEvent = null;
+        let depositEvent = /** @type {never} */ (null);
         const depositEventVisitor = new oasisRT.event.Visitor([
             oasisRT.consensusAccounts.moduleEventHandler({
                 [oasisRT.consensusAccounts.EVENT_DEPOSIT_CODE]: (e, depositEv) => {
@@ -284,7 +288,7 @@ export const playground = (async function () {
         await twWithdraw.sign([csDave], consensusChainContext);
 
         /** @type {oasisRT.types.ConsensusAccountsWithdrawEvent} */
-        let withdrawEvent = null;
+        let withdrawEvent = /** @type {never} */ (null);
         const withdrawEventVisitor = new oasisRT.event.Visitor([
             oasisRT.consensusAccounts.moduleEventHandler({
                 [oasisRT.consensusAccounts.EVENT_WITHDRAW_CODE]: (e, withdrawEv) => {

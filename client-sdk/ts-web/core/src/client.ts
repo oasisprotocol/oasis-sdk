@@ -16,8 +16,8 @@ function createMethodDescriptorUnary<REQ, RESP>(serviceName: string, methodName:
     return new grpcWeb.MethodDescriptor<REQ, RESP>(
         `/oasis-core.${serviceName}/${methodName}`,
         MethodType.UNARY,
-        null,
-        null,
+        null as never,
+        null as never,
         toCBOR,
         misc.fromCBOR,
     );
@@ -28,8 +28,8 @@ function createMethodDescriptorServerStreaming<REQ, RESP>(serviceName: string, m
     return new grpcWeb.MethodDescriptor<REQ, RESP>(
         `/oasis-core.${serviceName}/${methodName}`,
         MethodType.SERVER_STREAMING,
-        null,
-        null,
+        null as never,
+        null as never,
         toCBOR,
         misc.fromCBOR,
     );
@@ -555,8 +555,8 @@ interface GRPCError {
 }
 
 export class OasisCodedError extends Error {
-    oasisCode: number;
-    oasisModule: string;
+    oasisCode?: number;
+    oasisModule?: string;
 }
 
 export class GRPCWrapper {
@@ -576,65 +576,79 @@ export class GRPCWrapper {
         // Some browsers with enormous market share aren't able to preserve the stack between here
         // and our `.catch` callback below. Save a copy explicitly.
         const invocationStack = new Error().stack;
-        return this.client.thenableCall(method, request, null, desc).catch((e) => {
-            if (e.message === 'Incomplete response') {
-                // This seems to be normal. Void methods don't send back anything, which makes
-                // grpc-web freak out. I don't know why we don't send a CBOR undefined or
-                // something.
-                // TODO: remove after https://github.com/grpc/grpc-web/pull/1230
-                //       and see TODO in methodDescriptorConsensusGetSignerNonce
-                return undefined;
-            }
-            if (e.metadata && 'grpc-status-details-bin' in e.metadata) {
-                const statusU8 = misc.fromBase64(e.metadata['grpc-status-details-bin']);
-                const status = proto.google.rpc.Status.decode(statusU8);
-                const details = status.details;
-                // `errorFromGrpc` from oasis-core checks for exactly one entry in Details.
-                // We additionally check that the type URL is empty, consistent with how
-                // `errorToGrpc` leaves it blank.
-                if (details.length === 1 && details[0].type_url === '' && details[0].value) {
-                    const grpcError = misc.fromCBOR(details[0].value) as GRPCError;
-                    const innerMessage =
-                        e.message ||
-                        `Message missing, module=${grpcError.module} code=${grpcError.code}`;
-                    const message = `callUnary method ${method}: ${innerMessage}`;
-                    // @ts-expect-error options and cause not modeled
-                    const wrapped = new OasisCodedError(message, {cause: e});
-                    wrapped.oasisCode = grpcError.code;
-                    wrapped.oasisModule = grpcError.module;
-                    wrapped.stack += `
-Cause stack:
-${e.stack}
-End of cause stack
-Invocation stack:
-${invocationStack}
-End of invocation stack`;
-                    throw wrapped;
+        return this.client
+            .thenableCall(
+                method,
+                request,
+                // @ts-expect-error metadata nullability not modeled
+                null,
+                desc,
+            )
+            .catch((e) => {
+                if (e.message === 'Incomplete response') {
+                    // This seems to be normal. Void methods don't send back anything, which makes
+                    // grpc-web freak out. I don't know why we don't send a CBOR undefined or
+                    // something.
+                    // TODO: remove after https://github.com/grpc/grpc-web/pull/1230
+                    //       and see TODO in methodDescriptorConsensusGetSignerNonce
+                    return undefined as never;
                 }
-            }
-            // Just in case there's some non-Error rejection reason that doesn't come with metadata
-            // from oasis-core as expected above, try using JSON to stringify it so that we don't
-            // end up with [object Object].
-            const innerMessage = e instanceof Error ? e.toString() : JSON.stringify(e);
-            const message = `callUnary method ${method}: ${innerMessage}`;
-            // @ts-expect-error options and cause not modeled
-            const wrapped = new Error(message, {cause: e});
-            wrapped.stack += `
+                if (e.metadata?.['grpc-status-details-bin']) {
+                    const statusU8 = misc.fromBase64(e.metadata['grpc-status-details-bin']);
+                    const status = proto.google.rpc.Status.decode(statusU8);
+                    const details = status.details;
+                    // `errorFromGrpc` from oasis-core checks for exactly one entry in Details.
+                    // We additionally check that the type URL is empty, consistent with how
+                    // `errorToGrpc` leaves it blank.
+                    if (details.length === 1 && details[0].type_url === '' && details[0].value) {
+                        const grpcError = misc.fromCBOR(details[0].value) as GRPCError;
+                        const innerMessage =
+                            e.message ||
+                            `Message missing, module=${grpcError.module} code=${grpcError.code}`;
+                        const message = `callUnary method ${method}: ${innerMessage}`;
+                        // @ts-expect-error options and cause not modeled
+                        const wrapped = new OasisCodedError(message, {cause: e});
+                        wrapped.oasisCode = grpcError.code;
+                        wrapped.oasisModule = grpcError.module;
+                        wrapped.stack += `
 Cause stack:
 ${e.stack}
 End of cause stack
 Invocation stack:
 ${invocationStack}
 End of invocation stack`;
-            throw wrapped;
-        });
+                        throw wrapped;
+                    }
+                }
+                // Just in case there's some non-Error rejection reason that doesn't come with metadata
+                // from oasis-core as expected above, try using JSON to stringify it so that we don't
+                // end up with [object Object].
+                const innerMessage = e instanceof Error ? e.toString() : JSON.stringify(e);
+                const message = `callUnary method ${method}: ${innerMessage}`;
+                // @ts-expect-error options and cause not modeled
+                const wrapped = new Error(message, {cause: e});
+                wrapped.stack += `
+Cause stack:
+${e.stack}
+End of cause stack
+Invocation stack:
+${invocationStack}
+End of invocation stack`;
+                throw wrapped;
+            });
     }
 
     protected callServerStreaming<REQ, RESP>(
         desc: grpcWeb.MethodDescriptor<REQ, RESP>,
         request: REQ,
     ): grpcWeb.ClientReadableStream<RESP> {
-        return this.client.serverStreaming(this.base + desc.getName(), request, null, desc);
+        return this.client.serverStreaming(
+            this.base + desc.getName(),
+            request,
+            // @ts-expect-error metadata nullability not modeled
+            null,
+            desc,
+        );
     }
 }
 

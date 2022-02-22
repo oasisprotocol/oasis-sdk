@@ -39,11 +39,11 @@ describe('HDKey', () => {
                 const passphrase =
                     vector.bip39_passphrase && vector.bip39_passphrase !== ''
                         ? vector.bip39_passphrase
-                        : null;
+                        : undefined;
 
                 for (let account of vector.oasis_accounts) {
                     expect(account.bip32_path).toMatch(/^m\/44'\/474'\/[0-9]+'/);
-                    const index = Number(account.bip32_path.split('/').pop().replace("'", ''));
+                    const index = Number(account.bip32_path.split('/').pop()!.replace("'", ''));
                     const keyPair = await HDKey.getAccountSigner(
                         vector.bip39_mnemonic,
                         index,

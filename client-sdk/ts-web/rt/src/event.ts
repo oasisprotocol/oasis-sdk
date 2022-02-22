@@ -8,10 +8,10 @@ export function toKey(module: string, code: number) {
 }
 
 export type Handler<V> = (e: oasis.types.RuntimeClientEvent, value: V) => void;
-export type ModuleHandler = [module: string, codes: {[code: number]: Handler<unknown>}];
+export type ModuleHandler = [module: string, codes: {[code: number]: Handler<never>}];
 
 export class Visitor {
-    handlers: {[keyHex: string]: Handler<unknown>};
+    handlers: {[keyHex: string]: Handler<never>};
 
     constructor(modules: ModuleHandler[]) {
         this.handlers = {};
@@ -29,8 +29,8 @@ export class Visitor {
      */
     visit(e: oasis.types.RuntimeClientEvent) {
         const keyHex = oasis.misc.toHex(e.key);
-        if (keyHex in this.handlers) {
-            const values = oasis.misc.fromCBOR(e.value) as unknown[];
+        if (this.handlers[keyHex]) {
+            const values = oasis.misc.fromCBOR(e.value) as never[];
             for (const value of values) {
                 this.handlers[keyHex](e, value);
             }

@@ -58,9 +58,9 @@ export async function signAny(
     context: string,
     body: Uint8Array,
 ) {
-    if ('ed25519' in pk) {
+    if (pk.ed25519) {
         return await (signer as oasis.signature.ContextSigner).sign(context, body);
-    } else if ('secp256k1' in pk) {
+    } else if (pk.secp256k1) {
         return await (signer as signatureSecp256k1.ContextSigner).sign(context, body);
     } else {
         throw new Error('unsupported public key type');
@@ -73,9 +73,9 @@ export async function proveSignature(
     context: string,
     body: Uint8Array,
 ) {
-    if ('ed25519' in spec) {
+    if (spec.ed25519) {
         return {signature: await (signer as oasis.signature.ContextSigner).sign(context, body)};
-    } else if ('secp256k1eth' in spec) {
+    } else if (spec.secp256k1eth) {
         return {signature: await (signer as signatureSecp256k1.ContextSigner).sign(context, body)};
     } else {
         throw new Error('unsupported signature address specification type');
@@ -88,7 +88,7 @@ export async function proveMultisig(
     context: string,
     body: Uint8Array,
 ) {
-    const signatureSet = new Array(config.signers.length) as Uint8Array[];
+    const signatureSet = new Array(config.signers.length) as (Uint8Array | null)[];
     for (let i = 0; i < config.signers.length; i++) {
         if (signerSet[i]) {
             signatureSet[i] = await signAny(
@@ -110,14 +110,14 @@ export async function proveAny(
     context: string,
     body: Uint8Array,
 ) {
-    if ('signature' in addressSpec) {
+    if (addressSpec.signature) {
         return await proveSignature(
             addressSpec.signature,
             proofProvider as AnySigner,
             context,
             body,
         );
-    } else if ('multisig' in addressSpec) {
+    } else if (addressSpec.multisig) {
         return await proveMultisig(
             addressSpec.multisig,
             proofProvider as MultisigSignerSet,
@@ -162,11 +162,11 @@ export type SignatureMessageHandlersWithChainContext = {
 };
 
 export type CallHandler<BODY> = (body: BODY) => void;
-export type CallHandlers = {[method: string]: CallHandler<unknown>};
+export type CallHandlers = {[method: string]: CallHandler<never>};
 
 export function visitCall(handlers: CallHandlers, call: types.Call) {
-    if (call.method in handlers) {
-        handlers[call.method](call.body);
+    if (handlers[call.method]) {
+        handlers[call.method](call.body as never);
         return true;
     }
     return false;

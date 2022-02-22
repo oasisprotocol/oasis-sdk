@@ -126,6 +126,7 @@ export class TransactionWrapper<BODY> {
             },
             method,
         };
+        this.signedTransaction = null as never;
     }
 
     setNonce(nonce: types.longnum) {
@@ -134,12 +135,12 @@ export class TransactionWrapper<BODY> {
     }
 
     setFeeAmount(amount: Uint8Array) {
-        this.transaction.fee.amount = amount;
+        this.transaction.fee!.amount = amount;
         return this;
     }
 
     setFeeGas(gas: types.longnum) {
-        this.transaction.fee.gas = gas;
+        this.transaction.fee!.gas = gas;
         return this;
     }
 
@@ -180,7 +181,7 @@ export type SignatureMessageHandlersWithChainContext = {
 };
 
 export type TransactionHandler<BODY> = (body: BODY) => void;
-export type TransactionHandlers = {[method: string]: TransactionHandler<unknown>};
+export type TransactionHandlers = {[method: string]: TransactionHandler<never>};
 
 /**
  * Calls one of the handlers based on the given transaction method.
@@ -190,8 +191,8 @@ export type TransactionHandlers = {[method: string]: TransactionHandler<unknown>
  * @returns `true` if the transaction method matched one of the handlers
  */
 export function visitTransaction(handlers: TransactionHandlers, tx: types.ConsensusTransaction) {
-    if (tx.method in handlers) {
-        handlers[tx.method](tx.body);
+    if (handlers[tx.method]) {
+        handlers[tx.method](tx.body as never);
         return true;
     }
     return false;

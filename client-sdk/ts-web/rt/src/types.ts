@@ -215,7 +215,7 @@ export interface AuthProof {
     /**
      * For _multisig_ authentication.
      */
-    multisig?: Uint8Array[];
+    multisig?: (Uint8Array | null)[];
     /**
      * A flag to use module-controlled decoding. The string is an encoding scheme name that a
      * module must handle. When using this variant, the scheme name must not be empty.

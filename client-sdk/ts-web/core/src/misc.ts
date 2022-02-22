@@ -69,7 +69,7 @@ export function fromHex(hex: string) {
 }
 
 export function toBase64(u8: Uint8Array) {
-    return btoa(String.fromCharCode.apply(null, u8));
+    return btoa(String.fromCharCode(...u8));
 }
 
 export function fromBase64(base64: string) {

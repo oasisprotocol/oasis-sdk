@@ -168,10 +168,10 @@ export class NaclSigner implements Signer {
 }
 
 export type MessageHandlerBare<PARSED> = (v: PARSED) => void;
-export type MessageHandlersBare = {[context: string]: MessageHandlerBare<unknown>};
+export type MessageHandlersBare = {[context: string]: MessageHandlerBare<never>};
 export type MessageHandlerWithChainContext<PARSED> = (chainContext: string, v: PARSED) => void;
 export type MessageHandlersWithChainContext = {
-    [context: string]: MessageHandlerWithChainContext<unknown>;
+    [context: string]: MessageHandlerWithChainContext<never>;
 };
 export interface MessageHandlers {
     bare?: MessageHandlersBare;
@@ -193,16 +193,16 @@ export function visitMessage(handlers: MessageHandlers, context: string, message
         const parts = context.split(CHAIN_CONTEXT_SEPARATOR);
         if (parts.length === 2) {
             const [context2, chainContext] = parts;
-            if (context2 in handlers.withChainContext) {
-                handlers.withChainContext[context2](chainContext, misc.fromCBOR(message));
+            if (handlers.withChainContext?.[context2]) {
+                handlers.withChainContext[context2](chainContext, misc.fromCBOR(message) as never);
                 return true;
             }
             return false;
         }
     }
     {
-        if (context in handlers.bare) {
-            handlers.bare[context](misc.fromCBOR(message));
+        if (handlers.bare?.[context]) {
+            handlers.bare[context](misc.fromCBOR(message) as never);
             return true;
         }
         return false;
