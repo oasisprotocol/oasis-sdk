@@ -1,7 +1,11 @@
 //! Secp256k1 signatures.
 use k256::{
     self,
-    ecdsa::{self, digest::Digest, signature::DigestVerifier},
+    ecdsa::{
+        self,
+        digest::Digest,
+        signature::{DigestVerifier, Verifier as _},
+    },
 };
 use sha2::Sha512Trunc256;
 
@@ -58,6 +62,17 @@ impl PublicKey {
 
         verify_key
             .verify_digest(digest, &sig)
+            .map_err(|_| Error::VerificationFailed)
+    }
+
+    /// Verify signature without using any domain separation scheme.
+    pub fn verify_raw(&self, message: &[u8], signature: &Signature) -> Result<(), Error> {
+        let sig = ecdsa::Signature::from_der(signature.0.as_ref())
+            .map_err(|_| Error::MalformedSignature)?;
+        let verify_key = ecdsa::VerifyingKey::from_encoded_point(&self.0)
+            .map_err(|_| Error::MalformedPublicKey)?;
+        verify_key
+            .verify(message, &sig)
             .map_err(|_| Error::VerificationFailed)
     }
 }

@@ -1,11 +1,15 @@
 //! An example hello world contract also used in unit tests.
 extern crate alloc;
 
+use std::convert::TryInto;
+
 use oas20::types::{ReceiverRequest, Request as Oas20Request, TokenInstantiation};
+
 use oasis_contract_sdk::{
     self as sdk,
     env::{Crypto, Env},
     types::{
+        crypto::SignatureKind,
         env::{AccountsQuery, AccountsResponse, QueryRequest, QueryResponse},
         message::{CallResult, Message, NotifyReply, Reply},
         modules::contracts::InstantiateResult,
@@ -75,6 +79,15 @@ pub enum Request {
     #[cbor(rename = "ecdsa_recover")]
     ECDSARecover { input: Vec<u8> },
 
+    #[cbor(rename = "signature_verify")]
+    SignatureVerify {
+        kind: u32,
+        key: Vec<u8>,
+        context: Vec<u8>,
+        message: Vec<u8>,
+        signature: Vec<u8>,
+    },
+
     #[cbor(rename = "query_address")]
     QueryAddress,
 
@@ -113,6 +126,9 @@ pub enum Response {
 
     #[cbor(rename = "ecdsa_recover")]
     ECDSARecover { output: [u8; 65] },
+
+    #[cbor(rename = "signature_verify")]
+    SignatureVerify { result: bool },
 
     #[cbor(rename = "empty")]
     Empty,
@@ -243,6 +259,28 @@ impl sdk::Contract for HelloWorld {
                 let output = ctx.env().ecdsa_recover(&input);
 
                 Ok(Response::ECDSARecover { output })
+            }
+            Request::SignatureVerify {
+                kind,
+                key,
+                context,
+                message,
+                signature,
+            } => {
+                let kind: SignatureKind = kind.try_into().map_err(|_| Error::BadRequest)?;
+                let result = match kind {
+                    SignatureKind::Ed25519 => ctx
+                        .env()
+                        .signature_verify_ed25519(&key, &message, &signature),
+                    SignatureKind::Secp256k1 => ctx
+                        .env()
+                        .signature_verify_secp256k1(&key, &message, &signature),
+                    SignatureKind::Sr25519 => ctx
+                        .env()
+                        .signature_verify_sr25519(&key, &context, &message, &signature),
+                };
+
+                Ok(Response::SignatureVerify { result })
             }
             Request::QueryAddress => {
                 let address = ctx.env().address_for_instance(ctx.instance_id());

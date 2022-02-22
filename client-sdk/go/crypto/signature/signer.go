@@ -10,6 +10,9 @@ type Signer interface {
 	// message.
 	ContextSign(context, message []byte) ([]byte, error)
 
+	// Sign generates a signature with the private key over the message only.
+	Sign(message []byte) ([]byte, error)
+
 	// String returns the string representation of a Signer, which MUST not
 	// include any sensitive information.
 	String() string

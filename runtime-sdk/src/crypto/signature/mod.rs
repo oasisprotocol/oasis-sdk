@@ -56,6 +56,16 @@ impl PublicKey {
         }
     }
 
+    /// Verify signature raw using the underlying method, without the domain
+    /// separation schema.
+    pub fn verify_raw(&self, message: &[u8], signature: &Signature) -> Result<(), Error> {
+        match self {
+            PublicKey::Ed25519(pk) => pk.verify_raw(message, signature),
+            PublicKey::Secp256k1(pk) => pk.verify_raw(message, signature),
+            PublicKey::Sr25519(_) => Err(Error::InvalidArgument),
+        }
+    }
+
     /// Verify a batch of signatures of the same message.
     pub fn verify_batch_multisig(
         context: &[u8],

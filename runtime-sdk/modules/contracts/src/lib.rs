@@ -153,6 +153,9 @@ pub struct GasCosts {
 
     // Crypto operations.
     pub wasm_crypto_ecdsa_recover: u64,
+    pub wasm_crypto_signature_verify_ed25519: u64,
+    pub wasm_crypto_signature_verify_secp256k1: u64,
+    pub wasm_crypto_signature_verify_sr25519: u64,
 }
 
 impl Default for GasCosts {
@@ -175,6 +178,9 @@ impl Default for GasCosts {
             wasm_env_query_base: 10,
 
             wasm_crypto_ecdsa_recover: 20,
+            wasm_crypto_signature_verify_ed25519: 20,
+            wasm_crypto_signature_verify_secp256k1: 20,
+            wasm_crypto_signature_verify_sr25519: 25,
         }
     }
 }
@@ -193,6 +199,7 @@ pub struct Parameters {
     pub max_query_size_bytes: u32,
     pub max_storage_key_size_bytes: u32,
     pub max_storage_value_size_bytes: u32,
+    pub max_crypto_signature_verify_message_size_bytes: u32,
 
     pub gas_costs: GasCosts,
 }
@@ -212,6 +219,7 @@ impl Default for Parameters {
             max_query_size_bytes: 1024,  // 1 KiB
             max_storage_key_size_bytes: 64,
             max_storage_value_size_bytes: 16 * 1024, // 16 KiB
+            max_crypto_signature_verify_message_size_bytes: 16 * 1024, // 16KiB
 
             gas_costs: Default::default(),
         }

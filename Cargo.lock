@@ -1753,6 +1753,7 @@ dependencies = [
  "oasis-contract-sdk-crypto",
  "oasis-contract-sdk-macros",
  "oasis-contract-sdk-types",
+ "oasis-runtime-sdk",
  "thiserror",
  "wee_alloc",
 ]

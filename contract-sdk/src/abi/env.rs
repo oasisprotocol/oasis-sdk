@@ -8,6 +8,7 @@ use crate::{
     env::{Crypto, Env},
     memory::{HostRegion, HostRegionRef},
     types::{
+        crypto::SignatureKind,
         env::{QueryRequest, QueryResponse},
         InstanceId,
     },
@@ -39,6 +40,42 @@ pub fn query(query: QueryRequest) -> QueryResponse {
 
 /// Host environment.
 pub struct HostEnv;
+
+impl HostEnv {
+    fn signature_verify(
+        &self,
+        kind: SignatureKind,
+        key: &[u8],
+        context: Option<&[u8]>,
+        message: &[u8],
+        signature: &[u8],
+    ) -> bool {
+        let key_region = HostRegionRef::from_slice(key);
+        let (ctx_offset, ctx_length) = match context {
+            Some(context) if matches!(kind, SignatureKind::Sr25519) => {
+                let region = HostRegionRef::from_slice(context);
+                (region.offset, region.length)
+            }
+            None | _ => (0, 0),
+        };
+        let message_region = HostRegionRef::from_slice(message);
+        let signature_region = HostRegionRef::from_slice(signature);
+        let result = unsafe {
+            crypto::crypto_signature_verify(
+                kind as u32,
+                key_region.offset,
+                key_region.length,
+                ctx_offset,
+                ctx_length,
+                message_region.offset,
+                message_region.length,
+                signature_region.offset,
+                signature_region.length,
+            )
+        };
+        result == 0
+    }
+}
 
 impl Env for HostEnv {
     fn query<Q: Into<QueryRequest>>(&self, q: Q) -> QueryResponse {
@@ -87,5 +124,37 @@ impl Crypto for HostEnv {
         };
 
         dst
+    }
+
+    fn signature_verify_ed25519(&self, key: &[u8], message: &[u8], signature: &[u8]) -> bool {
+        HostEnv::signature_verify(self, SignatureKind::Ed25519, key, None, message, signature)
+    }
+
+    fn signature_verify_secp256k1(&self, key: &[u8], message: &[u8], signature: &[u8]) -> bool {
+        HostEnv::signature_verify(
+            self,
+            SignatureKind::Secp256k1,
+            key,
+            None,
+            message,
+            signature,
+        )
+    }
+
+    fn signature_verify_sr25519(
+        &self,
+        key: &[u8],
+        context: &[u8],
+        message: &[u8],
+        signature: &[u8],
+    ) -> bool {
+        HostEnv::signature_verify(
+            self,
+            SignatureKind::Sr25519,
+            key,
+            Some(context),
+            message,
+            signature,
+        )
     }
 }

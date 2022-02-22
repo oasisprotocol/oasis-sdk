@@ -11,6 +11,7 @@ use oasis_runtime_sdk::{
 use super::{gas, Abi, ExecutionContext, ExecutionResult};
 use crate::{wasm::ContractError, Config, Error};
 
+mod crypto;
 mod env;
 mod memory;
 mod storage;
