@@ -2,7 +2,7 @@ module github.com/oasisprotocol/oasis-sdk/client-sdk/ts-web/core/reflect-go
 
 go 1.17
 
-require github.com/oasisprotocol/oasis-core/go v0.2103.9
+require github.com/oasisprotocol/oasis-core/go v0.2103.10
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -29,7 +29,7 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.2 // indirect
-	github.com/oasisprotocol/curve25519-voi v0.0.0-20210505121811-294cf0fbfb43 // indirect
+	github.com/oasisprotocol/curve25519-voi v0.0.0-20211219162838-e9a669f65da9 // indirect
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
 	github.com/prometheus/client_golang v1.11.0 // indirect

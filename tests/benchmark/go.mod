@@ -15,7 +15,7 @@ replace (
 )
 
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2103.9
+	github.com/oasisprotocol/oasis-core/go v0.2103.10
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.11.0
 	github.com/spf13/cobra v1.2.1
@@ -140,7 +140,7 @@ require (
 	github.com/multiformats/go-multihash v0.0.15 // indirect
 	github.com/multiformats/go-multistream v0.2.2 // indirect
 	github.com/multiformats/go-varint v0.0.6 // indirect
-	github.com/oasisprotocol/curve25519-voi v0.0.0-20210716083614-f38f8e8b0b84 // indirect
+	github.com/oasisprotocol/curve25519-voi v0.0.0-20211219162838-e9a669f65da9 // indirect
 	github.com/oasisprotocol/deoxysii v0.0.0-20200527154044-851aec403956 // indirect
 	github.com/oasisprotocol/ed25519 v0.0.0-20210127160119-f7017427c1ea // indirect
 	github.com/oasisprotocol/safeopen v0.0.0-20200528085122-e01cfdfc7661 // indirect

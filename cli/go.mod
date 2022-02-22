@@ -8,9 +8,9 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/adrg/xdg v0.4.0
 	github.com/mitchellh/mapstructure v1.4.3
-	github.com/oasisprotocol/curve25519-voi v0.0.0-20210716083614-f38f8e8b0b84
+	github.com/oasisprotocol/curve25519-voi v0.0.0-20211219162838-e9a669f65da9
 	github.com/oasisprotocol/deoxysii v0.0.0-20200527154044-851aec403956
-	github.com/oasisprotocol/oasis-core/go v0.2103.9
+	github.com/oasisprotocol/oasis-core/go v0.2103.10
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.3.0
