@@ -40,6 +40,16 @@ var evmSolCreateMultiCompiledHex string
 //go:embed contracts/evm_erc20_test_compiled.hex
 var evmERC20TestCompiledHex string
 
+// We store the compiled EVM bytecode for the SimpleEVMSuicideTest in a separate
+// file (in hex) to preserve readability of this file.
+//go:embed contracts/evm_suicide_test_compiled.hex
+var evmSuicideTestCompiledHex string
+
+// We store the compiled EVM bytecode for the SimpleEVMCallSuicideTest in a separate
+// file (in hex) to preserve readability of this file.
+//go:embed contracts/evm_call_suicide_test_compiled.hex
+var evmCallSuicideTestCompiledHex string
+
 func evmCreate(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer signature.Signer, value []byte, initCode []byte, gasPrice uint64) ([]byte, error) {
 	txB := e.Create(value, initCode)
 
@@ -656,6 +666,175 @@ func SimpleERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cli
 	// Balance should match the amount we transferred.
 	if resBalance != strings.Repeat("0", 64-2)+"42" {
 		return fmt.Errorf("return value of balanceOf method call should be 0x42")
+	}
+
+	return nil
+}
+
+// SimpleEVMSuicideTest does a simple suicide contract test.
+func SimpleEVMSuicideTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	signer := testing.Dave.Signer
+	e := evm.NewV1(rtc)
+
+	// To generate the contract bytecode below, use https://remix.ethereum.org/
+	// with the following settings:
+	//     Compiler: 0.8.7+commit.e28d00a7
+	//     EVM version: london
+	//     Enable optimization: yes, 200
+	// on the following source:
+	/*
+		pragma solidity ^0.8.0;
+
+		contract Suicide {
+			function suicide() public {
+				selfdestruct(payable(msg.sender));
+			}
+		}
+	*/
+	suicide, err := hex.DecodeString(strings.TrimSpace(evmSuicideTestCompiledHex))
+	if err != nil {
+		return err
+	}
+
+	zero, err := hex.DecodeString(strings.Repeat("0", 64))
+	if err != nil {
+		return err
+	}
+
+	gasPrice := uint64(1)
+
+	// Create the suicide contract.
+	contractAddr, err := evmCreate(ctx, rtc, e, signer, zero, suicide, gasPrice)
+	if err != nil {
+		return fmt.Errorf("evmCreate failed: %w", err)
+	}
+
+	log.Info("evmCreate finished", "contract_addr", hex.EncodeToString(contractAddr))
+
+	// This is the hash of the "suicide()" of the contract.
+	// You can get this by clicking on "Compilation details" and then
+	// looking at the "Function hashes" section.
+	// Method calls must be zero-padded to a multiple of 32 bytes.
+	suicideMethod, err := hex.DecodeString("c96cd46f" + strings.Repeat("0", 64-8))
+	if err != nil {
+		return err
+	}
+
+	// Call the suicide method.
+	_, err = evmCall(ctx, rtc, e, signer, contractAddr, zero, suicideMethod, gasPrice)
+	switch {
+	case err == nil:
+		return fmt.Errorf("suicide method call should fail")
+	case strings.Contains(err.Error(), "SELFDESTRUCT not supported"):
+		// Expected error message.
+	default:
+		return fmt.Errorf("unexpected suicide call error: %w", err)
+	}
+
+	return nil
+}
+
+// SimpleEVMCallSuicideTest does a simple call suicide contract test.
+func SimpleEVMCallSuicideTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	signer := testing.Dave.Signer
+	e := evm.NewV1(rtc)
+
+	// To generate the contract bytecode below, use https://remix.ethereum.org/
+	// with the following settings:
+	//     Compiler: 0.8.7+commit.e28d00a7
+	//     EVM version: london
+	//     Enable optimization: yes, 200
+	// on the following source:
+	/*
+		pragma solidity ^0.8.0;
+
+		contract Suicide {
+			function suicide() public {
+				selfdestruct(payable(msg.sender));
+			}
+		}
+	*/
+	suicide, err := hex.DecodeString(strings.TrimSpace(evmSuicideTestCompiledHex))
+	if err != nil {
+		return err
+	}
+
+	zero, err := hex.DecodeString(strings.Repeat("0", 64))
+	if err != nil {
+		return err
+	}
+
+	gasPrice := uint64(1)
+
+	// Create the suicide contract.
+	address, err := evmCreate(ctx, rtc, e, signer, zero, suicide, gasPrice)
+	if err != nil {
+		return fmt.Errorf("evmCreate failed: %w", err)
+	}
+	suicideAddress := hex.EncodeToString(address)
+	log.Info("evmCreate finished", "contract_addr", suicideAddress)
+
+	// To generate the contract bytecode below, use https://remix.ethereum.org/
+	// with the following settings:
+	//     Compiler: 0.8.7+commit.e28d00a7
+	//     EVM version: london
+	//     Enable optimization: yes, 200
+	// on the following source:
+	/*
+		pragma solidity ^0.8.0;
+
+		import './Suicide.sol';
+
+		contract CallSuicide {
+		    address public suicideAddress;
+
+		    constructor(address addr) {
+		        suicideAddress = addr;
+		    }
+
+		    function call_suicide() public {
+		        Suicide suicide = Suicide(suicideAddress);
+		        suicide.suicide();
+		    }
+		}
+	*/
+	callSuicideHex := strings.TrimSpace(evmCallSuicideTestCompiledHex)
+	// Append constructor argument.
+	callSuicideHex += strings.Repeat("0", 64-len(suicideAddress)) + suicideAddress
+	callSuicide, err := hex.DecodeString(callSuicideHex)
+	if err != nil {
+		return err
+	}
+
+	// Create the CallSuicide contract.
+	address, err = evmCreate(ctx, rtc, e, signer, zero, callSuicide, gasPrice)
+	if err != nil {
+		return fmt.Errorf("evmCreate failed: %w", err)
+	}
+
+	callSuicideAddress := hex.EncodeToString(address)
+	log.Info("evmCreate finished", "contract_addr", callSuicideAddress)
+
+	// This is the hash of the "call_suicide()" of the contract.
+	// You can get this by clicking on "Compilation details" and then
+	// looking at the "Function hashes" section.
+	// Method calls must be zero-padded to a multiple of 32 bytes.
+	callSuicideMethod, err := hex.DecodeString("7734922e" + strings.Repeat("0", 64-8))
+	if err != nil {
+		return err
+	}
+
+	// Call the call_suicide method.
+	_, err = evmCall(ctx, rtc, e, signer, address, zero, callSuicideMethod, gasPrice)
+	switch {
+	case err == nil:
+		return fmt.Errorf("call_suicide method call should fail")
+	case strings.Contains(err.Error(), "SELFDESTRUCT not supported"):
+		// Expected error message.
+	default:
+		return fmt.Errorf("unexpected suicide call error: %w", err)
 	}
 
 	return nil

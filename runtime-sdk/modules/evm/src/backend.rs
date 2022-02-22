@@ -1,7 +1,7 @@
 //! EVM backend.
 use std::{cell::RefCell, marker::PhantomData};
 
-use evm::backend::{Apply, ApplyBackend, Backend as EVMBackend, Basic, Log};
+use evm::backend::{Apply, Backend as EVMBackend, Basic, Log};
 
 use oasis_runtime_sdk::{
     core::common::crypto::hash::Hash, modules::accounts::API as _, types::token, Context,
@@ -139,8 +139,18 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
     }
 }
 
-impl<'c, C: Context, Cfg: Config> ApplyBackend for Backend<'c, C, Cfg> {
-    fn apply<A, I, L>(&mut self, values: A, logs: L, _delete_empty: bool)
+/// EVM backend that can apply changes and return an exit value.
+pub trait ApplyBackendResult {
+    /// Apply given values and logs at backend and return an exit value.
+    fn apply<A, I, L>(&mut self, values: A, logs: L) -> evm::ExitReason
+    where
+        A: IntoIterator<Item = Apply<I>>,
+        I: IntoIterator<Item = (primitive_types::H256, primitive_types::H256)>,
+        L: IntoIterator<Item = Log>;
+}
+
+impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
+    fn apply<A, I, L>(&mut self, values: A, logs: L) -> evm::ExitReason
     where
         A: IntoIterator<Item = Apply<I>>,
         I: IntoIterator<Item = (primitive_types::H256, primitive_types::H256)>,
@@ -156,13 +166,27 @@ impl<'c, C: Context, Cfg: Config> ApplyBackend for Backend<'c, C, Cfg> {
 
         for apply in values {
             match apply {
+                Apply::Delete { .. } => {
+                    // Apply::Delete indicates a SELFDESTRUCT action which is not supported.
+                    // This assumes that Apply::Delete is ALWAYS and ONLY invoked in SELFDESTRUCT opcodes, which indeed is the case:
+                    // https://github.com/rust-blockchain/evm/blob/0fbde9fa7797308290f89111c6abe5cee55a5eac/runtime/src/eval/system.rs#L258-L267
+                    //
+                    // NOTE: We cannot just check the executors ExitReason if the reason was suicide,
+                    //       because that doesn't work in case of cross-contract suicide calls, as only
+                    //       the top-level exit reason is returned.
+                    return evm::ExitFatal::Other("SELFDESTRUCT not supported".into()).into();
+                }
                 Apply::Modify {
                     address,
                     basic,
                     code,
                     storage,
-                    reset_storage,
+                    reset_storage: _,
                 } => {
+                    // Reset storage is ignored since storage cannot be efficiently reset as this
+                    // would require iterating over all of the storage keys. This is fine as reset_storage
+                    // is only ever called on non-empty storage when doing SELFDESTRUCT, which we don't support.
+
                     let addr: H160 = address.into();
                     // Derive SDK account address from the Ethereum address.
                     let address = Cfg::map_address(address);
@@ -212,13 +236,6 @@ impl<'c, C: Context, Cfg: Config> ApplyBackend for Backend<'c, C, Cfg> {
                         store.insert(&addr, code);
                     }
 
-                    // Handle storage reset.
-                    if reset_storage {
-                        // NOTE: Storage cannot be efficiently reset as this would require iterating
-                        //       over all of the storage keys. We could add this if remove_prefix
-                        //       existed.
-                    }
-
                     // Handle storage updates.
                     for (index, value) in storage {
                         let idx: H256 = index.into();
@@ -231,9 +248,6 @@ impl<'c, C: Context, Cfg: Config> ApplyBackend for Backend<'c, C, Cfg> {
                             store.insert(&idx, val);
                         }
                     }
-                }
-                Apply::Delete { .. } => {
-                    // Accounts cannot be deleted.
                 }
             }
         }
@@ -255,5 +269,7 @@ impl<'c, C: Context, Cfg: Config> ApplyBackend for Backend<'c, C, Cfg> {
                 data: log.data,
             });
         }
+
+        evm::ExitSucceed::Returned.into()
     }
 }
