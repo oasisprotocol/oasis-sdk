@@ -33,7 +33,7 @@ use oasis_runtime_sdk::{
     },
 };
 
-use evm::backend::ApplyBackend;
+use backend::ApplyBackendResult;
 use types::{H160, H256, U256};
 
 #[cfg(test)]
@@ -558,7 +558,13 @@ impl<Cfg: Config> Module<Cfg> {
             .ok_or(Error::InsufficientBalance)?;
 
         let (vals, logs) = executor.into_state().deconstruct();
-        backend.apply(vals, logs, true);
+
+        // Apply can fail in case of unsupported actions.
+        let exit_reason = backend.apply(vals, logs);
+        if let Err(err) = process_evm_result(exit_reason, Vec::new()) {
+            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
+            return Err(err);
+        };
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
 

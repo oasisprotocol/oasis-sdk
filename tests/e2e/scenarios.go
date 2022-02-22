@@ -40,6 +40,8 @@ var (
 		SimpleSolEVMTest,
 		SimpleSolEVMTestCreateMulti,
 		SimpleERC20EVMTest,
+		SimpleEVMSuicideTest,
+		SimpleEVMCallSuicideTest,
 	})
 
 	// SimpleContractsRuntime is the simple-contracts runtime test.
