@@ -411,8 +411,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
     }
 }
 
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::AuthHandler
-    for Module<Accounts, Consensus>
+impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
+    module::TransactionHandler for Module<Accounts, Consensus>
 {
 }
 

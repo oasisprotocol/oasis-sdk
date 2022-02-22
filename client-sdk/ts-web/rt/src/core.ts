@@ -1,5 +1,6 @@
 import * as oasis from '@oasisprotocol/client';
 
+import * as event from './event';
 import * as types from './types';
 import * as wrapper from './wrapper';
 
@@ -34,6 +35,9 @@ export const METHOD_CHECK_INVARIANTS = 'core.CheckInvariants';
 export const METHOD_CALL_DATA_PUBLIC_KEY = 'core.CallDataPublicKey';
 export const METHOD_MIN_GAS_PRICE = 'core.MinGasPrice';
 
+// Events.
+export const EVENT_GAS_USED = 1;
+
 export class Wrapper extends wrapper.Base {
     constructor(runtimeID: Uint8Array) {
         super(runtimeID);
@@ -56,4 +60,10 @@ export class Wrapper extends wrapper.Base {
     queryMinGasPrice() {
         return this.query<void, Map<Uint8Array, Uint8Array>>(METHOD_MIN_GAS_PRICE);
     }
+}
+
+export function moduleEventHandler(codes: {
+    [EVENT_GAS_USED]?: event.Handler<types.CoreGasUsedEvent>;
+}) {
+    return [MODULE_NAME, codes] as event.ModuleHandler;
 }

@@ -19,6 +19,13 @@ export interface CoreCallDataPublicKeyQueryResponse {
 }
 
 /**
+ * Core module Gas used event.
+ */
+export interface CoreGasUsedEvent {
+    amount: oasis.types.longnum;
+}
+
+/**
  * Caller address.
  */
 export interface CallerAddress {

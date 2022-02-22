@@ -31,7 +31,7 @@ use crate::{
     error::{Error as _, RuntimeError},
     event::IntoTags,
     keymanager::{KeyManagerClient, KeyManagerError},
-    module::{self, AuthHandler, BlockHandler, MethodHandler},
+    module::{self, BlockHandler, MethodHandler, TransactionHandler},
     modules,
     modules::core::API as _,
     runtime::Runtime,
@@ -157,8 +157,9 @@ impl<R: Runtime> Dispatcher<R> {
         }
     }
 
-    /// Run the dispatch steps inside a transaction context. This includes the before call hooks
-    /// and the call itself.
+    /// Run the dispatch steps inside a transaction context. This includes the before call hooks,
+    /// the call itself and after call hooks. The after call hooks are called regardless if the call
+    /// succeeds or not.
     pub fn dispatch_tx_call<C: TxContext>(
         ctx: &mut C,
         call: types::transaction::Call,
@@ -167,12 +168,19 @@ impl<R: Runtime> Dispatcher<R> {
             return e.into_call_result();
         }
 
-        match R::Modules::dispatch_call(ctx, &call.method, call.body) {
+        let result = match R::Modules::dispatch_call(ctx, &call.method, call.body) {
             module::DispatchResult::Handled(result) => result,
             module::DispatchResult::Unhandled(_) => {
                 modules::core::Error::InvalidMethod(call.method).into_call_result()
             }
+        };
+
+        // Call after hook.
+        if let Err(e) = R::Modules::after_handle_call(ctx) {
+            return e.into_call_result();
         }
+
+        result
     }
 
     /// Dispatch a runtime transaction in the given context.

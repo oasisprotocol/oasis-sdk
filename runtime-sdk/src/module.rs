@@ -257,8 +257,8 @@ impl MethodHandler for Tuple {
     }
 }
 
-/// Authentication handler.
-pub trait AuthHandler {
+/// Transaction handler.
+pub trait TransactionHandler {
     /// Judge if an unverified transaction is good enough to undergo verification.
     /// This takes place before even verifying signatures.
     fn approve_unverified_tx<C: Context>(
@@ -304,10 +304,18 @@ pub trait AuthHandler {
         // Default implementation doesn't do anything.
         Ok(())
     }
+
+    /// Perform any action after call, within the transaction context.
+    ///
+    /// If an error is returned the transaction call fails and updates are rolled back.
+    fn after_handle_call<C: TxContext>(_ctx: &mut C) -> Result<(), modules::core::Error> {
+        // Default implementation doesn't do anything.
+        Ok(())
+    }
 }
 
 #[impl_for_tuples(30)]
-impl AuthHandler for Tuple {
+impl TransactionHandler for Tuple {
     fn approve_unverified_tx<C: Context>(
         ctx: &mut C,
         utx: &UnverifiedTransaction,
@@ -343,6 +351,11 @@ impl AuthHandler for Tuple {
         call: &Call,
     ) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::before_handle_call(ctx, call)?; )* );
+        Ok(())
+    }
+
+    fn after_handle_call<C: TxContext>(ctx: &mut C) -> Result<(), modules::core::Error> {
+        for_tuples!( #( Tuple::after_handle_call(ctx)?; )* );
         Ok(())
     }
 }

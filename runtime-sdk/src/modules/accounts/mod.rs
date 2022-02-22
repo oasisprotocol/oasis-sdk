@@ -832,7 +832,7 @@ impl module::MigrationHandler for Module {
     }
 }
 
-impl module::AuthHandler for Module {
+impl module::TransactionHandler for Module {
     fn authenticate_tx<C: Context>(
         ctx: &mut C,
         tx: &Transaction,

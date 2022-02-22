@@ -36,6 +36,9 @@ const EventWaitTimeout = 20 * time.Second
 // defaultGasAmount is the default amount of gas to specify.
 const defaultGasAmount = 400
 
+// expectedKVTransferGasUsed is the expected gas used by the kv transfer transaction.
+const expectedKVTransferGasUsed = 373
+
 // The kvKey type must match the Key type from the simple-keyvalue runtime
 // in ../runtimes/simple-keyvalue/src/keyvalue/types.rs.
 type kvKey struct {
@@ -473,11 +476,15 @@ func TransactionsQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.
 	}
 
 	tx := txs[meta.BatchOrder]
-	if len(tx.Events) != 1 {
-		return fmt.Errorf("expected 1 event got %d events", len(tx.Events))
+	if len(tx.Events) != 2 {
+		return fmt.Errorf("expected 2 events got %d events", len(tx.Events))
 	}
 
 	event := tx.Events[0]
+	if event.Module != "core" || event.Code != 1 {
+		return fmt.Errorf("expected event module 'core' with code 1 got module '%s' with code %d", event.Module, event.Code)
+	}
+	event = tx.Events[1]
 	if event.Module != "keyvalue" || event.Code != 1 {
 		return fmt.Errorf("expected event module 'keyvalue' with code 1 got module '%s' with code %d", event.Module, event.Code)
 	}
@@ -701,6 +708,7 @@ func KVBalanceTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 // KVTransferTest does a transfer test and verifies balances.
 func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
+	core := core.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
 
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
@@ -716,6 +724,21 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	var meta *client.TransactionMeta
 	if meta, err = tb.SubmitTxMeta(ctx, nil); err != nil {
 		return err
+	}
+
+	cevs, err := core.GetEvents(ctx, meta.Round)
+	if err != nil {
+		return fmt.Errorf("failed to fetch core events: %w", err)
+	}
+	if len(cevs) != 1 {
+		return fmt.Errorf("expected 1 core event, got: %v", len(cevs))
+	}
+	event := cevs[0]
+	if event.GasUsed.Amount != expectedKVTransferGasUsed {
+		return fmt.Errorf("unexpected transaction used amount: expected: %v, got: %v",
+			expectedKVTransferGasUsed,
+			event.GasUsed.Amount,
+		)
 	}
 
 	evs, err := ac.GetEvents(ctx, meta.Round)

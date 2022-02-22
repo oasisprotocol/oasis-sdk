@@ -661,7 +661,7 @@ impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
     }
 }
 
-impl<Cfg: Config> module::AuthHandler for Module<Cfg> {
+impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
     fn decode_tx<C: Context>(
         _ctx: &mut C,
         scheme: &str,

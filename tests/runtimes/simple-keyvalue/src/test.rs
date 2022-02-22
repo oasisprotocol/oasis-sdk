@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use oasis_runtime_sdk::{
-    module::AuthHandler as _,
+    module::TransactionHandler as _,
     modules::core,
     testing::mock,
     types::{token, transaction},

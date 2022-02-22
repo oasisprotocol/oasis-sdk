@@ -16,7 +16,7 @@ use crate::{
     context::Context,
     crypto, dispatcher,
     keymanager::{KeyManagerClient, TrustedPolicySigners},
-    module::{AuthHandler, BlockHandler, InvariantHandler, MethodHandler, MigrationHandler},
+    module::{BlockHandler, InvariantHandler, MethodHandler, MigrationHandler, TransactionHandler},
     modules, storage,
 };
 
@@ -37,7 +37,11 @@ pub trait Runtime {
     type Core: modules::core::API;
 
     /// Supported modules.
-    type Modules: AuthHandler + MigrationHandler + MethodHandler + BlockHandler + InvariantHandler;
+    type Modules: TransactionHandler
+        + MigrationHandler
+        + MethodHandler
+        + BlockHandler
+        + InvariantHandler;
 
     /// Return the trusted policy signers for this runtime; if `None`, a key manager connection will
     /// not be established on startup.

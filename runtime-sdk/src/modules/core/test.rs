@@ -8,7 +8,7 @@ use crate::{
     crypto::multisig,
     dispatcher,
     event::IntoTags,
-    module::{self, AuthHandler as _, BlockHandler, Module as _},
+    module::{self, BlockHandler, Module as _, TransactionHandler as _},
     runtime::Runtime,
     testing::{keys, mock},
     types::{
@@ -17,7 +17,7 @@ use crate::{
     },
 };
 
-use super::{types, Parameters, API as _, GAS_WEIGHT_NAME};
+use super::{types, Event, Parameters, API as _, GAS_WEIGHT_NAME};
 
 type Core = super::Module<Config>;
 
@@ -55,6 +55,7 @@ fn test_use_gas() {
             BLOCK_MAX_GAS - 1 - MAX_GAS
         );
         assert_eq!(Core::remaining_tx_gas(&mut tx_ctx), 0);
+        assert_eq!(Core::used_tx_gas(&mut tx_ctx), MAX_GAS);
     });
 
     ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
@@ -65,12 +66,14 @@ fn test_use_gas() {
             BLOCK_MAX_GAS - 1 - 2 * MAX_GAS
         );
         assert_eq!(Core::remaining_tx_gas(&mut tx_ctx), 0);
+        assert_eq!(Core::used_tx_gas(&mut tx_ctx), MAX_GAS);
     });
 
     ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, MAX_GAS).unwrap();
         Core::use_tx_gas(&mut tx_ctx, 1).expect_err("gas in same transaction should accumulate");
         assert_eq!(Core::remaining_tx_gas(&mut tx_ctx), 0);
+        assert_eq!(Core::used_tx_gas(&mut tx_ctx), MAX_GAS);
     });
 
     assert_eq!(
@@ -89,7 +92,9 @@ fn test_use_gas() {
             0,
             "remaining tx gas should take batch limit into account"
         );
+        assert_eq!(Core::used_tx_gas(&mut tx_ctx), 1);
         Core::use_tx_gas(&mut tx_ctx, u64::MAX).expect_err("overflow should cause error");
+        assert_eq!(Core::used_tx_gas(&mut tx_ctx), 1);
     });
 
     let mut big_tx = tx.clone();
@@ -199,7 +204,7 @@ impl module::MethodHandler for GasWasterModule {
 }
 
 impl module::BlockHandler for GasWasterModule {}
-impl module::AuthHandler for GasWasterModule {}
+impl module::TransactionHandler for GasWasterModule {}
 impl module::MigrationHandler for GasWasterModule {
     type Genesis = ();
 }
@@ -796,7 +801,6 @@ fn test_emit_events() {
     ctx.emit_event(TestEvent { i: 0 });
 
     let (etags, _) = ctx.commit();
-    println! {"etags: {:?}", etags};
     let tags = etags.into_tags();
     assert_eq!(tags.len(), 1, "1 emitted tag expected");
 
@@ -807,4 +811,51 @@ fn test_emit_events() {
     assert_eq!(TestEvent { i: 3 }, events[2], "expected events emitted");
     assert_eq!(TestEvent { i: 1 }, events[3], "expected events emitted");
     assert_eq!(TestEvent { i: 0 }, events[4], "expected events emitted");
+}
+
+#[test]
+fn test_gas_used_events() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+    Core::set_params(
+        ctx.runtime_state(),
+        Parameters {
+            max_batch_gas: 1_000_000,
+            max_tx_signers: 8,
+            max_multisig_signers: 8,
+            gas_costs: Default::default(),
+            min_gas_price: {
+                let mut mgp = BTreeMap::new();
+                mgp.insert(token::Denomination::NATIVE, 0);
+                mgp
+            },
+        },
+    );
+
+    let mut tx = mock::transaction();
+    tx.auth_info.fee.gas = 100_000;
+
+    let etags = ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
+        Core::use_tx_gas(&mut tx_ctx, 10).expect("using gas under limit should succeed");
+        assert_eq!(Core::used_tx_gas(&mut tx_ctx), 10);
+        Core::after_handle_call(&mut tx_ctx).unwrap();
+
+        let (etags, _) = tx_ctx.commit();
+        let tags = etags.clone().into_tags();
+        assert_eq!(tags.len(), 1, "1 emitted tag expected");
+
+        let expected = cbor::to_vec(vec![Event::GasUsed { amount: 10 }]);
+        assert_eq!(tags[0].value, expected, "expected events emitted");
+
+        etags
+    });
+    // Forward tx emitted etags.
+    ctx.emit_etags(etags);
+
+    let (etags, _) = ctx.commit();
+    let tags = etags.into_tags();
+    assert_eq!(tags.len(), 1, "1 emitted tags expected");
+
+    let expected = cbor::to_vec(vec![Event::GasUsed { amount: 10 }]);
+    assert_eq!(tags[0].value, expected, "expected events emitted");
 }

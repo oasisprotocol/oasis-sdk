@@ -173,6 +173,11 @@ export const playground = (async function () {
                     console.log('observed remove', removeEvent);
                 },
             }),
+            oasisRT.core.moduleEventHandler({
+                [oasisRT.core.EVENT_GAS_USED]: (e, gasUsedEvent) => {
+                    console.log('observed gas used event', gasUsedEvent);
+                },
+            }),
         ]);
         const blocks = nic.runtimeClientWatchBlocks(KEYVALUE_RUNTIME_ID);
         blocks.on('data', (annotatedBlock) => {
