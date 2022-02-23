@@ -26,6 +26,11 @@ on:
   schedule:
     - cron: "0 4 * * *"
 
+# Cancel in-progress jobs on same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
 
   build-runtime-builder:
