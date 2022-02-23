@@ -245,6 +245,11 @@ func (a *v1) GetEvents(ctx context.Context, instanceID InstanceID, round uint64)
 
 // Implements client.EventDecoder.
 func (a *v1) DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
+	return DecodeEvent(event)
+}
+
+// DecodeEvent decodes a contract event.
+func DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
 	// "contracts" or "contracts.<...>".
 	if event.Module != ModuleName && !strings.HasPrefix(event.Module, ModuleName+".") {
 		return nil, nil
