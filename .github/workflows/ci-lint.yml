@@ -15,6 +15,11 @@ on:
       - main
       - stable/*
 
+# Cancel in-progress jobs on same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
 
   lint-rust:
