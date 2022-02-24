@@ -15,6 +15,7 @@ const (
 	methodTransfer = "accounts.Transfer"
 
 	// Queries.
+	methodParameters       = "accounts.Parameters"
 	methodNonce            = "accounts.Nonce"
 	methodBalances         = "accounts.Balances"
 	methodAddresses        = "accounts.Addresses"
@@ -27,6 +28,9 @@ type V1 interface {
 
 	// Transfer generates an accounts.Transfer transaction.
 	Transfer(to types.Address, amount types.BaseUnits) *client.TransactionBuilder
+
+	// Parameters queries the accounts module parameters.
+	Parameters(ctx context.Context, round uint64) (*Parameters, error)
 
 	// Nonce queries the given account's nonce.
 	Nonce(ctx context.Context, round uint64, address types.Address) (uint64, error)
@@ -54,6 +58,16 @@ func (a *v1) Transfer(to types.Address, amount types.BaseUnits) *client.Transact
 		To:     to,
 		Amount: amount,
 	})
+}
+
+// Implements V1.
+func (a *v1) Parameters(ctx context.Context, round uint64) (*Parameters, error) {
+	var params Parameters
+	err := a.rc.Query(ctx, round, methodParameters, nil, &params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
 }
 
 // Implements V1.

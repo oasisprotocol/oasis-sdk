@@ -325,3 +325,19 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 
 	return nil
 }
+
+// ConsensusAccountsParametersTest tests the parameters methods.
+func ConsensusAccountsParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	cac := consensusAccounts.NewV1(rtc)
+
+	params, err := cac.Parameters(ctx, client.RoundLatest)
+	if err != nil {
+		return fmt.Errorf("parameters: %w", err)
+	}
+	if gc := params.GasCosts.TxWithdraw; gc != 0 {
+		return fmt.Errorf("unexpected GasCosts.TxWithdraw: expected: %v, got: %v", 0, gc)
+	}
+
+	return nil
+}

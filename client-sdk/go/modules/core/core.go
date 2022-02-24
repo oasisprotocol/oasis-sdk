@@ -12,12 +12,16 @@ import (
 
 const (
 	// Queries.
+	methodParameters  = "core.Parameters"
 	methodEstimateGas = "core.EstimateGas"
 	methodMinGasPrice = "core.MinGasPrice"
 )
 
 // V1 is the v1 core module interface.
 type V1 interface {
+	// Parameters queries the core module parameters.
+	Parameters(ctx context.Context, round uint64) (*Parameters, error)
+
 	// EstimateGas performs gas estimation for executing the given transaction.
 	EstimateGas(ctx context.Context, round uint64, tx *types.Transaction) (uint64, error)
 
@@ -34,6 +38,16 @@ type V1 interface {
 
 type v1 struct {
 	rc client.RuntimeClient
+}
+
+// Implements V1.
+func (a *v1) Parameters(ctx context.Context, round uint64) (*Parameters, error) {
+	var params Parameters
+	err := a.rc.Query(ctx, round, methodParameters, nil, &params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
 }
 
 // Implements V1.

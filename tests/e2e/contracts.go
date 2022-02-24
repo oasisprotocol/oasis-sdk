@@ -411,3 +411,22 @@ OUTER:
 
 	return nil
 }
+
+// ContractsParametersTest tests the parameters methods.
+func ContractsParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	ct := contracts.NewV1(rtc)
+
+	params, err := ct.Parameters(ctx, client.RoundLatest)
+	if err != nil {
+		return fmt.Errorf("parameters: %w", err)
+	}
+	if cs := params.MaxCodeSize; cs != 524288 {
+		return fmt.Errorf("unexpected MaxCodeSize: expected: %v, got: %v", 10, cs)
+	}
+	if gc := params.GasCosts.TxUpload; gc != 0 {
+		return fmt.Errorf("unexpected GasCosts.TxUpload: expected: %v, got: %v", 0, gc)
+	}
+
+	return nil
+}

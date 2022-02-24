@@ -29,6 +29,17 @@ type AccountQuery struct {
 	Address types.Address `json:"address"`
 }
 
+// GasCosts are the consensus accounts module gas costs.
+type GasCosts struct {
+	TxDeposit  uint64 `json:"tx_deposit"`
+	TxWithdraw uint64 `json:"tx_withdraw"`
+}
+
+// Parameters are the parameters for the consensus accounts module.
+type Parameters struct {
+	GasCosts GasCosts `json:"gas_costs"`
+}
+
 // ConsensusError contains error details from the consensus layer.
 type ConsensusError struct {
 	Module string `json:"module,omitempty"`

@@ -839,3 +839,16 @@ func SimpleEVMCallSuicideTest(sc *RuntimeScenario, log *logging.Logger, conn *gr
 
 	return nil
 }
+
+// EVMParametersTest tests parameters methods.
+func EVMParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	evm := evm.NewV1(rtc)
+
+	_, err := evm.Parameters(ctx, client.RoundLatest)
+	if err != nil {
+		return fmt.Errorf("parameters: %w", err)
+	}
+
+	return nil
+}
