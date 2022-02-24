@@ -1,11 +1,14 @@
 //! An OAS20 contract.
 extern crate alloc;
 
+pub mod helpers;
+pub mod types;
+
 use oasis_contract_sdk::{self as sdk};
-use oasis_contract_sdk_oas20_types as types;
-use oasis_contract_sdk_oas20_types::{Error, Event, Request, Response};
 use oasis_contract_sdk_storage::{cell::Cell, map::Map};
 use oasis_contract_sdk_types::address::Address;
+
+use types::{Error, Event, Request, Response};
 
 /// The contract type.
 pub struct Oas20Token;
@@ -30,7 +33,7 @@ impl sdk::Contract for Oas20Token {
             // We require the caller to always pass the Instantiate request.
             Request::Instantiate(token_instantiation) => {
                 let token_information =
-                    types::helpers::instantiate(ctx, BALANCES, TOKEN_INFO, token_instantiation)?;
+                    helpers::instantiate(ctx, BALANCES, TOKEN_INFO, token_instantiation)?;
 
                 ctx.emit_event(Event::Oas20Instantiated { token_information });
 
@@ -41,11 +44,11 @@ impl sdk::Contract for Oas20Token {
     }
 
     fn call<C: sdk::Context>(ctx: &mut C, request: Request) -> Result<Response, Error> {
-        types::helpers::handle_call(ctx, TOKEN_INFO, BALANCES, ALLOWANCES, request)
+        helpers::handle_call(ctx, TOKEN_INFO, BALANCES, ALLOWANCES, request)
     }
 
     fn query<C: sdk::Context>(ctx: &mut C, request: Request) -> Result<Response, Error> {
-        types::helpers::handle_query(ctx, TOKEN_INFO, BALANCES, ALLOWANCES, request)
+        helpers::handle_query(ctx, TOKEN_INFO, BALANCES, ALLOWANCES, request)
     }
 }
 

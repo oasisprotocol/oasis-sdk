@@ -14,6 +14,7 @@ use crate::{
 };
 
 #[link(wasm_import_module = "env")]
+#[allow(unused)]
 extern "C" {
     #[link_name = "query"]
     fn env_query(query_ptr: u32, query_len: u32) -> *const HostRegion;

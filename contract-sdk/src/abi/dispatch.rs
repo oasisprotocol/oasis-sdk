@@ -199,7 +199,8 @@ pub fn query<C: Contract>(
 
 /// A macro that creates WASM entry points.
 #[macro_export]
-macro_rules! create_contract {
+#[doc(hidden)]
+macro_rules! __create_contract {
     ($name:ty) => {
         #[no_mangle]
         pub extern "C" fn instantiate(

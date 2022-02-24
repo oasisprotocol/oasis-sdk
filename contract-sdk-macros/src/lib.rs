@@ -24,3 +24,11 @@ pub fn event_derive(input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     event_derive::derive_event(input).into()
 }
+
+#[proc_macro]
+pub fn create_contract(input: TokenStream) -> TokenStream {
+    let contract_ident = syn::parse_macro_input!(input as syn::Ident);
+    std::env::var_os("CARGO_PRIMARY_PACKAGE")
+        .map(|_| quote::quote!(::oasis_contract_sdk::__create_contract!(#contract_ident);).into())
+        .unwrap_or_default()
+}
