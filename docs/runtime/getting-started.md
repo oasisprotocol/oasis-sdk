@@ -141,5 +141,5 @@ cd ${OASIS_CORE_PATH}/bin
 tar xf ~/Downloads/oasis_core_21.3.10_linux_amd64.tar.gz --strip-components=1
 ```
 
-[Oasis Core]: https://docs.oasis.dev/oasis-core
+[Oasis Core]: /oasis-core
 [Oasis Core releases]: https://github.com/oasisprotocol/oasis-core/releases
