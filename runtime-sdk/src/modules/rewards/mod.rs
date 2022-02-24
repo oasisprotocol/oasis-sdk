@@ -1,5 +1,5 @@
 //! Rewards module.
-use std::convert::{Infallible, TryFrom, TryInto};
+use std::convert::{TryFrom, TryInto};
 
 use num_traits::Zero;
 use once_cell::sync::Lazy;
@@ -8,9 +8,8 @@ use thiserror::Error;
 use crate::{
     context::Context,
     core::consensus::beacon,
-    error,
     module::{self, Module as _, Parameters as _},
-    modules, storage,
+    modules, sdk_derive, storage,
     types::address::{Address, SignatureAddressSpec},
 };
 
@@ -87,31 +86,15 @@ pub struct Module<Accounts: modules::accounts::API> {
 pub static ADDRESS_REWARD_POOL: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "reward-pool"));
 
-impl<Accounts: modules::accounts::API> Module<Accounts> {
-    fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<Parameters, Error> {
-        Ok(Self::params(ctx.runtime_state()))
-    }
-}
-
 impl<Accounts: modules::accounts::API> module::Module for Module<Accounts> {
     const NAME: &'static str = MODULE_NAME;
-    type Error = Infallible;
+    type Error = Error;
     type Event = ();
     type Parameters = Parameters;
 }
 
-impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts> {
-    fn dispatch_query<C: Context>(
-        ctx: &mut C,
-        method: &str,
-        args: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
-        match method {
-            "rewards.Parameters" => module::dispatch_query(ctx, args, Self::query_parameters),
-            _ => module::DispatchResult::Unhandled(args),
-        }
-    }
-}
+#[sdk_derive(MethodHandler)]
+impl<Accounts: modules::accounts::API> Module<Accounts> {}
 
 impl<Accounts: modules::accounts::API> Module<Accounts> {
     /// Initialize state from genesis.
