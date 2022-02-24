@@ -1,6 +1,7 @@
 //! An example hello world contract also used in unit tests.
 extern crate alloc;
 
+use oas20::types::{ReceiverRequest, Request as Oas20Request, TokenInstantiation};
 use oasis_contract_sdk::{
     self as sdk,
     env::{Crypto, Env},
@@ -10,9 +11,6 @@ use oasis_contract_sdk::{
         modules::contracts::InstantiateResult,
         token, CodeId, InstanceId,
     },
-};
-use oasis_contract_sdk_oas20_types::{
-    ReceiverRequest, Request as Oas20Request, TokenInstantiation,
 };
 use oasis_contract_sdk_storage::cell::Cell;
 

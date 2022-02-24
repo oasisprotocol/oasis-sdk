@@ -68,9 +68,9 @@ cargo build --target wasm32-unknown-unknown --release
 cp "${TESTS_DIR}"/contracts/hello/target/wasm32-unknown-unknown/release/hello.wasm "${TESTS_DIR}"/e2e/contracts/
 
 printf "${CYAN}### Building oas20 contract...${OFF}\n"
-cd "${TESTS_DIR}"/../contract-sdk/specs/oas20/contract
+cd "${TESTS_DIR}"/../contract-sdk/specs/oas20
 cargo build --target wasm32-unknown-unknown --release
-cp "${TESTS_DIR}"/../contract-sdk/specs/oas20/contract/target/wasm32-unknown-unknown/release/oas20.wasm "${TESTS_DIR}"/e2e/contracts/
+cp "${TESTS_DIR}"/../contract-sdk/specs/oas20/target/wasm32-unknown-unknown/release/oas20.wasm "${TESTS_DIR}"/e2e/contracts/
 
 printf "${CYAN}### Building e2e test harness...${OFF}\n"
 cd "${TESTS_DIR}"/e2e
