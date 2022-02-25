@@ -115,7 +115,7 @@ local testnet of your own.
 
 For use with an existing network such as the Oasis Mainnet, see [our docs on
 how to run a non-validator
-node](https://docs.oasis.dev/general/run-a-node/set-up-your-node/run-non-validator).
+node](/general/run-a-node/set-up-your-node/run-non-validator).
 The instructions there set up the socket to be in `/node/data/internal.sock`.
 
 ### Create a local testnet
@@ -123,7 +123,7 @@ The instructions there set up the socket to be in `/node/data/internal.sock`.
 For development, you can alternatively run your own local testnet using
 oasis-net-runner.
 See [our guide on how to use
-oasis-net-runner](https://docs.oasis.dev/oasis-core/development-setup/running-tests-and-development-networks/oasis-net-runner).
+oasis-net-runner](/oasis-core/development-setup/running-tests-and-development-networks/oasis-net-runner).
 In this case, the net runner creates a "client" node, and you should proceed
 using that node's socket.
 The instructions there set up the socket to be in

@@ -8,9 +8,8 @@ This section will guide you how to install the software required for developing
 a runtime and client using the Oasis SDK. After successfully completing all the
 described steps you will be able to start building your first runtime!
 
-If you already have everything set up, feel free to skip to the next section.
-
-{% page-ref page="minimal-runtime.md" %}
+If you already have everything set up, feel free to skip to the [next
+section](minimal-runtime.md).
 
 ## Environment Setup
 
@@ -22,10 +21,12 @@ Oasis SDK:
 We follow [Rust upstream's recommendation][rust-upstream-rustup] on using
 [rustup] to install and manage Rust versions.
 
-{% hint style="info" %}
+:::info
+
 rustup cannot be installed alongside a distribution packaged Rust version. You
 will need to remove it (if it's present) before you can start using rustup.
-{% endhint %}
+
+:::
 
 Install it by running:
 
@@ -33,11 +34,13 @@ Install it by running:
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-{% hint style="info" %}
+:::info
+
 If you want to avoid directly executing a shell script fetched the
 internet, you can also [download `rustup-init` executable for your platform]
 and run it manually.
-{% endhint %}
+
+:::
 
 This will run `rustup-init` which will download and install the latest stable
 version of Rust on your system.
@@ -90,7 +93,7 @@ rustup target add x86_64-fortanix-unknown-sgx
 [rust-upstream-rustup]: https://www.rust-lang.org/tools/install
 [download `rustup-init` executable for your platform]: https://rust-lang.github.io/rustup/installation/other.html
 [Rust]: https://www.rust-lang.org/
-[rust-toolchain]: ../../rust-toolchain
+[rust-toolchain]: https://github.com/oasisprotocol/oasis-core/tree/master/rust-toolchain
 [rust-toolchain-precedence]: https://github.com/rust-lang/rustup/blob/master/README.md#override-precedence
 <!-- markdownlint-enable line-length -->
 
@@ -138,5 +141,5 @@ cd ${OASIS_CORE_PATH}/bin
 tar xf ~/Downloads/oasis_core_21.3.10_linux_amd64.tar.gz --strip-components=1
 ```
 
-[Oasis Core]: https://docs.oasis.dev/oasis-core
+[Oasis Core]: /oasis-core
 [Oasis Core releases]: https://github.com/oasisprotocol/oasis-core/releases

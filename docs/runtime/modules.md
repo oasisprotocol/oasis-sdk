@@ -64,7 +64,7 @@ follows [semantic versioning] with the following semantics:
 
 <!-- markdownlint-disable line-length -->
 [semantic versioning]: https://semver.org/
-[Oasis Core scheduler service]: https://docs.oasis.dev/oasis-core/high-level-components/index/services/scheduler
+[Oasis Core scheduler service]: /oasis-core/consensus/services/scheduler
 <!-- markdownlint-enable line-length -->
 
 ### List of Modules
