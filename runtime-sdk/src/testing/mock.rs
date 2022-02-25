@@ -89,13 +89,13 @@ impl Mock {
 impl Default for Mock {
     fn default() -> Self {
         let mkvs = mkvs::OverlayTree::new(
-            mkvs::Tree::make()
+            mkvs::Tree::builder()
                 .with_root_type(mkvs::RootType::State)
-                .new(Box::new(mkvs::sync::NoopReadSyncer)),
+                .build(Box::new(mkvs::sync::NoopReadSyncer)),
         );
-        let consensus_tree = mkvs::Tree::make()
+        let consensus_tree = mkvs::Tree::builder()
             .with_root_type(mkvs::RootType::State)
-            .new(Box::new(mkvs::sync::NoopReadSyncer));
+            .build(Box::new(mkvs::sync::NoopReadSyncer));
 
         Self {
             host_info: HostInfo {

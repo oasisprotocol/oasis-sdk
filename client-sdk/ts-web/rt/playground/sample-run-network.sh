@@ -15,14 +15,13 @@ FIXTURE_FILE="/tmp/oasis-net-runner-sdk-rt/fixture.json"
     --fixture.default.runtime.binary ../../../../target/debug/test-runtime-simple-keyvalue \
     --fixture.default.runtime.id "8000000000000000000000000000000000000000000000000000000000000001" \
     --fixture.default.runtime.binary ../../../../target/debug/test-runtime-simple-consensus \
-    --fixture.default.runtime.genesis_state "," \
     --fixture.default.runtime.loader "$TEST_RUNTIME_LOADER" \
     --fixture.default.keymanager.binary "$TEST_KM_BINARY" \
     --fixture.default.halt_epoch 100000 \
-    --fixture.default.staking_genesis ./staking.json > "$FIXTURE_FILE"
+    --fixture.default.staking_genesis ./staking.json >"$FIXTURE_FILE"
 
 # Allow expensive queries.
-jq '.clients[0].runtime_config."2".allow_expensive_queries = true' "$FIXTURE_FILE" > "$FIXTURE_FILE.tmp"
+jq '.clients[0].runtime_config."2".allow_expensive_queries = true' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
 "$TEST_NET_RUNNER" \

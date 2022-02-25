@@ -24,7 +24,6 @@ import (
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
 	scheduler "github.com/oasisprotocol/oasis-core/go/scheduler/api"
 	"github.com/oasisprotocol/oasis-core/go/staking/api"
-	"github.com/oasisprotocol/oasis-core/go/storage/database"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
@@ -163,13 +162,17 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				Kind:       registry.KindKeyManager,
 				Entity:     0,
 				Keymanager: -1,
-				Binaries: map[node.TEEHardware][]string{
-					node.TEEHardwareInvalid: {keymanagerPath},
-				},
 				AdmissionPolicy: registry.RuntimeAdmissionPolicy{
 					AnyNode: &registry.AnyNodeRuntimeAdmissionPolicy{},
 				},
 				GovernanceModel: registry.GovernanceEntity,
+				Deployments: []oasis.DeploymentCfg{
+					{
+						Binaries: map[node.TEEHardware]string{
+							node.TEEHardwareInvalid: keymanagerPath,
+						},
+					},
+				},
 			},
 			// Compute runtime.
 			{
@@ -177,7 +180,6 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				Kind:       registry.KindCompute,
 				Entity:     0,
 				Keymanager: -1,
-				Binaries:   sc.resolveRuntimeBinaries([]string{runtimeBinary}),
 				Executor: registry.ExecutorParameters{
 					GroupSize:       2,
 					GroupBackupSize: 1,
@@ -185,17 +187,10 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 					MaxMessages:     256,
 				},
 				TxnScheduler: registry.TxnSchedulerParameters{
-					Algorithm:         registry.TxnSchedulerSimple,
 					MaxBatchSize:      1000,
 					MaxBatchSizeBytes: 16 * 1024 * 1024, // 16 MB.
 					BatchFlushTimeout: 1 * time.Second,
 					ProposerTimeout:   30,
-				},
-				Storage: registry.StorageParameters{
-					GroupSize:               2,
-					MinWriteReplication:     2,
-					MaxApplyWriteLogEntries: 100_000,
-					MaxApplyOps:             2,
 				},
 				AdmissionPolicy: registry.RuntimeAdmissionPolicy{
 					AnyNode: &registry.AnyNodeRuntimeAdmissionPolicy{},
@@ -213,25 +208,19 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 							},
 						},
 					},
-					scheduler.KindStorage: {
-						scheduler.RoleWorker: {
-							MinPoolSize: &registry.MinPoolSizeConstraint{
-								Limit: 2,
-							},
-						},
-					},
 				},
 				GovernanceModel: registry.GovernanceEntity,
+				Deployments: []oasis.DeploymentCfg{
+					{
+						Binaries: sc.resolveRuntimeBinaries(runtimeBinary),
+					},
+				},
 			},
 		},
 		Validators: []oasis.ValidatorFixture{
 			{Entity: 1, Consensus: oasis.ConsensusFixture{EnableConsensusRPCWorker: true, SupplementarySanityInterval: 1}},
 			{Entity: 1, Consensus: oasis.ConsensusFixture{EnableConsensusRPCWorker: true}},
 			{Entity: 1, Consensus: oasis.ConsensusFixture{EnableConsensusRPCWorker: true}},
-		},
-		StorageWorkers: []oasis.StorageWorkerFixture{
-			{Backend: database.BackendNameBadgerDB, Entity: 1},
-			{Backend: database.BackendNameBadgerDB, Entity: 1},
 		},
 		ComputeWorkers: []oasis.ComputeWorkerFixture{
 			{Entity: 1, Runtimes: []int{1}},
@@ -267,15 +256,13 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 	return ff, nil
 }
 
-func (sc *RuntimeScenario) resolveRuntimeBinaries(runtimeBinaries []string) map[node.TEEHardware][]string {
-	binaries := make(map[node.TEEHardware][]string)
+func (sc *RuntimeScenario) resolveRuntimeBinaries(baseRuntimeBinary string) map[node.TEEHardware]string {
+	binaries := make(map[node.TEEHardware]string)
 	for _, tee := range []node.TEEHardware{
 		node.TEEHardwareInvalid,
 		node.TEEHardwareIntelSGX,
 	} {
-		for _, binary := range runtimeBinaries {
-			binaries[tee] = append(binaries[tee], sc.resolveRuntimeBinary(binary))
-		}
+		binaries[tee] = sc.resolveRuntimeBinary(baseRuntimeBinary)
 	}
 	return binaries
 }
@@ -308,11 +295,6 @@ func (sc *RuntimeScenario) waitNodesSynced() error {
 			return err
 		}
 	}
-	for _, n := range sc.Net.StorageWorkers() {
-		if err := checkSynced(n.Node); err != nil {
-			return err
-		}
-	}
 	for _, n := range sc.Net.ComputeWorkers() {
 		if err := checkSynced(n.Node); err != nil {
 			return err
@@ -341,6 +323,11 @@ func (sc *RuntimeScenario) Run(childEnv *env.Env) error {
 		return err
 	}
 
+	sc.Logger.Info("waiting for network to come up")
+	if err := sc.Net.Controller().WaitNodesRegistered(ctx, sc.Net.NumRegisterNodes()); err != nil {
+		return fmt.Errorf("WaitNodesRegistered: %w", err)
+	}
+
 	// Connect to the client node.
 	clients := sc.Net.Clients()
 	if len(clients) == 0 {
@@ -352,6 +339,10 @@ func (sc *RuntimeScenario) Run(childEnv *env.Env) error {
 		return err
 	}
 	rtc := client.New(conn, runtimeID)
+
+	// Hack: otherwise sometimes the initial invariants check happens to soon.
+	// TODO: find a better solution.
+	time.Sleep(5 * time.Second)
 
 	// Do an initial invariants check.
 	if err = txgen.CheckInvariants(ctx, rtc); err != nil {

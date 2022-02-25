@@ -13,7 +13,6 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/node"
 	consensusGenesis "github.com/oasisprotocol/oasis-core/go/consensus/genesis"
-	"github.com/oasisprotocol/oasis-core/go/consensus/tendermint/db/badger"
 	cmdCommon "github.com/oasisprotocol/oasis-core/go/oasis-node/cmd/common"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
@@ -87,15 +86,10 @@ func fixture() *oasis.NetworkFixture {
 				Runtimes: []int{0},
 			},
 		},
-		StorageWorkers: []oasis.StorageWorkerFixture{
-			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-1"}, Entity: 1, Runtimes: []int{0}, Backend: badger.BackendName},
-			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-2"}, Entity: 1, Runtimes: []int{0}, Backend: badger.BackendName},
-			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-3"}, Entity: 1, Runtimes: []int{0}, Backend: badger.BackendName},
-		},
 		ComputeWorkers: []oasis.ComputeWorkerFixture{
-			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-1", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
-			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-2", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
-			{NodeFixture: oasis.NodeFixture{Name: "compute-storage-3", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-1", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-2", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-3", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
 		},
 		Seeds: []oasis.SeedFixture{{}},
 		Runtimes: []oasis.RuntimeFixture{
@@ -104,9 +98,6 @@ func fixture() *oasis.NetworkFixture {
 				Kind:       registry.KindCompute,
 				Entity:     0,
 				Keymanager: -1,
-				Binaries: map[node.TEEHardware][]string{
-					node.TEEHardwareInvalid: {viper.GetString(cfgRuntimeBinary)},
-				},
 				Executor: registry.ExecutorParameters{
 					GroupSize:       2,
 					GroupBackupSize: 1,
@@ -114,23 +105,23 @@ func fixture() *oasis.NetworkFixture {
 					MaxMessages:     128,
 				},
 				TxnScheduler: registry.TxnSchedulerParameters{
-					Algorithm:         registry.TxnSchedulerSimple,
 					MaxBatchSize:      10_000,
 					MaxBatchSizeBytes: 10 * 16 * 1024 * 1024, // 160 MiB
 					BatchFlushTimeout: 1 * time.Second,
 					ProposerTimeout:   5,
-				},
-				Storage: registry.StorageParameters{
-					GroupSize:               3,
-					MinWriteReplication:     3,
-					MaxApplyWriteLogEntries: 100_000,
-					MaxApplyOps:             2,
 				},
 				AdmissionPolicy: registry.RuntimeAdmissionPolicy{
 					AnyNode: &registry.AnyNodeRuntimeAdmissionPolicy{},
 				},
 				GenesisRound:    0,
 				GovernanceModel: registry.GovernanceEntity,
+				Deployments: []oasis.DeploymentCfg{
+					{
+						Binaries: map[node.TEEHardware]string{
+							node.TEEHardwareInvalid: viper.GetString(cfgRuntimeBinary),
+						},
+					},
+				},
 			},
 		},
 	}
