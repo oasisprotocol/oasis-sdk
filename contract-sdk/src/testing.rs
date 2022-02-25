@@ -165,6 +165,7 @@ impl Context for MockContext {
 
 /// A macro that creates Oasis ABI entry points.
 #[macro_export]
-macro_rules! create_contract {
+#[doc(hidden)]
+macro_rules! __create_contract {
     ($name:ty) => {};
 }

@@ -9,7 +9,7 @@ use oasis_contract_sdk::{
 use oasis_contract_sdk_storage::{cell::Cell, map::Map};
 use oasis_contract_sdk_types::address::Address;
 
-use crate::{
+use crate::types::{
     Error, Event, InitialBalance, ReceiverRequest, Request, Response, TokenInformation,
     TokenInstantiation,
 };

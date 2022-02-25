@@ -12,17 +12,19 @@ license = "Apache-2.0"
 
 [lib]
 name = "oas20"
-crate-type = ["cdylib"]
+crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 cbor = { version = "0.2.0", package = "oasis-cbor" }
-oasis-contract-sdk = { path = "../../.." }
-oasis-contract-sdk-storage = { path = "../../../storage" }
-oasis-contract-sdk-types = { path = "../../../types" }
-oasis-contract-sdk-oas20-types = { path = "../types" }
+oasis-contract-sdk = { path = "../../" }
+oasis-contract-sdk-storage = { path = "../../storage" }
+oasis-contract-sdk-types = { path = "../../types" }
 
 # Third party.
 thiserror = "1.0.30"
+
+[dev-dependencies]
+base64 = "0.13.0"
 
 [profile.release]
 opt-level = 3

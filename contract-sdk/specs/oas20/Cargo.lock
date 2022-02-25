@@ -3,6 +3,12 @@
 version = 3
 
 [[package]]
+name = "base64"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
+
+[[package]]
 name = "bech32"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -291,18 +297,7 @@ dependencies = [
 name = "oasis-contract-sdk-oas20"
 version = "0.1.0"
 dependencies = [
- "oasis-cbor",
- "oasis-contract-sdk",
- "oasis-contract-sdk-oas20-types",
- "oasis-contract-sdk-storage",
- "oasis-contract-sdk-types",
- "thiserror",
-]
-
-[[package]]
-name = "oasis-contract-sdk-oas20-types"
-version = "0.1.0"
-dependencies = [
+ "base64",
  "oasis-cbor",
  "oasis-contract-sdk",
  "oasis-contract-sdk-storage",

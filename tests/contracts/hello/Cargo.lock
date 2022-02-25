@@ -178,7 +178,7 @@ version = "0.0.0"
 dependencies = [
  "oasis-cbor",
  "oasis-contract-sdk",
- "oasis-contract-sdk-oas20-types",
+ "oasis-contract-sdk-oas20",
  "oasis-contract-sdk-storage",
  "thiserror",
 ]
@@ -299,7 +299,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "oasis-contract-sdk-oas20-types"
+name = "oasis-contract-sdk-oas20"
 version = "0.1.0"
 dependencies = [
  "oasis-cbor",

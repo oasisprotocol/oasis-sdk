@@ -14,7 +14,7 @@ crate-type = ["cdylib"]
 cbor = { version = "0.2.1", package = "oasis-cbor" }
 oasis-contract-sdk = { path = "../../../contract-sdk" }
 oasis-contract-sdk-storage = { path = "../../../contract-sdk/storage" }
-oasis-contract-sdk-oas20-types = { path = "../../../contract-sdk/specs/oas20/types" }
+oasis-contract-sdk-oas20 = { path = "../../../contract-sdk/specs/oas20" }
 
 # Third party.
 thiserror = "1.0.30"
