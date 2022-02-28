@@ -42,6 +42,14 @@ type SimulateCallQuery struct {
 	Data     []byte `json:"data"`
 }
 
+// GasCosts are the EVM module gas costs.
+type GasCosts struct{}
+
+// Parameters are the parameters for the EVM module.
+type Parameters struct {
+	GasCosts GasCosts `json:"gas_costs"`
+}
+
 // ModuleName is the EVM module name.
 const ModuleName = "evm"
 

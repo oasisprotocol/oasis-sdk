@@ -194,6 +194,43 @@ type CustomQuery struct {
 // CustomQueryResult is the result of the contracts.Custom query.
 type CustomQueryResult []byte
 
+// GasCosts are the contracts module gas costs.
+type GasCosts struct {
+	TxUpload        uint64 `json:"tx_upload"`
+	TxUploadPerByte uint64 `json:"tx_upload_per_byte"`
+	TxInstantiate   uint64 `json:"tx_instantiate"`
+	TxCall          uint64 `json:"tx_call"`
+	TxUpgrade       uint64 `json:"tx_upgrade"`
+
+	SubcallDispatch uint64 `json:"subcall_dispatch"`
+
+	WASMStorageGetBase    uint64 `json:"wasm_storage_get_base"`
+	WASMStorageInsertBase uint64 `json:"wasm_storage_insert_base"`
+	WASMStorageRemoveBase uint64 `json:"wasm_storage_remove_base"`
+	WASMStorageKeyByte    uint64 `json:"wasm_storage_key_byte"`
+	WASMStorageValueByte  uint64 `json:"wasm_storage_value_byte"`
+	WASMEnvQueryBase      uint64 `json:"wasm_env_query_base"`
+
+	WASMCryptoECDSARecover uint64 `json:"wasm_crypto_ecdsa_recover"`
+}
+
+// Parameters are the parameters for the contracts module.
+type Parameters struct {
+	MaxCodeSize    uint32 `json:"max_code_size"`
+	MaxStackSize   uint32 `json:"max_stack_size"`
+	MaxMemoryPages uint32 `json:"max_memory_pages"`
+
+	MaxSubcallDepth uint16 `json:"max_subcall_depth"`
+	MaxSubcallCount uint16 `json:"max_subcall_count"`
+
+	MaxResultSizeBytes       uint32 `json:"max_result_size_bytes"`
+	MaxQuerySizeBytes        uint32 `json:"max_query_size_bytes"`
+	MaxStorageKeySizeBytes   uint32 `json:"max_storage_key_size_bytes"`
+	MaxStorageValueSizeBytes uint32 `json:"max_storage_value_size_bytes"`
+
+	GasCosts GasCosts `json:"gas_costs"`
+}
+
 // ModuleName is the contracts module name.
 const ModuleName = "contracts"
 

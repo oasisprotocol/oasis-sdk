@@ -17,7 +17,7 @@ use oasis_core_runtime::{
 
 use crate::{
     context::{Context, TxContext},
-    handler, module,
+    module,
     module::{Module as _, Parameters as _},
     modules, sdk_derive,
     types::{
@@ -180,12 +180,7 @@ impl Module {
 }
 
 #[sdk_derive(MethodHandler)]
-impl Module {
-    #[handler(query = "consensus.Parameters")]
-    fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<Parameters, Error> {
-        Ok(Self::params(ctx.runtime_state()))
-    }
-}
+impl Module {}
 
 impl API for Module {
     fn transfer<C: TxContext>(

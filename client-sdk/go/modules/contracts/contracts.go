@@ -27,6 +27,7 @@ const (
 	methodInstanceStorage = "contracts.InstanceStorage"
 	methodPublicKey       = "contracts.PublicKey"
 	methodCustom          = "contracts.Custom"
+	methodParameters      = "contracts.Parameters"
 )
 
 // V1 is the v1 contracts module interface.
@@ -95,6 +96,9 @@ type V1 interface {
 	//
 	// This method will encode the specified data using CBOR as defined by the Oasis ABI.
 	Custom(ctx context.Context, round uint64, id InstanceID, data, rsp interface{}) error
+
+	// Parameters queries the EVM module parameters.
+	Parameters(ctx context.Context, round uint64) (*Parameters, error)
 
 	// GetEvents returns events emitted by the contract at the provided round.
 	GetEvents(ctx context.Context, instanceID InstanceID, round uint64) ([]*Event, error)
@@ -217,6 +221,16 @@ func (a *v1) Custom(ctx context.Context, round uint64, id InstanceID, data, rsp 
 		return fmt.Errorf("failed to unmarshal response from contract: %w", err)
 	}
 	return nil
+}
+
+// Implements V1.
+func (a *v1) Parameters(ctx context.Context, round uint64) (*Parameters, error) {
+	var params Parameters
+	err := a.rc.Query(ctx, round, methodParameters, nil, &params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
 }
 
 // Implements V1.

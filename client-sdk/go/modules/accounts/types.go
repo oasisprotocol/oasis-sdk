@@ -44,6 +44,19 @@ type DenominationInfo struct {
 // Addresses is the response of the accounts.Addresses query.
 type Addresses []types.Address
 
+// GasCosts are the accounts module gas costs.
+type GasCosts struct {
+	TxTransfer uint64 `json:"tx_transfer"`
+}
+
+// Parameters are the parameters for the accounts module.
+type Parameters struct {
+	TransfersDisabled      bool                                    `json:"transfers_disabled"`
+	GasCosts               GasCosts                                `json:"gas_costs"`
+	DebugDisableNonceCheck bool                                    `json:"debug_disable_nonce_check,omitempty"`
+	DenominationInfos      map[types.Denomination]DenominationInfo `json:"denomination_infos,omitempty"`
+}
+
 // ModuleName is the accounts module name.
 const ModuleName = "accounts"
 

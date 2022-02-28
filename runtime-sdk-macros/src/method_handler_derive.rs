@@ -116,11 +116,30 @@ pub fn derive_method_handler(impl_block: syn::ItemImpl) -> TokenStream {
         }
     };
 
+    let query_parameters_impl = {
+        quote! {
+            fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                Ok(Self::params(ctx.runtime_state()))
+            }
+        }
+    };
+
     let dispatch_query_impl = {
         let (handler_names, handler_idents) = filter_by_kind(&handlers, HandlerKind::Query);
 
         if handler_names.is_empty() {
-            quote! {}
+            quote! {
+                fn dispatch_query<C: Context>(
+                    ctx: &mut C,
+                    method: &str,
+                    args: cbor::Value,
+                ) -> DispatchResult<cbor::Value, Result<cbor::Value, sdk::error::RuntimeError>> {
+                    match method {
+                        q if q == format!("{}.Parameters", Self::NAME) => module::dispatch_query(ctx, args, Self::query_parameters),
+                        _ => DispatchResult::Unhandled(args),
+                    }
+                }
+            }
         } else {
             quote! {
                 fn dispatch_query<C: Context>(
@@ -132,6 +151,7 @@ pub fn derive_method_handler(impl_block: syn::ItemImpl) -> TokenStream {
                         #(
                           #handler_names => module::dispatch_query(ctx, args, Self::#handler_idents),
                         )*
+                        q if q == format!("{}.Parameters", Self::NAME) => module::dispatch_query(ctx, args, Self::query_parameters),
                         _ => DispatchResult::Unhandled(args),
                     }
                 }
@@ -188,6 +208,8 @@ pub fn derive_method_handler(impl_block: syn::ItemImpl) -> TokenStream {
         }
 
         impl#module_generics #module_ty {
+            #query_parameters_impl
+
             #(#handler_items)*
         }
     })
@@ -298,8 +320,25 @@ mod tests {
                         #uses
                         impl<C: Cfg> sdk::module::MethodHandler for MyModule<C> {
                             fn unannotated_fn_should_be_passed_thru(foo: Bar) -> Baz {}
+                            fn dispatch_query<C: Context>(
+                                ctx: &mut C,
+                                method: &str,
+                                args: cbor::Value,
+                            ) -> DispatchResult<cbor::Value, Result<cbor::Value, sdk::error::RuntimeError>>
+                            {
+                                match method {
+                                    q if q == format!("{}.Parameters", Self::NAME) => {
+                                        module::dispatch_query(ctx, args, Self::query_parameters)
+                                    }
+                                    _ => DispatchResult::Unhandled(args),
+                                }
+                            }
                         }
-                        impl<C: Cfg> MyModule<C> {}
+                        impl<C: Cfg> MyModule<C> {
+                            fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                                Ok(Self::params(ctx.runtime_state()))
+                            }
+                        }
                     };
                 )
             }),
@@ -356,8 +395,24 @@ mod tests {
                                     _ => DispatchResult::Unhandled(body),
                                 }
                             }
+                            fn dispatch_query<C: Context>(
+                                ctx: &mut C,
+                                method: &str,
+                                args: cbor::Value,
+                            ) -> DispatchResult<cbor::Value, Result<cbor::Value, sdk::error::RuntimeError>>
+                            {
+                                match method {
+                                    q if q == format!("{}.Parameters", Self::NAME) => {
+                                        module::dispatch_query(ctx, args, Self::query_parameters)
+                                    }
+                                    _ => DispatchResult::Unhandled(args),
+                                }
+                            }
                         }
                         impl<C: Cfg> MyModule<C> {
+                            fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                                Ok(Self::params(ctx.runtime_state()))
+                            }
                             #[handler(prefetch = "my_module.MyCall")]
                             fn prefetch_for_my_call() {}
                             #[handler(call = "my_module.MyCall")]
@@ -395,11 +450,17 @@ mod tests {
                             {
                                 match method {
                                     RPC_NAME_OF_MY_QUERY => module::dispatch_query(ctx, args, Self::my_query),
+                                    q if q == format!("{}.Parameters", Self::NAME) => {
+                                       module::dispatch_query(ctx, args, Self::query_parameters)
+                                    }
                                     _ => DispatchResult::Unhandled(args),
                                 }
                             }
                         }
                         impl<C: Cfg> MyModule<C> {
+                            fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                                Ok(Self::params(ctx.runtime_state()))
+                            }
                             #[handler(query = RPC_NAME_OF_MY_QUERY)]
                             fn my_query() -> () {}
                         }
@@ -433,11 +494,17 @@ mod tests {
                             {
                                 match method {
                                     "my_module.MyMC" => module::dispatch_query(ctx, args, Self::my_method_call),
+                                    q if q == format!("{}.Parameters", Self::NAME) => {
+                                        module::dispatch_query(ctx, args, Self::query_parameters)
+                                    }
                                     _ => DispatchResult::Unhandled(args),
                                 }
                             }
                         }
                         impl<C: Cfg> MyModule<C> {
+                            fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                                Ok(Self::params(ctx.runtime_state()))
+                            }
                             #[handler(query = "my_module.MyMC")]
                             fn my_method_call() -> () {}
                         }

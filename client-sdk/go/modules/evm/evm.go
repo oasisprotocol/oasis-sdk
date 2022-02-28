@@ -20,6 +20,7 @@ const (
 	methodCode         = "evm.Code"
 	methodBalance      = "evm.Balance"
 	methodSimulateCall = "evm.SimulateCall"
+	methodParameters   = "evm.Parameters"
 )
 
 // V1 is the v1 EVM module interface.
@@ -50,6 +51,9 @@ type V1 interface {
 	// SimulateCall simulates an EVM CALL.
 	SimulateCall(ctx context.Context, round uint64, gasPrice []byte, gasLimit uint64, caller []byte, address []byte, value []byte, data []byte) ([]byte, error)
 
+	// Parameters queries the EVM module parameters.
+	Parameters(ctx context.Context, round uint64) (*Parameters, error)
+
 	// GetEvents returns events emitted by the EVM module.
 	GetEvents(ctx context.Context, round uint64) ([]*Event, error)
 }
@@ -73,6 +77,16 @@ func (a *v1) Call(address []byte, value []byte, data []byte) *client.Transaction
 		Value:   value,
 		Data:    data,
 	})
+}
+
+// Implements V1.
+func (a *v1) Parameters(ctx context.Context, round uint64) (*Parameters, error) {
+	var params Parameters
+	err := a.rtc.Query(ctx, round, methodParameters, nil, &params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
 }
 
 // Implements V1.

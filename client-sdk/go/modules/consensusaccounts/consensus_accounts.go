@@ -17,8 +17,9 @@ const (
 	methodWithdraw = "consensus.Withdraw"
 
 	// Queries.
-	methodBalance = "consensus.Balance"
-	methodAccount = "consensus.Account"
+	methodParameters = "consensus_accounts.Parameters"
+	methodBalance    = "consensus.Balance"
+	methodAccount    = "consensus.Account"
 )
 
 // V1 is the v1 consensus accounts module interface.
@@ -30,6 +31,9 @@ type V1 interface {
 
 	// Withdraw generates a consensus.Withdraw transaction.
 	Withdraw(to *types.Address, amount types.BaseUnits) *client.TransactionBuilder
+
+	// Parameters queries the consensus accounts module parameters.
+	Parameters(ctx context.Context, round uint64) (*Parameters, error)
 
 	// Balance queries the given account's balance of consensus denomination tokens.
 	Balance(ctx context.Context, round uint64, query *BalanceQuery) (*AccountBalance, error)
@@ -59,6 +63,16 @@ func (a *v1) Withdraw(to *types.Address, amount types.BaseUnits) *client.Transac
 		To:     to,
 		Amount: amount,
 	})
+}
+
+// Implements V1.
+func (a *v1) Parameters(ctx context.Context, round uint64) (*Parameters, error) {
+	var params Parameters
+	err := a.rc.Query(ctx, round, methodParameters, nil, &params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
 }
 
 // Implements V1.

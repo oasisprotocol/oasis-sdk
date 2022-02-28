@@ -1088,3 +1088,34 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 	log.Info("finished", "num_ok_submitted_txs", ok, "num_gen_errs", genErrs, "num_sub_errs", subErrs)
 	return nil
 }
+
+// ParametersTest tests parameters methods.
+func ParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	ac := accounts.NewV1(rtc)
+	core := core.NewV1(rtc)
+
+	accParams, err := ac.Parameters(ctx, client.RoundLatest)
+	if err != nil {
+		return fmt.Errorf("accounts parameters: %w", err)
+	}
+	if accParams.DebugDisableNonceCheck {
+		return fmt.Errorf("accounts DebugDisableNonceChecks should be disabled")
+	}
+	if gc := accParams.GasCosts.TxTransfer; gc != 100 {
+		return fmt.Errorf("unexpected GasCosts.TxTransfer: expected: %v, got: %v", 100, gc)
+	}
+
+	coreParams, err := core.Parameters(ctx, client.RoundLatest)
+	if err != nil {
+		return fmt.Errorf("core parameters: %w", err)
+	}
+	if s := coreParams.MaxTxSigners; s != 8 {
+		return fmt.Errorf("unexpected core.MaxTxSigners: expected: %v, got: %v", 8, s)
+	}
+	if gc := coreParams.GasCosts.TxByte; gc != 1 {
+		return fmt.Errorf("unexpected GasCosts.TxByte: expected: %v, got: %v", 10, gc)
+	}
+
+	return nil
+}
