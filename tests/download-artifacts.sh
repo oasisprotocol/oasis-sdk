@@ -2,7 +2,10 @@
 set -o nounset -o pipefail -o errexit
 
 # Get the root directory of the tests dir inside the repository.
-TESTS_DIR="$(cd $(dirname $0); pwd -P)"
+TESTS_DIR="$(
+    cd $(dirname $0)
+    pwd -P
+)"
 
 . "$TESTS_DIR/consts.sh"
 
@@ -10,7 +13,7 @@ mkdir -p "$TESTS_DIR/untracked"
 
 HAVE_RELEASE_PACKAGE=0
 
-if [ -n "$OASIS_CORE_VERSION" ]; then
+if [ -n "${OASIS_CORE_VERSION:-}" ]; then
     if [ ! -x "$TESTS_DIR/untracked/oasis_core_${OASIS_CORE_VERSION}_linux_amd64/oasis-node" ]; then
         (
             cd "$TESTS_DIR/untracked"

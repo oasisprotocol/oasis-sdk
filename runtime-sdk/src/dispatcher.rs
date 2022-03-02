@@ -13,6 +13,7 @@ use thiserror::Error;
 use oasis_core_runtime::{
     self,
     common::crypto::hash::Hash,
+    consensus::roothash,
     protocol::HostInfo,
     storage::mkvs,
     transaction::{
@@ -460,6 +461,7 @@ impl<R: Runtime> Dispatcher<R> {
             block_tags: block_tags.into_tags(),
             batch_weight_limits: Some(block_weight_limits),
             tx_reject_hashes: vec![],
+            in_msgs_count: 0, // TODO: Support processing incoming messages.
         })
     }
 }
@@ -469,6 +471,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         &self,
         rt_ctx: transaction::Context<'_>,
         batch: &TxnBatch,
+        _in_msgs: &[roothash::IncomingMessage],
     ) -> Result<ExecuteBatchResult, RuntimeError> {
         self.execute_batch_common(
             rt_ctx,
@@ -515,6 +518,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         &self,
         rt_ctx: transaction::Context<'_>,
         batch: &mut TxnBatch,
+        _in_msgs: &[roothash::IncomingMessage],
     ) -> Result<ExecuteBatchResult, RuntimeError> {
         let cfg = R::SCHEDULE_CONTROL.unwrap(); // Must succeed otherwise we wouldn't be here.
         let mut tx_reject_hashes = Vec::new();

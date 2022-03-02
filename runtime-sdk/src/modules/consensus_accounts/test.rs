@@ -703,6 +703,7 @@ fn test_api_withdraw_handler_failure() {
         module: "staking".to_string(),
         code: 1, // Any non-zero code is treated as an error.
         index: 0,
+        result: None,
     };
     Module::<Accounts, Consensus>::message_result_transfer(
         &mut ctx,
