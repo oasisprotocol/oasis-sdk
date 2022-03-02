@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # gcc-multilib is required for bindgen to work for SGX.
       - name: Install dependencies
@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Check versions
         run: ./tests/check-core-versions.sh
@@ -99,7 +99,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Go 1.17
         uses: actions/setup-go@v3
@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Go 1.17
         uses: actions/setup-go@v3
@@ -147,7 +147,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v3
@@ -189,7 +189,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v3
@@ -252,7 +252,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v3
@@ -293,7 +293,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v3
@@ -371,7 +371,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
@@ -402,7 +402,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v3
@@ -427,7 +427,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v3
@@ -453,7 +453,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Go 1.17
         uses: actions/setup-go@v3
@@ -475,7 +475,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
