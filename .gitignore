@@ -27,3 +27,4 @@ tests/benchmark/benchmark
 cli/cli
 cli/oasis
 client-sdk/ts-web/core/reflect-go/reflect-go
+tools/orc/orc

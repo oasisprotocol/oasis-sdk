@@ -141,6 +141,23 @@ jobs:
         with:
           directory: cli
 
+  test-go-tools:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: test-tools
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go 1.17
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.17.x"
+
+      - name: Test build
+        working-directory: tools/orc
+        run: go build
+
   typecheck:
     # NOTE: This name appears in GitHub's Checks API.
     name: typecheck

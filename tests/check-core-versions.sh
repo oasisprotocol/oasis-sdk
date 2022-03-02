@@ -26,6 +26,7 @@ for m in \
   tests/benchmark/go.mod \
   tests/e2e/go.mod \
   cli/go.mod \
+  tools/orc/go.mod \
   ; do
   thisversion=$(get_dep_version "$m")
   if [ "$thisversion" = "$refversion" ]; then
