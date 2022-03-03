@@ -43,7 +43,7 @@ var DefaultNetworks = Networks{
 		// Oasis Protocol Foundation Testnet parameters.
 		// See https://docs.oasis.dev/general/foundation/testnet.
 		"testnet": {
-			ChainContext: "5ba68bc5e01e06f755c4c044dd11ec508e4c17f1faf40c0e67874388437a9e55",
+			ChainContext: "50304f98ddb656620ea817cc1446c401752a05a249b36c9b90dba4616829977a",
 			RPC:          "testnet.grpc.oasis.dev:443",
 			Denomination: DenominationInfo{
 				Symbol:   "TEST",
