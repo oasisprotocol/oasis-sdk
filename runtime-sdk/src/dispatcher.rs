@@ -27,7 +27,7 @@ use oasis_core_runtime::{
 
 use crate::{
     callformat,
-    context::{BatchContext, Context, RuntimeBatchContext, TxContext},
+    context::{BatchContext, Context, Mode, RuntimeBatchContext, TxContext},
     error::{Error as _, RuntimeError},
     event::IntoTags,
     keymanager::{KeyManagerClient, KeyManagerError},
@@ -568,6 +568,17 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
 
                         // Determine the current transaction index.
                         let index = new_batch.len();
+
+                        // First run the transaction in check tx mode in a separate subcontext. If
+                        // that fails, skip and reject transaction.
+                        let check_result = ctx.with_child(Mode::CheckTx, |mut ctx| {
+                            Self::dispatch_tx(&mut ctx, tx_size, tx.clone(), index)
+                        })?;
+                        if let module::CallResult::Failed { .. } = check_result.result {
+                            // Skip and reject transaction.
+                            tx_reject_hashes.push(Hash::digest_bytes(&raw_tx));
+                            continue;
+                        }
 
                         new_batch.push(raw_tx);
                         results.push(Self::execute_tx(ctx, tx_size, tx, index)?);
