@@ -155,6 +155,12 @@ var (
 				_ = bnd.Add(v.dst, b)
 			}
 
+			// Validate SGXS signature (if any).
+			if manifest.SGX.Signature != "" {
+				err = sgxVerifySignature(bnd)
+				cobra.CheckErr(err)
+			}
+
 			// Write the bundle out.
 			outFn := fmt.Sprintf("%s.orc", manifest.Name)
 			if bundleFn != "" {
@@ -162,6 +168,45 @@ var (
 			}
 			if err = bnd.Write(outFn); err != nil {
 				cobra.CheckErr(fmt.Errorf("failed to write output bundle: %w", err))
+			}
+		},
+	}
+
+	sgxSetSigCmd = &cobra.Command{
+		Use:   "sgx-set-sig <bundle.orc> <signature.sig>",
+		Short: "add or overwrite an SGXS signature in an existing runtime bundle",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			bundlePath, sigPath := args[0], args[1]
+
+			// Load bundle.
+			bnd, err := bundle.Open(bundlePath)
+			if err != nil {
+				cobra.CheckErr(fmt.Errorf("failed to open bundle: %w", err))
+			}
+
+			// Load signature file.
+			data, err := os.ReadFile(sigPath)
+			if err != nil {
+				cobra.CheckErr(fmt.Errorf("failed to load signature file: %w", err))
+			}
+
+			_ = bnd.Add(sgxSigName, data)
+			bnd.Manifest.SGX.Signature = sgxSigName
+
+			// Validate signature.
+			err = sgxVerifySignature(bnd)
+			cobra.CheckErr(err)
+
+			// Remove previous serialized manifest.
+			// TODO: Manifest name should be exposed or there should be a method for clearing it.
+			delete(bnd.Data, "META-INF/MANIFEST.MF")
+
+			// Write the bundle back.
+			// TODO: Could be more careful and not overwrite.
+			err = bnd.Write(bundlePath)
+			if err != nil {
+				cobra.CheckErr(fmt.Errorf("failed to write bundle: %w", err))
 			}
 		},
 	}
@@ -180,4 +225,5 @@ func init() {
 	initCmd.Flags().AddFlagSet(initFlags)
 
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(sgxSetSigCmd)
 }
