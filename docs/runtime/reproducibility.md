@@ -45,6 +45,18 @@ available in `/src`.
 
 ## Building
 
+### ELF
+
+Simply build the paratime in release mode using:
+
+```bash
+cargo build --release
+```
+
+The resulting binaries will be in `/src/target/release/`.
+
+### Intel SGX
+
 Follow the normal build procedure for your paratime. For the testing
 runtimes in the SDK, e.g.:
 
@@ -68,3 +80,47 @@ It is necessary to change directories first because the tool does not
 currently support cargo workspaces.
 
 The resulting binaries will have the `.sgxs` extension.
+
+## Generating Bundles
+
+Oasis Core since version 22.0 distributes bundles in the Oasis Runtime Container
+format which is basically a zip archive with some metadata attached. This makes
+it easier for node operators to configure paratimes. To ease creation of such
+bundles from built binaries and metadata, you can use the `orc` tool provided by
+the SDK.
+
+:::info
+
+You can install the `orc` utility by running:
+
+```bash
+go install github.com/oasisprotocol/oasis-sdk/tools/orc@latest
+```
+
+:::
+
+The same bundle can contain both ELF and Intel SGX artifacts. To create a bundle
+use the following command:
+
+```bash
+orc init path/to/elf-binary
+```
+
+When including Intel SGX artifacts you may additionally specify:
+
+:::info
+
+All bundles, even Intel SGX ones, are required to include an ELF binary of the
+paratime. This binary is used for client nodes that don't have SGX support.
+
+:::
+
+```bash
+orc init path/to/elf-binary --sgx-executable path/to/binary.sgxs --sgx-signature path/to/binary.sig
+```
+
+You can omit the signature initially and add it later by using:
+
+```bash
+orc sgx-set-sig bundle.orc path/to/binary.sig
+```
