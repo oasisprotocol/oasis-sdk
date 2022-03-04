@@ -156,7 +156,7 @@ var (
 			}
 
 			// Validate SGXS signature (if any).
-			if manifest.SGX.Signature != "" {
+			if manifest.SGX != nil && manifest.SGX.Signature != "" {
 				err = sgxVerifySignature(bnd)
 				cobra.CheckErr(err)
 			}
