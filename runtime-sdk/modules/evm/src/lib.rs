@@ -330,12 +330,12 @@ impl<Cfg: Config> API for Module<Cfg> {
     ) -> Result<Vec<u8>, Error> {
         let caller = Self::derive_caller(ctx)?;
 
-        if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
+        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
             // Only fast checks are allowed.
             return Ok(vec![]);
         }
 
-        let rsp = Self::do_evm(
+        Self::do_evm(
             caller,
             ctx,
             |exec, gas_limit| {
@@ -349,14 +349,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             },
             // If in simulation, this must be EstimateGas query.
             ctx.is_simulation(),
-        );
-
-        // Always return success in CheckTx, as we might not have up-to-date state.
-        if ctx.is_check_only() {
-            rsp.or_else(|_| Ok(vec![]))
-        } else {
-            rsp
-        }
+        )
     }
 
     fn call<C: TxContext>(
@@ -367,12 +360,12 @@ impl<Cfg: Config> API for Module<Cfg> {
     ) -> Result<Vec<u8>, Error> {
         let caller = Self::derive_caller(ctx)?;
 
-        if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
+        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
             // Only fast checks are allowed.
             return Ok(vec![]);
         }
 
-        let rsp = Self::do_evm(
+        Self::do_evm(
             caller,
             ctx,
             |exec, gas_limit| {
@@ -387,14 +380,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             },
             // If in simulation, this must be EstimateGas query.
             ctx.is_simulation(),
-        );
-
-        // Always return success in CheckTx, as we might not have up-to-date state.
-        if ctx.is_check_only() {
-            rsp.or_else(|_| Ok(vec![]))
-        } else {
-            rsp
-        }
+        )
     }
 
     fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {

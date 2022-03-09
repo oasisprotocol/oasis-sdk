@@ -85,10 +85,9 @@ pub trait Context {
 
     /// Whether expensive queries are allowed based on local configuration.
     ///
-    /// This method will always return `true` if `is_check_only` returns `false` to avoid any bugs
-    /// that would cause non-determinism in non-check-tx contexts.
+    /// This method will always return `true` in `Mode::ExecuteTx` contexts.
     fn are_expensive_queries_allowed(&self) -> bool {
-        if !self.is_check_only() {
+        if self.mode() == Mode::ExecuteTx {
             return true;
         }
 
@@ -98,13 +97,12 @@ pub trait Context {
 
     /// Returns node operator-provided local configuration.
     ///
-    /// This method will always return `None` if `is_check_only` returns `false` to avoid any bugs
-    /// that would cause non-determinism in non-check-tx contexts.
+    /// This method will always return `None` in `Mode::ExecuteTx` contexts.
     fn local_config<T>(&self, key: &str) -> Option<T>
     where
         T: cbor::Decode,
     {
-        if !self.is_check_only() {
+        if self.mode() == Mode::ExecuteTx {
             return None;
         }
 

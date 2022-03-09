@@ -374,7 +374,7 @@ impl<Cfg: Config> Module<Cfg> {
                 .saturating_mul(plain_code_size.saturating_sub(code_size) as u64),
         )?;
 
-        if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
+        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
             // Only fast checks are allowed.
             return Ok(types::UploadResult::default());
         }
@@ -399,10 +399,6 @@ impl<Cfg: Config> Module<Cfg> {
                 .tx_upload_per_byte
                 .saturating_mul(inst_code_size.saturating_sub(plain_code_size) as u64),
         )?;
-
-        if ctx.is_check_only() {
-            return Ok(types::UploadResult::default());
-        }
 
         // Assign next identifier.
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
@@ -434,7 +430,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_instantiate)?;
 
-        if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
+        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
             // Only fast checks are allowed.
             return Ok(types::InstantiateResult::default());
         }
@@ -481,18 +477,9 @@ impl<Cfg: Config> Module<Cfg> {
         };
         let result = wasm::instantiate::<Cfg, C>(&mut exec_ctx, &contract, &body);
 
-        let result = (|| {
-            let result = results::process_execution_result(ctx, result)?;
-            results::process_execution_success::<Cfg, C>(ctx, &params, &contract, result)?;
-            Ok(types::InstantiateResult { id })
-        })();
-
-        // Always return success in CheckTx, as we might not have up-to-date state.
-        if ctx.is_check_only() {
-            result.or(Ok(types::InstantiateResult { id }))
-        } else {
-            result
-        }
+        let result = results::process_execution_result(ctx, result)?;
+        results::process_execution_success::<Cfg, C>(ctx, &params, &contract, result)?;
+        Ok(types::InstantiateResult { id })
     }
 
     #[handler(call = "contracts.Call")]
@@ -505,7 +492,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_call)?;
 
-        if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
+        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
             // Only fast checks are allowed.
             return Ok(types::CallResult::default());
         }
@@ -535,19 +522,9 @@ impl<Cfg: Config> Module<Cfg> {
         };
         let result = wasm::call::<Cfg, C>(&mut exec_ctx, &contract, &body);
 
-        let result = (|| {
-            let result = results::process_execution_result(ctx, result)?;
-            let data =
-                results::process_execution_success::<Cfg, C>(ctx, &params, &contract, result)?;
-            Ok(types::CallResult(data))
-        })();
-
-        // Always return success in CheckTx, as we might not have up-to-date state.
-        if ctx.is_check_only() {
-            result.or_else(|_| Ok(types::CallResult::default()))
-        } else {
-            result
-        }
+        let result = results::process_execution_result(ctx, result)?;
+        let data = results::process_execution_success::<Cfg, C>(ctx, &params, &contract, result)?;
+        Ok(types::CallResult(data))
     }
 
     #[handler(call = "contracts.Upgrade")]
@@ -557,7 +534,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_upgrade)?;
 
-        if ctx.is_check_only() && !ctx.are_expensive_queries_allowed() {
+        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
             // Only fast checks are allowed.
             return Ok(());
         }
@@ -592,40 +569,31 @@ impl<Cfg: Config> Module<Cfg> {
         // Pre-upgrade invocation must succeed for the upgrade to proceed.
         let result = wasm::pre_upgrade::<Cfg, C>(&mut exec_ctx, &contract, &body);
 
-        let result = (|| {
-            results::process_execution_result(ctx, result)?;
+        results::process_execution_result(ctx, result)?;
 
-            // Update the contract code.
-            instance_info.code_id = body.code_id;
-            let code_info = Self::load_code_info(ctx, instance_info.code_id)?;
-            let code = Self::load_code(ctx, &code_info)?;
-            Self::store_instance_info(ctx, instance_info.clone())?;
+        // Update the contract code.
+        instance_info.code_id = body.code_id;
+        let code_info = Self::load_code_info(ctx, instance_info.code_id)?;
+        let code = Self::load_code(ctx, &code_info)?;
+        Self::store_instance_info(ctx, instance_info.clone())?;
 
-            let contract = wasm::Contract {
-                code_info: &code_info,
-                code: &code,
-                instance_info: &instance_info,
-            };
-            let mut exec_ctx = abi::ExecutionContext {
-                caller_address: ctx.tx_caller_address(),
-                gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
-                instance_info: &instance_info,
-                tx_context: ctx,
-                params: &params,
-            };
+        let contract = wasm::Contract {
+            code_info: &code_info,
+            code: &code,
+            instance_info: &instance_info,
+        };
+        let mut exec_ctx = abi::ExecutionContext {
+            caller_address: ctx.tx_caller_address(),
+            gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
+            instance_info: &instance_info,
+            tx_context: ctx,
+            params: &params,
+        };
 
-            // Run post-upgrade function on the new contract.
-            let result = wasm::post_upgrade::<Cfg, C>(&mut exec_ctx, &contract, &body);
-            results::process_execution_result(ctx, result)?;
-            Ok(())
-        })();
-
-        // Always return success in CheckTx, as we might not have up-to-date state.
-        if ctx.is_check_only() {
-            result.or(Ok(()))
-        } else {
-            result
-        }
+        // Run post-upgrade function on the new contract.
+        let result = wasm::post_upgrade::<Cfg, C>(&mut exec_ctx, &contract, &body);
+        results::process_execution_result(ctx, result)?;
+        Ok(())
     }
 
     #[handler(query = "contracts.Code")]
