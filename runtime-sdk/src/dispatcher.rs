@@ -86,10 +86,14 @@ pub struct DispatchResult {
 }
 
 impl DispatchResult {
-    fn new(result: module::CallResult, call_format_metadata: callformat::Metadata) -> Self {
+    fn new(
+        result: module::CallResult,
+        tags: Tags,
+        call_format_metadata: callformat::Metadata,
+    ) -> Self {
         Self {
             result,
-            tags: Tags::new(),
+            tags,
             priority: 0,
             weights: BTreeMap::new(),
             call_format_metadata,
@@ -99,7 +103,7 @@ impl DispatchResult {
 
 impl From<module::CallResult> for DispatchResult {
     fn from(result: module::CallResult) -> Self {
-        Self::new(result, callformat::Metadata::Empty)
+        Self::new(result, vec![], callformat::Metadata::Empty)
     }
 }
 
@@ -212,8 +216,11 @@ impl<R: Runtime> Dispatcher<R> {
 
             let result = Self::dispatch_tx_call(&mut ctx, call);
             if !result.is_success() {
+                // Retrieve unconditional events by doing an explicit rollback.
+                let etags = ctx.rollback();
+
                 return (
-                    DispatchResult::new(result, call_format_metadata),
+                    DispatchResult::new(result, etags.into_tags(), call_format_metadata),
                     Vec::new(),
                 );
             }

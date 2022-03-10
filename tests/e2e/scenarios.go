@@ -21,6 +21,7 @@ var (
 		KVEventTest,
 		KVBalanceTest,
 		KVTransferTest,
+		KVTransferFailTest,
 		KVDaveTest,
 		KVMultisigTest,
 		KVRewardsTest,
