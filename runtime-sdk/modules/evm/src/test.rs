@@ -548,16 +548,19 @@ fn test_revert_reason_decoding() {
         // Valid value, reason too long and should be truncated.
         (long_reason_hex, &long_reason_str[..1024]),
         // Malformed output.
-        ("", "unknown"),
+        ("", "invalid reason prefix: ''"),
         // Malformed output, incorrect selector and bad length.
-        ("BADBADBADBADBADBAD", "unknown"),
+        (
+            "BADBADBADBADBADBAD",
+            "invalid reason prefix: 'utututututut'",
+        ),
         // Malformed output, bad selector.
         (
             "BAAAAAAD\
             0000000000000000000000000000000000000000000000000000000000000020\
             0000000000000000000000000000000000000000000000000000000000000018\
             4461692f696e73756666696369656e742d62616c616e63650000000000000000",
-            "unknown",
+            "invalid reason prefix: 'uqqqrQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABhEYWkvaW5zdWZmaWNpZW50LWJhbGFuY2UAAAAAAAAAAA=='",
         ),
         // Malformed output, corrupted length.
         (
@@ -565,7 +568,7 @@ fn test_revert_reason_decoding() {
             0000000000000000000000000000000000000000000000000000000000000020\
             00000000000000000000000000000000000000000000000000000000FFFFFFFF\
             4461692f696e73756666696369656e742d62616c616e63650000000000000000",
-            "unknown",
+            "invalid reason length: 'CMN5oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP////9EYWkvaW5zdWZmaWNpZW50LWJhbGFuY2UAAAAAAAAAAA=='",
         ),
     ];
 
