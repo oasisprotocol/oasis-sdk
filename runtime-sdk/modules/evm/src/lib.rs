@@ -198,6 +198,10 @@ fn process_evm_result(exit_reason: evm::ExitReason, data: Vec<u8>) -> Result<Vec
     match exit_reason {
         evm::ExitReason::Succeed(_) => Ok(data),
         evm::ExitReason::Revert(_) => {
+            if data.is_empty() {
+                return Err(Error::Reverted("no revert reason".to_string()));
+            }
+
             // Decode revert reason, format is as follows:
             //
             // 08c379a0                                                         <- Function selector
