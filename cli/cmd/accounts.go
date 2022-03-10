@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
@@ -443,6 +444,60 @@ var (
 			common.BroadcastTransaction(ctx, npw.ParaTime, conn, sigTx, nil)
 		},
 	}
+
+	accountsUndelegateCmd = &cobra.Command{
+		Use:   "undelegate <shares> <from>",
+		Short: "Undelegate given amount of shares from a specified account",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := cliConfig.Global()
+			npw := common.GetNPWSelection(cfg)
+			txCfg := common.GetTransactionConfig()
+			amount, from := args[0], args[1]
+
+			if npw.Wallet == nil {
+				cobra.CheckErr("no wallets configured")
+			}
+
+			// When not in offline mode, connect to the given network endpoint.
+			ctx := context.Background()
+			var conn connection.Connection
+			if !txCfg.Offline {
+				var err error
+				conn, err = connection.Connect(ctx, npw.Network)
+				cobra.CheckErr(err)
+			}
+
+			// Resolve destination address.
+			fromAddr, err := helpers.ResolveAddress(npw.Network, from)
+			cobra.CheckErr(err)
+
+			wallet := common.LoadWallet(cfg, npw.WalletName)
+
+			var sigTx interface{}
+			switch npw.ParaTime {
+			case nil:
+				// Consensus layer delegation.
+				var shares quantity.Quantity
+				err = shares.UnmarshalText([]byte(amount))
+				cobra.CheckErr(err)
+
+				// Prepare transaction.
+				tx := staking.NewReclaimEscrowTx(0, nil, &staking.ReclaimEscrow{
+					Account: fromAddr.ConsensusAddress(),
+					Shares:  shares,
+				})
+
+				sigTx, err = common.SignConsensusTransaction(ctx, npw, wallet, conn, tx)
+				cobra.CheckErr(err)
+			default:
+				// ParaTime delegation.
+				cobra.CheckErr("delegations within paratimes are not supported; use --no-paratime")
+			}
+
+			common.BroadcastTransaction(ctx, npw.ParaTime, conn, sigTx, nil)
+		},
+	}
 )
 
 func init() {
@@ -463,10 +518,14 @@ func init() {
 	accountsDelegateCmd.Flags().AddFlagSet(common.SelectorFlags)
 	accountsDelegateCmd.Flags().AddFlagSet(common.TransactionFlags)
 
+	accountsUndelegateCmd.Flags().AddFlagSet(common.SelectorFlags)
+	accountsUndelegateCmd.Flags().AddFlagSet(common.TransactionFlags)
+
 	accountsCmd.AddCommand(accountsShowCmd)
 	accountsCmd.AddCommand(accountsAllowCmd)
 	accountsCmd.AddCommand(accountsDepositCmd)
 	accountsCmd.AddCommand(accountsWithdrawCmd)
 	accountsCmd.AddCommand(accountsTransferCmd)
 	accountsCmd.AddCommand(accountsDelegateCmd)
+	accountsCmd.AddCommand(accountsUndelegateCmd)
 }
