@@ -547,8 +547,8 @@ fn test_revert_reason_decoding() {
         ),
         // Valid value, reason too long and should be truncated.
         (long_reason_hex, &long_reason_str[..1024]),
-        // Malformed output.
-        ("", "invalid reason prefix: ''"),
+        // No revert reason.
+        ("", "no revert reason"),
         // Malformed output, incorrect selector and bad length.
         (
             "BADBADBADBADBADBAD",
