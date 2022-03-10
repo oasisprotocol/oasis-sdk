@@ -390,6 +390,59 @@ var (
 			common.BroadcastTransaction(ctx, npw.ParaTime, conn, sigTx, nil)
 		},
 	}
+
+	accountsDelegateCmd = &cobra.Command{
+		Use:   "delegate <amount> <to>",
+		Short: "Delegate given amount of tokens to a specified account",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := cliConfig.Global()
+			npw := common.GetNPWSelection(cfg)
+			txCfg := common.GetTransactionConfig()
+			amount, to := args[0], args[1]
+
+			if npw.Wallet == nil {
+				cobra.CheckErr("no wallets configured")
+			}
+
+			// When not in offline mode, connect to the given network endpoint.
+			ctx := context.Background()
+			var conn connection.Connection
+			if !txCfg.Offline {
+				var err error
+				conn, err = connection.Connect(ctx, npw.Network)
+				cobra.CheckErr(err)
+			}
+
+			// Resolve destination address.
+			toAddr, err := helpers.ResolveAddress(npw.Network, to)
+			cobra.CheckErr(err)
+
+			wallet := common.LoadWallet(cfg, npw.WalletName)
+
+			var sigTx interface{}
+			switch npw.ParaTime {
+			case nil:
+				// Consensus layer delegation.
+				amount, err := helpers.ParseConsensusDenomination(npw.Network, amount)
+				cobra.CheckErr(err)
+
+				// Prepare transaction.
+				tx := staking.NewAddEscrowTx(0, nil, &staking.Escrow{
+					Account: toAddr.ConsensusAddress(),
+					Amount:  *amount,
+				})
+
+				sigTx, err = common.SignConsensusTransaction(ctx, npw, wallet, conn, tx)
+				cobra.CheckErr(err)
+			default:
+				// ParaTime delegation.
+				cobra.CheckErr("delegations within paratimes are not supported; use --no-paratime")
+			}
+
+			common.BroadcastTransaction(ctx, npw.ParaTime, conn, sigTx, nil)
+		},
+	}
 )
 
 func init() {
@@ -407,9 +460,13 @@ func init() {
 	accountsTransferCmd.Flags().AddFlagSet(common.SelectorFlags)
 	accountsTransferCmd.Flags().AddFlagSet(common.TransactionFlags)
 
+	accountsDelegateCmd.Flags().AddFlagSet(common.SelectorFlags)
+	accountsDelegateCmd.Flags().AddFlagSet(common.TransactionFlags)
+
 	accountsCmd.AddCommand(accountsShowCmd)
 	accountsCmd.AddCommand(accountsAllowCmd)
 	accountsCmd.AddCommand(accountsDepositCmd)
 	accountsCmd.AddCommand(accountsWithdrawCmd)
 	accountsCmd.AddCommand(accountsTransferCmd)
+	accountsCmd.AddCommand(accountsDelegateCmd)
 }

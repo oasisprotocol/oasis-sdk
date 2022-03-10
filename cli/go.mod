@@ -17,6 +17,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
 	github.com/tyler-smith/go-bip39 v1.1.0
+	github.com/zondax/ledger-go v0.12.2
 	golang.org/x/crypto v0.0.0-20210915214749-c084706c2272
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -52,6 +53,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
@@ -66,6 +68,7 @@ require (
 	github.com/tendermint/tendermint v0.34.15 // indirect
 	github.com/whyrusleeping/go-logging v0.0.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	github.com/zondax/hid v0.9.0 // indirect
 	golang.org/x/net v0.0.0-20211005001312-d4b1ae081e3b // indirect
 	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
 	golang.org/x/term v0.0.0-20210503060354-a79de5458b56 // indirect
