@@ -16,7 +16,7 @@ use crate::{
     dispatcher,
     module::{self, InvariantHandler as _, Module as _, ModuleInfoHandler as _},
     types::{
-        token,
+        in_msg, token,
         transaction::{
             self, AddressSpec, AuthProof, Call, CallFormat, TransactionWeight,
             UnverifiedTransaction,
@@ -112,6 +112,14 @@ pub enum Error {
     #[error("forbidden in secure build")]
     #[sdk_error(code = 21)]
     ForbiddenInSecureBuild,
+
+    #[error("malformed incoming message: {0}")]
+    #[sdk_error(code = 22)]
+    MalformedIncomingMessageData(u64, #[source] anyhow::Error),
+
+    #[error("invalid incoming message: {0}")]
+    #[sdk_error(code = 23)]
+    InvalidIncomingMessage(#[from] in_msg::Error),
 }
 
 /// Events emitted by the core module.
