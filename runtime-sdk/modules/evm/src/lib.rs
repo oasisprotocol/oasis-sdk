@@ -213,17 +213,27 @@ fn process_evm_result(exit_reason: evm::ExitReason, data: Vec<u8>) -> Result<Vec
             const FIELD_REASON_START: usize = FIELD_LENGTH_START + 32;
             const MIN_SIZE: usize = FIELD_REASON_START;
             const MAX_REASON_SIZE: usize = 1024;
+
+            let max_raw_len = if data.len() > MAX_REASON_SIZE {
+                MAX_REASON_SIZE
+            } else {
+                data.len()
+            };
             if data.len() < MIN_SIZE || !data.starts_with(ERROR_STRING_SELECTOR) {
-                // TODO: Could also return Base64-encoded raw reason?
-                return Err(Error::Reverted("unknown".to_string()));
+                return Err(Error::Reverted(format!(
+                    "invalid reason prefix: '{}'",
+                    base64::encode(&data[..max_raw_len])
+                )));
             }
             // Decode and validate length.
             let mut length =
                 primitive_types::U256::from(&data[FIELD_LENGTH_START..FIELD_LENGTH_START + 32])
                     .low_u32() as usize;
             if FIELD_REASON_START + length > data.len() {
-                // TODO: Could also return Base64-encoded raw reason?
-                return Err(Error::Reverted("unknown".to_string()));
+                return Err(Error::Reverted(format!(
+                    "invalid reason length: '{}'",
+                    base64::encode(&data[..max_raw_len])
+                )));
             }
             // Make sure that this doesn't ever return huge reason values as this is at least
             // somewhat contract-controlled.
