@@ -159,6 +159,11 @@ pub trait Context {
         Vec<(roothash::Message, MessageEventHookInvocation)>,
     );
 
+    /// Rollback any changes made by this context. This method only needs to be called explicitly
+    /// in case you want to retrieve possibly emitted unconditional events. Simply dropping the
+    /// context without calling `commit` will also result in a rollback.
+    fn rollback(self) -> EventTags;
+
     /// Fetches a value entry associated with the context.
     fn value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V>;
 
@@ -235,6 +240,10 @@ pub trait TxContext: Context {
         msg: roothash::Message,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error>;
+
+    /// Similar as `emit_event` but the event will persist even in case the transaction that owns
+    /// this context fails.
+    fn emit_unconditional_event<E: Event>(&mut self, event: E);
 }
 
 /// Dispatch context for the whole batch.
@@ -406,6 +415,10 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
         (self.block_etags, self.messages)
     }
 
+    fn rollback(self) -> EventTags {
+        EventTags::new()
+    }
+
     fn value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
         ContextValue::new(self.values.entry(key))
     }
@@ -487,6 +500,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
             tx_size,
             tx_auth_info: tx.auth_info,
             etags: BTreeMap::new(),
+            etags_unconditional: BTreeMap::new(),
             max_messages: remaining_messages,
             messages: Vec::new(),
             values: &mut self.values,
@@ -533,6 +547,8 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
     /// Emitted event tags. Events are aggregated by tag key, the value
     /// is a list of all emitted event values.
     etags: EventTags,
+    /// Emitted unconditional event tags.
+    etags_unconditional: EventTags,
 
     /// Maximum number of messages that can be emitted.
     max_messages: u32,
@@ -613,13 +629,23 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
     }
 
     fn commit(
-        self,
+        mut self,
     ) -> (
         EventTags,
         Vec<(roothash::Message, MessageEventHookInvocation)>,
     ) {
+        // Merge unconditional events into regular events on success.
+        for (key, val) in self.etags_unconditional {
+            let tag = self.etags.entry(key).or_insert_with(Vec::new);
+            tag.extend(val)
+        }
+
         self.store.commit();
         (self.etags, self.messages)
+    }
+
+    fn rollback(self) -> EventTags {
+        self.etags_unconditional
     }
 
     fn value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
@@ -701,6 +727,15 @@ impl<R: runtime::Runtime, S: Store> TxContext for RuntimeTxContext<'_, '_, R, S>
         self.messages.push((msg, hook));
 
         Ok(())
+    }
+
+    fn emit_unconditional_event<E: Event>(&mut self, event: E) {
+        let etag = event.into_event_tag();
+        let tag = self
+            .etags_unconditional
+            .entry(etag.key)
+            .or_insert_with(Vec::new);
+        tag.push(etag.value);
     }
 }
 

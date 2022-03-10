@@ -39,6 +39,9 @@ const defaultGasAmount = 400
 // expectedKVTransferGasUsed is the expected gas used by the kv transfer transaction.
 const expectedKVTransferGasUsed = 373
 
+// expectedKVTransferFailGasUsed is the expected gas used by the failing kv transfer transaction.
+const expectedKVTransferFailGasUsed = 376
+
 // The kvKey type must match the Key type from the simple-keyvalue runtime
 // in ../runtimes/simple-keyvalue/src/keyvalue/types.rs.
 type kvKey struct {
@@ -756,7 +759,11 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 			continue
 		}
 		transfer := ev.Transfer
-		if transfer.From != expected.From || transfer.To != expected.To || transfer.Amount.Amount.Cmp(&expected.Amount.Amount) != 0 {
+		if transfer.From != expected.From {
+			// There can also be reward disbursements.
+			continue
+		}
+		if transfer.To != expected.To || transfer.Amount.Amount.Cmp(&expected.Amount.Amount) != 0 {
 			return fmt.Errorf("unexpected event, expected: %v, got: %v", expected, transfer)
 		}
 		gotTransfer = true
@@ -800,6 +807,50 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	// More may exist if any reward disbursement happened.
 	if len(addrs) < 5 {
 		return fmt.Errorf("unexpected number of addresses (expected at least: %d, got: %d)", 5, len(addrs))
+	}
+
+	return nil
+}
+
+// KVTransferFailTest does a failing transfer test.
+func KVTransferFailTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	core := core.NewV1(rtc)
+	ac := accounts.NewV1(rtc)
+
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return err
+	}
+
+	log.Info("transferring 900,000,000 units from Alice to Bob (expecting failure)")
+	tb := ac.Transfer(testing.Bob.Address, types.NewBaseUnits(*quantity.NewFromUint64(900_000_000), types.NativeDenomination)).
+		SetFeeGas(defaultGasAmount).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce)
+	_ = tb.AppendSign(ctx, testing.Alice.Signer)
+	var meta *client.TransactionMeta
+	if meta, err = tb.SubmitTxMeta(ctx, nil); err == nil {
+		return fmt.Errorf("transaction succeeded when failure was expected")
+	}
+	if meta == nil {
+		// We expect the transaction to be included in a block and then fail.
+		return fmt.Errorf("missing transaction metadata: %w", err)
+	}
+
+	// Make sure that gas used event was stil emitted.
+	cevs, err := core.GetEvents(ctx, meta.Round)
+	if err != nil {
+		return fmt.Errorf("failed to fetch core events: %w", err)
+	}
+	if len(cevs) != 1 {
+		return fmt.Errorf("expected 1 core event, got: %v", len(cevs))
+	}
+	event := cevs[0]
+	if event.GasUsed.Amount != expectedKVTransferFailGasUsed {
+		return fmt.Errorf("unexpected transaction used amount: expected: %v, got: %v",
+			expectedKVTransferFailGasUsed,
+			event.GasUsed.Amount,
+		)
 	}
 
 	return nil

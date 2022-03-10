@@ -616,7 +616,7 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
     fn after_handle_call<C: TxContext>(ctx: &mut C) -> Result<(), Error> {
         // Emit gas used event.
         let used_gas = Self::used_tx_gas(ctx);
-        ctx.emit_event(Event::GasUsed { amount: used_gas });
+        ctx.emit_unconditional_event(Event::GasUsed { amount: used_gas });
 
         Ok(())
     }
