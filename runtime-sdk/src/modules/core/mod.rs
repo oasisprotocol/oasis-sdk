@@ -21,7 +21,7 @@ use crate::{
         ModuleInfoHandler as _,
     },
     types::{
-        token,
+        in_msg, token,
         transaction::{self, AddressSpec, AuthProof, Call, CallFormat, UnverifiedTransaction},
     },
     Runtime,
@@ -130,6 +130,14 @@ pub enum Error {
     #[error("read-only transaction attempted modifications")]
     #[sdk_error(code = 25)]
     ReadOnlyTransaction,
+
+    #[error("malformed incoming message: {0}")]
+    #[sdk_error(code = 26)]
+    MalformedIncomingMessageData(u64, #[source] anyhow::Error),
+
+    #[error("invalid incoming message: {0}")]
+    #[sdk_error(code = 27)]
+    InvalidIncomingMessage(#[from] in_msg::Error),
 
     #[error("{0}")]
     #[sdk_error(transparent)]
