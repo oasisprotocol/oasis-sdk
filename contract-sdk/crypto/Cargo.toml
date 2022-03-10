@@ -11,7 +11,7 @@ license = "Apache-2.0"
 cbor = { version = "0.2.1", package = "oasis-cbor" }
 
 # Third party.
-k256 = { version = "0.9.6", default-features = false, features = ["keccak256", "ecdsa"] }
+k256 = { version = "0.10.2", default-features = false, features = ["keccak256", "ecdsa"] }
 thiserror = "1.0.30"
 
 [dev-dependencies]
