@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::anyhow;
-use slog::error;
+use slog::{error, warn};
 use thiserror::Error;
 
 use oasis_core_runtime::{
@@ -40,7 +40,10 @@ use crate::{
     storage,
     storage::Prefix,
     types,
-    types::transaction::{AuthProof, Transaction, TransactionWeight},
+    types::{
+        in_msg::IncomingMessageData,
+        transaction::{AuthProof, Transaction, TransactionWeight},
+    },
 };
 
 /// Unique module name.
@@ -160,6 +163,16 @@ impl<R: Runtime> Dispatcher<R> {
                 .verify()
                 .map_err(|e| modules::core::Error::MalformedTransaction(e.into())),
         }
+    }
+
+    /// Decode a roothash incoming message's data field.
+    pub fn decode_in_msg(
+        in_msg: &roothash::IncomingMessage,
+    ) -> Result<types::in_msg::IncomingMessageData, modules::core::Error> {
+        let data: types::in_msg::IncomingMessageData = cbor::from_slice(&in_msg.data)
+            .map_err(|e| modules::core::Error::MalformedIncomingMessageData(in_msg.id, e.into()))?;
+        data.validate_basic()?;
+        Ok(data)
     }
 
     /// Run the dispatch steps inside a transaction context. This includes the before call hooks,
@@ -321,6 +334,49 @@ impl<R: Runtime> Dispatcher<R> {
         }
     }
 
+    /// Execute the given roothash incoming message. This includes executing the embedded
+    /// transaction if there is one.
+    pub fn execute_in_msg<C: BatchContext>(
+        ctx: &mut C,
+        in_msg: &roothash::IncomingMessage,
+        data: &IncomingMessageData,
+        tx: &Option<Transaction>,
+    ) -> Result<(), RuntimeError> {
+        if let Some(tx) = tx {
+            let tx_size = match data
+                .ut
+                .as_ref()
+                .unwrap_or_else(|| panic!("incoming message {} has tx but no ut", in_msg.id))
+                .len()
+                .try_into()
+            {
+                Ok(tx_size) => tx_size,
+                Err(err) => {
+                    warn!(ctx.get_logger("dispatcher"), "incoming message transaction too large"; "id" => in_msg.id, "err" => ?err);
+                    return Ok(());
+                }
+            };
+            // Use the ID as index.
+            let index = in_msg.id.try_into().unwrap();
+            Self::execute_tx(ctx, tx_size, tx.clone(), index)?;
+        }
+        Ok(())
+    }
+
+    /// Prefetch prefixes for the given roothash incoming message. This includes prefetching the
+    /// prefixes for the embedded transaction if there is one.
+    pub fn prefetch_in_msg(
+        prefixes: &mut BTreeSet<Prefix>,
+        _in_msg: &roothash::IncomingMessage,
+        _data: &IncomingMessageData,
+        tx: &Option<Transaction>,
+    ) -> Result<(), RuntimeError> {
+        if let Some(tx) = tx {
+            Self::prefetch_tx(prefixes, tx.clone())?;
+        }
+        Ok(())
+    }
+
     fn handle_last_round_messages<C: Context>(ctx: &mut C) -> Result<(), modules::core::Error> {
         let message_events = ctx.runtime_round_results().messages.clone();
 
@@ -455,6 +511,8 @@ impl<R: Runtime> Dispatcher<R> {
         // Query block weight limits for next round.
         let block_weight_limits = R::Modules::get_block_weight_limits(&mut ctx);
 
+        let in_msgs_count = ctx.get_in_msgs_processed();
+
         // Commit the context and retrieve the emitted messages.
         let (block_tags, messages) = ctx.commit();
         let (messages, handlers) = messages.into_iter().unzip();
@@ -468,7 +526,7 @@ impl<R: Runtime> Dispatcher<R> {
             block_tags: block_tags.into_tags(),
             batch_weight_limits: Some(block_weight_limits),
             tx_reject_hashes: vec![],
-            in_msgs_count: 0, // TODO: Support processing incoming messages.
+            in_msgs_count,
         })
     }
 }
@@ -478,7 +536,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         &self,
         rt_ctx: transaction::Context<'_>,
         batch: &TxnBatch,
-        _in_msgs: &[roothash::IncomingMessage],
+        in_msgs: &[roothash::IncomingMessage],
     ) -> Result<ExecuteBatchResult, RuntimeError> {
         self.execute_batch_common(
             rt_ctx,
@@ -486,8 +544,22 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                 // If prefetch limit is set enable prefetch.
                 let prefetch_enabled = R::PREFETCH_LIMIT > 0;
 
-                let mut txs = Vec::with_capacity(batch.len());
                 let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
+                let mut in_msgs_parsed = Vec::with_capacity(in_msgs.len());
+                for in_msg in in_msgs {
+                    let data = Self::decode_in_msg(in_msg).unwrap_or_else(|err| {
+                        warn!(ctx.get_logger("dispatcher"), "incoming message data malformed"; "id" => in_msg.id, "err" => ?err);
+                        IncomingMessageData::noop()
+                    });
+                    let tx = data.ut.as_ref().and_then(|ut| Self::decode_tx(ctx, ut).map_err(|err| {
+                        warn!(ctx.get_logger("dispatcher"), "incoming message transaction malformed"; "id" => in_msg.id, "err" => ?err);
+                    }).ok());
+                    if prefetch_enabled {
+                        Self::prefetch_in_msg(&mut prefixes, in_msg, &data, &tx)?;
+                    }
+                    in_msgs_parsed.push((in_msg, data, tx));
+                }
+                let mut txs = Vec::with_capacity(batch.len());
                 for tx in batch.iter() {
                     let tx_size = tx.len().try_into().map_err(|_| {
                         Error::MalformedTransactionInBatch(anyhow!("transaction too large"))
@@ -510,6 +582,12 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                         .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
                 }
 
+                // Execute incoming messages.
+                for (in_msg, data, tx) in in_msgs_parsed {
+                    Self::execute_in_msg(ctx, in_msg, &data, &tx)?;
+                }
+                ctx.set_in_msgs_processed(in_msgs.len());
+
                 // Execute the batch.
                 let mut results = Vec::with_capacity(batch.len());
                 for (index, (tx_size, tx)) in txs.into_iter().enumerate() {
@@ -525,7 +603,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         &self,
         rt_ctx: transaction::Context<'_>,
         batch: &mut TxnBatch,
-        _in_msgs: &[roothash::IncomingMessage],
+        in_msgs: &[roothash::IncomingMessage],
     ) -> Result<ExecuteBatchResult, RuntimeError> {
         let cfg = R::SCHEDULE_CONTROL.unwrap(); // Must succeed otherwise we wouldn't be here.
         let mut tx_reject_hashes = Vec::new();
@@ -533,6 +611,19 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         let mut result = self.execute_batch_common(
             rt_ctx,
             |ctx| -> Result<Vec<ExecuteTxResult>, RuntimeError> {
+                // Execute incoming messages.
+                for in_msg in in_msgs {
+                    let data = Self::decode_in_msg(in_msg).unwrap_or_else(|err| {
+                        warn!(ctx.get_logger("dispatcher"), "incoming message data malformed"; "id" => in_msg.id, "err" => ?err);
+                        IncomingMessageData::noop()
+                    });
+                    let tx = data.ut.as_ref().and_then(|ut| Self::decode_tx(ctx, ut).map_err(|err| {
+                        warn!(ctx.get_logger("dispatcher"), "incoming message transaction malformed"; "id" => in_msg.id, "err" => ?err);
+                    }).ok());
+                    Self::execute_in_msg(ctx, in_msg, &data, &tx)?;
+                }
+                ctx.set_in_msgs_processed(in_msgs.len());
+
                 // Schedule and execute the batch.
                 //
                 // The idea is to keep scheduling transactions as long as we have some space
