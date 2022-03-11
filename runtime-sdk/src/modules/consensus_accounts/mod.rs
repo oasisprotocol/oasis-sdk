@@ -4,10 +4,11 @@
 //! while keeping track of amount deposited per account.
 use std::{collections::BTreeSet, convert::TryInto};
 
+use num_traits::Zero;
 use once_cell::sync::Lazy;
 use thiserror::Error;
 
-use oasis_core_runtime::consensus::staking::Account as ConsensusAccount;
+use oasis_core_runtime::consensus::{roothash, staking::Account as ConsensusAccount};
 use oasis_runtime_sdk_macros::{handler, sdk_derive};
 
 use crate::{
@@ -20,9 +21,10 @@ use crate::{
     storage::Prefix,
     types::{
         address::Address,
+        in_msg::IncomingMessageData,
         message::{MessageEvent, MessageEventHookInvocation},
         token,
-        transaction::AuthInfo,
+        transaction::{AuthInfo, Transaction},
     },
 };
 
@@ -413,6 +415,11 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
 
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     module::TransactionHandler for Module<Accounts, Consensus>
+{
+}
+
+impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
+    module::IncomingMessageHandler for Module<Accounts, Consensus>
 {
 }
 

@@ -32,7 +32,7 @@ use crate::{
     error::{Error as _, RuntimeError},
     event::IntoTags,
     keymanager::{KeyManagerClient, KeyManagerError},
-    module::{self, BlockHandler, MethodHandler, TransactionHandler},
+    module::{self, BlockHandler, IncomingMessageHandler, MethodHandler, TransactionHandler},
     modules,
     modules::core::API as _,
     runtime::Runtime,
@@ -338,10 +338,11 @@ impl<R: Runtime> Dispatcher<R> {
     /// transaction if there is one.
     pub fn execute_in_msg<C: BatchContext>(
         ctx: &mut C,
-        _in_msg: &roothash::IncomingMessage,
+        in_msg: &roothash::IncomingMessage,
         data: &IncomingMessageData,
         tx: &Option<Transaction>,
     ) -> Result<(), RuntimeError> {
+        R::Modules::execute_in_msg(ctx, in_msg, data, tx)?;
         if let Some(tx) = tx {
             let tx_size = match data
                 .ut
@@ -367,10 +368,11 @@ impl<R: Runtime> Dispatcher<R> {
     /// prefixes for the embedded transaction if there is one.
     pub fn prefetch_in_msg(
         prefixes: &mut BTreeSet<Prefix>,
-        _in_msg: &roothash::IncomingMessage,
-        _data: &IncomingMessageData,
+        in_msg: &roothash::IncomingMessage,
+        data: &IncomingMessageData,
         tx: &Option<Transaction>,
     ) -> Result<(), RuntimeError> {
+        R::Modules::prefetch_in_msg(prefixes, in_msg, data, tx)?;
         if let Some(tx) = tx {
             Self::prefetch_tx(prefixes, tx.clone())?;
         }

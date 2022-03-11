@@ -212,6 +212,12 @@ pub trait API {
         amount: &token::BaseUnits,
     ) -> Result<(), modules::core::Error>;
 
+    /// Mint new tokens, directly crediting the fee accumulator.
+    fn mint_into_fee_accumulator<C: Context>(
+        ctx: &mut C,
+        amount: &token::BaseUnits,
+    ) -> Result<(), modules::core::Error>;
+
     /// Move amount from fee accumulator into address.
     fn move_from_fee_accumulator<C: Context>(
         ctx: &mut C,
@@ -587,6 +593,24 @@ impl API for Module {
         Ok(())
     }
 
+    fn mint_into_fee_accumulator<C: Context>(
+        ctx: &mut C,
+        amount: &token::BaseUnits,
+    ) -> Result<(), modules::core::Error> {
+        if ctx.is_simulation() {
+            return Ok(());
+        }
+
+        ctx.value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
+            .or_default()
+            .add(amount);
+
+        // Increase total supply.
+        Self::inc_total_supply(ctx.runtime_state(), amount)?;
+
+        Ok(())
+    }
+
     fn move_from_fee_accumulator<C: Context>(
         ctx: &mut C,
         to: Address,
@@ -857,6 +881,8 @@ impl module::TransactionHandler for Module {
         Self::update_signer_nonces(ctx, tx)
     }
 }
+
+impl module::IncomingMessageHandler for Module {}
 
 impl module::BlockHandler for Module {
     fn end_block<C: Context>(ctx: &mut C) {
