@@ -858,6 +858,8 @@ impl module::TransactionHandler for Module {
     }
 }
 
+impl module::IncomingMessageHandler for Module {}
+
 impl module::BlockHandler for Module {
     fn end_block<C: Context>(ctx: &mut C) {
         // Determine the fees that are available for disbursement from the last block.

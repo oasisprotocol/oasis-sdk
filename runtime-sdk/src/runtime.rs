@@ -17,8 +17,8 @@ use crate::{
     crypto, dispatcher,
     keymanager::{KeyManagerClient, TrustedPolicySigners},
     module::{
-        BlockHandler, InvariantHandler, MethodHandler, MigrationHandler, ModuleInfoHandler,
-        TransactionHandler,
+        BlockHandler, IncomingMessageHandler, InvariantHandler, MethodHandler, MigrationHandler,
+        ModuleInfoHandler, TransactionHandler,
     },
     modules, storage,
 };
@@ -43,6 +43,7 @@ pub trait Runtime {
     type Modules: TransactionHandler
         + MigrationHandler
         + MethodHandler
+        + IncomingMessageHandler
         + BlockHandler
         + InvariantHandler
         + ModuleInfoHandler;

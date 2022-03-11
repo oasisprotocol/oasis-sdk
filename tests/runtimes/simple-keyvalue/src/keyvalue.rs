@@ -153,6 +153,7 @@ impl sdk::module::TransactionHandler for Module {
     }
 }
 
+impl sdk::module::IncomingMessageHandler for Module {}
 impl sdk::module::BlockHandler for Module {}
 impl sdk::module::InvariantHandler for Module {}
 

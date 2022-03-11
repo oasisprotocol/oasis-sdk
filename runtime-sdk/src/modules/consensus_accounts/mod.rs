@@ -416,6 +416,11 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 {
 }
 
+impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
+    module::IncomingMessageHandler for Module<Accounts, Consensus>
+{
+}
+
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::BlockHandler
     for Module<Accounts, Consensus>
 {
