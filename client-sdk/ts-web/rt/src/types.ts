@@ -26,6 +26,30 @@ export interface CoreGasUsedEvent {
 }
 
 /**
+ * Response to the RuntimeInfo query.
+ */
+export interface CoreRuntimeInfoQueryResponse {
+    runtime_version: oasis.types.Version;
+    state_version: number;
+    modules: {[key: string]: CoreModuleInfo};
+}
+
+/**
+ * Metadata for an individual module within the runtime.
+ */
+export interface CoreModuleInfo {
+    version: number;
+    params: any;
+    methods: CoreMethodHandlerInfo[];
+}
+
+export interface CoreMethodHandlerInfo {
+    name: string;
+    // Keep these in sync with the `METHODHANDLERKIND_*` constants.
+    kind: 'call' | 'query' | 'message_result';
+}
+
+/**
  * Caller address.
  */
 export interface CallerAddress {
@@ -196,7 +220,7 @@ export interface AuthProof {
      * A flag to use module-controlled decoding. The string is an encoding scheme name that a
      * module must handle. When using this variant, the scheme name must not be empty.
      */
-    module?: String;
+    module?: string;
 }
 
 /**

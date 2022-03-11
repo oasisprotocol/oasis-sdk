@@ -285,6 +285,47 @@ export const playground = (async function () {
         console.log('ok');
     }
 
+    // Try introspection
+    {
+        const info = await coreWrapper.queryRuntimeInfo().query(nic);
+        console.log('runtime info', info);
+
+        // Check module presence
+        const accts = info.modules['accounts'];
+        if (accts === undefined) {
+            throw new Error('accounts module was expected in RuntimeInfo response');
+        }
+
+        // Check deserialization of lists and enums
+        if (
+            !accts.methods.some(
+                (m) =>
+                    m.name === 'accounts.Transfer' &&
+                    m.kind === oasisRT.core.METHODHANDLERKIND_CALL,
+            )
+        ) {
+            throw new Error(
+                'accounts.Transfer call was expected in accounts module; instead, got the following methods: ' +
+                    JSON.stringify(accts.methods),
+            );
+        }
+
+        // Check deserialization of arbitrary objects (= module params)
+        try {
+            // If we can log it, we can access it; success
+            console.log(
+                `tx transfer gas cost in accounts module is ${accts.params.gas_costs.tx_transfer}`,
+            );
+        } catch (e) {
+            throw new Error(
+                `Couldn't find gas_costs.tx_transfer in params of the accounts module. Params were ${JSON.stringify(
+                    accts.params,
+                )}`,
+            );
+        }
+        console.log('ok');
+    }
+
     // Try the rewards parameters.
     {
         console.log('query rewards parameters');

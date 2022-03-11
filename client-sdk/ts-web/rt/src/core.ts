@@ -34,9 +34,16 @@ export const METHOD_ESTIMATE_GAS = 'core.EstimateGas';
 export const METHOD_CHECK_INVARIANTS = 'core.CheckInvariants';
 export const METHOD_CALL_DATA_PUBLIC_KEY = 'core.CallDataPublicKey';
 export const METHOD_MIN_GAS_PRICE = 'core.MinGasPrice';
+export const METHOD_RUNTIME_INFO = 'core.RuntimeInfo';
 
 // Events.
 export const EVENT_GAS_USED = 1;
+
+// Introspection.
+// Keep these in sync with `CoreMethodHandlerInfo.kind`
+export const METHODHANDLERKIND_CALL = 'call';
+export const METHODHANDLERKIND_QUERY = 'query';
+export const METHODHANDLERKIND_MESSAGE_RESULT = 'message_result';
 
 export class Wrapper extends wrapper.Base {
     constructor(runtimeID: Uint8Array) {
@@ -59,6 +66,10 @@ export class Wrapper extends wrapper.Base {
 
     queryMinGasPrice() {
         return this.query<void, Map<Uint8Array, Uint8Array>>(METHOD_MIN_GAS_PRICE);
+    }
+
+    queryRuntimeInfo() {
+        return this.query<void, types.CoreRuntimeInfoQueryResponse>(METHOD_RUNTIME_INFO);
     }
 }
 

@@ -1167,6 +1167,45 @@ func ParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	if gc := coreParams.GasCosts.TxByte; gc != 1 {
 		return fmt.Errorf("unexpected GasCosts.TxByte: expected: %v, got: %v", 10, gc)
 	}
+	return nil
+}
 
+func IntrospectionTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+
+	log.Info("fetching runtime info")
+	info, err := core.NewV1(rtc).RuntimeInfo(ctx)
+	if err != nil {
+		return err
+	}
+	log.Info("received runtime info: %+v", info)
+
+	if info.RuntimeVersion.Major == 0 && info.RuntimeVersion.Minor == 0 && info.RuntimeVersion.Patch == 0 {
+		return fmt.Errorf("runtime version is %d.%d.%d, expected >0.0.0",
+			info.RuntimeVersion.Major, info.RuntimeVersion.Minor, info.RuntimeVersion.Patch)
+	}
+
+	// "accounts" is one of the modules that is present in the test runtime.
+	accts, ok := info.Modules["accounts"]
+	if !ok {
+		return fmt.Errorf("runtime introspection has no info on the accounts module")
+	}
+	if len(accts.Methods) < 5 {
+		return fmt.Errorf("accounts module should have at least 5 methods")
+	}
+
+	// check for presence of a known method
+	found := false
+	for _, m := range accts.Methods {
+		if m.Name == "accounts.Transfer" {
+			found = true
+			if m.Kind != core.MethodHandlerKindCall {
+				return fmt.Errorf("the accounts.Transfer method should be a Call; instead, got %v", m.Kind)
+			}
+		}
+	}
+	if !found {
+		return fmt.Errorf("accounts module should have an accounts.Transfer method")
+	}
 	return nil
 }

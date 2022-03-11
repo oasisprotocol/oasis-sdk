@@ -4,13 +4,16 @@ use std::{
     fmt::Debug,
 };
 
+use cbor::Encode as _;
 use impl_trait_for_tuples::impl_for_tuples;
 
 use crate::{
     context::{Context, TxContext},
     dispatcher, error,
     error::Error as _,
-    event, modules, storage,
+    event, modules,
+    modules::core::types::{MethodHandlerInfo, ModuleInfo},
+    storage,
     storage::{Prefix, Store},
     types::{
         message::MessageResult,
@@ -186,6 +189,13 @@ pub trait MethodHandler {
     ) -> DispatchResult<MessageResult, ()> {
         // Default implementation indicates that the query was not handled.
         DispatchResult::Unhandled(result)
+    }
+
+    /// Lists the names of all RPC methods exposed by this module. The result is informational
+    /// only. An empty return vector means that the implementor does not care to list the methods,
+    /// or the implementor is a tuple of modules.
+    fn supported_methods() -> Vec<MethodHandlerInfo> {
+        vec![]
     }
 }
 
@@ -455,6 +465,39 @@ impl InvariantHandler for Tuple {
     fn check_invariants<C: Context>(ctx: &mut C) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::check_invariants(ctx)?; )* );
         Ok(())
+    }
+}
+
+/// Info handler.
+pub trait ModuleInfoHandler {
+    /// Reports info about the module (or modules, if `Self` is a tuple).
+    fn module_info<C: Context>(_ctx: &mut C) -> BTreeMap<String, ModuleInfo>;
+}
+
+impl<M: Module + MethodHandler> ModuleInfoHandler for M {
+    fn module_info<C: Context>(ctx: &mut C) -> BTreeMap<String, ModuleInfo> {
+        let mut info = BTreeMap::new();
+        info.insert(
+            Self::NAME.to_string(),
+            ModuleInfo {
+                version: Self::VERSION,
+                params: Self::params(ctx.runtime_state()).into_cbor_value(),
+                methods: Self::supported_methods(),
+            },
+        );
+        info
+    }
+}
+
+#[impl_for_tuples(30)]
+impl ModuleInfoHandler for Tuple {
+    #[allow(clippy::let_and_return)]
+    fn module_info<C: Context>(ctx: &mut C) -> BTreeMap<String, ModuleInfo> {
+        let mut merged = BTreeMap::new();
+        for_tuples!( #(
+            merged.extend(Tuple::module_info(ctx));
+        )* );
+        merged
     }
 }
 
