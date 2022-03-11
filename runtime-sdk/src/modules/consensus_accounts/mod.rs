@@ -421,6 +421,41 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     module::IncomingMessageHandler for Module<Accounts, Consensus>
 {
+    fn prefetch_in_msg(
+        _prefixes: &mut BTreeSet<Prefix>,
+        _in_msg: &roothash::IncomingMessage,
+        _data: &IncomingMessageData,
+        _tx: &Option<Transaction>,
+    ) -> Result<(), error::RuntimeError> {
+        // todo: their account
+        Ok(())
+    }
+
+    fn execute_in_msg<C: Context>(
+        ctx: &mut C,
+        in_msg: &roothash::IncomingMessage,
+        _data: &IncomingMessageData,
+        _tx: &Option<Transaction>,
+    ) -> Result<(), error::RuntimeError> {
+        if !in_msg.fee.is_zero() {
+            let amount = token::BaseUnits(
+                Consensus::amount_from_consensus(ctx, (&in_msg.fee).try_into().unwrap()).unwrap(),
+                Consensus::consensus_denomination(ctx).unwrap(),
+            );
+            Accounts::mint_into_fee_accumulator(ctx, &amount).unwrap();
+            // TODO: Emit event that fee has been paid.
+        }
+        if !in_msg.tokens.is_zero() {
+            let amount = token::BaseUnits(
+                Consensus::amount_from_consensus(ctx, (&in_msg.tokens).try_into().unwrap())
+                    .unwrap(),
+                Consensus::consensus_denomination(ctx).unwrap(),
+            );
+            Accounts::mint(ctx, (&in_msg.caller).into(), &amount).unwrap();
+            // TODO: Emit event.
+        }
+        Ok(())
+    }
 }
 
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::BlockHandler
