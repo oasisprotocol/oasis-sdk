@@ -224,8 +224,8 @@ func (wf *fileWalletFactory) GetConfigFromSurvey(kind *wallet.ImportKind) (map[s
 	}
 
 	return map[string]interface{}{
-		cfgAlgorithm: answers.Algorithm,
-		cfgNumber:    answers.Number,
+		"algorithm": answers.Algorithm,
+		"number":    answers.Number,
 	}, nil
 }
 
