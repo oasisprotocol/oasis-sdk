@@ -203,6 +203,8 @@ impl<Accounts: modules::accounts::API> module::MigrationHandler for Module<Accou
     }
 }
 
+impl<Accounts: modules::accounts::API> module::IncomingMessageHandler for Module<Accounts> {}
+
 impl<Accounts: modules::accounts::API> module::TransactionHandler for Module<Accounts> {}
 
 impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts> {}
