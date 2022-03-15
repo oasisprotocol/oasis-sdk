@@ -59,8 +59,8 @@ pub fn sdk_derive(args: TokenStream, input: TokenStream) -> TokenStream {
     }
 }
 
-/// A helper attribute for `#[sdk_derive(...)]`. It doesn't do anyting on its own;
-/// it only mark functions that represent a paratime method handler.
+/// A helper attribute for `#[sdk_derive(...)]`. It doesn't do anything on its own;
+/// it only marks functions that represent a paratime method handler.
 /// The permitted forms are:
 ///  - `#[handler(call = "my_module.MyCall")]`: Marks a function that handles
 ///        the "my_module.MyCall" call and can be passed to
