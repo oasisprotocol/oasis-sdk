@@ -614,17 +614,58 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             rt_ctx,
             |ctx| -> Result<Vec<ExecuteTxResult>, RuntimeError> {
                 // Execute incoming messages.
+                let in_msgs_gas_limit = R::Core::remaining_in_msgs_gas(ctx);
+                let mut in_msgs_processed = 0usize;
                 for in_msg in in_msgs {
                     let data = Self::decode_in_msg(in_msg).unwrap_or_else(|err| {
                         warn!(ctx.get_logger("dispatcher"), "incoming message data malformed"; "id" => in_msg.id, "err" => ?err);
                         IncomingMessageData::noop()
                     });
-                    let tx = data.ut.as_ref().and_then(|ut| Self::decode_tx(ctx, ut).map_err(|err| {
-                        warn!(ctx.get_logger("dispatcher"), "incoming message transaction malformed"; "id" => in_msg.id, "err" => ?err);
-                    }).ok());
+                    let tx = match data.ut.as_ref() {
+                        Some(ut) => {
+                            match Self::decode_tx(ctx, ut) {
+                                Ok(tx) => {
+                                    let remaining_gas = R::Core::remaining_in_msgs_gas(ctx);
+                                    if remaining_gas < cfg.min_remaining_gas {
+                                        // This next message has a transaction, but we won't have
+                                        // enough gas to execute it, so leave it for the next
+                                        // round and stop.
+                                        break;
+                                    } else if tx.auth_info.fee.gas > in_msgs_gas_limit {
+                                        // The transaction is too large to execute under our
+                                        // current parameters, so skip over it.
+                                        warn!(ctx.get_logger("dispatcher"), "incoming message transaction fee gas exceeds round gas limit";
+                                            "id" => in_msg.id,
+                                            "tx_gas" => tx.auth_info.fee.gas,
+                                            "in_msgs_gas_limit" => in_msgs_gas_limit,
+                                        );
+                                        // Actually don't skip the message entirely, just don't
+                                        // execute the transaction.
+                                        None
+                                    } else if tx.auth_info.fee.gas > remaining_gas {
+                                        // The transaction is too large to execute in this round,
+                                        // so leave it for the next round and stop.
+                                        break;
+                                    } else {
+                                        Some(tx)
+                                    }
+                                }
+                                Err(err) => {
+                                    warn!(ctx.get_logger("dispatcher"), "incoming message transaction malformed";
+                                        "id" => in_msg.id,
+                                        "err" => ?err,
+                                    );
+                                    None
+                                }
+                            }
+                        }
+                        None => None,
+                    };
+
                     Self::execute_in_msg(ctx, in_msg, &data, &tx)?;
+                    in_msgs_processed += 1;
                 }
-                ctx.set_in_msgs_processed(in_msgs.len());
+                ctx.set_in_msgs_processed(in_msgs_processed);
 
                 // Schedule and execute the batch.
                 //
