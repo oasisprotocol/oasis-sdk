@@ -65,6 +65,7 @@ impl sdk::Runtime for Runtime {
             modules::core::Genesis {
                 parameters: modules::core::Parameters {
                     max_batch_gas: 10_000,
+                    max_in_msgs_gas: 2_500,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
                     // These are free, in order to simplify testing.
