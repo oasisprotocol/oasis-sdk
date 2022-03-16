@@ -31,6 +31,7 @@ fn test_use_gas() {
         ctx.runtime_state(),
         Parameters {
             max_batch_gas: BLOCK_MAX_GAS,
+            max_in_msgs_gas: BLOCK_MAX_GAS / 4,
             max_tx_signers: 8,
             max_multisig_signers: 8,
             gas_costs: Default::default(),
@@ -126,6 +127,7 @@ fn test_query_min_gas_price() {
         ctx.runtime_state(),
         Parameters {
             max_batch_gas: 10000,
+            max_in_msgs_gas: 2500,
             max_tx_signers: 8,
             max_multisig_signers: 8,
             gas_costs: Default::default(),
@@ -243,6 +245,7 @@ impl Runtime for GasWasterRuntime {
             super::Genesis {
                 parameters: Parameters {
                     max_batch_gas: u64::MAX,
+                    max_in_msgs_gas: u64::MAX,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
                     gas_costs: super::GasCosts {
@@ -373,6 +376,7 @@ fn test_approve_unverified_tx() {
         ctx.runtime_state(),
         Parameters {
             max_batch_gas: u64::MAX,
+            max_in_msgs_gas: u64::MAX,
             max_tx_signers: 2,
             max_multisig_signers: 2,
             gas_costs: Default::default(),
@@ -587,6 +591,7 @@ fn test_check_weights() {
         ctx.runtime_state(),
         Parameters {
             max_batch_gas: u64::MAX,
+            max_in_msgs_gas: u64::MAX,
             max_tx_signers: 8,
             max_multisig_signers: 8,
             gas_costs: super::GasCosts {
@@ -650,6 +655,7 @@ fn test_min_gas_price() {
         ctx.runtime_state(),
         Parameters {
             max_batch_gas: u64::MAX,
+            max_in_msgs_gas: u64::MAX,
             max_tx_signers: 8,
             max_multisig_signers: 8,
             gas_costs: super::GasCosts {
@@ -830,6 +836,7 @@ fn test_gas_used_events() {
         ctx.runtime_state(),
         Parameters {
             max_batch_gas: 1_000_000,
+            max_in_msgs_gas: 250_000,
             max_tx_signers: 8,
             max_multisig_signers: 8,
             gas_costs: Default::default(),
