@@ -5,6 +5,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
+	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	memorySigner "github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/memory"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -21,15 +22,20 @@ type TestKey struct {
 
 	// EthAddress is the corresponding Ethereum address if the key is secp256k1.
 	EthAddress [20]byte
+
+	// ConsensusSigner is the signer for the consensus API if the key is ed25519.
+	ConsensusSigner coreSignature.Signer
 }
 
 func newEd25519TestKey(seed string) TestKey {
-	signer := ed25519.WrapSigner(memorySigner.NewTestSigner(seed))
+	consensusSigner := memorySigner.NewTestSigner(seed)
+	signer := ed25519.WrapSigner(consensusSigner)
 	sigspec := types.NewSignatureAddressSpecEd25519(signer.Public().(ed25519.PublicKey))
 	return TestKey{
-		Signer:  signer,
-		Address: types.NewAddress(sigspec),
-		SigSpec: sigspec,
+		Signer:          signer,
+		Address:         types.NewAddress(sigspec),
+		SigSpec:         sigspec,
+		ConsensusSigner: consensusSigner,
 	}
 }
 
