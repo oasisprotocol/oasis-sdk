@@ -101,6 +101,11 @@ func (tb *TransactionBuilder) AppendSign(ctx context.Context, signer signature.S
 	return tb.ts.AppendSign(rtInfo.ChainContext, signer)
 }
 
+//GetUnverifiedTransaction returns the underlying signed transaction.
+func (tb *TransactionBuilder) GetUnverifiedTransaction() *types.UnverifiedTransaction {
+	return tb.ts.UnverifiedTransaction()
+}
+
 // SubmitTx submits a transaction to the runtime transaction scheduler and waits for transaction
 // execution results.
 func (tb *TransactionBuilder) SubmitTx(ctx context.Context, rsp interface{}) error {
