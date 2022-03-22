@@ -81,7 +81,7 @@ pub fn confidential_storage<'a, C: Context>(
     };
     let is_simulation = ctx.is_simulation();
 
-    let contract_storages = contract_storage(ctx.runtime_state(), &CONFIDENTIAL_STORAGES, address);
+    let contract_storages = contract_storage(ctx.runtime_state(), CONFIDENTIAL_STORAGES, address);
     let confidential_storages = storage::ConfidentialStore::new_with_key(
         contract_storages,
         confidential_key.0,
