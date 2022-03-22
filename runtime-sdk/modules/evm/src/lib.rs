@@ -370,14 +370,8 @@ impl<Cfg: Config> API for Module<Cfg> {
     }
 
     fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
-        let store = storage::PrefixStore::new(ctx.runtime_state(), &crate::MODULE_NAME);
-        let storages = storage::PrefixStore::new(store, &state::STORAGES);
-        let s = storage::TypedStore::new(storage::HashedStore::<_, blake3::Hasher>::new(
-            storage::PrefixStore::new(storages, &address),
-        ));
-
+        let s = state::public_storage(ctx, &address);
         let result: H256 = s.get(&index).unwrap_or_default();
-
         Ok(result.as_bytes().to_vec())
     }
 
