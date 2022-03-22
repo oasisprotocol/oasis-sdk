@@ -50,16 +50,23 @@ pub fn public_storage<'a, C: Context>(
 pub fn confidential_storage<'a, C: Context>(
     ctx: &'a mut C,
     address: &'a H160,
-) -> storage::TypedStore<impl storage::Store + 'a> {
-    let kmgr_client = ctx.key_manager().expect("key manager must be connected");
+) -> storage::TypedStore<Box<dyn storage::Store + 'a>> {
+    fn empty_store() -> storage::TypedStore<Box<dyn storage::Store>> {
+        storage::TypedStore::new(Box::new(storage::EmptyStore::new()))
+    }
+    let kmgr_client = match ctx.key_manager() {
+        Some(kmgr_client) => kmgr_client,
+        None => return empty_store(),
+    };
     let key_id = oasis_runtime_sdk::keymanager::get_key_pair_id(&[
         CONFIDENTIAL_STORE_KEY_PAIR_ID_CONTEXT_BASE,
         address.as_ref(),
     ]);
-    let confidential_key = kmgr_client
-        .get_or_create_keys(key_id)
-        .expect("failed to create store key")
-        .state_key;
+    let keypair = match kmgr_client.get_or_create_keys(key_id) {
+        Ok(keypair) => keypair,
+        Err(_) => return empty_store(),
+    };
+    let confidential_key = keypair.state_key;
 
     // These values are used to derive the confidential store nonce:
     let round = ctx.runtime_header().round;
@@ -84,7 +91,7 @@ pub fn confidential_storage<'a, C: Context>(
             &[is_simulation as u8],
         ],
     );
-    storage::TypedStore::new(confidential_storages)
+    storage::TypedStore::new(Box::new(confidential_storages))
 }
 
 fn contract_storage<'a, S: storage::Store + 'a>(
