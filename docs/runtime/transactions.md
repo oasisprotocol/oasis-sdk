@@ -7,9 +7,36 @@
 This section describes the format of all supported runtime methods and queries
 with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
-## Methods
+## Accounts
+
+### accounts.Addresses
+(query)
+[[Go][go-accounts.Addresses]|[Rust][rust-accounts.Addresses]|[TypeScript][ts-accounts.Addresses]]
+
+Arguments for the Addresses query.
+
+#### Parameters [[Go][go-params-accounts.Addresses]|[Rust][rust-params-accounts.Addresses]|[TypeScript][ts-params-accounts.Addresses]]
+
+- `denomination: token::Denomination`
+
+[go-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/accounts/accounts.go#L94-L101
+[rust-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/accounts/mod.rs#L711-L720
+[ts-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/accounts.ts#L49-L51
+[go-params-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/accounts/types.go#L28-L31
+[rust-params-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/accounts/types.rs#L30-L34
+[ts-params-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L111-L116
+
+### accounts.Balances
+(query)
+
+### accounts.DenominationInfo
+(query)
+
+### accounts.Nonce
+(query)
 
 ### accounts.Transfer
+(method)
 [[Go][go-accounts.Transfer]|[Rust][rust-accounts.Transfer]|[TypeScript][ts-accounts.Transfer]]
 
 Transfer call.
@@ -26,7 +53,18 @@ Transfer call.
 [rust-params-accounts.Transfer]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/accounts/types.rs#L10-L13
 [ts-params-accounts.Transfer]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L132-L138
 
+## Consensus
+
+### consensus.Account
+(query)
+
+### consensus.Balance
+(query)
+
+## Contracts
+
 ### contracts.Call
+(method)
 [[Go][go-contracts.Call]|[Rust][rust-contracts.Call]|[TypeScript][ts-contracts.Call]]
 
 Contract call.
@@ -59,7 +97,20 @@ Contract call.
 [rust-result-contracts.Call]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/modules/contracts/src/types.rs#L151-L154
 [ts-result-contracts.Call]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L245-L252
 
+### contracts.Code
+(query)
+
+### contracts.Custom
+(query)
+
+### contracts.Instance
+(query)
+
+### contracts.InstanceStorage
+(query)
+
 ### contracts.Instantiate
+(method)
 [[Go][go-contracts.Instantiate]|[Rust][rust-contracts.Instantiate]|[TypeScript][ts-contracts.Instantiate]]
 
 Instantiate call.
@@ -98,7 +149,11 @@ Instantiate call.
 [rust-result-contracts.Instantiate]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/modules/contracts/src/types.rs#L131-L136
 [ts-result-contracts.Instantiate]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L524-L532
 
+### contracts.PublicKey
+(query)
+
 ### contracts.Upgrade
+(method)
 [[Go][go-contracts.Upgrade]|[Rust][rust-contracts.Upgrade]|[TypeScript][ts-contracts.Upgrade]]
 
 Upgrade call.
@@ -129,6 +184,7 @@ Upgrade call.
 [ts-params-contracts.Upgrade]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L552-L572
 
 ### contracts.Upload
+(method)
 [[Go][go-contracts.Upload]|[Rust][rust-contracts.Upload]|[TypeScript][ts-contracts.Upload]]
 
 Upload call.
@@ -163,7 +219,30 @@ Upload call.
 [rust-result-contracts.Upload]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/modules/contracts/src/types.rs#L108-L113
 [ts-result-contracts.Upload]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L492-L500
 
+## Core
+
+### core.CallDataPublicKey
+(query)
+
+### core.CheckInvariants
+(query)
+
+### core.EstimateGas
+(query)
+
+### core.MinGasPrice
+(query)
+
+### core.RuntimeInfo
+(query)
+
+## Evm
+
+### evm.Balance
+(query)
+
 ### evm.Call
+(method)
 [[Go][go-evm.Call]|[Rust][rust-evm.Call]|[TypeScript][ts-evm.Call]]
 
 Transaction body for calling an EVM contract.
@@ -181,7 +260,11 @@ Transaction body for calling an EVM contract.
 [rust-params-evm.Call]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/modules/evm/src/types.rs#L10-L16
 [ts-params-evm.Call]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L402-L409
 
+### evm.Code
+(query)
+
 ### evm.Create
+(method)
 [[Go][go-evm.Create]|[Rust][rust-evm.Create]|[TypeScript][ts-evm.Create]]
 
 Transaction body for creating an EVM contract.
@@ -199,6 +282,7 @@ Transaction body for creating an EVM contract.
 [ts-params-evm.Create]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L394-L400
 
 ### consensus.Deposit
+(method)
 [[Go][go-consensus.Deposit]|[Rust][rust-consensus.Deposit]|[TypeScript][ts-consensus.Deposit]]
 
 Deposit into runtime call.
@@ -218,7 +302,14 @@ address. The `to` address runtime account gets the tokens.
 [rust-params-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/consensus_accounts/types.rs#L4-L13
 [ts-params-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L336-L342
 
+### evm.SimulateCall
+(query)
+
+### evm.Storage
+(query)
+
 ### consensus.Withdraw
+(method)
 [[Go][go-consensus.Withdraw]|[Rust][rust-consensus.Withdraw]|[TypeScript][ts-consensus.Withdraw]]
 
 Withdraw from runtime call.
@@ -236,59 +327,3 @@ The `to` address consensus staking account gets the tokens.
 [go-params-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/consensusaccounts/types.go#L11-L15
 [rust-params-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/consensus_accounts/types.rs#L15-L23
 [ts-params-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L344-L350
-
-## Queries
-
-### accounts.Addresses
-[[Go][go-accounts.Addresses]|[Rust][rust-accounts.Addresses]|[TypeScript][ts-accounts.Addresses]]
-
-Arguments for the Addresses query.
-
-#### Parameters [[Go][go-params-accounts.Addresses]|[Rust][rust-params-accounts.Addresses]|[TypeScript][ts-params-accounts.Addresses]]
-
-- `denomination: token::Denomination`
-
-[go-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/accounts/accounts.go#L94-L101
-[rust-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/accounts/mod.rs#L711-L720
-[ts-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/accounts.ts#L49-L51
-[go-params-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/accounts/types.go#L28-L31
-[rust-params-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/accounts/types.rs#L30-L34
-[ts-params-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L111-L116
-
-### accounts.Balances 
-
-### accounts.DenominationInfo
-
-### accounts.Nonce
-
-### contracts.Code
-
-### contracts.Custom
-
-### contracts.Instance
-
-### contracts.InstanceStorage
-
-### contracts.PublicKey
-
-### consensus.Account
-
-### consensus.Balance
-
-### core.CallDataPublicKey
-
-### core.CheckInvariants
-
-### core.EstimateGas
-
-### core.MinGasPrice
-
-### core.RuntimeInfo
-
-### evm.Balance
-
-### evm.Code
-
-### evm.SimulateCall
-
-### evm.Storage
