@@ -125,7 +125,7 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
         let idx: H256 = index.into();
 
         let mut ctx = self.ctx.borrow_mut();
-        let store = state::storage(ctx.runtime_state(), &address);
+        let store = state::storage(*ctx, &address);
         let res: H256 = store.get(&idx).unwrap_or_default();
         res.into()
     }
@@ -241,7 +241,7 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
                         let idx: H256 = index.into();
                         let val: H256 = value.into();
 
-                        let mut store = state::storage(self.ctx.get_mut().runtime_state(), &addr);
+                        let mut store = state::storage(*self.ctx.get_mut(), &addr);
                         if value == primitive_types::H256::default() {
                             store.remove(&idx);
                         } else {
