@@ -189,6 +189,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				TxnScheduler: registry.TxnSchedulerParameters{
 					MaxBatchSize:      1000,
 					MaxBatchSizeBytes: 16 * 1024 * 1024, // 16 MB.
+					MaxInMessages:     128,
 					BatchFlushTimeout: 1 * time.Second,
 					ProposerTimeout:   30,
 				},
