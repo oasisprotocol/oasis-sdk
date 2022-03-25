@@ -444,6 +444,7 @@ impl<R: Runtime> Dispatcher<R> {
             };
             // Use the ID as index.
             let index = in_msg.id.try_into().unwrap();
+            // todo: put result tags in block
             Self::execute_tx(ctx, tx_size, tx.clone(), index)?;
         }
         Ok(())
