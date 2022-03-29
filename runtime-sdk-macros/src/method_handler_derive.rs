@@ -214,6 +214,24 @@ pub fn derive_method_handler(impl_block: syn::ItemImpl) -> TokenStream {
         }
     };
 
+    let expensive_queries_impl = {
+        let handler_names: Vec<syn::Expr> = handlers
+            .iter()
+            .filter_map(|h| h.handler.as_ref())
+            .filter(|h| h.attrs.kind == HandlerKind::Query && h.attrs.is_expensive)
+            .map(|h| h.attrs.rpc_name.clone())
+            .collect();
+        if handler_names.is_empty() {
+            quote! {}
+        } else {
+            quote! {
+                fn expensive_queries() -> Vec<&'static str> {
+                    vec![ #( #handler_names, )* ]
+                }
+            }
+        }
+    };
+
     gen::wrap_in_const(quote! {
         use #sdk_crate::{
           self as sdk,
@@ -232,6 +250,7 @@ pub fn derive_method_handler(impl_block: syn::ItemImpl) -> TokenStream {
             #dispatch_query_impl
             #dispatch_message_result_impl
             #supported_methods_impl
+            #expensive_queries_impl
         }
 
         impl#module_generics #module_ty {
@@ -285,6 +304,8 @@ struct MethodHandlerAttr {
     kind: HandlerKind,
     /// Name of the RPC that this handler handles, e.g. "my_module.MyQuery".
     rpc_name: syn::Expr,
+    /// Whether this handler is tagged as expensive. Only applies to query handlers.
+    is_expensive: bool,
 }
 impl syn::parse::Parse for MethodHandlerAttr {
     fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
@@ -298,13 +319,37 @@ impl syn::parse::Parse for MethodHandlerAttr {
         };
         let _: syn::token::Eq = input.parse()?;
         let rpc_name: syn::Expr = input.parse()?;
+
+        // Parse optional `expensive` tag
+        let is_expensive = if input.peek(syn::token::Comma) {
+            let _: syn::token::Comma = input.parse()?;
+            let tag: syn::Ident = input.parse()?;
+            if tag.to_string() == "expensive" {
+                if kind != HandlerKind::Query {
+                    return Err(syn::Error::new(
+                        tag.span(),
+                        "`expensive` tag is only allowed on `query` handlers",
+                    ));
+                }
+                true
+            } else {
+                return Err(syn::Error::new(
+                    tag.span(),
+                    "invalid handler tag; only `expensive` is supported",
+                ));
+            }
+        } else {
+            false
+        };
+
         if !input.is_empty() {
-            return Err(syn::Error::new(
-                input.span(),
-                "unexpected tokens; only one kind of handler can be specified",
-            ));
+            return Err(syn::Error::new(input.span(), "unexpected extra tokens"));
         }
-        Ok(Self { kind, rpc_name })
+        Ok(Self {
+            kind,
+            rpc_name,
+            is_expensive,
+        })
     }
 }
 
@@ -487,6 +532,8 @@ mod tests {
             impl<C: Cfg> MyModule<C> {
                 #[handler(query = RPC_NAME_OF_MY_QUERY)]
                 fn my_query() -> () {}
+                #[handler(query = "module.OtherQuery", expensive)]
+                fn my_other_query() -> () {}
             }
         );
 
@@ -505,25 +552,41 @@ mod tests {
                             {
                                 match method {
                                     RPC_NAME_OF_MY_QUERY => module::dispatch_query(ctx, args, Self::my_query),
+                                    "module.OtherQuery" => module::dispatch_query(ctx, args, Self::my_other_query),
                                     q if q == format!("{}.Parameters", Self::NAME) => {
-                                       module::dispatch_query(ctx, args, Self::query_parameters)
+                                        module::dispatch_query(ctx, args, Self::query_parameters)
                                     }
                                     _ => DispatchResult::Unhandled(args),
                                 }
                             }
                             fn supported_methods() -> Vec<core_types::MethodHandlerInfo> {
-                                vec![core_types::MethodHandlerInfo {
-                                    kind: core_types::MethodHandlerKind::Query,
-                                    name: RPC_NAME_OF_MY_QUERY.to_string(),
-                                }]
+                                vec![
+                                    core_types::MethodHandlerInfo {
+                                        kind: core_types::MethodHandlerKind::Query,
+                                        name: RPC_NAME_OF_MY_QUERY.to_string(),
+                                    },
+                                    core_types::MethodHandlerInfo {
+                                        kind: core_types::MethodHandlerKind::Query,
+                                        name: "module.OtherQuery".to_string(),
+                                    },
+                                ]
+                            }
+                            fn expensive_queries() -> Vec<&'static str> {
+                                vec!["module.OtherQuery"]
                             }
                         }
                         impl<C: Cfg> MyModule<C> {
-                            fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                            fn query_parameters<C: Context>(
+                                ctx: &mut C,
+                                _args: (),
+                            ) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error>
+                            {
                                 Ok(Self::params(ctx.runtime_state()))
                             }
                             #[handler(query = RPC_NAME_OF_MY_QUERY)]
                             fn my_query() -> () {}
+                            #[handler(query = "module.OtherQuery", expensive)]
+                            fn my_other_query() -> () {}
                         }
                     };
                 )
@@ -594,7 +657,19 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "only one kind of handler")]
+    #[should_panic(expected = "only allowed on `query` handlers")]
+    fn generate_method_handler_malformed_expensive_nonquery() {
+        let input: syn::ItemImpl = syn::parse_quote!(
+            impl<C: Cfg> MyModule<C> {
+                #[handler(call = "foo", expensive)]
+                fn my_method_call() -> () {}
+            }
+        );
+        super::derive_method_handler(input);
+    }
+
+    #[test]
+    #[should_panic]
     fn generate_method_handler_malformed_multiple_metas() {
         let input: syn::ItemImpl = syn::parse_quote!(
             impl<C: Cfg> MyModule<C> {

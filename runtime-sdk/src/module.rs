@@ -197,6 +197,10 @@ pub trait MethodHandler {
     fn supported_methods() -> Vec<MethodHandlerInfo> {
         vec![]
     }
+
+    fn expensive_queries() -> Vec<&'static str> {
+        Vec::new()
+    }
 }
 
 #[impl_for_tuples(30)]
@@ -264,6 +268,15 @@ impl MethodHandler for Tuple {
         )* );
 
         DispatchResult::Unhandled(result)
+    }
+
+    #[allow(clippy::let_and_return)]
+    fn expensive_queries() -> Vec<&'static str> {
+        let mut merged = Vec::new();
+        for_tuples!( #(
+            merged.extend(Tuple::expensive_queries());
+        )* );
+        merged
     }
 }
 

@@ -426,7 +426,7 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     /// Check invariants of all modules in the runtime.
-    #[handler(query = "core.CheckInvariants")]
+    #[handler(query = "core.CheckInvariants", expensive)]
     fn query_check_invariants<C: Context>(ctx: &mut C, _args: ()) -> Result<(), Error> {
         if !ctx.are_expensive_queries_allowed() {
             return Err(Error::InvalidArgument(anyhow!("query not allowed")));

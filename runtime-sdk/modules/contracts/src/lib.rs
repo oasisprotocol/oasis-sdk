@@ -642,7 +642,7 @@ impl<Cfg: Config> Module<Cfg> {
         Err(Error::Unsupported)
     }
 
-    #[handler(query = "contracts.Custom")]
+    #[handler(query = "contracts.Custom", expensive)]
     pub fn query_custom<C: Context>(
         ctx: &mut C,
         args: types::CustomQuery,

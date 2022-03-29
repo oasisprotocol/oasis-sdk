@@ -722,7 +722,7 @@ impl Module {
         Self::get_nonce(ctx.runtime_state(), args.address)
     }
 
-    #[handler(query = "accounts.Addresses")]
+    #[handler(query = "accounts.Addresses", expensive)]
     fn query_addresses<C: Context>(
         ctx: &mut C,
         args: types::AddressesQuery,

@@ -79,8 +79,13 @@ pub fn sdk_derive(args: TokenStream, input: TokenStream) -> TokenStream {
 ///        the "my_module.MyMR" message result and can be passed to
 ///        oasis_runtime_sdk::module::dispatch_message_result.
 ///
-/// NOTE: This attribute is parsed by the `#[sdk_derive(...)]` macro, so its name
-/// (`handler`) cannot be interpreted semantically. Use `#[handler]`, not
+/// Query handler can also contain the `expensive` tag. Example:
+/// `#[handler(query = "my_module.MyQuery", expensive)]`.
+/// Queries tagged `expensive` can be enabled/disabled are disabled by default to avoid
+/// excessive costs to the node operator. This can be overridden in the node config.
+///
+/// NOTE: This attribute is parsed by the `#[sdk_derive(...)]` macro, which cannot
+/// interpret the attribute name semantically. Use `#[handler]`, not
 /// `#[oasis_runtime_sdk_macros::handler]` or other paths/aliases.
 #[proc_macro_attribute]
 pub fn handler(_args: TokenStream, input: TokenStream) -> TokenStream {
