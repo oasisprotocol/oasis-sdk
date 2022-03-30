@@ -61,6 +61,47 @@ Transfer call.
 ### consensus.Balance
 (query)
 
+### consensus.Deposit
+(method)
+[[Go][go-consensus.Deposit]|[Rust][rust-consensus.Deposit]|[TypeScript][ts-consensus.Deposit]]
+
+Deposit into runtime call.
+Transfer from consensus staking to an account in this runtime.
+The transaction signer has a consensus layer allowance benefiting this runtime's staking
+address. The `to` address runtime account gets the tokens.
+
+#### Parameters [[Go][go-params-consensus.Deposit]|[Rust][rust-params-consensus.Deposit]|[TypeScript][ts-params-consensus.Deposit]]
+
+- `to: Option<Address>`
+- `amount: token::BaseUnits`
+
+[go-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/consensusaccounts/consensus_accounts.go#L52-L58
+[rust-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/consensus_accounts/mod.rs#L230-L240
+[ts-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/consensus_accounts.ts#L31-L33
+[go-params-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/consensusaccounts/types.go#L5-L9
+[rust-params-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/consensus_accounts/types.rs#L4-L13
+[ts-params-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L336-L342
+
+### consensus.Withdraw
+(method)
+[[Go][go-consensus.Withdraw]|[Rust][rust-consensus.Withdraw]|[TypeScript][ts-consensus.Withdraw]]
+
+Withdraw from runtime call.
+Transfer from an account in this runtime to consensus staking.
+The `to` address consensus staking account gets the tokens.
+
+#### Parameters [[Go][go-params-consensus.Withdraw]|[Rust][rust-params-consensus.Withdraw]|[TypeScript][ts-params-consensus.Withdraw]]
+
+- `to: Option<Address>`
+- `amount: token::BaseUnits`
+
+[go-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/consensusaccounts/consensus_accounts.go#L60-L66
+[rust-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/consensus_accounts/mod.rs#L244-L260
+[ts-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/consensus_accounts.ts#L35-L37
+[go-params-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/consensusaccounts/types.go#L11-L15
+[rust-params-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/consensus_accounts/types.rs#L15-L23
+[ts-params-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L344-L350
+
 ## Contracts
 
 ### contracts.Call
@@ -281,49 +322,9 @@ Transaction body for creating an EVM contract.
 [rust-params-evm.Create]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/modules/evm/src/types.rs#L3-L8
 [ts-params-evm.Create]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L394-L400
 
-### consensus.Deposit
-(method)
-[[Go][go-consensus.Deposit]|[Rust][rust-consensus.Deposit]|[TypeScript][ts-consensus.Deposit]]
-
-Deposit into runtime call.
-Transfer from consensus staking to an account in this runtime.
-The transaction signer has a consensus layer allowance benefiting this runtime's staking
-address. The `to` address runtime account gets the tokens.
-
-#### Parameters [[Go][go-params-consensus.Deposit]|[Rust][rust-params-consensus.Deposit]|[TypeScript][ts-params-consensus.Deposit]]
-
-- `to: Option<Address>`
-- `amount: token::BaseUnits`
-
-[go-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/consensusaccounts/consensus_accounts.go#L52-L58
-[rust-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/consensus_accounts/mod.rs#L230-L240
-[ts-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/consensus_accounts.ts#L31-L33
-[go-params-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/consensusaccounts/types.go#L5-L9
-[rust-params-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/consensus_accounts/types.rs#L4-L13
-[ts-params-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L336-L342
-
 ### evm.SimulateCall
 (query)
 
 ### evm.Storage
 (query)
 
-### consensus.Withdraw
-(method)
-[[Go][go-consensus.Withdraw]|[Rust][rust-consensus.Withdraw]|[TypeScript][ts-consensus.Withdraw]]
-
-Withdraw from runtime call.
-Transfer from an account in this runtime to consensus staking.
-The `to` address consensus staking account gets the tokens.
-
-#### Parameters [[Go][go-params-consensus.Withdraw]|[Rust][rust-params-consensus.Withdraw]|[TypeScript][ts-params-consensus.Withdraw]]
-
-- `to: Option<Address>`
-- `amount: token::BaseUnits`
-
-[go-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/consensusaccounts/consensus_accounts.go#L60-L66
-[rust-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/consensus_accounts/mod.rs#L244-L260
-[ts-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/consensus_accounts.ts#L35-L37
-[go-params-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/go/modules/consensusaccounts/types.go#L11-L15
-[rust-params-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/runtime-sdk/src/modules/consensus_accounts/types.rs#L15-L23
-[ts-params-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/blob/656b0a21527149c690c3daf3ce25becea6e9bad3/client-sdk/ts-web/rt/src/types.ts#L344-L350
