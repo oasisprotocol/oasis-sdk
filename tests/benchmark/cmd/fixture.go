@@ -80,7 +80,8 @@ func fixture() *oasis.NetworkFixture {
 				RuntimeConfig: map[int]map[string]interface{}{
 
 					0: {
-						"allow_expensive_queries": true,
+						"estimate_gas_by_simulating_contracts": true,
+						"allowed_queries":                      []map[string]bool{{"all_expensive": true}},
 					},
 				},
 				Runtimes: []int{0},

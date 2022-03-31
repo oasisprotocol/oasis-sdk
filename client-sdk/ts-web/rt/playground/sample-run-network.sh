@@ -20,8 +20,11 @@ FIXTURE_FILE="/tmp/oasis-net-runner-sdk-rt/fixture.json"
     --fixture.default.halt_epoch 100000 \
     --fixture.default.staking_genesis ./staking.json >"$FIXTURE_FILE"
 
-# Allow expensive queries.
-jq '.clients[0].runtime_config."2".allow_expensive_queries = true' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+# Allow expensive gas estimation and expensive queries.
+jq '
+  .clients[0].runtime_config."2".estimate_gas_by_simulating_contracts = true |
+  .clients[0].runtime_config."2".allowed_queries = [{all_expensive: true}]
+' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
 "$TEST_NET_RUNNER" \

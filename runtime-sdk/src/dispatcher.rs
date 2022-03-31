@@ -410,6 +410,10 @@ impl<R: Runtime> Dispatcher<R> {
                         return Err(modules::core::Error::ForbiddenInSecureBuild.into());
                     }
 
+                    if !ctx.is_allowed_query::<R>(method) {
+                        return Err(modules::core::Error::Forbidden.into());
+                    }
+
                     R::Modules::dispatch_query(ctx, method, args)
                         .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?
                 }

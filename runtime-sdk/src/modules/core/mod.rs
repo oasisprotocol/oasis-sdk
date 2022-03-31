@@ -112,6 +112,10 @@ pub enum Error {
     #[error("forbidden in secure build")]
     #[sdk_error(code = 21)]
     ForbiddenInSecureBuild,
+
+    #[error("forbidden by node policy")]
+    #[sdk_error(code = 22)]
+    Forbidden,
 }
 
 /// Events emitted by the core module.
@@ -428,10 +432,6 @@ impl<Cfg: Config> Module<Cfg> {
     /// Check invariants of all modules in the runtime.
     #[handler(query = "core.CheckInvariants", expensive)]
     fn query_check_invariants<C: Context>(ctx: &mut C, _args: ()) -> Result<(), Error> {
-        if !ctx.are_expensive_queries_allowed() {
-            return Err(Error::InvalidArgument(anyhow!("query not allowed")));
-        }
-
         <C::Runtime as Runtime>::Modules::check_invariants(ctx)
     }
 

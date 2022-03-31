@@ -324,7 +324,7 @@ impl syn::parse::Parse for MethodHandlerAttr {
         let is_expensive = if input.peek(syn::token::Comma) {
             let _: syn::token::Comma = input.parse()?;
             let tag: syn::Ident = input.parse()?;
-            if tag.to_string() == "expensive" {
+            if tag == "expensive" {
                 if kind != HandlerKind::Query {
                     return Err(syn::Error::new(
                         tag.span(),

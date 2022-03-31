@@ -25,6 +25,19 @@ pub struct Config;
 
 impl modules::core::Config for Config {}
 
+/// Constructs a BTreeMap using a `cbormap! { "key" => value, ... }` syntax.
+/// Keys are coerced to strings, and values to cbor::Value.
+macro_rules! cbormap {
+    // allow trailing comma
+    ( $($key:expr => $value:expr,)+ ) => (cbormap!($($key => $value),+));
+    ( $($key:expr => $value:expr),* ) => {
+        {
+            let mut m = BTreeMap::new();
+            $( m.insert($key.to_string(), cbor::to_value($value)); )*
+            m
+        }
+    };
+}
 /// A mock runtime that only has the core module.
 pub struct EmptyRuntime;
 
@@ -97,19 +110,20 @@ impl Default for Mock {
             .with_root_type(mkvs::RootType::State)
             .build(Box::new(mkvs::sync::NoopReadSyncer));
 
+        let local_config = cbormap! {
+            "estimate_gas_by_simulating_contracts" => true,
+            "allowed_queries" => vec![
+                cbormap! {"all_expensive" => true}
+            ],
+        };
+
         Self {
             host_info: HostInfo {
                 runtime_id: Namespace::default(),
                 consensus_backend: "mock".to_string(),
                 consensus_protocol_version: Version::default(),
                 consensus_chain_context: "test".to_string(),
-                local_config: {
-                    let mut local_config = BTreeMap::new();
-                    // Allow expensive queries in tests to make it easier.
-                    local_config
-                        .insert("allow_expensive_queries".to_string(), cbor::to_value(true));
-                    local_config
-                },
+                local_config,
             },
             runtime_header: roothash::Header::default(),
             runtime_round_results: roothash::RoundResults::default(),

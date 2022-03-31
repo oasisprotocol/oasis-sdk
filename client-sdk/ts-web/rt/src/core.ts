@@ -28,6 +28,8 @@ export const ERR_INVARIANT_VIOLATION_CODE = 17;
 export const ERR_INVALID_CALL_FORMAT_CODE = 18;
 export const ERR_NOT_AUTHENTICATED_CODE = 19;
 export const ERR_GAS_PRICE_TOO_LOW_CODE = 20;
+export const ERR_FORBIDDEN_IN_SECURE_BUILD = 21;
+export const ERR_FORBIDDEN_BY_NODE_POLICY = 22;
 
 // Queries.
 export const METHOD_ESTIMATE_GAS = 'core.EstimateGas';
