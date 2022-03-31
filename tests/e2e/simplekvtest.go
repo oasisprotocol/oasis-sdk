@@ -1209,3 +1209,41 @@ func IntrospectionTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clie
 	}
 	return nil
 }
+
+// TransactionCheckTest checks that nonce/fee are correctly taken into account during tx checks.
+func TransactionCheckTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	ac := accounts.NewV1(rtc)
+
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return err
+	}
+
+	log.Info("generating transfer transaction with not enough gas")
+	tb := ac.Transfer(testing.Bob.Address, types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)).
+		SetFeeGas(100).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce)
+	_ = tb.AppendSign(ctx, testing.Alice.Signer)
+	var meta *client.TransactionMeta
+	if meta, err = tb.SubmitTxMeta(ctx, nil); err != nil {
+		return fmt.Errorf("unexpected error during SubmitTxMeta: %w", err)
+	}
+	if meta.CheckTxError == nil {
+		return fmt.Errorf("expected an error during check tx, got nil")
+	}
+
+	log.Info("generating transfer transaction with the same nonce")
+	tb = ac.Transfer(testing.Bob.Address, types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)).
+		SetFeeGas(defaultGasAmount).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce)
+	_ = tb.AppendSign(ctx, testing.Alice.Signer)
+	if meta, err = tb.SubmitTxMeta(ctx, nil); err != nil {
+		return fmt.Errorf("unexpected error during SubmitTxMeta: %w", err)
+	}
+	if meta.CheckTxError != nil {
+		return fmt.Errorf("unexpected error during check tx: %s", meta.CheckTxError.Message)
+	}
+
+	return nil
+}

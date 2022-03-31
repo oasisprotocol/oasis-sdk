@@ -31,6 +31,7 @@ var (
 		BlockQueryTest,
 		ParametersTest,
 		IntrospectionTest,
+		TransactionCheckTest,
 	})
 
 	// SimpleConsensusRuntime is the simple-consensus runtime test.

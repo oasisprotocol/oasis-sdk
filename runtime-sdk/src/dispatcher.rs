@@ -199,6 +199,7 @@ impl<R: Runtime> Dispatcher<R> {
         if let Err(err) = R::Modules::authenticate_tx(ctx, &tx) {
             return Ok(err.into_call_result().into());
         }
+        let tx_auth_info = tx.auth_info.clone();
 
         let (result, messages) = ctx.with_tx(tx_size, tx, |mut ctx, call| {
             // Decode call based on specified call format.
@@ -242,6 +243,9 @@ impl<R: Runtime> Dispatcher<R> {
                 messages,
             )
         });
+
+        // Run after dispatch hooks.
+        R::Modules::after_dispatch_tx(ctx, &tx_auth_info, &result.result);
 
         // Propagate batch aborts.
         if let module::CallResult::Aborted(err) = result.result {
