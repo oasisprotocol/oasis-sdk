@@ -205,11 +205,16 @@ jobs:
     env:
       TXS_FILE: ../../docs/runtime/transactions.md
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Set up Go
         uses: actions/setup-go@v3
+
       - name: Compile extract-runtime-txs
         working-directory: tools/extract-runtime-txs
         run: go build
+
       - name: Check runtime transactions sync
         working-directory: tools/extract-runtime-txs
         run: |
