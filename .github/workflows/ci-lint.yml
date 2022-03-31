@@ -204,13 +204,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TXS_FILE: ../../docs/runtime/transactions.md
+    working-directory: tools/extract-runtime-txs
     steps:
       - name: Set up Go
         uses: actions/setup-go@v3
       - name: Compile extract-runtime-txs
-        run: |
-          cd tools/extract-runtime-txs
-          go build
+        run: go build
       - name: Check runtime transactions sync
         run: |
           cp ${TXS_FILE} ${TXS_FILE}.orig
