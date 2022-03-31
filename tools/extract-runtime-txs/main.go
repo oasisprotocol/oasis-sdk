@@ -69,19 +69,22 @@ func markdownParams(params []Parameter) string {
 }
 
 func snippetPath(s Snippet) string {
-	/* TODO
 	baseDir := viper.GetString(CfgCodebasePath)
 	if viper.IsSet(CfgMarkdownTplFile) && !viper.IsSet(CfgCodebaseURL) {
 		baseDir = filepath.Dir(viper.GetString(CfgMarkdownTplFile))
-	}*/
-	locStr := ""
+	}
+	fileURL, _ := filepath.Rel(baseDir, s.Path)
+	if viper.IsSet(CfgCodebaseURL) {
+		fileURL = viper.GetString(CfgCodebaseURL) + fileURL
+	}
+	linesStr := ""
 	if s.LineFrom != 0 {
-		locStr = fmt.Sprintf("#L%d", s.LineFrom)
+		linesStr = fmt.Sprintf("#L%d", s.LineFrom)
 		if s.LineTo != s.LineFrom {
-			locStr += fmt.Sprintf("-L%d", s.LineTo)
+			linesStr += fmt.Sprintf("-L%d", s.LineTo)
 		}
 	}
-	return fmt.Sprintf("%s%s", s.Path, locStr)
+	return fmt.Sprintf("%s%s", fileURL, linesStr)
 }
 
 func markdownList(txs []Tx) string {
@@ -205,9 +208,9 @@ func extractValue(n ast.Expr) string {
 func main() {
 	rootCmd.Flags().Bool(CfgMarkdown, false, "print metrics in markdown format")
 	rootCmd.Flags().String(CfgCodebasePath, "", "path to Go codebase")
-	rootCmd.Flags().String(CfgCodebaseURL, "", "show URL to Go files with this base instead of relative path (optional) (e.g. https://github.com/oasisprotocol/oasis-core/tree/master/go/)")
+	rootCmd.Flags().String(CfgCodebaseURL, "", "show URL to Go files with this base instead of relative path (optional) (e.g. https://github.com/oasisprotocol/oasis-sdk/tree/master/)")
 	rootCmd.Flags().String(CfgMarkdownTplFile, "", "path to Markdown template file")
-	rootCmd.Flags().String(CfgMarkdownTplPlaceholder, "<!--- OASIS_METRICS -->", "placeholder for Markdown table in the template")
+	rootCmd.Flags().String(CfgMarkdownTplPlaceholder, "<!--- OASIS_RUNTIME_TRANSACTIONS -->", "placeholder for Markdown table in the template")
 	_ = cobra.MarkFlagRequired(rootCmd.Flags(), CfgCodebasePath)
 	_ = viper.BindPFlags(rootCmd.Flags())
 
