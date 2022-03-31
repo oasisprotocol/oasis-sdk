@@ -1,14 +1,47 @@
-package main
+package parsers
 
 import (
 	"fmt"
+	"log"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/oasisprotocol/oasis-sdk/tools/extract-runtime-txs/types"
 )
 
 type RustParser struct {
 	filename string
+}
+
+func GenerateInitialTransactions(searchDir string) ([]types.Tx, error) {
+	transactions := []types.Tx{}
+	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+		if err != nil {
+			log.Fatal(err)
+		}
+		if f.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(f.Name(), ".rs") {
+			return nil
+		}
+		rustParser := RustParser{filename: path}
+		txs, err := rustParser.FindTransactions()
+		if err != nil {
+			return err
+		}
+
+		transactions = append(transactions, txs...)
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return transactions, nil
 }
 
 func (r RustParser) getTypesFile() string {
@@ -18,7 +51,7 @@ func (r RustParser) getTypesFile() string {
 // FindTransactions scans the given rust source file and looks for the
 // #[handler(call = "...")] or #[handler(query = "...")] pattern. For each
 // matching pattern, a new Tx is added to the result set.
-func (r RustParser) FindTransactions() ([]Tx, error) {
+func (r RustParser) FindTransactions() ([]types.Tx, error) {
 	text, err := readFile(r.filename)
 	if err != nil {
 		return nil, err
@@ -27,7 +60,7 @@ func (r RustParser) FindTransactions() ([]Tx, error) {
 	// some spaces + #[handler(txtype = "txfullname")]
 	regMatch, _ := regexp.Compile("([ ]*)#\\[handler\\((call|query) = \"([a-zA-Z\\.]+)\"\\)\\]")
 
-	txs := []Tx{}
+	txs := []types.Tx{}
 	for lineIdx := 0; lineIdx < len(text); lineIdx += 1 {
 		txMatch := regMatch.FindStringSubmatch(text[lineIdx])
 		if len(txMatch) > 0 {
@@ -35,9 +68,9 @@ func (r RustParser) FindTransactions() ([]Tx, error) {
 			comment, lineFrom := findComment(text, lineIdx, txMatch[1])
 			paramsName, resultName := r.findParamsResultName(text, lineIdx)
 
-			txType := Call
-			if txMatch[2] == string(Query) {
-				txType = Query
+			txType := types.Call
+			if txMatch[2] == string(types.Query) {
+				txType = types.Query
 			}
 
 			fullNameSplit := strings.Split(txMatch[3], ".")
@@ -47,40 +80,40 @@ func (r RustParser) FindTransactions() ([]Tx, error) {
 				return nil, err
 			}
 
-			parameters, paramSnippet, err := r.mustFindParameters(paramsName)
+			parameters, paramSnippet, err := r.mustFindMembers(paramsName)
 			if err != nil {
 				return nil, err
 			}
 
-			var result []Parameter
-			var resultSnippet *Snippet
+			var result []types.Parameter
+			var resultSnippet *types.Snippet
 			if resultName != "" {
-				result, resultSnippet, err = r.findParameters(resultName)
+				result, resultSnippet, err = r.findMembers(resultName)
 				if err != nil {
 					return nil, err
 				}
 			}
-			tx := Tx{
+			tx := types.Tx{
 				Module:  fullNameSplit[0],
 				Name:    fullNameSplit[1],
 				Comment: comment,
 				Type:    txType,
-				Ref: map[Lang]Snippet{
-					Rust: {
+				Ref: map[types.Lang]types.Snippet{
+					types.Rust: {
 						Path:     r.filename,
 						LineFrom: lineFrom,
 						LineTo:   lineTo,
 					},
 				},
 				Parameters: parameters,
-				ParametersRef: map[Lang]Snippet{
-					Rust: paramSnippet,
+				ParametersRef: map[types.Lang]types.Snippet{
+					types.Rust: paramSnippet,
 				},
 				Result: result,
 			}
 			if result != nil {
-				tx.ResultRef = map[Lang]Snippet{
-					Rust: *resultSnippet,
+				tx.ResultRef = map[types.Lang]types.Snippet{
+					types.Rust: *resultSnippet,
 				}
 			}
 			txs = append(txs, tx)
@@ -115,7 +148,7 @@ func (r RustParser) findParamsResultName(text []string, lineIdx int) (paramsName
 	return
 }
 
-func (r RustParser) findParameters(name string) ([]Parameter, *Snippet, error) {
+func (r RustParser) findMembers(name string) ([]types.Parameter, *types.Snippet, error) {
 	typesFilename := r.getTypesFile()
 	text, err := readFile(typesFilename)
 	if err != nil {
@@ -139,7 +172,7 @@ func (r RustParser) findParameters(name string) ([]Parameter, *Snippet, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	snippet := Snippet{
+	snippet := types.Snippet{
 		Path:     typesFilename,
 		LineFrom: lineFrom,
 		LineTo:   lineTo,
@@ -147,12 +180,12 @@ func (r RustParser) findParameters(name string) ([]Parameter, *Snippet, error) {
 
 	// Find parameters.
 	regParamMatch, _ := regexp.Compile("    pub (.*): (.*),")
-	params := []Parameter{}
+	params := []types.Parameter{}
 	for ; lineIdx < lineTo; lineIdx += 1 {
 		paramMatch := regParamMatch.FindStringSubmatch(text[lineIdx])
 		if len(paramMatch) > 0 {
 			desc, _ := findComment(text, lineIdx, "    ")
-			param := Parameter{
+			param := types.Parameter{
 				Name:        paramMatch[1],
 				Type:        paramMatch[2],
 				Description: desc,
@@ -164,13 +197,13 @@ func (r RustParser) findParameters(name string) ([]Parameter, *Snippet, error) {
 	return params, &snippet, nil
 }
 
-func (r RustParser) mustFindParameters(name string) ([]Parameter, Snippet, error) {
-	params, snippet, err := r.findParameters(name)
+func (r RustParser) mustFindMembers(name string) ([]types.Parameter, types.Snippet, error) {
+	params, snippet, err := r.findMembers(name)
 	if err != nil {
-		return nil, Snippet{}, err
+		return nil, types.Snippet{}, err
 	}
 	if snippet == nil {
-		return nil, Snippet{}, fmt.Errorf("no parameters definition found for %s in %s", name, r.getTypesFile())
+		return nil, types.Snippet{}, fmt.Errorf("no parameters definition found for %s in %s", name, r.getTypesFile())
 	}
 
 	return params, *snippet, nil

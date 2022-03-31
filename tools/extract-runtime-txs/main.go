@@ -12,6 +12,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/oasisprotocol/oasis-sdk/tools/extract-runtime-txs/parsers"
+	"github.com/oasisprotocol/oasis-sdk/tools/extract-runtime-txs/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -30,16 +32,16 @@ var (
 	rootCmd = &cobra.Command{
 		Use:     scriptName,
 		Short:   "Extracts Runtime transactions from formatted Rust, Go and TypeScript code.",
-		Long:    `TODO`,
+		Long:    "See README.md for details.",
 		Example: "./extract-runtime-txs --codebase.path ../.. --markdown",
 		Run:     doExtractRuntimeTxs,
 	}
 )
 
 // refAnchor returns the reference
-func refAnchor(l Lang, fullName string, t RefType) string {
+func refAnchor(l types.Lang, fullName string, t types.RefType) string {
 	refTypeStr := ""
-	if t != Base {
+	if t != types.Base {
 		refTypeStr = fmt.Sprintf("-%s", t)
 	}
 
@@ -47,7 +49,7 @@ func refAnchor(l Lang, fullName string, t RefType) string {
 }
 
 // markdownRef generates [ Go | Rust | TypeScript ] for the provided snippet.
-func markdownRef(fullName string, snippets map[Lang]Snippet, t RefType) string {
+func markdownRef(fullName string, snippets map[types.Lang]types.Snippet, t types.RefType) string {
 	langMarkdown := []string{}
 	for lang, _ := range snippets {
 		ref := fmt.Sprintf("[%s][%s]", lang.ToString(), refAnchor(lang, fullName, t))
@@ -57,7 +59,7 @@ func markdownRef(fullName string, snippets map[Lang]Snippet, t RefType) string {
 	return fmt.Sprintf("[%s]", strings.Join(langMarkdown, " | "))
 }
 
-func markdownParams(params []Parameter) string {
+func markdownParams(params []types.Parameter) string {
 	paramsStr := "\n"
 	for _, p := range params {
 		paramsStr += fmt.Sprintf("- `%s: %s`\n", p.Name, p.Type)
@@ -68,7 +70,7 @@ func markdownParams(params []Parameter) string {
 	return paramsStr
 }
 
-func snippetPath(s Snippet) string {
+func snippetPath(s types.Snippet) string {
 	baseDir := viper.GetString(CfgCodebasePath)
 	if viper.IsSet(CfgMarkdownTplFile) && !viper.IsSet(CfgCodebaseURL) {
 		baseDir = filepath.Dir(viper.GetString(CfgMarkdownTplFile))
@@ -87,7 +89,7 @@ func snippetPath(s Snippet) string {
 	return fmt.Sprintf("%s%s", fileURL, linesStr)
 }
 
-func markdownList(txs []Tx) string {
+func markdownList(txs []types.Tx) string {
 	sort.Slice(txs, func(i, j int) bool {
 		return txs[i].FullName() < txs[j].FullName()
 	})
@@ -100,21 +102,21 @@ func markdownList(txs []Tx) string {
 			lastModule = t.Module
 		}
 		tStr += fmt.Sprintf("### %s\n", t.FullName())
-		tStr += fmt.Sprintf("(%s) %s\n\n", t.Type, markdownRef(t.FullName(), t.Ref, Base))
-		tStr += fmt.Sprintf("#### Parameters %s\n%s\n", markdownRef(t.FullName(), t.ParametersRef, Params), markdownParams(t.Parameters))
+		tStr += fmt.Sprintf("(%s) %s\n\n", t.Type, markdownRef(t.FullName(), t.Ref, types.Base))
+		tStr += fmt.Sprintf("#### Parameters %s\n%s\n", markdownRef(t.FullName(), t.ParametersRef, types.Params), markdownParams(t.Parameters))
 
 		if t.Result != nil {
-			tStr += fmt.Sprintf("#### Result %s\n%s\n", markdownRef(t.FullName(), t.ResultRef, Result), markdownParams(t.Result))
+			tStr += fmt.Sprintf("#### Result %s\n%s\n", markdownRef(t.FullName(), t.ResultRef, types.Result), markdownParams(t.Result))
 		}
 
 		for l, s := range t.Ref {
-			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), Base), snippetPath(s))
+			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), types.Base), snippetPath(s))
 		}
 		for l, s := range t.ParametersRef {
-			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), Params), snippetPath(s))
+			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), types.Params), snippetPath(s))
 		}
 		for l, s := range t.ResultRef {
-			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), Result), snippetPath(s))
+			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), types.Result), snippetPath(s))
 		}
 
 		tStr += "\n"
@@ -123,7 +125,7 @@ func markdownList(txs []Tx) string {
 	return tStr
 }
 
-func printMarkdown(transactions []Tx) {
+func printMarkdown(transactions []types.Tx) {
 	markdown := markdownList(transactions)
 
 	if !viper.IsSet(CfgMarkdownTplFile) {
@@ -141,7 +143,7 @@ func printMarkdown(transactions []Tx) {
 	fmt.Print(mdStr)
 }
 
-func printJSON(m []Tx) {
+func printJSON(m []types.Tx) {
 	data, err := json.Marshal(m)
 	if err != nil {
 		panic(err)
@@ -149,33 +151,13 @@ func printJSON(m []Tx) {
 	fmt.Printf("%s", data)
 }
 
-var transactions = []Tx{}
-
 func doExtractRuntimeTxs(cmd *cobra.Command, args []string) {
-	searchDir := viper.GetString(CfgCodebasePath) + "/runtime-sdk"
-	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
-		if err != nil {
-			log.Fatal(err)
-		}
-		if f.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(f.Name(), ".rs") {
-			return nil
-		}
-		rustParser := RustParser{filename: path}
-		txs, err := rustParser.FindTransactions()
-		if err != nil {
-			return err
-		}
-
-		transactions = append(transactions, txs...)
-
-		return nil
-	})
+	transactions, err := parsers.GenerateInitialTransactions(viper.GetString(CfgCodebasePath) + "/runtime-sdk")
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	parsers.PopulateGoRefs(transactions, viper.GetString(CfgCodebasePath)+"/client-sdk/go")
 
 	if viper.GetBool(CfgMarkdown) {
 		printMarkdown(transactions)

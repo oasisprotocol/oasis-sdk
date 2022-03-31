@@ -1,4 +1,4 @@
-package main
+package types
 
 const (
 	Call  TxType = "call"

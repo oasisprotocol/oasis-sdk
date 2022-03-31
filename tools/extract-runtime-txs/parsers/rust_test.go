@@ -1,7 +1,9 @@
-package main
+package parsers
 
 import (
 	"testing"
+
+	"github.com/oasisprotocol/oasis-sdk/tools/extract-runtime-txs/types"
 
 	"github.com/stretchr/testify/require"
 )
@@ -13,19 +15,19 @@ func TestFindTransactions(t *testing.T) {
 	txs, err := rustParser.FindTransactions()
 	require.NoError(err)
 	require.Equal(
-		[]Tx{
+		[]types.Tx{
 			{
 				Module: "contracts",
 				Name:   "Upload",
-				Type:   Call,
-				Ref: map[Lang]Snippet{
-					Rust: {
+				Type:   types.Call,
+				Ref: map[types.Lang]types.Snippet{
+					types.Rust: {
 						Path:     "tests/rust/basic.rs",
 						LineFrom: 5,
 						LineTo:   95,
 					},
 				},
-				Parameters: []Parameter{
+				Parameters: []types.Parameter{
 					{
 						Name:        "abi",
 						Type:        "ABI",
@@ -42,22 +44,22 @@ func TestFindTransactions(t *testing.T) {
 						Description: "Compiled contract code.",
 					},
 				},
-				ParametersRef: map[Lang]Snippet{
-					Rust: {
+				ParametersRef: map[types.Lang]types.Snippet{
+					types.Rust: {
 						Path:     "tests/rust/types.rs",
 						LineFrom: 82,
 						LineTo:   93,
 					},
 				},
-				Result: []Parameter{
+				Result: []types.Parameter{
 					{
 						Name:        "id",
 						Type:        "CodeId",
 						Description: "Assigned code identifier.",
 					},
 				},
-				ResultRef: map[Lang]Snippet{
-					Rust: {
+				ResultRef: map[types.Lang]types.Snippet{
+					types.Rust: {
 						Path:     "tests/rust/types.rs",
 						LineFrom: 95,
 						LineTo:   100,
@@ -67,31 +69,31 @@ func TestFindTransactions(t *testing.T) {
 			{
 				Module: "contracts",
 				Name:   "Code",
-				Type:   Query,
-				Ref: map[Lang]Snippet{
-					Rust: {
+				Type:   types.Query,
+				Ref: map[types.Lang]types.Snippet{
+					types.Rust: {
 						Path:     "tests/rust/basic.rs",
 						LineFrom: 97,
 						LineTo:   103,
 					},
 				},
-				Parameters: []Parameter{
+				Parameters: []types.Parameter{
 					{
 						Name:        "id",
 						Type:        "CodeId",
 						Description: "Code identifier.",
 					},
 				},
-				ParametersRef: map[Lang]Snippet{
-					Rust: {
+				ParametersRef: map[types.Lang]types.Snippet{
+					types.Rust: {
 						Path:     "tests/rust/types.rs",
 						LineFrom: 159,
 						LineTo:   164,
 					},
 				},
-				Result: []Parameter{},
-				ResultRef: map[Lang]Snippet{
-					Rust: {
+				Result: []types.Parameter{},
+				ResultRef: map[types.Lang]types.Snippet{
+					types.Rust: {
 						Path:     "tests/rust/types.rs",
 						LineFrom: 48,
 						LineTo:   52,
@@ -111,22 +113,22 @@ func TestFindTransactionsComments(t *testing.T) {
 	txs, err := rustParser.FindTransactions()
 	require.NoError(err)
 	require.Equal(
-		[]Tx{
+		[]types.Tx{
 			{
 				Module:  "consensus",
 				Name:    "Deposit",
 				Comment: "Some comment.",
-				Type:    Call,
-				Ref: map[Lang]Snippet{
-					Rust: {
+				Type:    types.Call,
+				Ref: map[types.Lang]types.Snippet{
+					types.Rust: {
 						Path:     "tests/rust/basic_comments.rs",
 						LineFrom: 10,
 						LineTo:   22,
 					},
 				},
-				Parameters: []Parameter{},
-				ParametersRef: map[Lang]Snippet{
-					Rust: {
+				Parameters: []types.Parameter{},
+				ParametersRef: map[types.Lang]types.Snippet{
+					types.Rust: {
 						Path:     "tests/rust/types.rs",
 						LineFrom: 174,
 						LineTo:   180,
@@ -137,17 +139,17 @@ func TestFindTransactionsComments(t *testing.T) {
 				Module:  "consensus",
 				Name:    "Balance",
 				Comment: "Some multiline comment.",
-				Type:    Query,
-				Ref: map[Lang]Snippet{
-					Rust: {
+				Type:    types.Query,
+				Ref: map[types.Lang]types.Snippet{
+					types.Rust: {
 						Path:     "tests/rust/basic_comments.rs",
 						LineFrom: 24,
 						LineTo:   40,
 					},
 				},
-				Parameters: []Parameter{},
-				ParametersRef: map[Lang]Snippet{
-					Rust: {
+				Parameters: []types.Parameter{},
+				ParametersRef: map[types.Lang]types.Snippet{
+					types.Rust: {
 						Path:     "tests/rust/types.rs",
 						LineFrom: 182,
 						LineTo:   185,
