@@ -198,3 +198,26 @@ jobs:
         uses: nosborn/github-action-markdown-cli@v3.1.0
         with:
           files: docs
+
+  lint-generated-docs:
+    name: lint-generated-docs
+    runs-on: ubuntu-latest
+    env:
+      TX_FILE: ../../docs/runtime/transactions.md
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+      - name: Compile extract-runtime-txs
+        run: |
+          cd tools/extract-runtime-txs
+          go build
+      - name: Check runtime transactions sync
+        run: |
+          cp ${TX_FILE} ${TX_FILE}.orig
+          ./extract-runtime-txs \
+            --codebase.path ../.. \
+            --markdown \
+            --markdown.template.file ${TX_FILE}.tpl \
+            --codebase.url https://github.com/oasisprotocol/oasis-sdk/tree/master/
+          diff -u ${TX_FILE}.orig ${TX_FILE} || \
+            echo "Runtime transactions docs should be updated. Please check tools/extract-runtime-txs/README.md." && exit 1
