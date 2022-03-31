@@ -7,7 +7,7 @@
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     Module<Accounts, Consensus>
 {
-    /// Comment.
+    /// Some comment.
     #[handler(call = "consensus.Deposit")]
     fn tx_deposit<C: TxContext>(ctx: &mut C, body: types::Deposit) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
@@ -21,7 +21,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         Self::deposit(ctx, address, nonce, body.to.unwrap_or(address), body.amount)
     }
 
-    /// Multiline
+    /// Some multiline
     /// comment.
     #[handler(query = "consensus.Balance")]
     fn query_balance<C: Context>(

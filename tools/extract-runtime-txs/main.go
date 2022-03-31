@@ -29,7 +29,7 @@ var (
 
 	rootCmd = &cobra.Command{
 		Use:     scriptName,
-		Short:   "Extracts Runtime transactions from Rust, Go and TypeScript code.",
+		Short:   "Extracts Runtime transactions from formatted Rust, Go and TypeScript code.",
 		Long:    `TODO`,
 		Example: "./extract-runtime-txs --codebase.path ../.. --markdown",
 		Run:     doExtractRuntimeTxs,
@@ -39,7 +39,7 @@ var (
 // refAnchor returns the reference
 func refAnchor(l Lang, fullName string, t RefType) string {
 	refTypeStr := ""
-	if t!=Base {
+	if t != Base {
 		refTypeStr = fmt.Sprintf("-%s", t)
 	}
 
@@ -58,7 +58,14 @@ func markdownRef(fullName string, snippets map[Lang]Snippet, t RefType) string {
 }
 
 func markdownParams(params []Parameter) string {
-	return "\n- param1\n- param 2"
+	paramsStr := "\n"
+	for _, p := range params {
+		paramsStr += fmt.Sprintf("- `%s: %s`\n", p.Name, p.Type)
+		if p.Description != "" {
+			paramsStr += fmt.Sprintf("  %s\n", p.Description)
+		}
+	}
+	return paramsStr
 }
 
 func snippetPath(s Snippet) string {
@@ -68,7 +75,7 @@ func snippetPath(s Snippet) string {
 		baseDir = filepath.Dir(viper.GetString(CfgMarkdownTplFile))
 	}*/
 	locStr := ""
-	if s.LineFrom != 0{
+	if s.LineFrom != 0 {
 		locStr = fmt.Sprintf("#L%d", s.LineFrom)
 		if s.LineTo != s.LineFrom {
 			locStr += fmt.Sprintf("-L%d", s.LineTo)
@@ -89,17 +96,17 @@ func markdownList(txs []Tx) string {
 		tStr += fmt.Sprintf("### Parameters\n%s\n%s\n", markdownRef(t.FullName(), t.ParametersRef, Params), markdownParams(t.Parameters))
 
 		if t.Result != nil {
-			tStr += fmt.Sprintf("### Result\n%s\n%s\n", markdownRef(t.FullName(), t.ResultRef, Result), markdownParams([]Parameter{*t.Result}))
+			tStr += fmt.Sprintf("### Result\n%s\n%s\n", markdownRef(t.FullName(), t.ResultRef, Result), markdownParams(t.Result))
 		}
 
 		for l, s := range t.Ref {
-			tStr += fmt.Sprintf("[%s]: %s", refAnchor(l, t.FullName(), Base), snippetPath(s))
+			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), Base), snippetPath(s))
 		}
 		for l, s := range t.ParametersRef {
-			tStr += fmt.Sprintf("[%s]: %s", refAnchor(l, t.FullName(), Params), snippetPath(s))
+			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), Params), snippetPath(s))
 		}
 		for l, s := range t.ResultRef {
-			tStr += fmt.Sprintf("[%s]: %s", refAnchor(l, t.FullName(), Result), snippetPath(s))
+			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), Result), snippetPath(s))
 		}
 
 		tStr += "\n"

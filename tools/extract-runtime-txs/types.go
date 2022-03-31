@@ -67,7 +67,7 @@ type Tx struct {
 	Ref           map[Lang]Snippet `json:"ref"`
 	Parameters    []Parameter      `json:"parameters"`
 	ParametersRef map[Lang]Snippet `json:"parameters_ref"`
-	Result        *Parameter       `json:"result"`
+	Result        []Parameter      `json:"result"`
 	ResultRef     map[Lang]Snippet `json:"result_ref"`
 }
 

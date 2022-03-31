@@ -48,20 +48,7 @@ pub enum ABI {
 /// Stored code information.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Code {
-    /// Unique code identifier.
-    pub id: CodeId,
-
-    /// Code hash.
-    pub hash: Hash,
-
-    /// ABI.
-    pub abi: ABI,
-
-    /// Code uploader address.
-    pub uploader: Address,
-
-    /// Who is allowed to instantiate this code.
-    pub instantiate_policy: Policy,
+    // omitted for tests...
 }
 
 /// Deployed code instance information.
@@ -183,109 +170,16 @@ pub struct InstanceQuery {
     pub id: InstanceId,
 }
 
-/// Instance storage query.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct InstanceStorageQuery {
-    /// Instance identifier.
-    pub id: InstanceId,
 
-    /// Storage key.
-    pub key: Vec<u8>,
+/// Deposit into runtime call.
+/// Transfer from consensus staking to an account in this runtime.
+/// The transaction signer has a consensus layer allowance benefiting this runtime's staking
+/// address. The `to` address runtime account gets the tokens.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct Deposit {
 }
 
+/// Balance query.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct InstanceStorageQueryResult {
-    /// Storage value or `None` if key doesn't exist.
-    pub value: Option<Vec<u8>>,
-}
-
-/// Public key kind.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-#[repr(u8)]
-pub enum PublicKeyKind {
-    Transaction = 1,
-}
-
-/// Public key query.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct PublicKeyQuery {
-    /// Instance identifier.
-    pub id: InstanceId,
-
-    /// Kind of public key.
-    pub kind: PublicKeyKind,
-}
-
-/// Public key query result.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct PublicKeyQueryResult {
-    /// Public key.
-    pub key: Vec<u8>,
-
-    /// Checksum of the key manager state.
-    pub checksum: Vec<u8>,
-
-    /// Sign(sk, (key || checksum)) from the key manager.
-    pub signature: Vec<u8>,
-}
-
-/// Custom contract query.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct CustomQuery {
-    /// Instance identifier.
-    pub id: InstanceId,
-
-    /// Query arguments.
-    pub data: Vec<u8>,
-}
-
-/// Custom query result.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-#[cbor(transparent)]
-pub struct CustomQueryResult(pub Vec<u8>);
-
-/// An event emitted from a contract, wrapped to include additional metadata.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct ContractEvent {
-    /// Identifier of the instance that emitted the event.
-    pub id: InstanceId,
-    /// Raw event data emitted by the instance.
-    #[cbor(optional, default, skip_serializing_if = "Vec::is_empty")]
-    pub data: Vec<u8>,
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_instanceid_to_address() {
-        let tcs = vec![
-            (
-                InstanceId::from(0),
-                "oasis1qq08mjlkztsgpgrar082rzzxwjaplxmgjs5ftugn",
-            ),
-            (
-                InstanceId::from(1),
-                "oasis1qpg6jv8mxwlv4z578xyjxl7d793jamltdg9czzkx",
-            ),
-            (
-                InstanceId::from(14324),
-                "oasis1qzasj0kq0hlq6vzw4ajhrwgp3tqx6rnwvg2ylu2v",
-            ),
-            (
-                InstanceId::from(u64::MAX),
-                "oasis1qqr0nxsu5aqpu4k85z4h5z08vrfmawnnqycl6gup",
-            ),
-        ];
-
-        for (id, address) in tcs {
-            let instance_address = Instance::address_for(id);
-            assert_eq!(
-                instance_address.to_bech32(),
-                address.to_string(),
-                "instance address should match"
-            );
-        }
-    }
+pub struct BalanceQuery {
 }
