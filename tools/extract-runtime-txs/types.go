@@ -8,7 +8,7 @@ const (
 	Go         Lang = "go"
 	TypeScript Lang = "typescript"
 
-	Base RefType = "base"
+	Base   RefType = "base"
 	Params RefType = "params"
 	Result RefType = "result"
 )
@@ -62,6 +62,7 @@ type Snippet struct {
 type Tx struct {
 	Module        string           `json:"module"`
 	Name          string           `json:"name"`
+	Comment       string           `json:"comment"`
 	Type          TxType           `json:"type"`
 	Ref           map[Lang]Snippet `json:"ref"`
 	Parameters    []Parameter      `json:"parameters"`
