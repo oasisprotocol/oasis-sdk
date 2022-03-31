@@ -203,7 +203,7 @@ jobs:
     name: lint-generated-docs
     runs-on: ubuntu-latest
     env:
-      TX_FILE: ../../docs/runtime/transactions.md
+      TXS_FILE: ../../docs/runtime/transactions.md
     steps:
       - name: Set up Go
         uses: actions/setup-go@v3
@@ -213,11 +213,12 @@ jobs:
           go build
       - name: Check runtime transactions sync
         run: |
-          cp ${TX_FILE} ${TX_FILE}.orig
+          cp ${TXS_FILE} ${TXS_FILE}.orig
           ./extract-runtime-txs \
             --codebase.path ../.. \
             --markdown \
-            --markdown.template.file ${TX_FILE}.tpl \
-            --codebase.url https://github.com/oasisprotocol/oasis-sdk/tree/master/
-          diff -u ${TX_FILE}.orig ${TX_FILE} || \
+            --markdown.template.file ${TXS_FILE}.tpl \
+            --codebase.url https://github.com/oasisprotocol/oasis-sdk/tree/master/ \
+            > ${TXS_FILE}
+          diff -u ${TXS_FILE}.orig ${TXS_FILE} || \
             echo "Runtime transactions docs should be updated. Please check tools/extract-runtime-txs/README.md." && exit 1
