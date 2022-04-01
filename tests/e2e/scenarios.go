@@ -34,7 +34,7 @@ var (
 	})
 
 	// SimpleConsensusRuntime is the simple-consensus runtime test.
-	SimpleConsensusRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-consensus", []RunTestFunction{SimpleConsensusTest, ConsensusAccountsParametersTest})
+	SimpleConsensusRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-consensus", []RunTestFunction{SimpleConsensusTest, ConsensusAccountsParametersTest, IncomingMessagesTest})
 
 	// SimpleEVMRuntime is the simple-evm runtime test.
 	SimpleEVMRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-evm", []RunTestFunction{

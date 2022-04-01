@@ -342,7 +342,9 @@ impl<R: Runtime> Dispatcher<R> {
         data: &IncomingMessageData,
         tx: &Option<Transaction>,
     ) -> Result<(), RuntimeError> {
+        warn!(ctx.get_logger("dispatcher"), "incoming message executing"; "id" => in_msg.id); // %%%
         R::Modules::execute_in_msg(ctx, in_msg, data, tx)?;
+        warn!(ctx.get_logger("dispatcher"), "incoming message modules done"; "id" => in_msg.id); // %%%
         if let Some(tx) = tx {
             let tx_size = match data
                 .ut
@@ -360,7 +362,11 @@ impl<R: Runtime> Dispatcher<R> {
             // Use the ID as index.
             let index = in_msg.id.try_into().unwrap();
             // todo: put result tags in block
-            Self::execute_tx(ctx, tx_size, tx.clone(), index)?;
+            let result = Self::execute_tx(ctx, tx_size, tx.clone(), index)?;
+            let result_parsed = cbor::from_slice::<crate::types::transaction::CallResult>(&result.output).unwrap();
+            warn!(ctx.get_logger("dispatcher"), "incoming message transaction done"; "id" => in_msg.id, "result_parsed" => ?result_parsed); // %%%
+        } else {
+            warn!(ctx.get_logger("dispatcher"), "incoming message no transaction"; "id" => in_msg.id); // %%%
         }
         Ok(())
     }
