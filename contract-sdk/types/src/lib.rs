@@ -1,6 +1,7 @@
 //! A collection of common types used by the Oasis Contract SDK.
 
 pub mod address;
+pub mod crypto;
 pub mod env;
 pub mod event;
 pub mod message;

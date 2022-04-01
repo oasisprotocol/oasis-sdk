@@ -211,7 +211,10 @@ type GasCosts struct {
 	WASMStorageValueByte  uint64 `json:"wasm_storage_value_byte"`
 	WASMEnvQueryBase      uint64 `json:"wasm_env_query_base"`
 
-	WASMCryptoECDSARecover uint64 `json:"wasm_crypto_ecdsa_recover"`
+	WASMCryptoECDSARecover             uint64 `json:"wasm_crypto_ecdsa_recover"`
+	WASMCryptoSignatureVerifyEd25519   uint64 `json:"wasm_crypto_signature_verify_ed25519"`
+	WASMCryptoSignatureVerifySecp256k1 uint64 `json:"wasm_crypto_signature_verify_secp256k1"`
+	WASMCryptoSignatureVerifySr25519   uint64 `json:"wasm_crypto_signature_verify_sr25519"`
 }
 
 // Parameters are the parameters for the contracts module.
@@ -223,10 +226,11 @@ type Parameters struct {
 	MaxSubcallDepth uint16 `json:"max_subcall_depth"`
 	MaxSubcallCount uint16 `json:"max_subcall_count"`
 
-	MaxResultSizeBytes       uint32 `json:"max_result_size_bytes"`
-	MaxQuerySizeBytes        uint32 `json:"max_query_size_bytes"`
-	MaxStorageKeySizeBytes   uint32 `json:"max_storage_key_size_bytes"`
-	MaxStorageValueSizeBytes uint32 `json:"max_storage_value_size_bytes"`
+	MaxResultSizeBytes                       uint32 `json:"max_result_size_bytes"`
+	MaxQuerySizeBytes                        uint32 `json:"max_query_size_bytes"`
+	MaxStorageKeySizeBytes                   uint32 `json:"max_storage_key_size_bytes"`
+	MaxStorageValueSizeBytes                 uint32 `json:"max_storage_value_size_bytes"`
+	MaxCryptoSignatureVerifyMessageSizeBytes uint32 `json:"max_crypto_signature_verify_message_size_bytes"`
 
 	GasCosts GasCosts `json:"gas_costs"`
 }

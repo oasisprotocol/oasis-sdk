@@ -1,6 +1,7 @@
 package secp256k1
 
 import (
+	"crypto/sha256"
 	"runtime"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -25,6 +26,15 @@ func (s Signer) ContextSign(context, message []byte) ([]byte, error) {
 	}
 
 	sig, err := s.privateKey.Sign(data)
+	if err != nil {
+		return nil, err
+	}
+	return sig.Serialize(), nil
+}
+
+func (s Signer) Sign(message []byte) ([]byte, error) {
+	digest := sha256.Sum256(message)
+	sig, err := s.privateKey.Sign(digest[:])
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,8 @@
 package ed25519
 
 import (
+	"fmt"
+
 	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -16,6 +18,10 @@ func (w wrappedSigner) Public() signature.PublicKey {
 
 func (w wrappedSigner) ContextSign(context, message []byte) ([]byte, error) {
 	return w.signer.ContextSign(coreSignature.Context(context), message)
+}
+
+func (w wrappedSigner) Sign(message []byte) ([]byte, error) {
+	return nil, fmt.Errorf("ed25519: signing without context not implemented")
 }
 
 func (w wrappedSigner) String() string {

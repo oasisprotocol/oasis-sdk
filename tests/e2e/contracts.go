@@ -8,13 +8,22 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/btcsuite/btcd/btcec"
 	"google.golang.org/grpc"
 
+	voiEd "github.com/oasisprotocol/curve25519-voi/primitives/ed25519"
+	voiSr "github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
+
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
+	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/sr25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/contracts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/contracts/oas20"
@@ -30,6 +39,40 @@ var oas20ContractCode []byte
 
 type HelloInitiate struct {
 	InitialCounter uint64 `json:"initial_counter"`
+}
+
+type voiEd25519Signer struct {
+	privateKey voiEd.PrivateKey
+}
+
+func (v *voiEd25519Signer) Public() signature.PublicKey {
+	var pk coreSignature.PublicKey
+	_ = pk.UnmarshalBinary(v.privateKey.Public().(voiEd.PublicKey))
+	return ed25519.PublicKey(pk)
+}
+
+func (v *voiEd25519Signer) ContextSign(context, message []byte) ([]byte, error) {
+	return nil, fmt.Errorf("test signer only for raw signing")
+}
+
+func (v *voiEd25519Signer) Sign(message []byte) ([]byte, error) {
+	return voiEd.Sign(v.privateKey, message), nil
+}
+
+func (v *voiEd25519Signer) String() string {
+	return "very private"
+}
+
+func (v *voiEd25519Signer) Reset() {
+	for idx := range v.privateKey {
+		v.privateKey[idx] = 0
+	}
+}
+
+func newEd25519Signer(seed string) *voiEd25519Signer {
+	return &voiEd25519Signer{
+		privateKey: voiEd.NewKeyFromSeed([]byte(seed)),
+	}
 }
 
 // ContractsTest does a simple upload/instantiate/call contract test.
@@ -407,6 +450,79 @@ OUTER:
 	}
 	if !bytes.Equal(testPubKey, ecdsaOutput["output"]) {
 		return fmt.Errorf("unexpected ecdsa_recover result: %v", ecdsaOutput["output"])
+	}
+
+	// Test signature verification.
+	ed25519Signer := newEd25519Signer("this has 32 bytes  on the  whole")
+	ed25519PkBytes, _ := ed25519Signer.Public().(ed25519.PublicKey).MarshalBinary()
+
+	pk, err := btcec.NewPrivateKey(btcec.S256())
+	if err != nil {
+		return err
+	}
+	secp256k1Signer := secp256k1.NewSigner(pk.Serialize())
+	secp256k1PkBytes, _ := secp256k1Signer.Public().(secp256k1.PublicKey).MarshalBinary()
+
+	kp, err := voiSr.GenerateKeyPair(nil)
+	if err != nil {
+		return err
+	}
+	sr25519Signer := sr25519.NewSignerFromKeyPair(kp)
+	sr25519PkBytes, _ := sr25519Signer.Public().(sr25519.PublicKey).MarshalBinary()
+
+	message := []byte("message")
+	signers := []struct {
+		signer   signature.Signer
+		keyBytes []byte
+		context  []byte
+	}{{ed25519Signer, ed25519PkBytes, []byte{}}, {secp256k1Signer, secp256k1PkBytes, []byte{}}, {sr25519Signer, sr25519PkBytes, []byte("context")}}
+
+	callCount := uint64(10)
+	for _, messageSigner := range signers {
+		var signature []byte
+		if len(messageSigner.context) > 0 {
+			signature, err = messageSigner.signer.ContextSign(messageSigner.context, message)
+		} else {
+			signature, err = messageSigner.signer.Sign(message)
+		}
+		if err != nil {
+			return err
+		}
+
+		for i, checker := range signers {
+			tb = ct.Call(
+				instance.ID,
+				map[string]map[string]interface{}{
+					"signature_verify": {
+						"kind":      uint32(i),
+						"key":       checker.keyBytes,
+						"context":   messageSigner.context,
+						"message":   message,
+						"signature": signature,
+					},
+				},
+				[]types.BaseUnits{},
+			).
+				SetFeeGas(1_000_000).
+				AppendAuthSignature(testing.Alice.SigSpec, nonce+callCount)
+			_ = tb.AppendSign(ctx, signer)
+			callCount++
+
+			if err = tb.SubmitTx(ctx, &rawResult); err != nil {
+				return fmt.Errorf("failed to call hello contract: %w", err)
+			}
+
+			var verifyResponse map[string]struct {
+				Result bool `json:"result"`
+			}
+			if err = cbor.Unmarshal(rawResult, &verifyResponse); err != nil {
+				return fmt.Errorf("failed to decode contract result: %w", err)
+			}
+			signatureVerify := verifyResponse["signature_verify"]
+			if signatureVerify.Result != (messageSigner.signer == checker.signer) {
+				return fmt.Errorf("incorrect signature verification result, got %v, should be %v (call %d)", signatureVerify.Result, messageSigner.signer == checker.signer, callCount)
+			}
+		}
 	}
 
 	return nil

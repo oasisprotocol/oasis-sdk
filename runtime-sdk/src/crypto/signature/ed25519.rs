@@ -56,6 +56,19 @@ impl PublicKey {
         sig.verify(&self.0, context, message)
             .map_err(|_| Error::VerificationFailed)
     }
+
+    /// Verify signature without applying domain separation.
+    pub fn verify_raw(&self, message: &[u8], signature: &Signature) -> Result<(), Error> {
+        // CoreSignature::from doesn't support error checking either.
+        if signature.0.len() != CoreSignature::len() {
+            return Err(Error::MalformedSignature);
+        }
+        let sig: &[u8] = signature.0.as_ref();
+        let sig = CoreSignature::from(sig);
+
+        sig.verify_raw(&self.0, message)
+            .map_err(|_| Error::VerificationFailed)
+    }
 }
 
 impl From<&'static str> for PublicKey {

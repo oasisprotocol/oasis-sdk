@@ -23,4 +23,19 @@ pub trait Env {
 pub trait Crypto {
     /// ECDSA public key recovery function.
     fn ecdsa_recover(&self, input: &[u8]) -> [u8; 65];
+
+    /// Verify an ed25519 message signature.
+    fn signature_verify_ed25519(&self, key: &[u8], message: &[u8], signature: &[u8]) -> bool;
+
+    /// Verify a secp256k1 message signature.
+    fn signature_verify_secp256k1(&self, key: &[u8], message: &[u8], signature: &[u8]) -> bool;
+
+    /// Verify an sr25519 message signature.
+    fn signature_verify_sr25519(
+        &self,
+        key: &[u8],
+        context: &[u8],
+        message: &[u8],
+        signature: &[u8],
+    ) -> bool;
 }

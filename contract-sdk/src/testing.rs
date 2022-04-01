@@ -2,6 +2,7 @@
 use std::collections::BTreeMap;
 
 use oasis_contract_sdk_crypto as crypto;
+use oasis_runtime_sdk::crypto::signature;
 
 use crate::{
     context::Context,
@@ -87,6 +88,42 @@ impl Env for MockEnv {
 impl Crypto for MockEnv {
     fn ecdsa_recover(&self, input: &[u8]) -> [u8; 65] {
         crypto::ecdsa::recover(input).unwrap()
+    }
+
+    fn signature_verify_ed25519(&self, key: &[u8], message: &[u8], signature: &[u8]) -> bool {
+        let key = if let Ok(key) = signature::ed25519::PublicKey::from_bytes(key) {
+            key
+        } else {
+            return false;
+        };
+        let sig: signature::Signature = signature.to_vec().into();
+        key.verify_raw(message, &sig).is_ok()
+    }
+
+    fn signature_verify_secp256k1(&self, key: &[u8], message: &[u8], signature: &[u8]) -> bool {
+        let key = if let Ok(key) = signature::secp256k1::PublicKey::from_bytes(key) {
+            key
+        } else {
+            return false;
+        };
+        let sig: signature::Signature = signature.to_vec().into();
+        key.verify_raw(message, &sig).is_ok()
+    }
+
+    fn signature_verify_sr25519(
+        &self,
+        key: &[u8],
+        context: &[u8],
+        message: &[u8],
+        signature: &[u8],
+    ) -> bool {
+        let key = if let Ok(key) = signature::sr25519::PublicKey::from_bytes(key) {
+            key
+        } else {
+            return false;
+        };
+        let sig: signature::Signature = signature.to_vec().into();
+        key.verify(context, message, &sig).is_ok()
     }
 }
 

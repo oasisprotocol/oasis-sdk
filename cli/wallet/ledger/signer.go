@@ -52,6 +52,10 @@ func (ls *ledgerSigner) ContextSign(context, message []byte) ([]byte, error) {
 	return nil, fmt.Errorf("ledger: signing paratime transactions not supported")
 }
 
+func (ls *ledgerSigner) Sign(message []byte) ([]byte, error) {
+	return nil, fmt.Errorf("ledger: signing paratime transactions not supported")
+}
+
 func (ls *ledgerSigner) String() string {
 	return fmt.Sprintf("[ledger signer: %s]", ls.pk)
 }

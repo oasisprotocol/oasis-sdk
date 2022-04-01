@@ -1,6 +1,8 @@
 package sr25519
 
 import (
+	"fmt"
+
 	"github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -25,6 +27,10 @@ func (s *signer) ContextSign(context, message []byte) ([]byte, error) {
 	}
 
 	return sig.MarshalBinary()
+}
+
+func (s *signer) Sign(message []byte) ([]byte, error) {
+	return nil, fmt.Errorf("sr25519: signing without context not implemented")
 }
 
 func (s *signer) String() string {
