@@ -2,6 +2,7 @@ package testing
 
 import (
 	"crypto/sha512"
+	"os"
 
 	"golang.org/x/crypto/sha3"
 
@@ -28,7 +29,7 @@ type TestKey struct {
 }
 
 func newEd25519TestKey(seed string) TestKey {
-	consensusSigner := memorySigner.NewTestSigner(seed)
+	consensusSigner := memorySigner.NewTestSigner(seed + ", tweak " + os.Getenv("OASIS_TEST_KEY_TWEAK"))
 	signer := ed25519.WrapSigner(consensusSigner)
 	sigspec := types.NewSignatureAddressSpecEd25519(signer.Public().(ed25519.PublicKey))
 	return TestKey{
@@ -40,7 +41,7 @@ func newEd25519TestKey(seed string) TestKey {
 }
 
 func newSecp256k1TestKey(seed string) TestKey {
-	pk := sha512.Sum512_256([]byte(seed))
+	pk := sha512.Sum512_256([]byte(seed + ", tweak " + os.Getenv("OASIS_TEST_KEY_TWEAK")))
 	signer := secp256k1.NewSigner(pk[:])
 	sigspec := types.NewSignatureAddressSpecSecp256k1Eth(signer.Public().(secp256k1.PublicKey))
 
