@@ -175,6 +175,20 @@ pub trait API {
         denomination: token::Denomination,
     ) -> Result<u128, Error>;
 
+    /// Ensures that the given account has at least the specified balance.
+    fn ensure_balance<S: storage::Store>(
+        state: S,
+        address: Address,
+        amount: &token::BaseUnits,
+    ) -> Result<(), Error> {
+        let balance = Self::get_balance(state, address, amount.denomination().clone())?;
+        if balance < amount.amount() {
+            Err(Error::InsufficientBalance)
+        } else {
+            Ok(())
+        }
+    }
+
     /// Fetch an account's current balances.
     fn get_balances<S: storage::Store>(
         state: S,
@@ -223,13 +237,13 @@ pub trait API {
     /// Return payee address.
     fn check_signer_nonces<C: Context>(
         ctx: &mut C,
-        tx: &Transaction,
+        tx_auth_info: &AuthInfo,
     ) -> Result<Option<Address>, modules::core::Error>;
 
     /// Update transaction signer account nonces.
     fn update_signer_nonces<C: Context>(
         ctx: &mut C,
-        tx: &Transaction,
+        tx_auth_info: &AuthInfo,
     ) -> Result<(), modules::core::Error>;
 }
 
@@ -609,7 +623,7 @@ impl API for Module {
 
     fn check_signer_nonces<C: Context>(
         ctx: &mut C,
-        tx: &Transaction,
+        auth_info: &AuthInfo,
     ) -> Result<Option<Address>, modules::core::Error> {
         // TODO: Optimize the check/update pair so that the accounts are
         // fetched only once.
@@ -619,7 +633,7 @@ impl API for Module {
         let accounts =
             storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
         let mut payee = None;
-        for si in tx.auth_info.signer_info.iter() {
+        for si in auth_info.signer_info.iter() {
             let address = si.address_spec.address();
             let account: types::Account = accounts.get(&address).unwrap_or_default();
             if account.nonce != si.nonce {
@@ -639,13 +653,13 @@ impl API for Module {
 
     fn update_signer_nonces<C: Context>(
         ctx: &mut C,
-        tx: &Transaction,
+        auth_info: &AuthInfo,
     ) -> Result<(), modules::core::Error> {
         // Fetch information about each signer.
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut accounts =
             storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
-        for si in tx.auth_info.signer_info.iter() {
+        for si in auth_info.signer_info.iter() {
             let address = si.address_spec.address();
             let mut account: types::Account = accounts.get(&address).unwrap_or_default();
 
@@ -686,6 +700,7 @@ impl Module {
 
         Ok(())
     }
+
     #[handler(call = "accounts.Transfer")]
     fn tx_transfer<C: TxContext>(ctx: &mut C, body: types::Transfer) -> Result<(), Error> {
         let params = Self::params(ctx.runtime_state());
@@ -837,13 +852,22 @@ impl module::TransactionHandler for Module {
         ctx: &mut C,
         tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
-        let payee = Self::check_signer_nonces(ctx, tx)?;
+        let payee = Self::check_signer_nonces(ctx, &tx.auth_info)?;
 
         // Charge the specified amount of fees.
         if !tx.auth_info.fee.amount.amount().is_zero() {
             let payee = payee.expect("at least one signer is always present");
 
-            Self::move_into_fee_accumulator(ctx, payee, &tx.auth_info.fee.amount)?;
+            if ctx.is_check_only() {
+                // Do not update balances during transaction checks. In case of checks, only do it
+                // after all the other checks have already passed as otherwise retrying the
+                // transaction will not be possible.
+                Self::ensure_balance(ctx.runtime_state(), payee, &tx.auth_info.fee.amount)
+                    .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
+            } else {
+                // Actually perform the move.
+                Self::move_into_fee_accumulator(ctx, payee, &tx.auth_info.fee.amount)?;
+            }
 
             // TODO: Emit event that fee has been paid.
 
@@ -854,7 +878,39 @@ impl module::TransactionHandler for Module {
                 gas_price.try_into().unwrap_or(u64::MAX),
             )?;
         }
-        Self::update_signer_nonces(ctx, tx)
+
+        // Do not update nonces early during transaction checks. In case of checks, only do it after
+        // all the other checks have already passed as otherwise retrying the transaction will not
+        // be possible.
+        if !ctx.is_check_only() {
+            Self::update_signer_nonces(ctx, &tx.auth_info)?;
+        }
+
+        Ok(())
+    }
+
+    fn after_dispatch_tx<C: Context>(
+        ctx: &mut C,
+        tx_auth_info: &AuthInfo,
+        result: &module::CallResult,
+    ) {
+        if !ctx.is_check_only() {
+            // Do nothing outside transaction checks.
+            return;
+        }
+        if !matches!(result, module::CallResult::Ok(_)) {
+            // Do nothing in case the call failed to allow retries.
+            return;
+        }
+
+        // Update payee balance.
+        let payee = Self::check_signer_nonces(ctx, tx_auth_info).unwrap(); // Already checked.
+        let payee = payee.unwrap(); // Already checked.
+        let amount = &tx_auth_info.fee.amount;
+        Self::sub_amount(ctx.runtime_state(), payee, amount).unwrap(); // Already checked.
+
+        // Update nonces.
+        Self::update_signer_nonces(ctx, tx_auth_info).unwrap();
     }
 }
 
