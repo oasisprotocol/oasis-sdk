@@ -1,9 +1,12 @@
 [package]
 name = "test-runtime-simple-consensus"
-version = "0.1.0"
+version = "0.0.0"
 authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
 edition = "2018"
 license = "Apache-2.0"
+
+[package.metadata.orc.release]
+runtime-id = "0000000000000000fcf3d0b68fa02c3bf7c0e853bf147af28c5ca82cfbdd2840"
 
 [dependencies]
 oasis-runtime-sdk = { path = "../../../runtime-sdk" }
