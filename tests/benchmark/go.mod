@@ -15,7 +15,7 @@ replace (
 )
 
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2200.2
+	github.com/oasisprotocol/oasis-core/go v0.2201.0
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.12.1
 	github.com/spf13/cobra v1.3.0
@@ -98,7 +98,7 @@ require (
 	github.com/libp2p/go-conn-security-multistream v0.3.0 // indirect
 	github.com/libp2p/go-eventbus v0.2.1 // indirect
 	github.com/libp2p/go-flow-metrics v0.0.3 // indirect
-	github.com/libp2p/go-libp2p v0.18.0-rc6 // indirect
+	github.com/libp2p/go-libp2p v0.18.0 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-blankhost v0.3.0 // indirect
 	github.com/libp2p/go-libp2p-core v0.14.0 // indirect
@@ -110,7 +110,7 @@ require (
 	github.com/libp2p/go-libp2p-pnet v0.2.0 // indirect
 	github.com/libp2p/go-libp2p-pubsub v0.6.1 // indirect
 	github.com/libp2p/go-libp2p-quic-transport v0.16.1 // indirect
-	github.com/libp2p/go-libp2p-resource-manager v0.1.3 // indirect
+	github.com/libp2p/go-libp2p-resource-manager v0.1.5 // indirect
 	github.com/libp2p/go-libp2p-swarm v0.10.2 // indirect
 	github.com/libp2p/go-libp2p-tls v0.3.1 // indirect
 	github.com/libp2p/go-libp2p-transport-upgrader v0.7.1 // indirect

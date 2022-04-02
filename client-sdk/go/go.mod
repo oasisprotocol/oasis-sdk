@@ -14,7 +14,7 @@ require (
 	github.com/golang/snappy v0.0.4
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20211219162838-e9a669f65da9
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
-	github.com/oasisprotocol/oasis-core/go v0.2200.2
+	github.com/oasisprotocol/oasis-core/go v0.2201.0
 	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210915214749-c084706c2272
