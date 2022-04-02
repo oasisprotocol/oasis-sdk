@@ -10,7 +10,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20211219162838-e9a669f65da9
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
-	github.com/oasisprotocol/oasis-core/go v0.2200.2
+	github.com/oasisprotocol/oasis-core/go v0.2201.0
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.3.0

@@ -582,8 +582,8 @@ github.com/libp2p/go-eventbus v0.2.1/go.mod h1:jc2S4SoEVPP48H9Wpzm5aiGwUCBMfGhVh
 github.com/libp2p/go-flow-metrics v0.0.1/go.mod h1:Iv1GH0sG8DtYN3SVJ2eG221wMiNpZxBdp967ls1g+k8=
 github.com/libp2p/go-flow-metrics v0.0.3 h1:8tAs/hSdNvUiLgtlSy3mxwxWP4I9y/jlkPFT7epKdeM=
 github.com/libp2p/go-flow-metrics v0.0.3/go.mod h1:HeoSNUrOJVK1jEpDqVEiUOIXqhbnS27omG0uWU5slZs=
-github.com/libp2p/go-libp2p v0.18.0-rc6 h1:IR6TVPYGo1wDY0tY61gyPQVxK1koOkXh49ejVfAnH7A=
-github.com/libp2p/go-libp2p v0.18.0-rc6/go.mod h1:oOUOAlBrm1L0+jxT10h2TMUMTDz6pV3EvmkJ3beDYGQ=
+github.com/libp2p/go-libp2p v0.18.0 h1:moKKKG875KNGsCjZxTIFB75ihHiVjFeWg5I4aR1pDLk=
+github.com/libp2p/go-libp2p v0.18.0/go.mod h1:+veaZ9z1SZQhmc5PW78jvnnxZ89Mgvmh4cggO11ETmw=
 github.com/libp2p/go-libp2p-asn-util v0.1.0 h1:rABPCO77SjdbJ/eJ/ynIo8vWICy1VEnL5JAxJbQLo1E=
 github.com/libp2p/go-libp2p-asn-util v0.1.0/go.mod h1:wu+AnM9Ii2KgO5jMmS1rz9dvzTdj8BXqsPR9HR0XB7I=
 github.com/libp2p/go-libp2p-blankhost v0.2.0/go.mod h1:eduNKXGTioTuQAUcZ5epXi9vMl+t4d8ugUBRQ4SqaNQ=
@@ -627,8 +627,8 @@ github.com/libp2p/go-libp2p-quic-transport v0.13.0/go.mod h1:39/ZWJ1TW/jx1iFkKzz
 github.com/libp2p/go-libp2p-quic-transport v0.16.0/go.mod h1:1BXjVMzr+w7EkPfiHkKnwsWjPjtfaNT0q8RS3tGDvEQ=
 github.com/libp2p/go-libp2p-quic-transport v0.16.1 h1:N/XqYXHurphPLDfXYhll8NyqzdZYQqAF4GIr7+SmLV8=
 github.com/libp2p/go-libp2p-quic-transport v0.16.1/go.mod h1:1BXjVMzr+w7EkPfiHkKnwsWjPjtfaNT0q8RS3tGDvEQ=
-github.com/libp2p/go-libp2p-resource-manager v0.1.3 h1:Umf0tW6WNXSb6Uoma0YT56azB5iikL/aeGAP7s7+f5o=
-github.com/libp2p/go-libp2p-resource-manager v0.1.3/go.mod h1:wJPNjeE4XQlxeidwqVY5G6DLOKqFK33u2n8blpl0I6Y=
+github.com/libp2p/go-libp2p-resource-manager v0.1.5 h1:7J6t9KLFS0MxXDTfqA6rwfVCZl/yLQnXW5LpZjHAANI=
+github.com/libp2p/go-libp2p-resource-manager v0.1.5/go.mod h1:wJPNjeE4XQlxeidwqVY5G6DLOKqFK33u2n8blpl0I6Y=
 github.com/libp2p/go-libp2p-swarm v0.8.0/go.mod h1:sOMp6dPuqco0r0GHTzfVheVBh6UEL0L1lXUZ5ot2Fvc=
 github.com/libp2p/go-libp2p-swarm v0.10.0/go.mod h1:71ceMcV6Rg/0rIQ97rsZWMzto1l9LnNquef+efcRbmA=
 github.com/libp2p/go-libp2p-swarm v0.10.2 h1:UaXf+CTq6Ns1N2V1EgqJ9Q3xaRsiN7ImVlDMpirMAWw=
@@ -848,8 +848,8 @@ github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7 h1:1102pQc2
 github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7/go.mod h1:UqoUn6cHESlliMhOnKLWr+CBH+e3bazUPvFj1XZwAjs=
 github.com/oasisprotocol/ed25519 v0.0.0-20210127160119-f7017427c1ea h1:r4MhxgqQ1bed0fQhRINBM50Rbwsgma6oEjG4zQ444Lw=
 github.com/oasisprotocol/ed25519 v0.0.0-20210127160119-f7017427c1ea/go.mod h1:IZbb50w3AB72BVobEF6qG93NNSrTw/V2QlboxqSu3Xw=
-github.com/oasisprotocol/oasis-core/go v0.2200.2 h1:is4ilDlTcXPlBq4OAkpXAY4ryKKmvXkAbiw8KCJYQTc=
-github.com/oasisprotocol/oasis-core/go v0.2200.2/go.mod h1:GS8OwL3mFgpd+YcXnD7yUu7Fnk+IOaxHcfSGzfBZbZY=
+github.com/oasisprotocol/oasis-core/go v0.2201.0 h1:NXZQ9K279+qaBaDbzFayHPoj9GXha6nHqz93g5aXLbE=
+github.com/oasisprotocol/oasis-core/go v0.2201.0/go.mod h1:9n/UonHFlJP3Ggven2P1+uBnKl5WJe3PEQPKJVmG/Fw=
 github.com/oasisprotocol/safeopen v0.0.0-20200528085122-e01cfdfc7661 h1:MB73kGMtuMGS+6VDoU/mitzff7Cu+aZo9ta5wabuxVA=
 github.com/oasisprotocol/safeopen v0.0.0-20200528085122-e01cfdfc7661/go.mod h1:SwBxaVibf6Sr2IZ6M3WnUue0yp8dPLAo1riQRNQ60+g=
 github.com/oasisprotocol/tendermint v0.34.9-oasis2 h1:wVFJjLnmen7QXpIAznbiGHOeVrX5oNtJMUk0rrpSmG8=
