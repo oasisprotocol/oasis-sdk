@@ -48,6 +48,19 @@ func refAnchor(l types.Lang, fullName string, t types.RefType) string {
 	return fmt.Sprintf("%s-%s%s", l, fullName, refTypeStr)
 }
 
+// markdownRefSrcs generates a sorted list of URL sources for the given references.
+func markdownRefSrcs(fullName string, refs map[types.Lang]types.Snippet, refType types.RefType) string {
+	markdown := ""
+	for _, lang := range []types.Lang{types.Rust, types.Go, types.TypeScript} {
+		if _, valid := refs[lang]; !valid {
+			continue
+		}
+		markdown += fmt.Sprintf("[%s]: %s\n", refAnchor(lang, fullName, refType), snippetPath(refs[lang]))
+	}
+
+	return markdown
+}
+
 // markdownRef generates [ Go | Rust | TypeScript ] for the provided snippet.
 func markdownRef(fullName string, snippets map[types.Lang]types.Snippet, t types.RefType) string {
 	langMarkdown := []string{}
@@ -125,15 +138,9 @@ func printMarkdown(transactions map[string]types.Tx) {
 			markdown += fmt.Sprintf("#### Result %s\n%s\n", markdownRef(tx.FullName(), tx.ResultRef, types.Result), markdownParams(tx.Result))
 		}
 
-		for l, s := range tx.Ref {
-			markdown += fmt.Sprintf("[%s]: %s\n", refAnchor(l, tx.FullName(), types.Base), snippetPath(s))
-		}
-		for l, s := range tx.ParametersRef {
-			markdown += fmt.Sprintf("[%s]: %s\n", refAnchor(l, tx.FullName(), types.Params), snippetPath(s))
-		}
-		for l, s := range tx.ResultRef {
-			markdown += fmt.Sprintf("[%s]: %s\n", refAnchor(l, tx.FullName(), types.Result), snippetPath(s))
-		}
+		markdown += markdownRefSrcs(tx.FullName(), tx.Ref, types.Base)
+		markdown += markdownRefSrcs(tx.FullName(), tx.ParametersRef, types.Params)
+		markdown += markdownRefSrcs(tx.FullName(), tx.ResultRef, types.Result)
 
 		markdown += "\n"
 	}
