@@ -168,6 +168,7 @@ func doExtractRuntimeTxs(cmd *cobra.Command, args []string) {
 	}
 
 	parsers.PopulateGoRefs(transactions, viper.GetString(CfgCodebasePath)+"/client-sdk/go")
+	parsers.PopulateTypeScriptRefs(transactions, viper.GetString(CfgCodebasePath)+"/client-sdk/ts-web")
 
 	if viper.GetBool(CfgMarkdown) {
 		printMarkdown(transactions)
@@ -179,6 +180,9 @@ func doExtractRuntimeTxs(cmd *cobra.Command, args []string) {
 		fmt.Fprintln(os.Stderr, w)
 	}
 	for _, w := range parsers.GolangWarnings {
+		fmt.Fprintln(os.Stderr, w)
+	}
+	for _, w := range parsers.TypeScriptWarnings {
 		fmt.Fprintln(os.Stderr, w)
 	}
 }
