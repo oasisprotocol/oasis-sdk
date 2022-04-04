@@ -4,7 +4,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"go/ast"
 	"io/ioutil"
 	"log"
 	"os"
@@ -48,7 +47,7 @@ func refAnchor(l types.Lang, fullName string, t types.RefType) string {
 	return fmt.Sprintf("%s-%s%s", l, fullName, refTypeStr)
 }
 
-// markdownRefSrcs generates a sorted list of URL sources for the given references.
+// markdownRefSrcs generates a sorted list by language of URL sources for the given references.
 func markdownRefSrcs(fullName string, refs map[types.Lang]types.Snippet, refType types.RefType) string {
 	markdown := ""
 	for _, lang := range []types.Lang{types.Rust, types.Go, types.TypeScript} {
@@ -75,6 +74,7 @@ func markdownRef(fullName string, snippets map[types.Lang]types.Snippet, t types
 	return fmt.Sprintf("[%s]", strings.Join(langMarkdown, " | "))
 }
 
+// markdownParams generates a markdown list of parameter or results fields of the transaction.
 func markdownParams(params []types.Parameter) string {
 	paramsStr := "\n"
 	for _, p := range params {
@@ -86,6 +86,8 @@ func markdownParams(params []types.Parameter) string {
 	return paramsStr
 }
 
+// snippetPath populates the file name with line numbers and optionally replaces the local filename
+// with the github's or other git repository base URL.
 func snippetPath(s types.Snippet) string {
 	baseDir := viper.GetString(CfgCodebasePath)
 	if viper.IsSet(CfgMarkdownTplFile) && !viper.IsSet(CfgCodebaseURL) {
@@ -192,30 +194,6 @@ func doExtractRuntimeTxs(cmd *cobra.Command, args []string) {
 	for _, w := range parsers.TypeScriptWarnings {
 		fmt.Fprintln(os.Stderr, w)
 	}
-}
-
-// extractValue returns string value of the identifier or literal.
-func extractValue(n ast.Expr) string {
-	lit, ok := n.(*ast.BasicLit)
-	if ok {
-		// Strip quotes.
-		return lit.Value[1 : len(lit.Value)-1]
-	}
-
-	ident, ok := n.(*ast.Ident)
-	if !ok || ident.Obj == nil {
-		return ""
-	}
-	decl, ok := ident.Obj.Decl.(*ast.ValueSpec)
-	if !ok || len(decl.Values) != 1 {
-		return ""
-	}
-	val, ok := decl.Values[0].(*ast.BasicLit)
-	if !ok {
-		return ""
-	}
-	// Strip quotes.
-	return val.Value[1 : len(val.Value)-1]
 }
 
 func main() {

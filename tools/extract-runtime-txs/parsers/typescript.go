@@ -29,6 +29,8 @@ func NewTypeScriptParser(filename string) TypeScriptParser {
 	}
 }
 
+// PopulateTypeScriptRefs populates existing transactions with references to TypeScript language
+// bindings in the provided searchDir.
 func PopulateTypeScriptRefs(transactions map[string]types.Tx, searchDir string) error {
 	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
 		if err != nil {

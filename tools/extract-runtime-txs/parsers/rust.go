@@ -17,6 +17,8 @@ type RustParser struct {
 	filename string
 }
 
+// GenerateInitialTransactions generates a map of all runtime transactions found in the
+// specified searchDir.
 func GenerateInitialTransactions(searchDir string) (map[string]types.Tx, error) {
 	transactions := map[string]types.Tx{}
 	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {

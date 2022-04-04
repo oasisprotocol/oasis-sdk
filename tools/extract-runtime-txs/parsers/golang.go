@@ -15,8 +15,18 @@ var GolangWarnings = []error{}
 
 type GolangParser struct {
 	filename string
+	txs      map[string]string
 }
 
+func NewGolangParser(filename string) GolangParser {
+	return GolangParser{
+		filename: filename,
+		txs:      map[string]string{},
+	}
+}
+
+// PopulateGoRefs populates existing transactions with references to Golang language bindings
+// in the provided searchDir.
 func PopulateGoRefs(transactions map[string]types.Tx, searchDir string) error {
 	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
@@ -29,7 +39,7 @@ func PopulateGoRefs(transactions map[string]types.Tx, searchDir string) error {
 		if !strings.HasSuffix(f.Name(), ".go") || f.Name() == "types.go" {
 			return nil
 		}
-		goParser := GolangParser{filename: path}
+		goParser := NewGolangParser(path)
 		e := goParser.populateTransactionRefs(transactions)
 		if e != nil {
 			return e
@@ -56,7 +66,6 @@ func (p *GolangParser) populateTransactionRefs(txs map[string]types.Tx) error {
 	regImplMatch, _ := regexp.Compile("func \\(a \\*v1\\) ([a-zA-Z]+)\\(.*")
 
 	// Collect name -> fullName of transactions in this file.
-	localTxs := map[string]string{}
 	for lineIdx := 0; lineIdx < len(text); lineIdx += 1 {
 		txMatch := regTxMatch.FindStringSubmatch(text[lineIdx])
 		if len(txMatch) > 0 {
@@ -65,12 +74,12 @@ func (p *GolangParser) populateTransactionRefs(txs map[string]types.Tx) error {
 			if !found {
 				GolangWarnings = append(GolangWarnings, fmt.Errorf("unknown method %s in file %s:%d", txMatch[2], p.filename, lineIdx+1))
 			}
-			localTxs[fullNameSplit[1]] = txMatch[2]
+			p.txs[fullNameSplit[1]] = txMatch[2]
 		}
 
 		implMatch := regImplMatch.FindStringSubmatch(text[lineIdx])
 		if len(implMatch) > 0 {
-			fullName, valid := localTxs[implMatch[1]]
+			fullName, valid := p.txs[implMatch[1]]
 			if !valid {
 				GolangWarnings = append(GolangWarnings, fmt.Errorf("implementation of %s not defined as method in the beginning of %s", implMatch[1], p.filename))
 				continue
@@ -93,8 +102,8 @@ func (p *GolangParser) populateTransactionRefs(txs map[string]types.Tx) error {
 	}
 
 	// Open types.go of the same module and collect parameters and result snippets.
-	if len(localTxs) > 0 {
-		if err := p.populateParamsResultRefs(localTxs, txs); err != nil {
+	if len(p.txs) > 0 {
+		if err := p.populateParamsResultRefs(txs); err != nil {
 			return err
 		}
 	}
@@ -104,7 +113,7 @@ func (p *GolangParser) populateTransactionRefs(txs map[string]types.Tx) error {
 
 // populateParamsResultRefs opens types.go file in the current module's folder, finds parameters
 // and results snippets for the provided transactions and populates the refs of global transactions.
-func (p *GolangParser) populateParamsResultRefs(localTxs map[string]string, txs map[string]types.Tx) error {
+func (p *GolangParser) populateParamsResultRefs(txs map[string]types.Tx) error {
 	typesPath := filepath.Join(filepath.Dir(p.filename), "types.go")
 	text, err := readFile(typesPath)
 	if err != nil {
@@ -119,7 +128,7 @@ func (p *GolangParser) populateParamsResultRefs(localTxs map[string]string, txs 
 			name := strings.TrimSuffix(typeMatch[1], "Result")
 			name = strings.TrimSuffix(name, "Query")
 
-			fullName, valid := localTxs[name]
+			fullName, valid := p.txs[name]
 			if !valid {
 				continue
 			}
