@@ -8,7 +8,7 @@ describing all runtime transactions with their call types and results.
 
 ```sh
 go build
-go test
+go test ./...
 ```
 
 ## Execution
