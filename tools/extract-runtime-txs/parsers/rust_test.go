@@ -11,7 +11,7 @@ import (
 func TestFindTransactions(t *testing.T) {
 	require := require.New(t)
 
-	rustParser := RustParser{filename: "tests/rust/basic.rs"}
+	rustParser := RustParser{filename: "../tests/rust/basic.rs"}
 	txs, err := rustParser.FindTransactions()
 	require.NoError(err)
 	require.Equal(
@@ -22,7 +22,7 @@ func TestFindTransactions(t *testing.T) {
 				Type:   types.Call,
 				Ref: map[types.Lang]types.Snippet{
 					types.Rust: {
-						Path:     "tests/rust/basic.rs",
+						Path:     "../tests/rust/basic.rs",
 						LineFrom: 5,
 						LineTo:   95,
 					},
@@ -46,7 +46,7 @@ func TestFindTransactions(t *testing.T) {
 				},
 				ParametersRef: map[types.Lang]types.Snippet{
 					types.Rust: {
-						Path:     "tests/rust/types.rs",
+						Path:     "../tests/rust/types.rs",
 						LineFrom: 82,
 						LineTo:   93,
 					},
@@ -60,7 +60,7 @@ func TestFindTransactions(t *testing.T) {
 				},
 				ResultRef: map[types.Lang]types.Snippet{
 					types.Rust: {
-						Path:     "tests/rust/types.rs",
+						Path:     "../tests/rust/types.rs",
 						LineFrom: 95,
 						LineTo:   100,
 					},
@@ -72,7 +72,7 @@ func TestFindTransactions(t *testing.T) {
 				Type:   types.Query,
 				Ref: map[types.Lang]types.Snippet{
 					types.Rust: {
-						Path:     "tests/rust/basic.rs",
+						Path:     "../tests/rust/basic.rs",
 						LineFrom: 97,
 						LineTo:   103,
 					},
@@ -86,7 +86,7 @@ func TestFindTransactions(t *testing.T) {
 				},
 				ParametersRef: map[types.Lang]types.Snippet{
 					types.Rust: {
-						Path:     "tests/rust/types.rs",
+						Path:     "../tests/rust/types.rs",
 						LineFrom: 159,
 						LineTo:   164,
 					},
@@ -94,7 +94,7 @@ func TestFindTransactions(t *testing.T) {
 				Result: []types.Parameter{},
 				ResultRef: map[types.Lang]types.Snippet{
 					types.Rust: {
-						Path:     "tests/rust/types.rs",
+						Path:     "../tests/rust/types.rs",
 						LineFrom: 48,
 						LineTo:   52,
 					},
@@ -109,7 +109,7 @@ func TestFindTransactions(t *testing.T) {
 func TestFindTransactionsComments(t *testing.T) {
 	require := require.New(t)
 
-	rustParser := RustParser{filename: "tests/rust/basic_comments.rs"}
+	rustParser := RustParser{filename: "../tests/rust/basic_comments.rs"}
 	txs, err := rustParser.FindTransactions()
 	require.NoError(err)
 	require.Equal(
@@ -121,7 +121,7 @@ func TestFindTransactionsComments(t *testing.T) {
 				Type:    types.Call,
 				Ref: map[types.Lang]types.Snippet{
 					types.Rust: {
-						Path:     "tests/rust/basic_comments.rs",
+						Path:     "../tests/rust/basic_comments.rs",
 						LineFrom: 10,
 						LineTo:   22,
 					},
@@ -129,11 +129,12 @@ func TestFindTransactionsComments(t *testing.T) {
 				Parameters: []types.Parameter{},
 				ParametersRef: map[types.Lang]types.Snippet{
 					types.Rust: {
-						Path:     "tests/rust/types.rs",
+						Path:     "../tests/rust/types.rs",
 						LineFrom: 174,
 						LineTo:   180,
 					},
 				},
+				ResultRef: map[types.Lang]types.Snippet{},
 			},
 			{
 				Module:  "consensus",
@@ -142,7 +143,7 @@ func TestFindTransactionsComments(t *testing.T) {
 				Type:    types.Query,
 				Ref: map[types.Lang]types.Snippet{
 					types.Rust: {
-						Path:     "tests/rust/basic_comments.rs",
+						Path:     "../tests/rust/basic_comments.rs",
 						LineFrom: 24,
 						LineTo:   40,
 					},
@@ -150,11 +151,12 @@ func TestFindTransactionsComments(t *testing.T) {
 				Parameters: []types.Parameter{},
 				ParametersRef: map[types.Lang]types.Snippet{
 					types.Rust: {
-						Path:     "tests/rust/types.rs",
+						Path:     "../tests/rust/types.rs",
 						LineFrom: 182,
 						LineTo:   185,
 					},
 				},
+				ResultRef: map[types.Lang]types.Snippet{},
 			},
 		},
 		txs,

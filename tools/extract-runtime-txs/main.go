@@ -38,7 +38,7 @@ var (
 	}
 )
 
-// refAnchor returns the reference
+// refAnchor returns the reference name.
 func refAnchor(l types.Lang, fullName string, t types.RefType) string {
 	refTypeStr := ""
 	if t != types.Base {
@@ -51,7 +51,10 @@ func refAnchor(l types.Lang, fullName string, t types.RefType) string {
 // markdownRef generates [ Go | Rust | TypeScript ] for the provided snippet.
 func markdownRef(fullName string, snippets map[types.Lang]types.Snippet, t types.RefType) string {
 	langMarkdown := []string{}
-	for lang, _ := range snippets {
+	for _, lang := range []types.Lang{types.Rust, types.Go, types.TypeScript} {
+		if _, valid := snippets[lang]; !valid {
+			continue
+		}
 		ref := fmt.Sprintf("[%s][%s]", lang.ToString(), refAnchor(lang, fullName, t))
 		langMarkdown = append(langMarkdown, ref)
 	}
@@ -89,44 +92,51 @@ func snippetPath(s types.Snippet) string {
 	return fmt.Sprintf("%s%s", fileURL, linesStr)
 }
 
-func markdownList(txs []types.Tx) string {
-	sort.Slice(txs, func(i, j int) bool {
-		return txs[i].FullName() < txs[j].FullName()
-	})
+// sortTxs sorts the given map of transactions by their key and returns an
+// ordered list of transactions.
+func sortTxs(txs map[string]types.Tx) []types.Tx {
+	keys := make([]string, 0, len(txs))
+	for k := range txs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-	tStr := ""
-	lastModule := ""
-	for _, t := range txs {
-		if t.Module != lastModule {
-			tStr += fmt.Sprintf("## %s\n\n", t.Module)
-			lastModule = t.Module
-		}
-		tStr += fmt.Sprintf("### %s\n", t.FullName())
-		tStr += fmt.Sprintf("(%s) %s\n\n", t.Type, markdownRef(t.FullName(), t.Ref, types.Base))
-		tStr += fmt.Sprintf("#### Parameters %s\n%s\n", markdownRef(t.FullName(), t.ParametersRef, types.Params), markdownParams(t.Parameters))
-
-		if t.Result != nil {
-			tStr += fmt.Sprintf("#### Result %s\n%s\n", markdownRef(t.FullName(), t.ResultRef, types.Result), markdownParams(t.Result))
-		}
-
-		for l, s := range t.Ref {
-			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), types.Base), snippetPath(s))
-		}
-		for l, s := range t.ParametersRef {
-			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), types.Params), snippetPath(s))
-		}
-		for l, s := range t.ResultRef {
-			tStr += fmt.Sprintf("[%s]: %s\n", refAnchor(l, t.FullName(), types.Result), snippetPath(s))
-		}
-
-		tStr += "\n"
+	sortedTxs := []types.Tx{}
+	for _, k := range keys {
+		sortedTxs = append(sortedTxs, txs[k])
 	}
 
-	return tStr
+	return sortedTxs
 }
 
-func printMarkdown(transactions []types.Tx) {
-	markdown := markdownList(transactions)
+func printMarkdown(transactions map[string]types.Tx) {
+	markdown := ""
+	lastModule := ""
+	for _, tx := range sortTxs(transactions) {
+		if tx.Module != lastModule {
+			markdown += fmt.Sprintf("## %s\n\n", tx.Module)
+			lastModule = tx.Module
+		}
+		markdown += fmt.Sprintf("### %s (%s) {#%s}\n", tx.FullName(), tx.Type, tx.Module+"-"+strings.ToLower(tx.Name))
+		markdown += fmt.Sprintf("%s\n\n", markdownRef(tx.FullName(), tx.Ref, types.Base))
+		markdown += fmt.Sprintf("#### Parameters %s\n%s\n", markdownRef(tx.FullName(), tx.ParametersRef, types.Params), markdownParams(tx.Parameters))
+
+		if tx.Result != nil || len(tx.ResultRef) > 0 {
+			markdown += fmt.Sprintf("#### Result %s\n%s\n", markdownRef(tx.FullName(), tx.ResultRef, types.Result), markdownParams(tx.Result))
+		}
+
+		for l, s := range tx.Ref {
+			markdown += fmt.Sprintf("[%s]: %s\n", refAnchor(l, tx.FullName(), types.Base), snippetPath(s))
+		}
+		for l, s := range tx.ParametersRef {
+			markdown += fmt.Sprintf("[%s]: %s\n", refAnchor(l, tx.FullName(), types.Params), snippetPath(s))
+		}
+		for l, s := range tx.ResultRef {
+			markdown += fmt.Sprintf("[%s]: %s\n", refAnchor(l, tx.FullName(), types.Result), snippetPath(s))
+		}
+
+		markdown += "\n"
+	}
 
 	if !viper.IsSet(CfgMarkdownTplFile) {
 		// Print Markdown only.
@@ -143,8 +153,8 @@ func printMarkdown(transactions []types.Tx) {
 	fmt.Print(mdStr)
 }
 
-func printJSON(m []types.Tx) {
-	data, err := json.Marshal(m)
+func printJSON(txs map[string]types.Tx) {
+	data, err := json.Marshal(sortTxs(txs))
 	if err != nil {
 		panic(err)
 	}
@@ -163,6 +173,13 @@ func doExtractRuntimeTxs(cmd *cobra.Command, args []string) {
 		printMarkdown(transactions)
 	} else {
 		printJSON(transactions)
+	}
+
+	for _, w := range parsers.RustWarnings {
+		fmt.Fprintln(os.Stderr, w)
+	}
+	for _, w := range parsers.GolangWarnings {
+		fmt.Fprintln(os.Stderr, w)
 	}
 }
 

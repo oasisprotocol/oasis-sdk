@@ -9,20 +9,22 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
 ## accounts
 
-### accounts.Addresses
-(query) [[Rust][rust-accounts.Addresses]]
+### accounts.Addresses (query) {#accounts-addresses}
+[[Rust][rust-accounts.Addresses] | [Go][go-accounts.Addresses]]
 
-#### Parameters [[Rust][rust-accounts.Addresses-params]]
+#### Parameters [[Rust][rust-accounts.Addresses-params] | [Go][go-accounts.Addresses-params]]
 
 - `denomination: token::Denomination`
 
 [rust-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/mod.rs#L710-L720
+[go-accounts.Addresses]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/accounts/accounts.go#L93-L101
+[go-accounts.Addresses-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/accounts/types.go#L44-L45
 [rust-accounts.Addresses-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/types.rs#L30-L34
 
-### accounts.Balances
-(query) [[Rust][rust-accounts.Balances]]
+### accounts.Balances (query) {#accounts-balances}
+[[Rust][rust-accounts.Balances] | [Go][go-accounts.Balances]]
 
-#### Parameters [[Rust][rust-accounts.Balances-params]]
+#### Parameters [[Rust][rust-accounts.Balances-params] | [Go][go-accounts.Balances-params]]
 
 - `address: Address`
 
@@ -31,13 +33,15 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 - `balances: BTreeMap<token::Denomination, u128>`
 
 [rust-accounts.Balances]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/mod.rs#L722-L728
+[go-accounts.Balances]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/accounts/accounts.go#L83-L91
 [rust-accounts.Balances-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/types.rs#L36-L40
+[go-accounts.Balances-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/accounts/types.go#L18-L21
 [rust-accounts.Balances-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/types.rs#L42-L46
 
-### accounts.DenominationInfo
-(query) [[Rust][rust-accounts.DenominationInfo]]
+### accounts.DenominationInfo (query) {#accounts-denominationinfo}
+[[Rust][rust-accounts.DenominationInfo] | [Go][go-accounts.DenominationInfo]]
 
-#### Parameters [[Rust][rust-accounts.DenominationInfo-params]]
+#### Parameters [[Rust][rust-accounts.DenominationInfo-params] | [Go][go-accounts.DenominationInfo-params]]
 
 - `denomination: token::Denomination`
 
@@ -49,46 +53,53 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
 
 [rust-accounts.DenominationInfo]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/mod.rs#L730-L736
+[go-accounts.DenominationInfo]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/accounts/accounts.go#L103-L111
 [rust-accounts.DenominationInfo-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/types.rs#L48-L52
+[go-accounts.DenominationInfo-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/accounts/types.go#L38-L42
 [rust-accounts.DenominationInfo-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/types.rs#L54-L59
 
-### accounts.Nonce
-(query) [[Rust][rust-accounts.Nonce]]
+### accounts.Nonce (query) {#accounts-nonce}
+[[Rust][rust-accounts.Nonce] | [Go][go-accounts.Nonce]]
 
-#### Parameters [[Rust][rust-accounts.Nonce-params]]
+#### Parameters [[Rust][rust-accounts.Nonce-params] | [Go][go-accounts.Nonce-params]]
 
 - `address: Address`
 
 [rust-accounts.Nonce]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/mod.rs#L705-L708
+[go-accounts.Nonce]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/accounts/accounts.go#L73-L81
 [rust-accounts.Nonce-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/types.rs#L24-L28
+[go-accounts.Nonce-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/accounts/types.go#L13-L16
 
-### accounts.Transfer
-(call) [[Rust][rust-accounts.Transfer]]
+### accounts.Transfer (call) {#accounts-transfer}
+[[Rust][rust-accounts.Transfer] | [Go][go-accounts.Transfer]]
 
-#### Parameters [[Rust][rust-accounts.Transfer-params]]
+#### Parameters [[Rust][rust-accounts.Transfer-params] | [Go][go-accounts.Transfer-params]]
 
 - `to: Address`
 - `amount: token::BaseUnits`
 
+[go-accounts.Transfer]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/accounts/accounts.go#L55-L61
 [rust-accounts.Transfer]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/mod.rs#L689-L703
 [rust-accounts.Transfer-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/accounts/types.rs#L8-L13
+[go-accounts.Transfer-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/accounts/types.go#L7-L11
 
 ## consensus
 
-### consensus.Account
-(query) [[Rust][rust-consensus.Account]]
+### consensus.Account (query) {#consensus-account}
+[[Rust][rust-consensus.Account]]
 
-#### Parameters [[Rust][rust-consensus.Account-params]]
+#### Parameters [[Rust][rust-consensus.Account-params] | [Go][go-consensus.Account-params]]
 
 - `address: Address`
 
 [rust-consensus.Account]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/consensus_accounts/mod.rs#L297-L303
 [rust-consensus.Account-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/consensus_accounts/types.rs#L31-L35
+[go-consensus.Account-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/consensusaccounts/types.go#L27-L30
 
-### consensus.Balance
-(query) [[Rust][rust-consensus.Balance]]
+### consensus.Balance (query) {#consensus-balance}
+[[Rust][rust-consensus.Balance] | [Go][go-consensus.Balance]]
 
-#### Parameters [[Rust][rust-consensus.Balance-params]]
+#### Parameters [[Rust][rust-consensus.Balance-params] | [Go][go-consensus.Balance-params]]
 
 - `address: Address`
 
@@ -97,37 +108,43 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 - `balance: u128`
 
 [rust-consensus.Balance]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/consensus_accounts/mod.rs#L281-L295
+[go-consensus.Balance]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/consensusaccounts/consensus_accounts.go#L78-L86
 [rust-consensus.Balance-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/consensus_accounts/types.rs#L25-L29
+[go-consensus.Balance-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/consensusaccounts/types.go#L17-L20
 [rust-consensus.Balance-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/consensus_accounts/types.rs#L37-L40
 
-### consensus.Deposit
-(call) [[Rust][rust-consensus.Deposit]]
+### consensus.Deposit (call) {#consensus-deposit}
+[[Rust][rust-consensus.Deposit] | [Go][go-consensus.Deposit]]
 
-#### Parameters [[Rust][rust-consensus.Deposit-params]]
+#### Parameters [[Rust][rust-consensus.Deposit-params] | [Go][go-consensus.Deposit-params]]
 
 - `to: Option<Address>`
 - `amount: token::BaseUnits`
 
 [rust-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/consensus_accounts/mod.rs#L228-L240
+[go-consensus.Deposit]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/consensusaccounts/consensus_accounts.go#L52-L58
 [rust-consensus.Deposit-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/consensus_accounts/types.rs#L4-L13
+[go-consensus.Deposit-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/consensusaccounts/types.go#L5-L9
 
-### consensus.Withdraw
-(call) [[Rust][rust-consensus.Withdraw]]
+### consensus.Withdraw (call) {#consensus-withdraw}
+[[Rust][rust-consensus.Withdraw] | [Go][go-consensus.Withdraw]]
 
-#### Parameters [[Rust][rust-consensus.Withdraw-params]]
+#### Parameters [[Rust][rust-consensus.Withdraw-params] | [Go][go-consensus.Withdraw-params]]
 
 - `to: Option<Address>`
 - `amount: token::BaseUnits`
 
 [rust-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/consensus_accounts/mod.rs#L262-L279
+[go-consensus.Withdraw]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/consensusaccounts/consensus_accounts.go#L60-L66
 [rust-consensus.Withdraw-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/consensus_accounts/types.rs#L15-L23
+[go-consensus.Withdraw-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/consensusaccounts/types.go#L11-L15
 
 ## contracts
 
-### contracts.Call
-(call) [[Rust][rust-contracts.Call]]
+### contracts.Call (call) {#contracts-call}
+[[Rust][rust-contracts.Call] | [Go][go-contracts.Call]]
 
-#### Parameters [[Rust][rust-contracts.Call-params]]
+#### Parameters [[Rust][rust-contracts.Call-params] | [Go][go-contracts.Call-params]]
 
 - `id: InstanceId`
 
@@ -142,13 +159,19 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
   Tokens that should be sent to the contract as part of the call.
 
 
+#### Result [[Go][go-contracts.Call-result]]
+
+
 [rust-contracts.Call]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/lib.rs#L485-L528
+[go-contracts.Call]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/contracts.go#L144-L147
 [rust-contracts.Call-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L138-L149
+[go-contracts.Call-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L109-L117
+[go-contracts.Call-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L119-L120
 
-### contracts.Code
-(query) [[Rust][rust-contracts.Code]]
+### contracts.Code (query) {#contracts-code}
+[[Rust][rust-contracts.Code] | [Go][go-contracts.Code]]
 
-#### Parameters [[Rust][rust-contracts.Code-params]]
+#### Parameters [[Rust][rust-contracts.Code-params] | [Go][go-contracts.Code-params]]
 
 - `id: CodeId`
 
@@ -178,14 +201,16 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
   Who is allowed to instantiate this code.
 
 
+[go-contracts.Code]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/contracts.go#L164-L172
 [rust-contracts.Code]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/lib.rs#L599-L605
 [rust-contracts.Code-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L172-L177
+[go-contracts.Code-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L134-L138
 [rust-contracts.Code-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L48-L65
 
-### contracts.Custom
-(query) [[Rust][rust-contracts.Custom]]
+### contracts.Custom (query) {#contracts-custom}
+[[Rust][rust-contracts.Custom] | [Go][go-contracts.Custom]]
 
-#### Parameters [[Rust][rust-contracts.Custom-params]]
+#### Parameters [[Rust][rust-contracts.Custom-params] | [Go][go-contracts.Custom-params]]
 
 - `id: InstanceId`
 
@@ -196,13 +221,19 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
   Query arguments.
 
 
+#### Result [[Go][go-contracts.Custom-result]]
+
+
+[go-contracts.Custom]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/contracts.go#L214-L224
 [rust-contracts.Custom]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/lib.rs#L637-L672
 [rust-contracts.Custom-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L232-L240
+[go-contracts.Custom-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L186-L192
+[go-contracts.Custom-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L194-L195
 
-### contracts.Instance
-(query) [[Rust][rust-contracts.Instance]]
+### contracts.Instance (query) {#contracts-instance}
+[[Rust][rust-contracts.Instance] | [Go][go-contracts.Instance]]
 
-#### Parameters [[Rust][rust-contracts.Instance-params]]
+#### Parameters [[Rust][rust-contracts.Instance-params] | [Go][go-contracts.Instance-params]]
 
 - `id: InstanceId`
 
@@ -229,13 +260,15 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
 
 [rust-contracts.Instance]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/lib.rs#L607-L613
+[go-contracts.Instance]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/contracts.go#L174-L182
 [rust-contracts.Instance-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L179-L184
+[go-contracts.Instance-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L140-L144
 [rust-contracts.Instance-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L67-L81
 
-### contracts.InstanceStorage
-(query) [[Rust][rust-contracts.InstanceStorage]]
+### contracts.InstanceStorage (query) {#contracts-instancestorage}
+[[Rust][rust-contracts.InstanceStorage] | [Go][go-contracts.InstanceStorage]]
 
-#### Parameters [[Rust][rust-contracts.InstanceStorage-params]]
+#### Parameters [[Rust][rust-contracts.InstanceStorage-params] | [Go][go-contracts.InstanceStorage-params]]
 
 - `id: InstanceId`
 
@@ -246,7 +279,7 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
   Storage key.
 
 
-#### Result [[Rust][rust-contracts.InstanceStorage-result]]
+#### Result [[Rust][rust-contracts.InstanceStorage-result] | [Go][go-contracts.InstanceStorage-result]]
 
 - `value: Option<Vec<u8>>`
 
@@ -254,13 +287,16 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
 
 [rust-contracts.InstanceStorage]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/lib.rs#L615-L627
+[go-contracts.InstanceStorage]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/contracts.go#L184-L192
 [rust-contracts.InstanceStorage-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L186-L194
+[go-contracts.InstanceStorage-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L146-L152
 [rust-contracts.InstanceStorage-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L196-L200
+[go-contracts.InstanceStorage-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L154-L158
 
-### contracts.Instantiate
-(call) [[Rust][rust-contracts.Instantiate]]
+### contracts.Instantiate (call) {#contracts-instantiate}
+[[Rust][rust-contracts.Instantiate] | [Go][go-contracts.Instantiate]]
 
-#### Parameters [[Rust][rust-contracts.Instantiate-params]]
+#### Parameters [[Rust][rust-contracts.Instantiate-params] | [Go][go-contracts.Instantiate-params]]
 
 - `code_id: CodeId`
 
@@ -279,7 +315,7 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
   Tokens that should be sent to the contract as part of the instantiate call.
 
 
-#### Result [[Rust][rust-contracts.Instantiate-result]]
+#### Result [[Rust][rust-contracts.Instantiate-result] | [Go][go-contracts.Instantiate-result]]
 
 - `id: InstanceId`
 
@@ -287,13 +323,16 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
 
 [rust-contracts.Instantiate]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/lib.rs#L423-L483
+[go-contracts.Instantiate]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/contracts.go#L130-L133
 [rust-contracts.Instantiate-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L115-L129
+[go-contracts.Instantiate-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L91-L101
 [rust-contracts.Instantiate-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L131-L136
+[go-contracts.Instantiate-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L103-L107
 
-### contracts.PublicKey
-(query) [[Rust][rust-contracts.PublicKey]]
+### contracts.PublicKey (query) {#contracts-publickey}
+[[Rust][rust-contracts.PublicKey] | [Go][go-contracts.PublicKey]]
 
-#### Parameters [[Rust][rust-contracts.PublicKey-params]]
+#### Parameters [[Rust][rust-contracts.PublicKey-params] | [Go][go-contracts.PublicKey-params]]
 
 - `id: InstanceId`
 
@@ -304,7 +343,7 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
   Kind of public key.
 
 
-#### Result [[Rust][rust-contracts.PublicKey-result]]
+#### Result [[Rust][rust-contracts.PublicKey-result] | [Go][go-contracts.PublicKey-result]]
 
 - `key: Vec<u8>`
 
@@ -320,13 +359,16 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
 
 [rust-contracts.PublicKey]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/lib.rs#L629-L635
+[go-contracts.PublicKey]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/contracts.go#L194-L202
 [rust-contracts.PublicKey-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L209-L217
+[go-contracts.PublicKey-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L168-L174
 [rust-contracts.PublicKey-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L219-L230
+[go-contracts.PublicKey-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L176-L184
 
-### contracts.Upgrade
-(call) [[Rust][rust-contracts.Upgrade]]
+### contracts.Upgrade (call) {#contracts-upgrade}
+[[Rust][rust-contracts.Upgrade] | [Go][go-contracts.Upgrade]]
 
-#### Parameters [[Rust][rust-contracts.Upgrade-params]]
+#### Parameters [[Rust][rust-contracts.Upgrade-params] | [Go][go-contracts.Upgrade-params]]
 
 - `id: InstanceId`
 
@@ -346,12 +388,14 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
 
 [rust-contracts.Upgrade]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/lib.rs#L530-L597
+[go-contracts.Upgrade]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/contracts.go#L159-L162
 [rust-contracts.Upgrade-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L156-L170
+[go-contracts.Upgrade-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L122-L132
 
-### contracts.Upload
-(call) [[Rust][rust-contracts.Upload]]
+### contracts.Upload (call) {#contracts-upload}
+[[Rust][rust-contracts.Upload] | [Go][go-contracts.Upload]]
 
-#### Parameters [[Rust][rust-contracts.Upload-params]]
+#### Parameters [[Rust][rust-contracts.Upload-params] | [Go][go-contracts.Upload-params]]
 
 - `abi: ABI`
 
@@ -366,7 +410,7 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
   Compiled contract code.
 
 
-#### Result [[Rust][rust-contracts.Upload-result]]
+#### Result [[Rust][rust-contracts.Upload-result] | [Go][go-contracts.Upload-result]]
 
 - `id: CodeId`
 
@@ -374,13 +418,16 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
 
 [rust-contracts.Upload]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/lib.rs#L331-L421
+[go-contracts.Upload]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/contracts.go#L111-L118
 [rust-contracts.Upload-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L95-L106
+[go-contracts.Upload-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L75-L83
 [rust-contracts.Upload-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/contracts/src/types.rs#L108-L113
+[go-contracts.Upload-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/contracts/types.go#L85-L89
 
 ## core
 
-### core.CallDataPublicKey
-(query) [[Rust][rust-core.CallDataPublicKey]]
+### core.CallDataPublicKey (query) {#core-calldatapublickey}
+[[Rust][rust-core.CallDataPublicKey]]
 
 #### Parameters [[Rust][rust-core.CallDataPublicKey-params]]
 
@@ -400,8 +447,8 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 [rust-core.CallDataPublicKey-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/core/types.rs#L29-L34
 [rust-core.CallDataPublicKey-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/core/types.rs#L29-L34
 
-### core.CheckInvariants
-(query) [[Rust][rust-core.CheckInvariants]]
+### core.CheckInvariants (query) {#core-checkinvariants}
+[[Rust][rust-core.CheckInvariants]]
 
 #### Parameters [[Rust][rust-core.CheckInvariants-params]]
 
@@ -421,10 +468,10 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 [rust-core.CheckInvariants-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/core/types.rs#L29-L34
 [rust-core.CheckInvariants-result]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/core/types.rs#L29-L34
 
-### core.EstimateGas
-(query) [[Rust][rust-core.EstimateGas]]
+### core.EstimateGas (query) {#core-estimategas}
+[[Rust][rust-core.EstimateGas] | [Go][go-core.EstimateGas]]
 
-#### Parameters [[Rust][rust-core.EstimateGas-params]]
+#### Parameters [[Rust][rust-core.EstimateGas-params] | [Go][go-core.EstimateGas-params]]
 
 - `caller: Option<CallerAddress>`
 - `tx: Transaction`
@@ -433,10 +480,12 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
 
 [rust-core.EstimateGas]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/core/mod.rs#L348-L426
+[go-core.EstimateGas]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/core/core.go#L57-L65
 [rust-core.EstimateGas-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/core/types.rs#L18-L27
+[go-core.EstimateGas-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/core/types.go#L10-L17
 
-### core.MinGasPrice
-(query) [[Rust][rust-core.MinGasPrice]]
+### core.MinGasPrice (query) {#core-mingasprice}
+[[Rust][rust-core.MinGasPrice] | [Go][go-core.MinGasPrice]]
 
 #### Parameters [[Rust][rust-core.MinGasPrice-params]]
 
@@ -446,10 +495,11 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
 
 [rust-core.MinGasPrice]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/core/mod.rs#L455-L473
+[go-core.MinGasPrice]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/core/core.go#L81-L89
 [rust-core.MinGasPrice-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/core/types.rs#L11-L16
 
-### core.RuntimeInfo
-(query) [[Rust][rust-core.RuntimeInfo]]
+### core.RuntimeInfo (query) {#core-runtimeinfo}
+[[Rust][rust-core.RuntimeInfo] | [Go][go-core.RuntimeInfo]]
 
 #### Parameters [[Rust][rust-core.RuntimeInfo-params]]
 
@@ -459,57 +509,66 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 
 
 [rust-core.RuntimeInfo]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/core/mod.rs#L475-L486
+[go-core.RuntimeInfo]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/core/core.go#L141-L149
 [rust-core.RuntimeInfo-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/src/modules/core/types.rs#L11-L16
 
 ## evm
 
-### evm.Balance
-(query) [[Rust][rust-evm.Balance]]
+### evm.Balance (query) {#evm-balance}
+[[Rust][rust-evm.Balance] | [Go][go-evm.Balance]]
 
-#### Parameters [[Rust][rust-evm.Balance-params]]
+#### Parameters [[Rust][rust-evm.Balance-params] | [Go][go-evm.Balance-params]]
 
 - `address: H160`
 
+[go-evm.Balance]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/evm.go#L117-L127
 [rust-evm.Balance]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/lib.rs#L613-L616
 [rust-evm.Balance-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/types.rs#L31-L35
+[go-evm.Balance-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/types.go#L30-L33
 
-### evm.Call
-(call) [[Rust][rust-evm.Call]]
+### evm.Call (call) {#evm-call}
+[[Rust][rust-evm.Call] | [Go][go-evm.Call]]
 
-#### Parameters [[Rust][rust-evm.Call-params]]
+#### Parameters [[Rust][rust-evm.Call-params] | [Go][go-evm.Call-params]]
 
 - `address: H160`
 - `value: U256`
 - `data: Vec<u8>`
 
+[go-evm.Call]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/evm.go#L73-L80
 [rust-evm.Call]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/lib.rs#L598-L601
 [rust-evm.Call-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/types.rs#L10-L16
+[go-evm.Call-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/types.go#L12-L17
 
-### evm.Code
-(query) [[Rust][rust-evm.Code]]
+### evm.Code (query) {#evm-code}
+[[Rust][rust-evm.Code] | [Go][go-evm.Code]]
 
-#### Parameters [[Rust][rust-evm.Code-params]]
+#### Parameters [[Rust][rust-evm.Code-params] | [Go][go-evm.Code-params]]
 
 - `address: H160`
 
 [rust-evm.Code]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/lib.rs#L608-L611
+[go-evm.Code]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/evm.go#L105-L115
+[go-evm.Code-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/types.go#L25-L28
 [rust-evm.Code-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/types.rs#L25-L29
 
-### evm.Create
-(call) [[Rust][rust-evm.Create]]
+### evm.Create (call) {#evm-create}
+[[Rust][rust-evm.Create] | [Go][go-evm.Create]]
 
-#### Parameters [[Rust][rust-evm.Create-params]]
+#### Parameters [[Rust][rust-evm.Create-params] | [Go][go-evm.Create-params]]
 
 - `value: U256`
 - `init_code: Vec<u8>`
 
 [rust-evm.Create]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/lib.rs#L593-L596
+[go-evm.Create]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/evm.go#L65-L71
 [rust-evm.Create-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/types.rs#L3-L8
+[go-evm.Create-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/types.go#L6-L10
 
-### evm.SimulateCall
-(query) [[Rust][rust-evm.SimulateCall]]
+### evm.SimulateCall (query) {#evm-simulatecall}
+[[Rust][rust-evm.SimulateCall] | [Go][go-evm.SimulateCall]]
 
-#### Parameters [[Rust][rust-evm.SimulateCall-params]]
+#### Parameters [[Rust][rust-evm.SimulateCall-params] | [Go][go-evm.SimulateCall-params]]
 
 - `gas_price: U256`
 - `gas_limit: u64`
@@ -519,18 +578,22 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 - `data: Vec<u8>`
 
 [rust-evm.SimulateCall]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/lib.rs#L618-L632
+[go-evm.SimulateCall]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/evm.go#L129-L144
 [rust-evm.SimulateCall-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/types.rs#L37-L46
+[go-evm.SimulateCall-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/types.go#L35-L43
 
-### evm.Storage
-(query) [[Rust][rust-evm.Storage]]
+### evm.Storage (query) {#evm-storage}
+[[Rust][rust-evm.Storage] | [Go][go-evm.Storage]]
 
-#### Parameters [[Rust][rust-evm.Storage-params]]
+#### Parameters [[Rust][rust-evm.Storage-params] | [Go][go-evm.Storage-params]]
 
 - `address: H160`
 - `index: H256`
 
 [rust-evm.Storage]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/lib.rs#L603-L606
+[go-evm.Storage]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/evm.go#L92-L103
 [rust-evm.Storage-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/runtime-sdk/modules/evm/src/types.rs#L18-L23
+[go-evm.Storage-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/types.go#L19-L23
 
 
 <!-- markdownlint-enable line-length -->

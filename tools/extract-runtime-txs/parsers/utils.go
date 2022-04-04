@@ -31,7 +31,7 @@ func readFile(filename string) ([]string, error) {
 // extracts the content. If the comment is not found, the initial line is
 // returned + 1.
 func findComment(text []string, lineIdx int, indent string) (string, int) {
-	regMatchComment, _ := regexp.Compile(indent + "//[/] (.*)")
+	regMatchComment, _ := regexp.Compile(indent + "///? (.*)")
 	comment := ""
 	for commentLine := lineIdx - 1; commentLine > 0; commentLine -= 1 {
 		commentMatch := regMatchComment.FindStringSubmatch(text[commentLine])
@@ -48,10 +48,20 @@ func findComment(text []string, lineIdx int, indent string) (string, int) {
 
 // findEndBlock finds the end of the block by finding curly parenthesis symbol
 // at the specified depth and returns the line number or error, if not found.
+// It also stops, if an empty new line is detected and no opening bracket existed
+// (e.g. one-line type definition)
 func findEndBlock(text []string, lineIdx int, indent string, name string) (int, error) {
+	bracketOpen := false
 	for ; lineIdx < len(text); lineIdx += 1 {
 		if text[lineIdx] == (indent + "}") {
 			return lineIdx + 1, nil
+		}
+
+		if strings.Contains(text[lineIdx], "{") {
+			bracketOpen = true
+		}
+		if text[lineIdx] == "" && !bracketOpen {
+			return lineIdx, nil
 		}
 	}
 	return 0, fmt.Errorf("cannot find end of %s block", name)

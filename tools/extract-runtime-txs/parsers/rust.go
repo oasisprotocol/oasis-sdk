@@ -11,12 +11,14 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/tools/extract-runtime-txs/types"
 )
 
+var RustWarnings = []error{}
+
 type RustParser struct {
 	filename string
 }
 
-func GenerateInitialTransactions(searchDir string) ([]types.Tx, error) {
-	transactions := []types.Tx{}
+func GenerateInitialTransactions(searchDir string) (map[string]types.Tx, error) {
+	transactions := map[string]types.Tx{}
 	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			log.Fatal(err)
@@ -33,7 +35,20 @@ func GenerateInitialTransactions(searchDir string) ([]types.Tx, error) {
 			return err
 		}
 
-		transactions = append(transactions, txs...)
+		for _, tx := range txs {
+			txOld, valid := transactions[tx.FullName()]
+			if valid {
+				return fmt.Errorf(
+					"runtime transaction %s in %s:%d was already defined in %s:%d",
+					tx.FullName(),
+					tx.Ref[types.Rust].Path,
+					tx.Ref[types.Rust].LineFrom,
+					txOld.Ref[types.Rust].Path,
+					txOld.Ref[types.Rust].LineFrom,
+				)
+			}
+			transactions[tx.FullName()] = tx
+		}
 
 		return nil
 	})
@@ -92,6 +107,10 @@ func (r RustParser) FindTransactions() ([]types.Tx, error) {
 				if err != nil {
 					return nil, err
 				}
+
+				if resultSnippet == nil {
+					RustWarnings = append(RustWarnings, fmt.Errorf("no definition found for %s in %s required by %s:%d", resultName, r.getTypesFile(), r.filename, lineIdx+1))
+				}
 			}
 			tx := types.Tx{
 				Module:  fullNameSplit[0],
@@ -109,17 +128,17 @@ func (r RustParser) FindTransactions() ([]types.Tx, error) {
 				ParametersRef: map[types.Lang]types.Snippet{
 					types.Rust: paramSnippet,
 				},
-				Result: result,
+				Result:    result,
+				ResultRef: map[types.Lang]types.Snippet{},
 			}
 			if result != nil {
-				tx.ResultRef = map[types.Lang]types.Snippet{
-					types.Rust: *resultSnippet,
-				}
+				tx.ResultRef[types.Rust] = *resultSnippet
 			}
 			txs = append(txs, tx)
 		}
 	}
 
+	// TODO: Add implicit Parameters transaction!
 	return txs, nil
 }
 
@@ -203,7 +222,7 @@ func (r RustParser) mustFindMembers(name string) ([]types.Parameter, types.Snipp
 		return nil, types.Snippet{}, err
 	}
 	if snippet == nil {
-		return nil, types.Snippet{}, fmt.Errorf("no parameters definition found for %s in %s", name, r.getTypesFile())
+		return nil, types.Snippet{}, fmt.Errorf("no definition found for %s in %s", name, r.getTypesFile())
 	}
 
 	return params, *snippet, nil
