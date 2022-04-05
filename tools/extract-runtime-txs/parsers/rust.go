@@ -11,10 +11,9 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/tools/extract-runtime-txs/types"
 )
 
-var RustWarnings = []error{}
-
 type RustParser struct {
 	searchDir string
+	warnings  []error
 
 	filename string
 }
@@ -22,6 +21,7 @@ type RustParser struct {
 func NewRustParser(searchDir string) *RustParser {
 	return &RustParser{
 		searchDir: searchDir,
+		warnings:  []error{},
 	}
 }
 
@@ -69,18 +69,22 @@ func (p *RustParser) GenerateInitialTransactions() (map[string]types.Tx, error) 
 	return transactions, nil
 }
 
-func (p RustParser) PopulateRefs(transactions map[string]types.Tx, searchDir string) error {
+func (p *RustParser) PopulateRefs(_ map[string]types.Tx) error {
 	return types.NotImplementedError
 }
 
-func (p RustParser) getTypesFile() string {
+func (p *RustParser) GetWarnings() []error {
+	return p.warnings
+}
+
+func (p *RustParser) getTypesFile() string {
 	return filepath.Join(filepath.Dir(p.filename), "types.rs")
 }
 
 // findTransactions scans the given rust source file and looks for the
 // #[handler(call = "...")] or #[handler(query = "...")] pattern. For each
 // matching pattern, a new Tx is added to the result set.
-func (p RustParser) findTransactions() ([]types.Tx, error) {
+func (p *RustParser) findTransactions() ([]types.Tx, error) {
 	text, err := readFile(p.filename)
 	if err != nil {
 		return nil, err
@@ -123,7 +127,7 @@ func (p RustParser) findTransactions() ([]types.Tx, error) {
 				}
 
 				if resultSnippet == nil {
-					RustWarnings = append(RustWarnings, fmt.Errorf("no definition found for %s in %s required by %s:%d", resultName, p.getTypesFile(), p.filename, lineIdx+1))
+					p.warnings = append(p.warnings, fmt.Errorf("no definition found for %s in %s required by %s:%d", resultName, p.getTypesFile(), p.filename, lineIdx+1))
 				}
 			}
 			tx := types.Tx{
@@ -157,7 +161,7 @@ func (p RustParser) findTransactions() ([]types.Tx, error) {
 }
 
 // findParamsResultName extracts the type name for parameters and result.
-func (p RustParser) findParamsResultName(text []string, lineIdx int) (paramsName string, resultName string) {
+func (p *RustParser) findParamsResultName(text []string, lineIdx int) (paramsName string, resultName string) {
 	paramsRegMatch, _ := regexp.Compile(".*types::([a-zA-Z]+)")
 	for ; lineIdx < len(text); lineIdx += 1 {
 		paramsMatch := paramsRegMatch.FindStringSubmatch(text[lineIdx])
@@ -181,7 +185,7 @@ func (p RustParser) findParamsResultName(text []string, lineIdx int) (paramsName
 	return
 }
 
-func (p RustParser) findMembers(name string) ([]types.Parameter, *types.Snippet, error) {
+func (p *RustParser) findMembers(name string) ([]types.Parameter, *types.Snippet, error) {
 	typesFilename := p.getTypesFile()
 	text, err := readFile(typesFilename)
 	if err != nil {
@@ -230,7 +234,7 @@ func (p RustParser) findMembers(name string) ([]types.Parameter, *types.Snippet,
 	return params, &snippet, nil
 }
 
-func (p RustParser) mustFindMembers(name string) ([]types.Parameter, types.Snippet, error) {
+func (p *RustParser) mustFindMembers(name string) ([]types.Parameter, types.Snippet, error) {
 	params, snippet, err := p.findMembers(name)
 	if err != nil {
 		return nil, types.Snippet{}, err

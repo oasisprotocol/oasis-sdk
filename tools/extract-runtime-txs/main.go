@@ -170,12 +170,19 @@ func printJSON(txs map[string]types.Tx) {
 	fmt.Printf("%s", data)
 }
 
+func printWarnings(parser parsers.Parser) {
+	for _, w := range parser.GetWarnings() {
+		fmt.Fprintln(os.Stderr, w)
+	}
+}
+
 func doExtractRuntimeTxs(cmd *cobra.Command, args []string) {
 	rustParser := parsers.NewRustParser(viper.GetString(CfgCodebasePath) + "/runtime-sdk")
 	transactions, err := rustParser.GenerateInitialTransactions()
 	if err != nil {
 		log.Fatal(err)
 	}
+	printWarnings(rustParser)
 
 	prsrs := []parsers.Parser{
 		parsers.NewGolangParser(viper.GetString(CfgCodebasePath) + "/client-sdk/go"),
@@ -183,22 +190,16 @@ func doExtractRuntimeTxs(cmd *cobra.Command, args []string) {
 	}
 	for _, p := range prsrs {
 		p.PopulateRefs(transactions)
+		for _, w := range p.GetWarnings() {
+			fmt.Fprintln(os.Stderr, w)
+		}
+		printWarnings(p)
 	}
 
 	if viper.GetBool(CfgMarkdown) {
 		printMarkdown(transactions)
 	} else {
 		printJSON(transactions)
-	}
-
-	for _, w := range parsers.RustWarnings {
-		fmt.Fprintln(os.Stderr, w)
-	}
-	for _, w := range parsers.GolangWarnings {
-		fmt.Fprintln(os.Stderr, w)
-	}
-	for _, w := range parsers.TypeScriptWarnings {
-		fmt.Fprintln(os.Stderr, w)
 	}
 }
 

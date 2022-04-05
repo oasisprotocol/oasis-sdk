@@ -11,10 +11,9 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/tools/extract-runtime-txs/types"
 )
 
-var TypeScriptWarnings = []error{}
-
 type TypeScriptParser struct {
 	searchDir string
+	warnings  []error
 
 	filename       string
 	localTxs       map[string]string
@@ -25,6 +24,7 @@ type TypeScriptParser struct {
 func NewTypeScriptParser(searchDir string) *TypeScriptParser {
 	return &TypeScriptParser{
 		searchDir: searchDir,
+		warnings:  []error{},
 
 		localTxs:       map[string]string{},
 		localTxParams:  map[string]string{},
@@ -38,7 +38,7 @@ func (p *TypeScriptParser) clearLocalTxs() {
 	p.localTxResults = map[string]string{}
 }
 
-func (p *TypeScriptParser) GenerateInitialTransactions(_ string) (map[string]types.Tx, error) {
+func (p *TypeScriptParser) GenerateInitialTransactions() (map[string]types.Tx, error) {
 	return nil, types.NotImplementedError
 }
 
@@ -69,6 +69,10 @@ func (p *TypeScriptParser) PopulateRefs(transactions map[string]types.Tx) error 
 	return nil
 }
 
+func (p *TypeScriptParser) GetWarnings() []error {
+	return p.warnings
+}
+
 func (p *TypeScriptParser) populateTransactionRefs(txs map[string]types.Tx) error {
 	p.clearLocalTxs()
 
@@ -92,7 +96,7 @@ func (p *TypeScriptParser) populateTransactionRefs(txs map[string]types.Tx) erro
 			fullNameSplit := strings.Split(methodMatch[1], ".")
 			_, found := txs[methodMatch[1]]
 			if !found {
-				TypeScriptWarnings = append(TypeScriptWarnings, fmt.Errorf("unknown method %s in file %s:%d", methodMatch[1], p.filename, lineIdx+1))
+				p.warnings = append(p.warnings, fmt.Errorf("unknown method %s in file %s:%d", methodMatch[1], p.filename, lineIdx+1))
 			}
 			p.localTxs[fullNameSplit[1]] = methodMatch[1]
 		}
@@ -101,7 +105,7 @@ func (p *TypeScriptParser) populateTransactionRefs(txs map[string]types.Tx) erro
 		if len(callQueryMatch) == 3 {
 			fullName, valid := p.localTxs[callQueryMatch[2]]
 			if !valid {
-				TypeScriptWarnings = append(TypeScriptWarnings, fmt.Errorf("implementation of %s not defined as method in the beginning of %s", callQueryMatch[2], p.filename))
+				p.warnings = append(p.warnings, fmt.Errorf("implementation of %s not defined as method in the beginning of %s", callQueryMatch[2], p.filename))
 				continue
 			}
 			if _, valid = txs[fullName]; !valid {

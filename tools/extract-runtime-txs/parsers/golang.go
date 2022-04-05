@@ -11,10 +11,9 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/tools/extract-runtime-txs/types"
 )
 
-var GolangWarnings = []error{}
-
 type GolangParser struct {
 	searchDir string
+	warnings  []error
 
 	filename string
 	localTxs map[string]string
@@ -23,11 +22,12 @@ type GolangParser struct {
 func NewGolangParser(searchDir string) *GolangParser {
 	return &GolangParser{
 		searchDir: searchDir,
+		warnings:  []error{},
 		localTxs:  map[string]string{},
 	}
 }
 
-func (p *GolangParser) GenerateInitialTransactions(_ string) (map[string]types.Tx, error) {
+func (p *GolangParser) GenerateInitialTransactions() (map[string]types.Tx, error) {
 	return nil, types.NotImplementedError
 }
 
@@ -59,6 +59,10 @@ func (p *GolangParser) PopulateRefs(transactions map[string]types.Tx) error {
 	return nil
 }
 
+func (p *GolangParser) GetWarnings() []error {
+	return p.warnings
+}
+
 func (p *GolangParser) populateTransactionRefs(txs map[string]types.Tx) error {
 	p.localTxs = map[string]string{}
 
@@ -79,7 +83,7 @@ func (p *GolangParser) populateTransactionRefs(txs map[string]types.Tx) error {
 			fullNameSplit := strings.Split(txMatch[2], ".")
 			_, found := txs[txMatch[2]]
 			if !found {
-				GolangWarnings = append(GolangWarnings, fmt.Errorf("unknown method %s in file %s:%d", txMatch[2], p.filename, lineIdx+1))
+				p.warnings = append(p.warnings, fmt.Errorf("unknown method %s in file %s:%d", txMatch[2], p.filename, lineIdx+1))
 			}
 			p.localTxs[fullNameSplit[1]] = txMatch[2]
 		}
@@ -88,7 +92,7 @@ func (p *GolangParser) populateTransactionRefs(txs map[string]types.Tx) error {
 		if len(implMatch) > 0 {
 			fullName, valid := p.localTxs[implMatch[1]]
 			if !valid {
-				GolangWarnings = append(GolangWarnings, fmt.Errorf("implementation of %s not defined as method in the beginning of %s", implMatch[1], p.filename))
+				p.warnings = append(p.warnings, fmt.Errorf("implementation of %s not defined as method in the beginning of %s", implMatch[1], p.filename))
 				continue
 			}
 			if _, valid = txs[fullName]; !valid {
