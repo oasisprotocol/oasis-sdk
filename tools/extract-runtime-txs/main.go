@@ -29,11 +29,15 @@ var (
 	scriptName = filepath.Base(os.Args[0])
 
 	rootCmd = &cobra.Command{
-		Use:     scriptName,
-		Short:   "Extracts Runtime transactions from formatted Rust, Go and TypeScript code.",
-		Long:    "See README.md for details.",
-		Example: "./extract-runtime-txs --codebase.path ../.. --markdown",
-		Run:     doExtractRuntimeTxs,
+		Use:   scriptName,
+		Short: "Extracts Runtime transactions from formatted Rust, Go and TypeScript code.",
+		Example: `./extract-runtime-txs \
+        --codebase.path ../.. \
+        --markdown \
+        --markdown.template.file ../../docs/runtime/transactions.md.tpl \
+        --codebase.url https://github.com/oasisprotocol/oasis-sdk/tree/master/ \
+        > ../../docs/runtime/transactions.md`,
+		Run: doExtractRuntimeTxs,
 	}
 )
 
@@ -76,11 +80,11 @@ func markdownRef(fullName string, snippets map[types.Lang]types.Snippet, t types
 
 // markdownParams generates a markdown list of parameter or results fields of the transaction.
 func markdownParams(params []types.Parameter) string {
-	paramsStr := "\n"
+	paramsStr := ""
 	for _, p := range params {
 		paramsStr += fmt.Sprintf("- `%s: %s`\n", p.Name, p.Type)
 		if p.Description != "" {
-			paramsStr += fmt.Sprintf("\n  %s\n\n", p.Description)
+			paramsStr += fmt.Sprintf("\n  %s\n", p.Description)
 		}
 	}
 	return paramsStr
@@ -132,12 +136,15 @@ func printMarkdown(transactions map[string]types.Tx) {
 			markdown += fmt.Sprintf("## %s\n\n", tx.Module)
 			lastModule = tx.Module
 		}
-		markdown += fmt.Sprintf("### %s (%s) {#%s}\n", tx.FullName(), tx.Type, tx.Module+"-"+strings.ToLower(tx.Name))
+		markdown += fmt.Sprintf("### %s (%s) {#%s}\n\n", tx.FullName(), tx.Type, tx.Module+"-"+strings.ToLower(tx.Name))
 		markdown += fmt.Sprintf("%s\n\n", markdownRef(tx.FullName(), tx.Ref, types.Base))
-		markdown += fmt.Sprintf("#### Parameters %s\n%s\n", markdownRef(tx.FullName(), tx.ParametersRef, types.Params), markdownParams(tx.Parameters))
+		markdown += fmt.Sprintf("#### Parameters %s\n\n%s\n", markdownRef(tx.FullName(), tx.ParametersRef, types.Params), markdownParams(tx.Parameters))
 
-		if tx.Result != nil || len(tx.ResultRef) > 0 {
-			markdown += fmt.Sprintf("#### Result %s\n%s\n", markdownRef(tx.FullName(), tx.ResultRef, types.Result), markdownParams(tx.Result))
+		if len(tx.ResultRef) > 0 {
+			markdown += fmt.Sprintf("#### Result %s\n\n", markdownRef(tx.FullName(), tx.ResultRef, types.Result))
+			if tx.Result != nil {
+				markdown += fmt.Sprintf("%s\n", markdownParams(tx.Result))
+			}
 		}
 
 		markdown += markdownRefSrcs(tx.FullName(), tx.Ref, types.Base)
