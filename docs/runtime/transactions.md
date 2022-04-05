@@ -643,5 +643,4 @@ with references to Go, Rust and TypeScript bindings in Oasis SDK.
 [go-evm.Storage-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/go/modules/evm/types.go#L19-L23
 [typescript-evm.Storage-params]: https://github.com/oasisprotocol/oasis-sdk/tree/master/client-sdk/ts-web/rt/src/types.ts#L411-L417
 
-
 <!-- markdownlint-enable line-length -->
