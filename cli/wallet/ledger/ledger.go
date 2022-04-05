@@ -182,7 +182,7 @@ func (w *ledgerWallet) UnsafeExport() string {
 
 func init() {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
-	flags.String(cfgDerivation, derivationAdr8, "Derivation scheme to use [adr8, legacy]")
+	flags.String(cfgDerivation, derivationLegacy, "Derivation scheme to use [adr8, legacy]")
 	flags.Uint32(cfgNumber, 0, "Key number to use for ADR 0008 key derivation scheme")
 
 	wallet.Register(&ledgerWalletFactory{
