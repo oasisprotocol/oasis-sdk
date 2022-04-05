@@ -199,6 +199,25 @@ jobs:
         with:
           files: docs
 
+  lint-go-tools-extract-runtime-txs:
+    name: lint-go-tools-extract-runtime-txs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.17.x'
+
+      - name: Lint Go cli
+        uses: golangci/golangci-lint-action@v3.1.0
+        with:
+          # NOTE: The version must be specified without the patch version.
+          version: v1.40
+          working-directory: tools/extract-runtime-txs
+
   lint-generated-docs:
     name: lint-generated-docs
     runs-on: ubuntu-latest
