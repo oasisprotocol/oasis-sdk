@@ -114,17 +114,14 @@ func snippetPath(s types.Snippet) string {
 // sortTxs sorts the given map of transactions by their key and returns an
 // ordered list of transactions.
 func sortTxs(txs map[string]types.Tx) []types.Tx {
-	keys := make([]string, 0, len(txs))
-	for k := range txs {
-		keys = append(keys, k)
+	sortedTxs := make([]types.Tx, 0, len(txs))
+	for _, tx := range txs {
+		sortedTxs = append(sortedTxs, tx)
 	}
-	sort.Strings(keys)
-
-	sortedTxs := []types.Tx{}
-	for _, k := range keys {
-		sortedTxs = append(sortedTxs, txs[k])
-	}
-
+	// Sort by module name, then by tx type and then by name.
+	sort.Slice(sortedTxs, func(i, j int) bool {
+		return sortedTxs[i].Module+string(sortedTxs[i].Type)+sortedTxs[i].Name < sortedTxs[j].Module+string(sortedTxs[j].Type)+sortedTxs[j].Name
+	})
 	return sortedTxs
 }
 
