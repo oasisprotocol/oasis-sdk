@@ -14,21 +14,25 @@ import (
 var GolangWarnings = []error{}
 
 type GolangParser struct {
+	searchDir string
+
 	filename string
-	txs      map[string]string
+	localTxs map[string]string
 }
 
-func NewGolangParser(filename string) GolangParser {
-	return GolangParser{
-		filename: filename,
-		txs:      map[string]string{},
+func NewGolangParser(searchDir string) *GolangParser {
+	return &GolangParser{
+		searchDir: searchDir,
+		localTxs:  map[string]string{},
 	}
 }
 
-// PopulateGoRefs populates existing transactions with references to Golang language bindings
-// in the provided searchDir.
-func PopulateGoRefs(transactions map[string]types.Tx, searchDir string) error {
-	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+func (p *GolangParser) GenerateInitialTransactions(_ string) (map[string]types.Tx, error) {
+	return nil, types.NotImplementedError
+}
+
+func (p *GolangParser) PopulateRefs(transactions map[string]types.Tx) error {
+	err := filepath.Walk(p.searchDir, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -39,8 +43,9 @@ func PopulateGoRefs(transactions map[string]types.Tx, searchDir string) error {
 		if !strings.HasSuffix(f.Name(), ".go") || f.Name() == "types.go" {
 			return nil
 		}
-		goParser := NewGolangParser(path)
-		e := goParser.populateTransactionRefs(transactions)
+
+		p.filename = path
+		e := p.populateTransactionRefs(transactions)
 		if e != nil {
 			return e
 		}
@@ -55,6 +60,8 @@ func PopulateGoRefs(transactions map[string]types.Tx, searchDir string) error {
 }
 
 func (p *GolangParser) populateTransactionRefs(txs map[string]types.Tx) error {
+	p.localTxs = map[string]string{}
+
 	text, err := readFile(p.filename)
 	if err != nil {
 		return err
@@ -74,12 +81,12 @@ func (p *GolangParser) populateTransactionRefs(txs map[string]types.Tx) error {
 			if !found {
 				GolangWarnings = append(GolangWarnings, fmt.Errorf("unknown method %s in file %s:%d", txMatch[2], p.filename, lineIdx+1))
 			}
-			p.txs[fullNameSplit[1]] = txMatch[2]
+			p.localTxs[fullNameSplit[1]] = txMatch[2]
 		}
 
 		implMatch := regImplMatch.FindStringSubmatch(text[lineIdx])
 		if len(implMatch) > 0 {
-			fullName, valid := p.txs[implMatch[1]]
+			fullName, valid := p.localTxs[implMatch[1]]
 			if !valid {
 				GolangWarnings = append(GolangWarnings, fmt.Errorf("implementation of %s not defined as method in the beginning of %s", implMatch[1], p.filename))
 				continue
@@ -102,7 +109,7 @@ func (p *GolangParser) populateTransactionRefs(txs map[string]types.Tx) error {
 	}
 
 	// Open types.go of the same module and collect parameters and result snippets.
-	if len(p.txs) > 0 {
+	if len(p.localTxs) > 0 {
 		if err := p.populateParamsResultRefs(txs); err != nil {
 			return err
 		}
@@ -128,7 +135,7 @@ func (p *GolangParser) populateParamsResultRefs(txs map[string]types.Tx) error {
 			name := strings.TrimSuffix(typeMatch[1], "Result")
 			name = strings.TrimSuffix(name, "Query")
 
-			fullName, valid := p.txs[name]
+			fullName, valid := p.localTxs[name]
 			if !valid {
 				continue
 			}

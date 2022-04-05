@@ -26,8 +26,8 @@ func TestPopulateTypeScriptRefs(t *testing.T) {
 		},
 	}
 
-	tsParser := NewTypeScriptParser("../tests/typescript/contracts.ts")
-	err := tsParser.populateTransactionRefs(txs)
+	tsParser := NewTypeScriptParser("../tests/typescript")
+	err := tsParser.PopulateRefs(txs)
 	require.NoError(err)
 	fmt.Println(txs["contracts.Upload"].Ref)
 	require.Equal(

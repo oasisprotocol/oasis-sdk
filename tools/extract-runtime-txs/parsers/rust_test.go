@@ -12,7 +12,7 @@ func TestFindTransactions(t *testing.T) {
 	require := require.New(t)
 
 	rustParser := RustParser{filename: "../tests/rust/basic.rs"}
-	txs, err := rustParser.FindTransactions()
+	txs, err := rustParser.findTransactions()
 	require.NoError(err)
 	require.Equal(
 		[]types.Tx{
@@ -109,8 +109,9 @@ func TestFindTransactions(t *testing.T) {
 func TestFindTransactionsComments(t *testing.T) {
 	require := require.New(t)
 
-	rustParser := RustParser{filename: "../tests/rust/basic_comments.rs"}
-	txs, err := rustParser.FindTransactions()
+	rustParser := NewRustParser("../tests/rust")
+	rustParser.filename = "../tests/rust/basic_comments.rs"
+	txs, err := rustParser.findTransactions()
 	require.NoError(err)
 	require.Equal(
 		[]types.Tx{

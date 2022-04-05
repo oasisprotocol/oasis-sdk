@@ -171,13 +171,19 @@ func printJSON(txs map[string]types.Tx) {
 }
 
 func doExtractRuntimeTxs(cmd *cobra.Command, args []string) {
-	transactions, err := parsers.GenerateInitialTransactions(viper.GetString(CfgCodebasePath) + "/runtime-sdk")
+	rustParser := parsers.NewRustParser(viper.GetString(CfgCodebasePath) + "/runtime-sdk")
+	transactions, err := rustParser.GenerateInitialTransactions()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	parsers.PopulateGoRefs(transactions, viper.GetString(CfgCodebasePath)+"/client-sdk/go")
-	parsers.PopulateTypeScriptRefs(transactions, viper.GetString(CfgCodebasePath)+"/client-sdk/ts-web")
+	prsrs := []parsers.Parser{
+		parsers.NewGolangParser(viper.GetString(CfgCodebasePath) + "/client-sdk/go"),
+		parsers.NewTypeScriptParser(viper.GetString(CfgCodebasePath) + "/client-sdk/ts-web"),
+	}
+	for _, p := range prsrs {
+		p.PopulateRefs(transactions)
+	}
 
 	if viper.GetBool(CfgMarkdown) {
 		printMarkdown(transactions)

@@ -14,25 +14,36 @@ import (
 var TypeScriptWarnings = []error{}
 
 type TypeScriptParser struct {
-	filename  string
-	txs       map[string]string
-	txParams  map[string]string
-	txResults map[string]string
+	searchDir string
+
+	filename       string
+	localTxs       map[string]string
+	localTxParams  map[string]string
+	localTxResults map[string]string
 }
 
-func NewTypeScriptParser(filename string) TypeScriptParser {
-	return TypeScriptParser{
-		filename:  filename,
-		txs:       map[string]string{},
-		txParams:  map[string]string{},
-		txResults: map[string]string{},
+func NewTypeScriptParser(searchDir string) *TypeScriptParser {
+	return &TypeScriptParser{
+		searchDir: searchDir,
+
+		localTxs:       map[string]string{},
+		localTxParams:  map[string]string{},
+		localTxResults: map[string]string{},
 	}
 }
 
-// PopulateTypeScriptRefs populates existing transactions with references to TypeScript language
-// bindings in the provided searchDir.
-func PopulateTypeScriptRefs(transactions map[string]types.Tx, searchDir string) error {
-	err := filepath.Walk(searchDir, func(path string, f os.FileInfo, err error) error {
+func (p *TypeScriptParser) clearLocalTxs() {
+	p.localTxs = map[string]string{}
+	p.localTxParams = map[string]string{}
+	p.localTxResults = map[string]string{}
+}
+
+func (p *TypeScriptParser) GenerateInitialTransactions(_ string) (map[string]types.Tx, error) {
+	return nil, types.NotImplementedError
+}
+
+func (p *TypeScriptParser) PopulateRefs(transactions map[string]types.Tx) error {
+	err := filepath.Walk(p.searchDir, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -43,8 +54,8 @@ func PopulateTypeScriptRefs(transactions map[string]types.Tx, searchDir string) 
 		if !strings.HasSuffix(f.Name(), ".ts") || f.Name() == "types.ts" {
 			return nil
 		}
-		tsParser := NewTypeScriptParser(path)
-		e := tsParser.populateTransactionRefs(transactions)
+		p.filename = path
+		e := p.populateTransactionRefs(transactions)
 		if e != nil {
 			return e
 		}
@@ -59,6 +70,8 @@ func PopulateTypeScriptRefs(transactions map[string]types.Tx, searchDir string) 
 }
 
 func (p *TypeScriptParser) populateTransactionRefs(txs map[string]types.Tx) error {
+	p.clearLocalTxs()
+
 	text, err := readFile(p.filename)
 	if err != nil {
 		return err
@@ -81,12 +94,12 @@ func (p *TypeScriptParser) populateTransactionRefs(txs map[string]types.Tx) erro
 			if !found {
 				TypeScriptWarnings = append(TypeScriptWarnings, fmt.Errorf("unknown method %s in file %s:%d", methodMatch[1], p.filename, lineIdx+1))
 			}
-			p.txs[fullNameSplit[1]] = methodMatch[1]
+			p.localTxs[fullNameSplit[1]] = methodMatch[1]
 		}
 
 		callQueryMatch := regCallQueryMatch.FindStringSubmatch(text[lineIdx])
 		if len(callQueryMatch) == 3 {
-			fullName, valid := p.txs[callQueryMatch[2]]
+			fullName, valid := p.localTxs[callQueryMatch[2]]
 			if !valid {
 				TypeScriptWarnings = append(TypeScriptWarnings, fmt.Errorf("implementation of %s not defined as method in the beginning of %s", callQueryMatch[2], p.filename))
 				continue
@@ -99,11 +112,11 @@ func (p *TypeScriptParser) populateTransactionRefs(txs map[string]types.Tx) erro
 			if len(txTypesMatch) == 4 {
 				if strings.HasPrefix(txTypesMatch[2], "types.") {
 					name := strings.TrimPrefix(txTypesMatch[2], "types.")
-					p.txParams[name] = fullName
+					p.localTxParams[name] = fullName
 				}
 				if strings.HasPrefix(txTypesMatch[3], "types.") {
 					name := strings.TrimPrefix(txTypesMatch[3], "types.")
-					p.txResults[name] = fullName
+					p.localTxResults[name] = fullName
 				}
 			}
 
@@ -121,7 +134,7 @@ func (p *TypeScriptParser) populateTransactionRefs(txs map[string]types.Tx) erro
 	}
 
 	// Open types.ts of the same module and collect parameters and result snippets.
-	if len(p.txs) > 0 {
+	if len(p.localTxs) > 0 {
 		if err := p.populateParamsResultRefs(txs); err != nil {
 			return err
 		}
@@ -154,9 +167,9 @@ func (p *TypeScriptParser) populateParamsResultRefs(txs map[string]types.Tx) err
 				LineFrom: lineFrom,
 				LineTo:   lineTo,
 			}
-			if fullName, valid := p.txParams[typeMatch[1]]; valid {
+			if fullName, valid := p.localTxParams[typeMatch[1]]; valid {
 				txs[fullName].ParametersRef[types.TypeScript] = snippet
-			} else if fullName, valid := p.txResults[typeMatch[1]]; valid {
+			} else if fullName, valid := p.localTxResults[typeMatch[1]]; valid {
 				txs[fullName].ResultRef[types.TypeScript] = snippet
 			}
 		}

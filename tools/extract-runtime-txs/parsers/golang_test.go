@@ -25,8 +25,8 @@ func TestPopulateGoRefs(t *testing.T) {
 		},
 	}
 
-	goParser := NewGolangParser("../tests/_golang/contracts.go")
-	err := goParser.populateTransactionRefs(txs)
+	goParser := NewGolangParser("../tests/_golang")
+	err := goParser.PopulateRefs(txs)
 	require.NoError(err)
 	require.Equal(
 		types.Snippet{

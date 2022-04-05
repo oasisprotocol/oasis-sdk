@@ -1,5 +1,7 @@
 package types
 
+import "fmt"
+
 const (
 	Call  TxType = "call"
 	Query TxType = "query"
@@ -11,6 +13,10 @@ const (
 	Base   RefType = "base"
 	Params RefType = "params"
 	Result RefType = "result"
+)
+
+var (
+	NotImplementedError = fmt.Errorf("method not implemented")
 )
 
 // TxType is a transaction type.
@@ -32,6 +38,7 @@ func (l Lang) ToString() string {
 	return ""
 }
 
+// Parameter is a single parameter to the method or the result.
 type Parameter struct {
 	// Name is a name of the member inside the source code.
 	Name string `json:"name"`
@@ -71,7 +78,7 @@ type Tx struct {
 	ResultRef     map[Lang]Snippet `json:"result_ref"`
 }
 
-// FullNama returns the module + transaction name.
+// FullName returns the module + transaction name.
 func (t Tx) FullName() string {
 	return t.Module + "." + t.Name
 }
