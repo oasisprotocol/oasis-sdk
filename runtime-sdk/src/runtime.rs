@@ -166,6 +166,7 @@ pub trait Runtime {
                 version: Self::VERSION,
                 trust_root: Self::consensus_trust_root(),
                 features: Some(features),
+                persist_check_tx_state: false,
                 ..Default::default()
             },
         );
