@@ -154,8 +154,12 @@ jobs:
         with:
           go-version: "1.17.x"
 
-      - name: Test build
+      - name: Test build orc
         working-directory: tools/orc
+        run: go build
+
+      - name: Test build gen_runtime_vectors
+        working-directory: tools/gen_runtime_vectors
         run: go build
 
   typecheck:

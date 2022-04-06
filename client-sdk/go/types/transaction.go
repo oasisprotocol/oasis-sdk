@@ -203,6 +203,23 @@ func (t *Transaction) PrepareForSigning() *TransactionSigner {
 	}
 }
 
+// PrettyType returns a representation of the Transaction that can be used for pretty printing.
+func (t *Transaction) PrettyType(txBody interface{}) (*PrettyTransaction, error) {
+	if err := cbor.Unmarshal(t.Call.Body, txBody); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal transaction call body: %w", err)
+	}
+
+	return &PrettyTransaction{
+		Versioned: t.Versioned,
+		Call: PrettyCall{
+			Format: t.Call.Format,
+			Method: t.Call.Method,
+			Body:   txBody,
+		},
+		AuthInfo: t.AuthInfo,
+	}, nil
+}
+
 // NewTransaction creates a new unsigned transaction.
 func NewTransaction(fee *Fee, method string, body interface{}) *Transaction {
 	tx := &Transaction{
@@ -210,6 +227,28 @@ func NewTransaction(fee *Fee, method string, body interface{}) *Transaction {
 		Call: Call{
 			Format: CallFormatPlain,
 			Method: method,
+			Body:   cbor.Marshal(body),
+		},
+	}
+	if fee != nil {
+		tx.AuthInfo.Fee = *fee
+	} else {
+		// Set up a default amount to avoid invalid serialization.
+		tx.AuthInfo.Fee.Amount = NewBaseUnits(*quantity.NewFromUint64(0), NativeDenomination)
+	}
+	// Initialize SignerInfo to avoid it being set to null in case there are no signers specified
+	// which is valid in some queries.
+	tx.AuthInfo.SignerInfo = []SignerInfo{}
+	return tx
+}
+
+// NewEncryptedTransaction creates a new unsigned transaction.
+func NewEncryptedTransaction(fee *Fee, body interface{}) *Transaction {
+	tx := &Transaction{
+		Versioned: cbor.NewVersioned(LatestTransactionVersion),
+		Call: Call{
+			Format: CallFormatEncryptedX25519DeoxysII,
+			Method: "",
 			Body:   cbor.Marshal(body),
 		},
 	}
@@ -370,4 +409,19 @@ func (cr FailedCallResult) Error() string {
 // String returns the string representation of a failed call result.
 func (cr FailedCallResult) String() string {
 	return fmt.Sprintf("module: %s code: %d message: %s", cr.Module, cr.Code, cr.Message)
+}
+
+// PrettyTransaction returns a representation of the type that can be used for pretty printing.
+type PrettyTransaction struct {
+	cbor.Versioned
+
+	Call     PrettyCall `json:"call"`
+	AuthInfo AuthInfo   `json:"ai"`
+}
+
+// PrettyCall returns a representation of the type that can be used for pretty printing.
+type PrettyCall struct {
+	Format CallFormat  `json:"format,omitempty"`
+	Method string      `json:"method,omitempty"`
+	Body   interface{} `json:"body"`
 }

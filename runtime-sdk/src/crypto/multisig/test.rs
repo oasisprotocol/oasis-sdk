@@ -106,18 +106,54 @@ fn test_config_batch() {
                 public_key: keys::charlie::pk(),
                 weight: 2,
             },
+            Signer {
+                public_key: keys::dave::pk(),
+                weight: 1,
+            },
+            Signer {
+                public_key: keys::erin::pk(),
+                weight: 1,
+            },
+            Signer {
+                public_key: keys::frank::pk(),
+                weight: 1,
+            },
+            Signer {
+                public_key: keys::grace::pk(),
+                weight: 1,
+            },
         ],
         threshold: 2,
     };
     let dummy_sig_a = Signature::from(vec![97]);
     let dummy_sig_b = Signature::from(vec![98]);
     let dummy_sig_c = Signature::from(vec![99]);
+    let dummy_sig_d = Signature::from(vec![100]);
+    let dummy_sig_e = Signature::from(vec![101]);
+    let dummy_sig_f = Signature::from(vec![102]);
+    let dummy_sig_g = Signature::from(vec![103]);
     config
-        .batch(&[Some(dummy_sig_a.clone()), None, None])
+        .batch(&[
+            Some(dummy_sig_a.clone()),
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ])
         .expect_err("insufficient weight");
     assert_eq!(
         config
-            .batch(&[Some(dummy_sig_a.clone()), Some(dummy_sig_b.clone()), None])
+            .batch(&[
+                Some(dummy_sig_a.clone()),
+                Some(dummy_sig_b.clone()),
+                None,
+                None,
+                None,
+                None,
+                None
+            ])
             .expect("sufficient weight ab"),
         (
             vec![keys::alice::pk(), keys::bob::pk()],
@@ -126,9 +162,51 @@ fn test_config_batch() {
     );
     assert_eq!(
         config
-            .batch(&[None, None, Some(dummy_sig_c.clone())])
+            .batch(&[
+                None,
+                None,
+                Some(dummy_sig_c.clone()),
+                None,
+                None,
+                None,
+                None
+            ])
             .expect("sufficient weight c"),
         (vec![keys::charlie::pk()], vec![dummy_sig_c.clone()])
+    );
+    assert_eq!(
+        config
+            .batch(&[
+                None,
+                None,
+                None,
+                Some(dummy_sig_d.clone()),
+                Some(dummy_sig_e.clone()),
+                None,
+                None
+            ])
+            .expect("sufficient weight de"),
+        (
+            vec![keys::dave::pk(), keys::erin::pk()],
+            vec![dummy_sig_d.clone(), dummy_sig_e.clone()]
+        )
+    );
+    assert_eq!(
+        config
+            .batch(&[
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(dummy_sig_f.clone()),
+                Some(dummy_sig_g.clone())
+            ])
+            .expect("sufficient weight fg"),
+        (
+            vec![keys::frank::pk(), keys::grace::pk()],
+            vec![dummy_sig_f.clone(), dummy_sig_g.clone()]
+        )
     );
     assert_eq!(
         config
@@ -136,14 +214,30 @@ fn test_config_batch() {
                 Some(dummy_sig_a.clone()),
                 Some(dummy_sig_b.clone()),
                 Some(dummy_sig_c.clone()),
+                Some(dummy_sig_d.clone()),
+                Some(dummy_sig_e.clone()),
+                Some(dummy_sig_f.clone()),
+                Some(dummy_sig_g.clone()),
             ])
             .expect("sufficient weight abc"),
         (
-            vec![keys::alice::pk(), keys::bob::pk(), keys::charlie::pk()],
+            vec![
+                keys::alice::pk(),
+                keys::bob::pk(),
+                keys::charlie::pk(),
+                keys::dave::pk(),
+                keys::erin::pk(),
+                keys::frank::pk(),
+                keys::grace::pk()
+            ],
             vec![
                 dummy_sig_a.clone(),
                 dummy_sig_b.clone(),
                 dummy_sig_c.clone(),
+                dummy_sig_d.clone(),
+                dummy_sig_e.clone(),
+                dummy_sig_f.clone(),
+                dummy_sig_g.clone(),
             ]
         )
     );
@@ -154,6 +248,10 @@ fn test_config_batch() {
         .batch(&[
             Some(dummy_sig_a.clone()),
             Some(dummy_sig_b.clone()),
+            None,
+            None,
+            None,
+            None,
             None,
             None,
         ])

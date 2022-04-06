@@ -16,6 +16,6 @@ type CallEnvelopeX25519DeoxysII struct {
 type ResultEnvelopeX25519DeoxysII struct {
 	// Nonce.
 	Nonce [deoxysii.NonceSize]byte `json:"nonce"`
-	// Data is the encrypted call data.
+	// Data is the encrypted result data.
 	Data []byte `json:"data"`
 }

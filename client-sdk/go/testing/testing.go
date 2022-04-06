@@ -40,8 +40,8 @@ func newEd25519TestKey(seed string) TestKey {
 }
 
 func newSecp256k1TestKey(seed string) TestKey {
-	pk := sha512.Sum512_256([]byte(seed))
-	signer := secp256k1.NewSigner(pk[:])
+	sk := sha512.Sum512_256([]byte(seed))
+	signer := secp256k1.NewSigner(sk[:])
 	sigspec := types.NewSignatureAddressSpecSecp256k1Eth(signer.Public().(secp256k1.PublicKey))
 
 	h := sha3.NewLegacyKeccak256()
@@ -51,7 +51,7 @@ func newSecp256k1TestKey(seed string) TestKey {
 	copy(ethAddress[:], h.Sum(nil)[32-20:])
 
 	return TestKey{
-		SecretKey:  pk[:],
+		SecretKey:  sk[:],
 		Signer:     signer,
 		Address:    types.NewAddress(sigspec),
 		SigSpec:    sigspec,
@@ -85,8 +85,8 @@ var (
 	Charlie = newEd25519TestKey("oasis-runtime-sdk/test-keys: charlie")
 	// Dave is the test key D.
 	Dave = newSecp256k1TestKey("oasis-runtime-sdk/test-keys: dave")
-	// Eve is the test key E.
-	Eve = newSecp256k1TestKey("oasis-runtime-sdk/test-keys: eve")
+	// Erin is the test key E.
+	Erin = newSecp256k1TestKey("oasis-runtime-sdk/test-keys: erin")
 	// Frank is the test key F.
 	Frank = newSr25519TestKey("oasis-runtime-sdk/test-keys: frank")
 	// Grace is the test key G.

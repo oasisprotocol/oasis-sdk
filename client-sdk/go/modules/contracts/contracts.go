@@ -299,6 +299,11 @@ func NewCallTx(fee *types.Fee, body *Call) *types.Transaction {
 	return types.NewTransaction(fee, methodCall, body)
 }
 
+// NewUpgradeTx generates a new contracts.Upgrade transaction.
+func NewUpgradeTx(fee *types.Fee, body *Upgrade) *types.Transaction {
+	return types.NewTransaction(fee, methodUpgrade, body)
+}
+
 // CompressCode performs code compression using Snappy.
 func CompressCode(code []byte) []byte {
 	var compressedCode bytes.Buffer

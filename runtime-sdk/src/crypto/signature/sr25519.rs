@@ -63,3 +63,9 @@ impl PublicKey {
         schnorrkel::PublicKey::from_bytes(bytes).map_err(|_| Error::MalformedPublicKey)
     }
 }
+
+impl From<&'static str> for PublicKey {
+    fn from(s: &'static str) -> PublicKey {
+        PublicKey::from_bytes(&base64::decode(s).unwrap()).unwrap()
+    }
+}
