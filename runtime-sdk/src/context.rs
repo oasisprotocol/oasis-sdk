@@ -106,10 +106,18 @@ pub trait Context {
             return None;
         }
 
-        self.host_info()
-            .local_config
-            .get(key)
-            .and_then(|v| cbor::from_value(v.clone()).ok())
+        self.host_info().local_config.get(key).and_then(|v| {
+            cbor::from_value(v.clone()).unwrap_or_else(|e| {
+                let msg = format!(
+                    "Cannot interpret the value of \"{}\" in runtime's local config as a {}: {:?}",
+                    key,
+                    std::any::type_name::<T>(),
+                    e
+                );
+                slog::error!(self.get_logger("runtime-sdk"), "{}", msg);
+                panic!("{}", msg);
+            })
+        })
     }
 
     /// Information about the host environment.
