@@ -107,7 +107,6 @@ pub trait Context {
 
     /// Whether `method` is an allowed query per policy in the local config.
     fn is_allowed_query<R: crate::runtime::Runtime>(&self, method: &str) -> bool {
-        // XXX: This is on the critical but pre-parsing with a lazy_static (?) feels like premature optimization.
         let config: Vec<BTreeMap<String, bool>> = self
             .local_config(LOCAL_CONFIG_ALLOWED_QUERIES)
             .unwrap_or_default();

@@ -17,7 +17,7 @@ use crate::{
     modules,
     runtime::Runtime,
     storage,
-    testing::keymanager::MockKeyManagerClient,
+    testing::{configmap, keymanager::MockKeyManagerClient},
     types::transaction,
 };
 
@@ -25,19 +25,6 @@ pub struct Config;
 
 impl modules::core::Config for Config {}
 
-/// Constructs a BTreeMap using a `cbormap! { "key" => value, ... }` syntax.
-/// Keys are coerced to strings, and values to cbor::Value.
-macro_rules! cbormap {
-    // allow trailing comma
-    ( $($key:expr => $value:expr,)+ ) => (cbormap!($($key => $value),+));
-    ( $($key:expr => $value:expr),* ) => {
-        {
-            let mut m = BTreeMap::new();
-            $( m.insert($key.to_string(), cbor::to_value($value)); )*
-            m
-        }
-    };
-}
 /// A mock runtime that only has the core module.
 pub struct EmptyRuntime;
 
@@ -97,10 +84,8 @@ impl Mock {
             self.max_messages,
         )
     }
-}
 
-impl Default for Mock {
-    fn default() -> Self {
+    pub fn with_local_config(local_config: BTreeMap<String, cbor::Value>) -> Self {
         let mkvs = mkvs::OverlayTree::new(
             mkvs::Tree::builder()
                 .with_root_type(mkvs::RootType::State)
@@ -109,13 +94,6 @@ impl Default for Mock {
         let consensus_tree = mkvs::Tree::builder()
             .with_root_type(mkvs::RootType::State)
             .build(Box::new(mkvs::sync::NoopReadSyncer));
-
-        let local_config = cbormap! {
-            "estimate_gas_by_simulating_contracts" => true,
-            "allowed_queries" => vec![
-                cbormap! {"all_expensive" => true}
-            ],
-        };
 
         Self {
             host_info: HostInfo {
@@ -132,6 +110,19 @@ impl Default for Mock {
             epoch: 1,
             max_messages: 32,
         }
+    }
+}
+
+impl Default for Mock {
+    fn default() -> Self {
+        let local_config_for_tests = configmap! {
+            // Allow expensive gas estimation and expensive queries so they can be tested.
+            "estimate_gas_by_simulating_contracts" => true,
+            "allowed_queries" => vec![
+                configmap! {"all_expensive" => true}
+            ],
+        };
+        Self::with_local_config(local_config_for_tests)
     }
 }
 
