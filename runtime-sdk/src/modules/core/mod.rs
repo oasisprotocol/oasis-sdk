@@ -200,6 +200,13 @@ pub struct LocalConfig {
     /// Minimum gas price to accept.
     #[cbor(optional, default)]
     pub min_gas_price: BTreeMap<token::Denomination, u128>,
+
+    /// When estimating gas in `core.EstimateGas`, simulate the tx (and report) only up to this much
+    /// used gas. This limit is more likely to be relevant if `estimate_gas_by_simulating_contracts` is
+    /// enabled in the local config. The special value of 0 means that the maximum amount of gas in a
+    /// batch will be used.
+    #[cbor(optional, default)]
+    pub max_estimated_gas: u64,
 }
 
 /// State schema constants.
@@ -359,7 +366,14 @@ impl<Cfg: Config> Module<Cfg> {
         mut args: types::EstimateGasQuery,
     ) -> Result<u64, Error> {
         // Assume maximum amount of gas in a batch, a reasonable maximum fee and maximum amount of consensus messages.
-        args.tx.auth_info.fee.gas = Self::params(ctx.runtime_state()).max_batch_gas;
+        args.tx.auth_info.fee.gas = {
+            let local_max_estimated_gas = Self::get_local_max_estimated_gas(ctx);
+            if local_max_estimated_gas == 0 {
+                Self::params(ctx.runtime_state()).max_batch_gas
+            } else {
+                local_max_estimated_gas
+            }
+        };
         args.tx.auth_info.fee.amount =
             token::BaseUnits::new(u64::MAX.into(), token::Denomination::NATIVE);
         args.tx.auth_info.fee.consensus_messages = ctx.remaining_messages();
@@ -493,6 +507,13 @@ impl<Cfg: Config> Module<Cfg> {
             .as_ref()
             .map(|cfg: &LocalConfig| cfg.min_gas_price.get(denom).copied())
             .unwrap_or_else(|| Cfg::DEFAULT_LOCAL_MIN_GAS_PRICE.get(denom).copied())
+            .unwrap_or_default()
+    }
+
+    fn get_local_max_estimated_gas<C: Context>(ctx: &mut C) -> u64 {
+        ctx.local_config(MODULE_NAME)
+            .as_ref()
+            .map(|cfg: &LocalConfig| cfg.max_estimated_gas)
             .unwrap_or_default()
     }
 
