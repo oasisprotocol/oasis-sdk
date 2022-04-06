@@ -1,0 +1,20 @@
+package inspect
+
+import (
+	"github.com/spf13/cobra"
+
+	"github.com/oasisprotocol/oasis-sdk/cli/cmd/common"
+)
+
+// Cmd is the network inspection sub-command set root.
+var Cmd = &cobra.Command{
+	Use:   "inspect",
+	Short: "Inspect the network",
+}
+
+func init() {
+	governanceProposalCmd.Flags().AddFlagSet(common.SelectorFlags)
+	governanceProposalCmd.Flags().AddFlagSet(common.HeightFlag)
+
+	Cmd.AddCommand(governanceProposalCmd)
+}
