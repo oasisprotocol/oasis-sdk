@@ -393,6 +393,51 @@ var (
 		},
 	}
 
+	accountsBurnCmd = &cobra.Command{
+		Use:   "burn <amount>",
+		Short: "Burn given amount of tokens",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := cliConfig.Global()
+			npw := common.GetNPWSelection(cfg)
+			txCfg := common.GetTransactionConfig()
+			amountStr := args[0]
+
+			if npw.Wallet == nil {
+				cobra.CheckErr("no wallets configured")
+			}
+
+			// When not in offline mode, connect to the given network endpoint.
+			ctx := context.Background()
+			var conn connection.Connection
+			if !txCfg.Offline {
+				var err error
+				conn, err = connection.Connect(ctx, npw.Network)
+				cobra.CheckErr(err)
+			}
+
+			wallet := common.LoadWallet(cfg, npw.WalletName)
+
+			if npw.ParaTime != nil {
+				cobra.CheckErr("burns within paratimes are not supported; use --no-paratime")
+			}
+
+			// Consensus layer transfer.
+			amount, err := helpers.ParseConsensusDenomination(npw.Network, amountStr)
+			cobra.CheckErr(err)
+
+			// Prepare transaction.
+			tx := staking.NewBurnTx(0, nil, &staking.Burn{
+				Amount: *amount,
+			})
+
+			sigTx, err := common.SignConsensusTransaction(ctx, npw, wallet, conn, tx)
+			cobra.CheckErr(err)
+
+			common.BroadcastTransaction(ctx, npw.ParaTime, conn, sigTx, nil)
+		},
+	}
+
 	accountsDelegateCmd = &cobra.Command{
 		Use:   "delegate <amount> <to>",
 		Short: "Delegate given amount of tokens to a specified account",
@@ -529,6 +574,9 @@ func init() {
 	accountsTransferCmd.Flags().AddFlagSet(common.SelectorFlags)
 	accountsTransferCmd.Flags().AddFlagSet(common.TransactionFlags)
 
+	accountsBurnCmd.Flags().AddFlagSet(common.SelectorFlags)
+	accountsBurnCmd.Flags().AddFlagSet(common.TransactionFlags)
+
 	accountsDelegateCmd.Flags().AddFlagSet(common.SelectorFlags)
 	accountsDelegateCmd.Flags().AddFlagSet(common.TransactionFlags)
 
@@ -540,6 +588,7 @@ func init() {
 	accountsCmd.AddCommand(accountsDepositCmd)
 	accountsCmd.AddCommand(accountsWithdrawCmd)
 	accountsCmd.AddCommand(accountsTransferCmd)
+	accountsCmd.AddCommand(accountsBurnCmd)
 	accountsCmd.AddCommand(accountsDelegateCmd)
 	accountsCmd.AddCommand(accountsUndelegateCmd)
 	accountsCmd.AddCommand(accountsFromPublicKeyCmd)
