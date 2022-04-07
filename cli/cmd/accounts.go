@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
@@ -498,6 +499,19 @@ var (
 			common.BroadcastTransaction(ctx, npw.ParaTime, conn, sigTx, nil)
 		},
 	}
+
+	accountsFromPublicKeyCmd = &cobra.Command{
+		Use:   "from-public-key <public-key>",
+		Short: "Convert from a public key to an account address",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			var pk signature.PublicKey
+			err := pk.UnmarshalText([]byte(args[0]))
+			cobra.CheckErr(err)
+
+			fmt.Println(staking.NewAddress(pk))
+		},
+	}
 )
 
 func init() {
@@ -528,4 +542,5 @@ func init() {
 	accountsCmd.AddCommand(accountsTransferCmd)
 	accountsCmd.AddCommand(accountsDelegateCmd)
 	accountsCmd.AddCommand(accountsUndelegateCmd)
+	accountsCmd.AddCommand(accountsFromPublicKeyCmd)
 }
