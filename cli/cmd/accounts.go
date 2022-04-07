@@ -71,6 +71,7 @@ var (
 			cobra.CheckErr(err)
 
 			fmt.Printf("Balance: %s\n", helpers.FormatConsensusDenomination(npw.Network, consensusAccount.General.Balance))
+			fmt.Printf("Nonce: %d\n", consensusAccount.General.Nonce)
 			// TODO: Delegations.
 			// TODO: Allowances.
 
