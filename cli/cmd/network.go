@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -11,6 +12,7 @@ import (
 	cliConfig "github.com/oasisprotocol/oasis-sdk/cli/config"
 	"github.com/oasisprotocol/oasis-sdk/cli/table"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/connection"
 )
 
 var (
@@ -69,35 +71,65 @@ var (
 			cobra.CheckErr(net.Validate())
 
 			// Ask user for some additional parameters.
-			questions := []*survey.Question{
-				{
-					Name:   "description",
-					Prompt: &survey.Input{Message: "Description:"},
-				},
-				{
-					Name:   "symbol",
-					Prompt: &survey.Input{Message: "Denomination symbol:"},
-				},
-				{
-					Name: "decimals",
-					Prompt: &survey.Input{
-						Message: "Denomination decimal places:",
-						Default: "9",
-					},
-					Validate: survey.Required,
-				},
-			}
-			answers := struct {
-				Description string
-				Symbol      string
-				Decimals    uint8
-			}{}
-			err := survey.Ask(questions, &answers)
+			networkDetailsFromSurvey(&net)
+
+			err := cfg.Networks.Add(name, &net)
 			cobra.CheckErr(err)
 
-			net.Description = answers.Description
-			net.Denomination.Symbol = answers.Symbol
-			net.Denomination.Decimals = answers.Decimals
+			err = cfg.Save()
+			cobra.CheckErr(err)
+		},
+	}
+
+	networkAddLocalCmd = &cobra.Command{
+		Use:   "add-local <name> <rpc-endpoint>",
+		Short: "Add a new local network",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := cliConfig.Global()
+			name, rpc := args[0], args[1]
+
+			net := config.Network{
+				RPC: rpc,
+			}
+			// Validate initial network configuration early.
+			cobra.CheckErr(config.ValidateIdentifier(name))
+			if !net.IsLocalRPC() {
+				cobra.CheckErr(fmt.Errorf("rpc-endpoint '%s' is not local", rpc))
+			}
+
+			// Connect to the network and query the chain context.
+			ctx := context.Background()
+			conn, err := connection.ConnectNoVerify(ctx, &net)
+			cobra.CheckErr(err)
+
+			chainContext, err := conn.Consensus().GetChainContext(ctx)
+			cobra.CheckErr(err)
+			net.ChainContext = chainContext
+			cobra.CheckErr(net.Validate())
+
+			// With a very high probability, the user is going to be
+			// adding a local endpoint for an existing network, so try
+			// to clone config details from any of the hardcoded
+			// defaults.
+			var clonedDefault bool
+			for _, defaultNet := range config.DefaultNetworks.All {
+				if defaultNet.ChainContext != chainContext {
+					continue
+				}
+
+				// Yep.
+				net.Denomination = defaultNet.Denomination
+				net.ParaTimes = defaultNet.ParaTimes
+				clonedDefault = true
+				break
+			}
+
+			// If we failed to crib details from a hardcoded config,
+			// ask the user.
+			if !clonedDefault {
+				networkDetailsFromSurvey(&net)
+			}
 
 			err = cfg.Networks.Add(name, &net)
 			cobra.CheckErr(err)
@@ -172,9 +204,43 @@ var (
 	}
 )
 
+func networkDetailsFromSurvey(net *config.Network) {
+	// Ask user for some additional parameters.
+	questions := []*survey.Question{
+		{
+			Name:   "description",
+			Prompt: &survey.Input{Message: "Description:"},
+		},
+		{
+			Name:   "symbol",
+			Prompt: &survey.Input{Message: "Denomination symbol:"},
+		},
+		{
+			Name: "decimals",
+			Prompt: &survey.Input{
+				Message: "Denomination decimal places:",
+				Default: "9",
+			},
+			Validate: survey.Required,
+		},
+	}
+	answers := struct {
+		Description string
+		Symbol      string
+		Decimals    uint8
+	}{}
+	err := survey.Ask(questions, &answers)
+	cobra.CheckErr(err)
+
+	net.Description = answers.Description
+	net.Denomination.Symbol = answers.Symbol
+	net.Denomination.Decimals = answers.Decimals
+}
+
 func init() {
 	networkCmd.AddCommand(networkListCmd)
 	networkCmd.AddCommand(networkAddCmd)
+	networkCmd.AddCommand(networkAddLocalCmd)
 	networkCmd.AddCommand(networkRmCmd)
 	networkCmd.AddCommand(networkSetDefaultCmd)
 	networkCmd.AddCommand(networkSetRPCCmd)
