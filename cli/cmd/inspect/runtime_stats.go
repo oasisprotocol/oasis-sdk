@@ -218,19 +218,33 @@ var runtimeStatsCmd = &cobra.Command{
 
 		roothashConn := consensusConn.RootHash()
 		registryConn := consensusConn.Registry()
-		nodeToEntity := make(map[signature.PublicKey]signature.PublicKey)
+
+		nl, err := newNodeLookup(ctx, consensusConn, registryConn, int64(startHeight))
+		cobra.CheckErr(err)
+
+		nodeToEntityMap := make(map[signature.PublicKey]signature.PublicKey)
+		nodeToEntity := func(id signature.PublicKey) signature.PublicKey {
+			// Note: node.EntityID is immutable once registered, so the
+			// cache does not need to ever be updated.
+			entityID, ok := nodeToEntityMap[id]
+			if !ok {
+				var node *node.Node
+				node, err = nl.ByID(ctx, id)
+				cobra.CheckErr(err)
+
+				entityID = node.EntityID
+				nodeToEntityMap[id] = entityID
+			}
+
+			return entityID
+		}
 
 		for height := int64(startHeight); height < int64(endHeight); height++ {
 			if height%1000 == 0 {
 				fmt.Printf("progressed: height: %d\n", height)
 			}
-			// Update node to entity map.
-			var nodes []*node.Node
-			nodes, err = registryConn.GetNodes(ctx, height)
+			err = nl.SetHeight(ctx, height)
 			cobra.CheckErr(err)
-			for _, node := range nodes {
-				nodeToEntity[node.ID] = node.EntityID
-			}
 
 			rtRequest := &roothash.RuntimeRequest{
 				RuntimeID: runtimeID,
@@ -281,8 +295,8 @@ var runtimeStatsCmd = &cobra.Command{
 						continue
 					}
 					// Proposer timeout triggered the round failure, update stats.
-					stats.entities[nodeToEntity[sigTx.Signature.PublicKey]].proposedTimeout++
-					stats.entities[nodeToEntity[currentScheduler.PublicKey]].missedProposer++
+					stats.entities[nodeToEntity(sigTx.Signature.PublicKey)].proposedTimeout++
+					stats.entities[nodeToEntity(currentScheduler.PublicKey)].missedProposer++
 					proposerTimeout = true
 					break
 				}
@@ -332,7 +346,8 @@ var runtimeStatsCmd = &cobra.Command{
 					// Update stats.
 				OUTER:
 					for _, member := range currentCommittee.Members {
-						entity := nodeToEntity[member.PublicKey]
+						// entity := nodeToEntity[member.PublicKey]
+						entity := nodeToEntity(member.PublicKey)
 						// Primary workers are always required.
 						if member.Role == scheduler.RoleWorker {
 							stats.entities[entity].roundsPrimaryRequired++
@@ -438,7 +453,7 @@ var runtimeStatsCmd = &cobra.Command{
 				// Update election stats.
 				seen := make(map[signature.PublicKey]bool)
 				for _, member := range currentCommittee.Members {
-					entity := nodeToEntity[member.PublicKey]
+					entity := nodeToEntity(member.PublicKey)
 					if _, ok := stats.entities[entity]; !ok {
 						stats.entities[entity] = &entityStats{}
 					}

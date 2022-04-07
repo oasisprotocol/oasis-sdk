@@ -10,12 +10,10 @@ import (
 	"github.com/spf13/cobra"
 
 	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
-	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/node"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	governance "github.com/oasisprotocol/oasis-core/go/governance/api"
-	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
 	"github.com/oasisprotocol/oasis-sdk/cli/cmd/common"
@@ -89,13 +87,13 @@ var governanceProposalCmd = &cobra.Command{
 		cobra.CheckErr(err)
 
 		// Retrieve all the node descriptors.
-		nodeMap := make(map[signature.PublicKey]*node.Node)
-		allNodes, err := registryConn.GetNodes(ctx, height)
-		if err == nil {
-			for idx, node := range allNodes {
-				nodeMap[node.ID] = allNodes[idx]
-			}
-		}
+		nodeLookup, err := newNodeLookup(
+			ctx,
+			consensusConn,
+			registryConn,
+			height,
+		)
+		cobra.CheckErr(err)
 
 		// Figure out the per-validator and total voting power.
 		//
@@ -111,32 +109,10 @@ var governanceProposalCmd = &cobra.Command{
 		validators, err := schedulerConn.GetValidators(ctx, height)
 		cobra.CheckErr(err)
 
-		if len(nodeMap) == 0 {
-			for _, validator := range validators {
-				// Sigh, the public endpoint doesn't allow GetNodes, so
-				// query the nodes one-by-one, which ironically is worse.
-				var n *node.Node
-				n, err = registryConn.GetNode(
-					ctx,
-					&registry.IDQuery{
-						Height: height,
-						ID:     validator.ID,
-					},
-				)
-				cobra.CheckErr(err)
-
-				nodeMap[n.ID] = n
-			}
-		}
-
 		for _, validator := range validators {
-			node, ok := nodeMap[validator.ID]
-			if !ok {
-				cobra.CheckErr(fmt.Errorf(
-					"BUG: non-existent node in validator list: %v",
-					validator.ID,
-				))
-			}
+			var node *node.Node
+			node, err = nodeLookup.ByID(ctx, validator.ID)
+			cobra.CheckErr(err)
 
 			// If there are multiple nodes in the validator set belonging
 			// to the same entity, only count the entity escrow once.
