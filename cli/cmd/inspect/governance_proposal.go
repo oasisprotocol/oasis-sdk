@@ -12,7 +12,6 @@ import (
 	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
 	"github.com/oasisprotocol/oasis-core/go/common/node"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
-	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	governance "github.com/oasisprotocol/oasis-core/go/governance/api"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
@@ -47,15 +46,11 @@ var governanceProposalCmd = &cobra.Command{
 		stakingConn := consensusConn.Staking()
 
 		// Figure out the height to use if "latest".
-		height := common.GetHeight()
-		if height == consensus.HeightLatest {
-			var blk *consensus.Block
-
-			blk, err = consensusConn.GetBlock(ctx, height)
-			cobra.CheckErr(err)
-
-			height = blk.Height
-		}
+		height := getActualHeight(
+			ctx,
+			consensusConn,
+			common.GetHeight(),
+		)
 
 		// Retrieve the proposal.
 		proposalQuery := &governance.ProposalQuery{
