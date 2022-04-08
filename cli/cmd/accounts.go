@@ -376,6 +376,13 @@ var (
 				cobra.CheckErr(err)
 			}
 
+			// Safety check for withdrawals to known accounts that are not supported on the consensus layer.
+			for name, w := range cliConfig.Global().Wallets.All {
+				if w.Address == toAddr.String() && !w.HasConsensusSigner() {
+					cobra.CheckErr(fmt.Errorf("account '%s' (%s) will not be able to sign transactions on consensus layer", name, w.Address))
+				}
+			}
+
 			// Parse amount.
 			// TODO: This should actually query the ParaTime (or config) to check what the consensus
 			//       layer denomination is in the ParaTime. Assume NATIVE for now.

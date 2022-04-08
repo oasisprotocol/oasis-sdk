@@ -286,3 +286,21 @@ func (w *Wallet) SetConfigFromFlags() error {
 func (w *Wallet) LoadFactory() (wallet.Factory, error) {
 	return wallet.Load(w.Kind)
 }
+
+// PrettyKind returns a human-friendly wallet kind.
+func (w *Wallet) PrettyKind() string {
+	wf, err := wallet.Load(w.Kind)
+	if err != nil {
+		return ""
+	}
+	return wf.PrettyKind(w.Config)
+}
+
+// HasConsensusSigner returns true, iff there is a consensus layer signer associated with this wallet.
+func (w *Wallet) HasConsensusSigner() bool {
+	wf, err := wallet.Load(w.Kind)
+	if err != nil {
+		return false
+	}
+	return wf.HasConsensusSigner(w.Config)
+}

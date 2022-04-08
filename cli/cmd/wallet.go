@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -13,6 +14,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/cli/table"
 	"github.com/oasisprotocol/oasis-sdk/cli/wallet"
 	walletFile "github.com/oasisprotocol/oasis-sdk/cli/wallet/file"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/helpers"
 )
 
 var (
@@ -37,7 +39,7 @@ var (
 			for name, wallet := range cfg.Wallets.All {
 				output = append(output, []string{
 					name,
-					wallet.Kind,
+					wallet.PrettyKind(),
 					wallet.Address,
 				})
 			}
@@ -208,8 +210,8 @@ var (
 			questions := []*survey.Question{
 				{
 					Name:     "data",
-					Prompt:   kind.Prompt(),
-					Validate: kind.DataValidator(),
+					Prompt:   wf.DataPrompt(kind, wfCfg),
+					Validate: wf.DataValidator(kind, wfCfg),
 				},
 			}
 			err = survey.Ask(questions, &answers)
@@ -254,16 +256,22 @@ var (
 )
 
 func showPublicWalletInfo(wallet wallet.Wallet) {
-	fmt.Printf("Public Key: %s\n", wallet.Signer().Public())
-	fmt.Printf("Address:    %s\n", wallet.Address())
+	fmt.Printf("Public Key:       %s\n", wallet.Signer().Public())
+	fmt.Printf("Address:          %s\n", wallet.Address())
+	if wallet.SignatureAddressSpec().Secp256k1Eth != nil {
+		fmt.Printf("Ethereum address: %s\n", helpers.EthAddressFromPubKey(*wallet.SignatureAddressSpec().Secp256k1Eth))
+	}
 }
 
 func init() {
 	walletCmd.AddCommand(walletListCmd)
 
 	walletFlags := flag.NewFlagSet("", flag.ContinueOnError)
-	// TODO: Dynamically populate supported wallet kinds.
-	walletFlags.StringVar(&walletKind, "kind", "file", "wallet kind")
+	kinds := make([]string, 0, len(wallet.AvailableKinds()))
+	for _, w := range wallet.AvailableKinds() {
+		kinds = append(kinds, w.Kind())
+	}
+	walletFlags.StringVar(&walletKind, "kind", "file", fmt.Sprintf("Wallet kind [%s]", strings.Join(kinds, ", ")))
 
 	// TODO: Group flags in usage by tweaking the usage template/function.
 	for _, wf := range wallet.AvailableKinds() {

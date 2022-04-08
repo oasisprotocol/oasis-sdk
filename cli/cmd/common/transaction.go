@@ -62,6 +62,12 @@ func SignConsensusTransaction(
 	conn connection.Connection,
 	tx *consensusTx.Transaction,
 ) (*consensusTx.SignedTransaction, error) {
+	// Require consensus signer.
+	signer := wallet.ConsensusSigner()
+	if signer == nil {
+		return nil, fmt.Errorf("wallet does not support signing consensus transactions")
+	}
+
 	// Default to passed values and do online estimation when possible.
 	tx.Nonce = txNonce
 	if tx.Fee == nil {
@@ -94,7 +100,7 @@ func SignConsensusTransaction(
 		// Gas estimation if not specified.
 		if tx.Fee.Gas == invalidGasLimit {
 			gas, err := conn.Consensus().EstimateGas(ctx, &consensus.EstimateGasRequest{
-				Signer:      wallet.ConsensusSigner().Public(),
+				Signer:      signer.Public(),
 				Transaction: tx,
 			})
 			if err != nil {
@@ -118,11 +124,6 @@ func SignConsensusTransaction(
 	PrintTransactionBeforeSigning(npw, tx)
 
 	// Sign the transaction.
-	signer := wallet.ConsensusSigner()
-	if signer == nil {
-		return nil, fmt.Errorf("wallet does not support signing consensus transactions")
-	}
-
 	// NOTE: We build our own domain separation context here as we need to support multiple chain
 	//       contexts at the same time. Would be great if chainContextSeparator was exposed in core.
 	sigCtx := coreSignature.Context([]byte(fmt.Sprintf("%s for chain %s", consensusTx.SignatureContext, npw.Network.ChainContext)))

@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 )
 
 func TestResolveAddress(t *testing.T) {
@@ -47,5 +48,20 @@ func TestResolveAddress(t *testing.T) {
 		} else {
 			require.Error(err, tc.address)
 		}
+	}
+}
+
+func TestEthAddressFromPubKey(t *testing.T) {
+	for _, pk := range []struct {
+		pubkey  string
+		address string
+	}{
+		{pubkey: "AyZKkxNFeyqLI5HGTYqEmCcYxKGo/kueOzSHzdnrSePO", address: "0x90adE3B7065fa715c7a150313877dF1d33e777D5"},
+		{pubkey: "A8JDpTiCnrq+zFUsAHrHY/xuFVsyt48sC1Srkp62r7Yx", address: "0xDCbF59bbcC0B297F1729adB23d7a5D721B481BA9"},
+		{pubkey: "A91r/4dh1zR5Sbbq3vWJm5H8nHVXh06MKARDz9A5yvak", address: "0xdC97a6a36448C69367f004Af4a657ca0A3905e0B"},
+	} {
+		pubkey := secp256k1.PublicKey{}
+		_ = pubkey.UnmarshalText([]byte(pk.pubkey))
+		require.Equal(t, pk.address, EthAddressFromPubKey(pubkey))
 	}
 }
