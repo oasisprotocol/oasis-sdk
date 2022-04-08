@@ -25,6 +25,7 @@ var (
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List configured networks",
+		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := cliConfig.Global()
 			table := table.New()

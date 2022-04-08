@@ -27,6 +27,7 @@ var (
 		Use:     "list",
 		Aliases: []string{"ls"},
 		Short:   "List configured wallets",
+		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := config.Global()
 			table := table.New()
