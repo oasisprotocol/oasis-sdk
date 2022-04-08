@@ -12,6 +12,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
+	control "github.com/oasisprotocol/oasis-core/go/control/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
@@ -38,6 +39,9 @@ type Connection interface {
 	// Consensus returns an interface to the consensus layer.
 	Consensus() consensus.ClientBackend
 
+	// Control returns an interface to the node control layer.
+	Control() control.NodeController
+
 	// Runtime returns an interface to the given runtime.
 	Runtime(pt *config.ParaTime) RuntimeClient
 }
@@ -48,6 +52,10 @@ type connection struct {
 
 func (c *connection) Consensus() consensus.ClientBackend {
 	return consensus.NewConsensusClient(c.conn)
+}
+
+func (c *connection) Control() control.NodeController {
+	return control.NewNodeControllerClient(c.conn)
 }
 
 func (c *connection) Runtime(pt *config.ParaTime) RuntimeClient {
