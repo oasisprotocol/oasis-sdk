@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -72,18 +73,63 @@ var (
 
 			// Query consensus layer account.
 			// TODO: Nicer overall formatting.
-			fmt.Printf("Address: %s\n", addr)
-			fmt.Println()
-			fmt.Printf("=== CONSENSUS LAYER (%s) ===\n", npw.NetworkName)
 
 			consensusAccount, err := c.Consensus().Staking().Account(ctx, ownerQuery)
 			cobra.CheckErr(err)
 
-			fmt.Printf("Balance: %s\n", helpers.FormatConsensusDenomination(npw.Network, consensusAccount.General.Balance))
+			fmt.Printf("Address: %s\n", addr)
 			fmt.Printf("Nonce: %d\n", consensusAccount.General.Nonce)
+			fmt.Println()
+			fmt.Printf("=== CONSENSUS LAYER (%s) ===\n", npw.NetworkName)
 
-			// TODO: Delegations.
-			// TODO: Allowances.
+			outgoingDelegations, err := c.Consensus().Staking().DelegationInfosFor(ctx, ownerQuery)
+			cobra.CheckErr(err)
+			outgoingDebondingDelegations, err := c.Consensus().Staking().DebondingDelegationInfosFor(ctx, ownerQuery)
+			cobra.CheckErr(err)
+
+			helpers.PrettyPrintAccountBalanceAndDelegationsFrom(
+				npw.Network,
+				addr,
+				consensusAccount.General,
+				outgoingDelegations,
+				outgoingDebondingDelegations,
+				"  ",
+				os.Stdout,
+			)
+			fmt.Println()
+
+			incomingDelegations, err := c.Consensus().Staking().DelegationsTo(ctx, ownerQuery)
+			cobra.CheckErr(err)
+			incomingDebondingDelegations, err := c.Consensus().Staking().DebondingDelegationsTo(ctx, ownerQuery)
+			cobra.CheckErr(err)
+
+			if len(incomingDelegations) > 0 {
+				fmt.Println("  Active Delegations to this Account:")
+				helpers.PrettyPrintDelegationsTo(
+					npw.Network,
+					addr,
+					consensusAccount.Escrow.Active,
+					incomingDelegations,
+					"    ",
+					os.Stdout,
+				)
+				fmt.Println()
+			}
+			if len(incomingDebondingDelegations) > 0 {
+				fmt.Println("  Debonding Delegations to this Account:")
+				helpers.PrettyPrintDelegationsTo(
+					npw.Network,
+					addr,
+					consensusAccount.Escrow.Debonding,
+					incomingDebondingDelegations,
+					"    ",
+					os.Stdout,
+				)
+				fmt.Println()
+			}
+
+			// TODO: CommissionSchedule
+			// TODO: StakeAccumulator
 
 			if npw.ParaTime != nil {
 				// Make an effort to support the height query.
