@@ -1,11 +1,7 @@
 package inspect
 
 import (
-	"context"
-
 	"github.com/spf13/cobra"
-
-	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 
 	"github.com/oasisprotocol/oasis-sdk/cli/cmd/common"
 )
@@ -14,21 +10,6 @@ import (
 var Cmd = &cobra.Command{
 	Use:   "inspect",
 	Short: "Inspect the network",
-}
-
-func getActualHeight(
-	ctx context.Context,
-	consensusConn consensus.ClientBackend,
-	height int64,
-) int64 {
-	if height != consensus.HeightLatest {
-		return height
-	}
-
-	blk, err := consensusConn.GetBlock(ctx, height)
-	cobra.CheckErr(err)
-
-	return blk.Height
 }
 
 func init() {

@@ -187,11 +187,10 @@ var runtimeStatsCmd = &cobra.Command{
 			startHeight = uint64(status.LastRetainedHeight)
 		}
 		if endHeight == 0 {
-			endHeight = uint64(getActualHeight(
-				ctx,
-				consensusConn,
-				consensus.HeightLatest,
-			))
+			var blk *consensus.Block
+			blk, err = consensusConn.GetBlock(ctx, consensus.HeightLatest)
+			cobra.CheckErr(err)
+			endHeight = uint64(blk.Height)
 		}
 
 		chainCtx, err := consensusConn.GetChainContext(ctx)

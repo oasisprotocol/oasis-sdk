@@ -46,11 +46,11 @@ var governanceProposalCmd = &cobra.Command{
 		stakingConn := consensusConn.Staking()
 
 		// Figure out the height to use if "latest".
-		height := getActualHeight(
+		height, err := common.GetActualHeight(
 			ctx,
 			consensusConn,
-			common.GetHeight(),
 		)
+		cobra.CheckErr(err)
 
 		// Retrieve the proposal.
 		proposalQuery := &governance.ProposalQuery{

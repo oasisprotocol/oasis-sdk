@@ -51,11 +51,12 @@ var nativeTokenCmd = &cobra.Command{
 		fmt.Printf("Token's ticker symbol: %s\n", tokenSymbol)
 		fmt.Printf("Token's value base-10 exponent: %d\n", tokenValueExponent)
 
-		height := getActualHeight(
+		// Figure out the height to use if "latest".
+		height, err := common.GetActualHeight(
 			ctx,
 			consensusConn,
-			common.GetHeight(),
 		)
+		cobra.CheckErr(err)
 
 		totalSupply, err := stakingConn.TotalSupply(ctx, height)
 		cobra.CheckErr(err)
