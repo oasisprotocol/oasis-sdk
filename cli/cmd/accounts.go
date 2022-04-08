@@ -77,15 +77,23 @@ var (
 
 			if npw.ParaTime != nil {
 				// Query runtime account when a paratime has been configured.
-				fmt.Println()
-				fmt.Printf("=== %s PARATIME ===\n", npw.ParaTimeName)
-
 				rtBalances, err := c.Runtime(npw.ParaTime).Accounts.Balances(ctx, client.RoundLatest, *addr)
 				cobra.CheckErr(err)
 
-				fmt.Printf("Balances for all denominations:\n")
-				for denom, balance := range rtBalances.Balances {
-					fmt.Printf("  %s\n", helpers.FormatParaTimeDenomination(npw.ParaTime, types.NewBaseUnits(balance, denom)))
+				var hasNonZeroBalance bool
+				for _, balance := range rtBalances.Balances {
+					if hasNonZeroBalance = balance.IsZero(); hasNonZeroBalance {
+						break
+					}
+				}
+				if hasNonZeroBalance {
+					fmt.Println()
+					fmt.Printf("=== %s PARATIME ===\n", npw.ParaTimeName)
+
+					fmt.Printf("Balances for all denominations:\n")
+					for denom, balance := range rtBalances.Balances {
+						fmt.Printf("  %s\n", helpers.FormatParaTimeDenomination(npw.ParaTime, types.NewBaseUnits(balance, denom)))
+					}
 				}
 			}
 		},
