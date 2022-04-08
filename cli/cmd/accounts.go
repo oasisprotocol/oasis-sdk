@@ -9,6 +9,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
+	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
 	"github.com/oasisprotocol/oasis-sdk/cli/cmd/common"
@@ -58,26 +59,51 @@ var (
 			addr, err := helpers.ResolveAddress(npw.Network, targetAddress)
 			cobra.CheckErr(err)
 
+			height, err := common.GetActualHeight(
+				ctx,
+				c.Consensus(),
+			)
+			cobra.CheckErr(err)
+
+			ownerQuery := &staking.OwnerQuery{
+				Owner:  addr.ConsensusAddress(),
+				Height: height,
+			}
+
 			// Query consensus layer account.
 			// TODO: Nicer overall formatting.
 			fmt.Printf("Address: %s\n", addr)
 			fmt.Println()
 			fmt.Printf("=== CONSENSUS LAYER (%s) ===\n", npw.NetworkName)
 
-			consensusAccount, err := c.Consensus().Staking().Account(ctx, &staking.OwnerQuery{
-				Height: consensus.HeightLatest,
-				Owner:  addr.ConsensusAddress(),
-			})
+			consensusAccount, err := c.Consensus().Staking().Account(ctx, ownerQuery)
 			cobra.CheckErr(err)
 
 			fmt.Printf("Balance: %s\n", helpers.FormatConsensusDenomination(npw.Network, consensusAccount.General.Balance))
 			fmt.Printf("Nonce: %d\n", consensusAccount.General.Nonce)
+
 			// TODO: Delegations.
 			// TODO: Allowances.
 
 			if npw.ParaTime != nil {
+				// Make an effort to support the height query.
+				//
+				// Note: Public gRPC endpoints do not allow this method.
+				round := client.RoundLatest
+				if h := common.GetHeight(); h != consensus.HeightLatest {
+					blk, err := c.Consensus().RootHash().GetLatestBlock(
+						ctx,
+						&roothash.RuntimeRequest{
+							RuntimeID: npw.ParaTime.Namespace(),
+							Height:    height,
+						},
+					)
+					cobra.CheckErr(err)
+					round = blk.Header.Round
+				}
+
 				// Query runtime account when a paratime has been configured.
-				rtBalances, err := c.Runtime(npw.ParaTime).Accounts.Balances(ctx, client.RoundLatest, *addr)
+				rtBalances, err := c.Runtime(npw.ParaTime).Accounts.Balances(ctx, round, *addr)
 				cobra.CheckErr(err)
 
 				var hasNonZeroBalance bool
@@ -570,6 +596,7 @@ var (
 
 func init() {
 	accountsShowCmd.Flags().AddFlagSet(common.SelectorFlags)
+	accountsShowCmd.Flags().AddFlagSet(common.HeightFlag)
 
 	accountsAllowCmd.Flags().AddFlagSet(common.SelectorFlags)
 	accountsAllowCmd.Flags().AddFlagSet(common.TransactionFlags)
