@@ -40,7 +40,10 @@ func init() {
 	nativeTokenCmd.Flags().AddFlagSet(common.SelectorFlags)
 	nativeTokenCmd.Flags().AddFlagSet(common.HeightFlag)
 
+	nodeStatusCmd.Flags().AddFlagSet(common.SelectorFlags)
+
 	Cmd.AddCommand(governanceProposalCmd)
 	Cmd.AddCommand(runtimeStatsCmd)
 	Cmd.AddCommand(nativeTokenCmd)
+	Cmd.AddCommand(nodeStatusCmd)
 }
