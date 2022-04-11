@@ -7,7 +7,7 @@ var DefaultNetworks = Networks{
 		// Mainnet network parameters.
 		// See https://docs.oasis.dev/general/oasis-network/network-parameters.
 		"mainnet": {
-			ChainContext: "53852332637bacb61b91b6411ab4095168ba02a50be4c3f82448438826f23898",
+			ChainContext: "b11b369e0da5bb230b220127f5e7b242d385ef8c6f54906243f30af63c815535",
 			RPC:          "grpc.oasis.dev:443",
 			Denomination: DenominationInfo{
 				Symbol:   "ROSE",
