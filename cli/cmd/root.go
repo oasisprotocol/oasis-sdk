@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/oasisprotocol/oasis-sdk/cli/cmd/inspect"
 	"github.com/oasisprotocol/oasis-sdk/cli/config"
 	_ "github.com/oasisprotocol/oasis-sdk/cli/wallet/file"   // Register file wallet backend.
 	_ "github.com/oasisprotocol/oasis-sdk/cli/wallet/ledger" // Register ledger wallet backend.
@@ -77,4 +78,5 @@ func init() {
 	rootCmd.AddCommand(walletCmd)
 	rootCmd.AddCommand(accountsCmd)
 	rootCmd.AddCommand(contractsCmd)
+	rootCmd.AddCommand(inspect.Cmd)
 }

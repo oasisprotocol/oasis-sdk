@@ -12,6 +12,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
+	control "github.com/oasisprotocol/oasis-core/go/control/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
@@ -38,6 +39,9 @@ type Connection interface {
 	// Consensus returns an interface to the consensus layer.
 	Consensus() consensus.ClientBackend
 
+	// Control returns an interface to the node control layer.
+	Control() control.NodeController
+
 	// Runtime returns an interface to the given runtime.
 	Runtime(pt *config.ParaTime) RuntimeClient
 }
@@ -48,6 +52,10 @@ type connection struct {
 
 func (c *connection) Consensus() consensus.ClientBackend {
 	return consensus.NewConsensusClient(c.conn)
+}
+
+func (c *connection) Control() control.NodeController {
+	return control.NewNodeControllerClient(c.conn)
 }
 
 func (c *connection) Runtime(pt *config.ParaTime) RuntimeClient {
@@ -68,6 +76,28 @@ func (c *connection) Runtime(pt *config.ParaTime) RuntimeClient {
 
 // Connect establishes a connection with the target network.
 func Connect(ctx context.Context, net *config.Network) (Connection, error) {
+	conn, err := ConnectNoVerify(ctx, net)
+	if err != nil {
+		return nil, err
+	}
+
+	// Request the chain domain separation context from the node and compare with local
+	// configuration to reject mismatches early.
+	cs := conn.Consensus()
+	chainContext, err := cs.GetChainContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve remote node's chain context: %s", err)
+	}
+	if chainContext != net.ChainContext {
+		return nil, fmt.Errorf("remote node's chain context mismatch (expected: %s got: %s)", net.ChainContext, chainContext)
+	}
+
+	return conn, nil
+}
+
+// ConnectNoVerify establishes a connection with the target network,
+// omitting the chain context check.
+func ConnectNoVerify(ctx context.Context, net *config.Network) (Connection, error) {
 	var dialOpts []grpc.DialOption
 	switch net.IsLocalRPC() {
 	case true:
@@ -82,17 +112,6 @@ func Connect(ctx context.Context, net *config.Network) (Connection, error) {
 	conn, err := cmnGrpc.Dial(net.RPC, dialOpts...)
 	if err != nil {
 		return nil, err
-	}
-
-	// Request the chain domain separation context from the node and compare with local
-	// configuration to reject mismatches early.
-	cs := consensus.NewConsensusClient(conn)
-	chainContext, err := cs.GetChainContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve remote node's chain context: %s", err)
-	}
-	if chainContext != net.ChainContext {
-		return nil, fmt.Errorf("remote node's chain context mismatch (expected: %s got: %s)", net.ChainContext, chainContext)
 	}
 
 	return &connection{

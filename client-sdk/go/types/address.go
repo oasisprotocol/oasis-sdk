@@ -7,6 +7,7 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/address"
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/encoding/bech32"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
@@ -187,4 +188,10 @@ func NewAddressFromMultisig(config *MultisigConfig) Address {
 // NewAddressFromConsensus converts a consensus layer address into an address.
 func NewAddressFromConsensus(addr staking.Address) Address {
 	return (Address)((address.Address)(addr))
+}
+
+// NewAddressFromConsensusPublicKey converts a consensus layer public key
+// into an address.
+func NewAddressFromConsensusPublicKey(pk signature.PublicKey) Address {
+	return NewAddress(NewSignatureAddressSpecEd25519(ed25519.PublicKey(pk)))
 }
