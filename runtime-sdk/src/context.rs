@@ -57,6 +57,10 @@ impl From<&Mode> for &'static str {
     }
 }
 
+/// Local configuration key the value of which determines whether expensive queries should be
+/// allowed or not, and also whether smart contracts should be simulated for `core.EstimateGas`.
+/// DEPRECATED and superseded by LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS and LOCAL_CONFIG_ALLOWED_QUERIES.
+const LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES: &str = "allow_expensive_queries";
 /// Local configuration key the value of which determines whether smart contracts should
 /// be simulated when estimating gas in `core.EstimateGas`.
 const LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS: &str =
@@ -97,9 +101,25 @@ pub trait Context {
         match self.mode() {
             // When actually executing a transaction, we always run contracts.
             Mode::ExecuteTx => true,
-            Mode::SimulateTx => self
-                .local_config(LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS)
-                .unwrap_or_default(),
+            Mode::SimulateTx => {
+                // Backwards compatibility for the deprecated `allow_expensive_queries`.
+                if let Some(allow_expensive_queries) =
+                    self.local_config::<bool>(LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES)
+                {
+                    slog::warn!(
+                        self.get_logger("runtime-sdk"),
+                        "The {} config option is DEPRECATED since April 2022 and will be removed in a future release. Use {} and {} instead.",
+                        LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES,
+                        LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS,
+                        LOCAL_CONFIG_ALLOWED_QUERIES
+                    );
+                    return allow_expensive_queries;
+                };
+
+                // The non-deprecated config option.
+                self.local_config(LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS)
+                    .unwrap_or_default()
+            }
             // When just checking a transaction, we always want to be fast and skip contracts.
             Mode::CheckTx => false,
         }
@@ -114,6 +134,21 @@ pub trait Context {
             .iter()
             .any(|&name| name == method);
 
+        // Backwards compatibility for the deprecated `allow_expensive_queries`.
+        if let Some(allow_expensive_queries) =
+            self.local_config::<bool>(LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES)
+        {
+            slog::warn!(
+                self.get_logger("runtime-sdk"),
+                "The {} config option is DEPRECATED since April 2022 and will be removed in a future release. Use {} and {} instead.",
+                LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES,
+                LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS,
+                LOCAL_CONFIG_ALLOWED_QUERIES
+            );
+            return (!is_expensive) || allow_expensive_queries;
+        };
+
+        // The non-deprecated config option.
         config
             .iter()
             .find_map(|item| {
