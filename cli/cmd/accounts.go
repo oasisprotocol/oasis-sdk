@@ -98,6 +98,18 @@ var (
 			)
 			fmt.Println()
 
+			if len(consensusAccount.General.Allowances) > 0 {
+				fmt.Println("  Allowances for this Account:")
+				helpers.PrettyPrintAllowances(
+					npw.Network,
+					addr,
+					consensusAccount.General.Allowances,
+					"    ",
+					os.Stdout,
+				)
+				fmt.Println()
+			}
+
 			incomingDelegations, err := c.Consensus().Staking().DelegationsTo(ctx, ownerQuery)
 			cobra.CheckErr(err)
 			incomingDebondingDelegations, err := c.Consensus().Staking().DebondingDelegationsTo(ctx, ownerQuery)

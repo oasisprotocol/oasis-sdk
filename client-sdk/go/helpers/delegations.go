@@ -116,7 +116,6 @@ func prettyPrintDelegationDescriptions(
 func PrettyPrintAccountBalanceAndDelegationsFrom(
 	network *config.Network,
 	addr *types.Address,
-	// addr staking.Address,
 	generalAccount staking.GeneralAccount,
 	actDelegationInfos map[staking.Address]*staking.DelegationInfo,
 	debDelegationInfos map[staking.Address][]*staking.DebondingDelegationInfo,
