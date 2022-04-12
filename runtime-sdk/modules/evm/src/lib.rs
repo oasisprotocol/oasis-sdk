@@ -146,6 +146,10 @@ pub enum Error {
     #[sdk_error(code = 8)]
     Reverted(String),
 
+    #[error("forbidden by policy: this node only allows simulating calls that use up to {0} gas")]
+    #[sdk_error(code = 9)]
+    SimulationTooExpensive(u64),
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] CoreError),
@@ -276,6 +280,16 @@ impl module::Parameters for Parameters {
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Genesis {
     pub parameters: Parameters,
+}
+
+/// Local configuration that can be provided by the node operator.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct LocalConfig {
+    /// Maximum gas limit that can be passed to the `evm.SimulateCall` query. Queries
+    /// with a higher gas limit will be rejected. A special value of `0` indicates
+    /// no limit. Default: 0.
+    #[cbor(optional, default)]
+    pub query_simulate_call_max_gas: u64,
 }
 
 /// Events emitted by the EVM module.
@@ -620,6 +634,13 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         body: types::SimulateCallQuery,
     ) -> Result<Vec<u8>, Error> {
+        let cfg: LocalConfig = ctx.local_config(MODULE_NAME).unwrap_or_default();
+        if cfg.query_simulate_call_max_gas > 0 && body.gas_limit > cfg.query_simulate_call_max_gas {
+            return Err(Error::SimulationTooExpensive(
+                cfg.query_simulate_call_max_gas,
+            ));
+        }
+
         Self::simulate_call(
             ctx,
             body.gas_price,
