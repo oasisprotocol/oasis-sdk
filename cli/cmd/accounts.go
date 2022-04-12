@@ -140,8 +140,19 @@ var (
 				fmt.Println()
 			}
 
-			// TODO: CommissionSchedule
-			// TODO: StakeAccumulator
+			cs := consensusAccount.Escrow.CommissionSchedule
+			if len(cs.Rates) > 0 || len(cs.Bounds) > 0 {
+				fmt.Println("  Commission Schedule:")
+				cs.PrettyPrint(ctx, "    ", os.Stdout)
+				fmt.Println()
+			}
+
+			sa := consensusAccount.Escrow.StakeAccumulator
+			if len(sa.Claims) > 0 {
+				fmt.Println("  Stake Accumulator:")
+				sa.PrettyPrint(ctx, "    ", os.Stdout)
+				fmt.Println()
+			}
 
 			if npw.ParaTime != nil {
 				// Make an effort to support the height query.
