@@ -10,6 +10,8 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
+
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 type oScanResponse struct {
@@ -29,7 +31,7 @@ type oScanVal struct {
 }
 
 // EntitiesFromOasisscan queries oasisscan for all known entities.
-func EntitiesFromOasisscan(ctx context.Context) (map[staking.Address]*Entity, error) {
+func EntitiesFromOasisscan(ctx context.Context) (map[types.Address]*Entity, error) {
 	reqCtx, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 
@@ -60,7 +62,7 @@ func EntitiesFromOasisscan(ctx context.Context) (map[staking.Address]*Entity, er
 		return nil, err
 	}
 
-	entities := make(map[staking.Address]*Entity, len(oResp.Data.List))
+	entities := make(map[types.Address]*Entity, len(oResp.Data.List))
 	for _, dl := range oResp.Data.List {
 		var pk signature.PublicKey
 		if err = pk.UnmarshalText([]byte(dl.EntityID)); err != nil {

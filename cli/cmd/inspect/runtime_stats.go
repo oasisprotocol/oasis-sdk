@@ -22,7 +22,9 @@ import (
 
 	"github.com/oasisprotocol/oasis-sdk/cli/cmd/common"
 	cliConfig "github.com/oasisprotocol/oasis-sdk/cli/config"
+	"github.com/oasisprotocol/oasis-sdk/cli/metadata"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/connection"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 type runtimeStats struct {
@@ -85,11 +87,14 @@ type entityStats struct {
 	missedProposer uint64
 }
 
-func (s *runtimeStats) prepareEntitiesOutput() {
+func (s *runtimeStats) prepareEntitiesOutput(
+	metadataLookup map[types.Address]*metadata.Entity,
+) {
 	s.entitiesOutput = make([][]string, 0)
 
 	s.entitiesHeader = []string{
-		"Entity ID",
+		"Entity Addr",
+		"Entity Name",
 		"Elected",
 		"Primary",
 		"Backup",
@@ -106,10 +111,23 @@ func (s *runtimeStats) prepareEntitiesOutput() {
 		"Proposed timeout",
 	}
 
+	addrToName := func(addr types.Address) string {
+		if metadataLookup != nil {
+			if entry, ok := metadataLookup[addr]; ok {
+				return entry.Name
+			}
+		}
+		return ""
+	}
+
 	for entity, stats := range s.entities {
 		var line []string
+
+		entityAddr := types.NewAddressFromConsensusPublicKey(entity)
+
 		line = append(line,
-			entity.String(),
+			entityAddr.String(),
+			addrToName(entityAddr),
 			strconv.FormatUint(stats.roundsElected, 10),
 			strconv.FormatUint(stats.roundsPrimary, 10),
 			strconv.FormatUint(stats.roundsBackup, 10),
@@ -479,7 +497,14 @@ var runtimeStatsCmd = &cobra.Command{
 		}
 
 		// Prepare and printout stats.
-		stats.prepareEntitiesOutput()
+		entityMetadataLookup, err := metadata.EntitiesFromRegistry(ctx)
+		if err != nil {
+			// Non-fatal, this is informative and gathering stats is time
+			// consuming.
+			fmt.Printf("\nWarning: failed to query metadata registry: %v\n", err)
+		}
+
+		stats.prepareEntitiesOutput(entityMetadataLookup)
 		stats.printStats()
 
 		// Also save entity stats in a csv.

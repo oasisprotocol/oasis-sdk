@@ -4,10 +4,10 @@ package metadata
 import (
 	"context"
 
-	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
-	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
-
 	metadata "github.com/oasisprotocol/metadata-registry-tools"
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
+
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 // Entity is a metadata registry entity for a Entity.
@@ -19,13 +19,13 @@ type Entity struct {
 }
 
 // Address is the entity's staking address.
-func (e *Entity) Address() staking.Address {
-	return staking.NewAddress(e.ID)
+func (e *Entity) Address() types.Address {
+	return types.NewAddressFromConsensusPublicKey(e.ID)
 }
 
 // EntitiesFromRegistry queries the metadata registry for all known
 // entities.
-func EntitiesFromRegistry(ctx context.Context) (map[staking.Address]*Entity, error) {
+func EntitiesFromRegistry(ctx context.Context) (map[types.Address]*Entity, error) {
 	gp, err := metadata.NewGitProvider(metadata.NewGitConfig())
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func EntitiesFromRegistry(ctx context.Context) (map[staking.Address]*Entity, err
 		return nil, err
 	}
 
-	meta := make(map[staking.Address]*Entity, len(entities))
+	meta := make(map[types.Address]*Entity, len(entities))
 	for id, ent := range entities {
 		em := &Entity{
 			ID:   id,

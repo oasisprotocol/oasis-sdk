@@ -19,6 +19,7 @@ import (
 	cliConfig "github.com/oasisprotocol/oasis-sdk/cli/config"
 	"github.com/oasisprotocol/oasis-sdk/cli/metadata"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/connection"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 var governanceProposalCmd = &cobra.Command{
@@ -230,7 +231,7 @@ var governanceProposalCmd = &cobra.Command{
 
 		getName := func(addr staking.Address) string {
 			for _, src := range []struct {
-				m      map[staking.Address]*metadata.Entity
+				m      map[types.Address]*metadata.Entity
 				suffix string
 			}{
 				{fromRegistry, ""},
@@ -239,7 +240,7 @@ var governanceProposalCmd = &cobra.Command{
 				if src.m == nil {
 					continue
 				}
-				if entry := src.m[addr]; entry != nil {
+				if entry := src.m[types.NewAddressFromConsensus(addr)]; entry != nil {
 					return entry.Name + src.suffix
 				}
 			}
