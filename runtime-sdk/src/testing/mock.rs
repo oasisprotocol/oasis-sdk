@@ -17,7 +17,7 @@ use crate::{
     modules,
     runtime::Runtime,
     storage,
-    testing::keymanager::MockKeyManagerClient,
+    testing::{configmap, keymanager::MockKeyManagerClient},
     types::transaction,
 };
 
@@ -84,10 +84,8 @@ impl Mock {
             self.max_messages,
         )
     }
-}
 
-impl Default for Mock {
-    fn default() -> Self {
+    pub fn with_local_config(local_config: BTreeMap<String, cbor::Value>) -> Self {
         let mkvs = mkvs::OverlayTree::new(
             mkvs::Tree::builder()
                 .with_root_type(mkvs::RootType::State)
@@ -103,13 +101,7 @@ impl Default for Mock {
                 consensus_backend: "mock".to_string(),
                 consensus_protocol_version: Version::default(),
                 consensus_chain_context: "test".to_string(),
-                local_config: {
-                    let mut local_config = BTreeMap::new();
-                    // Allow expensive queries in tests to make it easier.
-                    local_config
-                        .insert("allow_expensive_queries".to_string(), cbor::to_value(true));
-                    local_config
-                },
+                local_config,
             },
             runtime_header: roothash::Header::default(),
             runtime_round_results: roothash::RoundResults::default(),
@@ -118,6 +110,19 @@ impl Default for Mock {
             epoch: 1,
             max_messages: 32,
         }
+    }
+}
+
+impl Default for Mock {
+    fn default() -> Self {
+        let local_config_for_tests = configmap! {
+            // Allow expensive gas estimation and expensive queries so they can be tested.
+            "estimate_gas_by_simulating_contracts" => true,
+            "allowed_queries" => vec![
+                configmap! {"all_expensive" => true}
+            ],
+        };
+        Self::with_local_config(local_config_for_tests)
     }
 }
 

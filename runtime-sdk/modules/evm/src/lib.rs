@@ -358,7 +358,7 @@ impl<Cfg: Config> API for Module<Cfg> {
     ) -> Result<Vec<u8>, Error> {
         let caller = Self::derive_caller(ctx)?;
 
-        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
+        if !ctx.should_execute_contracts() {
             // Only fast checks are allowed.
             return Ok(vec![]);
         }
@@ -388,7 +388,7 @@ impl<Cfg: Config> API for Module<Cfg> {
     ) -> Result<Vec<u8>, Error> {
         let caller = Self::derive_caller(ctx)?;
 
-        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
+        if !ctx.should_execute_contracts() {
             // Only fast checks are allowed.
             return Ok(vec![]);
         }
@@ -445,10 +445,6 @@ impl<Cfg: Config> API for Module<Cfg> {
         value: U256,
         data: Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
-        if !ctx.are_expensive_queries_allowed() {
-            return Err(Error::Forbidden);
-        }
-
         ctx.with_simulation(|mut sctx| {
             let call_tx = transaction::Transaction {
                 version: 1,
@@ -629,7 +625,7 @@ impl<Cfg: Config> Module<Cfg> {
         Self::get_balance(ctx, body.address)
     }
 
-    #[handler(query = "evm.SimulateCall")]
+    #[handler(query = "evm.SimulateCall", expensive)]
     fn query_simulate_call<C: Context>(
         ctx: &mut C,
         body: types::SimulateCallQuery,

@@ -8,9 +8,11 @@ use crate::{
     crypto::multisig,
     dispatcher,
     event::IntoTags,
+    handler,
     module::{self, BlockHandler, Module as _, TransactionHandler as _},
     runtime::Runtime,
-    testing::{keys, mock},
+    sdk_derive,
+    testing::{configmap, keys, mock},
     types::{
         token, transaction,
         transaction::{CallerAddress, TransactionWeight},
@@ -180,34 +182,20 @@ impl GasWasterModule {
 impl module::Module for GasWasterModule {
     const NAME: &'static str = "gaswaster";
     const VERSION: u32 = 42;
-    type Error = std::convert::Infallible;
+    type Error = crate::modules::core::Error;
     type Event = ();
     type Parameters = ();
 }
 
-impl crate::module::MethodHandler for GasWasterModule {
-    fn dispatch_call<C: TxContext>(
+#[sdk_derive(MethodHandler)]
+impl GasWasterModule {
+    #[handler(call = Self::METHOD_WASTE_GAS)]
+    fn waste_gas<C: TxContext>(
         ctx: &mut C,
-        method: &str,
-        body: cbor::Value,
-    ) -> module::DispatchResult<cbor::Value, module::CallResult> {
-        match method {
-            Self::METHOD_WASTE_GAS => {
-                <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS)
-                    .expect("use_gas should succeed");
-                module::DispatchResult::Handled(module::CallResult::Ok(cbor::Value::Simple(
-                    cbor::SimpleValue::NullValue,
-                )))
-            }
-            _ => module::DispatchResult::Unhandled(body),
-        }
-    }
-
-    fn supported_methods() -> Vec<types::MethodHandlerInfo> {
-        vec![types::MethodHandlerInfo {
-            kind: types::MethodHandlerKind::Call,
-            name: Self::METHOD_WASTE_GAS.to_string(),
-        }]
+        _args: (),
+    ) -> Result<(), <GasWasterModule as module::Module>::Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS)?;
+        Ok(())
     }
 }
 
@@ -305,11 +293,6 @@ fn test_reject_txs() {
 
 #[test]
 fn test_query_estimate_gas() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
-
-    GasWasterRuntime::migrate(&mut ctx);
-
     let tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
@@ -339,29 +322,62 @@ fn test_query_estimate_gas() {
         },
     };
 
-    // Test estimation with caller derived from the transaction.
-    let args = types::EstimateGasQuery {
-        caller: None,
-        tx: tx.clone(),
-    };
-
-    let est = Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+    // Gas that we expect `tx` to use.
     let reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
         + GasWasterRuntime::AUTH_MULTISIG_GAS
         + GasWasterModule::CALL_GAS;
-    assert_eq!(est, reference_gas, "estimated gas should be correct");
 
-    // Test estimation with specified caller.
-    let args = types::EstimateGasQuery {
-        caller: Some(CallerAddress::Address(keys::alice::address())),
-        tx,
-    };
+    // Test happy-path execution with default settings.
+    {
+        let mut mock = mock::Mock::default();
+        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+        GasWasterRuntime::migrate(&mut ctx);
 
-    let est = Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-    let reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
-        + GasWasterRuntime::AUTH_MULTISIG_GAS
-        + GasWasterModule::CALL_GAS;
-    assert_eq!(est, reference_gas, "estimated gas should be correct");
+        // Test estimation with caller derived from the transaction.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx.clone(),
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(est, reference_gas, "estimated gas should be correct");
+
+        // Test estimation with specified caller.
+        let args = types::EstimateGasQuery {
+            caller: Some(CallerAddress::Address(keys::alice::address())),
+            tx: tx.clone(),
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(est, reference_gas, "estimated gas should be correct");
+    }
+
+    // Test expensive estimates.
+    {
+        let max_estimated_gas = reference_gas - 1;
+        let local_config = configmap! {
+            "core" => configmap! {
+                "max_estimated_gas" => max_estimated_gas,
+            },
+        };
+        let mut mock = mock::Mock::with_local_config(local_config);
+        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+        GasWasterRuntime::migrate(&mut ctx);
+
+        // Test with limited max_estimated_gas.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx.clone(),
+        };
+        let est = Core::query_estimate_gas(&mut ctx, args)
+            .expect("query_estimate_gas should succeed even with limited max_estimated_gas");
+        assert!(
+            est <= max_estimated_gas,
+            "estimated gas should be at most max_estimated_gas={}, was {}",
+            max_estimated_gas,
+            est
+        );
+    }
 }
 
 #[test]

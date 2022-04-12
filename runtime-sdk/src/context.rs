@@ -22,6 +22,7 @@ use oasis_core_runtime::{
 use crate::{
     event::{Event, EventTag, EventTags},
     keymanager::KeyManager,
+    module::MethodHandler as _,
     modules::core::Error,
     runtime,
     storage::{self, NestedStore, Store},
@@ -57,8 +58,20 @@ impl From<&Mode> for &'static str {
 }
 
 /// Local configuration key the value of which determines whether expensive queries should be
-/// allowed or not.
+/// allowed or not, and also whether smart contracts should be simulated for `core.EstimateGas`.
+/// DEPRECATED and superseded by LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS and LOCAL_CONFIG_ALLOWED_QUERIES.
 const LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES: &str = "allow_expensive_queries";
+/// Local configuration key the value of which determines whether smart contracts should
+/// be simulated when estimating gas in `core.EstimateGas`.
+const LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS: &str =
+    "estimate_gas_by_simulating_contracts";
+/// Local configuration key the value of which determines the set of allowed queries.
+const LOCAL_CONFIG_ALLOWED_QUERIES: &str = "allowed_queries";
+/// Special key inside the `allowed_queries` list; represents the set of all queries.
+const LOCAL_CONFIG_ALLOWED_QUERIES_ALL: &str = "all";
+/// Special key inside the `allowed_queries` list; represents the set of all queries
+/// that are tagged `expensive`.
+const LOCAL_CONFIG_ALLOWED_QUERIES_ALL_EXPENSIVE: &str = "all_expensive";
 
 /// Runtime SDK context.
 pub trait Context {
@@ -83,16 +96,74 @@ pub trait Context {
         self.mode() == Mode::SimulateTx
     }
 
-    /// Whether expensive queries are allowed based on local configuration.
-    ///
-    /// This method will always return `true` in `Mode::ExecuteTx` contexts.
-    fn are_expensive_queries_allowed(&self) -> bool {
-        if self.mode() == Mode::ExecuteTx {
-            return true;
-        }
+    /// Whether smart contracts should be executed in this context.
+    fn should_execute_contracts(&self) -> bool {
+        match self.mode() {
+            // When actually executing a transaction, we always run contracts.
+            Mode::ExecuteTx => true,
+            Mode::SimulateTx => {
+                // Backwards compatibility for the deprecated `allow_expensive_queries`.
+                if let Some(allow_expensive_queries) =
+                    self.local_config::<bool>(LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES)
+                {
+                    slog::warn!(
+                        self.get_logger("runtime-sdk"),
+                        "The {} config option is DEPRECATED since April 2022 and will be removed in a future release. Use {} and {} instead.",
+                        LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES,
+                        LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS,
+                        LOCAL_CONFIG_ALLOWED_QUERIES
+                    );
+                    return allow_expensive_queries;
+                };
 
-        self.local_config(LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES)
-            .unwrap_or_default()
+                // The non-deprecated config option.
+                self.local_config(LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS)
+                    .unwrap_or_default()
+            }
+            // When just checking a transaction, we always want to be fast and skip contracts.
+            Mode::CheckTx => false,
+        }
+    }
+
+    /// Whether `method` is an allowed query per policy in the local config.
+    fn is_allowed_query<R: crate::runtime::Runtime>(&self, method: &str) -> bool {
+        let config: Vec<BTreeMap<String, bool>> = self
+            .local_config(LOCAL_CONFIG_ALLOWED_QUERIES)
+            .unwrap_or_default();
+        let is_expensive = R::Modules::expensive_queries()
+            .iter()
+            .any(|&name| name == method);
+
+        // Backwards compatibility for the deprecated `allow_expensive_queries`.
+        if let Some(allow_expensive_queries) =
+            self.local_config::<bool>(LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES)
+        {
+            slog::warn!(
+                self.get_logger("runtime-sdk"),
+                "The {} config option is DEPRECATED since April 2022 and will be removed in a future release. Use {} and {} instead.",
+                LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES,
+                LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS,
+                LOCAL_CONFIG_ALLOWED_QUERIES
+            );
+            return (!is_expensive) || allow_expensive_queries;
+        };
+
+        // The non-deprecated config option.
+        config
+            .iter()
+            .find_map(|item| {
+                item.get(method)
+                    .or_else(|| {
+                        if !is_expensive {
+                            return None;
+                        }
+                        item.get(LOCAL_CONFIG_ALLOWED_QUERIES_ALL_EXPENSIVE)
+                    })
+                    .or_else(|| item.get(LOCAL_CONFIG_ALLOWED_QUERIES_ALL))
+                    .copied()
+            })
+            // If no config entry matches, the default is to allow only non-expensive queries.
+            .unwrap_or_else(|| !is_expensive)
     }
 
     /// Returns node operator-provided local configuration.

@@ -410,6 +410,10 @@ impl<R: Runtime> Dispatcher<R> {
                         return Err(modules::core::Error::ForbiddenInSecureBuild.into());
                     }
 
+                    if !ctx.is_allowed_query::<R>(method) {
+                        return Err(modules::core::Error::Forbidden.into());
+                    }
+
                     R::Modules::dispatch_query(ctx, method, args)
                         .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?
                 }
@@ -715,5 +719,123 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             );
 
         Self::dispatch_query(&mut ctx, method, args)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::{
+        handler,
+        module::Module,
+        modules::core,
+        sdk_derive,
+        testing::{configmap, mock::Mock},
+        Version,
+    };
+    use cbor::Encode as _;
+
+    struct CoreConfig;
+    impl core::Config for CoreConfig {}
+    type Core = core::Module<CoreConfig>;
+
+    /// A module with multiple no-op methods; intended for testing routing.
+    struct AlphabetModule;
+
+    impl module::Module for AlphabetModule {
+        const NAME: &'static str = "alphabet";
+        const VERSION: u32 = 42;
+        type Error = crate::modules::core::Error;
+        type Event = ();
+        type Parameters = ();
+    }
+
+    #[sdk_derive(MethodHandler)]
+    impl AlphabetModule {
+        #[handler(query = "alphabet.Alpha")]
+        fn alpha<C: Context>(
+            _ctx: &mut C,
+            _args: (),
+        ) -> Result<(), <AlphabetModule as module::Module>::Error> {
+            Ok(())
+        }
+
+        #[handler(query = "alphabet.Omega", expensive)]
+        fn expensive<C: Context>(
+            _ctx: &mut C,
+            _args: (),
+        ) -> Result<(), <AlphabetModule as module::Module>::Error> {
+            // Nothing actually expensive here. We're just pretending for testing purposes.
+            Ok(())
+        }
+    }
+
+    impl module::BlockHandler for AlphabetModule {}
+    impl module::TransactionHandler for AlphabetModule {}
+    impl module::MigrationHandler for AlphabetModule {
+        type Genesis = ();
+    }
+    impl module::InvariantHandler for AlphabetModule {}
+
+    struct AlphabetRuntime;
+
+    impl Runtime for AlphabetRuntime {
+        const VERSION: Version = Version::new(0, 0, 0);
+        type Core = Core;
+        type Modules = (Core, AlphabetModule);
+
+        fn genesis_state() -> (core::Genesis, ()) {
+            (core::Genesis::default(), ())
+        }
+    }
+
+    #[test]
+    fn test_allowed_queries_defaults() {
+        let mut mock = Mock::with_local_config(BTreeMap::new());
+        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::CheckTx);
+
+        Dispatcher::<AlphabetRuntime>::dispatch_query(
+            &mut ctx,
+            "alphabet.Alpha",
+            cbor::to_vec(().into_cbor_value()),
+        )
+        .expect("alphabet.Alpha is an inexpensive query, allowed by default");
+
+        Dispatcher::<AlphabetRuntime>::dispatch_query(
+            &mut ctx,
+            "alphabet.Omega",
+            cbor::to_vec(().into_cbor_value()),
+        )
+        .expect_err("alphabet.Omega is an expensive query, disallowed by default");
+    }
+
+    #[test]
+    fn test_allowed_queries_custom() {
+        let local_config = configmap! {
+            // Allow expensive gas estimation and expensive queries so they can be tested.
+            "estimate_gas_by_simulating_contracts" => true,
+            "allowed_queries" => vec![
+                configmap! {"alphabet.Alpha" => false},
+                configmap! {"all_expensive" => true},
+                configmap! {"all" => true}  // should have no effect on Alpha
+            ],
+        };
+        let mut mock = Mock::with_local_config(local_config);
+        // For queries, oasis-core always generates a `CheckTx` context; test with that.
+        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::CheckTx);
+
+        Dispatcher::<AlphabetRuntime>::dispatch_query(
+            &mut ctx,
+            "alphabet.Alpha",
+            cbor::to_vec(().into_cbor_value()),
+        )
+        .expect_err("alphabet.Alpha is a disallowed query");
+
+        Dispatcher::<AlphabetRuntime>::dispatch_query(
+            &mut ctx,
+            "alphabet.Omega",
+            cbor::to_vec(().into_cbor_value()),
+        )
+        .expect("alphabet.Omega is an expensive query and expensive queries are allowed");
     }
 }

@@ -722,15 +722,11 @@ impl Module {
         Self::get_nonce(ctx.runtime_state(), args.address)
     }
 
-    #[handler(query = "accounts.Addresses")]
+    #[handler(query = "accounts.Addresses", expensive)]
     fn query_addresses<C: Context>(
         ctx: &mut C,
         args: types::AddressesQuery,
     ) -> Result<Vec<Address>, Error> {
-        if !ctx.are_expensive_queries_allowed() {
-            return Err(Error::Forbidden);
-        }
-
         Self::get_addresses(ctx.runtime_state(), args.denomination)
     }
 

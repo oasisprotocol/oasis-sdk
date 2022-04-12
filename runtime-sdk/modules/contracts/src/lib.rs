@@ -382,7 +382,7 @@ impl<Cfg: Config> Module<Cfg> {
                 .saturating_mul(plain_code_size.saturating_sub(code_size) as u64),
         )?;
 
-        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
+        if !ctx.should_execute_contracts() {
             // Only fast checks are allowed.
             return Ok(types::UploadResult::default());
         }
@@ -438,7 +438,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_instantiate)?;
 
-        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
+        if !ctx.should_execute_contracts() {
             // Only fast checks are allowed.
             return Ok(types::InstantiateResult::default());
         }
@@ -500,7 +500,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_call)?;
 
-        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
+        if !ctx.should_execute_contracts() {
             // Only fast checks are allowed.
             return Ok(types::CallResult::default());
         }
@@ -542,7 +542,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_upgrade)?;
 
-        if ctx.is_check_only() || (ctx.is_simulation() && !ctx.are_expensive_queries_allowed()) {
+        if !ctx.should_execute_contracts() {
             // Only fast checks are allowed.
             return Ok(());
         }
@@ -642,15 +642,11 @@ impl<Cfg: Config> Module<Cfg> {
         Err(Error::Unsupported)
     }
 
-    #[handler(query = "contracts.Custom")]
+    #[handler(query = "contracts.Custom", expensive)]
     pub fn query_custom<C: Context>(
         ctx: &mut C,
         args: types::CustomQuery,
     ) -> Result<types::CustomQueryResult, Error> {
-        if !ctx.are_expensive_queries_allowed() {
-            return Err(Error::Forbidden);
-        }
-
         let params = Self::params(ctx.runtime_state());
 
         // Load instance information and code.
