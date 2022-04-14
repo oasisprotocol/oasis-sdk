@@ -116,6 +116,10 @@ pub enum Error {
     #[error("forbidden by node policy")]
     #[sdk_error(code = 22)]
     Forbidden,
+
+    #[error("transaction is too large")]
+    #[sdk_error(code = 23)]
+    OversizedTransaction,
 }
 
 /// Events emitted by the core module.
@@ -141,6 +145,7 @@ pub struct GasCosts {
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
     pub max_batch_gas: u64,
+    pub max_tx_size: u32,
     pub max_tx_signers: u32,
     pub max_multisig_signers: u32,
     pub gas_costs: GasCosts,
@@ -561,6 +566,14 @@ impl<Cfg: Config> module::Module for Module<Cfg> {
 }
 
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
+    fn approve_raw_tx<C: Context>(ctx: &mut C, tx: &[u8]) -> Result<(), Error> {
+        let params = Self::params(ctx.runtime_state());
+        if tx.len() > params.max_tx_size.try_into().unwrap() {
+            return Err(Error::OversizedTransaction);
+        }
+        Ok(())
+    }
+
     fn approve_unverified_tx<C: Context>(
         ctx: &mut C,
         utx: &UnverifiedTransaction,

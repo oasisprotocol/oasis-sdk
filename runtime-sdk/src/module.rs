@@ -282,6 +282,13 @@ impl MethodHandler for Tuple {
 
 /// Transaction handler.
 pub trait TransactionHandler {
+    /// Judge if a raw transaction is good enough to undergo decoding.
+    /// This takes place before even decoding the transaction.
+    fn approve_raw_tx<C: Context>(_ctx: &mut C, _tx: &[u8]) -> Result<(), modules::core::Error> {
+        // Default implementation doesn't do any checks.
+        Ok(())
+    }
+
     /// Judge if an unverified transaction is good enough to undergo verification.
     /// This takes place before even verifying signatures.
     fn approve_unverified_tx<C: Context>(
@@ -344,6 +351,11 @@ pub trait TransactionHandler {
 
 #[impl_for_tuples(30)]
 impl TransactionHandler for Tuple {
+    fn approve_raw_tx<C: Context>(ctx: &mut C, tx: &[u8]) -> Result<(), modules::core::Error> {
+        for_tuples!( #( Tuple::approve_raw_tx(ctx, tx)?; )* );
+        Ok(())
+    }
+
     fn approve_unverified_tx<C: Context>(
         ctx: &mut C,
         utx: &UnverifiedTransaction,

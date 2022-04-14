@@ -138,7 +138,8 @@ impl<R: Runtime> Dispatcher<R> {
         ctx: &mut C,
         tx: &[u8],
     ) -> Result<types::transaction::Transaction, modules::core::Error> {
-        // TODO: Check against transaction size limit.
+        // Perform any checks before decoding.
+        R::Modules::approve_raw_tx(ctx, tx)?;
 
         // Deserialize transaction.
         let utx: types::transaction::UnverifiedTransaction = cbor::from_slice(tx)
