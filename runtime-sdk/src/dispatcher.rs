@@ -227,17 +227,32 @@ impl<R: Runtime> Dispatcher<R> {
             // Load priority, weights.
             let priority = R::Core::take_priority(&mut ctx);
 
-            // Commit store and return emitted tags and messages.
-            let (etags, messages) = ctx.commit();
-            (
-                DispatchResult {
-                    result,
-                    tags: etags.into_tags(),
-                    priority,
-                    call_format_metadata,
-                },
-                messages,
-            )
+            if ctx.is_check_only() {
+                // Rollback state during checks.
+                ctx.rollback();
+
+                (
+                    DispatchResult {
+                        result,
+                        tags: Vec::new(),
+                        priority,
+                        call_format_metadata,
+                    },
+                    Vec::new(),
+                )
+            } else {
+                // Commit store and return emitted tags and messages.
+                let (etags, messages) = ctx.commit();
+                (
+                    DispatchResult {
+                        result,
+                        tags: etags.into_tags(),
+                        priority,
+                        call_format_metadata,
+                    },
+                    messages,
+                )
+            }
         });
 
         // Run after dispatch hooks.
@@ -263,7 +278,9 @@ impl<R: Runtime> Dispatcher<R> {
         tx_size: u32,
         tx: Transaction,
     ) -> Result<CheckTxResult, Error> {
-        let dispatch = Self::dispatch_tx(ctx, tx_size, tx, usize::MAX)?;
+        let dispatch = ctx.with_child(Mode::CheckTx, |mut ctx| {
+            Self::dispatch_tx(&mut ctx, tx_size, tx, usize::MAX)
+        })?;
         match dispatch.result {
             module::CallResult::Ok(_) => Ok(CheckTxResult {
                 error: Default::default(),
