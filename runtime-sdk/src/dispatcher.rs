@@ -536,7 +536,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         batch: &mut TxnBatch,
         _in_msgs: &[roothash::IncomingMessage],
     ) -> Result<ExecuteBatchResult, RuntimeError> {
-        let cfg = R::SCHEDULE_CONTROL.unwrap(); // Must succeed otherwise we wouldn't be here.
+        let cfg = R::SCHEDULE_CONTROL;
         let mut tx_reject_hashes = Vec::new();
 
         let mut result = self.execute_batch_common(
