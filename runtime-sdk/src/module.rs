@@ -17,9 +17,7 @@ use crate::{
     storage::{Prefix, Store},
     types::{
         message::MessageResult,
-        transaction::{
-            self, AuthInfo, Call, Transaction, TransactionWeight, UnverifiedTransaction,
-        },
+        transaction::{self, AuthInfo, Call, Transaction, UnverifiedTransaction},
     },
 };
 
@@ -454,11 +452,6 @@ pub trait BlockHandler {
     fn end_block<C: Context>(_ctx: &mut C) {
         // Default implementation doesn't do anything.
     }
-
-    /// Returns module per-batch weight limits.
-    fn get_block_weight_limits<C: Context>(_ctx: &mut C) -> BTreeMap<TransactionWeight, u64> {
-        BTreeMap::new()
-    }
 }
 
 #[impl_for_tuples(30)]
@@ -469,18 +462,6 @@ impl BlockHandler for Tuple {
 
     fn end_block<C: Context>(ctx: &mut C) {
         for_tuples!( #( Tuple::end_block(ctx); )* );
-    }
-
-    // Ignore let and return for the empty tuple case.
-    #[allow(clippy::let_and_return)]
-    fn get_block_weight_limits<C: Context>(ctx: &mut C) -> BTreeMap<TransactionWeight, u64> {
-        let mut result = BTreeMap::new();
-
-        for_tuples!( #(
-            result.extend( Tuple::get_block_weight_limits(ctx) );
-        )* );
-
-        result
     }
 }
 
