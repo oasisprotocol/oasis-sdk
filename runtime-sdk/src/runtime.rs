@@ -90,7 +90,8 @@ pub trait Runtime {
             .unwrap_or_default();
         if global_version != Self::STATE_VERSION {
             assert!(
-                global_version == Self::STATE_VERSION - 1,
+                // There should either be no state, or it should be the pervious version.
+                global_version == 0 || global_version == Self::STATE_VERSION - 1,
                 "inconsistent existing state version (expected: {} got: {})",
                 Self::STATE_VERSION - 1,
                 global_version
