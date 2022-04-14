@@ -17,6 +17,7 @@ func init() {
 	governanceProposalCmd.Flags().AddFlagSet(common.HeightFlag)
 
 	runtimeStatsCmd.Flags().AddFlagSet(common.SelectorFlags)
+	runtimeStatsCmd.Flags().AddFlagSet(csvFlags)
 
 	nativeTokenCmd.Flags().AddFlagSet(common.SelectorFlags)
 	nativeTokenCmd.Flags().AddFlagSet(common.HeightFlag)

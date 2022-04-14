@@ -9,6 +9,7 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	flag "github.com/spf13/pflag"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
@@ -25,6 +26,18 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/cli/metadata"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/connection"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
+)
+
+var (
+	writeCSV bool
+	fileCSV  string
+
+	csvFlags *flag.FlagSet = func() *flag.FlagSet {
+		fs := flag.NewFlagSet("", flag.ContinueOnError)
+		fs.BoolVar(&writeCSV, "write-csv", false, "write stats to CSV")
+		fs.StringVar(&fileCSV, "csv-file", "", "custom CSV file path")
+		return fs
+	}()
 )
 
 type runtimeStats struct {
@@ -520,8 +533,15 @@ var runtimeStatsCmd = &cobra.Command{
 		stats.prepareEntitiesOutput(entityMetadataLookup)
 		stats.printStats()
 
+		if !writeCSV {
+			return
+		}
+
 		// Also save entity stats in a csv.
-		fout, err := os.Create(fmt.Sprintf("runtime-%s-%d-%d-stats.csv", runtimeID, startHeight, endHeight))
+		if fileCSV == "" {
+			fileCSV = fmt.Sprintf("runtime-%s-%d-%d-stats.csv", runtimeID, startHeight, endHeight)
+		}
+		fout, err := os.Create(fileCSV)
 		cobra.CheckErr(err)
 		defer fout.Close()
 
