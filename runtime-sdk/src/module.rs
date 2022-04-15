@@ -17,9 +17,7 @@ use crate::{
     storage::{Prefix, Store},
     types::{
         message::MessageResult,
-        transaction::{
-            self, AuthInfo, Call, Transaction, TransactionWeight, UnverifiedTransaction,
-        },
+        transaction::{self, AuthInfo, Call, Transaction, UnverifiedTransaction},
     },
 };
 
@@ -282,6 +280,13 @@ impl MethodHandler for Tuple {
 
 /// Transaction handler.
 pub trait TransactionHandler {
+    /// Judge if a raw transaction is good enough to undergo decoding.
+    /// This takes place before even decoding the transaction.
+    fn approve_raw_tx<C: Context>(_ctx: &mut C, _tx: &[u8]) -> Result<(), modules::core::Error> {
+        // Default implementation doesn't do any checks.
+        Ok(())
+    }
+
     /// Judge if an unverified transaction is good enough to undergo verification.
     /// This takes place before even verifying signatures.
     fn approve_unverified_tx<C: Context>(
@@ -344,6 +349,11 @@ pub trait TransactionHandler {
 
 #[impl_for_tuples(30)]
 impl TransactionHandler for Tuple {
+    fn approve_raw_tx<C: Context>(ctx: &mut C, tx: &[u8]) -> Result<(), modules::core::Error> {
+        for_tuples!( #( Tuple::approve_raw_tx(ctx, tx)?; )* );
+        Ok(())
+    }
+
     fn approve_unverified_tx<C: Context>(
         ctx: &mut C,
         utx: &UnverifiedTransaction,
@@ -442,11 +452,6 @@ pub trait BlockHandler {
     fn end_block<C: Context>(_ctx: &mut C) {
         // Default implementation doesn't do anything.
     }
-
-    /// Returns module per-batch weight limits.
-    fn get_block_weight_limits<C: Context>(_ctx: &mut C) -> BTreeMap<TransactionWeight, u64> {
-        BTreeMap::new()
-    }
 }
 
 #[impl_for_tuples(30)]
@@ -457,18 +462,6 @@ impl BlockHandler for Tuple {
 
     fn end_block<C: Context>(ctx: &mut C) {
         for_tuples!( #( Tuple::end_block(ctx); )* );
-    }
-
-    // Ignore let and return for the empty tuple case.
-    #[allow(clippy::let_and_return)]
-    fn get_block_weight_limits<C: Context>(ctx: &mut C) -> BTreeMap<TransactionWeight, u64> {
-        let mut result = BTreeMap::new();
-
-        for_tuples!( #(
-            result.extend( Tuple::get_block_weight_limits(ctx) );
-        )* );
-
-        result
     }
 }
 

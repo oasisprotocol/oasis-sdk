@@ -23,13 +23,12 @@ impl evm::Config for Config {
 impl sdk::Runtime for Runtime {
     const VERSION: Version = sdk::version_from_cargo!();
 
-    // Enable the runtime schedule control feature.
-    const SCHEDULE_CONTROL: Option<config::ScheduleControl> = Some(config::ScheduleControl {
+    const SCHEDULE_CONTROL: config::ScheduleControl = config::ScheduleControl {
         initial_batch_size: 50,
         batch_size: 50,
         min_remaining_gas: 100,
         max_tx_count: 1000,
-    });
+    };
 
     type Core = modules::core::Module<Config>;
 
@@ -69,6 +68,7 @@ impl sdk::Runtime for Runtime {
             modules::core::Genesis {
                 parameters: modules::core::Parameters {
                     max_batch_gas: 1_000_000,
+                    max_tx_size: 32 * 1024,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
                     gas_costs: modules::core::GasCosts {

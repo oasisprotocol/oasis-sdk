@@ -17,10 +17,7 @@ use crate::{
     module::{self, InvariantHandler as _, Module as _, ModuleInfoHandler as _},
     types::{
         token,
-        transaction::{
-            self, AddressSpec, AuthProof, Call, CallFormat, TransactionWeight,
-            UnverifiedTransaction,
-        },
+        transaction::{self, AddressSpec, AuthProof, Call, CallFormat, UnverifiedTransaction},
     },
     Runtime,
 };
@@ -116,6 +113,10 @@ pub enum Error {
     #[error("forbidden by node policy")]
     #[sdk_error(code = 22)]
     Forbidden,
+
+    #[error("transaction is too large")]
+    #[sdk_error(code = 23)]
+    OversizedTransaction,
 }
 
 /// Events emitted by the core module.
@@ -141,6 +142,7 @@ pub struct GasCosts {
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
     pub max_batch_gas: u64,
+    pub max_tx_size: u32,
     pub max_tx_signers: u32,
     pub max_multisig_signers: u32,
     pub gas_costs: GasCosts,
@@ -173,16 +175,6 @@ pub trait API {
 
     /// Increase transaction priority for the provided amount.
     fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error>;
-
-    /// Increase the specific transaction weight for the provided amount.
-    fn add_weight<C: TxContext>(
-        ctx: &mut C,
-        weight: TransactionWeight,
-        val: u64,
-    ) -> Result<(), Error>;
-
-    /// Takes the stored transaction weight.
-    fn take_weights<C: Context>(ctx: &mut C) -> BTreeMap<TransactionWeight, u64>;
 
     /// Takes and returns the stored transaction priority.
     fn take_priority<C: Context>(ctx: &mut C) -> u64;
@@ -237,9 +229,6 @@ pub struct Module<Cfg: Config> {
 
 const CONTEXT_KEY_GAS_USED: &str = "core.GasUsed";
 const CONTEXT_KEY_PRIORITY: &str = "core.Priority";
-const CONTEXT_KEY_WEIGHTS: &str = "core.Weights";
-
-const GAS_WEIGHT_NAME: &str = "gas";
 
 impl<Cfg: Config> Module<Cfg> {
     /// Initialize state from genesis.
@@ -325,30 +314,8 @@ impl<Cfg: Config> API for Module<Cfg> {
         Ok(())
     }
 
-    fn add_weight<C: TxContext>(
-        ctx: &mut C,
-        weight: TransactionWeight,
-        val: u64,
-    ) -> Result<(), Error> {
-        let weights = ctx
-            .value::<BTreeMap<TransactionWeight, u64>>(CONTEXT_KEY_WEIGHTS)
-            .or_default();
-
-        let w = weights.remove(&weight).unwrap_or_default();
-        let added_w = w.checked_add(val).unwrap_or(u64::MAX);
-        weights.insert(weight, added_w);
-
-        Ok(())
-    }
-
     fn take_priority<C: Context>(ctx: &mut C) -> u64 {
         ctx.value::<u64>(CONTEXT_KEY_PRIORITY)
-            .take()
-            .unwrap_or_default()
-    }
-
-    fn take_weights<C: Context>(ctx: &mut C) -> BTreeMap<TransactionWeight, u64> {
-        ctx.value::<BTreeMap<TransactionWeight, u64>>(CONTEXT_KEY_WEIGHTS)
             .take()
             .unwrap_or_default()
     }
@@ -561,6 +528,14 @@ impl<Cfg: Config> module::Module for Module<Cfg> {
 }
 
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
+    fn approve_raw_tx<C: Context>(ctx: &mut C, tx: &[u8]) -> Result<(), Error> {
+        let params = Self::params(ctx.runtime_state());
+        if tx.len() > params.max_tx_size.try_into().unwrap() {
+            return Err(Error::OversizedTransaction);
+        }
+        Ok(())
+    }
+
     fn approve_unverified_tx<C: Context>(
         ctx: &mut C,
         utx: &UnverifiedTransaction,
@@ -634,17 +609,9 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
             }
         }
 
-        // Set weight based on configured gas limit.
-        Self::add_weight(ctx, GAS_WEIGHT_NAME.into(), gas)?;
-
-        // Attempt to limit the maximum number of consensus messages and add appropriate weights.
+        // Attempt to limit the maximum number of consensus messages.
         let consensus_messages = ctx.tx_auth_info().fee.consensus_messages;
         ctx.limit_max_messages(consensus_messages)?;
-        Self::add_weight(
-            ctx,
-            TransactionWeight::ConsensusMessages,
-            consensus_messages as u64,
-        )?;
 
         Ok(())
     }
@@ -679,15 +646,5 @@ impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
     }
 }
 
-impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
-    fn get_block_weight_limits<C: Context>(ctx: &mut C) -> BTreeMap<TransactionWeight, u64> {
-        let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
-
-        let mut res = BTreeMap::new();
-        res.insert(GAS_WEIGHT_NAME.into(), batch_gas_limit);
-
-        res
-    }
-}
-
+impl<Cfg: Config> module::BlockHandler for Module<Cfg> {}
 impl<Cfg: Config> module::InvariantHandler for Module<Cfg> {}

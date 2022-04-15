@@ -22,7 +22,7 @@ use oasis_core_runtime::{
         tags::Tags,
         types::TxnBatch,
     },
-    types::{CheckTxMetadata, CheckTxResult, BATCH_WEIGHT_LIMIT_QUERY_METHOD},
+    types::{CheckTxMetadata, CheckTxResult},
     BUILD_INFO,
 };
 
@@ -40,7 +40,7 @@ use crate::{
     storage,
     storage::Prefix,
     types,
-    types::transaction::{AuthProof, Transaction, TransactionWeight},
+    types::transaction::{AuthProof, Transaction},
 };
 
 /// Unique module name.
@@ -79,8 +79,6 @@ pub struct DispatchResult {
     pub tags: Tags,
     /// Transaction priority.
     pub priority: u64,
-    /// Transaction weights.
-    pub weights: BTreeMap<TransactionWeight, u64>,
     /// Call format metadata.
     pub call_format_metadata: callformat::Metadata,
 }
@@ -95,7 +93,6 @@ impl DispatchResult {
             result,
             tags,
             priority: 0,
-            weights: BTreeMap::new(),
             call_format_metadata,
         }
     }
@@ -138,7 +135,8 @@ impl<R: Runtime> Dispatcher<R> {
         ctx: &mut C,
         tx: &[u8],
     ) -> Result<types::transaction::Transaction, modules::core::Error> {
-        // TODO: Check against transaction size limit.
+        // Perform any checks before decoding.
+        R::Modules::approve_raw_tx(ctx, tx)?;
 
         // Deserialize transaction.
         let utx: types::transaction::UnverifiedTransaction = cbor::from_slice(tx)
@@ -228,20 +226,33 @@ impl<R: Runtime> Dispatcher<R> {
 
             // Load priority, weights.
             let priority = R::Core::take_priority(&mut ctx);
-            let weights = R::Core::take_weights(&mut ctx);
 
-            // Commit store and return emitted tags and messages.
-            let (etags, messages) = ctx.commit();
-            (
-                DispatchResult {
-                    result,
-                    tags: etags.into_tags(),
-                    priority,
-                    weights,
-                    call_format_metadata,
-                },
-                messages,
-            )
+            if ctx.is_check_only() {
+                // Rollback state during checks.
+                ctx.rollback();
+
+                (
+                    DispatchResult {
+                        result,
+                        tags: Vec::new(),
+                        priority,
+                        call_format_metadata,
+                    },
+                    Vec::new(),
+                )
+            } else {
+                // Commit store and return emitted tags and messages.
+                let (etags, messages) = ctx.commit();
+                (
+                    DispatchResult {
+                        result,
+                        tags: etags.into_tags(),
+                        priority,
+                        call_format_metadata,
+                    },
+                    messages,
+                )
+            }
         });
 
         // Run after dispatch hooks.
@@ -267,13 +278,15 @@ impl<R: Runtime> Dispatcher<R> {
         tx_size: u32,
         tx: Transaction,
     ) -> Result<CheckTxResult, Error> {
-        let dispatch = Self::dispatch_tx(ctx, tx_size, tx, usize::MAX)?;
+        let dispatch = ctx.with_child(Mode::CheckTx, |mut ctx| {
+            Self::dispatch_tx(&mut ctx, tx_size, tx, usize::MAX)
+        })?;
         match dispatch.result {
             module::CallResult::Ok(_) => Ok(CheckTxResult {
                 error: Default::default(),
                 meta: Some(CheckTxMetadata {
                     priority: dispatch.priority,
-                    weights: Some(dispatch.weights),
+                    weights: None,
                 }),
             }),
 
@@ -392,32 +405,21 @@ impl<R: Runtime> Dispatcher<R> {
             // Perform state migrations if required.
             R::migrate(ctx);
 
-            // Execute the query.
-            match method {
-                // Internal methods.
-                BATCH_WEIGHT_LIMIT_QUERY_METHOD => {
-                    let block_weight_limits = R::Modules::get_block_weight_limits(ctx);
-                    Ok(cbor::to_value(block_weight_limits))
-                }
-                // Runtime methods.
-                _ => {
-                    // Even though queries are not allowed to perform any private key ops, we
-                    // reduce the attack surface by completely disallowing them in secure builds.
-                    //
-                    // If one needs to perform runtime queries, she should use a regular build of
-                    // the runtime for that.
-                    if BUILD_INFO.is_secure {
-                        return Err(modules::core::Error::ForbiddenInSecureBuild.into());
-                    }
-
-                    if !ctx.is_allowed_query::<R>(method) {
-                        return Err(modules::core::Error::Forbidden.into());
-                    }
-
-                    R::Modules::dispatch_query(ctx, method, args)
-                        .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?
-                }
+            // Even though queries are not allowed to perform any private key ops, we
+            // reduce the attack surface by completely disallowing them in secure builds.
+            //
+            // If one needs to perform runtime queries, she should use a regular build of
+            // the runtime for that.
+            if BUILD_INFO.is_secure {
+                return Err(modules::core::Error::ForbiddenInSecureBuild.into());
             }
+
+            if !ctx.is_allowed_query::<R>(method) {
+                return Err(modules::core::Error::Forbidden.into());
+            }
+
+            R::Modules::dispatch_query(ctx, method, args)
+                .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?
         }))
         .map_err(|err| -> RuntimeError { Error::QueryAborted(format!("{:?}", err)).into() })?
         .map(cbor::to_vec)
@@ -460,9 +462,6 @@ impl<R: Runtime> Dispatcher<R> {
         // Run end block hooks.
         R::Modules::end_block(&mut ctx);
 
-        // Query block weight limits for next round.
-        let block_weight_limits = R::Modules::get_block_weight_limits(&mut ctx);
-
         // Commit the context and retrieve the emitted messages.
         let (block_tags, messages) = ctx.commit();
         let (messages, handlers) = messages.into_iter().unzip();
@@ -474,7 +473,7 @@ impl<R: Runtime> Dispatcher<R> {
             results,
             messages,
             block_tags: block_tags.into_tags(),
-            batch_weight_limits: Some(block_weight_limits),
+            batch_weight_limits: None,
             tx_reject_hashes: vec![],
             in_msgs_count: 0, // TODO: Support processing incoming messages.
         })
@@ -535,7 +534,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         batch: &mut TxnBatch,
         _in_msgs: &[roothash::IncomingMessage],
     ) -> Result<ExecuteBatchResult, RuntimeError> {
-        let cfg = R::SCHEDULE_CONTROL.unwrap(); // Must succeed otherwise we wouldn't be here.
+        let cfg = R::SCHEDULE_CONTROL;
         let mut tx_reject_hashes = Vec::new();
 
         let mut result = self.execute_batch_common(

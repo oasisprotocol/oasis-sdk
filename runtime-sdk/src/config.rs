@@ -14,3 +14,15 @@ pub struct ScheduleControl {
     /// This is only used as a last resort to avoid the batch going over the runtime's limit.
     pub max_tx_count: usize,
 }
+
+impl ScheduleControl {
+    /// Construct a default schedule control configuration.
+    pub const fn default() -> Self {
+        Self {
+            initial_batch_size: 50,
+            batch_size: 50,
+            min_remaining_gas: 1_000,
+            max_tx_count: 1_000,
+        }
+    }
+}

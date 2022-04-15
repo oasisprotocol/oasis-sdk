@@ -31,6 +31,11 @@ type Parameters struct {
 	MaxMultisigSigners uint32                                   `json:"max_multisig_signers"`
 	GasCosts           GasCosts                                 `json:"gas_costs"`
 	MinGasPrice        map[types.Denomination]quantity.Quantity `json:"min_gas_price"`
+
+	// Fields below have omitempty set for backwards compatibility. Once there are no deployed
+	// runtimes using an old version of the SDK, this should be removed.
+
+	MaxTxSize uint32 `json:"max_tx_size,omitempty"`
 }
 
 // ModuleName is the core module name.

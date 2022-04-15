@@ -33,8 +33,8 @@ pub trait Runtime {
     /// Prefetch limit. To enable prefetch set it to a non-zero value.
     const PREFETCH_LIMIT: u16 = 0;
 
-    /// Whether the runtime should take control of transaction scheduling.
-    const SCHEDULE_CONTROL: Option<config::ScheduleControl> = None;
+    /// Runtime schedule control configuration.
+    const SCHEDULE_CONTROL: config::ScheduleControl = config::ScheduleControl::default();
 
     /// Module that provides the core API.
     type Core: modules::core::API;
@@ -153,12 +153,11 @@ pub trait Runtime {
         };
 
         // Configure the runtime features.
-        let mut features = Features::default();
-        if let Some(cfg) = Self::SCHEDULE_CONTROL {
-            features.schedule_control = Some(FeatureScheduleControl {
-                initial_batch_size: cfg.initial_batch_size,
-            });
-        }
+        let features = Features {
+            schedule_control: Some(FeatureScheduleControl {
+                initial_batch_size: Self::SCHEDULE_CONTROL.initial_batch_size,
+            }),
+        };
 
         // Start the runtime.
         start_runtime(
