@@ -6,7 +6,7 @@ use crate::{
     crypto::multisig,
     event::IntoTags,
     handler,
-    module::{self, BlockHandler, Module as _, TransactionHandler as _},
+    module::{self, Module as _, TransactionHandler as _},
     runtime::Runtime,
     sdk_derive,
     testing::{configmap, keys, mock},
