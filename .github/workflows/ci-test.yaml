@@ -111,7 +111,7 @@ jobs:
         run: go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v2.1.0
+        uses: codecov/codecov-action@v3.0.0
         with:
           directory: client-sdk/go
 
@@ -137,7 +137,7 @@ jobs:
         run: go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v2.1.0
+        uses: codecov/codecov-action@v3.0.0
         with:
           directory: cli
 
