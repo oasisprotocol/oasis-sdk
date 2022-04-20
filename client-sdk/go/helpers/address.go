@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"strings"
 
+	"golang.org/x/crypto/sha3"
+
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
@@ -70,4 +74,32 @@ func ResolveAddress(net *config.Network, address string) (*types.Address, error)
 	default:
 		return nil, fmt.Errorf("unsupported address format")
 	}
+}
+
+// EthAddressFromPubKey takes public key, extracts the ethereum address and returns its checksummed
+// case-sensitive variant.
+func EthAddressFromPubKey(pk secp256k1.PublicKey) string {
+	h := sha3.NewLegacyKeccak256()
+	untaggedPk, _ := pk.MarshalBinaryUncompressedUntagged()
+	h.Write(untaggedPk)
+	hash := h.Sum(nil)
+	unchecksummed := hex.EncodeToString(hash[32-20:])
+
+	sha := sha3.NewLegacyKeccak256()
+	sha.Write([]byte(unchecksummed))
+	hash = sha.Sum(nil)
+
+	result := []byte(unchecksummed)
+	for i := 0; i < len(result); i++ {
+		hashByte := hash[i/2]
+		if i%2 == 0 {
+			hashByte >>= 4
+		} else {
+			hashByte &= 0xf
+		}
+		if result[i] > '9' && hashByte > 7 {
+			result[i] -= 32
+		}
+	}
+	return fmt.Sprintf("0x%s", string(result))
 }

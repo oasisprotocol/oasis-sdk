@@ -7,6 +7,7 @@ replace github.com/oasisprotocol/oasis-sdk/client-sdk/go => ../client-sdk/go
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/adrg/xdg v0.4.0
+	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20220328075252-7dd334e3daae
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
@@ -17,6 +18,7 @@ require (
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/zondax/ledger-go v0.12.2
 	golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29
@@ -36,6 +38,7 @@ require (
 	github.com/eapache/channels v1.1.0 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
+	github.com/ethereum/go-ethereum v1.10.4 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
@@ -77,7 +80,6 @@ require (
 	github.com/spf13/afero v1.8.0 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/tendermint/tendermint v0.35.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect

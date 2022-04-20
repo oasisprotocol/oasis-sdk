@@ -1,7 +1,6 @@
 package wallet
 
 import (
-	"encoding/base64"
 	"fmt"
 	"sync"
 
@@ -15,10 +14,24 @@ import (
 
 var registeredFactories sync.Map
 
+const (
+	// AlgorithmEd25519Adr8 is the Ed25519 algorithm using the ADR-0008 derivation.
+	AlgorithmEd25519Adr8 = "ed25519-adr8"
+	// AlgorithmEd25519Raw is the Ed25519 algorithm using raw private keys.
+	AlgorithmEd25519Raw = "ed25519-raw"
+	// AlgorithmSecp256k1Bip44 is the Secp256k1 algorithm using BIP-44 derivation.
+	AlgorithmSecp256k1Bip44 = "secp256k1-bip44"
+	// AlgorithmSecp256k1Raw is the Secp256k1 algorithm using raw private keys.
+	AlgorithmSecp256k1Raw = "secp256k1-raw"
+)
+
 // Factory is a factory that supports wallets of a specific kind.
 type Factory interface {
 	// Kind returns the kind of wallets this factory will produce.
 	Kind() string
+
+	// PrettyKind returns human-friendly kind of wallets this factory will produce.
+	PrettyKind(cfg map[string]interface{}) string
 
 	// Flags returns the CLI flags that can be used for configuring this wallet factory.
 	Flags() *flag.FlagSet
@@ -29,11 +42,20 @@ type Factory interface {
 	// GetConfigFromSurvey generates wallet configuration from survey answers.
 	GetConfigFromSurvey(kind *ImportKind) (map[string]interface{}, error)
 
+	// DataPrompt returns a survey prompt for entering data when importing the wallet.
+	DataPrompt(kind ImportKind, cfg map[string]interface{}) survey.Prompt
+
+	// DataValidator returns a survey data input validator used when importing the wallet.
+	DataValidator(kind ImportKind, cfg map[string]interface{}) survey.Validator
+
 	// RequiresPassphrase returns true if the wallet requires a passphrase.
 	RequiresPassphrase() bool
 
 	// SupportedImportKinds returns the import kinds supported by this wallet.
 	SupportedImportKinds() []ImportKind
+
+	// HasConsensusSigner returns true, iff there is a consensus layer signer associated with this wallet.
+	HasConsensusSigner(cfg map[string]interface{}) bool
 
 	// Create creates a new wallet.
 	Create(name string, passphrase string, cfg map[string]interface{}) (Wallet, error)
@@ -71,36 +93,6 @@ func (k *ImportKind) UnmarshalText(text []byte) error {
 		return fmt.Errorf("unknown import kind: %s", string(text))
 	}
 	return nil
-}
-
-// Prompt returns a survey prompt for entering data for the given import kind.
-func (k ImportKind) Prompt() survey.Prompt {
-	switch k {
-	case ImportKindMnemonic:
-		return &survey.Multiline{Message: "Mnemonic:"}
-	case ImportKindPrivateKey:
-		return &survey.Multiline{Message: "Private key (base64-encoded):"}
-	default:
-		return nil
-	}
-}
-
-// DataValidator returns a survey data input validator for this importkind.
-func (k ImportKind) DataValidator() survey.Validator {
-	return func(ans interface{}) error {
-		switch k {
-		case ImportKindMnemonic:
-		case ImportKindPrivateKey:
-			// Ensure the private key is base64 encoded.
-			_, err := base64.StdEncoding.DecodeString(ans.(string))
-			if err != nil {
-				return fmt.Errorf("private key must be base64-encoded: %w", err)
-			}
-		default:
-			return fmt.Errorf("unsupported import kind: %s", k)
-		}
-		return nil
-	}
 }
 
 // ImportSource is a source of imported wallet key material.

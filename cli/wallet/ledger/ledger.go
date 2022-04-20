@@ -3,6 +3,7 @@ package ledger
 import (
 	"fmt"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/mitchellh/mapstructure"
 	flag "github.com/spf13/pflag"
 
@@ -38,6 +39,20 @@ func (wf *ledgerWalletFactory) Kind() string {
 	return Kind
 }
 
+func (wf *ledgerWalletFactory) PrettyKind(rawCfg map[string]interface{}) string {
+	cfg, err := wf.unmarshalConfig(rawCfg)
+	if err != nil {
+		return ""
+	}
+
+	// Show adr8, if derivation not set.
+	derivation := cfg.Derivation
+	if derivation == "" {
+		derivation = derivationAdr8
+	}
+	return fmt.Sprintf("%s (%s:%d)", wf.Kind(), derivation, cfg.Number)
+}
+
 func (wf *ledgerWalletFactory) Flags() *flag.FlagSet {
 	return wf.flags
 }
@@ -53,12 +68,24 @@ func (wf *ledgerWalletFactory) GetConfigFromSurvey(kind *wallet.ImportKind) (map
 	return nil, fmt.Errorf("ledger: import not supported")
 }
 
+func (wf *ledgerWalletFactory) DataPrompt(kind wallet.ImportKind, rawCfg map[string]interface{}) survey.Prompt {
+	return nil
+}
+
+func (wf *ledgerWalletFactory) DataValidator(kind wallet.ImportKind, rawCfg map[string]interface{}) survey.Validator {
+	return nil
+}
+
 func (wf *ledgerWalletFactory) RequiresPassphrase() bool {
 	return false
 }
 
 func (wf *ledgerWalletFactory) SupportedImportKinds() []wallet.ImportKind {
 	return []wallet.ImportKind{}
+}
+
+func (wf *ledgerWalletFactory) HasConsensusSigner(rawCfg map[string]interface{}) bool {
+	return true
 }
 
 func (wf *ledgerWalletFactory) unmarshalConfig(raw map[string]interface{}) (*walletConfig, error) {
@@ -183,7 +210,7 @@ func (w *ledgerWallet) UnsafeExport() string {
 func init() {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
 	flags.String(cfgDerivation, derivationLegacy, "Derivation scheme to use [adr8, legacy]")
-	flags.Uint32(cfgNumber, 0, "Key number to use for ADR 0008 key derivation scheme")
+	flags.Uint32(cfgNumber, 0, "Key number to use in the derivation scheme")
 
 	wallet.Register(&ledgerWalletFactory{
 		flags: flags,
