@@ -8,6 +8,7 @@ use oas20::types::{ReceiverRequest, Request as Oas20Request, TokenInstantiation}
 use oasis_contract_sdk::{
     self as sdk,
     env::{Crypto, Env},
+    storage::Store,
     types::{
         crypto::SignatureKind,
         env::{AccountsQuery, AccountsResponse, QueryRequest, QueryResponse},
@@ -87,6 +88,9 @@ pub enum Request {
         message: Vec<u8>,
         signature: Vec<u8>,
     },
+
+    #[cbor(rename = "invalid_storage_call")]
+    InvalidStorageCall,
 
     #[cbor(rename = "query_address")]
     QueryAddress,
@@ -281,6 +285,13 @@ impl sdk::Contract for HelloWorld {
                 };
 
                 Ok(Response::SignatureVerify { result })
+            }
+            Request::InvalidStorageCall => {
+                // Generate an invalid storage call.
+                let big_value = vec![0x80; 70]; // Limit in tests is 64.
+                ctx.public_store().insert(&big_value, b"boom");
+
+                Ok(Response::Empty)
             }
             Request::QueryAddress => {
                 let address = ctx.env().address_for_instance(ctx.instance_id());

@@ -227,13 +227,13 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                             result: result.into(),
                             data,
                         };
-                        let mut exec_ctx = ExecutionContext {
-                            caller_address: ctx.tx_caller_address(),
-                            gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
-                            instance_info: contract.instance_info,
-                            tx_context: ctx,
+                        let mut exec_ctx = ExecutionContext::new(
                             params,
-                        };
+                            contract.instance_info,
+                            <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
+                            ctx.tx_caller_address(),
+                            ctx,
+                        );
                         let reply_result =
                             wasm::handle_reply::<Cfg, C>(&mut exec_ctx, contract, reply);
                         let reply_result = process_execution_result(ctx, reply_result)?;

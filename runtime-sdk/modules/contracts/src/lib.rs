@@ -117,6 +117,22 @@ pub enum Error {
     #[sdk_error(code = 20, abort)]
     Abort(#[from] sdk::dispatcher::Error),
 
+    #[error("storage: key too large (size: {0} max: {1})")]
+    #[sdk_error(code = 21)]
+    StorageKeyTooLarge(u32, u32),
+
+    #[error("storage: value too large (size: {0} max: {1})")]
+    #[sdk_error(code = 22)]
+    StorageValueTooLarge(u32, u32),
+
+    #[error("crypto: msg too large (size: {0} max: {1})")]
+    #[sdk_error(code = 23)]
+    CryptoMsgTooLarge(u32, u32),
+
+    #[error("crypto: malformed public key")]
+    #[sdk_error(code = 24)]
+    CryptoMalformedPublicKey,
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),
@@ -476,13 +492,13 @@ impl<Cfg: Config> Module<Cfg> {
             code: &code,
             instance_info: &instance_info,
         };
-        let mut exec_ctx = abi::ExecutionContext {
-            caller_address: ctx.tx_caller_address(),
-            gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
-            instance_info: &instance_info,
-            tx_context: ctx,
-            params: &params,
-        };
+        let mut exec_ctx = abi::ExecutionContext::new(
+            &params,
+            &instance_info,
+            <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
+            ctx.tx_caller_address(),
+            ctx,
+        );
         let result = wasm::instantiate::<Cfg, C>(&mut exec_ctx, &contract, &body);
 
         let result = results::process_execution_result(ctx, result)?;
@@ -521,13 +537,13 @@ impl<Cfg: Config> Module<Cfg> {
             code: &code,
             instance_info: &instance_info,
         };
-        let mut exec_ctx = abi::ExecutionContext {
-            caller_address: ctx.tx_caller_address(),
-            gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
-            instance_info: &instance_info,
-            tx_context: ctx,
-            params: &params,
-        };
+        let mut exec_ctx = abi::ExecutionContext::new(
+            &params,
+            &instance_info,
+            <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
+            ctx.tx_caller_address(),
+            ctx,
+        );
         let result = wasm::call::<Cfg, C>(&mut exec_ctx, &contract, &body);
 
         let result = results::process_execution_result(ctx, result)?;
@@ -567,13 +583,13 @@ impl<Cfg: Config> Module<Cfg> {
             code: &code,
             instance_info: &instance_info,
         };
-        let mut exec_ctx = abi::ExecutionContext {
-            caller_address: ctx.tx_caller_address(),
-            gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
-            instance_info: &instance_info,
-            tx_context: ctx,
-            params: &params,
-        };
+        let mut exec_ctx = abi::ExecutionContext::new(
+            &params,
+            &instance_info,
+            <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
+            ctx.tx_caller_address(),
+            ctx,
+        );
         // Pre-upgrade invocation must succeed for the upgrade to proceed.
         let result = wasm::pre_upgrade::<Cfg, C>(&mut exec_ctx, &contract, &body);
 
@@ -590,13 +606,13 @@ impl<Cfg: Config> Module<Cfg> {
             code: &code,
             instance_info: &instance_info,
         };
-        let mut exec_ctx = abi::ExecutionContext {
-            caller_address: ctx.tx_caller_address(),
-            gas_limit: <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
-            instance_info: &instance_info,
-            tx_context: ctx,
-            params: &params,
-        };
+        let mut exec_ctx = abi::ExecutionContext::new(
+            &params,
+            &instance_info,
+            <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
+            ctx.tx_caller_address(),
+            ctx,
+        );
 
         // Run post-upgrade function on the new contract.
         let result = wasm::post_upgrade::<Cfg, C>(&mut exec_ctx, &contract, &body);
@@ -663,13 +679,13 @@ impl<Cfg: Config> Module<Cfg> {
             code: &code,
             instance_info: &instance_info,
         };
-        let mut exec_ctx = abi::ExecutionContext {
-            caller_address: Default::default(), // No caller for queries.
-            gas_limit: cfg.query_custom_max_gas,
-            instance_info: &instance_info,
-            tx_context: ctx,
-            params: &params,
-        };
+        let mut exec_ctx = abi::ExecutionContext::new(
+            &params,
+            &instance_info,
+            cfg.query_custom_max_gas,
+            Default::default(), // No caller for queries.
+            ctx,
+        );
         let result = wasm::query::<Cfg, C>(&mut exec_ctx, &contract, &args).inner?; // No need to handle gas.
 
         Ok(types::CustomQueryResult(result.data))

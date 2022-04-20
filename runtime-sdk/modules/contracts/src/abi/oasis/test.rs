@@ -216,13 +216,13 @@ fn run_contract_with_defaults(
             code: &code,
             instance_info: &instance_info,
         };
-        let mut exec_ctx = abi::ExecutionContext {
-            caller_address: Default::default(),
-            instance_info: &instance_info,
-            tx_context: &mut ctx,
-            params: &params,
+        let mut exec_ctx = abi::ExecutionContext::new(
+            &params,
+            &instance_info,
             gas_limit,
-        };
+            Default::default(),
+            &mut ctx,
+        );
         wasm::instantiate::<ContractsConfig, _>(&mut exec_ctx, &contract, &call).inner?;
 
         // Call the contract.
@@ -297,6 +297,27 @@ fn test_hello_contract_out_of_gas() {
     assert_eq!(
         &result.to_string(),
         "core: out of gas (limit: 1000 wanted: 1008)"
+    );
+}
+
+#[test]
+fn test_hello_contract_invalid_storage_call() {
+    let result = run_contract_with_defaults(
+        HELLO_CONTRACT_CODE,
+        1_000_000,
+        cbor::cbor_map! {
+        "instantiate" => cbor::cbor_map! {
+            "initial_counter" => cbor::cbor_int!(42)
+        }},
+        cbor::cbor_text!("invalid_storage_call"),
+    )
+    .expect_err("contract call should fail");
+
+    assert_eq!(result.module_name(), "contracts");
+    assert_eq!(result.code(), 21);
+    assert_eq!(
+        &result.to_string(),
+        "storage: key too large (size: 70 max: 64)"
     );
 }
 
