@@ -98,6 +98,30 @@ pub struct ExecutionContext<'ctx, C: Context> {
 
     /// Address of the caller.
     pub caller_address: Address,
+
+    /// Whether the execution has aborted with an error that should be propagated instead of just
+    /// using the generic "execution failed" error.
+    pub aborted: Option<Error>,
+}
+
+impl<'ctx, C: Context> ExecutionContext<'ctx, C> {
+    /// Create a new execution context.
+    pub fn new(
+        params: &'ctx Parameters,
+        instance_info: &'ctx types::Instance,
+        gas_limit: u64,
+        caller_address: Address,
+        tx_context: &'ctx mut C,
+    ) -> Self {
+        Self {
+            tx_context,
+            params,
+            instance_info,
+            gas_limit,
+            caller_address,
+            aborted: None,
+        }
+    }
 }
 
 /// Result of an execution that contains additional metadata like gas used.

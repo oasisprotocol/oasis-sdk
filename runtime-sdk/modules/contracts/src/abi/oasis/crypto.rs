@@ -68,6 +68,10 @@ impl<Cfg: Config> OasisV1<Cfg> {
 
                 // Validate message length.
                 if message.1 > ec.params.max_crypto_signature_verify_message_size_bytes {
+                    ec.aborted = Some(Error::CryptoMsgTooLarge(
+                        message.1,
+                        ec.params.max_crypto_signature_verify_message_size_bytes,
+                    ));
                     return Err(wasm3::Trap::Abort);
                 }
 
@@ -90,7 +94,10 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 ctx.instance
                     .runtime()
                     .try_with_memory(|memory| -> Result<_, wasm3::Trap> {
-                        let key = get_key(kind, key, &memory)?;
+                        let key = get_key(kind, key, &memory).map_err(|err| {
+                            ec.aborted = Some(Error::CryptoMalformedPublicKey);
+                            err
+                        })?;
                         let message = Region::from_arg(message)
                             .as_slice(&memory)
                             .map_err(|_| wasm3::Trap::Abort)?;

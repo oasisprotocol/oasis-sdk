@@ -166,17 +166,27 @@ fn get_instance_store<'a, C: Context>(
     // Determine which store we should be using.
     let store_kind: StoreKind = store_kind.try_into().map_err(|_| wasm3::Trap::Abort)?;
 
-    Ok(store::for_instance(
-        ec.tx_context,
-        ec.instance_info,
-        store_kind,
-    )?)
+    let instance_store = store::for_instance(ec.tx_context, ec.instance_info, store_kind);
+    match instance_store {
+        Err(err) => {
+            // Propagate the underlying error.
+            ec.aborted = Some(err);
+            Err(wasm3::Trap::Abort)
+        }
+        Ok(store) => Ok(store),
+    }
 }
 
 /// Make sure that the key size is within the range specified in module parameters.
-fn ensure_key_size<C: Context>(ec: &ExecutionContext<'_, C>, size: u32) -> Result<(), wasm3::Trap> {
+fn ensure_key_size<C: Context>(
+    ec: &mut ExecutionContext<'_, C>,
+    size: u32,
+) -> Result<(), wasm3::Trap> {
     if size > ec.params.max_storage_key_size_bytes {
-        // TODO: Consider returning a nicer error message.
+        ec.aborted = Some(Error::StorageKeyTooLarge(
+            size,
+            ec.params.max_storage_key_size_bytes,
+        ));
         return Err(wasm3::Trap::Abort);
     }
     Ok(())
@@ -184,11 +194,14 @@ fn ensure_key_size<C: Context>(ec: &ExecutionContext<'_, C>, size: u32) -> Resul
 
 /// Make sure that the value size is within the range specified in module parameters.
 fn ensure_value_size<C: Context>(
-    ec: &ExecutionContext<'_, C>,
+    ec: &mut ExecutionContext<'_, C>,
     size: u32,
 ) -> Result<(), wasm3::Trap> {
     if size > ec.params.max_storage_value_size_bytes {
-        // TODO: Consider returning a nicer error message.
+        ec.aborted = Some(Error::StorageValueTooLarge(
+            size,
+            ec.params.max_storage_value_size_bytes,
+        ));
         return Err(wasm3::Trap::Abort);
     }
     Ok(())

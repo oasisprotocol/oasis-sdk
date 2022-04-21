@@ -142,6 +142,11 @@ impl<Cfg: Config> OasisV1<Cfg> {
             function_name,
         )
         .map_err(|err| {
+            // Check if an abort flag has been set and propagate the error.
+            if let Some(aborted) = ctx.aborted.take() {
+                return aborted;
+            }
+
             // Check if call failed due to gas being exhausted and return a proper error.
             let exhausted_gas = gas::get_exhausted_amount(instance);
             if exhausted_gas != 0 {
