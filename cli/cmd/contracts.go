@@ -39,10 +39,10 @@ var (
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := cliConfig.Global()
-			npw := common.GetNPWSelection(cfg)
+			npa := common.GetNPASelection(cfg)
 			strInstanceID := args[0]
 
-			if npw.ParaTime == nil {
+			if npa.ParaTime == nil {
 				cobra.CheckErr("no paratimes configured")
 			}
 
@@ -50,10 +50,10 @@ var (
 			cobra.CheckErr(err)
 
 			ctx := context.Background()
-			conn, err := connection.Connect(ctx, npw.Network)
+			conn, err := connection.Connect(ctx, npa.Network)
 			cobra.CheckErr(err)
 
-			inst, err := conn.Runtime(npw.ParaTime).Contracts.Instance(ctx, client.RoundLatest, contracts.InstanceID(instanceID))
+			inst, err := conn.Runtime(npa.ParaTime).Contracts.Instance(ctx, client.RoundLatest, contracts.InstanceID(instanceID))
 			cobra.CheckErr(err)
 
 			fmt.Printf("ID:              %d\n", inst.ID)
@@ -69,10 +69,10 @@ var (
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := cliConfig.Global()
-			npw := common.GetNPWSelection(cfg)
+			npa := common.GetNPASelection(cfg)
 			strCodeID := args[0]
 
-			if npw.ParaTime == nil {
+			if npa.ParaTime == nil {
 				cobra.CheckErr("no paratimes configured")
 			}
 
@@ -80,10 +80,10 @@ var (
 			cobra.CheckErr(err)
 
 			ctx := context.Background()
-			conn, err := connection.Connect(ctx, npw.Network)
+			conn, err := connection.Connect(ctx, npa.Network)
 			cobra.CheckErr(err)
 
-			code, err := conn.Runtime(npw.ParaTime).Contracts.Code(ctx, client.RoundLatest, contracts.CodeID(codeID))
+			code, err := conn.Runtime(npa.ParaTime).Contracts.Code(ctx, client.RoundLatest, contracts.CodeID(codeID))
 			cobra.CheckErr(err)
 
 			fmt.Printf("ID:                 %d\n", code.ID)
@@ -100,14 +100,14 @@ var (
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := cliConfig.Global()
-			npw := common.GetNPWSelection(cfg)
+			npa := common.GetNPASelection(cfg)
 			txCfg := common.GetTransactionConfig()
 			wasmFilename := args[0]
 
-			if npw.Wallet == nil {
-				cobra.CheckErr("no wallets configured")
+			if npa.Account == nil {
+				cobra.CheckErr("no accounts configured in your wallet")
 			}
-			if npw.ParaTime == nil {
+			if npa.ParaTime == nil {
 				cobra.CheckErr("no paratimes configured")
 			}
 
@@ -116,7 +116,7 @@ var (
 			var conn connection.Connection
 			if !txCfg.Offline {
 				var err error
-				conn, err = connection.Connect(ctx, npw.Network)
+				conn, err = connection.Connect(ctx, npa.Network)
 				cobra.CheckErr(err)
 			}
 
@@ -125,7 +125,7 @@ var (
 			cobra.CheckErr(err)
 
 			// Parse instantiation policy.
-			instantiatePolicy := parsePolicy(npw.Network, npw.Wallet, contractsInstantiatePolicy)
+			instantiatePolicy := parsePolicy(npa.Network, npa.Account, contractsInstantiatePolicy)
 
 			// Prepare transaction.
 			tx := contracts.NewUploadTx(nil, &contracts.Upload{
@@ -134,12 +134,12 @@ var (
 				Code:              contracts.CompressCode(wasmData),
 			})
 
-			wallet := common.LoadWallet(cfg, npw.WalletName)
-			sigTx, err := common.SignParaTimeTransaction(ctx, npw, wallet, conn, tx)
+			acc := common.LoadAccount(cfg, npa.AccountName)
+			sigTx, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
 			cobra.CheckErr(err)
 
 			var result contracts.UploadResult
-			common.BroadcastTransaction(ctx, npw.ParaTime, conn, sigTx, &result)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, &result)
 
 			if txCfg.Offline {
 				return
@@ -156,15 +156,15 @@ var (
 		Args:    cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := cliConfig.Global()
-			npw := common.GetNPWSelection(cfg)
+			npa := common.GetNPASelection(cfg)
 			txCfg := common.GetTransactionConfig()
 			strCodeID := args[0]
 			strData := args[1]
 
-			if npw.Wallet == nil {
-				cobra.CheckErr("no wallets configured")
+			if npa.Account == nil {
+				cobra.CheckErr("no accounts configured in your wallet")
 			}
-			if npw.ParaTime == nil {
+			if npa.ParaTime == nil {
 				cobra.CheckErr("no paratimes configured")
 			}
 
@@ -178,15 +178,15 @@ var (
 			ctx := context.Background()
 			var conn connection.Connection
 			if !txCfg.Offline {
-				conn, err = connection.Connect(ctx, npw.Network)
+				conn, err = connection.Connect(ctx, npa.Network)
 				cobra.CheckErr(err)
 			}
 
 			// Parse upgrades policy.
-			upgradesPolicy := parsePolicy(npw.Network, npw.Wallet, contractsUpgradesPolicy)
+			upgradesPolicy := parsePolicy(npa.Network, npa.Account, contractsUpgradesPolicy)
 
 			// Parse tokens that should be sent to the contract.
-			tokens := parseTokens(npw.ParaTime, contractsTokens)
+			tokens := parseTokens(npa.ParaTime, contractsTokens)
 
 			// Prepare transaction.
 			tx := contracts.NewInstantiateTx(nil, &contracts.Instantiate{
@@ -196,12 +196,12 @@ var (
 				Tokens:         tokens,
 			})
 
-			wallet := common.LoadWallet(cfg, npw.WalletName)
-			sigTx, err := common.SignParaTimeTransaction(ctx, npw, wallet, conn, tx)
+			acc := common.LoadAccount(cfg, npa.AccountName)
+			sigTx, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
 			cobra.CheckErr(err)
 
 			var result contracts.InstantiateResult
-			common.BroadcastTransaction(ctx, npw.ParaTime, conn, sigTx, &result)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, &result)
 
 			if txCfg.Offline {
 				return
@@ -217,15 +217,15 @@ var (
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := cliConfig.Global()
-			npw := common.GetNPWSelection(cfg)
+			npa := common.GetNPASelection(cfg)
 			txCfg := common.GetTransactionConfig()
 			strInstanceID := args[0]
 			strData := args[0]
 
-			if npw.Wallet == nil {
-				cobra.CheckErr("no wallets configured")
+			if npa.Account == nil {
+				cobra.CheckErr("no accounts configured in your wallet")
 			}
-			if npw.ParaTime == nil {
+			if npa.ParaTime == nil {
 				cobra.CheckErr("no paratimes configured")
 			}
 
@@ -239,12 +239,12 @@ var (
 			ctx := context.Background()
 			var conn connection.Connection
 			if !txCfg.Offline {
-				conn, err = connection.Connect(ctx, npw.Network)
+				conn, err = connection.Connect(ctx, npa.Network)
 				cobra.CheckErr(err)
 			}
 
 			// Parse tokens that should be sent to the contract.
-			tokens := parseTokens(npw.ParaTime, contractsTokens)
+			tokens := parseTokens(npa.ParaTime, contractsTokens)
 
 			// Prepare transaction.
 			tx := contracts.NewCallTx(nil, &contracts.Call{
@@ -253,12 +253,12 @@ var (
 				Tokens: tokens,
 			})
 
-			wallet := common.LoadWallet(cfg, npw.WalletName)
-			sigTx, err := common.SignParaTimeTransaction(ctx, npw, wallet, conn, tx)
+			acc := common.LoadAccount(cfg, npa.AccountName)
+			sigTx, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
 			cobra.CheckErr(err)
 
 			var result contracts.CallResult
-			common.BroadcastTransaction(ctx, npw.ParaTime, conn, sigTx, &result)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, &result)
 
 			if txCfg.Offline {
 				return
@@ -292,7 +292,7 @@ func formatPolicy(policy *contracts.Policy) string {
 	}
 }
 
-func parsePolicy(net *config.Network, wallet *cliConfig.Wallet, policy string) *contracts.Policy {
+func parsePolicy(net *config.Network, wallet *cliConfig.Account, policy string) *contracts.Policy {
 	switch {
 	case policy == "nobody":
 		return &contracts.Policy{Nobody: &struct{}{}}

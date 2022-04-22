@@ -25,55 +25,55 @@ const (
 	AlgorithmSecp256k1Raw = "secp256k1-raw"
 )
 
-// Factory is a factory that supports wallets of a specific kind.
+// Factory is a factory that supports accounts of a specific kind.
 type Factory interface {
-	// Kind returns the kind of wallets this factory will produce.
+	// Kind returns the kind of accounts this factory will produce.
 	Kind() string
 
-	// PrettyKind returns human-friendly kind of wallets this factory will produce.
+	// PrettyKind returns human-friendly kind of accounts this factory will produce.
 	PrettyKind(cfg map[string]interface{}) string
 
-	// Flags returns the CLI flags that can be used for configuring this wallet factory.
+	// Flags returns the CLI flags that can be used for configuring this account factory.
 	Flags() *flag.FlagSet
 
-	// GetConfigFromFlags generates wallet configuration from flags.
+	// GetConfigFromFlags generates account configuration from flags.
 	GetConfigFromFlags() (map[string]interface{}, error)
 
-	// GetConfigFromSurvey generates wallet configuration from survey answers.
+	// GetConfigFromSurvey generates account configuration from survey answers.
 	GetConfigFromSurvey(kind *ImportKind) (map[string]interface{}, error)
 
-	// DataPrompt returns a survey prompt for entering data when importing the wallet.
+	// DataPrompt returns a survey prompt for entering data when importing the account.
 	DataPrompt(kind ImportKind, cfg map[string]interface{}) survey.Prompt
 
-	// DataValidator returns a survey data input validator used when importing the wallet.
+	// DataValidator returns a survey data input validator used when importing the account.
 	DataValidator(kind ImportKind, cfg map[string]interface{}) survey.Validator
 
-	// RequiresPassphrase returns true if the wallet requires a passphrase.
+	// RequiresPassphrase returns true if the account requires a passphrase.
 	RequiresPassphrase() bool
 
-	// SupportedImportKinds returns the import kinds supported by this wallet.
+	// SupportedImportKinds returns the import kinds supported by this account.
 	SupportedImportKinds() []ImportKind
 
-	// HasConsensusSigner returns true, iff there is a consensus layer signer associated with this wallet.
+	// HasConsensusSigner returns true, iff there is a consensus layer signer associated with this account.
 	HasConsensusSigner(cfg map[string]interface{}) bool
 
-	// Create creates a new wallet.
-	Create(name string, passphrase string, cfg map[string]interface{}) (Wallet, error)
+	// Create creates a new account.
+	Create(name string, passphrase string, cfg map[string]interface{}) (Account, error)
 
-	// Load loads an existing wallet.
-	Load(name string, passphrase string, cfg map[string]interface{}) (Wallet, error)
+	// Load loads an existing account.
+	Load(name string, passphrase string, cfg map[string]interface{}) (Account, error)
 
-	// Remove removes an existing wallet.
+	// Remove removes an existing account.
 	Remove(name string, cfg map[string]interface{}) error
 
-	// Rename renames an existing wallet.
+	// Rename renames an existing account.
 	Rename(old, new string, cfg map[string]interface{}) error
 
-	// Import creates a new wallet from imported key material.
-	Import(name string, passphrase string, cfg map[string]interface{}, src *ImportSource) (Wallet, error)
+	// Import creates a new account from imported key material.
+	Import(name string, passphrase string, cfg map[string]interface{}, src *ImportSource) (Account, error)
 }
 
-// ImportKind is a wallet import kind.
+// ImportKind is an account import kind.
 type ImportKind string
 
 // Supported import kinds.
@@ -95,49 +95,49 @@ func (k *ImportKind) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// ImportSource is a source of imported wallet key material.
+// ImportSource is a source of imported account key material.
 type ImportSource struct {
 	Kind ImportKind
 	Data string
 }
 
-// Wallet is the wallet interface.
-type Wallet interface {
-	// ConsensusSigner returns the consensus layer signer associated with the wallet.
+// Account is an interface of a single account in the wallet.
+type Account interface {
+	// ConsensusSigner returns the consensus layer signer associated with the account.
 	//
-	// It may return nil in case this wallet cannot be used with the consensus layer.
+	// It may return nil in case this account cannot be used with the consensus layer.
 	ConsensusSigner() coreSignature.Signer
 
-	// Signer returns the signer associated with the wallet.
+	// Signer returns the signer associated with the account.
 	Signer() signature.Signer
 
-	// Address returns the address associated with the wallet.
+	// Address returns the address associated with the account.
 	Address() types.Address
 
-	// SignatureAddressSpec returns the signature address specification associated with the wallet.
+	// SignatureAddressSpec returns the signature address specification associated with the account.
 	SignatureAddressSpec() types.SignatureAddressSpec
 
-	// UnsafeExport exports the wallet's secret state.
+	// UnsafeExport exports the account's secret state.
 	UnsafeExport() string
 }
 
-// Register registers a new wallet type.
-func Register(wf Factory) {
-	if _, loaded := registeredFactories.LoadOrStore(wf.Kind(), wf); loaded {
-		panic(fmt.Sprintf("wallet: kind '%s' is already registered", wf.Kind()))
+// Register registers a new account type.
+func Register(af Factory) {
+	if _, loaded := registeredFactories.LoadOrStore(af.Kind(), af); loaded {
+		panic(fmt.Sprintf("wallet: kind '%s' is already registered", af.Kind()))
 	}
 }
 
-// Load loads a previously registered wallet factory.
+// Load loads a previously registered account factory.
 func Load(kind string) (Factory, error) {
-	wf, loaded := registeredFactories.Load(kind)
+	af, loaded := registeredFactories.Load(kind)
 	if !loaded {
 		return nil, fmt.Errorf("wallet: kind '%s' not available", kind)
 	}
-	return wf.(Factory), nil
+	return af.(Factory), nil
 }
 
-// AvailableKinds returns all of the available wallet factories.
+// AvailableKinds returns all of the available account factories.
 func AvailableKinds() []Factory {
 	var kinds []Factory
 	registeredFactories.Range(func(key, value interface{}) bool {
@@ -147,7 +147,7 @@ func AvailableKinds() []Factory {
 	return kinds
 }
 
-// ImportKinds returns all of the available wallet import kinds.
+// ImportKinds returns all of the available account import kinds.
 func ImportKinds() []string {
 	return []string{
 		string(ImportKindMnemonic),

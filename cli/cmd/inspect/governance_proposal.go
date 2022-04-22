@@ -28,7 +28,7 @@ var governanceProposalCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := cliConfig.Global()
-		npw := common.GetNPWSelection(cfg)
+		npa := common.GetNPASelection(cfg)
 
 		// Determine the proposal ID to query.
 		proposalID, err := strconv.ParseUint(args[0], 10, 64)
@@ -36,7 +36,7 @@ var governanceProposalCmd = &cobra.Command{
 
 		// Establish connection with the target network.
 		ctx := context.Background()
-		conn, err := connection.Connect(ctx, npw.Network)
+		conn, err := connection.Connect(ctx, npa.Network)
 		cobra.CheckErr(err)
 
 		consensusConn := conn.Consensus()

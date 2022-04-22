@@ -22,11 +22,11 @@ var nativeTokenCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := cliConfig.Global()
-		npw := common.GetNPWSelection(cfg)
+		npa := common.GetNPASelection(cfg)
 
 		// Establish connection with the target network.
 		ctx := context.Background()
-		conn, err := connection.Connect(ctx, npw.Network)
+		conn, err := connection.Connect(ctx, npa.Network)
 		cobra.CheckErr(err)
 
 		consensusConn := conn.Consensus()
