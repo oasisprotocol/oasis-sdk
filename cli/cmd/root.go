@@ -16,6 +16,10 @@ import (
 	_ "github.com/oasisprotocol/oasis-sdk/cli/wallet/ledger" // Register ledger wallet backend.
 )
 
+const (
+	defaultMarker = " (*)"
+)
+
 var (
 	cfgFile string
 

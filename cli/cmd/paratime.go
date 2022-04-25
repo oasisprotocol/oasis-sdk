@@ -33,7 +33,7 @@ var (
 				for ptName, pt := range net.ParaTimes.All {
 					displayPtName := ptName
 					if net.ParaTimes.Default == ptName {
-						displayPtName += " (*)"
+						displayPtName += defaultMarker
 					}
 
 					output = append(output, []string{

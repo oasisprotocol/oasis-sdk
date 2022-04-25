@@ -35,7 +35,7 @@ var (
 			for name, net := range cfg.Networks.All {
 				displayName := name
 				if cfg.Networks.Default == name {
-					displayName += " (*)"
+					displayName += defaultMarker
 				}
 
 				output = append(output, []string{

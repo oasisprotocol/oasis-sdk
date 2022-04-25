@@ -37,6 +37,9 @@ var (
 
 			var output [][]string
 			for name, acc := range cfg.Wallet.All {
+				if cfg.Wallet.Default == name {
+					name += defaultMarker
+				}
 				output = append(output, []string{
 					name,
 					acc.PrettyKind(),
