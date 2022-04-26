@@ -177,7 +177,7 @@ var (
 
 				var hasNonZeroBalance bool
 				for _, balance := range rtBalances.Balances {
-					if hasNonZeroBalance = balance.IsZero(); hasNonZeroBalance {
+					if hasNonZeroBalance = !balance.IsZero(); hasNonZeroBalance {
 						break
 					}
 				}
