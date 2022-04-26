@@ -239,6 +239,11 @@ func PrintTransactionBeforeSigning(npa *NPASelection, tx interface{}) {
 	}
 	fmt.Println()
 
+	fmt.Printf("Account:  %s", npa.AccountName)
+	if len(npa.Account.Description) > 0 {
+		fmt.Printf(" (%s)", npa.Account.Description)
+	}
+	fmt.Println()
 	fmt.Printf("Network:  %s", npa.NetworkName)
 	if len(npa.Network.Description) > 0 {
 		fmt.Printf(" (%s)", npa.Network.Description)

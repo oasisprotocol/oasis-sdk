@@ -80,5 +80,10 @@ func init() {
 	SelectorFlags.StringVar(&selectedNetwork, "network", "", "explicitly set network to use")
 	SelectorFlags.StringVar(&selectedParaTime, "paratime", "", "explicitly set paratime to use")
 	SelectorFlags.BoolVar(&noParaTime, "no-paratime", false, "explicitly set that no paratime should be used")
-	SelectorFlags.StringVar(&selectedAccount, "wallet", "", "explicitly set account to use")
+	SelectorFlags.StringVar(&selectedAccount, "account", "", "explicitly set account to use")
+
+	// Backward compatibility.
+	SelectorFlags.StringVar(&selectedAccount, "wallet", "", "explicitly set account to use. OBSOLETE, USE --account INSTEAD!")
+	err := SelectorFlags.MarkHidden("wallet")
+	cobra.CheckErr(err)
 }
