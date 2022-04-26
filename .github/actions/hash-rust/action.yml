@@ -9,6 +9,10 @@ inputs:
     description: The docker image to use for the build
     default: oasisprotocol/runtime-builder:v0.0
     required: false
+  pkg-dirs:
+    description: The list of subdirectories to start build in
+    default: .
+    required: false
   binaries:
     description: The list of all binaries that should be hashed
     required: true
@@ -38,17 +42,27 @@ runs:
           cd /src
           CARGO_TARGET_ROOT="/src/target"
           TARGET=""
+          PKG_DIRS=$(tr ',' ' ' <<< "${{ inputs.pkg-dirs }}")
           if [ "${{ inputs.sgx }}" == "yes" ]; then
             TARGET="x86_64-fortanix-unknown-sgx"
             export CARGO_TARGET_DIR="$CARGO_TARGET_ROOT/sgx"
             export CFLAGS_x86_64_fortanix_unknown_sgx="-isystem/usr/include/x86_64-linux-gnu -mlvi-hardening -mllvm -x86-experimental-lvi-inline-asm-hardening"
             export CC_x86_64_fortanix_unknown_sgx=clang-11
 
-            cargo build --release --target $TARGET
-            cargo elf2sgxs --release
+            for pkg in $PKG_DIRS; do
+              pushd ${pkg}
+              cargo build --release --target $TARGET
+              cargo elf2sgxs --release
+              popd
+            done
           else
             export CARGO_TARGET_DIR="$CARGO_TARGET_ROOT/default"
-            cargo build --release
+
+            for pkg in $PKG_DIRS; do
+              pushd ${pkg}
+              cargo build --release
+              popd
+            done
           fi
           echo "::set-output name=hashes::$(cd "$CARGO_TARGET_DIR/$TARGET/release"; shasum -a 512256 -b $(tr ',' ' ' <<< "${{ inputs.binaries }}") | cut -d' ' -f1 | tr '\n' ',' | sed -e 's/,$//g')"
           echo "::set-output name=build-path::$(sed -e 's/^\/src//g' <<< "$CARGO_TARGET_DIR")/$TARGET/release"
