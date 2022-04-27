@@ -8,7 +8,7 @@ import (
 )
 
 // ed25519rawSigner is an in-memory signer that allows deserialization of raw ed25519 keys for use
-// in imported wallets that don't use ADR 0008.
+// in imported accounts that don't use ADR 0008.
 type ed25519rawSigner struct {
 	privateKey ed25519.PrivateKey
 }

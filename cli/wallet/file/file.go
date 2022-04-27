@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	// Kind is the wallet kind for the file-backed wallet.
+	// Kind is the account kind for the file-backed accounts.
 	Kind = "file"
 
 	cfgAlgorithm = "file.algorithm"
@@ -57,13 +57,13 @@ func SupportedAlgorithmsForImport(kind *wallet.ImportKind) []string {
 	}
 }
 
-type walletConfig struct {
+type accountConfig struct {
 	Algorithm string `mapstructure:"algorithm"`
 	Number    uint32 `mapstructure:"number,omitempty"`
 }
 
 type secretState struct {
-	// Algorithm is the cryptographic algorithm used by the wallet.
+	// Algorithm is the cryptographic algorithm used by the account.
 	Algorithm string `json:"algorithm"`
 
 	// Data is the secret data used to derive the private key.
@@ -170,20 +170,20 @@ func (e *secretStateEnvelope) Open(passphrase string) (*secretState, error) {
 	return &state, nil
 }
 
-func getWalletFilename(name string) string {
+func getAccountFilename(name string) string {
 	return filepath.Join(config.Directory(), fmt.Sprintf("%s.wallet", name))
 }
 
-type fileWalletFactory struct {
+type fileAccountFactory struct {
 	flags *flag.FlagSet
 }
 
-func (wf *fileWalletFactory) Kind() string {
+func (af *fileAccountFactory) Kind() string {
 	return Kind
 }
 
-func (wf *fileWalletFactory) PrettyKind(rawCfg map[string]interface{}) string {
-	cfg, err := wf.unmarshalConfig(rawCfg)
+func (af *fileAccountFactory) PrettyKind(rawCfg map[string]interface{}) string {
+	cfg, err := af.unmarshalConfig(rawCfg)
 	if err != nil {
 		return ""
 	}
@@ -197,18 +197,18 @@ func (wf *fileWalletFactory) PrettyKind(rawCfg map[string]interface{}) string {
 	return fmt.Sprintf("%s (%s%s)", Kind, cfg.Algorithm, number)
 }
 
-func (wf *fileWalletFactory) Flags() *flag.FlagSet {
-	return wf.flags
+func (af *fileAccountFactory) Flags() *flag.FlagSet {
+	return af.flags
 }
 
-func (wf *fileWalletFactory) GetConfigFromFlags() (map[string]interface{}, error) {
+func (af *fileAccountFactory) GetConfigFromFlags() (map[string]interface{}, error) {
 	cfg := make(map[string]interface{})
-	cfg["algorithm"], _ = wf.flags.GetString(cfgAlgorithm)
-	cfg["number"], _ = wf.flags.GetUint32(cfgNumber)
+	cfg["algorithm"], _ = af.flags.GetString(cfgAlgorithm)
+	cfg["number"], _ = af.flags.GetUint32(cfgNumber)
 	return cfg, nil
 }
 
-func (wf *fileWalletFactory) GetConfigFromSurvey(kind *wallet.ImportKind) (map[string]interface{}, error) {
+func (af *fileAccountFactory) GetConfigFromSurvey(kind *wallet.ImportKind) (map[string]interface{}, error) {
 	// Ask for import details.
 	var answers struct {
 		Algorithm string
@@ -243,12 +243,12 @@ func (wf *fileWalletFactory) GetConfigFromSurvey(kind *wallet.ImportKind) (map[s
 	}, nil
 }
 
-func (wf *fileWalletFactory) DataPrompt(kind wallet.ImportKind, rawCfg map[string]interface{}) survey.Prompt {
+func (af *fileAccountFactory) DataPrompt(kind wallet.ImportKind, rawCfg map[string]interface{}) survey.Prompt {
 	switch kind {
 	case wallet.ImportKindMnemonic:
 		return &survey.Multiline{Message: "Mnemonic:"}
 	case wallet.ImportKindPrivateKey:
-		cfg, err := wf.unmarshalConfig(rawCfg)
+		cfg, err := af.unmarshalConfig(rawCfg)
 		if err != nil {
 			return nil
 		}
@@ -265,12 +265,12 @@ func (wf *fileWalletFactory) DataPrompt(kind wallet.ImportKind, rawCfg map[strin
 	}
 }
 
-func (wf *fileWalletFactory) DataValidator(kind wallet.ImportKind, rawCfg map[string]interface{}) survey.Validator {
+func (af *fileAccountFactory) DataValidator(kind wallet.ImportKind, rawCfg map[string]interface{}) survey.Validator {
 	return func(ans interface{}) error {
 		switch kind {
 		case wallet.ImportKindMnemonic:
 		case wallet.ImportKindPrivateKey:
-			cfg, err := wf.unmarshalConfig(rawCfg)
+			cfg, err := af.unmarshalConfig(rawCfg)
 			if err != nil {
 				return nil
 			}
@@ -298,20 +298,20 @@ func (wf *fileWalletFactory) DataValidator(kind wallet.ImportKind, rawCfg map[st
 	}
 }
 
-func (wf *fileWalletFactory) RequiresPassphrase() bool {
-	// A file-backed wallet always requires a passphrase.
+func (af *fileAccountFactory) RequiresPassphrase() bool {
+	// A file-backed account always requires a passphrase.
 	return true
 }
 
-func (wf *fileWalletFactory) SupportedImportKinds() []wallet.ImportKind {
+func (af *fileAccountFactory) SupportedImportKinds() []wallet.ImportKind {
 	return []wallet.ImportKind{
 		wallet.ImportKindMnemonic,
 		wallet.ImportKindPrivateKey,
 	}
 }
 
-func (wf *fileWalletFactory) HasConsensusSigner(rawCfg map[string]interface{}) bool {
-	cfg, err := wf.unmarshalConfig(rawCfg)
+func (af *fileAccountFactory) HasConsensusSigner(rawCfg map[string]interface{}) bool {
+	cfg, err := af.unmarshalConfig(rawCfg)
 	if err != nil {
 		return false
 	}
@@ -323,20 +323,20 @@ func (wf *fileWalletFactory) HasConsensusSigner(rawCfg map[string]interface{}) b
 	return false
 }
 
-func (wf *fileWalletFactory) unmarshalConfig(raw map[string]interface{}) (*walletConfig, error) {
+func (af *fileAccountFactory) unmarshalConfig(raw map[string]interface{}) (*accountConfig, error) {
 	if raw == nil {
 		return nil, fmt.Errorf("missing configuration")
 	}
 
-	var cfg walletConfig
+	var cfg accountConfig
 	if err := mapstructure.Decode(raw, &cfg); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
 }
 
-func (wf *fileWalletFactory) Create(name string, passphrase string, rawCfg map[string]interface{}) (wallet.Wallet, error) {
-	cfg, err := wf.unmarshalConfig(rawCfg)
+func (af *fileAccountFactory) Create(name string, passphrase string, rawCfg map[string]interface{}) (wallet.Account, error) {
+	cfg, err := af.unmarshalConfig(rawCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -365,49 +365,49 @@ func (wf *fileWalletFactory) Create(name string, passphrase string, rawCfg map[s
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal envelope: %w", err)
 	}
-	if err := ioutil.WriteFile(getWalletFilename(name), raw, 0o600); err != nil {
+	if err := ioutil.WriteFile(getAccountFilename(name), raw, 0o600); err != nil {
 		return nil, fmt.Errorf("failed to save state: %w", err)
 	}
 
-	// Create a proper wallet based on the chosen algorithm.
-	return newWallet(state, cfg)
+	// Create a proper account based on the chosen algorithm.
+	return newAccount(state, cfg)
 }
 
-func (wf *fileWalletFactory) Load(name string, passphrase string, rawCfg map[string]interface{}) (wallet.Wallet, error) {
-	cfg, err := wf.unmarshalConfig(rawCfg)
+func (af *fileAccountFactory) Load(name string, passphrase string, rawCfg map[string]interface{}) (wallet.Account, error) {
+	cfg, err := af.unmarshalConfig(rawCfg)
 	if err != nil {
 		return nil, err
 	}
 
 	// Load state from encrypted file.
-	raw, err := ioutil.ReadFile(getWalletFilename(name))
+	raw, err := ioutil.ReadFile(getAccountFilename(name))
 	if err != nil {
-		return nil, fmt.Errorf("failed to load wallet state: %w", err)
+		return nil, fmt.Errorf("failed to load account state: %w", err)
 	}
 
 	var envelope secretStateEnvelope
 	if err = json.Unmarshal(raw, &envelope); err != nil {
-		return nil, fmt.Errorf("failed to load wallet state: %w", err)
+		return nil, fmt.Errorf("failed to load account state: %w", err)
 	}
 
 	var state *secretState
 	if state, err = envelope.Open(passphrase); err != nil {
-		return nil, fmt.Errorf("failed to open wallet state (maybe incorrect passphrase?)")
+		return nil, fmt.Errorf("failed to open account state (maybe incorrect passphrase?)")
 	}
 
-	return newWallet(state, cfg)
+	return newAccount(state, cfg)
 }
 
-func (wf *fileWalletFactory) Remove(name string, rawCfg map[string]interface{}) error {
-	return os.Remove(getWalletFilename(name))
+func (af *fileAccountFactory) Remove(name string, rawCfg map[string]interface{}) error {
+	return os.Remove(getAccountFilename(name))
 }
 
-func (wf *fileWalletFactory) Rename(old, new string, rawCfg map[string]interface{}) error {
-	return os.Rename(getWalletFilename(old), getWalletFilename(new))
+func (af *fileAccountFactory) Rename(old, new string, rawCfg map[string]interface{}) error {
+	return os.Rename(getAccountFilename(old), getAccountFilename(new))
 }
 
-func (wf *fileWalletFactory) Import(name string, passphrase string, rawCfg map[string]interface{}, src *wallet.ImportSource) (wallet.Wallet, error) {
-	cfg, err := wf.unmarshalConfig(rawCfg)
+func (af *fileAccountFactory) Import(name string, passphrase string, rawCfg map[string]interface{}, src *wallet.ImportSource) (wallet.Account, error) {
+	cfg, err := af.unmarshalConfig(rawCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -435,8 +435,8 @@ func (wf *fileWalletFactory) Import(name string, passphrase string, rawCfg map[s
 		Data:      src.Data,
 	}
 
-	// Create a proper wallet based on the chosen algorithm.
-	wallet, err := newWallet(&state, cfg)
+	// Create a proper account based on the chosen algorithm.
+	acc, err := newAccount(&state, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -451,19 +451,19 @@ func (wf *fileWalletFactory) Import(name string, passphrase string, rawCfg map[s
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal envelope: %w", err)
 	}
-	if err := ioutil.WriteFile(getWalletFilename(name), raw, 0o600); err != nil {
+	if err := ioutil.WriteFile(getAccountFilename(name), raw, 0o600); err != nil {
 		return nil, fmt.Errorf("failed to save state: %w", err)
 	}
-	return wallet, nil
+	return acc, nil
 }
 
-type fileWallet struct {
-	cfg    *walletConfig
+type fileAccount struct {
+	cfg    *accountConfig
 	state  *secretState
 	signer signature.Signer
 }
 
-func newWallet(state *secretState, cfg *walletConfig) (wallet.Wallet, error) {
+func newAccount(state *secretState, cfg *accountConfig) (wallet.Account, error) {
 	switch state.Algorithm {
 	case wallet.AlgorithmEd25519Adr8:
 		// For Ed25519 use the ADR 0008 derivation scheme.
@@ -472,7 +472,7 @@ func newWallet(state *secretState, cfg *walletConfig) (wallet.Wallet, error) {
 			return nil, fmt.Errorf("failed to derive signer: %w", err)
 		}
 
-		return &fileWallet{
+		return &fileAccount{
 			cfg:    cfg,
 			state:  state,
 			signer: ed25519.WrapSigner(signer),
@@ -484,7 +484,7 @@ func newWallet(state *secretState, cfg *walletConfig) (wallet.Wallet, error) {
 			return nil, fmt.Errorf("failed to initialize signer: %w", err)
 		}
 
-		return &fileWallet{
+		return &fileAccount{
 			cfg:    cfg,
 			state:  state,
 			signer: ed25519.WrapSigner(&signer),
@@ -495,7 +495,7 @@ func newWallet(state *secretState, cfg *walletConfig) (wallet.Wallet, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize signer: %w", err)
 		}
-		return &fileWallet{
+		return &fileAccount{
 			cfg:    cfg,
 			state:  state,
 			signer: signer,
@@ -507,7 +507,7 @@ func newWallet(state *secretState, cfg *walletConfig) (wallet.Wallet, error) {
 			return nil, fmt.Errorf("failed to initialize signer: %w", err)
 		}
 
-		return &fileWallet{
+		return &fileAccount{
 			cfg:    cfg,
 			state:  state,
 			signer: signer,
@@ -517,46 +517,46 @@ func newWallet(state *secretState, cfg *walletConfig) (wallet.Wallet, error) {
 	}
 }
 
-func (w *fileWallet) ConsensusSigner() coreSignature.Signer {
+func (a *fileAccount) ConsensusSigner() coreSignature.Signer {
 	type wrappedSigner interface {
 		Unwrap() coreSignature.Signer
 	}
 
-	if ws, ok := w.signer.(wrappedSigner); ok {
+	if ws, ok := a.signer.(wrappedSigner); ok {
 		return ws.Unwrap()
 	}
 	return nil
 }
 
-func (w *fileWallet) Signer() signature.Signer {
-	return w.signer
+func (a *fileAccount) Signer() signature.Signer {
+	return a.signer
 }
 
-func (w *fileWallet) Address() types.Address {
-	return types.NewAddress(w.SignatureAddressSpec())
+func (a *fileAccount) Address() types.Address {
+	return types.NewAddress(a.SignatureAddressSpec())
 }
 
-func (w *fileWallet) SignatureAddressSpec() types.SignatureAddressSpec {
-	switch w.cfg.Algorithm {
+func (a *fileAccount) SignatureAddressSpec() types.SignatureAddressSpec {
+	switch a.cfg.Algorithm {
 	case wallet.AlgorithmEd25519Adr8, wallet.AlgorithmEd25519Raw:
-		return types.NewSignatureAddressSpecEd25519(w.Signer().Public().(ed25519.PublicKey))
+		return types.NewSignatureAddressSpecEd25519(a.Signer().Public().(ed25519.PublicKey))
 	case wallet.AlgorithmSecp256k1Bip44, wallet.AlgorithmSecp256k1Raw:
-		return types.NewSignatureAddressSpecSecp256k1Eth(w.Signer().Public().(secp256k1.PublicKey))
+		return types.NewSignatureAddressSpecSecp256k1Eth(a.Signer().Public().(secp256k1.PublicKey))
 	default:
 		return types.SignatureAddressSpec{}
 	}
 }
 
-func (w *fileWallet) UnsafeExport() string {
-	return w.state.Data
+func (a *fileAccount) UnsafeExport() string {
+	return a.state.Data
 }
 
 func init() {
 	flags := flag.NewFlagSet("", flag.ContinueOnError)
-	flags.String(cfgAlgorithm, wallet.AlgorithmEd25519Adr8, fmt.Sprintf("Cryptographic algorithm to use for this wallet [%s, %s]", wallet.AlgorithmEd25519Adr8, wallet.AlgorithmSecp256k1Bip44))
+	flags.String(cfgAlgorithm, wallet.AlgorithmEd25519Adr8, fmt.Sprintf("Cryptographic algorithm to use for this account [%s, %s]", wallet.AlgorithmEd25519Adr8, wallet.AlgorithmSecp256k1Bip44))
 	flags.Uint32(cfgNumber, 0, "Key number to use in the key derivation scheme")
 
-	wallet.Register(&fileWalletFactory{
+	wallet.Register(&fileAccountFactory{
 		flags: flags,
 	})
 }

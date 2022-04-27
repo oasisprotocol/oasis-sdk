@@ -10,31 +10,31 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/cli/wallet"
 )
 
-// LoadWallet loads the given named wallet.
-func LoadWallet(cfg *config.Config, name string) wallet.Wallet {
-	// Early check for whether the wallet exists so that we don't ask for passphrase first.
+// LoadAccount loads the given named account.
+func LoadAccount(cfg *config.Config, name string) wallet.Account {
+	// Early check for whether the account exists so that we don't ask for passphrase first.
 	var (
-		wcfg   *config.Wallet
+		acfg   *config.Account
 		exists bool
 	)
-	if wcfg, exists = cfg.Wallets.All[name]; !exists {
-		cobra.CheckErr(fmt.Errorf("wallet '%s' does not exist", name))
+	if acfg, exists = cfg.Wallet.All[name]; !exists {
+		cobra.CheckErr(fmt.Errorf("account '%s' does not exist in the wallet", name))
 	}
 
-	wf, err := wcfg.LoadFactory()
+	af, err := acfg.LoadFactory()
 	cobra.CheckErr(err)
 
 	var passphrase string
-	if wf.RequiresPassphrase() {
-		// Ask for passphrase to decrypt the wallet.
-		fmt.Printf("Unlock your wallet.\n")
+	if af.RequiresPassphrase() {
+		// Ask for passphrase to decrypt the account.
+		fmt.Printf("Unlock your account.\n")
 
 		err = survey.AskOne(PromptPassphrase, &passphrase)
 		cobra.CheckErr(err)
 	}
 
-	wallet, err := cfg.Wallets.Load(name, passphrase)
+	acc, err := cfg.Wallet.Load(name, passphrase)
 	cobra.CheckErr(err)
 
-	return wallet
+	return acc
 }

@@ -46,7 +46,7 @@ type Config struct {
 	viper *viper.Viper
 
 	Networks config.Networks `mapstructure:"networks"`
-	Wallets  Wallets         `mapstructure:"wallets"`
+	Wallet   Wallet          `mapstructure:"wallets"`
 }
 
 // Load loads the configuration structure from viper.
@@ -165,7 +165,7 @@ func (cfg *Config) Validate() error {
 	if err := cfg.Networks.Validate(); err != nil {
 		return fmt.Errorf("failed to validate network configuration: %w", err)
 	}
-	if err := cfg.Wallets.Validate(); err != nil {
+	if err := cfg.Wallet.Validate(); err != nil {
 		return fmt.Errorf("failed to validate wallet configuration: %w", err)
 	}
 	return nil

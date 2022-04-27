@@ -18,17 +18,17 @@ import (
 )
 
 var (
-	walletKind string
+	accKind string
 
 	walletCmd = &cobra.Command{
 		Use:   "wallet",
-		Short: "Manage wallets",
+		Short: "Manage accounts in the local wallet",
 	}
 
 	walletListCmd = &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Short:   "List configured wallets",
+		Short:   "List configured accounts",
 		Args:    cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := config.Global()
@@ -36,11 +36,14 @@ var (
 			table.SetHeader([]string{"Name", "Kind", "Address"})
 
 			var output [][]string
-			for name, wallet := range cfg.Wallets.All {
+			for name, acc := range cfg.Wallet.All {
+				if cfg.Wallet.Default == name {
+					name += defaultMarker
+				}
 				output = append(output, []string{
 					name,
-					wallet.PrettyKind(),
-					wallet.Address,
+					acc.PrettyKind(),
+					acc.Address,
 				})
 			}
 
@@ -56,28 +59,28 @@ var (
 
 	walletCreateCmd = &cobra.Command{
 		Use:   "create <name>",
-		Short: "Create a new wallet",
+		Short: "Create a new account",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := config.Global()
 			name := args[0]
 
-			wf, err := wallet.Load(walletKind)
+			af, err := wallet.Load(accKind)
 			cobra.CheckErr(err)
 
 			// Ask for passphrase to encrypt the wallet with.
 			var passphrase string
-			if wf.RequiresPassphrase() {
+			if af.RequiresPassphrase() {
 				passphrase = common.AskNewPassphrase()
 			}
 
-			walletCfg := &config.Wallet{
-				Kind: walletKind,
+			accCfg := &config.Account{
+				Kind: accKind,
 			}
-			err = walletCfg.SetConfigFromFlags()
+			err = accCfg.SetConfigFromFlags()
 			cobra.CheckErr(err)
 
-			err = cfg.Wallets.Create(name, passphrase, walletCfg)
+			err = cfg.Wallet.Create(name, passphrase, accCfg)
 			cobra.CheckErr(err)
 
 			err = cfg.Save()
@@ -87,35 +90,35 @@ var (
 
 	walletShowCmd = &cobra.Command{
 		Use:   "show <name>",
-		Short: "Show public wallet information",
+		Short: "Show public account information",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
 
-			wallet := common.LoadWallet(config.Global(), name)
-			showPublicWalletInfo(wallet)
+			acc := common.LoadAccount(config.Global(), name)
+			showPublicWalletInfo(acc)
 		},
 	}
 
 	walletRmCmd = &cobra.Command{
 		Use:     "rm <name>",
 		Aliases: []string{"remove"},
-		Short:   "Remove an existing wallet",
+		Short:   "Remove an existing account",
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := config.Global()
 			name := args[0]
 
 			// Early check for whether the wallet exists so that we don't ask for confirmation first.
-			if _, exists := cfg.Wallets.All[name]; !exists {
-				cobra.CheckErr(fmt.Errorf("wallet '%s' does not exist", name))
+			if _, exists := cfg.Wallet.All[name]; !exists {
+				cobra.CheckErr(fmt.Errorf("account '%s' does not exist", name))
 			}
 
-			fmt.Printf("WARNING: Removing the wallet will ERASE secret key material!\n")
+			fmt.Printf("WARNING: Removing the account will ERASE secret key material!\n")
 			fmt.Printf("WARNING: THIS ACTION IS IRREVERSIBLE!\n")
 
 			var result string
-			confirmText := fmt.Sprintf("I really want to remove wallet %s", name)
+			confirmText := fmt.Sprintf("I really want to remove account %s", name)
 			prompt := &survey.Input{
 				Message: fmt.Sprintf("Enter '%s' (without quotes) to confirm removal:", confirmText),
 			}
@@ -126,7 +129,7 @@ var (
 				cobra.CheckErr("Aborted.")
 			}
 
-			err = cfg.Wallets.Remove(name)
+			err = cfg.Wallet.Remove(name)
 			cobra.CheckErr(err)
 
 			err = cfg.Save()
@@ -136,13 +139,13 @@ var (
 
 	walletRenameCmd = &cobra.Command{
 		Use:   "rename <old> <new>",
-		Short: "Rename an existing wallet",
+		Short: "Rename an existing account",
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := config.Global()
 			oldName, newName := args[0], args[1]
 
-			err := cfg.Wallets.Rename(oldName, newName)
+			err := cfg.Wallet.Rename(oldName, newName)
 			cobra.CheckErr(err)
 
 			err = cfg.Save()
@@ -152,13 +155,13 @@ var (
 
 	walletSetDefaultCmd = &cobra.Command{
 		Use:   "set-default <name>",
-		Short: "Sets the given wallet as the default wallet",
+		Short: "Sets the given account as the default account",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := config.Global()
 			name := args[0]
 
-			err := cfg.Wallets.SetDefault(name)
+			err := cfg.Wallet.SetDefault(name)
 			cobra.CheckErr(err)
 
 			err = cfg.Save()
@@ -168,23 +171,23 @@ var (
 
 	walletImportCmd = &cobra.Command{
 		Use:   "import <name>",
-		Short: "Import an existing wallet",
+		Short: "Import an existing account",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := config.Global()
 			name := args[0]
 
-			if _, exists := cfg.Wallets.All[name]; exists {
-				cobra.CheckErr(fmt.Errorf("wallet '%s' already exists", name))
+			if _, exists := cfg.Wallet.All[name]; exists {
+				cobra.CheckErr(fmt.Errorf("account '%s' already exists", name))
 			}
 
 			// NOTE: We only support importing into the file-based wallet for now.
-			wf, err := wallet.Load(walletFile.Kind)
+			af, err := wallet.Load(walletFile.Kind)
 			cobra.CheckErr(err)
 
 			// Ask for import kind.
 			var supportedKinds []string
-			for _, kind := range wf.SupportedImportKinds() {
+			for _, kind := range af.SupportedImportKinds() {
 				supportedKinds = append(supportedKinds, string(kind))
 			}
 
@@ -200,7 +203,7 @@ var (
 			cobra.CheckErr(err)
 
 			// Ask for wallet configuration.
-			wfCfg, err := wf.GetConfigFromSurvey(&kind)
+			afCfg, err := af.GetConfigFromSurvey(&kind)
 			cobra.CheckErr(err)
 
 			// Ask for import data.
@@ -210,8 +213,8 @@ var (
 			questions := []*survey.Question{
 				{
 					Name:     "data",
-					Prompt:   wf.DataPrompt(kind, wfCfg),
-					Validate: wf.DataValidator(kind, wfCfg),
+					Prompt:   af.DataPrompt(kind, afCfg),
+					Validate: af.DataValidator(kind, afCfg),
 				},
 			}
 			err = survey.Ask(questions, &answers)
@@ -220,16 +223,16 @@ var (
 			// Ask for passphrase.
 			passphrase := common.AskNewPassphrase()
 
-			walletCfg := &config.Wallet{
-				Kind:   wf.Kind(),
-				Config: wfCfg,
+			accCfg := &config.Account{
+				Kind:   af.Kind(),
+				Config: afCfg,
 			}
 			src := &wallet.ImportSource{
 				Kind: kind,
 				Data: answers.Data,
 			}
 
-			err = cfg.Wallets.Import(name, passphrase, walletCfg, src)
+			err = cfg.Wallet.Import(name, passphrase, accCfg, src)
 			cobra.CheckErr(err)
 
 			err = cfg.Save()
@@ -239,23 +242,23 @@ var (
 
 	walletExportCmd = &cobra.Command{
 		Use:   "export <name>",
-		Short: "Export secret wallet information",
+		Short: "Export secret account information",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
 
-			fmt.Printf("WARNING: Exporting the wallet will expose secret key material!\n")
-			wallet := common.LoadWallet(config.Global(), name)
+			fmt.Printf("WARNING: Exporting the account will expose secret key material!\n")
+			acc := common.LoadAccount(config.Global(), name)
 
-			showPublicWalletInfo(wallet)
+			showPublicWalletInfo(acc)
 
 			fmt.Printf("Export:\n")
-			fmt.Println(wallet.UnsafeExport())
+			fmt.Println(acc.UnsafeExport())
 		},
 	}
 )
 
-func showPublicWalletInfo(wallet wallet.Wallet) {
+func showPublicWalletInfo(wallet wallet.Account) {
 	fmt.Printf("Public Key:       %s\n", wallet.Signer().Public())
 	fmt.Printf("Address:          %s\n", wallet.Address())
 	if wallet.SignatureAddressSpec().Secp256k1Eth != nil {
@@ -271,11 +274,11 @@ func init() {
 	for _, w := range wallet.AvailableKinds() {
 		kinds = append(kinds, w.Kind())
 	}
-	walletFlags.StringVar(&walletKind, "kind", "file", fmt.Sprintf("Wallet kind [%s]", strings.Join(kinds, ", ")))
+	walletFlags.StringVar(&accKind, "kind", "file", fmt.Sprintf("Account kind [%s]", strings.Join(kinds, ", ")))
 
 	// TODO: Group flags in usage by tweaking the usage template/function.
-	for _, wf := range wallet.AvailableKinds() {
-		walletFlags.AddFlagSet(wf.Flags())
+	for _, af := range wallet.AvailableKinds() {
+		walletFlags.AddFlagSet(af.Flags())
 	}
 
 	walletCreateCmd.Flags().AddFlagSet(walletFlags)

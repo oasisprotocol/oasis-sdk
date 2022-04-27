@@ -57,15 +57,15 @@ func GetTransactionConfig() *TransactionConfig {
 // SignConsensusTransaction signs a consensus transaction.
 func SignConsensusTransaction(
 	ctx context.Context,
-	npw *NPWSelection,
-	wallet wallet.Wallet,
+	npa *NPASelection,
+	wallet wallet.Account,
 	conn connection.Connection,
 	tx *consensusTx.Transaction,
 ) (*consensusTx.SignedTransaction, error) {
 	// Require consensus signer.
 	signer := wallet.ConsensusSigner()
 	if signer == nil {
-		return nil, fmt.Errorf("wallet does not support signing consensus transactions")
+		return nil, fmt.Errorf("account does not support signing consensus transactions")
 	}
 
 	// Default to passed values and do online estimation when possible.
@@ -78,7 +78,7 @@ func SignConsensusTransaction(
 	gasPrice := quantity.NewQuantity()
 	if txGasPrice != "" {
 		var err error
-		gasPrice, err = helpers.ParseConsensusDenomination(npw.Network, txGasPrice)
+		gasPrice, err = helpers.ParseConsensusDenomination(npa.Network, txGasPrice)
 		if err != nil {
 			return nil, fmt.Errorf("bad gas price: %w", err)
 		}
@@ -121,12 +121,12 @@ func SignConsensusTransaction(
 	}
 	tx.Fee.Amount = *gasPrice
 
-	PrintTransactionBeforeSigning(npw, tx)
+	PrintTransactionBeforeSigning(npa, tx)
 
 	// Sign the transaction.
 	// NOTE: We build our own domain separation context here as we need to support multiple chain
 	//       contexts at the same time. Would be great if chainContextSeparator was exposed in core.
-	sigCtx := coreSignature.Context([]byte(fmt.Sprintf("%s for chain %s", consensusTx.SignatureContext, npw.Network.ChainContext)))
+	sigCtx := coreSignature.Context([]byte(fmt.Sprintf("%s for chain %s", consensusTx.SignatureContext, npa.Network.ChainContext)))
 	signed, err := coreSignature.SignSigned(signer, sigCtx, tx)
 	if err != nil {
 		return nil, err
@@ -138,8 +138,8 @@ func SignConsensusTransaction(
 // SignParaTimeTransaction signs a ParaTime transaction.
 func SignParaTimeTransaction(
 	ctx context.Context,
-	npw *NPWSelection,
-	wallet wallet.Wallet,
+	npa *NPASelection,
+	wallet wallet.Account,
 	conn connection.Connection,
 	tx *types.Transaction,
 ) (*types.UnverifiedTransaction, error) {
@@ -151,7 +151,7 @@ func SignParaTimeTransaction(
 	if txGasPrice != "" {
 		// TODO: Support different denominations for gas fees.
 		var err error
-		gasPrice, err = helpers.ParseParaTimeDenomination(npw.ParaTime, txGasPrice, types.NativeDenomination)
+		gasPrice, err = helpers.ParseParaTimeDenomination(npa.ParaTime, txGasPrice, types.NativeDenomination)
 		if err != nil {
 			return nil, fmt.Errorf("bad gas price: %w", err)
 		}
@@ -161,7 +161,7 @@ func SignParaTimeTransaction(
 		// Query nonce if not specified.
 		if nonce == invalidNonce {
 			var err error
-			nonce, err = conn.Runtime(npw.ParaTime).Accounts.Nonce(ctx, client.RoundLatest, wallet.Address())
+			nonce, err = conn.Runtime(npa.ParaTime).Accounts.Nonce(ctx, client.RoundLatest, wallet.Address())
 			if err != nil {
 				return nil, fmt.Errorf("failed to query nonce: %w", err)
 			}
@@ -175,7 +175,7 @@ func SignParaTimeTransaction(
 		// Gas estimation if not specified.
 		if tx.AuthInfo.Fee.Gas == invalidGasLimit {
 			var err error
-			tx.AuthInfo.Fee.Gas, err = conn.Runtime(npw.ParaTime).Core.EstimateGas(ctx, client.RoundLatest, tx)
+			tx.AuthInfo.Fee.Gas, err = conn.Runtime(npa.ParaTime).Core.EstimateGas(ctx, client.RoundLatest, tx)
 			if err != nil {
 				return nil, fmt.Errorf("failed to estimate gas: %w", err)
 			}
@@ -183,7 +183,7 @@ func SignParaTimeTransaction(
 
 		// Gas price determination if not specified.
 		if txGasPrice == "" {
-			mgp, err := conn.Runtime(npw.ParaTime).Core.MinGasPrice(ctx)
+			mgp, err := conn.Runtime(npa.ParaTime).Core.MinGasPrice(ctx)
 			if err != nil {
 				return nil, fmt.Errorf("failed to query minimum gas price: %w", err)
 			}
@@ -208,10 +208,10 @@ func SignParaTimeTransaction(
 
 	// TODO: Support confidential transactions (only in online mode).
 
-	PrintTransactionBeforeSigning(npw, tx)
+	PrintTransactionBeforeSigning(npa, tx)
 
 	// Sign the transaction.
-	sigCtx := signature.DeriveChainContext(npw.ParaTime.Namespace(), npw.Network.ChainContext)
+	sigCtx := signature.DeriveChainContext(npa.ParaTime.Namespace(), npa.Network.ChainContext)
 	ts := tx.PrepareForSigning()
 	if err := ts.AppendSign(sigCtx, wallet.Signer()); err != nil {
 		return nil, fmt.Errorf("failed to sign transaction: %w", err)
@@ -221,15 +221,15 @@ func SignParaTimeTransaction(
 }
 
 // PrintTransactionBeforeSigning prints the transaction and asks the user for confirmation.
-func PrintTransactionBeforeSigning(npw *NPWSelection, tx interface{}) {
+func PrintTransactionBeforeSigning(npa *NPASelection, tx interface{}) {
 	fmt.Printf("You are about to sign the following transaction:\n")
 
 	switch rtx := tx.(type) {
 	case *consensusTx.Transaction:
 		// Consensus transaction.
 		ctx := context.Background()
-		ctx = context.WithValue(ctx, consensusPretty.ContextKeyTokenSymbol, npw.Network.Denomination.Symbol)
-		ctx = context.WithValue(ctx, consensusPretty.ContextKeyTokenValueExponent, npw.Network.Denomination.Decimals)
+		ctx = context.WithValue(ctx, consensusPretty.ContextKeyTokenSymbol, npa.Network.Denomination.Symbol)
+		ctx = context.WithValue(ctx, consensusPretty.ContextKeyTokenValueExponent, npa.Network.Denomination.Decimals)
 		rtx.PrettyPrint(ctx, "", os.Stdout)
 	default:
 		// TODO: Add pretty variant for paratime transactions.
@@ -239,15 +239,20 @@ func PrintTransactionBeforeSigning(npw *NPWSelection, tx interface{}) {
 	}
 	fmt.Println()
 
-	fmt.Printf("Network:  %s", npw.NetworkName)
-	if len(npw.Network.Description) > 0 {
-		fmt.Printf(" (%s)", npw.Network.Description)
+	fmt.Printf("Account:  %s", npa.AccountName)
+	if len(npa.Account.Description) > 0 {
+		fmt.Printf(" (%s)", npa.Account.Description)
 	}
 	fmt.Println()
-	if _, isParaTimeTx := tx.(*types.Transaction); isParaTimeTx && npw.ParaTime != nil {
-		fmt.Printf("Paratime: %s", npw.ParaTimeName)
-		if len(npw.ParaTime.Description) > 0 {
-			fmt.Printf(" (%s)", npw.ParaTime.Description)
+	fmt.Printf("Network:  %s", npa.NetworkName)
+	if len(npa.Network.Description) > 0 {
+		fmt.Printf(" (%s)", npa.Network.Description)
+	}
+	fmt.Println()
+	if _, isParaTimeTx := tx.(*types.Transaction); isParaTimeTx && npa.ParaTime != nil {
+		fmt.Printf("Paratime: %s", npa.ParaTimeName)
+		if len(npa.ParaTime.Description) > 0 {
+			fmt.Printf(" (%s)", npa.ParaTime.Description)
 		}
 		fmt.Println()
 	} else {

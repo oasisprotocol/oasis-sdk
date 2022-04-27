@@ -13,7 +13,7 @@ import (
 var (
 	selectedNetwork  string
 	selectedParaTime string
-	selectedWallet   string
+	selectedAccount  string
 
 	noParaTime bool
 )
@@ -21,21 +21,21 @@ var (
 // SelectorFlags contains the common selector flags for network/paratime/wallet.
 var SelectorFlags *flag.FlagSet
 
-// NPWSelection contains the network/paratime/wallet selection.
-type NPWSelection struct {
+// NPASelection contains the network/paratime/account selection.
+type NPASelection struct {
 	NetworkName string
 	Network     *config.Network
 
 	ParaTimeName string
 	ParaTime     *config.ParaTime
 
-	WalletName string
-	Wallet     *cliConfig.Wallet
+	AccountName string
+	Account     *cliConfig.Account
 }
 
-// GetNPWSelection returns the user-selected network/paratime/wallet combination.
-func GetNPWSelection(cfg *cliConfig.Config) *NPWSelection {
-	var s NPWSelection
+// GetNPASelection returns the user-selected network/paratime/account combination.
+func GetNPASelection(cfg *cliConfig.Config) *NPASelection {
+	var s NPASelection
 	s.NetworkName = cfg.Networks.Default
 	if selectedNetwork != "" {
 		s.NetworkName = selectedNetwork
@@ -61,14 +61,14 @@ func GetNPWSelection(cfg *cliConfig.Config) *NPWSelection {
 		}
 	}
 
-	s.WalletName = cfg.Wallets.Default
-	if selectedWallet != "" {
-		s.WalletName = selectedWallet
+	s.AccountName = cfg.Wallet.Default
+	if selectedAccount != "" {
+		s.AccountName = selectedAccount
 	}
-	if s.WalletName != "" {
-		s.Wallet = cfg.Wallets.All[s.WalletName]
-		if s.Wallet == nil {
-			cobra.CheckErr(fmt.Errorf("wallet '%s' does not exist", s.WalletName))
+	if s.AccountName != "" {
+		s.Account = cfg.Wallet.All[s.AccountName]
+		if s.Account == nil {
+			cobra.CheckErr(fmt.Errorf("account '%s' does not exist in the wallet", s.AccountName))
 		}
 	}
 
@@ -80,5 +80,10 @@ func init() {
 	SelectorFlags.StringVar(&selectedNetwork, "network", "", "explicitly set network to use")
 	SelectorFlags.StringVar(&selectedParaTime, "paratime", "", "explicitly set paratime to use")
 	SelectorFlags.BoolVar(&noParaTime, "no-paratime", false, "explicitly set that no paratime should be used")
-	SelectorFlags.StringVar(&selectedWallet, "wallet", "", "explicitly set wallet to use")
+	SelectorFlags.StringVar(&selectedAccount, "account", "", "explicitly set account to use")
+
+	// Backward compatibility.
+	SelectorFlags.StringVar(&selectedAccount, "wallet", "", "explicitly set account to use. OBSOLETE, USE --account INSTEAD!")
+	err := SelectorFlags.MarkHidden("wallet")
+	cobra.CheckErr(err)
 }

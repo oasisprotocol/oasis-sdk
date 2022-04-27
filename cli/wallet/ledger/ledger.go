@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	// Kind is the wallet kind for the ledger-backed wallet.
+	// Kind is the account kind for the ledger-backed accounts.
 	Kind = "ledger"
 
 	derivationAdr8   = "adr8"
@@ -26,21 +26,21 @@ const (
 	cfgNumber     = "ledger.number"
 )
 
-type walletConfig struct {
+type accountConfig struct {
 	Derivation string `mapstructure:"derivation,omitempty"`
 	Number     uint32 `mapstructure:"number,omitempty"`
 }
 
-type ledgerWalletFactory struct {
+type ledgerAccountFactory struct {
 	flags *flag.FlagSet
 }
 
-func (wf *ledgerWalletFactory) Kind() string {
+func (af *ledgerAccountFactory) Kind() string {
 	return Kind
 }
 
-func (wf *ledgerWalletFactory) PrettyKind(rawCfg map[string]interface{}) string {
-	cfg, err := wf.unmarshalConfig(rawCfg)
+func (af *ledgerAccountFactory) PrettyKind(rawCfg map[string]interface{}) string {
+	cfg, err := af.unmarshalConfig(rawCfg)
 	if err != nil {
 		return ""
 	}
@@ -50,93 +50,93 @@ func (wf *ledgerWalletFactory) PrettyKind(rawCfg map[string]interface{}) string 
 	if derivation == "" {
 		derivation = derivationAdr8
 	}
-	return fmt.Sprintf("%s (%s:%d)", wf.Kind(), derivation, cfg.Number)
+	return fmt.Sprintf("%s (%s:%d)", af.Kind(), derivation, cfg.Number)
 }
 
-func (wf *ledgerWalletFactory) Flags() *flag.FlagSet {
-	return wf.flags
+func (af *ledgerAccountFactory) Flags() *flag.FlagSet {
+	return af.flags
 }
 
-func (wf *ledgerWalletFactory) GetConfigFromFlags() (map[string]interface{}, error) {
+func (af *ledgerAccountFactory) GetConfigFromFlags() (map[string]interface{}, error) {
 	cfg := make(map[string]interface{})
-	cfg["derivation"], _ = wf.flags.GetString(cfgDerivation)
-	cfg["number"], _ = wf.flags.GetUint32(cfgNumber)
+	cfg["derivation"], _ = af.flags.GetString(cfgDerivation)
+	cfg["number"], _ = af.flags.GetUint32(cfgNumber)
 	return cfg, nil
 }
 
-func (wf *ledgerWalletFactory) GetConfigFromSurvey(kind *wallet.ImportKind) (map[string]interface{}, error) {
+func (af *ledgerAccountFactory) GetConfigFromSurvey(kind *wallet.ImportKind) (map[string]interface{}, error) {
 	return nil, fmt.Errorf("ledger: import not supported")
 }
 
-func (wf *ledgerWalletFactory) DataPrompt(kind wallet.ImportKind, rawCfg map[string]interface{}) survey.Prompt {
+func (af *ledgerAccountFactory) DataPrompt(kind wallet.ImportKind, rawCfg map[string]interface{}) survey.Prompt {
 	return nil
 }
 
-func (wf *ledgerWalletFactory) DataValidator(kind wallet.ImportKind, rawCfg map[string]interface{}) survey.Validator {
+func (af *ledgerAccountFactory) DataValidator(kind wallet.ImportKind, rawCfg map[string]interface{}) survey.Validator {
 	return nil
 }
 
-func (wf *ledgerWalletFactory) RequiresPassphrase() bool {
+func (af *ledgerAccountFactory) RequiresPassphrase() bool {
 	return false
 }
 
-func (wf *ledgerWalletFactory) SupportedImportKinds() []wallet.ImportKind {
+func (af *ledgerAccountFactory) SupportedImportKinds() []wallet.ImportKind {
 	return []wallet.ImportKind{}
 }
 
-func (wf *ledgerWalletFactory) HasConsensusSigner(rawCfg map[string]interface{}) bool {
+func (af *ledgerAccountFactory) HasConsensusSigner(rawCfg map[string]interface{}) bool {
 	return true
 }
 
-func (wf *ledgerWalletFactory) unmarshalConfig(raw map[string]interface{}) (*walletConfig, error) {
+func (af *ledgerAccountFactory) unmarshalConfig(raw map[string]interface{}) (*accountConfig, error) {
 	if raw == nil {
 		return nil, fmt.Errorf("missing configuration")
 	}
 
-	var cfg walletConfig
+	var cfg accountConfig
 	if err := mapstructure.Decode(raw, &cfg); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
 }
 
-func (wf *ledgerWalletFactory) Create(name string, passphrase string, rawCfg map[string]interface{}) (wallet.Wallet, error) {
-	cfg, err := wf.unmarshalConfig(rawCfg)
+func (af *ledgerAccountFactory) Create(name string, passphrase string, rawCfg map[string]interface{}) (wallet.Account, error) {
+	cfg, err := af.unmarshalConfig(rawCfg)
 	if err != nil {
 		return nil, err
 	}
 
-	return newWallet(cfg)
+	return newAccount(cfg)
 }
 
-func (wf *ledgerWalletFactory) Load(name string, passphrase string, rawCfg map[string]interface{}) (wallet.Wallet, error) {
-	cfg, err := wf.unmarshalConfig(rawCfg)
+func (af *ledgerAccountFactory) Load(name string, passphrase string, rawCfg map[string]interface{}) (wallet.Account, error) {
+	cfg, err := af.unmarshalConfig(rawCfg)
 	if err != nil {
 		return nil, err
 	}
 
-	return newWallet(cfg)
+	return newAccount(cfg)
 }
 
-func (wf *ledgerWalletFactory) Remove(name string, rawCfg map[string]interface{}) error {
+func (af *ledgerAccountFactory) Remove(name string, rawCfg map[string]interface{}) error {
 	return nil
 }
 
-func (wf *ledgerWalletFactory) Rename(old, new string, rawCfg map[string]interface{}) error {
+func (af *ledgerAccountFactory) Rename(old, new string, rawCfg map[string]interface{}) error {
 	return nil
 }
 
-func (wf *ledgerWalletFactory) Import(name string, passphrase string, rawCfg map[string]interface{}, src *wallet.ImportSource) (wallet.Wallet, error) {
+func (af *ledgerAccountFactory) Import(name string, passphrase string, rawCfg map[string]interface{}, src *wallet.ImportSource) (wallet.Account, error) {
 	return nil, fmt.Errorf("ledger: import not supported")
 }
 
-type ledgerWallet struct {
-	cfg        *walletConfig
+type ledgerAccount struct {
+	cfg        *accountConfig
 	signer     *ledgerSigner
 	coreSigner *ledgerCoreSigner
 }
 
-func newWallet(cfg *walletConfig) (wallet.Wallet, error) {
+func newAccount(cfg *accountConfig) (wallet.Account, error) {
 	// Connect to device.
 	dev, err := connectToDevice()
 	if err != nil {
@@ -180,30 +180,30 @@ func newWallet(cfg *walletConfig) (wallet.Wallet, error) {
 		return nil, fmt.Errorf("ledger: got malformed public key: %w", err)
 	}
 
-	return &ledgerWallet{
+	return &ledgerAccount{
 		cfg:        cfg,
 		signer:     signer,
 		coreSigner: coreSigner,
 	}, nil
 }
 
-func (w *ledgerWallet) ConsensusSigner() coreSignature.Signer {
-	return w.coreSigner
+func (a *ledgerAccount) ConsensusSigner() coreSignature.Signer {
+	return a.coreSigner
 }
 
-func (w *ledgerWallet) Signer() signature.Signer {
-	return w.signer
+func (a *ledgerAccount) Signer() signature.Signer {
+	return a.signer
 }
 
-func (w *ledgerWallet) Address() types.Address {
-	return types.NewAddress(w.SignatureAddressSpec())
+func (a *ledgerAccount) Address() types.Address {
+	return types.NewAddress(a.SignatureAddressSpec())
 }
 
-func (w *ledgerWallet) SignatureAddressSpec() types.SignatureAddressSpec {
-	return types.NewSignatureAddressSpecEd25519(w.signer.Public().(ed25519.PublicKey))
+func (a *ledgerAccount) SignatureAddressSpec() types.SignatureAddressSpec {
+	return types.NewSignatureAddressSpecEd25519(a.signer.Public().(ed25519.PublicKey))
 }
 
-func (w *ledgerWallet) UnsafeExport() string {
+func (a *ledgerAccount) UnsafeExport() string {
 	return ""
 }
 
@@ -212,7 +212,7 @@ func init() {
 	flags.String(cfgDerivation, derivationLegacy, "Derivation scheme to use [adr8, legacy]")
 	flags.Uint32(cfgNumber, 0, "Key number to use in the derivation scheme")
 
-	wallet.Register(&ledgerWalletFactory{
+	wallet.Register(&ledgerAccountFactory{
 		flags: flags,
 	})
 }
