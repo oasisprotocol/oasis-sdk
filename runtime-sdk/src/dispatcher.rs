@@ -690,15 +690,16 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                     });
                     let tx = match data.tx.as_ref() {
                         Some(tx) => {
+                            let remaining_gas = R::Core::remaining_in_msgs_gas(ctx);
+                            if remaining_gas < cfg.min_remaining_gas {
+                                // This next message has a transaction, but we won't have
+                                // enough gas to execute it, so leave it for the next
+                                // round and stop.
+                                break;
+                            }
                             match Self::decode_tx(ctx, tx) {
                                 Ok(tx) => {
-                                    let remaining_gas = R::Core::remaining_in_msgs_gas(ctx);
-                                    if remaining_gas < cfg.min_remaining_gas {
-                                        // This next message has a transaction, but we won't have
-                                        // enough gas to execute it, so leave it for the next
-                                        // round and stop.
-                                        break;
-                                    } else if tx.auth_info.fee.gas > in_msgs_gas_limit {
+                                    if tx.auth_info.fee.gas > in_msgs_gas_limit {
                                         // The transaction is too large to execute under our
                                         // current parameters, so skip over it.
                                         warn!(ctx.get_logger("dispatcher"), "incoming message transaction fee gas exceeds round gas limit";
