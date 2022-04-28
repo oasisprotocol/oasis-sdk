@@ -440,7 +440,9 @@ const methodDescriptorConsensusEstimateGas = createMethodDescriptorUnary<
 >('Consensus', 'EstimateGas');
 const methodDescriptorConsensusGetSignerNonce = createMethodDescriptorUnary<
     types.ConsensusGetSignerNonceRequest,
-    types.longnum
+    // TODO: remove `undefined` after https://github.com/grpc/grpc-web/pull/1230
+    //       and see TODO in callUnary.
+    types.longnum | undefined
 >('Consensus', 'GetSignerNonce');
 const methodDescriptorConsensusGetBlock = createMethodDescriptorUnary<
     types.longnum,
@@ -581,6 +583,8 @@ export class GRPCWrapper {
                 // This seems to be normal. Void methods don't send back anything, which makes
                 // grpc-web freak out. I don't know why we don't send a CBOR undefined or
                 // something.
+                // TODO: remove after https://github.com/grpc/grpc-web/pull/1230
+                //       and see TODO in methodDescriptorConsensusGetSignerNonce
                 return undefined;
             }
             if (e.metadata && 'grpc-status-details-bin' in e.metadata) {
