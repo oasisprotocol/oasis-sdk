@@ -1,9 +1,9 @@
 //! Simple WASM contracts runtime.
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 
 use oasis_runtime_sdk::{
-    self as sdk, config, core::common::crypto::signature::PrivateKey,
-    keymanager::TrustedPolicySigners, modules, types::token::Denomination, Version,
+    self as sdk, config, keymanager::TrustedPolicySigners, modules, types::token::Denomination,
+    Version,
 };
 use oasis_runtime_sdk_contracts as contracts;
 
@@ -38,24 +38,7 @@ impl sdk::Runtime for Runtime {
     );
 
     fn trusted_policy_signers() -> Option<TrustedPolicySigners> {
-        let signers = TrustedPolicySigners {
-            signers: {
-                let mut set = HashSet::new();
-                for seed in [
-                    "ekiden key manager test multisig key 0",
-                    "ekiden key manager test multisig key 1",
-                    "ekiden key manager test multisig key 2",
-                ]
-                .iter()
-                {
-                    let pk = PrivateKey::from_test_seed(seed.to_string());
-                    set.insert(pk.public_key());
-                }
-                set
-            },
-            threshold: 2,
-        };
-        Some(signers)
+        Some(TrustedPolicySigners::default())
     }
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {

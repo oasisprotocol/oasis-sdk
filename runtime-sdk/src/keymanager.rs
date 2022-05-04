@@ -11,7 +11,10 @@ pub use oasis_core_keymanager_api_common::{
 };
 use oasis_core_keymanager_client::{KeyManagerClient as CoreKeyManagerClient, RemoteClient};
 use oasis_core_runtime::{
-    common::namespace::Namespace, protocol::Protocol, rak::RAK, RpcDispatcher,
+    common::{logger::get_logger, namespace::Namespace},
+    protocol::Protocol,
+    rak::RAK,
+    RpcDispatcher,
 };
 
 /// Key manager interface. This is a runtime context-resident convenience
@@ -39,9 +42,9 @@ impl KeyManagerClient {
         ));
         let handler_remote_client = remote_client.clone();
         rpc.set_keymanager_policy_update_handler(Some(Box::new(move |raw_signed_policy| {
-            handler_remote_client
-                .set_policy(raw_signed_policy)
-                .expect("failed to update key manager policy");
+            if let Err(error) = handler_remote_client.set_policy(raw_signed_policy) {
+                slog::warn!(get_logger("keymanager/client"), "failed to update key manager policy"; "err" => %error);
+            }
         })));
         KeyManagerClient {
             inner: remote_client,
