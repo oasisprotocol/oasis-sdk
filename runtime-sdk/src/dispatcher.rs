@@ -683,6 +683,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                 let mut new_batch = Vec::new();
 
                 // Execute incoming messages.
+                let in_msg_txs = Vec::new(); // todo: more efficient way to do this
                 let in_msgs_gas_limit = R::Core::remaining_in_msgs_gas(ctx);
                 let mut in_msgs_processed = 0usize;
                 for in_msg in in_msgs {
@@ -754,6 +755,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                     let last_batch_tx_hash = batch.last().map(|raw_tx| Hash::digest_bytes(raw_tx));
 
                     for raw_tx in batch.drain(..) {
+                        // todo: skip copies of incoming message txs
                         // If we don't have enough gas for processing even the cheapest transaction
                         // we are done. Same if we reached the runtime-imposed maximum tx count.
                         let remaining_gas = R::Core::remaining_batch_gas(ctx);
