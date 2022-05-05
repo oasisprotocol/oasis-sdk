@@ -680,6 +680,8 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         let mut result = self.execute_batch_common(
             rt_ctx,
             |ctx| -> Result<Vec<ExecuteTxResult>, RuntimeError> {
+                let mut new_batch = Vec::new();
+
                 // Execute incoming messages.
                 let in_msgs_gas_limit = R::Core::remaining_in_msgs_gas(ctx);
                 let mut in_msgs_processed = 0usize;
@@ -690,6 +692,12 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                     });
                     let tx = match data.tx.as_ref() {
                         Some(tx) => {
+                            if new_batch.len() >= cfg.max_tx_count {
+                                // This next message has a transaction, but we'll exceed the
+                                // maximum transaction count, so leave it for the next round and
+                                // stop.
+                                break;
+                            }
                             let remaining_gas = R::Core::remaining_in_msgs_gas(ctx);
                             if remaining_gas < cfg.min_remaining_gas {
                                 // This next message has a transaction, but we won't have
@@ -738,7 +746,6 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                 //
                 // The idea is to keep scheduling transactions as long as we have some space
                 // available in the block as determined by gas use.
-                let mut new_batch = Vec::new();
                 let mut results = Vec::with_capacity(batch.len());
                 let mut requested_batch_len = cfg.initial_batch_size;
                 'batch: loop {
