@@ -489,6 +489,8 @@ jobs:
   benchmark-rt:
     # NOTE: This name appears in GitHub's Checks API.
     name: benchmark-rt
+    # Need to fix run-benchmarks.sh to work with oasis-core 22.1.3+ runtimes.
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
