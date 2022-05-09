@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -37,12 +38,18 @@ import (
 	scheduler "github.com/oasisprotocol/oasis-core/go/scheduler/api"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 	storage "github.com/oasisprotocol/oasis-core/go/storage/api"
+	"github.com/oasisprotocol/oasis-core/go/storage/mkvs/syncer"
 	workerStorage "github.com/oasisprotocol/oasis-core/go/worker/storage/api"
 )
 
 type usedType struct {
 	ref    string
 	source string
+}
+
+type clientCode struct {
+	methodDescriptors string
+	methods           string
 }
 
 var (
@@ -113,8 +120,7 @@ func parseDocs(importPath string) {
 
 func getTypeDoc(t reflect.Type) string {
 	parseDocs(t.PkgPath())
-	typesByName := packageTypes[t.PkgPath()]
-	if dt, ok := typesByName[t.Name()]; ok {
+	if dt, ok := packageTypes[t.PkgPath()][t.Name()]; ok {
 		return dt.Doc
 	}
 	return ""
@@ -152,17 +158,98 @@ func getFieldDoc(t reflect.Type, name string) string {
 	return field.Doc.Text()
 }
 
+var typeMethods = map[string]map[string]*ast.Field{}
+
+func getMethodLookupVisitEmbedded(methodsByName map[string]*ast.Field, elem *ast.Field) {
+	_, _ = fmt.Fprintf(os.Stderr, "visiting doc interface element %v\n", elem)
+	switch t := elem.Type.(type) {
+	case *ast.Ident:
+		getMethodLookupVisitInterface(methodsByName, t.Obj.Decl.(*ast.TypeSpec))
+	case *ast.SelectorExpr:
+		if t.Sel.Obj != nil {
+			getMethodLookupVisitInterface(methodsByName, t.Sel.Obj.Decl.(*ast.TypeSpec))
+		} else {
+			pkgPathSource := t.X.(*ast.Ident).Obj.Decl.(*ast.ImportSpec).Path.Value
+			pkgPath, err := strconv.Unquote(pkgPathSource)
+			if err != nil {
+				panic(fmt.Sprintf("import path %s unquote", pkgPathSource))
+			}
+			parseDocs(pkgPath)
+			dt := packageTypes[pkgPath][t.Sel.Name]
+			getMethodLookupVisitInterface(methodsByName, dt.Decl.Specs[0].(*ast.TypeSpec))
+		}
+	default:
+		panic(fmt.Sprintf("method %v unexpected type", elem))
+	}
+}
+
+func getMethodLookupVisitInterface(methodsByName map[string]*ast.Field, ts *ast.TypeSpec) {
+	_, _ = fmt.Fprintf(os.Stderr, "visiting doc interface %v\n", ts)
+	it := ts.Type.(*ast.InterfaceType)
+	for _, elem := range it.Methods.List {
+		if _, ok := elem.Type.(*ast.FuncType); ok {
+			if len(elem.Names) > 1 {
+				panic(fmt.Sprintf("method %v unexpected multiple names", elem))
+			}
+			if len(elem.Names) == 0 {
+				continue
+			}
+			methodsByName[elem.Names[0].Name] = elem
+		} else {
+			getMethodLookupVisitEmbedded(methodsByName, elem)
+		}
+	}
+}
+
+func getMethodLookup(t reflect.Type) map[string]*ast.Field {
+	sig := fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
+	if methodsByName, ok := typeMethods[sig]; ok {
+		return methodsByName
+	}
+	methodsByName := make(map[string]*ast.Field)
+	parseDocs(t.PkgPath())
+	dt := packageTypes[t.PkgPath()][t.Name()]
+	getMethodLookupVisitInterface(methodsByName, dt.Decl.Specs[0].(*ast.TypeSpec))
+	typeMethods[sig] = methodsByName
+	return methodsByName
+}
+
+func getMethodDoc(t reflect.Type, name string) string {
+	method, ok := getMethodLookup(t)[name]
+	if !ok {
+		panic(fmt.Sprintf("source for %s %v method %s not found", t.PkgPath(), t, name))
+	}
+	return method.Doc.Text()
+}
+
+var patternLine = regexp.MustCompile(`(?m)^(.?)`)
+
 func renderDocComment(godoc string, indent string) string {
 	if godoc == "" {
 		return ""
 	}
-	indented := regexp.MustCompile(`(?m)^(.?)`).ReplaceAllStringFunc(godoc, func(s string) string {
+	indented := patternLine.ReplaceAllStringFunc(godoc, func(s string) string {
 		if len(s) > 0 {
 			return indent + " * " + s
 		}
 		return indent + " *"
 	})
 	return indent + "/**\n" + indented + "/\n"
+}
+
+func getMethodArgName(t reflect.Type, name string, i int) string {
+	method, ok := getMethodLookup(t)[name]
+	if !ok {
+		panic(fmt.Sprintf("source for %s %v method %s not found", t.PkgPath(), t, name))
+	}
+	arg := method.Type.(*ast.FuncType).Params.List[i]
+	if len(arg.Names) > 1 {
+		panic(fmt.Sprintf("arg %v unexpected multiple names", arg))
+	}
+	if len(arg.Names) == 0 {
+		return ""
+	}
+	return arg.Names[0].Name
 }
 
 var customStructNames = map[reflect.Type]string{
@@ -198,11 +285,7 @@ var prefixByPackage = map[string]string{
 }
 var prefixConsulted = map[string]bool{}
 
-func getStructName(t reflect.Type) string {
-	if ref, ok := customStructNames[t]; ok {
-		customStructNamesConsulted[t] = true
-		return ref
-	}
+func getPrefix(t reflect.Type) string {
 	pkgDir := t.PkgPath()
 	var prefix string
 	for {
@@ -217,6 +300,15 @@ func getStructName(t reflect.Type) string {
 		}
 		pkgDir = path.Dir(pkgDir)
 	}
+	return prefix
+}
+
+func getStructName(t reflect.Type) string {
+	if ref, ok := customStructNames[t]; ok {
+		customStructNamesConsulted[t] = true
+		return ref
+	}
+	prefix := getPrefix(t)
 	if prefix == t.Name() {
 		return t.Name()
 	}
@@ -249,12 +341,19 @@ func visitSigned(t reflect.Type) {
 		if u.Kind() != reflect.Ptr {
 			continue
 		}
-		visitType(u.Elem())
+		visitType(u.Elem(), false)
 		outParams++
 	}
 	if outParams != 1 {
 		panic("wrong number of out params")
 	}
+}
+
+func importedRef(ref string, typesDot bool) string {
+	if typesDot {
+		return "types." + ref
+	}
+	return ref
 }
 
 const (
@@ -263,22 +362,139 @@ const (
 	structModeEmptyMap = "empty-map"
 )
 
-func visitType(t reflect.Type) string { // nolint: gocyclo
+func visitStruct(t reflect.Type) string { // nolint: gocyclo
+	if ut, ok := memo[t]; ok {
+		return ut.ref
+	}
+	sourceDoc := renderDocComment(getTypeDoc(t), "")
+	ref := getStructName(t)
+	var extendsType reflect.Type
+	extendsRef := ""
+	sourceExtends := ""
+	sourceFields := ""
+	mode := structModeObject
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		_, _ = fmt.Fprintf(os.Stderr, "visiting field %v\n", f)
+		if f.Anonymous {
+			if extendsType == nil {
+				extendsType = f.Type
+				extendsRef = visitType(extendsType, false)
+				sourceExtends = fmt.Sprintf(" extends %s", extendsRef)
+			} else {
+				panic("multiple embedded types")
+			}
+			continue
+		}
+		var name string
+		var optional string
+		if cborTag, ok := f.Tag.Lookup("cbor"); ok { // nolint: nestif
+			parts := strings.Split(cborTag, ",")
+			name = parts[0]
+			parts = parts[1:]
+			if name == "" {
+				for _, part := range parts {
+					switch part {
+					case "toarray":
+						if sourceFields != "" {
+							panic("changing struct mode after fields are rendered")
+						}
+						mode = structModeArray
+					default:
+						panic(fmt.Sprintf("unhandled json tag %s", part))
+					}
+				}
+				continue
+			}
+			for _, part := range parts {
+				panic(fmt.Sprintf("unhandled cbor tag %s", part))
+			}
+		} else if jsonTag, ok := f.Tag.Lookup("json"); ok {
+			parts := strings.Split(jsonTag, ",")
+			name = parts[0]
+			if name == "-" {
+				continue
+			}
+			parts = parts[1:]
+			for _, part := range parts {
+				switch part {
+				case "omitempty":
+					optional = "?"
+				default:
+					panic(fmt.Sprintf("unhandled json tag %s", part))
+				}
+			}
+		} else {
+			name = f.Name
+		}
+		if f.PkgPath != "" {
+			// skip private fields
+			continue
+		}
+		sourceFieldDoc := renderDocComment(getFieldDoc(t, f.Name), "    ")
+		switch mode {
+		case structModeObject:
+			sourceFields += fmt.Sprintf("%s    %s%s: %s;\n", sourceFieldDoc, name, optional, visitType(f.Type, false))
+		case structModeArray:
+			if optional != "" {
+				panic("unhandled optional in mode array")
+			}
+			sourceFields += fmt.Sprintf("%s    %s: %s,\n", sourceFieldDoc, name, visitType(f.Type, false))
+		default:
+			panic(fmt.Sprintf("unhandled struct field in mode %s", mode))
+		}
+	}
+	if t == reflect.TypeOf(registry.VersionInfo{}) {
+		// `.TEE` contains serialized `Constraints` for use with detached
+		// signature
+		visitType(reflect.TypeOf(node.SGXConstraints{}), false)
+		encounteredVersionInfo = true
+	}
+	if sourceFields == "" && extendsType != nil {
+		// there's a convention where we have a struct that wraps
+		// `signature.Signed` with an `Open` method that has an out
+		// pointer to the type of the signed data.
+		if extendsType == reflect.TypeOf(signature.Signed{}) {
+			visitSigned(t)
+		}
+		return extendsRef
+	}
+	if mode == structModeObject && sourceFields == "" && extendsType == nil {
+		mode = structModeEmptyMap
+	}
+	var source string
+	switch mode {
+	case structModeObject:
+		source = fmt.Sprintf("%sexport interface %s%s {\n%s}\n", sourceDoc, ref, sourceExtends, sourceFields)
+	case structModeArray:
+		if extendsType != nil {
+			panic("unhandled extends in mode array")
+		}
+		source = fmt.Sprintf("%sexport type %s = [\n%s];\n", sourceDoc, ref, sourceFields)
+	case structModeEmptyMap:
+		if extendsType != nil {
+			panic("unhandled extends in mode empty-map")
+		}
+		if sourceFields != "" {
+			panic("unhandled source fields in mode empty-map")
+		}
+		source = fmt.Sprintf("%sexport type %s = Map<never, never>;\n", sourceDoc, ref)
+	}
+	ut := usedType{ref, source}
+	used = append(used, &ut)
+	memo[t] = &ut
+	return ref
+}
+
+func visitType(t reflect.Type, typesDot bool) string {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting type %v\n", t)
 	switch t {
 	case reflect.TypeOf(time.Time{}):
 		t = reflect.TypeOf(int64(0))
 	case reflect.TypeOf(quantity.Quantity{}):
 		t = reflect.TypeOf([]byte{})
-	case reflect.TypeOf((*io.Writer)(nil)).Elem():
-		t = reflect.TypeOf([]byte{})
-	case reflect.TypeOf((*storage.WriteLogIterator)(nil)).Elem():
-		t = reflect.TypeOf(storage.SyncChunk{})
 	case reflect.TypeOf(cbor.RawMessage{}):
 		return "unknown"
-	}
-	if ut, ok := memo[t]; ok {
-		return ut.ref
 	}
 	switch t.Kind() {
 	// Invalid begone
@@ -287,7 +503,7 @@ func visitType(t reflect.Type) string { // nolint: gocyclo
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32:
 		return "number"
 	case reflect.Int64, reflect.Uint64, reflect.Uintptr:
-		return "longnum"
+		return importedRef("longnum", typesDot)
 	case reflect.Float32, reflect.Float64:
 		return "number"
 	// Complex64, Complex128 begone
@@ -295,147 +511,43 @@ func visitType(t reflect.Type) string { // nolint: gocyclo
 		if t.Elem().Kind() == reflect.Uint8 {
 			return "Uint8Array"
 		}
-		return fmt.Sprintf("%s[]", visitType(t.Elem()))
+		return fmt.Sprintf("%s[]", visitType(t.Elem(), typesDot))
 	// Chan begone
 	// Func begone
 	// Interface begone
 	case reflect.Map:
 		if t.Key().Kind() == reflect.String {
-			return fmt.Sprintf("{[%s: string]: %s}", getMapKeyName(t), visitType(t.Elem()))
+			return fmt.Sprintf("{[%s: string]: %s}", getMapKeyName(t), visitType(t.Elem(), typesDot))
 		}
-		return fmt.Sprintf("Map<%s, %s>", visitType(t.Key()), visitType(t.Elem()))
+		return fmt.Sprintf("Map<%s, %s>", visitType(t.Key(), typesDot), visitType(t.Elem(), typesDot))
 	case reflect.Ptr:
-		return visitType(t.Elem())
+		return visitType(t.Elem(), typesDot)
 	case reflect.String:
 		return "string"
 	case reflect.Struct:
-		sourceDoc := renderDocComment(getTypeDoc(t), "")
-		ref := getStructName(t)
-		var extendsType reflect.Type
-		extendsRef := ""
-		sourceExtends := ""
-		sourceFields := ""
-		mode := structModeObject
-		for i := 0; i < t.NumField(); i++ {
-			f := t.Field(i)
-			_, _ = fmt.Fprintf(os.Stderr, "visiting field %v\n", f)
-			if f.Anonymous {
-				if extendsType == nil {
-					extendsType = f.Type
-					extendsRef = visitType(extendsType)
-					sourceExtends = fmt.Sprintf(" extends %s", extendsRef)
-				} else {
-					panic("multiple embedded types")
-				}
-				continue
-			}
-			var name string
-			var optional string
-			if cborTag, ok := f.Tag.Lookup("cbor"); ok { // nolint: nestif
-				parts := strings.Split(cborTag, ",")
-				name = parts[0]
-				parts = parts[1:]
-				if name == "" {
-					for _, part := range parts {
-						switch part {
-						case "toarray":
-							if sourceFields != "" {
-								panic("changing struct mode after fields are rendered")
-							}
-							mode = structModeArray
-						default:
-							panic(fmt.Sprintf("unhandled json tag %s", part))
-						}
-					}
-					continue
-				}
-				for _, part := range parts {
-					panic(fmt.Sprintf("unhandled cbor tag %s", part))
-				}
-			} else if jsonTag, ok := f.Tag.Lookup("json"); ok {
-				parts := strings.Split(jsonTag, ",")
-				name = parts[0]
-				if name == "-" {
-					continue
-				}
-				parts = parts[1:]
-				for _, part := range parts {
-					switch part {
-					case "omitempty":
-						optional = "?"
-					default:
-						panic(fmt.Sprintf("unhandled json tag %s", part))
-					}
-				}
-			} else {
-				name = f.Name
-			}
-			if f.PkgPath != "" {
-				// skip private fields
-				continue
-			}
-			sourceFieldDoc := renderDocComment(getFieldDoc(t, f.Name), "    ")
-			switch mode {
-			case structModeObject:
-				sourceFields += fmt.Sprintf("%s    %s%s: %s;\n", sourceFieldDoc, name, optional, visitType(f.Type))
-			case structModeArray:
-				if optional != "" {
-					panic("unhandled optional in mode array")
-				}
-				sourceFields += fmt.Sprintf("%s    %s: %s,\n", sourceFieldDoc, name, visitType(f.Type))
-			default:
-				panic(fmt.Sprintf("unhandled struct field in mode %s", mode))
-			}
-		}
-		if t == reflect.TypeOf(registry.VersionInfo{}) {
-			// `.TEE` contains serialized `Constraints` for use with detached
-			// signature
-			visitType(reflect.TypeOf(node.SGXConstraints{}))
-			encounteredVersionInfo = true
-		}
-		if sourceFields == "" && extendsType != nil {
-			// there's a convention where we have a struct that wraps
-			// `signature.Signed` with an `Open` method that has an out
-			// pointer to the type of the signed data.
-			if extendsType == reflect.TypeOf(signature.Signed{}) {
-				visitSigned(t)
-			}
-			return extendsRef
-		}
-		if mode == structModeObject && sourceFields == "" && extendsType == nil {
-			mode = structModeEmptyMap
-		}
-		var source string
-		switch mode {
-		case structModeObject:
-			source = fmt.Sprintf("%sexport interface %s%s {\n%s}\n", sourceDoc, ref, sourceExtends, sourceFields)
-		case structModeArray:
-			if extendsType != nil {
-				panic("unhandled extends in mode array")
-			}
-			source = fmt.Sprintf("%sexport type %s = [\n%s];\n", sourceDoc, ref, sourceFields)
-		case structModeEmptyMap:
-			if extendsType != nil {
-				panic("unhandled extends in mode empty-map")
-			}
-			if sourceFields != "" {
-				panic("unhandled source fields in mode empty-map")
-			}
-			source = fmt.Sprintf("%sexport type %s = Map<never, never>;\n", sourceDoc, ref)
-		}
-		ut := usedType{ref, source}
-		used = append(used, &ut)
-		memo[t] = &ut
-		return ref
+		return importedRef(visitStruct(t), typesDot)
 	// UnsafePointer begone
 	default:
 		panic(fmt.Sprintf("unhandled kind %v", t.Kind()))
 	}
 }
 
+const (
+	descriptorKindUnary           = "Unary"
+	descriptorKindServerStreaming = "ServerStreaming"
+)
+
 var skipMethods = map[string]bool{
-	"github.com/oasisprotocol/oasis-core/go/roothash/api.Backend.TrackRuntime":      true,
-	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized":        true,
+	"github.com/oasisprotocol/oasis-core/go/roothash/api.Backend.TrackRuntime": true,
+	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized":   true,
+	// Cleanup functions
+	"github.com/oasisprotocol/oasis-core/go/scheduler/api.Backend.Cleanup":  true,
+	"github.com/oasisprotocol/oasis-core/go/registry/api.Backend.Cleanup":   true,
+	"github.com/oasisprotocol/oasis-core/go/staking/api.Backend.Cleanup":    true,
+	"github.com/oasisprotocol/oasis-core/go/roothash/api.Backend.Cleanup":   true,
+	"github.com/oasisprotocol/oasis-core/go/governance/api.Backend.Cleanup": true,
+	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Cleanup":    true,
+	// getters for other APIs
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Beacon":     true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Registry":   true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Staking":    true,
@@ -443,10 +555,17 @@ var skipMethods = map[string]bool{
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Governance": true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.RootHash":   true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.State":      true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.LightClientBackend.State": true,
+	// methods in consensus ClientBackend that we need to emit from LightClientBackend instead
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.GetLightBlock":         true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.GetLightBlockForState": true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.GetParameters":         true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.SubmitTxNoWait":        true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.SubmitEvidence":        true,
 }
 var skipMethodsConsulted = map[string]bool{}
 
-func visitClient(t reflect.Type) {
+func visitClientWithPrefix(client *clientCode, t reflect.Type, prefix string) {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting client %v\n", t)
 	for i := 0; i < t.NumMethod(); i++ {
 		m := t.Method(i)
@@ -456,13 +575,27 @@ func visitClient(t reflect.Type) {
 			skipMethodsConsulted[sig] = true
 			continue
 		}
+		descriptorKind := descriptorKindUnary
+		var inArgIndex int
+		var inRef string
+		var outRef string
 		for j := 0; j < m.Type.NumIn(); j++ {
 			u := m.Type.In(j)
 			// skip context
 			if u == reflect.TypeOf((*context.Context)(nil)).Elem() {
 				continue
 			}
-			visitType(u)
+			// writer means streaming byte array output
+			if u == reflect.TypeOf((*io.Writer)(nil)).Elem() {
+				descriptorKind = descriptorKindServerStreaming
+				outRef = visitType(reflect.TypeOf([]byte{}), true)
+				continue
+			}
+			if inRef != "" {
+				_, _ = fmt.Fprintf(os.Stderr, "type %v method %v unexpected multiple in types\n", t, m)
+			}
+			inArgIndex = j
+			inRef = visitType(u, true)
 		}
 		for j := 0; j < m.Type.NumOut(); j++ {
 			u := m.Type.Out(j)
@@ -477,14 +610,56 @@ func visitClient(t reflect.Type) {
 			if u == reflect.TypeOf((*error)(nil)).Elem() {
 				continue
 			}
+			if outRef != "" {
+				_, _ = fmt.Fprintf(os.Stderr, "type %v method %v unexpected multiple out types\n", t, m)
+			}
+			// visit sync chunk instead
+			if u == reflect.TypeOf((*storage.WriteLogIterator)(nil)).Elem() {
+				u = reflect.TypeOf(storage.SyncChunk{})
+				descriptorKind = descriptorKindServerStreaming
+			}
 			// visit stream datum instead
 			if u.Kind() == reflect.Chan {
-				visitType(u.Elem())
-				continue
+				u = u.Elem()
+				descriptorKind = descriptorKindServerStreaming
 			}
-			visitType(u)
+			outRef = visitType(u, true)
 		}
+		var inParam, inArg string
+		if inRef == "" {
+			inRef = "void"
+			inArg = "undefined"
+		} else {
+			inArg = getMethodArgName(t, m.Name, inArgIndex)
+			if inArg == "" {
+				// why didn't we put the name in the interface spec ugh
+				switch {
+				case m.Type.In(inArgIndex) == reflect.TypeOf(uint64(0)) || m.Type.In(inArgIndex) == reflect.TypeOf(int64(0)):
+					// oh my god our codebase
+					inArg = "height"
+				case m.Type.In(inArgIndex) == reflect.TypeOf(beacon.EpochTime(0)):
+					inArg = "epoch"
+				default:
+					inArg = "query"
+				}
+			}
+			inParam = inArg + ": " + inRef
+		}
+		if outRef == "" {
+			outRef = "void"
+		}
+		methodDoc := renderDocComment(getMethodDoc(t, m.Name), "    ")
+		lowerPrefix := strings.ToLower(prefix[:1]) + prefix[1:]
+		client.methodDescriptors += fmt.Sprintf("const methodDescriptor%s%s = createMethodDescriptor%s<%s, %s>('%s', '%s');\n", prefix, m.Name, descriptorKind, inRef, outRef, prefix, m.Name)
+		client.methods += fmt.Sprintf("%s    %s%s(%s) { return this.call%s(methodDescriptor%s%s, %s); }\n", methodDoc, lowerPrefix, m.Name, inParam, descriptorKind, prefix, m.Name, inArg)
+		client.methods += "\n"
 	}
+	client.methodDescriptors += "\n"
+}
+
+func visitClient(client *clientCode, t reflect.Type) {
+	prefix := getPrefix(t)
+	visitClientWithPrefix(client, t, prefix)
 }
 
 func write() {
@@ -497,33 +672,44 @@ func write() {
 	}
 }
 
+func writeClient(internal clientCode, className string) {
+	fmt.Print(internal.methodDescriptors)
+	fmt.Printf("export class %s extends GRPCWrapper {\n", className)
+	fmt.Print(internal.methods)
+	fmt.Print("}\n\n")
+}
+
 // might be nicer to add a function to list these in oasis-core
 //go:linkname registeredMethods github.com/oasisprotocol/oasis-core/go/consensus/api/transaction.registeredMethods
 var registeredMethods sync.Map
 
 func main() {
-	visitClient(reflect.TypeOf((*beacon.Backend)(nil)).Elem())
-	visitClient(reflect.TypeOf((*scheduler.Backend)(nil)).Elem())
-	visitClient(reflect.TypeOf((*registry.Backend)(nil)).Elem())
-	visitClient(reflect.TypeOf((*staking.Backend)(nil)).Elem())
-	visitClient(reflect.TypeOf((*keymanager.Backend)(nil)).Elem())
-	visitClient(reflect.TypeOf((*roothash.Backend)(nil)).Elem())
-	visitClient(reflect.TypeOf((*governance.Backend)(nil)).Elem())
-	visitClient(reflect.TypeOf((*runtimeClient.RuntimeClient)(nil)).Elem())
-	visitClient(reflect.TypeOf((*storage.Backend)(nil)).Elem())
-	visitClient(reflect.TypeOf((*workerStorage.StorageWorker)(nil)).Elem())
-	visitClient(reflect.TypeOf((*consensus.ClientBackend)(nil)).Elem())
-	visitClient(reflect.TypeOf((*control.NodeController)(nil)).Elem())
-	visitClient(reflect.TypeOf((*control.DebugController)(nil)).Elem())
+	var internal clientCode
+	visitClient(&internal, reflect.TypeOf((*beacon.Backend)(nil)).Elem())
+	visitClient(&internal, reflect.TypeOf((*scheduler.Backend)(nil)).Elem())
+	visitClient(&internal, reflect.TypeOf((*registry.Backend)(nil)).Elem())
+	visitClient(&internal, reflect.TypeOf((*staking.Backend)(nil)).Elem())
+	visitClient(&internal, reflect.TypeOf((*keymanager.Backend)(nil)).Elem())
+	visitClient(&internal, reflect.TypeOf((*roothash.Backend)(nil)).Elem())
+	visitClient(&internal, reflect.TypeOf((*governance.Backend)(nil)).Elem())
+	visitClient(&internal, reflect.TypeOf((*storage.Backend)(nil)).Elem())
+	visitClientWithPrefix(&internal, reflect.TypeOf((*workerStorage.StorageWorker)(nil)).Elem(), "StorageWorker")
+	visitClient(&internal, reflect.TypeOf((*runtimeClient.RuntimeClient)(nil)).Elem())
+	visitClient(&internal, reflect.TypeOf((*consensus.ClientBackend)(nil)).Elem())
+	visitClientWithPrefix(&internal, reflect.TypeOf((*consensus.LightClientBackend)(nil)).Elem(), "ConsensusLight")
+	visitClientWithPrefix(&internal, reflect.TypeOf((*syncer.ReadSyncer)(nil)).Elem(), "ConsensusLightState") // this doesn't work right
+	visitClientWithPrefix(&internal, reflect.TypeOf((*control.NodeController)(nil)).Elem(), "NodeController")
+	visitClientWithPrefix(&internal, reflect.TypeOf((*control.DebugController)(nil)).Elem(), "DebugController")
 
 	_, _ = fmt.Fprintf(os.Stderr, "visiting transaction body types\n")
 	registeredMethods.Range(func(name, bodyType interface{}) bool {
 		_, _ = fmt.Fprintf(os.Stderr, "visiting method %v\n", name)
-		visitType(reflect.TypeOf(bodyType))
+		visitType(reflect.TypeOf(bodyType), false)
 		return true
 	})
 
 	write()
+	writeClient(internal, "NodeInternal")
 	for p := range modulePaths {
 		if !modulePathsConsulted[p] {
 			panic(fmt.Sprintf("unused module path %s", p))
