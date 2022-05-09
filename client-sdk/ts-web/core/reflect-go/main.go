@@ -226,11 +226,6 @@ func getStructName(t reflect.Type) string {
 	return prefix + t.Name()
 }
 
-var (
-	mapKeyNames          = map[reflect.Type]string{}
-	mapKeyNamesConsulted = map[reflect.Type]bool{}
-)
-
 func getMapKeyName(t reflect.Type) string {
 	switch t.Key() {
 	case reflect.TypeOf(transaction.Op("")):
@@ -545,11 +540,6 @@ func main() {
 	for prefix := range prefixByPackage {
 		if !prefixConsulted[prefix] {
 			panic(fmt.Sprintf("unused prefix %s", prefix))
-		}
-	}
-	for t := range mapKeyNames {
-		if !mapKeyNamesConsulted[t] {
-			panic(fmt.Sprintf("unused map key name %v", t))
 		}
 	}
 	if !encounteredVersionInfo {
