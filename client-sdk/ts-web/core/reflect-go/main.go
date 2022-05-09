@@ -16,12 +16,12 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
 	"time"
+	_ "unsafe"
 
-	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
-	"github.com/oasisprotocol/oasis-core/go/common/entity"
 	"github.com/oasisprotocol/oasis-core/go/common/node"
 	"github.com/oasisprotocol/oasis-core/go/common/pubsub"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
@@ -504,45 +504,30 @@ func write() {
 	}
 }
 
+// might be nicer to add a function to list these in oasis-core
+//go:linkname registeredMethods github.com/oasisprotocol/oasis-core/go/consensus/api/transaction.registeredMethods
+var registeredMethods sync.Map
+
 func main() {
-	visitType(reflect.TypeOf((*beacon.EpochTime)(nil)).Elem())
-
 	visitClient(reflect.TypeOf((*scheduler.Backend)(nil)).Elem())
-
 	visitClient(reflect.TypeOf((*registry.Backend)(nil)).Elem())
-	visitType(reflect.TypeOf((*entity.SignedEntity)(nil)).Elem())
-	visitType(reflect.TypeOf((*registry.DeregisterEntity)(nil)).Elem())
-	visitType(reflect.TypeOf((*node.MultiSignedNode)(nil)).Elem())
-	visitType(reflect.TypeOf((*registry.UnfreezeNode)(nil)).Elem())
-	visitType(reflect.TypeOf((*registry.Runtime)(nil)).Elem())
-
 	visitClient(reflect.TypeOf((*staking.Backend)(nil)).Elem())
-	visitType(reflect.TypeOf((*staking.Transfer)(nil)).Elem())
-	visitType(reflect.TypeOf((*staking.Burn)(nil)).Elem())
-	visitType(reflect.TypeOf((*staking.Escrow)(nil)).Elem())
-	visitType(reflect.TypeOf((*staking.ReclaimEscrow)(nil)).Elem())
-	visitType(reflect.TypeOf((*staking.AmendCommissionSchedule)(nil)).Elem())
-	visitType(reflect.TypeOf((*staking.Allow)(nil)).Elem())
-	visitType(reflect.TypeOf((*staking.Withdraw)(nil)).Elem())
-
 	visitClient(reflect.TypeOf((*keymanager.Backend)(nil)).Elem())
-	visitType(reflect.TypeOf((*keymanager.SignedPolicySGX)(nil)).Elem())
-
 	visitClient(reflect.TypeOf((*roothash.Backend)(nil)).Elem())
-	visitType(reflect.TypeOf((*roothash.ExecutorCommit)(nil)).Elem())
-	visitType(reflect.TypeOf((*roothash.ExecutorProposerTimeoutRequest)(nil)).Elem())
-	visitType(reflect.TypeOf((*roothash.Evidence)(nil)).Elem())
-
 	visitClient(reflect.TypeOf((*governance.Backend)(nil)).Elem())
-	visitType(reflect.TypeOf((*governance.ProposalContent)(nil)).Elem())
-	visitType(reflect.TypeOf((*governance.ProposalVote)(nil)).Elem())
-
 	visitClient(reflect.TypeOf((*runtimeClient.RuntimeClient)(nil)).Elem())
 	visitClient(reflect.TypeOf((*storage.Backend)(nil)).Elem())
 	visitClient(reflect.TypeOf((*workerStorage.StorageWorker)(nil)).Elem())
 	visitClient(reflect.TypeOf((*consensus.ClientBackend)(nil)).Elem())
 	visitClient(reflect.TypeOf((*control.NodeController)(nil)).Elem())
 	visitClient(reflect.TypeOf((*control.DebugController)(nil)).Elem())
+
+	_, _ = fmt.Fprintf(os.Stderr, "visiting transaction body types\n")
+	registeredMethods.Range(func(name, bodyType interface{}) bool {
+		_, _ = fmt.Fprintf(os.Stderr, "visiting method %v\n", name)
+		visitType(reflect.TypeOf(bodyType))
+		return true
+	})
 
 	write()
 	for p := range modulePaths {
