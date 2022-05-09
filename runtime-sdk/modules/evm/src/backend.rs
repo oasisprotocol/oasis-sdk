@@ -20,6 +20,23 @@ pub struct Vicinity {
     pub origin: H160,
 }
 
+/// This macro is like `fn with_storage(ctx, addr, f: FnOnce(impl Storage) -> T) ->T`
+/// that chooses public/confidential storage, if that such a function were possible to
+/// write without the compiler complaining about unspecified generic type errors.
+macro_rules! with_storage {
+    ($ctx:expr, $addr:expr, |$store:ident| $handler:expr) => {
+        if Cfg::CONFIDENTIAL {
+            #[allow(unused_mut)]
+            let mut $store = state::confidential_storage($ctx, $addr);
+            $handler
+        } else {
+            #[allow(unused_mut)]
+            let mut $store = state::public_storage($ctx, $addr);
+            $handler
+        }
+    };
+}
+
 /// Backend for the evm crate that enables the use of our storage.
 pub struct Backend<'ctx, C: Context, Cfg: Config> {
     vicinity: Vicinity,
@@ -125,8 +142,7 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
         let idx: H256 = index.into();
 
         let mut ctx = self.ctx.borrow_mut();
-        let store = state::storage(*ctx, &address);
-        let res: H256 = store.get(&idx).unwrap_or_default();
+        let res: H256 = with_storage!(*ctx, &address, |store| store.get(&idx).unwrap_or_default());
         res.into()
     }
 
@@ -241,11 +257,11 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
                         let idx: H256 = index.into();
                         let val: H256 = value.into();
 
-                        let mut store = state::storage(*self.ctx.get_mut(), &addr);
+                        let ctx = self.ctx.get_mut();
                         if value == primitive_types::H256::default() {
-                            store.remove(&idx);
+                            with_storage!(*ctx, &addr, |store| store.remove(&idx));
                         } else {
-                            store.insert(&idx, val);
+                            with_storage!(*ctx, &addr, |store| store.insert(&idx, val));
                         }
                     }
                 }

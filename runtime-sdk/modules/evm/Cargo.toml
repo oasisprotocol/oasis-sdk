@@ -31,6 +31,3 @@ fixed-hash = "0.7.0"
 primitive-types = { version = "0.10.1", default-features = false, features = ["rlp", "num-traits"] }
 rlp = "0.5.1"
 uint = "0.9.1"
-
-[features]
-confidential = [] # Use confidential storage by default.

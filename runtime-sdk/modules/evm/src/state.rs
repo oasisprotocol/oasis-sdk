@@ -9,33 +9,15 @@ pub const STORAGES: &[u8] = &[0x02];
 /// Prefix for Ethereum block hashes (only for last BLOCK_HASH_WINDOW_SIZE blocks
 /// excluding current) storage in our storage (maps Round -> H256).
 pub const BLOCK_HASHES: &[u8] = &[0x03];
-#[cfg(feature = "confidential")]
 /// Prefix for Ethereum account storage in our confidential storage (maps H160||H256 -> H256).
 pub const CONFIDENTIAL_STORAGES: &[u8] = &[0x04];
 
-#[cfg(feature = "confidential")]
 /// Confidential store key pair ID domain separation context base.
 pub const CONFIDENTIAL_STORE_KEY_PAIR_ID_CONTEXT_BASE: &[u8] = b"oasis-runtime-sdk/evm: state";
-#[cfg(feature = "confidential")]
 const CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT: &str = "evm.ConfidentialStoreCounter";
 
 /// The number of hash blocks that can be obtained from the current blockchain.
 pub const BLOCK_HASH_WINDOW_SIZE: u64 = 256;
-
-/// Get a typed store for the given address' storage.
-pub fn storage<'a, C: Context>(
-    ctx: &'a mut C,
-    address: &'a H160,
-) -> storage::TypedStore<impl storage::Store + 'a> {
-    #[cfg(feature = "confidential")]
-    {
-        confidential_storage(ctx, address)
-    }
-    #[cfg(not(feature = "confidential"))]
-    {
-        public_storage(ctx, address)
-    }
-}
 
 pub fn public_storage<'a, C: Context>(
     ctx: &'a mut C,
@@ -46,26 +28,20 @@ pub fn public_storage<'a, C: Context>(
     ))
 }
 
-#[cfg(feature = "confidential")]
 pub fn confidential_storage<'a, C: Context>(
     ctx: &'a mut C,
     address: &'a H160,
 ) -> storage::TypedStore<Box<dyn storage::Store + 'a>> {
-    fn empty_store() -> storage::TypedStore<Box<dyn storage::Store>> {
-        storage::TypedStore::new(Box::new(storage::EmptyStore::new()))
-    }
-    let kmgr_client = match ctx.key_manager() {
-        Some(kmgr_client) => kmgr_client,
-        None => return empty_store(),
-    };
+    let kmgr_client = ctx
+        .key_manager()
+        .expect("key manager must be available to use confidential storage");
     let key_id = oasis_runtime_sdk::keymanager::get_key_pair_id(&[
         CONFIDENTIAL_STORE_KEY_PAIR_ID_CONTEXT_BASE,
         address.as_ref(),
     ]);
-    let keypair = match kmgr_client.get_or_create_keys(key_id) {
-        Ok(keypair) => keypair,
-        Err(_) => return empty_store(),
-    };
+    let keypair = kmgr_client
+        .get_or_create_keys(key_id)
+        .expect("unable to retrieve confidential storage keys");
     let confidential_key = keypair.state_key;
 
     // These values are used to derive the confidential store nonce:

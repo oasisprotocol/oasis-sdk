@@ -55,6 +55,9 @@ pub trait Config: 'static {
     /// Token denomination used as the native EVM token.
     const TOKEN_DENOMINATION: token::Denomination;
 
+    /// Whether to use confidential storage by default, and transaction data encryption.
+    const CONFIDENTIAL: bool = false;
+
     /// Maps an Ethereum address into an SDK account address.
     fn map_address(address: primitive_types::H160) -> Address {
         Address::new(

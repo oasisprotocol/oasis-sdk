@@ -209,6 +209,7 @@ mod test {
 
     use super::decode;
 
+    #[allow(clippy::too_many_arguments)]
     fn decode_expect_call(
         raw: &str,
         expected_chain_id: Option<u64>,
@@ -241,6 +242,7 @@ mod test {
         assert_eq!(tx.auth_info.fee.gas, expected_gas_limit);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn decode_expect_create(
         raw: &str,
         expected_chain_id: Option<u64>,
