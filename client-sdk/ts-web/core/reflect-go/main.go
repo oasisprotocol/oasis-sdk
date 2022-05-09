@@ -20,6 +20,7 @@ import (
 	"time"
 	_ "unsafe"
 
+	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/node"
@@ -509,6 +510,7 @@ func write() {
 var registeredMethods sync.Map
 
 func main() {
+	visitClient(reflect.TypeOf((*beacon.Backend)(nil)).Elem())
 	visitClient(reflect.TypeOf((*scheduler.Backend)(nil)).Elem())
 	visitClient(reflect.TypeOf((*registry.Backend)(nil)).Elem())
 	visitClient(reflect.TypeOf((*staking.Backend)(nil)).Elem())
