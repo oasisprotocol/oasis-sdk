@@ -1,12 +1,3 @@
-import * as misc from './misc';
-import * as signature from './signature';
-import * as types from './types';
-
-/**
- * ReceiptSignatureContext is the signature context used for verifying MKVS receipts.
- */
-export const RECEIPT_SIGNATURE_CONTEXT = 'oasis-core/storage: receipt';
-
 export const CHECKPOINT_VERSION = 1;
 
 /**
@@ -161,17 +152,3 @@ export const MKVS_DB_ERR_INVALID_MULTIPART_VERSION_CODE = 14;
  * database is therefore unusable. Run the upgrade tool to finish upgrading.
  */
 export const MKVS_DB_ERR_UPGRADE_IN_PROGRESS_CODE = 15;
-
-export async function openReceipt(chainContext: string, receipt: types.SignatureSigned) {
-    const context = signature.combineChainContext(RECEIPT_SIGNATURE_CONTEXT, chainContext);
-    return misc.fromCBOR(await signature.openSigned(context, receipt)) as types.StorageReceiptBody;
-}
-
-export async function signReceipt(
-    signer: signature.ContextSigner,
-    chainContext: string,
-    receiptBody: types.StorageReceiptBody,
-) {
-    const context = signature.combineChainContext(RECEIPT_SIGNATURE_CONTEXT, chainContext);
-    return await signature.signSigned(signer, context, misc.toCBOR(receiptBody));
-}
