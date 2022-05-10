@@ -183,29 +183,34 @@ export const ERR_INVALID_ROUND_CODE = 18;
 export const ERR_NO_PROPOSER_COMMITMENT_CODE = 19;
 export const ERR_BAD_PROPOSER_COMMITMENT_CODE = 20;
 
-export async function openExecutorCommitment(
+export async function verifyExecutorCommitment(
     chainContext: string,
     runtimeID: Uint8Array,
-    signed: types.SignatureSigned,
+    commitment: types.RootHashExecutorCommitment,
 ) {
     const context = `${signature.combineChainContext(
         EXECUTOR_SIGNATURE_CONTEXT,
         chainContext,
     )} for runtime ${misc.toHex(runtimeID)}`;
-    return misc.fromCBOR(await signature.openSigned(context, signed)) as types.RootHashComputeBody;
+    return await signature.verify(
+        commitment.node_id,
+        context,
+        misc.toCBOR(commitment.header),
+        commitment.sig,
+    );
 }
 
 export async function signExecutorCommitment(
     signer: signature.ContextSigner,
     chainContext: string,
     runtimeID: Uint8Array,
-    computeBody: types.RootHashComputeBody,
+    header: types.RootHashExecutorCommitmentHeader,
 ) {
     const context = `${signature.combineChainContext(
         EXECUTOR_SIGNATURE_CONTEXT,
         chainContext,
     )} for runtime ${misc.toHex(runtimeID)}`;
-    return await signature.signSigned(signer, context, misc.toCBOR(computeBody));
+    return await signer.sign(context, misc.toCBOR(header));
 }
 
 export async function verifyComputeResultsHeader(
@@ -228,31 +233,34 @@ export async function signComputeResultsHeader(
     return await rakSigner.sign(COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT, misc.toCBOR(header));
 }
 
-export async function openProposedBatch(
+export async function verifyProposal(
     chainContext: string,
     runtimeID: Uint8Array,
-    signed: types.SignatureSigned,
+    proposal: types.RootHashProposal,
 ) {
     const context = `${signature.combineChainContext(
-        PROPOSED_BATCH_SIGNATURE_CONTEXT,
+        PROPOSAL_SIGNATURE_CONTEXT,
         chainContext,
     )} for runtime ${misc.toHex(runtimeID)}`;
-    return misc.fromCBOR(
-        await signature.openSigned(context, signed),
-    ) as types.RootHashProposedBatch;
+    return await signature.verify(
+        proposal.node_id,
+        context,
+        misc.toCBOR(proposal.header),
+        proposal.sig,
+    );
 }
 
-export async function signProposedBatch(
+export async function signProposal(
     signer: signature.ContextSigner,
     chainContext: string,
     runtimeID: Uint8Array,
-    proposedBatch: types.RootHashProposedBatch,
+    header: types.RootHashProposalHeader,
 ) {
     const context = `${signature.combineChainContext(
-        PROPOSED_BATCH_SIGNATURE_CONTEXT,
+        PROPOSAL_SIGNATURE_CONTEXT,
         chainContext,
     )} for runtime ${misc.toHex(runtimeID)}`;
-    return await signature.signSigned(signer, context, misc.toCBOR(proposedBatch));
+    return await signer.sign(context, misc.toCBOR(header));
 }
 
 export function executorCommitWrapper() {
