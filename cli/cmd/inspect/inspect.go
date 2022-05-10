@@ -24,8 +24,12 @@ func init() {
 
 	nodeStatusCmd.Flags().AddFlagSet(common.SelectorFlags)
 
+	registryCmd.Flags().AddFlagSet(common.SelectorFlags)
+	registryCmd.Flags().AddFlagSet(common.HeightFlag)
+
 	Cmd.AddCommand(governanceProposalCmd)
 	Cmd.AddCommand(runtimeStatsCmd)
 	Cmd.AddCommand(nativeTokenCmd)
 	Cmd.AddCommand(nodeStatusCmd)
+	Cmd.AddCommand(registryCmd)
 }
