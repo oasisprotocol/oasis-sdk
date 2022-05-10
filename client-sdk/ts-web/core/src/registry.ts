@@ -103,7 +103,7 @@ export const GOVERNANCE_MAX = GOVERNANCE_CONSENSUS;
  * LatestRuntimeDescriptorVersion is the latest entity descriptor version that should be used
  * for all new descriptors. Using earlier versions may be rejected.
  */
-export const LATEST_RUNTIME_DESCRIPTOR_VERSION = 2;
+export const LATEST_RUNTIME_DESCRIPTOR_VERSION = 3;
 
 /**
  * ModuleName is a unique module name for the registry module.

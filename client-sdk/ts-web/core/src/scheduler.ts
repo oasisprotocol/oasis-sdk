@@ -20,15 +20,6 @@ export const KIND_INVALID = 0;
  */
 export const KIND_COMPUTE_EXECUTOR = 1;
 /**
- * KindStorage is a storage committee.
- */
-export const KIND_STORAGE = 2;
-/**
  * MaxCommitteeKind is a dummy value used for iterating all committee kinds.
  */
-export const MAX_COMMITTEE_KIND = 3;
-
-/**
- * TxnSchedulerSimple is the name of the simple batching algorithm.
- */
-export const TXN_SCHEDULER_SIMPLE = 'simple';
+export const MAX_COMMITTEE_KIND = 2;

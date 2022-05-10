@@ -2,13 +2,9 @@ import * as consensus from './consensus';
 import * as types from './types';
 
 /**
- * MethodPVSSCommit is the method name for a PVSS commitment.
+ * MethodVRFProve is the method name for a VRF proof.
  */
-export const METHOD_PVSS_COMMIT = 'beacon.PVSSCommit';
-/**
- * MethodPVSSReveal is the method name for a PVSS reveal.
- */
-export const METHOD_PVSS_REVEAL = 'beacon.PVSSReveal';
+export const METHOD_VRF_PROVE = 'beacon.VRFProve';
 /**
  * MethodSetEpoch is the method name for setting epochs.
  */
@@ -19,9 +15,9 @@ export const METHOD_SET_EPOCH = '000_beacon.SetEpoch';
  */
 export const BACKEND_INSECURE = 'insecure';
 /**
- * BackendPVSS is the name of the PVSS backend.
+ * BackendVRF is the name of the VRF backend.
  */
-export const BACKEND_PVSS = 'pvss';
+export const BACKEND_VRF = 'vrf';
 
 /**
  * ModuleName is a unique module name for the beacon module.
@@ -34,12 +30,8 @@ export const MODULE_NAME = 'beacon';
  */
 export const ERR_BEACON_NOT_AVAILABLE_CODE = 1;
 
-export function pvssCommitWrapper() {
-    return new consensus.TransactionWrapper<types.BeaconPVSSCommit>(METHOD_PVSS_COMMIT);
-}
-
-export function pvssRevealWrapper() {
-    return new consensus.TransactionWrapper<types.BeaconPVSSReveal>(METHOD_PVSS_REVEAL);
+export function vrfProveWrapper() {
+    return new consensus.TransactionWrapper<types.BeaconVRFProve>(METHOD_VRF_PROVE);
 }
 
 export function setEpochWrapper() {

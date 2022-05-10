@@ -15,10 +15,9 @@ export const EXECUTOR_SIGNATURE_CONTEXT = 'oasis-core/roothash: executor commitm
 export const COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT =
     'oasis-core/roothash: compute results header';
 /**
- * ProposedBatchSignatureContext is the context used for signing propose batch
- * dispatch messages.
+ * ProposalSignatureContext is the context used for signing propose batch dispatch messages.
  */
-export const PROPOSED_BATCH_SIGNATURE_CONTEXT = 'oasis-core/roothash: proposed batch';
+export const PROPOSAL_SIGNATURE_CONTEXT = 'oasis-core/roothash: proposal';
 
 /**
  * MethodExecutorCommit is the method name for executor commit submission.
@@ -32,6 +31,10 @@ export const METHOD_EXECUTOR_PROPOSER_TIMEOUT = 'roothash.ExecutorProposerTimeou
  * MethodEvidence is the method name for submitting evidence of node misbehavior.
  */
 export const METHOD_EVIDENCE = 'roothash.Evidence';
+/**
+ * MethodSubmitMsg is the method name for queuing incoming runtime messages.
+ */
+export const METHOD_SUBMIT_MSG = 'roothash.SubmitMsg';
 
 /**
  * GasOpComputeCommit is the gas operation identifier for compute commits.
@@ -45,6 +48,10 @@ export const GAS_OP_PROPOSER_TIMEOUT = 'proposer_timeout';
  * GasOpEvidence is the gas operation identifier for evidence submission transaction cost.
  */
 export const GAS_OP_EVIDENCE = 'evidence';
+/**
+ * GasOpSubmitMsg is the gas operation identifier for message submission transaction cost.
+ */
+export const GAS_OP_SUBMIT_MSG = 'submit_msg';
 
 /**
  * Invalid is an invalid header type and should never be stored.
@@ -134,9 +141,23 @@ export const ERR_RUNTIME_DOES_NOT_SLASH_CODE = 8;
  */
 export const ERR_DUPLICATE_EVIDENCE_CODE = 9;
 /**
- * ErrInvalidEvidence is the error return when an invalid evidence is submitted.
+ * ErrInvalidEvidence is the error returned when an invalid evidence is submitted.
  */
 export const ERR_INVALID_EVIDENCE_CODE = 10;
+/**
+ * ErrIncomingMessageQueueFull is the error returned when the incoming message queue is full.
+ */
+export const ERR_INCOMING_MESSAGE_QUEUE_FULL_CODE = 11;
+/**
+ * ErrIncomingMessageInsufficientFee is the error returned when the provided fee is smaller than
+ * the configured minimum incoming message submission fee.
+ */
+export const ERR_INCOMING_MESSAGE_INSUFFICIENT_FEE_CODE = 12;
+/**
+ * ErrMaxInMessagesTooBig is the error returned when the MaxInMessages parameter is set to a
+ * value larger than the MaxInRuntimeMessages specified in consensus parameters.
+ */
+export const ERR_MAX_IN_MESSAGES_TOO_BIG_CODE = 13;
 
 /**
  * moduleName is the module name used for namespacing errors.
@@ -154,9 +175,7 @@ export const ERR_DISCREPANCY_DETECTED_CODE = 8;
 export const ERR_STILL_WAITING_CODE = 9;
 export const ERR_INSUFFICIENT_VOTES_CODE = 10;
 export const ERR_BAD_EXECUTOR_COMMITMENT_CODE = 11;
-export const ERR_TXN_SCHED_SIG_INVALID_CODE = 12;
 export const ERR_INVALID_MESSAGES_CODE = 13;
-export const ERR_BAD_STORAGE_RECEIPTS_CODE = 14;
 export const ERR_TIMEOUT_NOT_CORRECT_ROUND_CODE = 15;
 export const ERR_NODE_IS_SCHEDULER_CODE = 16;
 export const ERR_MAJORITY_FAILURE_CODE = 17;
@@ -248,4 +267,8 @@ export function executorProposerTimeoutWrapper() {
 
 export function evidenceWrapper() {
     return new consensus.TransactionWrapper<types.RootHashEvidence>(METHOD_EVIDENCE);
+}
+
+export function submitMsgWrapper() {
+    return new consensus.TransactionWrapper<types.RootHashSubmitMsg>(METHOD_SUBMIT_MSG);
 }
