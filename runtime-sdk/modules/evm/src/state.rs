@@ -34,7 +34,7 @@ pub fn confidential_storage<'a, C: Context>(
 ) -> storage::TypedStore<Box<dyn storage::Store + 'a>> {
     let kmgr_client = ctx
         .key_manager()
-        .expect("key manager must be available to use confidential storage");
+        .expect("key manager must be available to use confidentiality");
     let key_id = oasis_runtime_sdk::keymanager::get_key_pair_id(&[
         CONFIDENTIAL_STORE_KEY_PAIR_ID_CONTEXT_BASE,
         address.as_ref(),

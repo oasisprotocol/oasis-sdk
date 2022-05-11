@@ -17,6 +17,7 @@ use once_cell::sync::Lazy;
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
+    callformat,
     context::{BatchContext, Context, TxContext},
     handler,
     module::{self, Module as _},
@@ -324,6 +325,9 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
+        let (init_code, _) = Self::decode_call_data(ctx, init_code, ctx.tx_index(), true)?
+            .expect("processing proceeds");
+
         Self::do_evm(
             caller,
             ctx,
@@ -353,6 +357,9 @@ impl<Cfg: Config> API for Module<Cfg> {
             // Only fast checks are allowed.
             return Ok(vec![]);
         }
+
+        let (data, tx_metadata) =
+            Self::decode_call_data(ctx, data, ctx.tx_index(), true)?.expect("processing proceeds");
 
         Self::do_evm(
             caller,
@@ -400,6 +407,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         value: U256,
         data: Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
+        let data = Self::decode_call_data(ctx, data, 0, true)?.expect("processing proceeds");
         ctx.with_simulation(|mut sctx| {
             let call_tx = transaction::Transaction {
                 version: 1,
@@ -427,7 +435,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                     },
                 },
             };
-            sctx.with_tx(0, call_tx, |mut txctx, _call| {
+            sctx.with_tx(0, 0, call_tx, |mut txctx, _call| {
                 Self::do_evm(
                     caller,
                     &mut txctx,
@@ -550,6 +558,34 @@ impl<Cfg: Config> Module<Cfg> {
         C: TxContext,
     {
         derive_caller::from_tx_auth_info(ctx.tx_auth_info())
+    }
+
+    /// Returns the decrypted call data or `None` if this transaction is simulated in
+    /// a context that may not include a key manager (i.e. SimulateCall but not EstimateGas).
+    fn decode_call_data<C: Context>(
+        ctx: &C,
+        data: Vec<u8>,
+        tx_index: usize,
+        assume_km_reachable: bool,
+    ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
+        if !Cfg::CONFIDENTIAL {
+            return Ok(Some((data, callformat::Metadata::Empty)));
+        }
+        let call = cbor::from_slice(&data)
+            .map_err(|_| CoreError::InvalidCallFormat(anyhow::anyhow!("invalid packed call")))?;
+        match callformat::decode_call_ex(ctx, call, tx_index, assume_km_reachable)? {
+            Some((
+                transaction::Call {
+                    body: cbor::Value::ByteString(data),
+                    ..
+                },
+                metadata,
+            )) => Ok(Some((data, metadata))),
+            Some((_, _)) => {
+                Err(CoreError::InvalidCallFormat(anyhow::anyhow!("invalid inner data")).into())
+            }
+            None => Ok(None),
+        }
     }
 }
 
