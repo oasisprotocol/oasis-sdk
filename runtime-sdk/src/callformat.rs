@@ -46,6 +46,20 @@ pub fn decode_call<C: Context>(
     call: Call,
     index: usize,
 ) -> Result<Option<(Call, Metadata)>, Error> {
+    decode_call_ex(ctx, call, index, false /* assume_km_reachable */)
+}
+
+/// Decode call arguments.
+///
+/// Returns `Some((Call, Metadata))` when processing should proceed and `None` in case further
+/// execution needs to be deferred (e.g., because key manager access is required).
+/// If `assume_km_reachable` is set, then this method will return errors instead of `None`.
+pub fn decode_call_ex<C: Context>(
+    ctx: &C,
+    call: Call,
+    index: usize,
+    assume_km_reachable: bool,
+) -> Result<Option<(Call, Metadata)>, Error> {
     match call.format {
         // In case of the plain-text data format, we simply pass on the call unchanged.
         CallFormat::Plain => Ok(Some((call, Metadata::Empty))),
@@ -68,7 +82,7 @@ pub fn decode_call<C: Context>(
 
             // If we are only doing checks, this is the most that we can do as in this case we may
             // be unable to access the key manager.
-            if ctx.is_check_only() || ctx.is_simulation() {
+            if !assume_km_reachable && (ctx.is_check_only() || ctx.is_simulation()) {
                 return Ok(None);
             }
 
