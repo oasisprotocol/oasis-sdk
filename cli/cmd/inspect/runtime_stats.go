@@ -9,6 +9,7 @@ import (
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	flag "github.com/spf13/pflag"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
@@ -25,6 +26,18 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/cli/metadata"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/connection"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
+)
+
+var (
+	writeCSV bool
+	fileCSV  string
+
+	csvFlags *flag.FlagSet = func() *flag.FlagSet {
+		fs := flag.NewFlagSet("", flag.ContinueOnError)
+		fs.BoolVar(&writeCSV, "write-csv", false, "write stats to CSV")
+		fs.StringVar(&fileCSV, "csv-file", "", "custom CSV file path")
+		return fs
+	}()
 )
 
 type runtimeStats struct {
@@ -176,12 +189,15 @@ var runtimeStatsCmd = &cobra.Command{
 		runtimeID := npa.ParaTime.Namespace()
 
 		// Parse command line arguments
-		var startHeight, endHeight uint64
+		var (
+			startHeightArg int64
+			endHeight      uint64
+		)
 		if argLen := len(args); argLen > 0 {
 			var err error
 
 			// Start height is present for 1 and 2 args.
-			startHeight, err = strconv.ParseUint(args[0], 10, 64)
+			startHeightArg, err = strconv.ParseInt(args[0], 10, 64)
 			cobra.CheckErr(err)
 
 			if argLen == 2 {
@@ -198,17 +214,27 @@ var runtimeStatsCmd = &cobra.Command{
 		consensusConn := conn.Consensus()
 
 		// Fixup the start/end heights if they were not specified (or are 0)
-		if startHeight == 0 {
-			var status *consensus.Status
-			status, err = consensusConn.GetStatus(ctx)
-			cobra.CheckErr(err)
-			startHeight = uint64(status.LastRetainedHeight)
-		}
 		if endHeight == 0 {
 			var blk *consensus.Block
 			blk, err = consensusConn.GetBlock(ctx, consensus.HeightLatest)
 			cobra.CheckErr(err)
 			endHeight = uint64(blk.Height)
+		}
+		var startHeight uint64
+		switch {
+		case startHeightArg < 0:
+			delta := uint64(-startHeightArg)
+			if endHeight <= delta {
+				cobra.CheckErr(fmt.Errorf("start-height %d will underflow end-height %d", startHeightArg, endHeight))
+			}
+			startHeight = endHeight - delta
+		case startHeightArg == 0:
+			var status *consensus.Status
+			status, err = consensusConn.GetStatus(ctx)
+			cobra.CheckErr(err)
+			startHeight = uint64(status.LastRetainedHeight)
+		default:
+			startHeight = uint64(startHeightArg)
 		}
 
 		chainCtx, err := consensusConn.GetChainContext(ctx)
@@ -216,7 +242,7 @@ var runtimeStatsCmd = &cobra.Command{
 		signature.SetChainContext(chainCtx)
 
 		fmt.Printf(
-			"gathering statistics: runtime_id: %s, start_height: %d, end_height: %d\n",
+			"gathering statistics: runtime-id: %s, start-height: %d, end-height: %d\n",
 			runtimeID,
 			startHeight,
 			endHeight,
@@ -507,8 +533,15 @@ var runtimeStatsCmd = &cobra.Command{
 		stats.prepareEntitiesOutput(entityMetadataLookup)
 		stats.printStats()
 
+		if !writeCSV {
+			return
+		}
+
 		// Also save entity stats in a csv.
-		fout, err := os.Create(fmt.Sprintf("runtime-%s-%d-%d-stats.csv", runtimeID, startHeight, endHeight))
+		if fileCSV == "" {
+			fileCSV = fmt.Sprintf("runtime-%s-%d-%d-stats.csv", runtimeID, startHeight, endHeight)
+		}
+		fout, err := os.Create(fileCSV)
 		cobra.CheckErr(err)
 		defer fout.Close()
 

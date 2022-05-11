@@ -3,13 +3,22 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
+	"math/big"
 	"os"
 
 	"github.com/spf13/cobra"
+	flag "github.com/spf13/pflag"
 
+	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/remote"
+	"github.com/oasisprotocol/oasis-core/go/common/grpc"
+	"github.com/oasisprotocol/oasis-core/go/common/identity"
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
+	cmdBackground "github.com/oasisprotocol/oasis-core/go/oasis-node/cmd/common/background"
 	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
@@ -24,6 +33,9 @@ import (
 )
 
 var (
+	commissionScheduleRates  []string
+	commissionScheduleBounds []string
+
 	accountsCmd = &cobra.Command{
 		Use:   "accounts",
 		Short: "Account operations",
@@ -656,6 +668,105 @@ var (
 		},
 	}
 
+	accountsAmendCommissionScheduleCmd = &cobra.Command{
+		Use:   "amend-commission-schedule",
+		Short: "Amend the account's commission schedule",
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := cliConfig.Global()
+			npa := common.GetNPASelection(cfg)
+			txCfg := common.GetTransactionConfig()
+
+			if npa.Account == nil {
+				cobra.CheckErr("no accounts configured in your wallet")
+			}
+			acc := common.LoadAccount(cfg, npa.AccountName)
+
+			// When not in offline mode, connect to the given network endpoint.
+			ctx := context.Background()
+			var (
+				conn connection.Connection
+
+				rules    *staking.CommissionScheduleRules
+				schedule *staking.CommissionSchedule
+				now      beacon.EpochTime
+			)
+			if !txCfg.Offline {
+				var err error
+				conn, err = connection.Connect(ctx, npa.Network)
+				cobra.CheckErr(err)
+
+				// And also query the various dynamic values required
+				// to validate the amendment.
+
+				var height int64
+				height, err = common.GetActualHeight(
+					ctx,
+					conn.Consensus(),
+				)
+				cobra.CheckErr(err)
+
+				now, err = conn.Consensus().Beacon().GetEpoch(ctx, height)
+				cobra.CheckErr(err)
+
+				addr, err := helpers.ResolveAddress(npa.Network, npa.Account.Address)
+				cobra.CheckErr(err)
+
+				stakingConn := conn.Consensus().Staking()
+
+				params, err := stakingConn.ConsensusParameters(ctx, height)
+				cobra.CheckErr(err)
+
+				consensusAccount, err := stakingConn.Account(
+					ctx,
+					&staking.OwnerQuery{
+						Owner:  addr.ConsensusAddress(),
+						Height: height,
+					},
+				)
+				cobra.CheckErr(err)
+
+				rules = &params.CommissionScheduleRules
+				schedule = &consensusAccount.Escrow.CommissionSchedule
+			}
+
+			var amendment staking.AmendCommissionSchedule
+			if rawRates := commissionScheduleRates; len(rawRates) > 0 {
+				amendment.Amendment.Rates = make([]staking.CommissionRateStep, len(rawRates))
+				for i, rawRate := range rawRates {
+					if err := scanRateStep(&amendment.Amendment.Rates[i], rawRate); err != nil {
+						cobra.CheckErr(fmt.Errorf("failed to parse commission schedule rate step %d: %w", i, err))
+					}
+				}
+			}
+			if rawBounds := commissionScheduleBounds; len(rawBounds) > 0 {
+				amendment.Amendment.Bounds = make([]staking.CommissionRateBoundStep, len(rawBounds))
+				for i, rawBound := range rawBounds {
+					if err := scanBoundStep(&amendment.Amendment.Bounds[i], rawBound); err != nil {
+						cobra.CheckErr(fmt.Errorf("failed to parse commission schedule bound step %d: %w", i, err))
+					}
+				}
+			}
+
+			if rules != nil && schedule != nil {
+				// If we are in online mode, try to validate the amendment.
+				err := schedule.AmendAndPruneAndValidate(
+					&amendment.Amendment,
+					rules,
+					now,
+				)
+				cobra.CheckErr(err)
+			}
+
+			// Prepare transaction.
+			tx := staking.NewAmendCommissionScheduleTx(0, nil, &amendment)
+
+			sigTx, err := common.SignConsensusTransaction(ctx, npa, acc, conn, tx)
+			cobra.CheckErr(err)
+
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil)
+		},
+	}
+
 	accountsFromPublicKeyCmd = &cobra.Command{
 		Use:   "from-public-key <public-key>",
 		Short: "Convert from a public key to an account address",
@@ -668,7 +779,137 @@ var (
 			fmt.Println(staking.NewAddress(pk))
 		},
 	}
+
+	accountsEntitySignerCmd = &cobra.Command{
+		Use:   "entity-signer <socket-path>",
+		Short: "Act as a oasis-node remote entity signer over AF_LOCAL",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := cliConfig.Global()
+			npa := common.GetNPASelection(cfg)
+
+			if npa.Account == nil {
+				cobra.CheckErr("no accounts configured in your wallet")
+			}
+			acc := common.LoadAccount(cfg, npa.AccountName)
+
+			sf := &accountEntitySignerFactory{
+				signer: acc.ConsensusSigner(),
+			}
+			if sf.signer == nil {
+				cobra.CheckErr("account not compatible with consensus layer usage")
+			}
+
+			// The domain separation is entirely handled on the client side.
+			signature.UnsafeAllowUnregisteredContexts()
+
+			// Suppress oasis-core logging.
+			err := logging.Initialize(
+				nil,
+				logging.FmtLogfmt,
+				logging.LevelInfo,
+				nil,
+			)
+			cobra.CheckErr(err)
+
+			// Setup the gRPC service.
+			srvCfg := &grpc.ServerConfig{
+				Name:     "remote-signer",
+				Path:     args[0], // XXX: Maybe fix this up to be nice.
+				Identity: &identity.Identity{},
+			}
+			srv, err := grpc.NewServer(srvCfg)
+			cobra.CheckErr(err)
+			remote.RegisterService(srv.Server(), sf)
+
+			// Start the service and wait for graceful termination.
+			err = srv.Start()
+			cobra.CheckErr(err)
+
+			fmt.Printf("Address: %s\n", acc.Address())
+			fmt.Printf("Node Args:\n  --signer.backend=remote \\\n  --signer.remote.address=unix:%s\n", args[0])
+			fmt.Printf("\n*** REMOTE SIGNER READY ***\n")
+
+			sm := cmdBackground.NewServiceManager(logging.GetLogger("remote-signer"))
+			sm.Register(srv)
+			defer sm.Cleanup()
+			sm.Wait()
+		},
+	}
 )
+
+type accountEntitySignerFactory struct {
+	signer signature.Signer
+}
+
+func (sf *accountEntitySignerFactory) EnsureRole(
+	role signature.SignerRole,
+) error {
+	if role != signature.SignerEntity {
+		return signature.ErrInvalidRole
+	}
+	return nil
+}
+
+func (sf *accountEntitySignerFactory) Generate(
+	role signature.SignerRole,
+	rng io.Reader,
+) (signature.Signer, error) {
+	// The remote signer should never require this.
+	return nil, fmt.Errorf("refusing to generate new signing keys")
+}
+
+func (sf *accountEntitySignerFactory) Load(
+	role signature.SignerRole,
+) (signature.Signer, error) {
+	if err := sf.EnsureRole(role); err != nil {
+		return nil, err
+	}
+	return sf.signer, nil
+}
+
+func scanRateStep(
+	dst *staking.CommissionRateStep,
+	raw string,
+) error {
+	var rateBI big.Int
+	n, err := fmt.Sscanf(raw, "%d/%d", &dst.Start, &rateBI)
+	if err != nil {
+		return err
+	}
+	if n != 2 {
+		return fmt.Errorf("scanned %d values (need 2)", n)
+	}
+	if err = dst.Rate.FromBigInt(&rateBI); err != nil {
+		return fmt.Errorf("rate: %w", err)
+	}
+	return nil
+}
+
+func scanBoundStep(
+	dst *staking.CommissionRateBoundStep,
+	raw string,
+) error {
+	var (
+		rateMinBI big.Int
+		rateMaxBI big.Int
+	)
+	n, err := fmt.Sscanf(raw, "%d/%d/%d", &dst.Start, &rateMinBI, &rateMaxBI)
+	if err != nil {
+		return err
+	}
+	if n != 3 {
+		return fmt.Errorf("scanned %d values (need 3)", n)
+	}
+	if err = dst.RateMin.FromBigInt(&rateMinBI); err != nil {
+		return fmt.Errorf("rate min: %w", err)
+	}
+
+	if err = dst.RateMax.FromBigInt(&rateMaxBI); err != nil {
+		return fmt.Errorf("rate max: %w", err)
+	}
+	return nil
+}
 
 func init() {
 	accountsShowCmd.Flags().AddFlagSet(common.SelectorFlags)
@@ -695,6 +936,24 @@ func init() {
 	accountsUndelegateCmd.Flags().AddFlagSet(common.SelectorFlags)
 	accountsUndelegateCmd.Flags().AddFlagSet(common.TransactionFlags)
 
+	f := flag.NewFlagSet("", flag.ContinueOnError)
+	f.StringSliceVar(&commissionScheduleRates, "commission_schedule.rates", nil, fmt.Sprintf(
+		"commission rate step. Multiple of this flag is allowed. "+
+			"Each step is in the format start_epoch/rate_numerator. "+
+			"The rate is rate_numerator divided by %v", staking.CommissionRateDenominator,
+	))
+	f.StringSliceVar(&commissionScheduleBounds, "commission_schedule.bounds", nil, fmt.Sprintf(
+		"commission rate bound step. Multiple of this flag is allowed. "+
+			"Each step is in the format start_epoch/rate_min_numerator/rate_max_numerator. "+
+			"The minimum rate is rate_min_numerator divided by %v, and the maximum rate is "+
+			"rate_max_numerator divided by %v", staking.CommissionRateDenominator, staking.CommissionRateDenominator,
+	))
+	accountsAmendCommissionScheduleCmd.Flags().AddFlagSet(common.SelectorFlags)
+	accountsAmendCommissionScheduleCmd.Flags().AddFlagSet(common.TransactionFlags)
+	accountsAmendCommissionScheduleCmd.Flags().AddFlagSet(f)
+
+	accountsEntitySignerCmd.Flags().AddFlagSet(common.SelectorFlags)
+
 	accountsCmd.AddCommand(accountsShowCmd)
 	accountsCmd.AddCommand(accountsAllowCmd)
 	accountsCmd.AddCommand(accountsDepositCmd)
@@ -703,5 +962,7 @@ func init() {
 	accountsCmd.AddCommand(accountsBurnCmd)
 	accountsCmd.AddCommand(accountsDelegateCmd)
 	accountsCmd.AddCommand(accountsUndelegateCmd)
+	accountsCmd.AddCommand(accountsAmendCommissionScheduleCmd)
 	accountsCmd.AddCommand(accountsFromPublicKeyCmd)
+	accountsCmd.AddCommand(accountsEntitySignerCmd)
 }

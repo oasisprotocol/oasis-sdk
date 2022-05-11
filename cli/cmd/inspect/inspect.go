@@ -17,14 +17,19 @@ func init() {
 	governanceProposalCmd.Flags().AddFlagSet(common.HeightFlag)
 
 	runtimeStatsCmd.Flags().AddFlagSet(common.SelectorFlags)
+	runtimeStatsCmd.Flags().AddFlagSet(csvFlags)
 
 	nativeTokenCmd.Flags().AddFlagSet(common.SelectorFlags)
 	nativeTokenCmd.Flags().AddFlagSet(common.HeightFlag)
 
 	nodeStatusCmd.Flags().AddFlagSet(common.SelectorFlags)
 
+	registryCmd.Flags().AddFlagSet(common.SelectorFlags)
+	registryCmd.Flags().AddFlagSet(common.HeightFlag)
+
 	Cmd.AddCommand(governanceProposalCmd)
 	Cmd.AddCommand(runtimeStatsCmd)
 	Cmd.AddCommand(nativeTokenCmd)
 	Cmd.AddCommand(nodeStatusCmd)
+	Cmd.AddCommand(registryCmd)
 }
