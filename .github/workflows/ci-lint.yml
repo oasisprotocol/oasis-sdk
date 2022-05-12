@@ -65,7 +65,7 @@ jobs:
           go-version: '1.17.x'
 
       - name: Lint Go client-sdk
-        uses: golangci/golangci-lint-action@v3.1.0
+        uses: golangci/golangci-lint-action@v3.2.0
         with:
           # NOTE: The version must be specified without the patch version.
           version: v1.40
@@ -106,7 +106,7 @@ jobs:
           go-version: '1.17.x'
 
       - name: Lint E2E tests
-        uses: golangci/golangci-lint-action@v3.1.0
+        uses: golangci/golangci-lint-action@v3.2.0
         with:
           # NOTE: The version must be specified without the patch version.
           version: v1.40
@@ -125,7 +125,7 @@ jobs:
           go-version: '1.17.x'
 
       - name: Lint reflect-go
-        uses: golangci/golangci-lint-action@v3.1.0
+        uses: golangci/golangci-lint-action@v3.2.0
         with:
           # NOTE: The version must be specified without the patch version.
           version: v1.40
@@ -144,7 +144,7 @@ jobs:
           go-version: '1.17.x'
 
       - name: Lint Go cli
-        uses: golangci/golangci-lint-action@v3.1.0
+        uses: golangci/golangci-lint-action@v3.2.0
         with:
           # NOTE: The version must be specified without the patch version.
           version: v1.40
