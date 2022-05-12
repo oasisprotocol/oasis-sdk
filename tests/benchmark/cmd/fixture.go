@@ -12,6 +12,7 @@ import (
 	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/node"
+	"github.com/oasisprotocol/oasis-core/go/common/version"
 	consensusGenesis "github.com/oasisprotocol/oasis-core/go/consensus/genesis"
 	cmdCommon "github.com/oasisprotocol/oasis-core/go/oasis-node/cmd/common"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
@@ -78,7 +79,6 @@ func fixture() *oasis.NetworkFixture {
 		Clients: []oasis.ClientFixture{
 			{
 				RuntimeConfig: map[int]map[string]interface{}{
-
 					0: {
 						"estimate_gas_by_simulating_contracts": true,
 						"allowed_queries":                      []map[string]bool{{"all_expensive": true}},
@@ -118,6 +118,7 @@ func fixture() *oasis.NetworkFixture {
 				GovernanceModel: registry.GovernanceEntity,
 				Deployments: []oasis.DeploymentCfg{
 					{
+						Version: version.Version{Major: 0, Minor: 1, Patch: 0},
 						Binaries: map[node.TEEHardware]string{
 							node.TEEHardwareInvalid: viper.GetString(cfgRuntimeBinary),
 						},
