@@ -15,10 +15,9 @@ export const EXECUTOR_SIGNATURE_CONTEXT = 'oasis-core/roothash: executor commitm
 export const COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT =
     'oasis-core/roothash: compute results header';
 /**
- * ProposedBatchSignatureContext is the context used for signing propose batch
- * dispatch messages.
+ * ProposalSignatureContext is the context used for signing propose batch dispatch messages.
  */
-export const PROPOSED_BATCH_SIGNATURE_CONTEXT = 'oasis-core/roothash: proposed batch';
+export const PROPOSAL_SIGNATURE_CONTEXT = 'oasis-core/roothash: proposal';
 
 /**
  * MethodExecutorCommit is the method name for executor commit submission.
@@ -32,6 +31,10 @@ export const METHOD_EXECUTOR_PROPOSER_TIMEOUT = 'roothash.ExecutorProposerTimeou
  * MethodEvidence is the method name for submitting evidence of node misbehavior.
  */
 export const METHOD_EVIDENCE = 'roothash.Evidence';
+/**
+ * MethodSubmitMsg is the method name for queuing incoming runtime messages.
+ */
+export const METHOD_SUBMIT_MSG = 'roothash.SubmitMsg';
 
 /**
  * GasOpComputeCommit is the gas operation identifier for compute commits.
@@ -45,6 +48,10 @@ export const GAS_OP_PROPOSER_TIMEOUT = 'proposer_timeout';
  * GasOpEvidence is the gas operation identifier for evidence submission transaction cost.
  */
 export const GAS_OP_EVIDENCE = 'evidence';
+/**
+ * GasOpSubmitMsg is the gas operation identifier for message submission transaction cost.
+ */
+export const GAS_OP_SUBMIT_MSG = 'submit_msg';
 
 /**
  * Invalid is an invalid header type and should never be stored.
@@ -134,9 +141,23 @@ export const ERR_RUNTIME_DOES_NOT_SLASH_CODE = 8;
  */
 export const ERR_DUPLICATE_EVIDENCE_CODE = 9;
 /**
- * ErrInvalidEvidence is the error return when an invalid evidence is submitted.
+ * ErrInvalidEvidence is the error returned when an invalid evidence is submitted.
  */
 export const ERR_INVALID_EVIDENCE_CODE = 10;
+/**
+ * ErrIncomingMessageQueueFull is the error returned when the incoming message queue is full.
+ */
+export const ERR_INCOMING_MESSAGE_QUEUE_FULL_CODE = 11;
+/**
+ * ErrIncomingMessageInsufficientFee is the error returned when the provided fee is smaller than
+ * the configured minimum incoming message submission fee.
+ */
+export const ERR_INCOMING_MESSAGE_INSUFFICIENT_FEE_CODE = 12;
+/**
+ * ErrMaxInMessagesTooBig is the error returned when the MaxInMessages parameter is set to a
+ * value larger than the MaxInRuntimeMessages specified in consensus parameters.
+ */
+export const ERR_MAX_IN_MESSAGES_TOO_BIG_CODE = 13;
 
 /**
  * moduleName is the module name used for namespacing errors.
@@ -154,9 +175,7 @@ export const ERR_DISCREPANCY_DETECTED_CODE = 8;
 export const ERR_STILL_WAITING_CODE = 9;
 export const ERR_INSUFFICIENT_VOTES_CODE = 10;
 export const ERR_BAD_EXECUTOR_COMMITMENT_CODE = 11;
-export const ERR_TXN_SCHED_SIG_INVALID_CODE = 12;
 export const ERR_INVALID_MESSAGES_CODE = 13;
-export const ERR_BAD_STORAGE_RECEIPTS_CODE = 14;
 export const ERR_TIMEOUT_NOT_CORRECT_ROUND_CODE = 15;
 export const ERR_NODE_IS_SCHEDULER_CODE = 16;
 export const ERR_MAJORITY_FAILURE_CODE = 17;
@@ -164,29 +183,34 @@ export const ERR_INVALID_ROUND_CODE = 18;
 export const ERR_NO_PROPOSER_COMMITMENT_CODE = 19;
 export const ERR_BAD_PROPOSER_COMMITMENT_CODE = 20;
 
-export async function openExecutorCommitment(
+export async function verifyExecutorCommitment(
     chainContext: string,
     runtimeID: Uint8Array,
-    signed: types.SignatureSigned,
+    commitment: types.RootHashExecutorCommitment,
 ) {
     const context = `${signature.combineChainContext(
         EXECUTOR_SIGNATURE_CONTEXT,
         chainContext,
     )} for runtime ${misc.toHex(runtimeID)}`;
-    return misc.fromCBOR(await signature.openSigned(context, signed)) as types.RootHashComputeBody;
+    return await signature.verify(
+        commitment.node_id,
+        context,
+        misc.toCBOR(commitment.header),
+        commitment.sig,
+    );
 }
 
 export async function signExecutorCommitment(
     signer: signature.ContextSigner,
     chainContext: string,
     runtimeID: Uint8Array,
-    computeBody: types.RootHashComputeBody,
+    header: types.RootHashExecutorCommitmentHeader,
 ) {
     const context = `${signature.combineChainContext(
         EXECUTOR_SIGNATURE_CONTEXT,
         chainContext,
     )} for runtime ${misc.toHex(runtimeID)}`;
-    return await signature.signSigned(signer, context, misc.toCBOR(computeBody));
+    return await signer.sign(context, misc.toCBOR(header));
 }
 
 export async function verifyComputeResultsHeader(
@@ -209,31 +233,34 @@ export async function signComputeResultsHeader(
     return await rakSigner.sign(COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT, misc.toCBOR(header));
 }
 
-export async function openProposedBatch(
+export async function verifyProposal(
     chainContext: string,
     runtimeID: Uint8Array,
-    signed: types.SignatureSigned,
+    proposal: types.RootHashProposal,
 ) {
     const context = `${signature.combineChainContext(
-        PROPOSED_BATCH_SIGNATURE_CONTEXT,
+        PROPOSAL_SIGNATURE_CONTEXT,
         chainContext,
     )} for runtime ${misc.toHex(runtimeID)}`;
-    return misc.fromCBOR(
-        await signature.openSigned(context, signed),
-    ) as types.RootHashProposedBatch;
+    return await signature.verify(
+        proposal.node_id,
+        context,
+        misc.toCBOR(proposal.header),
+        proposal.sig,
+    );
 }
 
-export async function signProposedBatch(
+export async function signProposal(
     signer: signature.ContextSigner,
     chainContext: string,
     runtimeID: Uint8Array,
-    proposedBatch: types.RootHashProposedBatch,
+    header: types.RootHashProposalHeader,
 ) {
     const context = `${signature.combineChainContext(
-        PROPOSED_BATCH_SIGNATURE_CONTEXT,
+        PROPOSAL_SIGNATURE_CONTEXT,
         chainContext,
     )} for runtime ${misc.toHex(runtimeID)}`;
-    return await signature.signSigned(signer, context, misc.toCBOR(proposedBatch));
+    return await signer.sign(context, misc.toCBOR(header));
 }
 
 export function executorCommitWrapper() {
@@ -248,4 +275,8 @@ export function executorProposerTimeoutWrapper() {
 
 export function evidenceWrapper() {
     return new consensus.TransactionWrapper<types.RootHashEvidence>(METHOD_EVIDENCE);
+}
+
+export function submitMsgWrapper() {
+    return new consensus.TransactionWrapper<types.RootHashSubmitMsg>(METHOD_SUBMIT_MSG);
 }

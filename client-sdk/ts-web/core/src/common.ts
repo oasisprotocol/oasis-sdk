@@ -7,10 +7,6 @@ import * as types from './types';
  */
 export const ROLE_COMPUTE_WORKER = 1 << 0;
 /**
- * RoleStorageWorker is the storage worker role.
- */
-export const ROLE_STORAGE_WORKER = 1 << 1;
-/**
  * RoleKeyManager is the the key manager role.
  */
 export const ROLE_KEY_MANAGER = 1 << 2;
@@ -22,6 +18,10 @@ export const ROLE_VALIDATOR = 1 << 3;
  * RoleConsensusRPC is the public consensus RPC services worker role.
  */
 export const ROLE_CONSENSUS_RPC = 1 << 4;
+/**
+ * RoleStorageRPC is the public storage RPC services worker role.
+ */
+export const ROLE_STORAGE_RPC = 1 << 5;
 
 /**
  * TEEHardwareInvalid is a non-TEE implementation.

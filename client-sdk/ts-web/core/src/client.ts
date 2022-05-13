@@ -68,10 +68,6 @@ const methodDescriptorBeaconConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
     types.BeaconConsensusParameters
 >('Beacon', 'ConsensusParameters');
-const methodDescriptorBeaconGetPVSSState = createMethodDescriptorUnary<
-    types.longnum,
-    types.BeaconPVSSState
->('Beacon', 'GetPVSSState');
 const methodDescriptorBeaconWatchEpochs = createMethodDescriptorServerStreaming<
     void,
     types.longnum
@@ -262,6 +258,18 @@ const methodDescriptorRootHashGetRuntimeState = createMethodDescriptorUnary<
     types.RootHashRuntimeRequest,
     types.RootHashRuntimeState
 >('RootHash', 'GetRuntimeState');
+const methodDescriptorRootHashGetLastRoundResults = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashRoundResults
+>('RootHash', 'GetLastRoundResults');
+const methodDescriptorRootHashGetIncomingMessageQueueMeta = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashIncomingMessageQueueMeta
+>('RootHash', 'GetIncomingMessageQueueMeta');
+const methodDescriptorRootHashGetIncomingMessageQueue = createMethodDescriptorUnary<
+    types.RootHashInMessageQueueRequest,
+    types.RootHashIncomingMessage[]
+>('RootHash', 'GetIncomingMessageQueue');
 const methodDescriptorRootHashStateToGenesis = createMethodDescriptorUnary<
     types.longnum,
     types.RootHashGenesis
@@ -334,14 +342,6 @@ const methodDescriptorStorageSyncIterate = createMethodDescriptorUnary<
     types.StorageIterateRequest,
     types.StorageProofResponse
 >('Storage', 'SyncIterate');
-const methodDescriptorStorageApply = createMethodDescriptorUnary<
-    types.StorageApplyRequest,
-    types.SignatureSigned[]
->('Storage', 'Apply');
-const methodDescriptorStorageApplyBatch = createMethodDescriptorUnary<
-    types.StorageApplyBatchRequest,
-    types.SignatureSigned[]
->('Storage', 'ApplyBatch');
 const methodDescriptorStorageGetCheckpoints = createMethodDescriptorUnary<
     types.StorageGetCheckpointsRequest,
     types.StorageMetadata[]
@@ -419,12 +419,6 @@ const methodDescriptorRuntimeClientWatchBlocks = createMethodDescriptorServerStr
     types.RootHashAnnotatedBlock
 >('RuntimeClient', 'WatchBlocks');
 
-// enclaverpc
-const methodDescriptorEnclaveRPCCallEnclave = createMethodDescriptorUnary<
-    types.EnclaveRPCCallEnclaveRequest,
-    Uint8Array
->('EnclaveRPC', 'CallEnclave');
-
 // consensus
 const methodDescriptorConsensusSubmitTx = createMethodDescriptorUnary<types.SignatureSigned, void>(
     'Consensus',
@@ -472,6 +466,10 @@ const methodDescriptorConsensusGetStatus = createMethodDescriptorUnary<void, typ
     'Consensus',
     'GetStatus',
 );
+const methodDescriptorConsensusGetNextBlockState = createMethodDescriptorUnary<
+    void,
+    types.ConsensusNextBlockState
+>('Consensus', 'GetNextBlockState');
 const methodDescriptorConsensusWatchBlocks = createMethodDescriptorServerStreaming<
     void,
     types.ConsensusBlock
@@ -714,16 +712,6 @@ export class NodeInternal extends GRPCWrapper {
      */
     beaconConsensusParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorBeaconConsensusParameters, height);
-    }
-
-    /**
-     * GetPVSSState gets the PVSS beacon round state for the
-     * provided block height.  Calling this method with height
-     * `consensus.HeightLatest` should return the beacon for
-     * the latest finalized block.
-     */
-    beaconGetPVSSState(height: types.longnum) {
-        return this.callUnary(methodDescriptorBeaconGetPVSSState, height);
     }
 
     /**
@@ -1069,6 +1057,15 @@ export class NodeInternal extends GRPCWrapper {
     rootHashGetRuntimeState(request: types.RootHashRuntimeRequest) {
         return this.callUnary(methodDescriptorRootHashGetRuntimeState, request);
     }
+    rootHashGetLastRoundResults(request: types.RootHashRuntimeRequest) {
+        return this.callUnary(methodDescriptorRootHashGetLastRoundResults, request);
+    }
+    rootHashGetIncomingMessageQueueMeta(request: types.RootHashRuntimeRequest) {
+        return this.callUnary(methodDescriptorRootHashGetIncomingMessageQueueMeta, request);
+    }
+    rootHashGetIncomingMessageQueue(request: types.RootHashInMessageQueueRequest) {
+        return this.callUnary(methodDescriptorRootHashGetIncomingMessageQueue, request);
+    }
     rootHashStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorRootHashStateToGenesis, height);
     }
@@ -1173,27 +1170,6 @@ export class NodeInternal extends GRPCWrapper {
      */
     storageSyncIterate(request: types.StorageIterateRequest) {
         return this.callUnary(methodDescriptorStorageSyncIterate, request);
-    }
-
-    /**
-     * Apply applies a set of operations against the MKVS.  The root may refer
-     * to a nil node, in which case a new root will be created.
-     * The expected new root is used to check if the new root after all the
-     * operations are applied already exists in the local DB.  If it does, the
-     * Apply is ignored.
-     */
-    storageApply(request: types.StorageApplyRequest) {
-        return this.callUnary(methodDescriptorStorageApply, request);
-    }
-
-    /**
-     * ApplyBatch applies multiple sets of operations against the MKVS and
-     * returns a single receipt covering all applied roots.
-     *
-     * See Apply for more details.
-     */
-    storageApplyBatch(request: types.StorageApplyBatchRequest) {
-        return this.callUnary(methodDescriptorStorageApplyBatch, request);
     }
 
     /**
@@ -1336,15 +1312,6 @@ export class NodeInternal extends GRPCWrapper {
         return this.callServerStreaming(methodDescriptorRuntimeClientWatchBlocks, runtimeID);
     }
 
-    // enclaverpc
-
-    /**
-     * CallEnclave sends the request bytes to the target enclave.
-     */
-    enclaveRPCCallEnclave(request: types.EnclaveRPCCallEnclaveRequest) {
-        return this.callUnary(methodDescriptorEnclaveRPCCallEnclave, request);
-    }
-
     // consensus
 
     /**
@@ -1430,6 +1397,13 @@ export class NodeInternal extends GRPCWrapper {
      */
     consensusGetStatus() {
         return this.callUnary(methodDescriptorConsensusGetStatus, undefined);
+    }
+
+    /**
+     * GetNextBlockState returns the state of the next block being voted on by validators.
+     */
+    consensusGetNextBlockState() {
+        return this.callUnary(methodDescriptorConsensusGetNextBlockState, undefined);
     }
 
     /**

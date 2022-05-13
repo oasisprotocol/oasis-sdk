@@ -94,6 +94,10 @@ export const SLASH_RUNTIME_INCORRECT_RESULTS = 0x80;
  * executor commits or proposed batches for the same round.
  */
 export const SLASH_RUNTIME_EQUIVOCATION = 0x81;
+/**
+ * SlashRuntimeLiveness is slashing due to not doing the required work.
+ */
+export const SLASH_RUNTIME_LIVENESS = 0x82;
 
 /**
  * GasOpTransfer is the gas operation identifier for transfer.
@@ -168,6 +172,17 @@ export const ERR_TOO_MANY_ALLOWANCES_CODE = 7;
  * consensus parameters.
  */
 export const ERR_UNDER_MIN_DELEGATION_AMOUNT_CODE = 8;
+/**
+ * ErrUnderMinTransferAmount is the error returned when the given transfer
+ * or burn or withdrawal amount is lower than the minimum transfer amount
+ * specified in the consensus parameters.
+ */
+export const ERR_UNDER_MIN_TRANSFER_AMOUNT_CODE = 9;
+/**
+ * ErrBalanceTooLow is the error returned when an account's balance is
+ * below the minimum allowed amount.
+ */
+export const ERR_BALANCE_TOO_LOW_CODE = 10;
 
 /**
  * ModuleName is a unique module name for the staking/token module.

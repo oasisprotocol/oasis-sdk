@@ -20,17 +20,13 @@ export interface BeaconConsensusParameters {
      */
     debug_mock_backend?: boolean;
     /**
-     * DebugDeterministic is true iff the output should be deterministic.
-     */
-    debug_deterministic?: boolean;
-    /**
      * InsecureParameters are the beacon parameters for the insecure backend.
      */
     insecure_parameters?: BeaconInsecureParameters;
     /**
-     * PVSSParameters are the beacon parameters for the PVSS backend.
+     * VRFParamenters are the beacon parameters for the VRF backend.
      */
-    pvss_parameters?: BeaconPVSSParameters;
+    vrf_parameters?: BeaconVRFParameters;
 }
 
 /**
@@ -66,62 +62,38 @@ export interface BeaconInsecureParameters {
 }
 
 /**
- * PVSSCommit is a PVSS commitment transaction payload.
+ * VRFParameters are the beacon parameters for the VRF backend.
  */
-export interface BeaconPVSSCommit {
+export interface BeaconVRFParameters {
+    /**
+     * AlphaHighQualityThreshold is the minimum number of proofs (Pi)
+     * that must be received for the next input (Alpha) to be considered
+     * high quality.  If the VRF input is not high quality, runtimes will
+     * be disabled for the next epoch.
+     */
+    alpha_hq_threshold?: longnum;
+    /**
+     * Interval is the epoch interval (in blocks).
+     */
+    interval?: longnum;
+    /**
+     * ProofSubmissionDelay is the wait peroid in blocks after an epoch
+     * transition that nodes MUST wait before attempting to submit a
+     * VRF proof for the next epoch's elections.
+     */
+    proof_delay?: longnum;
+    /**
+     * GasCosts are the VRF proof gas costs.
+     */
+    gas_costs?: {[op: string]: longnum};
+}
+
+/**
+ * VRFProve is a VRF proof transaction payload.
+ */
+export interface BeaconVRFProve {
     epoch: longnum;
-    round: longnum;
-    commit?: PVSSCommit;
-}
-
-/**
- * PVSSEvent is a PVSS backend event.
- */
-export interface BeaconPVSSEvent {
-    height?: longnum;
-    epoch?: longnum;
-    round?: longnum;
-    state?: number;
-    participants?: Uint8Array[];
-}
-
-/**
- * PVSSParameters are the beacon parameters for the PVSS backend.
- */
-export interface BeaconPVSSParameters {
-    participants: number;
-    threshold: number;
-    commit_interval: longnum;
-    reveal_interval: longnum;
-    transition_delay: longnum;
-    debug_forced_participants?: Uint8Array[];
-}
-
-/**
- * PVSSReveal is a PVSS reveal transaction payload.
- */
-export interface BeaconPVSSReveal {
-    epoch: longnum;
-    round: longnum;
-    reveal?: PVSSReveal;
-}
-
-/**
- * PVSSState is the PVSS backend state.
- */
-export interface BeaconPVSSState {
-    height?: longnum;
-    epoch?: longnum;
-    round?: longnum;
-    state?: number;
-    instance?: PVSSInstance;
-    participants?: Uint8Array[];
-    entropy?: Uint8Array;
-    bad_participants?: Map<Uint8Array, boolean>;
-    commit_deadline?: longnum;
-    reveal_deadline?: longnum;
-    transition_height?: longnum;
-    runtime_disable_height?: longnum;
+    pi: Uint8Array;
 }
 
 /**
@@ -259,6 +231,17 @@ export interface ConsensusLightParameters {
      * Meta contains the consensus backend specific consensus parameters.
      */
     meta: Uint8Array;
+}
+
+/**
+ * NextBlockState has the state of the next block being voted on by validators.
+ */
+export interface ConsensusNextBlockState {
+    height: longnum;
+    num_validators: longnum;
+    voting_power: longnum;
+    prevotes: ConsensusVotes;
+    precommits: ConsensusVotes;
 }
 
 /**
@@ -402,6 +385,42 @@ export interface ConsensusTransactionsWithResults {
 }
 
 /**
+ * Vote contains metadata about a vote for the next block.
+ */
+export interface ConsensusVote {
+    node_id: Uint8Array;
+    entity_id: Uint8Array;
+    entity_address: Uint8Array;
+    voting_power: longnum;
+}
+
+/**
+ * Votes are the votes for the next block.
+ */
+export interface ConsensusVotes {
+    voting_power: longnum;
+    ratio: number;
+    votes: ConsensusVote[];
+}
+
+/**
+ * DebugStatus is the current node debug status, listing the various node
+ * debug options if enabled.
+ */
+export interface ControlDebugStatus {
+    /**
+     * Enabled is true iff the node is running with DebugDontBlameOasis
+     * set.
+     */
+    enabled: boolean;
+    /**
+     * AllowRoot is true iff the node is running with DebugAllowRoot
+     * set.
+     */
+    allow_root: boolean;
+}
+
+/**
  * IdentityStatus is the current node identity status, listing all the public keys that identify
  * this node in different contexts.
  */
@@ -504,6 +523,10 @@ export interface ControlStatus {
      */
     software_version: string;
     /**
+     * Debug is the oasis-node debug status.
+     */
+    debug?: ControlDebugStatus;
+    /**
      * Identity is the identity of the node.
      */
     identity: ControlIdentityStatus;
@@ -523,18 +546,6 @@ export interface ControlStatus {
      * PendingUpgrades are the node's pending upgrades.
      */
     pending_upgrades: UpgradePendingUpgrade[];
-}
-
-/**
- * CallEnclaveRequest is a CallEnclave request.
- */
-export interface EnclaveRPCCallEnclaveRequest {
-    runtime_id: Uint8Array;
-    endpoint: string;
-    /**
-     * Payload is a CBOR-serialized Frame.
-     */
-    payload: Uint8Array;
 }
 
 /**
@@ -643,15 +654,11 @@ export interface GovernanceConsensusParameters {
      */
     voting_period?: longnum;
     /**
-     * Quorum is he minimum percentage of voting power that needs to be cast on
-     * a proposal for the result to be valid.
+     * StakeThreshold is the minimum percentage of VoteYes votes in terms
+     * of total voting power when the proposal expires in order for a
+     * proposal to be accepted.  This value has a lower bound of 67.
      */
-    quorum?: number;
-    /**
-     * Threshold is the minimum percentage of VoteYes votes in order for a
-     * proposal to be accepted.
-     */
-    threshold?: number;
+    stake_threshold?: number;
     /**
      * UpgradeMinEpochDiff is the minimum number of epochs between the current
      * epoch and the proposed upgrade epoch for the upgrade proposal to be valid.
@@ -960,13 +967,15 @@ export interface Node extends CBORVersioned {
      */
     consensus: NodeConsensusInfo;
     /**
-     * Beacon contains information for this node's participation
-     * in the random beacon protocol.
-     *
-     * TODO: This is optional for now, make mandatory once enough
-     * nodes provide this field.
+     * VRF contains information for this node's participation in VRF
+     * based elections.
      */
-    beacon?: NodeBeaconInfo;
+    vrf?: NodeVRFInfo;
+    /**
+     * DeprecatedBeacon contains information for this node's
+     * participation in the old PVSS based random beacon protocol.
+     */
+    beacon?: unknown;
     /**
      * Runtimes are the node's runtimes.
      */
@@ -975,17 +984,10 @@ export interface Node extends CBORVersioned {
      * Roles is a bitmask representing the node roles.
      */
     roles: number;
-}
-
-/**
- * BeaconInfo contains information for this node's participation in
- * the random beacon protocol.
- */
-export interface NodeBeaconInfo {
     /**
-     * Point is the elliptic curve point used for the PVSS algorithm.
+     * SoftwareVersion is the node's oasis-node software version.
      */
-    point: Uint8Array;
+    software_version?: string;
 }
 
 /**
@@ -1086,6 +1088,23 @@ export interface NodeRuntime {
 }
 
 /**
+ * SGXConstraints are the Intel SGX TEE constraints.
+ */
+export interface NodeSGXConstraints {
+    /**
+     * Enclaves is the allowed MRENCLAVE/MRSIGNER pairs.
+     */
+    enclaves?: SGXEnclaveIdentity[];
+    /**
+     * AllowedQuoteStatuses are the allowed quote statuses for the node
+     * to be scheduled as a compute worker.
+     *
+     * Note: QuoteOK and QuoteSwHardeningNeeded are ALWAYS allowed, and do not need to be specified.
+     */
+    allowed_quote_statuses?: number[];
+}
+
+/**
  * TLSAddress represents an Oasis committee address that includes a TLS public key and a TCP
  * address.
  *
@@ -1123,57 +1142,14 @@ export interface NodeTLSInfo {
 }
 
 /**
- * Commit is a PVSS commit.
+ * VRFInfo contains information for this node's participation in
+ * VRF based elections.
  */
-export interface PVSSCommit {
-    index: number;
-    shares: PVSSCommitShare[];
-}
-
-/**
- * CommitShare is a commit share.
- */
-export interface PVSSCommitShare extends PVSSPubVerShare {
-    poly_v: Uint8Array;
-}
-
-/**
- * CommitState is a PVSS commit and the corresponding decrypted share,
- * if any.
- */
-export interface PVSSCommitState {
-    commit: PVSSCommit;
-    decrypted_share?: PVSSPubVerShare;
-}
-
-/**
- * Instance is an instance of the PVSS protocol.
- */
-export interface PVSSInstance {
-    participants: Uint8Array[];
-    commits: Map<number, PVSSCommitState>;
-    reveals: Map<number, PVSSReveal>;
-    decrypted_shares: Map<number, Map<number, PVSSPubVerShare>>;
-    threshold: number;
-}
-
-/**
- * PubVerShare is a public verifiable share (`pvss.PubVerShare`)
- */
-export interface PVSSPubVerShare {
-    v: Uint8Array;
-    c: Uint8Array;
-    r: Uint8Array;
-    vg: Uint8Array;
-    vh: Uint8Array;
-}
-
-/**
- * Reveal is a PVSS reveal.
- */
-export interface PVSSReveal {
-    index: number;
-    decrypted_shares: Map<number, PVSSPubVerShare>;
+export interface NodeVRFInfo {
+    /**
+     * ID is the unique identifier of the node used to generate VRF proofs.
+     */
+    id: Uint8Array;
 }
 
 /**
@@ -1210,6 +1186,11 @@ export interface RegistryConsensusParameters {
      * related checks and operations.
      */
     debug_bypass_stake?: boolean;
+    /**
+     * DebugDeployImmediately is true iff runtime registrations should
+     * allow immediate deployment.
+     */
+    debug_deploy_immediately?: boolean;
     /**
      * DisableRuntimeRegistration is true iff runtime registration should be
      * disabled outside of the genesis block.
@@ -1304,6 +1285,37 @@ export interface RegistryExecutorParameters {
      * single round.
      */
     max_messages: number;
+    /**
+     * MinLiveRoundsPercent is the minimum percentage of rounds in an epoch that a node must
+     * participate in positively in order to be considered live. Nodes not satisfying this may be
+     * penalized.
+     */
+    min_live_rounds_percent?: number;
+    /**
+     * MinLiveRoundsForEvaluation is the minimum number of live rounds in an epoch for the liveness
+     * calculations to be considered for evaluation.
+     */
+    min_live_rounds_eval?: longnum;
+    /**
+     * MaxLivenessFailures is the maximum number of liveness failures that are tolerated before
+     * suspending and/or slashing the node. Zero means unlimited.
+     */
+    max_liveness_fails?: number;
+}
+
+/**
+ * Fault is used to track the state of nodes that are experiencing liveness failures.
+ */
+export interface RegistryFault {
+    /**
+     * Failures is the number of times a node has been declared faulty.
+     */
+    failures?: number;
+    /**
+     * SuspendedUntil specifies the epoch number until the node is not eligible for being scheduled
+     * into the committee for which it is deemed faulty.
+     */
+    suspended_until?: longnum;
 }
 
 /**
@@ -1416,6 +1428,11 @@ export interface RegistryNodeStatus {
      * Note: A value of 0 is treated unconditionally as "ineligible".
      */
     election_eligible_after: longnum;
+    /**
+     * Faults is a set of fault records for nodes that are experiencing
+     * liveness failures when participating in specific committees.
+     */
+    faults?: Map<Uint8Array, RegistryFault>;
 }
 
 /**
@@ -1451,10 +1468,6 @@ export interface RegistryRuntime extends CBORVersioned {
      */
     tee_hardware: number;
     /**
-     * Version is the runtime version information.
-     */
-    versions: RegistryVersionInfo;
-    /**
      * KeyManager is the key manager runtime ID for this runtime.
      */
     key_manager?: Uint8Array;
@@ -1488,6 +1501,10 @@ export interface RegistryRuntime extends CBORVersioned {
      * GovernanceModel specifies the runtime governance model.
      */
     governance_model: number;
+    /**
+     * Deployments specifies the runtime deployments (versions).
+     */
+    deployments?: RegistryVersionInfo[];
 }
 
 /**
@@ -1516,19 +1533,6 @@ export interface RegistryRuntimeGenesis {
      * empty hash.
      */
     state_root: Uint8Array;
-    /**
-     * State is the state identified by the StateRoot. It may be empty iff
-     * all StorageReceipts are valid or StateRoot is an empty hash or if used
-     * in network genesis (e.g. during consensus chain init).
-     */
-    state: StorageLogEntry[];
-    /**
-     * StorageReceipts are the storage receipts for the state root. The list
-     * may be empty or a signature in the list invalid iff the State is non-
-     * empty or StateRoot is an empty hash or if used in network genesis
-     * (e.g. during consensus chain init).
-     */
-    storage_receipts: Signature[];
     /**
      * Round is the runtime round in the genesis.
      */
@@ -1561,6 +1565,11 @@ export interface RegistryRuntimeStakingParameters {
      * for incorrect results that is transferred to the runtime's account.
      */
     reward_bad_results?: number;
+    /**
+     * MinInMessageFee specifies the minimum fee that the incoming message must include for the
+     * message to be queued.
+     */
+    min_in_message_fee?: Uint8Array;
 }
 
 /**
@@ -1578,24 +1587,6 @@ export interface RegistrySchedulingConstraints {
  * StorageParameters are parameters for the storage committee.
  */
 export interface RegistryStorageParameters {
-    /**
-     * GroupSize is the size of the storage group.
-     */
-    group_size: number;
-    /**
-     * MinWriteReplication is the number of nodes to which any writes must be replicated before
-     * being assumed to be committed. It must be less than or equal to the GroupSize.
-     */
-    min_write_replication: number;
-    /**
-     * MaxApplyWriteLogEntries is the maximum number of write log entries when performing an Apply
-     * operation.
-     */
-    max_apply_write_log_entries: longnum;
-    /**
-     * MaxApplyOps is the maximum number of apply operations in a batch.
-     */
-    max_apply_ops: longnum;
     /**
      * CheckpointInterval is the expected runtime state checkpoint interval (in rounds).
      */
@@ -1615,10 +1606,6 @@ export interface RegistryStorageParameters {
  */
 export interface RegistryTxnSchedulerParameters {
     /**
-     * Algorithm is the transaction scheduling algorithm.
-     */
-    algorithm: string;
-    /**
      * BatchFlushTimeout denotes, if using the "simple" algorithm, how long to
      * wait for a scheduled batch.
      */
@@ -1631,6 +1618,10 @@ export interface RegistryTxnSchedulerParameters {
      * MaxBatchSizeBytes denote what is the max size of a scheduled batch in bytes.
      */
     max_batch_size_bytes: longnum;
+    /**
+     * MaxInMessages specifies the maximum size of the incoming message queue.
+     */
+    max_in_messages?: number;
     /**
      * ProposerTimeout denotes the timeout (in consensus blocks) for scheduler
      * to propose a batch.
@@ -1659,6 +1650,10 @@ export interface RegistryVersionInfo {
      * Version of the runtime.
      */
     version: Version;
+    /**
+     * ValidFrom stores the epoch at which, this version is valid.
+     */
+    valid_from: longnum;
     /**
      * TEE is the enclave version information, in an enclave provider specific
      * format if any.
@@ -1694,20 +1689,6 @@ export interface RootHashBlock {
 }
 
 /**
- * ComputeBody holds the data signed in a compute worker commitment.
- */
-export interface RootHashComputeBody {
-    header: RootHashComputeResultsHeader;
-    failure?: number;
-    txn_sched_sig: Signature;
-    input_root: Uint8Array;
-    input_storage_sigs: Signature[];
-    storage_signatures?: Signature[];
-    rak_sig?: Uint8Array;
-    messages?: RootHashMessage[];
-}
-
-/**
  * ComputeResultsHeader is the header of a computed batch output by a runtime. This
  * header is a compressed representation (e.g., hashes instead of full content) of
  * the actual results.
@@ -1723,6 +1704,14 @@ export interface RootHashComputeResultsHeader {
     io_root?: Uint8Array;
     state_root?: Uint8Array;
     messages_hash?: Uint8Array;
+    /**
+     * InMessagesHash is the hash of processed incoming messages.
+     */
+    in_msgs_hash?: Uint8Array;
+    /**
+     * InMessagesCount is the number of processed incoming messages.
+     */
+    in_msgs_count?: number;
 }
 
 /**
@@ -1749,25 +1738,29 @@ export interface RootHashConsensusParameters {
      */
     max_runtime_messages: number;
     /**
+     * MaxInRuntimeMessages is the maximum number of allowed incoming messages that can be queued.
+     */
+    max_in_runtime_messages: number;
+    /**
      * MaxEvidenceAge is the maximum age of submitted evidence in the number of rounds.
      */
     max_evidence_age: longnum;
 }
 
 /**
- * EquivocationBatchEvidence is evidence of executor proposed batch equivocation.
- */
-export interface RootHashEquivocationBatchEvidence {
-    batch_a: SignatureSigned;
-    batch_b: SignatureSigned;
-}
-
-/**
  * EquivocationExecutorEvidence is evidence of executor commitment equivocation.
  */
 export interface RootHashEquivocationExecutorEvidence {
-    commit_a: SignatureSigned;
-    commit_b: SignatureSigned;
+    commit_a: RootHashExecutorCommitment;
+    commit_b: RootHashExecutorCommitment;
+}
+
+/**
+ * EquivocationProposalEvidence is evidence of executor proposed batch equivocation.
+ */
+export interface RootHashEquivocationProposalEvidence {
+    prop_a: RootHashProposal;
+    prop_b: RootHashProposal;
 }
 
 /**
@@ -1780,7 +1773,7 @@ export interface RootHashEvent {
     executor_committed?: RootHashExecutorCommittedEvent;
     execution_discrepancy?: RootHashExecutionDiscrepancyDetectedEvent;
     finalized?: RootHashFinalizedEvent;
-    message?: RootHashMessageEvent;
+    in_msg_processed?: RootHashInMsgProcessedEvent;
 }
 
 /**
@@ -1789,7 +1782,7 @@ export interface RootHashEvent {
 export interface RootHashEvidence {
     id: Uint8Array;
     equivocation_executor?: RootHashEquivocationExecutorEvidence;
-    equivocation_batch?: RootHashEquivocationBatchEvidence;
+    equivocation_prop?: RootHashEquivocationProposalEvidence;
 }
 
 /**
@@ -1807,7 +1800,40 @@ export interface RootHashExecutionDiscrepancyDetectedEvent {
  */
 export interface RootHashExecutorCommit {
     id: Uint8Array;
-    commits: SignatureSigned[];
+    commits: RootHashExecutorCommitment[];
+}
+
+/**
+ * ExecutorCommitment is a commitment to results of processing a proposed runtime block.
+ */
+export interface RootHashExecutorCommitment {
+    /**
+     * NodeID is the public key of the node that generated this commitment.
+     */
+    node_id: Uint8Array;
+    /**
+     * Header is the commitment header.
+     */
+    header: RootHashExecutorCommitmentHeader;
+    /**
+     * Signature is the commitment header signature.
+     */
+    sig: Uint8Array;
+    /**
+     * Messages are the messages emitted by the runtime.
+     *
+     * This field is only present in case this commitment belongs to the proposer. In case of
+     * the commitment being submitted as equivocation evidence, this field should be omitted.
+     */
+    messages?: RootHashMessage[];
+}
+
+/**
+ * ExecutorCommitmentHeader is the header of an executor commitment.
+ */
+export interface RootHashExecutorCommitmentHeader extends RootHashComputeResultsHeader {
+    failure?: number;
+    rak_sig?: Uint8Array;
 }
 
 /**
@@ -1817,7 +1843,7 @@ export interface RootHashExecutorCommittedEvent {
     /**
      * Commit is the executor commitment.
      */
-    commit: SignatureSigned;
+    commit: RootHashExecutorCommitment;
 }
 
 /**
@@ -1836,16 +1862,6 @@ export interface RootHashFinalizedEvent {
      * Round is the round that was finalized.
      */
     round: longnum;
-    /**
-     * GoodComputeNodes are the public keys of compute nodes that positively contributed to the
-     * round by replicating the computation correctly.
-     */
-    good_compute_nodes?: Uint8Array[];
-    /**
-     * BadComputeNodes are the public keys of compute nodes that negatively contributed to the round
-     * by causing discrepancies.
-     */
-    bad_compute_nodes?: Uint8Array[];
 }
 
 /**
@@ -1915,10 +1931,107 @@ export interface RootHashHeader {
      */
     messages_hash: Uint8Array;
     /**
-     * StorageSignatures are the storage receipt signatures for the merkle
-     * roots.
+     * InMessagesHash is the hash of processed incoming messages.
      */
-    storage_signatures: Signature[];
+    in_msgs_hash: Uint8Array;
+}
+
+/**
+ * IncomingMessage is an incoming message.
+ */
+export interface RootHashIncomingMessage {
+    /**
+     * ID is the unique identifier of the message.
+     */
+    id: longnum;
+    /**
+     * Caller is the address of the caller authenticated by the consensus layer.
+     */
+    caller: Uint8Array;
+    /**
+     * Tag is an optional tag provided by the caller which is ignored and can be used to match
+     * processed incoming message events later.
+     */
+    tag?: longnum;
+    /**
+     * Fee is the fee sent into the runtime as part of the message being sent. The fee is
+     * transferred before the message is processed by the runtime.
+     */
+    fee?: Uint8Array;
+    /**
+     * Tokens are any tokens sent into the runtime as part of the message being sent. The tokens are
+     * transferred before the message is processed by the runtime.
+     */
+    tokens?: Uint8Array;
+    /**
+     * Data is arbitrary runtime-dependent data.
+     */
+    data?: Uint8Array;
+}
+
+/**
+ * IncomingMessageQueueMeta is the incoming message queue metadata.
+ */
+export interface RootHashIncomingMessageQueueMeta {
+    /**
+     * Size contains the current size of the queue.
+     */
+    size?: number;
+    /**
+     * NextSequenceNumber contains the sequence number that should be used for the next queued
+     * message.
+     */
+    next_sequence_number?: longnum;
+}
+
+/**
+ * InMessageQueueRequest is a request for queued incoming messages.
+ */
+export interface RootHashInMessageQueueRequest {
+    runtime_id: Uint8Array;
+    height: longnum;
+    offset?: longnum;
+    limit?: number;
+}
+
+/**
+ * InMsgProcessedEvent is an event of a specific incoming message being processed.
+ *
+ * In order to see details one needs to query the runtime at the specified round.
+ */
+export interface RootHashInMsgProcessedEvent {
+    /**
+     * ID is the unique incoming message identifier.
+     */
+    id: longnum;
+    /**
+     * Round is the round where the incoming message was processed.
+     */
+    round: longnum;
+    /**
+     * Caller is the incoming message submitter address.
+     */
+    caller: Uint8Array;
+    /**
+     * Tag is an optional tag provided by the caller.
+     */
+    tag?: longnum;
+}
+
+/**
+ * LivenessStatistics has the per-epoch liveness statistics for nodes.
+ */
+export interface RootHashLivenessStatistics {
+    /**
+     * TotalRounds is the total number of rounds in the last epoch, excluding any rounds generated
+     * by the roothash service itself.
+     */
+    total_rounds: longnum;
+    /**
+     * LiveRounds is a list of counters, specified in committee order (e.g. counter at index i has
+     * the value for node i in the committee).
+     */
+    good_rounds: longnum[];
 }
 
 /**
@@ -1936,6 +2049,10 @@ export interface RootHashMessageEvent {
     module?: string;
     code?: number;
     index?: number;
+    /**
+     * Result contains CBOR-encoded message execution result for successfully executed messages.
+     */
+    result?: unknown;
 }
 
 /**
@@ -1962,7 +2079,7 @@ export interface RootHashPool {
      * ExecuteCommitments are the commitments in the pool iff Committee.Kind
      * is scheduler.KindComputeExecutor.
      */
-    execute_commitments?: Map<Uint8Array, SignatureSigned>;
+    execute_commitments?: Map<Uint8Array, RootHashExecutorCommitment>;
     /**
      * Discrepancy is a flag signalling that a discrepancy has been detected.
      */
@@ -1975,26 +2092,44 @@ export interface RootHashPool {
 }
 
 /**
- * ProposedBatch is the message sent from the transaction scheduler
- * to executor workers after a batch is ready to be executed.
- *
- * Don't forget to bump CommitteeProtocol version in go/common/version
- * if you change anything in this struct.
+ * Proposal is a batch proposal.
  */
-export interface RootHashProposedBatch {
+export interface RootHashProposal {
     /**
-     * IORoot is the I/O root containing the inputs (transactions) that
-     * the executor node should use.
+     * NodeID is the public key of the node that generated this proposal.
      */
-    io_root: Uint8Array;
+    node_id: Uint8Array;
     /**
-     * StorageSignatures are the storage receipt signatures for the I/O root.
+     * Header is the proposal header.
      */
-    storage_signatures: Signature[];
+    header: RootHashProposalHeader;
     /**
-     * Header is the block header on which the batch should be based.
+     * Signature is the proposal header signature.
      */
-    header: RootHashHeader;
+    sig: Uint8Array;
+    /**
+     * Batch is an ordered list of all transaction hashes that should be in a batch. In case of
+     * the proposal being submitted as equivocation evidence, this field should be omitted.
+     */
+    batch?: Uint8Array[];
+}
+
+/**
+ * ProposalHeader is the header of the batch proposal.
+ */
+export interface RootHashProposalHeader {
+    /**
+     * Round is the proposed round number.
+     */
+    round: longnum;
+    /**
+     * PreviousHash is the hash of the block header on which the batch should be based.
+     */
+    previous_hash: Uint8Array;
+    /**
+     * BatchHash is the hash of the content of the batch.
+     */
+    batch_hash: Uint8Array;
 }
 
 /**
@@ -2002,6 +2137,27 @@ export interface RootHashProposedBatch {
  */
 export interface RootHashRegistryMessage extends CBORVersioned {
     update_runtime?: RegistryRuntime;
+}
+
+/**
+ * RoundResults contains information about how a particular round was executed by the consensus
+ * layer.
+ */
+export interface RootHashRoundResults {
+    /**
+     * Messages are the results of executing emitted runtime messages.
+     */
+    messages?: RootHashMessageEvent[];
+    /**
+     * GoodComputeEntities are the public keys of compute nodes' controlling entities that
+     * positively contributed to the round by replicating the computation correctly.
+     */
+    good_compute_entities?: Uint8Array[];
+    /**
+     * BadComputeEntities are the public keys of compute nodes' controlling entities that
+     * negatively contributed to the round by causing discrepancies.
+     */
+    bad_compute_entities?: Uint8Array[];
 }
 
 /**
@@ -2030,7 +2186,14 @@ export interface RootHashRuntimeState {
      * LastNormalHeight is the consensus block height corresponding to LastNormalRound.
      */
     last_normal_height: longnum;
+    /**
+     * ExecutorPool contains the executor commitment pool.
+     */
     executor_pool: RootHashPool;
+    /**
+     * LivenessStatistics contains the liveness statistics for the current epoch.
+     */
+    liveness_stats: RootHashLivenessStatistics;
 }
 
 /**
@@ -2041,6 +2204,35 @@ export interface RootHashStakingMessage extends CBORVersioned {
     withdraw?: StakingWithdraw;
     add_escrow?: StakingEscrow;
     reclaim_escrow?: StakingReclaimEscrow;
+}
+
+/**
+ * SubmitMsg is the argument set for the SubmitMsg method.
+ */
+export interface RootHashSubmitMsg {
+    /**
+     * ID is the destination runtime ID.
+     */
+    id: Uint8Array;
+    /**
+     * Tag is an optional tag provided by the caller which is ignored and can be used to match
+     * processed incoming message events later.
+     */
+    tag?: longnum;
+    /**
+     * Fee is the fee sent into the runtime as part of the message being sent. The fee is
+     * transferred before the message is processed by the runtime.
+     */
+    fee?: Uint8Array;
+    /**
+     * Tokens are any tokens sent into the runtime as part of the message being sent. The tokens are
+     * transferred before the message is processed by the runtime.
+     */
+    tokens?: Uint8Array;
+    /**
+     * Data is arbitrary runtime-dependent data.
+     */
+    data?: Uint8Array;
 }
 
 /**
@@ -2228,6 +2420,35 @@ export interface SchedulerConsensusParameters {
      * in any election.
      */
     reward_factor_epoch_election_any: Uint8Array;
+    /**
+     * DebugForceElect is the map of nodes that will always be elected
+     * to a given role for a runtime.
+     */
+    debug_force_elect?: Map<Uint8Array, Map<Uint8Array, SchedulerForceElectCommitteeRole>>;
+    /**
+     * DebugAllowWeakAlpha allows VRF based elections based on proofs
+     * generated by an alpha value considered weak.
+     */
+    debug_allow_weak_alpha?: boolean;
+}
+
+/**
+ * ForceElectCommitteeRole is the committee kind/role that a force-elected
+ * node is elected as.
+ */
+export interface SchedulerForceElectCommitteeRole {
+    /**
+     * Kind is the kind of committee to force-elect the node into.
+     */
+    kind: number;
+    /**
+     * Role is the role that the given node is force elected as.
+     */
+    role: number;
+    /**
+     * IsScheduler is true iff the node should be set as the scheduler.
+     */
+    is_scheduler?: boolean;
 }
 
 /**
@@ -2260,16 +2481,6 @@ export interface SchedulerValidator {
      * VotingPower is the validator's consensus voting power.
      */
     voting_power: longnum;
-}
-
-/**
- * Constraints are the Intel SGX TEE constraints.
- */
-export interface SGXConstraints {
-    /**
-     * Enclaves is the allowed MRENCLAVE/MRSIGNER pairs.
-     */
-    enclaves: SGXEnclaveIdentity[];
 }
 
 /**
@@ -2480,6 +2691,8 @@ export interface StakingConsensusParameters {
     slashing?: Map<number, StakingSlash>;
     gas_costs?: {[op: string]: longnum};
     min_delegation: Uint8Array;
+    min_transfer: Uint8Array;
+    min_transact_balance: Uint8Array;
     disable_transfers?: boolean;
     disable_delegation?: boolean;
     undisable_transfers_from?: Map<Uint8Array, boolean>;
@@ -2550,6 +2763,7 @@ export interface StakingDebondingStartEscrowEvent {
     amount: Uint8Array;
     active_shares: Uint8Array;
     debonding_shares: Uint8Array;
+    debond_end_time: longnum;
 }
 
 /**
@@ -2789,56 +3003,6 @@ export interface StakingWithdraw {
 }
 
 /**
- * ApplyBatchRequest is an ApplyBatch request.
- */
-export interface StorageApplyBatchRequest {
-    namespace: Uint8Array;
-    dst_round: longnum;
-    ops: StorageApplyOp[];
-}
-
-/**
- * ApplyOp is an apply operation within a batch of apply operations.
- */
-export interface StorageApplyOp {
-    /**
-     * RootType is the type of root this operation is for.
-     */
-    root_type: number;
-    /**
-     * SrcRound is the source root round.
-     */
-    src_round: longnum;
-    /**
-     * SrcRoot is the merkle root to apply the operations against. It may
-     * refer to a nil node (empty hash) in which case a new root will be
-     * created.
-     */
-    src_root: Uint8Array;
-    /**
-     * DstRoot is the expected merkle root after applying the write log.
-     */
-    dst_root: Uint8Array;
-    /**
-     * WriteLog is a write log of operations to apply.
-     */
-    writelog: StorageLogEntry[];
-}
-
-/**
- * ApplyRequest is an Apply request.
- */
-export interface StorageApplyRequest {
-    namespace: Uint8Array;
-    root_type: number;
-    src_round: longnum;
-    src_root: Uint8Array;
-    dst_round: longnum;
-    dst_root: Uint8Array;
-    writelog: StorageLogEntry[];
-}
-
-/**
  * ChunkMetadata is chunk metadata.
  */
 export interface StorageChunkMetadata {
@@ -2932,33 +3096,6 @@ export interface StorageProof {
  */
 export interface StorageProofResponse {
     proof: StorageProof;
-}
-
-/**
- * ReceiptBody is the body of a receipt.
- */
-export interface StorageReceiptBody {
-    /**
-     * Version is the storage data structure version.
-     */
-    version: number;
-    /**
-     * Namespace is the chain namespace under which the root(s) are stored.
-     */
-    ns: Uint8Array;
-    /**
-     * Round is the chain round in which the root(s) are stored.
-     */
-    round: longnum;
-    /**
-     * RootTypes are the storage types of the merkle roots in Roots.
-     */
-    root_types: Uint8Array;
-    /**
-     * Roots are the merkle roots of the merklized data structure that the
-     * storage node is certifying to store.
-     */
-    roots: Uint8Array[];
 }
 
 /**
@@ -3071,9 +3208,38 @@ export interface VersionProtocolVersions {
 }
 
 /**
+ * HostStatus is the runtime host status.
+ */
+export interface WorkerCommonHostStatus {
+    /**
+     * Versions are the locally supported versions.
+     */
+    versions: Version[];
+}
+
+/**
+ * LivenessStatus is the liveness status for the current epoch.
+ */
+export interface WorkerCommonLivenessStatus {
+    /**
+     * TotalRounds is the total number of rounds in the last epoch, excluding any rounds generated
+     * by the roothash service itself.
+     */
+    total_rounds: longnum;
+    /**
+     * LiveRounds is the number of rounds in which the node positively contributed.
+     */
+    live_rounds: longnum;
+}
+
+/**
  * Status is the common runtime worker status.
  */
 export interface WorkerCommonStatus {
+    /**
+     * ActiveVersion is the currently active version.
+     */
+    active_version: Version;
     /**
      * LatestRound is the latest runtime round as seen by the committee node.
      */
@@ -3083,25 +3249,25 @@ export interface WorkerCommonStatus {
      */
     latest_height: longnum;
     /**
-     * LastCommitteeUpdateHeight is the consensus layer height of the last committee update.
-     */
-    last_committee_update_height: longnum;
-    /**
      * ExecutorRoles are the node's roles in the executor committee.
      */
     executor_roles: Uint8Array;
-    /**
-     * StorageRole are the node's roles in the storage committee.
-     */
-    storage_roles: Uint8Array;
     /**
      * IsTransactionScheduler indicates whether the node is a transaction scheduler in this round.
      */
     is_txn_scheduler: boolean;
     /**
+     * Liveness is the node's liveness status for the current epoch.
+     */
+    liveness?: WorkerCommonLivenessStatus;
+    /**
      * Peers is the list of peers in the runtime P2P network.
      */
     peers: string[];
+    /**
+     * Host is the runtime host status.
+     */
+    host: WorkerCommonHostStatus;
 }
 
 /**
