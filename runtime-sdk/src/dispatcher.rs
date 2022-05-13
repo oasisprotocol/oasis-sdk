@@ -408,8 +408,8 @@ impl<R: Runtime> Dispatcher<R> {
             // Even though queries are not allowed to perform any private key ops, we
             // reduce the attack surface by completely disallowing them in secure builds.
             //
-            // If one needs to perform runtime queries, she should use a regular build of
-            // the runtime for that.
+            // If one needs to perform runtime queries, one should use a regular build of
+            // the runtime.
             if BUILD_INFO.is_secure {
                 return Err(modules::core::Error::ForbiddenInSecureBuild.into());
             }
