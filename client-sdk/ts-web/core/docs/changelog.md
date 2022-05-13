@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.1.0-alpha9
+
+Spotlight change:
+
+- Compatibility with oasis-core is updated to 22.1.5.
+
+New features:
+
+- The typing for `consensusGetSignerNonce` is corrected to indicate that it
+  return `undefined` instead of `0`.
+
 ## v0.1.0-alpha8
 
 Spotlight change:
