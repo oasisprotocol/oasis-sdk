@@ -484,6 +484,7 @@ impl InvariantHandler for Tuple {
 }
 
 /// Info handler.
+#[doc(hidden)]
 pub trait ModuleInfoHandler {
     /// Reports info about the module (or modules, if `Self` is a tuple).
     fn module_info<C: Context>(_ctx: &mut C) -> BTreeMap<String, ModuleInfo>;
