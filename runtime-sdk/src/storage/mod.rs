@@ -52,6 +52,24 @@ impl<S: Store + ?Sized> Store for &mut S {
     }
 }
 
+impl<S: Store + ?Sized> Store for Box<S> {
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        S::get(self, key)
+    }
+
+    fn insert(&mut self, key: &[u8], value: &[u8]) {
+        S::insert(self, key, value)
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        S::remove(self, key)
+    }
+
+    fn iter(&self) -> Box<dyn Iterator + '_> {
+        S::iter(self)
+    }
+}
+
 pub use confidential::{ConfidentialStore, Error as ConfidentialStoreError};
 pub use hashed::HashedStore;
 pub use mkvs::MKVSStore;

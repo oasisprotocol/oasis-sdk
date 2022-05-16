@@ -37,7 +37,17 @@ impl Config for EVMConfig {
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
 }
 
-type EVM = EVMModule<EVMConfig>;
+struct ConfidentialEVMConfig;
+
+impl Config for ConfidentialEVMConfig {
+    type Accounts = Accounts;
+
+    const CHAIN_ID: u64 = 0x5afe;
+
+    const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
+
+    const CONFIDENTIAL: bool = true;
+}
 
 fn load_erc20() -> Vec<u8> {
     Vec::from_hex(
@@ -83,8 +93,7 @@ fn test_evm_caller_addr_derivation() {
     assert_eq!(derived, expected);
 }
 
-#[test]
-fn test_evm_calls() {
+fn do_test_evm_calls<C: Config>() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
@@ -120,7 +129,7 @@ fn test_evm_calls() {
         },
     );
 
-    EVM::init(
+    EVMModule::<C>::init(
         &mut ctx,
         Genesis {
             parameters: Default::default(),
@@ -137,7 +146,7 @@ fn test_evm_calls() {
             method: "evm.Create".to_owned(),
             body: cbor::to_value(types::Create {
                 value: 0.into(),
-                init_code: erc20.clone(),
+                init_code: erc20,
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -157,11 +166,11 @@ fn test_evm_calls() {
 
     let erc20_addr = ctx.with_tx(0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
-            &EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            &EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("create should succeed"),
         );
 
-        EVM::check_invariants(&mut tx_ctx).expect("invariants should hold");
+        EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
 
         tx_ctx.commit();
 
@@ -197,10 +206,10 @@ fn test_evm_calls() {
     Accounts::authenticate_tx(&mut ctx, &call_name_tx).unwrap();
 
     let erc20_name = ctx.with_tx(0, call_name_tx, |mut tx_ctx, call| {
-        let name = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+        let name = EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call name should succeed");
 
-        EVM::check_invariants(&mut tx_ctx).expect("invariants should hold");
+        EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
 
         tx_ctx.commit();
 
@@ -211,19 +220,29 @@ fn test_evm_calls() {
     assert_eq!(erc20_name[64..68], vec![0x54, 0x65, 0x73, 0x74]); // "Test".
 }
 
+#[test]
+fn test_evm_calls() {
+    do_test_evm_calls::<EVMConfig>();
+}
+
+#[test]
+fn test_c10l_evm_calls() {
+    do_test_evm_calls::<ConfidentialEVMConfig>();
+}
+
 struct CoreConfig;
 
 impl core::Config for CoreConfig {}
 
 /// EVM test runtime.
-struct EVMRuntime;
+struct EVMRuntime<C>(C);
 
-impl Runtime for EVMRuntime {
+impl<C: Config> Runtime for EVMRuntime<C> {
     const VERSION: Version = Version::new(0, 0, 0);
 
     type Core = Core<CoreConfig>;
 
-    type Modules = (Core<CoreConfig>, Accounts, EVM);
+    type Modules = (Core<CoreConfig>, Accounts, EVMModule<C>);
 
     fn genesis_state() -> <Self::Modules as module::MigrationHandler>::Genesis {
         (
@@ -258,12 +277,11 @@ impl Runtime for EVMRuntime {
     }
 }
 
-#[test]
-fn test_evm_runtime() {
+fn do_test_evm_runtime<C: Config>() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime>(context::Mode::ExecuteTx);
+    let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime<C>>(context::Mode::ExecuteTx);
 
-    EVMRuntime::migrate(&mut ctx);
+    EVMRuntime::<C>::migrate(&mut ctx);
 
     let erc20 = load_erc20();
 
@@ -291,15 +309,15 @@ fn test_evm_runtime() {
         },
     };
     // Run authentication handler to simulate nonce increments.
-    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &create_tx).unwrap();
+    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &create_tx).unwrap();
 
     let erc20_addr = ctx.with_tx(0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
-            &EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            &EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("create should succeed"),
         );
 
-        EVM::check_invariants(&mut tx_ctx).expect("invariants should hold");
+        EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
 
         tx_ctx.commit();
 
@@ -330,17 +348,17 @@ fn test_evm_runtime() {
         },
     };
     // Run authentication handler to simulate nonce increments.
-    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_create).unwrap();
+    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_create).unwrap();
 
     ctx.with_tx(0, out_of_gas_create.clone(), |mut tx_ctx, call| {
-        EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+        EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect_err("call transfer should fail");
     });
 
     // CheckTx should not fail.
     ctx.with_child(context::Mode::CheckTx, |mut check_ctx| {
         check_ctx.with_tx(0, out_of_gas_create, |mut tx_ctx, call| {
-            let rsp = EVM::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            let rsp = EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("call should succeed with empty result");
 
             assert_eq!(
@@ -377,15 +395,15 @@ fn test_evm_runtime() {
         },
     };
     // Run authentication handler to simulate nonce increments.
-    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &call_name_tx).unwrap();
+    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &call_name_tx).unwrap();
 
     // Test transaction call in simulate mode.
     ctx.with_child(context::Mode::SimulateTx, |mut sim_ctx| {
         let erc20_name = sim_ctx.with_tx(0, call_name_tx.clone(), |mut tx_ctx, call| {
-            let name = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            let name = EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("call name should succeed");
 
-            EVM::check_invariants(&mut tx_ctx).expect("invariants should hold");
+            EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
 
             tx_ctx.commit();
 
@@ -397,10 +415,10 @@ fn test_evm_runtime() {
     });
 
     let erc20_name = ctx.with_tx(0, call_name_tx.clone(), |mut tx_ctx, call| {
-        let name = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+        let name = EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call name should succeed");
 
-        EVM::check_invariants(&mut tx_ctx).expect("invariants should hold");
+        EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
 
         tx_ctx.commit();
 
@@ -444,13 +462,13 @@ fn test_evm_runtime() {
         },
     };
     // Run authentication handler to simulate nonce increments.
-    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &call_transfer_tx).unwrap();
+    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &call_transfer_tx).unwrap();
 
     let transfer_ret = ctx.with_tx(0, call_transfer_tx.clone(), |mut tx_ctx, call| {
-        let ret = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+        let ret = EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call transfer should succeed");
 
-        EVM::check_invariants(&mut tx_ctx).expect("invariants should hold");
+        EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
 
         tx_ctx.commit();
 
@@ -485,17 +503,17 @@ fn test_evm_runtime() {
             },
         },
     };
-    <EVMRuntime as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_tx).unwrap();
+    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_tx).unwrap();
 
     ctx.with_tx(0, out_of_gas_tx.clone(), |mut tx_ctx, call| {
-        EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+        EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect_err("call transfer should fail");
     });
 
     // CheckTx should not fail.
     ctx.with_child(context::Mode::CheckTx, |mut check_ctx| {
         check_ctx.with_tx(0, out_of_gas_tx, |mut tx_ctx, call| {
-            let rsp = EVM::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            let rsp = EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("call should succeed with empty result");
 
             assert_eq!(
@@ -505,6 +523,16 @@ fn test_evm_runtime() {
             )
         });
     });
+}
+
+#[test]
+fn test_evm_runtime() {
+    do_test_evm_runtime::<EVMConfig>();
+}
+
+#[test]
+fn test_c10l_evm_runtime() {
+    do_test_evm_runtime::<ConfidentialEVMConfig>();
 }
 
 #[test]

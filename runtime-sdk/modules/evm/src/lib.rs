@@ -4,6 +4,7 @@ pub mod backend;
 pub mod derive_caller;
 pub mod precompile;
 pub mod raw_tx;
+pub mod state;
 pub mod types;
 
 use std::collections::BTreeMap;
@@ -42,49 +43,6 @@ mod test;
 /// Unique module name.
 const MODULE_NAME: &str = "evm";
 
-/// State schema constants.
-pub mod state {
-    use super::{storage, H160};
-
-    /// Prefix for Ethereum account code in our storage (maps H160 -> Vec<u8>).
-    pub const CODES: &[u8] = &[0x01];
-    /// Prefix for Ethereum account storage in our storage (maps H160||H256 -> H256).
-    pub const STORAGES: &[u8] = &[0x02];
-    /// Prefix for Ethereum block hashes (only for last BLOCK_HASH_WINDOW_SIZE blocks
-    /// excluding current) storage in our storage (maps Round -> H256).
-    pub const BLOCK_HASHES: &[u8] = &[0x03];
-    /// The number of hash blocks that can be obtained from the current blockchain.
-    pub const BLOCK_HASH_WINDOW_SIZE: u64 = 256;
-
-    /// Get a typed store for the given address' storage.
-    pub fn storage<'a, S: storage::Store + 'a>(
-        state: S,
-        address: &'a H160,
-    ) -> storage::TypedStore<impl storage::Store + 'a> {
-        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-        let storages = storage::PrefixStore::new(store, &STORAGES);
-        storage::TypedStore::new(storage::HashedStore::<_, blake3::Hasher>::new(
-            storage::PrefixStore::new(storages, address),
-        ))
-    }
-
-    /// Get a typed store for codes of all contracts.
-    pub fn codes<'a, S: storage::Store + 'a>(
-        state: S,
-    ) -> storage::TypedStore<impl storage::Store + 'a> {
-        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-        storage::TypedStore::new(storage::PrefixStore::new(store, &CODES))
-    }
-
-    /// Get a typed store for historic block hashes.
-    pub fn block_hashes<'a, S: storage::Store + 'a>(
-        state: S,
-    ) -> storage::TypedStore<impl storage::Store + 'a> {
-        let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-        storage::TypedStore::new(storage::PrefixStore::new(store, &BLOCK_HASHES))
-    }
-}
-
 /// Module configuration.
 pub trait Config: 'static {
     /// Module that is used for accessing accounts.
@@ -96,6 +54,9 @@ pub trait Config: 'static {
 
     /// Token denomination used as the native EVM token.
     const TOKEN_DENOMINATION: token::Denomination;
+
+    /// Whether to use confidential storage by default, and transaction data encryption.
+    const CONFIDENTIAL: bool = false;
 
     /// Maps an Ethereum address into an SDK account address.
     fn map_address(address: primitive_types::H160) -> Address {
@@ -412,14 +373,8 @@ impl<Cfg: Config> API for Module<Cfg> {
     }
 
     fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
-        let store = storage::PrefixStore::new(ctx.runtime_state(), &crate::MODULE_NAME);
-        let storages = storage::PrefixStore::new(store, &state::STORAGES);
-        let s = storage::TypedStore::new(storage::HashedStore::<_, blake3::Hasher>::new(
-            storage::PrefixStore::new(storages, &address),
-        ));
-
+        let s = state::public_storage(ctx, &address);
         let result: H256 = s.get(&index).unwrap_or_default();
-
         Ok(result.as_bytes().to_vec())
     }
 
