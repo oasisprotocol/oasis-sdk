@@ -341,11 +341,12 @@ func init() {
 
 	contractsShowCodeCmd.Flags().AddFlagSet(common.SelectorFlags)
 
-	constractsUploadFlags := flag.NewFlagSet("", flag.ContinueOnError)
-	constractsUploadFlags.StringVar(&contractsInstantiatePolicy, "instantiate-policy", "everyone", "contract instantiation policy")
+	contractsUploadFlags := flag.NewFlagSet("", flag.ContinueOnError)
+	contractsUploadFlags.StringVar(&contractsInstantiatePolicy, "instantiate-policy", "everyone", "contract instantiation policy")
 
 	contractsUploadCmd.Flags().AddFlagSet(common.SelectorFlags)
 	contractsUploadCmd.Flags().AddFlagSet(common.TransactionFlags)
+	contractsUploadCmd.Flags().AddFlagSet(contractsUploadFlags)
 
 	contractsCallFlags := flag.NewFlagSet("", flag.ContinueOnError)
 	contractsCallFlags.StringSliceVar(&contractsTokens, "tokens", []string{}, "token amounts to send to a contract")
