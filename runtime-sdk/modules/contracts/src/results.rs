@@ -180,8 +180,9 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         ctx.value(CONTEXT_KEY_DEPTH).set(current_depth + 1);
 
                         // Dispatch the call.
-                        let result =
-                            dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut ctx, call);
+                        let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
+                            &mut ctx, call, 0,
+                        );
                         // Retrieve remaining gas.
                         let gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(&mut ctx);
 
