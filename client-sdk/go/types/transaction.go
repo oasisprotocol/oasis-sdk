@@ -236,6 +236,18 @@ const (
 	CallFormatEncryptedX25519DeoxysII = CallFormat(1)
 )
 
+// String returns a string representation of the call format.
+func (cf CallFormat) String() string {
+	switch cf {
+	case CallFormatPlain:
+		return "plain"
+	case CallFormatEncryptedX25519DeoxysII:
+		return "encrypted/x25519-deoxysii"
+	default:
+		return "[unknown]"
+	}
+}
+
 // Call is a method call.
 type Call struct {
 	Format CallFormat      `json:"format,omitempty"`

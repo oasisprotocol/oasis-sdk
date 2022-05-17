@@ -18,6 +18,7 @@ import (
 	consensusTx "github.com/oasisprotocol/oasis-core/go/consensus/api/transaction"
 
 	"github.com/oasisprotocol/oasis-sdk/cli/wallet"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/callformat"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/connection"
@@ -27,10 +28,11 @@ import (
 )
 
 var (
-	txOffline  bool
-	txNonce    uint64
-	txGasLimit uint64
-	txGasPrice string
+	txOffline   bool
+	txNonce     uint64
+	txGasLimit  uint64
+	txGasPrice  string
+	txEncrypted bool
 )
 
 const (
@@ -136,13 +138,15 @@ func SignConsensusTransaction(
 }
 
 // SignParaTimeTransaction signs a ParaTime transaction.
+//
+// Returns the signed transaction and call format-specific metadata for result decoding.
 func SignParaTimeTransaction(
 	ctx context.Context,
 	npa *NPASelection,
 	wallet wallet.Account,
 	conn connection.Connection,
 	tx *types.Transaction,
-) (*types.UnverifiedTransaction, error) {
+) (*types.UnverifiedTransaction, interface{}, error) {
 	// Default to passed values and do online estimation when possible.
 	nonce := txNonce
 	tx.AuthInfo.Fee.Gas = txGasLimit
@@ -153,7 +157,7 @@ func SignParaTimeTransaction(
 		var err error
 		gasPrice, err = helpers.ParseParaTimeDenomination(npa.ParaTime, txGasPrice, types.NativeDenomination)
 		if err != nil {
-			return nil, fmt.Errorf("bad gas price: %w", err)
+			return nil, nil, fmt.Errorf("bad gas price: %w", err)
 		}
 	}
 
@@ -163,7 +167,7 @@ func SignParaTimeTransaction(
 			var err error
 			nonce, err = conn.Runtime(npa.ParaTime).Accounts.Nonce(ctx, client.RoundLatest, wallet.Address())
 			if err != nil {
-				return nil, fmt.Errorf("failed to query nonce: %w", err)
+				return nil, nil, fmt.Errorf("failed to query nonce: %w", err)
 			}
 		}
 	}
@@ -177,7 +181,7 @@ func SignParaTimeTransaction(
 			var err error
 			tx.AuthInfo.Fee.Gas, err = conn.Runtime(npa.ParaTime).Core.EstimateGas(ctx, client.RoundLatest, tx)
 			if err != nil {
-				return nil, fmt.Errorf("failed to estimate gas: %w", err)
+				return nil, nil, fmt.Errorf("failed to estimate gas: %w", err)
 			}
 		}
 
@@ -185,7 +189,7 @@ func SignParaTimeTransaction(
 		if txGasPrice == "" {
 			mgp, err := conn.Runtime(npa.ParaTime).Core.MinGasPrice(ctx)
 			if err != nil {
-				return nil, fmt.Errorf("failed to query minimum gas price: %w", err)
+				return nil, nil, fmt.Errorf("failed to query minimum gas price: %w", err)
 			}
 
 			// TODO: Support different denominations for gas fees.
@@ -196,17 +200,41 @@ func SignParaTimeTransaction(
 
 	// If we are using offline mode and either nonce or gas limit is not specified, abort.
 	if nonce == invalidNonce || tx.AuthInfo.Fee.Gas == invalidGasLimit {
-		return nil, fmt.Errorf("nonce and/or gas limit must be specified in offline mode")
+		return nil, nil, fmt.Errorf("nonce and/or gas limit must be specified in offline mode")
 	}
 
 	// Compute fee amount based on gas price.
 	if err := gasPrice.Amount.Mul(quantity.NewFromUint64(tx.AuthInfo.Fee.Gas)); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	tx.AuthInfo.Fee.Amount.Amount = gasPrice.Amount
 	tx.AuthInfo.Fee.Amount.Denomination = gasPrice.Denomination
 
-	// TODO: Support confidential transactions (only in online mode).
+	// Handle confidential transactions.
+	var meta interface{}
+	if txEncrypted {
+		// Only online mode is supported for now.
+		if txOffline {
+			return nil, nil, fmt.Errorf("encrypted transactions are not available in offline mode")
+		}
+
+		// Request public key from the runtime.
+		pk, err := conn.Runtime(npa.ParaTime).Core.CallDataPublicKey(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get runtime's call data public key: %w", err)
+		}
+
+		cfg := callformat.EncodeConfig{
+			PublicKey: &pk.PublicKey,
+		}
+		var encCall *types.Call
+		encCall, meta, err = callformat.EncodeCall(&tx.Call, types.CallFormatEncryptedX25519DeoxysII, &cfg)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to encrypt call: %w", err)
+		}
+
+		tx.Call = *encCall
+	}
 
 	PrintTransactionBeforeSigning(npa, tx)
 
@@ -214,10 +242,10 @@ func SignParaTimeTransaction(
 	sigCtx := signature.DeriveChainContext(npa.ParaTime.Namespace(), npa.Network.ChainContext)
 	ts := tx.PrepareForSigning()
 	if err := ts.AppendSign(sigCtx, wallet.Signer()); err != nil {
-		return nil, fmt.Errorf("failed to sign transaction: %w", err)
+		return nil, nil, fmt.Errorf("failed to sign transaction: %w", err)
 	}
 
-	return ts.UnverifiedTransaction(), nil
+	return ts.UnverifiedTransaction(), meta, nil
 }
 
 // PrintTransactionBeforeSigning prints the transaction and asks the user for confirmation.
@@ -281,6 +309,7 @@ func BroadcastTransaction(
 	pt *config.ParaTime,
 	conn connection.Connection,
 	tx interface{},
+	meta interface{},
 	result interface{},
 ) {
 	if txOffline {
@@ -300,24 +329,41 @@ func BroadcastTransaction(
 	case *types.UnverifiedTransaction:
 		// ParaTime transaction.
 		fmt.Printf("Broadcasting transaction...\n")
-		meta, err := conn.Runtime(pt).SubmitTxMeta(ctx, sigTx)
+		rawMeta, err := conn.Runtime(pt).SubmitTxRawMeta(ctx, sigTx)
 		cobra.CheckErr(err)
 
-		if meta.CheckTxError != nil {
-			cobra.CheckErr(fmt.Sprintf("transaction check failed with error: module: %s code: %d message: %s",
-				meta.CheckTxError.Module,
-				meta.CheckTxError.Code,
-				meta.CheckTxError.Message,
+		if rawMeta.CheckTxError != nil {
+			cobra.CheckErr(fmt.Sprintf("Transaction check failed with error: module: %s code: %d message: %s",
+				rawMeta.CheckTxError.Module,
+				rawMeta.CheckTxError.Code,
+				rawMeta.CheckTxError.Message,
 			))
 		}
 
-		fmt.Printf("Transaction executed successfully.\n")
-		fmt.Printf("Round:            %d\n", meta.Round)
+		fmt.Printf("Transaction included in block successfully.\n")
+		fmt.Printf("Round:            %d\n", rawMeta.Round)
 		fmt.Printf("Transaction hash: %s\n", sigTx.Hash())
 
-		if result != nil {
-			err = cbor.Unmarshal(meta.Result, result)
-			cobra.CheckErr(err)
+		if rawMeta.Result.IsUnknown() {
+			fmt.Printf("                  (Transaction result is encrypted.)\n")
+		}
+
+		decResult, err := callformat.DecodeResult(&rawMeta.Result, meta)
+		cobra.CheckErr(err)
+
+		switch {
+		case decResult.IsUnknown():
+			// This should never happen as the inner result should not be unknown.
+			cobra.CheckErr(fmt.Sprintf("Execution result unknown: %X", decResult.Unknown))
+		case decResult.IsSuccess():
+			fmt.Printf("Execution successful.\n")
+
+			if result != nil {
+				err = cbor.Unmarshal(decResult.Ok, result)
+				cobra.CheckErr(err)
+			}
+		default:
+			cobra.CheckErr(fmt.Sprintf("Execution failed with error: %s", decResult.Failed.Error()))
 		}
 	default:
 		panic(fmt.Errorf("unsupported transaction kind: %T", tx))
@@ -375,4 +421,5 @@ func init() {
 	TransactionFlags.Uint64Var(&txNonce, "nonce", invalidNonce, "override nonce to use")
 	TransactionFlags.Uint64Var(&txGasLimit, "gas-limit", invalidGasLimit, "override gas limit to use (disable estimation)")
 	TransactionFlags.StringVar(&txGasPrice, "gas-price", "", "override gas price to use")
+	TransactionFlags.BoolVar(&txEncrypted, "encrypted", false, "encrypt transaction call data (requires online mode)")
 }

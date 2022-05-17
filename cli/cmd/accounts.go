@@ -253,7 +253,7 @@ var (
 			sigTx, err := common.SignConsensusTransaction(ctx, npa, acc, conn, tx)
 			cobra.CheckErr(err)
 
-			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil, nil)
 		},
 	}
 
@@ -308,7 +308,7 @@ var (
 			})
 
 			acc := common.LoadAccount(cfg, npa.AccountName)
-			sigTx, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
+			sigTx, meta, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
 			cobra.CheckErr(err)
 
 			if txCfg.Offline {
@@ -328,7 +328,7 @@ var (
 				return ce.Deposit
 			})
 
-			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, meta, nil)
 
 			fmt.Printf("Waiting for deposit result...\n")
 
@@ -408,7 +408,7 @@ var (
 			})
 
 			acc := common.LoadAccount(cfg, npa.AccountName)
-			sigTx, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
+			sigTx, meta, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
 			cobra.CheckErr(err)
 
 			if txCfg.Offline {
@@ -428,7 +428,7 @@ var (
 				return ce.Withdraw
 			})
 
-			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, meta, nil)
 
 			fmt.Printf("Waiting for withdraw result...\n")
 
@@ -480,7 +480,7 @@ var (
 
 			acc := common.LoadAccount(cfg, npa.AccountName)
 
-			var sigTx interface{}
+			var sigTx, meta interface{}
 			switch npa.ParaTime {
 			case nil:
 				// Consensus layer transfer.
@@ -508,11 +508,11 @@ var (
 					Amount: *amountBaseUnits,
 				})
 
-				sigTx, err = common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
+				sigTx, meta, err = common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
 				cobra.CheckErr(err)
 			}
 
-			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, meta, nil)
 		},
 	}
 
@@ -557,7 +557,7 @@ var (
 			sigTx, err := common.SignConsensusTransaction(ctx, npa, acc, conn, tx)
 			cobra.CheckErr(err)
 
-			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil, nil)
 		},
 	}
 
@@ -610,7 +610,7 @@ var (
 				cobra.CheckErr("delegations within paratimes are not supported; use --no-paratime")
 			}
 
-			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil, nil)
 		},
 	}
 
@@ -664,7 +664,7 @@ var (
 				cobra.CheckErr("delegations within paratimes are not supported; use --no-paratime")
 			}
 
-			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil, nil)
 		},
 	}
 
@@ -763,7 +763,7 @@ var (
 			sigTx, err := common.SignConsensusTransaction(ctx, npa, acc, conn, tx)
 			cobra.CheckErr(err)
 
-			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, nil, nil)
 		},
 	}
 

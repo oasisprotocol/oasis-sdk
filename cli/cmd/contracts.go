@@ -135,11 +135,11 @@ var (
 			})
 
 			acc := common.LoadAccount(cfg, npa.AccountName)
-			sigTx, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
+			sigTx, meta, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
 			cobra.CheckErr(err)
 
 			var result contracts.UploadResult
-			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, &result)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, meta, &result)
 
 			if txCfg.Offline {
 				return
@@ -197,11 +197,11 @@ var (
 			})
 
 			acc := common.LoadAccount(cfg, npa.AccountName)
-			sigTx, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
+			sigTx, meta, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
 			cobra.CheckErr(err)
 
 			var result contracts.InstantiateResult
-			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, &result)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, meta, &result)
 
 			if txCfg.Offline {
 				return
@@ -254,11 +254,11 @@ var (
 			})
 
 			acc := common.LoadAccount(cfg, npa.AccountName)
-			sigTx, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
+			sigTx, meta, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
 			cobra.CheckErr(err)
 
 			var result contracts.CallResult
-			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, &result)
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, meta, &result)
 
 			if txCfg.Offline {
 				return
