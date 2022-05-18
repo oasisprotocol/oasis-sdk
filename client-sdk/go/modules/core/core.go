@@ -12,10 +12,11 @@ import (
 
 const (
 	// Queries.
-	methodParameters  = "core.Parameters"
-	methodEstimateGas = "core.EstimateGas"
-	methodMinGasPrice = "core.MinGasPrice"
-	methodRuntimeInfo = "core.RuntimeInfo"
+	methodParameters        = "core.Parameters"
+	methodEstimateGas       = "core.EstimateGas"
+	methodMinGasPrice       = "core.MinGasPrice"
+	methodRuntimeInfo       = "core.RuntimeInfo"
+	methodCallDataPublicKey = "core.CallDataPublicKey"
 )
 
 // V1 is the v1 core module interface.
@@ -38,6 +39,9 @@ type V1 interface {
 
 	// RuntimeInfo returns basic info about the module and the containing runtime.
 	RuntimeInfo(ctx context.Context) (*RuntimeInfoResponse, error)
+
+	// CallDataPublicKey returns the runtime's call data public key.
+	CallDataPublicKey(ctx context.Context) (*CallDataPublicKeyResponse, error)
 }
 
 type v1 struct {
@@ -146,6 +150,16 @@ func (a *v1) RuntimeInfo(ctx context.Context) (*RuntimeInfoResponse, error) {
 		return nil, err
 	}
 	return &info, nil
+}
+
+// Implements V1.
+func (a *v1) CallDataPublicKey(ctx context.Context) (*CallDataPublicKeyResponse, error) {
+	var cdpk CallDataPublicKeyResponse
+	err := a.rc.Query(ctx, client.RoundLatest, methodCallDataPublicKey, nil, &cdpk)
+	if err != nil {
+		return nil, err
+	}
+	return &cdpk, nil
 }
 
 // NewV1 generates a V1 client helper for the core module.

@@ -401,7 +401,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         ctx.with_simulation(|mut sim_ctx| {
             sim_ctx.with_tx(tx_size, args.tx, |mut tx_ctx, call| {
-                dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut tx_ctx, call);
+                dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut tx_ctx, call, 0);
                 // Warning: we don't report success or failure. If the call fails, we still report
                 // how much gas it uses while it fails.
                 let gas_used = *tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();

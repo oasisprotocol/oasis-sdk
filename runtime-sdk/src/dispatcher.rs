@@ -166,10 +166,23 @@ impl<R: Runtime> Dispatcher<R> {
     pub fn dispatch_tx_call<C: TxContext>(
         ctx: &mut C,
         call: types::transaction::Call,
-    ) -> module::CallResult {
+        index: usize,
+    ) -> (module::CallResult, callformat::Metadata) {
         if let Err(e) = R::Modules::before_handle_call(ctx, &call) {
-            return e.into_call_result();
+            return (e.into_call_result(), callformat::Metadata::Empty);
         }
+
+        // Decode call based on specified call format.
+        let (call, call_format_metadata) = match callformat::decode_call(ctx, call, index) {
+            Ok(Some(result)) => result,
+            Ok(None) => {
+                return (
+                    module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
+                    callformat::Metadata::Empty,
+                )
+            }
+            Err(err) => return (err.into_call_result(), callformat::Metadata::Empty),
+        };
 
         let result = match R::Modules::dispatch_call(ctx, &call.method, call.body) {
             module::DispatchResult::Handled(result) => result,
@@ -180,10 +193,10 @@ impl<R: Runtime> Dispatcher<R> {
 
         // Call after hook.
         if let Err(e) = R::Modules::after_handle_call(ctx) {
-            return e.into_call_result();
+            return (e.into_call_result(), call_format_metadata);
         }
 
-        result
+        (result, call_format_metadata)
     }
 
     /// Dispatch a runtime transaction in the given context.
@@ -200,20 +213,7 @@ impl<R: Runtime> Dispatcher<R> {
         let tx_auth_info = tx.auth_info.clone();
 
         let (result, messages) = ctx.with_tx(tx_size, tx, |mut ctx, call| {
-            // Decode call based on specified call format.
-            let (call, call_format_metadata) = match callformat::decode_call(&ctx, call, index) {
-                Ok(Some(result)) => result,
-                Ok(None) => {
-                    return (
-                        module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue))
-                            .into(),
-                        vec![],
-                    )
-                }
-                Err(err) => return (err.into_call_result().into(), vec![]),
-            };
-
-            let result = Self::dispatch_tx_call(&mut ctx, call);
+            let (result, call_format_metadata) = Self::dispatch_tx_call(&mut ctx, call, index);
             if !result.is_success() {
                 // Retrieve unconditional events by doing an explicit rollback.
                 let etags = ctx.rollback();

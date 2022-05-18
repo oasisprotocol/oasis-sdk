@@ -325,6 +325,9 @@ pub trait TransactionHandler {
     }
 
     /// Perform any action after authentication, within the transaction context.
+    ///
+    /// At this point call format has not yet been decoded so peeking into the call may not be
+    /// possible in case the call is encrypted.
     fn before_handle_call<C: TxContext>(
         _ctx: &mut C,
         _call: &Call,

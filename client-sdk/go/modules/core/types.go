@@ -92,3 +92,9 @@ const (
 	MethodHandlerKindQuery         methodHandlerKind = "query"
 	MethodHandlerKindMessageResult methodHandlerKind = "message_result"
 )
+
+// CallDataPublicKeyResponse is the response of the core.CallDataPublicKey query.
+type CallDataPublicKeyResponse struct {
+	// PublicKey is the signed runtime call data public key.
+	PublicKey types.SignedPublicKey `json:"public_key"`
+}

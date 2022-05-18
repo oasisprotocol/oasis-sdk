@@ -58,8 +58,7 @@ func (tb *TransactionBuilder) SetCallFormat(ctx context.Context, format types.Ca
 		return fmt.Errorf("can only change call format from CallFormatPlain")
 	}
 
-	tb.tx.Call.Format = format
-	encodedCall, meta, err := tb.encodeCall(ctx, &tb.tx.Call)
+	encodedCall, meta, err := tb.encodeCall(ctx, &tb.tx.Call, format)
 	if err != nil {
 		return err
 	}
