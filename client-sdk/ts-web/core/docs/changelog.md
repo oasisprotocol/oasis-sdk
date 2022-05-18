@@ -1,6 +1,17 @@
 # Changelog
 
-## v0.1.0-alpha8:
+## v0.1.0-alpha9
+
+Spotlight change:
+
+- Compatibility with oasis-core is updated to 22.1.5.
+
+New features:
+
+- The typing for `consensusGetSignerNonce` is corrected to indicate that it
+  return `undefined` instead of `0`.
+
+## v0.1.0-alpha8
 
 Spotlight change:
 
@@ -14,14 +25,14 @@ New features:
 - Errors from `client` are now wrapped to show what method you were calling.
   Use the `.cause` property in newer browsers to get the original error.
 
-## v0.1.0-alpha7:
+## v0.1.0-alpha7
 
 Spotlight change:
 
 - We changed the protobuf scripts to be commonjs for better compatibility with
   various tools.
 
-## v0.1.0-alpha6:
+## v0.1.0-alpha6
 
 Spotlight change:
 
