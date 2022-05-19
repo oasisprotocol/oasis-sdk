@@ -6,7 +6,7 @@ use oasis_contract_sdk::{
         InstanceId,
     },
 };
-use oasis_contract_sdk_storage::{cell::Cell, map::Map};
+use oasis_contract_sdk_storage::{cell::PublicCell, map::PublicMap};
 use oasis_contract_sdk_types::address::Address;
 
 use crate::types::{
@@ -17,9 +17,9 @@ use crate::types::{
 /// Handles an OAS20 request call.
 pub fn handle_call<C: sdk::Context>(
     ctx: &mut C,
-    token_info: Cell<TokenInformation>,
-    balances: Map<Address, u128>,
-    allowances: Map<(Address, Address), u128>,
+    token_info: PublicCell<TokenInformation>,
+    balances: PublicMap<Address, u128>,
+    allowances: PublicMap<(Address, Address), u128>,
     request: Request,
 ) -> Result<Response, Error> {
     match request {
@@ -89,9 +89,9 @@ pub fn handle_call<C: sdk::Context>(
 /// Handles an OAS20 request query.
 pub fn handle_query<C: sdk::Context>(
     ctx: &mut C,
-    token_info: Cell<TokenInformation>,
-    balances: Map<Address, u128>,
-    allowances: Map<(Address, Address), u128>,
+    token_info: PublicCell<TokenInformation>,
+    balances: PublicMap<Address, u128>,
+    allowances: PublicMap<(Address, Address), u128>,
     request: Request,
 ) -> Result<Response, Error> {
     match request {
@@ -123,8 +123,8 @@ pub fn handle_query<C: sdk::Context>(
 /// Instantiates the contract state.
 pub fn instantiate<C: sdk::Context>(
     ctx: &mut C,
-    balances: Map<Address, u128>,
-    token_info: Cell<TokenInformation>,
+    balances: PublicMap<Address, u128>,
+    token_info: PublicCell<TokenInformation>,
     instantiation: TokenInstantiation,
 ) -> Result<TokenInformation, Error> {
     // Setup initial balances and compute the total supply.
@@ -151,7 +151,7 @@ pub fn instantiate<C: sdk::Context>(
 /// Transfer the `amount` of funds from `from` to `to` address.
 pub fn transfer<C: sdk::Context>(
     ctx: &mut C,
-    balances: Map<Address, u128>,
+    balances: PublicMap<Address, u128>,
     from: Address,
     to: Address,
     amount: u128,
@@ -177,8 +177,8 @@ pub fn transfer<C: sdk::Context>(
 /// Burns the `amount` of funds from `from`.
 pub fn burn<C: sdk::Context>(
     ctx: &mut C,
-    balances: Map<Address, u128>,
-    token_info: Cell<TokenInformation>,
+    balances: PublicMap<Address, u128>,
+    token_info: PublicCell<TokenInformation>,
     from: Address,
     amount: u128,
 ) -> Result<(), Error> {
@@ -207,8 +207,8 @@ pub fn burn<C: sdk::Context>(
 /// Mints the `amount` of tokens to `to`.
 pub fn mint<C: sdk::Context>(
     ctx: &mut C,
-    balances: Map<Address, u128>,
-    token_info_cell: Cell<TokenInformation>,
+    balances: PublicMap<Address, u128>,
+    token_info_cell: PublicCell<TokenInformation>,
     to: Address,
     amount: u128,
 ) -> Result<(), Error> {
@@ -256,7 +256,7 @@ pub fn mint<C: sdk::Context>(
 #[allow(clippy::too_many_arguments)]
 pub fn send<C: sdk::Context>(
     ctx: &mut C,
-    balances: Map<Address, u128>,
+    balances: PublicMap<Address, u128>,
     from: Address,
     to: InstanceId,
     amount: u128,
@@ -294,7 +294,7 @@ pub fn send<C: sdk::Context>(
 /// Update the `beneficiary` allowance by the `amount`.
 pub fn allow<C: sdk::Context>(
     ctx: &mut C,
-    allowances: Map<(Address, Address), u128>,
+    allowances: PublicMap<(Address, Address), u128>,
     allower: Address,
     beneficiary: Address,
     negative: bool,
@@ -331,8 +331,8 @@ pub fn allow<C: sdk::Context>(
 /// Withdraw the `amount` of funds from `from` to `to`.
 pub fn withdraw<C: sdk::Context>(
     ctx: &mut C,
-    balances: Map<Address, u128>,
-    allowances: Map<(Address, Address), u128>,
+    balances: PublicMap<Address, u128>,
+    allowances: PublicMap<(Address, Address), u128>,
     from: Address,
     to: Address,
     amount: u128,

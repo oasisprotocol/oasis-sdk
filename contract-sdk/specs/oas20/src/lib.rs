@@ -5,7 +5,7 @@ pub mod helpers;
 pub mod types;
 
 use oasis_contract_sdk::{self as sdk};
-use oasis_contract_sdk_storage::{cell::Cell, map::Map};
+use oasis_contract_sdk_storage::{cell::PublicCell, map::PublicMap};
 use oasis_contract_sdk_types::address::Address;
 
 use types::{Error, Event, Request, Response};
@@ -14,11 +14,11 @@ use types::{Error, Event, Request, Response};
 pub struct Oas20Token;
 
 /// Storage cell for the token information.
-const TOKEN_INFO: Cell<types::TokenInformation> = Cell::new(b"token_info");
+const TOKEN_INFO: PublicCell<types::TokenInformation> = PublicCell::new(b"token_info");
 /// Storage map for account balances.
-const BALANCES: Map<Address, u128> = Map::new(b"balances");
+const BALANCES: PublicMap<Address, u128> = PublicMap::new(b"balances");
 /// Storage map for allowances.
-const ALLOWANCES: Map<(Address, Address), u128> = Map::new(b"allowances");
+const ALLOWANCES: PublicMap<(Address, Address), u128> = PublicMap::new(b"allowances");
 
 // Implementation of the sdk::Contract trait is required in order for the type to be a contract.
 impl sdk::Contract for Oas20Token {

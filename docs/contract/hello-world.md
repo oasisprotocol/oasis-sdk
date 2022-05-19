@@ -95,7 +95,7 @@ content:
 extern crate alloc;
 
 use oasis_contract_sdk as sdk;
-use oasis_contract_sdk_storage::cell::Cell;
+use oasis_contract_sdk_storage::cell::PublicCell;
 
 /// All possible errors that can be returned by the contract.
 ///
@@ -136,7 +136,7 @@ pub enum Response {
 pub struct HelloWorld;
 
 /// Storage cell for the counter.
-const COUNTER: Cell<u64> = Cell::new(b"counter");
+const COUNTER: PublicCell<u64> = PublicCell::new(b"counter");
 
 impl HelloWorld {
     /// Increment the counter and return the previous value.
@@ -160,7 +160,7 @@ impl sdk::Contract for HelloWorld {
         match request {
             // We require the caller to always pass the Instantiate request.
             Request::Instantiate { initial_counter } => {
-                // Initialize counter to 1.
+                // Initialize counter to specified value.
                 COUNTER.set(ctx.public_store(), initial_counter);
 
                 Ok(())

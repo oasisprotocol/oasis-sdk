@@ -17,7 +17,7 @@ use oasis_contract_sdk::{
         token, CodeId, InstanceId,
     },
 };
-use oasis_contract_sdk_storage::cell::Cell;
+use oasis_contract_sdk_storage::cell::{ConfidentialCell, PublicCell};
 
 /// All possible errors that can be returned by the contract.
 ///
@@ -141,11 +141,11 @@ pub enum Response {
 /// The contract type.
 pub struct HelloWorld;
 
-/// Storage cell for the counter.
-const COUNTER: Cell<u64> = Cell::new(b"counter");
+/// Storage cell for the public counter.
+const COUNTER: PublicCell<u64> = PublicCell::new(b"counter");
 
 /// Storage cell for the confidential counter.
-const CONFIDENTIAL_COUNTER: Cell<u64> = Cell::new(b"confidential_counter");
+const CONFIDENTIAL_COUNTER: ConfidentialCell<u64> = ConfidentialCell::new(b"confidential_counter");
 
 impl HelloWorld {
     /// Increment the counter and return the previous value.
@@ -177,7 +177,7 @@ impl sdk::Contract for HelloWorld {
         match request {
             // We require the caller to always pass the Instantiate request.
             Request::Instantiate { initial_counter } => {
-                // Initialize counter to 1.
+                // Initialize counter to specified value.
                 COUNTER.set(ctx.public_store(), initial_counter);
                 CONFIDENTIAL_COUNTER.set(ctx.confidential_store(), initial_counter);
 

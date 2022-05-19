@@ -1,7 +1,7 @@
 //! Storage ABI.
 use crate::{
     memory::{HostRegion, HostRegionRef},
-    storage::Store,
+    storage::{ConfidentialStore, PublicStore, Store},
     types::storage::StoreKind,
 };
 
@@ -55,28 +55,40 @@ pub fn remove(store: StoreKind, key: &[u8]) {
     }
 }
 
-/// Store backed by the host through the Oasis WASM ABI.
-pub struct HostStore {
-    kind: StoreKind,
-}
+/// Public store backed by the host through the Oasis WASM ABI.
+pub struct PublicHostStore;
 
-impl HostStore {
-    /// Create a new host-backed storage.
-    pub fn new(kind: StoreKind) -> Self {
-        Self { kind }
-    }
-}
-
-impl Store for HostStore {
+impl Store for PublicHostStore {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        get(self.kind, key)
+        get(StoreKind::Public, key)
     }
 
     fn insert(&mut self, key: &[u8], value: &[u8]) {
-        insert(self.kind, key, value)
+        insert(StoreKind::Public, key, value)
     }
 
     fn remove(&mut self, key: &[u8]) {
-        remove(self.kind, key)
+        remove(StoreKind::Public, key)
     }
 }
+
+impl PublicStore for PublicHostStore {}
+
+/// Confidential store backed by the host through the Oasis WASM ABI.
+pub struct ConfidentialHostStore;
+
+impl Store for ConfidentialHostStore {
+    fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        get(StoreKind::Confidential, key)
+    }
+
+    fn insert(&mut self, key: &[u8], value: &[u8]) {
+        insert(StoreKind::Confidential, key, value)
+    }
+
+    fn remove(&mut self, key: &[u8]) {
+        remove(StoreKind::Confidential, key)
+    }
+}
+
+impl ConfidentialStore for ConfidentialHostStore {}
