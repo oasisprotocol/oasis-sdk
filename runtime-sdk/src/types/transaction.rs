@@ -297,10 +297,40 @@ pub enum CallResult {
 impl CallResult {
     /// Check whether the call result indicates a successful operation or not.
     pub fn is_success(&self) -> bool {
+        !matches!(self, CallResult::Failed { .. })
+    }
+}
+
+#[cfg(any(test, feature = "test"))]
+impl CallResult {
+    pub fn unwrap(self) -> cbor::Value {
         match self {
-            CallResult::Ok(_) | CallResult::Unknown(_) => true,
-            CallResult::Failed { .. } => false,
+            Self::Ok(v) | Self::Unknown(v) => v,
+            Self::Failed {
+                module,
+                code,
+                message,
+            } => panic!(
+                "{} reported failure with code {}: {}",
+                module, code, message
+            ),
         }
+    }
+
+    pub fn into_call_result(self) -> Option<crate::module::CallResult> {
+        Some(match self {
+            Self::Ok(v) => crate::module::CallResult::Ok(v),
+            Self::Failed {
+                module,
+                code,
+                message,
+            } => crate::module::CallResult::Failed {
+                module,
+                code,
+                message,
+            },
+            Self::Unknown(_) => return None,
+        })
     }
 }
 

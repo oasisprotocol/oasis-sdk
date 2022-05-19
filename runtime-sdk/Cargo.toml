@@ -42,3 +42,4 @@ blake3 = { version = "1.2.0", features = ["traits-preview"] }
 [features]
 default = ["oasis-runtime-sdk-macros"]
 unsafe-allow-debug = []
+test = []
