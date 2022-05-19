@@ -31,3 +31,6 @@ fixed-hash = "0.7.0"
 primitive-types = { version = "0.10.1", default-features = false, features = ["rlp", "num-traits"] }
 rlp = "0.5.1"
 uint = "0.9.1"
+
+[dev-dependencies]
+oasis-runtime-sdk = { path = "../..", features = ["test"] }

@@ -5,8 +5,9 @@ use sha3::Digest as _;
 use uint::hex::FromHex;
 
 use oasis_runtime_sdk::{
-    context,
-    crypto::signature::secp256k1,
+    callformat, context,
+    crypto::{self, signature::secp256k1},
+    error::Error as _,
     module::{self, InvariantHandler as _, TransactionHandler as _},
     modules::{
         accounts::{self, Module as Accounts},
@@ -96,6 +97,52 @@ fn test_evm_caller_addr_derivation() {
 fn do_test_evm_calls<C: Config>() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
+    let client_keypair =
+        oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::generate_key_pair();
+
+    macro_rules! encode_data {
+        ($data:expr) => {
+            if C::CONFIDENTIAL {
+                cbor::to_vec(
+                    callformat::encode_call(
+                        &ctx,
+                        transaction::Call {
+                            format: transaction::CallFormat::EncryptedX25519DeoxysII,
+                            method: "".into(),
+                            body: cbor::Value::from($data),
+                        },
+                        &client_keypair,
+                    )
+                    .unwrap(),
+                )
+            } else {
+                $data
+            }
+        };
+    }
+
+    macro_rules! decode_result {
+        ($tx_ctx:ident, $result:expr$(,)?) => {
+            match $result {
+                Ok(evm_result) => {
+                    if C::CONFIDENTIAL {
+                        let call_result: transaction::CallResult =
+                            cbor::from_slice(&evm_result).unwrap();
+                        callformat::decode_result(
+                            &$tx_ctx,
+                            transaction::CallFormat::EncryptedX25519DeoxysII,
+                            call_result,
+                            &client_keypair,
+                        )
+                        .expect("bad decode")
+                    } else {
+                        module::CallResult::Ok(cbor::Value::from(evm_result))
+                    }
+                }
+                Err(e) => e.into_call_result(),
+            }
+        };
+    }
 
     Core::<CoreConfig>::init(
         &mut ctx,
@@ -146,7 +193,7 @@ fn do_test_evm_calls<C: Config>() {
             method: "evm.Create".to_owned(),
             body: cbor::to_value(types::Create {
                 value: 0.into(),
-                init_code: erc20,
+                init_code: encode_data!(erc20),
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -166,8 +213,14 @@ fn do_test_evm_calls<C: Config>() {
 
     let erc20_addr = ctx.with_tx(0, 0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
-            &EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-                .expect("create should succeed"),
+            &cbor::from_value::<Vec<u8>>(
+                decode_result!(
+                    tx_ctx,
+                    EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+                )
+                .unwrap(),
+            )
+            .unwrap(),
         );
 
         EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
@@ -187,7 +240,7 @@ fn do_test_evm_calls<C: Config>() {
             body: cbor::to_value(types::Call {
                 address: erc20_addr,
                 value: 0.into(),
-                data: name_method,
+                data: encode_data!(name_method),
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -206,8 +259,14 @@ fn do_test_evm_calls<C: Config>() {
     Accounts::authenticate_tx(&mut ctx, &call_name_tx).unwrap();
 
     let erc20_name = ctx.with_tx(0, 0, call_name_tx, |mut tx_ctx, call| {
-        let name = EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-            .expect("call name should succeed");
+        let name: Vec<u8> = cbor::from_value(
+            decode_result!(
+                tx_ctx,
+                EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            )
+            .unwrap(),
+        )
+        .unwrap();
 
         EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
 
@@ -227,6 +286,7 @@ fn test_evm_calls() {
 
 #[test]
 fn test_c10l_evm_calls() {
+    crypto::signature::context::set_chain_context(Default::default(), "test");
     do_test_evm_calls::<ConfidentialEVMConfig>();
 }
 
@@ -280,6 +340,53 @@ impl<C: Config> Runtime for EVMRuntime<C> {
 fn do_test_evm_runtime<C: Config>() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime<C>>(context::Mode::ExecuteTx);
+    let client_keypair =
+        oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::generate_key_pair();
+
+    // This is a macro to avoid mucking with borrow scopes.
+    macro_rules! encode_data {
+        ($data:expr) => {
+            if C::CONFIDENTIAL {
+                cbor::to_vec(
+                    callformat::encode_call(
+                        &ctx,
+                        transaction::Call {
+                            format: transaction::CallFormat::EncryptedX25519DeoxysII,
+                            method: "".into(),
+                            body: cbor::Value::from($data),
+                        },
+                        &client_keypair,
+                    )
+                    .unwrap(),
+                )
+            } else {
+                $data
+            }
+        };
+    }
+
+    macro_rules! decode_result {
+        ($tx_ctx:ident, $result:expr$(,)?) => {
+            match $result {
+                Ok(evm_result) => {
+                    if C::CONFIDENTIAL {
+                        let call_result: transaction::CallResult =
+                            cbor::from_slice(&evm_result).unwrap();
+                        callformat::decode_result(
+                            &$tx_ctx,
+                            transaction::CallFormat::EncryptedX25519DeoxysII,
+                            call_result,
+                            &client_keypair,
+                        )
+                        .expect("bad decode")
+                    } else {
+                        module::CallResult::Ok(cbor::Value::from(evm_result))
+                    }
+                }
+                Err(e) => e.into_call_result(),
+            }
+        };
+    }
 
     EVMRuntime::<C>::migrate(&mut ctx);
 
@@ -293,7 +400,7 @@ fn do_test_evm_runtime<C: Config>() {
             method: "evm.Create".to_owned(),
             body: cbor::to_value(types::Create {
                 value: 0.into(),
-                init_code: erc20.clone(),
+                init_code: encode_data!(erc20.clone()),
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -313,8 +420,14 @@ fn do_test_evm_runtime<C: Config>() {
 
     let erc20_addr = ctx.with_tx(0, 0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
-            &EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-                .expect("create should succeed"),
+            &cbor::from_value::<Vec<u8>>(
+                decode_result!(
+                    tx_ctx,
+                    EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+                )
+                .unwrap(),
+            )
+            .unwrap(),
         );
 
         EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
@@ -332,7 +445,7 @@ fn do_test_evm_runtime<C: Config>() {
             method: "evm.Create".to_owned(),
             body: cbor::to_value(types::Create {
                 value: 0.into(),
-                init_code: erc20,
+                init_code: encode_data!(erc20),
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -351,8 +464,11 @@ fn do_test_evm_runtime<C: Config>() {
     <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_create).unwrap();
 
     ctx.with_tx(0, 0, out_of_gas_create.clone(), |mut tx_ctx, call| {
-        EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-            .expect_err("call transfer should fail");
+        assert!(!decode_result!(
+            tx_ctx,
+            EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+        )
+        .is_success());
     });
 
     // CheckTx should not fail.
@@ -379,7 +495,7 @@ fn do_test_evm_runtime<C: Config>() {
             body: cbor::to_value(types::Call {
                 address: erc20_addr,
                 value: 0.into(),
-                data: name_method,
+                data: encode_data!(name_method),
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -400,8 +516,14 @@ fn do_test_evm_runtime<C: Config>() {
     // Test transaction call in simulate mode.
     ctx.with_child(context::Mode::SimulateTx, |mut sim_ctx| {
         let erc20_name = sim_ctx.with_tx(0, 0, call_name_tx.clone(), |mut tx_ctx, call| {
-            let name = EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-                .expect("call name should succeed");
+            let name: Vec<u8> = cbor::from_value(
+                decode_result!(
+                    tx_ctx,
+                    EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+                )
+                .unwrap(),
+            )
+            .unwrap();
 
             EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
 
@@ -415,8 +537,14 @@ fn do_test_evm_runtime<C: Config>() {
     });
 
     let erc20_name = ctx.with_tx(0, 0, call_name_tx.clone(), |mut tx_ctx, call| {
-        let name = EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-            .expect("call name should succeed");
+        let name: Vec<u8> = cbor::from_value(
+            decode_result!(
+                tx_ctx,
+                EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            )
+            .unwrap(),
+        )
+        .unwrap();
 
         EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
 
@@ -446,7 +574,7 @@ fn do_test_evm_runtime<C: Config>() {
             body: cbor::to_value(types::Call {
                 address: erc20_addr,
                 value: 0.into(),
-                data: transfer_method.clone(),
+                data: encode_data!(transfer_method.clone()),
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -465,8 +593,14 @@ fn do_test_evm_runtime<C: Config>() {
     <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &call_transfer_tx).unwrap();
 
     let transfer_ret = ctx.with_tx(0, 0, call_transfer_tx.clone(), |mut tx_ctx, call| {
-        let ret = EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-            .expect("call transfer should succeed");
+        let ret: Vec<u8> = cbor::from_value(
+            decode_result!(
+                tx_ctx,
+                EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            )
+            .unwrap(),
+        )
+        .unwrap();
 
         EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
 
@@ -488,7 +622,7 @@ fn do_test_evm_runtime<C: Config>() {
             body: cbor::to_value(types::Call {
                 address: erc20_addr,
                 value: 0.into(),
-                data: transfer_method,
+                data: encode_data!(transfer_method),
             }),
         },
         auth_info: transaction::AuthInfo {
@@ -506,8 +640,11 @@ fn do_test_evm_runtime<C: Config>() {
     <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_tx).unwrap();
 
     ctx.with_tx(0, 0, out_of_gas_tx.clone(), |mut tx_ctx, call| {
-        EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-            .expect_err("call transfer should fail");
+        assert!(!decode_result!(
+            tx_ctx,
+            EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+        )
+        .is_success());
     });
 
     // CheckTx should not fail.
@@ -532,6 +669,7 @@ fn test_evm_runtime() {
 
 #[test]
 fn test_c10l_evm_runtime() {
+    crypto::signature::context::set_chain_context(Default::default(), "test");
     do_test_evm_runtime::<ConfidentialEVMConfig>();
 }
 
