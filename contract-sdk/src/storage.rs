@@ -11,3 +11,9 @@ pub trait Store {
     /// Remove a given key from contract storage.
     fn remove(&mut self, key: &[u8]);
 }
+
+/// Marker trait for stores backed by public storage.
+pub trait PublicStore: Store {}
+
+/// Marker trait for stores backed by confidential storage.
+pub trait ConfidentialStore: Store {}

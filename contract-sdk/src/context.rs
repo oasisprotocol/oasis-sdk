@@ -2,16 +2,16 @@
 use crate::{
     env::{Crypto, Env},
     event::Event,
-    storage::Store,
+    storage::{ConfidentialStore, PublicStore},
     types::{address::Address, message::Message, token, InstanceId},
 };
 
 /// Execution context.
 pub trait Context {
     /// The public store.
-    type PublicStore: Store;
+    type PublicStore: PublicStore;
     /// The confidential store.
-    type ConfidentialStore: Store;
+    type ConfidentialStore: ConfidentialStore;
     /// The environment.
     type Env: Env + Crypto;
 

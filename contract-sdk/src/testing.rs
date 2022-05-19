@@ -8,7 +8,7 @@ use crate::{
     context::Context,
     env::{Crypto, Env},
     event::Event,
-    storage::Store,
+    storage::{ConfidentialStore, PublicStore, Store},
     types::{
         address::Address,
         env::{QueryRequest, QueryResponse},
@@ -46,6 +46,9 @@ impl Store for MockStore {
         self.inner.remove(key);
     }
 }
+
+impl PublicStore for MockStore {}
+impl ConfidentialStore for MockStore {}
 
 /// Mock environment.
 #[derive(Clone, Default)]

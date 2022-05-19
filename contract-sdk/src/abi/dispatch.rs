@@ -6,8 +6,8 @@ use crate::{
     event::Event,
     memory::HostRegion,
     types::{
-        address::Address, event::Event as RawEvent, message::Message, storage::StoreKind, token,
-        ExecutionContext, ExecutionOk, ExecutionResult, InstanceId,
+        address::Address, event::Event as RawEvent, message::Message, token, ExecutionContext,
+        ExecutionOk, ExecutionResult, InstanceId,
     },
 };
 
@@ -16,8 +16,8 @@ use super::{env, storage};
 struct Context {
     ec: ExecutionContext,
 
-    public_store: storage::HostStore,
-    confidential_store: storage::HostStore,
+    public_store: storage::PublicHostStore,
+    confidential_store: storage::ConfidentialHostStore,
     env: env::HostEnv,
 
     messages: Vec<Message>,
@@ -29,8 +29,8 @@ impl From<ExecutionContext> for Context {
         Self {
             ec,
 
-            public_store: storage::HostStore::new(StoreKind::Public),
-            confidential_store: storage::HostStore::new(StoreKind::Confidential),
+            public_store: storage::PublicHostStore,
+            confidential_store: storage::ConfidentialHostStore,
             env: env::HostEnv,
 
             messages: vec![],
@@ -40,8 +40,8 @@ impl From<ExecutionContext> for Context {
 }
 
 impl context::Context for Context {
-    type PublicStore = storage::HostStore;
-    type ConfidentialStore = storage::HostStore;
+    type PublicStore = storage::PublicHostStore;
+    type ConfidentialStore = storage::ConfidentialHostStore;
     type Env = env::HostEnv;
 
     fn instance_id(&self) -> InstanceId {
