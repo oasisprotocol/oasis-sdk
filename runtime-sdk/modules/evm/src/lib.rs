@@ -19,6 +19,7 @@ use thiserror::Error;
 use oasis_runtime_sdk::{
     callformat,
     context::{BatchContext, Context, TxContext},
+    error::Error as _,
     handler,
     module::{self, Module as _},
     modules::{
@@ -325,10 +326,11 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        let (init_code, _) = Self::decode_call_data(ctx, init_code, ctx.tx_index(), true)?
-            .expect("processing proceeds");
+        let (init_code, tx_metadata) =
+            Self::decode_call_data(ctx, init_code, ctx.tx_index(), true)?
+                .expect("processing always proceeds");
 
-        Self::do_evm(
+        let evm_result = Self::do_evm(
             caller,
             ctx,
             |exec, gas_limit| {
@@ -342,7 +344,8 @@ impl<Cfg: Config> API for Module<Cfg> {
             },
             // If in simulation, this must be EstimateGas query.
             ctx.is_simulation(),
-        )
+        );
+        Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 
     fn call<C: TxContext>(
@@ -358,10 +361,10 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        let (data, tx_metadata) =
-            Self::decode_call_data(ctx, data, ctx.tx_index(), true)?.expect("processing proceeds");
+        let (data, tx_metadata) = Self::decode_call_data(ctx, data, ctx.tx_index(), true)?
+            .expect("processing always proceeds");
 
-        Self::do_evm(
+        let evm_result = Self::do_evm(
             caller,
             ctx,
             |exec, gas_limit| {
@@ -376,7 +379,8 @@ impl<Cfg: Config> API for Module<Cfg> {
             },
             // If in simulation, this must be EstimateGas query.
             ctx.is_simulation(),
-        )
+        );
+        Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 
     fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
@@ -407,8 +411,10 @@ impl<Cfg: Config> API for Module<Cfg> {
         value: U256,
         data: Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
-        let data = Self::decode_call_data(ctx, data, 0, true)?.expect("processing proceeds");
-        ctx.with_simulation(|mut sctx| {
+        let (data, tx_metadata) =
+            Self::decode_call_data(ctx, data, 0, true)?.expect("processing always proceeds");
+
+        let evm_result = ctx.with_simulation(|mut sctx| {
             let call_tx = transaction::Transaction {
                 version: 1,
                 call: transaction::Call {
@@ -453,7 +459,8 @@ impl<Cfg: Config> API for Module<Cfg> {
                     false,
                 )
             })
-        })
+        });
+        Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 }
 
@@ -558,6 +565,29 @@ impl<Cfg: Config> Module<Cfg> {
         C: TxContext,
     {
         derive_caller::from_tx_auth_info(ctx.tx_auth_info())
+    }
+
+    fn encode_evm_result<C: Context>(
+        ctx: &C,
+        evm_result: Result<Vec<u8>, Error>,
+        tx_metadata: callformat::Metadata,
+    ) -> Result<Vec<u8>, Error> {
+        if !Cfg::CONFIDENTIAL {
+            return evm_result;
+        }
+        let call_result = match evm_result {
+            Ok(exit_value) => module::CallResult::Ok(exit_value.into()),
+            Err(e) => module::CallResult::Failed {
+                module: e.module_name().into(),
+                code: e.code(),
+                message: e.to_string(),
+            },
+        };
+        Ok(cbor::to_vec(callformat::encode_result(
+            ctx,
+            call_result,
+            tx_metadata,
+        )))
     }
 
     /// Returns the decrypted call data or `None` if this transaction is simulated in
