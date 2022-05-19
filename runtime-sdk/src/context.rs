@@ -302,7 +302,7 @@ pub trait BatchContext: Context {
 
 /// Runtime SDK transaction context.
 pub trait TxContext: Context {
-    /// The index of the transaction in the block.
+    /// The index of the transaction in the batch.
     fn tx_index(&self) -> usize;
 
     /// Transaction size in bytes.
