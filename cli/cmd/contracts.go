@@ -220,7 +220,7 @@ var (
 			npa := common.GetNPASelection(cfg)
 			txCfg := common.GetTransactionConfig()
 			strInstanceID := args[0]
-			strData := args[0]
+			strData := args[1]
 
 			if npa.Account == nil {
 				cobra.CheckErr("no accounts configured in your wallet")
