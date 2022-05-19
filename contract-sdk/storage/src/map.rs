@@ -1,59 +1,69 @@
 //! A map backed by contract storage.
 use std::{convert::TryInto, marker::PhantomData};
 
-use oasis_contract_sdk::{storage::Store, types::address::Address};
+use oasis_contract_sdk::{
+    storage::{ConfidentialStore, PublicStore},
+    types::address::Address,
+};
 
-use crate::cell::Cell;
+use crate::cell::{ConfidentialCell, PublicCell};
 
-/// A map backed by contract storage.
-pub struct Map<'key, K, V> {
-    /// Unique map identifier.
-    key: &'key [u8],
+macro_rules! declare_map {
+    ($name:ident, $cell:ident, $store:ident) => {
+        /// A map backed by contract storage.
+        pub struct $name<'key, K, V> {
+            /// Unique map identifier.
+            key: &'key [u8],
 
-    _key: PhantomData<K>,
-    _value: PhantomData<V>,
-}
-
-impl<'key, K, V> Map<'key, K, V> {
-    /// Create a new map instance.
-    pub const fn new(key: &'key [u8]) -> Self {
-        Self {
-            key,
-            _key: PhantomData,
-            _value: PhantomData,
+            _key: PhantomData<K>,
+            _value: PhantomData<V>,
         }
-    }
+
+        impl<'key, K, V> $name<'key, K, V> {
+            /// Create a new map instance.
+            pub const fn new(key: &'key [u8]) -> Self {
+                Self {
+                    key,
+                    _key: PhantomData,
+                    _value: PhantomData,
+                }
+            }
+        }
+
+        impl<'key, K, V> $name<'key, K, V>
+        where
+            K: MapKey,
+            V: cbor::Encode + cbor::Decode,
+        {
+            fn key(&self, key: K) -> Vec<u8> {
+                let raw_key = key.key();
+                encode_length_prefixed_path(
+                    self.key,
+                    &raw_key[..raw_key.len() - 1],
+                    raw_key[raw_key.len() - 1],
+                )
+            }
+
+            /// Lookup a given key.
+            pub fn get(&self, store: &dyn $store, key: K) -> Option<V> {
+                $cell::new(&self.key(key)).get(store)
+            }
+
+            /// Insert a given key/value pair.
+            pub fn insert(&self, store: &mut dyn $store, key: K, value: V) {
+                $cell::new(&self.key(key)).set(store, value);
+            }
+
+            /// Remove a given key.
+            pub fn remove(&self, store: &mut dyn $store, key: K) {
+                $cell::<V>::new(&self.key(key)).clear(store);
+            }
+        }
+    };
 }
 
-impl<'key, K, V> Map<'key, K, V>
-where
-    K: MapKey,
-    V: cbor::Encode + cbor::Decode,
-{
-    fn key(&self, key: K) -> Vec<u8> {
-        let raw_key = key.key();
-        encode_length_prefixed_path(
-            self.key,
-            &raw_key[..raw_key.len() - 1],
-            raw_key[raw_key.len() - 1],
-        )
-    }
-
-    /// Lookup a given key.
-    pub fn get(&self, store: &dyn Store, key: K) -> Option<V> {
-        Cell::new(&self.key(key)).get(store)
-    }
-
-    /// Insert a given key/value pair.
-    pub fn insert(&self, store: &mut dyn Store, key: K, value: V) {
-        Cell::new(&self.key(key)).set(store, value);
-    }
-
-    /// Remove a given key.
-    pub fn remove(&self, store: &mut dyn Store, key: K) {
-        Cell::<V>::new(&self.key(key)).clear(store);
-    }
-}
+declare_map!(PublicMap, PublicCell, PublicStore);
+declare_map!(ConfidentialMap, ConfidentialCell, ConfidentialStore);
 
 /// A trait for types which can be used as map keys.
 pub trait MapKey {
@@ -220,13 +230,13 @@ mod test {
     #[test]
     fn test_map_basic() {
         let mut store = MockStore::new();
-        let map: Map<&str, u64> = Map::new(b"test");
+        let map: PublicMap<&str, u64> = PublicMap::new(b"test");
 
         assert_eq!(map.get(&store, "foo"), None);
         map.insert(&mut store, "foo", 42);
         assert_eq!(map.get(&store, "foo"), Some(42));
 
-        let map: Map<Int<u64>, String> = Map::new(b"test2");
+        let map: PublicMap<Int<u64>, String> = PublicMap::new(b"test2");
 
         assert_eq!(map.get(&store, 42.into()), None);
         map.insert(&mut store, 42.into(), "hello".to_string());
@@ -239,7 +249,7 @@ mod test {
     #[test]
     fn test_map_composite() {
         let mut store = MockStore::new();
-        let map: Map<(&str, &str), u64> = Map::new(b"test");
+        let map: PublicMap<(&str, &str), u64> = PublicMap::new(b"test");
 
         assert_eq!(map.get(&store, ("foo", "bar")), None);
         map.insert(&mut store, ("foo", "bar"), 42);
