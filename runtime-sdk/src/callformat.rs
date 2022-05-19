@@ -73,12 +73,12 @@ pub fn decode_call_ex<C: Context>(
             // Body needs to follow the specified envelope.
             let envelope: types::callformat::CallEnvelopeX25519DeoxysII =
                 cbor::from_value(call.body)
-                    .map_err(|_| Error::InvalidCallFormat(anyhow!("bad envelope")))?;
+                    .map_err(|_| Error::InvalidCallFormat(anyhow!("bad call envelope")))?;
 
             // Make sure a key manager is available in this runtime.
-            let key_manager = ctx.key_manager().ok_or_else(|| {
-                Error::InvalidCallFormat(anyhow!("confidential transactions not available"))
-            })?;
+            let key_manager = ctx
+                .key_manager()
+                .ok_or_else(|| Error::InvalidCallFormat(anyhow!("confidential txs unavailable")))?;
 
             // If we are only doing checks, this is the most that we can do as in this case we may
             // be unable to access the key manager.
@@ -106,6 +106,48 @@ pub fn decode_call_ex<C: Context>(
                     index,
                 },
             )))
+        }
+    }
+}
+
+#[cfg(any(test, feature = "test"))]
+/// Encodes a call such that it can be decoded by `decode_call[_ex]`.
+pub fn encode_call<C: Context>(
+    ctx: &C,
+    mut call: Call,
+    client_keypair: &([u8; 32], [u8; 32]),
+) -> Result<Call, Error> {
+    match call.format {
+        // In case of the plain-text data format, we simply pass on the call unchanged.
+        CallFormat::Plain => Ok(call),
+
+        // Encrypted data format using X25519 key exchange and Deoxys-II symmetric encryption.
+        CallFormat::EncryptedX25519DeoxysII => {
+            let key_manager = ctx.key_manager().ok_or_else(|| {
+                Error::InvalidCallFormat(anyhow!("confidential transactions not available"))
+            })?;
+            let runtime_keypair = key_manager
+                .get_or_create_keys(get_key_pair_id(ctx))
+                .map_err(|err| Error::Abort(err.into()))?;
+            let runtime_pk = runtime_keypair.input_keypair.pk;
+            let nonce = [0u8; deoxysii::NONCE_SIZE];
+
+            Ok(Call {
+                format: call.format,
+                method: std::mem::take(&mut call.method),
+                body: cbor::to_value(types::callformat::CallEnvelopeX25519DeoxysII {
+                    pk: client_keypair.0,
+                    nonce,
+                    data: deoxysii::box_seal(
+                        &nonce,
+                        cbor::to_vec(call),
+                        vec![],
+                        &runtime_pk.0,
+                        &client_keypair.1,
+                    )
+                    .unwrap(),
+                }),
+            })
         }
     }
 }
@@ -143,6 +185,64 @@ pub fn encode_result<C: Context>(
                 cbor::to_value(types::callformat::ResultEnvelopeX25519DeoxysII { nonce, data });
 
             CallResult::Unknown(envelope)
+        }
+    }
+}
+
+#[cfg(any(test, feature = "test"))]
+pub fn decode_result<C: Context>(
+    ctx: &C,
+    format: CallFormat,
+    result: CallResult,
+    client_keypair: &([u8; 32], [u8; 32]),
+) -> Result<module::CallResult, Error> {
+    if matches!(format, CallFormat::Plain) {
+        return Ok(result.into_call_result().expect("CallResult was Unknown"));
+    }
+    let envelope_value = match result {
+        CallResult::Ok(v) | CallResult::Unknown(v) => v,
+        CallResult::Failed {
+            module,
+            code,
+            message,
+        } => {
+            return Ok(module::CallResult::Failed {
+                module,
+                code,
+                message,
+            })
+        }
+    };
+    match format {
+        CallFormat::Plain => unreachable!("checked above"),
+        CallFormat::EncryptedX25519DeoxysII => {
+            let envelope: types::callformat::ResultEnvelopeX25519DeoxysII =
+                cbor::from_value(envelope_value)
+                    .map_err(|_| Error::InvalidCallFormat(anyhow!("bad result envelope")))?;
+
+            // Get the runtime pubkey from the KM. A real client would simply use the
+            // session key that has already been derived.
+            let key_manager = ctx
+                .key_manager()
+                .ok_or_else(|| Error::InvalidCallFormat(anyhow!("confidential txs unavailable")))?;
+            let keypair = key_manager
+                .get_or_create_keys(get_key_pair_id(ctx))
+                .map_err(|err| Error::Abort(err.into()))?;
+            let runtime_pk = keypair.input_keypair.pk;
+
+            let data = deoxysii::box_open(
+                &envelope.nonce,
+                envelope.data,
+                vec![],
+                &runtime_pk.0,
+                &client_keypair.1,
+            )
+            .map_err(Error::InvalidCallFormat)?;
+            let call_result: CallResult = cbor::from_slice(&data)
+                .map_err(|_| Error::InvalidCallFormat(anyhow!("malformed call")))?;
+            Ok(call_result
+                .into_call_result()
+                .expect("CallResult was Unknown"))
         }
     }
 }
