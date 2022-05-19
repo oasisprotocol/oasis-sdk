@@ -301,7 +301,7 @@ arguments. Note that the arguments depend on the contract that is being deployed
 and in our hello world case we are simply taking the initial counter value.
 
 ```
-oasis contracts instantiate CODEID --data '{"instantiate": {"initial_counter": 42}}'
+oasis contracts instantiate CODEID '{instantiate: {initial_counter: 42}}'
 ```
 
 <!-- TODO: Mention how to send tokens and change the upgrade policy. -->
@@ -310,7 +310,7 @@ After successful execution it shows the instance ID that you need for calling
 the instantiated contract. Next, you can test calling the contract.
 
 ```
-oasis contracts call INSTANCEID --data '{"say_hello": {"who": "me"}}'
+oasis contracts call INSTANCEID '{say_hello: {who: "me"}}'
 ```
 
 <!-- TODO: Expand. -->
