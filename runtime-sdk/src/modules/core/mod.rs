@@ -221,6 +221,11 @@ pub trait Config: 'static {
     /// Methods which are exempt from minimum gas price requirements.
     const MIN_GAS_PRICE_EXEMPT_METHODS: once_cell::unsync::Lazy<BTreeSet<&'static str>> =
         once_cell::unsync::Lazy::new(BTreeSet::new);
+
+    /// Whether gas used events should be emitted for every transaction.
+    ///
+    /// Confidential runtimes may want to disable this as it is a possible side channel.
+    const EMIT_GAS_USED_EVENTS: bool = true;
 }
 
 pub struct Module<Cfg: Config> {
@@ -618,8 +623,10 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
 
     fn after_handle_call<C: TxContext>(ctx: &mut C) -> Result<(), Error> {
         // Emit gas used event.
-        let used_gas = Self::used_tx_gas(ctx);
-        ctx.emit_unconditional_event(Event::GasUsed { amount: used_gas });
+        if Cfg::EMIT_GAS_USED_EVENTS {
+            let used_gas = Self::used_tx_gas(ctx);
+            ctx.emit_unconditional_event(Event::GasUsed { amount: used_gas });
+        }
 
         Ok(())
     }
