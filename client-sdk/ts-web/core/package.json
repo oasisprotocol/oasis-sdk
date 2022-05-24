@@ -1,6 +1,6 @@
 {
     "name": "@oasisprotocol/client",
-    "version": "0.1.0-alpha9",
+    "version": "0.1.1-alpha.1",
     "license": "Apache-2.0",
     "files": [
         "dist",

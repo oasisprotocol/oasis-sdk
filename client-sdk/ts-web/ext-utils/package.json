@@ -17,7 +17,7 @@
         "prepare": "tsc"
     },
     "dependencies": {
-        "@oasisprotocol/client": "^0.1.0-alpha9"
+        "@oasisprotocol/client": "^0.1.1-alpha.1"
     },
     "devDependencies": {
         "@oasisprotocol/client-rt": "^0.2.0-alpha10",
