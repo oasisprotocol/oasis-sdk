@@ -12,9 +12,9 @@ export const V0_MULTISIG_CONTEXT_VERSION = 0;
 const SECP256K1 = new elliptic.ec('secp256k1');
 
 export async function fromSigspec(spec: types.SignatureAddressSpec) {
-    if ('ed25519' in spec) {
+    if (spec.ed25519) {
         return await oasis.staking.addressFromPublicKey(spec.ed25519);
-    } else if ('secp256k1eth' in spec) {
+    } else if (spec.secp256k1eth) {
         // Use a scheme such that we can compute Secp256k1 addresses from Ethereum
         // addresses as this makes things more interoperable.
         const untaggedPk = SECP256K1.keyFromPublic(Array.from(spec.secp256k1eth))

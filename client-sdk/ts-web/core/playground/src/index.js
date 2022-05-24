@@ -110,7 +110,7 @@ export const playground = (async function () {
                     ),
                 ),
                 transaction: transaction,
-                feeAmount: oasis.quantity.toBigInt(transaction.fee.amount),
+                feeAmount: transaction.fee ? oasis.quantity.toBigInt(transaction.fee.amount) : 0n,
                 result: results[i],
             });
         }
@@ -128,31 +128,33 @@ export const playground = (async function () {
     // Try server streaming.
     {
         console.log('watching consensus blocks for 5s');
-        await new Promise((resolve, reject) => {
-            const blocks = nic.consensusWatchBlocks();
-            const cancel = setTimeout(() => {
-                console.log("time's up, cancelling");
-                blocks.cancel();
-                resolve();
-            }, 5_000);
-            blocks.on('error', (e) => {
-                clearTimeout(cancel);
-                reject(e);
-            });
-            blocks.on('status', (status) => {
-                console.log('status', status);
-            });
-            blocks.on('metadata', (metadata) => {
-                console.log('metadata', metadata);
-            });
-            blocks.on('data', (block) => {
-                console.log('block', block);
-            });
-            blocks.on('end', () => {
-                clearTimeout(cancel);
-                resolve();
-            });
-        });
+        await /** @type {Promise<void>} */ (
+            new Promise((resolve, reject) => {
+                const blocks = nic.consensusWatchBlocks();
+                const cancel = setTimeout(() => {
+                    console.log("time's up, cancelling");
+                    blocks.cancel();
+                    resolve();
+                }, 5_000);
+                blocks.on('error', (e) => {
+                    clearTimeout(cancel);
+                    reject(e);
+                });
+                blocks.on('status', (status) => {
+                    console.log('status', status);
+                });
+                blocks.on('metadata', (metadata) => {
+                    console.log('metadata', metadata);
+                });
+                blocks.on('data', (block) => {
+                    console.log('block', block);
+                });
+                blocks.on('end', () => {
+                    clearTimeout(cancel);
+                    resolve();
+                });
+            })
+        );
         console.log('done watching');
     }
 })();

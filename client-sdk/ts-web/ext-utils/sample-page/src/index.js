@@ -7,6 +7,7 @@ import * as oasisExt from '../..';
 
 const options = new URL(window.location.href).searchParams;
 const extOrigin = options.get('ext');
+if (!extOrigin) throw new Error('ext parameter unset');
 const extPath = options.has('test_noninteractive')
     ? '/oasis-xu-frame.html?test_noninteractive=1'
     : undefined;
@@ -79,7 +80,10 @@ export const playground = (async function () {
     console.log('requesting signature');
     await rtw.sign([signer], 'fake-chain-context-for-testing');
     console.log('got signature');
-    console.log('signature base64', oasis.misc.toBase64(rtw.unverifiedTransaction[1][0].signature));
+    console.log(
+        'signature base64',
+        oasis.misc.toBase64(/** @type {Uint8Array} */ (rtw.unverifiedTransaction[1][0].signature)),
+    );
 })();
 
 playground.catch((e) => {

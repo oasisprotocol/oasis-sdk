@@ -7,9 +7,8 @@ import * as oasisExt from './../..';
 
 const testNoninteractive = new URL(window.location.href).searchParams.has('test_noninteractive');
 
-let authorization = 'ask';
-/** @type {string} */
-let authorizedOrigin = null;
+/** @type {{state: 'ask'} | {state: 'allow', authorizedOrigin: string} | {state: 'ignore'}} */
+let authorization = {state: 'ask'};
 
 const never = new Promise((resolve, reject) => {});
 
@@ -17,32 +16,34 @@ const never = new Promise((resolve, reject) => {});
  * @param {string} message
  */
 function fakeAlert(message) {
-    return new Promise((resolve, reject) => {
-        const w = window.open('about:blank', '_blank', 'width=500,height=300');
-        if (!w) {
-            console.log('fakeAlert: popup blocked');
-            resolve();
-            return;
-        }
-        const p1 = w.document.createElement('p');
-        p1.style.whiteSpace = 'pre-wrap';
-        p1.textContent = message;
-        w.document.body.appendChild(p1);
-        const p2 = w.document.createElement('p');
-        p2.style.textAlign = 'end';
-        const ok = w.document.createElement('input');
-        ok.type = 'button';
-        ok.value = 'OK';
-        ok.autofocus = true;
-        ok.onclick = () => {
-            w.close();
-        };
-        p2.appendChild(ok);
-        w.document.body.appendChild(p2);
-        w.onunload = () => {
-            resolve();
-        };
-    });
+    return /** @type {Promise<void>} */ (
+        new Promise((resolve, reject) => {
+            const w = window.open('about:blank', '_blank', 'width=500,height=300');
+            if (!w) {
+                console.log('fakeAlert: popup blocked');
+                resolve();
+                return;
+            }
+            const p1 = w.document.createElement('p');
+            p1.style.whiteSpace = 'pre-wrap';
+            p1.textContent = message;
+            w.document.body.appendChild(p1);
+            const p2 = w.document.createElement('p');
+            p2.style.textAlign = 'end';
+            const ok = w.document.createElement('input');
+            ok.type = 'button';
+            ok.value = 'OK';
+            ok.autofocus = true;
+            ok.onclick = () => {
+                w.close();
+            };
+            p2.appendChild(ok);
+            w.document.body.appendChild(p2);
+            w.onunload = () => {
+                resolve();
+            };
+        })
+    );
 }
 
 /**
@@ -105,16 +106,15 @@ async function authorize(origin) {
         return;
     }
 
-    if (authorization === 'ask') {
+    if (authorization.state === 'ask') {
         const conf = await fakeConfirm(`Allow ${origin} to see public key and request signatures?`);
         if (conf) {
-            authorization = 'allow';
-            authorizedOrigin = origin;
+            authorization = {state: 'allow', authorizedOrigin: origin};
         } else {
-            authorization = 'ignore';
+            authorization = {state: 'ignore'};
         }
     }
-    if (authorization === 'allow' && origin === authorizedOrigin) {
+    if (authorization.state === 'allow' && origin === authorization.authorizedOrigin) {
         return;
     } else {
         // In this sample, if the user doesn't allow the page to see the
@@ -127,7 +127,7 @@ async function authorize(origin) {
 }
 
 const KEY_ID = 'sample-singleton';
-/** @type {Promise<oasis.signature.ContextSigner>} */
+/** @type {Promise<oasis.signature.ContextSigner> | null} */
 let signerP = null;
 function getSigner() {
     if (!signerP) {
@@ -243,8 +243,8 @@ async function contextSignerSign(origin, req) {
 Recognized message type: consensus transaction
 Chain context: ${chainContext}
 Nonce: ${tx.nonce}
-Fee amount: ${oasis.quantity.toBigInt(tx.fee.amount)} base units
-Fee gas: ${tx.fee.gas}`;
+Fee amount: ${tx.fee ? oasis.quantity.toBigInt(tx.fee.amount) : 0n} base units
+Fee gas: ${tx.fee ? tx.fee.gas : 0n}`;
                             const handled = oasis.consensus.visitTransaction(
                                 /** @type {oasis.staking.ConsensusTransactionHandlers} */ ({
                                     [oasis.staking.METHOD_TRANSFER]: (body) => {
@@ -332,8 +332,8 @@ Method: ${tx.call.method}
 Body JSON: ${JSON.stringify(tx.call.body)}`;
                             }
                             for (const si of tx.ai.si) {
-                                if ('signature' in si.address_spec) {
-                                    if ('ed25519' in si.address_spec.signature) {
+                                if (si.address_spec.signature) {
+                                    if (si.address_spec.signature.ed25519) {
                                         confMessage += `
 Signer: ed25519 signature with public key, base64 ${oasis.misc.toBase64(
                                             si.address_spec.signature.ed25519,

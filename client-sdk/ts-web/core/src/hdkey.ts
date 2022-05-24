@@ -70,7 +70,10 @@ export class HDKey {
             .map((val: string): string => val.replace("'", ''))
             .map((el) => parseInt(el, 10));
 
-        return segments.reduce((parent, segment) => parent.derive(segment + HARDENED_OFFSET), this);
+        return segments.reduce<HDKey>(
+            (parent, segment) => parent.derive(segment + HARDENED_OFFSET),
+            this,
+        );
     }
 
     /**

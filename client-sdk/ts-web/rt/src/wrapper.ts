@@ -26,6 +26,7 @@ export class TransactionWrapper<BODY, OK> {
                 },
             },
         };
+        this.unverifiedTransaction = null as never;
     }
 
     setBody(body: BODY) {

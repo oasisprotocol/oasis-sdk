@@ -57,6 +57,6 @@ export class ExtContextSigner implements oasis.signature.ContextSigner {
         } as protocol.ContextSignerSignRequest;
         const res = (await this.connection.request(req)) as protocol.ContextSignerSignResponse;
         if (!res.approved) throw new Error('ExtContextSigner: extension declined to sign');
-        return res.signature;
+        return res.signature!;
     }
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased changes
+
+New features:
+
+- We've tighted up some TypeScript declarations to work better in strict mode.
+
 ## v0.1.0-alpha3
 
 Spotlight change:
