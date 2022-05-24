@@ -1,11 +1,14 @@
 # Changelog
 
-## Unreleased changes
+## v0.2.1-alpha.1
 
-New features:
+Spotlight change:
 
 - We added bindings for several new SDK features, notably including the
   contracts module, the gas used event, and runtime introspection.
+
+New features:
+
 - We've tightened up some TypeScript declarations to work better in strict
   mode.
 
