@@ -50,7 +50,7 @@ jobs:
         uses: ./.github/actions/lint-rust
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          manfiest_path: contract-sdk/specs/oas20/Cargo.toml
+          manfiest_path: contract-sdk/specs/token/oas20/Cargo.toml
 
   lint-go-client-sdk:
     name: lint-go-client-sdk
@@ -95,10 +95,10 @@ jobs:
           mv target/wasm32-unknown-unknown/release/hello.wasm ../../e2e/contracts/hello.wasm
 
       - name: Build oas20 contract
-        working-directory: contract-sdk/specs/oas20
+        working-directory: contract-sdk/specs/token/oas20
         run: |
           cargo build --target wasm32-unknown-unknown --release
-          mv target/wasm32-unknown-unknown/release/oas20.wasm ../../../tests/e2e/contracts/oas20.wasm
+          mv target/wasm32-unknown-unknown/release/oas20.wasm ../../../../tests/e2e/contracts/oas20.wasm
 
       - name: Setup Go
         uses: actions/setup-go@v3
