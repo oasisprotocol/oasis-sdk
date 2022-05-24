@@ -6,6 +6,7 @@ New features:
 
 - We added bindings for several new SDK features, notably including the
   contracts module, the gas used event, and runtime introspection.
+- We've tighted up some TypeScript declarations to work better in strict mode.
 
 ## v0.2.0-alpha10
 
