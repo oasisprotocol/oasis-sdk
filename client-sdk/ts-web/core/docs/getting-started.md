@@ -24,8 +24,8 @@ We have [a sample that uses webpack](../playground/webpack.config.js).
 ```js
 import * as oasis from '@oasisprotocol/client';
 
-// Use https://grpc-web.oasis.dev/api/testnet to interact with the testnet instead.
-const client = new oasis.OasisNodeClient('https://grpc-web.oasis.dev/api/mainnet');
+// Use https://testnet.grpc.oasis.dev to interact with the testnet instead.
+const nic = new oasis.client.NodeInternal('https://grpc.oasis.dev');
 ```
 
 This connects to a public oasis-node instance.
@@ -47,7 +47,7 @@ a custom set of enabled methods.
 ## How to cross reference the Go codebase
 
 **gRPC method wrappers**
-`oasis.OasisNodeClient.prototype.<moduleName><MethodName>` methods are defined
+`oasis.client.NodeInternal.prototype.<moduleName><MethodName>` methods are defined
 in oasis-core as a Go `MethodDesc` structure (construction looks like
 `method<MethodName> = serviceName.NewMethod( ...`) in a
 `<modulename>/api/grpc.go` file.
@@ -92,7 +92,7 @@ but appear here as multiple primitive values.
 You can also run your own Oasis node with gRPC proxy.
 
 <!-- Authored on https://app.diagrams.net/. -->
-![](ts-web-blocks.svg)
+![](ts-web-blocks-cors.svg)
 
 ## Overview
 
@@ -102,7 +102,7 @@ You can also run your own Oasis node with gRPC proxy.
 1. Running Envoy
 1. Using the SDK with your node
 
-## Setting up a node
+## Setting up a non-validator node
 
 Setting up a node results in a running process with a Unix domain socket named
 `internal.sock` that allows other programs to interact with the node, and
@@ -141,7 +141,7 @@ Labs](https://github.com/tetratelabs/archive-envoy).
 
 ## Configuring Envoy
 
-Notably, need to configure a route to forward requests from the distinctly
+Notably, you need to configure a route to forward requests from the distinctly
 browser-compatible gRPC-web protocol to the Unix domain socket in native gRPC.
 
 See [our sample configuration](../playground/sample-envoy.yaml) for one way to
@@ -151,13 +151,14 @@ You'll need to adjust the following:
 - `.match.safe_regex.regex` in the route, for setting up a method whitelist
 - `.load_assignment.endpoints[0].lb_endpoints[0].endpoint.address.pipe.path`
   in the `oasis_node_grpc` cluster, to point to your node's socket
-- `.load_assignment.endpoints[0].lb_endpoints[0].endpoint.address.socket_address`
-  in the `dev_static` cluster, to point to your web server
+- `.cors.allow_origin_string_match` in the virtual host to match your client's
+  origin(s)
 
-You can alternatively disable the `dev_static` cluster and its corresponding
-route, enable CORS, and serve your web app from a separate origin.
+You can alternatively remove the CORS configuration and add another cluster to
+proxy the client through Envoy as well, so that it is same-origin with the
+gRPC-web endpoints.
 
-![](ts-web-blocks-cors.svg)
+![](ts-web-blocks.svg)
 
 ## Running Envoy
 
@@ -166,15 +167,13 @@ In our sample, we run Envoy and proxy the web app through it.
 See [our sample invocation](../playground/sample-run-envoy.sh).
 
 If you're running Envoy in Docker, you can use volume mounts to allow envoy
-to access the YAML config file and the node's UNIX socket, and you can set the
-container to use the "host" network so that Envoy can connect to the web
-server.
+to access the YAML config file and the node's UNIX socket.
 
 ## Using the SDK with your node
 
-When you create an `OasisNodeClient`, pass the HTTP endpoint of your Envoy
-proxy:
+When you create an `oasis.client.NodeInternal`, pass the HTTP endpoint of your
+Envoy proxy:
 
 ```js
-const client = new oasis.OasisNodeClient('http://localhost:42280');
+const client = new oasis.client.NodeInternal('http://localhost:42280');
 ```
