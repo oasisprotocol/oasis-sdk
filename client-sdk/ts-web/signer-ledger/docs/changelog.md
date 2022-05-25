@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.1.1-alpha.1
+
+Spotlight change:
+
+- With a lot of hard work and determination, we've painstakingly modernized
+  the codebase and moved lightyears ahead in the build tooling. Okay there
+  really aren't any changes and we're only doing a release because there was a
+  problem with the old version numbering. Don't tell my boss.
+
 ## v0.1.0-alpha3
 
 Spotlight change:
