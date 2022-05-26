@@ -14,15 +14,6 @@ export const SIGNATURE_CONTEXT_BASE = 'oasis-runtime-sdk/tx: v0';
 export const LATEST_TRANSACTION_VERSION = 1;
 
 /**
- * Plain text call data.
- */
-export const CALLFORMAT_PLAIN = 0;
-/**
- * Encrypted call data using X25519 for key exchange and Deoxys-II for symmetric encryption.
- */
-export const CALLFORMAT_ENCRYPTED_X25519DEOXYSII = 1;
-
-/**
  * A union of signer types from different algorithms.
  * Because they all tend to look the same (e.g. have a `sign` method), code
  * that accepts an AnySigner should consult separate metadata such, such as an

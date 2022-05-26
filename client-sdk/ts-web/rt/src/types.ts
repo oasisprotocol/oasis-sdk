@@ -232,6 +232,16 @@ export interface AuthProof {
 export type BaseUnits = [amount: Uint8Array, denomination: Uint8Array];
 
 /**
+ * Plain text call data.
+ */
+export const CALLFORMAT_PLAIN = 0;
+
+/**
+ * Encrypted call data using X25519 for key exchange and Deoxys-II for symmetric encryption.
+ */
+export const CALLFORMAT_ENCRYPTED_X25519DEOXYSII = 1;
+
+/**
  * Format used for encoding the call (and output) information.
  */
 export type CallFormat = number;
