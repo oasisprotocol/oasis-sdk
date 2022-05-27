@@ -311,6 +311,9 @@ pub trait TxContext: Context {
     /// Transaction authentication information.
     fn tx_auth_info(&self) -> &transaction::AuthInfo;
 
+    /// The transaction's call format.
+    fn tx_call_format(&self) -> transaction::CallFormat;
+
     /// Authenticated address of the caller.
     ///
     /// In case there are multiple signers of a transaction, this will return the address
@@ -594,6 +597,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
             tx_index,
             tx_size,
             tx_auth_info: tx.auth_info,
+            tx_call_format: tx.call.format,
             etags: BTreeMap::new(),
             etags_unconditional: BTreeMap::new(),
             max_messages: remaining_messages,
@@ -640,6 +644,8 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
     tx_size: u32,
     /// Transaction authentication info.
     tx_auth_info: transaction::AuthInfo,
+    /// Transaction call format.
+    tx_call_format: transaction::CallFormat,
 
     /// Emitted event tags. Events are aggregated by tag key, the value
     /// is a list of all emitted event values.
@@ -805,6 +811,10 @@ impl<R: runtime::Runtime, S: Store> TxContext for RuntimeTxContext<'_, '_, R, S>
 
     fn tx_size(&self) -> u32 {
         self.tx_size
+    }
+
+    fn tx_call_format(&self) -> transaction::CallFormat {
+        self.tx_call_format
     }
 
     fn tx_auth_info(&self) -> &transaction::AuthInfo {

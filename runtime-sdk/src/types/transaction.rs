@@ -111,7 +111,7 @@ impl Transaction {
 }
 
 /// Format used for encoding the call (and output) information.
-#[derive(Clone, Copy, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 #[repr(u8)]
 pub enum CallFormat {
     /// Plain text call data.
