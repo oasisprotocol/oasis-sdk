@@ -302,6 +302,7 @@ pub trait API {
     fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<u128, Error>;
 
     /// Simulate an Ethereum CALL.
+    #[allow(clippy::too_many_arguments)]
     fn simulate_call<C: Context>(
         ctx: &mut C,
         gas_price: U256,
@@ -310,6 +311,7 @@ pub trait API {
         address: H160,
         value: U256,
         data: Vec<u8>,
+        format: transaction::CallFormat,
     ) -> Result<Vec<u8>, Error>;
 }
 
@@ -327,7 +329,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         }
 
         let (init_code, tx_metadata) =
-            Self::decode_call_data(ctx, init_code, ctx.tx_index(), true)?
+            Self::decode_call_data(ctx, init_code, ctx.tx_call_format(), ctx.tx_index(), true)?
                 .expect("processing always proceeds");
 
         let evm_result = Self::do_evm(
@@ -361,8 +363,9 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        let (data, tx_metadata) = Self::decode_call_data(ctx, data, ctx.tx_index(), true)?
-            .expect("processing always proceeds");
+        let (data, tx_metadata) =
+            Self::decode_call_data(ctx, data, ctx.tx_call_format(), ctx.tx_index(), true)?
+                .expect("processing always proceeds");
 
         let evm_result = Self::do_evm(
             caller,
@@ -410,9 +413,12 @@ impl<Cfg: Config> API for Module<Cfg> {
         address: H160,
         value: U256,
         data: Vec<u8>,
+        format: transaction::CallFormat,
     ) -> Result<Vec<u8>, Error> {
-        let (data, tx_metadata) =
-            Self::decode_call_data(ctx, data, 0, true)?.expect("processing always proceeds");
+        debug_assert_eq!(format, transaction::CallFormat::Plain);
+
+        let (data, tx_metadata) = Self::decode_call_data(ctx, data, format, 0, true)?
+            .expect("processing always proceeds");
 
         let evm_result = ctx.with_simulation(|mut sctx| {
             let call_tx = transaction::Transaction {
@@ -595,10 +601,13 @@ impl<Cfg: Config> Module<Cfg> {
     fn decode_call_data<C: Context>(
         ctx: &C,
         data: Vec<u8>,
+        format: transaction::CallFormat,
         tx_index: usize,
         assume_km_reachable: bool,
     ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
-        if !Cfg::CONFIDENTIAL {
+        if !Cfg::CONFIDENTIAL || format != transaction::CallFormat::Plain {
+            // Either the runtime is non-confidential and all txs are plaintext, or the tx
+            // is sent using a confidential call format and the whole tx is encrypted.
             return Ok(Some((data, callformat::Metadata::Empty)));
         }
         let call = cbor::from_slice(&data)
@@ -666,6 +675,7 @@ impl<Cfg: Config> Module<Cfg> {
             body.address,
             body.value,
             body.data,
+            transaction::CallFormat::Plain,
         )
     }
 }
