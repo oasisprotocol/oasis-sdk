@@ -1,7 +1,8 @@
+import * as oasis from '@oasisprotocol/client';
+
 import * as ed from '@noble/ed25519';
 import * as types from './types';
 import * as mrae from './mrae';
-import * as cborg from 'cborg';
 
 var deoxysii = require('deoxysii');
 
@@ -36,14 +37,52 @@ export async function encodeCall(call: types.Call, cf: types.CallFormat, cfg?: E
     case types.CALLFORMAT_ENCRYPTED_X25519DEOXYSII:
       if (cfg && cfg.publicKey) {
 	const privateKey = ed.utils.randomPrivateKey();
-	const publicKey = await ed.getPublicKey(privateKey);
+	const publicKey = ed.curve25519.scalarMultBase(privateKey)
 	const nonce = new Uint8Array(deoxysii.NonceSize);
 	crypto.getRandomValues(nonce);
-	const rawCall = cborg.encode(call) as Uint8Array;
-	const sealedCall = mrae.boxSeal(nonce, rawCall, null, cfg.publicKey, privateKey)	
+	const rawCall = oasis.misc.toCBOR(call);
+	const sealedCall = mrae.boxSeal(nonce, rawCall, null, cfg.publicKey.key, privateKey);
+	const envolope: types.CallEnvelopeX25519DeoxysII = {
+	  pk: publicKey,
+	  nonce: nonce,
+	  data: sealedCall,
+	}
+	const encoded: types.Call = {
+	  format: types.CALLFORMAT_ENCRYPTED_X25519DEOXYSII,
+	  method: "",
+	  body: oasis.misc.toCBOR(envolope),
+	};
+	const meta: metaEncryptedX25519DeoxysII = {
+	  sk: privateKey,
+	  pk: cfg.publicKey.key,
+	};
+	return [encoded, meta];
       } else {
 	throw new Error('callformat: runtime call data public key not set');
-      }
-      
+      }      
+  }
+}
+
+/**
+ * decodeResult performs result decoding based on the specified call format metadata.
+ */
+
+export function decodeResult(result: types.CallResult, meta?: metaEncryptedX25519DeoxysII): types.CallResult {
+  if (meta == undefined) {
+    /**
+     * In case of plain-text data format, we simply pass on the result unchanged.
+     */
+    return result;
+  } else {
+    if (result.unknown) {
+      const envelop = oasis.misc.fromCBOR(result.unknown) as types.ResultEnvelopeX25519DeoxysII;      
+      const pt = mrae.boxOpen(envelop.nonce, envelop.data, null, meta.pk, meta.sk);
+      const output = oasis.misc.fromCBOR(pt) as types.CallResult;
+      return output;
+    } else if (result.fail) {
+      throw new Error(`callformat: failed call: module :${result.fail.module} code: ${result.fail.code} message: ${result.fail.message}`);
+    } else {
+      throw new Error(`callformat: unexpected result: ${result.ok}`);
+    }    
   }
 }

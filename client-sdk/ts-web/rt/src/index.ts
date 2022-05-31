@@ -7,6 +7,7 @@ export * as contracts from './contracts';
 export * as core from './core';
 export * as event from './event';
 export * as evm from './evm';
+export * as mrae from './mrae';
 export * as rewards from './rewards';
 export * as signatureSecp256k1 from './signature_secp256k1';
 export * as token from './token';
