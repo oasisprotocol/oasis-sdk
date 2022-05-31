@@ -17,7 +17,9 @@ use once_cell::sync::Lazy;
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
+    callformat,
     context::{BatchContext, Context, TxContext},
+    error::Error as _,
     handler,
     module::{self, Module as _},
     modules::{
@@ -300,6 +302,7 @@ pub trait API {
     fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<u128, Error>;
 
     /// Simulate an Ethereum CALL.
+    #[allow(clippy::too_many_arguments)]
     fn simulate_call<C: Context>(
         ctx: &mut C,
         gas_price: U256,
@@ -308,6 +311,7 @@ pub trait API {
         address: H160,
         value: U256,
         data: Vec<u8>,
+        format: transaction::CallFormat,
     ) -> Result<Vec<u8>, Error>;
 }
 
@@ -324,7 +328,11 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        Self::do_evm(
+        let (init_code, tx_metadata) =
+            Self::decode_call_data(ctx, init_code, ctx.tx_call_format(), ctx.tx_index(), true)?
+                .expect("processing always proceeds");
+
+        let evm_result = Self::do_evm(
             caller,
             ctx,
             |exec, gas_limit| {
@@ -338,7 +346,8 @@ impl<Cfg: Config> API for Module<Cfg> {
             },
             // If in simulation, this must be EstimateGas query.
             ctx.is_simulation(),
-        )
+        );
+        Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 
     fn call<C: TxContext>(
@@ -354,7 +363,11 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        Self::do_evm(
+        let (data, tx_metadata) =
+            Self::decode_call_data(ctx, data, ctx.tx_call_format(), ctx.tx_index(), true)?
+                .expect("processing always proceeds");
+
+        let evm_result = Self::do_evm(
             caller,
             ctx,
             |exec, gas_limit| {
@@ -369,7 +382,8 @@ impl<Cfg: Config> API for Module<Cfg> {
             },
             // If in simulation, this must be EstimateGas query.
             ctx.is_simulation(),
-        )
+        );
+        Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 
     fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
@@ -399,8 +413,14 @@ impl<Cfg: Config> API for Module<Cfg> {
         address: H160,
         value: U256,
         data: Vec<u8>,
+        format: transaction::CallFormat,
     ) -> Result<Vec<u8>, Error> {
-        ctx.with_simulation(|mut sctx| {
+        debug_assert_eq!(format, transaction::CallFormat::Plain);
+
+        let (data, tx_metadata) = Self::decode_call_data(ctx, data, format, 0, true)?
+            .expect("processing always proceeds");
+
+        let evm_result = ctx.with_simulation(|mut sctx| {
             let call_tx = transaction::Transaction {
                 version: 1,
                 call: transaction::Call {
@@ -427,7 +447,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                     },
                 },
             };
-            sctx.with_tx(0, call_tx, |mut txctx, _call| {
+            sctx.with_tx(0, 0, call_tx, |mut txctx, _call| {
                 Self::do_evm(
                     caller,
                     &mut txctx,
@@ -445,7 +465,8 @@ impl<Cfg: Config> API for Module<Cfg> {
                     false,
                 )
             })
-        })
+        });
+        Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 }
 
@@ -551,6 +572,60 @@ impl<Cfg: Config> Module<Cfg> {
     {
         derive_caller::from_tx_auth_info(ctx.tx_auth_info())
     }
+
+    fn encode_evm_result<C: Context>(
+        ctx: &C,
+        evm_result: Result<Vec<u8>, Error>,
+        tx_metadata: callformat::Metadata,
+    ) -> Result<Vec<u8>, Error> {
+        if !Cfg::CONFIDENTIAL {
+            return evm_result;
+        }
+        let call_result = match evm_result {
+            Ok(exit_value) => module::CallResult::Ok(exit_value.into()),
+            Err(e) => module::CallResult::Failed {
+                module: e.module_name().into(),
+                code: e.code(),
+                message: e.to_string(),
+            },
+        };
+        Ok(cbor::to_vec(callformat::encode_result(
+            ctx,
+            call_result,
+            tx_metadata,
+        )))
+    }
+
+    /// Returns the decrypted call data or `None` if this transaction is simulated in
+    /// a context that may not include a key manager (i.e. SimulateCall but not EstimateGas).
+    fn decode_call_data<C: Context>(
+        ctx: &C,
+        data: Vec<u8>,
+        format: transaction::CallFormat,
+        tx_index: usize,
+        assume_km_reachable: bool,
+    ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
+        if !Cfg::CONFIDENTIAL || format != transaction::CallFormat::Plain {
+            // Either the runtime is non-confidential and all txs are plaintext, or the tx
+            // is sent using a confidential call format and the whole tx is encrypted.
+            return Ok(Some((data, callformat::Metadata::Empty)));
+        }
+        let call = cbor::from_slice(&data)
+            .map_err(|_| CoreError::InvalidCallFormat(anyhow::anyhow!("invalid packed call")))?;
+        match callformat::decode_call_ex(ctx, call, tx_index, assume_km_reachable)? {
+            Some((
+                transaction::Call {
+                    body: cbor::Value::ByteString(data),
+                    ..
+                },
+                metadata,
+            )) => Ok(Some((data, metadata))),
+            Some((_, _)) => {
+                Err(CoreError::InvalidCallFormat(anyhow::anyhow!("invalid inner data")).into())
+            }
+            None => Ok(None),
+        }
+    }
 }
 
 #[sdk_derive(MethodHandler)]
@@ -600,6 +675,7 @@ impl<Cfg: Config> Module<Cfg> {
             body.address,
             body.value,
             body.data,
+            transaction::CallFormat::Plain,
         )
     }
 }

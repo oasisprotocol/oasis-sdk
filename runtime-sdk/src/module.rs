@@ -72,6 +72,22 @@ impl CallResult {
     pub fn is_success(&self) -> bool {
         matches!(self, CallResult::Ok(_))
     }
+
+    #[cfg(any(test, feature = "test"))]
+    pub fn unwrap(self) -> cbor::Value {
+        match self {
+            Self::Ok(v) => v,
+            Self::Failed {
+                module,
+                code,
+                message,
+            } => panic!(
+                "{} reported failure with code {}: {}",
+                module, code, message
+            ),
+            Self::Aborted(e) => panic!("tx aborted with error: {}", e),
+        }
+    }
 }
 
 impl From<CallResult> for transaction::CallResult {

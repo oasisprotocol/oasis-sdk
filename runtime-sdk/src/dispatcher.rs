@@ -166,14 +166,14 @@ impl<R: Runtime> Dispatcher<R> {
     pub fn dispatch_tx_call<C: TxContext>(
         ctx: &mut C,
         call: types::transaction::Call,
-        index: usize,
     ) -> (module::CallResult, callformat::Metadata) {
         if let Err(e) = R::Modules::before_handle_call(ctx, &call) {
             return (e.into_call_result(), callformat::Metadata::Empty);
         }
 
         // Decode call based on specified call format.
-        let (call, call_format_metadata) = match callformat::decode_call(ctx, call, index) {
+        let (call, call_format_metadata) = match callformat::decode_call(ctx, call, ctx.tx_index())
+        {
             Ok(Some(result)) => result,
             Ok(None) => {
                 return (
@@ -212,8 +212,8 @@ impl<R: Runtime> Dispatcher<R> {
         }
         let tx_auth_info = tx.auth_info.clone();
 
-        let (result, messages) = ctx.with_tx(tx_size, tx, |mut ctx, call| {
-            let (result, call_format_metadata) = Self::dispatch_tx_call(&mut ctx, call, index);
+        let (result, messages) = ctx.with_tx(index, tx_size, tx, |mut ctx, call| {
+            let (result, call_format_metadata) = Self::dispatch_tx_call(&mut ctx, call);
             if !result.is_success() {
                 // Retrieve unconditional events by doing an explicit rollback.
                 let etags = ctx.rollback();

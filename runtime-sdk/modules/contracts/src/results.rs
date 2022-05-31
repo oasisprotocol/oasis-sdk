@@ -175,14 +175,13 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         },
                     };
 
-                    let result = ctx.with_tx(0, tx, |mut ctx, call| {
+                    let result = ctx.with_tx(0, 0, tx, |mut ctx, call| {
                         // Propagate call depth.
                         ctx.value(CONTEXT_KEY_DEPTH).set(current_depth + 1);
 
                         // Dispatch the call.
-                        let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
-                            &mut ctx, call, 0,
-                        );
+                        let (result, _) =
+                            dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut ctx, call);
                         // Retrieve remaining gas.
                         let gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(&mut ctx);
 

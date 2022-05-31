@@ -45,7 +45,7 @@ fn test_use_gas() {
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = MAX_GAS;
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, MAX_GAS).expect("using gas under limit should succeed");
         assert_eq!(
             Core::remaining_batch_gas(&mut tx_ctx),
@@ -55,7 +55,7 @@ fn test_use_gas() {
         assert_eq!(Core::used_tx_gas(&mut tx_ctx), MAX_GAS);
     });
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, MAX_GAS)
             .expect("gas across separate transactions shouldn't accumulate");
         assert_eq!(
@@ -66,7 +66,7 @@ fn test_use_gas() {
         assert_eq!(Core::used_tx_gas(&mut tx_ctx), MAX_GAS);
     });
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, MAX_GAS).unwrap();
         Core::use_tx_gas(&mut tx_ctx, 1).expect_err("gas in same transaction should accumulate");
         assert_eq!(Core::remaining_tx_gas(&mut tx_ctx), 0);
@@ -78,7 +78,7 @@ fn test_use_gas() {
         BLOCK_MAX_GAS - 1 - 3 * MAX_GAS
     );
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, 1).unwrap();
         assert_eq!(
             Core::remaining_batch_gas(&mut tx_ctx),
@@ -96,11 +96,11 @@ fn test_use_gas() {
 
     let mut big_tx = tx.clone();
     big_tx.auth_info.fee.gas = u64::MAX;
-    ctx.with_tx(0, big_tx, |mut tx_ctx, _call| {
+    ctx.with_tx(0, 0, big_tx, |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, u64::MAX).expect_err("batch overflow should cause error");
     });
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, 1).expect_err("batch gas should accumulate");
     });
 
@@ -109,7 +109,7 @@ fn test_use_gas() {
     let mut ctx = mock.create_check_ctx();
     let mut big_tx = tx.clone();
     big_tx.auth_info.fee.gas = u64::MAX;
-    ctx.with_tx(0, big_tx, |mut tx_ctx, _call| {
+    ctx.with_tx(0, 0, big_tx, |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, u64::MAX)
             .expect("batch overflow should not happen in check-tx");
     });
@@ -448,7 +448,7 @@ fn test_add_priority() {
     Core::add_priority(&mut ctx, 11).expect("adding priority should succeed");
 
     let tx = mock::transaction();
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
         Core::add_priority(&mut tx_ctx, 10)
             .expect("adding priority from tx context should succeed");
     });
@@ -531,13 +531,13 @@ fn test_min_gas_price() {
         },
     };
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, call| {
         Core::before_handle_call(&mut tx_ctx, &call).expect_err("gas price should be too low");
     });
 
     tx.auth_info.fee.amount = token::BaseUnits::new(100000, token::Denomination::NATIVE);
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, call| {
         Core::before_handle_call(&mut tx_ctx, &call).expect("gas price should be ok");
     });
 
@@ -558,28 +558,28 @@ fn test_min_gas_price() {
             once_cell::unsync::Lazy::new(|| BTreeSet::from(["exempt.Method"]));
     }
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, call| {
         super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
             .expect_err("gas price should be too low");
     });
 
     tx.auth_info.fee.amount = token::BaseUnits::new(1_000_000, token::Denomination::NATIVE);
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, call| {
         super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
             .expect("gas price should be ok");
     });
 
     tx.auth_info.fee.amount = token::BaseUnits::new(1_000, "SMALLER".parse().unwrap());
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, call| {
         super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
             .expect_err("gas price should be too low");
     });
 
     tx.auth_info.fee.amount = token::BaseUnits::new(10_000, "SMALLER".parse().unwrap());
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, call| {
         super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
             .expect("gas price should be ok");
     });
@@ -588,14 +588,14 @@ fn test_min_gas_price() {
     tx.call.method = "exempt.Method".into();
     tx.auth_info.fee.amount = token::BaseUnits::new(100_000, token::Denomination::NATIVE);
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, call| {
         super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
             .expect("method should be gas price exempt");
     });
 
     tx.auth_info.fee.amount = token::BaseUnits::new(0, token::Denomination::NATIVE);
 
-    ctx.with_tx(0, tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, call| {
         super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
             .expect("method should be gas price exempt");
     });
@@ -622,7 +622,7 @@ fn test_emit_events() {
     }
 
     ctx.emit_event(TestEvent { i: 42 });
-    let etags = ctx.with_tx(0, mock::transaction(), |mut ctx, _| {
+    let etags = ctx.with_tx(0, 0, mock::transaction(), |mut ctx, _| {
         ctx.emit_event(TestEvent { i: 2 });
         ctx.emit_event(TestEvent { i: 3 });
         ctx.emit_event(TestEvent { i: 1 });
@@ -680,7 +680,7 @@ fn test_gas_used_events() {
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = 100_000;
 
-    let etags = ctx.with_tx(0, tx.clone(), |mut tx_ctx, _call| {
+    let etags = ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, 10).expect("using gas under limit should succeed");
         assert_eq!(Core::used_tx_gas(&mut tx_ctx), 10);
         Core::after_handle_call(&mut tx_ctx).unwrap();

@@ -59,6 +59,9 @@ pub fn set_chain_context(runtime_id: Namespace, consensus_chain_context: &str) {
     ]));
     let mut guard = CHAIN_CONTEXT.lock().unwrap();
     if let Some(ref existing) = *guard {
+        if cfg!(any(test, feature = "test")) && existing == ctx.as_bytes() {
+            return;
+        }
         let ex = String::from_utf8(existing.clone()).unwrap();
         drop(guard); // Avoid poisioning the global lock.
         panic!("chain domain separation context already set: {}", ex,);
