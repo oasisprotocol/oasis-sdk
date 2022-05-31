@@ -644,7 +644,7 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
     tx_size: u32,
     /// Transaction authentication info.
     tx_auth_info: transaction::AuthInfo,
-    /// Transaction call format.
+    /// The transaction call format (as received, before decoding by the dispatcher).
     tx_call_format: transaction::CallFormat,
 
     /// Emitted event tags. Events are aggregated by tag key, the value
@@ -1218,6 +1218,16 @@ mod test {
                     .emit_messages(messages.clone())
                     .expect_err("emitting another message should fail");
             });
+        });
+    }
+
+    #[test]
+    fn test_tx_ctx_metadata() {
+        let mut mock = Mock::default();
+        let mut ctx = mock.create_ctx();
+        ctx.with_tx(42, 888, mock::transaction(), |mut tx_ctx, _call| {
+            assert_eq!(tx_ctx.tx_index(), 42);
+            assert_eq!(tx_ctx.tx_size(), 888);
         });
     }
 }
