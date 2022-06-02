@@ -18,7 +18,7 @@ require (
 	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210915214749-c084706c2272
-	google.golang.org/grpc v1.46.0
+	google.golang.org/grpc v1.47.0
 )
 
 require (
