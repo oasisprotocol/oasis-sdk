@@ -1,7 +1,5 @@
-/// <reference types="cypress" />
-
-describe('playground', () => {
-    it('finishes', () => {
+describe('playground.cy.ts', () => {
+    it('should finish', () => {
         cy.visit('http://localhost:8080/');
         // This is similar to `.its('playground')`, except that
         // (i) it doesn't retry if `w.playground` rejects, and
