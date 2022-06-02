@@ -1,7 +1,5 @@
-/// <reference types="cypress" />
-
-describe('playground', () => {
-    it('finishes simple-keyvalue', () => {
+describe('playground.cy.ts', () => {
+    it('should finish simple-keyvalue', () => {
         cy.visit('http://localhost:8080/');
         // This is similar to `.its('playground')`, except that
         // (i) it doesn't retry if `w.playground` rejects, and
@@ -13,7 +11,7 @@ describe('playground', () => {
             });
     });
 
-    it('finishes simple-consensus', () => {
+    it('should finish simple-consensus', () => {
         cy.visit('http://localhost:8080/consensus.html');
         // This is similar to `.its('playground')`, except that
         // (i) it doesn't retry if `w.playground` rejects, and
