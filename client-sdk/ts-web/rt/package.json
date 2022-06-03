@@ -22,7 +22,7 @@
         "@types/elliptic": "^6.4.14",
         "@types/jest": "^28.1.0",
         "buffer": "^6.0.3",
-        "cypress": "^10.0.1",
+        "cypress": "^10.0.2",
         "jest": "^28.1.0",
         "prettier": "^2.6.2",
         "process": "^0.11.10",
