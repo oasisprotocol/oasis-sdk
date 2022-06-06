@@ -25,11 +25,11 @@ type V1 interface {
 	Parameters(ctx context.Context, round uint64) (*Parameters, error)
 
 	// EstimateGas performs gas estimation for executing the given transaction.
-	EstimateGas(ctx context.Context, round uint64, tx *types.Transaction) (uint64, error)
+	EstimateGas(ctx context.Context, round uint64, tx *types.Transaction, propagateFailures bool) (uint64, error)
 
 	// EstimateGasForCaller performs gas estimation for executing the given transaction as if the
 	// caller specified by address had executed it.
-	EstimateGasForCaller(ctx context.Context, round uint64, caller types.CallerAddress, tx *types.Transaction) (uint64, error)
+	EstimateGasForCaller(ctx context.Context, round uint64, caller types.CallerAddress, tx *types.Transaction, propagateFailures bool) (uint64, error)
 
 	// MinGasPrice returns the minimum gas price.
 	MinGasPrice(ctx context.Context) (map[types.Denomination]types.Quantity, error)
@@ -59,9 +59,9 @@ func (a *v1) Parameters(ctx context.Context, round uint64) (*Parameters, error) 
 }
 
 // Implements V1.
-func (a *v1) EstimateGas(ctx context.Context, round uint64, tx *types.Transaction) (uint64, error) {
+func (a *v1) EstimateGas(ctx context.Context, round uint64, tx *types.Transaction, propagateFailures bool) (uint64, error) {
 	var gas uint64
-	err := a.rc.Query(ctx, round, methodEstimateGas, EstimateGasQuery{Tx: tx}, &gas)
+	err := a.rc.Query(ctx, round, methodEstimateGas, EstimateGasQuery{Tx: tx, PropagateFailures: propagateFailures}, &gas)
 	if err != nil {
 		return 0, err
 	}
@@ -69,11 +69,12 @@ func (a *v1) EstimateGas(ctx context.Context, round uint64, tx *types.Transactio
 }
 
 // Implements V1.
-func (a *v1) EstimateGasForCaller(ctx context.Context, round uint64, caller types.CallerAddress, tx *types.Transaction) (uint64, error) {
+func (a *v1) EstimateGasForCaller(ctx context.Context, round uint64, caller types.CallerAddress, tx *types.Transaction, propagateFailures bool) (uint64, error) {
 	var gas uint64
 	args := EstimateGasQuery{
-		Caller: &caller,
-		Tx:     tx,
+		Caller:            &caller,
+		Tx:                tx,
+		PropagateFailures: propagateFailures,
 	}
 	err := a.rc.Query(ctx, round, methodEstimateGas, args, &gas)
 	if err != nil {

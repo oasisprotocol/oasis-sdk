@@ -54,7 +54,7 @@ func evmCreate(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer s
 	txB := e.Create(value, initCode)
 
 	// Check if gas estimation works.
-	gasLimit, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &testing.Dave.Address}, txB.GetTransaction())
+	gasLimit, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &testing.Dave.Address}, txB.GetTransaction(), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to estimate gas: %w", err)
 	}
@@ -75,7 +75,7 @@ func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer sig
 	txB := e.Call(address, value, data)
 
 	// Check if ETH gas estimation works.
-	gasLimit, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{EthAddress: &testing.Dave.EthAddress}, txB.GetTransaction())
+	gasLimit, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{EthAddress: &testing.Dave.EthAddress}, txB.GetTransaction(), false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to estimate gas: %w", err)
 	}

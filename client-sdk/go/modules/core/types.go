@@ -4,6 +4,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/common/version"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -14,6 +15,8 @@ type EstimateGasQuery struct {
 	Caller *types.CallerAddress `json:"caller,omitempty"`
 	// Tx is the unsigned transaction to estimate.
 	Tx *types.Transaction `json:"tx"`
+	// PropagateFailures indicates if the estimate gas query should propagate transaction failures.
+	PropagateFailures bool `json:"propagate_failures,omitempty"`
 }
 
 // GasCosts are the consensus accounts module gas costs.

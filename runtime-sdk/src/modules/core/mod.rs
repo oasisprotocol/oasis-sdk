@@ -1,7 +1,8 @@
 //! Core definitions module.
 use std::{
     collections::{BTreeMap, BTreeSet},
-    convert::TryInto,
+    convert::{TryFrom, TryInto},
+    fmt::Display,
 };
 
 use anyhow::anyhow;
@@ -14,7 +15,8 @@ use crate::{
     callformat,
     context::{BatchContext, Context, TxContext},
     dispatcher,
-    module::{self, InvariantHandler as _, Module as _, ModuleInfoHandler as _},
+    error::Error as SDKError,
+    module::{self, CallResult, InvariantHandler as _, Module as _, ModuleInfoHandler as _},
     types::{
         token,
         transaction::{self, AddressSpec, AuthProof, Call, CallFormat, UnverifiedTransaction},
@@ -117,6 +119,53 @@ pub enum Error {
     #[error("transaction is too large")]
     #[sdk_error(code = 23)]
     OversizedTransaction,
+
+    #[error("{0}")]
+    #[sdk_error(transparent)]
+    TxSimulationFailed(#[from] TxSimulationFailure),
+}
+
+/// Simulation failure error.
+#[derive(Error, Debug)]
+pub struct TxSimulationFailure {
+    message: String,
+    module_name: String,
+    code: u32,
+}
+
+impl Display for TxSimulationFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl SDKError for TxSimulationFailure {
+    fn module_name(&self) -> &str {
+        &self.module_name
+    }
+
+    fn code(&self) -> u32 {
+        self.code
+    }
+}
+
+impl TryFrom<CallResult> for TxSimulationFailure {
+    type Error = anyhow::Error;
+
+    fn try_from(value: CallResult) -> Result<Self, Self::Error> {
+        match value {
+            CallResult::Failed {
+                module,
+                code,
+                message,
+            } => Ok(TxSimulationFailure {
+                code,
+                module_name: module,
+                message,
+            }),
+            _ => Err(anyhow!("CallResult not Failed")),
+        }
+    }
 }
 
 /// Events emitted by the core module.
@@ -404,10 +453,17 @@ impl<Cfg: Config> Module<Cfg> {
             extra_gas += params.gas_costs.auth_signature;
         }
 
+        let propagate_failures = args.propagate_failures;
         ctx.with_simulation(|mut sim_ctx| {
             sim_ctx.with_tx(0 /* index */, tx_size, args.tx, |mut tx_ctx, call| {
-                dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut tx_ctx, call);
-                // Warning: we don't report success or failure. If the call fails, we still report
+                let (result, _) =
+                    dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut tx_ctx, call);
+                if propagate_failures && !result.is_success() {
+                    // Report failure.
+                    let err: TxSimulationFailure = result.try_into().unwrap(); // Guaranteed to be a Failed CallResult.
+                    return Err(Error::TxSimulationFailed(err));
+                }
+                // Don't report success or failure. If the call fails, we still report
                 // how much gas it uses while it fails.
                 let gas_used = *tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
                 Ok(gas_used + extra_gas)

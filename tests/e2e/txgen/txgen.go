@@ -85,7 +85,7 @@ func EstimateGas(ctx context.Context, rtc client.RuntimeClient, tx types.Transac
 	// Set the starting gas to something high, so we don't run out.
 	tx.AuthInfo.Fee.Gas = highGasAmount
 	// Estimate gas usage.
-	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, &tx)
+	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, &tx, false)
 	if err != nil {
 		tx.AuthInfo.Fee.Gas = oldGas + extraGas
 		return tx

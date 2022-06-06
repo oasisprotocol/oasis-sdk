@@ -15,6 +15,11 @@ pub struct Metadata {
     pub versions: BTreeMap<String, u32>,
 }
 
+#[allow(clippy::trivially_copy_pass_by_ref)]
+#[inline]
+const fn is_false(v: &bool) -> bool {
+    !(*v)
+}
 /// Arguments for the EstimateGas query.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct EstimateGasQuery {
@@ -24,6 +29,14 @@ pub struct EstimateGasQuery {
     pub caller: Option<CallerAddress>,
     /// The unsigned transaction to estimate.
     pub tx: Transaction,
+    /// If the estimate gas query should fail in case of transaction failures.
+    /// If true, the query will return the transaction error and not the gas estimation.
+    /// Defaults to false.
+    #[cbor(optional)]
+    #[cbor(default)]
+    // TODO: remove once oasis-cbor is updated to 0.3.
+    #[cbor(skip_serializing_if = "is_false")]
+    pub propagate_failures: bool,
 }
 
 /// Response to the call data public key query.
