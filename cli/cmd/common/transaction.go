@@ -179,7 +179,7 @@ func SignParaTimeTransaction(
 		// Gas estimation if not specified.
 		if tx.AuthInfo.Fee.Gas == invalidGasLimit {
 			var err error
-			tx.AuthInfo.Fee.Gas, err = conn.Runtime(npa.ParaTime).Core.EstimateGas(ctx, client.RoundLatest, tx)
+			tx.AuthInfo.Fee.Gas, err = conn.Runtime(npa.ParaTime).Core.EstimateGas(ctx, client.RoundLatest, tx, false)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to estimate gas: %w", err)
 			}

@@ -137,14 +137,14 @@ func sendTx(rtc client.RuntimeClient, signer signature.Signer, tx *types.Transac
 	tx.AppendAuthSignature(sigspecForSigner(signer), nonce)
 
 	// Estimate gas by passing the transaction.
-	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
+	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx, false)
 	if err != nil {
 		return err
 	}
 	tx.AuthInfo.Fee.Gas = gas
 
 	// Estimate gas by passing the caller address.
-	gasForCaller, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &caller}, tx)
+	gasForCaller, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &caller}, tx, false)
 	if err != nil {
 		return err
 	}
@@ -222,14 +222,14 @@ func kvConfidentialGet(rtc client.RuntimeClient, signer signature.Signer, keyID 
 	tx.AppendAuthSignature(sigspecForSigner(signer), nonce)
 
 	// Estimate gas by passing the transaction.
-	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
+	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx, false)
 	if err != nil {
 		return nil, err
 	}
 	tx.AuthInfo.Fee.Gas = gas
 
 	// Estimate gas by passing the caller address.
-	gasForCaller, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &caller}, tx)
+	gasForCaller, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &caller}, tx, false)
 	if err != nil {
 		return nil, err
 	}
@@ -937,7 +937,7 @@ func KVMultisigTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	})
 	tx.AppendAuthMultisig(&config, nonce1)
 
-	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx)
+	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx, false)
 	if err != nil {
 		return err
 	}

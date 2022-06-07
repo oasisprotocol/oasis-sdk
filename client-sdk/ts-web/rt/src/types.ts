@@ -6,6 +6,7 @@ import * as oasis from '@oasisprotocol/client';
 export interface CoreEstimateGasQuery {
     caller?: CallerAddress;
     tx: Transaction;
+    propagate_failures?: boolean;
 }
 
 /**

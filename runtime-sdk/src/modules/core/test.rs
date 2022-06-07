@@ -4,6 +4,7 @@ use crate::{
     context::{BatchContext, Context, Mode, TxContext},
     core::common::version::Version,
     crypto::multisig,
+    error::Error,
     event::IntoTags,
     handler,
     module::{self, Module as _, TransactionHandler as _},
@@ -173,6 +174,7 @@ struct GasWasterModule;
 impl GasWasterModule {
     const CALL_GAS: u64 = 100;
     const METHOD_WASTE_GAS: &'static str = "test.WasteGas";
+    const METHOD_WASTE_GAS_AND_FAIL: &'static str = "test.WasteGasAndFail";
 }
 
 impl module::Module for GasWasterModule {
@@ -192,6 +194,15 @@ impl GasWasterModule {
     ) -> Result<(), <GasWasterModule as module::Module>::Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS)?;
         Ok(())
+    }
+
+    #[handler(call = Self::METHOD_WASTE_GAS_AND_FAIL)]
+    fn fail<C: TxContext>(
+        ctx: &mut C,
+        _args: (),
+    ) -> Result<(), <GasWasterModule as module::Module>::Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS)?;
+        Err(<GasWasterModule as module::Module>::Error::Forbidden)
     }
 }
 
@@ -318,6 +329,34 @@ fn test_query_estimate_gas() {
             },
         },
     };
+    let tx_fail = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: GasWasterModule::METHOD_WASTE_GAS_AND_FAIL.to_owned(),
+            body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![
+                transaction::SignerInfo::new_sigspec(keys::alice::sigspec(), 0),
+                transaction::SignerInfo::new_multisig(
+                    multisig::Config {
+                        signers: vec![multisig::Signer {
+                            public_key: keys::bob::pk(),
+                            weight: 1,
+                        }],
+                        threshold: 1,
+                    },
+                    0,
+                ),
+            ],
+            fee: transaction::Fee {
+                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                gas: u64::MAX,
+                consensus_messages: 0,
+            },
+        },
+    };
 
     // Gas that we expect `tx` to use.
     let reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
@@ -334,6 +373,7 @@ fn test_query_estimate_gas() {
         let args = types::EstimateGasQuery {
             caller: None,
             tx: tx.clone(),
+            propagate_failures: false,
         };
         let est =
             Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
@@ -343,6 +383,7 @@ fn test_query_estimate_gas() {
         let args = types::EstimateGasQuery {
             caller: Some(CallerAddress::Address(keys::alice::address())),
             tx: tx.clone(),
+            propagate_failures: false,
         };
         let est =
             Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
@@ -365,6 +406,7 @@ fn test_query_estimate_gas() {
         let args = types::EstimateGasQuery {
             caller: None,
             tx: tx.clone(),
+            propagate_failures: false,
         };
         let est = Core::query_estimate_gas(&mut ctx, args)
             .expect("query_estimate_gas should succeed even with limited max_estimated_gas");
@@ -374,6 +416,54 @@ fn test_query_estimate_gas() {
             max_estimated_gas,
             est
         );
+
+        // Test with limited max_estimated_gas.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx.clone(),
+            propagate_failures: true,
+        };
+        let result = Core::query_estimate_gas(&mut ctx, args).expect_err(
+            "query_estimate_gas should fail with limited max_estimated_gas and propagate failures enabled",
+        );
+        assert_eq!(result.module_name(), "core");
+        assert_eq!(result.code(), 12);
+        assert_eq!(
+            result.to_string(),
+            format!(
+                "out of gas (limit: {} wanted: {})",
+                max_estimated_gas, reference_gas
+            )
+        );
+    }
+
+    // Test transactions that fail.
+    {
+        let mut mock = mock::Mock::default();
+        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+        GasWasterRuntime::migrate(&mut ctx);
+
+        // Test with propagate failures disabled.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_fail.clone(),
+            propagate_failures: false,
+        };
+        let est = Core::query_estimate_gas(&mut ctx, args)
+            .expect("query_estimate_gas should succeed even with a transaction that fails");
+        assert_eq!(est, reference_gas, "estimated gas should be correct");
+
+        // Test with propagate failures enabled.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_fail.clone(),
+            propagate_failures: true,
+        };
+        let result = Core::query_estimate_gas(&mut ctx, args)
+            .expect_err("query_estimate_gas should fail with a transaction that fails and propagate failures enabled");
+        assert_eq!(result.module_name(), "core");
+        assert_eq!(result.code(), 22);
+        assert_eq!(result.to_string(), "forbidden by node policy",);
     }
 }
 
@@ -759,7 +849,8 @@ fn test_module_info() {
                         version: 42,
                         params: ().into_cbor_value(),
                         methods: vec![
-                            MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGas".to_string() }
+                            MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGas".to_string() },
+                            MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGasAndFail".to_string() },
                         ],
                     },
             }

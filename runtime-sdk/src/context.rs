@@ -1225,7 +1225,7 @@ mod test {
     fn test_tx_ctx_metadata() {
         let mut mock = Mock::default();
         let mut ctx = mock.create_ctx();
-        ctx.with_tx(42, 888, mock::transaction(), |mut tx_ctx, _call| {
+        ctx.with_tx(42, 888, mock::transaction(), |tx_ctx, _call| {
             assert_eq!(tx_ctx.tx_index(), 42);
             assert_eq!(tx_ctx.tx_size(), 888);
         });
