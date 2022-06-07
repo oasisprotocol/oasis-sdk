@@ -5,7 +5,7 @@ go 1.17
 replace github.com/oasisprotocol/oasis-sdk/client-sdk/go => ../client-sdk/go
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.3.2
+	github.com/AlecAivazis/survey/v2 v2.3.4
 	github.com/adrg/xdg v0.4.0
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
 	github.com/mitchellh/mapstructure v1.4.3
