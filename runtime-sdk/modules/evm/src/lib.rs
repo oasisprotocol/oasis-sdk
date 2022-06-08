@@ -689,7 +689,7 @@ impl<Cfg: Config> Module<Cfg> {
         let body = Cfg::CONFIDENTIAL
             .then(|| cbor::from_slice::<types::SignedQueryEnvelope>(&body.data).ok())
             .flatten()
-            .map(|e| signed_query::verify::<_, Cfg>(ctx, e.query, &e.signature))
+            .map(|e| signed_query::verify::<_, Cfg>(ctx, e.query, e.signature))
             .transpose()?
             .unwrap_or(body);
 

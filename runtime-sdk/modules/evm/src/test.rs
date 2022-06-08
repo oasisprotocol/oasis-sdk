@@ -38,7 +38,7 @@ impl Config for EVMConfig {
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
 }
 
-struct ConfidentialEVMConfig;
+pub(crate) struct ConfidentialEVMConfig;
 
 impl Config for ConfidentialEVMConfig {
     type Accounts = Accounts;
