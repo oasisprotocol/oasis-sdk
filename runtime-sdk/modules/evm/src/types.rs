@@ -43,6 +43,26 @@ pub struct SimulateCallQuery {
     pub address: H160,
     pub value: U256,
     pub data: Vec<u8>,
+    #[cbor(default)]
+    pub leash: Option<Leash>,
+}
+
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct SignedQueryEnvelope {
+    pub query: SimulateCallQuery,
+    pub signature: [u8; 65],
+}
+
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct Leash {
+    /// The maximum account nonce that will be tolerated.
+    pub nonce: u64,
+    /// The base block number.
+    pub block_number: u64,
+    /// The expeced hash at `block_number`.
+    pub block_hash: H256,
+    /// The range of the leash past `block_number`.
+    pub block_range: u64,
 }
 
 // The rest of the file contains wrappers for primitive_types::{H160, H256, U256},

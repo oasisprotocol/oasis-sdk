@@ -4,6 +4,7 @@ pub mod backend;
 pub mod derive_caller;
 pub mod precompile;
 pub mod raw_tx;
+mod signed_query;
 pub mod state;
 pub mod types;
 
@@ -112,6 +113,10 @@ pub enum Error {
     #[error("forbidden by policy: this node only allows simulating calls that use up to {0} gas")]
     #[sdk_error(code = 9)]
     SimulationTooExpensive(u64),
+
+    #[error("invalid signed query: {0}")]
+    #[sdk_error(code = 10)]
+    InvalidSignedQuery(&'static str),
 
     #[error("core: {0}")]
     #[sdk_error(transparent)]
@@ -680,6 +685,13 @@ impl<Cfg: Config> Module<Cfg> {
                 cfg.query_simulate_call_max_gas,
             ));
         }
+
+        let body = Cfg::CONFIDENTIAL
+            .then(|| cbor::from_slice::<types::SignedQueryEnvelope>(&body.data).ok())
+            .flatten()
+            .map(|e| signed_query::verify::<_, Cfg>(ctx, e.query, &e.signature))
+            .transpose()?
+            .unwrap_or(body);
 
         Self::simulate_call(
             ctx,
