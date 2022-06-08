@@ -186,7 +186,7 @@ pub struct Fee {
 }
 
 impl Fee {
-    /// Caculates gas price from fee amount and gas.
+    /// Calculates gas price from fee amount and gas.
     pub fn gas_price(&self) -> u128 {
         self.amount
             .amount()

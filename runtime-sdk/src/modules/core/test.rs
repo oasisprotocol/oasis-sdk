@@ -194,8 +194,14 @@ struct GasWasterModule;
 
 impl GasWasterModule {
     const CALL_GAS: u64 = 100;
+    const CALL_GAS_HUGE: u64 = u64::MAX - 10_000;
+    const CALL_GAS_SPECIFIC: u64 = 123456;
+    const CALL_GAS_SPECIFIC_HUGE: u64 = u64::MAX - 10_000;
     const METHOD_WASTE_GAS: &'static str = "test.WasteGas";
     const METHOD_WASTE_GAS_AND_FAIL: &'static str = "test.WasteGasAndFail";
+    const METHOD_WASTE_GAS_HUGE: &'static str = "test.WasteGasHuge";
+    const METHOD_SPECIFIC_GAS_REQUIRED: &'static str = "test.SpecificGasRequired";
+    const METHOD_SPECIFIC_GAS_REQUIRED_HUGE: &'static str = "test.SpecificGasRequiredHuge";
 }
 
 impl module::Module for GasWasterModule {
@@ -224,6 +230,40 @@ impl GasWasterModule {
     ) -> Result<(), <GasWasterModule as module::Module>::Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS)?;
         Err(<GasWasterModule as module::Module>::Error::Forbidden)
+    }
+
+    #[handler(call = Self::METHOD_WASTE_GAS_HUGE)]
+    fn waste_gas_huge<C: TxContext>(
+        ctx: &mut C,
+        _args: (),
+    ) -> Result<(), <GasWasterModule as module::Module>::Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS_HUGE)?;
+        Ok(())
+    }
+
+    #[handler(call = Self::METHOD_SPECIFIC_GAS_REQUIRED)]
+    fn specific_gas_required<C: TxContext>(
+        ctx: &mut C,
+        _args: (),
+    ) -> Result<(), <GasWasterModule as module::Module>::Error> {
+        // Fails with an error if less than X gas was specified. (doesn't fail with out-of-gas).
+        if ctx.tx_auth_info().fee.gas < Self::CALL_GAS_SPECIFIC {
+            Err(<GasWasterModule as module::Module>::Error::Forbidden)
+        } else {
+            Ok(())
+        }
+    }
+    #[handler(call = Self::METHOD_SPECIFIC_GAS_REQUIRED_HUGE)]
+    fn specific_gas_required_huge<C: TxContext>(
+        ctx: &mut C,
+        _args: (),
+    ) -> Result<(), <GasWasterModule as module::Module>::Error> {
+        // Fails with an error if less than X gas was specified. (doesn't fail with out-of-gas).
+        if ctx.tx_auth_info().fee.gas < Self::CALL_GAS_SPECIFIC_HUGE {
+            Err(<GasWasterModule as module::Module>::Error::Forbidden)
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -352,40 +392,28 @@ fn test_query_estimate_gas() {
             ..Default::default()
         },
     };
-    let tx_fail = transaction::Transaction {
-        version: 1,
-        call: transaction::Call {
-            format: transaction::CallFormat::Plain,
-            method: GasWasterModule::METHOD_WASTE_GAS_AND_FAIL.to_owned(),
-            ..Default::default()
-        },
-        auth_info: transaction::AuthInfo {
-            signer_info: vec![
-                transaction::SignerInfo::new_sigspec(keys::alice::sigspec(), 0),
-                transaction::SignerInfo::new_multisig(
-                    multisig::Config {
-                        signers: vec![multisig::Signer {
-                            public_key: keys::bob::pk(),
-                            weight: 1,
-                        }],
-                        threshold: 1,
-                    },
-                    0,
-                ),
-            ],
-            fee: transaction::Fee {
-                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
-                gas: u64::MAX,
-                consensus_messages: 0,
-            },
-            ..Default::default()
-        },
-    };
+    let mut tx_fail = tx.clone();
+    tx_fail.call.method = GasWasterModule::METHOD_WASTE_GAS_AND_FAIL.to_owned();
 
-    // Gas that we expect `tx` to use.
-    let reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
+    let mut tx_huge = tx.clone();
+    tx_huge.call.method = GasWasterModule::METHOD_WASTE_GAS_HUGE.to_owned();
+
+    let mut tx_specific_gas = tx.clone();
+    tx_specific_gas.call.method = GasWasterModule::METHOD_SPECIFIC_GAS_REQUIRED.to_owned();
+
+    let mut tx_specific_gas_huge = tx.clone();
+    tx_specific_gas_huge.call.method =
+        GasWasterModule::METHOD_SPECIFIC_GAS_REQUIRED_HUGE.to_owned();
+
+    // Gas that we expect transactions to use.
+    let tx_reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
         + GasWasterRuntime::AUTH_MULTISIG_GAS
         + GasWasterModule::CALL_GAS;
+    let tx_huge_reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
+        + GasWasterRuntime::AUTH_MULTISIG_GAS
+        + GasWasterModule::CALL_GAS_HUGE;
+    let tx_specific_gas_reference_gas = GasWasterModule::CALL_GAS_SPECIFIC;
+    let tx_specific_gas_huge_reference_gas = GasWasterModule::CALL_GAS_SPECIFIC_HUGE;
 
     // Test happy-path execution with default settings.
     {
@@ -401,7 +429,7 @@ fn test_query_estimate_gas() {
         };
         let est =
             Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(est, reference_gas, "estimated gas should be correct");
+        assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
 
         // Test estimation with specified caller.
         let args = types::EstimateGasQuery {
@@ -411,12 +439,12 @@ fn test_query_estimate_gas() {
         };
         let est =
             Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(est, reference_gas, "estimated gas should be correct");
+        assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
     }
 
     // Test expensive estimates.
     {
-        let max_estimated_gas = reference_gas - 1;
+        let max_estimated_gas = tx_reference_gas - 1;
         let local_config = configmap! {
             "core" => configmap! {
                 "max_estimated_gas" => max_estimated_gas,
@@ -441,7 +469,7 @@ fn test_query_estimate_gas() {
             est
         );
 
-        // Test with limited max_estimated_gas.
+        // Test with limited max_estimated_gas and propagate failures enabled.
         let args = types::EstimateGasQuery {
             caller: None,
             tx: tx.clone(),
@@ -456,7 +484,7 @@ fn test_query_estimate_gas() {
             result.to_string(),
             format!(
                 "out of gas (limit: {} wanted: {})",
-                max_estimated_gas, reference_gas
+                max_estimated_gas, tx_reference_gas
             )
         );
     }
@@ -475,7 +503,7 @@ fn test_query_estimate_gas() {
         };
         let est = Core::query_estimate_gas(&mut ctx, args)
             .expect("query_estimate_gas should succeed even with a transaction that fails");
-        assert_eq!(est, reference_gas, "estimated gas should be correct");
+        assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
 
         // Test with propagate failures enabled.
         let args = types::EstimateGasQuery {
@@ -488,6 +516,138 @@ fn test_query_estimate_gas() {
         assert_eq!(result.module_name(), "core");
         assert_eq!(result.code(), 22);
         assert_eq!(result.to_string(), "forbidden by node policy",);
+    }
+
+    // Test binary search of expensive transactions.
+    {
+        let local_config = configmap! {
+            "core" => configmap! {
+                "estimate_gas_search_max_iters" => 64,
+            },
+        };
+        let mut mock = mock::Mock::with_local_config(local_config);
+        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+        GasWasterRuntime::migrate(&mut ctx);
+
+        // Test tx estimation.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx.clone(),
+            propagate_failures: false,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
+
+        // Test tx estimation with propagate failures enabled.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx.clone(),
+            propagate_failures: true,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
+
+        // Test a failing transaction with propagate failures disabled.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_fail.clone(),
+            propagate_failures: false,
+        };
+        let est = Core::query_estimate_gas(&mut ctx, args)
+            .expect("query_estimate_gas should succeed even with a transaction that fails");
+        assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
+
+        // Test a failing transaction with propagate failures enabled.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_fail.clone(),
+            propagate_failures: true,
+        };
+        let result = Core::query_estimate_gas(&mut ctx, args)
+            .expect_err("query_estimate_gas should fail with a transaction that fails and propagate failures enabled");
+        assert_eq!(result.module_name(), "core");
+        assert_eq!(result.code(), 22);
+        assert_eq!(result.to_string(), "forbidden by node policy",);
+
+        // Test huge tx estimation.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_huge.clone(),
+            propagate_failures: false,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(
+            est, tx_huge_reference_gas,
+            "estimated gas should be correct"
+        );
+
+        // Test huge tx estimation with propagate failures enabled.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_huge.clone(),
+            propagate_failures: true,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(
+            est, tx_huge_reference_gas,
+            "estimated gas should be correct"
+        );
+
+        // Test a transaction that requires specific amount of gas, but doesn't fail with out-of-gas.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_specific_gas.clone(),
+            propagate_failures: false,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(
+            est, tx_specific_gas_reference_gas,
+            "estimated gas should be correct"
+        );
+
+        // Test a transaction that requires specific amount of gas, with propagate failures enabled.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_specific_gas.clone(),
+            propagate_failures: true,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(
+            est, tx_specific_gas_reference_gas,
+            "estimated gas should be correct"
+        );
+
+        // Test a transaction that requires specific huge amount of gas, but doesn't fail with out-of-gas.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_specific_gas_huge.clone(),
+            propagate_failures: false,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(
+            est, tx_specific_gas_huge_reference_gas,
+            "estimated gas should be correct"
+        );
+
+        // Test a transaction that requires specific amount of gas, with propagate failures enabled.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_specific_gas_huge.clone(),
+            propagate_failures: true,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(
+            est, tx_specific_gas_huge_reference_gas,
+            "estimated gas should be correct"
+        );
     }
 }
 
@@ -877,6 +1037,9 @@ fn test_module_info() {
                         methods: vec![
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGas".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGasAndFail".to_string() },
+                            MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGasHuge".to_string() },
+                            MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.SpecificGasRequired".to_string() },
+                            MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.SpecificGasRequiredHuge".to_string() },
                         ],
                     },
             }
