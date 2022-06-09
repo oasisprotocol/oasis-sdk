@@ -302,8 +302,10 @@ impl Module {
         let balances = storage::PrefixStore::new(store, &state::BALANCES);
         let mut account = storage::TypedStore::new(storage::PrefixStore::new(balances, &addr));
         let mut value: u128 = account.get(amount.denomination()).unwrap_or_default();
-        value += amount.amount();
 
+        value = value
+            .checked_add(amount.amount())
+            .ok_or(Error::InvalidArgument)?;
         account.insert(amount.denomination(), value);
         Ok(())
     }
@@ -337,7 +339,10 @@ impl Module {
         let mut total_supply: u128 = total_supplies
             .get(amount.denomination())
             .unwrap_or_default();
-        total_supply += amount.amount();
+
+        total_supply = total_supply
+            .checked_add(amount.amount())
+            .ok_or(Error::InvalidArgument)?;
         total_supplies.insert(amount.denomination(), total_supply);
         Ok(())
     }
@@ -406,7 +411,8 @@ impl FeeAccumulator {
             .total_fees
             .entry(fee.denomination().clone())
             .or_default();
-        *current += fee.amount();
+
+        *current = current.checked_add(fee.amount()).unwrap(); // Should never overflow.
     }
 
     /// Subtract given fee from the accumulator.
@@ -415,10 +421,10 @@ impl FeeAccumulator {
             .total_fees
             .entry(fee.denomination().clone())
             .or_default();
-        if *current < fee.amount() {
-            return Err(Error::InsufficientBalance);
-        }
-        *current -= fee.amount();
+
+        *current = current
+            .checked_sub(fee.amount())
+            .ok_or(Error::InsufficientBalance)?;
         Ok(())
     }
 }
@@ -664,8 +670,10 @@ impl API for Module {
             let mut account: types::Account = accounts.get(&address).unwrap_or_default();
 
             // Update nonce.
-            // TODO: Could support an option to defer this.
-            account.nonce += 1;
+            account.nonce = account
+                .nonce
+                .checked_add(1)
+                .ok_or(modules::core::Error::InvalidNonce)?; // Should never overflow.
             accounts.insert(&address, account);
         }
         Ok(())
