@@ -15,6 +15,38 @@ use crate::{
     Config, Error,
 };
 
+/// Verifies the signature on signed query and whether it is appropriately [`Leash`]ed.
+///
+/// The signature is generated according to [EIP-712](https://eips.ethereum.org/EIPS/eip-712)
+/// so that the signed message can be easily verified by the user. MetaMask, for instance, shows
+/// each field as itself, whereas a standard `eth_personalSign` would show an opaque hash.
+/// The EIP-712 type parameters for a signed query are:
+/// ```ignore
+/// {
+///   domain: {
+///     name: 'oasis-runtime-sdk/evm: signed query',
+///     version: '1.0.0',
+///     chainId,
+///   },
+///   types: {
+///     Call: [
+///       { name: 'from', type: 'address' },
+///       { name: 'to', type: 'address' },
+///       { name: 'value', type: 'uint256' },
+///       { name: 'gasPrice', type: 'uint256' },
+///       { name: 'gasLimit', type: 'uint64' },
+///       { name: 'data', type: 'bytes' },
+///       { name: 'leash', type: 'Leash' },
+///     ],
+///     Leash: [
+///       { name: 'nonce', type: 'uint64' },
+///       { name: 'blockNumber', type: 'uint64' },
+///       { name: 'blockHash', type: 'uint256' },
+///       { name: 'blockRange', type: 'uint64' },
+///     ],
+///   },
+/// }
+/// ```
 pub(super) fn verify<C: Context, Cfg: Config>(
     ctx: &mut C,
     query: SimulateCallQuery,
@@ -27,12 +59,11 @@ pub(super) fn verify<C: Context, Cfg: Config>(
 
     // First, verify the signature since it's cheap compared to accessing state to verify the leash.
     let invalid_signature = || Error::InvalidSignedQuery("invalid signature");
-    signature[64] = signature[64].saturating_sub(27); // Some wallets generate high `s`.
+    signature[64] = signature[64].saturating_sub(27); // Some wallets generate a high recovery id.
     let sig =
         recoverable::Signature::try_from(signature.as_slice()).map_err(|_| invalid_signature())?;
     let signed_message = hash_call_toplevel::<Cfg>(&query);
-    let signer_key = sig
-        .recover_verify_key_from_digest_bytes(&signed_message.into())
+    let signer_key = crate::raw_tx::recover_low(&sig, &signed_message.into())
         .map_err(|_| invalid_signature())?;
     let signer_addr_digest = Keccak256::digest(&signer_key.to_encoded_point(false).as_bytes()[1..]);
     if &signer_addr_digest[12..] != query.caller.as_ref() {
@@ -112,7 +143,7 @@ fn hash_call(query: &SimulateCallQuery) -> [u8; 32] {
         Token::Uint(ethabi::ethereum_types::U256(query.gas_price.0)),
         Token::Uint(query.gas_limit.into()),
         encode_bytes(&query.data),
-        Token::Uint(hash_leash(query.leash.as_ref().unwrap() /* checked above */).into()),
+        Token::Uint(hash_leash(query.leash.as_ref().unwrap() /* checked in verify */).into()),
     ])
 }
 
@@ -132,7 +163,7 @@ fn hash_domain<Cfg: Config>() -> &'static [u8; 32] {
         const DOMAIN_TYPE_STR: &str = "EIP712Domain(string name,string version,uint256 chainId)";
         hash_encoded(&[
             encode_bytes(DOMAIN_TYPE_STR),
-            encode_bytes("Sapphire ParaTime"),
+            encode_bytes("oasis-runtime-sdk/evm: signed query"),
             encode_bytes("1.0.0"),
             Token::Uint(Cfg::CHAIN_ID.into()),
         ])
@@ -157,24 +188,27 @@ mod test {
 
     /// This was generated using the `@oasislabs/sapphire-paratime` JS lib.
     const SIGNED_QUERY: &str =
-"a2657175657279a764646174614401020304656c65617368a4656e6f6e63651903e76a626c6f636b5f686173685820c92b675c7013e33aa88feaae520eb0ede155e7cacb3c4587e0923cba9953f8bb6b626c6f636b5f72616e6765036c626c6f636b5f6e756d626572182a6576616c75655820000000000000000000000000000000000000000000000000000000000000002a6663616c6c65725411e244400cf165ade687077984f09c3a037b868f676164647265737354b5ed90452aac09f294a0be877cbf2dc4d55e096f696761735f6c696d69740a696761735f70726963655820000000000000000000000000000000000000000000000000000000000000007b697369676e617475726558412496b1b40cfa931d6e62f76148bdb37e0a775213d757d715d379e60dfadfd18602296c8480d117fce51a52e2e420dbc6017d1e42accb0e5393a78050fcca73d11c";
+"a2657175657279a764646174614401020304656c65617368a4656e6f6e63651903e76a626c6f636b5f686173685820c92b675c7013e33aa88feaae520eb0ede155e7cacb3c4587e0923cba9953f8bb6b626c6f636b5f72616e6765036c626c6f636b5f6e756d626572182a6576616c75655820000000000000000000000000000000000000000000000000000000000000002a6663616c6c65725411e244400cf165ade687077984f09c3a037b868f676164647265737354b5ed90452aac09f294a0be877cbf2dc4d55e096f696761735f6c696d69740a696761735f70726963655820000000000000000000000000000000000000000000000000000000000000007b697369676e61747572655841e4631519ea4b096f34989f1238a83a83792954eb8fde29edfc8354dfcf2a455335ec4e9e85c5cbfdd34e85ff1416d58b95a566bb463b872432f61ac18a1534fd1b";
 
-    fn setup_context<C: Context>(ctx: &mut C, query: &SimulateCallQuery, omit_block: bool) {
+    fn setup_context<C: Context>(ctx: &mut C, query: &SimulateCallQuery) {
+        setup_nonce(ctx, query);
+        setup_block(ctx, query);
+    }
+
+    fn setup_nonce<C: Context>(ctx: &mut C, query: &SimulateCallQuery) {
         let leash = query.leash.as_ref().unwrap();
         let mut state = ctx.runtime_state();
-
-        // Set the nonce to what the leash requires.
         let sdk_address = Cfg::map_address(query.caller.into());
         <Cfg as Config>::Accounts::set_nonce(&mut state, sdk_address, leash.nonce);
+    }
 
-        if !omit_block {
-            // Set the block hash and number to what the leash requires.
-            let mut block_hashes = state::block_hashes(state);
-            block_hashes.insert::<_, Hash>(
-                &leash.block_number.to_be_bytes(),
-                leash.block_hash.as_ref().into(),
-            );
-        }
+    fn setup_block<C: Context>(ctx: &mut C, query: &SimulateCallQuery) {
+        let leash = query.leash.as_ref().unwrap();
+        let mut block_hashes = state::block_hashes(ctx.runtime_state());
+        block_hashes.insert::<_, Hash>(
+            &leash.block_number.to_be_bytes(),
+            leash.block_hash.as_ref().into(),
+        );
     }
 
     #[test]
@@ -187,7 +221,7 @@ mod test {
         mock.runtime_header.round = leash.block_number;
         let mut ctx = mock.create_ctx();
 
-        setup_context(&mut ctx, &query, false);
+        setup_context(&mut ctx, &query);
 
         verify::<_, Cfg>(&mut ctx, query, signature).unwrap();
     }
@@ -204,12 +238,29 @@ mod test {
         mock.runtime_header.round = query.leash.as_ref().unwrap().block_number;
         let mut ctx = mock.create_ctx();
 
-        setup_context(&mut ctx, &query, false);
+        setup_context(&mut ctx, &query);
 
         signature[0] = signature[0].wrapping_add(1);
         assert!(matches!(
             verify::<_, Cfg>(&mut ctx, query, signature).unwrap_err(),
             Error::InvalidSignedQuery("invalid signature")
+        ));
+    }
+
+    #[test]
+    fn test_verify_bad_nonce() {
+        let signed_query = hex::decode(SIGNED_QUERY).unwrap();
+        let SignedQueryEnvelope { query, signature } = cbor::from_slice(&signed_query).unwrap();
+
+        let mut mock = mock::Mock::default();
+        mock.runtime_header.round = query.leash.as_ref().unwrap().block_number;
+        let mut ctx = mock.create_ctx();
+
+        setup_block(&mut ctx, &query);
+
+        assert!(matches!(
+            verify::<_, Cfg>(&mut ctx, query, signature).unwrap_err(),
+            Error::InvalidSignedQuery("stale nonce")
         ));
     }
 
@@ -222,7 +273,7 @@ mod test {
         mock.runtime_header.round = query.leash.as_ref().unwrap().block_number;
         let mut ctx = mock.create_ctx();
 
-        setup_context(&mut ctx, &query, true /* omit block */);
+        setup_nonce(&mut ctx, &query);
 
         assert!(matches!(
             verify::<_, Cfg>(&mut ctx, query, signature).unwrap_err(),
@@ -238,7 +289,7 @@ mod test {
         let mut mock = mock::Mock::default();
         let mut ctx = mock.create_ctx();
 
-        setup_context(&mut ctx, &query, false);
+        setup_context(&mut ctx, &query);
 
         assert!(matches!(
             verify::<_, Cfg>(&mut ctx, query, signature).unwrap_err(),

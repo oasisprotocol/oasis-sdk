@@ -43,7 +43,7 @@ pub struct SimulateCallQuery {
     pub address: H160,
     pub value: U256,
     pub data: Vec<u8>,
-    #[cbor(default)]
+    #[cbor(optional, default)]
     pub leash: Option<Leash>,
 }
 
