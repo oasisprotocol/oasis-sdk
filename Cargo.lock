@@ -902,7 +902,7 @@ dependencies = [
  "fixed-hash",
  "impl-codec",
  "impl-rlp",
- "primitive-types",
+ "primitive-types 0.10.1",
  "scale-info",
  "uint",
 ]
@@ -920,7 +920,7 @@ dependencies = [
  "evm-runtime",
  "log",
  "parity-scale-codec",
- "primitive-types",
+ "primitive-types 0.10.1",
  "rlp",
  "scale-info",
  "serde",
@@ -934,7 +934,7 @@ source = "git+https://github.com/oasisprotocol/evm?tag=v0.33.1-oasis#020f1e66ff2
 dependencies = [
  "funty",
  "parity-scale-codec",
- "primitive-types",
+ "primitive-types 0.10.1",
  "scale-info",
  "serde",
 ]
@@ -947,7 +947,7 @@ dependencies = [
  "environmental",
  "evm-core",
  "evm-runtime",
- "primitive-types",
+ "primitive-types 0.10.1",
 ]
 
 [[package]]
@@ -958,7 +958,7 @@ dependencies = [
  "auto_impl",
  "environmental",
  "evm-core",
- "primitive-types",
+ "primitive-types 0.10.1",
  "sha3 0.8.2",
 ]
 
@@ -1972,7 +1972,7 @@ dependencies = [
  "oasis-cbor",
  "oasis-runtime-sdk",
  "once_cell",
- "primitive-types",
+ "primitive-types 0.11.1",
  "ripemd160",
  "rlp",
  "sha2 0.9.9",
@@ -2215,9 +2215,20 @@ checksum = "05e4722c697a58a99d5d06a08c30821d7c082a4632198de1eaa5a6c22ef42373"
 dependencies = [
  "fixed-hash",
  "impl-codec",
- "impl-num-traits",
  "impl-rlp",
  "scale-info",
+ "uint",
+]
+
+[[package]]
+name = "primitive-types"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e28720988bff275df1f51b171e1b2a18c30d194c4d2b61defdacecd625a5d94a"
+dependencies = [
+ "fixed-hash",
+ "impl-num-traits",
+ "impl-rlp",
  "uint",
 ]
 

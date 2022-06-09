@@ -28,7 +28,7 @@ ethereum = "0.11.1"
 # Remove once upstream merges in: https://github.com/rust-blockchain/evm/pull/88.
 evm = { git = "https://github.com/oasisprotocol/evm", tag = "v0.33.1-oasis" }
 fixed-hash = "0.7.0"
-primitive-types = { version = "0.10.1", default-features = false, features = ["rlp", "num-traits"] }
+primitive-types = { version = "0.11.1", default-features = false, features = ["rlp", "num-traits"] }
 rlp = "0.5.1"
 uint = "0.9.1"
 
