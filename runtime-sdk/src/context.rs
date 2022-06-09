@@ -4,6 +4,7 @@ use std::{
     collections::btree_map::{BTreeMap, Entry},
     fmt,
     marker::PhantomData,
+    ops::{Deref, DerefMut},
     sync::Arc,
 };
 
@@ -274,6 +275,97 @@ pub trait Context {
         ) -> Rs,
     {
         self.with_child(Mode::SimulateTx, f)
+    }
+}
+
+impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
+    type Runtime = C::Runtime;
+    type Store = C::Store;
+
+    fn get_logger(&self, module: &'static str) -> slog::Logger {
+        self.deref().get_logger(module)
+    }
+
+    fn mode(&self) -> Mode {
+        self.deref().mode()
+    }
+
+    fn host_info(&self) -> &HostInfo {
+        self.deref().host_info()
+    }
+
+    fn key_manager(&self) -> Option<&dyn KeyManager> {
+        self.deref().key_manager()
+    }
+
+    fn runtime_header(&self) -> &roothash::Header {
+        self.deref().runtime_header()
+    }
+
+    fn runtime_round_results(&self) -> &roothash::RoundResults {
+        self.deref().runtime_round_results()
+    }
+
+    fn runtime_state(&mut self) -> &mut Self::Store {
+        self.deref_mut().runtime_state()
+    }
+
+    fn consensus_state(&self) -> &consensus::state::ConsensusState {
+        self.deref().consensus_state()
+    }
+
+    fn epoch(&self) -> consensus::beacon::EpochTime {
+        self.deref().epoch()
+    }
+
+    fn emit_event<E: Event>(&mut self, event: E) {
+        self.deref_mut().emit_event(event);
+    }
+
+    fn emit_etag(&mut self, etag: EventTag) {
+        self.deref_mut().emit_etag(etag);
+    }
+
+    fn emit_etags(&mut self, etags: EventTags) {
+        self.deref_mut().emit_etags(etags);
+    }
+
+    fn io_ctx(&self) -> IoContext {
+        self.deref().io_ctx()
+    }
+
+    fn commit(
+        self,
+    ) -> (
+        EventTags,
+        Vec<(roothash::Message, MessageEventHookInvocation)>,
+    ) {
+        unimplemented!()
+    }
+
+    fn rollback(self) -> EventTags {
+        unimplemented!()
+    }
+
+    fn value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
+        self.deref_mut().value(key)
+    }
+
+    fn remaining_messages(&self) -> u32 {
+        self.deref().remaining_messages()
+    }
+
+    fn limit_max_messages(&mut self, max_messages: u32) -> Result<(), Error> {
+        self.deref_mut().limit_max_messages(max_messages)
+    }
+
+    fn with_child<F, Rs>(&mut self, mode: Mode, f: F) -> Rs
+    where
+        F: FnOnce(
+            RuntimeBatchContext<'_, Self::Runtime, storage::OverlayStore<&mut dyn Store>>,
+        ) -> Rs,
+    {
+        self.deref_mut().with_child(mode, f)
     }
 }
 
