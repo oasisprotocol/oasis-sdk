@@ -9,3 +9,7 @@ of EVM-compatible smart contracts.
   a transaction being reverted. Solving this would require either inefficient
   iteration over all storage keys, a special storage operation for removing
   prefixes or some form of generational storage.
+
+* `COINBASE` op code always returns an all-zero address.
+
+* `DIFFICULTY` op code always returns zero.

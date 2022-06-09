@@ -73,13 +73,23 @@ fn call_ecrecover(
         sig[64] = padding[63];
     }
 
+    // Ensure bytes 32..63 are all zero.
+    if padding[32..63] != [0; 31] {
+        return Ok(PrecompileOutput {
+            exit_status: ExitSucceed::Returned,
+            cost: gas_cost,
+            output: vec![],
+            logs: Default::default(),
+        });
+    }
+
     let dsa_sig = match recoverable::Signature::try_from(&sig[..]) {
         Ok(s) => s,
         Err(_) => {
             return Ok(PrecompileOutput {
                 exit_status: ExitSucceed::Returned,
                 cost: gas_cost,
-                output: [0u8; 0].to_vec(),
+                output: vec![],
                 logs: Default::default(),
             });
         }
@@ -90,7 +100,7 @@ fn call_ecrecover(
         return Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
             cost: gas_cost,
-            output: [0u8; 0].to_vec(),
+            output: vec![],
             logs: Default::default(),
         });
     }
@@ -105,7 +115,7 @@ fn call_ecrecover(
             address[0..12].copy_from_slice(&[0u8; 12]);
             address.to_vec()
         }
-        Err(_) => [0u8; 0].to_vec(),
+        Err(_) => vec![],
     };
 
     Ok(PrecompileOutput {
@@ -421,6 +431,18 @@ mod test {
             hex::encode(ret.unwrap().output),
             "000000000000000000000000ceaccac640adf55b2028469bd36ba501f28b699d"
         );
+
+        // Test with invalid input.
+        let input = "38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e0000000000000deadbeef000000000000000000000000000000000000000001b38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e789d1dd423d25f0772d2748d60f7e4b81bb14d086eba8e8e8efb6dcff8a4ae02";
+        let ret = call_contract(
+            H160([
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01,
+            ]),
+            &hex::decode(input).unwrap(),
+            3000,
+        )
+        .unwrap(); // Should be successful, but empty result.
+        assert!(ret.unwrap().output.is_empty());
     }
 
     #[test]
