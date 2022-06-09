@@ -222,6 +222,12 @@ pub trait API {
     /// Return the used tx-wide gas.
     fn used_tx_gas<C: TxContext>(ctx: &mut C) -> u64;
 
+    /// Configured maximum amount of gas that can be used in a batch.
+    fn max_batch_gas<C: Context>(ctx: &mut C) -> u64;
+
+    /// Configured minimum gas price.
+    fn min_gas_price<C: Context>(ctx: &mut C, denom: &token::Denomination) -> u128;
+
     /// Increase transaction priority for the provided amount.
     fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error>;
 
@@ -357,6 +363,18 @@ impl<Cfg: Config> API for Module<Cfg> {
 
     fn used_tx_gas<C: TxContext>(ctx: &mut C) -> u64 {
         *ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default()
+    }
+
+    fn max_batch_gas<C: Context>(ctx: &mut C) -> u64 {
+        Self::params(ctx.runtime_state()).max_batch_gas
+    }
+
+    fn min_gas_price<C: Context>(ctx: &mut C, denom: &token::Denomination) -> u128 {
+        Self::params(ctx.runtime_state())
+            .min_gas_price
+            .get(denom)
+            .copied()
+            .unwrap_or_default()
     }
 
     fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error> {

@@ -234,7 +234,7 @@ pub trait API {
     ) -> Result<(), modules::core::Error>;
 
     /// Check transaction signer account nonces.
-    /// Return payee address.
+    /// Return payer address.
     fn check_signer_nonces<C: Context>(
         ctx: &mut C,
         tx_auth_info: &AuthInfo,
@@ -302,8 +302,10 @@ impl Module {
         let balances = storage::PrefixStore::new(store, &state::BALANCES);
         let mut account = storage::TypedStore::new(storage::PrefixStore::new(balances, &addr));
         let mut value: u128 = account.get(amount.denomination()).unwrap_or_default();
-        value += amount.amount();
 
+        value = value
+            .checked_add(amount.amount())
+            .ok_or(Error::InvalidArgument)?;
         account.insert(amount.denomination(), value);
         Ok(())
     }
@@ -337,7 +339,10 @@ impl Module {
         let mut total_supply: u128 = total_supplies
             .get(amount.denomination())
             .unwrap_or_default();
-        total_supply += amount.amount();
+
+        total_supply = total_supply
+            .checked_add(amount.amount())
+            .ok_or(Error::InvalidArgument)?;
         total_supplies.insert(amount.denomination(), total_supply);
         Ok(())
     }
@@ -353,6 +358,7 @@ impl Module {
         let mut total_supply: u128 = total_supplies
             .get(amount.denomination())
             .unwrap_or_default();
+
         total_supply = total_supply
             .checked_sub(amount.amount())
             .ok_or(Error::InsufficientBalance)?;
@@ -406,7 +412,8 @@ impl FeeAccumulator {
             .total_fees
             .entry(fee.denomination().clone())
             .or_default();
-        *current += fee.amount();
+
+        *current = current.checked_add(fee.amount()).unwrap(); // Should never overflow.
     }
 
     /// Subtract given fee from the accumulator.
@@ -415,10 +422,10 @@ impl FeeAccumulator {
             .total_fees
             .entry(fee.denomination().clone())
             .or_default();
-        if *current < fee.amount() {
-            return Err(Error::InsufficientBalance);
-        }
-        *current -= fee.amount();
+
+        *current = current
+            .checked_sub(fee.amount())
+            .ok_or(Error::InsufficientBalance)?;
         Ok(())
     }
 }
@@ -632,7 +639,7 @@ impl API for Module {
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let accounts =
             storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
-        let mut payee = None;
+        let mut payer = None;
         for si in auth_info.signer_info.iter() {
             let address = si.address_spec.address();
             let account: types::Account = accounts.get(&address).unwrap_or_default();
@@ -644,11 +651,11 @@ impl API for Module {
             }
 
             // First signer pays for the fees.
-            if payee.is_none() {
-                payee = Some(address);
+            if payer.is_none() {
+                payer = Some(address);
             }
         }
-        Ok(payee)
+        Ok(payer)
     }
 
     fn update_signer_nonces<C: Context>(
@@ -664,8 +671,10 @@ impl API for Module {
             let mut account: types::Account = accounts.get(&address).unwrap_or_default();
 
             // Update nonce.
-            // TODO: Could support an option to defer this.
-            account.nonce += 1;
+            account.nonce = account
+                .nonce
+                .checked_add(1)
+                .ok_or(modules::core::Error::InvalidNonce)?; // Should never overflow.
             accounts.insert(&address, account);
         }
         Ok(())
@@ -848,21 +857,21 @@ impl module::TransactionHandler for Module {
         ctx: &mut C,
         tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
-        let payee = Self::check_signer_nonces(ctx, &tx.auth_info)?;
+        let payer = Self::check_signer_nonces(ctx, &tx.auth_info)?;
 
         // Charge the specified amount of fees.
         if !tx.auth_info.fee.amount.amount().is_zero() {
-            let payee = payee.expect("at least one signer is always present");
+            let payer = payer.expect("at least one signer is always present");
 
             if ctx.is_check_only() {
                 // Do not update balances during transaction checks. In case of checks, only do it
                 // after all the other checks have already passed as otherwise retrying the
                 // transaction will not be possible.
-                Self::ensure_balance(ctx.runtime_state(), payee, &tx.auth_info.fee.amount)
+                Self::ensure_balance(ctx.runtime_state(), payer, &tx.auth_info.fee.amount)
                     .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
             } else {
                 // Actually perform the move.
-                Self::move_into_fee_accumulator(ctx, payee, &tx.auth_info.fee.amount)?;
+                Self::move_into_fee_accumulator(ctx, payer, &tx.auth_info.fee.amount)?;
             }
 
             // TODO: Emit event that fee has been paid.
@@ -899,11 +908,11 @@ impl module::TransactionHandler for Module {
             return;
         }
 
-        // Update payee balance.
-        let payee = Self::check_signer_nonces(ctx, tx_auth_info).unwrap(); // Already checked.
-        let payee = payee.unwrap(); // Already checked.
+        // Update payer balance.
+        let payer = Self::check_signer_nonces(ctx, tx_auth_info).unwrap(); // Already checked.
+        let payer = payer.unwrap(); // Already checked.
         let amount = &tx_auth_info.fee.amount;
-        Self::sub_amount(ctx.runtime_state(), payee, amount).unwrap(); // Already checked.
+        Self::sub_amount(ctx.runtime_state(), payer, amount).unwrap(); // Already checked.
 
         // Update nonces.
         Self::update_signer_nonces(ctx, tx_auth_info).unwrap();

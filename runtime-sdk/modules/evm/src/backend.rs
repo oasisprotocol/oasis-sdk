@@ -4,7 +4,10 @@ use std::{cell::RefCell, marker::PhantomData};
 use evm::backend::{Apply, Backend as EVMBackend, Basic, Log};
 
 use oasis_runtime_sdk::{
-    core::common::crypto::hash::Hash, modules::accounts::API as _, types::token, Context,
+    core::common::crypto::hash::Hash,
+    modules::{accounts::API as _, core::API as _},
+    types::token,
+    Context, Runtime,
 };
 
 use crate::{
@@ -58,40 +61,56 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
     fn gas_price(&self) -> primitive_types::U256 {
         self.vicinity.gas_price.into()
     }
+
     fn origin(&self) -> primitive_types::H160 {
         self.vicinity.origin.into()
     }
+
     fn block_hash(&self, number: primitive_types::U256) -> primitive_types::H256 {
         let mut ctx = self.ctx.borrow_mut();
         let block_hashes = state::block_hashes(ctx.runtime_state());
 
-        if let Some(hash) = block_hashes.get::<_, Hash>(&number.as_u64().to_be_bytes()) {
+        if let Some(hash) = block_hashes.get::<_, Hash>(&number.low_u64().to_be_bytes()) {
             primitive_types::H256::from_slice(hash.as_ref())
         } else {
             primitive_types::H256::default()
         }
     }
+
     fn block_number(&self) -> primitive_types::U256 {
         self.ctx.borrow().runtime_header().round.into()
     }
+
     fn block_coinbase(&self) -> primitive_types::H160 {
+        // Does not make sense in runtime context.
         primitive_types::H160::default()
     }
+
     fn block_timestamp(&self) -> primitive_types::U256 {
         self.ctx.borrow().runtime_header().timestamp.into()
     }
+
     fn block_difficulty(&self) -> primitive_types::U256 {
+        // Does not make sense in runtime context.
         primitive_types::U256::zero()
     }
+
     fn block_gas_limit(&self) -> primitive_types::U256 {
-        primitive_types::U256::zero()
+        <C::Runtime as Runtime>::Core::max_batch_gas(&mut self.ctx.borrow_mut()).into()
     }
+
     fn block_base_fee_per_gas(&self) -> primitive_types::U256 {
-        primitive_types::U256::zero()
+        <C::Runtime as Runtime>::Core::min_gas_price(
+            &mut self.ctx.borrow_mut(),
+            &Cfg::TOKEN_DENOMINATION,
+        )
+        .into()
     }
+
     fn chain_id(&self) -> primitive_types::U256 {
         Cfg::CHAIN_ID.into()
     }
+
     fn exists(&self, address: primitive_types::H160) -> bool {
         let acct = self.basic(address);
 
@@ -228,7 +247,7 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
 
                     // Sanity check nonce updates to make sure that they behave exactly the same as
                     // what we do anyway when authenticating transactions.
-                    let nonce = basic.nonce.as_u64();
+                    let nonce = basic.nonce.low_u64();
                     if !is_simulation {
                         let old_nonce = Cfg::Accounts::get_nonce(&mut state, address).unwrap();
 

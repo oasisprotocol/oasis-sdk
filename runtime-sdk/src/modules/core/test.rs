@@ -40,6 +40,8 @@ fn test_use_gas() {
         },
     );
 
+    assert_eq!(Core::max_batch_gas(&mut ctx), BLOCK_MAX_GAS);
+
     Core::use_batch_gas(&mut ctx, 1).expect("using batch gas under limit should succeed");
     assert_eq!(Core::remaining_batch_gas(&mut ctx), BLOCK_MAX_GAS - 1);
 
@@ -78,6 +80,7 @@ fn test_use_gas() {
         Core::remaining_batch_gas(&mut ctx),
         BLOCK_MAX_GAS - 1 - 3 * MAX_GAS
     );
+    assert_eq!(Core::max_batch_gas(&mut ctx), BLOCK_MAX_GAS);
 
     ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, 1).unwrap();
@@ -137,6 +140,15 @@ fn test_query_min_gas_price() {
         },
     );
 
+    assert_eq!(
+        Core::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
+        123
+    );
+    assert_eq!(
+        Core::min_gas_price(&mut ctx, &"SMALLER".parse().unwrap()),
+        1000
+    );
+
     let mgp = Core::query_min_gas_price(&mut ctx, ()).expect("query_min_gas_price should succeed");
     assert!(mgp.len() == 2);
     assert!(mgp.contains_key(&token::Denomination::NATIVE));
@@ -158,6 +170,15 @@ fn test_query_min_gas_price() {
             ])
         });
     }
+
+    assert_eq!(
+        super::Module::<MinGasPriceOverride>::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
+        123
+    );
+    assert_eq!(
+        super::Module::<MinGasPriceOverride>::min_gas_price(&mut ctx, &"SMALLER".parse().unwrap()),
+        1000
+    );
 
     let mgp = super::Module::<MinGasPriceOverride>::query_min_gas_price(&mut ctx, ())
         .expect("query_min_gas_price should succeed");
