@@ -250,15 +250,18 @@ func (cf CallFormat) String() string {
 
 // Call is a method call.
 type Call struct {
-	Format CallFormat      `json:"format,omitempty"`
-	Method string          `json:"method,omitempty"`
-	Body   cbor.RawMessage `json:"body"`
+	Format   CallFormat      `json:"format,omitempty"`
+	Method   string          `json:"method,omitempty"`
+	Body     cbor.RawMessage `json:"body"`
+	ReadOnly bool            `json:"ro,omitempty"`
 }
 
 // AuthInfo contains transaction authentication information.
 type AuthInfo struct {
 	SignerInfo []SignerInfo `json:"si"`
 	Fee        Fee          `json:"fee"`
+	NotBefore  *uint64      `json:"not_before,omitempty"`
+	NotAfter   *uint64      `json:"not_after,omitempty"`
 }
 
 // Fee contains the transaction fee information.

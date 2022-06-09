@@ -1,7 +1,8 @@
-use crate::{emit_compile_error, generators as gen};
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::parse_quote;
+
+use crate::{emit_compile_error, generators as gen};
 
 /// Given an `impl MyModule` block, produces an `impl MethodHandler for MyModule`.
 /// See `sdk_derive()` in lib.rs for details.
@@ -225,8 +226,44 @@ pub fn derive_method_handler(impl_block: syn::ItemImpl) -> TokenStream {
             quote! {}
         } else {
             quote! {
-                fn expensive_queries() -> Vec<&'static str> {
-                    vec![ #( #handler_names, )* ]
+                fn is_expensive_query(method: &str) -> bool {
+                    [ #( #handler_names, )* ].contains(&method)
+                }
+            }
+        }
+    };
+
+    let allowed_private_km_queries_impl = {
+        let handler_names: Vec<syn::Expr> = handlers
+            .iter()
+            .filter_map(|h| h.handler.as_ref())
+            .filter(|h| h.attrs.kind == HandlerKind::Query && h.attrs.allow_private_km)
+            .map(|h| h.attrs.rpc_name.clone())
+            .collect();
+        if handler_names.is_empty() {
+            quote! {}
+        } else {
+            quote! {
+                fn is_allowed_private_km_query(method: &str) -> bool {
+                    [ #( #handler_names, )* ].contains(&method)
+                }
+            }
+        }
+    };
+
+    let allowed_interactive_calls_impl = {
+        let handler_names: Vec<syn::Expr> = handlers
+            .iter()
+            .filter_map(|h| h.handler.as_ref())
+            .filter(|h| h.attrs.kind == HandlerKind::Call && h.attrs.allow_interactive)
+            .map(|h| h.attrs.rpc_name.clone())
+            .collect();
+        if handler_names.is_empty() {
+            quote! {}
+        } else {
+            quote! {
+                fn is_allowed_interactive_call(method: &str) -> bool {
+                    [ #( #handler_names, )* ].contains(&method)
                 }
             }
         }
@@ -251,6 +288,8 @@ pub fn derive_method_handler(impl_block: syn::ItemImpl) -> TokenStream {
             #dispatch_message_result_impl
             #supported_methods_impl
             #expensive_queries_impl
+            #allowed_private_km_queries_impl
+            #allowed_interactive_calls_impl
         }
 
         impl#module_generics #module_ty {
@@ -306,6 +345,11 @@ struct MethodHandlerAttr {
     rpc_name: syn::Expr,
     /// Whether this handler is tagged as expensive. Only applies to query handlers.
     is_expensive: bool,
+    /// Whether this handler is tagged as allowing access to private key manager state. Only applies
+    /// to query handlers.
+    allow_private_km: bool,
+    /// Whether this handler is tagged as allowing interactive calls. Only applies to call handlers.
+    allow_interactive: bool,
 }
 impl syn::parse::Parse for MethodHandlerAttr {
     fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
@@ -320,10 +364,14 @@ impl syn::parse::Parse for MethodHandlerAttr {
         let _: syn::token::Eq = input.parse()?;
         let rpc_name: syn::Expr = input.parse()?;
 
-        // Parse optional `expensive` tag
-        let is_expensive = if input.peek(syn::token::Comma) {
+        // Parse optional comma-separated tags.
+        let mut is_expensive = false;
+        let mut allow_private_km = false;
+        let mut allow_interactive = false;
+        while input.peek(syn::token::Comma) {
             let _: syn::token::Comma = input.parse()?;
             let tag: syn::Ident = input.parse()?;
+
             if tag == "expensive" {
                 if kind != HandlerKind::Query {
                     return Err(syn::Error::new(
@@ -331,16 +379,30 @@ impl syn::parse::Parse for MethodHandlerAttr {
                         "`expensive` tag is only allowed on `query` handlers",
                     ));
                 }
-                true
+                is_expensive = true;
+            } else if tag == "allow_private_km" {
+                if kind != HandlerKind::Query {
+                    return Err(syn::Error::new(
+                        tag.span(),
+                        "`allow_private_km` tag is only allowed on `query` handlers",
+                    ));
+                }
+                allow_private_km = true;
+            } else if tag == "allow_interactive" {
+                if kind != HandlerKind::Call {
+                    return Err(syn::Error::new(
+                        tag.span(),
+                        "`allow_interactive` tag is only allowed on `call` handlers",
+                    ));
+                }
+                allow_interactive = true;
             } else {
                 return Err(syn::Error::new(
                     tag.span(),
-                    "invalid handler tag; only `expensive` is supported",
+                    "invalid handler tag; supported: `expensive`, `allow_private_km`, `allow_interactive`",
                 ));
             }
-        } else {
-            false
-        };
+        }
 
         if !input.is_empty() {
             return Err(syn::Error::new(input.span(), "unexpected extra tokens"));
@@ -349,6 +411,8 @@ impl syn::parse::Parse for MethodHandlerAttr {
             kind,
             rpc_name,
             is_expensive,
+            allow_private_km,
+            allow_interactive,
         })
     }
 }
@@ -534,6 +598,8 @@ mod tests {
                 fn my_query() -> () {}
                 #[handler(query = "module.OtherQuery", expensive)]
                 fn my_other_query() -> () {}
+                #[handler(query = "module.ConfidentialQuery", expensive, allow_private_km)]
+                fn my_confidential_query() -> () {}
             }
         );
 
@@ -553,6 +619,7 @@ mod tests {
                                 match method {
                                     RPC_NAME_OF_MY_QUERY => module::dispatch_query(ctx, args, Self::my_query),
                                     "module.OtherQuery" => module::dispatch_query(ctx, args, Self::my_other_query),
+                                    "module.ConfidentialQuery" => module::dispatch_query(ctx, args, Self::my_confidential_query),
                                     q if q == format!("{}.Parameters", Self::NAME) => {
                                         module::dispatch_query(ctx, args, Self::query_parameters)
                                     }
@@ -569,10 +636,17 @@ mod tests {
                                         kind: core_types::MethodHandlerKind::Query,
                                         name: "module.OtherQuery".to_string(),
                                     },
+                                    core_types::MethodHandlerInfo {
+                                        kind: core_types::MethodHandlerKind::Query,
+                                        name: "module.ConfidentialQuery".to_string(),
+                                    },
                                 ]
                             }
-                            fn expensive_queries() -> Vec<&'static str> {
-                                vec!["module.OtherQuery"]
+                            fn is_expensive_query(method: &str) -> bool {
+                                ["module.OtherQuery", "module.ConfidentialQuery"].contains(&method)
+                            }
+                            fn is_allowed_private_km_query(method: &str) -> bool {
+                                ["module.ConfidentialQuery"].contains(&method)
                             }
                         }
                         impl<C: Cfg> MyModule<C> {
@@ -587,6 +661,8 @@ mod tests {
                             fn my_query() -> () {}
                             #[handler(query = "module.OtherQuery", expensive)]
                             fn my_other_query() -> () {}
+                            #[handler(query = "module.ConfidentialQuery", expensive, allow_private_km)]
+                            fn my_confidential_query() -> () {}
                         }
                     };
                 )
@@ -662,6 +738,18 @@ mod tests {
         let input: syn::ItemImpl = syn::parse_quote!(
             impl<C: Cfg> MyModule<C> {
                 #[handler(call = "foo", expensive)]
+                fn my_method_call() -> () {}
+            }
+        );
+        super::derive_method_handler(input);
+    }
+
+    #[test]
+    #[should_panic(expected = "only allowed on `query` handlers")]
+    fn generate_method_handler_malformed_allow_private_km_nonquery() {
+        let input: syn::ItemImpl = syn::parse_quote!(
+            impl<C: Cfg> MyModule<C> {
+                #[handler(call = "foo", allow_private_km)]
                 fn my_method_call() -> () {}
             }
         );

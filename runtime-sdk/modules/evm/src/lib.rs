@@ -431,6 +431,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                         value,
                         data: data.clone(),
                     }),
+                    ..Default::default()
                 },
                 auth_info: transaction::AuthInfo {
                     signer_info: vec![],
@@ -445,6 +446,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                         gas: gas_limit,
                         consensus_messages: 0,
                     },
+                    ..Default::default()
                 },
             };
             sctx.with_tx(0, 0, call_tx, |mut txctx, _call| {

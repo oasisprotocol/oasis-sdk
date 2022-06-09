@@ -101,3 +101,13 @@ type CallDataPublicKeyResponse struct {
 	// PublicKey is the signed runtime call data public key.
 	PublicKey types.SignedPublicKey `json:"public_key"`
 }
+
+// ExecuteReadOnlyTxQuery is the body of the core.ExecuteReadOnlyTx query.
+type ExecuteReadOnlyTxQuery struct {
+	Tx []byte `json:"tx"`
+}
+
+// ExecuteReadOnlyTxResponse is the response of the core.ExecuteReadOnlyTx query.
+type ExecuteReadOnlyTxResponse struct {
+	Result types.CallResult `json:"result"`
+}

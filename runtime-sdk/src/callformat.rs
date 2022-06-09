@@ -96,8 +96,16 @@ pub fn decode_call_ex<C: Context>(
             let data =
                 deoxysii::box_open(&envelope.nonce, envelope.data, vec![], &envelope.pk, &sk.0)
                     .map_err(Error::InvalidCallFormat)?;
-            let call = cbor::from_slice(&data)
+            let read_only = call.read_only;
+            let call: Call = cbor::from_slice(&data)
                 .map_err(|_| Error::InvalidCallFormat(anyhow!("malformed call")))?;
+
+            // Ensure read-only flag is the same as in the outer envelope. This is to prevent
+            // bypassing any authorization based on the read-only flag.
+            if call.read_only != read_only {
+                return Err(Error::InvalidCallFormat(anyhow!("read-only flag mismatch")));
+            }
+
             Ok(Some((
                 call,
                 Metadata::EncryptedX25519DeoxysII {
@@ -147,6 +155,7 @@ pub fn encode_call<C: Context>(
                     )
                     .unwrap(),
                 }),
+                ..Default::default()
             })
         }
     }

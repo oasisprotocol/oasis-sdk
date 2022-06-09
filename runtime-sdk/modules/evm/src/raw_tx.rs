@@ -161,6 +161,7 @@ fn decode_enveloped(
             format: transaction::CallFormat::Plain,
             method: method.to_owned(),
             body,
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo {
@@ -179,6 +180,7 @@ fn decode_enveloped(
                 gas: gas_limit,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     })
 }

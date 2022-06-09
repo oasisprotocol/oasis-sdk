@@ -157,6 +157,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                             format: transaction::CallFormat::Plain,
                             method,
                             body,
+                            ..Default::default()
                         },
                         auth_info: transaction::AuthInfo {
                             signer_info: vec![transaction::SignerInfo {
@@ -172,6 +173,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                                 gas: max_gas,
                                 consensus_messages: remaining_messages,
                             },
+                            ..Default::default()
                         },
                     };
 
@@ -180,8 +182,11 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         ctx.value(CONTEXT_KEY_DEPTH).set(current_depth + 1);
 
                         // Dispatch the call.
-                        let (result, _) =
-                            dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut ctx, call);
+                        let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
+                            &mut ctx,
+                            call,
+                            &Default::default(),
+                        );
                         // Retrieve remaining gas.
                         let gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(&mut ctx);
 

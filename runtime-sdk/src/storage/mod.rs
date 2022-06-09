@@ -32,6 +32,9 @@ pub trait NestedStore: Store {
     ///
     /// If this method is not called the changes may be discarded by the store.
     fn commit(self) -> Self::Inner;
+
+    /// Whether there are any store updates pending to be committed.
+    fn has_pending_updates(&self) -> bool;
 }
 
 impl<S: Store + ?Sized> Store for &mut S {

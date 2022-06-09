@@ -68,6 +68,27 @@ pub trait Runtime {
         // Default implementation doesn't perform any migration.
     }
 
+    /// Whether a given query method is allowed to be invoked.
+    fn is_allowed_query(_method: &str) -> bool {
+        true
+    }
+
+    /// Whether a given query method is allowed to access private key manager state.
+    ///
+    /// Note that even if this returns `true` for a method, the method also needs to be tagged as
+    /// being allowed to access private key manager state (e.g. with `allow_private_km`).
+    fn is_allowed_private_km_query(_method: &str) -> bool {
+        true
+    }
+
+    /// Whether a given call is allowed to be invoked interactively.
+    ///
+    /// Note that even if this returns `true` for a method, the method also needs to be tagged as
+    /// being allowed to be executed interactively (e.g. with `allow_interactive`)
+    fn is_allowed_interactive_call(_method: &str) -> bool {
+        true
+    }
+
     /// Perform state migrations if required.
     fn migrate<C: Context>(ctx: &mut C) {
         let store = storage::TypedStore::new(storage::PrefixStore::new(

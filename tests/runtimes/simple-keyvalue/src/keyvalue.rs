@@ -132,6 +132,7 @@ impl sdk::module::TransactionHandler for Module {
                             key: "greeting".as_bytes().to_owned(),
                             value: params.greeting.into_bytes(),
                         }),
+                        ..Default::default()
                     },
                     auth_info: transaction::AuthInfo {
                         signer_info: vec![transaction::SignerInfo {
@@ -144,6 +145,7 @@ impl sdk::module::TransactionHandler for Module {
                             gas: 500,
                             ..Default::default()
                         },
+                        ..Default::default()
                     },
                 }))
                 // After we decode this, the accounts module will check the nonce.

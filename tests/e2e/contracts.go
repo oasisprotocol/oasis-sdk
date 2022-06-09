@@ -27,6 +27,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/contracts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/contracts/oas20"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
@@ -82,6 +83,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	counter := uint64(24)
 	ac := accounts.NewV1(rtc)
 	ct := contracts.NewV1(rtc)
+	cr := core.NewV1(rtc)
 	signer := testing.Alice.Signer
 
 	// Upload hello contract code.
@@ -327,7 +329,7 @@ OUTER:
 		return fmt.Errorf("unexpected result from contract: %+v", result)
 	}
 	// Calling say_hello bumps the counter.
-	// counter++
+	counter++
 
 	// Query contract OAS20 balance.
 	if err = ct.Custom(
@@ -523,6 +525,38 @@ OUTER:
 				return fmt.Errorf("incorrect signature verification result, got %v, should be %v (call %d)", signatureVerify.Result, messageSigner.signer == checker.signer, callCount)
 			}
 		}
+	}
+
+	nonce, err = ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return fmt.Errorf("failed to get nonce: %w", err)
+	}
+
+	// Test signed queries.
+	tb = ct.Call(
+		instance.ID,
+		"query_ro",
+		[]types.BaseUnits{},
+	).
+		SetFeeGas(1_000_000).
+		SetNotBefore(0).
+		SetNotAfter(100_000).
+		ReadOnly().
+		AppendAuthSignature(testing.Alice.SigSpec, nonce)
+	_ = tb.AppendSign(ctx, signer)
+	rsp, err := cr.ExecuteReadOnlyTx(ctx, client.RoundLatest, tb.GetSignedTransaction())
+	if err != nil {
+		return fmt.Errorf("failed to execute read only tx: %w", err)
+	}
+	if err = tb.DecodeResult(&rsp.Result, &rawResult); err != nil {
+		return fmt.Errorf("failed to decode read only tx result: %w", err)
+	}
+
+	if err = cbor.Unmarshal(rawResult, &result); err != nil {
+		return fmt.Errorf("failed to decode read only tx contract result: %w", err)
+	}
+	if result["hello"]["greeting"] != fmt.Sprintf("hello %s (%d)", testing.Alice.Address, counter) {
+		return fmt.Errorf("unexpected contract result from read only tx: %+v", result)
 	}
 
 	return nil

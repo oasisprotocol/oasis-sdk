@@ -506,7 +506,7 @@ impl<Cfg: Config> Module<Cfg> {
         Ok(types::InstantiateResult { id })
     }
 
-    #[handler(call = "contracts.Call")]
+    #[handler(call = "contracts.Call", allow_interactive)]
     pub fn tx_call<C: TxContext>(
         ctx: &mut C,
         body: types::Call,

@@ -101,6 +101,9 @@ pub enum Request {
     #[cbor(rename = "query_accounts")]
     QueryAccounts,
 
+    #[cbor(rename = "query_ro")]
+    QueryReadOnly,
+
     #[cbor(rename = "upgrade_proceed")]
     UpgradeProceed,
 
@@ -324,6 +327,13 @@ impl sdk::Contract for HelloWorld {
 
                 _ => Err(Error::QueryFailed),
             },
+            Request::QueryReadOnly => {
+                let counter = COUNTER.get(ctx.public_store()).unwrap_or_default();
+
+                Ok(Response::Hello {
+                    greeting: format!("hello {} ({})", ctx.caller_address().to_bech32(), counter),
+                })
+            }
             // Handle receiving Oas20 tokens.
             Request::Oas20(ReceiverRequest::Receive {
                 sender: _,

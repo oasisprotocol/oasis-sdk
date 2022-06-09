@@ -63,6 +63,7 @@ func EncodeCall(call *types.Call, cf types.CallFormat, cfg *EncodeConfig) (*type
 				Nonce: nonce,
 				Data:  sealedCall,
 			}),
+			ReadOnly: call.ReadOnly,
 		}
 		meta := &metaEncryptedX25519DeoxysII{
 			sk: sk,

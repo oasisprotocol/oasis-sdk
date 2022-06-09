@@ -66,6 +66,7 @@ fn test_api_deposit_invalid_denomination() {
                 to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -77,6 +78,7 @@ fn test_api_deposit_invalid_denomination() {
                 gas: 1000,
                 consensus_messages: 1,
             },
+            ..Default::default()
         },
     };
 
@@ -115,6 +117,7 @@ fn test_api_deposit_incompatible_signer() {
                 to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -126,6 +129,7 @@ fn test_api_deposit_incompatible_signer() {
                 gas: 1000,
                 consensus_messages: 1,
             },
+            ..Default::default()
         },
     };
 
@@ -166,6 +170,7 @@ fn test_api_deposit() {
                 to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, denom.clone()),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -177,6 +182,7 @@ fn test_api_deposit() {
                 gas: 1000,
                 consensus_messages: 1,
             },
+            ..Default::default()
         },
     };
 
@@ -308,6 +314,7 @@ fn test_api_withdraw_invalid_denomination() {
                 to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -319,6 +326,7 @@ fn test_api_withdraw_invalid_denomination() {
                 gas: 1000,
                 consensus_messages: 1,
             },
+            ..Default::default()
         },
     };
 
@@ -357,6 +365,7 @@ fn test_api_withdraw_insufficient_balance() {
                 to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -368,6 +377,7 @@ fn test_api_withdraw_insufficient_balance() {
                 gas: 1000,
                 consensus_messages: 1,
             },
+            ..Default::default()
         },
     };
 
@@ -401,6 +411,7 @@ fn test_api_withdraw_incompatible_signer() {
                 to: None,
                 amount: BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap()),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -412,6 +423,7 @@ fn test_api_withdraw_incompatible_signer() {
                 gas: 1000,
                 consensus_messages: 1,
             },
+            ..Default::default()
         },
     };
 
@@ -474,6 +486,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
                 to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000_000, denom.clone()),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(signer_sigspec, nonce)],
@@ -482,6 +495,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
                 gas: 1000,
                 consensus_messages: 1,
             },
+            ..Default::default()
         },
     };
 
@@ -639,6 +653,7 @@ fn test_api_withdraw_handler_failure() {
                 to: keys::bob::address().into(),
                 amount: BaseUnits::new(1_000_000, denom.clone()),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -650,6 +665,7 @@ fn test_api_withdraw_handler_failure() {
                 gas: 1000,
                 consensus_messages: 1,
             },
+            ..Default::default()
         },
     };
 
@@ -836,6 +852,7 @@ fn test_prefetch() {
             gas: 1000,
             consensus_messages: 1,
         },
+        ..Default::default()
     };
 
     // Test withdraw.
@@ -850,6 +867,7 @@ fn test_prefetch() {
                 to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
+            ..Default::default()
         },
         auth_info: auth_info.clone(),
     };
@@ -881,6 +899,7 @@ fn test_prefetch() {
                 to: Some(keys::bob::address()),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
+            ..Default::default()
         },
         auth_info: auth_info.clone(),
     };

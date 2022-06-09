@@ -131,9 +131,7 @@ pub trait Context {
         let config: Vec<BTreeMap<String, bool>> = self
             .local_config(LOCAL_CONFIG_ALLOWED_QUERIES)
             .unwrap_or_default();
-        let is_expensive = R::Modules::expensive_queries()
-            .iter()
-            .any(|&name| name == method);
+        let is_expensive = R::Modules::is_expensive_query(method);
 
         // Backwards compatibility for the deprecated `allow_expensive_queries`.
         if let Some(allow_expensive_queries) =
@@ -1087,7 +1085,7 @@ mod test {
             call: transaction::Call {
                 format: transaction::CallFormat::Plain,
                 method: "test".to_owned(),
-                body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+                ..Default::default()
             },
             auth_info: transaction::AuthInfo {
                 signer_info: vec![],
@@ -1096,6 +1094,7 @@ mod test {
                     gas: 1000,
                     consensus_messages: 0,
                 },
+                ..Default::default()
             },
         };
         ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
@@ -1148,7 +1147,7 @@ mod test {
             call: transaction::Call {
                 format: transaction::CallFormat::Plain,
                 method: "test".to_owned(),
-                body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+                ..Default::default()
             },
             auth_info: transaction::AuthInfo {
                 signer_info: vec![],
@@ -1157,6 +1156,7 @@ mod test {
                     gas: 1000,
                     consensus_messages: 0,
                 },
+                ..Default::default()
             },
         };
         ctx.with_tx(0, 0, tx, |mut tx_ctx, _call| {

@@ -110,6 +110,7 @@ fn do_test_evm_calls<C: Config>() {
                             format: transaction::CallFormat::EncryptedX25519DeoxysII,
                             method: "".into(),
                             body: cbor::Value::from($data),
+                            ..Default::default()
                         },
                         &client_keypair,
                     )
@@ -195,6 +196,7 @@ fn do_test_evm_calls<C: Config>() {
                 value: 0.into(),
                 init_code: encode_data!(erc20),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -206,6 +208,7 @@ fn do_test_evm_calls<C: Config>() {
                 gas: 1000000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     // Run authentication handler to simulate nonce increments.
@@ -242,6 +245,7 @@ fn do_test_evm_calls<C: Config>() {
                 value: 0.into(),
                 data: encode_data!(name_method),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -253,6 +257,7 @@ fn do_test_evm_calls<C: Config>() {
                 gas: 25000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     // Run authentication handler to simulate nonce increments.
@@ -375,6 +380,7 @@ fn do_test_evm_runtime<C: Config>() {
                             format: transaction::CallFormat::EncryptedX25519DeoxysII,
                             method: "".into(),
                             body: cbor::Value::from($data),
+                            ..Default::default()
                         },
                         &client_keypair,
                     )
@@ -423,6 +429,7 @@ fn do_test_evm_runtime<C: Config>() {
                 value: 0.into(),
                 init_code: encode_data!(erc20.clone()),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -434,6 +441,7 @@ fn do_test_evm_runtime<C: Config>() {
                 gas: 1000000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     // Run authentication handler to simulate nonce increments.
@@ -468,6 +476,7 @@ fn do_test_evm_runtime<C: Config>() {
                 value: 0.into(),
                 init_code: encode_data!(erc20),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -479,6 +488,7 @@ fn do_test_evm_runtime<C: Config>() {
                 gas: 10, // Not enough gas.
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     // Run authentication handler to simulate nonce increments.
@@ -518,6 +528,7 @@ fn do_test_evm_runtime<C: Config>() {
                 value: 0.into(),
                 data: encode_data!(name_method),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -529,6 +540,7 @@ fn do_test_evm_runtime<C: Config>() {
                 gas: 25000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     // Run authentication handler to simulate nonce increments.
@@ -597,6 +609,7 @@ fn do_test_evm_runtime<C: Config>() {
                 value: 0.into(),
                 data: encode_data!(transfer_method.clone()),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -608,6 +621,7 @@ fn do_test_evm_runtime<C: Config>() {
                 gas: 64000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     // Run authentication handler to simulate nonce increments.
@@ -645,6 +659,7 @@ fn do_test_evm_runtime<C: Config>() {
                 value: 0.into(),
                 data: encode_data!(transfer_method),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -656,6 +671,7 @@ fn do_test_evm_runtime<C: Config>() {
                 gas: 10, // Not enough gas.
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_tx).unwrap();
