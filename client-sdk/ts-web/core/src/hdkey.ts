@@ -9,7 +9,7 @@ const pathRegex = new RegExp("^m(\\/[0-9]+')+$");
 
 /**
  * HDKey handles hierarchical key generation according to ADR 0008
- * https://github.com/oasisprotocol/oasis-core/blob/master/docs/adr/0008-standard-account-key-generation.md
+ * https://github.com/oasisprotocol/adrs/blob/main/0008-standard-account-key-generation.md
  */
 export class HDKey {
     public readonly keypair: SignKeyPair;
