@@ -34,8 +34,15 @@ pub struct BalanceQuery {
     pub address: H160,
 }
 
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct SignedQueryEnvelope {
+    pub query: SimulateCallQuery,
+    pub signature: [u8; 65],
+}
+
 /// Transaction body for simulating an EVM call.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cfg_attr(test, derive(Default, PartialEq, Eq))]
 pub struct SimulateCallQuery {
     pub gas_price: U256,
     pub gas_limit: u64,
@@ -48,12 +55,7 @@ pub struct SimulateCallQuery {
 }
 
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct SignedQueryEnvelope {
-    pub query: SimulateCallQuery,
-    pub signature: [u8; 65],
-}
-
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cfg_attr(test, derive(Default, PartialEq, Eq))]
 pub struct Leash {
     /// The maximum account nonce that will be tolerated.
     pub nonce: u64,

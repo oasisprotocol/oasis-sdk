@@ -47,7 +47,7 @@ use crate::{
 ///   },
 /// }
 /// ```
-pub(super) fn verify<C: Context, Cfg: Config>(
+pub(crate) fn verify<C: Context, C10lCfg: Config>(
     ctx: &mut C,
     query: SimulateCallQuery,
     mut signature: [u8; 65],
@@ -62,7 +62,7 @@ pub(super) fn verify<C: Context, Cfg: Config>(
     signature[64] = signature[64].saturating_sub(27); // Some wallets generate a high recovery id.
     let sig =
         recoverable::Signature::try_from(signature.as_slice()).map_err(|_| invalid_signature())?;
-    let signed_message = hash_call_toplevel::<Cfg>(&query);
+    let signed_message = hash_call_toplevel::<C10lCfg>(&query);
     let signer_key = crate::raw_tx::recover_low(&sig, &signed_message.into())
         .map_err(|_| invalid_signature())?;
     let signer_addr_digest = Keccak256::digest(&signer_key.to_encoded_point(false).as_bytes()[1..]);
@@ -73,25 +73,25 @@ pub(super) fn verify<C: Context, Cfg: Config>(
     // Next, verify the leash.
     let current_block = ctx.runtime_header().round;
     let mut state = ctx.runtime_state();
-    let sdk_address = Cfg::map_address(query.caller.into());
-    let nonce = Cfg::Accounts::get_nonce(&mut state, sdk_address).unwrap();
+    let sdk_address = C10lCfg::map_address(query.caller.into());
+    let nonce = C10lCfg::Accounts::get_nonce(&mut state, sdk_address).unwrap();
     if nonce < leash.nonce {
         return Err(Error::InvalidSignedQuery("stale nonce"));
     }
 
     let block_hashes = state::block_hashes(state);
-    if let Some(hash) = block_hashes.get::<_, Hash>(&leash.block_number.to_be_bytes()) {
-        if hash.as_ref() != leash.block_hash.as_ref() {
-            return Err(Error::InvalidSignedQuery("unexpected base block"));
-        }
-        let block_delta = current_block
-            .checked_sub(leash.block_number)
-            .unwrap_or_else(|| leash.block_number - current_block);
-        if block_delta > leash.block_range {
-            return Err(Error::InvalidSignedQuery("current block out of range"));
-        }
-    } else {
-        return Err(Error::InvalidSignedQuery("base block not found"));
+    let base_block_hash = match block_hashes.get::<_, Hash>(&leash.block_number.to_be_bytes()) {
+        Some(hash) => hash,
+        None => return Err(Error::InvalidSignedQuery("base block not found")),
+    };
+    if base_block_hash.as_ref() != leash.block_hash.as_ref() {
+        return Err(Error::InvalidSignedQuery("unexpected base block"));
+    }
+    let block_delta = current_block
+        .checked_sub(leash.block_number)
+        .unwrap_or_else(|| leash.block_number - current_block);
+    if block_delta > leash.block_range {
+        return Err(Error::InvalidSignedQuery("current block out of range"));
     }
 
     Ok(query)
@@ -111,9 +111,9 @@ macro_rules! leash_type_str {
     };
 }
 
-fn hash_call_toplevel<Cfg: Config>(query: &SimulateCallQuery) -> [u8; 32] {
+fn hash_call_toplevel<C10lCfg: Config>(query: &SimulateCallQuery) -> [u8; 32] {
     let call_struct_hash = hash_call(query);
-    let domain_separator = hash_domain::<Cfg>();
+    let domain_separator = hash_domain::<C10lCfg>();
     let mut encoded_call = [0u8; 66];
     encoded_call[0..2].copy_from_slice(b"\x19\x01");
     encoded_call[2..34].copy_from_slice(domain_separator);
@@ -157,7 +157,7 @@ fn hash_leash(leash: &Leash) -> [u8; 32] {
     ])
 }
 
-fn hash_domain<Cfg: Config>() -> &'static [u8; 32] {
+fn hash_domain<C10lCfg: Config>() -> &'static [u8; 32] {
     static DOMAIN_SEPARATOR: OnceCell<[u8; 32]> = OnceCell::new(); // Not `Lazy` because of generic.
     DOMAIN_SEPARATOR.get_or_init(|| {
         const DOMAIN_TYPE_STR: &str = "EIP712Domain(string name,string version,uint256 chainId)";
@@ -165,7 +165,7 @@ fn hash_domain<Cfg: Config>() -> &'static [u8; 32] {
             encode_bytes(DOMAIN_TYPE_STR),
             encode_bytes("oasis-runtime-sdk/evm: signed query"),
             encode_bytes("1.0.0"),
-            Token::Uint(Cfg::CHAIN_ID.into()),
+            Token::Uint(C10lCfg::CHAIN_ID.into()),
         ])
     })
 }
@@ -184,11 +184,20 @@ mod test {
 
     use oasis_runtime_sdk::testing::mock;
 
-    use crate::{test::ConfidentialEVMConfig as Cfg, types::SignedQueryEnvelope};
+    use crate::{
+        test::{ConfidentialEVMConfig as C10lCfg, EVMConfig as Cfg},
+        types::SignedQueryEnvelope,
+        Module as EVMModule,
+    };
 
     /// This was generated using the `@oasislabs/sapphire-paratime` JS lib.
     const SIGNED_QUERY: &str =
 "a2657175657279a764646174614401020304656c65617368a4656e6f6e63651903e76a626c6f636b5f686173685820c92b675c7013e33aa88feaae520eb0ede155e7cacb3c4587e0923cba9953f8bb6b626c6f636b5f72616e6765036c626c6f636b5f6e756d626572182a6576616c75655820000000000000000000000000000000000000000000000000000000000000002a6663616c6c65725411e244400cf165ade687077984f09c3a037b868f676164647265737354b5ed90452aac09f294a0be877cbf2dc4d55e096f696761735f6c696d69740a696761735f70726963655820000000000000000000000000000000000000000000000000000000000000007b697369676e61747572655841e4631519ea4b096f34989f1238a83a83792954eb8fde29edfc8354dfcf2a455335ec4e9e85c5cbfdd34e85ff1416d58b95a566bb463b872432f61ac18a1534fd1b";
+
+    fn make_signed_query() -> SignedQueryEnvelope {
+        let signed_query = hex::decode(SIGNED_QUERY).unwrap();
+        cbor::from_slice(&signed_query).unwrap()
+    }
 
     fn setup_context<C: Context>(ctx: &mut C, query: &SimulateCallQuery) {
         setup_nonce(ctx, query);
@@ -198,8 +207,8 @@ mod test {
     fn setup_nonce<C: Context>(ctx: &mut C, query: &SimulateCallQuery) {
         let leash = query.leash.as_ref().unwrap();
         let mut state = ctx.runtime_state();
-        let sdk_address = Cfg::map_address(query.caller.into());
-        <Cfg as Config>::Accounts::set_nonce(&mut state, sdk_address, leash.nonce);
+        let sdk_address = C10lCfg::map_address(query.caller.into());
+        <C10lCfg as Config>::Accounts::set_nonce(&mut state, sdk_address, leash.nonce);
     }
 
     fn setup_block<C: Context>(ctx: &mut C, query: &SimulateCallQuery) {
@@ -213,8 +222,7 @@ mod test {
 
     #[test]
     fn test_verify_ok() {
-        let signed_query = hex::decode(SIGNED_QUERY).unwrap();
-        let SignedQueryEnvelope { query, signature } = cbor::from_slice(&signed_query).unwrap();
+        let SignedQueryEnvelope { query, signature } = make_signed_query();
         let leash = query.leash.as_ref().unwrap();
 
         let mut mock = mock::Mock::default();
@@ -223,16 +231,15 @@ mod test {
 
         setup_context(&mut ctx, &query);
 
-        verify::<_, Cfg>(&mut ctx, query, signature).unwrap();
+        verify::<_, C10lCfg>(&mut ctx, query, signature).unwrap();
     }
 
     #[test]
     fn test_verify_bad_signature() {
-        let signed_query = hex::decode(SIGNED_QUERY).unwrap();
         let SignedQueryEnvelope {
             query,
             mut signature,
-        } = cbor::from_slice(&signed_query).unwrap();
+        } = make_signed_query();
 
         let mut mock = mock::Mock::default();
         mock.runtime_header.round = query.leash.as_ref().unwrap().block_number;
@@ -242,15 +249,14 @@ mod test {
 
         signature[0] = signature[0].wrapping_add(1);
         assert!(matches!(
-            verify::<_, Cfg>(&mut ctx, query, signature).unwrap_err(),
+            verify::<_, C10lCfg>(&mut ctx, query, signature).unwrap_err(),
             Error::InvalidSignedQuery("invalid signature")
         ));
     }
 
     #[test]
     fn test_verify_bad_nonce() {
-        let signed_query = hex::decode(SIGNED_QUERY).unwrap();
-        let SignedQueryEnvelope { query, signature } = cbor::from_slice(&signed_query).unwrap();
+        let SignedQueryEnvelope { query, signature } = make_signed_query();
 
         let mut mock = mock::Mock::default();
         mock.runtime_header.round = query.leash.as_ref().unwrap().block_number;
@@ -259,15 +265,14 @@ mod test {
         setup_block(&mut ctx, &query);
 
         assert!(matches!(
-            verify::<_, Cfg>(&mut ctx, query, signature).unwrap_err(),
+            verify::<_, C10lCfg>(&mut ctx, query, signature).unwrap_err(),
             Error::InvalidSignedQuery("stale nonce")
         ));
     }
 
     #[test]
     fn test_verify_bad_base_block() {
-        let signed_query = hex::decode(SIGNED_QUERY).unwrap();
-        let SignedQueryEnvelope { query, signature } = cbor::from_slice(&signed_query).unwrap();
+        let SignedQueryEnvelope { query, signature } = make_signed_query();
 
         let mut mock = mock::Mock::default();
         mock.runtime_header.round = query.leash.as_ref().unwrap().block_number;
@@ -276,15 +281,14 @@ mod test {
         setup_nonce(&mut ctx, &query);
 
         assert!(matches!(
-            verify::<_, Cfg>(&mut ctx, query, signature).unwrap_err(),
+            verify::<_, C10lCfg>(&mut ctx, query, signature).unwrap_err(),
             Error::InvalidSignedQuery("base block not found")
         ));
     }
 
     #[test]
     fn test_verify_bad_range() {
-        let signed_query = hex::decode(SIGNED_QUERY).unwrap();
-        let SignedQueryEnvelope { query, signature } = cbor::from_slice(&signed_query).unwrap();
+        let SignedQueryEnvelope { query, signature } = make_signed_query();
 
         let mut mock = mock::Mock::default();
         let mut ctx = mock.create_ctx();
@@ -292,8 +296,50 @@ mod test {
         setup_context(&mut ctx, &query);
 
         assert!(matches!(
-            verify::<_, Cfg>(&mut ctx, query, signature).unwrap_err(),
+            verify::<_, C10lCfg>(&mut ctx, query, signature).unwrap_err(),
             Error::InvalidSignedQuery("current block out of range")
         ));
+    }
+
+    #[test]
+    fn test_decode_simulate_call_body() {
+        let signed_query_bytes = hex::decode(SIGNED_QUERY).unwrap();
+        let unsigned_body = make_signed_query().query;
+        let signed_body = SimulateCallQuery {
+            data: signed_query_bytes,
+            ..Default::default()
+        };
+
+        let mut mock = mock::Mock::default();
+        let mut ctx = mock.create_ctx();
+
+        let mut c10l_mock = mock::Mock::default();
+        c10l_mock.runtime_header.round = unsigned_body.leash.as_ref().unwrap().block_number;
+        let mut c10l_ctx = c10l_mock.create_ctx();
+        setup_context(&mut c10l_ctx, &unsigned_body);
+
+        let mut non_c10l_decode = |body: &SimulateCallQuery| {
+            EVMModule::<Cfg>::decode_simulate_call_body(&mut ctx, body.clone())
+        };
+        let mut c10l_decode = |body: &SimulateCallQuery| {
+            EVMModule::<C10lCfg>::decode_simulate_call_body(&mut c10l_ctx, body.clone())
+        };
+
+        assert_eq!(non_c10l_decode(&unsigned_body).unwrap(), unsigned_body);
+        assert_eq!(non_c10l_decode(&signed_body).unwrap(), signed_body);
+
+        assert!(EVMModule::<C10lCfg>::decode_simulate_call_body(
+            &mut mock::Mock::default().create_ctx(),
+            signed_body.clone()
+        )
+        .is_err()); // Check that errors are propagated (in this case leash invalidity).
+        assert_eq!(c10l_decode(&signed_body).unwrap(), unsigned_body);
+        assert_eq!(
+            c10l_decode(&unsigned_body).unwrap(),
+            SimulateCallQuery {
+                caller: Default::default(),
+                ..unsigned_body
+            }
+        );
     }
 }

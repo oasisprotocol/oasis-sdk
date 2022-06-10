@@ -686,12 +686,7 @@ impl<Cfg: Config> Module<Cfg> {
             ));
         }
 
-        let body = Cfg::CONFIDENTIAL
-            .then(|| cbor::from_slice::<types::SignedQueryEnvelope>(&body.data).ok())
-            .flatten()
-            .map(|e| signed_query::verify::<_, Cfg>(ctx, e.query, e.signature))
-            .transpose()?
-            .unwrap_or(body);
+        let body = Self::decode_simulate_call_body(ctx, body)?;
 
         Self::simulate_call(
             ctx,
@@ -717,6 +712,26 @@ impl<Cfg: Config> Module<Cfg> {
     fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
         // No migrations currently supported.
         false
+    }
+
+    fn decode_simulate_call_body<C: Context>(
+        ctx: &mut C,
+        body: types::SimulateCallQuery,
+    ) -> Result<types::SimulateCallQuery, Error> {
+        if !Cfg::CONFIDENTIAL {
+            return Ok(body);
+        }
+        match cbor::from_slice(&body.data) {
+            Ok(types::SignedQueryEnvelope { query, signature }) => {
+                signed_query::verify::<_, Cfg>(ctx, query, signature)
+            }
+            Err(_) => Ok(types::SimulateCallQuery {
+                // If the ParaTime is confidential, but the query isn't signed, zero out
+                // the caller address to preserve that `msg.sender` is not spoofable.
+                caller: Default::default(),
+                ..body
+            }),
+        }
     }
 }
 
