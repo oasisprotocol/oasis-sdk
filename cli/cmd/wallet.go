@@ -2,12 +2,20 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"sort"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
+
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/remote"
+	"github.com/oasisprotocol/oasis-core/go/common/grpc"
+	"github.com/oasisprotocol/oasis-core/go/common/identity"
+	"github.com/oasisprotocol/oasis-core/go/common/logging"
+	cmdBackground "github.com/oasisprotocol/oasis-core/go/oasis-node/cmd/common/background"
 
 	"github.com/oasisprotocol/oasis-sdk/cli/cmd/common"
 	"github.com/oasisprotocol/oasis-sdk/cli/config"
@@ -256,7 +264,90 @@ var (
 			fmt.Println(acc.UnsafeExport())
 		},
 	}
+
+	walletRemoteSignerCmd = &cobra.Command{
+		Use:   "remote-signer <name> <socket-path>",
+		Short: "Act as a oasis-node remote entity signer over AF_LOCAL",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			name, socketPath := args[0], args[1]
+
+			acc := common.LoadAccount(config.Global(), name)
+
+			sf := &accountEntitySignerFactory{
+				signer: acc.ConsensusSigner(),
+			}
+			if sf.signer == nil {
+				cobra.CheckErr("account not compatible with consensus layer usage")
+			}
+
+			// The domain separation is entirely handled on the client side.
+			signature.UnsafeAllowUnregisteredContexts()
+
+			// Suppress oasis-core logging.
+			err := logging.Initialize(
+				nil,
+				logging.FmtLogfmt,
+				logging.LevelInfo,
+				nil,
+			)
+			cobra.CheckErr(err)
+
+			// Setup the gRPC service.
+			srvCfg := &grpc.ServerConfig{
+				Name:     "remote-signer",
+				Path:     socketPath, // XXX: Maybe fix this up to be nice.
+				Identity: &identity.Identity{},
+			}
+			srv, err := grpc.NewServer(srvCfg)
+			cobra.CheckErr(err)
+			remote.RegisterService(srv.Server(), sf)
+
+			// Start the service and wait for graceful termination.
+			err = srv.Start()
+			cobra.CheckErr(err)
+
+			fmt.Printf("Address: %s\n", acc.Address())
+			fmt.Printf("Node Args:\n  --signer.backend=remote \\\n  --signer.remote.address=unix:%s\n", socketPath)
+			fmt.Printf("\n*** REMOTE SIGNER READY ***\n")
+
+			sm := cmdBackground.NewServiceManager(logging.GetLogger("remote-signer"))
+			sm.Register(srv)
+			defer sm.Cleanup()
+			sm.Wait()
+		},
+	}
 )
+
+type accountEntitySignerFactory struct {
+	signer signature.Signer
+}
+
+func (sf *accountEntitySignerFactory) EnsureRole(
+	role signature.SignerRole,
+) error {
+	if role != signature.SignerEntity {
+		return signature.ErrInvalidRole
+	}
+	return nil
+}
+
+func (sf *accountEntitySignerFactory) Generate(
+	role signature.SignerRole,
+	rng io.Reader,
+) (signature.Signer, error) {
+	// The remote signer should never require this.
+	return nil, fmt.Errorf("refusing to generate new signing keys")
+}
+
+func (sf *accountEntitySignerFactory) Load(
+	role signature.SignerRole,
+) (signature.Signer, error) {
+	if err := sf.EnsureRole(role); err != nil {
+		return nil, err
+	}
+	return sf.signer, nil
+}
 
 func showPublicWalletInfo(wallet wallet.Account) {
 	fmt.Printf("Public Key:       %s\n", wallet.Signer().Public())
@@ -290,4 +381,5 @@ func init() {
 	walletCmd.AddCommand(walletSetDefaultCmd)
 	walletCmd.AddCommand(walletImportCmd)
 	walletCmd.AddCommand(walletExportCmd)
+	walletCmd.AddCommand(walletRemoteSignerCmd)
 }
