@@ -15,38 +15,9 @@ use crate::{
     Config, Error,
 };
 
-/// Verifies the signature on signed query and whether it is appropriately [`Leash`]ed.
+/// Verifies the signature on signed query and whether it is appropriately leashed.
 ///
-/// The signature is generated according to [EIP-712](https://eips.ethereum.org/EIPS/eip-712)
-/// so that the signed message can be easily verified by the user. MetaMask, for instance, shows
-/// each field as itself, whereas a standard `eth_personalSign` would show an opaque hash.
-/// The EIP-712 type parameters for a signed query are:
-/// ```ignore
-/// {
-///   domain: {
-///     name: 'oasis-runtime-sdk/evm: signed query',
-///     version: '1.0.0',
-///     chainId,
-///   },
-///   types: {
-///     Call: [
-///       { name: 'from', type: 'address' },
-///       { name: 'to', type: 'address' },
-///       { name: 'value', type: 'uint256' },
-///       { name: 'gasPrice', type: 'uint256' },
-///       { name: 'gasLimit', type: 'uint64' },
-///       { name: 'data', type: 'bytes' },
-///       { name: 'leash', type: 'Leash' },
-///     ],
-///     Leash: [
-///       { name: 'nonce', type: 'uint64' },
-///       { name: 'blockNumber', type: 'uint64' },
-///       { name: 'blockHash', type: 'uint256' },
-///       { name: 'blockRange', type: 'uint64' },
-///     ],
-///   },
-/// }
-/// ```
+/// See [`crate::types::SignedQueryEnvelope`] for details on the signature format.
 pub(crate) fn verify<C: Context, C10lCfg: Config>(
     ctx: &mut C,
     query: SimulateCallQuery,
@@ -302,7 +273,7 @@ mod test {
     }
 
     #[test]
-    fn test_decode_simulate_call_body() {
+    fn test_decode_simulate_call_query() {
         let signed_query_bytes = hex::decode(SIGNED_QUERY).unwrap();
         let unsigned_body = make_signed_query().query;
         let signed_body = SimulateCallQuery {
@@ -319,16 +290,16 @@ mod test {
         setup_context(&mut c10l_ctx, &unsigned_body);
 
         let mut non_c10l_decode = |body: &SimulateCallQuery| {
-            EVMModule::<Cfg>::decode_simulate_call_body(&mut ctx, body.clone())
+            EVMModule::<Cfg>::decode_simulate_call_query(&mut ctx, body.clone())
         };
         let mut c10l_decode = |body: &SimulateCallQuery| {
-            EVMModule::<C10lCfg>::decode_simulate_call_body(&mut c10l_ctx, body.clone())
+            EVMModule::<C10lCfg>::decode_simulate_call_query(&mut c10l_ctx, body.clone())
         };
 
         assert_eq!(non_c10l_decode(&unsigned_body).unwrap(), unsigned_body);
         assert_eq!(non_c10l_decode(&signed_body).unwrap(), signed_body);
 
-        assert!(EVMModule::<C10lCfg>::decode_simulate_call_body(
+        assert!(EVMModule::<C10lCfg>::decode_simulate_call_query(
             &mut mock::Mock::default().create_ctx(),
             signed_body.clone()
         )

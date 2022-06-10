@@ -34,6 +34,40 @@ pub struct BalanceQuery {
     pub address: H160,
 }
 
+/// An envelope containing a non-encrypted [`SimulateCallQuery`] and a signture
+/// generated according to [EIP-712](https://eips.ethereum.org/EIPS/eip-712).
+///
+/// EIP-712 is used so that the signed message can be easily verified by the user.
+/// MetaMask, for instance, shows each field as itself, whereas a standard `eth_personalSign`
+/// would show an opaque CBOR-encoded [`SimulateCallQuery`].
+///
+/// The EIP-712 type parameters for a signed query are:
+/// ```ignore
+/// {
+///   domain: {
+///     name: 'oasis-runtime-sdk/evm: signed query',
+///     version: '1.0.0',
+///     chainId,
+///   },
+///   types: {
+///     Call: [
+///       { name: 'from', type: 'address' },
+///       { name: 'to', type: 'address' },
+///       { name: 'value', type: 'uint256' },
+///       { name: 'gasPrice', type: 'uint256' },
+///       { name: 'gasLimit', type: 'uint64' },
+///       { name: 'data', type: 'bytes' },
+///       { name: 'leash', type: 'Leash' },
+///     ],
+///     Leash: [
+///       { name: 'nonce', type: 'uint64' },
+///       { name: 'blockNumber', type: 'uint64' },
+///       { name: 'blockHash', type: 'uint256' },
+///       { name: 'blockRange', type: 'uint64' },
+///     ],
+///   },
+/// }
+/// ```
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct SignedQueryEnvelope {
     pub query: SimulateCallQuery,

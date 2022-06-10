@@ -307,16 +307,13 @@ pub trait API {
     fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<u128, Error>;
 
     /// Simulate an Ethereum CALL.
-    #[allow(clippy::too_many_arguments)]
+    ///
+    /// If the EVM is confidential, it may accept _signed queries_, which are formatted as
+    /// an encrypted [`types::SignedQueryEnvelope`] packed into the `data` field of
+    /// [`types::SimulateCallQuery`].
     fn simulate_call<C: Context>(
         ctx: &mut C,
-        gas_price: U256,
-        gas_limit: u64,
-        caller: H160,
-        address: H160,
-        value: U256,
-        data: Vec<u8>,
-        format: transaction::CallFormat,
+        call: types::SimulateCallQuery,
     ) -> Result<Vec<u8>, Error>;
 }
 
@@ -421,18 +418,21 @@ impl<Cfg: Config> API for Module<Cfg> {
 
     fn simulate_call<C: Context>(
         ctx: &mut C,
-        gas_price: U256,
-        gas_limit: u64,
-        caller: H160,
-        address: H160,
-        value: U256,
-        data: Vec<u8>,
-        format: transaction::CallFormat,
+        call: types::SimulateCallQuery,
     ) -> Result<Vec<u8>, Error> {
-        debug_assert_eq!(format, transaction::CallFormat::Plain);
+        let types::SimulateCallQuery {
+            gas_price,
+            gas_limit,
+            caller,
+            address,
+            value,
+            data,
+            ..
+        } = Self::decode_simulate_call_query(ctx, call)?;
 
-        let (data, tx_metadata) = Self::decode_call_data(ctx, data, format, 0, true)?
-            .expect("processing always proceeds");
+        let (data, tx_metadata) =
+            Self::decode_call_data(ctx, data, transaction::CallFormat::Plain, 0, true)?
+                .expect("processing always proceeds");
 
         let evm_result = ctx.with_simulation(|mut sctx| {
             let call_tx = transaction::Transaction {
@@ -483,6 +483,39 @@ impl<Cfg: Config> API for Module<Cfg> {
             })
         });
         Self::encode_evm_result(ctx, evm_result, tx_metadata)
+    }
+}
+
+impl<Cfg: Config> Module<Cfg> {
+    /// Returns the decrypted call data or `None` if this transaction is simulated in
+    /// a context that may not include a key manager (i.e. SimulateCall but not EstimateGas).
+    fn decode_call_data<C: Context>(
+        ctx: &C,
+        data: Vec<u8>,
+        format: transaction::CallFormat,
+        tx_index: usize,
+        assume_km_reachable: bool,
+    ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
+        if !Cfg::CONFIDENTIAL || format != transaction::CallFormat::Plain {
+            // Either the runtime is non-confidential and all txs are plaintext, or the tx
+            // is sent using a confidential call format and the whole tx is encrypted.
+            return Ok(Some((data, callformat::Metadata::Empty)));
+        }
+        let call = cbor::from_slice(&data)
+            .map_err(|_| CoreError::InvalidCallFormat(anyhow::anyhow!("invalid packed call")))?;
+        match callformat::decode_call_ex(ctx, call, tx_index, assume_km_reachable)? {
+            Some((
+                transaction::Call {
+                    body: cbor::Value::ByteString(data),
+                    ..
+                },
+                metadata,
+            )) => Ok(Some((data, metadata))),
+            Some((_, _)) => {
+                Err(CoreError::InvalidCallFormat(anyhow::anyhow!("invalid inner data")).into())
+            }
+            None => Ok(None),
+        }
     }
 }
 
@@ -614,37 +647,6 @@ impl<Cfg: Config> Module<Cfg> {
             tx_metadata,
         )))
     }
-
-    /// Returns the decrypted call data or `None` if this transaction is simulated in
-    /// a context that may not include a key manager (i.e. SimulateCall but not EstimateGas).
-    fn decode_call_data<C: Context>(
-        ctx: &C,
-        data: Vec<u8>,
-        format: transaction::CallFormat,
-        tx_index: usize,
-        assume_km_reachable: bool,
-    ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
-        if !Cfg::CONFIDENTIAL || format != transaction::CallFormat::Plain {
-            // Either the runtime is non-confidential and all txs are plaintext, or the tx
-            // is sent using a confidential call format and the whole tx is encrypted.
-            return Ok(Some((data, callformat::Metadata::Empty)));
-        }
-        let call = cbor::from_slice(&data)
-            .map_err(|_| CoreError::InvalidCallFormat(anyhow::anyhow!("invalid packed call")))?;
-        match callformat::decode_call_ex(ctx, call, tx_index, assume_km_reachable)? {
-            Some((
-                transaction::Call {
-                    body: cbor::Value::ByteString(data),
-                    ..
-                },
-                metadata,
-            )) => Ok(Some((data, metadata))),
-            Some((_, _)) => {
-                Err(CoreError::InvalidCallFormat(anyhow::anyhow!("invalid inner data")).into())
-            }
-            None => Ok(None),
-        }
-    }
 }
 
 #[sdk_derive(MethodHandler)]
@@ -685,19 +687,7 @@ impl<Cfg: Config> Module<Cfg> {
                 cfg.query_simulate_call_max_gas,
             ));
         }
-
-        let body = Self::decode_simulate_call_body(ctx, body)?;
-
-        Self::simulate_call(
-            ctx,
-            body.gas_price,
-            body.gas_limit,
-            body.caller,
-            body.address,
-            body.value,
-            body.data,
-            transaction::CallFormat::Plain,
-        )
+        Self::simulate_call(ctx, body)
     }
 }
 
@@ -714,7 +704,7 @@ impl<Cfg: Config> Module<Cfg> {
         false
     }
 
-    fn decode_simulate_call_body<C: Context>(
+    fn decode_simulate_call_query<C: Context>(
         ctx: &mut C,
         body: types::SimulateCallQuery,
     ) -> Result<types::SimulateCallQuery, Error> {
