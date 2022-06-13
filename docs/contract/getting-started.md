@@ -91,7 +91,7 @@ rustup target add wasm32-unknown-unknown
 [rust-upstream-rustup]: https://www.rust-lang.org/tools/install
 [download `rustup-init` executable for your platform]: https://rust-lang.github.io/rustup/installation/other.html
 [Rust]: https://www.rust-lang.org/
-[rust-toolchain]: https://github.com/oasisprotocol/oasis-core/tree/master/rust-toolchain
+[rust-toolchain]: https://github.com/oasisprotocol/oasis-sdk/tree/master/rust-toolchain
 [rust-toolchain-precedence]: https://github.com/rust-lang/rustup/blob/master/README.md#override-precedence
 <!-- markdownlint-enable line-length -->
 
