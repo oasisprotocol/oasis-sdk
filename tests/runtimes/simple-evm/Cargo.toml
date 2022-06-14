@@ -12,3 +12,6 @@ oasis-runtime-sdk-evm = { path = "../../../runtime-sdk/modules/evm" }
 
 # Third party.
 thiserror = "1.0"
+
+[features]
+confidential = []

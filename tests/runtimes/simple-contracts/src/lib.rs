@@ -7,7 +7,6 @@ use oasis_runtime_sdk::{
 };
 use oasis_runtime_sdk_contracts as contracts;
 
-/// Simple EVM runtime.
 pub struct Runtime;
 
 /// Runtime configuration.
