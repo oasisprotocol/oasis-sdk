@@ -676,7 +676,7 @@ impl<Cfg: Config> Module<Cfg> {
         Self::get_balance(ctx, body.address)
     }
 
-    #[handler(query = "evm.SimulateCall", expensive)]
+    #[handler(query = "evm.SimulateCall", expensive, allow_private_km)]
     fn query_simulate_call<C: Context>(
         ctx: &mut C,
         body: types::SimulateCallQuery,
