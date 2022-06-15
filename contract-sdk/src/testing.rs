@@ -14,7 +14,7 @@ use crate::{
         env::{QueryRequest, QueryResponse},
         event::Event as RawEvent,
         message::Message,
-        token, ExecutionContext, InstanceId,
+        token, CallFormat, ExecutionContext, InstanceId,
     },
 };
 
@@ -180,6 +180,14 @@ impl Context for MockContext {
 
     fn deposited_tokens(&self) -> &[token::BaseUnits] {
         &self.ec.deposited_tokens
+    }
+
+    fn is_read_only(&self) -> bool {
+        self.ec.read_only
+    }
+
+    fn call_format(&self) -> CallFormat {
+        self.ec.call_format
     }
 
     fn emit_message(&mut self, msg: Message) {

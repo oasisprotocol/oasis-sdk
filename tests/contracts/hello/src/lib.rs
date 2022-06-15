@@ -331,7 +331,12 @@ impl sdk::Contract for HelloWorld {
                 let counter = COUNTER.get(ctx.public_store()).unwrap_or_default();
 
                 Ok(Response::Hello {
-                    greeting: format!("hello {} ({})", ctx.caller_address().to_bech32(), counter),
+                    greeting: format!(
+                        "hello {} ({}, {})",
+                        ctx.caller_address().to_bech32(),
+                        counter,
+                        ctx.is_read_only()
+                    ),
                 })
             }
             // Handle receiving Oas20 tokens.

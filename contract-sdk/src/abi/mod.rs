@@ -5,6 +5,7 @@ pub mod crypto;
 pub mod dispatch;
 pub mod env;
 pub mod storage;
+pub mod version;
 
 #[no_mangle]
 pub extern "C" fn allocate(length: u32) -> u32 {

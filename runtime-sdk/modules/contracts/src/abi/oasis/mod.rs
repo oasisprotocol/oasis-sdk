@@ -61,16 +61,20 @@ impl<Cfg: Config> OasisV1<Cfg> {
         function_name: &str,
     ) -> Result<contract_sdk::ExecutionOk, Error> {
         // Allocate memory for context and request, copy serialized data into the region.
-        let context_dst = Self::serialize_and_allocate(
-            instance,
-            contract_sdk::ExecutionContext {
-                instance_id: ctx.instance_info.id,
-                instance_address: ctx.instance_info.address().into(),
-                caller_address: ctx.caller_address.into(),
-                deposited_tokens: deposited_tokens.iter().map(|b| b.into()).collect(),
-            },
-        )
-        .map_err(|err| Error::ExecutionFailed(err.into()))?;
+        let mut ec = contract_sdk::ExecutionContext {
+            instance_id: ctx.instance_info.id,
+            instance_address: ctx.instance_info.address().into(),
+            caller_address: ctx.caller_address.into(),
+            deposited_tokens: deposited_tokens.iter().map(|b| b.into()).collect(),
+            ..Default::default()
+        };
+        if ctx.code_info.abi_sv >= 1 {
+            // Supports read only and call format flags.
+            ec.read_only = ctx.read_only;
+            ec.call_format = ctx.call_format.into();
+        }
+        let context_dst = Self::serialize_and_allocate(instance, ec)
+            .map_err(|err| Error::ExecutionFailed(err.into()))?;
         let request_dst = Self::allocate_and_copy(instance, request)
             .map_err(|err| Error::ExecutionFailed(err.into()))?;
 

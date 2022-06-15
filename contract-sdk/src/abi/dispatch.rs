@@ -6,8 +6,8 @@ use crate::{
     event::Event,
     memory::HostRegion,
     types::{
-        address::Address, event::Event as RawEvent, message::Message, token, ExecutionContext,
-        ExecutionOk, ExecutionResult, InstanceId,
+        address::Address, event::Event as RawEvent, message::Message, token, CallFormat,
+        ExecutionContext, ExecutionOk, ExecutionResult, InstanceId,
     },
 };
 
@@ -58,6 +58,14 @@ impl context::Context for Context {
 
     fn deposited_tokens(&self) -> &[token::BaseUnits] {
         &self.ec.deposited_tokens
+    }
+
+    fn is_read_only(&self) -> bool {
+        self.ec.read_only
+    }
+
+    fn call_format(&self) -> CallFormat {
+        self.ec.call_format
     }
 
     fn emit_message(&mut self, msg: Message) {

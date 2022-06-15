@@ -286,9 +286,12 @@ fn run_contract_with_defaults(
         };
         let mut exec_ctx = abi::ExecutionContext::new(
             &params,
+            &code_info,
             &instance_info,
             gas_limit,
             Default::default(),
+            ctx.is_read_only(),
+            ctx.tx_call_format(),
             &mut ctx,
         );
         wasm::instantiate::<ContractsConfig, _>(&mut exec_ctx, &contract, &call).inner?;

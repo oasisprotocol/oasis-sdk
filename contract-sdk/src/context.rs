@@ -3,7 +3,7 @@ use crate::{
     env::{Crypto, Env},
     event::Event,
     storage::{ConfidentialStore, PublicStore},
-    types::{address::Address, message::Message, token, InstanceId},
+    types::{address::Address, message::Message, token, CallFormat, InstanceId},
 };
 
 /// Execution context.
@@ -26,6 +26,12 @@ pub trait Context {
 
     /// Tokens deposited by the caller.
     fn deposited_tokens(&self) -> &[token::BaseUnits];
+
+    /// Whether the call is read-only and must not make any storage modifications.
+    fn is_read_only(&self) -> bool;
+
+    /// Call format.
+    fn call_format(&self) -> CallFormat;
 
     /// Emits a message.
     fn emit_message(&mut self, msg: Message);

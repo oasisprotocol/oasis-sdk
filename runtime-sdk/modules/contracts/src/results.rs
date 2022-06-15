@@ -126,6 +126,10 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
         ));
     }
 
+    // Properly propagate original call format and read-only flag.
+    let orig_call_format = ctx.tx_call_format();
+    let orig_read_only = ctx.is_read_only();
+
     // Process emitted messages recursively.
     for msg in messages {
         match msg {
@@ -234,9 +238,12 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         };
                         let mut exec_ctx = ExecutionContext::new(
                             params,
+                            contract.code_info,
                             contract.instance_info,
                             <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
                             ctx.tx_caller_address(),
+                            orig_read_only,
+                            orig_call_format,
                             ctx,
                         );
                         let reply_result =

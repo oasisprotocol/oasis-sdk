@@ -555,7 +555,7 @@ OUTER:
 	if err = cbor.Unmarshal(rawResult, &result); err != nil {
 		return fmt.Errorf("failed to decode read only tx contract result: %w", err)
 	}
-	if result["hello"]["greeting"] != fmt.Sprintf("hello %s (%d)", testing.Alice.Address, counter) {
+	if result["hello"]["greeting"] != fmt.Sprintf("hello %s (%d, true)", testing.Alice.Address, counter) {
 		return fmt.Errorf("unexpected contract result from read only tx: %+v", result)
 	}
 
