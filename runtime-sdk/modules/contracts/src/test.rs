@@ -50,6 +50,7 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
                 instantiate_policy: types::Policy::Everyone,
                 code,
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -61,6 +62,7 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
                 gas: 1000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
@@ -98,6 +100,7 @@ fn deploy_hello_contract<C: BatchContext>(
                 }),
                 tokens,
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -109,6 +112,7 @@ fn deploy_hello_contract<C: BatchContext>(
                 gas: 1_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
@@ -217,6 +221,7 @@ fn test_hello_contract_call() {
                 }),
                 tokens: vec![BaseUnits::new(2_000, Denomination::NATIVE)],
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -228,6 +233,7 @@ fn test_hello_contract_call() {
                 gas: 1_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
@@ -312,6 +318,7 @@ fn test_hello_contract_call() {
                 }),
                 tokens: vec![],
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -323,6 +330,7 @@ fn test_hello_contract_call() {
                 gas: 1_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
@@ -417,6 +425,7 @@ fn test_hello_contract_call() {
                 }),
                 tokens: vec![],
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -428,6 +437,7 @@ fn test_hello_contract_call() {
                 gas: 1_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, invalid_tx.clone(), |mut tx_ctx, call| {
@@ -510,6 +520,7 @@ fn test_hello_contract_subcalls() {
                 data: cbor::to_vec(cbor::cbor_text!("call_self")), // Needs to conform to contract API.
                 tokens: vec![],
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -521,6 +532,7 @@ fn test_hello_contract_subcalls() {
                 gas: 2_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
@@ -559,6 +571,7 @@ fn test_hello_contract_query() {
                 data: cbor::to_vec(cbor::cbor_text!("query_block_info")), // Needs to conform to contract API.
                 tokens: vec![],
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -570,6 +583,7 @@ fn test_hello_contract_query() {
                 gas: 1_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
@@ -599,6 +613,7 @@ fn test_hello_contract_query() {
                 data: cbor::to_vec(cbor::cbor_text!("query_accounts")), // Needs to conform to contract API.
                 tokens: vec![BaseUnits::new(2_000, Denomination::NATIVE)], // For the query below.
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -610,6 +625,7 @@ fn test_hello_contract_query() {
                 gas: 1_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
@@ -639,6 +655,7 @@ fn test_hello_contract_query() {
                 data: cbor::to_vec(cbor::cbor_text!("query_address")), // Needs to conform to contract API.
                 tokens: vec![],
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -650,6 +667,7 @@ fn test_hello_contract_query() {
                 gas: 1_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
@@ -691,6 +709,7 @@ fn test_hello_contract_upgrade() {
                 data: cbor::to_vec(cbor::cbor_text!("upgrade_proceed")), // Needs to conform to contract API.
                 tokens: vec![],
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -702,6 +721,7 @@ fn test_hello_contract_upgrade() {
                 gas: 2_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
@@ -734,6 +754,7 @@ fn test_hello_contract_upgrade_fail_policy() {
                 data: cbor::to_vec(cbor::cbor_text!("upgrade_proceed")), // Needs to conform to contract API.
                 tokens: vec![],
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -745,6 +766,7 @@ fn test_hello_contract_upgrade_fail_policy() {
                 gas: 2_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
@@ -779,6 +801,7 @@ fn test_hello_contract_upgrade_fail_pre() {
                 data: cbor::to_vec(cbor::cbor_text!("upgrade_fail_pre")), // Needs to conform to contract API.
                 tokens: vec![],
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -790,6 +813,7 @@ fn test_hello_contract_upgrade_fail_pre() {
                 gas: 2_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
@@ -827,6 +851,7 @@ fn test_hello_contract_upgrade_fail_post() {
                 data: cbor::to_vec(cbor::cbor_text!("upgrade_fail_post")), // Needs to conform to contract API.
                 tokens: vec![],
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -838,6 +863,7 @@ fn test_hello_contract_upgrade_fail_post() {
                 gas: 2_000_000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {

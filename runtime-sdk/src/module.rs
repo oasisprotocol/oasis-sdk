@@ -212,8 +212,20 @@ pub trait MethodHandler {
         vec![]
     }
 
-    fn expensive_queries() -> Vec<&'static str> {
-        Vec::new()
+    /// Checks whether the given query method is tagged as expensive.
+    fn is_expensive_query(_method: &str) -> bool {
+        false
+    }
+
+    /// Checks whether the given query is allowed to access private key manager state.
+    fn is_allowed_private_km_query(_method: &str) -> bool {
+        false
+    }
+
+    /// Checks whether the given call is allowed to be called interactively via read-only
+    /// transactions.
+    fn is_allowed_interactive_call(_method: &str) -> bool {
+        false
     }
 }
 
@@ -284,13 +296,31 @@ impl MethodHandler for Tuple {
         DispatchResult::Unhandled(result)
     }
 
-    #[allow(clippy::let_and_return)]
-    fn expensive_queries() -> Vec<&'static str> {
-        let mut merged = Vec::new();
+    fn is_expensive_query(method: &str) -> bool {
         for_tuples!( #(
-            merged.extend(Tuple::expensive_queries());
+            if Tuple::is_expensive_query(method) {
+                return true;
+            }
         )* );
-        merged
+        false
+    }
+
+    fn is_allowed_private_km_query(method: &str) -> bool {
+        for_tuples!( #(
+            if Tuple::is_allowed_private_km_query(method) {
+                return true;
+            }
+        )* );
+        false
+    }
+
+    fn is_allowed_interactive_call(method: &str) -> bool {
+        for_tuples!( #(
+            if Tuple::is_allowed_interactive_call(method) {
+                return true;
+            }
+        )* );
+        false
     }
 }
 

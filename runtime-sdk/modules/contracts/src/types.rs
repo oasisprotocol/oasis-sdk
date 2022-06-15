@@ -57,6 +57,10 @@ pub struct Code {
     /// ABI.
     pub abi: ABI,
 
+    /// ABI sub-version.
+    #[cbor(optional, default)]
+    pub abi_sv: u32,
+
     /// Code uploader address.
     pub uploader: Address,
 

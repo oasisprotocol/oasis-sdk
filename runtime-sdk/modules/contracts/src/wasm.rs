@@ -3,7 +3,7 @@ use oasis_contract_sdk_types::message::Reply;
 use oasis_runtime_sdk::context::Context;
 
 use super::{
-    abi::{oasis::OasisV1, Abi, ExecutionContext, ExecutionResult},
+    abi::{oasis::OasisV1, Abi, ExecutionContext, ExecutionResult, Info},
     types, Config, Error, MODULE_NAME,
 };
 
@@ -53,7 +53,7 @@ impl oasis_runtime_sdk::error::Error for ContractError {
 pub(super) fn validate_and_transform<Cfg: Config, C: Context>(
     code: &[u8],
     abi: types::ABI,
-) -> Result<Vec<u8>, Error> {
+) -> Result<(Vec<u8>, Info), Error> {
     // Parse code.
     let mut module = walrus::ModuleConfig::new()
         .generate_producers_section(false)
@@ -62,9 +62,9 @@ pub(super) fn validate_and_transform<Cfg: Config, C: Context>(
 
     // Validate ABI selection and make sure the code conforms to the specified ABI.
     let abi = create_abi::<Cfg, C>(abi)?;
-    abi.validate(&mut module)?;
+    let info = abi.validate(&mut module)?;
 
-    Ok(module.emit_wasm())
+    Ok((module.emit_wasm(), info))
 }
 
 /// Create a new WASM runtime and link the required functions based on the ABI then run the

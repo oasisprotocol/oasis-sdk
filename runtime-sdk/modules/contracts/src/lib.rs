@@ -20,6 +20,7 @@ use oasis_runtime_sdk::{
     modules::{accounts::API as _, core::API as _},
     runtime::Runtime,
     sdk_derive, storage,
+    types::transaction::CallFormat,
 };
 
 mod abi;
@@ -132,6 +133,10 @@ pub enum Error {
     #[error("crypto: malformed public key")]
     #[sdk_error(code = 24)]
     CryptoMalformedPublicKey,
+
+    #[error("code declares multiple sub-versions")]
+    #[sdk_error(code = 25)]
+    CodeDeclaresMultipleSubVersions,
 
     #[error("core: {0}")]
     #[sdk_error(transparent)]
@@ -404,7 +409,7 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Validate and transform the code.
-        let code = wasm::validate_and_transform::<Cfg, C>(&code, body.abi)?;
+        let (code, abi_info) = wasm::validate_and_transform::<Cfg, C>(&code, body.abi)?;
         let hash = Hash::digest_bytes(&code);
 
         // Validate code size again and account for any instrumentation. This is here to avoid any
@@ -435,6 +440,7 @@ impl<Cfg: Config> Module<Cfg> {
             id,
             hash,
             abi: body.abi,
+            abi_sv: abi_info.abi_sv,
             uploader,
             instantiate_policy: body.instantiate_policy,
         };
@@ -494,9 +500,12 @@ impl<Cfg: Config> Module<Cfg> {
         };
         let mut exec_ctx = abi::ExecutionContext::new(
             &params,
+            &code_info,
             &instance_info,
             <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
             ctx.tx_caller_address(),
+            ctx.is_read_only(),
+            ctx.tx_call_format(),
             ctx,
         );
         let result = wasm::instantiate::<Cfg, C>(&mut exec_ctx, &contract, &body);
@@ -506,7 +515,7 @@ impl<Cfg: Config> Module<Cfg> {
         Ok(types::InstantiateResult { id })
     }
 
-    #[handler(call = "contracts.Call")]
+    #[handler(call = "contracts.Call", allow_interactive)]
     pub fn tx_call<C: TxContext>(
         ctx: &mut C,
         body: types::Call,
@@ -539,9 +548,12 @@ impl<Cfg: Config> Module<Cfg> {
         };
         let mut exec_ctx = abi::ExecutionContext::new(
             &params,
+            &code_info,
             &instance_info,
             <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
             ctx.tx_caller_address(),
+            ctx.is_read_only(),
+            ctx.tx_call_format(),
             ctx,
         );
         let result = wasm::call::<Cfg, C>(&mut exec_ctx, &contract, &body);
@@ -585,9 +597,12 @@ impl<Cfg: Config> Module<Cfg> {
         };
         let mut exec_ctx = abi::ExecutionContext::new(
             &params,
+            &code_info,
             &instance_info,
             <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
             ctx.tx_caller_address(),
+            ctx.is_read_only(),
+            ctx.tx_call_format(),
             ctx,
         );
         // Pre-upgrade invocation must succeed for the upgrade to proceed.
@@ -608,9 +623,12 @@ impl<Cfg: Config> Module<Cfg> {
         };
         let mut exec_ctx = abi::ExecutionContext::new(
             &params,
+            &code_info,
             &instance_info,
             <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
             ctx.tx_caller_address(),
+            ctx.is_read_only(),
+            ctx.tx_call_format(),
             ctx,
         );
 
@@ -681,9 +699,12 @@ impl<Cfg: Config> Module<Cfg> {
         };
         let mut exec_ctx = abi::ExecutionContext::new(
             &params,
+            &code_info,
             &instance_info,
             cfg.query_custom_max_gas,
             Default::default(), // No caller for queries.
+            true,
+            CallFormat::Plain,
             ctx,
         );
         let result = wasm::query::<Cfg, C>(&mut exec_ctx, &contract, &args).inner?; // No need to handle gas.

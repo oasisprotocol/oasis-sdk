@@ -67,6 +67,24 @@ func (tb *TransactionBuilder) SetCallFormat(ctx context.Context, format types.Ca
 	return nil
 }
 
+// SetNotBefore sets the round at which the transaction becomes valid.
+func (tb *TransactionBuilder) SetNotBefore(round uint64) *TransactionBuilder {
+	tb.tx.AuthInfo.NotBefore = &round
+	return tb
+}
+
+// SetNotAfter sets the round after which the transaction is no longer valid.
+func (tb *TransactionBuilder) SetNotAfter(round uint64) *TransactionBuilder {
+	tb.tx.AuthInfo.NotAfter = &round
+	return tb
+}
+
+// ReadOnly marks the call as read-only (e.g. the call is not allowed to modify storage state).
+func (tb *TransactionBuilder) ReadOnly() *TransactionBuilder {
+	tb.tx.Call.ReadOnly = true
+	return tb
+}
+
 // AppendAuthSignature appends a new transaction signer information with a signature address
 // specification to the transaction.
 func (tb *TransactionBuilder) AppendAuthSignature(spec types.SignatureAddressSpec, nonce uint64) *TransactionBuilder {
@@ -86,6 +104,16 @@ func (tb *TransactionBuilder) GetTransaction() *types.Transaction {
 	return tb.tx
 }
 
+// GetSignedTransaction returns the signed transaction (if any).
+//
+// If no transaction has been signed yet, returns nil.
+func (tb *TransactionBuilder) GetSignedTransaction() *types.UnverifiedTransaction {
+	if tb.ts == nil {
+		return nil
+	}
+	return tb.ts.UnverifiedTransaction()
+}
+
 // AppendSign signs the transaction and appends the signature.
 //
 // The signer must be specified in the AuthInfo.
@@ -100,18 +128,13 @@ func (tb *TransactionBuilder) AppendSign(ctx context.Context, signer signature.S
 	return tb.ts.AppendSign(rtInfo.ChainContext, signer)
 }
 
-// SubmitTx submits a transaction to the runtime transaction scheduler and waits for transaction
-// execution results.
-func (tb *TransactionBuilder) SubmitTx(ctx context.Context, rsp interface{}) error {
+// DecodeResult decodes a result of executing a transaction signed by this builder.
+func (tb *TransactionBuilder) DecodeResult(result *types.CallResult, rsp interface{}) error {
 	if tb.ts == nil {
 		return fmt.Errorf("unable to submit unsigned transaction")
 	}
 
-	result, err := tb.rc.SubmitTxRaw(ctx, tb.ts.UnverifiedTransaction())
-	if err != nil {
-		return err
-	}
-	result, err = tb.decodeResult(result, tb.callMeta)
+	result, err := tb.decodeResult(result, tb.callMeta)
 	if err != nil {
 		return err
 	}
@@ -130,6 +153,20 @@ func (tb *TransactionBuilder) SubmitTx(ctx context.Context, rsp interface{}) err
 	default:
 		return result.Failed
 	}
+}
+
+// SubmitTx submits a transaction to the runtime transaction scheduler and waits for transaction
+// execution results.
+func (tb *TransactionBuilder) SubmitTx(ctx context.Context, rsp interface{}) error {
+	if tb.ts == nil {
+		return fmt.Errorf("unable to submit unsigned transaction")
+	}
+
+	result, err := tb.rc.SubmitTxRaw(ctx, tb.ts.UnverifiedTransaction())
+	if err != nil {
+		return err
+	}
+	return tb.DecodeResult(result, rsp)
 }
 
 // SubmitTxMeta submits a transaction to the runtime transaction scheduler and waits for transaction
@@ -152,25 +189,8 @@ func (tb *TransactionBuilder) SubmitTxMeta(ctx context.Context, rsp interface{})
 		return &meta.TransactionMeta, nil
 	}
 
-	result, err := tb.decodeResult(&meta.Result, tb.callMeta)
-	if err != nil {
-		return nil, err
-	}
-
-	switch {
-	case result.IsUnknown():
-		// This should never happen as the inner result should not be unknown.
-		return nil, fmt.Errorf("got unknown result: %X", result.Unknown)
-	case result.IsSuccess():
-		if rsp != nil {
-			if err := cbor.Unmarshal(result.Ok, rsp); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal call result: %w", err)
-			}
-		}
-		return &meta.TransactionMeta, nil
-	default:
-		return &meta.TransactionMeta, result.Failed
-	}
+	err = tb.DecodeResult(&meta.Result, rsp)
+	return &meta.TransactionMeta, err
 }
 
 // SubmitTxNoWait submits a transaction to the runtime transaction scheduler but does not wait for

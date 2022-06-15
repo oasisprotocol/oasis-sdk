@@ -2,7 +2,7 @@
 use oasis_contract_sdk_types::{message::Reply, ExecutionOk};
 use oasis_runtime_sdk::{
     context::Context,
-    types::{address::Address, token},
+    types::{address::Address, token, transaction::CallFormat},
 };
 
 use super::{types, Error, Parameters};
@@ -13,7 +13,7 @@ pub mod oasis;
 /// Trait for any WASM ABI to implement.
 pub trait Abi<C: Context> {
     /// Validate that the given WASM module conforms to the ABI.
-    fn validate(&self, module: &mut walrus::Module) -> Result<(), Error>;
+    fn validate(&self, module: &mut walrus::Module) -> Result<Info, Error>;
 
     /// Link required functions into the WASM module instance.
     fn link(
@@ -84,6 +84,12 @@ pub trait Abi<C: Context> {
     ) -> ExecutionResult;
 }
 
+/// Additional information related to the ABI instance.
+pub struct Info {
+    /// ABI sub-version number.
+    pub abi_sv: u32,
+}
+
 /// Execution context.
 pub struct ExecutionContext<'ctx, C: Context> {
     /// Transaction context.
@@ -91,6 +97,8 @@ pub struct ExecutionContext<'ctx, C: Context> {
     /// Contracts module parameters.
     pub params: &'ctx Parameters,
 
+    /// Code information.
+    pub code_info: &'ctx types::Code,
     /// Contract instance information.
     pub instance_info: &'ctx types::Instance,
     /// Gas limit for this contract execution.
@@ -98,6 +106,10 @@ pub struct ExecutionContext<'ctx, C: Context> {
 
     /// Address of the caller.
     pub caller_address: Address,
+    /// Whether the call is read-only and must not make any storage modifications.
+    pub read_only: bool,
+    /// Call format.
+    pub call_format: CallFormat,
 
     /// Whether the execution has aborted with an error that should be propagated instead of just
     /// using the generic "execution failed" error.
@@ -106,19 +118,26 @@ pub struct ExecutionContext<'ctx, C: Context> {
 
 impl<'ctx, C: Context> ExecutionContext<'ctx, C> {
     /// Create a new execution context.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         params: &'ctx Parameters,
+        code_info: &'ctx types::Code,
         instance_info: &'ctx types::Instance,
         gas_limit: u64,
         caller_address: Address,
+        read_only: bool,
+        call_format: CallFormat,
         tx_context: &'ctx mut C,
     ) -> Self {
         Self {
             tx_context,
             params,
+            code_info,
             instance_info,
             gas_limit,
             caller_address,
+            read_only,
+            call_format,
             aborted: None,
         }
     }

@@ -293,7 +293,7 @@ fn test_reject_txs() {
         call: transaction::Call {
             format: transaction::CallFormat::Plain,
             method: GasWasterModule::METHOD_WASTE_GAS.to_owned(),
-            body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![
@@ -314,6 +314,7 @@ fn test_reject_txs() {
                 gas: u64::MAX,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
 
@@ -327,7 +328,7 @@ fn test_query_estimate_gas() {
         call: transaction::Call {
             format: transaction::CallFormat::Plain,
             method: GasWasterModule::METHOD_WASTE_GAS.to_owned(),
-            body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![
@@ -348,6 +349,7 @@ fn test_query_estimate_gas() {
                 gas: u64::MAX,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
     let tx_fail = transaction::Transaction {
@@ -355,7 +357,7 @@ fn test_query_estimate_gas() {
         call: transaction::Call {
             format: transaction::CallFormat::Plain,
             method: GasWasterModule::METHOD_WASTE_GAS_AND_FAIL.to_owned(),
-            body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![
@@ -376,6 +378,7 @@ fn test_query_estimate_gas() {
                 gas: u64::MAX,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
 
@@ -618,7 +621,7 @@ fn test_min_gas_price() {
         call: transaction::Call {
             format: transaction::CallFormat::Plain,
             method: GasWasterModule::METHOD_WASTE_GAS.to_owned(),
-            body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![
@@ -639,6 +642,7 @@ fn test_min_gas_price() {
                 gas: 100,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
 
@@ -862,7 +866,8 @@ fn test_module_info() {
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.CheckInvariants".to_string() },
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.CallDataPublicKey".to_string() },
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.MinGasPrice".to_string() },
-                            MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.RuntimeInfo".to_string() }
+                            MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.RuntimeInfo".to_string() },
+                            MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.ExecuteReadOnlyTx".to_string() },
                         ]
                     },
                 "gaswaster" =>

@@ -137,14 +137,39 @@ pub struct Call {
     pub method: String,
     /// Method body.
     pub body: cbor::Value,
+    /// Read-only flag.
+    ///
+    /// A read-only call cannot make any changes to runtime state. Any attempt at modifying state
+    /// will result in the call failing.
+    #[cbor(optional, default, rename = "ro")]
+    pub read_only: bool,
+}
+
+impl Default for Call {
+    fn default() -> Self {
+        Self {
+            format: Default::default(),
+            method: Default::default(),
+            body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+            read_only: false,
+        }
+    }
 }
 
 /// Transaction authentication information.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct AuthInfo {
+    /// Transaction signer information.
     #[cbor(rename = "si")]
     pub signer_info: Vec<SignerInfo>,
+    /// Fee payment information.
     pub fee: Fee,
+    /// Earliest round when the transaction is valid.
+    #[cbor(optional)]
+    pub not_before: Option<u64>,
+    /// Latest round when the transaction is valid.
+    #[cbor(optional)]
+    pub not_after: Option<u64>,
 }
 
 /// Transaction fee.
@@ -292,6 +317,12 @@ pub enum CallResult {
 
     #[cbor(rename = "unknown")]
     Unknown(cbor::Value),
+}
+
+impl Default for CallResult {
+    fn default() -> Self {
+        Self::Unknown(cbor::Value::Simple(cbor::SimpleValue::NullValue))
+    }
 }
 
 impl CallResult {

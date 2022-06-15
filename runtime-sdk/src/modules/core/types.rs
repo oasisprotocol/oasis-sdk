@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::{
     keymanager::SignedPublicKey,
-    types::transaction::{CallerAddress, Transaction},
+    types::transaction::{CallResult, CallerAddress, Transaction},
 };
 
 /// Key in the versions map used for the global state version.
@@ -81,4 +81,16 @@ pub struct RuntimeInfoResponse {
     pub runtime_version: oasis_core_runtime::common::version::Version,
     pub state_version: u32,
     pub modules: BTreeMap<String, ModuleInfo>,
+}
+
+/// Arguments for the ExecuteReadOnlyTx query.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct ExecuteReadOnlyTxQuery {
+    pub tx: Vec<u8>,
+}
+
+/// Response to the ExecuteReadOnlyTx query.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct ExecuteReadOnlyTxResponse {
+    pub result: CallResult,
 }

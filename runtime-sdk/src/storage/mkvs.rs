@@ -54,4 +54,8 @@ impl<M: mkvs::MKVS> NestedStore for MKVSStore<M> {
         // Commit is not needed.
         self.parent
     }
+
+    fn has_pending_updates(&self) -> bool {
+        true
+    }
 }

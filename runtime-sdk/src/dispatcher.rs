@@ -23,7 +23,6 @@ use oasis_core_runtime::{
         types::TxnBatch,
     },
     types::{CheckTxMetadata, CheckTxResult},
-    BUILD_INFO,
 };
 
 use crate::{
@@ -37,8 +36,7 @@ use crate::{
     modules::core::API as _,
     runtime::Runtime,
     schedule_control::ScheduleControlHost,
-    storage,
-    storage::Prefix,
+    storage::{self, NestedStore, Prefix},
     types,
     types::transaction::{AuthProof, Transaction},
 };
@@ -104,6 +102,17 @@ impl From<module::CallResult> for DispatchResult {
     }
 }
 
+/// Additional options for dispatch operations.
+#[derive(Default)]
+pub struct DispatchOptions<'a> {
+    /// Transaction size.
+    pub tx_size: u32,
+    /// Transaction index within the batch.
+    pub tx_index: usize,
+    /// Optionally only allow methods for which the provided authorizer closure returns true.
+    pub method_authorizer: Option<&'a dyn Fn(&str) -> bool>,
+}
+
 /// The runtime dispatcher.
 pub struct Dispatcher<R: Runtime> {
     host_info: HostInfo,
@@ -166,7 +175,11 @@ impl<R: Runtime> Dispatcher<R> {
     pub fn dispatch_tx_call<C: TxContext>(
         ctx: &mut C,
         call: types::transaction::Call,
-    ) -> (module::CallResult, callformat::Metadata) {
+        opts: &DispatchOptions<'_>,
+    ) -> (module::CallResult, callformat::Metadata)
+    where
+        C::Store: NestedStore,
+    {
         if let Err(e) = R::Modules::before_handle_call(ctx, &call) {
             return (e.into_call_result(), callformat::Metadata::Empty);
         }
@@ -184,6 +197,16 @@ impl<R: Runtime> Dispatcher<R> {
             Err(err) => return (err.into_call_result(), callformat::Metadata::Empty),
         };
 
+        // Apply optional method authorization.
+        if let Some(method_authorizer) = opts.method_authorizer {
+            if !method_authorizer(&call.method) {
+                return (
+                    modules::core::Error::Forbidden.into_call_result(),
+                    call_format_metadata,
+                );
+            }
+        }
+
         let result = match R::Modules::dispatch_call(ctx, &call.method, call.body) {
             module::DispatchResult::Handled(result) => result,
             module::DispatchResult::Unhandled(_) => {
@@ -196,25 +219,33 @@ impl<R: Runtime> Dispatcher<R> {
             return (e.into_call_result(), call_format_metadata);
         }
 
+        // Make sure that a read-only call did not result in any modifications.
+        if call.read_only && ctx.runtime_state().has_pending_updates() {
+            return (
+                modules::core::Error::ReadOnlyTransaction.into_call_result(),
+                call_format_metadata,
+            );
+        }
+
         (result, call_format_metadata)
     }
 
-    /// Dispatch a runtime transaction in the given context.
-    pub fn dispatch_tx<C: BatchContext>(
+    /// Dispatch a runtime transaction in the given context with the provided options.
+    pub fn dispatch_tx_opts<C: BatchContext>(
         ctx: &mut C,
-        tx_size: u32,
         tx: types::transaction::Transaction,
-        index: usize,
+        opts: &DispatchOptions<'_>,
     ) -> Result<DispatchResult, Error> {
         // Run pre-processing hooks.
         if let Err(err) = R::Modules::authenticate_tx(ctx, &tx) {
             return Ok(err.into_call_result().into());
         }
         let tx_auth_info = tx.auth_info.clone();
+        let is_read_only = tx.call.read_only;
 
-        let (result, messages) = ctx.with_tx(index, tx_size, tx, |mut ctx, call| {
-            let (result, call_format_metadata) = Self::dispatch_tx_call(&mut ctx, call);
-            if !result.is_success() {
+        let (result, messages) = ctx.with_tx(opts.tx_index, opts.tx_size, tx, |mut ctx, call| {
+            let (result, call_format_metadata) = Self::dispatch_tx_call(&mut ctx, call, opts);
+            if !result.is_success() || is_read_only {
                 // Retrieve unconditional events by doing an explicit rollback.
                 let etags = ctx.rollback();
 
@@ -272,6 +303,24 @@ impl<R: Runtime> Dispatcher<R> {
         Ok(result)
     }
 
+    /// Dispatch a runtime transaction in the given context.
+    pub fn dispatch_tx<C: BatchContext>(
+        ctx: &mut C,
+        tx_size: u32,
+        tx: types::transaction::Transaction,
+        tx_index: usize,
+    ) -> Result<DispatchResult, Error> {
+        Self::dispatch_tx_opts(
+            ctx,
+            tx,
+            &DispatchOptions {
+                tx_size,
+                tx_index,
+                ..Default::default()
+            },
+        )
+    }
+
     /// Check whether the given transaction is valid.
     pub fn check_tx<C: BatchContext>(
         ctx: &mut C,
@@ -307,23 +356,42 @@ impl<R: Runtime> Dispatcher<R> {
         }
     }
 
-    /// Execute the given transaction.
-    pub fn execute_tx<C: BatchContext>(
+    /// Execute the given transaction, returning unserialized results.
+    pub fn execute_tx_opts<C: BatchContext>(
         ctx: &mut C,
-        tx_size: u32,
         tx: Transaction,
-        index: usize,
-    ) -> Result<ExecuteTxResult, Error> {
-        let dispatch_result = Self::dispatch_tx(ctx, tx_size, tx, index)?;
+        opts: &DispatchOptions<'_>,
+    ) -> Result<(types::transaction::CallResult, Tags), Error> {
+        let dispatch_result = Self::dispatch_tx_opts(ctx, tx, opts)?;
         let output: types::transaction::CallResult = callformat::encode_result(
             ctx,
             dispatch_result.result,
             dispatch_result.call_format_metadata,
         );
 
+        Ok((output, dispatch_result.tags))
+    }
+
+    /// Execute the given transaction.
+    pub fn execute_tx<C: BatchContext>(
+        ctx: &mut C,
+        tx_size: u32,
+        tx: Transaction,
+        tx_index: usize,
+    ) -> Result<ExecuteTxResult, Error> {
+        let (output, tags) = Self::execute_tx_opts(
+            ctx,
+            tx,
+            &DispatchOptions {
+                tx_size,
+                tx_index,
+                ..Default::default()
+            },
+        )?;
+
         Ok(ExecuteTxResult {
             output: cbor::to_vec(output),
-            tags: dispatch_result.tags,
+            tags,
         })
     }
 
@@ -405,16 +473,7 @@ impl<R: Runtime> Dispatcher<R> {
             // Perform state migrations if required.
             R::migrate(ctx);
 
-            // Even though queries are not allowed to perform any private key ops, we
-            // reduce the attack surface by completely disallowing them in secure builds.
-            //
-            // If one needs to perform runtime queries, one should use a regular build of
-            // the runtime.
-            if BUILD_INFO.is_secure {
-                return Err(modules::core::Error::ForbiddenInSecureBuild.into());
-            }
-
-            if !ctx.is_allowed_query::<R>(method) {
+            if !R::is_allowed_query(method) || !ctx.is_allowed_query::<R>(method) {
                 return Err(modules::core::Error::Forbidden.into());
             }
 
@@ -705,11 +764,19 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         method: &str,
         args: Vec<u8>,
     ) -> Result<Vec<u8>, RuntimeError> {
+        // Determine whether the method is allowed to access confidential state and provide an
+        // appropriately scoped instance of the key manager client.
+        let is_confidential_allowed = R::Modules::is_allowed_private_km_query(method)
+            && R::is_allowed_private_km_query(method);
+        let key_manager = self.key_manager.as_ref().map(|mgr| {
+            if is_confidential_allowed {
+                mgr.with_private_context(ctx.io_ctx.clone())
+            } else {
+                mgr.with_context(ctx.io_ctx.clone())
+            }
+        });
+
         // Prepare dispatch context.
-        let key_manager = self
-            .key_manager
-            .as_ref()
-            .map(|mgr| mgr.with_context(ctx.io_ctx.clone()));
         let mut ctx =
             RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
                 &mut ctx,
@@ -729,7 +796,9 @@ mod test {
         module::Module,
         modules::core,
         sdk_derive,
-        testing::{configmap, mock::Mock},
+        storage::Store,
+        testing::{configmap, keys, mock::Mock},
+        types::{token, transaction},
         Version,
     };
     use cbor::Encode as _;
@@ -744,26 +813,32 @@ mod test {
     impl module::Module for AlphabetModule {
         const NAME: &'static str = "alphabet";
         const VERSION: u32 = 42;
-        type Error = crate::modules::core::Error;
+        type Error = core::Error;
         type Event = ();
         type Parameters = ();
     }
 
     #[sdk_derive(MethodHandler)]
     impl AlphabetModule {
+        #[handler(call = "alphabet.ReadOnly")]
+        fn read_only<C: TxContext>(ctx: &mut C, _args: ()) -> Result<u64, core::Error> {
+            let _ = ctx.runtime_state().get(b"key"); // Read something and ignore result.
+            Ok(42)
+        }
+
+        #[handler(call = "alphabet.NotReadOnly")]
+        fn not_read_only<C: TxContext>(ctx: &mut C, _args: ()) -> Result<u64, core::Error> {
+            ctx.runtime_state().insert(b"key", b"value");
+            Ok(10)
+        }
+
         #[handler(query = "alphabet.Alpha")]
-        fn alpha<C: Context>(
-            _ctx: &mut C,
-            _args: (),
-        ) -> Result<(), <AlphabetModule as module::Module>::Error> {
+        fn alpha<C: Context>(_ctx: &mut C, _args: ()) -> Result<(), core::Error> {
             Ok(())
         }
 
         #[handler(query = "alphabet.Omega", expensive)]
-        fn expensive<C: Context>(
-            _ctx: &mut C,
-            _args: (),
-        ) -> Result<(), <AlphabetModule as module::Module>::Error> {
+        fn expensive<C: Context>(_ctx: &mut C, _args: ()) -> Result<(), core::Error> {
             // Nothing actually expensive here. We're just pretending for testing purposes.
             Ok(())
         }
@@ -783,8 +858,25 @@ mod test {
         type Core = Core;
         type Modules = (Core, AlphabetModule);
 
-        fn genesis_state() -> (core::Genesis, ()) {
-            (core::Genesis::default(), ())
+        fn genesis_state() -> <Self::Modules as module::MigrationHandler>::Genesis {
+            (
+                core::Genesis {
+                    parameters: core::Parameters {
+                        max_batch_gas: u64::MAX,
+                        max_tx_size: 32 * 1024,
+                        max_tx_signers: 1,
+                        max_multisig_signers: 8,
+                        gas_costs: core::GasCosts {
+                            tx_byte: 0,
+                            auth_signature: 0,
+                            auth_multisig_signer: 0,
+                            callformat_x25519_deoxysii: 0,
+                        },
+                        min_gas_price: BTreeMap::from([(token::Denomination::NATIVE, 0)]),
+                    },
+                },
+                (),
+            )
         }
     }
 
@@ -836,5 +928,62 @@ mod test {
             cbor::to_vec(().into_cbor_value()),
         )
         .expect("alphabet.Omega is an expensive query and expensive queries are allowed");
+    }
+
+    #[test]
+    fn test_dispatch_read_only_call() {
+        let mut mock = Mock::default();
+        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::ExecuteTx);
+
+        AlphabetRuntime::migrate(&mut ctx);
+
+        let mut tx = transaction::Transaction {
+            version: 1,
+            call: transaction::Call {
+                format: transaction::CallFormat::Plain,
+                method: "alphabet.ReadOnly".to_owned(),
+                read_only: true,
+                ..Default::default()
+            },
+            auth_info: transaction::AuthInfo {
+                signer_info: vec![transaction::SignerInfo::new_sigspec(
+                    keys::alice::sigspec(),
+                    0,
+                )],
+                fee: transaction::Fee {
+                    amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                    gas: 1000,
+                    consensus_messages: 0,
+                },
+                ..Default::default()
+            },
+        };
+
+        // Dispatch read-only transaction.
+        let dispatch_result =
+            Dispatcher::<AlphabetRuntime>::dispatch_tx(&mut ctx, 1024, tx.clone(), 0)
+                .expect("read only method dispatch should work");
+        let result = dispatch_result.result.unwrap();
+        let result: u64 = cbor::from_value(result).unwrap();
+        assert_eq!(result, 42);
+
+        // Dispatch read-only transaction of a method that writes.
+        tx.call.method = "alphabet.NotReadOnly".to_owned();
+
+        let dispatch_result =
+            Dispatcher::<AlphabetRuntime>::dispatch_tx(&mut ctx, 1024, tx.clone(), 0)
+                .expect("read only method dispatch should work");
+        match dispatch_result.result {
+            module::CallResult::Failed {
+                module,
+                code,
+                message,
+            } => {
+                assert_eq!(&module, "core");
+                assert_eq!(code, 25);
+                assert_eq!(&message, "read-only transaction attempted modifications")
+            }
+            _ => panic!("not read only method execution did not fail"),
+        }
     }
 }

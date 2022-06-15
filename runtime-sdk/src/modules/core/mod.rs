@@ -16,7 +16,10 @@ use crate::{
     context::{BatchContext, Context, TxContext},
     dispatcher,
     error::Error as SDKError,
-    module::{self, CallResult, InvariantHandler as _, Module as _, ModuleInfoHandler as _},
+    module::{
+        self, CallResult, InvariantHandler as _, MethodHandler as _, Module as _,
+        ModuleInfoHandler as _,
+    },
     types::{
         token,
         transaction::{self, AddressSpec, AuthProof, Call, CallFormat, UnverifiedTransaction},
@@ -119,6 +122,14 @@ pub enum Error {
     #[error("transaction is too large")]
     #[sdk_error(code = 23)]
     OversizedTransaction,
+
+    #[error("transaction is expired or not yet valid")]
+    #[sdk_error(code = 24)]
+    ExpiredTransaction,
+
+    #[error("read-only transaction attempted modifications")]
+    #[sdk_error(code = 25)]
+    ReadOnlyTransaction,
 
     #[error("{0}")]
     #[sdk_error(transparent)]
@@ -281,6 +292,11 @@ pub trait Config: 'static {
     ///
     /// Confidential runtimes may want to disable this as it is a possible side channel.
     const EMIT_GAS_USED_EVENTS: bool = true;
+
+    /// Whether to allow submission of read-only transactions in an interactive way.
+    ///
+    /// Note that execution of such transactions is allowed to access confidential state.
+    const ALLOW_INTERACTIVE_READ_ONLY_TRANSACTIONS: bool = false;
 }
 
 pub struct Module<Cfg: Config> {
@@ -474,8 +490,11 @@ impl<Cfg: Config> Module<Cfg> {
         let propagate_failures = args.propagate_failures;
         ctx.with_simulation(|mut sim_ctx| {
             sim_ctx.with_tx(0 /* index */, tx_size, args.tx, |mut tx_ctx, call| {
-                let (result, _) =
-                    dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut tx_ctx, call);
+                let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
+                    &mut tx_ctx,
+                    call,
+                    &Default::default(),
+                );
                 if propagate_failures && !result.is_success() {
                     // Report failure.
                     let err: TxSimulationFailure = result.try_into().unwrap(); // Guaranteed to be a Failed CallResult.
@@ -542,6 +561,65 @@ impl<Cfg: Config> Module<Cfg> {
             runtime_version: <C::Runtime as Runtime>::VERSION,
             state_version: <C::Runtime as Runtime>::STATE_VERSION,
             modules: <C::Runtime as Runtime>::Modules::module_info(ctx),
+        })
+    }
+
+    /// Execute a read-only transaction in an interactive mode.
+    ///
+    /// # Warning
+    ///
+    /// This query is allowed access to private key manager state.
+    #[handler(query = "core.ExecuteReadOnlyTx", expensive, allow_private_km)]
+    fn query_execute_read_only_tx<C: Context>(
+        ctx: &mut C,
+        args: types::ExecuteReadOnlyTxQuery,
+    ) -> Result<types::ExecuteReadOnlyTxResponse, Error> {
+        if !Cfg::ALLOW_INTERACTIVE_READ_ONLY_TRANSACTIONS {
+            return Err(Error::Forbidden);
+        }
+
+        ctx.with_simulation(|mut sim_ctx| {
+            // TODO: Use separate batch gas limit for query execution.
+
+            // Decode transaction and verify signature.
+            let tx_size = args
+                .tx
+                .len()
+                .try_into()
+                .map_err(|_| Error::OversizedTransaction)?;
+            let tx = dispatcher::Dispatcher::<C::Runtime>::decode_tx(&mut sim_ctx, &args.tx)?;
+
+            // Only read-only transactions are allowed in interactive queries.
+            if !tx.call.read_only {
+                return Err(Error::InvalidArgument(anyhow::anyhow!(
+                    "only read-only transactions are allowed"
+                )));
+            }
+            // Only transactions with expiry are allowed in interactive queries.
+            if tx.auth_info.not_before.is_none() || tx.auth_info.not_after.is_none() {
+                return Err(Error::InvalidArgument(anyhow::anyhow!(
+                    "only read-only transactions with expiry are allowed"
+                )));
+            }
+
+            // Execute transaction.
+            let (result, _) = dispatcher::Dispatcher::<C::Runtime>::execute_tx_opts(
+                &mut sim_ctx,
+                tx,
+                &dispatcher::DispatchOptions {
+                    tx_size,
+                    method_authorizer: Some(&|method| {
+                        // Ensure that the inner method is allowed to be called from an interactive
+                        // context to avoid unexpected pitfalls.
+                        <C::Runtime as Runtime>::Modules::is_allowed_interactive_call(method)
+                            && <C::Runtime as Runtime>::is_allowed_interactive_call(method)
+                    }),
+                    ..Default::default()
+                },
+            )
+            .map_err(|err| Error::InvalidArgument(err.into()))?;
+
+            Ok(types::ExecuteReadOnlyTxResponse { result })
         })
     }
 }

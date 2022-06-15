@@ -17,6 +17,7 @@ const (
 	methodMinGasPrice       = "core.MinGasPrice"
 	methodRuntimeInfo       = "core.RuntimeInfo"
 	methodCallDataPublicKey = "core.CallDataPublicKey"
+	methodExecuteReadOnlyTx = "core.ExecuteReadOnlyTx"
 )
 
 // V1 is the v1 core module interface.
@@ -42,6 +43,9 @@ type V1 interface {
 
 	// CallDataPublicKey returns the runtime's call data public key.
 	CallDataPublicKey(ctx context.Context) (*CallDataPublicKeyResponse, error)
+
+	// ExecuteReadOnlyTx executes a read only transaction.
+	ExecuteReadOnlyTx(ctx context.Context, round uint64, tx *types.UnverifiedTransaction) (*ExecuteReadOnlyTxResponse, error)
 }
 
 type v1 struct {
@@ -161,6 +165,16 @@ func (a *v1) CallDataPublicKey(ctx context.Context) (*CallDataPublicKeyResponse,
 		return nil, err
 	}
 	return &cdpk, nil
+}
+
+// Implements V1.
+func (a *v1) ExecuteReadOnlyTx(ctx context.Context, round uint64, tx *types.UnverifiedTransaction) (*ExecuteReadOnlyTxResponse, error) {
+	var rsp ExecuteReadOnlyTxResponse
+	err := a.rc.Query(ctx, round, methodExecuteReadOnlyTx, ExecuteReadOnlyTxQuery{Tx: cbor.Marshal(tx)}, &rsp)
+	if err != nil {
+		return nil, err
+	}
+	return &rsp, nil
 }
 
 // NewV1 generates a V1 client helper for the core module.

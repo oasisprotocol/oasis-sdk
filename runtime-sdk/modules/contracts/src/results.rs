@@ -126,6 +126,10 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
         ));
     }
 
+    // Properly propagate original call format and read-only flag.
+    let orig_call_format = ctx.tx_call_format();
+    let orig_read_only = ctx.is_read_only();
+
     // Process emitted messages recursively.
     for msg in messages {
         match msg {
@@ -157,6 +161,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                             format: transaction::CallFormat::Plain,
                             method,
                             body,
+                            ..Default::default()
                         },
                         auth_info: transaction::AuthInfo {
                             signer_info: vec![transaction::SignerInfo {
@@ -172,6 +177,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                                 gas: max_gas,
                                 consensus_messages: remaining_messages,
                             },
+                            ..Default::default()
                         },
                     };
 
@@ -180,8 +186,11 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         ctx.value(CONTEXT_KEY_DEPTH).set(current_depth + 1);
 
                         // Dispatch the call.
-                        let (result, _) =
-                            dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(&mut ctx, call);
+                        let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
+                            &mut ctx,
+                            call,
+                            &Default::default(),
+                        );
                         // Retrieve remaining gas.
                         let gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(&mut ctx);
 
@@ -229,9 +238,12 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         };
                         let mut exec_ctx = ExecutionContext::new(
                             params,
+                            contract.code_info,
                             contract.instance_info,
                             <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
                             ctx.tx_caller_address(),
+                            orig_read_only,
+                            orig_call_format,
                             ctx,
                         );
                         let reply_result =

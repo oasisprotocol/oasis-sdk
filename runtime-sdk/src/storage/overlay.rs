@@ -42,6 +42,10 @@ impl<S: Store> NestedStore for OverlayStore<S> {
 
         self.parent
     }
+
+    fn has_pending_updates(&self) -> bool {
+        !self.dirty.is_empty()
+    }
 }
 
 impl<S: Store> Store for OverlayStore<S> {

@@ -134,6 +134,7 @@ pub fn transaction() -> transaction::Transaction {
             format: transaction::CallFormat::Plain,
             method: "mock".to_owned(),
             body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![],
@@ -142,6 +143,7 @@ pub fn transaction() -> transaction::Transaction {
                 gas: 1_000_000,
                 consensus_messages: 32,
             },
+            ..Default::default()
         },
     }
 }

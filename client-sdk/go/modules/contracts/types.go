@@ -54,6 +54,8 @@ type Code struct {
 	Hash hash.Hash `json:"hash"`
 	// ABI.
 	ABI ABI `json:"abi"`
+	// ABI sub-version.
+	ABISubVersion uint32 `json:"abi_sv,omitempty"`
 	// Uploader is the code uploader address.
 	Uploader types.Address `json:"uploader"`
 	// InstantiatePolicy is the policy on who is allowed to instantiate this code.

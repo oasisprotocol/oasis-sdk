@@ -221,6 +221,7 @@ fn test_api_tx_transfer_disabled() {
                 to: keys::bob::address(),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -232,6 +233,7 @@ fn test_api_tx_transfer_disabled() {
                 gas: 1000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
 
@@ -262,6 +264,7 @@ fn test_prefetch() {
             gas: 1000,
             consensus_messages: 0,
         },
+        ..Default::default()
     };
 
     let tx = transaction::Transaction {
@@ -273,6 +276,7 @@ fn test_prefetch() {
                 to: keys::bob::address(),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
+            ..Default::default()
         },
         auth_info: auth_info.clone(),
     };
@@ -408,6 +412,7 @@ fn test_authenticate_tx() {
                 to: keys::bob::address(),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -419,6 +424,7 @@ fn test_authenticate_tx() {
                 gas: 1000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
 
@@ -472,6 +478,7 @@ fn test_tx_transfer() {
                 to: keys::bob::address(),
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -483,6 +490,7 @@ fn test_tx_transfer() {
                 gas: 1000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
 
@@ -544,6 +552,7 @@ fn test_fee_disbursement() {
                 to: keys::bob::address(),
                 amount: Default::default(),
             }),
+            ..Default::default()
         },
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -556,6 +565,7 @@ fn test_fee_disbursement() {
                 gas: 1000,
                 consensus_messages: 0,
             },
+            ..Default::default()
         },
     };
 
@@ -1210,4 +1220,60 @@ fn test_query_denomination_info() {
         },
     )
     .unwrap_err();
+}
+
+#[test]
+fn test_transaction_expiry() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    init_accounts(&mut ctx);
+
+    let mut tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "accounts.Transfer".to_owned(),
+            body: cbor::to_value(Transfer {
+                to: keys::bob::address(),
+                amount: Default::default(),
+            }),
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
+            fee: transaction::Fee {
+                // Use an amount that does not split nicely among the good compute entities.
+                amount: BaseUnits::new(1_001, Denomination::NATIVE),
+                gas: 1000,
+                consensus_messages: 0,
+            },
+            not_before: Some(10),
+            not_after: Some(42),
+            ..Default::default()
+        },
+    };
+
+    // Authenticate transaction, should be expired.
+    let err = Accounts::authenticate_tx(&mut ctx, &tx).expect_err("tx should be expired (early)");
+    assert!(matches!(err, core::Error::ExpiredTransaction));
+
+    // Move the round forward.
+    mock.runtime_header.round = 15;
+
+    // Authenticate transaction, should succeed.
+    let mut ctx = mock.create_ctx();
+    Accounts::authenticate_tx(&mut ctx, &tx).expect("tx should be valid");
+
+    // Move the round forward and also update the transaction nonce.
+    mock.runtime_header.round = 50;
+    tx.auth_info.signer_info[0].nonce = 1;
+
+    // Authenticate transaction, should be expired.
+    let mut ctx = mock.create_ctx();
+    let err = Accounts::authenticate_tx(&mut ctx, &tx).expect_err("tx should be expired");
+    assert!(matches!(err, core::Error::ExpiredTransaction));
 }

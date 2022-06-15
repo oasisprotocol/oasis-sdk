@@ -131,9 +131,7 @@ pub trait Context {
         let config: Vec<BTreeMap<String, bool>> = self
             .local_config(LOCAL_CONFIG_ALLOWED_QUERIES)
             .unwrap_or_default();
-        let is_expensive = R::Modules::expensive_queries()
-            .iter()
-            .any(|&name| name == method);
+        let is_expensive = R::Modules::is_expensive_query(method);
 
         // Backwards compatibility for the deprecated `allow_expensive_queries`.
         if let Some(allow_expensive_queries) =
@@ -405,6 +403,9 @@ pub trait TxContext: Context {
 
     /// The transaction's call format.
     fn tx_call_format(&self) -> transaction::CallFormat;
+
+    /// Whether the call is read-only and must not make any storage modifications.
+    fn is_read_only(&self) -> bool;
 
     /// Authenticated address of the caller.
     ///
@@ -690,6 +691,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
             tx_size,
             tx_auth_info: tx.auth_info,
             tx_call_format: tx.call.format,
+            read_only: tx.call.read_only,
             etags: BTreeMap::new(),
             etags_unconditional: BTreeMap::new(),
             max_messages: remaining_messages,
@@ -738,6 +740,8 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
     tx_auth_info: transaction::AuthInfo,
     /// The transaction call format (as received, before decoding by the dispatcher).
     tx_call_format: transaction::CallFormat,
+    /// Whether the call is read-only and must not make any storage modifications.
+    read_only: bool,
 
     /// Emitted event tags. Events are aggregated by tag key, the value
     /// is a list of all emitted event values.
@@ -911,6 +915,10 @@ impl<R: runtime::Runtime, S: Store> TxContext for RuntimeTxContext<'_, '_, R, S>
 
     fn tx_auth_info(&self) -> &transaction::AuthInfo {
         &self.tx_auth_info
+    }
+
+    fn is_read_only(&self) -> bool {
+        self.read_only
     }
 
     fn tx_value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
@@ -1087,7 +1095,7 @@ mod test {
             call: transaction::Call {
                 format: transaction::CallFormat::Plain,
                 method: "test".to_owned(),
-                body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+                ..Default::default()
             },
             auth_info: transaction::AuthInfo {
                 signer_info: vec![],
@@ -1096,6 +1104,7 @@ mod test {
                     gas: 1000,
                     consensus_messages: 0,
                 },
+                ..Default::default()
             },
         };
         ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
@@ -1148,7 +1157,7 @@ mod test {
             call: transaction::Call {
                 format: transaction::CallFormat::Plain,
                 method: "test".to_owned(),
-                body: cbor::Value::Simple(cbor::SimpleValue::NullValue),
+                ..Default::default()
             },
             auth_info: transaction::AuthInfo {
                 signer_info: vec![],
@@ -1157,6 +1166,7 @@ mod test {
                     gas: 1000,
                     consensus_messages: 0,
                 },
+                ..Default::default()
             },
         };
         ctx.with_tx(0, 0, tx, |mut tx_ctx, _call| {

@@ -203,6 +203,8 @@ export interface SignatureAddressSpec {
 export interface AuthInfo {
     si: SignerInfo[];
     fee: Fee;
+    not_before?: oasis.types.longnum;
+    not_after?: oasis.types.longnum;
 }
 
 /**
@@ -241,6 +243,7 @@ export interface Call {
     format?: CallFormat;
     method: string;
     body: unknown;
+    ro?: boolean;
 }
 
 /**
