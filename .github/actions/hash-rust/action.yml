@@ -24,6 +24,10 @@ inputs:
     description: Control whether to produce sgxs binaries
     default: no
     required: false
+  setup:
+    description: Code to run before building
+    default: ""
+    required: false
 outputs:
   hashes:
     description: Comma-separated list of binary hashes
@@ -39,6 +43,7 @@ runs:
       run: |
         docker run --rm -i -v ${{ inputs.dir }}:/src ${{ inputs.image }} /bin/bash <<-'EOF'
           set -e
+          ${{ inputs.setup }}
           cd /src
           CARGO_TARGET_ROOT="/src/target"
           TARGET=""
@@ -51,7 +56,7 @@ runs:
 
             for pkg in $PKG_DIRS; do
               pushd ${pkg}
-              cargo build --release --target $TARGET
+              cargo build --release --locked --target $TARGET
               cargo elf2sgxs --release
               popd
             done
@@ -60,7 +65,7 @@ runs:
 
             for pkg in $PKG_DIRS; do
               pushd ${pkg}
-              cargo build --release
+              cargo build --release --locked
               popd
             done
           fi
