@@ -133,6 +133,10 @@ pub enum Error {
     #[sdk_error(code = 24)]
     CryptoMalformedPublicKey,
 
+    #[error("code declares multiple sub-versions")]
+    #[sdk_error(code = 25)]
+    CodeDeclaresMultipleSubVersions,
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),
@@ -404,7 +408,7 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Validate and transform the code.
-        let code = wasm::validate_and_transform::<Cfg, C>(&code, body.abi)?;
+        let (code, abi_info) = wasm::validate_and_transform::<Cfg, C>(&code, body.abi)?;
         let hash = Hash::digest_bytes(&code);
 
         // Validate code size again and account for any instrumentation. This is here to avoid any
@@ -435,6 +439,7 @@ impl<Cfg: Config> Module<Cfg> {
             id,
             hash,
             abi: body.abi,
+            abi_sv: abi_info.abi_sv,
             uploader,
             instantiate_policy: body.instantiate_policy,
         };

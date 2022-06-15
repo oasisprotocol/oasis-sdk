@@ -8,7 +8,7 @@ use oasis_runtime_sdk::{
     types::token,
 };
 
-use super::{gas, Abi, ExecutionContext, ExecutionResult};
+use super::{gas, Abi, ExecutionContext, ExecutionResult, Info};
 use crate::{wasm::ContractError, Config, Error};
 
 mod crypto;
@@ -24,6 +24,7 @@ const EXPORT_HANDLE_REPLY: &str = "handle_reply";
 const EXPORT_PRE_UPGRADE: &str = "pre_upgrade";
 const EXPORT_POST_UPGRADE: &str = "post_upgrade";
 const EXPORT_QUERY: &str = "query";
+const EXPORT_SUB_VERSION_PREFIX: &str = "__oasis_sv_";
 
 const GAS_SCALING_FACTOR: u64 = 1;
 
@@ -168,7 +169,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
 }
 
 impl<Cfg: Config, C: Context> Abi<C> for OasisV1<Cfg> {
-    fn validate(&self, module: &mut walrus::Module) -> Result<(), Error> {
+    fn validate(&self, module: &mut walrus::Module) -> Result<Info, Error> {
         // Verify that all required exports are there.
         let exports: BTreeSet<&str> = module
             .exports
@@ -187,6 +188,29 @@ impl<Cfg: Config, C: Context> Abi<C> for OasisV1<Cfg> {
             }
         }
 
+        // Determine supported ABI sub-version.
+        let sv_exports: Vec<_> = exports
+            .iter()
+            .filter(|export| export.starts_with(EXPORT_SUB_VERSION_PREFIX))
+            .collect();
+        let abi_sv = match sv_exports[..] {
+            [] => {
+                // No versions, this is v0.
+                0
+            }
+            [sv] => {
+                // A single version, parse which one.
+                sv.strip_prefix(EXPORT_SUB_VERSION_PREFIX)
+                    .ok_or(Error::CodeMalformed)?
+                    .parse::<u32>()
+                    .map_err(|_| Error::CodeMalformed)?
+            }
+            _ => {
+                // Multiple versions.
+                return Err(Error::CodeDeclaresMultipleSubVersions);
+            }
+        };
+
         // Verify that there is no start function defined.
         if module.start.is_some() {
             return Err(Error::CodeDeclaresStartFunction);
@@ -200,7 +224,7 @@ impl<Cfg: Config, C: Context> Abi<C> for OasisV1<Cfg> {
         // Add gas metering instrumentation.
         gas::transform(module);
 
-        Ok(())
+        Ok(Info { abi_sv })
     }
 
     fn link(

@@ -85,6 +85,8 @@ fn test_validate_and_transform() {
             result.is_ok(),
             "valid WASM with required exports should be ok"
         );
+        let info = result.unwrap().1;
+        assert_eq!(info.abi_sv, 0);
 
         // WASM code with reserved exports.
         let code = wat::parse_str(
@@ -152,6 +154,71 @@ fn test_validate_and_transform() {
             matches!(result, Err(Error::CodeDeclaresTooManyMemories)),
             "WASM with multiple memories defined should fail validation"
         );
+
+        // WASM code with multiple ABI sub-versions defined.
+        let code = wat::parse_str(
+            r#"
+            (module
+                (type (;0;) (func))
+                (func (;0;) (type 0))
+
+                (export "allocate" (func 0))
+                (export "deallocate" (func 0))
+                (export "instantiate" (func 0))
+                (export "call" (func 0))
+                (export "__oasis_sv_1" (func 0))
+                (export "__oasis_sv_2" (func 0))
+            )
+        "#,
+        )
+        .unwrap();
+        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+        assert!(
+            matches!(result, Err(Error::CodeDeclaresMultipleSubVersions)),
+            "WASM with multiple ABI sub-versions defined should fail validation"
+        );
+
+        // WASM code with malformed ABI sub-version defined.
+        let code = wat::parse_str(
+            r#"
+            (module
+                (type (;0;) (func))
+                (func (;0;) (type 0))
+
+                (export "allocate" (func 0))
+                (export "deallocate" (func 0))
+                (export "instantiate" (func 0))
+                (export "call" (func 0))
+                (export "__oasis_sv_1xxx" (func 0))
+            )
+        "#,
+        )
+        .unwrap();
+        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+        assert!(
+            matches!(result, Err(Error::CodeMalformed)),
+            "WASM with a malformed ABI sub-version defined should fail validation"
+        );
+
+        // WASM code with correct ABI sub-version defined.
+        let code = wat::parse_str(
+            r#"
+            (module
+                (type (;0;) (func))
+                (func (;0;) (type 0))
+
+                (export "allocate" (func 0))
+                (export "deallocate" (func 0))
+                (export "instantiate" (func 0))
+                (export "call" (func 0))
+                (export "__oasis_sv_1" (func 0))
+            )
+        "#,
+        )
+        .unwrap();
+        let (_, abi_info) =
+            wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1).unwrap();
+        assert_eq!(abi_info.abi_sv, 1);
     }
 
     let mut mock = mock::Mock::default();
@@ -185,15 +252,16 @@ fn run_contract_with_defaults(
     tx.auth_info.fee.gas = gas_limit;
 
     ctx.with_tx(0, 0, tx, |mut ctx, _| -> Result<cbor::Value, Error> {
-        fn transform<C: TxContext>(_ctx: &mut C, code: &[u8]) -> Vec<u8> {
+        fn transform<C: TxContext>(_ctx: &mut C, code: &[u8]) -> (Vec<u8>, abi::Info) {
             wasm::validate_and_transform::<ContractsConfig, C>(code, types::ABI::OasisV1).unwrap()
         }
-        let code = transform(&mut ctx, code);
+        let (code, abi_info) = transform(&mut ctx, code);
 
         let code_info = types::Code {
             id: 1.into(),
             hash: Hash::empty_hash(),
             abi: types::ABI::OasisV1,
+            abi_sv: abi_info.abi_sv,
             uploader: Address::default(),
             instantiate_policy: types::Policy::Everyone,
         };
