@@ -27,6 +27,8 @@ import (
 )
 
 var (
+	showDelegations bool
+
 	commissionScheduleRates  []string
 	commissionScheduleBounds []string
 
@@ -88,10 +90,16 @@ var (
 			fmt.Println()
 			fmt.Printf("=== CONSENSUS LAYER (%s) ===\n", npa.NetworkName)
 
-			outgoingDelegations, err := c.Consensus().Staking().DelegationInfosFor(ctx, ownerQuery)
-			cobra.CheckErr(err)
-			outgoingDebondingDelegations, err := c.Consensus().Staking().DebondingDelegationInfosFor(ctx, ownerQuery)
-			cobra.CheckErr(err)
+			var (
+				outgoingDelegations          map[staking.Address]*staking.DelegationInfo
+				outgoingDebondingDelegations map[staking.Address][]*staking.DebondingDelegationInfo
+			)
+			if showDelegations {
+				outgoingDelegations, err = c.Consensus().Staking().DelegationInfosFor(ctx, ownerQuery)
+				cobra.CheckErr(err)
+				outgoingDebondingDelegations, err = c.Consensus().Staking().DebondingDelegationInfosFor(ctx, ownerQuery)
+				cobra.CheckErr(err)
+			}
 
 			helpers.PrettyPrintAccountBalanceAndDelegationsFrom(
 				npa.Network,
@@ -116,34 +124,36 @@ var (
 				fmt.Println()
 			}
 
-			incomingDelegations, err := c.Consensus().Staking().DelegationsTo(ctx, ownerQuery)
-			cobra.CheckErr(err)
-			incomingDebondingDelegations, err := c.Consensus().Staking().DebondingDelegationsTo(ctx, ownerQuery)
-			cobra.CheckErr(err)
+			if showDelegations {
+				incomingDelegations, err := c.Consensus().Staking().DelegationsTo(ctx, ownerQuery)
+				cobra.CheckErr(err)
+				incomingDebondingDelegations, err := c.Consensus().Staking().DebondingDelegationsTo(ctx, ownerQuery)
+				cobra.CheckErr(err)
 
-			if len(incomingDelegations) > 0 {
-				fmt.Println("  Active Delegations to this Account:")
-				helpers.PrettyPrintDelegationsTo(
-					npa.Network,
-					addr,
-					consensusAccount.Escrow.Active,
-					incomingDelegations,
-					"    ",
-					os.Stdout,
-				)
-				fmt.Println()
-			}
-			if len(incomingDebondingDelegations) > 0 {
-				fmt.Println("  Debonding Delegations to this Account:")
-				helpers.PrettyPrintDelegationsTo(
-					npa.Network,
-					addr,
-					consensusAccount.Escrow.Debonding,
-					incomingDebondingDelegations,
-					"    ",
-					os.Stdout,
-				)
-				fmt.Println()
+				if len(incomingDelegations) > 0 {
+					fmt.Println("  Active Delegations to this Account:")
+					helpers.PrettyPrintDelegationsTo(
+						npa.Network,
+						addr,
+						consensusAccount.Escrow.Active,
+						incomingDelegations,
+						"    ",
+						os.Stdout,
+					)
+					fmt.Println()
+				}
+				if len(incomingDebondingDelegations) > 0 {
+					fmt.Println("  Debonding Delegations to this Account:")
+					helpers.PrettyPrintDelegationsTo(
+						npa.Network,
+						addr,
+						consensusAccount.Escrow.Debonding,
+						incomingDebondingDelegations,
+						"    ",
+						os.Stdout,
+					)
+					fmt.Println()
+				}
 			}
 
 			cs := consensusAccount.Escrow.CommissionSchedule
@@ -819,8 +829,11 @@ func scanBoundStep(
 }
 
 func init() {
+	f := flag.NewFlagSet("", flag.ContinueOnError)
+	f.BoolVar(&showDelegations, "show-delegations", false, "show incoming and outgoing delegations")
 	accountsShowCmd.Flags().AddFlagSet(common.SelectorFlags)
 	accountsShowCmd.Flags().AddFlagSet(common.HeightFlag)
+	accountsShowCmd.Flags().AddFlagSet(f)
 
 	accountsAllowCmd.Flags().AddFlagSet(common.SelectorFlags)
 	accountsAllowCmd.Flags().AddFlagSet(common.TransactionFlags)
@@ -843,13 +856,13 @@ func init() {
 	accountsUndelegateCmd.Flags().AddFlagSet(common.SelectorFlags)
 	accountsUndelegateCmd.Flags().AddFlagSet(common.TransactionFlags)
 
-	f := flag.NewFlagSet("", flag.ContinueOnError)
-	f.StringSliceVar(&commissionScheduleRates, "commission_schedule.rates", nil, fmt.Sprintf(
+	f = flag.NewFlagSet("", flag.ContinueOnError)
+	f.StringSliceVar(&commissionScheduleRates, "rates", nil, fmt.Sprintf(
 		"commission rate step. Multiple of this flag is allowed. "+
 			"Each step is in the format start_epoch/rate_numerator. "+
 			"The rate is rate_numerator divided by %v", staking.CommissionRateDenominator,
 	))
-	f.StringSliceVar(&commissionScheduleBounds, "commission_schedule.bounds", nil, fmt.Sprintf(
+	f.StringSliceVar(&commissionScheduleBounds, "bounds", nil, fmt.Sprintf(
 		"commission rate bound step. Multiple of this flag is allowed. "+
 			"Each step is in the format start_epoch/rate_min_numerator/rate_max_numerator. "+
 			"The minimum rate is rate_min_numerator divided by %v, and the maximum rate is "+
