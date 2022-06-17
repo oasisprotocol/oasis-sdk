@@ -30,11 +30,11 @@ as follows:
 
 ```
 hello-world
-├── Cargo.lock      # Rust dependency tree checksums.
-├── Cargo.toml      # Rust crate defintion.
+├── Cargo.lock      # Dependency tree checksums (generated on first compilation).
+├── Cargo.toml      # Rust crate definition.
 ├── rust-toolchain  # Rust toolchain version configuration.
 └── src
-    └── lib.rs      # The smart contract definition.
+    └── lib.rs      # Smart contract source code.
 ```
 
 [`cargo`]: https://doc.rust-lang.org/cargo
@@ -256,6 +256,13 @@ mod test {
 
 This is it! You now have a simple hello world smart contract with included unit
 tests for its functionality.
+
+:::tip
+
+`PublicCell<T>` can use any type `T` which implements `oasis_cbor::Encode` and
+`oasis_cbor::Decode`.
+
+:::
 
 ## Building
 
