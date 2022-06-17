@@ -34,6 +34,7 @@ import (
 const (
 	cfgRuntimeBinaryDirDefault = "runtime.binary_dir.default"
 	cfgRuntimeLoader           = "runtime.loader"
+	cfgRuntimeProvisioner      = "runtime.provisioner"
 	cfgIasMock                 = "ias.mock"
 
 	cfgKeymanagerBinary = "keymanager.binary"
@@ -85,6 +86,7 @@ func NewRuntimeScenario(runtimeName string, tests []RunTestFunction) *RuntimeSce
 	sc.Flags.String(cfgRuntimeLoader, "../../../oasis-core/target/default/debug/oasis-core-runtime-loader", "path to the runtime loader")
 	sc.Flags.String(cfgKeymanagerBinary, "", "path to the keymanager binary")
 	sc.Flags.Bool(cfgIasMock, true, "if mock IAS service should be used")
+	sc.Flags.String(cfgRuntimeProvisioner, "sandbox", "the runtime provisioner: mock, unconfined, or sandbox")
 
 	return sc
 }
@@ -110,6 +112,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 	runtimeBinary := sc.RuntimeName
 	runtimeLoader, _ := sc.Flags.GetString(cfgRuntimeLoader)
 	iasMock, _ := sc.Flags.GetBool(cfgIasMock)
+	runtimeProvisioner, _ := sc.Flags.GetString(cfgRuntimeProvisioner)
 
 	keymanagerPath, _ := sc.Flags.GetString(cfgKeymanagerBinary)
 	usingKeymanager := len(keymanagerPath) > 0
@@ -225,9 +228,9 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			{Entity: 1, Consensus: oasis.ConsensusFixture{EnableConsensusRPCWorker: true}},
 		},
 		ComputeWorkers: []oasis.ComputeWorkerFixture{
-			{Entity: 1, Runtimes: []int{1}},
-			{Entity: 1, Runtimes: []int{1}},
-			{Entity: 1, Runtimes: []int{1}},
+			{RuntimeProvisioner: runtimeProvisioner, Entity: 1, Runtimes: []int{1}},
+			{RuntimeProvisioner: runtimeProvisioner, Entity: 1, Runtimes: []int{1}},
+			{RuntimeProvisioner: runtimeProvisioner, Entity: 1, Runtimes: []int{1}},
 		},
 		Sentries: []oasis.SentryFixture{},
 		Seeds:    []oasis.SeedFixture{{}},
@@ -237,7 +240,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 					"estimate_gas_by_simulating_contracts": true,
 					"allowed_queries":                      []map[string]bool{{"all_expensive": true}},
 				},
-			}},
+			}, RuntimeProvisioner: runtimeProvisioner},
 		},
 	}
 
@@ -252,7 +255,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			{Runtime: 0, Serial: 1},
 		}
 		ff.Keymanagers = []oasis.KeymanagerFixture{
-			{Runtime: 0, Entity: 1},
+			{RuntimeProvisioner: runtimeProvisioner, Runtime: 0, Entity: 1},
 		}
 	}
 
