@@ -19,16 +19,15 @@ hex = "0.4.2"
 sha2 = "0.9.5"
 ripemd160 = { version = "0.9", default-features = false }
 k256 = { version = "0.9.6", default-features = false, features = ["keccak256", "ecdsa"] }
-sha3 = { version = "0.9", default-features = false }
+sha3 = { version = "0.10", default-features = false }
 num = { version = "0.4", features = ["alloc"], default-features = false }
 once_cell = "1.8.0"
 
 # Ethereum.
-ethereum = "0.11.1"
-# Remove once upstream merges in: https://github.com/rust-blockchain/evm/pull/88.
-evm = { git = "https://github.com/oasisprotocol/evm", tag = "v0.33.1-oasis" }
+ethereum = "0.12"
+evm = "0.35.0"
 fixed-hash = "0.7.0"
-primitive-types = { version = "0.10.1", default-features = false, features = ["rlp", "num-traits"] }
+primitive-types = { version = "0.11", default-features = false, features = ["rlp", "num-traits"] }
 rlp = "0.5.1"
 uint = "0.9.1"
 

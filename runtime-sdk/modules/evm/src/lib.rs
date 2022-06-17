@@ -339,10 +339,15 @@ impl<Cfg: Config> API for Module<Cfg> {
                 let address = exec.create_address(evm::CreateScheme::Legacy {
                     caller: caller.into(),
                 });
-                (
-                    exec.transact_create(caller.into(), value.into(), init_code, gas_limit, vec![]),
-                    address.as_bytes().to_vec(),
-                )
+                let (exit_reason, exit_value) =
+                    exec.transact_create(caller.into(), value.into(), init_code, gas_limit, vec![]);
+                if exit_reason.is_succeed() {
+                    // If successful return the contract deployed address.
+                    (exit_reason, address.as_bytes().to_vec())
+                } else {
+                    // Otherwise propagate the exit value.
+                    (exit_reason, exit_value)
+                }
             },
             // If in simulation, this must be EstimateGas query.
             ctx.is_simulation(),
