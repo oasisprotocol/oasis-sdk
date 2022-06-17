@@ -1886,7 +1886,7 @@ dependencies = [
  "once_cell",
  "schnorrkel",
  "sha2 0.9.9",
- "sha3 0.9.1",
+ "sha3 0.10.1",
  "slog",
  "thiserror",
  "tiny-keccak 2.0.2",
