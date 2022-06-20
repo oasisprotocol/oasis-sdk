@@ -19,7 +19,7 @@ struct Error {
     /// Whether to sequentially autonumber the error codes.
     /// This option exists as a convenience for contracts that
     /// only append errors or release only breaking changes.
-    #[darling(default, rename = "autonumber")]
+    #[darling(rename = "autonumber")]
     autonumber: Flag,
 }
 
@@ -31,10 +31,10 @@ struct ErrorVariant {
     fields: darling::ast::Fields<ErrorField>,
 
     /// The explicit ID of the error code. Overrides any autonumber set on the error enum.
-    #[darling(default, rename = "code")]
+    #[darling(rename = "code")]
     code: Option<u32>,
 
-    #[darling(default, rename = "transparent")]
+    #[darling(rename = "transparent")]
     transparent: Flag,
 }
 
@@ -59,7 +59,7 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
         &format_ident!("self"),
         &error.module_name,
         &error.data.as_ref().take_enum().unwrap(),
-        error.autonumber.is_some(),
+        error.autonumber.is_present(),
     );
 
     util::wrap_in_const(quote! {
@@ -96,7 +96,7 @@ fn convert_variants(
         .map(|variant| {
             let variant_ident = &variant.ident;
 
-            if variant.transparent.is_some() {
+            if variant.transparent.is_present() {
                 // Transparently forward everything to the source.
                 let mut maybe_sources = variant
                     .fields
