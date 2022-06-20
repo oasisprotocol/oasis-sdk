@@ -144,6 +144,13 @@ pub struct TxSimulationFailure {
     code: u32,
 }
 
+impl TxSimulationFailure {
+    /// Returns true if the failure is "core::Error::OutOfGas".
+    pub fn is_error_core_out_of_gas(&self) -> bool {
+        self.module_name == MODULE_NAME && self.code == 12
+    }
+}
+
 impl Display for TxSimulationFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.message)
@@ -244,6 +251,10 @@ pub trait API {
 
     /// Takes and returns the stored transaction priority.
     fn take_priority<C: Context>(ctx: &mut C) -> u64;
+
+    /// Returns the configured max iterations in the binary search for the estimate
+    /// gas.
+    fn estimate_gas_search_max_iters<C: Context>(ctx: &C) -> u64;
 }
 
 /// Genesis state for the accounts module.
@@ -265,6 +276,14 @@ pub struct LocalConfig {
     /// batch will be used.
     #[cbor(optional, default)]
     pub max_estimated_gas: u64,
+
+    /// The maximum number of iterations of the binary search to be done when simulating contracts for
+    /// gas estimation in `core.EstimateGas`.
+    /// The special value of 0 means that binary search won't be performed, and the transaction will be
+    /// simulated using maximum possible gas, which might return an overestimation in some special cases.
+    /// This setting should likely be kept at 0, unless the runtime is using the EVM module.
+    #[cbor(optional, default)]
+    pub estimate_gas_search_max_iters: u64,
 }
 
 /// State schema constants.
@@ -283,6 +302,10 @@ pub trait Config: 'static {
     const DEFAULT_LOCAL_MIN_GAS_PRICE: once_cell::unsync::Lazy<
         BTreeMap<token::Denomination, u128>,
     > = once_cell::unsync::Lazy::new(BTreeMap::new);
+
+    /// Default local estimate gas max search iterations configuration that is used in case no overrides
+    /// are set in the local per-node configuration.
+    const DEFAULT_LOCAL_ESTIMATE_GAS_SEARCH_MAX_ITERS: u64 = 0;
 
     /// Methods which are exempt from minimum gas price requirements.
     const MIN_GAS_PRICE_EXEMPT_METHODS: once_cell::unsync::Lazy<BTreeSet<&'static str>> =
@@ -407,6 +430,13 @@ impl<Cfg: Config> API for Module<Cfg> {
             .take()
             .unwrap_or_default()
     }
+
+    fn estimate_gas_search_max_iters<C: Context>(ctx: &C) -> u64 {
+        ctx.local_config(MODULE_NAME)
+            .as_ref()
+            .map(|cfg: &LocalConfig| cfg.estimate_gas_search_max_iters)
+            .unwrap_or(Cfg::DEFAULT_LOCAL_ESTIMATE_GAS_SEARCH_MAX_ITERS)
+    }
 }
 
 #[sdk_derive(MethodHandler)]
@@ -465,6 +495,8 @@ impl<Cfg: Config> Module<Cfg> {
             .len()
             .try_into()
             .map_err(|_| Error::InvalidArgument(anyhow!("transaction too large")))?;
+        let propagate_failures = args.propagate_failures;
+        let bs_max_iters = Self::estimate_gas_search_max_iters(ctx);
 
         // Update the address used within the transaction when caller address is passed.
         let mut extra_gas = 0;
@@ -487,25 +519,128 @@ impl<Cfg: Config> Module<Cfg> {
             extra_gas += params.gas_costs.auth_signature;
         }
 
-        let propagate_failures = args.propagate_failures;
-        ctx.with_simulation(|mut sim_ctx| {
-            sim_ctx.with_tx(0 /* index */, tx_size, args.tx, |mut tx_ctx, call| {
-                let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
-                    &mut tx_ctx,
-                    call,
-                    &Default::default(),
-                );
-                if propagate_failures && !result.is_success() {
-                    // Report failure.
-                    let err: TxSimulationFailure = result.try_into().unwrap(); // Guaranteed to be a Failed CallResult.
-                    return Err(Error::TxSimulationFailed(err));
-                }
-                // Don't report success or failure. If the call fails, we still report
-                // how much gas it uses while it fails.
-                let gas_used = *tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
-                Ok(gas_used + extra_gas)
+        // Simulates transaction with a specific gas limit.
+        let mut simulate = |tx: &transaction::Transaction, gas: u64, report_failure: bool| {
+            let mut tx = tx.clone();
+            tx.auth_info.fee.gas = gas;
+            ctx.with_simulation(|mut sim_ctx| {
+                sim_ctx.with_tx(0 /* index */, tx_size, tx, |mut tx_ctx, call| {
+                    let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
+                        &mut tx_ctx,
+                        call,
+                        &Default::default(),
+                    );
+                    if !result.is_success() && report_failure {
+                        // Report failure.
+                        let err: TxSimulationFailure = result.try_into().unwrap(); // Guaranteed to be a Failed CallResult.
+                        return Err(Error::TxSimulationFailed(err));
+                    }
+                    // Don't report success or failure. If the call fails, we still report
+                    // how much gas it uses while it fails.
+                    let gas_used = *tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
+                    Ok(gas_used)
+                })
             })
-        })
+        };
+
+        // Do a binary search for exact gas limit.
+        let (cap, mut lo, mut hi) = (
+            args.tx.auth_info.fee.gas,
+            10_u128,
+            args.tx.auth_info.fee.gas as u128,
+        ); // Use u128 to avoid overflows when computing the mid point.
+
+        // Count iterations, and remember if fast path was tried.
+        let (mut iters, mut fast_path_tried) = (0, false);
+        // The following two variables are used to control the special case where a transaction fails
+        // and we check if the error is due to out-of-gas by re-simulating the transaction with maximum
+        // gas limit. This is needed due to EVM transactions failing with a "reverted" error when
+        // not having enough gas for EIP-150 (and not with "out-of-gas").
+        let (mut has_succeeded, mut tried_with_max_gas) = (false, false);
+        while (lo + 1 < hi) && iters < bs_max_iters {
+            iters += 1;
+
+            let mid = (hi + lo) / 2;
+            match simulate(&args.tx, mid as u64, true) {
+                Ok(r) => {
+                    // Estimate success. Try with lower gas.
+                    hi = mid;
+
+                    // The transaction succeeded at least once, meaning any future failure is due
+                    // to insufficient gas limit.
+                    has_succeeded = true;
+
+                    // Optimization: In vast majority of cases the initially returned gas estimate
+                    // might already be a good one. Check if this is the case to speed up the convergence.
+                    if !fast_path_tried && (lo + 1 < hi) {
+                        fast_path_tried = true;
+
+                        // If simulate with the returned estimate succeeds, we can further shrink the
+                        // high limit of the binary search.
+                        match simulate(&args.tx, r, true) {
+                            Ok(_) => hi = r as u128,
+                            _ => continue,
+                        }
+                        // If simulate with one unit of gas smaller fails, we know the exact estimate.
+                        match simulate(&args.tx, r - 1, true) {
+                            Err(_) => {
+                                // Stop the gas search.
+                                break;
+                            }
+                            _ => continue,
+                        }
+                    }
+                }
+                Err(_) if has_succeeded => {
+                    // Transaction previously succeeded. Transaction failed due to insufficient gas limit,
+                    // regardless of the actual returned error.
+                    // Try with higher gas.
+                    lo = mid
+                }
+                Err(Error::TxSimulationFailed(failure)) if failure.is_error_core_out_of_gas() => {
+                    // Estimate failed due to insufficient gas limit. Try with higher gas.
+                    lo = mid
+                }
+                r @ Err(_) => {
+                    let mut res = r;
+                    if !tried_with_max_gas {
+                        tried_with_max_gas = true;
+                        // Transaction failed and simulation with max gas was not yet tried.
+                        // Try simulating with maximum gas once:
+                        //  - if fails, the transaction will always fail, stop the binary search.
+                        //  - if succeeds, remember that transaction is failing due to insufficient gas
+                        //    and continue the search.
+                        res = simulate(&args.tx, cap, true)
+                    }
+                    match res {
+                        Ok(_) => {
+                            has_succeeded = true;
+                            // Transaction can succeed. Try with higher gas.
+                            lo = mid
+                        }
+                        err if propagate_failures => {
+                            // Estimate failed (not with out-of-gas) and caller wants error propagation -> early exit and return the error.
+                            return err;
+                        }
+                        _ => {
+                            // Estimate failed (not with out-of-gas) but caller wants to know the gas usage.
+                            // Exit loop and do one final estimate without error propagation.
+                            // NOTE: don't continue the binary search for failing transactions as the convergence
+                            // for these could take somewhat long and the estimate with default max gas is likely good.
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // hi == cap if binary search is disabled or this is a failing transaction.
+        if hi == cap.into() {
+            // Simulate one last time with maximum gas limit.
+            simulate(&args.tx, cap, propagate_failures).map(|est| est + extra_gas)
+        } else {
+            Ok(hi as u64 + extra_gas)
+        }
     }
 
     /// Check invariants of all modules in the runtime.

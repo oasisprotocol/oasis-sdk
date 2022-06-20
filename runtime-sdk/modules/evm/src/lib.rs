@@ -350,7 +350,9 @@ impl<Cfg: Config> API for Module<Cfg> {
                 }
             },
             // If in simulation, this must be EstimateGas query.
-            ctx.is_simulation(),
+            // Use estimate mode if not doing binary search for exact gas costs.
+            ctx.is_simulation()
+                && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
         );
         Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
@@ -386,7 +388,9 @@ impl<Cfg: Config> API for Module<Cfg> {
                 )
             },
             // If in simulation, this must be EstimateGas query.
-            ctx.is_simulation(),
+            // Use estimate mode if not doing binary search for exact gas costs.
+            ctx.is_simulation()
+                && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
         );
         Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
@@ -482,9 +486,12 @@ static EVM_CONFIG: EVMConfig = EVMConfig::london();
 // Config used by the EVM for estimation.
 static EVM_CONFIG_ESTIMATE: Lazy<EVMConfig> = Lazy::new(|| {
     let mut cfg = EVM_CONFIG.clone();
-    // Without `estimate=true` the EVM underestimates the gas needed for transactions using CREATE calls: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-150.md
-    // However by having `estimate=true` the said transaction costs are GREATLY overestimated in the estimateGas call: ~by around 1/64 of the estimate call gas_limit.
-    // https://github.com/rust-blockchain/evm/issues/8
+    // The estimate mode overestimates transaction costs and returns a gas costs that should be sufficient
+    // to execute a transaction, but likely overestimated.
+    // The "proper" EVM-way to estimate exact gas is to disable this estimation and do a binary search
+    // over all possible gas costs to find the minimum gas cost with which the transaction succeeds.
+    // This mode should only be used when the caller wants to avoid the expensive binary search and is
+    // ok with a possible overestimation of gas costs.
     cfg.estimate = true;
     cfg
 });
