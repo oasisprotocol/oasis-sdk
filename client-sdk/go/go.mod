@@ -16,7 +16,7 @@ require (
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
 	github.com/oasisprotocol/oasis-core/go v0.2201.5
 	github.com/shopspring/decimal v1.3.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.3
 	golang.org/x/crypto v0.0.0-20210915214749-c084706c2272
 	google.golang.org/grpc v1.47.0
 )
@@ -74,5 +74,5 @@ require (
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
