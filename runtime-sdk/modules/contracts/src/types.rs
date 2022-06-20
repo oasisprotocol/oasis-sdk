@@ -180,6 +180,20 @@ pub struct CodeQuery {
     pub id: CodeId,
 }
 
+/// Code storage information query.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct CodeStorageQuery {
+    /// Code identifier.
+    pub id: CodeId,
+}
+
+/// Code storage query result.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct CodeStorageQueryResult {
+    /// Stored contract code.
+    pub code: Vec<u8>,
+}
+
 /// Instance information query.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct InstanceQuery {

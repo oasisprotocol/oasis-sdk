@@ -395,6 +395,18 @@ fn test_hello_contract_call() {
     assert_eq!(result.id, 0.into());
     assert_eq!(result.abi, types::ABI::OasisV1);
 
+    // Test code storage query.
+    let result = Contracts::query_code_storage(&mut ctx, types::CodeStorageQuery { id: 0.into() })
+        .expect("code storage query should succeed");
+    // Stored code is the original code plus some injected gas billing calls.
+    assert_eq!(result.code.len() >= HELLO_CONTRACT_CODE.len(), true);
+
+    // Invalid code queries should fail.
+    Contracts::query_code(&mut ctx, types::CodeQuery { id: 9999.into() })
+        .expect_err("invalid code query should fail");
+    Contracts::query_code_storage(&mut ctx, types::CodeStorageQuery { id: 9999.into() })
+        .expect_err("invalid code storage query should fail");
+
     // Test storage query for the counter key.
     let result = Contracts::query_instance_storage(
         &mut ctx,
