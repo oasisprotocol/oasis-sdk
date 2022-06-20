@@ -16,17 +16,17 @@ oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 # Third party.
 byteorder = "1.4.3"
 curve25519-dalek = "3.2.0"
-digest = "0.9.0"
+digest = "0.10.3"
 hmac = "0.11.0"
 sha2 = "0.9.8"
-sha3 = { version = "0.9", default-features = false }
+sha3 = { version = "0.10.1", default-features = false }
 k256 = { version = "0.9.6" }
 schnorrkel = "0.10.2"
 thiserror = "1.0.30"
 hex = "0.4.2"
 io-context = "0.2.0"
 anyhow = "1.0.50"
-bech32 = "0.8.1"
+bech32 = "0.9.0"
 num-traits = "0.2.14"
 impl-trait-for-tuples = "0.2.1"
 base64 = "0.13.0"
@@ -37,7 +37,7 @@ tokio = { version = "1", features = ["rt"] }
 zeroize = "1.4"
 
 [dev-dependencies]
-blake3 = { version = "1.2.0", features = ["traits-preview"] }
+blake3 = { version = "1.3.1", features = ["traits-preview"] }
 
 [features]
 default = ["oasis-runtime-sdk-macros"]

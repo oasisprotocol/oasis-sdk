@@ -17,7 +17,7 @@ wasm3 = { git = "https://github.com/oasisprotocol/wasm3-rs", tag = "v0.3.0" }
 
 # Third party.
 anyhow = "1.0"
-blake3 = { version = "~1.2.0", features = ["traits-preview"] }
+blake3 = { version = "~1.3.1", features = ["traits-preview"] }
 lru = "0.7.0"
 num-traits = "0.2.14"
 once_cell = "1.8.0"
