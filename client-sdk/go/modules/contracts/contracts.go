@@ -23,6 +23,7 @@ const (
 
 	// Queries.
 	methodCode            = "contracts.Code"
+	methodCodeStorage     = "contracts.CodeStorage"
 	methodInstance        = "contracts.Instance"
 	methodInstanceStorage = "contracts.InstanceStorage"
 	methodPublicKey       = "contracts.PublicKey"
@@ -75,6 +76,9 @@ type V1 interface {
 
 	// Code queries the given code information.
 	Code(ctx context.Context, round uint64, id CodeID) (*Code, error)
+
+	// CodeStorage queries the given code's storage.
+	CodeStorage(ctx context.Context, round uint64, id CodeID) (*CodeStorageQueryResult, error)
 
 	// Instance queries the given instance information.
 	Instance(ctx context.Context, round uint64, id InstanceID) (*Instance, error)
@@ -169,6 +173,16 @@ func (a *v1) Code(ctx context.Context, round uint64, id CodeID) (*Code, error) {
 		return nil, err
 	}
 	return &code, nil
+}
+
+// Implements V1.
+func (a *v1) CodeStorage(ctx context.Context, round uint64, id CodeID) (*CodeStorageQueryResult, error) {
+	var rsp CodeStorageQueryResult
+	err := a.rc.Query(ctx, round, methodCodeStorage, &CodeStorageQuery{ID: id}, &rsp)
+	if err != nil {
+		return nil, err
+	}
+	return &rsp, nil
 }
 
 // Implements V1.
