@@ -1956,6 +1956,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "blake3",
+ "hex",
+ "k256",
  "lru",
  "num-traits",
  "oasis-cbor",

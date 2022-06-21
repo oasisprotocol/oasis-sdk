@@ -193,3 +193,431 @@ fn create_abi<Cfg: Config, C: Context>(abi: types::ABI) -> Result<Box<dyn Abi<C>
         types::ABI::OasisV1 => Ok(Box::new(OasisV1::<Cfg>::new())),
     }
 }
+
+#[cfg(test)]
+mod test {
+    extern crate test;
+    use std::time::Instant;
+    use test::Bencher;
+
+    use crate::abi::gas;
+
+    const BENCH_CODE: &[u8] = include_bytes!(
+        "../../../../tests/contracts/bench/target/wasm32-unknown-unknown/release/bench.wasm"
+    );
+    const OPCODE_SPINS: i32 = 1_000_000;
+
+    fn bench_wat_spinner<F>(b: &mut Bencher, param: i32, code: &str, mut linkup: F)
+    where
+        F: FnMut(&mut wasm3::Instance<'_, '_, wasm3::CallContext<'_, ()>>),
+    {
+        let module_bin = wat::parse_str(code).expect("parsing module wat should succeed");
+        let env =
+            wasm3::Environment::new().expect("creating a new wasm3 environment should succeed");
+        let module = env
+            .parse_module(&module_bin)
+            .expect("parsing the code should succeed");
+        let rt: wasm3::Runtime<'_, wasm3::CallContext<'_, ()>> = env
+            .new_runtime(1 * 1024 * 1024, None)
+            .expect("creating a new wasm3 runtime should succeed");
+        let mut instance = rt
+            .load_module(module)
+            .expect("instance creation should succeed");
+        linkup(&mut instance);
+        let func = instance
+            .find_function::<i32, ()>("spinner")
+            .expect("finding the entrypoint function should succeed");
+        b.iter(|| {
+            func.call(param).expect("function call should succeed");
+        });
+    }
+
+    const LOOP_SKEL: &str = r#"
+        (module
+            (global $globaldummy (mut i32) (i32.const 0))
+            (func $spinner (param $lim i32) (local $dummy i32)
+                (loop $spin
+                    local.get $lim
+                    i32.const 1
+                    i32.sub
+                    local.tee $lim
+
+                    ;; measure this block by comparing runtimes
+                    ;; with the module in bench_loop_skel, where
+                    ;; this section is empty.
+                    {}
+
+                    i32.const 0
+                    i32.ne
+                    br_if $spin
+                )
+            )
+            (export "spinner" (func $spinner))
+        )
+    "#;
+
+    #[bench]
+    fn bench_loop_skel(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace("{}", "");
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_const(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            i32.const 0
+            drop
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_block(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            (block $block
+                i32.const 0
+                drop
+            )
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_block_block(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            (block
+                (block
+                    nop
+                )
+            )
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_br_table(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            (block
+                (block
+                    i32.const 0
+                    (br_table 1 2)
+                )
+            )
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_br(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            (block $block
+                i32.const 1
+                br $block
+            )
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_br_if(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            (block $block
+                i32.const 1
+                br_if $block
+            )
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_if_within_block(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            (block $block
+                i32.const 1
+                (if
+                    (then
+                        br $block
+                    )
+                )
+            )
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_local_set(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            i32.const 42
+            local.set $dummy
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_global_get(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            global.get $globaldummy
+            drop
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_global_set(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            i32.const 1
+            global.set $globaldummy
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_grow_skel(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            local.get $lim
+            i32.const 100000
+            i32.rem_u
+            (if
+                (then
+                    nop
+                    nop
+                )
+            )
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_grow(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            local.get $lim
+            i32.const 100000
+            i32.rem_u
+            (if
+                (then
+                    (memory.grow (i32.const 1))
+                    drop
+                )
+            )
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_add(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            i32.const 0
+            i32.add
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_add_64(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            i64.extend_i32_u
+            i64.const 0
+            i64.add
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_mul(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            i32.const 1
+            i32.mul
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_div(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            i32.const 1
+            i32.div_s
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_rotr(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            i32.const 1
+            i32.rotr
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_extend(b: &mut Bencher) {
+        let src = LOOP_SKEL.replace(
+            "{}",
+            r#"
+            i32.const 3
+            i64.extend_i32_u
+            drop
+        "#,
+        );
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_call(b: &mut Bencher) {
+        let src = r#"
+            (module
+                (func $callee
+                    return
+                )
+                (func $spinner (param $lim i32)
+                    (loop $spin
+                        local.get $lim
+                        i32.const 1
+                        i32.sub
+                        local.tee $lim
+
+                        ;; measure this block by comparing runtimes
+                        ;; with the module in bench_loop_skel, where
+                        ;; this section is empty.
+                        call $callee
+
+                        i32.const 0
+                        i32.ne
+                        br_if $spin
+                    )
+                )
+                (export "spinner" (func $spinner))
+            )
+        "#;
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |_| {});
+    }
+
+    #[bench]
+    fn bench_loop_call_external(b: &mut Bencher) {
+        let src = r#"
+            (module
+                (import "bench" "callee" (func $callee))
+                (func $spinner (param $lim i32)
+                    (loop $spin
+                        local.get $lim
+                        i32.const 1
+                        i32.sub
+                        local.tee $lim
+
+                        ;; measure this block by comparing runtimes
+                        ;; with the module in bench_loop_skel, where
+                        ;; this section is empty.
+                        call $callee
+
+                        i32.const 0
+                        i32.ne
+                        br_if $spin
+                    )
+                )
+                (export "spinner" (func $spinner))
+            )
+        "#;
+        bench_wat_spinner(b, OPCODE_SPINS, &src, |instance| {
+            let _ =
+                instance.link_function("bench", "callee", |_, _: ()| -> Result<(), wasm3::Trap> {
+                    Ok(())
+                });
+        });
+    }
+
+    #[bench]
+    fn bench_time_waster(_b: &mut Bencher) {
+        let mut module = walrus::ModuleConfig::new()
+            .generate_producers_section(false)
+            .parse(&BENCH_CODE)
+            .unwrap();
+        gas::transform(&mut module);
+        let new_code = module.emit_wasm();
+
+        let env =
+            wasm3::Environment::new().expect("creating a new wasm3 environment should succeed");
+        let module = env
+            .parse_module(&new_code)
+            .expect("parsing the code should succeed");
+        let rt: wasm3::Runtime<'_, wasm3::CallContext<'_, ()>> = env
+            .new_runtime(1 * 1024 * 1024, None)
+            .expect("creating a new wasm3 runtime should succeed");
+        let instance = rt
+            .load_module(module)
+            .expect("instance creation should succeed");
+        let func = instance
+            .find_function::<u64, u64>("waste_time")
+            .expect("finding the entrypoint function should succeed");
+        let initial_gas = 1_000_000_000_000u64;
+        instance
+            .set_global(gas::EXPORT_GAS_LIMIT, initial_gas)
+            .expect("setting gas limit should succeed");
+        let begin = Instant::now();
+        func.call(41).expect("function call should succeed");
+        let gas_limit: u64 = instance
+            .get_global(gas::EXPORT_GAS_LIMIT)
+            .expect("getting gas limit global should succeed");
+        let gas_limit_exhausted: u64 = instance
+            .get_global(gas::EXPORT_GAS_LIMIT_EXHAUSTED)
+            .expect("getting gas limit exhausted global should succeed");
+        let delta = Instant::now().duration_since(begin).as_secs_f64();
+        println!(
+            "  time waster runtime: {} seconds, gas remaining {} [used: {}, exhausted flag: {}]",
+            delta,
+            gas_limit,
+            initial_gas - gas_limit,
+            gas_limit_exhausted
+        );
+    }
+}
