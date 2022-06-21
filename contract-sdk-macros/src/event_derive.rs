@@ -19,7 +19,7 @@ struct Event {
     /// Whether to sequentially autonumber the event codes.
     /// This option exists as a convenience for contracts that
     /// only append events or release only breaking changes.
-    #[darling(default, rename = "autonumber")]
+    #[darling(rename = "autonumber")]
     autonumber: Flag,
 }
 
@@ -29,7 +29,7 @@ struct EventVariant {
     ident: Ident,
 
     /// The explicit ID of the event code. Overrides any autonumber set on the event enum.
-    #[darling(default, rename = "code")]
+    #[darling(rename = "code")]
     code: Option<u32>,
 }
 
@@ -46,7 +46,7 @@ pub fn derive_event(input: DeriveInput) -> TokenStream {
         &format_ident!("self"),
         &event.module_name,
         &event.data.as_ref().take_enum().unwrap(),
-        event.autonumber.is_some(),
+        event.autonumber.is_present(),
     );
 
     util::wrap_in_const(quote! {

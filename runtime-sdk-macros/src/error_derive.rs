@@ -13,13 +13,12 @@ struct Error {
     data: darling::ast::Data<ErrorVariant, darling::util::Ignored>,
 
     /// The path to a const set to the module name.
-    #[darling(default)]
     module_name: Option<syn::Path>,
 
     /// Whether to sequentially autonumber the error codes.
     /// This option exists as a convenience for runtimes that
     /// only append errors or release only breaking changes.
-    #[darling(default, rename = "autonumber")]
+    #[darling(rename = "autonumber")]
     autonumber: Flag,
 }
 
@@ -31,13 +30,13 @@ struct ErrorVariant {
     fields: darling::ast::Fields<ErrorField>,
 
     /// The explicit ID of the error code. Overrides any autonumber set on the error enum.
-    #[darling(default, rename = "code")]
+    #[darling(rename = "code")]
     code: Option<u32>,
 
-    #[darling(default, rename = "transparent")]
+    #[darling(rename = "transparent")]
     transparent: Flag,
 
-    #[darling(default, rename = "abort")]
+    #[darling(rename = "abort")]
     abort: Flag,
 }
 
@@ -77,7 +76,7 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
         &format_ident!("self"),
         module_name,
         &error.data.as_ref().take_enum().unwrap(),
-        error.autonumber.is_some(),
+        error.autonumber.is_present(),
     );
 
     let sdk_crate = gen::sdk_crate_path();
@@ -125,7 +124,7 @@ fn convert_variants(
     let abort_variants: Vec<_> = variants
         .iter()
         .filter_map(|variant| {
-            if variant.abort.is_none() {
+            if !variant.abort.is_present() {
                 return None;
             }
 
@@ -157,7 +156,7 @@ fn convert_variants(
         .map(|variant| {
             let variant_ident = &variant.ident;
 
-            if variant.transparent.is_some() {
+            if variant.transparent.is_present() {
                 // Transparently forward everything to the source.
                 let mut maybe_sources = variant
                     .fields

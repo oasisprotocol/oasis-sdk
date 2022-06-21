@@ -13,13 +13,12 @@ struct Event {
     data: darling::ast::Data<EventVariant, darling::util::Ignored>,
 
     /// The path to a const set to the module name.
-    #[darling(default)]
     module_name: Option<syn::Path>,
 
     /// Whether to sequentially autonumber the event codes.
     /// This option exists as a convenience for runtimes that
     /// only append events or release only breaking changes.
-    #[darling(default, rename = "autonumber")]
+    #[darling(rename = "autonumber")]
     autonumber: Flag,
 }
 
@@ -29,7 +28,7 @@ struct EventVariant {
     ident: Ident,
 
     /// The explicit ID of the event code. Overrides any autonumber set on the event enum.
-    #[darling(default, rename = "code")]
+    #[darling(rename = "code")]
     code: Option<u32>,
 }
 
@@ -59,7 +58,7 @@ pub fn derive_event(input: DeriveInput) -> TokenStream {
     let code_converter = gen::enum_code_converter(
         &format_ident!("self"),
         &event.data.as_ref().take_enum().unwrap(),
-        event.autonumber.is_some(),
+        event.autonumber.is_present(),
     );
 
     let sdk_crate = gen::sdk_crate_path();
