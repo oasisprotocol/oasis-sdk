@@ -22,17 +22,23 @@ impl<Cfg: Config> OasisV1<Cfg> {
             |ctx, (store, key): (u32, (u32, u32))| -> Result<u32, wasm3::Trap> {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
+                let store_kind: StoreKind = store.try_into().map_err(|_| wasm3::Trap::Abort)?;
 
                 ensure_key_size(ec, key.1)?;
 
                 // Charge base gas amount plus size-dependent gas.
                 let total_gas = (|| {
-                    let base = ec.params.gas_costs.wasm_storage_get_base;
-                    let key = ec
-                        .params
-                        .gas_costs
-                        .wasm_storage_key_byte
-                        .checked_mul(key.1.into())?;
+                    let (base, key_base) = match store_kind {
+                        StoreKind::Public => (
+                            ec.params.gas_costs.wasm_public_storage_get_base,
+                            ec.params.gas_costs.wasm_public_storage_key_byte,
+                        ),
+                        StoreKind::Confidential => (
+                            ec.params.gas_costs.wasm_confidential_storage_get_base,
+                            ec.params.gas_costs.wasm_confidential_storage_key_byte,
+                        ),
+                    };
+                    let key = key_base.checked_mul(key.1.into())?;
                     let total = base.checked_add(key)?;
                     Some(total)
                 })()
@@ -43,7 +49,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 let value = ctx.instance.runtime().try_with_memory(
                     |memory| -> Result<_, wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
-                        Ok(get_instance_store(ec, store)?.get(key))
+                        Ok(get_instance_store(ec, store_kind)?.get(key))
                     },
                 )??;
 
@@ -53,11 +59,15 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 };
 
                 // Charge gas for size of value.
+                let value_byte_cost = match store_kind {
+                    StoreKind::Public => ec.params.gas_costs.wasm_public_storage_value_byte,
+                    StoreKind::Confidential => {
+                        ec.params.gas_costs.wasm_confidential_storage_value_byte
+                    }
+                };
                 gas::use_gas(
                     ctx.instance,
-                    ec.params
-                        .gas_costs
-                        .wasm_storage_value_byte
+                    value_byte_cost
                         .checked_mul(value.len().try_into()?)
                         .ok_or(wasm3::Trap::Abort)?,
                 )?;
@@ -80,23 +90,27 @@ impl<Cfg: Config> OasisV1<Cfg> {
             |ctx, (store, key, value): (u32, (u32, u32), (u32, u32))| {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
+                let store_kind: StoreKind = store.try_into().map_err(|_| wasm3::Trap::Abort)?;
 
                 ensure_key_size(ec, key.1)?;
                 ensure_value_size(ec, value.1)?;
 
                 // Charge base gas amount plus size-dependent gas.
                 let total_gas = (|| {
-                    let base = ec.params.gas_costs.wasm_storage_insert_base;
-                    let key = ec
-                        .params
-                        .gas_costs
-                        .wasm_storage_key_byte
-                        .checked_mul(key.1.into())?;
-                    let value = ec
-                        .params
-                        .gas_costs
-                        .wasm_storage_value_byte
-                        .checked_mul(value.1.into())?;
+                    let (base, key_base, value_base) = match store_kind {
+                        StoreKind::Public => (
+                            ec.params.gas_costs.wasm_public_storage_insert_base,
+                            ec.params.gas_costs.wasm_public_storage_key_byte,
+                            ec.params.gas_costs.wasm_public_storage_value_byte,
+                        ),
+                        StoreKind::Confidential => (
+                            ec.params.gas_costs.wasm_confidential_storage_insert_base,
+                            ec.params.gas_costs.wasm_confidential_storage_key_byte,
+                            ec.params.gas_costs.wasm_confidential_storage_value_byte,
+                        ),
+                    };
+                    let key = key_base.checked_mul(key.1.into())?;
+                    let value = value_base.checked_mul(value.1.into())?;
                     let total = base.checked_add(key)?.checked_add(value)?;
                     Some(total)
                 })()
@@ -109,7 +123,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     .try_with_memory(|memory| -> Result<(), wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
                         let value = Region::from_arg(value).as_slice(&memory)?;
-                        get_instance_store(ec, store)?.insert(key, value);
+                        get_instance_store(ec, store_kind)?.insert(key, value);
                         Ok(())
                     })??;
 
@@ -124,17 +138,23 @@ impl<Cfg: Config> OasisV1<Cfg> {
             |ctx, (store, key): (u32, (u32, u32))| {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
+                let store_kind: StoreKind = store.try_into().map_err(|_| wasm3::Trap::Abort)?;
 
                 ensure_key_size(ec, key.1)?;
 
                 // Charge base gas amount plus size-dependent gas.
                 let total_gas = (|| {
-                    let base = ec.params.gas_costs.wasm_storage_remove_base;
-                    let key = ec
-                        .params
-                        .gas_costs
-                        .wasm_storage_key_byte
-                        .checked_mul(key.1.into())?;
+                    let (base, key_base) = match store_kind {
+                        StoreKind::Public => (
+                            ec.params.gas_costs.wasm_public_storage_remove_base,
+                            ec.params.gas_costs.wasm_public_storage_key_byte,
+                        ),
+                        StoreKind::Confidential => (
+                            ec.params.gas_costs.wasm_confidential_storage_remove_base,
+                            ec.params.gas_costs.wasm_confidential_storage_key_byte,
+                        ),
+                    };
+                    let key = key_base.checked_mul(key.1.into())?;
                     let total = base.checked_add(key)?;
                     Some(total)
                 })()
@@ -146,7 +166,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     .runtime()
                     .try_with_memory(|memory| -> Result<(), wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
-                        get_instance_store(ec, store)?.remove(key);
+                        get_instance_store(ec, store_kind)?.remove(key);
                         Ok(())
                     })??;
 
@@ -161,11 +181,8 @@ impl<Cfg: Config> OasisV1<Cfg> {
 /// Create a contract instance store.
 fn get_instance_store<'a, C: Context>(
     ec: &'a mut ExecutionContext<'_, C>,
-    store_kind: u32,
+    store_kind: StoreKind,
 ) -> Result<Box<dyn Store + 'a>, wasm3::Trap> {
-    // Determine which store we should be using.
-    let store_kind: StoreKind = store_kind.try_into().map_err(|_| wasm3::Trap::Abort)?;
-
     let instance_store = store::for_instance(ec.tx_context, ec.instance_info, store_kind);
     match instance_store {
         Err(err) => {

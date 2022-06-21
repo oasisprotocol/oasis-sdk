@@ -1,6 +1,7 @@
 //! Smart contracts module.
 #![deny(rust_2018_idioms)]
 #![forbid(unsafe_code)]
+#![feature(test)]
 
 #[cfg(test)]
 extern crate alloc;
@@ -168,11 +169,16 @@ pub struct GasCosts {
     pub subcall_dispatch: u64,
 
     // Storage operations.
-    pub wasm_storage_get_base: u64,
-    pub wasm_storage_insert_base: u64,
-    pub wasm_storage_remove_base: u64,
-    pub wasm_storage_key_byte: u64,
-    pub wasm_storage_value_byte: u64,
+    pub wasm_public_storage_get_base: u64,
+    pub wasm_public_storage_insert_base: u64,
+    pub wasm_public_storage_remove_base: u64,
+    pub wasm_public_storage_key_byte: u64,
+    pub wasm_public_storage_value_byte: u64,
+    pub wasm_confidential_storage_get_base: u64,
+    pub wasm_confidential_storage_insert_base: u64,
+    pub wasm_confidential_storage_remove_base: u64,
+    pub wasm_confidential_storage_key_byte: u64,
+    pub wasm_confidential_storage_value_byte: u64,
     pub wasm_env_query_base: u64,
 
     // Crypto operations.
@@ -186,26 +192,31 @@ impl Default for GasCosts {
     fn default() -> Self {
         // TODO: Decide what reasonable defaults should be.
         GasCosts {
-            tx_upload: 0,
-            tx_upload_per_byte: 0,
-            tx_instantiate: 0,
-            tx_call: 0,
-            tx_upgrade: 0,
+            tx_upload: 1_000_000,
+            tx_upload_per_byte: 5,
+            tx_instantiate: 10_000,
+            tx_call: 1_000,
+            tx_upgrade: 10_000,
             tx_change_upgrade_policy: 0,
 
             subcall_dispatch: 100,
 
-            wasm_storage_get_base: 20,
-            wasm_storage_insert_base: 20,
-            wasm_storage_remove_base: 20,
-            wasm_storage_key_byte: 1,
-            wasm_storage_value_byte: 1,
+            wasm_public_storage_get_base: 5000,
+            wasm_public_storage_insert_base: 8400,
+            wasm_public_storage_remove_base: 6400,
+            wasm_public_storage_key_byte: 3,
+            wasm_public_storage_value_byte: 3,
+            wasm_confidential_storage_get_base: 10_000,
+            wasm_confidential_storage_insert_base: 16_800,
+            wasm_confidential_storage_remove_base: 12_800,
+            wasm_confidential_storage_key_byte: 6,
+            wasm_confidential_storage_value_byte: 6,
             wasm_env_query_base: 10,
 
-            wasm_crypto_ecdsa_recover: 20,
-            wasm_crypto_signature_verify_ed25519: 20,
-            wasm_crypto_signature_verify_secp256k1: 20,
-            wasm_crypto_signature_verify_sr25519: 25,
+            wasm_crypto_ecdsa_recover: 500_000,
+            wasm_crypto_signature_verify_ed25519: 500_000,
+            wasm_crypto_signature_verify_secp256k1: 500_000,
+            wasm_crypto_signature_verify_sr25519: 500_000,
         }
     }
 }
