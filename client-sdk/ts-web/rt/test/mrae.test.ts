@@ -1,6 +1,7 @@
 import * as oasisRT from './../src';
 import * as ed from '@noble/ed25519';
 import * as oasis from '@oasisprotocol/client';
+import * as nacl from 'tweetnacl';
 
 describe('mrae', () => {
   describe('symmetricKey', () => {

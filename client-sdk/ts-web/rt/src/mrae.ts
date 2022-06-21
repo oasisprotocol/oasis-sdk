@@ -1,10 +1,10 @@
 import * as oasis from '@oasisprotocol/client';
-import * as ed from '@noble/ed25519';
+import * as nacl from 'tweetnacl';
 import {sha512_256} from 'js-sha512';
 
 var deoxysii = require('deoxysii');
 
-const BoxKDFTweak = 'MRAE_Box_Deoxys-II-256-128';
+const BOX_KDF_TWEAK = 'MRAE_Box_Deoxys-II-256-128';
 
 /**
  * deriveSymmetricKey derives a MRAE AEAD symmetric key suitable for use with the asymmetric
@@ -12,15 +12,15 @@ const BoxKDFTweak = 'MRAE_Box_Deoxys-II-256-128';
  */
 
 export function deriveSymmetricKey(publicKey: Uint8Array, privateKey: Uint8Array): Uint8Array {
-    const pmk = ed.curve25519.scalarMult(oasis.misc.toHex(privateKey), oasis.misc.toHex(publicKey));
-    var kdf = sha512_256.hmac.create(BoxKDFTweak);
+    const pmk = nacl.scalarMult(privateKey, publicKey);
+    var kdf = sha512_256.hmac.create(BOX_KDF_TWEAK);
     kdf.update(pmk);
     return oasis.misc.fromHex(kdf.hex());
 }
 
 /**
  * boxSeal boxes ("seals") the provided additional data and plaintext via
- * Deoxys-II-256-128 using a symmetric key derived from the provided
+ * Deoxys-II-256-128 using a symmetcaric key derived from the provided
  * X25519 public and private keys.
  */
 export function boxSeal(
