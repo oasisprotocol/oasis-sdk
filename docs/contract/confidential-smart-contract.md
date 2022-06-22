@@ -148,7 +148,7 @@ impl sdk::Contract for HelloWorld {
     }
 }
 
-// Create the required WASM exports required for the contract to be runnable.
+// Create the required Wasm exports required for the contract to be runnable.
 sdk::create_contract!(HelloWorld);
 
 // We define some simple contract tests below.
@@ -223,7 +223,7 @@ works. **Do not put any sensitive data inside the smart contract code!**
 
 :::
 
-Since the smart contracts store is public, uploading the WASM code is
+Since the smart contracts store is public, uploading the Wasm code is
 the same as for the non-confidential ones:
 
 ```shell

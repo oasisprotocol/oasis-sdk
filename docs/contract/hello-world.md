@@ -193,7 +193,7 @@ impl sdk::Contract for HelloWorld {
     }
 }
 
-// Create the required WASM exports required for the contract to be runnable.
+// Create the required Wasm exports required for the contract to be runnable.
 sdk::create_contract!(HelloWorld);
 
 // We define some simple contract tests below.
@@ -301,7 +301,7 @@ oasis paratime set-default testnet cipher
 ```
 
 The first deployment step that needs to be performed only once for the given
-binary is uploading the WASM binary.
+binary is uploading the Wasm binary.
 
 ```
 oasis contracts upload hello_world.wasm
