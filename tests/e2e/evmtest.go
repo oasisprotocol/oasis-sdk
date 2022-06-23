@@ -69,18 +69,23 @@ func evmCreate(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer s
 	}
 
 	// Check if gas estimation works.
-	gasLimit, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &testing.Dave.Address}, txB.GetTransaction(), false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to estimate gas: %w", err)
+	var err error
+	var gasLimit uint64 = 1_000_000
+	if !c10l {
+		// Gas estimation does not work with confidentiality.
+		gasLimit, err = core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &testing.Dave.Address}, txB.GetTransaction(), true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to estimate gas: %w", err)
+		}
 	}
 
 	tx := txB.SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(gasPrice * gasLimit), types.NativeDenomination)).GetTransaction()
-	result, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, gasLimit)
+	result, err := txgen.SignAndSubmitTxRaw(ctx, rtc, signer, *tx, gasLimit)
 	if err != nil {
 		return nil, err
 	}
 	var out []byte
-	if err = cbor.Unmarshal(result, &out); err != nil {
+	if err = txB.DecodeResult(result, &out); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal evmCreate result: %w", err)
 	}
 	return out, nil
@@ -94,22 +99,94 @@ func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer sig
 		}
 	}
 
-	// Check if ETH gas estimation works.
-	gasLimit, err := core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{EthAddress: &testing.Dave.EthAddress}, txB.GetTransaction(), false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to estimate gas: %w", err)
+	// Check if gas estimation works.
+	var err error
+	var gasLimit uint64 = 1_000_000
+	if !c10l {
+		// Gas estimation does not work with confidentiality.
+		if gasLimit, err = core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{EthAddress: &testing.Dave.EthAddress}, txB.GetTransaction(), false); err != nil {
+			return nil, fmt.Errorf("failed to estimate gas: %w", err)
+		}
 	}
 
 	tx := txB.SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(gasPrice * gasLimit), types.NativeDenomination)).GetTransaction()
-	result, err := txgen.SignAndSubmitTx(ctx, rtc, signer, *tx, gasLimit)
+	result, err := txgen.SignAndSubmitTxRaw(ctx, rtc, signer, *tx, gasLimit)
 	if err != nil {
 		return nil, err
 	}
 	var out []byte
-	if err = cbor.Unmarshal(result, &out); err != nil {
+	if err = txB.DecodeResult(result, &out); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal evmCall result: %w", err)
 	}
 	return out, nil
+}
+
+func evmSimulateCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, caller []byte, secretKey [32]byte, callee, valueU256, data, gasPriceU256 []byte, gasLimit uint64, c10l c10lity) ([]byte, error) {
+	if !c10l {
+		return e.SimulateCall(ctx, client.RoundLatest, gasPriceU256, gasLimit, caller, callee, valueU256, data)
+	}
+	var err error
+	zero, err := hex.DecodeString(strings.Repeat("0", 64))
+	if err != nil {
+		return nil, err
+	}
+	txB := client.NewTransactionBuilder(rtc, "", data)
+	if err = txB.SetCallFormat(ctx, types.CallFormatEncryptedX25519DeoxysII); err != nil {
+		return nil, fmt.Errorf("failed to set confidential SimulateCall format: %w", err)
+	}
+	data = cbor.Marshal(txB.GetTransaction().Call)
+
+	leashBlock, err := rtc.GetBlock(ctx, 3)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get leash block: %w", err)
+	}
+	leashBlockHash := leashBlock.Header.EncodedHash()
+	leashBlockHashBytes, err := leashBlockHash.MarshalBinary()
+
+	leash := evm.Leash{
+		Nonce:       9999,
+		BlockNumber: leashBlock.Header.Round,
+		BlockHash:   leashBlockHashBytes,
+		BlockRange:  9999,
+	}
+
+	// This stringify-then-parse approach is used to keep the fn sig taking []byte so that
+	// the go-ethereum package is easier to remove, if needed.
+	value := ethMath.MustParseBig256(hex.EncodeToString(valueU256))
+	gasPrice := ethMath.MustParseBig256(hex.EncodeToString(gasPriceU256))
+	sk, err := crypto.ToECDSA(secretKey[:])
+	if err != nil {
+		return nil, err
+	}
+	signer := rsvSigner{sk}
+	signedCallData, err := evm.EncodeSignedCall(signer, 0xa515, caller, callee, gasLimit, gasPrice, value, data, leash)
+	if err != nil {
+		return nil, err
+	}
+
+	// Unsigned queries are sent by the zero address, which has no balance, so it will out-of-funds
+	// if the gas price or value is non-zero.
+	raw, err := e.SimulateCall(ctx, client.RoundLatest, zero, gasLimit, caller, callee, zero, signedCallData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send c10l SimulateCall: %w", err)
+	}
+	var result types.CallResult
+	if err := cbor.Unmarshal(raw, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal c10l SimulateCall result: %w", err)
+	}
+	var out []byte
+	if err := txB.DecodeResult(&result, &out); err != nil {
+		return nil, fmt.Errorf("failed to decode c10l SimulateCall result: %w", err)
+	}
+	return out, nil
+}
+
+type rsvSigner struct {
+	*ecdsa.PrivateKey
+}
+
+func (s rsvSigner) SignRSV(digest [32]byte) ([]byte, error) {
+	return crypto.Sign(digest[:], s.PrivateKey)
 }
 
 // This wraps the given EVM bytecode in an unpacker, suitable for
@@ -401,8 +478,14 @@ func evmTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error 
 	storedValHex := hex.EncodeToString(storedVal)
 	log.Info("Storage finished", "stored_value", storedValHex)
 
-	if storedValHex != strings.Repeat("0", 62)+"46" {
-		return fmt.Errorf("stored value isn't correct (expected 0x46)")
+	if c10l {
+		if storedValHex != strings.Repeat("0", 64) {
+			return fmt.Errorf("stored value isn't correct (expected 0x00 because c10l)")
+		}
+	} else {
+		if storedValHex != strings.Repeat("0", 62)+"46" {
+			return fmt.Errorf("stored value isn't correct (expected 0x46)")
+		}
 	}
 
 	log.Info("re-checking contract's EVM account balance")
