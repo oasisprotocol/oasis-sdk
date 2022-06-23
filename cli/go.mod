@@ -7,7 +7,7 @@ replace (
 
 	// v1.5.0 has broken uint parsing, use a commit with the fix until the
 	// the maintainers merge the PR: https://github.com/spf13/cast/pull/144
-	github.com/spf13/cast => github.com/abukosek/cast v0.0.0-20220606122631-eba453e69641
+	github.com/spf13/cast => github.com/oasisprotocol/cast v0.0.0-20220606122631-eba453e69641
 )
 
 require (
