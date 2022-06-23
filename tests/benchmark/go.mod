@@ -12,7 +12,8 @@ replace (
 
 	// v1.5.0 has broken uint parsing, use a commit with the fix until the
 	// the maintainers merge the PR: https://github.com/spf13/cast/pull/144
-	github.com/spf13/cast => github.com/abukosek/cast v0.0.0-20220606122631-eba453e69641
+	github.com/spf13/cast => github.com/oasisprotocol/cast v0.0.0-20220606122631-eba453e69641
+
 	github.com/tendermint/tendermint => github.com/oasisprotocol/tendermint v0.34.9-oasis2
 	golang.org/x/crypto/curve25519 => github.com/oasisprotocol/curve25519-voi/primitives/x25519 v0.0.0-20210505121811-294cf0fbfb43
 	golang.org/x/crypto/ed25519 => github.com/oasisprotocol/curve25519-voi/primitives/ed25519 v0.0.0-20210505121811-294cf0fbfb43
@@ -203,7 +204,7 @@ require (
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4 // indirect
 	golang.org/x/mod v0.5.0 // indirect
 	golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2 // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29 // indirect
 	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.5 // indirect
