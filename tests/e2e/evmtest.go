@@ -3,11 +3,14 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	_ "embed"
 	"encoding/hex"
 	"fmt"
 	"strings"
 
+	ethMath "github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/crypto"
 	"google.golang.org/grpc"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
@@ -221,7 +224,7 @@ func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn
 		testing.Dave.Address,
 		types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination),
 	)
-	_, err = txgen.SignAndSubmitTx(ctx, rtc, testing.Alice.Signer, *tx.GetTransaction(), 0)
+	_, err = txgen.SignAndSubmitTxRaw(ctx, rtc, testing.Alice.Signer, *tx.GetTransaction(), 0)
 	if err != nil {
 		return fmt.Errorf("failed to transfer from alice to dave: %w", err)
 	}
@@ -366,7 +369,7 @@ func evmTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error 
 	if err != nil {
 		return err
 	}
-	simCallResult, err := e.SimulateCall(ctx, client.RoundLatest, gasPriceU256, 64000, daveEVMAddr, contractAddr, value, []byte{})
+	simCallResult, err := evmSimulateCall(ctx, rtc, e, daveEVMAddr, testing.Dave.SecretKey, contractAddr, value, []byte{}, gasPriceU256, 64000, c10l)
 	if err != nil {
 		return fmt.Errorf("SimulateCall failed: %w", err)
 	}
@@ -608,10 +611,10 @@ func erc20EVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) e
 	// Create the EVM contract.
 	contractAddr, err := evmCreate(ctx, rtc, e, signer, zero, erc20, gasPrice, c10l)
 	if err != nil {
-		return fmt.Errorf("evmCreate failed: %w", err)
+		return fmt.Errorf("ERC20 evmCreate failed: %w", err)
 	}
 
-	log.Info("evmCreate finished", "contract_addr", hex.EncodeToString(contractAddr))
+	log.Info("ERC20 evmCreate finished", "contract_addr", hex.EncodeToString(contractAddr))
 
 	// This is the hash of the "name()" method of the contract.
 	// You can get this by clicking on "Compilation details" and then
@@ -625,11 +628,11 @@ func erc20EVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) e
 	// Call the name method.
 	callResult, err := evmCall(ctx, rtc, e, signer, contractAddr, zero, nameMethod, gasPrice, c10l)
 	if err != nil {
-		return fmt.Errorf("evmCall:name failed: %w", err)
+		return fmt.Errorf("ERC20 evmCall:name failed: %w", err)
 	}
 
 	resName := hex.EncodeToString(callResult)
-	log.Info("evmCall:name finished", "call_result", resName)
+	log.Info("ERC20 evmCall:name finished", "call_result", resName)
 
 	if len(resName) != 192 {
 		return fmt.Errorf("returned value has wrong length (expected 192, got %d)", len(resName))
@@ -654,9 +657,9 @@ func erc20EVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) e
 	if err != nil {
 		return err
 	}
-	simCallResult, err := e.SimulateCall(ctx, client.RoundLatest, gasPriceU256, 64000, daveEVMAddr, contractAddr, zero, transferMethod)
+	simCallResult, err := evmSimulateCall(ctx, rtc, e, daveEVMAddr, testing.Dave.SecretKey, contractAddr, zero, transferMethod, gasPriceU256, 64000, c10l)
 	if err != nil {
-		return fmt.Errorf("SimulateCall failed: %w", err)
+		return fmt.Errorf("ERC20 SimulateCall failed: %w", err)
 	}
 
 	// Call transfer(0x123, 0x42).
@@ -666,7 +669,7 @@ func erc20EVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) e
 	}
 
 	resTransfer := hex.EncodeToString(callResult)
-	log.Info("evmCall:transfer finished", "call_result", resTransfer)
+	log.Info("ERC20 evmCall:transfer finished", "call_result", resTransfer)
 
 	// Return value should be true.
 	if resTransfer != strings.Repeat("0", 64-1)+"1" {
@@ -675,7 +678,7 @@ func erc20EVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) e
 
 	// Result of transfer call should match what was simulated.
 	if !bytes.Equal(callResult, simCallResult) {
-		return fmt.Errorf("SimulateCall and evmCall returned different results")
+		return fmt.Errorf("ERC20 SimulateCall and evmCall returned different results")
 	}
 
 	evs, err := e.GetEvents(ctx, client.RoundLatest)

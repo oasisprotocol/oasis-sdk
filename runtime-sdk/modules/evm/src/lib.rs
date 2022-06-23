@@ -139,7 +139,7 @@ impl From<evm::ExitError> for Error {
 
             OutOfOffset => "out of offset",
             OutOfGas => "out of gas",
-            OutOfFund => "out of fund",
+            OutOfFund => "out of funds",
 
             #[allow(clippy::upper_case_acronyms)]
             PCUnderflow => "PC underflow",

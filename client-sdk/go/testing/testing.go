@@ -15,9 +15,10 @@ import (
 
 // TestKey is a key used for testing.
 type TestKey struct {
-	Signer  signature.Signer
-	Address types.Address
-	SigSpec types.SignatureAddressSpec
+	SecretKey [32]byte
+	Signer    signature.Signer
+	Address   types.Address
+	SigSpec   types.SignatureAddressSpec
 
 	// EthAddress is the corresponding Ethereum address if the key is secp256k1.
 	EthAddress [20]byte
@@ -45,6 +46,7 @@ func newSecp256k1TestKey(seed string) TestKey {
 	copy(ethAddress[:], h.Sum(nil)[32-20:])
 
 	return TestKey{
+		SecretKey:  pk,
 		Signer:     signer,
 		Address:    types.NewAddress(sigspec),
 		SigSpec:    sigspec,
