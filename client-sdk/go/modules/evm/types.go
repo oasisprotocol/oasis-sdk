@@ -40,6 +40,15 @@ type SimulateCallQuery struct {
 	Address  []byte `json:"address"`
 	Value    []byte `json:"value"`
 	Data     []byte `json:"data"`
+	Leash    *Leash `json:"leash,omitempty"`
+}
+
+// Leash limits the duration of a signed query's validity (only relevant to confidential EVM).
+type Leash struct {
+	Nonce       uint64 `json:"nonce"`
+	BlockNumber uint64 `json:"block_number"`
+	BlockHash   []byte `json:"block_hash"`
+	BlockRange  uint64 `json:"block_range"`
 }
 
 // GasCosts are the EVM module gas costs.

@@ -864,6 +864,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68b91989ae21441195d7d9b9993a2f9295c7e1a8c96255d8b729accddc124797"
 
 [[package]]
+name = "ethabi"
+version = "17.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f186de076b3e77b8e6d73c99d1b52edc2a229e604f4b5eb6992c06c11d79d537"
+dependencies = [
+ "ethereum-types",
+ "hex",
+ "sha3 0.10.1",
+ "thiserror",
+ "uint",
+]
+
+[[package]]
 name = "ethbloom"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1941,6 +1954,7 @@ dependencies = [
  "anyhow",
  "base64",
  "blake3",
+ "ethabi",
  "ethereum",
  "evm",
  "fixed-hash",
@@ -2715,7 +2729,7 @@ dependencies = [
  "serde",
  "serde_json",
  "slog",
- "time 0.3.10",
+ "time 0.3.11",
 ]
 
 [[package]]
@@ -2896,7 +2910,7 @@ dependencies = [
  "subtle",
  "subtle-encoding",
  "tendermint-proto",
- "time 0.3.10",
+ "time 0.3.11",
  "zeroize",
 ]
 
@@ -2932,7 +2946,7 @@ dependencies = [
  "tendermint",
  "tendermint-light-client-verifier",
  "tendermint-rpc",
- "time 0.3.10",
+ "time 0.3.11",
 ]
 
 [[package]]
@@ -2945,7 +2959,7 @@ dependencies = [
  "flex-error",
  "serde",
  "tendermint",
- "time 0.3.10",
+ "time 0.3.11",
 ]
 
 [[package]]
@@ -2963,7 +2977,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "subtle-encoding",
- "time 0.3.10",
+ "time 0.3.11",
 ]
 
 [[package]]
@@ -2985,7 +2999,7 @@ dependencies = [
  "tendermint-config",
  "tendermint-proto",
  "thiserror",
- "time 0.3.10",
+ "time 0.3.11",
  "url",
  "uuid",
  "walkdir",
@@ -3091,9 +3105,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.10"
+version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82501a4c1c0330d640a6e176a3d6a204f5ec5237aca029029d21864a902e27b0"
+checksum = "72c91f41dcb2f096c05f0873d667dceec1087ce5bcf984ec8ffb19acddbb3217"
 dependencies = [
  "itoa",
  "libc",

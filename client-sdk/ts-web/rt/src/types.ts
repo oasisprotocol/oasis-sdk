@@ -444,6 +444,14 @@ export interface EVMSimulateCallQuery {
     address: Uint8Array;
     value: Uint8Array;
     data: Uint8Array;
+    leash?: Leash;
+}
+
+export interface Leash {
+    nonce: oasis.types.longnum;
+    block_number: oasis.types.longnum;
+    block_hash: Uint8Array;
+    block_range: oasis.types.longnum;
 }
 
 export interface EVMLogEvent {

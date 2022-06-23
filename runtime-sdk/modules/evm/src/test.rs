@@ -28,7 +28,7 @@ use crate::{
 static TEST_CONTRACT_CODE_HEX: &str =
     include_str!("../../../../tests/e2e/contracts/evm_erc20_test_compiled.hex");
 
-struct EVMConfig;
+pub(crate) struct EVMConfig;
 
 impl Config for EVMConfig {
     type Accounts = Accounts;
@@ -38,7 +38,7 @@ impl Config for EVMConfig {
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
 }
 
-struct ConfidentialEVMConfig;
+pub(crate) struct ConfidentialEVMConfig;
 
 impl Config for ConfidentialEVMConfig {
     type Accounts = Accounts;
