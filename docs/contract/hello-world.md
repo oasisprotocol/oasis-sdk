@@ -255,7 +255,8 @@ mod test {
 ```
 
 This is it! You now have a simple hello world smart contract with included unit
-tests for its functionality.
+tests for its functionality. You can also look at other smart contract handles
+supported by the [Oasis Contract SDK].
 
 :::tip
 
@@ -263,6 +264,11 @@ tests for its functionality.
 `oasis_cbor::Decode`.
 
 :::
+
+<!-- markdownlint-disable line-length -->
+[Oasis Contract SDK]:
+  https://github.com/oasisprotocol/oasis-sdk/blob/main/contract-sdk/src/contract.rs
+<!-- markdownlint-enable line-length -->
 
 ## Building
 

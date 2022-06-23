@@ -257,17 +257,43 @@ this transaction.
 
 :::
 
-To instantiate a smart contract with the code ID obtained above, run:
+Before we instantiate the contract we need to consider the gas usage of our
+confidential smart contract. Since the execution of the smart contract is
+dependent on the (encrypted) smart contract state, the gas limit cannot be
+computed automatically. Currently, the gas limit for confidential transactions
+is tailored towards simple transaction execution (e.g. no gas is reserved for
+accessing the contract state). For more expensive transactions, we
+need to explicitly pass the `--gas-limit` parameter and *guess* the sufficient
+value for now or we will get the `out of gas` error. For example, to
+instantiate our smart contract above with a single write to the contract state,
+we need to raise the gas limit to `60000`:
 
 ```shell
-oasis contracts instantiate CODEID '{instantiate: {initial_counter: 42}}' --encrypted
+oasis contracts instantiate CODEID '{instantiate: {initial_counter: 42}}' --encrypted --gas-limit 60000
 ```
 
-We obtain a subsequent instance ID in the same way as with non-confidential
-contracts. Finally, we make a confidential call:
+:::danger
+
+The `out of gas` error can **potentially reveal the (confidential) state of the
+smart contract**! If your smart contract contains a branch which depends on the
+value stored in the contract state, an attack similar to the **timing attack**
+known from the design of cryptographic algorithms can succeed. To overcome this,
+your code should **never contain branches depending on secret smart contract
+state**.
+
+A similar gas limit attack could reveal the **client's transaction parameters**.
+For example, if calling function `A` costs `50,000` gas units and function `B`
+`300,000` gas units, the attacker could imply which function call was performed
+based on the transaction's gas limit, which is public. To mitigate this attack,
+the client should always use the maximum gas cost among all contract function
+calls - in this case `300,000`.
+
+:::
+
+Finally, we make a confidential call:
 
 ```shell
-oasis contracts call INSTANCEID '{say_hello: {who: "me"}}' --encrypted
+oasis contracts call INSTANCEID '{say_hello: {who: "me"}}' --encrypted --gas-limit 60000
 ```
 
 :::danger
