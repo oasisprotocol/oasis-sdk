@@ -1,5 +1,4 @@
 import * as oasis from '@oasisprotocol/client';
-import * as ed from '@noble/ed25519';
 
 import * as transaction from './transaction';
 import * as mrae from './mrae';
@@ -38,7 +37,7 @@ export async function encodeCall(
     call: types.Call,
     format: types.CallFormat,
     config?: EncodeConfig,
-): Promise<[types.Call, MetaEncryptedX25519DeoxysII?]> {
+): Promise<[types.Call, unknown]> {
     switch (format) {
         case transaction.CALLFORMAT_PLAIN:
             return [call, undefined];
@@ -55,15 +54,16 @@ export async function encodeCall(
             };
             const encoded: types.Call = {
                 format: transaction.CALLFORMAT_ENCRYPTED_X25519DEOXYSII,
-                method: '',
                 body: oasis.misc.toCBOR(envelope),
             };
             const meta: MetaEncryptedX25519DeoxysII = {
                 sk: sk,
                 pk: config.publicKey.key,
             };
-            return [encoded, meta];
-    }
+        return [encoded, meta];
+      default:
+	throw new Error(`callformat: unsupported call format: ${format}`)
+    }  
 }
 
 /**
@@ -73,7 +73,7 @@ export function decodeResult(
     result: types.CallResult,
     meta?: MetaEncryptedX25519DeoxysII,
 ): types.CallResult {
-    if (meta == undefined) {
+    if (meta === undefined) {
         // In case of plain-text data format, we simply pass on the result unchanged.
         return result;
     }
@@ -84,7 +84,7 @@ export function decodeResult(
         return oasis.misc.fromCBOR(pt) as types.CallResult;
     } else if (result.fail) {
         throw new Error(
-            `callformat: failed call: module :${result.fail.module} code: ${result.fail.code} message: ${result.fail.message}`,
+            `callformat: failed call: module :${result.fail.module} code: ${result.fail.code} message: ${result.fail.message}`
         );
     }
 

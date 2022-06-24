@@ -16,9 +16,9 @@
     "dependencies": {
         "@oasisprotocol/client": "^0.1.1-alpha.1",
         "elliptic": "^6.5.3",
-	"js-sha512": "^0.8.0",
+        "js-sha512": "^0.8.0",
         "sha3": "^2.1.4",
-	"tweetnacl": "^1.0.3"
+        "tweetnacl": "^1.0.3"
     },
     "devDependencies": {
         "@types/elliptic": "^6.4.14",

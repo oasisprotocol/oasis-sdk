@@ -20,7 +20,7 @@ export function deriveSymmetricKey(publicKey: Uint8Array, privateKey: Uint8Array
 
 /**
  * boxSeal boxes ("seals") the provided additional data and plaintext via
- * Deoxys-II-256-128 using a symmetcaric key derived from the provided
+ * Deoxys-II-256-128 using a symmetric key derived from the provided
  * X25519 public and private keys.
  */
 export function boxSeal(
