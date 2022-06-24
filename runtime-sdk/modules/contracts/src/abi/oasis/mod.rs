@@ -2,11 +2,7 @@
 use std::collections::BTreeSet;
 
 use oasis_contract_sdk_types as contract_sdk;
-use oasis_runtime_sdk::{
-    context::Context,
-    modules::core::{self},
-    types::token,
-};
+use oasis_runtime_sdk::{context::Context, modules::core, runtime::Runtime, types::token};
 
 use super::{gas, Abi, ExecutionContext, ExecutionResult, Info};
 use crate::{wasm::ContractError, Config, Error};
@@ -158,7 +154,11 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 // Compute how much gas was wanted.
                 let final_gas = gas::get_remaining_gas(instance);
                 let wanted_gas = initial_gas + exhausted_gas.saturating_sub(final_gas);
-                core::Error::OutOfGas(initial_gas, wanted_gas).into()
+                core::Error::out_of_gas::<<<C::Runtime as Runtime>::Core as core::API>::Config>(
+                    initial_gas,
+                    wanted_gas,
+                )
+                .into()
             } else {
                 err
             }
