@@ -127,6 +127,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			RuntimeSGXLoaderBinary:            runtimeLoader,
 			DefaultLogWatcherHandlerFactories: DefaultRuntimeLogWatcherHandlerFactories,
 			Consensus:                         f.Network.Consensus,
+			DeterministicIdentities:           true, // for allowlisting the client node on the km
 			IAS: oasis.IASCfg{
 				Mock: iasMock,
 			},
@@ -255,7 +256,12 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			{Runtime: 0, Serial: 1},
 		}
 		ff.Keymanagers = []oasis.KeymanagerFixture{
-			{RuntimeProvisioner: runtimeProvisioner, Runtime: 0, Entity: 1},
+			{
+				RuntimeProvisioner: runtimeProvisioner,
+				Runtime:            0,
+				Entity:             1,
+				PrivatePeerPubKeys: []string{"pr+KLREDcBxpWgQ/80yUrHXbyhDuBDcnxzo3td4JiIo="}, // The deterministic client node ID.
+			},
 		}
 	}
 
