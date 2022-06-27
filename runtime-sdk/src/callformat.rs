@@ -3,6 +3,7 @@ use std::convert::TryInto;
 
 use anyhow::anyhow;
 use byteorder::{BigEndian, WriteBytesExt};
+use oasis_core_runtime::consensus::beacon;
 
 use crate::{
     context::Context,
@@ -30,10 +31,10 @@ pub enum Metadata {
 }
 
 /// Derive the key pair ID for the call data encryption key pair.
-pub fn get_key_pair_id<C: Context>(ctx: &C) -> keymanager::KeyPairId {
+pub fn get_key_pair_id(epoch: beacon::EpochTime) -> keymanager::KeyPairId {
     keymanager::get_key_pair_id(&[
         &get_chain_context_for(types::callformat::CALL_DATA_KEY_PAIR_ID_CONTEXT_BASE),
-        &ctx.epoch().to_be_bytes(),
+        &epoch.to_be_bytes(),
     ])
 }
 
@@ -74,6 +75,7 @@ pub fn decode_call_ex<C: Context>(
             let envelope: types::callformat::CallEnvelopeX25519DeoxysII =
                 cbor::from_value(call.body)
                     .map_err(|_| Error::InvalidCallFormat(anyhow!("bad call envelope")))?;
+            let pk = envelope.pk;
 
             // Make sure a key manager is available in this runtime.
             let key_manager = ctx
@@ -86,16 +88,29 @@ pub fn decode_call_ex<C: Context>(
                 return Ok(None);
             }
 
+            let decrypt = |epoch: beacon::EpochTime| {
+                let keypair = key_manager
+                    .get_or_create_keys(get_key_pair_id(epoch))
+                    .map_err(|err| Error::Abort(err.into()))?;
+                let sk = keypair.input_keypair.sk;
+                // Derive shared secret via X25519 and open the sealed box.
+                deoxysii::box_open(
+                    &envelope.nonce,
+                    envelope.data.clone(),
+                    vec![],
+                    &envelope.pk,
+                    &sk.0,
+                )
+                .map(|data| (data, sk))
+            };
+
             // Get transaction key pair from the key manager. Note that only the `input_keypair`
-            // portion is used.
-            let keypair = key_manager
-                .get_or_create_keys(get_key_pair_id(ctx))
-                .map_err(|err| Error::Abort(err.into()))?;
-            let sk = keypair.input_keypair.sk;
-            // Derive shared secret via X25519 and open the sealed box.
-            let data =
-                deoxysii::box_open(&envelope.nonce, envelope.data, vec![], &envelope.pk, &sk.0)
-                    .map_err(Error::InvalidCallFormat)?;
+            // portion is used.  In case of failure, also try with previous epoch key in case the epoch
+            // transition just occurred.
+            let (data, sk) = decrypt(ctx.epoch())
+                .or_else(|_| decrypt(ctx.epoch() - 1))
+                .map_err(Error::InvalidCallFormat)?;
+
             let read_only = call.read_only;
             let call: Call = cbor::from_slice(&data)
                 .map_err(|_| Error::InvalidCallFormat(anyhow!("malformed call")))?;
@@ -108,11 +123,7 @@ pub fn decode_call_ex<C: Context>(
 
             Ok(Some((
                 call,
-                Metadata::EncryptedX25519DeoxysII {
-                    pk: envelope.pk,
-                    sk,
-                    index,
-                },
+                Metadata::EncryptedX25519DeoxysII { pk, sk, index },
             )))
         }
     }
@@ -135,7 +146,7 @@ pub fn encode_call<C: Context>(
                 Error::InvalidCallFormat(anyhow!("confidential transactions not available"))
             })?;
             let runtime_keypair = key_manager
-                .get_or_create_keys(get_key_pair_id(ctx))
+                .get_or_create_keys(get_key_pair_id(ctx.epoch()))
                 .map_err(|err| Error::Abort(err.into()))?;
             let runtime_pk = runtime_keypair.input_keypair.pk;
             let nonce = [0u8; deoxysii::NONCE_SIZE];
@@ -235,7 +246,7 @@ pub fn decode_result<C: Context>(
                 .key_manager()
                 .ok_or_else(|| Error::InvalidCallFormat(anyhow!("confidential txs unavailable")))?;
             let keypair = key_manager
-                .get_or_create_keys(get_key_pair_id(ctx))
+                .get_or_create_keys(get_key_pair_id(ctx.epoch()))
                 .map_err(|err| Error::Abort(err.into()))?;
             let runtime_pk = keypair.input_keypair.pk;
 

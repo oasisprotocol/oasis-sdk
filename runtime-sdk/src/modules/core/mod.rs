@@ -659,7 +659,7 @@ impl<Cfg: Config> Module<Cfg> {
             .key_manager()
             .ok_or_else(|| Error::InvalidArgument(anyhow!("key manager not available")))?;
         let public_key = key_manager
-            .get_public_key(callformat::get_key_pair_id(ctx))
+            .get_public_key(callformat::get_key_pair_id(ctx.epoch()))
             .map_err(|err| Error::Abort(err.into()))?
             .ok_or_else(|| Error::InvalidArgument(anyhow!("key not available")))?;
 
