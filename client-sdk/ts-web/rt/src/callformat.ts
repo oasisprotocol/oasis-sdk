@@ -54,16 +54,17 @@ export async function encodeCall(
             };
             const encoded: types.Call = {
                 format: transaction.CALLFORMAT_ENCRYPTED_X25519DEOXYSII,
+                method: '',
                 body: oasis.misc.toCBOR(envelope),
             };
             const meta: MetaEncryptedX25519DeoxysII = {
                 sk: sk,
                 pk: config.publicKey.key,
             };
-        return [encoded, meta];
-      default:
-	throw new Error(`callformat: unsupported call format: ${format}`)
-    }  
+            return [encoded, meta];
+        default:
+            throw new Error(`callformat: unsupported call format: ${format}`);
+    }
 }
 
 /**
@@ -84,7 +85,7 @@ export function decodeResult(
         return oasis.misc.fromCBOR(pt) as types.CallResult;
     } else if (result.fail) {
         throw new Error(
-            `callformat: failed call: module :${result.fail.module} code: ${result.fail.code} message: ${result.fail.message}`
+            `callformat: failed call: module :${result.fail.module} code: ${result.fail.code} message: ${result.fail.message}`,
         );
     }
 

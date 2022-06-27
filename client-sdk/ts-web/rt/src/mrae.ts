@@ -1,8 +1,8 @@
 import * as oasis from '@oasisprotocol/client';
 import * as nacl from 'tweetnacl';
 import {sha512_256} from 'js-sha512';
-
-var deoxysii = require('deoxysii');
+// @ts-expect-error missing declaration
+import * as deoxysii from 'deoxysii';
 
 const BOX_KDF_TWEAK = 'MRAE_Box_Deoxys-II-256-128';
 
@@ -15,7 +15,7 @@ export function deriveSymmetricKey(publicKey: Uint8Array, privateKey: Uint8Array
     const pmk = nacl.scalarMult(privateKey, publicKey);
     var kdf = sha512_256.hmac.create(BOX_KDF_TWEAK);
     kdf.update(pmk);
-    return oasis.misc.fromHex(kdf.hex());
+    return new Uint8Array(kdf.arrayBuffer());
 }
 
 /**
