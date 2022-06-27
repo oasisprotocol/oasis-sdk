@@ -136,6 +136,19 @@ pub enum Error {
     TxSimulationFailed(#[from] TxSimulationFailure),
 }
 
+impl Error {
+    /// Generate a proper OutOfGas error, depending on whether the module is configured to emit gas
+    /// use information or not.
+    pub fn out_of_gas<Cfg: Config>(limit: u64, wanted: u64) -> Self {
+        if Cfg::EMIT_GAS_USED_EVENTS {
+            Self::OutOfGas(limit, wanted)
+        } else {
+            // Mask gas used information.
+            Self::OutOfGas(0, 0)
+        }
+    }
+}
+
 /// Simulation failure error.
 #[derive(Error, Debug)]
 pub struct TxSimulationFailure {
@@ -221,6 +234,9 @@ impl module::Parameters for Parameters {
 }
 
 pub trait API {
+    /// Module configuration.
+    type Config: Config;
+
     /// Attempt to use gas. If the gas specified would cause either total used to exceed
     /// its limit, fails with Error::OutOfGas or Error::BatchOutOfGas, and neither gas usage is
     /// increased.
@@ -344,6 +360,8 @@ impl<Cfg: Config> Module<Cfg> {
 }
 
 impl<Cfg: Config> API for Module<Cfg> {
+    type Config = Cfg;
+
     fn use_batch_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error> {
         // Do not enforce batch limits for check-tx.
         if ctx.is_check_only() {
@@ -373,7 +391,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         let new_gas_used = {
             let sum = gas_used.checked_add(gas).ok_or(Error::GasOverflow)?;
             if sum > gas_limit {
-                return Err(Error::OutOfGas(gas_limit, sum));
+                return Err(Error::out_of_gas::<Cfg>(gas_limit, sum));
             }
             sum
         };
