@@ -620,6 +620,23 @@ export interface ContractsCode {
 }
 
 /**
+ * Code storage information query.
+ */
+export interface ContractsCodeStorageQuery {
+    /**
+     * Code identifier.
+     */
+    id: oasis.types.longnum;
+}
+
+export interface ContractsCodeStorageQueryResult {
+    /**
+     * Stored contract code.
+     */
+    code: Uint8Array;
+}
+
+/**
  * Instance information query.
  */
 export interface ContractsInstanceQuery {
