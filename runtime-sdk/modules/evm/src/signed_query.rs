@@ -184,6 +184,13 @@ mod test {
         <C10lCfg as Config>::Accounts::set_nonce(&mut state, sdk_address, leash.nonce);
     }
 
+    fn setup_stale_nonce<C: Context>(ctx: &mut C, query: &SimulateCallQuery) {
+        let leash = query.leash.as_ref().unwrap();
+        let mut state = ctx.runtime_state();
+        let sdk_address = C10lCfg::map_address(query.caller.into());
+        <C10lCfg as Config>::Accounts::set_nonce(&mut state, sdk_address, leash.nonce + 1);
+    }
+
     fn setup_block<C: Context>(ctx: &mut C, query: &SimulateCallQuery) {
         let leash = query.leash.as_ref().unwrap();
         let mut block_hashes = state::block_hashes(ctx.runtime_state());
@@ -236,6 +243,7 @@ mod test {
         let mut ctx = mock.create_ctx();
 
         setup_block(&mut ctx, &query);
+        setup_stale_nonce(&mut ctx, &query);
 
         assert!(matches!(
             verify::<_, C10lCfg>(&mut ctx, query, signature).unwrap_err(),
