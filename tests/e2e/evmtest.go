@@ -73,7 +73,7 @@ func evmCreate(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer s
 	var gasLimit uint64 = 1_000_000
 	if !c10l {
 		// Gas estimation does not work with confidentiality.
-		gasLimit, err = core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &testing.Dave.Address}, txB.GetTransaction(), true)
+		gasLimit, err = core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &testing.Dave.Address}, txB.GetTransaction(), false)
 		if err != nil {
 			return nil, fmt.Errorf("failed to estimate gas: %w", err)
 		}
@@ -104,7 +104,7 @@ func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer sig
 	var gasLimit uint64 = 1_000_000
 	if !c10l {
 		// Gas estimation does not work with confidentiality.
-		if gasLimit, err = core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{EthAddress: &testing.Dave.EthAddress}, txB.GetTransaction(), false); err != nil {
+		if gasLimit, err = core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &testing.Dave.Address}, txB.GetTransaction(), false); err != nil {
 			return nil, fmt.Errorf("failed to estimate gas: %w", err)
 		}
 	}
