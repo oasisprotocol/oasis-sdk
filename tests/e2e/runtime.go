@@ -86,7 +86,7 @@ func NewRuntimeScenario(runtimeName string, tests []RunTestFunction) *RuntimeSce
 	sc.Flags.String(cfgRuntimeLoader, "../../../oasis-core/target/default/debug/oasis-core-runtime-loader", "path to the runtime loader")
 	sc.Flags.String(cfgKeymanagerBinary, "", "path to the keymanager binary")
 	sc.Flags.Bool(cfgIasMock, true, "if mock IAS service should be used")
-	sc.Flags.String(cfgRuntimeProvisioner, "sandbox", "the runtime provisioner: mock, unconfined, or sandbox")
+	sc.Flags.String(cfgRuntimeProvisioner, "sandboxed", "the runtime provisioner: mock, unconfined, or sandboxed")
 
 	return sc
 }
