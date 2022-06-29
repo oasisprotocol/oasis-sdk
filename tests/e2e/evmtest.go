@@ -142,6 +142,9 @@ func evmSimulateCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, ca
 	}
 	leashBlockHash := leashBlock.Header.EncodedHash()
 	leashBlockHashBytes, err := leashBlockHash.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal leash block hash: %w", err)
+	}
 
 	leash := evm.Leash{
 		Nonce:       9999,

@@ -11,7 +11,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 )
 
-// Signer is a type that produces secp256k1 signatures in RSV format.
+// RSVSigner is a type that produces secp256k1 signatures in RSV format.
 type RSVSigner interface {
 	// Sign returns a 65-byte secp256k1 signature as (R || S || V) over the provided digest.
 	SignRSV(digest [32]byte) ([]byte, error)
@@ -40,10 +40,10 @@ type SignedQueryEnvelope struct {
 // EncodeSignedCall returns a value that should be set as the `data` field of `SimulateCall`.
 //
 // This method does not encrypt `data`, so that should be done in advance, if required.
-func EncodeSignedCall(signer RSVSigner, chainId uint64, caller, callee []byte, gasLimit uint64, gasPrice, value *big.Int, data []byte, leash Leash) ([]byte, error) {
+func EncodeSignedCall(signer RSVSigner, chainID uint64, caller, callee []byte, gasLimit uint64, gasPrice, value *big.Int, data []byte, leash Leash) ([]byte, error) {
 	gasPriceU256 := math.U256Bytes(gasPrice)
 	valueU256 := math.U256Bytes(value)
-	signable := packCall(chainId, caller, callee, gasLimit, gasPrice, value, data, leash)
+	signable := packCall(chainID, caller, callee, gasLimit, gasPrice, value, data, leash)
 	signature, err := signTypedData(signer, signable)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign call: %w", err)
@@ -65,7 +65,7 @@ func EncodeSignedCall(signer RSVSigner, chainId uint64, caller, callee []byte, g
 	return envelopedCall, nil
 }
 
-func packCall(chainId uint64, caller, callee []byte, gasLimit uint64, gasPrice *big.Int, value *big.Int, data []byte, leash Leash) apitypes.TypedData {
+func packCall(chainID uint64, caller, callee []byte, gasLimit uint64, gasPrice *big.Int, value *big.Int, data []byte, leash Leash) apitypes.TypedData {
 	if value == nil {
 		value = big.NewInt(0)
 	}
@@ -103,13 +103,13 @@ func packCall(chainId uint64, caller, callee []byte, gasLimit uint64, gasPrice *
 		Domain: apitypes.TypedDataDomain{
 			Name:              "oasis-runtime-sdk/evm: signed query",
 			Version:           "1.0.0",
-			ChainId:           math.NewHexOrDecimal256(int64(chainId)),
+			ChainId:           math.NewHexOrDecimal256(int64(chainID)),
 			VerifyingContract: "",
 			Salt:              "",
 		},
 		Message: map[string]interface{}{
-			"from":     hex.EncodeToString(caller[:]),
-			"to":       hex.EncodeToString(callee[:]),
+			"from":     hex.EncodeToString(caller),
+			"to":       hex.EncodeToString(callee),
 			"value":    &valueU256,
 			"gasLimit": math.NewHexOrDecimal256(int64(gasLimit)),
 			"gasPrice": &gasPriceU256,
@@ -124,7 +124,7 @@ func packCall(chainId uint64, caller, callee []byte, gasLimit uint64, gasPrice *
 	}
 }
 
-/// signTypedData is based on go-ethereum/core/signer but modified to use an in-memory signer.
+// signTypedData is based on go-ethereum/core/signer but modified to use an in-memory signer.
 func signTypedData(signer RSVSigner, typedData apitypes.TypedData) ([]byte, error) {
 	domainSeparator, err := typedData.HashStruct("EIP712Domain", typedData.Domain.Map())
 	if err != nil {

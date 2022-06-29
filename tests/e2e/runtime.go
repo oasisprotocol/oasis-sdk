@@ -260,7 +260,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				RuntimeProvisioner: runtimeProvisioner,
 				Runtime:            0,
 				Entity:             1,
-				PrivatePeerPubKeys: []string{"pr+KLREDcBxpWgQ/80yUrHXbyhDuBDcnxzo3td4JiIo="}, // The deterministic client node ID.
+				PrivatePeerPubKeys: []string{"pr+KLREDcBxpWgQ/80yUrHXbyhDuBDcnxzo3td4JiIo="}, // The deterministic client node pub key.
 			},
 		}
 	}
