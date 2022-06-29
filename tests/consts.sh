@@ -16,4 +16,4 @@ GITHUB_ARTIFACT_VERSION=''
 
 # Version from Buildkite.
 # e.g. '4759'
-BUILD_NUMBER='8907' # v22.1.7
+BUILD_NUMBER='8907' # v22.1.8
