@@ -75,12 +75,12 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-oasis-runtime-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "runtime-sdk/v0.1.0" }
+oasis-runtime-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk" }
 ```
 
 :::info
 
-We are using Git tags for releases instead of releasing Rust packages on
+We are using the Git repository directly instead of releasing Rust packages on
 crates.io.
 
 :::
@@ -95,19 +95,27 @@ use std::collections::BTreeMap;
 
 use oasis_runtime_sdk::{self as sdk, modules, types::token::Denomination, Version};
 
+/// Configuration of the various modules.
+pub struct Config;
+
 // The base runtime type.
 //
 // Note that everything is statically defined, so the runtime has no state.
 pub struct Runtime;
 
+impl modules::core::Config for Config {}
+
 impl sdk::Runtime for Runtime {
     // Use the crate version from Cargo.toml as the runtime version.
     const VERSION: Version = sdk::version_from_cargo!();
 
+    // Define the module that provides the core API.
+    type Core = modules::core::Module<Config>;
+
     // Define the modules that the runtime will be composed of. Here we just use
     // the core and accounts modules from the SDK. Later on we will go into
     // detail on how to create your own modules.
-    type Modules = (modules::core::Module, modules::accounts::Module);
+    type Modules = (modules::core::Module<Config>, modules::accounts::Module);
 
     // Define the genesis (initial) state for all of the specified modules. This
     // state is used when the runtime is first initialized.
@@ -121,7 +129,9 @@ impl sdk::Runtime for Runtime {
                 parameters: modules::core::Parameters {
                     max_batch_gas: 10_000,
                     max_tx_signers: 8,
+                    max_tx_size: 10_000,
                     max_multisig_signers: 8,
+                    min_gas_price: BTreeMap::from([(Denomination::NATIVE, 0)]),
                     ..Default::default()
                 },
             },
@@ -131,27 +141,17 @@ impl sdk::Runtime for Runtime {
                     gas_costs: modules::accounts::GasCosts { tx_transfer: 100 },
                     ..Default::default()
                 },
-                balances: {
-                    let mut b = BTreeMap::new();
-                    // Alice.
-                    b.insert(sdk::testing::keys::alice::address(), {
-                        let mut d = BTreeMap::new();
-                        d.insert(Denomination::NATIVE, 1_000.into());
-                        d
-                    });
-                    // Bob.
-                    b.insert(sdk::testing::keys::bob::address(), {
-                        let mut d = BTreeMap::new();
-                        d.insert(Denomination::NATIVE, 2_000.into());
-                        d
-                    });
-                    b
-                },
-                total_supplies: {
-                    let mut ts = BTreeMap::new();
-                    ts.insert(Denomination::NATIVE, 3_000.into());
-                    ts
-                },
+                balances: BTreeMap::from([
+                    (
+                        sdk::testing::keys::alice::address(),
+                        BTreeMap::from([(Denomination::NATIVE, 1_000_000_000)]),
+                    ),
+                    (
+                        sdk::testing::keys::bob::address(),
+                        BTreeMap::from([(Denomination::NATIVE, 2_000_000_000)]),
+                    ),
+                ]),
+                total_supplies: BTreeMap::from([(Denomination::NATIVE, 3_000_000_000)]),
                 ..Default::default()
             },
         )
@@ -166,9 +166,9 @@ SDK.
 
 :::danger
 
-While the test keys are nice for testing they should never be used in production
-versions of the runtimes as the private keys are generated from publicly known
-seeds.
+While the test keys are nice for testing they __should never be used in
+production__ versions of the runtimes as the private keys are generated from
+publicly known seeds!
 
 :::
 
@@ -234,11 +234,11 @@ you can use the `oasis-net-runner` provided in Oasis Core. This will set up a
 small network of local nodes that will run the runtime.
 
 ```bash
-mkdir -p /tmp/minimal-runtime-test
-${OASIS_CORE_PATH}/bin/oasis-net-runner \
-    --fixture.default.node.binary ${OASIS_CORE_PATH}/bin/oasis-node \
+rm -rf /tmp/minimal-runtime-test; mkdir -p /tmp/minimal-runtime-test
+${OASIS_CORE_PATH}/oasis-net-runner \
+    --fixture.default.node.binary ${OASIS_CORE_PATH}/oasis-node \
     --fixture.default.runtime.binary target/debug/minimal-runtime \
-    --fixture.default.runtime.loader ${OASIS_CORE_PATH}/bin/oasis-core-runtime-loader \
+    --fixture.default.runtime.loader ${OASIS_CORE_PATH}/oasis-core-runtime-loader \
     --fixture.default.runtime.provisioner unconfined \
     --fixture.default.keymanager.binary '' \
     --basedir /tmp/minimal-runtime-test \
@@ -254,7 +254,7 @@ level=info module=net-runner caller=root.go:152 ts=2021-06-14T08:42:47.219513806
 ```
 <!-- markdownlint-enable line-length -->
 
-:::info
+:::tip
 
 The local network runner will take control of the current terminal until you
 terminate it via Ctrl+C. For the rest of the guide keep the local network
@@ -262,13 +262,150 @@ running and use a separate terminal to run the client.
 
 :::
 
+## Testing From Oasis CLI
+
+After you have the runtime running in your local network, the next step is to
+test that it actually works. First, let's add a new `localhost` network to the
+Oasis CLI and provide the path to the local socket file reported above:
+
+```bash
+oasis network add-local localhost unix:/tmp/minimal-runtime-test/net-runner/network/client-0/internal.sock
+? Description: localhost
+? Denomination symbol: TEST
+? Denomination decimal places: 9
+```
+
+Now, let's see, if the local network was correctly initialized and the runtime
+is ready:
+
+```bash
+oasis inspect node-status --network localhost
+```
+
+If everything is working correctly, you should see the `"status": "ready"`
+under the runtime's `"committee"` field after a while and an increasing
+`"latest_round"` value:
+
+```
+      "committee": {
+        "status": "ready",
+        "active_version": {
+          "minor": 1
+        },
+        "latest_round": 19,
+        "latest_height": 302,
+        "executor_roles": null,
+```
+
+:::info
+
+When you restart `oasis-net-runner`, a new [chain context] will be generated
+and you will have to remove the `localhost` network and add it again to Oasis
+CLI.
+
+:::
+
+Now, let's add `minimal` runtime to the wallet. By default, `oasis-net-runner`
+assigns ID `8000000000000000000000000000000000000000000000000000000000000000`
+to the first provided runtime.
+
+```bash
+oasis paratime add localhost minimal 8000000000000000000000000000000000000000000000000000000000000000
+? Description: minimal
+? Denomination symbol: TEST
+? Denomination decimal places: 9
+```
+
+Finally, we import _Alice's_ account to our wallet with a private key below:
+
+```bash
+oasis wallet import alice
+? Import kind: private key
+? Algorithm: ed25519-raw
+? Private key (base64-encoded): [Enter 2 empty lines to finish]OPYg5hO22BvHgHmtjo/dZgyn/+efqDhcAfcZ6NsMKhc1w/M1bdhTZP66A1S1Ra2hCdG9s4v11hJoF9uMcs/WkQ==
+
+? Private key (base64-encoded): 
+OPYg5hO22BvHgHmtjo/dZgyn/+efqDhcAfcZ6NsMKhc1w/M1bdhTZP66A1S1Ra2hCdG9s4v11hJoF9uMcs/WkQ==
+? Choose a new passphrase: 
+? Repeat passphrase:
+```
+
+If the Oasis CLI was configured correctly, you should see the balance of Alice's
+account in the runtime:
+
+```bash
+oasis accounts show --network localhost --paratime minimal --account alice
+Address: oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve
+Nonce: 0
+
+=== CONSENSUS LAYER (localhost) ===
+  Total: 0.0 TEST
+  Available: 0.0 TEST
+
+
+
+=== minimal PARATIME ===
+Balances for all denominations:
+  1.0 TEST
+```
+
+Sending some TEST in your runtime should also work. Let's send 0.1 TEST to
+Bob's address `oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx`:
+
+```bash
+oasis accounts transfer 0.1 oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx --network localhost --paratime minimal --account alice 
+Unlock your account.
+? Passphrase: 
+You are about to sign the following transaction:
+{
+  "v": 1,
+  "call": {
+    "method": "accounts.Transfer",
+    "body": "omJ0b1UAyND0Wds45cwxynfmbSxEVty+tQJmYW1vdW50gkQF9eEAQA=="
+  },
+  "ai": {
+    "si": [
+      {
+        "address_spec": {
+          "signature": {
+            "ed25519": "NcPzNW3YU2T+ugNUtUWtoQnRvbOL9dYSaBfbjHLP1pE="
+          }
+        },
+        "nonce": 0
+      }
+    ],
+    "fee": {
+      "amount": {
+        "Amount": "0",
+        "Denomination": ""
+      },
+      "gas": 100
+    }
+  }
+}
+
+Account:  alice
+Network:  localhost (localhost)
+Paratime: minimal (minimal)
+? Sign this transaction? Yes
+(In case you are using a hardware-based signer you may need to confirm on device.)
+Broadcasting transaction...
+Transaction included in block successfully.
+Round:            14
+Transaction hash: 03a73bd08fb23472673ea45938b0871edd9ecd2cd02b3061d49c0906a772348a
+Execution successful.
+```
+
+[chain context]: /oasis-core/crypto#chain-domain-separation
+
 ## Testing From a Client
 
-After you have the runtme running in your local network, the next step is to
-test that it actually works. The best way to do this is to create a simple
-Go client and submit some transactions and queries.
+While the Oasis CLI is useful to quickly get your hands dirty, a more convenient
+way for writing end-to-end tests for your runtime once it grows is to create a
+Go client. Let's see how to use Go bindings for Oasis Runtime SDK in practice
+to submit some transactions and perform queries.
 
-Create a `tests` directory and move into it, creating a Go module:
+First, create a `tests` directory and move into it, creating a Go module:
 
 ```bash
 go mod init example.com/oasisprotocol/minimal-runtime-client
@@ -397,13 +534,13 @@ func main() {
     // Create a transfer transaction with Bob's address as the destination and 10 native base units
     // as the amount.
     tb := rc.Accounts.Transfer(
-            testing.Bob.Address,
-            types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination),
-        ).
+        testing.Bob.Address,
+        types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination),
+    ).
         // Configure gas as set in genesis parameters. We could also estimate it instead.
         SetFeeGas(100).
         // Append transaction authentication information using a single signature variant.
-        AppendAuthSignature(testing.Alice.Signer.Public(), nonce)
+        AppendAuthSignature(testing.Alice.SigSpec, nonce)
     // Sign the transaction using the signer. Before a transaction can be submitted it must be
     // signed by all configured signers. This will automatically fetch the corresponding chain
     // domain separation context for the runtime.
@@ -428,7 +565,13 @@ func main() {
 }
 ```
 
-And build it using:
+Fetch the dependencies:
+
+```bash
+go get
+```
+
+And build it:
 
 ```bash
 go build
@@ -450,21 +593,21 @@ The output should be something like the following:
 
 <!-- markdownlint-disable line-length -->
 ```
-ts=2021-06-17T10:27:20.610110939Z level=info module=minimal-runtime-client caller=test.go:79 msg="connecting to local node"
-ts=2021-06-17T10:27:20.610257327Z level=info module=minimal-runtime-client caller=test.go:101 msg="dumping initial balances"
+level=info ts=2022-06-28T14:08:02.834961397Z caller=test.go:81 module=minimal-runtime-client msg="connecting to local node"
+level=info ts=2022-06-28T14:08:02.836059713Z caller=test.go:103 module=minimal-runtime-client msg="dumping initial balances"
 === Balances for oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve ===
-<native>: 990
+<native>: 1000000000
 
 === Balances for oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx ===
-<native>: 2010
+<native>: 2000000000
 
-ts=2021-06-17T10:27:20.618605387Z level=info module=minimal-runtime-client caller=test.go:115 msg="performing transfer" nonce=1
-ts=2021-06-17T10:27:21.665858845Z level=info module=minimal-runtime-client caller=test.go:144 msg="dumping final balances"
+level=info ts=2022-06-28T14:08:02.864348758Z caller=test.go:117 module=minimal-runtime-client msg="performing transfer" nonce=0
+level=info ts=2022-06-28T14:08:18.515842571Z caller=test.go:146 module=minimal-runtime-client msg="dumping final balances"
 === Balances for oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve ===
-<native>: 980
+<native>: 999999990
 
 === Balances for oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx ===
-<native>: 2020
+<native>: 2000000010
 
 ```
 <!-- markdownlint-enable line-length -->

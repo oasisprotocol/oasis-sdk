@@ -127,18 +127,16 @@ The SDK requires utilities provided by [Oasis Core] in order to be able to run
 a local test network for development purposes.
 
 The recommended way is to download a pre-built release (at least version
-21.3.10) from the [Oasis Core releases page]. After downloading the binary
-release (e.g. into `~/Downloads/oasis_core_21.3.10_linux_amd64.tar.gz`), unpack
-it into a local directory (this guide will use `~/.oasis/core/v21.3.10/bin`) as
-follows:
+22.1.8) from the [Oasis Core releases] page. After downloading the binary
+release (e.g. into `~/Downloads/oasis_core_22.1.8_linux_amd64.tar.gz`), unpack
+it as follows:
 
 ```bash
-# This environment variable is used throughout this guide.
-export OASIS_CORE_PATH=~/.oasis/core/v21.3.10
+cd ~/Downloads
+tar xf ~/Downloads/oasis_core_22.1.8_linux_amd64.tar.gz --strip-components=1
 
-mkdir -p ${OASIS_CORE_PATH}/bin
-cd ${OASIS_CORE_PATH}/bin
-tar xf ~/Downloads/oasis_core_21.3.10_linux_amd64.tar.gz --strip-components=1
+# This environment variable will be used throughout this guide.
+export OASIS_CORE_PATH=~/Downloads/oasis_core_22.1.8_linux_amd64
 ```
 
 [Oasis Core]: /oasis-core
