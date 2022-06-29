@@ -18,15 +18,14 @@ FIXTURE_FILE="/tmp/oasis-net-runner-sdk-rt/fixture.json"
     --fixture.default.runtime.loader "$TEST_RUNTIME_LOADER" \
     --fixture.default.keymanager.binary "$TEST_KM_BINARY" \
     --fixture.default.halt_epoch 100000 \
+    --fixture.default.runtime.version 0.1.0 \
+    --fixture.default.runtime.version 0.1.0 \
     --fixture.default.staking_genesis ./staking.json >"$FIXTURE_FILE"
 
 # Allow expensive gas estimation and expensive queries.
-# Set runtime versions.
 jq '
   .clients[0].runtime_config."2".estimate_gas_by_simulating_contracts = true |
-  .clients[0].runtime_config."2".allowed_queries = [{all_expensive: true}] |
-  .runtimes[1].deployments[0].version = {major: 0, minor: 1, patch: 0} |
-  .runtimes[2].deployments[0].version = {major: 0, minor: 1, patch: 0}
+  .clients[0].runtime_config."2".allowed_queries = [{all_expensive: true}]
 ' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
