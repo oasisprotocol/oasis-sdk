@@ -1,10 +1,9 @@
 //! Simple EVM runtime.
 use std::collections::BTreeMap;
 
-use oasis_runtime_sdk::{
-    self as sdk, config, keymanager::TrustedPolicySigners, modules, types::token::Denomination,
-    Version,
-};
+#[cfg(feature = "confidential")]
+use oasis_runtime_sdk::keymanager::TrustedPolicySigners;
+use oasis_runtime_sdk::{self as sdk, config, modules, types::token::Denomination, Version};
 use oasis_runtime_sdk_evm as evm;
 
 /// Simple EVM runtime.

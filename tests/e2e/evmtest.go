@@ -121,7 +121,7 @@ func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer sig
 	return out, nil
 }
 
-func evmSimulateCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, caller []byte, secretKey [32]byte, callee, valueU256, data, gasPriceU256 []byte, gasLimit uint64, c10l c10lity) ([]byte, error) {
+func evmSimulateCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, caller []byte, secretKey []byte, callee, valueU256, data, gasPriceU256 []byte, gasLimit uint64, c10l c10lity) ([]byte, error) {
 	if !c10l {
 		return e.SimulateCall(ctx, client.RoundLatest, gasPriceU256, gasLimit, caller, callee, valueU256, data)
 	}
@@ -157,7 +157,7 @@ func evmSimulateCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, ca
 	// the go-ethereum package is easier to remove, if needed.
 	value := ethMath.MustParseBig256(hex.EncodeToString(valueU256))
 	gasPrice := ethMath.MustParseBig256(hex.EncodeToString(gasPriceU256))
-	sk, err := crypto.ToECDSA(secretKey[:])
+	sk, err := crypto.ToECDSA(secretKey)
 	if err != nil {
 		return nil, err
 	}
