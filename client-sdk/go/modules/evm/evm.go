@@ -189,3 +189,8 @@ func DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
 func NewV1(rtc client.RuntimeClient) V1 {
 	return &v1{rtc: rtc}
 }
+
+// NewCallTx generates a new evm.Call transaction.
+func NewCallTx(fee *types.Fee, body *Call) *types.Transaction {
+	return types.NewTransaction(fee, methodCall, body)
+}
