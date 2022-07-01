@@ -49,6 +49,18 @@ var (
 		EVMParametersTest,
 	})
 
+	// C10lEVMRuntime is the c10l-evm runtime test.
+	C10lEVMRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-c10l-evm", []RunTestFunction{
+		SimpleEVMDepositWithdrawTest,
+		C10lEVMTest,
+		C10lSolEVMTest,
+		C10lSolEVMTestCreateMulti,
+		C10lERC20EVMTest,
+		C10lEVMSuicideTest,
+		C10lEVMCallSuicideTest,
+		EVMParametersTest,
+	})
+
 	// SimpleContractsRuntime is the simple-contracts runtime test.
 	SimpleContractsRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-contracts", []RunTestFunction{
 		ContractsTest,
@@ -69,6 +81,7 @@ func RegisterScenarios() error {
 		SimpleKVRuntime,
 		SimpleConsensusRuntime,
 		SimpleEVMRuntime,
+		C10lEVMRuntime,
 		SimpleContractsRuntime,
 	} {
 		if err := cmd.Register(s); err != nil {

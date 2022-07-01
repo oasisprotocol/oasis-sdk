@@ -1,6 +1,8 @@
 //! Simple EVM runtime.
 use std::collections::BTreeMap;
 
+#[cfg(feature = "confidential")]
+use oasis_runtime_sdk::keymanager::TrustedPolicySigners;
 use oasis_runtime_sdk::{self as sdk, config, modules, types::token::Denomination, Version};
 use oasis_runtime_sdk_evm as evm;
 
@@ -18,6 +20,8 @@ impl evm::Config for Config {
     const CHAIN_ID: u64 = 0xa515;
 
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
+
+    const CONFIDENTIAL: bool = cfg!(feature = "confidential");
 }
 
 impl sdk::Runtime for Runtime {
@@ -37,6 +41,11 @@ impl sdk::Runtime for Runtime {
         modules::core::Module<Config>,
         evm::Module<Config>,
     );
+
+    #[cfg(feature = "confidential")]
+    fn trusted_policy_signers() -> Option<TrustedPolicySigners> {
+        Some(TrustedPolicySigners::default())
+    }
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {
         (

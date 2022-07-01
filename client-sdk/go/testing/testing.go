@@ -3,33 +3,39 @@ package testing
 import (
 	"crypto/sha512"
 
+	sr25519voi "github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
 	"golang.org/x/crypto/sha3"
 
+	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	memorySigner "github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/memory"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/sr25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 // TestKey is a key used for testing.
 type TestKey struct {
-	Signer  signature.Signer
-	Address types.Address
-	SigSpec types.SignatureAddressSpec
+	SecretKey []byte
+	Signer    signature.Signer
+	Address   types.Address
+	SigSpec   types.SignatureAddressSpec
 
 	// EthAddress is the corresponding Ethereum address if the key is secp256k1.
 	EthAddress [20]byte
 }
 
 func newEd25519TestKey(seed string) TestKey {
-	signer := ed25519.WrapSigner(memorySigner.NewTestSigner(seed))
+	ms := memorySigner.NewTestSigner(seed)
+	signer := ed25519.WrapSigner(ms)
 	sigspec := types.NewSignatureAddressSpecEd25519(signer.Public().(ed25519.PublicKey))
 	return TestKey{
-		Signer:  signer,
-		Address: types.NewAddress(sigspec),
-		SigSpec: sigspec,
+		SecretKey: ms.(coreSignature.UnsafeSigner).UnsafeBytes(),
+		Signer:    signer,
+		Address:   types.NewAddress(sigspec),
+		SigSpec:   sigspec,
 	}
 }
 
@@ -45,10 +51,28 @@ func newSecp256k1TestKey(seed string) TestKey {
 	copy(ethAddress[:], h.Sum(nil)[32-20:])
 
 	return TestKey{
+		SecretKey:  pk[:],
 		Signer:     signer,
 		Address:    types.NewAddress(sigspec),
 		SigSpec:    sigspec,
 		EthAddress: ethAddress,
+	}
+}
+
+func newSr25519TestKey(seed string) TestKey {
+	msk := sr25519voi.MiniSecretKey(sha512.Sum512_256([]byte(seed)))
+	sk := msk.ExpandEd25519()
+	signer := sr25519.NewSignerFromKeyPair(sk.KeyPair())
+	sigspec := types.NewSignatureAddressSpecSr25519(signer.Public().(sr25519.PublicKey))
+	skBinary, err := sk.MarshalBinary()
+	if err != nil {
+		panic(err)
+	}
+	return TestKey{
+		SecretKey: skBinary,
+		Signer:    signer,
+		Address:   types.NewAddress(sigspec),
+		SigSpec:   sigspec,
 	}
 }
 
@@ -61,4 +85,10 @@ var (
 	Charlie = newEd25519TestKey("oasis-runtime-sdk/test-keys: charlie")
 	// Dave is the test key D.
 	Dave = newSecp256k1TestKey("oasis-runtime-sdk/test-keys: dave")
+	// Eve is the test key E.
+	Eve = newSecp256k1TestKey("oasis-runtime-sdk/test-keys: eve")
+	// Frank is the test key F.
+	Frank = newSr25519TestKey("oasis-runtime-sdk/test-keys: frank")
+	// Grace is the test key G.
+	Grace = newSr25519TestKey("oasis-runtime-sdk/test-keys: grace")
 )

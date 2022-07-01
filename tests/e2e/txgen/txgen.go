@@ -14,7 +14,6 @@ import (
 	voiSr "github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
-	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	coreMemSig "github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/memory"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
@@ -100,9 +99,9 @@ func CheckInvariants(ctx context.Context, rtc client.RuntimeClient) error {
 	return rtc.Query(ctx, client.RoundLatest, "core.CheckInvariants", nil, nil)
 }
 
-// SignAndSubmitTx signs and submits the given transaction.
+// SignAndSubmitTxRaw signs and submits the given transaction.
 // Gas estimation is done automatically.
-func SignAndSubmitTx(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, tx types.Transaction, extraGas uint64) (cbor.RawMessage, error) {
+func SignAndSubmitTxRaw(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, tx types.Transaction, extraGas uint64) (*types.CallResult, error) {
 	// Get chain context.
 	chainCtx, err := GetChainContext(ctx, rtc)
 	if err != nil {
@@ -127,8 +126,8 @@ func SignAndSubmitTx(ctx context.Context, rtc client.RuntimeClient, signer signa
 	}
 
 	// Submit the signed transaction.
-	var result cbor.RawMessage
-	if result, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction()); err != nil {
+	var result *types.CallResult
+	if result, err = rtc.SubmitTxRaw(ctx, stx.UnverifiedTransaction()); err != nil {
 		return nil, err
 	}
 	return result, nil
@@ -167,7 +166,7 @@ func CreateAndFundAccount(ctx context.Context, rtc client.RuntimeClient, funder 
 		To:     types.NewAddress(sigspecForSigner(sig)),
 		Amount: types.NewBaseUnits(*quantity.NewFromUint64(fundAmount), types.NativeDenomination),
 	})
-	if _, err := SignAndSubmitTx(ctx, rtc, funder, *tx, 0); err != nil {
+	if _, err := SignAndSubmitTxRaw(ctx, rtc, funder, *tx, 0); err != nil {
 		return nil, err
 	}
 
@@ -240,7 +239,7 @@ func Generate(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 					}
 
 					// Sign and submit the generated transaction.
-					if _, err = SignAndSubmitTx(ctx, rtc, acct, *tx, 0); err != nil {
+					if _, err = SignAndSubmitTxRaw(ctx, rtc, acct, *tx, 0); err != nil {
 						atomic.AddUint64(&subErrCount, 1)
 					} else {
 						atomic.AddUint64(&okCount, 1)

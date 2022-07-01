@@ -139,7 +139,7 @@ impl From<evm::ExitError> for Error {
 
             OutOfOffset => "out of offset",
             OutOfGas => "out of gas",
-            OutOfFund => "out of fund",
+            OutOfFund => "out of funds",
 
             #[allow(clippy::upper_case_acronyms)]
             PCUnderflow => "PC underflow",
@@ -356,7 +356,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             ctx.is_simulation()
                 && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
         );
-        Self::encode_evm_result(ctx, evm_result, tx_metadata)
+        Self::encode_evm_result(ctx, evm_result, tx_metadata, ctx.tx_call_format())
     }
 
     fn call<C: TxContext>(
@@ -394,7 +394,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             ctx.is_simulation()
                 && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
         );
-        Self::encode_evm_result(ctx, evm_result, tx_metadata)
+        Self::encode_evm_result(ctx, evm_result, tx_metadata, ctx.tx_call_format())
     }
 
     fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
@@ -482,7 +482,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                 )
             })
         });
-        Self::encode_evm_result(ctx, evm_result, tx_metadata)
+        Self::encode_evm_result(ctx, evm_result, tx_metadata, transaction::CallFormat::Plain)
     }
 }
 
@@ -628,9 +628,13 @@ impl<Cfg: Config> Module<Cfg> {
     fn encode_evm_result<C: Context>(
         ctx: &C,
         evm_result: Result<Vec<u8>, Error>,
-        tx_metadata: callformat::Metadata,
+        tx_metadata: callformat::Metadata, // Potentially parsed from an inner enveloped tx.
+        outer_call_format: transaction::CallFormat, // The outermost call format.
     ) -> Result<Vec<u8>, Error> {
-        if !Cfg::CONFIDENTIAL {
+        if !Cfg::CONFIDENTIAL || !matches!(outer_call_format, transaction::CallFormat::Plain) {
+            // Either the runtime is non-confidential and all responses are plaintext,
+            // or the tx was sent using a confidential call format and dispatcher will
+            // encrypt the call in the normal way.
             return evm_result;
         }
         let call_result = match evm_result {

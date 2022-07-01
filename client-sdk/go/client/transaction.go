@@ -130,10 +130,6 @@ func (tb *TransactionBuilder) AppendSign(ctx context.Context, signer signature.S
 
 // DecodeResult decodes a result of executing a transaction signed by this builder.
 func (tb *TransactionBuilder) DecodeResult(result *types.CallResult, rsp interface{}) error {
-	if tb.ts == nil {
-		return fmt.Errorf("unable to submit unsigned transaction")
-	}
-
 	result, err := tb.decodeResult(result, tb.callMeta)
 	if err != nil {
 		return err

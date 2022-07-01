@@ -57,6 +57,11 @@ cd "${TESTS_DIR}"/runtimes/simple-evm
 cargo build
 cp "${TESTS_DIR}"/../target/debug/test-runtime-simple-evm "${TEST_BASE_DIR}"/
 
+printf "${CYAN}### Building test c10l-evm runtime...${OFF}\n"
+cd "${TESTS_DIR}"/runtimes/simple-evm
+cargo build --features confidential
+cp "${TESTS_DIR}"/../target/debug/test-runtime-simple-evm "${TEST_BASE_DIR}"/test-runtime-c10l-evm
+
 printf "${CYAN}### Building test simple-contracts runtime...${OFF}\n"
 cd "${TESTS_DIR}"/runtimes/simple-contracts
 cargo build
