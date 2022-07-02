@@ -1,8 +1,8 @@
 import * as oasis from '@oasisprotocol/client';
-import * as nacl from 'tweetnacl';
-import {sha512_256} from 'js-sha512';
 // @ts-expect-error missing declaration
 import * as deoxysii from 'deoxysii';
+import {sha512_256} from 'js-sha512';
+import * as nacl from 'tweetnacl';
 
 const BOX_KDF_TWEAK = 'MRAE_Box_Deoxys-II-256-128';
 
