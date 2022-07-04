@@ -704,6 +704,43 @@ export interface ContractsInstanceStorageQueryResult {
 }
 
 /**
+ * Kind of store to query.
+ */
+export type StoreKind = number;
+
+/**
+ * Instance raw storage query.
+ */
+export interface ContractsInstanceRawStorageQuery {
+    /**
+     * Instance identifier.
+     */
+    id: oasis.types.longnum;
+
+    /**
+     * Kind of store to query.
+     */
+    store_kind: StoreKind;
+
+    /**
+     * Maximum number of items per page.
+     */
+    limit?: oasis.types.longnum;
+
+    /**
+     * Number of skipped items.
+     */
+    offset?: oasis.types.longnum;
+}
+
+export interface ContractsInstanceRawStorageQueryResult {
+    /**
+     * List of key-value pairs in contract's public store.
+     */
+    items: [Uint8Array, Uint8Array][];
+}
+
+/**
  * Public key query.
  */
 export interface ContractsPublicKeyQuery {
