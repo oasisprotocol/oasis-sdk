@@ -139,6 +139,18 @@ type CodeQuery struct {
 	ID CodeID `json:"id"`
 }
 
+// CodeStorageQuery is the body of the contracts.CodeStorage query.
+type CodeStorageQuery struct {
+	// ID is the code identifier.
+	ID CodeID `json:"id"`
+}
+
+// CodeStorageQueryResult is the result of the contracts.CodeStorage query.
+type CodeStorageQueryResult struct {
+	// Code is the stored contract code.
+	Code []byte `json:"code"`
+}
+
 // InstanceQuery is the body of the contracts.Instance query.
 type InstanceQuery struct {
 	// ID is the instance identifier.

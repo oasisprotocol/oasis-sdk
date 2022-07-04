@@ -309,7 +309,7 @@ impl<Cfg: Config> Module<Cfg> {
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let code_info_store =
             storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::CODE_INFO));
-        let code_info: types::Code = code_info_store
+        let code_info = code_info_store
             .get(code_id.to_storage_key())
             .ok_or_else(|| Error::CodeNotFound(code_id.as_u64()))?;
 
@@ -644,6 +644,17 @@ impl<Cfg: Config> Module<Cfg> {
         args: types::CodeQuery,
     ) -> Result<types::Code, Error> {
         Self::load_code_info(ctx, args.id)
+    }
+
+    #[handler(query = "contracts.CodeStorage")]
+    pub fn query_code_storage<C: Context>(
+        ctx: &mut C,
+        args: types::CodeStorageQuery,
+    ) -> Result<types::CodeStorageQueryResult, Error> {
+        let code_info = Self::load_code_info(ctx, args.id)?;
+        let code = Self::load_code(ctx, &code_info)?;
+
+        Ok(types::CodeStorageQueryResult { code })
     }
 
     #[handler(query = "contracts.Instance")]

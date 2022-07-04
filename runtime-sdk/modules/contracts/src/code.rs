@@ -19,14 +19,14 @@ static CODE_CACHE: Lazy<Mutex<lru::LruCache<Hash, Vec<u8>>>> =
     Lazy::new(|| Mutex::new(lru::LruCache::new(128)));
 
 impl<Cfg: Config> Module<Cfg> {
-    /// Stores specified code information.
+    /// Loads code with the specified code identifier.
     pub fn load_code<C: Context>(ctx: &mut C, code_info: &types::Code) -> Result<Vec<u8>, Error> {
         let mut cache = CODE_CACHE.lock().unwrap();
         if let Some(code) = cache.get(&code_info.hash) {
             return Ok(code.clone());
         }
 
-        // TODO: Spport local untrusted cache to avoid storage queries.
+        // TODO: Support local untrusted cache to avoid storage queries.
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let code_store = storage::PrefixStore::new(&mut store, &state::CODE);
         let code = code_store

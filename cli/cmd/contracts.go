@@ -35,7 +35,7 @@ var (
 
 	contractsShowCmd = &cobra.Command{
 		Use:   "show <instance-id>",
-		Short: "Show information about a deployed contract",
+		Short: "Show information about instantiated contract",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := cliConfig.Global()
@@ -91,6 +91,34 @@ var (
 			fmt.Printf("ABI:                %s (sv: %d)\n", code.ABI, code.ABISubVersion)
 			fmt.Printf("Uploader:           %s\n", code.Uploader)
 			fmt.Printf("Instantiate policy: %s\n", formatPolicy(&code.InstantiatePolicy))
+		},
+	}
+
+	contractsDumpCodeCmd = &cobra.Command{
+		Use:   "dump-code <code-id>",
+		Short: "Dump WebAssembly smart contract code",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := cliConfig.Global()
+			npa := common.GetNPASelection(cfg)
+			strCodeID := args[0]
+
+			if npa.ParaTime == nil {
+				cobra.CheckErr("no paratimes configured")
+			}
+
+			codeID, err := strconv.ParseUint(strCodeID, 10, 64)
+			cobra.CheckErr(err)
+
+			ctx := context.Background()
+			conn, err := connection.Connect(ctx, npa.Network)
+			cobra.CheckErr(err)
+
+			// Fetch WASM contract code, if supported.
+			codeStorage, err := conn.Runtime(npa.ParaTime).Contracts.CodeStorage(ctx, client.RoundLatest, contracts.CodeID(codeID))
+			cobra.CheckErr(err)
+
+			os.Stdout.Write(codeStorage.Code)
 		},
 	}
 
@@ -340,6 +368,7 @@ func init() {
 	contractsShowCmd.Flags().AddFlagSet(common.SelectorFlags)
 
 	contractsShowCodeCmd.Flags().AddFlagSet(common.SelectorFlags)
+	contractsDumpCodeCmd.Flags().AddFlagSet(common.SelectorFlags)
 
 	contractsUploadFlags := flag.NewFlagSet("", flag.ContinueOnError)
 	contractsUploadFlags.StringVar(&contractsInstantiatePolicy, "instantiate-policy", "everyone", "contract instantiation policy")
@@ -365,6 +394,7 @@ func init() {
 
 	contractsCmd.AddCommand(contractsShowCmd)
 	contractsCmd.AddCommand(contractsShowCodeCmd)
+	contractsCmd.AddCommand(contractsDumpCodeCmd)
 	contractsCmd.AddCommand(contractsUploadCmd)
 	contractsCmd.AddCommand(contractsInstantiateCmd)
 	contractsCmd.AddCommand(contractsCallCmd)

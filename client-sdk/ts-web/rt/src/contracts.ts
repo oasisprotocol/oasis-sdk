@@ -34,6 +34,7 @@ export const METHOD_CALL = 'contracts.Call';
 export const METHOD_UPGRADE = 'contracts.Upgrade';
 // Queries.
 export const METHOD_CODE = 'contracts.Code';
+export const METHOD_CODE_STORAGE = 'contracts.CodeStorage';
 export const METHOD_INSTANCE = 'contracts.Instance';
 export const METHOD_INSTANCE_STORAGE = 'contracts.InstanceStorage';
 export const METHOD_PUBLIC_KEY = 'contracts.PublicKey';
@@ -63,6 +64,11 @@ export class Wrapper extends wrapper.Base {
     }
     queryCode() {
         return this.query<types.ContractsCodeQuery, types.ContractsCode>(METHOD_CODE);
+    }
+    queryCodeStorage() {
+        return this.query<types.ContractsCodeStorageQuery, types.ContractsCodeStorageQueryResult>(
+            METHOD_CODE_STORAGE,
+        );
     }
     queryInstance() {
         return this.query<types.ContractsInstanceQuery, types.ContractsInstance>(METHOD_INSTANCE);
