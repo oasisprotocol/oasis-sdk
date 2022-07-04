@@ -23,13 +23,14 @@ const (
 	methodChangeUpgradePolicy = "contracts.ChangeUpgradePolicy"
 
 	// Queries.
-	methodCode            = "contracts.Code"
-	methodCodeStorage     = "contracts.CodeStorage"
-	methodInstance        = "contracts.Instance"
-	methodInstanceStorage = "contracts.InstanceStorage"
-	methodPublicKey       = "contracts.PublicKey"
-	methodCustom          = "contracts.Custom"
-	methodParameters      = "contracts.Parameters"
+	methodCode               = "contracts.Code"
+	methodCodeStorage        = "contracts.CodeStorage"
+	methodInstance           = "contracts.Instance"
+	methodInstanceStorage    = "contracts.InstanceStorage"
+	methodInstanceRawStorage = "contracts.InstanceRawStorage"
+	methodPublicKey          = "contracts.PublicKey"
+	methodCustom             = "contracts.Custom"
+	methodParameters         = "contracts.Parameters"
 )
 
 // V1 is the v1 contracts module interface.
@@ -87,8 +88,11 @@ type V1 interface {
 	// Instance queries the given instance information.
 	Instance(ctx context.Context, round uint64, id InstanceID) (*Instance, error)
 
-	// InstanceStorage queries the given instance's storage.
+	// InstanceStorage queries the given instance's public storage.
 	InstanceStorage(ctx context.Context, round uint64, id InstanceID, key []byte) (*InstanceStorageQueryResult, error)
+
+	// InstanceRawStorage returns the key-value pairs of contract instance storage.
+	InstanceRawStorage(ctx context.Context, round uint64, id InstanceID, kind StoreKind, limit, offset uint64) (*InstanceRawStorageQueryResult, error)
 
 	// PublicKey queries the given instance's public key.
 	PublicKey(ctx context.Context, round uint64, id InstanceID, kind PublicKeyKind) (*PublicKeyQueryResult, error)
@@ -211,6 +215,16 @@ func (a *v1) Instance(ctx context.Context, round uint64, id InstanceID) (*Instan
 func (a *v1) InstanceStorage(ctx context.Context, round uint64, id InstanceID, key []byte) (*InstanceStorageQueryResult, error) {
 	var rsp InstanceStorageQueryResult
 	err := a.rc.Query(ctx, round, methodInstanceStorage, &InstanceStorageQuery{ID: id, Key: key}, &rsp)
+	if err != nil {
+		return nil, err
+	}
+	return &rsp, nil
+}
+
+// Implements V1.
+func (a *v1) InstanceRawStorage(ctx context.Context, round uint64, id InstanceID, storeKind StoreKind, limit uint64, offset uint64) (*InstanceRawStorageQueryResult, error) {
+	var rsp InstanceRawStorageQueryResult
+	err := a.rc.Query(ctx, round, methodInstanceRawStorage, &InstanceRawStorageQuery{ID: id, StoreKind: storeKind, Limit: limit, Offset: offset}, &rsp)
 	if err != nil {
 		return nil, err
 	}
