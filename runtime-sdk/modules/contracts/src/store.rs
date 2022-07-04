@@ -59,13 +59,7 @@ pub fn for_instance<'a, C: Context>(
         None
     };
 
-    let store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-    let instance_prefix = instance_info.id.to_storage_key();
-    let contract_state = storage::PrefixStore::new(
-        storage::PrefixStore::new(store, &state::INSTANCE_STATE),
-        instance_prefix,
-    );
-    let contract_state = storage::PrefixStore::new(contract_state, store_kind.prefix());
+    let contract_state = get_instance_raw_store(ctx, instance_info, store_kind);
 
     match store_kind {
         // For public storage we use a hashed store using the Blake3 hash function.
@@ -86,4 +80,20 @@ pub fn for_instance<'a, C: Context>(
             Ok(Box::new(confidential_store))
         }
     }
+}
+
+/// Return the public of confidential raw store of the provided contract instance.
+pub fn get_instance_raw_store<'a, C: Context>(
+    ctx: &'a mut C,
+    instance_info: &types::Instance,
+    store_kind: StoreKind,
+) -> impl Store + 'a {
+    let store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+    let instance_prefix = instance_info.id.to_storage_key();
+    let contract_state = storage::PrefixStore::new(
+        storage::PrefixStore::new(store, &state::INSTANCE_STATE),
+        instance_prefix,
+    );
+
+    storage::PrefixStore::new(contract_state, store_kind.prefix())
 }

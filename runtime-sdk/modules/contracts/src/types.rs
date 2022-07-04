@@ -227,6 +227,39 @@ pub struct InstanceStorageQueryResult {
     pub value: Option<Vec<u8>>,
 }
 
+/// Exposed wrapper for oasis-contract-sdk-types::StoreKind.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[repr(u32)]
+pub enum StoreKind {
+    Public = 0,
+    Confidential = 1,
+}
+
+/// Instance raw storage query.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct InstanceRawStorageQuery {
+    /// Instance identifier.
+    pub id: InstanceId,
+
+    /// Kind of the store to query.
+    pub store_kind: StoreKind,
+
+    /// Maximum number of items per page.
+    #[cbor(optional, default)]
+    pub limit: Option<u64>,
+
+    /// Number of skipped items.
+    #[cbor(optional, default)]
+    pub offset: Option<u64>,
+}
+
+/// Instance raw storage query result.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct InstanceRawStorageQueryResult {
+    /// List of key-value pairs in contract's public store.
+    pub items: Vec<(Vec<u8>, Vec<u8>)>,
+}
+
 /// Public key kind.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 #[repr(u8)]

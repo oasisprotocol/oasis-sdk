@@ -17,7 +17,10 @@ use oasis_contract_sdk::{
         token, CodeId, InstanceId,
     },
 };
-use oasis_contract_sdk_storage::cell::{ConfidentialCell, PublicCell};
+use oasis_contract_sdk_storage::{
+    cell::{ConfidentialCell, PublicCell},
+    map::{ConfidentialMap, PublicMap},
+};
 
 /// All possible errors that can be returned by the contract.
 ///
@@ -150,6 +153,13 @@ const COUNTER: PublicCell<u64> = PublicCell::new(b"counter");
 /// Storage cell for the confidential counter.
 const CONFIDENTIAL_COUNTER: ConfidentialCell<u64> = ConfidentialCell::new(b"confidential_counter");
 
+/// Storage for the call public timestamps.
+const TIMESTAMPS: PublicMap<String, u64> = PublicMap::new(b"timestamps");
+
+/// Storage for the call confidential timestamps.
+const CONFIDENTIAL_TIMESTAMPS: ConfidentialMap<String, u64> =
+    ConfidentialMap::new(b"confidential_timestamps");
+
 impl HelloWorld {
     /// Increment the counter and return the previous value.
     fn increment_counter<C: sdk::Context>(ctx: &mut C, inc: u64) -> u64 {
@@ -165,6 +175,12 @@ impl HelloWorld {
         CONFIDENTIAL_COUNTER.set(ctx.confidential_store(), confidential_counter + inc);
 
         counter
+    }
+
+    /// Stores the counter value for the given user.
+    fn store_timestamp<C: sdk::Context>(ctx: &mut C, who: String, timestamp: u64) {
+        TIMESTAMPS.insert(ctx.public_store(), who.clone(), timestamp);
+        CONFIDENTIAL_TIMESTAMPS.insert(ctx.confidential_store(), who, timestamp);
     }
 }
 
@@ -197,6 +213,9 @@ impl sdk::Contract for HelloWorld {
             Request::SayHello { who } => {
                 // Increment the counter and retrieve the previous value.
                 let counter = Self::increment_counter(ctx, 1);
+
+                // Store current counter value as timestamp.
+                Self::store_timestamp(ctx, who.clone(), counter);
 
                 // Emit a test event.
                 ctx.emit_event(Event::Hello("world".to_string()));
