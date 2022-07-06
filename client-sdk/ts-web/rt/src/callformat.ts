@@ -51,7 +51,14 @@ export function encodeCallWithNonceAndKeys(
                 throw new Error('callformat: runtime call data public key not set');
             }
             const rawCall = oasis.misc.toCBOR(call);
-            const sealedCall = mraeDeoxysii.boxSeal(nonce, rawCall, null, config.publicKey.key, sk);
+            const zeroBuffer = new Uint8Array(0);
+            const sealedCall = mraeDeoxysii.boxSeal(
+                nonce,
+                rawCall,
+                zeroBuffer,
+                config.publicKey.key,
+                sk,
+            );
             const envelope: types.CallEnvelopeX25519DeoxysII = {
                 pk: pk,
                 nonce: nonce,
@@ -107,17 +114,24 @@ export function decodeResult(
             return result;
         case transaction.CALLFORMAT_ENCRYPTED_X25519DEOXYSII:
             if (result.unknown) {
-                const envelop = oasis.misc.fromCBOR(
-                    result.unknown,
-                ) as types.ResultEnvelopeX25519DeoxysII;
-                const pt = mraeDeoxysii.boxOpen(
-                    envelop.nonce,
-                    envelop.data,
-                    null,
-                    meta.pk,
-                    meta.sk,
-                );
-                return oasis.misc.fromCBOR(pt) as types.CallResult;
+                if (meta) {
+                    const envelop = oasis.misc.fromCBOR(
+                        result.unknown,
+                    ) as types.ResultEnvelopeX25519DeoxysII;
+                    const zeroBuffer = new Uint8Array(0);
+                    const pt = mraeDeoxysii.boxOpen(
+                        envelop?.nonce,
+                        envelop?.data,
+                        zeroBuffer,
+                        meta.pk,
+                        meta.sk,
+                    );
+                    return oasis.misc.fromCBOR(pt) as types.CallResult;
+                } else {
+                    throw new Error(
+                        `callformat: MetaEncryptedX25519DeoxysII data is required for callformat: CALLFORMAT_ENCRYPTED_X25519DEOXYSII`,
+                    );
+                }
             } else if (result.fail) {
                 throw new Error(
                     `callformat: failed call: module: ${result.fail.module} code: ${result.fail.code} message: ${result.fail.message}`,
