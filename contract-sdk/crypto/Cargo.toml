@@ -4,7 +4,7 @@ name = "oasis-contract-sdk-crypto"
 description = "A collection of types and cryptography helpers for the Oasis Contract SDK."
 version = "0.1.0"
 authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
-edition = "2018"
+edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
