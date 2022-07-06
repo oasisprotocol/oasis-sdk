@@ -66,4 +66,8 @@ pub trait Crypto {
         message: &[u8],
         additional_data: &[u8],
     ) -> Result<Vec<u8>, CryptoError>;
+
+    /// Fills `dst` with cryptographically secure random bytes.
+    /// Returns the number of bytes written.
+    fn random_bytes(&self, dst: &mut [u8]) -> usize;
 }

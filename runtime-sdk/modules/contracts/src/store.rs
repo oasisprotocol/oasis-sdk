@@ -47,7 +47,7 @@ pub fn for_instance<'a, C: Context>(
     let round = ctx.runtime_header().round;
     let confidential_key: Option<StateKey> = if let StoreKind::Confidential = store_kind {
         let kmgr_client = ctx.key_manager().ok_or(Error::Unsupported)?;
-        let kid = keymanager::get_key_pair_id(&[
+        let kid = keymanager::get_key_pair_id([
             CONFIDENTIAL_STORE_KEY_PAIR_ID_CONTEXT_BASE,
             &instance_info.id.to_storage_key(),
         ]);

@@ -154,6 +154,9 @@ impl Crypto for MockEnv {
             crypto::deoxysii::Error::DecryptionFailed => CryptoError::DecryptionFailed,
             _ => panic!("unexpected crypto error"),
         })
+
+    fn random_bytes(&self, dst: &mut [u8]) -> usize {
+        0
     }
 }
 

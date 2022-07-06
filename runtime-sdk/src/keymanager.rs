@@ -209,9 +209,12 @@ impl KeyManager for KeyManagerClientWithContext {
 pub const KEY_PAIR_ID_CONTEXT: &[u8] = b"oasis-runtime-sdk/keymanager: key pair id";
 
 /// Derive a `KeyPairId` for use with the key manager functions.
-pub fn get_key_pair_id(context: &[&[u8]]) -> KeyPairId {
+pub fn get_key_pair_id<'a, C>(context: C) -> KeyPairId
+where
+    C: IntoIterator<Item = &'a [u8]> + 'a,
+{
     let mut h = TupleHash::v256(KEY_PAIR_ID_CONTEXT);
-    for item in context {
+    for item in context.into_iter() {
         h.update(item);
     }
     let mut key_pair_id = [0u8; 32];

@@ -55,7 +55,7 @@ pub fn confidential_storage<'a, C: Context>(
             .set(cnt + 1);
         cnt
     };
-    let is_simulation = ctx.is_simulation();
+    let mode = ctx.mode();
 
     let contract_storages = contract_storage(ctx.runtime_state(), CONFIDENTIAL_STORAGES, address);
     let confidential_storages = storage::ConfidentialStore::new_with_key(
@@ -64,7 +64,7 @@ pub fn confidential_storage<'a, C: Context>(
         &[
             round.to_le_bytes().as_slice(),
             instance_count.to_le_bytes().as_slice(),
-            &[is_simulation as u8],
+            &[ctx.mode() as u8],
         ],
     );
     storage::TypedStore::new(Box::new(confidential_storages))

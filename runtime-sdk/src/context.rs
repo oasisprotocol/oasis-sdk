@@ -5,7 +5,10 @@ use std::{
     fmt,
     marker::PhantomData,
     ops::{Deref, DerefMut},
-    sync::Arc,
+    sync::{
+        atomic::{AtomicU64, Ordering::SeqCst},
+        Arc,
+    },
 };
 
 use io_context::Context as IoContext;
@@ -32,6 +35,7 @@ use crate::{
 
 /// Transaction execution mode.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[repr(u8)]
 pub enum Mode {
     ExecuteTx,
     CheckTx,
@@ -282,6 +286,12 @@ pub trait Context {
     {
         self.with_child(Mode::SimulateTx, f)
     }
+
+    /// Returns a random number generator.
+    /// Successively produces generators are independent.
+    fn rng(&self, _pers: &[&[u8]]) -> Option<crate::crypto::random::Rng> {
+        None
+    }
 }
 
 impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
@@ -475,6 +485,8 @@ pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: NestedStore> {
     /// Per-context values.
     values: BTreeMap<&'static str, Box<dyn Any>>,
 
+    rng_instance_count: Arc<AtomicU64>,
+
     _runtime: PhantomData<R>,
 }
 
@@ -510,6 +522,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             max_messages,
             messages: Vec::new(),
             values: BTreeMap::new(),
+            rng_instance_count: Default::default(),
             _runtime: PhantomData,
         }
     }
@@ -542,6 +555,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             max_messages: ctx.max_messages,
             messages: Vec::new(),
             values: BTreeMap::new(),
+            rng_instance_count: Default::default(),
             _runtime: PhantomData,
         }
     }
@@ -671,9 +685,14 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
+            rng_instance_count: self.rng_instance_count.clone(), // Keep count across sub-calls.
             _runtime: PhantomData,
         };
         f(child_ctx)
+    }
+
+    fn rng(&self, pers: &[&[u8]]) -> Option<crate::crypto::random::Rng> {
+        crate::crypto::random::Rng::new(self, self.rng_instance_count.fetch_add(1, SeqCst), pers)
     }
 }
 
@@ -919,6 +938,7 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
+            rng_instance_count: Default::default(),
             _runtime: PhantomData,
         };
         f(child_ctx)

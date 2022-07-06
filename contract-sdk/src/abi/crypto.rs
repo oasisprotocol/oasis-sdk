@@ -56,4 +56,7 @@ extern "C" {
         additional_data_ptr: u32,
         additional_data_len: u32,
     ) -> u32;
+
+    #[link_name = "random_bytes"]
+    pub(crate) fn crypto_random_bytes(output_ptr: u32, output_len: u32) -> u32;
 }
