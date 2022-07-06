@@ -1883,6 +1883,7 @@ dependencies = [
  "oasis-core-runtime",
  "oasis-runtime-sdk-macros",
  "once_cell",
+ "rand_chacha 0.3.1",
  "rand_core 0.6.4",
  "schnorrkel",
  "sha2 0.9.9",
