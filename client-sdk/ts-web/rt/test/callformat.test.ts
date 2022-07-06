@@ -31,11 +31,11 @@ describe('callformat', () => {
                 unknown: sealedCall.body as Uint8Array,
             };
 
-            var decodedResult = await oasisRT.callformat.decodeResult(
+            var decodedResult = (await oasisRT.callformat.decodeResult(
                 fakedResult,
                 oasisRT.transaction.CALLFORMAT_ENCRYPTED_X25519DEOXYSII,
                 meta as oasisRT.callformat.MetaEncryptedX25519DeoxysII,
-            ) as oasisRT.types.Call;
+            )) as oasisRT.types.Call;
             expect(decodedResult.body).toEqual(message);
         });
     });
