@@ -120,7 +120,7 @@ export function decodeResult(
                 return oasis.misc.fromCBOR(pt) as types.CallResult;
             } else if (result.fail) {
                 throw new Error(
-                    `callformat: failed call: module :${result.fail.module} code: ${result.fail.code} message: ${result.fail.message}`,
+                    `callformat: failed call: module: ${result.fail.module} code: ${result.fail.code} message: ${result.fail.message}`,
                 );
             }
             throw Object.assign(new Error(`callformat: unexpected result: ${result.ok}`), {
