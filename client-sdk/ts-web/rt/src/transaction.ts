@@ -17,6 +17,7 @@ export const LATEST_TRANSACTION_VERSION = 1;
  * Plain text call data.
  */
 export const CALLFORMAT_PLAIN = 0;
+
 /**
  * Encrypted call data using X25519 for key exchange and Deoxys-II for symmetric encryption.
  */

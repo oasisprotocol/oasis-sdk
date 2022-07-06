@@ -8,15 +8,19 @@
     "scripts": {
         "prepare": "tsc",
         "check-playground": "cd playground && tsc -p jsconfig.json",
-        "fmt": "prettier --write playground/src src",
-        "lint": "prettier --check playground/src src",
+        "fmt": "prettier --write playground/src src test",
+        "lint": "prettier --check playground/src src test",
         "playground": "cd playground && webpack s -c webpack.config.js",
         "test": "jest"
     },
     "dependencies": {
         "@oasisprotocol/client": "^0.1.1-alpha.1",
+        "deoxysii": "^0.0.2",
         "elliptic": "^6.5.3",
-        "sha3": "^2.1.4"
+        "js-sha512": "^0.8.0",
+        "randombytes": "^2.0.1",
+        "sha3": "^2.1.4",
+        "tweetnacl": "^1.0.3"
     },
     "devDependencies": {
         "@types/elliptic": "^6.4.14",
