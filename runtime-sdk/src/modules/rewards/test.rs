@@ -66,9 +66,7 @@ fn test_init_incorrect_rewards_schedule() {
                 },
                 participation_threshold_numerator: 3,
                 participation_threshold_denominator: 4,
-                ..Default::default()
             },
-            ..Default::default()
         },
     );
 }
@@ -92,19 +90,19 @@ fn test_init_incorrect_participation_threshold() {
                 },
                 participation_threshold_numerator: 10, // Invalid numerator.
                 participation_threshold_denominator: 4,
-                ..Default::default()
             },
-            ..Default::default()
         },
     );
 }
 
 #[test]
 fn test_reward_disbursement() {
-    let mut mock = mock::Mock::default();
+    let mut mock = mock::Mock {
+        epoch: 0,
+        ..Default::default()
+    };
 
     // Configure some good entities so they get the rewards.
-    mock.epoch = 0;
     mock.runtime_round_results.good_compute_entities = vec![
         keys::bob::pk_ed25519().into(),
         keys::charlie::pk_ed25519().into(),
@@ -127,9 +125,7 @@ fn test_reward_disbursement() {
                 },
                 participation_threshold_numerator: 3,
                 participation_threshold_denominator: 4,
-                ..Default::default()
             },
-            ..Default::default()
         },
     );
 

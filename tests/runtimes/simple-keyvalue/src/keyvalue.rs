@@ -285,7 +285,7 @@ impl Module {
     }
 
     fn get_key_pair<C: Context>(ctx: &mut C, id: &[u8]) -> Result<KeyPair, Error> {
-        let kid = get_key_pair_id(&[id]);
+        let kid = get_key_pair_id([id]);
         let kmgr = ctx
             .key_manager()
             .ok_or(Error::Abort(sdk::dispatcher::Error::Aborted))?;

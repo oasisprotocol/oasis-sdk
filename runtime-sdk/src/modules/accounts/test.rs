@@ -928,10 +928,10 @@ fn test_check_invariants_more() {
         },
         total_supplies: {
             let mut total_supplies = BTreeMap::new();
-            total_supplies.insert(dn.clone(), 1_000_000);
+            total_supplies.insert(dn, 1_000_000);
             total_supplies.insert(d1.clone(), 3_000);
-            total_supplies.insert(d2.clone(), 100);
-            total_supplies.insert(d3.clone(), 200);
+            total_supplies.insert(d2, 100);
+            total_supplies.insert(d3, 200);
             total_supplies
         },
         ..Default::default()
@@ -958,7 +958,7 @@ fn test_check_invariants_more() {
     );
 
     assert!(
-        Accounts::inc_total_supply(ctx.runtime_state(), &BaseUnits::new(100, d1.clone())).is_ok(),
+        Accounts::inc_total_supply(ctx.runtime_state(), &BaseUnits::new(100, d1)).is_ok(),
         "increasing total supply should succeed"
     );
     assert!(
@@ -983,7 +983,7 @@ fn test_check_invariants_more() {
     );
 
     assert!(
-        Accounts::inc_total_supply(ctx.runtime_state(), &BaseUnits::new(300, d4.clone())).is_ok(),
+        Accounts::inc_total_supply(ctx.runtime_state(), &BaseUnits::new(300, d4)).is_ok(),
         "increasing total supply should succeed"
     );
     assert!(
@@ -1003,12 +1003,7 @@ fn test_check_invariants_more() {
     );
 
     assert!(
-        Accounts::add_amount(
-            ctx.runtime_state(),
-            charlie,
-            &BaseUnits::new(123, d5.clone())
-        )
-        .is_ok(),
+        Accounts::add_amount(ctx.runtime_state(), charlie, &BaseUnits::new(123, d5)).is_ok(),
         "giving Charlie more money should succeed"
     );
     assert!(
@@ -1253,7 +1248,6 @@ fn test_transaction_expiry() {
             },
             not_before: Some(10),
             not_after: Some(42),
-            ..Default::default()
         },
     };
 

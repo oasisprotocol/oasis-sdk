@@ -56,7 +56,7 @@ impl HostEnv {
                 let region = HostRegionRef::from_slice(context);
                 (region.offset, region.length)
             }
-            None | _ => (0, 0),
+            _ => (0, 0),
         };
         let message_region = HostRegionRef::from_slice(message);
         let signature_region = HostRegionRef::from_slice(signature);
