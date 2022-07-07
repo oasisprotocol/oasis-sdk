@@ -331,7 +331,7 @@ func parsePolicy(net *config.Network, wallet *cliConfig.Account, policy string) 
 		return &contracts.Policy{Address: &address}
 	case strings.HasPrefix(policy, "address:"):
 		policy = strings.TrimPrefix(policy, "address:")
-		address, err := helpers.ResolveAddress(net, policy)
+		address, err := common.ResolveLocalAccountOrAddress(net, policy)
 		if err != nil {
 			cobra.CheckErr(fmt.Errorf("malformed address in policy: %w", err))
 		}

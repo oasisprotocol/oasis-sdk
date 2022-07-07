@@ -316,25 +316,14 @@ oasis paratime add localhost minimal 8000000000000000000000000000000000000000000
 ? Denomination decimal places: 9
 ```
 
-Finally, we import _Alice's_ account to our wallet with a private key below:
-
-```bash
-oasis wallet import alice
-? Import kind: private key
-? Algorithm: ed25519-raw
-? Private key (base64-encoded): [Enter 2 empty lines to finish]OPYg5hO22BvHgHmtjo/dZgyn/+efqDhcAfcZ6NsMKhc1w/M1bdhTZP66A1S1Ra2hCdG9s4v11hJoF9uMcs/WkQ==
-
-? Private key (base64-encoded): 
-OPYg5hO22BvHgHmtjo/dZgyn/+efqDhcAfcZ6NsMKhc1w/M1bdhTZP66A1S1Ra2hCdG9s4v11hJoF9uMcs/WkQ==
-? Choose a new passphrase: 
-? Repeat passphrase:
-```
-
 If the Oasis CLI was configured correctly, you should see the balance of Alice's
-account in the runtime:
+account in the runtime. Oasis CLI comes with hidden accounts for Alice, Bob and
+other test users (check the [oasis-sdk testing source] for a complete list).
+You can access the accounts by prepending `test:` literal in front of the test
+user's name, for example `test:alice`.
 
 ```bash
-oasis accounts show --network localhost --paratime minimal --account alice
+oasis accounts show test:alice --network localhost
 Address: oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve
 Nonce: 0
 
@@ -350,10 +339,10 @@ Balances for all denominations:
 ```
 
 Sending some TEST in your runtime should also work. Let's send 0.1 TEST to
-Bob's address `oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx`:
+Bob's address.
 
 ```bash
-oasis accounts transfer 0.1 oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx --network localhost --paratime minimal --account alice 
+oasis accounts transfer 0.1 test:bob --network localhost --account test:alice 
 Unlock your account.
 ? Passphrase: 
 You are about to sign the following transaction:
@@ -384,7 +373,7 @@ You are about to sign the following transaction:
   }
 }
 
-Account:  alice
+Account:  test:alice
 Network:  localhost (localhost)
 Paratime: minimal (minimal)
 ? Sign this transaction? Yes
@@ -396,7 +385,10 @@ Transaction hash: 03a73bd08fb23472673ea45938b0871edd9ecd2cd02b3061d49c0906a77234
 Execution successful.
 ```
 
+<!-- markdownlint-disable line-length -->
 [chain context]: /oasis-core/crypto#chain-domain-separation
+[oasis-sdk testing source]: https://github.com/oasisprotocol/oasis-sdk/blob/main/client-sdk/go/testing/testing.go
+<!-- markdownlint-enable line-length -->
 
 ## Testing From a Client
 

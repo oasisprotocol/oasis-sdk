@@ -12,15 +12,18 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 const (
-	addressPrefixOasis       = "oasis1"
-	addressPrefixEth         = "0x"
+	addressPrefixOasis = "oasis1"
+	addressPrefixEth   = "0x"
+
 	addressExplicitSeparator = ":"
 	addressExplicitParaTime  = "paratime"
 	addressExplicitPool      = "pool"
+	addressExplicitTest      = "test"
 
 	poolRewards = "rewards"
 )
@@ -67,6 +70,12 @@ func ResolveAddress(net *config.Network, address string) (*types.Address, error)
 			default:
 				return nil, fmt.Errorf("unsupported pool kind: %s", data)
 			}
+		case addressExplicitTest:
+			// Test key.
+			if testKey, ok := testing.TestAccounts[data]; ok {
+				return &testKey.Address, nil
+			}
+			return nil, fmt.Errorf("unsupported test account: %s", data)
 		default:
 			// Unsupported kind.
 			return nil, fmt.Errorf("unsupported explicit address kind: %s", kind)
@@ -74,6 +83,19 @@ func ResolveAddress(net *config.Network, address string) (*types.Address, error)
 	default:
 		return nil, fmt.Errorf("unsupported address format")
 	}
+}
+
+// ParseTestAccountAddress extracts test account name from "test:some_test_account" format or
+// returns an empty string, if the format doesn't match.
+func ParseTestAccountAddress(name string) string {
+	if strings.Contains(name, addressExplicitSeparator) {
+		subs := strings.SplitN(name, addressExplicitSeparator, 2)
+		if subs[0] == addressExplicitTest {
+			return subs[1]
+		}
+	}
+
+	return ""
 }
 
 // EthAddressFromPubKey takes public key, extracts the ethereum address and returns its checksummed

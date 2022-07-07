@@ -41,7 +41,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg := config.Global()
 			table := table.New()
-			table.SetHeader([]string{"Name", "Kind", "Address"})
+			table.SetHeader([]string{"Account", "Kind", "Address"})
 
 			var output [][]string
 			for name, acc := range cfg.Wallet.All {
