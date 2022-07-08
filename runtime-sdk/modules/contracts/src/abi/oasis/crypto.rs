@@ -139,18 +139,12 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     let output = Region::from_arg((dst_ptr, dst_len))
                         .as_slice_mut(&mut memory)
                         .map_err(|_| wasm3::Trap::Abort)?;
-                    let mut rng = match ec.tx_context.rng(&[
-                        &[ec.read_only as u8, ec.call_format as u8],
-                        ec.instance_info.address().as_ref(),
-                        ec.caller_address.as_ref(),
-                    ]) {
-                        Some(rng) => rng,
-                        None => return Ok(0),
-                    };
-                    Ok(match rand_core::RngCore::try_fill_bytes(&mut rng, output) {
-                        Ok(_) => dst_len,
-                        Err(_) => 0,
-                    })
+                    Ok(ec
+                        .tx_context
+                        .rng()
+                        .and_then(|rng| rand_core::RngCore::try_fill_bytes(rng, output).ok())
+                        .map(|_| dst_len)
+                        .unwrap_or_default())
                 })?
             },
         );

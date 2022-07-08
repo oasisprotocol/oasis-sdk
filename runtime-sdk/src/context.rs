@@ -5,10 +5,7 @@ use std::{
     fmt,
     marker::PhantomData,
     ops::{Deref, DerefMut},
-    sync::{
-        atomic::{AtomicU64, Ordering::SeqCst},
-        Arc,
-    },
+    sync::Arc,
 };
 
 use io_context::Context as IoContext;
@@ -24,6 +21,7 @@ use oasis_core_runtime::{
 };
 
 use crate::{
+    crypto::random::Rng,
     event::{Event, EventTag, EventTags},
     keymanager::KeyManager,
     module::MethodHandler as _,
@@ -287,11 +285,8 @@ pub trait Context {
         self.with_child(Mode::SimulateTx, f)
     }
 
-    /// Returns a random number generator.
-    /// Successively produces generators are independent.
-    fn rng(&self, _pers: &[&[u8]]) -> Option<crate::crypto::random::Rng> {
-        None
-    }
+    /// Returns the context's random number generator.
+    fn rng(&mut self) -> Option<&mut Rng>;
 }
 
 impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
@@ -382,6 +377,10 @@ impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
         ) -> Rs,
     {
         self.deref_mut().with_child(mode, f)
+    }
+
+    fn rng(&mut self) -> Option<&mut Rng> {
+        self.deref_mut().rng()
     }
 }
 
@@ -485,7 +484,7 @@ pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: NestedStore> {
     /// Per-context values.
     values: BTreeMap<&'static str, Box<dyn Any>>,
 
-    rng_instance_count: Arc<AtomicU64>,
+    rng: Option<Rng>,
 
     _runtime: PhantomData<R>,
 }
@@ -522,7 +521,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             max_messages,
             messages: Vec::new(),
             values: BTreeMap::new(),
-            rng_instance_count: Default::default(),
+            rng: Default::default(),
             _runtime: PhantomData,
         }
     }
@@ -555,7 +554,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             max_messages: ctx.max_messages,
             messages: Vec::new(),
             values: BTreeMap::new(),
-            rng_instance_count: Default::default(),
+            rng: Default::default(),
             _runtime: PhantomData,
         }
     }
@@ -685,14 +684,17 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
-            rng_instance_count: self.rng_instance_count.clone(), // Keep count across sub-calls.
+            rng: self.rng.as_mut().map(Rng::fork),
             _runtime: PhantomData,
         };
         f(child_ctx)
     }
 
-    fn rng(&self, pers: &[&[u8]]) -> Option<crate::crypto::random::Rng> {
-        crate::crypto::random::Rng::new(self, self.rng_instance_count.fetch_add(1, SeqCst), pers)
+    fn rng(&mut self) -> Option<&mut Rng> {
+        if self.rng.is_none() {
+            self.rng = Some(Rng::new(self));
+        }
+        self.rng.as_mut()
     }
 }
 
@@ -739,6 +741,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
             messages: Vec::new(),
             values: &mut self.values,
             tx_values: BTreeMap::new(),
+            rng: self.rng.as_mut().map(Rng::fork),
             _runtime: PhantomData,
         };
         f(tx_ctx, tx.call)
@@ -802,6 +805,9 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
 
     /// Per-transaction values.
     tx_values: BTreeMap<&'static str, Box<dyn Any>>,
+
+    /// The RNG associated with the context.
+    rng: Option<Rng>,
 
     _runtime: PhantomData<R>,
 }
@@ -938,10 +944,17 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
-            rng_instance_count: Default::default(),
+            rng: self.rng.as_mut().map(Rng::fork),
             _runtime: PhantomData,
         };
         f(child_ctx)
+    }
+
+    fn rng(&mut self) -> Option<&mut Rng> {
+        if self.rng.is_none() {
+            self.rng = Some(Rng::new(self));
+        }
+        self.rng.as_mut()
     }
 }
 

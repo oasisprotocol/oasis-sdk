@@ -1906,7 +1906,7 @@ checksum = "2399c9463abc5f909349d8aa9ba080e0b88b3ce2885389b60b993f39b1a56905"
 dependencies = [
  "byteorder",
  "lazy_static",
- "libm",
+ "libm 0.2.2",
  "num-integer",
  "num-iter",
  "num-traits",
@@ -2210,6 +2210,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "io-context",
  "k256",
+ "merlin",
  "num-traits",
  "oasis-cbor",
  "oasis-core-keymanager",
@@ -3028,6 +3029,7 @@ dependencies = [
  "cpufeatures",
  "digest 0.9.0",
  "opaque-debug",
+ "sha2-asm",
 ]
 
 [[package]]
@@ -3039,6 +3041,15 @@ dependencies = [
  "cfg-if 1.0.0",
  "cpufeatures",
  "digest 0.10.6",
+]
+
+[[package]]
+name = "sha2-asm"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf27176fb5d15398e3a479c652c20459d9dac830dedd1fa55b42a77dbcdbfcea"
+dependencies = [
+ "cc",
 ]
 
 [[package]]
