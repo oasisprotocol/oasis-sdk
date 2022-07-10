@@ -174,6 +174,32 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
     }
 }
 
+pub(crate) trait EVMBackendExt {
+    fn random_bytes(&self, num_words: u64) -> Vec<u8>;
+}
+
+impl<T: EVMBackendExt> EVMBackendExt for &T {
+    fn random_bytes(&self, num_words: u64) -> Vec<u8> {
+        (*self).random_bytes(num_words)
+    }
+}
+
+impl<'ctx, C: Context, Cfg: Config> EVMBackendExt for Backend<'ctx, C, Cfg> {
+    fn random_bytes(&self, num_words: u64) -> Vec<u8> {
+        let mut ctx = self.ctx.borrow_mut();
+        let num_bytes = num_words.checked_mul(32).unwrap_or_default();
+        let mut rand_bytes = vec![0u8; num_bytes.min(usize::max_value() as u64) as usize];
+        if ctx
+            .rng()
+            .and_then(|rng| rand_core::RngCore::try_fill_bytes(rng, &mut rand_bytes).ok())
+            .is_none()
+        {
+            return vec![];
+        }
+        rand_bytes
+    }
+}
+
 /// EVM backend that can apply changes and return an exit value.
 pub trait ApplyBackendResult {
     /// Apply given values and logs at backend and return an exit value.

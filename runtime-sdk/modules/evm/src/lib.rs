@@ -11,6 +11,8 @@ mod signed_call;
 pub mod state;
 pub mod types;
 
+use std::{cell::RefCell, collections::BTreeMap};
+
 use evm::{
     executor::stack::{MemoryStackState, StackExecutor, StackSubstateMetadata},
     Config as EVMConfig,
@@ -38,7 +40,7 @@ use oasis_runtime_sdk::{
     },
 };
 
-use backend::ApplyBackendResult;
+use backend::{ApplyBackendResult, EVMBackendExt};
 use types::{H160, H256, U256};
 
 #[cfg(test)]
@@ -46,6 +48,11 @@ mod test;
 
 /// Unique module name.
 const MODULE_NAME: &str = "evm";
+
+thread_local! {
+    pub(crate) static PRECOMPILE_CONTEXT: RefCell<Option<&'static dyn EVMBackendExt>>
+        = Default::default();
+}
 
 /// Module configuration.
 pub trait Config: 'static {
@@ -561,7 +568,14 @@ impl<Cfg: Config> Module<Cfg> {
         );
 
         // Run EVM and process the result.
-        let (exit_reason, exit_value) = f(&mut executor, gas_limit);
+        let (exit_reason, exit_value) = PRECOMPILE_CONTEXT.with(|pc| {
+            let backend_ext: &dyn EVMBackendExt = &backend as _;
+            pc.borrow_mut()
+                .replace(unsafe { std::mem::transmute::<&_, &'static _>(backend_ext) });
+            let exit = f(&mut executor, gas_limit);
+            pc.borrow_mut().take(); // The global reference does not outlive the referent's actual lifetime.
+            exit
+        });
         let gas_used = executor.used_gas();
         let fee = executor.fee(gas_price);
 

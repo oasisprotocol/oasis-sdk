@@ -55,6 +55,47 @@ pub(super) fn call_x25519_derive(
     })
 }
 
+fn call_oasis_random_bytes(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> PrecompileResult {
+    let mut num_bytes_bytes = [0u8; std::mem::size_of::<u64>()];
+    if input.len() != num_bytes_bytes.len() {
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("input must be a uint64".into()),
+        });
+    }
+    num_bytes_bytes.copy_from_slice(input);
+    let num_bytes = (256 /* u256 */ / 8) * u64::from_be_bytes(num_bytes_bytes);
+
+    // This operation shouldn't be too cheap to start since it invokes a key manager.
+    // Each byte is generated using hashing, so it's neither expensive nor cheap.
+    // Thus:
+    // * The base gas is the minimum SSTORE gas since one may think that it is
+    //   as difficult to to hit a storage node as the KM (another "remote" node).
+    // * The word gas is twice the SHA256 gas since the CSPRNG is reasonably expected
+    //   to use an efficient cryptographic hash function with some bookkeeping.
+    // In any case, it's much cheaper than using a VRF oracle, and even a Solidity DRBG,
+    // which has a cost-per-byte upwards of 1000.
+    let gas_cost = linear_cost(target_gas, num_bytes, 5_000, 24)?;
+
+    let random_bytes =
+        crate::PRECOMPILE_CONTEXT.with(|pc| pc.borrow().map(|pc| pc.random_bytes(num_bytes)));
+    match random_bytes {
+        Some(rb) if rb.len() as u64 == num_bytes => Ok(PrecompileOutput {
+            exit_status: ExitSucceed::Returned,
+            cost: gas_cost,
+            output: rb,
+            logs: Default::default(),
+        }),
+        _ => Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("not enough entropy".into()),
+        }),
+    }
+}
+
 #[allow(clippy::type_complexity)]
 fn decode_deoxysii_call_args(
     input: &[u8],
@@ -352,6 +393,32 @@ mod test {
         .expect("call should return something")
         .expect("call should succeed");
         assert_eq!(result.output, plaintext);
+    }
+
+    #[test]
+    fn test_oasis_random_bytes() {
+        struct MockBackend;
+        impl crate::backend::EVMBackendExt for MockBackend {
+            fn random_bytes(&self, num_words: u64) -> Vec<u8> {
+                (0..num_words).map(|i| i as u8).collect()
+            }
+        }
+        let input = "0000000000000002";
+        let ret = crate::PRECOMPILE_CONTEXT
+            .with(|pc| {
+                pc.borrow_mut().replace(&MockBackend);
+                let ret = call_contract(
+                    H160([
+                        0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    ]),
+                    &hex::decode(input).unwrap(),
+                    6000,
+                );
+                pc.borrow_mut().take();
+                ret
+            })
+            .unwrap();
+        assert_eq!(hex::encode(ret.unwrap().output), "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f");
     }
 
     #[bench]
