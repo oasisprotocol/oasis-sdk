@@ -28,7 +28,7 @@
     "devDependencies": {
         "@types/jest": "^28.1.0",
         "buffer": "^6.0.3",
-        "cypress": "^10.2.0",
+        "cypress": "^10.3.0",
         "jest": "^28.1.0",
         "prettier": "^2.7.1",
         "process": "^0.11.10",
