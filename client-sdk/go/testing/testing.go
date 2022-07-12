@@ -91,4 +91,15 @@ var (
 	Frank = newSr25519TestKey("oasis-runtime-sdk/test-keys: frank")
 	// Grace is the test key G.
 	Grace = newSr25519TestKey("oasis-runtime-sdk/test-keys: grace")
+
+	// TestAccounts contains all test keys.
+	TestAccounts = map[string]TestKey{
+		"alice":   Alice,
+		"bob":     Bob,
+		"charlie": Charlie,
+		"dave":    Dave,
+		"erin":    Erin,
+		"frank":   Frank,
+		"grace":   Grace,
+	}
 )

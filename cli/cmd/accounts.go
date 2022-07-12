@@ -23,6 +23,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/helpers"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensusaccounts"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -65,7 +66,7 @@ var (
 			c, err := connection.Connect(ctx, npa.Network)
 			cobra.CheckErr(err)
 
-			addr, err := helpers.ResolveAddress(npa.Network, targetAddress)
+			addr, err := common.ResolveLocalAccountOrAddress(npa.Network, targetAddress)
 			cobra.CheckErr(err)
 
 			height, err := common.GetActualHeight(
@@ -234,7 +235,7 @@ var (
 			}
 
 			// Resolve beneficiary address.
-			benAddr, err := helpers.ResolveAddress(npa.Network, beneficiary)
+			benAddr, err := common.ResolveLocalAccountOrAddress(npa.Network, beneficiary)
 			cobra.CheckErr(err)
 
 			// Parse amount.
@@ -295,7 +296,7 @@ var (
 			var toAddr *types.Address
 			if to != "" {
 				var err error
-				toAddr, err = helpers.ResolveAddress(npa.Network, to)
+				toAddr, err = common.ResolveLocalAccountOrAddress(npa.Network, to)
 				cobra.CheckErr(err)
 			}
 
@@ -384,18 +385,31 @@ var (
 				cobra.CheckErr(err)
 			}
 
-			// Resolve destination address when specified.
+			// Resolve destination address when explicitly specified.
 			var toAddr *types.Address
+			var addrToCheck string
 			if to != "" {
 				var err error
-				toAddr, err = helpers.ResolveAddress(npa.Network, to)
+				toAddr, err = common.ResolveLocalAccountOrAddress(npa.Network, to)
 				cobra.CheckErr(err)
+				addrToCheck = toAddr.String()
+			} else {
+				// Destination address is implicit, but obtain it for safety check below nonetheless.
+				addr, err := helpers.ResolveAddress(npa.Network, npa.Account.Address)
+				cobra.CheckErr(err)
+				addrToCheck = addr.String()
 			}
 
 			// Safety check for withdrawals to known accounts that are not supported on the consensus layer.
 			for name, acc := range cliConfig.Global().Wallet.All {
-				if acc.Address == toAddr.String() && !acc.HasConsensusSigner() {
+				if acc.Address == addrToCheck && !acc.HasConsensusSigner() {
 					cobra.CheckErr(fmt.Errorf("account '%s' (%s) will not be able to sign transactions on consensus layer", name, acc.Address))
+				}
+			}
+			for name := range testing.TestAccounts {
+				testAcc, _ := common.LoadTestAccount(name)
+				if testAcc.Address().String() == addrToCheck && testAcc.ConsensusSigner() == nil {
+					cobra.CheckErr(fmt.Errorf("test account '%s' (%s) will not be able to sign transactions on consensus layer", name, testAcc.Address().String()))
 				}
 			}
 
@@ -479,7 +493,7 @@ var (
 			}
 
 			// Resolve destination address.
-			toAddr, err := helpers.ResolveAddress(npa.Network, to)
+			toAddr, err := common.ResolveLocalAccountOrAddress(npa.Network, to)
 			cobra.CheckErr(err)
 
 			acc := common.LoadAccount(cfg, npa.AccountName)
@@ -589,7 +603,7 @@ var (
 			}
 
 			// Resolve destination address.
-			toAddr, err := helpers.ResolveAddress(npa.Network, to)
+			toAddr, err := common.ResolveLocalAccountOrAddress(npa.Network, to)
 			cobra.CheckErr(err)
 
 			acc := common.LoadAccount(cfg, npa.AccountName)
@@ -642,7 +656,7 @@ var (
 			}
 
 			// Resolve destination address.
-			fromAddr, err := helpers.ResolveAddress(npa.Network, from)
+			fromAddr, err := common.ResolveLocalAccountOrAddress(npa.Network, from)
 			cobra.CheckErr(err)
 
 			acc := common.LoadAccount(cfg, npa.AccountName)
@@ -712,7 +726,7 @@ var (
 				now, err = conn.Consensus().Beacon().GetEpoch(ctx, height)
 				cobra.CheckErr(err)
 
-				addr, err := helpers.ResolveAddress(npa.Network, npa.Account.Address)
+				addr, err := common.ResolveLocalAccountOrAddress(npa.Network, npa.Account.Address)
 				cobra.CheckErr(err)
 
 				stakingConn := conn.Consensus().Staking()

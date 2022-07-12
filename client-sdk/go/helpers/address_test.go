@@ -39,6 +39,10 @@ func TestResolveAddress(t *testing.T) {
 		{"pool:", ""},
 		{"pool:invalid", ""},
 		{"pool:rewards", "oasis1qp7x0q9qahahhjas0xde8w0v04ctp4pqzu5mhjav"},
+		{"test:alice", "oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve"},
+		{"test:dave", "oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt"},
+		{"test:frank", "oasis1qqnf0s9p8z79zfutszt0hwlh7w7jjrfqnq997mlw"},
+		{"test:invalid", ""},
 		{"invalid:", ""},
 	} {
 		addr, err := ResolveAddress(&net, tc.address)
@@ -48,6 +52,24 @@ func TestResolveAddress(t *testing.T) {
 		} else {
 			require.Error(err, tc.address)
 		}
+	}
+}
+
+func TestParseTestAccountAddress(t *testing.T) {
+	require := require.New(t)
+
+	for _, tc := range []struct {
+		address  string
+		expected string
+	}{
+		{"test:abc", "abc"},
+		{"testabc", ""},
+		{"testing:abc", ""},
+		{"oasis1qqzh32kr72v7x55cjnjp2me0pdn579u6as38kacz", ""},
+		{"", ""},
+	} {
+		testName := ParseTestAccountAddress(tc.address)
+		require.EqualValues(tc.expected, testName, tc.address)
 	}
 }
 
