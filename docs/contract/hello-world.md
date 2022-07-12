@@ -270,7 +270,23 @@ supported by the [Oasis Contract SDK].
   https://github.com/oasisprotocol/oasis-sdk/blob/main/contract-sdk/src/contract.rs
 <!-- markdownlint-enable line-length -->
 
-## Building
+## Testing
+
+To run unit tests type:
+
+```sh
+RUSTFLAGS="-C target-feature=+aes,+ssse3" cargo test
+```
+
+:::info
+
+Running unit tests locally requires an Intel-compatible CPU. If you want
+to run tests on Apple M1, we suggest that you set up a docker image with
+enabled Intel virtualization and the Rust development environment.
+
+:::
+
+## Building for Deployment
 
 In order to build the smart contract before it can be uploaded to the target
 chain, run:
