@@ -19,9 +19,8 @@ var chainContext hash.Hash
 
 // RuntimeTestVector is an Oasis runtime transaction test vector.
 type RuntimeTestVector struct {
-	Kind   string      `json:"kind"`
-	SigCtx string      `json:"signature_context"`
-	Tx     interface{} `json:"tx"`
+	Kind string      `json:"kind"`
+	Tx   interface{} `json:"tx"`
 	// Meta stores tx-specific information which need
 	// to be verified, but are implicitly part of the SigCtx or Tx.
 	// e.g. ethereum address for deposits. User needs to see the ethereum-formatted
@@ -44,6 +43,16 @@ func init() {
 	chainContext.FromBytes([]byte(chainContextSeed))
 }
 
+// MakeMeta creates a meta field for the test vector.
+func MakeMeta(sigCtx signature.Context, runtimeId string, chainContext string) map[string]string {
+	return map[string]string{
+		"sig_context":   string(sigCtx.New(types.SignatureContextBase)),
+		"runtime_id":    runtimeId,
+		"chain_context": chainContext,
+	}
+
+}
+
 // MakeRuntimeTestVector generates a new test vector from a transaction using a specific signer.
 func MakeRuntimeTestVector(tx *types.Transaction, txBody interface{}, meta interface{}, valid bool, w testing.TestKey, nonce uint64, sigCtx signature.Context) RuntimeTestVector {
 	tx.AppendAuthSignature(w.SigSpec, nonce)
@@ -62,7 +71,6 @@ func MakeRuntimeTestVector(tx *types.Transaction, txBody interface{}, meta inter
 
 	return RuntimeTestVector{
 		Kind:             keySeedPrefix + tx.Call.Method,
-		SigCtx:           string(sigCtx.New(types.SignatureContextBase)),
 		Tx:               prettyTx,
 		Meta:             meta,
 		SignedTx:         *sigTx,
