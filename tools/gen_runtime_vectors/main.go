@@ -44,7 +44,7 @@ var (
 	frankNativeAddr = testing.Frank.Address.String()
 	graceNativeAddr = testing.Grace.Address.String()
 
-	// wRoseAddr is the wROSE smart contract deployment on the Mainnet.
+	// wRoseAddr is the wROSE smart contract address deployed on Emerald ParaTime on Mainnet.
 	wRoseAddr, _ = hex.DecodeString("21C718C22D52d0F3a789b752D4c2fD5908a8A733")
 	// wRoseNameMethod is the address of Name() method.
 	wRoseNameMethod, _ = hex.DecodeString("06fdde03" + strings.Repeat("0", 64-8))
