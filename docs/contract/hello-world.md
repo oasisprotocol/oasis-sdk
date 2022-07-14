@@ -280,9 +280,8 @@ RUSTFLAGS="-C target-feature=+aes,+ssse3" cargo test
 
 :::info
 
-Running unit tests locally requires an Intel-compatible CPU. If you want
-to run tests on Apple M1, we suggest that you set up a docker image with
-enabled Intel virtualization and the Rust development environment.
+Running unit tests locally requires a physical or virtualized Intel-compatible
+CPU with AES and SSSE3 instruction sets.
 
 :::
 
