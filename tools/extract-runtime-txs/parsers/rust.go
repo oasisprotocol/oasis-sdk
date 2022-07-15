@@ -78,7 +78,12 @@ func (p *RustParser) GetWarnings() []error {
 }
 
 func (p *RustParser) getTypesFile() string {
-	return filepath.Join(filepath.Dir(p.filename), "types.rs")
+	typesFilename := filepath.Join(filepath.Dir(p.filename), "types.rs")
+	if _, err := os.Stat(typesFilename); err != nil {
+		return ""
+	}
+
+	return typesFilename
 }
 
 // findTransactions scans the given rust source file and looks for the
@@ -187,6 +192,9 @@ func (p *RustParser) findParamsResultName(text []string, lineIdx int) (paramsNam
 
 func (p *RustParser) findMembers(name string) ([]types.Parameter, *types.Snippet, error) {
 	typesFilename := p.getTypesFile()
+	if typesFilename == "" {
+		return nil, nil, nil
+	}
 	text, err := readFile(typesFilename)
 	if err != nil {
 		return nil, nil, err
