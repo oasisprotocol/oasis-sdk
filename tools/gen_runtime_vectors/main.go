@@ -44,7 +44,7 @@ var (
 	frankNativeAddr = testing.Frank.Address.String()
 	graceNativeAddr = testing.Grace.Address.String()
 
-	// wRoseAddr is the wROSE smart contract deployment on the Mainnet.
+	// wRoseAddr is the wROSE smart contract address deployed on Emerald ParaTime on Mainnet.
 	wRoseAddr, _ = hex.DecodeString("21C718C22D52d0F3a789b752D4c2fD5908a8A733")
 	// wRoseNameMethod is the address of Name() method.
 	wRoseNameMethod, _ = hex.DecodeString("06fdde03" + strings.Repeat("0", 64-8))
@@ -65,9 +65,9 @@ func main() {
 
 	for _, fee := range []*types.Fee{
 		{},
-		{Amount: types.NewBaseUnits(*quantity.NewFromUint64(0), "_"), Gas: 2000},
-		{Amount: types.NewBaseUnits(*quantity.NewFromUint64(424_242_424_242), "ROSE"), Gas: 3000},
-		{Amount: types.NewBaseUnits(*quantity.NewFromUint64(123_456_789), "TEST"), Gas: 4000},
+		{Amount: types.NewBaseUnits(*quantity.NewFromUint64(0), types.NativeDenomination), Gas: 2000},
+		{Amount: types.NewBaseUnits(*quantity.NewFromUint64(424_242_424_242), types.NativeDenomination), Gas: 3000},
+		{Amount: types.NewBaseUnits(*quantity.NewFromUint64(123_456_789), "FOO"), Gas: 4000},
 	} {
 		for _, nonce := range []uint64{0, 1, math.MaxUint64} {
 			for _, chainContext := range []signature.Context{
@@ -115,13 +115,10 @@ func main() {
 						to, _ := helpers.ResolveAddress(nil, t.to)
 						txBody := &consensusaccounts.Deposit{
 							To:     to,
-							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), "ROSE"),
+							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
 						}
 						tx = consensusaccounts.NewDepositTx(fee, txBody)
-						meta = map[string]string{
-							"runtime_id":    t.rtId,
-							"chain_context": t.chainContext,
-						}
+						meta = MakeMeta(sigCtx, t.rtId, t.chainContext)
 						if t.origTo != "" {
 							meta["orig_to"] = t.origTo
 						}
@@ -156,13 +153,10 @@ func main() {
 						to, _ := helpers.ResolveAddress(nil, t.to)
 						txBody := &consensusaccounts.Withdraw{
 							To:     to,
-							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), "ROSE"),
+							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
 						}
 						tx = consensusaccounts.NewWithdrawTx(fee, txBody)
-						meta = map[string]string{
-							"runtime_id":    t.rtId,
-							"chain_context": t.chainContext,
-						}
+						meta = MakeMeta(sigCtx, t.rtId, t.chainContext)
 						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, t.signer, nonce, sigCtx))
 					}
 
@@ -231,13 +225,10 @@ func main() {
 						to, _ := helpers.ResolveAddress(nil, t.to)
 						txBody := &accounts.Transfer{
 							To:     *to,
-							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), "ROSE"),
+							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
 						}
 						tx = accounts.NewTransferTx(fee, txBody)
-						meta = map[string]string{
-							"runtime_id":    t.rtId,
-							"chain_context": t.chainContext,
-						}
+						meta = MakeMeta(sigCtx, t.rtId, t.chainContext)
 						if t.origTo != "" {
 							meta["orig_to"] = t.origTo
 						}
@@ -257,16 +248,13 @@ func main() {
 					{testing.Alice, unknownRtIdHex, string(chainContext), false},
 					{testing.Alice, rtIdHex, unknownChainContext, false},
 				} {
-					meta = map[string]string{
-						"runtime_id":    t.rtId,
-						"chain_context": t.chainContext,
-					}
+					meta = MakeMeta(sigCtx, t.rtId, t.chainContext)
 
 					for _, tokens := range [][]types.BaseUnits{
 						{
 							types.BaseUnits{
 								Amount:       *quantity.NewFromUint64(1_000_000_000),
-								Denomination: "ROSE",
+								Denomination: types.NativeDenomination,
 							},
 							types.BaseUnits{
 								Amount:       *quantity.NewFromUint64(2_000),
@@ -280,13 +268,13 @@ func main() {
 						{
 							types.BaseUnits{
 								Amount:       *quantity.NewFromUint64(100_000_000_000_000_000),
-								Denomination: "ROSE",
+								Denomination: types.NativeDenomination,
 							},
 						},
 						{
 							types.BaseUnits{
 								Amount:       *quantity.NewFromUint64(0),
-								Denomination: "TEST",
+								Denomination: types.NativeDenomination,
 							},
 						},
 						{},
