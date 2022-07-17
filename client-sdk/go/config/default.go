@@ -73,6 +73,17 @@ var DefaultNetworks = Networks{
 							},
 						},
 					},
+
+					// Sapphire on Testnet.
+					"sapphire": {
+						ID: "000000000000000000000000000000000000000000000000a6d1e3ebf60dff6c",
+						Denominations: map[string]*DenominationInfo{
+							NativeDenominationKey: {
+								Symbol:   "TEST",
+								Decimals: 18,
+							},
+						},
+					},
 				},
 			},
 		},
