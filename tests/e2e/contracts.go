@@ -214,7 +214,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 		return fmt.Errorf("failed to watch events: %w", err)
 	}
 
-	// Tansfer some tokens.
+	// Transfer some tokens.
 	tb = ct.Call(
 		instanceOas20.ID,
 		&oas20.Request{
@@ -532,6 +532,15 @@ OUTER:
 		return fmt.Errorf("failed to get nonce: %w", err)
 	}
 
+	// Change upgrade policy.
+	tb = ct.ChangeUpgradePolicy(instanceID, contracts.Policy{Nobody: &struct{}{}}).
+		SetFeeGas(1_000_000).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce)
+	_ = tb.AppendSign(ctx, signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
+		return fmt.Errorf("failed to change upgrade policy: %w", err)
+	}
+
 	// Test signed queries.
 	tb = ct.Call(
 		instance.ID,
@@ -542,7 +551,7 @@ OUTER:
 		SetNotBefore(0).
 		SetNotAfter(100_000).
 		ReadOnly().
-		AppendAuthSignature(testing.Alice.SigSpec, nonce)
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+1)
 	_ = tb.AppendSign(ctx, signer)
 	rsp, err := cr.ExecuteReadOnlyTx(ctx, client.RoundLatest, tb.GetSignedTransaction())
 	if err != nil {

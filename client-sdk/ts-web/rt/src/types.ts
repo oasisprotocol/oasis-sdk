@@ -584,6 +584,20 @@ export interface ContractsUpgrade {
 }
 
 /**
+ * Change upgrade policy call.
+ */
+export interface ChangeUpgradePolicy {
+    /**
+     * Instance identifier.
+     */
+    id: oasis.types.longnum;
+    /**
+     * Updated contract upgrade policy.
+     */
+    upgrades_policy: ContractsPolicy;
+}
+
+/**
  * Code information query.
  */
 export interface ContractsCodeQuery {

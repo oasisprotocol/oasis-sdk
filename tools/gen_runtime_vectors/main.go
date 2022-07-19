@@ -280,6 +280,24 @@ func main() {
 						{},
 					} {
 						for _, id := range []uint64{0, 1, math.MaxUint64} {
+							// contracts.ChangeUpgradePolicy
+							addr, _ := helpers.ResolveAddress(nil, daveNativeAddr)
+							for _, p := range []contracts.Policy{
+								// Valid policy, everyone can instantiate/upgrade it.
+								{Everyone: &struct{}{}},
+								// Valid policy, noone can instantiate/upgrade it.
+								{Nobody: &struct{}{}},
+								// Valid policy, arbitrary address can instantiate/upgrade it.
+								{Address: addr},
+							} {
+								txBodyChangeUpgradePolicy := &contracts.ChangeUpgradePolicy{
+									ID:             contracts.InstanceID(id),
+									UpgradesPolicy: p,
+								}
+								tx = contracts.NewChangeUpgradePolicyTx(fee, txBodyChangeUpgradePolicy)
+								vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyChangeUpgradePolicy, meta, t.valid, t.signer, nonce, sigCtx))
+							}
+
 							for _, d := range []map[string]interface{}{
 								// Valid data, empty.
 								{},

@@ -890,3 +890,90 @@ fn test_hello_contract_upgrade_fail_post() {
         );
     });
 }
+
+#[test]
+fn test_hello_contract_change_upgrade_policy() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+
+    ContractRuntime::migrate(&mut ctx);
+
+    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
+
+    // Call the upgrade method.
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "contracts.ChangeUpgradePolicy".to_owned(),
+            body: cbor::to_value(types::ChangeUpgradePolicy {
+                id: instance_id,
+                upgrades_policy: types::Policy::Nobody,
+            }),
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 2_000_000,
+                consensus_messages: 0,
+            },
+            ..Default::default()
+        },
+    };
+    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+        Contracts::tx_change_upgrade_policy(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            .expect("upgrade should succeed");
+
+        tx_ctx.commit();
+    });
+}
+
+#[test]
+fn test_hello_contract_change_upgrade_policy_fail() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+
+    ContractRuntime::migrate(&mut ctx);
+
+    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
+
+    // Make Bob call the change upgrade policy method which should fail as he is not authorized.
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "contracts.ChangeUpgradePolicy".to_owned(),
+            body: cbor::to_value(types::ChangeUpgradePolicy {
+                id: instance_id,
+                upgrades_policy: types::Policy::Nobody,
+            }),
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::bob::sigspec(),
+                0,
+            )],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 2_000_000,
+                consensus_messages: 0,
+            },
+            ..Default::default()
+        },
+    };
+    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+        let result =
+            Contracts::tx_change_upgrade_policy(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+                .expect_err("change upgrade policy should fail");
+
+        assert_eq!(result.module_name(), "contracts");
+        assert_eq!(result.code(), 13);
+        assert_eq!(&result.to_string(), "forbidden by policy");
+    });
+}

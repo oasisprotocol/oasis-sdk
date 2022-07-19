@@ -16,10 +16,11 @@ import (
 
 const (
 	// Callable methods.
-	methodUpload      = "contracts.Upload"
-	methodInstantiate = "contracts.Instantiate"
-	methodCall        = "contracts.Call"
-	methodUpgrade     = "contracts.Upgrade"
+	methodUpload              = "contracts.Upload"
+	methodInstantiate         = "contracts.Instantiate"
+	methodCall                = "contracts.Call"
+	methodUpgrade             = "contracts.Upgrade"
+	methodChangeUpgradePolicy = "contracts.ChangeUpgradePolicy"
 
 	// Queries.
 	methodCode            = "contracts.Code"
@@ -73,6 +74,9 @@ type V1 interface {
 	//
 	// This method will encode the specified data using CBOR as defined by the Oasis ABI.
 	Upgrade(id InstanceID, codeID CodeID, data interface{}, tokens []types.BaseUnits) *client.TransactionBuilder
+
+	// ChangeUpgradePolicy generates a contracts.ChangeUpgradePolicy transaction.
+	ChangeUpgradePolicy(id InstanceID, upgradesPolicy Policy) *client.TransactionBuilder
 
 	// Code queries the given code information.
 	Code(ctx context.Context, round uint64, id CodeID) (*Code, error)
@@ -163,6 +167,14 @@ func (a *v1) UpgradeRaw(id InstanceID, codeID CodeID, data []byte, tokens []type
 // Implements V1.
 func (a *v1) Upgrade(id InstanceID, codeID CodeID, data interface{}, tokens []types.BaseUnits) *client.TransactionBuilder {
 	return a.UpgradeRaw(id, codeID, cbor.Marshal(data), tokens)
+}
+
+// Implements V1.
+func (a *v1) ChangeUpgradePolicy(id InstanceID, upgradesPolicy Policy) *client.TransactionBuilder {
+	return client.NewTransactionBuilder(a.rc, methodChangeUpgradePolicy, &ChangeUpgradePolicy{
+		ID:             id,
+		UpgradesPolicy: upgradesPolicy,
+	})
 }
 
 // Implements V1.
@@ -316,6 +328,11 @@ func NewCallTx(fee *types.Fee, body *Call) *types.Transaction {
 // NewUpgradeTx generates a new contracts.Upgrade transaction.
 func NewUpgradeTx(fee *types.Fee, body *Upgrade) *types.Transaction {
 	return types.NewTransaction(fee, methodUpgrade, body)
+}
+
+// NewChangeUpgradePolicyTx generates a new contracts.ChangeUpgradePolicy transaction.
+func NewChangeUpgradePolicyTx(fee *types.Fee, body *ChangeUpgradePolicy) *types.Transaction {
+	return types.NewTransaction(fee, methodChangeUpgradePolicy, body)
 }
 
 // CompressCode performs code compression using Snappy.

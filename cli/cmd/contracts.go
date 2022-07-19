@@ -305,6 +305,52 @@ var (
 			fmt.Println(string(formatted))
 		},
 	}
+
+	contractsChangeUpgradePolicyCmd = &cobra.Command{
+		Use:   "change-upgrade-policy <instance-id> <policy>",
+		Short: "Change WebAssembly smart contract upgrade policy",
+		Args:  cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := cliConfig.Global()
+			npa := common.GetNPASelection(cfg)
+			txCfg := common.GetTransactionConfig()
+			strInstanceID := args[0]
+			strPolicy := args[1]
+
+			if npa.Account == nil {
+				cobra.CheckErr("no accounts configured in your wallet")
+			}
+			if npa.ParaTime == nil {
+				cobra.CheckErr("no paratimes configured")
+			}
+
+			instanceID, err := strconv.ParseUint(strInstanceID, 10, 64)
+			cobra.CheckErr(err)
+
+			// When not in offline mode, connect to the given network endpoint.
+			ctx := context.Background()
+			var conn connection.Connection
+			if !txCfg.Offline {
+				conn, err = connection.Connect(ctx, npa.Network)
+				cobra.CheckErr(err)
+			}
+
+			// Parse upgrades policy.
+			upgradesPolicy := parsePolicy(npa.Network, npa.Account, strPolicy)
+
+			// Prepare transaction.
+			tx := contracts.NewChangeUpgradePolicyTx(nil, &contracts.ChangeUpgradePolicy{
+				ID:             contracts.InstanceID(instanceID),
+				UpgradesPolicy: *upgradesPolicy,
+			})
+
+			acc := common.LoadAccount(cfg, npa.AccountName)
+			sigTx, meta, err := common.SignParaTimeTransaction(ctx, npa, acc, conn, tx)
+			cobra.CheckErr(err)
+
+			common.BroadcastTransaction(ctx, npa.ParaTime, conn, sigTx, meta, nil)
+		},
+	}
 )
 
 func formatPolicy(policy *contracts.Policy) string {
@@ -392,10 +438,14 @@ func init() {
 	contractsCallCmd.Flags().AddFlagSet(common.TransactionFlags)
 	contractsCallCmd.Flags().AddFlagSet(contractsCallFlags)
 
+	contractsChangeUpgradePolicyCmd.Flags().AddFlagSet(common.SelectorFlags)
+	contractsChangeUpgradePolicyCmd.Flags().AddFlagSet(common.TransactionFlags)
+
 	contractsCmd.AddCommand(contractsShowCmd)
 	contractsCmd.AddCommand(contractsShowCodeCmd)
 	contractsCmd.AddCommand(contractsDumpCodeCmd)
 	contractsCmd.AddCommand(contractsUploadCmd)
 	contractsCmd.AddCommand(contractsInstantiateCmd)
 	contractsCmd.AddCommand(contractsCallCmd)
+	contractsCmd.AddCommand(contractsChangeUpgradePolicyCmd)
 }

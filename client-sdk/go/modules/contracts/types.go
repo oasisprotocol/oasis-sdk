@@ -133,6 +133,14 @@ type Upgrade struct {
 	Tokens []types.BaseUnits `json:"tokens"`
 }
 
+// ChangeUpgradePolicy is the body of the contracts.ChangeUpgradePolicy call.
+type ChangeUpgradePolicy struct {
+	// ID is the unique instance identifier.
+	ID InstanceID `json:"id"`
+	// UpgradesPolicy is the updated upgrade policy.
+	UpgradesPolicy Policy `json:"upgrades_policy"`
+}
+
 // CodeQuery is the body of the contracts.Code query.
 type CodeQuery struct {
 	// ID is the code identifier.
@@ -210,11 +218,12 @@ type CustomQueryResult []byte
 
 // GasCosts are the contracts module gas costs.
 type GasCosts struct {
-	TxUpload        uint64 `json:"tx_upload"`
-	TxUploadPerByte uint64 `json:"tx_upload_per_byte"`
-	TxInstantiate   uint64 `json:"tx_instantiate"`
-	TxCall          uint64 `json:"tx_call"`
-	TxUpgrade       uint64 `json:"tx_upgrade"`
+	TxUpload              uint64 `json:"tx_upload"`
+	TxUploadPerByte       uint64 `json:"tx_upload_per_byte"`
+	TxInstantiate         uint64 `json:"tx_instantiate"`
+	TxCall                uint64 `json:"tx_call"`
+	TxUpgrade             uint64 `json:"tx_upgrade"`
+	TxChangeUpgradePolicy uint64 `json:"tx_change_upgrade_policy"`
 
 	SubcallDispatch uint64 `json:"subcall_dispatch"`
 
