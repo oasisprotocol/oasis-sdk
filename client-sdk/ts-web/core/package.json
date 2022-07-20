@@ -26,10 +26,10 @@
         "tweetnacl": "^1.0.3"
     },
     "devDependencies": {
-        "@types/jest": "^28.1.0",
+        "@types/jest": "^28.1.6",
         "buffer": "^6.0.3",
         "cypress": "^10.2.0",
-        "jest": "^28.1.0",
+        "jest": "^28.1.3",
         "prettier": "^2.7.1",
         "process": "^0.11.10",
         "stream-browserify": "^3.0.0",
