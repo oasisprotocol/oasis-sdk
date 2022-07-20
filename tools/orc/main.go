@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"os"
 	"strings"
@@ -23,10 +26,22 @@ const (
 )
 
 var (
+	// Init flags.
 	sgxExecutableFn   string
 	sgxSignatureFn    string
 	bundleFn          string
 	overrideRuntimeID string
+
+	// SIGSTRUCT flags.
+	dateStr                 string
+	swdefined               uint32
+	isvprodid               uint16
+	isvsvn                  uint16
+	miscelectMiscmask       string
+	xfrm                    string
+	attributesAttributemask string
+	bit32                   bool
+	debug                   bool
 
 	rootCmd = &cobra.Command{
 		Use:     "orc",
@@ -172,12 +187,47 @@ var (
 		},
 	}
 
-	sgxSetSigCmd = &cobra.Command{
-		Use:   "sgx-set-sig <bundle.orc> <signature.sig>",
-		Short: "add or overwrite an SGXS signature in an existing runtime bundle",
-		Args:  cobra.ExactArgs(2),
+	sgxGetSignDataCmd = &cobra.Command{
+		Use:   "sgx-gen-sign-data <bundle.orc>",
+		Short: "outputs the SIGSTRUCT hash that is to be signed in an offline signing process",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			bundlePath, sigPath := args[0], args[1]
+			bundlePath := args[0]
+
+			// Load bundle.
+			bnd, err := bundle.Open(bundlePath)
+			if err != nil {
+				cobra.CheckErr(fmt.Errorf("failed to open bundle: %w", err))
+			}
+
+			sigstruct := constructSigstruct(bnd)
+			fmt.Printf("%s", sigstruct.HashForSignature())
+		},
+	}
+	sgxSetSigCmd = &cobra.Command{
+		Use:   "sgx-set-sig <bundle.orc> <signature.sig> <public_key.pub>",
+		Short: "add or overwrite an SGXS signature to an existing runtime bundle",
+		Args:  cobra.ExactArgs(3),
+		Run: func(cmd *cobra.Command, args []string) {
+			bundlePath, sigPath, publicKey := args[0], args[1], args[2]
+
+			// Load public key.
+			rawPub, err := os.ReadFile(publicKey)
+			if err != nil {
+				cobra.CheckErr(fmt.Errorf("failed to read public key: %w", err))
+			}
+			pubPem, _ := pem.Decode(rawPub)
+			if pubPem == nil {
+				cobra.CheckErr(fmt.Errorf("failed to decode public key pem file"))
+			}
+			pub, err := x509.ParsePKIXPublicKey(pubPem.Bytes)
+			if err != nil {
+				cobra.CheckErr(fmt.Errorf("failed to parse public key: %w", err))
+			}
+			pubKey, ok := pub.(*rsa.PublicKey)
+			if !ok {
+				cobra.CheckErr(fmt.Errorf("invalid public key type: %T", pub))
+			}
 
 			// Load bundle.
 			bnd, err := bundle.Open(bundlePath)
@@ -186,24 +236,25 @@ var (
 			}
 
 			// Load signature file.
-			data, err := os.ReadFile(sigPath)
+			rawSig, err := os.ReadFile(sigPath)
 			if err != nil {
 				cobra.CheckErr(fmt.Errorf("failed to load signature file: %w", err))
 			}
 
-			_ = bnd.Add(sgxSigName, data)
+			// Construct sigstruct from provided arguments.
+			sigstruct := constructSigstruct(bnd)
+			signed, err := sigstruct.WithSignature(rawSig, pubKey)
+			if err != nil {
+				cobra.CheckErr(fmt.Errorf("failed to append signature: %w", err))
+			}
+			err = bnd.Add(sgxSigName, signed)
+			cobra.CheckErr(err)
 			bnd.Manifest.SGX.Signature = sgxSigName
 
-			// Validate signature.
-			err = sgxVerifySignature(bnd)
-			cobra.CheckErr(err)
-
 			// Remove previous serialized manifest.
-			// TODO: Manifest name should be exposed or there should be a method for clearing it.
-			delete(bnd.Data, "META-INF/MANIFEST.MF")
+			bnd.ResetManifest()
 
 			// Write the bundle back.
-			// TODO: Could be more careful and not overwrite.
 			err = bnd.Write(bundlePath)
 			if err != nil {
 				cobra.CheckErr(fmt.Errorf("failed to write bundle: %w", err))
@@ -217,6 +268,7 @@ func main() {
 }
 
 func init() {
+	// Init cmd.
 	initFlags := flag.NewFlagSet("", flag.ContinueOnError)
 	initFlags.StringVar(&sgxExecutableFn, "sgx-executable", "", "SGXS executable for runtimes with TEE support")
 	initFlags.StringVar(&sgxSignatureFn, "sgx-signature", "", "detached SGXS signature for runtimes with TEE support")
@@ -224,6 +276,22 @@ func init() {
 	initFlags.StringVar(&overrideRuntimeID, "runtime-id", "", "override autodetected runtime ID")
 	initCmd.Flags().AddFlagSet(initFlags)
 
+	// SGX singing cmds.
+	signFlags := flag.NewFlagSet("", flag.ContinueOnError)
+	signFlags.StringVar(&dateStr, "date", "", "Sets the SIGSTRUCT DATE field in YYYYMMDD format (default: today)")
+	signFlags.Uint32VarP(&swdefined, "swdefined", "s", 0, "Sets the SIGSTRUCT SWDEFINED field")
+	signFlags.Uint16VarP(&isvprodid, "isvprodid", "p", 0, "Sets the SIGSTRUCT ISVPRODID field")
+	signFlags.Uint16VarP(&isvsvn, "isvsvn", "v", 0, "Sets the SIGSTRUCT ISVSVN field")
+	signFlags.StringVarP(&miscelectMiscmask, "miscselect", "m", "0/0", "Sets the MISCSELECT and inverse MISCMASK fields")
+	signFlags.StringVarP(&attributesAttributemask, "attributes", "a", "0x4/0x2", "Sets the lower ATTRIBUTES and inverse lower ATTRIBUTEMASK fields")
+	signFlags.StringVarP(&xfrm, "xfrm", "x", "0x3/0x3", "Sets the ATTRIBUTES.XFRM and inverse ATTRIBUTEMASK.XFRM fields")
+	signFlags.BoolVar(&bit32, "32bit", false, "Unsets the MODE64BIT bit in the ATTRIBUTES field, sets MODE64BIT in the ATTRIBUTEMASK field")
+	signFlags.BoolVarP(&debug, "debug", "d", false, "Sets the DEBUG bit in the ATTRIBUTES field, unsets the DEBUG bit in the ATTRIBUTEMASK field")
+
+	sgxGetSignDataCmd.Flags().AddFlagSet(signFlags)
+	sgxSetSigCmd.Flags().AddFlagSet(signFlags)
+
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(sgxGetSignDataCmd)
 	rootCmd.AddCommand(sgxSetSigCmd)
 }
