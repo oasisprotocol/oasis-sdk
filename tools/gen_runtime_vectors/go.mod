@@ -5,7 +5,7 @@ go 1.17
 replace github.com/oasisprotocol/oasis-sdk/client-sdk/go => ../../client-sdk/go
 
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2201.8
+	github.com/oasisprotocol/oasis-core/go v0.2201.9
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.0
 )
 

@@ -23,7 +23,7 @@ require (
 	github.com/btcsuite/btcd v0.22.0-beta
 	github.com/ethereum/go-ethereum v1.10.19
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20211219162838-e9a669f65da9
-	github.com/oasisprotocol/oasis-core/go v0.2201.8
+	github.com/oasisprotocol/oasis-core/go v0.2201.9
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
 	google.golang.org/grpc v1.47.0
 )

@@ -5,8 +5,8 @@
 #
 
 # Released version from GitHub Releases.
-# e.g. '21.1.8'
-OASIS_CORE_VERSION='22.1.8'
+# e.g. '21.1.9'
+OASIS_CORE_VERSION='22.1.9'
 
 # Development version from GitHub Actions.
 # e.g. '58512799'
@@ -16,4 +16,4 @@ GITHUB_ARTIFACT_VERSION=''
 
 # Version from Buildkite.
 # e.g. '4759'
-BUILD_NUMBER='8907' # v22.1.8
+BUILD_NUMBER='9078' # v22.1.9
