@@ -296,6 +296,91 @@ fn test_c10l_evm_calls() {
 }
 
 #[test]
+fn test_c10l_evm_balance_transfer() {
+    crypto::signature::context::set_chain_context(Default::default(), "test");
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    Core::<CoreConfig>::init(
+        &mut ctx,
+        core::Genesis {
+            parameters: core::Parameters {
+                max_batch_gas: 10_000_000,
+                ..Default::default()
+            },
+        },
+    );
+
+    Accounts::init(
+        &mut ctx,
+        accounts::Genesis {
+            balances: BTreeMap::from([(
+                keys::dave::address(),
+                BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
+            )]),
+            total_supplies: BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
+            ..Default::default()
+        },
+    );
+
+    EVMModule::<ConfidentialEVMConfig>::init(
+        &mut ctx,
+        Genesis {
+            parameters: Default::default(),
+        },
+    );
+
+    let recipient = ethabi::Address::repeat_byte(42);
+    let transfer_tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "evm.Call".to_owned(),
+            body: cbor::to_value(types::Call {
+                address: recipient.into(),
+                value: 12345u64.into(),
+                data: vec![],
+            }),
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::dave::sigspec(),
+                0,
+            )],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 1000000,
+                consensus_messages: 0,
+            },
+            ..Default::default()
+        },
+    };
+    // Run authentication handler to simulate nonce increments.
+    Accounts::authenticate_tx(&mut ctx, &transfer_tx).unwrap();
+
+    ctx.with_tx(0, 0, transfer_tx, |mut tx_ctx, call| {
+        EVMModule::<ConfidentialEVMConfig>::tx_call(
+            &mut tx_ctx,
+            cbor::from_value(call.body).unwrap(),
+        )
+        .unwrap();
+        EVMModule::<ConfidentialEVMConfig>::check_invariants(&mut tx_ctx)
+            .expect("invariants should hold");
+        tx_ctx.commit();
+    });
+
+    let recipient_balance = EVMModule::<ConfidentialEVMConfig>::query_balance(
+        &mut ctx,
+        types::BalanceQuery {
+            address: recipient.into(),
+        },
+    )
+    .unwrap();
+    assert_eq!(recipient_balance, 12345u64.into());
+}
+
+#[test]
 fn test_c10l_enc_call_identity_decoded() {
     // Calls sent using the Oasis encrypted envelope format (not inner-enveloped)
     // should not be decoded:

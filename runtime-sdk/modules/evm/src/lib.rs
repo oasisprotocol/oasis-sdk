@@ -14,7 +14,7 @@ use evm::{
     executor::stack::{MemoryStackState, PrecompileFn, StackExecutor, StackSubstateMetadata},
     Config as EVMConfig,
 };
-use once_cell::sync::Lazy;
+use once_cell::sync::OnceCell;
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
@@ -487,54 +487,6 @@ impl<Cfg: Config> API for Module<Cfg> {
 }
 
 impl<Cfg: Config> Module<Cfg> {
-    /// Returns the decrypted call data or `None` if this transaction is simulated in
-    /// a context that may not include a key manager (i.e. SimulateCall but not EstimateGas).
-    fn decode_call_data<C: Context>(
-        ctx: &C,
-        data: Vec<u8>,
-        format: transaction::CallFormat,
-        tx_index: usize,
-        assume_km_reachable: bool,
-    ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
-        if !Cfg::CONFIDENTIAL || format != transaction::CallFormat::Plain {
-            // Either the runtime is non-confidential and all txs are plaintext, or the tx
-            // is sent using a confidential call format and the whole tx is encrypted.
-            return Ok(Some((data, callformat::Metadata::Empty)));
-        }
-        let call = cbor::from_slice(&data)
-            .map_err(|_| CoreError::InvalidCallFormat(anyhow::anyhow!("invalid packed call")))?;
-        match callformat::decode_call_ex(ctx, call, tx_index, assume_km_reachable)? {
-            Some((
-                transaction::Call {
-                    body: cbor::Value::ByteString(data),
-                    ..
-                },
-                metadata,
-            )) => Ok(Some((data, metadata))),
-            Some((_, _)) => {
-                Err(CoreError::InvalidCallFormat(anyhow::anyhow!("invalid inner data")).into())
-            }
-            None => Ok(None),
-        }
-    }
-}
-
-// Config used by the EVM.
-static EVM_CONFIG: EVMConfig = EVMConfig::london();
-// Config used by the EVM for estimation.
-static EVM_CONFIG_ESTIMATE: Lazy<EVMConfig> = Lazy::new(|| {
-    let mut cfg = EVM_CONFIG.clone();
-    // The estimate mode overestimates transaction costs and returns a gas costs that should be sufficient
-    // to execute a transaction, but likely overestimated.
-    // The "proper" EVM-way to estimate exact gas is to disable this estimation and do a binary search
-    // over all possible gas costs to find the minimum gas cost with which the transaction succeeds.
-    // This mode should only be used when the caller wants to avoid the expensive binary search and is
-    // ok with a possible overestimation of gas costs.
-    cfg.estimate = true;
-    cfg
-});
-
-impl<Cfg: Config> Module<Cfg> {
     fn do_evm<C, F>(source: H160, ctx: &mut C, f: F, estimate_gas: bool) -> Result<Vec<u8>, Error>
     where
         F: FnOnce(
@@ -623,6 +575,37 @@ impl<Cfg: Config> Module<Cfg> {
         C: TxContext,
     {
         derive_caller::from_tx_auth_info(ctx.tx_auth_info())
+    }
+
+    /// Returns the decrypted call data or `None` if this transaction is simulated in
+    /// a context that may not include a key manager (i.e. SimulateCall but not EstimateGas).
+    fn decode_call_data<C: Context>(
+        ctx: &C,
+        data: Vec<u8>,
+        format: transaction::CallFormat,
+        tx_index: usize,
+        assume_km_reachable: bool,
+    ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
+        if !Cfg::CONFIDENTIAL || format != transaction::CallFormat::Plain || data.is_empty() {
+            // Either the runtime is non-confidential and all txs are plaintext, or the tx
+            // is sent using a confidential call format and the whole tx is encrypted.
+            return Ok(Some((data, callformat::Metadata::Empty)));
+        }
+        let call = cbor::from_slice(&data)
+            .map_err(|_| CoreError::InvalidCallFormat(anyhow::anyhow!("invalid packed call")))?;
+        match callformat::decode_call_ex(ctx, call, tx_index, assume_km_reachable)? {
+            Some((
+                transaction::Call {
+                    body: cbor::Value::ByteString(data),
+                    ..
+                },
+                metadata,
+            )) => Ok(Some((data, metadata))),
+            Some((_, _)) => {
+                Err(CoreError::InvalidCallFormat(anyhow::anyhow!("invalid inner data")).into())
+            }
+            None => Ok(None),
+        }
     }
 
     fn encode_evm_result<C: Context>(
