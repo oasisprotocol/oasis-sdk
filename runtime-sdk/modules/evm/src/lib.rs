@@ -69,6 +69,48 @@ pub trait Config: 'static {
             address.as_ref(),
         )
     }
+
+    fn evm_config(estimation: bool) -> &'static EVMConfig {
+        static EVM_CONFIG: OnceCell<EVMConfig> = OnceCell::new();
+        static EVM_CONFIG_ESTIMATE: OnceCell<EVMConfig> = OnceCell::new();
+
+        if estimation {
+            EVM_CONFIG_ESTIMATE.get_or_init(|| {
+                // The estimate mode overestimates transaction costs and returns a gas costs
+                // that should be sufficient to execute a transaction, but likely overestimated.
+                // The "proper" EVM-way to estimate exact gas is to disable this estimation and
+                // do a binary search over all possible gas costs to find the minimum gas cost
+                // with which the transaction succeeds. This mode should only be used when the
+                // caller wants to avoid the expensive binary search and is ok with a possible
+                // overestimation of gas costs.
+                EVMConfig {
+                    estimate: true,
+                    ..Self::evm_config(false).clone()
+                }
+            })
+        } else {
+            EVM_CONFIG.get_or_init(|| {
+                let mut cfg = EVMConfig::london();
+                if Self::CONFIDENTIAL {
+                    // Data-dependent gas costs are made constant, where possible, by setting
+                    // the value to the maximum of alternatives. Maximum is chosen to frustrate
+                    // DoS. If the gas costs are too high, the block gas limit may be raised
+                    // later, which is better than getting DoSed and breaking gas limits.
+                    //
+                    // Choosing the minimum has the benefit of not breaking unmodified Eth
+                    // gas estimators, but once algs become confidential data-dependent, gas
+                    // estimation will break anyway. It's not a long-term solution.
+                    //
+                    // Note: storage access patterns may be observed by nodes, so further
+                    // mitigations (e.g. ORAM) are required.
+                    cfg.gas_transaction_zero_data = cfg.gas_transaction_non_zero_data;
+                    cfg.gas_sstore_reset = cfg.gas_sstore_set;
+                    cfg.refund_sstore_clears = 0;
+                }
+                cfg
+            })
+        }
+    }
 }
 
 pub struct Module<Cfg: Config> {
@@ -500,12 +542,7 @@ impl<Cfg: Config> Module<Cfg> {
         ) -> (evm::ExitReason, Vec<u8>),
         C: TxContext,
     {
-        let cfg = if estimate_gas {
-            &*EVM_CONFIG_ESTIMATE
-        } else {
-            &EVM_CONFIG
-        };
-
+        let cfg = Cfg::evm_config(estimate_gas);
         let gas_limit: u64 = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
         let gas_price: primitive_types::U256 = ctx.tx_auth_info().fee.gas_price().into();
         let fee_denomination = ctx.tx_auth_info().fee.amount.denomination().clone();
