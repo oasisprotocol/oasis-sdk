@@ -277,7 +277,9 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
                         let val: H256 = value.into();
 
                         let ctx = self.ctx.get_mut();
-                        if value == primitive_types::H256::default() {
+                        if value == primitive_types::H256::default()
+                            && (Cfg::CONFIDENTIAL && !Cfg::CONFIDENTIAL_CONSTIFY)
+                        {
                             with_storage!(*ctx, &addr, |store| store.remove(&idx));
                         } else {
                             with_storage!(*ctx, &addr, |store| store.insert(&idx, val));

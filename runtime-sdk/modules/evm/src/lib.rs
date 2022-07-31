@@ -60,6 +60,8 @@ pub trait Config: 'static {
 
     /// Whether to use confidential storage by default, and transaction data encryption.
     const CONFIDENTIAL: bool = false;
+    /// Whether to modify some gas costs and storage ops to not be data-dependent.
+    const CONFIDENTIAL_CONSTIFY: bool = false;
 
     /// Maps an Ethereum address into an SDK account address.
     fn map_address(address: primitive_types::H160) -> Address {
@@ -91,7 +93,7 @@ pub trait Config: 'static {
         } else {
             EVM_CONFIG.get_or_init(|| {
                 let mut cfg = EVMConfig::london();
-                if Self::CONFIDENTIAL {
+                if Self::CONFIDENTIAL && Self::CONFIDENTIAL_CONSTIFY {
                     // Data-dependent gas costs are made constant, where possible, by setting
                     // the value to the maximum of alternatives. Maximum is chosen to frustrate
                     // DoS. If the gas costs are too high, the block gas limit may be raised
