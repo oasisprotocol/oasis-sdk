@@ -60,8 +60,6 @@ pub trait Config: 'static {
 
     /// Whether to use confidential storage by default, and transaction data encryption.
     const CONFIDENTIAL: bool = false;
-    /// Whether to modify some gas costs and storage ops to not be data-dependent.
-    const CONFIDENTIAL_CONSTIFY: bool = false;
 
     /// Maps an Ethereum address into an SDK account address.
     fn map_address(address: primitive_types::H160) -> Address {
@@ -72,6 +70,9 @@ pub trait Config: 'static {
         )
     }
 
+    /// Returns the config used by the EVM (in the hardfork sense).
+    // In some cases, the config may be runtime config dependent (e.g., constant
+    // timeness when confidential), so this is made part of the trait.
     fn evm_config(estimation: bool) -> &'static EVMConfig {
         static EVM_CONFIG: OnceCell<EVMConfig> = OnceCell::new();
         static EVM_CONFIG_ESTIMATE: OnceCell<EVMConfig> = OnceCell::new();
@@ -91,26 +92,7 @@ pub trait Config: 'static {
                 }
             })
         } else {
-            EVM_CONFIG.get_or_init(|| {
-                let mut cfg = EVMConfig::london();
-                if Self::CONFIDENTIAL && Self::CONFIDENTIAL_CONSTIFY {
-                    // Data-dependent gas costs are made constant, where possible, by setting
-                    // the value to the maximum of alternatives. Maximum is chosen to frustrate
-                    // DoS. If the gas costs are too high, the block gas limit may be raised
-                    // later, which is better than getting DoSed and breaking gas limits.
-                    //
-                    // Choosing the minimum has the benefit of not breaking unmodified Eth
-                    // gas estimators, but once algs become confidential data-dependent, gas
-                    // estimation will break anyway. It's not a long-term solution.
-                    //
-                    // Note: storage access patterns may be observed by nodes, so further
-                    // mitigations (e.g. ORAM) are required.
-                    cfg.gas_transaction_zero_data = cfg.gas_transaction_non_zero_data;
-                    cfg.gas_sstore_reset = cfg.gas_sstore_set;
-                    cfg.refund_sstore_clears = 0;
-                }
-                cfg
-            })
+            EVM_CONFIG.get_or_init(EVMConfig::london)
         }
     }
 }
