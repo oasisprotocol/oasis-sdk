@@ -32,6 +32,8 @@ export const METHOD_UPLOAD = 'contracts.Upload';
 export const METHOD_INSTANTIATE = 'contracts.Instantiate';
 export const METHOD_CALL = 'contracts.Call';
 export const METHOD_UPGRADE = 'contracts.Upgrade';
+export const METHOD_CHANGE_UPGRADE_POLICY = 'contracts.ChangeUpgradePolicy';
+
 // Queries.
 export const METHOD_CODE = 'contracts.Code';
 export const METHOD_CODE_STORAGE = 'contracts.CodeStorage';
@@ -61,6 +63,9 @@ export class Wrapper extends wrapper.Base {
     }
     callUpgrade() {
         return this.call<types.ContractsUpgrade, void>(METHOD_UPGRADE);
+    }
+    callChangeUpgradePolicy() {
+        return this.call<types.ChangeUpgradePolicy, void>(METHOD_CHANGE_UPGRADE_POLICY);
     }
     queryCode() {
         return this.query<types.ContractsCodeQuery, types.ContractsCode>(METHOD_CODE);
@@ -97,4 +102,5 @@ export type TransactionCallHandlers = {
     [METHOD_INSTANTIATE]?: transaction.CallHandler<types.ContractsInstantiate>;
     [METHOD_CALL]?: transaction.CallHandler<types.ContractsCall>;
     [METHOD_UPGRADE]?: transaction.CallHandler<types.ContractsUpgrade>;
+    [METHOD_CHANGE_UPGRADE_POLICY]?: transaction.CallHandler<types.ChangeUpgradePolicy>;
 };

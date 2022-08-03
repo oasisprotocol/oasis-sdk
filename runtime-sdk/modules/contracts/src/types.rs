@@ -173,6 +173,16 @@ pub struct Upgrade {
     pub tokens: Vec<token::BaseUnits>,
 }
 
+/// Change upgrade policy call.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub struct ChangeUpgradePolicy {
+    /// Instance identifier.
+    pub id: InstanceId,
+
+    /// Updated upgrade policy.
+    pub upgrades_policy: Policy,
+}
+
 /// Code information query.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct CodeQuery {

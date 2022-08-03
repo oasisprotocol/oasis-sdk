@@ -160,6 +160,7 @@ pub struct GasCosts {
     pub tx_instantiate: u64,
     pub tx_call: u64,
     pub tx_upgrade: u64,
+    pub tx_change_upgrade_policy: u64,
 
     // Subcalls.
     pub subcall_dispatch: u64,
@@ -188,6 +189,7 @@ impl Default for GasCosts {
             tx_instantiate: 0,
             tx_call: 0,
             tx_upgrade: 0,
+            tx_change_upgrade_policy: 0,
 
             subcall_dispatch: 100,
 
@@ -561,6 +563,30 @@ impl<Cfg: Config> Module<Cfg> {
         let result = results::process_execution_result(ctx, result)?;
         let data = results::process_execution_success::<Cfg, C>(ctx, &params, &contract, result)?;
         Ok(types::CallResult(data))
+    }
+
+    #[handler(call = "contracts.ChangeUpgradePolicy")]
+    pub fn tx_change_upgrade_policy<C: TxContext>(
+        ctx: &mut C,
+        body: types::ChangeUpgradePolicy,
+    ) -> Result<(), Error> {
+        let params = Self::params(ctx.runtime_state());
+
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_change_upgrade_policy)?;
+
+        if ctx.is_check_only() {
+            return Ok(());
+        }
+
+        // Load instance information.
+        let mut instance_info = Self::load_instance_info(ctx, body.id)?;
+        instance_info.upgrades_policy.enforce(ctx)?;
+
+        // Change upgrade policy.
+        instance_info.upgrades_policy = body.upgrades_policy;
+        Self::store_instance_info(ctx, instance_info.clone())?;
+
+        Ok(())
     }
 
     #[handler(call = "contracts.Upgrade")]
