@@ -20,7 +20,7 @@ replace (
 )
 
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2201.8
+	github.com/oasisprotocol/oasis-core/go v0.2201.9
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.12.2
 	github.com/spf13/cobra v1.4.0

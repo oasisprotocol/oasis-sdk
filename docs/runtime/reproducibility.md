@@ -124,3 +124,111 @@ You can omit the signature initially and add it later by using:
 ```bash
 orc sgx-set-sig bundle.orc path/to/binary.sig
 ```
+
+### Multi-step SGX Signing Example
+
+Multi-step signing allows enclave signing keys to be kept offline, preferrably
+in some HSM. The following example uses `openssl` and a locally generated key as
+an example, however, it is suggested that the key be stored in a more secure
+location than in plaintext on disk.
+
+#### Generate a key
+
+We will generate a valid key for enclave signing. This must be a
+3072-bit RSA key with a public exponent of 3. Do this like so:
+
+```bash
+openssl genrsa -3 3072 > private.pem
+```
+
+We will also need the public key in a later step so let's also generate this
+now.
+
+```bash
+openssl rsa -in private.pem -pubout > public.pem
+```
+
+#### Generate signing data for your enclave
+
+Generating signing data is done with the `orc sgx-gen-sign-data` subcommand,
+like so:
+
+```bash
+orc sgx-gen-sign-data [options] bundle.orc
+```
+
+:::tip
+
+See `orc sgx-gen-sign-data --help` for details on available options.
+
+:::
+
+For purposes of this example, let's assume your bundle is named `bundle.orc`.
+You would generate data to sign like so:
+
+```bash
+orc sgx-gen-sign-data bundle.orc > sigstruct.sha256.bin
+```
+
+The output file `sigstruct.sha256.bin` contains the sha256 hash of the
+SIGSTRUCT fields to be signed.
+
+##### Sign the SIGSTRUCT hash
+
+To sign the SIGSTRUCT you must create a signature using the `RSASSA-PKCS1-v1_5`
+scheme. The following command will do so with `openssl`. If you're using an HSM,
+your device may have a different process for generating a signature of this
+type.
+
+```bash
+openssl pkeyutl -sign \
+      -in sigstruct.sha256.bin \
+      -inkey private.pem \
+      -out sigstruct.sha256.sig \
+      -pkeyopt digest:sha256
+```
+
+##### Attach the singed SIGSTRUCT to the bundle
+
+With the signature in `sigstruct.sha256.sig` we can now generate a valid
+SIGSTRUCT and attach it into the bundle.
+
+```bash
+orc sgx-set-sig bundle.orc sigstruct.sha256.sig public.pem
+```
+
+If there are no errors, `bundle.orc` will now contain a valid SGX SIGSTRUCT
+that was signed by `private.pem`. To verify you can use `orc show` as follows.
+
+```bash
+orc show bundle.orc
+```
+
+It should return something like the following, showing the bundle content
+including the signed SGX SIGSTRUCT (the signature is also verified):
+
+```
+Bundle:         /path/to/bundle.orc
+Name:           my-paratime
+Runtime ID:     000000000000000000000000000000000000000000000000a6d1e3ebf60dff6c
+Version:        0.1.1
+Executable:     runtime.elf
+SGXS:           runtime.sgx
+SGXS MRENCLAVE: a68535bda1574a5e15dfb155c26e39bd404e9991a4d98010581a35d053011340
+SGXS signature: runtime.sgx.sig
+SGXS SIGSTRUCT:
+  Build date:       2022-07-14 00:00:00 +0000 UTC
+  MiscSelect:       00000000
+  MiscSelect mask:  FFFFFFFF
+  Attributes flags: 0000000000000004
+    - 64-bit mode
+  Attributes XFRM:  0000000000000003
+  Attributes mask:  FFFFFFFFFFFFFFFD FFFFFFFFFFFFFFFC
+  MRENCLAVE:        a68535bda1574a5e15dfb155c26e39bd404e9991a4d98010581a35d053011340
+  ISV product ID:   0
+  ISV SVN:          0
+Digests:
+  runtime.sgx.sig => 3c0daea89dfdb3d0381147dec3e041a596617f686afa9b28436ca17980dafee4
+  runtime.elf => a96397fc309bc2116802315c0341a2a9f6f21935d79a3f56d71b3e4d6f6d9302
+  runtime.sgx => b96ff3ae9c73646459b7e8dc1d096838720a7c62707affc1800967cbee99b28b
+```
