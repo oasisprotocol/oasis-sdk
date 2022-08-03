@@ -170,12 +170,6 @@ var (
 				_ = bnd.Add(v.dst, b)
 			}
 
-			// Validate SGXS signature (if any).
-			if manifest.SGX != nil && manifest.SGX.Signature != "" {
-				err = sgxVerifySignature(bnd)
-				cobra.CheckErr(err)
-			}
-
 			// Write the bundle out.
 			outFn := fmt.Sprintf("%s.orc", manifest.Name)
 			if bundleFn != "" {
