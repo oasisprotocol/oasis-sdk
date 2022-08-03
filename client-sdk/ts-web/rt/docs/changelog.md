@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.2.1-alpha.2
+
+Spotlight change:
+
+- A new set of helpers is here to perform the encryption and decryption for
+  confidential calls.
+
+New features:
+
+- We've brought in additions from the SDK itself, notably tooling for
+  signed queries,
+  changeable contract upgrade policy, and
+  contract code storage.
+
 ## v0.2.1-alpha.1
 
 Spotlight change:
