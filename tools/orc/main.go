@@ -13,6 +13,8 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
+	"github.com/oasisprotocol/oasis-core/go/common/sgx"
+	"github.com/oasisprotocol/oasis-core/go/common/sgx/sigstruct"
 	"github.com/oasisprotocol/oasis-core/go/common/version"
 	"github.com/oasisprotocol/oasis-core/go/runtime/bundle"
 )
@@ -255,6 +257,78 @@ var (
 			}
 		},
 	}
+
+	showCmd = &cobra.Command{
+		Use:   "show <bundle.orc>",
+		Short: "show the content of the runtime bundle",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			bundlePath := args[0]
+
+			// Load bundle.
+			bnd, err := bundle.Open(bundlePath)
+			if err != nil {
+				cobra.CheckErr(fmt.Errorf("failed to open bundle: %w", err))
+			}
+
+			fmt.Printf("Bundle:         %s\n", bundlePath)
+			fmt.Printf("Name:           %s\n", bnd.Manifest.Name)
+			fmt.Printf("Runtime ID:     %s\n", bnd.Manifest.ID)
+			fmt.Printf("Version:        %s\n", bnd.Manifest.Version)
+			fmt.Printf("Executable:     %s\n", bnd.Manifest.Executable)
+
+			if bnd.Manifest.SGX != nil {
+				fmt.Printf("SGXS:           %s\n", bnd.Manifest.SGX.Executable)
+
+				mrEnclave, err := bnd.MrEnclave()
+				if err != nil {
+					cobra.CheckErr(fmt.Errorf("failed to compute MRENCLAVE: %w", err))
+				}
+				fmt.Printf("SGXS MRENCLAVE: %s\n", mrEnclave)
+
+				if bnd.Manifest.SGX.Signature != "" {
+					fmt.Printf("SGXS signature: %s\n", bnd.Manifest.SGX.Signature)
+
+					_, sigStruct, err := sigstruct.Verify(bnd.Data[bnd.Manifest.SGX.Signature])
+					cobra.CheckErr(err) // Already checked during Open so it should never fail.
+
+					fmt.Printf("SGXS SIGSTRUCT:\n")
+					fmt.Printf("  Build date:       %s\n", sigStruct.BuildDate)
+					fmt.Printf("  MiscSelect:       %08X\n", sigStruct.MiscSelect)
+					fmt.Printf("  MiscSelect mask:  %08X\n", sigStruct.MiscSelectMask)
+					fmt.Printf("  Attributes flags: %016X\n", sigStruct.Attributes.Flags)
+
+					for _, fm := range []struct {
+						flag sgx.AttributesFlags
+						name string
+					}{
+						{sgx.AttributeInit, "init"},
+						{sgx.AttributeDebug, "DEBUG"},
+						{sgx.AttributeMode64Bit, "64-bit mode"},
+						{sgx.AttributeProvisionKey, "provision key"},
+						{sgx.AttributeEInitTokenKey, "enclave init token key"},
+					} {
+						if sigStruct.Attributes.Flags.Contains(fm.flag) {
+							fmt.Printf("    - %s\n", fm.name)
+						}
+					}
+
+					fmt.Printf("  Attributes XFRM:  %016X\n", sigStruct.Attributes.Xfrm)
+					fmt.Printf("  Attributes mask:  %016X %016X\n", sigStruct.AttributesMask[0], sigStruct.AttributesMask[1])
+					fmt.Printf("  MRENCLAVE:        %s\n", sigStruct.EnclaveHash)
+					fmt.Printf("  ISV product ID:   %d\n", sigStruct.ISVProdID)
+					fmt.Printf("  ISV SVN:          %d\n", sigStruct.ISVSVN)
+				} else {
+					fmt.Printf("SGXS signature: [UNSIGNED]\n")
+				}
+			}
+
+			fmt.Printf("Digests:\n")
+			for name, digest := range bnd.Manifest.Digests {
+				fmt.Printf("  %s => %s\n", name, digest)
+			}
+		},
+	}
 )
 
 func main() {
@@ -288,4 +362,5 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(sgxGetSignDataCmd)
 	rootCmd.AddCommand(sgxSetSigCmd)
+	rootCmd.AddCommand(showCmd)
 }
