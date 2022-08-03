@@ -407,6 +407,13 @@ pub trait TxContext: Context {
     /// Whether the call is read-only and must not make any storage modifications.
     fn is_read_only(&self) -> bool;
 
+    /// Whether the transaction is internally generated (e.g. by another module in the SDK as a
+    /// subcall to a different module).
+    fn is_internal(&self) -> bool;
+
+    /// Mark this context as part of an internally generated transaction (e.g. a subcall).
+    fn internal(self) -> Self;
+
     /// Authenticated address of the caller.
     ///
     /// In case there are multiple signers of a transaction, this will return the address
@@ -444,6 +451,9 @@ pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: NestedStore> {
     epoch: consensus::beacon::EpochTime,
     io_ctx: Arc<IoContext>,
     logger: slog::Logger,
+
+    /// Whether this context is part of an existing transaction (e.g. a subcall).
+    internal: bool,
 
     /// Block emitted event tags. Events are aggregated by tag key, the value
     /// is a list of all emitted event values.
@@ -487,6 +497,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             key_manager,
             logger: get_logger("runtime-sdk")
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
+            internal: false,
             block_etags: EventTags::new(),
             max_messages,
             messages: Vec::new(),
@@ -518,6 +529,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             io_ctx: ctx.io_ctx.clone(),
             logger: get_logger("runtime-sdk")
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
+            internal: false,
             block_etags: EventTags::new(),
             max_messages: ctx.max_messages,
             messages: Vec::new(),
@@ -643,6 +655,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
             logger: self
                 .logger
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
+            internal: self.internal,
             block_etags: EventTags::new(),
             max_messages: match mode {
                 Mode::SimulateTx => self.max_messages,
@@ -692,6 +705,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
             tx_auth_info: tx.auth_info,
             tx_call_format: tx.call.format,
             read_only: tx.call.read_only,
+            internal: self.internal,
             etags: BTreeMap::new(),
             etags_unconditional: BTreeMap::new(),
             max_messages: remaining_messages,
@@ -742,6 +756,8 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
     tx_call_format: transaction::CallFormat,
     /// Whether the call is read-only and must not make any storage modifications.
     read_only: bool,
+    /// Whether this context is part of an existing transaction (e.g. a subcall).
+    internal: bool,
 
     /// Emitted event tags. Events are aggregated by tag key, the value
     /// is a list of all emitted event values.
@@ -887,6 +903,7 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
             logger: self
                 .logger
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
+            internal: self.internal,
             block_etags: EventTags::new(),
             max_messages: match mode {
                 Mode::SimulateTx => self.max_messages,
@@ -919,6 +936,15 @@ impl<R: runtime::Runtime, S: Store> TxContext for RuntimeTxContext<'_, '_, R, S>
 
     fn is_read_only(&self) -> bool {
         self.read_only
+    }
+
+    fn is_internal(&self) -> bool {
+        self.internal
+    }
+
+    fn internal(mut self) -> Self {
+        self.internal = true;
+        self
     }
 
     fn tx_value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
