@@ -11,7 +11,7 @@ replace (
 
 require (
 	github.com/btcsuite/btcd v0.22.0-beta
-	github.com/ethereum/go-ethereum v1.10.19
+	github.com/ethereum/go-ethereum v1.10.21
 	github.com/golang/snappy v0.0.4
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20211219162838-e9a669f65da9
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
@@ -69,8 +69,8 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
-	golang.org/x/net v0.0.0-20220418201149-a630d4f3e7a2 // indirect
-	golang.org/x/sys v0.0.0-20220227234510-4e6760a101f9 // indirect
+	golang.org/x/net v0.0.0-20220607020251-c690dde0001d // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20220407144326-9054f6ed7bac // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20200902210233-8630cac324bf // indirect
