@@ -484,6 +484,7 @@ impl Runtime for ContractRuntime {
             core::Genesis {
                 parameters: core::Parameters {
                     max_batch_gas: 10_000_000,
+                    min_gas_price: BTreeMap::from([(Denomination::NATIVE, 1)]),
                     ..Default::default()
                 },
             },
@@ -513,7 +514,9 @@ impl Runtime for ContractRuntime {
 }
 
 #[test]
-fn test_hello_contract_subcalls() {
+fn test_hello_contract_subcalls_overflow() {
+    use cbor::cbor_map;
+
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
 
@@ -529,7 +532,11 @@ fn test_hello_contract_subcalls() {
             method: "contracts.Call".to_owned(),
             body: cbor::to_value(types::Call {
                 id: instance_id,
-                data: cbor::to_vec(cbor::cbor_text!("call_self")), // Needs to conform to contract API.
+                data: cbor::to_vec(cbor::cbor_map! { // Needs to conform to contract API.
+                    "call_self" => cbor::cbor_map! {
+                        "once" => cbor::cbor_bool!(false),
+                    },
+                }),
                 tokens: vec![],
             }),
             ..Default::default()
@@ -553,8 +560,79 @@ fn test_hello_contract_subcalls() {
 
         assert_eq!(result.module_name(), "contracts.0");
         assert_eq!(result.code(), 3);
-        assert_eq!(&result.to_string(), "contract error: subcall failed");
+        assert_eq!(
+            &result.to_string(),
+            "contract error: subcall failed: module=contracts.0 code=3"
+        );
     });
+}
+
+#[test]
+fn test_hello_contract_subcalls() {
+    use cbor::cbor_map;
+
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+
+    ContractRuntime::migrate(&mut ctx);
+
+    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
+
+    // And finally call a method.
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "contracts.Call".to_owned(),
+            body: cbor::to_value(types::Call {
+                id: instance_id,
+                data: cbor::to_vec(cbor::cbor_map! { // Needs to conform to contract API.
+                    "call_self" => cbor::cbor_map! {
+                        "once" => cbor::cbor_bool!(true),
+                    },
+                }),
+                tokens: vec![],
+            }),
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
+            fee: transaction::Fee {
+                amount: BaseUnits::new(2_000_000, Denomination::NATIVE),
+                gas: 2_000_000,
+                consensus_messages: 0,
+            },
+            ..Default::default()
+        },
+    };
+    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, call| {
+        let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            .expect("call should succeed");
+
+        let result: cbor::Value =
+            cbor::from_slice(&result.0).expect("result should be correctly formatted");
+        assert_eq!(
+            result,
+            cbor::cbor_map! {
+                "hello" => cbor::cbor_map!{
+                    "greeting" => cbor::cbor_text!("hello subcall (33)")
+                }
+            }
+        );
+    });
+
+    // Gas estimation should work.
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::CheckTx);
+    let args = core::types::EstimateGasQuery {
+        caller: None,
+        tx,
+        propagate_failures: true,
+    };
+    <ContractRuntime as Runtime>::Core::query_estimate_gas(&mut ctx, args)
+        .expect("query_estimate_gas should succeed");
 }
 
 #[test]

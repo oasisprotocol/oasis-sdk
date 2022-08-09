@@ -181,7 +181,9 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                         },
                     };
 
-                    let result = ctx.with_tx(0, 0, tx, |mut ctx, call| {
+                    let result = ctx.with_tx(0, 0, tx, |ctx, call| {
+                        // Mark this sub-context as internal as it belongs to an existing transaction.
+                        let mut ctx = ctx.internal();
                         // Propagate call depth.
                         ctx.value(CONTEXT_KEY_DEPTH).set(current_depth + 1);
 

@@ -33,9 +33,9 @@ pub enum Error {
     #[sdk_error(code = 2)]
     QueryFailed,
 
-    #[error("subcall failed")]
+    #[error("subcall failed: {0}")]
     #[sdk_error(code = 3)]
-    SubcallFailed,
+    SubcallFailed(String),
 
     #[error("upgrade not allowed (pre)")]
     #[sdk_error(code = 4)]
@@ -66,7 +66,7 @@ pub enum Request {
     SayHello { who: String },
 
     #[cbor(rename = "call_self")]
-    CallSelf,
+    CallSelf { once: bool },
 
     #[cbor(rename = "increment_counter")]
     IncrementCounter,
@@ -206,11 +206,28 @@ impl sdk::Contract for HelloWorld {
                     greeting: format!("hello {} ({})", who, counter),
                 })
             }
-            Request::CallSelf => {
-                // This request is used in tests to attempt to trigger infinite recursion through
-                // subcalls as it invokes the same method again and again. In reality propagation
-                // should stop when running out of gas or reaching the maximum subcall depth.
+            Request::CallSelf { once } => {
+                // This request is used in tests to test subcalls.
                 use cbor::cbor_map;
+
+                let args = if once {
+                    // Only one subcall.
+                    cbor::cbor_map! {
+                        "say_hello" => cbor::cbor_map! {
+                            "who" => cbor::cbor_text!("subcall"),
+                        },
+                    }
+                } else {
+                    // This request is used in tests to attempt to trigger infinite recursion
+                    // through subcalls as it invokes the same method again and again. In reality
+                    // propagation should stop when running out of gas or reaching the maximum
+                    // subcall depth.
+                    cbor::cbor_map! {
+                        "call_self" => cbor::cbor_map! {
+                            "once" => cbor::cbor_bool!(false),
+                        },
+                    }
+                };
 
                 // Emit a message through which we instruct the runtime to make a call on the
                 // contract's behalf. In this case we use it to call into our own contract.
@@ -222,7 +239,7 @@ impl sdk::Contract for HelloWorld {
                     method: "contracts.Call".to_string(),
                     body: cbor::cbor_map! {
                         "id" => cbor::cbor_int!(ctx.instance_id().as_u64() as i64),
-                        "data" => cbor::cbor_bytes!(cbor::to_vec(cbor::cbor_text!("call_self"))),
+                        "data" => cbor::cbor_bytes!(cbor::to_vec(args)),
                         "tokens" => cbor::cbor_array![],
                     },
                     max_gas: None,
@@ -368,13 +385,21 @@ impl sdk::Contract for HelloWorld {
         // This method is called to handle any replies for emitted messages.
         match reply {
             Reply::Call { id, result, .. } if id == 0 => {
-                // Propagate all failures.
-                if !result.is_success() {
-                    return Err(Error::SubcallFailed);
+                match result {
+                    CallResult::Failed { module, code } => {
+                        // Propagate all failures.
+                        Err(Error::SubcallFailed(format!(
+                            "module={} code={}",
+                            module, code
+                        )))
+                    }
+                    CallResult::Ok(val) => {
+                        // Replace result with the subcall's result.
+                        let val: Vec<u8> = cbor::from_value(val).unwrap();
+                        let val = cbor::from_slice(&val).unwrap();
+                        Ok(Some(val))
+                    }
                 }
-
-                // Do not modify the result.
-                Ok(None)
             }
             Reply::Call { id, result, data } if id == 42 => {
                 let data = cbor::from_value(data.unwrap()).unwrap();

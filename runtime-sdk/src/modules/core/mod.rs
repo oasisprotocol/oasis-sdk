@@ -464,7 +464,7 @@ impl<Cfg: Config> Module<Cfg> {
     /// estimate that and return successfully, so do not use this query to see if a transaction will
     /// succeed.
     #[handler(query = "core.EstimateGas")]
-    fn query_estimate_gas<C: Context>(
+    pub fn query_estimate_gas<C: Context>(
         ctx: &mut C,
         mut args: types::EstimateGasQuery,
     ) -> Result<u64, Error> {
@@ -872,6 +872,15 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
             return Err(Error::GasOverflow);
         }
 
+        // Attempt to limit the maximum number of consensus messages.
+        let consensus_messages = ctx.tx_auth_info().fee.consensus_messages;
+        ctx.limit_max_messages(consensus_messages)?;
+
+        // Skip additional checks/gas payment for internally generated transactions.
+        if ctx.is_internal() {
+            return Ok(());
+        }
+
         // Enforce minimum gas price constraints.
         Self::enforce_min_gas_price(ctx, call)?;
 
@@ -918,10 +927,6 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
                 Self::use_tx_gas(ctx, params.gas_costs.callformat_x25519_deoxysii)?
             }
         }
-
-        // Attempt to limit the maximum number of consensus messages.
-        let consensus_messages = ctx.tx_auth_info().fee.consensus_messages;
-        ctx.limit_max_messages(consensus_messages)?;
 
         Ok(())
     }
