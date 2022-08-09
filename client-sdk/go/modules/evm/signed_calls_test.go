@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 )
 
 type rsvSigner struct {
@@ -39,14 +40,14 @@ func TestMakeSignedCall(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := EncodeSignedCall(rsvSigner{sk}, 0x5afe, caller, callee, 10, big.NewInt(123), big.NewInt(42), []byte{1, 2, 3, 4}, leash)
+	dataPack, err := NewSignedCallDataPack(rsvSigner{sk}, 0x5afe, caller, callee, 10, big.NewInt(123), big.NewInt(42), []byte{1, 2, 3, 4}, leash)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	dataHex := hex.EncodeToString(data)
+	encodedDataPack := hex.EncodeToString(cbor.Marshal(dataPack))
 	// From the JS reference impl:
-	if dataHex != "a2657175657279a764646174614401020304656c65617368a4656e6f6e63651903e76a626c6f636b5f686173685820c92b675c7013e33aa88feaae520eb0ede155e7cacb3c4587e0923cba9953f8bb6b626c6f636b5f72616e6765036c626c6f636b5f6e756d626572182a6576616c75655820000000000000000000000000000000000000000000000000000000000000002a6663616c6c65725411e244400cf165ade687077984f09c3a037b868f676164647265737354b5ed90452aac09f294a0be877cbf2dc4d55e096f696761735f6c696d69740a696761735f70726963655820000000000000000000000000000000000000000000000000000000000000007b697369676e6174757265584148bca100e84d13a80b131c62b9b87caf07e4da6542a9e1ea16d8042ba08cc1e31f10ae924d8c137882204e9217423194014ce04fa2130c14f27b148858733c7b1c" {
-		t.Fatalf("got invalid signed call data: %s", dataHex)
+	if encodedDataPack != "a36464617461a164626f64794401020304656c65617368a4656e6f6e63651903e76a626c6f636b5f686173685820c92b675c7013e33aa88feaae520eb0ede155e7cacb3c4587e0923cba9953f8bb6b626c6f636b5f72616e6765036c626c6f636b5f6e756d626572182a697369676e6174757265584148bca100e84d13a80b131c62b9b87caf07e4da6542a9e1ea16d8042ba08cc1e31f10ae924d8c137882204e9217423194014ce04fa2130c14f27b148858733c7b1c" {
+		t.Fatalf("got invalid signed call data: %s", encodedDataPack)
 	}
 }

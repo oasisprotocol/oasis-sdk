@@ -664,7 +664,7 @@ impl<Cfg: Config> Module<Cfg> {
             ));
         }
 
-        // The call is not signed, but it must be encoded as an oaiss-sdk call.
+        // The call is not signed, but it must be encoded as an oasis-sdk call.
         let tx_call_format = transaction::CallFormat::Plain; // Queries cannot be encrypted.
         let (data, tx_metadata) = Self::decode_call_data(ctx, call.data, tx_call_format, 0, true)?
             .expect("processing always proceeds");
