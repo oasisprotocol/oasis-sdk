@@ -34,8 +34,21 @@ pub struct BalanceQuery {
     pub address: H160,
 }
 
-/// An envelope containing a non-encrypted [`SimulateCallQuery`] and a signture
-/// generated according to [EIP-712](https://eips.ethereum.org/EIPS/eip-712).
+/// Transaction body for simulating an EVM call.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cfg_attr(test, derive(Default, PartialEq, Eq))]
+pub struct SimulateCallQuery {
+    pub gas_price: U256,
+    pub gas_limit: u64,
+    pub caller: H160,
+    pub address: H160,
+    pub value: U256,
+    pub data: Vec<u8>,
+}
+
+/// An envelope containing the encryption-enveloped data of a [`SimulateCallQuery`]
+/// and a signature generated according to [EIP-712](https://eips.ethereum.org/EIPS/eip-712)
+/// over the unmodified Eth call.
 ///
 /// EIP-712 is used so that the signed message can be easily verified by the user.
 /// MetaMask, for instance, shows each field as itself, whereas a standard `eth_personalSign`
@@ -69,23 +82,10 @@ pub struct BalanceQuery {
 /// }
 /// ```
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-pub struct SignedQueryEnvelope {
-    pub query: SimulateCallQuery,
+pub struct SignedCallDataPack {
+    pub data: oasis_runtime_sdk::types::transaction::Call,
+    pub leash: Leash,
     pub signature: [u8; 65],
-}
-
-/// Transaction body for simulating an EVM call.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-#[cfg_attr(test, derive(Default, PartialEq, Eq))]
-pub struct SimulateCallQuery {
-    pub gas_price: U256,
-    pub gas_limit: u64,
-    pub caller: H160,
-    pub address: H160,
-    pub value: U256,
-    pub data: Vec<u8>,
-    #[cbor(optional, default)]
-    pub leash: Option<Leash>,
 }
 
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]

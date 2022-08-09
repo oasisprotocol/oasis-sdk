@@ -30,6 +30,19 @@ pub enum Metadata {
     },
 }
 
+impl std::fmt::Debug for Metadata {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Empty => f.debug_struct("Metadata::Empty").finish(),
+            Self::EncryptedX25519DeoxysII { pk, index, .. } => f
+                .debug_struct("Metadata::EncryptedX25519DeoxysII")
+                .field("pk", pk)
+                .field("index", index)
+                .finish_non_exhaustive(),
+        }
+    }
+}
+
 /// Derive the key pair ID for the call data encryption key pair.
 pub fn get_key_pair_id(epoch: beacon::EpochTime) -> keymanager::KeyPairId {
     keymanager::get_key_pair_id(&[
