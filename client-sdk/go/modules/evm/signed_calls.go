@@ -8,13 +8,24 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
+
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 // RSVSigner is a type that produces secp256k1 signatures in RSV format.
 type RSVSigner interface {
 	// Sign returns a 65-byte secp256k1 signature as (R || S || V) over the provided digest.
 	SignRSV(digest [32]byte) ([]byte, error)
+}
+
+// SignedCallDataPack defines a signed call.
+//
+// It should be encoded and sent in the `data` field of an Ethereum call.
+type SignedCallDataPack struct {
+	Data      types.Call `json:"data"`
+	Leash     Leash      `json:"leash"`
+	Signature []byte     `json:"signature"`
 }
 
 type Leash struct {
@@ -24,48 +35,23 @@ type Leash struct {
 	BlockRange  uint64 `json:"block_range"`
 }
 
-type LeashedSimulateCallQuery struct {
-	SimulateCallQuery
-	Leash Leash `json:"leash"`
-}
-
-// SignedQueryEnvelope is a query alongside its signature.
+// NewSignedCallDataPack returns a SignedCallDataPack.
 //
-// It should be encoded and sent in the `data` field of a `SimulateCallQuery`.
-type SignedQueryEnvelope struct {
-	Query     LeashedSimulateCallQuery `json:"query"`
-	Signature []byte                   `json:"signature"`
-}
-
-// EncodeSignedCall returns a value that should be set as the `data` field of `SimulateCall`.
-//
-// This method does not encrypt `data`, so that should be done in advance, if required.
-func EncodeSignedCall(signer RSVSigner, chainID uint64, caller, callee []byte, gasLimit uint64, gasPrice, value *big.Int, data []byte, leash Leash) ([]byte, error) {
-	gasPriceU256 := math.U256Bytes(gasPrice)
-	valueU256 := math.U256Bytes(value)
-	signable := packCall(chainID, caller, callee, gasLimit, gasPrice, value, data, leash)
+// This method does not encrypt `data`, so that should be done afterwards.
+func NewSignedCallDataPack(signer RSVSigner, chainID uint64, caller, callee []byte, gasLimit uint64, gasPrice, value *big.Int, data []byte, leash Leash) (*SignedCallDataPack, error) {
+	signable := makeSignableCall(chainID, caller, callee, gasLimit, gasPrice, value, data, leash)
 	signature, err := signTypedData(signer, signable)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign call: %w", err)
 	}
-	envelopedCall := cbor.Marshal(SignedQueryEnvelope{
-		Query: LeashedSimulateCallQuery{
-			SimulateCallQuery: SimulateCallQuery{
-				GasPrice: gasPriceU256,
-				GasLimit: gasLimit,
-				Caller:   caller,
-				Address:  callee,
-				Value:    valueU256,
-				Data:     data,
-			},
-			Leash: leash,
-		},
+	return &SignedCallDataPack{
+		Data:      types.Call{Body: cbor.Marshal(data)},
+		Leash:     leash,
 		Signature: signature,
-	})
-	return envelopedCall, nil
+	}, nil
 }
 
-func packCall(chainID uint64, caller, callee []byte, gasLimit uint64, gasPrice *big.Int, value *big.Int, data []byte, leash Leash) apitypes.TypedData {
+func makeSignableCall(chainID uint64, caller, callee []byte, gasLimit uint64, gasPrice *big.Int, value *big.Int, data []byte, leash Leash) apitypes.TypedData {
 	if value == nil {
 		value = big.NewInt(0)
 	}
@@ -130,7 +116,6 @@ func signTypedData(signer RSVSigner, typedData apitypes.TypedData) ([]byte, erro
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash EIP721Domain: %w", err)
 	}
-
 	typedDataHash, err := typedData.HashStruct(typedData.PrimaryType, typedData.Message)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash typed data: %w", err)
@@ -138,7 +123,9 @@ func signTypedData(signer RSVSigner, typedData apitypes.TypedData) ([]byte, erro
 	rawData := []byte(fmt.Sprintf("\x19\x01%s%s", string(domainSeparator), string(typedDataHash)))
 	digest := crypto.Keccak256Hash(rawData)
 	signature, err := signer.SignRSV(digest)
-	signature[64] += 27 // for compatibility with Eth wallets that generate high V
+	if signature[64] < 27 {
+		signature[64] += 27 // Eth wallets may prefer a high recovery ID.
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign typed data: %w", err)
 	}

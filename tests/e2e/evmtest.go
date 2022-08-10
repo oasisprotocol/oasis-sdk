@@ -17,6 +17,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/callformat"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
@@ -125,16 +126,8 @@ func evmSimulateCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, ca
 	if !c10l {
 		return e.SimulateCall(ctx, client.RoundLatest, gasPriceU256, gasLimit, caller, callee, valueU256, data)
 	}
+
 	var err error
-	zero, err := hex.DecodeString(strings.Repeat("0", 64))
-	if err != nil {
-		return nil, err
-	}
-	txB := client.NewTransactionBuilder(rtc, "", data)
-	if err = txB.SetCallFormat(ctx, types.CallFormatEncryptedX25519DeoxysII); err != nil {
-		return nil, fmt.Errorf("failed to set confidential SimulateCall format: %w", err)
-	}
-	data = cbor.Marshal(txB.GetTransaction().Call)
 
 	leashBlock, err := rtc.GetBlock(ctx, 3)
 	if err != nil {
@@ -145,7 +138,6 @@ func evmSimulateCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, ca
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal leash block hash: %w", err)
 	}
-
 	leash := evm.Leash{
 		Nonce:       9999,
 		BlockNumber: leashBlock.Header.Round,
@@ -162,26 +154,52 @@ func evmSimulateCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, ca
 		return nil, err
 	}
 	signer := rsvSigner{sk}
-	signedCallData, err := evm.EncodeSignedCall(signer, 0xa515, caller, callee, gasLimit, gasPrice, value, data, leash)
+	signedCallDataPack, err := evm.NewSignedCallDataPack(signer, 0xa515, caller, callee, gasLimit, gasPrice, value, data, leash)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create signed call data pack: %w", err)
 	}
+
+	// Encrypt the signed call's data.
+	c := core.NewV1(rtc)
+	callDataPublicKey, err := c.CallDataPublicKey(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get call data public key: %w", err)
+	}
+	encData, encMeta, err := callformat.EncodeCall(&signedCallDataPack.Data, types.CallFormatEncryptedX25519DeoxysII, &callformat.EncodeConfig{PublicKey: &callDataPublicKey.PublicKey})
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode signed call data: %w", err)
+	}
+	signedCallDataPack.Data = *encData
 
 	// Unsigned queries are sent by the zero address, which has no balance, so it will out-of-funds
 	// if the gas price or value is non-zero.
-	raw, err := e.SimulateCall(ctx, client.RoundLatest, zero, gasLimit, caller, callee, zero, signedCallData)
+	raw, err := e.SimulateCall(ctx, client.RoundLatest, gasPriceU256, gasLimit, caller, callee, valueU256, cbor.Marshal(signedCallDataPack))
 	if err != nil {
 		return nil, fmt.Errorf("failed to send c10l SimulateCall: %w", err)
 	}
-	var result types.CallResult
-	if err := cbor.Unmarshal(raw, &result); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal c10l SimulateCall result: %w", err)
+
+	// Decode and decrypt the call result.
+	var encResult types.CallResult
+	if err = cbor.Unmarshal(raw, &encResult); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal %x as c10l SimulateCall result: %w", raw, err)
 	}
-	var out []byte
-	if err := txB.DecodeResult(&result, &out); err != nil {
-		return nil, fmt.Errorf("failed to decode c10l SimulateCall result: %w", err)
+	result, err := callformat.DecodeResult(&encResult, encMeta)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode %#v as c10l SimulateCall result: %w", encResult, err)
 	}
-	return out, nil
+	switch {
+	case result.IsUnknown():
+		// This should never happen as the inner result should not be unknown.
+		return nil, fmt.Errorf("got unknown result: %X", result.Unknown)
+	case result.IsSuccess():
+		var out []byte
+		if err = cbor.Unmarshal(result.Ok, &out); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal call result: %w", err)
+		}
+		return out, nil
+	default:
+		return nil, result.Failed
+	}
 }
 
 type rsvSigner struct {

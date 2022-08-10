@@ -4,7 +4,7 @@ pub mod backend;
 pub mod derive_caller;
 pub mod precompile;
 pub mod raw_tx;
-mod signed_query;
+mod signed_call;
 pub mod state;
 pub mod types;
 
@@ -140,9 +140,9 @@ pub enum Error {
     #[sdk_error(code = 9)]
     SimulationTooExpensive(u64),
 
-    #[error("invalid signed query: {0}")]
+    #[error("invalid signed simulate call query: {0}")]
     #[sdk_error(code = 10)]
-    InvalidSignedQuery(&'static str),
+    InvalidSignedSimulateCall(&'static str),
 
     #[error("core: {0}")]
     #[sdk_error(transparent)]
@@ -335,8 +335,8 @@ pub trait API {
     /// Simulate an Ethereum CALL.
     ///
     /// If the EVM is confidential, it may accept _signed queries_, which are formatted as
-    /// an encrypted [`types::SignedQueryEnvelope`] packed into the `data` field of
-    /// [`types::SimulateCallQuery`].
+    /// an either a [`sdk::types::transaction::Call`] or [`types::SignedCallDataPack`] encoded
+    /// and packed into the `data` field of the [`types::SimulateCallQuery`].
     fn simulate_call<C: Context>(
         ctx: &mut C,
         call: types::SimulateCallQuery,
@@ -446,19 +446,17 @@ impl<Cfg: Config> API for Module<Cfg> {
         ctx: &mut C,
         call: types::SimulateCallQuery,
     ) -> Result<Vec<u8>, Error> {
-        let types::SimulateCallQuery {
-            gas_price,
-            gas_limit,
-            caller,
-            address,
-            value,
-            data,
-            ..
-        } = Self::decode_simulate_call_query(ctx, call)?;
-
-        let (data, tx_metadata) =
-            Self::decode_call_data(ctx, data, transaction::CallFormat::Plain, 0, true)?
-                .expect("processing always proceeds");
+        let (
+            types::SimulateCallQuery {
+                gas_price,
+                gas_limit,
+                caller,
+                address,
+                value,
+                data,
+            },
+            tx_metadata,
+        ) = Self::decode_simulate_call_query(ctx, call)?;
 
         let evm_result = ctx.with_simulation(|mut sctx| {
             let call_tx = transaction::Transaction {
@@ -603,7 +601,7 @@ impl<Cfg: Config> Module<Cfg> {
     fn decode_call_data<C: Context>(
         ctx: &C,
         data: Vec<u8>,
-        format: transaction::CallFormat,
+        format: transaction::CallFormat, // The tx call format.
         tx_index: usize,
         assume_km_reachable: bool,
     ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
@@ -614,6 +612,17 @@ impl<Cfg: Config> Module<Cfg> {
         }
         let call = cbor::from_slice(&data)
             .map_err(|_| CoreError::InvalidCallFormat(anyhow::anyhow!("invalid packed call")))?;
+        Self::decode_call(ctx, call, tx_index, assume_km_reachable)
+    }
+
+    /// Returns the decrypted call data or `None` if this transaction is simulated in
+    /// a context that may not include a key manager (i.e. SimulateCall but not EstimateGas).
+    fn decode_call<C: Context>(
+        ctx: &C,
+        call: transaction::Call,
+        tx_index: usize,
+        assume_km_reachable: bool,
+    ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
         match callformat::decode_call_ex(ctx, call, tx_index, assume_km_reachable)? {
             Some((
                 transaction::Call {
@@ -627,6 +636,46 @@ impl<Cfg: Config> Module<Cfg> {
             }
             None => Ok(None),
         }
+    }
+
+    fn decode_simulate_call_query<C: Context>(
+        ctx: &mut C,
+        call: types::SimulateCallQuery,
+    ) -> Result<(types::SimulateCallQuery, callformat::Metadata), Error> {
+        if !Cfg::CONFIDENTIAL {
+            return Ok((call, callformat::Metadata::Empty));
+        }
+        if let Ok(types::SignedCallDataPack {
+            data,
+            leash,
+            signature,
+        }) = cbor::from_slice(&call.data)
+        {
+            let (data, tx_metadata) =
+                Self::decode_call(ctx, data, 0, true)?.expect("processing always proceeds");
+            return Ok((
+                signed_call::verify::<_, Cfg>(
+                    ctx,
+                    types::SimulateCallQuery { data, ..call },
+                    leash,
+                    signature,
+                )?,
+                tx_metadata,
+            ));
+        }
+
+        // The call is not signed, but it must be encoded as an oasis-sdk call.
+        let tx_call_format = transaction::CallFormat::Plain; // Queries cannot be encrypted.
+        let (data, tx_metadata) = Self::decode_call_data(ctx, call.data, tx_call_format, 0, true)?
+            .expect("processing always proceeds");
+        Ok((
+            types::SimulateCallQuery {
+                caller: Default::default(), // The sender cannot be spoofed.
+                data,
+                ..call
+            },
+            tx_metadata,
+        ))
     }
 
     fn encode_evm_result<C: Context>(
@@ -710,26 +759,6 @@ impl<Cfg: Config> Module<Cfg> {
     fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
         // No migrations currently supported.
         false
-    }
-
-    fn decode_simulate_call_query<C: Context>(
-        ctx: &mut C,
-        body: types::SimulateCallQuery,
-    ) -> Result<types::SimulateCallQuery, Error> {
-        if !Cfg::CONFIDENTIAL {
-            return Ok(body);
-        }
-        match cbor::from_slice(&body.data) {
-            Ok(types::SignedQueryEnvelope { query, signature }) => {
-                signed_query::verify::<_, Cfg>(ctx, query, signature)
-            }
-            Err(_) => Ok(types::SimulateCallQuery {
-                // If the ParaTime is confidential, but the query isn't signed, zero out
-                // the caller address to preserve that `msg.sender` is not spoofable.
-                caller: Default::default(),
-                ..body
-            }),
-        }
     }
 }
 
