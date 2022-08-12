@@ -35,7 +35,11 @@ var (
 	})
 
 	// SimpleConsensusRuntime is the simple-consensus runtime test.
-	SimpleConsensusRuntime = NewRuntimeScenario("test-runtime-simple-consensus", []RunTestFunction{SimpleConsensusTest, ConsensusAccountsParametersTest})
+	SimpleConsensusRuntime = NewRuntimeScenario("test-runtime-simple-consensus", []RunTestFunction{
+		ConsensusDepositWithdrawalTest,
+		ConsensusAccountsParametersTest,
+		ConsensusDelegationTest,
+	})
 
 	// SimpleEVMRuntime is the simple-evm runtime test.
 	SimpleEVMRuntime = NewRuntimeScenario("test-runtime-simple-evm", []RunTestFunction{

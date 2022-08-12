@@ -13,13 +13,17 @@ import (
 
 var (
 	// Callable methods.
-	methodDeposit  = types.NewMethodName("consensus.Deposit", Deposit{})
-	methodWithdraw = types.NewMethodName("consensus.Withdraw", Withdraw{})
+	methodDeposit    = types.NewMethodName("consensus.Deposit", Deposit{})
+	methodWithdraw   = types.NewMethodName("consensus.Withdraw", Withdraw{})
+	methodDelegate   = types.NewMethodName("consensus.Delegate", Delegate{})
+	methodUndelegate = types.NewMethodName("consensus.Undelegate", Undelegate{})
 
 	// Queries.
-	methodParameters = types.NewMethodName("consensus_accounts.Parameters", nil)
-	methodBalance    = types.NewMethodName("consensus.Balance", BalanceQuery{})
-	methodAccount    = types.NewMethodName("consensus.Account", AccountQuery{})
+	methodParameters  = types.NewMethodName("consensus_accounts.Parameters", nil)
+	methodBalance     = types.NewMethodName("consensus.Balance", BalanceQuery{})
+	methodAccount     = types.NewMethodName("consensus.Account", AccountQuery{})
+	methodDelegation  = types.NewMethodName("consensus.Delegation", DelegationQuery{})
+	methodDelegations = types.NewMethodName("consensus.Delegations", DelegationsQuery{})
 )
 
 // V1 is the v1 consensus accounts module interface.
@@ -32,6 +36,12 @@ type V1 interface {
 	// Withdraw generates a consensus.Withdraw transaction.
 	Withdraw(to *types.Address, amount types.BaseUnits) *client.TransactionBuilder
 
+	// Delegate generates a consensus.Delegate transaction.
+	Delegate(to types.Address, amount types.BaseUnits) *client.TransactionBuilder
+
+	// Undelegate generates a consensus.Undelegate transaction.
+	Undelegate(from types.Address, shares types.Quantity) *client.TransactionBuilder
+
 	// Parameters queries the consensus accounts module parameters.
 	Parameters(ctx context.Context, round uint64) (*Parameters, error)
 
@@ -40,6 +50,12 @@ type V1 interface {
 
 	// ConsensusAccount queries the given consensus layer account.
 	ConsensusAccount(ctx context.Context, round uint64, query *AccountQuery) (*staking.Account, error)
+
+	// Delegation queries the given delegation metadata based on a (from, to) address pair.
+	Delegation(ctx context.Context, round uint64, query *DelegationQuery) (*DelegationInfo, error)
+
+	// Delegations queries all delegation metadata originating from a given account.
+	Delegations(ctx context.Context, round uint64, query *DelegationsQuery) ([]*ExtendedDelegationInfo, error)
 
 	// GetEvents returns all consensus accounts events emitted in a given block.
 	GetEvents(ctx context.Context, round uint64) ([]*Event, error)
@@ -62,6 +78,22 @@ func (a *v1) Withdraw(to *types.Address, amount types.BaseUnits) *client.Transac
 	return client.NewTransactionBuilder(a.rc, methodWithdraw, &Withdraw{
 		To:     to,
 		Amount: amount,
+	})
+}
+
+// Implements V1.
+func (a *v1) Delegate(to types.Address, amount types.BaseUnits) *client.TransactionBuilder {
+	return client.NewTransactionBuilder(a.rc, methodDelegate, &Delegate{
+		To:     to,
+		Amount: amount,
+	})
+}
+
+// Implements V1.
+func (a *v1) Undelegate(from types.Address, shares types.Quantity) *client.TransactionBuilder {
+	return client.NewTransactionBuilder(a.rc, methodUndelegate, &Undelegate{
+		From:   from,
+		Shares: shares,
 	})
 }
 
@@ -93,6 +125,26 @@ func (a *v1) ConsensusAccount(ctx context.Context, round uint64, query *AccountQ
 		return nil, err
 	}
 	return &account, nil
+}
+
+// Implements V1.
+func (a *v1) Delegation(ctx context.Context, round uint64, query *DelegationQuery) (*DelegationInfo, error) {
+	var di DelegationInfo
+	err := a.rc.Query(ctx, round, methodDelegation, query, &di)
+	if err != nil {
+		return nil, err
+	}
+	return &di, nil
+}
+
+// Implements V1.
+func (a *v1) Delegations(ctx context.Context, round uint64, query *DelegationsQuery) ([]*ExtendedDelegationInfo, error) {
+	var dis []*ExtendedDelegationInfo
+	err := a.rc.Query(ctx, round, methodDelegations, query, &dis)
+	if err != nil {
+		return nil, err
+	}
+	return dis, nil
 }
 
 // Implements V1.
@@ -146,6 +198,30 @@ func DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
 		for _, ev := range evs {
 			events = append(events, &Event{Withdraw: ev})
 		}
+	case DelegateEventCode:
+		var evs []*DelegateEvent
+		if err := cbor.Unmarshal(event.Value, &evs); err != nil {
+			return nil, fmt.Errorf("decode consensus accounts delegate event value: %w", err)
+		}
+		for _, ev := range evs {
+			events = append(events, &Event{Delegate: ev})
+		}
+	case UndelegateStartEventCode:
+		var evs []*UndelegateStartEvent
+		if err := cbor.Unmarshal(event.Value, &evs); err != nil {
+			return nil, fmt.Errorf("decode consensus accounts undelegate start event value: %w", err)
+		}
+		for _, ev := range evs {
+			events = append(events, &Event{UndelegateStart: ev})
+		}
+	case UndelegateDoneEventCode:
+		var evs []*UndelegateDoneEvent
+		if err := cbor.Unmarshal(event.Value, &evs); err != nil {
+			return nil, fmt.Errorf("decode consensus accounts undelegate done event value: %w", err)
+		}
+		for _, ev := range evs {
+			events = append(events, &Event{UndelegateDone: ev})
+		}
 	default:
 		return nil, fmt.Errorf("invalid consensus accounts event code: %v", event.Code)
 	}
@@ -167,6 +243,20 @@ func NewDepositTx(fee *types.Fee, body *Deposit) *types.Transaction {
 // NewWithdrawTx generates a new consensus.Withdraw transaction.
 func NewWithdrawTx(fee *types.Fee, body *Withdraw) *types.Transaction {
 	tx := types.NewTransaction(fee, methodWithdraw, body)
+	tx.AuthInfo.Fee.ConsensusMessages = 1
+	return tx
+}
+
+// NewDelegateTx generates a new consensus.Delegate transaction.
+func NewDelegateTx(fee *types.Fee, body *Delegate) *types.Transaction {
+	tx := types.NewTransaction(fee, methodDelegate, body)
+	tx.AuthInfo.Fee.ConsensusMessages = 1
+	return tx
+}
+
+// NewUndelegateTx generates a new consensus.Undelegate transaction.
+func NewUndelegateTx(fee *types.Fee, body *Undelegate) *types.Transaction {
+	tx := types.NewTransaction(fee, methodUndelegate, body)
 	tx.AuthInfo.Fee.ConsensusMessages = 1
 	return tx
 }

@@ -2226,6 +2226,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "io-context",
  "k256",
+ "lru",
  "merlin",
  "num-traits",
  "oasis-cbor",

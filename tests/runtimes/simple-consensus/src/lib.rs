@@ -59,6 +59,7 @@ impl sdk::Runtime for Runtime {
                     // These are free, in order to simplify testing. We do test gas accounting
                     // with other methods elsewhere though.
                     gas_costs: Default::default(),
+                    ..Default::default()
                 },
             },
             modules::core::Genesis {

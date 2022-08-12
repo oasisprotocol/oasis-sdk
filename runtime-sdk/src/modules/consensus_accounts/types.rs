@@ -22,6 +22,20 @@ pub struct Withdraw {
     pub amount: token::BaseUnits,
 }
 
+/// Delegate from runtime call.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct Delegate {
+    pub to: Address,
+    pub amount: token::BaseUnits,
+}
+
+/// Undelegate into runtime call.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct Undelegate {
+    pub from: Address,
+    pub shares: u128,
+}
+
 /// Balance query.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct BalanceQuery {
@@ -34,9 +48,38 @@ pub struct ConsensusAccountQuery {
     pub address: Address,
 }
 
+/// Delegation query.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct DelegationQuery {
+    pub from: Address,
+    pub to: Address,
+}
+
+/// Delegations query.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct DelegationsQuery {
+    pub from: Address,
+}
+
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct AccountBalance {
     pub balance: u128,
+}
+
+/// Information about a delegation.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct DelegationInfo {
+    /// The amount of owned shares.
+    pub shares: u128,
+}
+
+/// Extended information about a delegation.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct ExtendedDelegationInfo {
+    /// Address delegation to.
+    pub to: Address,
+    /// The amount of owned shares.
+    pub shares: u128,
 }
 
 /// Context for consensus transfer message handler.
@@ -59,6 +102,24 @@ pub struct ConsensusWithdrawContext {
     pub nonce: u64,
     pub address: Address,
     pub amount: token::BaseUnits,
+}
+
+/// Context for consensus delegate message handler.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode, Default)]
+pub struct ConsensusDelegateContext {
+    pub from: Address,
+    pub nonce: u64,
+    pub to: Address,
+    pub amount: token::BaseUnits,
+}
+
+/// Context for consensus undelegate message handler.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode, Default)]
+pub struct ConsensusUndelegateContext {
+    pub from: Address,
+    pub nonce: u64,
+    pub to: Address,
+    pub shares: u128,
 }
 
 /// Error details from the consensus layer.
