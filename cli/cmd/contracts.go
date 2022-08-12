@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -12,7 +13,6 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
-
 	"github.com/oasisprotocol/oasis-sdk/cli/cmd/common"
 	cliConfig "github.com/oasisprotocol/oasis-sdk/cli/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
@@ -27,6 +27,9 @@ var (
 	contractsInstantiatePolicy string
 	contractsUpgradesPolicy    string
 	contractsTokens            []string
+	contractsStorageDumpKind   string
+	contractsStorageDumpLimit  uint64
+	contractsStorageDumpOffset uint64
 
 	contractsCmd = &cobra.Command{
 		Use:   "contracts",
@@ -94,6 +97,105 @@ var (
 		},
 	}
 
+	contractsStorageCmd = &cobra.Command{
+		Use:   "storage",
+		Short: "WebAssembly smart contracts storage operations",
+	}
+
+	contractsStorageDumpCmd = &cobra.Command{
+		Use:   "dump <instance-id>",
+		Short: "Dump contract store",
+		Long: `Dump public or confidential contract store in JSON. Valid UTF-8 keys in the result set will be
+encoded as strings, or otherwise as Base64.`,
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := cliConfig.Global()
+			npa := common.GetNPASelection(cfg)
+			strInstanceID := args[0]
+
+			if npa.ParaTime == nil {
+				cobra.CheckErr("no paratimes configured")
+			}
+
+			instanceID, err := strconv.ParseUint(strInstanceID, 10, 64)
+			cobra.CheckErr(err)
+
+			ctx := context.Background()
+			conn, err := connection.Connect(ctx, npa.Network)
+			cobra.CheckErr(err)
+
+			var storeKind contracts.StoreKind
+			cobra.CheckErr(storeKind.UnmarshalText([]byte(contractsStorageDumpKind)))
+
+			res, err := conn.Runtime(npa.ParaTime).Contracts.InstanceRawStorage(
+				ctx,
+				client.RoundLatest,
+				contracts.InstanceID(instanceID),
+				storeKind,
+				contractsStorageDumpLimit,
+				contractsStorageDumpOffset,
+			)
+			cobra.CheckErr(err)
+
+			fmt.Printf(
+				"Showing %d %s record(s) of contract %d:\n",
+				len(res.Items),
+				contractsStorageDumpKind,
+				instanceID,
+			)
+			common.JSONPrintKeyValueTuple(res.Items)
+		},
+	}
+
+	contractsStorageGetCmd = &cobra.Command{
+		Use:   "get <instance-id> <key>",
+		Short: "Print value for given key in public contract store",
+		Long: `Print value for the given key in the public contract store in JSON format. The given key can be
+a string or Base64-encoded. Valid UTF-8 keys in the result set will be encoded as strings, or
+otherwise as Base64.`,
+		Args: cobra.ExactArgs(2),
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg := cliConfig.Global()
+			npa := common.GetNPASelection(cfg)
+			strInstanceID := args[0]
+			strKey := args[1]
+
+			if npa.ParaTime == nil {
+				cobra.CheckErr("no paratimes configured")
+			}
+
+			instanceID, err := strconv.ParseUint(strInstanceID, 10, 64)
+			cobra.CheckErr(err)
+
+			// Try parsing the query key as Base64-encoded value. This allows users to query binary
+			// keys. If decoding fails, fallback to original value.
+			var key []byte
+			if err = json.Unmarshal([]byte(fmt.Sprintf("\"%s\"", strKey)), &key); err != nil {
+				key = []byte(strKey)
+			}
+
+			ctx := context.Background()
+			conn, err := connection.Connect(ctx, npa.Network)
+			cobra.CheckErr(err)
+
+			res, err := conn.Runtime(npa.ParaTime).Contracts.InstanceStorage(
+				ctx,
+				client.RoundLatest,
+				contracts.InstanceID(instanceID),
+				key,
+			)
+			cobra.CheckErr(err)
+
+			var storageCell interface{}
+			err = cbor.Unmarshal(res.Value, &storageCell)
+			if err != nil {
+				// Value is not CBOR, use raw value instead.
+				storageCell = res.Value
+			}
+			fmt.Printf("%s\n", common.JSONMarshalUniversalValue(storageCell))
+		},
+	}
+
 	contractsDumpCodeCmd = &cobra.Command{
 		Use:   "dump-code <code-id>",
 		Short: "Dump WebAssembly smart contract code",
@@ -115,7 +217,11 @@ var (
 			cobra.CheckErr(err)
 
 			// Fetch WASM contract code, if supported.
-			codeStorage, err := conn.Runtime(npa.ParaTime).Contracts.CodeStorage(ctx, client.RoundLatest, contracts.CodeID(codeID))
+			codeStorage, err := conn.Runtime(npa.ParaTime).Contracts.CodeStorage(
+				ctx,
+				client.RoundLatest,
+				contracts.CodeID(codeID),
+			)
 			cobra.CheckErr(err)
 
 			os.Stdout.Write(codeStorage.Code)
@@ -412,8 +518,8 @@ func parseTokens(pt *config.ParaTime, tokens []string) []types.BaseUnits {
 
 func init() {
 	contractsShowCmd.Flags().AddFlagSet(common.SelectorFlags)
-
 	contractsShowCodeCmd.Flags().AddFlagSet(common.SelectorFlags)
+
 	contractsDumpCodeCmd.Flags().AddFlagSet(common.SelectorFlags)
 
 	contractsUploadFlags := flag.NewFlagSet("", flag.ContinueOnError)
@@ -441,8 +547,26 @@ func init() {
 	contractsChangeUpgradePolicyCmd.Flags().AddFlagSet(common.SelectorFlags)
 	contractsChangeUpgradePolicyCmd.Flags().AddFlagSet(common.TransactionFlags)
 
+	contractsStorageDumpCmdFlags := flag.NewFlagSet("", flag.ContinueOnError)
+	contractsStorageDumpCmdFlags.StringVar(&contractsStorageDumpKind, "kind", "public",
+		fmt.Sprintf("store kind [%s]", strings.Join([]string{
+			contracts.StoreKindPublicName,
+			contracts.StoreKindConfidentialName,
+		}, ", ")),
+	)
+	contractsStorageDumpCmdFlags.Uint64Var(&contractsStorageDumpLimit, "limit", 0, "result set limit")
+	contractsStorageDumpCmdFlags.Uint64Var(&contractsStorageDumpOffset, "offset", 0, "result set offset")
+	contractsStorageDumpCmd.Flags().AddFlagSet(common.SelectorFlags)
+	contractsStorageDumpCmd.Flags().AddFlagSet(contractsStorageDumpCmdFlags)
+
+	contractsStorageGetCmd.Flags().AddFlagSet(common.SelectorFlags)
+
+	contractsStorageCmd.AddCommand(contractsStorageDumpCmd)
+	contractsStorageCmd.AddCommand(contractsStorageGetCmd)
+
 	contractsCmd.AddCommand(contractsShowCmd)
 	contractsCmd.AddCommand(contractsShowCodeCmd)
+	contractsCmd.AddCommand(contractsStorageCmd)
 	contractsCmd.AddCommand(contractsDumpCodeCmd)
 	contractsCmd.AddCommand(contractsUploadCmd)
 	contractsCmd.AddCommand(contractsInstantiateCmd)

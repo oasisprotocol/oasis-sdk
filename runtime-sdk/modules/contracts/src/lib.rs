@@ -9,6 +9,7 @@ use std::{convert::TryInto, io::Read};
 
 use thiserror::Error;
 
+use crate::store::get_instance_raw_store;
 use oasis_contract_sdk_types::storage::StoreKind;
 use oasis_runtime_sdk::{
     self as sdk,
@@ -20,6 +21,7 @@ use oasis_runtime_sdk::{
     modules::{accounts::API as _, core::API as _},
     runtime::Runtime,
     sdk_derive, storage,
+    storage::Store,
     types::transaction::CallFormat,
 };
 
@@ -265,12 +267,17 @@ pub struct LocalConfig {
     /// Gas limit for custom queries that invoke smart contracts.
     #[cbor(optional, default)]
     pub query_custom_max_gas: u64,
+
+    /// Maximum number of items per page in InstanceRawStorage query result.
+    #[cbor(optional, default)]
+    pub max_instance_raw_storage_query_items: u64,
 }
 
 impl Default for LocalConfig {
     fn default() -> Self {
         Self {
             query_custom_max_gas: 10_000_000,
+            max_instance_raw_storage_query_items: 100,
         }
     }
 }
@@ -703,6 +710,43 @@ impl<Cfg: Config> Module<Cfg> {
         Ok(types::InstanceStorageQueryResult {
             value: store.get(&args.key),
         })
+    }
+
+    #[handler(query = "contracts.InstanceRawStorage", expensive)]
+    pub fn query_instance_raw_storage<C: Context>(
+        ctx: &mut C,
+        args: types::InstanceRawStorageQuery,
+    ) -> Result<types::InstanceRawStorageQueryResult, Error> {
+        let cfg: LocalConfig = ctx.local_config(MODULE_NAME).unwrap_or_default();
+        let limit: usize = args
+            .limit
+            .unwrap_or(u64::MAX)
+            .min(cfg.max_instance_raw_storage_query_items)
+            .try_into()
+            .map_err(|_| Error::InvalidArgument)?;
+        let offset: usize = args
+            .offset
+            .unwrap_or(0)
+            .try_into()
+            .map_err(|_| Error::InvalidArgument)?;
+
+        let instance_info = Self::load_instance_info(ctx, args.id)?;
+        // Convert contracts API StoreKind to internal storage StoreKind.
+        let sk: StoreKind = (args.store_kind as u32)
+            .try_into()
+            .map_err(|_| Error::InvalidArgument)?;
+        let store = get_instance_raw_store(ctx, &instance_info, sk);
+
+        let items: Vec<(Vec<u8>, Vec<u8>)> = store
+            .iter()
+            // Shave off first 32 bytes of the key to get the contract instance-level key name.
+            .filter(|(k, _)| k.len() >= 32)
+            .map(|(k, v)| (k[32..].to_vec(), v.to_vec()))
+            .skip(offset)
+            .take(limit)
+            .collect();
+
+        Ok(types::InstanceRawStorageQueryResult { items })
     }
 
     #[handler(query = "contracts.PublicKey")]

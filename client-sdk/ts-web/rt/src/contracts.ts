@@ -39,8 +39,13 @@ export const METHOD_CODE = 'contracts.Code';
 export const METHOD_CODE_STORAGE = 'contracts.CodeStorage';
 export const METHOD_INSTANCE = 'contracts.Instance';
 export const METHOD_INSTANCE_STORAGE = 'contracts.InstanceStorage';
+export const METHOD_INSTANCE_RAW_STORAGE = 'contracts.InstanceRawStorage';
 export const METHOD_PUBLIC_KEY = 'contracts.PublicKey';
 export const METHOD_CUSTOM = 'contracts.Custom';
+
+// Store kind.
+export const STORE_KIND_PUBLIC = 0;
+export const STORE_KIND_CONFIDENTIAL = 1;
 
 // Public key kind.
 export const PUBLIC_KEY_KIND_TRANSACTION = 1;
@@ -83,6 +88,12 @@ export class Wrapper extends wrapper.Base {
             types.ContractsInstanceStorageQuery,
             types.ContractsInstanceStorageQueryResult
         >(METHOD_INSTANCE_STORAGE);
+    }
+    queryInstanceRawStorage() {
+        return this.query<
+            types.ContractsInstanceRawStorageQuery,
+            types.ContractsInstanceRawStorageQueryResult
+        >(METHOD_INSTANCE_RAW_STORAGE);
     }
     queryPublicKey() {
         return this.query<types.ContractsPublicKeyQuery, types.ContractsPublicKeyQueryResult>(

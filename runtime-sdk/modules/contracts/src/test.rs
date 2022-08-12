@@ -18,7 +18,7 @@ use oasis_runtime_sdk::{
     BatchContext, Context, Runtime, Version,
 };
 
-use crate::{types, Config, Genesis};
+use crate::{types, types::StoreKind, Config, Genesis};
 
 /// Hello contract code.
 static HELLO_CONTRACT_CODE: &[u8] = include_bytes!(
@@ -420,6 +420,228 @@ fn test_hello_contract_call() {
     let value: u64 = cbor::from_slice(&value).expect("counter value should be well-formed");
     // Value is 35 because it was incremented by last call above.
     assert_eq!(value, 35, "counter value should be correct");
+
+    // Test raw public storage query.
+    let result = Contracts::query_instance_raw_storage(
+        &mut ctx,
+        types::InstanceRawStorageQuery {
+            id: instance_id,
+            store_kind: StoreKind::Public,
+            limit: None,
+            offset: None,
+        },
+    )
+    .expect("instance raw public storage query should succeed");
+    assert_eq!(
+        result.items.len(),
+        3,
+        "raw storage should contain 3 elements (tester, second, counter)"
+    );
+    assert_eq!(
+        result.items[0].0, b"timestampstester",
+        "first item in raw storage should be timestamps[tester]"
+    );
+    assert_eq!(
+        result.items[1].0, b"timestampssecond",
+        "second item in raw storage should be timestamps[second]"
+    );
+    assert_eq!(
+        result.items[2].0, b"counter",
+        "third item in raw storage should be counter"
+    );
+    let raw_value: u64 = cbor::from_slice(&result.items[2].1)
+        .expect("counter value in raw storage should be well-formed");
+    // Value is 35 because it was incremented by last call above.
+    assert_eq!(
+        raw_value, 35,
+        "counter value in raw storage should be correct"
+    );
+
+    // Test PublicMap and ConfidentialMap.
+    for i in 0..10 {
+        let tx = transaction::Transaction {
+            version: 1,
+            call: transaction::Call {
+                format: transaction::CallFormat::Plain,
+                method: "contracts.Call".to_owned(),
+                body: cbor::to_value(types::Call {
+                    id: instance_id,
+                    // Needs to conform to contract API.
+                    data: cbor::to_vec(cbor::cbor_map! {
+                        "say_hello" => cbor::cbor_map!{
+                            "who" => cbor::cbor_text!(format!("maptest{}", i))
+                        }
+                    }),
+                    tokens: vec![],
+                }),
+                ..Default::default()
+            },
+            auth_info: transaction::AuthInfo {
+                signer_info: vec![transaction::SignerInfo::new_sigspec(
+                    keys::alice::sigspec(),
+                    0,
+                )],
+                fee: transaction::Fee {
+                    amount: Default::default(),
+                    gas: 1_000_000,
+                    consensus_messages: 0,
+                },
+                ..Default::default()
+            },
+        };
+        ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+            let _result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+                .expect("call should succeed");
+            tx_ctx.commit();
+        });
+    }
+    let result = Contracts::query_instance_raw_storage(
+        &mut ctx,
+        types::InstanceRawStorageQuery {
+            id: instance_id,
+            store_kind: StoreKind::Public,
+            limit: None,
+            offset: None,
+        },
+    )
+    .expect("instance raw public storage query should succeed");
+    assert_eq!(
+        result.items.len(),
+        13,
+        "raw public storage should contain correct number of elements"
+    );
+    for item in result.items {
+        if !item.0.starts_with(b"timestampsmaptest") {
+            continue;
+        }
+        // "testX" -> X
+        let idx = std::str::from_utf8(&item.0[17..])
+            .unwrap()
+            .parse::<u64>()
+            .unwrap();
+        let val: u64 = cbor::from_slice(&item.1)
+            .expect("counter item's value in raw storage should be well-formed");
+        assert_eq!(
+            val,
+            idx + 35,
+            "iterated counter value in raw storage should be correct"
+        );
+    }
+    let result = Contracts::query_instance_raw_storage(
+        &mut ctx,
+        types::InstanceRawStorageQuery {
+            id: instance_id,
+            store_kind: StoreKind::Confidential,
+            limit: None,
+            offset: None,
+        },
+    )
+    .expect("instance raw confidential storage query should succeed");
+    assert_eq!(
+        result.items.len(),
+        13,
+        "raw confidential storage should contain 13 encrypted elements"
+    );
+
+    // Test instance raw storage pagination.
+    // Insert additional 100 entries so we exceed max_instance_raw_storage_query_items (default: 100)
+    for i in 10..110 {
+        let tx = transaction::Transaction {
+            version: 1,
+            call: transaction::Call {
+                format: transaction::CallFormat::Plain,
+                method: "contracts.Call".to_owned(),
+                body: cbor::to_value(types::Call {
+                    id: instance_id,
+                    // Needs to conform to contract API.
+                    data: cbor::to_vec(cbor::cbor_map! {
+                        "say_hello" => cbor::cbor_map!{
+                            "who" => cbor::cbor_text!(format!("test{}", i))
+                        }
+                    }),
+                    tokens: vec![],
+                }),
+                ..Default::default()
+            },
+            auth_info: transaction::AuthInfo {
+                signer_info: vec![transaction::SignerInfo::new_sigspec(
+                    keys::alice::sigspec(),
+                    0,
+                )],
+                fee: transaction::Fee {
+                    amount: Default::default(),
+                    gas: 1_000_000,
+                    consensus_messages: 0,
+                },
+                ..Default::default()
+            },
+        };
+        ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+            let _result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+                .expect("call should succeed");
+            tx_ctx.commit();
+        });
+    }
+    let result = Contracts::query_instance_raw_storage(
+        &mut ctx,
+        types::InstanceRawStorageQuery {
+            id: instance_id,
+            store_kind: StoreKind::Public,
+            limit: None,
+            offset: None,
+        },
+    )
+    .expect("instance raw storage query should succeed");
+    assert_eq!(
+        100,
+        result.items.len(),
+        "raw storage query should be limited by default limit 100"
+    );
+    let result = Contracts::query_instance_raw_storage(
+        &mut ctx,
+        types::InstanceRawStorageQuery {
+            id: instance_id,
+            store_kind: StoreKind::Public,
+            limit: 1000.into(),
+            offset: None,
+        },
+    )
+    .expect("instance raw storage query should succeed");
+    assert_eq!(
+        100,
+        result.items.len(),
+        "raw storage query should be limited by default limit 100, even if requested limit is higher"
+    );
+    let result = Contracts::query_instance_raw_storage(
+        &mut ctx,
+        types::InstanceRawStorageQuery {
+            id: instance_id,
+            store_kind: StoreKind::Public,
+            limit: 10.into(),
+            offset: None,
+        },
+    )
+    .expect("instance raw storage query should succeed");
+    assert_eq!(
+        10,
+        result.items.len(),
+        "raw storage should contain 10 elements"
+    );
+    let result = Contracts::query_instance_raw_storage(
+        &mut ctx,
+        types::InstanceRawStorageQuery {
+            id: instance_id,
+            store_kind: StoreKind::Public,
+            limit: 10.into(),
+            offset: 110.into(),
+        },
+    )
+    .expect("instance raw storage query should succeed");
+    assert_eq!(
+        result.items.len(),
+        3,
+        "raw storage should contain the remaining 3 elements"
+    );
 
     // Invalid call should fail.
     let invalid_tx = transaction::Transaction {

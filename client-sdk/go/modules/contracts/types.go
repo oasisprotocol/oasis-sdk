@@ -2,6 +2,7 @@ package contracts
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 
@@ -177,6 +178,78 @@ type InstanceStorageQuery struct {
 type InstanceStorageQueryResult struct {
 	// Value is the storage value or nil if key doesn't exist.
 	Value []byte `json:"value"`
+}
+
+// StoreKind defines the public or confidential store type for performing queries.
+type StoreKind uint32
+
+const (
+	// StoreKindPublicName is a human-readable name for public store kind.
+	StoreKindPublicName = "public"
+
+	// StoreKindConfidentialName is a human-readable name for confidential store kind.
+	StoreKindConfidentialName = "confidential"
+)
+
+// MarshalText returns human-readable name of StoreKind.
+func (sk StoreKind) MarshalText() (data []byte, err error) {
+	switch sk {
+	case StoreKindPublic:
+		return []byte(StoreKindPublicName), nil
+	case StoreKindConfidential:
+		return []byte(StoreKindConfidentialName), nil
+	}
+
+	return nil, fmt.Errorf("unsupported store kind '%d'", sk)
+}
+
+// UnmarshalText converts human-readable name of store kind to StoreKind.
+func (sk *StoreKind) UnmarshalText(s []byte) error {
+	switch string(s) {
+	case StoreKindPublicName:
+		*sk = StoreKindPublic
+	case StoreKindConfidentialName:
+		*sk = StoreKindConfidential
+	default:
+		return fmt.Errorf("unsupported store kind name '%v'", sk)
+	}
+
+	return nil
+}
+
+// These constants represent the kinds of store that the queries support.
+const (
+	StoreKindPublic       StoreKind = 0
+	StoreKindConfidential StoreKind = 1
+)
+
+// InstanceRawStorageQuery is the body of the contracts.InstanceRawStorage query.
+type InstanceRawStorageQuery struct {
+	// ID is the instance identifier.
+	ID InstanceID `json:"id"`
+
+	// StoreKind is type of store to query.
+	StoreKind StoreKind `json:"store_kind"`
+
+	// Limit is the maximum number of items per page.
+	Limit uint64 `json:"limit,omitempty"`
+
+	// Offset is the number of skipped items.
+	Offset uint64 `json:"offset,omitempty"`
+}
+
+// InstanceRawStorageQueryResult is the result of the contracts.InstanceRawStorage query.
+type InstanceRawStorageQueryResult struct {
+	// Items is a list of key-value pairs in contract's public store.
+	Items []InstanceStorageKeyValue `json:"items"`
+}
+
+// InstanceStorageKeyValue is used as a tuple type for the contract storage.
+type InstanceStorageKeyValue struct {
+	_ struct{} `cbor:",toarray"`
+
+	Key   []byte
+	Value []byte
 }
 
 // PublicKeyKind is the public key kind.
