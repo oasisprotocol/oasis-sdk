@@ -12,6 +12,7 @@ use thiserror::Error;
 use crate::{
     callformat,
     context::{BatchContext, Context, TxContext},
+    core::consensus::beacon::EpochTime,
     dispatcher,
     error::Error as SDKError,
     keymanager,
@@ -20,6 +21,7 @@ use crate::{
         ModuleInfoHandler as _,
     },
     sender::SenderMeta,
+    storage,
     types::{
         token,
         transaction::{
@@ -283,6 +285,9 @@ pub trait API {
     /// Returns the configured max iterations in the binary search for the estimate
     /// gas.
     fn estimate_gas_search_max_iters<C: Context>(ctx: &C) -> u64;
+
+    /// Check whether the epoch has changed since last processed block.
+    fn has_epoch_changed<C: Context>(ctx: &mut C) -> bool;
 }
 
 /// Genesis state for the accounts module.
@@ -320,6 +325,8 @@ pub mod state {
     pub const METADATA: &[u8] = &[0x01];
     /// Map of message idx to message handlers for messages emitted in previous round.
     pub const MESSAGE_HANDLERS: &[u8] = &[0x02];
+    /// Last processed epoch for detecting epoch changes.
+    pub const LAST_EPOCH: &[u8] = &[0x03];
 }
 
 /// Module configuration.
@@ -361,6 +368,7 @@ pub struct Module<Cfg: Config> {
 const CONTEXT_KEY_GAS_USED: &str = "core.GasUsed";
 const CONTEXT_KEY_PRIORITY: &str = "core.Priority";
 const CONTEXT_KEY_SENDER_META: &str = "core.SenderMeta";
+const CONTEXT_KEY_EPOCH_CHANGED: &str = "core.EpochChanged";
 
 impl<Cfg: Config> Module<Cfg> {
     /// Initialize state from genesis.
@@ -476,6 +484,10 @@ impl<Cfg: Config> API for Module<Cfg> {
             .as_ref()
             .map(|cfg: &LocalConfig| cfg.estimate_gas_search_max_iters)
             .unwrap_or(Cfg::DEFAULT_LOCAL_ESTIMATE_GAS_SEARCH_MAX_ITERS)
+    }
+
+    fn has_epoch_changed<C: Context>(ctx: &mut C) -> bool {
+        *ctx.value(CONTEXT_KEY_EPOCH_CHANGED).get().unwrap_or(&false)
     }
 }
 
@@ -1019,5 +1031,22 @@ impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
     }
 }
 
-impl<Cfg: Config> module::BlockHandler for Module<Cfg> {}
+impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
+    fn begin_block<C: Context>(ctx: &mut C) {
+        let epoch = ctx.epoch();
+
+        // Load previous epoch.
+        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        let mut tstore = storage::TypedStore::new(&mut store);
+        let previous_epoch: EpochTime = tstore.get(state::LAST_EPOCH).unwrap_or_default();
+        if epoch != previous_epoch {
+            tstore.insert(state::LAST_EPOCH, epoch);
+        }
+
+        // Set the epoch changed key as needed.
+        ctx.value(CONTEXT_KEY_EPOCH_CHANGED)
+            .set(epoch != previous_epoch);
+    }
+}
+
 impl<Cfg: Config> module::InvariantHandler for Module<Cfg> {}

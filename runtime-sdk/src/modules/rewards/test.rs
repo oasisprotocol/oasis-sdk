@@ -8,7 +8,11 @@ use crate::{
         accounts::{self, Module as Accounts, API as _},
         core,
     },
-    testing::{keys, mock},
+    runtime::Runtime,
+    testing::{
+        keys,
+        mock::{self, EmptyRuntime},
+    },
     types::token::{BaseUnits, Denomination},
 };
 
@@ -134,6 +138,7 @@ fn test_reward_disbursement() {
         mock.runtime_header.round = round;
 
         let mut ctx = mock.create_ctx();
+        <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
         Rewards::end_block(&mut ctx);
     }
 
@@ -152,6 +157,7 @@ fn test_reward_disbursement() {
 
     // Simulate the first round in the new epoch passing.
     let mut ctx = mock.create_ctx();
+    <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
     Rewards::end_block(&mut ctx);
 
     // Check reward pool account balance.
@@ -198,6 +204,7 @@ fn test_reward_disbursement() {
         }
 
         let mut ctx = mock.create_ctx();
+        <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
         Rewards::end_block(&mut ctx);
     }
 
@@ -216,6 +223,7 @@ fn test_reward_disbursement() {
 
     // Simulate the first round in the new epoch passing.
     let mut ctx = mock.create_ctx();
+    <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
     Rewards::end_block(&mut ctx);
 
     // Check reward pool account balance.
@@ -261,6 +269,7 @@ fn test_reward_disbursement() {
         mock.runtime_round_results.bad_compute_entities = vec![];
 
         let mut ctx = mock.create_ctx();
+        <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
         Rewards::end_block(&mut ctx);
     }
 
@@ -279,6 +288,7 @@ fn test_reward_disbursement() {
 
     // Simulate the first round in the new epoch passing.
     let mut ctx = mock.create_ctx();
+    <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
     Rewards::end_block(&mut ctx);
 
     // Check reward pool account balance.
