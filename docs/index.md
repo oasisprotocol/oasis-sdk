@@ -17,7 +17,7 @@ included.
 * [Build a Runtime](runtime/getting-started.md)
 
 <!-- markdownlint-disable line-length -->
-[Oasis Core Runtime Layer]: /oasis-core/runtime
+[Oasis Core Runtime Layer]: https://github.com/oasisprotocol/oasis-core/blob/master/docs/runtime/index.md
 <!-- markdownlint-enable line-length -->
 
 ## Components
