@@ -162,7 +162,7 @@ pub trait Context {
                     .copied()
             })
             // If no config entry matches, the default is to allow only non-expensive queries.
-            .unwrap_or_else(|| !is_expensive)
+            .unwrap_or(!is_expensive)
     }
 
     /// Returns node operator-provided local configuration.

@@ -4,8 +4,6 @@
 #![forbid(unsafe_code)]
 
 pub mod helpers;
-#[cfg(test)]
-mod test;
 pub mod types;
 
 use oasis_contract_sdk as sdk;

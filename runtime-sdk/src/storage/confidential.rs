@@ -99,7 +99,7 @@ impl<S: Store> ConfidentialStore<S> {
         let hash = Hash::digest_bytes(&nonce_src);
         nonce.copy_from_slice(hash.truncated(NONCE_SIZE));
 
-        let enc_key = self.deoxys.seal(&nonce, plain_key.to_vec(), vec![]);
+        let enc_key = self.deoxys.seal(&nonce, plain_key, vec![]);
         let key = self.pack_nonce_slice(&nonce, &enc_key);
         (nonce, key)
     }
@@ -119,7 +119,7 @@ impl<S: Store> ConfidentialStore<S> {
         ]);
         nonce.copy_from_slice(hash.truncated(NONCE_SIZE));
 
-        let enc_value = self.deoxys.seal(&nonce, plain_value.to_vec(), vec![]);
+        let enc_value = self.deoxys.seal(&nonce, plain_value, vec![]);
         let value = self.pack_nonce_slice(&nonce, &enc_value);
         (nonce, value)
     }
