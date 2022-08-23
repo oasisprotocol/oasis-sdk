@@ -62,7 +62,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
       - name: "Rebuild oasisprotocol/runtime-builder:${{ steps.determine-tag.outputs.tag }}"
-        uses: docker/build-push-action@v3.1.0
+        uses: docker/build-push-action@v3.1.1
         with:
           context: docker/runtime-builder
           file: docker/runtime-builder/Dockerfile
