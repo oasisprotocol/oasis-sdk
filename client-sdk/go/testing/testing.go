@@ -83,6 +83,8 @@ var (
 	Bob = newEd25519TestKey("oasis-runtime-sdk/test-keys: bob")
 	// Charlie is the test key C.
 	Charlie = newEd25519TestKey("oasis-runtime-sdk/test-keys: charlie")
+	// Cory is the default test key used by oasis-net-runner.
+	Cory = newEd25519TestKey("ekiden test entity key seed")
 	// Dave is the test key D.
 	Dave = newSecp256k1TestKey("oasis-runtime-sdk/test-keys: dave")
 	// Erin is the test key E.
@@ -97,6 +99,7 @@ var (
 		"alice":   Alice,
 		"bob":     Bob,
 		"charlie": Charlie,
+		"cory":    Cory,
 		"dave":    Dave,
 		"erin":    Erin,
 		"frank":   Frank,
