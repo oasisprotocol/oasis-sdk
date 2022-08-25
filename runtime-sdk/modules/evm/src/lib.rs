@@ -1,5 +1,8 @@
 //! EVM module.
 
+#![feature(array_chunks)]
+#![feature(test)]
+
 pub mod backend;
 pub mod derive_caller;
 pub mod precompile;
