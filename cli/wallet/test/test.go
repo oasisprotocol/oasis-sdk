@@ -3,6 +3,7 @@ package test
 import (
 	"encoding/base64"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 
 	"github.com/oasisprotocol/oasis-sdk/cli/wallet"
@@ -41,6 +42,10 @@ func (a *testAccount) Signer() signature.Signer {
 
 func (a *testAccount) Address() types.Address {
 	return a.testKey.Address
+}
+
+func (a *testAccount) EthAddress() *ethCommon.Address {
+	return &a.testKey.EthAddress
 }
 
 func (a *testAccount) SignatureAddressSpec() types.SignatureAddressSpec {

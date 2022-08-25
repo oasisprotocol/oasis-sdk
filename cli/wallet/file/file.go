@@ -12,10 +12,12 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/mitchellh/mapstructure"
 	flag "github.com/spf13/pflag"
 	bip39 "github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/argon2"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/oasisprotocol/deoxysii"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/sakg"
@@ -534,6 +536,20 @@ func (a *fileAccount) Signer() signature.Signer {
 
 func (a *fileAccount) Address() types.Address {
 	return types.NewAddress(a.SignatureAddressSpec())
+}
+
+func (a *fileAccount) EthAddress() *ethCommon.Address {
+	switch a.cfg.Algorithm {
+	case wallet.AlgorithmSecp256k1Bip44, wallet.AlgorithmSecp256k1Raw:
+		h := sha3.NewLegacyKeccak256()
+		untaggedPk, _ := a.Signer().Public().(secp256k1.PublicKey).MarshalBinaryUncompressedUntagged()
+		h.Write(untaggedPk)
+		hash := h.Sum(nil)
+		addr := ethCommon.BytesToAddress(hash[32-20:])
+		return &addr
+	}
+
+	return nil
 }
 
 func (a *fileAccount) SignatureAddressSpec() types.SignatureAddressSpec {

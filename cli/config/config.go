@@ -45,8 +45,9 @@ func ResetDefaults() {
 type Config struct {
 	viper *viper.Viper
 
-	Networks config.Networks `mapstructure:"networks"`
-	Wallet   Wallet          `mapstructure:"wallets"`
+	Networks    config.Networks `mapstructure:"networks"`
+	Wallet      Wallet          `mapstructure:"wallets"`
+	AddressBook AddressBook     `mapstructure:"address_book"`
 }
 
 // Load loads the configuration structure from viper.

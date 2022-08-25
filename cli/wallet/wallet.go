@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/AlecAivazis/survey/v2"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	flag "github.com/spf13/pflag"
 
 	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
@@ -113,6 +114,9 @@ type Account interface {
 
 	// Address returns the address associated with the account.
 	Address() types.Address
+
+	// EthAddress returns the Ethereum address associated with the account, if any.
+	EthAddress() *ethCommon.Address
 
 	// SignatureAddressSpec returns the signature address specification associated with the account.
 	SignatureAddressSpec() types.SignatureAddressSpec

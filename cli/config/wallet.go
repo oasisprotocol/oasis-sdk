@@ -251,7 +251,7 @@ func (a *Account) Validate() error {
 	// Check that address is valid.
 	var address types.Address
 	if err := address.UnmarshalText([]byte(a.Address)); err != nil {
-		return fmt.Errorf("malformed address '%s': %a", a.Address, err)
+		return fmt.Errorf("malformed address '%s': %w", a.Address, err)
 	}
 
 	return nil
