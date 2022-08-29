@@ -837,5 +837,6 @@ impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
 }
 
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {}
+impl<Cfg: Config> module::IncomingMessageHandler for Module<Cfg> {}
 impl<Cfg: Config> module::BlockHandler for Module<Cfg> {}
 impl<Cfg: Config> module::InvariantHandler for Module<Cfg> {}

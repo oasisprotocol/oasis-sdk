@@ -463,6 +463,8 @@ pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: NestedStore> {
     max_messages: u32,
     /// Emitted messages.
     messages: Vec<(roothash::Message, MessageEventHookInvocation)>,
+    /// Number of processed incoming messages.
+    in_msgs_processed: usize,
 
     /// Per-context values.
     values: BTreeMap<&'static str, Box<dyn Any>>,
@@ -501,6 +503,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             block_etags: EventTags::new(),
             max_messages,
             messages: Vec::new(),
+            in_msgs_processed: 0,
             values: BTreeMap::new(),
             _runtime: PhantomData,
         }
@@ -533,9 +536,24 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             block_etags: EventTags::new(),
             max_messages: ctx.max_messages,
             messages: Vec::new(),
+            in_msgs_processed: 0,
             values: BTreeMap::new(),
             _runtime: PhantomData,
         }
+    }
+
+    // Load how many roothash messages that this runtime handled in this round. This becomes valid
+    // after the dispatcher finishes executing incoming blocks, and it doesn't get updated during
+    // the execution of those incoming messages. The dispatcher calls this in order to report back
+    // to the node how many messages it got through.
+    pub fn get_in_msgs_processed(&self) -> usize {
+        self.in_msgs_processed
+    }
+
+    // Save how many roothash incoming messages that this runtime handled in this round. This is
+    // for the dispatcher to call, and modules shouldn't need to use this.
+    pub fn set_in_msgs_processed(&mut self, count: usize) {
+        self.in_msgs_processed = count;
     }
 }
 
@@ -662,6 +680,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
                 _ => remaining_messages,
             },
             messages: Vec::new(),
+            in_msgs_processed: self.in_msgs_processed,
             values: BTreeMap::new(),
             _runtime: PhantomData,
         };
@@ -910,6 +929,7 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
                 _ => remaining_messages,
             },
             messages: Vec::new(),
+            in_msgs_processed: 0,
             values: BTreeMap::new(),
             _runtime: PhantomData,
         };

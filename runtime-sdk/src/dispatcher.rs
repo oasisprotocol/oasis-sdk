@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::anyhow;
-use slog::error;
+use slog::{error, warn};
 use thiserror::Error;
 
 use oasis_core_runtime::{
@@ -31,14 +31,17 @@ use crate::{
     error::{Error as _, RuntimeError},
     event::IntoTags,
     keymanager::{KeyManagerClient, KeyManagerError},
-    module::{self, BlockHandler, MethodHandler, TransactionHandler},
+    module::{self, BlockHandler, IncomingMessageHandler, MethodHandler, TransactionHandler},
     modules,
     modules::core::API as _,
     runtime::Runtime,
     schedule_control::ScheduleControlHost,
     storage::{self, NestedStore, Prefix},
     types,
-    types::transaction::{AuthProof, Transaction},
+    types::{
+        in_msg::IncomingMessageData,
+        transaction::{AuthProof, Transaction},
+    },
 };
 
 /// Unique module name.
@@ -167,6 +170,16 @@ impl<R: Runtime> Dispatcher<R> {
                 .verify()
                 .map_err(|e| modules::core::Error::MalformedTransaction(e.into())),
         }
+    }
+
+    /// Decode a roothash incoming message's data field.
+    pub fn decode_in_msg(
+        in_msg: &roothash::IncomingMessage,
+    ) -> Result<types::in_msg::IncomingMessageData, modules::core::Error> {
+        let data: types::in_msg::IncomingMessageData = cbor::from_slice(&in_msg.data)
+            .map_err(|e| modules::core::Error::MalformedIncomingMessageData(in_msg.id, e.into()))?;
+        data.validate_basic()?;
+        Ok(data)
     }
 
     /// Run the dispatch steps inside a transaction context. This includes the before call hooks,
@@ -406,6 +419,52 @@ impl<R: Runtime> Dispatcher<R> {
         }
     }
 
+    /// Execute the given roothash incoming message. This includes executing the embedded
+    /// transaction if there is one.
+    pub fn execute_in_msg<C: BatchContext>(
+        ctx: &mut C,
+        in_msg: &roothash::IncomingMessage,
+        data: &IncomingMessageData,
+        tx: &Option<Transaction>,
+    ) -> Result<(), RuntimeError> {
+        R::Modules::execute_in_msg(ctx, in_msg, data, tx)?;
+        if let Some(tx) = tx {
+            let tx_size = match data
+                .tx
+                .as_ref()
+                .unwrap_or_else(|| panic!("incoming message {} has tx but no data.tx", in_msg.id))
+                .len()
+                .try_into()
+            {
+                Ok(tx_size) => tx_size,
+                Err(err) => {
+                    warn!(ctx.get_logger("dispatcher"), "incoming message transaction too large"; "id" => in_msg.id, "err" => ?err);
+                    return Ok(());
+                }
+            };
+            // Use the ID as index.
+            let index = in_msg.id.try_into().unwrap();
+            // todo: put result tags in block
+            Self::execute_tx(ctx, tx_size, tx.clone(), index)?;
+        }
+        Ok(())
+    }
+
+    /// Prefetch prefixes for the given roothash incoming message. This includes prefetching the
+    /// prefixes for the embedded transaction if there is one.
+    pub fn prefetch_in_msg(
+        prefixes: &mut BTreeSet<Prefix>,
+        in_msg: &roothash::IncomingMessage,
+        data: &IncomingMessageData,
+        tx: &Option<Transaction>,
+    ) -> Result<(), RuntimeError> {
+        R::Modules::prefetch_in_msg(prefixes, in_msg, data, tx)?;
+        if let Some(tx) = tx {
+            Self::prefetch_tx(prefixes, tx.clone())?;
+        }
+        Ok(())
+    }
+
     fn handle_last_round_messages<C: Context>(ctx: &mut C) -> Result<(), modules::core::Error> {
         let message_events = ctx.runtime_round_results().messages.clone();
 
@@ -521,6 +580,8 @@ impl<R: Runtime> Dispatcher<R> {
         // Run end block hooks.
         R::Modules::end_block(&mut ctx);
 
+        let in_msgs_count = ctx.get_in_msgs_processed();
+
         // Commit the context and retrieve the emitted messages.
         let (block_tags, messages) = ctx.commit();
         let (messages, handlers) = messages.into_iter().unzip();
@@ -534,7 +595,7 @@ impl<R: Runtime> Dispatcher<R> {
             block_tags: block_tags.into_tags(),
             batch_weight_limits: None,
             tx_reject_hashes: vec![],
-            in_msgs_count: 0, // TODO: Support processing incoming messages.
+            in_msgs_count,
         })
     }
 }
@@ -544,7 +605,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         &self,
         rt_ctx: transaction::Context<'_>,
         batch: &TxnBatch,
-        _in_msgs: &[roothash::IncomingMessage],
+        in_msgs: &[roothash::IncomingMessage],
     ) -> Result<ExecuteBatchResult, RuntimeError> {
         self.execute_batch_common(
             rt_ctx,
@@ -552,8 +613,22 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                 // If prefetch limit is set enable prefetch.
                 let prefetch_enabled = R::PREFETCH_LIMIT > 0;
 
-                let mut txs = Vec::with_capacity(batch.len());
                 let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
+                let mut in_msgs_parsed = Vec::with_capacity(in_msgs.len());
+                for in_msg in in_msgs {
+                    let data = Self::decode_in_msg(in_msg).unwrap_or_else(|err| {
+                        warn!(ctx.get_logger("dispatcher"), "incoming message data malformed"; "id" => in_msg.id, "err" => ?err);
+                        IncomingMessageData::noop()
+                    });
+                    let tx = data.tx.as_ref().and_then(|tx| Self::decode_tx(ctx, tx).map_err(|err| {
+                        warn!(ctx.get_logger("dispatcher"), "incoming message transaction malformed"; "id" => in_msg.id, "err" => ?err);
+                    }).ok());
+                    if prefetch_enabled {
+                        Self::prefetch_in_msg(&mut prefixes, in_msg, &data, &tx)?;
+                    }
+                    in_msgs_parsed.push((in_msg, data, tx));
+                }
+                let mut txs = Vec::with_capacity(batch.len());
                 for tx in batch.iter() {
                     let tx_size = tx.len().try_into().map_err(|_| {
                         Error::MalformedTransactionInBatch(anyhow!("transaction too large"))
@@ -576,6 +651,12 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                         .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
                 }
 
+                // Execute incoming messages.
+                for (in_msg, data, tx) in in_msgs_parsed {
+                    Self::execute_in_msg(ctx, in_msg, &data, &tx)?;
+                }
+                ctx.set_in_msgs_processed(in_msgs.len());
+
                 // Execute the batch.
                 let mut results = Vec::with_capacity(batch.len());
                 for (index, (tx_size, tx)) in txs.into_iter().enumerate() {
@@ -591,7 +672,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         &self,
         rt_ctx: transaction::Context<'_>,
         batch: &mut TxnBatch,
-        _in_msgs: &[roothash::IncomingMessage],
+        in_msgs: &[roothash::IncomingMessage],
     ) -> Result<ExecuteBatchResult, RuntimeError> {
         let cfg = R::SCHEDULE_CONTROL;
         let mut tx_reject_hashes = Vec::new();
@@ -599,11 +680,73 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         let mut result = self.execute_batch_common(
             rt_ctx,
             |ctx| -> Result<Vec<ExecuteTxResult>, RuntimeError> {
+                let mut new_batch = Vec::new();
+
+                // Execute incoming messages.
+                let in_msg_txs = Vec::new(); // todo: more efficient way to do this
+                let in_msgs_gas_limit = R::Core::remaining_in_msgs_gas(ctx);
+                let mut in_msgs_processed = 0usize;
+                for in_msg in in_msgs {
+                    let data = Self::decode_in_msg(in_msg).unwrap_or_else(|err| {
+                        warn!(ctx.get_logger("dispatcher"), "incoming message data malformed"; "id" => in_msg.id, "err" => ?err);
+                        IncomingMessageData::noop()
+                    });
+                    let tx = match data.tx.as_ref() {
+                        Some(tx) => {
+                            if new_batch.len() >= cfg.max_tx_count {
+                                // This next message has a transaction, but we'll exceed the
+                                // maximum transaction count, so leave it for the next round and
+                                // stop.
+                                break;
+                            }
+                            let remaining_gas = R::Core::remaining_in_msgs_gas(ctx);
+                            if remaining_gas < cfg.min_remaining_gas {
+                                // This next message has a transaction, but we won't have
+                                // enough gas to execute it, so leave it for the next
+                                // round and stop.
+                                break;
+                            }
+                            match Self::decode_tx(ctx, tx) {
+                                Ok(tx) => {
+                                    if tx.auth_info.fee.gas > in_msgs_gas_limit {
+                                        // The transaction is too large to execute under our
+                                        // current parameters, so skip over it.
+                                        warn!(ctx.get_logger("dispatcher"), "incoming message transaction fee gas exceeds round gas limit";
+                                            "id" => in_msg.id,
+                                            "tx_gas" => tx.auth_info.fee.gas,
+                                            "in_msgs_gas_limit" => in_msgs_gas_limit,
+                                        );
+                                        // Actually don't skip the message entirely, just don't
+                                        // execute the transaction.
+                                        None
+                                    } else if tx.auth_info.fee.gas > remaining_gas {
+                                        // The transaction is too large to execute in this round,
+                                        // so leave it for the next round and stop.
+                                        break;
+                                    } else {
+                                        Some(tx)
+                                    }
+                                }
+                                Err(err) => {
+                                    warn!(ctx.get_logger("dispatcher"), "incoming message transaction malformed";
+                                        "id" => in_msg.id,
+                                        "err" => ?err,
+                                    );
+                                    None
+                                }
+                            }
+                        }
+                        None => None,
+                    };
+                    Self::execute_in_msg(ctx, in_msg, &data, &tx)?;
+                    in_msgs_processed += 1;
+                }
+                ctx.set_in_msgs_processed(in_msgs_processed);
+
                 // Schedule and execute the batch.
                 //
                 // The idea is to keep scheduling transactions as long as we have some space
                 // available in the block as determined by gas use.
-                let mut new_batch = Vec::new();
                 let mut results = Vec::with_capacity(batch.len());
                 let mut requested_batch_len = cfg.initial_batch_size;
                 'batch: loop {
@@ -612,6 +755,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                     let last_batch_tx_hash = batch.last().map(|raw_tx| Hash::digest_bytes(raw_tx));
 
                     for raw_tx in batch.drain(..) {
+                        // todo: skip copies of incoming message txs
                         // If we don't have enough gas for processing even the cheapest transaction
                         // we are done. Same if we reached the runtime-imposed maximum tx count.
                         let remaining_gas = R::Core::remaining_batch_gas(ctx);

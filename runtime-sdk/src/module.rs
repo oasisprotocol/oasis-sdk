@@ -7,6 +7,8 @@ use std::{
 use cbor::Encode as _;
 use impl_trait_for_tuples::impl_for_tuples;
 
+use oasis_core_runtime::consensus::roothash;
+
 use crate::{
     context::{Context, TxContext},
     dispatcher, error,
@@ -16,6 +18,7 @@ use crate::{
     storage,
     storage::{Prefix, Store},
     types::{
+        in_msg::IncomingMessageData,
         message::MessageResult,
         transaction::{self, AuthInfo, Call, Transaction, UnverifiedTransaction},
     },
@@ -448,6 +451,54 @@ impl TransactionHandler for Tuple {
 
     fn after_dispatch_tx<C: Context>(ctx: &mut C, tx_auth_info: &AuthInfo, result: &CallResult) {
         for_tuples!( #( Tuple::after_dispatch_tx(ctx, tx_auth_info, result); )* );
+    }
+}
+
+/// Roothash incoming message handler.
+pub trait IncomingMessageHandler {
+    /// Add storage prefixes to prefetch, except for the prefixes for the embedded transaction. The
+    /// dispatcher will invoke the method handler for the embedded transaction separately.
+    fn prefetch_in_msg(
+        _prefixes: &mut BTreeSet<Prefix>,
+        _in_msg: &roothash::IncomingMessage,
+        _data: &IncomingMessageData,
+        _tx: &Option<Transaction>,
+    ) -> Result<(), error::RuntimeError> {
+        Ok(())
+    }
+
+    /// Execute an incoming message, except for the embedded transaction. The dispatcher will
+    /// invoke the transaction and method handlers for the embedded transaction separately.
+    fn execute_in_msg<C: Context>(
+        _ctx: &mut C,
+        _in_msg: &roothash::IncomingMessage,
+        _data: &IncomingMessageData,
+        _tx: &Option<Transaction>,
+    ) -> Result<(), error::RuntimeError> {
+        Ok(())
+    }
+}
+
+#[impl_for_tuples(30)]
+impl IncomingMessageHandler for Tuple {
+    fn prefetch_in_msg(
+        prefixes: &mut BTreeSet<Prefix>,
+        in_msg: &roothash::IncomingMessage,
+        data: &IncomingMessageData,
+        tx: &Option<Transaction>,
+    ) -> Result<(), error::RuntimeError> {
+        for_tuples!( #( Tuple::prefetch_in_msg(prefixes, in_msg, data, tx)?; )* );
+        Ok(())
+    }
+
+    fn execute_in_msg<C: Context>(
+        ctx: &mut C,
+        in_msg: &roothash::IncomingMessage,
+        data: &IncomingMessageData,
+        tx: &Option<Transaction>,
+    ) -> Result<(), error::RuntimeError> {
+        for_tuples!( #( Tuple::execute_in_msg(ctx, in_msg, data, tx)?; )* );
+        Ok(())
     }
 }
 

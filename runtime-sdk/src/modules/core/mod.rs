@@ -21,7 +21,7 @@ use crate::{
         ModuleInfoHandler as _,
     },
     types::{
-        token,
+        in_msg, token,
         transaction::{self, AddressSpec, AuthProof, Call, CallFormat, UnverifiedTransaction},
     },
     Runtime,
@@ -131,6 +131,14 @@ pub enum Error {
     #[sdk_error(code = 25)]
     ReadOnlyTransaction,
 
+    #[error("malformed incoming message: {0}")]
+    #[sdk_error(code = 26)]
+    MalformedIncomingMessageData(u64, #[source] anyhow::Error),
+
+    #[error("invalid incoming message: {0}")]
+    #[sdk_error(code = 27)]
+    InvalidIncomingMessage(#[from] in_msg::Error),
+
     #[error("{0}")]
     #[sdk_error(transparent)]
     TxSimulationFailed(#[from] TxSimulationFailure),
@@ -222,6 +230,7 @@ pub struct GasCosts {
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
     pub max_batch_gas: u64,
+    pub max_in_msgs_gas: u64,
     pub max_tx_size: u32,
     pub max_tx_signers: u32,
     pub max_multisig_signers: u32,
@@ -249,6 +258,9 @@ pub trait API {
 
     /// Returns the remaining batch-wide gas.
     fn remaining_batch_gas<C: Context>(ctx: &mut C) -> u64;
+
+    /// Returns the remaining batch-wide gas that can be used for roothash incoming messages.
+    fn remaining_in_msgs_gas<C: Context>(ctx: &mut C) -> u64;
 
     /// Return the remaining tx-wide gas.
     fn remaining_tx_gas<C: TxContext>(ctx: &mut C) -> u64;
@@ -407,6 +419,12 @@ impl<Cfg: Config> API for Module<Cfg> {
         let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
         let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
         batch_gas_limit.saturating_sub(*batch_gas_used)
+    }
+
+    fn remaining_in_msgs_gas<C: Context>(ctx: &mut C) -> u64 {
+        let in_msgs_gas_limit = Self::params(ctx.runtime_state()).max_in_msgs_gas;
+        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
+        in_msgs_gas_limit.saturating_sub(*batch_gas_used)
     }
 
     fn remaining_tx_gas<C: TxContext>(ctx: &mut C) -> u64 {
@@ -941,6 +959,8 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
         Ok(())
     }
 }
+
+impl<Cfg: Config> module::IncomingMessageHandler for Module<Cfg> {}
 
 impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
     type Genesis = Genesis;

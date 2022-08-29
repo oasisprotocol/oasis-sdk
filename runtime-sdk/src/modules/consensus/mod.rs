@@ -372,6 +372,8 @@ impl module::MigrationHandler for Module {
 
 impl module::TransactionHandler for Module {}
 
+impl module::IncomingMessageHandler for Module {}
+
 impl module::BlockHandler for Module {}
 
 impl module::InvariantHandler for Module {}

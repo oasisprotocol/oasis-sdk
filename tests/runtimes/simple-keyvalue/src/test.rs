@@ -16,6 +16,7 @@ fn test_impl_for_tuple() {
         ctx.runtime_state(),
         core::Parameters {
             max_batch_gas: u64::MAX,
+            max_in_msgs_gas: u64::MAX,
             max_tx_size: 32 * 1024,
             max_tx_signers: 1,
             max_multisig_signers: 1,

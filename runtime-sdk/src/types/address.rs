@@ -250,6 +250,12 @@ impl From<Address> for ConsensusAddress {
     }
 }
 
+impl From<&ConsensusAddress> for Address {
+    fn from(addr: &ConsensusAddress) -> Address {
+        Address::from_bytes(addr.as_ref()).unwrap()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
