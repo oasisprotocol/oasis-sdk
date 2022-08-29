@@ -56,6 +56,7 @@ pub(crate) fn verify<C: Context, Cfg: Config>(
     if base_block_hash.as_ref() != leash.block_hash.as_ref() {
         return Err(Error::InvalidSignedSimulateCall("unexpected base block"));
     }
+    #[allow(clippy::unnecessary_lazy_evaluations)]
     let block_delta = current_block
         .checked_sub(leash.block_number)
         .unwrap_or_else(|| leash.block_number - current_block);

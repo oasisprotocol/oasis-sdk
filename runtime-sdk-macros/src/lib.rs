@@ -1,5 +1,4 @@
 #![feature(proc_macro_diagnostic)]
-#![feature(bool_to_option)]
 #![deny(rust_2018_idioms)]
 
 use proc_macro::TokenStream;

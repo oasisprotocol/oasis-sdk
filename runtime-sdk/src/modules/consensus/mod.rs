@@ -68,7 +68,7 @@ impl module::Parameters for Parameters {
             return Err(ParameterValidationError::ZeroScalingFactor);
         }
 
-        let log = self.consensus_scaling_factor.log10();
+        let log = self.consensus_scaling_factor.ilog10();
         if 10u64.pow(log) != self.consensus_scaling_factor {
             return Err(ParameterValidationError::ScalingFactorNotPowerOf10);
         }

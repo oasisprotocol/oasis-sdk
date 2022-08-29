@@ -7,7 +7,7 @@ use k256::{
 use thiserror::Error;
 
 /// ECDSA signature verification/recovery errors.
-#[derive(Error, Debug, PartialEq, cbor::Encode, cbor::Decode)]
+#[derive(Error, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 pub enum Error {
     #[error("malformed input")]
     MalformedInput,

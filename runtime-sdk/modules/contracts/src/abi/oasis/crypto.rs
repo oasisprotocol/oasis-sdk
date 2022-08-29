@@ -41,7 +41,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                             .try_into()
                             .map_err(|_| wasm3::Trap::Abort)?;
 
-                        let key = crypto::ecdsa::recover(&input).unwrap_or_else(|_| [0; 65]);
+                        let key = crypto::ecdsa::recover(&input).unwrap_or([0; 65]);
                         output.copy_from_slice(&key);
 
                         Ok(())

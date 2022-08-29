@@ -188,7 +188,7 @@ pub enum Request {
 /// All possible responses that the OAS20 contract can return.
 ///
 /// This includes both calls and queries.
-#[derive(Clone, Debug, PartialEq, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 pub enum Response {
     #[cbor(rename = "token_information")]
     TokenInformation { token_information: TokenInformation },
