@@ -14,9 +14,6 @@ use crate::{
     },
 };
 
-// Re-export TransactionWeight type.
-pub use oasis_core_runtime::types::TransactionWeight;
-
 /// Transaction signature domain separation context base.
 pub const SIGNATURE_CONTEXT_BASE: &[u8] = b"oasis-runtime-sdk/tx: v0";
 /// The latest transaction format version.
@@ -48,6 +45,7 @@ pub enum AuthProof {
 
 /// An unverified signed transaction.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct UnverifiedTransaction(pub Vec<u8>, pub Vec<AuthProof>);
 
 impl UnverifiedTransaction {
@@ -85,6 +83,7 @@ impl UnverifiedTransaction {
 
 /// Transaction.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct Transaction {
     #[cbor(rename = "v")]
     pub version: u16,
@@ -113,6 +112,7 @@ impl Transaction {
 /// Format used for encoding the call (and output) information.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 #[repr(u8)]
+#[cbor(with_default)]
 pub enum CallFormat {
     /// Plain text call data.
     Plain = 0,
@@ -130,10 +130,10 @@ impl Default for CallFormat {
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Call {
     /// Call format.
-    #[cbor(optional, default)]
+    #[cbor(optional)]
     pub format: CallFormat,
     /// Method name.
-    #[cbor(optional, default, skip_serializing_if = "String::is_empty")]
+    #[cbor(optional)]
     pub method: String,
     /// Method body.
     pub body: cbor::Value,
@@ -141,7 +141,7 @@ pub struct Call {
     ///
     /// A read-only call cannot make any changes to runtime state. Any attempt at modifying state
     /// will result in the call failing.
-    #[cbor(optional, default, rename = "ro")]
+    #[cbor(optional, rename = "ro")]
     pub read_only: bool,
 }
 
@@ -178,10 +178,10 @@ pub struct Fee {
     /// Amount of base units paid as fee for transaction processing.
     pub amount: token::BaseUnits,
     /// Maximum amount of gas paid for.
-    #[cbor(optional, default, skip_serializing_if = "num_traits::Zero::is_zero")]
+    #[cbor(optional)]
     pub gas: u64,
     /// Maximum amount of emitted consensus messages paid for.
-    #[cbor(optional, default, skip_serializing_if = "num_traits::Zero::is_zero")]
+    #[cbor(optional)]
     pub consensus_messages: u32,
 }
 
@@ -275,6 +275,7 @@ impl AddressSpec {
 
 /// Transaction signer information.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct SignerInfo {
     pub address_spec: AddressSpec,
     pub nonce: u64,
@@ -310,8 +311,6 @@ pub enum CallResult {
         code: u32,
 
         #[cbor(optional)]
-        #[cbor(default)]
-        #[cbor(skip_serializing_if = "String::is_empty")]
         message: String,
     },
 

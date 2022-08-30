@@ -5,10 +5,9 @@ use oasis_core_runtime::{
     common::version,
     config::Config,
     consensus::verifier::TrustRoot,
-    rak::RAK,
+    dispatcher::{PostInitState, PreInitState},
     start_runtime,
     types::{FeatureScheduleControl, Features},
-    Protocol, RpcDemux, RpcDispatcher, TxnDispatcher,
 };
 
 use crate::{
@@ -144,13 +143,9 @@ pub trait Runtime {
         Self: Sized + Send + Sync + 'static,
     {
         // Initializer.
-        let init = |protocol: &Arc<Protocol>,
-                    rak: &Arc<RAK>,
-                    _rpc_demux: &mut RpcDemux,
-                    rpc: &mut RpcDispatcher|
-         -> Option<Box<dyn TxnDispatcher>> {
+        let init = |state: PreInitState<'_>| -> PostInitState {
             // Fetch host information and configure domain separation context.
-            let hi = protocol.get_host_info();
+            let hi = state.protocol.get_host_info();
             crypto::signature::context::set_chain_context(
                 hi.runtime_id,
                 &hi.consensus_chain_context,
@@ -160,17 +155,26 @@ pub trait Runtime {
             let key_manager = Self::trusted_policy_signers().map(|signers| {
                 Arc::new(KeyManagerClient::new(
                     hi.runtime_id,
-                    protocol.clone(),
-                    rak.clone(),
-                    rpc,
+                    state.protocol.clone(),
+                    state.consensus_verifier.clone(),
+                    state.rak.clone(),
+                    state.rpc_dispatcher,
                     4096,
                     signers,
                 ))
             });
 
             // Register runtime's methods.
-            let dispatcher = dispatcher::Dispatcher::<Self>::new(hi, key_manager, protocol.clone());
-            Some(Box::new(dispatcher))
+            let dispatcher = dispatcher::Dispatcher::<Self>::new(
+                hi,
+                key_manager,
+                state.consensus_verifier.clone(),
+                state.protocol.clone(),
+            );
+
+            PostInitState {
+                txn_dispatcher: Some(Box::new(dispatcher)),
+            }
         };
 
         // Configure the runtime features.

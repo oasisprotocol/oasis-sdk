@@ -101,7 +101,7 @@ var registryCmd = &cobra.Command{
 				return
 			}
 
-			nsQuery := &registry.NamespaceQuery{
+			nsQuery := &registry.GetRuntimeQuery{
 				Height: height,
 			}
 			copy(nsQuery.ID[:], v[:])

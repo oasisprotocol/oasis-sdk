@@ -1,14 +1,14 @@
 //! EVM module types.
 
 /// Transaction body for creating an EVM contract.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Create {
     pub value: U256,
     pub init_code: Vec<u8>,
 }
 
 /// Transaction body for calling an EVM contract.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Call {
     pub address: H160,
     pub value: U256,
@@ -16,27 +16,27 @@ pub struct Call {
 }
 
 /// Transaction body for peeking into EVM storage.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct StorageQuery {
     pub address: H160,
     pub index: H256,
 }
 
 /// Transaction body for peeking into EVM code storage.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct CodeQuery {
     pub address: H160,
 }
 
 /// Transaction body for fetching EVM account's balance.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct BalanceQuery {
     pub address: H160,
 }
 
 /// Transaction body for simulating an EVM call.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-#[cfg_attr(test, derive(Default, PartialEq, Eq))]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 pub struct SimulateCallQuery {
     pub gas_price: U256,
     pub gas_limit: u64,
@@ -82,14 +82,15 @@ pub struct SimulateCallQuery {
 /// }
 /// ```
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct SignedCallDataPack {
     pub data: oasis_runtime_sdk::types::transaction::Call,
     pub leash: Leash,
     pub signature: [u8; 65],
 }
 
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-#[cfg_attr(test, derive(Default, PartialEq, Eq))]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 pub struct Leash {
     /// The maximum account nonce that will be tolerated.
     pub nonce: u64,
@@ -132,6 +133,10 @@ mod eth {
             }
 
             impl cbor::Decode for $name {
+                fn try_default() -> Result<Self, cbor::DecodeError> {
+                    Ok(Default::default())
+                }
+
                 fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
                     match value {
                         cbor::Value::ByteString(v) => {
@@ -171,6 +176,10 @@ mod eth {
             }
 
             impl cbor::Decode for $name {
+                fn try_default() -> Result<Self, cbor::DecodeError> {
+                    Ok(Default::default())
+                }
+
                 fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
                     match value {
                         cbor::Value::ByteString(v) => {

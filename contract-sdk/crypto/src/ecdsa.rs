@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use k256::{
     ecdsa::{recoverable, Signature},
-    EncodedPoint,
+    elliptic_curve::{sec1::ToEncodedPoint, IsHigh},
 };
 use thiserror::Error;
 
@@ -53,7 +53,7 @@ pub fn recover(input: &[u8]) -> Result<[u8; 65], Error> {
 
     match signature.recover_verify_key_from_digest_bytes(&msg.into()) {
         Ok(recovered_key) => {
-            let key = EncodedPoint::from(&recovered_key).decompress().unwrap();
+            let key = recovered_key.to_encoded_point(false);
 
             Ok(key.as_bytes().try_into().unwrap())
         }

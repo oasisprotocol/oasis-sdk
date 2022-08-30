@@ -880,7 +880,8 @@ fn test_min_gas_price() {
 fn test_emit_events() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
-    #[derive(Debug, cbor::Encode, cbor::Decode, PartialEq, Eq)]
+
+    #[derive(Debug, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
     struct TestEvent {
         i: u64,
     }

@@ -7,7 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 oasis-runtime-sdk = { path = "../../../runtime-sdk" }
-cbor = { version = "0.2.1", package = "oasis-cbor" }
+cbor = { version = "0.5.0", package = "oasis-cbor" }
 
 # Third party.
 anyhow = "1.0.50"

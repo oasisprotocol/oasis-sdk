@@ -62,6 +62,10 @@ impl TryFrom<&[u8]> for Denomination {
 }
 
 impl cbor::Decode for Denomination {
+    fn try_default() -> Result<Self, cbor::DecodeError> {
+        Ok(Default::default())
+    }
+
     fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
         match value {
             cbor::Value::ByteString(data) => {

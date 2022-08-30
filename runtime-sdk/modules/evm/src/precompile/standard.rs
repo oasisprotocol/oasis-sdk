@@ -8,7 +8,10 @@ use evm::{
     executor::stack::{PrecompileFailure, PrecompileOutput},
     Context, ExitError, ExitSucceed,
 };
-use k256::{ecdsa::recoverable, EncodedPoint};
+use k256::{
+    ecdsa::recoverable,
+    elliptic_curve::{sec1::ToEncodedPoint, IsHigh},
+};
 use num::{BigUint, FromPrimitive, One, ToPrimitive, Zero};
 use ripemd160::Ripemd160;
 use sha2::Sha256;
@@ -83,7 +86,7 @@ pub(super) fn call_ecrecover(
     let result = match dsa_sig.recover_verify_key_from_digest_bytes(&msg.into()) {
         Ok(recovered_key) => {
             // Convert Ethereum style address
-            let p = EncodedPoint::from(&recovered_key).decompress().unwrap();
+            let p = recovered_key.to_encoded_point(false);
             let mut hasher = Keccak256::new();
             hasher.update(&p.as_bytes()[1..]);
             let mut address = hasher.finalize();

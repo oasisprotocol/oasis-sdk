@@ -6,7 +6,7 @@ use crate::crypto::signature::{Error, Signature};
 
 /// A Sr25519 public key.
 #[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
-#[cbor(transparent)]
+#[cbor(transparent, no_default)]
 pub struct PublicKey(Vec<u8>);
 
 impl PublicKey {

@@ -1,6 +1,7 @@
 //! Code caching and storage.
 use std::{
     io::{Read, Write},
+    num::NonZeroUsize,
     sync::Mutex,
 };
 
@@ -16,7 +17,7 @@ use crate::{state, types, Config, Error, Module, MODULE_NAME};
 
 /// A global in-memory LRU cache of code instances.
 static CODE_CACHE: Lazy<Mutex<lru::LruCache<Hash, Vec<u8>>>> =
-    Lazy::new(|| Mutex::new(lru::LruCache::new(128)));
+    Lazy::new(|| Mutex::new(lru::LruCache::new(NonZeroUsize::new(128).unwrap())));
 
 impl<Cfg: Config> Module<Cfg> {
     /// Loads code with the specified code identifier.

@@ -30,7 +30,7 @@ pub struct TokenInstantiation {
     /// Number of decimals.
     pub decimals: u8,
     /// Initial balances of the token.
-    #[cbor(optional, default, skip_serializing_if = "Vec::is_empty")]
+    #[cbor(optional)]
     pub initial_balances: Vec<InitialBalance>,
     /// Information about minting in case the token supports minting.
     #[cbor(optional)]

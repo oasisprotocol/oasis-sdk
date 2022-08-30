@@ -5,13 +5,15 @@ use io_context::Context as IoContext;
 use tiny_keccak::{Hasher, TupleHash};
 use tokio::runtime::Handle as TokioHandle;
 
-pub use oasis_core_keymanager_api_common::{
-    KeyManagerError, KeyPair, KeyPairId, PrivateKey, PublicKey, SignedPublicKey, StateKey,
-    TrustedPolicySigners,
+use oasis_core_keymanager::client::{KeyManagerClient as CoreKeyManagerClient, RemoteClient};
+pub use oasis_core_keymanager::{
+    api::KeyManagerError,
+    crypto::{KeyPair, KeyPairId, PrivateKey, PublicKey, SignedPublicKey, StateKey},
+    policy::TrustedPolicySigners,
 };
-use oasis_core_keymanager_client::{KeyManagerClient as CoreKeyManagerClient, RemoteClient};
 use oasis_core_runtime::{
     common::{logger::get_logger, namespace::Namespace},
+    consensus::verifier::Verifier,
     protocol::Protocol,
     rak::RAK,
     RpcDispatcher,
@@ -28,6 +30,7 @@ impl KeyManagerClient {
     pub(crate) fn new(
         runtime_id: Namespace,
         protocol: Arc<Protocol>,
+        consensus_verifier: Arc<dyn Verifier>,
         rak: Arc<RAK>,
         rpc: &mut RpcDispatcher,
         key_cache_sizes: usize,
@@ -36,6 +39,7 @@ impl KeyManagerClient {
         let remote_client = Arc::new(RemoteClient::new_runtime(
             runtime_id,
             protocol,
+            consensus_verifier,
             rak,
             key_cache_sizes,
             signers,

@@ -8,7 +8,6 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
-	"net"
 	"os"
 	"path"
 	"reflect"
@@ -65,8 +64,6 @@ func collectPath(fn interface{}, stripComponents string) string {
 }
 
 var modulePaths = map[string]string{
-	"net": collectPath((*net.TCPAddr).String, "/tcpsock.go"),
-
 	"github.com/oasisprotocol/oasis-core/go": collectPath(version.Version.String, "/common/version/version.go"),
 }
 
@@ -174,8 +171,6 @@ var customStructNames = map[reflect.Type]string{
 var customStructNamesConsulted = map[reflect.Type]bool{}
 
 var prefixByPackage = map[string]string{
-	"net": "Net",
-
 	"github.com/oasisprotocol/oasis-core/go/beacon":                  "Beacon",
 	"github.com/oasisprotocol/oasis-core/go/common/cbor":             "CBOR",
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature": "Signature",
@@ -198,6 +193,8 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/upgrade":                 "Upgrade",
 	"github.com/oasisprotocol/oasis-core/go/worker/common":           "WorkerCommon",
 	"github.com/oasisprotocol/oasis-core/go/worker/storage":          "WorkerStorage",
+	"github.com/oasisprotocol/oasis-core/go/worker/compute":          "WorkerCompute",
+	"github.com/oasisprotocol/oasis-core/go/worker/keymanager":       "WorkerKeyManager",
 }
 var prefixConsulted = map[string]bool{}
 

@@ -86,12 +86,6 @@ pub struct GasCosts {
     pub tx_transfer: u64,
 }
 
-#[allow(clippy::trivially_copy_pass_by_ref)]
-#[inline]
-const fn is_false(v: &bool) -> bool {
-    !(*v)
-}
-
 /// Parameters for the accounts module.
 #[derive(Clone, Default, Debug, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
@@ -99,11 +93,9 @@ pub struct Parameters {
     pub gas_costs: GasCosts,
 
     #[cbor(optional)]
-    #[cbor(default)]
-    #[cbor(skip_serializing_if = "is_false")]
     pub debug_disable_nonce_check: bool,
 
-    #[cbor(optional, default, skip_serializing_if = "BTreeMap::is_empty")]
+    #[cbor(optional)]
     pub denomination_infos: BTreeMap<token::Denomination, types::DenominationInfo>,
 }
 

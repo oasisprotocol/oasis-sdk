@@ -9,8 +9,6 @@ use anyhow::anyhow;
 use oasis_runtime_sdk_macros::{handler, sdk_derive};
 use thiserror::Error;
 
-pub use oasis_core_keymanager_api_common::KeyManagerError;
-
 use crate::{
     callformat,
     context::{BatchContext, Context, TxContext},
@@ -280,17 +278,17 @@ pub struct Genesis {
 }
 
 /// Local configuration that can be provided by the node operator.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct LocalConfig {
     /// Minimum gas price to accept.
-    #[cbor(optional, default)]
+    #[cbor(optional)]
     pub min_gas_price: BTreeMap<token::Denomination, u128>,
 
     /// When estimating gas in `core.EstimateGas`, simulate the tx (and report) only up to this much
     /// used gas. This limit is more likely to be relevant if `estimate_gas_by_simulating_contracts` is
     /// enabled in the local config. The special value of 0 means that the maximum amount of gas in a
     /// batch will be used.
-    #[cbor(optional, default)]
+    #[cbor(optional)]
     pub max_estimated_gas: u64,
 
     /// The maximum number of iterations of the binary search to be done when simulating contracts for
@@ -298,7 +296,7 @@ pub struct LocalConfig {
     /// The special value of 0 means that binary search won't be performed, and the transaction will be
     /// simulated using maximum possible gas, which might return an overestimation in some special cases.
     /// This setting should likely be kept at 0, unless the runtime is using the EVM module.
-    #[cbor(optional, default)]
+    #[cbor(optional)]
     pub estimate_gas_search_max_iters: u64,
 }
 

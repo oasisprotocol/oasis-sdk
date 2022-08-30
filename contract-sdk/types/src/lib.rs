@@ -70,6 +70,7 @@ impl From<u64> for InstanceId {
 /// Format used for encoding the call (and output) information.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 #[repr(u8)]
+#[cbor(with_default)]
 pub enum CallFormat {
     /// Plain text call data.
     Plain = 0,
@@ -114,24 +115,17 @@ pub struct ExecutionContext {
     /// Caller address.
     pub caller_address: address::Address,
     /// Tokens deposited by the caller.
-    #[cbor(optional, default, skip_serializing_if = "Vec::is_empty")]
+    #[cbor(optional)]
     pub deposited_tokens: Vec<token::BaseUnits>,
     /// Read-only flag.
     ///
     /// A read-only call cannot make any changes to runtime state. Any attempt at modifying state
     /// will result in the call failing.
-    #[cbor(optional, default, skip_serializing_if = "is_false")]
+    #[cbor(optional)]
     pub read_only: bool,
     /// Transaction's call format.
-    #[cbor(optional, default, skip_serializing_if = "CallFormat::is_plain")]
+    #[cbor(optional, skip_serializing_if = "CallFormat::is_plain")]
     pub call_format: CallFormat,
-}
-
-// TODO: Remove once oasis-cbor is updated to 0.3.x.
-#[allow(clippy::trivially_copy_pass_by_ref)]
-#[inline]
-const fn is_false(v: &bool) -> bool {
-    !(*v)
 }
 
 /// Contract execution result.
@@ -142,25 +136,25 @@ pub enum ExecutionResult {
 
     #[cbor(rename = "fail")]
     Failed {
-        #[cbor(optional, default, skip_serializing_if = "String::is_empty")]
+        #[cbor(optional)]
         module: String,
 
         code: u32,
 
-        #[cbor(optional, default, skip_serializing_if = "String::is_empty")]
+        #[cbor(optional)]
         message: String,
     },
 }
 
 /// Result of a successful contract execution.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct ExecutionOk {
     /// Raw data returned from the contract.
     pub data: Vec<u8>,
     /// Messages emitted from the contract.
-    #[cbor(optional, default, skip_serializing_if = "Vec::is_empty")]
+    #[cbor(optional)]
     pub messages: Vec<message::Message>,
     /// Events emitted from the contract.
-    #[cbor(optional, default, skip_serializing_if = "Vec::is_empty")]
+    #[cbor(optional)]
     pub events: Vec<event::Event>,
 }

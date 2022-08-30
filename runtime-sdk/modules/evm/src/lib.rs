@@ -292,7 +292,7 @@ pub struct LocalConfig {
     /// Maximum gas limit that can be passed to the `evm.SimulateCall` query. Queries
     /// with a higher gas limit will be rejected. A special value of `0` indicates
     /// no limit. Default: 0.
-    #[cbor(optional, default)]
+    #[cbor(optional)]
     pub query_simulate_call_max_gas: u64,
 }
 

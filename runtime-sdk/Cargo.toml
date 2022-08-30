@@ -6,11 +6,9 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-cbor = { version = "0.2.1", package = "oasis-cbor" }
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v22.1.9" }
-oasis-core-client = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v22.1.9" }
-oasis-core-keymanager-api-common = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v22.1.9" }
-oasis-core-keymanager-client = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v22.1.9" }
+cbor = { version = "0.5.0", package = "oasis-cbor" }
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v22.2.1" }
+oasis-core-keymanager = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v22.2.1" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
@@ -20,7 +18,7 @@ digest = "0.10.3"
 hmac = "0.11.0"
 sha2 = "0.9.8"
 sha3 = { version = "0.10.1", default-features = false }
-k256 = { version = "0.9.6" }
+k256 = { version = "0.10.4" }
 schnorrkel = "0.10.2"
 thiserror = "1.0.30"
 hex = "0.4.2"
@@ -34,7 +32,7 @@ once_cell = "1.8.0"
 rand_core = "0.6.4"
 slog = "2.7.0"
 tiny-keccak = { version = "2.0", features = ["tuple_hash"] }
-tokio = { version = "~1.20", features = ["rt"] }
+tokio = { version = "~1.21.1", features = ["rt"] }
 zeroize = "1.4"
 
 [dev-dependencies]

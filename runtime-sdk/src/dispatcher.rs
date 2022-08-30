@@ -13,7 +13,7 @@ use thiserror::Error;
 use oasis_core_runtime::{
     self,
     common::crypto::hash::Hash,
-    consensus::roothash,
+    consensus::{roothash, verifier::Verifier},
     protocol::HostInfo,
     storage::mkvs,
     transaction::{
@@ -117,6 +117,7 @@ pub struct DispatchOptions<'a> {
 pub struct Dispatcher<R: Runtime> {
     host_info: HostInfo,
     key_manager: Option<Arc<KeyManagerClient>>,
+    consensus_verifier: Arc<dyn Verifier>,
     schedule_control_host: Arc<dyn ScheduleControlHost>,
     _runtime: PhantomData<R>,
 }
@@ -129,11 +130,13 @@ impl<R: Runtime> Dispatcher<R> {
     pub(super) fn new(
         host_info: HostInfo,
         key_manager: Option<Arc<KeyManagerClient>>,
+        consensus_verifier: Arc<dyn Verifier>,
         schedule_control_host: Arc<dyn ScheduleControlHost>,
     ) -> Self {
         Self {
             host_info,
             key_manager,
+            consensus_verifier,
             schedule_control_host,
             _runtime: PhantomData,
         }
@@ -335,7 +338,9 @@ impl<R: Runtime> Dispatcher<R> {
                 error: Default::default(),
                 meta: Some(CheckTxMetadata {
                     priority: dispatch.priority,
-                    weights: None,
+                    sender: vec![],      // TODO: Support indicating senders.
+                    sender_seq: 0,       // TODO: Support indicating senders.
+                    sender_state_seq: 0, // TODO: Support indicating senders.
                 }),
             }),
 
@@ -532,7 +537,6 @@ impl<R: Runtime> Dispatcher<R> {
             results,
             messages,
             block_tags: block_tags.into_tags(),
-            batch_weight_limits: None,
             tx_reject_hashes: vec![],
             in_msgs_count: 0, // TODO: Support processing incoming messages.
         })
@@ -768,6 +772,17 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         // appropriately scoped instance of the key manager client.
         let is_confidential_allowed = R::Modules::is_allowed_private_km_query(method)
             && R::is_allowed_private_km_query(method);
+        if is_confidential_allowed {
+            // Perform consensus layer state integrity verification for any queries that allow
+            // access to confidential state.
+            self.consensus_verifier.verify_for_query(
+                ctx.consensus_block.clone(),
+                ctx.header.clone(),
+                ctx.epoch,
+            )?;
+            // Ensure the runtime is still ready to process requests.
+            ctx.protocol.ensure_initialized()?;
+        }
         let key_manager = self.key_manager.as_ref().map(|mgr| {
             if is_confidential_allowed {
                 mgr.with_private_context(ctx.io_ctx.clone())
