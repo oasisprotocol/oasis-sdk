@@ -13,8 +13,8 @@ runtime. A runtime can be thought of as a separate chain while smart contracts
 are deployed to an already running chain that has the corresponding module
 included.
 
-* [Build a Smart Contract](contract/getting-started.md)
-* [Build a Runtime](runtime/getting-started.md)
+* [Build a Smart Contract](contract/README.md)
+* [Build a Runtime](runtime/README.md)
 
 <!-- markdownlint-disable line-length -->
 [Oasis Core Runtime Layer]: https://github.com/oasisprotocol/oasis-core/blob/master/docs/runtime/index.md
