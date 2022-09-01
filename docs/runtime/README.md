@@ -139,5 +139,5 @@ tar xf ~/Downloads/oasis_core_22.1.9_linux_amd64.tar.gz --strip-components=1
 export OASIS_CORE_PATH=~/Downloads/oasis_core_22.1.9_linux_amd64
 ```
 
-[Oasis Core]: /oasis-core
+[Oasis Core]: https://github.com/oasisprotocol/oasis-core
 [Oasis Core releases]: https://github.com/oasisprotocol/oasis-core/releases
