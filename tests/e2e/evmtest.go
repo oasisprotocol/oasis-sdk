@@ -541,12 +541,55 @@ func C10lEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 	return evmTest(log, rtc, c10l)
 }
 
-// solEVMTest does a simple Solidity contract test.
-func solEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
+// simpleEVMCallTest performs a test by calling a single method from the provided contract.
+func simpleEVMCallTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity, contractHex, methodName, methodHash, callData string) (string, error) {
 	ctx := context.Background()
 	signer := testing.Dave.Signer
 	e := evm.NewV1(rtc)
 
+	contract, err := hex.DecodeString(strings.TrimSpace(contractHex))
+	if err != nil {
+		return "", err
+	}
+
+	zero, err := hex.DecodeString(strings.Repeat("0", 64))
+	if err != nil {
+		return "", err
+	}
+
+	gasPrice := uint64(2)
+
+	// Create the EVM contract.
+	contractAddr, err := evmCreate(ctx, rtc, e, signer, zero, contract, gasPrice, c10l)
+	if err != nil {
+		return "", fmt.Errorf("evmCreate failed: %w", err)
+	}
+
+	log.Info("evmCreate finished", "contract_addr", hex.EncodeToString(contractAddr))
+
+	// To get the hash of the method in remix, click on "Compilation details"
+	// and then look at the "Function hashes" section.
+	// Method calls must be zero-padded to a multiple of 32 bytes.
+	callData = methodHash + callData
+	methodCall, err := hex.DecodeString(callData + strings.Repeat("0", ((len(callData)+63) & ^63)-len(callData)))
+	if err != nil {
+		return "", err
+	}
+
+	// Call the method.
+	callResult, err := evmCall(ctx, rtc, e, signer, contractAddr, zero, methodCall, gasPrice, c10l)
+	if err != nil {
+		return "", fmt.Errorf("evmCall:%s failed: %w", methodName, err)
+	}
+
+	res := hex.EncodeToString(callResult)
+	log.Info("evmCall finished", "call_result", res, "method", methodName)
+
+	return res, nil
+}
+
+// solEVMTest does a simple Solidity contract test.
+func solEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
 	// To generate the contract bytecode below, use https://remix.ethereum.org/
 	// with the following settings:
 	//     Compiler: 0.8.6+commit.11564f7e
@@ -565,44 +608,10 @@ func solEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) err
 		}
 	*/
 
-	contract, err := hex.DecodeString(strings.TrimSpace(evmSolTestCompiledHex))
+	res, err := simpleEVMCallTest(log, rtc, c10l, evmSolTestCompiledHex, "name", "06fdde03", "")
 	if err != nil {
 		return err
 	}
-
-	zero, err := hex.DecodeString(strings.Repeat("0", 64))
-	if err != nil {
-		return err
-	}
-
-	gasPrice := uint64(2)
-
-	// Create the EVM contract.
-	contractAddr, err := evmCreate(ctx, rtc, e, signer, zero, contract, gasPrice, c10l)
-	if err != nil {
-		return fmt.Errorf("evmCreate failed: %w", err)
-	}
-
-	log.Info("evmCreate finished", "contract_addr", hex.EncodeToString(contractAddr))
-
-	// This is the hash of the "name()" method of the contract.
-	// You can get this by clicking on "Compilation details" and then
-	// looking at the "Function hashes" section.
-	// Method calls must be zero-padded to a multiple of 32 bytes.
-	nameMethod, err := hex.DecodeString("06fdde03" + strings.Repeat("0", 64-8))
-	if err != nil {
-		return err
-	}
-
-	// Call the name method.
-	callResult, err := evmCall(ctx, rtc, e, signer, contractAddr, zero, nameMethod, gasPrice, c10l)
-	if err != nil {
-		return fmt.Errorf("evmCall failed: %w", err)
-	}
-
-	res := hex.EncodeToString(callResult)
-	log.Info("evmCall:name finished", "call_result", res)
-
 	if len(res) != 192 {
 		return fmt.Errorf("returned value has wrong length (expected 192, got %d)", len(res))
 	}
@@ -1039,55 +1048,17 @@ func C10lEVMCallSuicideTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc
 // Note that this test will only work with a confidential runtime because
 // it needs the confidential precompiles.
 func encryptionEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
-	ctx := context.Background()
-	signer := testing.Dave.Signer
-	e := evm.NewV1(rtc)
-
-	// To generate the contract bytecode below, use https://remix.ethereum.org/
+	// To generate the contract bytecode, use https://remix.ethereum.org/
 	// with the following settings:
 	//     Compiler: 0.8.7+commit.e28d00a7
 	//     EVM version: london
 	//     Enable optimization: yes, 200
 	// on the source in evm_encryption.sol next to the hex file.
 
-	contract, err := hex.DecodeString(strings.TrimSpace(evmEncryptionCompiledHex))
+	res, err := simpleEVMCallTest(log, rtc, c10l, evmEncryptionCompiledHex, "test", "f8a8fd6d", "")
 	if err != nil {
 		return err
 	}
-
-	zero, err := hex.DecodeString(strings.Repeat("0", 64))
-	if err != nil {
-		return err
-	}
-
-	gasPrice := uint64(2)
-
-	// Create the EVM contract.
-	contractAddr, err := evmCreate(ctx, rtc, e, signer, zero, contract, gasPrice, c10l)
-	if err != nil {
-		return fmt.Errorf("evmCreate failed: %w", err)
-	}
-
-	log.Info("evmCreate finished", "contract_addr", hex.EncodeToString(contractAddr))
-
-	// This is the hash of the "test()" method of the contract.
-	// You can get this by clicking on "Compilation details" and then
-	// looking at the "Function hashes" section.
-	// Method calls must be zero-padded to a multiple of 32 bytes.
-	testMethod, err := hex.DecodeString("f8a8fd6d" + strings.Repeat("0", 64-8))
-	if err != nil {
-		return err
-	}
-
-	// Call the test method.
-	callResult, err := evmCall(ctx, rtc, e, signer, contractAddr, zero, testMethod, gasPrice, c10l)
-	if err != nil {
-		return fmt.Errorf("evmCall failed: %w", err)
-	}
-
-	res := hex.EncodeToString(callResult)
-	log.Info("evmCall:test finished", "call_result", res)
-
 	if len(res) != 192 {
 		return fmt.Errorf("returned value has wrong length (expected 192, got %d)", len(res))
 	}
@@ -1108,60 +1079,22 @@ func C10lEVMEncryptionTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.
 // Note that this test will only work with a confidential runtime because
 // it needs the confidential precompiles.
 func keyDerivationEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
-	ctx := context.Background()
-	signer := testing.Dave.Signer
-	e := evm.NewV1(rtc)
-
-	// To generate the contract bytecode below, use https://remix.ethereum.org/
+	// To generate the contract bytecode, use https://remix.ethereum.org/
 	// with the following settings:
 	//     Compiler: 0.8.7+commit.e28d00a7
 	//     EVM version: london
 	//     Enable optimization: yes, 200
 	// on the source in evm_key_derivation.sol next to the hex file.
 
-	contract, err := hex.DecodeString(strings.TrimSpace(evmKeyDerivationCompiledHex))
-	if err != nil {
-		return err
-	}
-
-	zero, err := hex.DecodeString(strings.Repeat("0", 64))
-	if err != nil {
-		return err
-	}
-
-	gasPrice := uint64(2)
-
-	// Create the EVM contract.
-	contractAddr, err := evmCreate(ctx, rtc, e, signer, zero, contract, gasPrice, c10l)
-	if err != nil {
-		return fmt.Errorf("evmCreate failed: %w", err)
-	}
-
-	log.Info("evmCreate finished", "contract_addr", hex.EncodeToString(contractAddr))
-
 	// Fixed random key material to pass to the contract.
 	publicKey := "3046db3fa70ce605457dc47c48837ebd8bd0a26abfde5994d033e1ced68e2576"
 	privateKey := "c07b151fbc1e7a11dff926111188f8d872f62eba0396da97c0a24adb75161750"
 	expected := "e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586"
 
-	// This is the hash of the "test()" method of the contract, followed by its input parameters.
-	// You can get the hash by clicking on "Compilation details" and then
-	// looking at the "Function hashes" section.
-	// Method calls must be zero-padded to a multiple of 32 bytes.
-	testMethod, err := hex.DecodeString("92e2a69c" + publicKey + privateKey + expected + strings.Repeat("0", 64-8))
+	res, err := simpleEVMCallTest(log, rtc, c10l, evmKeyDerivationCompiledHex, "test", "92e2a69c", publicKey+privateKey+expected)
 	if err != nil {
 		return err
 	}
-
-	// Call the test method..
-	callResult, err := evmCall(ctx, rtc, e, signer, contractAddr, zero, testMethod, gasPrice, c10l)
-	if err != nil {
-		return fmt.Errorf("evmCall failed: %w", err)
-	}
-
-	res := hex.EncodeToString(callResult)
-	log.Info("evmCall:test finished", "call_result", res)
-
 	if len(res) != 64 {
 		return fmt.Errorf("returned value has wrong length (expected 192, got %d)", len(res))
 	}
