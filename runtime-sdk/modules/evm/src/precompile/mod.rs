@@ -5,8 +5,10 @@ use evm::{
     executor::stack::{PrecompileFailure, PrecompileFn, PrecompileOutput},
     ExitError,
 };
-use once_cell::sync::Lazy;
+use once_cell::sync::OnceCell;
 use primitive_types::H160;
+
+use crate::Config;
 
 mod confidential;
 mod standard;
@@ -50,23 +52,6 @@ const PRECOMPILE_DEOXYSII_OPEN: H160 = H160([
     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04,
 ]);
 
-/// A set of precompiles.
-pub static PRECOMPILED_CONTRACT: Lazy<BTreeMap<H160, PrecompileFn>> = Lazy::new(|| {
-    BTreeMap::from([
-        (
-            PRECOMPILE_ECRECOVER,
-            standard::call_ecrecover as PrecompileFn,
-        ),
-        (PRECOMPILE_SHA256, standard::call_sha256),
-        (PRECOMPILE_RIPEMD160, standard::call_ripemd160),
-        (PRECOMPILE_DATACOPY, standard::call_datacopy),
-        (PRECOMPILE_BIGMODEXP, standard::call_bigmodexp),
-        (PRECOMPILE_X25519_DERIVE, confidential::call_x25519_derive),
-        (PRECOMPILE_DEOXYSII_SEAL, confidential::call_deoxysii_seal),
-        (PRECOMPILE_DEOXYSII_OPEN, confidential::call_deoxysii_open),
-    ])
-});
-
 /// Linear gas cost
 fn linear_cost(
     target_gas: Option<u64>,
@@ -93,4 +78,41 @@ fn linear_cost(
     }
 
     Ok(cost)
+}
+
+/// The type used for the precompile mapping.
+pub type PrecompileSetType = BTreeMap<H160, PrecompileFn>;
+
+/// The set of builtin precompiles.
+static PRECOMPILED_CONTRACTS: OnceCell<PrecompileSetType> = OnceCell::new();
+
+/// Return the mapping of all configured precompiles. The mapping is cached, so
+/// construction only happens on the first invocation.
+pub fn get_precompiles<Cfg: Config>() -> &'static PrecompileSetType {
+    PRECOMPILED_CONTRACTS.get_or_init(|| {
+        let mut map = BTreeMap::from([
+            (
+                PRECOMPILE_ECRECOVER,
+                standard::call_ecrecover as PrecompileFn,
+            ),
+            (PRECOMPILE_SHA256, standard::call_sha256),
+            (PRECOMPILE_RIPEMD160, standard::call_ripemd160),
+            (PRECOMPILE_DATACOPY, standard::call_datacopy),
+            (PRECOMPILE_BIGMODEXP, standard::call_bigmodexp),
+        ]);
+        if Cfg::CONFIDENTIAL {
+            map.extend([
+                (
+                    PRECOMPILE_X25519_DERIVE,
+                    confidential::call_x25519_derive as PrecompileFn,
+                ),
+                (PRECOMPILE_DEOXYSII_SEAL, confidential::call_deoxysii_seal),
+                (PRECOMPILE_DEOXYSII_OPEN, confidential::call_deoxysii_open),
+            ]);
+        }
+        if let Some(ref additional) = Cfg::additional_precompiles() {
+            map.extend(additional);
+        }
+        map
+    })
 }
