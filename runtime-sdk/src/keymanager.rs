@@ -157,7 +157,9 @@ impl KeyManagerClientWithContext {
         key_pair_id: KeyPairId,
     ) -> Result<KeyPair, KeyManagerError> {
         if !self.allow_private {
-            return Err(KeyManagerError::NotAuthenticated);
+            return Err(KeyManagerError::Other(anyhow::anyhow!(
+                "not allowed by local runtime policy"
+            )));
         }
 
         self.parent
