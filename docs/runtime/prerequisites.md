@@ -2,7 +2,7 @@
 description: How to build your first runtime
 ---
 
-# Getting Started
+# Prerequisites
 
 This section will guide you how to install the software required for developing
 a runtime and client using the Oasis SDK. After successfully completing all the

@@ -13,27 +13,36 @@ runtime. A runtime can be thought of as a separate chain while smart contracts
 are deployed to an already running chain that has the corresponding module
 included.
 
-* [Build a Smart Contract](contract/README.md)
-* [Build a Runtime](runtime/README.md)
-
-<!-- markdownlint-disable line-length -->
-[Oasis Core Runtime Layer]: https://github.com/oasisprotocol/oasis-core/blob/master/docs/runtime/index.md
-<!-- markdownlint-enable line-length -->
-
 ## Components
 
-The following are the two main components that allow you to easily build
-runtimes, smart contracts and the supporting frontend applications:
+The Oasis SDK is comprised of the following components that allow you to easily
+build runtimes, smart contracts and the supporting frontend applications.
 
-* **Runtime SDK** handles the _backend_ part, namely the runtime itself. It
-  allows you to build the logic that will be replicated when running alongside
-  an Oasis Core node in Rust.
+### Runtime SDK
 
-* **Contract SDK** handles the _higher level backend_ part and allows you to
-  deploy WebAssembly-based smart contracts into already deployed runtimes that
-  include the _contracts_ module. This makes it possible to develop applications
-  on top of the Oasis network without the need to develop runtimes yourself.
+The Runtime SDK handles the _backend_ part, namely the runtime itself. It
+allows you to build the logic that will be replicated when running alongside an
+Oasis Core node in Rust.
 
-* **Client SDK** handles the connection of the backend part with the _frontend_
-  by providing libraries in different languages that make it easy to generate
-  transactions, look up emitted events and query the runtime.
+### Contract SDK
+
+The Contract SDK handles the _higher level backend_ part and allows you to
+deploy WebAssembly-based smart contracts into already deployed runtimes that
+include the _contracts_ module. This makes it possible to develop applications
+on top of the Oasis network without the need to develop runtimes yourself.
+
+### Client SDK
+
+The Client SDK handles the connection of the backend part with the _frontend_
+by providing libraries in different languages that make it easy to generate
+transactions, look up emitted events and query the runtime.
+
+## Learn more
+
+* [Build a Smart Contract](contract/prerequisites.md)
+* [Build a Runtime](runtime/prerequisites.md)
+
+<!-- markdownlint-disable line-length -->
+[Oasis Core Runtime Layer]:
+  https://github.com/oasisprotocol/oasis-core/blob/master/docs/runtime/index.md
+<!-- markdownlint-enable line-length -->
