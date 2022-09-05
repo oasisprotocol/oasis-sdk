@@ -5,13 +5,15 @@ use io_context::Context as IoContext;
 
 use oasis_core_runtime::{
     common::{namespace::Namespace, version::Version},
-    consensus::{beacon, roothash, state::ConsensusState},
+    consensus::{beacon, roothash, state::ConsensusState, Event},
     protocol::HostInfo,
     storage::mkvs,
+    types::EventKind,
 };
 
 use crate::{
     context::{Mode, RuntimeBatchContext},
+    history,
     keymanager::KeyManager,
     module::MigrationHandler,
     modules,
@@ -40,6 +42,22 @@ impl Runtime for EmptyRuntime {
     }
 }
 
+struct EmptyHistory;
+
+impl history::HistoryHost for EmptyHistory {
+    fn consensus_state_at(&self, _height: u64) -> Result<ConsensusState, history::Error> {
+        Err(history::Error::FailedToFetchBlock)
+    }
+
+    fn consensus_events_at(
+        &self,
+        _height: u64,
+        _kind: EventKind,
+    ) -> Result<Vec<Event>, history::Error> {
+        Err(history::Error::FailedToFetchEvents)
+    }
+}
+
 /// Mock dispatch context factory.
 pub struct Mock {
     pub host_info: HostInfo,
@@ -47,6 +65,7 @@ pub struct Mock {
     pub runtime_round_results: roothash::RoundResults,
     pub mkvs: Box<dyn mkvs::MKVS>,
     pub consensus_state: ConsensusState,
+    pub history: Box<dyn history::HistoryHost>,
     pub epoch: beacon::EpochTime,
 
     pub max_messages: u32,
@@ -84,12 +103,14 @@ impl Mock {
             &self.runtime_round_results,
             storage::MKVSStore::new(IoContext::background().freeze(), self.mkvs.as_mut()),
             &self.consensus_state,
+            &self.history,
             self.epoch,
             IoContext::background().freeze(),
             self.max_messages,
         )
     }
 
+    /// Create an instance with the given local configuration.
     pub fn with_local_config(local_config: BTreeMap<String, cbor::Value>) -> Self {
         let mkvs = mkvs::OverlayTree::new(
             mkvs::Tree::builder()
@@ -112,6 +133,7 @@ impl Mock {
             runtime_round_results: roothash::RoundResults::default(),
             mkvs: Box::new(mkvs),
             consensus_state: ConsensusState::new(1, consensus_tree),
+            history: Box::new(EmptyHistory),
             epoch: 1,
             max_messages: 32,
         }

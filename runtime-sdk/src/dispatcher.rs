@@ -518,11 +518,13 @@ impl<R: Runtime> Dispatcher<R> {
             .as_ref()
             // NOTE: We are explicitly allowing private key operations during execution.
             .map(|mgr| mgr.with_private_context(rt_ctx.io_ctx.clone()));
+        let history = self.consensus_verifier.clone();
         let mut ctx =
             RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
                 &mut rt_ctx,
                 &self.host_info,
                 key_manager,
+                &history,
             );
 
         // Perform state migrations if required.
@@ -751,11 +753,13 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             .key_manager
             .as_ref()
             .map(|mgr| mgr.with_context(ctx.io_ctx.clone()));
+        let history = self.consensus_verifier.clone();
         let mut ctx =
             RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
                 &mut ctx,
                 &self.host_info,
                 key_manager,
+                &history,
             );
 
         // Perform state migrations if required.
@@ -834,11 +838,13 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         });
 
         // Prepare dispatch context.
+        let history = self.consensus_verifier.clone();
         let mut ctx =
             RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
                 &mut ctx,
                 &self.host_info,
                 key_manager,
+                &history,
             );
 
         Self::dispatch_query(&mut ctx, method, args)
