@@ -24,7 +24,6 @@
 * **The code has not yet been audited.**
 
 [Oasis Core]: https://github.com/oasisprotocol/oasis-core
-[local network]: /oasis-core/development-setup/running-tests-and-development-networks/oasis-net-runner
 
 ## Directories
 

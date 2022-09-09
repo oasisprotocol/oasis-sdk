@@ -386,7 +386,7 @@ Execution successful.
 ```
 
 <!-- markdownlint-disable line-length -->
-[chain context]: /oasis-core/crypto#chain-domain-separation
+[chain context]: https://github.com/oasisprotocol/oasis-core/blob/master/docs/crypto.md#chain-domain-separation
 [oasis-sdk testing source]: https://github.com/oasisprotocol/oasis-sdk/blob/main/client-sdk/go/testing/testing.go
 <!-- markdownlint-enable line-length -->
 
