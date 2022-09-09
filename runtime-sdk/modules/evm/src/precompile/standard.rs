@@ -1,51 +1,26 @@
 use std::{
     cmp::{max, min, Ordering},
-    collections::BTreeMap,
     convert::TryFrom,
     ops::BitAnd,
 };
 
 use evm::{
-    executor::stack::{PrecompileFailure, PrecompileFn, PrecompileOutput},
+    executor::stack::{PrecompileFailure, PrecompileOutput},
     Context, ExitError, ExitSucceed,
 };
 use k256::{ecdsa::recoverable, EncodedPoint};
 use num::{BigUint, FromPrimitive, One, ToPrimitive, Zero};
-use once_cell::sync::Lazy;
-use primitive_types::H160;
 use ripemd160::Ripemd160;
 use sha2::Sha256;
 use sha3::Keccak256;
 
-// Some types matching evm::executor::stack.
-type PrecompileResult = Result<PrecompileOutput, PrecompileFailure>;
-
-/// Address of ECDSA public key recovery function.
-const PRECOMPILE_ECRECOVER: H160 = H160([
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01,
-]);
-/// Address of of SHA2-256 hash function.
-const PRECOMPILE_SHA256: H160 = H160([
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02,
-]);
-/// Address of RIPEMD-160 hash functions.
-const PRECOMPILE_RIPEMD160: H160 = H160([
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
-]);
-/// Address of identity which defines the output as the input.
-const PRECOMPILE_DATACOPY: H160 = H160([
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04,
-]);
-/// Big integer modular exponentiation in EIP-198.
-const PRECOMPILE_BIGMODEXP: H160 = H160([
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
-]);
+use super::{linear_cost, PrecompileResult};
 
 /// Minimum gas cost of ModExp contract from eip-2565
 /// https://eips.ethereum.org/EIPS/eip-2565
 const MIN_GAS_COST: u64 = 200;
 
-fn call_ecrecover(
+pub(super) fn call_ecrecover(
     input: &[u8],
     target_gas: Option<u64>,
     _context: &Context,
@@ -126,7 +101,7 @@ fn call_ecrecover(
     })
 }
 
-fn call_sha256(
+pub(super) fn call_sha256(
     input: &[u8],
     target_gas: Option<u64>,
     _context: &Context,
@@ -148,7 +123,7 @@ fn call_sha256(
     })
 }
 
-fn call_ripemd160(
+pub(super) fn call_ripemd160(
     input: &[u8],
     target_gas: Option<u64>,
     _context: &Context,
@@ -171,7 +146,7 @@ fn call_ripemd160(
     })
 }
 
-fn call_datacopy(
+pub(super) fn call_datacopy(
     input: &[u8],
     target_gas: Option<u64>,
     _context: &Context,
@@ -187,7 +162,7 @@ fn call_datacopy(
     })
 }
 
-fn call_bigmodexp(
+pub(super) fn call_bigmodexp(
     input: &[u8],
     target_gas: Option<u64>,
     _context: &Context,
@@ -303,45 +278,6 @@ fn call_bigmodexp(
     }
 }
 
-/// A set of precompiles.
-pub static PRECOMPILED_CONTRACT: Lazy<BTreeMap<H160, PrecompileFn>> = Lazy::new(|| {
-    BTreeMap::from([
-        (PRECOMPILE_ECRECOVER, call_ecrecover as PrecompileFn),
-        (PRECOMPILE_SHA256, call_sha256),
-        (PRECOMPILE_RIPEMD160, call_ripemd160),
-        (PRECOMPILE_DATACOPY, call_datacopy),
-        (PRECOMPILE_BIGMODEXP, call_bigmodexp),
-    ])
-});
-
-/// Linear gas cost
-fn linear_cost(
-    target_gas: Option<u64>,
-    len: u64,
-    base: u64,
-    word: u64,
-) -> Result<u64, PrecompileFailure> {
-    let cost = base
-        .checked_add(word.checked_mul(len.saturating_add(31) / 32).ok_or(
-            PrecompileFailure::Error {
-                exit_status: ExitError::OutOfGas,
-            },
-        )?)
-        .ok_or(PrecompileFailure::Error {
-            exit_status: ExitError::OutOfGas,
-        })?;
-
-    if let Some(target_gas) = target_gas {
-        if cost > target_gas {
-            return Err(PrecompileFailure::Error {
-                exit_status: ExitError::OutOfGas,
-            });
-        }
-    }
-
-    Ok(cost)
-}
-
 fn calculate_multiplication_complexity(
     base_length: u64,
     mod_length: u64,
@@ -402,19 +338,8 @@ fn calculate_modexp_gas_cost(
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use super::{super::test::*, *};
     // The following test data is from "go-ethereum/core/vm/contracts_test.go"
-
-    pub fn call_contract(address: H160, input: &[u8], target_gas: u64) -> Option<PrecompileResult> {
-        let context: Context = Context {
-            address: Default::default(),
-            caller: Default::default(),
-            apparent_value: From::from(0),
-        };
-        PRECOMPILED_CONTRACT
-            .get(&address)
-            .map(|pf| pf(input, Some(target_gas), &context, false))
-    }
 
     #[test]
     fn test_ecrecover() {

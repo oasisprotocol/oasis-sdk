@@ -1,5 +1,8 @@
 //! EVM module.
 
+#![feature(array_chunks)]
+#![feature(test)]
+
 pub mod backend;
 pub mod derive_caller;
 pub mod precompile;
@@ -8,10 +11,8 @@ mod signed_call;
 pub mod state;
 pub mod types;
 
-use std::collections::BTreeMap;
-
 use evm::{
-    executor::stack::{MemoryStackState, PrecompileFn, StackExecutor, StackSubstateMetadata},
+    executor::stack::{MemoryStackState, StackExecutor, StackSubstateMetadata},
     Config as EVMConfig,
 };
 use once_cell::sync::OnceCell;
@@ -68,6 +69,15 @@ pub trait Config: 'static {
             address::ADDRESS_V0_VERSION,
             address.as_ref(),
         )
+    }
+
+    /// Provides additional precompiles that should be available to the EVM.
+    ///
+    /// If any of the precompile addresses returned is the same as for one of
+    /// the builtin precompiles, then the returned implementation will
+    /// overwrite the builtin implementation.
+    fn additional_precompiles() -> Option<precompile::PrecompileSetType> {
+        None
     }
 
     /// Returns the config used by the EVM (in the hardfork sense).
@@ -518,7 +528,7 @@ impl<Cfg: Config> Module<Cfg> {
                 'static,
                 '_,
                 MemoryStackState<'_, 'static, backend::Backend<'_, C, Cfg>>,
-                BTreeMap<primitive_types::H160, PrecompileFn>,
+                precompile::PrecompileSetType,
             >,
             u64,
         ) -> (evm::ExitReason, Vec<u8>),
@@ -545,7 +555,7 @@ impl<Cfg: Config> Module<Cfg> {
         let mut executor = StackExecutor::new_with_precompiles(
             stackstate,
             cfg,
-            &*precompile::PRECOMPILED_CONTRACT,
+            precompile::get_precompiles::<Cfg>(),
         );
 
         // Run EVM and process the result.

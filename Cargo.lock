@@ -1989,18 +1989,21 @@ dependencies = [
  "evm",
  "fixed-hash",
  "hex",
+ "hmac",
  "k256",
  "num",
  "oasis-cbor",
  "oasis-runtime-sdk",
  "once_cell",
  "primitive-types",
+ "rand 0.7.3",
  "ripemd160",
  "rlp",
  "sha2 0.9.9",
  "sha3 0.10.2",
  "thiserror",
  "uint",
+ "x25519-dalek",
 ]
 
 [[package]]
