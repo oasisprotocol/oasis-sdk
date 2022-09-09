@@ -12,4 +12,4 @@ cbor = { version = "0.2.1", package = "oasis-cbor" }
 # Third party.
 anyhow = "1.0.50"
 thiserror = "1.0"
-futures = "0.3.18"
+futures = "0.3.24"
