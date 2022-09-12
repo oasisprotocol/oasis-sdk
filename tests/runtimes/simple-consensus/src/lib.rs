@@ -7,6 +7,11 @@ pub struct Config;
 
 impl modules::core::Config for Config {}
 
+impl modules::consensus_inmsg::Config for Config {
+    type Accounts = modules::accounts::Module;
+    type Consensus = modules::consensus::Module;
+}
+
 /// Simple consensus runtime.
 pub struct Runtime;
 
@@ -21,6 +26,8 @@ impl sdk::Runtime for Runtime {
     };
 
     type Core = modules::core::Module<Config>;
+
+    type IncomingMessagesHandler = modules::consensus_inmsg::InMsgTx<Config>;
 
     type Modules = (
         modules::accounts::Module,
@@ -67,6 +74,7 @@ impl sdk::Runtime for Runtime {
             modules::core::Genesis {
                 parameters: modules::core::Parameters {
                     max_batch_gas: 10_000,
+                    max_inmsg_gas: 5_000,
                     max_tx_size: 32 * 1024,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,

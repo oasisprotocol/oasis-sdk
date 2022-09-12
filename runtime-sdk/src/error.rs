@@ -1,4 +1,6 @@
 //! Error types for runtimes.
+use std::fmt::Display;
+
 pub use oasis_core_runtime::types::Error as RuntimeError;
 
 use crate::{dispatcher, module::CallResult};
@@ -56,6 +58,18 @@ pub trait Error: std::error::Error {
     {
         Err(self)
     }
+
+    /// Converts the error into a serializable error.
+    fn into_serializable(self) -> SerializableError
+    where
+        Self: Sized,
+    {
+        SerializableError {
+            module: self.module_name().to_owned(),
+            code: self.code(),
+            message: self.to_string(),
+        }
+    }
 }
 
 impl Error for std::convert::Infallible {
@@ -65,6 +79,47 @@ impl Error for std::convert::Infallible {
 
     fn code(&self) -> u32 {
         Default::default()
+    }
+}
+
+/// A standardized serialized implementation for an error.
+#[derive(Debug, Default, Clone, thiserror::Error, cbor::Encode, cbor::Decode)]
+pub struct SerializableError {
+    pub module: String,
+    pub code: u32,
+    pub message: String,
+}
+
+impl Display for SerializableError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl Error for SerializableError {
+    fn module_name(&self) -> &str {
+        &self.module
+    }
+
+    fn code(&self) -> u32 {
+        self.code
+    }
+}
+
+impl From<CallResult> for SerializableError {
+    fn from(result: CallResult) -> Self {
+        match result {
+            CallResult::Failed {
+                module,
+                code,
+                message,
+            } => Self {
+                module,
+                code,
+                message,
+            },
+            _ => Default::default(),
+        }
     }
 }
 

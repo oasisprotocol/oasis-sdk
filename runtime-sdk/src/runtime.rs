@@ -16,8 +16,8 @@ use crate::{
     crypto, dispatcher,
     keymanager::{KeyManagerClient, TrustedPolicySigners},
     module::{
-        BlockHandler, InvariantHandler, MethodHandler, MigrationHandler, ModuleInfoHandler,
-        TransactionHandler,
+        BlockHandler, InMsgDiscard, InMsgHandler, InvariantHandler, MethodHandler,
+        MigrationHandler, ModuleInfoHandler, TransactionHandler,
     },
     modules,
     state::CurrentState,
@@ -39,6 +39,8 @@ pub trait Runtime {
 
     /// Module that provides the core API.
     type Core: modules::core::API;
+    /// Incoming message handler.
+    type IncomingMessagesHandler: InMsgHandler = InMsgDiscard;
 
     /// Supported modules.
     type Modules: TransactionHandler

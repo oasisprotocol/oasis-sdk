@@ -14,7 +14,7 @@ use crate::{
     context::Context,
     core::consensus::beacon::EpochTime,
     dispatcher,
-    error::Error as SDKError,
+    error::{Error as SDKError, SerializableError},
     keymanager, migration,
     module::{
         self, CallResult, InvariantHandler as _, MethodHandler as _, Module as _,
@@ -147,6 +147,10 @@ pub enum Error {
     #[error("{0}")]
     #[sdk_error(transparent)]
     TxSimulationFailed(#[from] TxSimulationFailure),
+
+    #[error("check failed: {0}")]
+    #[sdk_error(transparent)]
+    TxCheckFailed(#[from] SerializableError),
 }
 
 impl Error {
@@ -230,6 +234,8 @@ pub struct GasCosts {
     pub auth_multisig_signer: u64,
 
     pub callformat_x25519_deoxysii: u64,
+
+    pub inmsg_base: u64,
 }
 
 /// Dynamic min gas price parameters.
@@ -267,6 +273,7 @@ pub enum ParameterValidationError {
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
     pub max_batch_gas: u64,
+    pub max_inmsg_gas: u64,
     pub max_tx_size: u32,
     pub max_tx_signers: u32,
     pub max_multisig_signers: u32,
@@ -279,6 +286,13 @@ impl module::Parameters for Parameters {
     type Error = ParameterValidationError;
 
     fn validate_basic(&self) -> Result<(), Self::Error> {
+        // Validate maximum incoming message gas parameters.
+        if self.max_inmsg_gas > self.max_batch_gas {
+            return Err(Error::InvalidArgument(anyhow!(
+                "max_inmsg_gas > max_batch_gas"
+            )));
+        }
+
         // Validate dynamic min gas price parameters.
         let dmgp = &self.dynamic_min_gas_price;
         if dmgp.enabled {
@@ -325,6 +339,12 @@ pub trait API {
 
     /// Configured maximum amount of gas that can be used in a batch.
     fn max_batch_gas() -> u64;
+
+    /// Configured maximum amount of gas that can be used for incoming messages.
+    fn max_inmsg_gas<C: Context>(ctx: &mut C) -> u64;
+
+    /// Gas costs related to the core module.
+    fn gas_costs<C: Context>(ctx: &mut C) -> GasCosts;
 
     /// Configured minimum gas price.
     fn min_gas_price<C: Context>(ctx: &C, denom: &token::Denomination) -> Option<u128>;
@@ -518,6 +538,14 @@ impl<Cfg: Config> API for Module<Cfg> {
 
     fn max_batch_gas() -> u64 {
         Self::params().max_batch_gas
+    }
+
+    fn max_inmsg_gas() -> u64 {
+        Self::params().max_inmsg_gas
+    }
+
+    fn gas_costs() -> GasCosts {
+        Self::params().gas_costs
     }
 
     fn min_gas_price<C: Context>(ctx: &C, denom: &token::Denomination) -> Option<u128> {

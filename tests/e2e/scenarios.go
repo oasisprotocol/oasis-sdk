@@ -39,6 +39,7 @@ var (
 		ConsensusDepositWithdrawalTest,
 		ConsensusAccountsParametersTest,
 		ConsensusDelegationTest,
+		ConsensusIncomingMessageBasicTest,
 	})
 
 	// SimpleEVMRuntime is the simple-evm runtime test.
