@@ -232,9 +232,9 @@ oasis contracts upload hello_world.wasm
 
 <!-- markdownlint-disable line-length -->
 [PublicCell]:
-  https://api.docs.oasis.dev/oasis-sdk/oasis_contract_sdk_storage/cell/struct.PublicCell.html
+  https://api.docs.oasis.io/oasis-sdk/oasis_contract_sdk_storage/cell/struct.PublicCell.html
 [ConfidentialCell]:
-  https://api.docs.oasis.dev/oasis-sdk/oasis_contract_sdk_storage/cell/struct.ConfidentialCell.html
+  https://api.docs.oasis.io/oasis-sdk/oasis_contract_sdk_storage/cell/struct.ConfidentialCell.html
 <!-- markdownlint-enable line-length -->
 
 ## Confidential Instantiation and Calling
@@ -305,5 +305,5 @@ event][emit_event] will be public.
 
 <!-- markdownlint-disable line-length -->
 [emit_event]:
-  https://api.docs.oasis.dev/oasis-sdk/oasis_contract_sdk/context/trait.Context.html#tymethod.emit_event
+  https://api.docs.oasis.io/oasis-sdk/oasis_contract_sdk/context/trait.Context.html#tymethod.emit_event
 <!-- markdownlint-enable line-length -->
