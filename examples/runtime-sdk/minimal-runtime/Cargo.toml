@@ -1,0 +1,7 @@
+[package]
+name = "minimal-runtime"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+oasis-runtime-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk" }
