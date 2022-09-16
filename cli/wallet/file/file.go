@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -285,10 +284,9 @@ func (af *fileAccountFactory) DataValidator(kind wallet.ImportKind, rawCfg map[s
 				}
 			case wallet.AlgorithmSecp256k1Raw:
 				// Ensure the private key is hex encoded.
-				a := strings.TrimPrefix(ans.(string), "0x")
-				_, err := hex.DecodeString(a)
+				_, err := hex.DecodeString(ans.(string))
 				if err != nil {
-					return fmt.Errorf("private key must be hex-encoded: %w", err)
+					return fmt.Errorf("private key must be hex-encoded (without leading 0x): %w", err)
 				}
 			default:
 				return fmt.Errorf("unsupported algorithm for %s: %s", wallet.ImportKindPrivateKey, cfg.Algorithm)

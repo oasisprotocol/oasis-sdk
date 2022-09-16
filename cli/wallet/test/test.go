@@ -2,6 +2,7 @@ package test
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
@@ -45,7 +46,10 @@ func (a *testAccount) Address() types.Address {
 }
 
 func (a *testAccount) EthAddress() *ethCommon.Address {
-	return &a.testKey.EthAddress
+	if a.testKey.SigSpec.Secp256k1Eth != nil {
+		return &a.testKey.EthAddress
+	}
+	return nil
 }
 
 func (a *testAccount) SignatureAddressSpec() types.SignatureAddressSpec {
@@ -53,5 +57,8 @@ func (a *testAccount) SignatureAddressSpec() types.SignatureAddressSpec {
 }
 
 func (a *testAccount) UnsafeExport() string {
+	if a.testKey.SigSpec.Secp256k1Eth != nil {
+		return hex.EncodeToString(a.testKey.SecretKey)
+	}
 	return base64.StdEncoding.EncodeToString(a.testKey.SecretKey)
 }
