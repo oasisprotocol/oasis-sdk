@@ -22,9 +22,7 @@ Since the Runtime SDK requires a nightly version of the Rust toolchain, you need
 to specify a version to use by creating a special file called `rust-toolchain`
 containing the following information:
 
-```
-nightly-2021-08-17
-```
+![code](../../examples/runtime-sdk/minimal-runtime/rust-toolchain)
 
 Additionally, due to the requirements of some upstream dependencies, you need to
 configure Cargo to always build with specific target CPU platform features
@@ -68,15 +66,7 @@ First you need to declare the `oasis-runtime-sdk` as a dependency in order to be
 able to use its features. To do this, edit the `[dependencies]` section in your
 `Cargo.toml` to look like the following:
 
-```toml
-[package]
-name = "minimal-runtime"
-version = "0.1.0"
-edition = "2018"
-
-[dependencies]
-oasis-runtime-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk" }
-```
+![code toml](../../examples/runtime-sdk/minimal-runtime/Cargo.toml "Cargo.toml")
 
 :::info
 
@@ -89,75 +79,9 @@ After you have declared the dependency on the Runtime SDK the next thing is to
 define the minimal runtime. To do this, create `src/lib.rs` with the following
 content:
 
-```rust
-//! Minimal runtime.
-use std::collections::BTreeMap;
-
-use oasis_runtime_sdk::{self as sdk, modules, types::token::Denomination, Version};
-
-/// Configuration of the various modules.
-pub struct Config;
-
-// The base runtime type.
-//
-// Note that everything is statically defined, so the runtime has no state.
-pub struct Runtime;
-
-impl modules::core::Config for Config {}
-
-impl sdk::Runtime for Runtime {
-    // Use the crate version from Cargo.toml as the runtime version.
-    const VERSION: Version = sdk::version_from_cargo!();
-
-    // Define the module that provides the core API.
-    type Core = modules::core::Module<Config>;
-
-    // Define the modules that the runtime will be composed of. Here we just use
-    // the core and accounts modules from the SDK. Later on we will go into
-    // detail on how to create your own modules.
-    type Modules = (modules::core::Module<Config>, modules::accounts::Module);
-
-    // Define the genesis (initial) state for all of the specified modules. This
-    // state is used when the runtime is first initialized.
-    //
-    // The return value is a tuple of states in the same order as the modules
-    // are defined above.
-    fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {
-        (
-            // Core module.
-            modules::core::Genesis {
-                parameters: modules::core::Parameters {
-                    max_batch_gas: 10_000,
-                    max_tx_signers: 8,
-                    max_tx_size: 10_000,
-                    max_multisig_signers: 8,
-                    min_gas_price: BTreeMap::from([(Denomination::NATIVE, 0)]),
-                    ..Default::default()
-                },
-            },
-            // Accounts module.
-            modules::accounts::Genesis {
-                parameters: modules::accounts::Parameters {
-                    gas_costs: modules::accounts::GasCosts { tx_transfer: 100 },
-                    ..Default::default()
-                },
-                balances: BTreeMap::from([
-                    (
-                        sdk::testing::keys::alice::address(),
-                        BTreeMap::from([(Denomination::NATIVE, 1_000_000_000)]),
-                    ),
-                    (
-                        sdk::testing::keys::bob::address(),
-                        BTreeMap::from([(Denomination::NATIVE, 2_000_000_000)]),
-                    ),
-                ]),
-                total_supplies: BTreeMap::from([(Denomination::NATIVE, 3_000_000_000)]),
-                ..Default::default()
-            },
-        )
-    }
-}
-```
+<!-- markdownlint-disable line-length -->
+![code rust](../../examples/runtime-sdk/minimal-runtime/src/lib.rs "src/lib.rs")
+<!-- markdownlint-enable line-length -->
 
 This defines the behavior (state transition function) and the initial state of
 the runtime. We are populating the state with some initial accounts so that we
@@ -175,13 +99,9 @@ publicly known seeds!
 In order to be able to build a runtime binary that can be loaded by an Oasis
 Node, we need to add some boilerplate into `src/main.rs` as follows:
 
-```rust
-use oasis_runtime_sdk::Runtime;
-
-fn main() {
-    minimal_runtime::Runtime::start();
-}
-```
+<!-- markdownlint-disable line-length -->
+![code rust](../../examples/runtime-sdk/minimal-runtime/src/main.rs "src/main.rs")
+<!-- markdownlint-enable line-length -->
 
 ## Building and Running
 
@@ -386,8 +306,10 @@ Execution successful.
 ```
 
 <!-- markdownlint-disable line-length -->
-[chain context]: https://github.com/oasisprotocol/oasis-core/blob/master/docs/crypto.md#chain-domain-separation
-[oasis-sdk testing source]: https://github.com/oasisprotocol/oasis-sdk/blob/main/client-sdk/go/testing/testing.go
+[chain context]:
+  https://github.com/oasisprotocol/oasis-core/blob/master/docs/crypto.md#chain-domain-separation
+[oasis-sdk testing source]:
+  https://github.com/oasisprotocol/oasis-sdk/blob/main/client-sdk/go/testing/testing.go
 <!-- markdownlint-enable line-length -->
 
 ## Testing From a Client
@@ -406,156 +328,9 @@ go mod tidy
 
 Then create a `test.go` file with the following content:
 
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    "time"
-
-    "google.golang.org/grpc"
-    "google.golang.org/grpc/credentials/insecure"
-
-    "github.com/oasisprotocol/oasis-core/go/common"
-    cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
-    "github.com/oasisprotocol/oasis-core/go/common/logging"
-    "github.com/oasisprotocol/oasis-core/go/common/quantity"
-
-    "github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
-    "github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
-    "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
-    "github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
-)
-
-// In reality these would come from command-line arguments, the environment
-// or a configuration file.
-const (
-    // This is the default runtime ID as used in oasis-net-runner. It can
-    // be changed by using its --fixture.default.runtime.id argument.
-    runtimeIDHex = "8000000000000000000000000000000000000000000000000000000000000000"
-    // This is the default client node address as set in oasis-net-runner.
-    nodeAddress = "unix:/tmp/minimal-runtime-test/net-runner/network/client-0/internal.sock"
-)
-
-// The global logger.
-var logger = logging.GetLogger("minimal-runtime-client")
-
-// Client contains the client helpers for communicating with the runtime. This is a simple wrapper
-// used for convenience.
-type Client struct {
-    client.RuntimeClient
-
-    // Accounts are the accounts module helpers.
-    Accounts accounts.V1
-}
-
-// showBalances is a simple helper for displaying account balances.
-func showBalances(ctx context.Context, rc *Client, address types.Address) {
-    // Query the runtime, specifically the accounts module, for the given address' balances.
-    rsp, err := rc.Accounts.Balances(ctx, client.RoundLatest, address)
-    if err != nil {
-        logger.Error("failed to fetch account balances",
-            "err", err,
-        )
-        os.Exit(1)
-    }
-
-    fmt.Printf("=== Balances for %s ===\n", address)
-    for denom, balance := range rsp.Balances {
-        fmt.Printf("%s: %s\n", denom, balance)
-    }
-    fmt.Printf("\n")
-}
-
-func main() {
-    // Initialize logging.
-    if err := logging.Initialize(os.Stdout, logging.FmtLogfmt, logging.LevelDebug, nil); err != nil {
-        fmt.Fprintf(os.Stderr, "ERROR: Unable to initialize logging: %v\n", err)
-        os.Exit(1)
-    }
-
-    // Decode hex runtime ID into something we can use.
-    var runtimeID common.Namespace
-    if err := runtimeID.UnmarshalHex(runtimeIDHex); err != nil {
-        logger.Error("malformed runtime ID",
-            "err", err,
-        )
-        os.Exit(1)
-    }
-
-    // Establish a gRPC connection with the client node.
-    logger.Info("connecting to local node")
-    conn, err := cmnGrpc.Dial(nodeAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
-    if err != nil {
-        logger.Error("failed to establish connection",
-            "addr", nodeAddress,
-            "err", err,
-        )
-        os.Exit(1)
-    }
-    defer conn.Close()
-
-    // Create the runtime client with account module query helpers.
-    c := client.New(conn, runtimeID)
-    rc := &Client{
-        RuntimeClient: c,
-        Accounts:      accounts.NewV1(c),
-    }
-
-    ctx, cancelFn := context.WithTimeout(context.Background(), 30*time.Second)
-    defer cancelFn()
-
-    // Show initial balances for Alice's and Bob's accounts.
-    logger.Info("dumping initial balances")
-    showBalances(ctx, rc, testing.Alice.Address)
-    showBalances(ctx, rc, testing.Bob.Address)
-
-    // Get current nonce for Alice's account.
-    nonce, err := rc.Accounts.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
-    if err != nil {
-        logger.Error("failed to fetch account nonce",
-            "err", err,
-        )
-        os.Exit(1)
-    }
-
-    // Perform a transfer from Alice to Bob.
-    logger.Info("performing transfer", "nonce", nonce)
-    // Create a transfer transaction with Bob's address as the destination and 10 native base units
-    // as the amount.
-    tb := rc.Accounts.Transfer(
-        testing.Bob.Address,
-        types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination),
-    ).
-        // Configure gas as set in genesis parameters. We could also estimate it instead.
-        SetFeeGas(100).
-        // Append transaction authentication information using a single signature variant.
-        AppendAuthSignature(testing.Alice.SigSpec, nonce)
-    // Sign the transaction using the signer. Before a transaction can be submitted it must be
-    // signed by all configured signers. This will automatically fetch the corresponding chain
-    // domain separation context for the runtime.
-    if err = tb.AppendSign(ctx, testing.Alice.Signer); err != nil {
-        logger.Error("failed to sign transfer transaction",
-            "err", err,
-        )
-        os.Exit(1)
-    }
-    // Submit the transaction and wait for it to be included and a runtime block.
-    if err = tb.SubmitTx(ctx, nil); err != nil {
-        logger.Error("failed to submit transfer transaction",
-            "err", err,
-        )
-        os.Exit(1)
-    }
-
-    // Show final balances for Alice's and Bob's accounts.
-    logger.Info("dumping final balances")
-    showBalances(ctx, rc, testing.Alice.Address)
-    showBalances(ctx, rc, testing.Bob.Address)
-}
-```
+<!-- markdownlint-disable line-length -->
+![code go](../../examples/client-sdk/go/minimal-runtime-client/test.go "test.go")
+<!-- markdownlint-enable line-length -->
 
 Fetch the dependencies:
 
@@ -609,3 +384,17 @@ amount each time. As long as the local network is running the state will be
 preserved.
 
 Congratulations, you have successfully built and deployed your first runtime!
+
+:::info
+
+You can view and download complete [runtime example] and [client code in Go]
+from the Oasis SDK repository.
+
+:::
+
+<!-- markdownlint-disable line-length -->
+[runtime example]:
+  https://github.com/oasisprotocol/oasis-sdk/tree/main/examples/runtime-sdk/minimal-runtime
+[client code in Go]:
+  https://github.com/oasisprotocol/oasis-sdk/tree/main/examples/client-sdk/go/minimal-runtime-client
+<!-- markdownlint-enable line-length -->
