@@ -1,13 +1,12 @@
 package helpers
 
 import (
-	"encoding/hex"
 	"fmt"
 	"strings"
 
-	"golang.org/x/crypto/sha3"
-
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
@@ -30,25 +29,11 @@ const (
 
 // ResolveAddress resolves a string address into the corresponding account address.
 func ResolveAddress(net *config.Network, address string) (*types.Address, error) {
+	if addr, _, _ := ResolveEthOrOasisAddress(address); addr != nil {
+		return addr, nil
+	}
+
 	switch {
-	case strings.HasPrefix(address, addressPrefixOasis):
-		// Oasis Bech32 address.
-		var a types.Address
-		if err := a.UnmarshalText([]byte(address)); err != nil {
-			return nil, err
-		}
-		return &a, nil
-	case strings.HasPrefix(address, addressPrefixEth):
-		// Ethereum address, derive Oasis Bech32 address.
-		ethAddr, err := hex.DecodeString(address[2:])
-		if err != nil {
-			return nil, fmt.Errorf("malformed Ethereum address: %w", err)
-		}
-		if len(ethAddr) != 20 {
-			return nil, fmt.Errorf("malformed Ethereum address: expected 20 bytes")
-		}
-		addr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethAddr)
-		return &addr, nil
 	case strings.Contains(address, addressExplicitSeparator):
 		subs := strings.SplitN(address, addressExplicitSeparator, 2)
 		switch kind, data := subs[0], subs[1]; kind {
@@ -85,6 +70,30 @@ func ResolveAddress(net *config.Network, address string) (*types.Address, error)
 	}
 }
 
+// ResolveEthOrOasisAddress decodes the given oasis bech32-encoded or ethereum hex-encoded
+// address and returns the corresponding ethereum address object and/or account address.
+// If the encoding is not valid, returns error. If the format is not known, does nothing.
+func ResolveEthOrOasisAddress(address string) (*types.Address, *ethCommon.Address, error) {
+	switch {
+	case strings.HasPrefix(address, addressPrefixOasis):
+		// Oasis Bech32 address.
+		var a types.Address
+		if err := a.UnmarshalText([]byte(address)); err != nil {
+			return nil, nil, err
+		}
+		return &a, nil, nil
+	case strings.HasPrefix(address, addressPrefixEth):
+		// Ethereum address, derive Oasis Bech32 address.
+		if !ethCommon.IsHexAddress(address) {
+			return nil, nil, fmt.Errorf("malformed Ethereum address: %s", address)
+		}
+		ethAddr := ethCommon.HexToAddress(address)
+		addr := types.NewAddressRaw(types.AddressV0Secp256k1EthContext, ethAddr[:])
+		return &addr, &ethAddr, nil
+	}
+	return nil, nil, nil
+}
+
 // ParseTestAccountAddress extracts test account name from "test:some_test_account" format or
 // returns an empty string, if the format doesn't match.
 func ParseTestAccountAddress(name string) string {
@@ -105,23 +114,9 @@ func EthAddressFromPubKey(pk secp256k1.PublicKey) string {
 	untaggedPk, _ := pk.MarshalBinaryUncompressedUntagged()
 	h.Write(untaggedPk)
 	hash := h.Sum(nil)
-	unchecksummed := hex.EncodeToString(hash[32-20:])
 
-	sha := sha3.NewLegacyKeccak256()
-	sha.Write([]byte(unchecksummed))
-	hash = sha.Sum(nil)
+	var ethAddress ethCommon.Address
+	ethAddress.SetBytes(hash[32-20:])
 
-	result := []byte(unchecksummed)
-	for i := 0; i < len(result); i++ {
-		hashByte := hash[i/2]
-		if i%2 == 0 {
-			hashByte >>= 4
-		} else {
-			hashByte &= 0xf
-		}
-		if result[i] > '9' && hashByte > 7 {
-			result[i] -= 32
-		}
-	}
-	return fmt.Sprintf("0x%s", string(result))
+	return ethAddress.Hex()
 }

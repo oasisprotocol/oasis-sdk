@@ -22,7 +22,6 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/cli/table"
 	"github.com/oasisprotocol/oasis-sdk/cli/wallet"
 	walletFile "github.com/oasisprotocol/oasis-sdk/cli/wallet/file"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/helpers"
 )
 
 var (
@@ -88,6 +87,9 @@ var (
 			err = accCfg.SetConfigFromFlags()
 			cobra.CheckErr(err)
 
+			if _, exists := cfg.AddressBook.All[name]; exists {
+				cobra.CheckErr(fmt.Errorf("address named '%s' already exists in address book", name))
+			}
 			err = cfg.Wallet.Create(name, passphrase, accCfg)
 			cobra.CheckErr(err)
 
@@ -104,7 +106,7 @@ var (
 			name := args[0]
 
 			acc := common.LoadAccount(config.Global(), name)
-			showPublicWalletInfo(acc)
+			showPublicWalletInfo(name, acc)
 		},
 	}
 
@@ -186,7 +188,10 @@ var (
 			name := args[0]
 
 			if _, exists := cfg.Wallet.All[name]; exists {
-				cobra.CheckErr(fmt.Errorf("account '%s' already exists", name))
+				cobra.CheckErr(fmt.Errorf("account '%s' already exists in the wallet", name))
+			}
+			if _, exists := cfg.AddressBook.All[name]; exists {
+				cobra.CheckErr(fmt.Errorf("address named '%s' already exists in the address book", name))
 			}
 
 			// NOTE: We only support importing into the file-based wallet for now.
@@ -201,7 +206,7 @@ var (
 
 			var kindRaw string
 			err = survey.AskOne(&survey.Select{
-				Message: "Import kind:",
+				Message: "Kind:",
 				Options: supportedKinds,
 			}, &kindRaw)
 			cobra.CheckErr(err)
@@ -258,7 +263,7 @@ var (
 			fmt.Printf("WARNING: Exporting the account will expose secret key material!\n")
 			acc := common.LoadAccount(config.Global(), name)
 
-			showPublicWalletInfo(acc)
+			showPublicWalletInfo(name, acc)
 
 			fmt.Printf("Export:\n")
 			fmt.Println(acc.UnsafeExport())
@@ -349,12 +354,15 @@ func (sf *accountEntitySignerFactory) Load(
 	return sf.signer, nil
 }
 
-func showPublicWalletInfo(wallet wallet.Account) {
-	fmt.Printf("Public Key:       %s\n", wallet.Signer().Public())
-	fmt.Printf("Address:          %s\n", wallet.Address())
-	if wallet.SignatureAddressSpec().Secp256k1Eth != nil {
-		fmt.Printf("Ethereum address: %s\n", helpers.EthAddressFromPubKey(*wallet.SignatureAddressSpec().Secp256k1Eth))
+func showPublicWalletInfo(name string, wallet wallet.Account) {
+	fmt.Printf("Name:             %s\n", name)
+	if signer := wallet.Signer(); signer != nil {
+		fmt.Printf("Public Key:       %s\n", signer.Public())
 	}
+	if ethAddr := wallet.EthAddress(); ethAddr != nil {
+		fmt.Printf("Ethereum address: %s\n", ethAddr.Hex())
+	}
+	fmt.Printf("Native address:   %s\n", wallet.Address())
 }
 
 func init() {

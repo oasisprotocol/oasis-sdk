@@ -81,6 +81,7 @@ func init() {
 	rootCmd.AddCommand(paratimeCmd)
 	rootCmd.AddCommand(walletCmd)
 	rootCmd.AddCommand(accountsCmd)
+	rootCmd.AddCommand(addressBookCmd)
 	rootCmd.AddCommand(contractsCmd)
 	rootCmd.AddCommand(inspect.Cmd)
 }

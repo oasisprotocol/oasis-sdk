@@ -3,6 +3,7 @@ package testing
 import (
 	"crypto/sha512"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	sr25519voi "github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
 	"golang.org/x/crypto/sha3"
 
@@ -24,7 +25,7 @@ type TestKey struct {
 	SigSpec   types.SignatureAddressSpec
 
 	// EthAddress is the corresponding Ethereum address if the key is secp256k1.
-	EthAddress [20]byte
+	EthAddress ethCommon.Address
 }
 
 func newEd25519TestKey(seed string) TestKey {

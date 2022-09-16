@@ -76,11 +76,43 @@ func LoadTestAccountConfig(name string) (*config.Account, error) {
 
 // ResolveLocalAccountOrAddress resolves a string address into the corresponding account address.
 func ResolveLocalAccountOrAddress(net *configSdk.Network, address string) (*types.Address, error) {
-	// Check, if address is the account name in the wallet.
+	// Check if address is the account name in the wallet.
 	if acc, ok := config.Global().Wallet.All[address]; ok {
 		addr := acc.GetAddress()
 		return &addr, nil
 	}
 
+	// Check if address is the name of an address book entry.
+	if entry, ok := config.Global().AddressBook.All[address]; ok {
+		addr := entry.GetAddress()
+		return &addr, nil
+	}
+
 	return helpers.ResolveAddress(net, address)
+}
+
+// CheckLocalAccountIsConsensusCapable is a safety check for withdrawals or consensus layer
+// transfers to potentially known native addresses which key pairs are not compatible with
+// consensus or the address is a derivation of a known Ethereum address.
+func CheckLocalAccountIsConsensusCapable(cfg *config.Config, address string) error {
+	for name, acc := range cfg.Wallet.All {
+		if acc.Address == address && !acc.HasConsensusSigner() {
+			return fmt.Errorf("destination account '%s' (%s) will not be able to sign transactions on consensus layer", name, acc.Address)
+		}
+	}
+
+	for name := range testing.TestAccounts {
+		testAcc, _ := LoadTestAccount(name)
+		if testAcc.Address().String() == address && testAcc.ConsensusSigner() == nil {
+			return fmt.Errorf("test account '%s' (%s) will not be able to sign transactions on consensus layer", name, testAcc.Address().String())
+		}
+	}
+
+	for name, acc := range cfg.AddressBook.All {
+		if acc.Address == address && acc.GetEthAddress() != nil {
+			return fmt.Errorf("destination address named '%s' (%s) will not be able to sign transactions on consensus layer", name, acc.GetEthAddress().Hex())
+		}
+	}
+
+	return nil
 }

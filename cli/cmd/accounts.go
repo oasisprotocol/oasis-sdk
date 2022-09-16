@@ -23,7 +23,6 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/helpers"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensusaccounts"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -400,18 +399,7 @@ var (
 				addrToCheck = addr.String()
 			}
 
-			// Safety check for withdrawals to known accounts that are not supported on the consensus layer.
-			for name, acc := range cliConfig.Global().Wallet.All {
-				if acc.Address == addrToCheck && !acc.HasConsensusSigner() {
-					cobra.CheckErr(fmt.Errorf("account '%s' (%s) will not be able to sign transactions on consensus layer", name, acc.Address))
-				}
-			}
-			for name := range testing.TestAccounts {
-				testAcc, _ := common.LoadTestAccount(name)
-				if testAcc.Address().String() == addrToCheck && testAcc.ConsensusSigner() == nil {
-					cobra.CheckErr(fmt.Errorf("test account '%s' (%s) will not be able to sign transactions on consensus layer", name, testAcc.Address().String()))
-				}
-			}
+			cobra.CheckErr(common.CheckLocalAccountIsConsensusCapable(cfg, addrToCheck))
 
 			// Parse amount.
 			// TODO: This should actually query the ParaTime (or config) to check what the consensus
@@ -501,6 +489,8 @@ var (
 			var sigTx, meta interface{}
 			switch npa.ParaTime {
 			case nil:
+				cobra.CheckErr(common.CheckLocalAccountIsConsensusCapable(cfg, toAddr.String()))
+
 				// Consensus layer transfer.
 				amount, err := helpers.ParseConsensusDenomination(npa.Network, amount)
 				cobra.CheckErr(err)

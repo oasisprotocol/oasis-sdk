@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/AlecAivazis/survey/v2"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/mitchellh/mapstructure"
 	flag "github.com/spf13/pflag"
 
@@ -197,6 +198,11 @@ func (a *ledgerAccount) Signer() signature.Signer {
 
 func (a *ledgerAccount) Address() types.Address {
 	return types.NewAddress(a.SignatureAddressSpec())
+}
+
+func (a *ledgerAccount) EthAddress() *ethCommon.Address {
+	// secp256k1 accounts are not supported by Ledger yet.
+	return nil
 }
 
 func (a *ledgerAccount) SignatureAddressSpec() types.SignatureAddressSpec {
