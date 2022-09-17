@@ -23,7 +23,7 @@
     "devDependencies": {
         "@oasisprotocol/client-rt": "^0.2.1-alpha.2",
         "buffer": "^6.0.3",
-        "cypress": "^10.7.0",
+        "cypress": "^10.8.0",
         "prettier": "^2.7.1",
         "process": "^0.11.10",
         "stream-browserify": "^3.0.0",
