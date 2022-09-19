@@ -8,14 +8,14 @@ Developers, see [this getting started guide](docs/getting-started.md).
 ## Philosophy
 
 A browser extension is a convenient place to implement a wallet so that it can
-be used with DApps.
-Prefer to have more responsibilities in the DApp, such as connecting to a
+be used with dApps.
+Prefer to have more responsibilities in the dApp, such as connecting to a
 node, estimating or configuring gas, setting nonces, and submitting
 transactions.
 
 An extension that works by altering the JavaScript environment for all sites
 is a lot to trust.
-Prefer to have a DApp request to interact with an extension.
+Prefer to have a dApp request to interact with an extension.
 
 ## Inventory of what's here
 
