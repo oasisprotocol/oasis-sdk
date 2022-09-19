@@ -190,6 +190,11 @@ func NewV1(rtc client.RuntimeClient) V1 {
 	return &v1{rtc: rtc}
 }
 
+// NewCreateTx generates a new evm.Create transaction.
+func NewCreateTx(fee *types.Fee, body *Create) *types.Transaction {
+	return types.NewTransaction(fee, methodCreate, body)
+}
+
 // NewCallTx generates a new evm.Call transaction.
 func NewCallTx(fee *types.Fee, body *Call) *types.Transaction {
 	return types.NewTransaction(fee, methodCall, body)
