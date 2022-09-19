@@ -1,9 +1,9 @@
 # Getting started
 
-## Building a DApp
+## Building a dApp
 
-**The sample DApp.**
-Take a look at the sample code for the DApp side of the overall interface.
+**The sample dApp.**
+Take a look at the sample code for the dApp side of the overall interface.
 That's in [sample-page/src/index.js](../sample-page/src/index.js).
 
 At a high level, the sample page opens an `oasisExt.connection.ExtConnection`,
@@ -14,7 +14,7 @@ element exists, i.e. not in a script in the `head` without `defer`.
 It uses functions and classes in `oasisExt`, which require a `connection`
 parameter.
 
-**Your own DApp.**
+**Your own dApp.**
 Use the `@oasisprotocol/client` and/or `@oasisprotocol/client-rt` to write
 the code for preparing the body of a transaction and submitting it.
 Use this package to connect to an extension.
@@ -26,7 +26,7 @@ Then, get the public key and sign the transaction using
 ## Building an extension
 
 **The sample extension.**
-Take a look at the sample code for the extension side of the overall DApp
+Take a look at the sample code for the extension side of the overall dApp
 interface and signer interface.
 That's in [sample-ext/src/index.js](../sample-ext/src/index.js).
 It's integrated into the extension here in
@@ -35,10 +35,10 @@ resource."
 
 At a high level, the sample extension calls an `oasisExt.ext.ready` function
 with a bunch of
-callbacks, which the `oasisExt` library will call when the DApp makes
+callbacks, which the `oasisExt` library will call when the dApp makes
 requests.
 The sample extension handles these entirely within a little `iframe` that a
-DApp will embed, but it's fine to relay messages to a background page or
+dApp will embed, but it's fine to relay messages to a background page or
 otherwise communicate with other parts of the extension.
 
 There's a webpack build step for the sample extension.
@@ -49,7 +49,7 @@ extension.
 **Trying your own extension.**
 Integrate a similar "web accessible resource" page into your extension and
 implement the extension side of the signer interface.
-To try it out with the sample DApp page, do the following:
+To try it out with the sample dApp page, do the following:
 
 1. Get your extension ID from [chrome://extensions](chrome://extensions), e.g.
    `joglombbipnjdfbkimehokiomlbhcobn` here:
