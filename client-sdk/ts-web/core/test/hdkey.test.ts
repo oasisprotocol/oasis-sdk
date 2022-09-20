@@ -35,7 +35,7 @@ describe('HDKey', () => {
         adr0008Vectors.forEach((vector, index) => {
             const passphrase = vector.bip39_passphrase || undefined;
 
-            it(`Case #${index}`, async () => {
+            it(`Case #${index} using account index`, async () => {
                 // This can be a bit slow on CI servers.
                 jest.setTimeout(10000);
 
@@ -50,6 +50,20 @@ describe('HDKey', () => {
 
                     expect(uint2hex(keyPair.secretKey)).toEqual(account.private_key);
                     expect(uint2hex(keyPair.publicKey)).toEqual(account.public_key);
+                }
+            });
+
+            it(`Case #${index} using derivation path`, async () => {
+                // This can be a bit slow on CI servers.
+                jest.setTimeout(10000);
+
+                for (let account of vector.oasis_accounts) {
+                    const keyPair = await HDKey.getAccountSigner(
+                        vector.bip39_mnemonic,
+                        account.bip32_path,
+                        passphrase,
+                    );
+                    expect(uint2hex(keyPair.secretKey)).toEqual(account.private_key);
                 }
             });
         });

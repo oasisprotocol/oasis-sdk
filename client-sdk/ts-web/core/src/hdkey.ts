@@ -17,18 +17,18 @@ export class HDKey {
     /**
      * Generates the keypair matching the supplied parameters
      * @param mnemonic BIP-0039 Mnemonic
-     * @param index Account index
+     * @param indexOrPath Account index or derivation path
      * @param passphrase Optional BIP-0039 passphrase
      * @returns SignKeyPair for these parameters
      */
     public static async getAccountSigner(
         mnemonic: string,
-        index: number = 0,
+        indexOrPath: number | string = 0,
         passphrase?: string,
     ): Promise<SignKeyPair> {
         const seed = await mnemonicToSeed(mnemonic, passphrase);
         const key = HDKey.makeHDKey(ED25519_CURVE, seed);
-        return key.derivePath(index).keypair;
+        return key.derivePath(indexOrPath).keypair;
     }
 
     /**
@@ -50,14 +50,20 @@ export class HDKey {
     /**
      * Returns the HDKey for the given derivation path
      * using SLIP-0010
-     * @param index Account index
+     * @param indexOrPath Account index or derivation path
      * @returns Instance of HDKey
      */
-    private derivePath(index: number): HDKey {
-        if (index < 0 || index > 0x7fffffff) {
-            throw new Error('Account number must be >= 0 and <= 2147483647');
+    private derivePath(indexOrPath: number | string): HDKey {
+        let path: string;
+        if (typeof indexOrPath === 'number') {
+            const index = indexOrPath;
+            if (index < 0 || index > 0x7fffffff) {
+                throw new Error('Account number must be >= 0 and <= 2147483647');
+            }
+            path = `m/44'/474'/${index}'`;
+        } else {
+            path = indexOrPath;
         }
-        const path = `m/44'/474'/${index}'`
 
         if (!pathRegex.test(path)) {
             throw new Error(
