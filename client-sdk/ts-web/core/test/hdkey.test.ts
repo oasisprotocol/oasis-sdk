@@ -33,13 +33,11 @@ describe('HDKey', () => {
 
     describe('ADR 0008 Vectors', () => {
         adr0008Vectors.forEach((vector, index) => {
+            const passphrase = vector.bip39_passphrase || undefined;
+
             it(`Case #${index}`, async () => {
                 // This can be a bit slow on CI servers.
                 jest.setTimeout(10000);
-                const passphrase =
-                    vector.bip39_passphrase && vector.bip39_passphrase !== ''
-                        ? vector.bip39_passphrase
-                        : undefined;
 
                 for (let account of vector.oasis_accounts) {
                     expect(account.bip32_path).toMatch(/^m\/44'\/474'\/[0-9]+'/);

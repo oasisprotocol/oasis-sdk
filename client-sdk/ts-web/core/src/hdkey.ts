@@ -5,7 +5,7 @@ import {concat} from './misc';
 
 const ED25519_CURVE = 'ed25519 seed';
 const HARDENED_OFFSET = 0x80000000;
-const pathRegex = new RegExp("^m(\\/[0-9]+')+$");
+const pathRegex = /^m(\/[0-9]+')+$/;
 
 /**
  * HDKey handles hierarchical key generation according to ADR 0008
@@ -26,13 +26,9 @@ export class HDKey {
         index: number = 0,
         passphrase?: string,
     ): Promise<SignKeyPair> {
-        if (index < 0 || index > 0x7fffffff) {
-            throw new Error('Account number must be >= 0 and <= 2147483647');
-        }
-
         const seed = await mnemonicToSeed(mnemonic, passphrase);
         const key = HDKey.makeHDKey(ED25519_CURVE, seed);
-        return key.derivePath(`m/44'/474'/${index}'`).keypair;
+        return key.derivePath(index).keypair;
     }
 
     /**
@@ -54,10 +50,15 @@ export class HDKey {
     /**
      * Returns the HDKey for the given derivation path
      * using SLIP-0010
-     * @param path Derivation path, starting with m/
+     * @param index Account index
      * @returns Instance of HDKey
      */
-    private derivePath(path: string): HDKey {
+    private derivePath(index: number): HDKey {
+        if (index < 0 || index > 0x7fffffff) {
+            throw new Error('Account number must be >= 0 and <= 2147483647');
+        }
+        const path = `m/44'/474'/${index}'`
+
         if (!pathRegex.test(path)) {
             throw new Error(
                 "Invalid derivation path. Valid paths must use a format similar to : m/44'/474'/0' and all indexes must be hardened",
