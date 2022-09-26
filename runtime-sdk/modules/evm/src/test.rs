@@ -282,18 +282,21 @@ fn test_evm_calls() {
 
 #[test]
 fn test_c10l_evm_calls_enc() {
+    let _guard = crypto::signature::context::test_using_chain_context();
     crypto::signature::context::set_chain_context(Default::default(), "test");
     do_test_evm_calls::<ConfidentialEVMConfig>(false);
 }
 
 #[test]
 fn test_c10l_evm_calls_plain() {
+    let _guard = crypto::signature::context::test_using_chain_context();
     crypto::signature::context::set_chain_context(Default::default(), "test");
     do_test_evm_calls::<ConfidentialEVMConfig>(true /* force_plain */);
 }
 
 #[test]
 fn test_c10l_evm_balance_transfer() {
+    let _guard = crypto::signature::context::test_using_chain_context();
     crypto::signature::context::set_chain_context(Default::default(), "test");
     let mut mock = mock::Mock::default();
     let ctx = mock.create_ctx();
@@ -791,6 +794,7 @@ fn test_evm_runtime() {
 
 #[test]
 fn test_c10l_evm_runtime() {
+    let _guard = crypto::signature::context::test_using_chain_context();
     crypto::signature::context::set_chain_context(Default::default(), "test");
     do_test_evm_runtime::<ConfidentialEVMConfig>();
 }
