@@ -366,11 +366,14 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        let (init_code, tx_metadata) =
+        // Create output (the contract address) does not need to be encrypted because it's
+        // trivially computable by anyone who can observe the create tx and receipt status.
+        // Therefore, we don't need the `tx_metadata` or to encode the result.
+        let (init_code, _tx_metadata) =
             Self::decode_call_data(ctx, init_code, ctx.tx_call_format(), ctx.tx_index(), true)?
                 .expect("processing always proceeds");
 
-        let evm_result = Self::do_evm(
+        Self::do_evm(
             caller,
             ctx,
             |exec, gas_limit| {
@@ -391,8 +394,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             // Use estimate mode if not doing binary search for exact gas costs.
             ctx.is_simulation()
                 && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
-        );
-        Self::encode_evm_result(ctx, evm_result, tx_metadata, ctx.tx_call_format())
+        )
     }
 
     fn call<C: TxContext>(
