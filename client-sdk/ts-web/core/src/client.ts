@@ -572,7 +572,9 @@ export class GRPCWrapper {
         desc: grpcWeb.MethodDescriptor<REQ, RESP>,
         request: REQ,
     ): Promise<RESP> {
-        const method = this.base + desc.getName();
+        // @ts-expect-error missing declaration
+        const name = desc.name;
+        const method = this.base + name;
         // Some browsers with enormous market share aren't able to preserve the stack between here
         // and our `.catch` callback below. Save a copy explicitly.
         const invocationStack = new Error().stack;
@@ -642,8 +644,10 @@ End of invocation stack`;
         desc: grpcWeb.MethodDescriptor<REQ, RESP>,
         request: REQ,
     ): grpcWeb.ClientReadableStream<RESP> {
+        // @ts-expect-error missing declaration
+        const name = desc.name;
         return this.client.serverStreaming(
-            this.base + desc.getName(),
+            this.base + name,
             request,
             // @ts-expect-error metadata nullability not modeled
             null,
