@@ -216,20 +216,10 @@ fn do_test_evm_calls<C: Config>() {
 
     let erc20_addr = ctx.with_tx(0, 0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
-            &cbor::from_value::<Vec<u8>>(
-                decode_result!(
-                    tx_ctx,
-                    EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-                )
-                .unwrap(),
-            )
-            .unwrap(),
+            &EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap()).unwrap(),
         );
-
         EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
-
         tx_ctx.commit();
-
         addr
     });
 
@@ -534,20 +524,10 @@ fn do_test_evm_runtime<C: Config>() {
 
     let erc20_addr = ctx.with_tx(0, 0, create_tx, |mut tx_ctx, call| {
         let addr = H160::from_slice(
-            &cbor::from_value::<Vec<u8>>(
-                decode_result!(
-                    tx_ctx,
-                    EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-                )
-                .unwrap(),
-            )
-            .unwrap(),
+            &EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap()).unwrap(),
         );
-
         EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
-
         tx_ctx.commit();
-
         addr
     });
 
