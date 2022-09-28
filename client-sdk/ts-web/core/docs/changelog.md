@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.1.1-alpha.2
+
+Spotlight change:
+
+- We fixed an incompatibility with grpc-web 1.4.0.
+
+Materials:
+
+- Fixed a broken link to the account key generation specification.
+- We've filled in the `homepage` field in our package.json files so now you
+  can easily navigate from npm to GitHub.
+
 ## v0.1.1-alpha.1
 
 Spotlight change:
