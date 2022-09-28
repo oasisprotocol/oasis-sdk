@@ -18,6 +18,7 @@ use crate::{
         self, CallResult, InvariantHandler as _, MethodHandler as _, Module as _,
         ModuleInfoHandler as _,
     },
+    sender::SenderMeta,
     types::{
         token,
         transaction::{self, AddressSpec, AuthProof, Call, CallFormat, UnverifiedTransaction},
@@ -266,6 +267,12 @@ pub trait API {
     /// Takes and returns the stored transaction priority.
     fn take_priority<C: Context>(ctx: &mut C) -> u64;
 
+    /// Set transaction sender metadata.
+    fn set_sender_meta<C: Context>(ctx: &mut C, meta: SenderMeta);
+
+    /// Takes and returns the stored transaction sender metadata.
+    fn take_sender_meta<C: Context>(ctx: &mut C) -> SenderMeta;
+
     /// Returns the configured max iterations in the binary search for the estimate
     /// gas.
     fn estimate_gas_search_max_iters<C: Context>(ctx: &C) -> u64;
@@ -342,6 +349,7 @@ pub struct Module<Cfg: Config> {
 
 const CONTEXT_KEY_GAS_USED: &str = "core.GasUsed";
 const CONTEXT_KEY_PRIORITY: &str = "core.Priority";
+const CONTEXT_KEY_SENDER_META: &str = "core.SenderMeta";
 
 impl<Cfg: Config> Module<Cfg> {
     /// Initialize state from genesis.
@@ -443,6 +451,16 @@ impl<Cfg: Config> API for Module<Cfg> {
 
     fn take_priority<C: Context>(ctx: &mut C) -> u64 {
         ctx.value::<u64>(CONTEXT_KEY_PRIORITY)
+            .take()
+            .unwrap_or_default()
+    }
+
+    fn set_sender_meta<C: Context>(ctx: &mut C, meta: SenderMeta) {
+        ctx.value::<SenderMeta>(CONTEXT_KEY_SENDER_META).set(meta);
+    }
+
+    fn take_sender_meta<C: Context>(ctx: &mut C) -> SenderMeta {
+        ctx.value::<SenderMeta>(CONTEXT_KEY_SENDER_META)
             .take()
             .unwrap_or_default()
     }

@@ -36,6 +36,7 @@ use crate::{
     modules::core::API as _,
     runtime::Runtime,
     schedule_control::ScheduleControlHost,
+    sender::SenderMeta,
     storage::{self, NestedStore, Prefix},
     types,
     types::transaction::{AuthProof, Transaction},
@@ -77,6 +78,8 @@ pub struct DispatchResult {
     pub tags: Tags,
     /// Transaction priority.
     pub priority: u64,
+    /// Transaction sender metadata.
+    pub sender_metadata: SenderMeta,
     /// Call format metadata.
     pub call_format_metadata: callformat::Metadata,
 }
@@ -91,6 +94,7 @@ impl DispatchResult {
             result,
             tags,
             priority: 0,
+            sender_metadata: Default::default(),
             call_format_metadata,
         }
     }
@@ -258,8 +262,10 @@ impl<R: Runtime> Dispatcher<R> {
                 );
             }
 
-            // Load priority, weights.
+            // Load priority.
             let priority = R::Core::take_priority(&mut ctx);
+            // Load sender metadata.
+            let sender_metadata = R::Core::take_sender_meta(&mut ctx);
 
             if ctx.is_check_only() {
                 // Rollback state during checks.
@@ -270,6 +276,7 @@ impl<R: Runtime> Dispatcher<R> {
                         result,
                         tags: Vec::new(),
                         priority,
+                        sender_metadata,
                         call_format_metadata,
                     },
                     Vec::new(),
@@ -282,6 +289,7 @@ impl<R: Runtime> Dispatcher<R> {
                         result,
                         tags: etags.into_tags(),
                         priority,
+                        sender_metadata,
                         call_format_metadata,
                     },
                     messages,
@@ -338,9 +346,9 @@ impl<R: Runtime> Dispatcher<R> {
                 error: Default::default(),
                 meta: Some(CheckTxMetadata {
                     priority: dispatch.priority,
-                    sender: vec![],      // TODO: Support indicating senders.
-                    sender_seq: 0,       // TODO: Support indicating senders.
-                    sender_state_seq: 0, // TODO: Support indicating senders.
+                    sender: dispatch.sender_metadata.id(),
+                    sender_seq: dispatch.sender_metadata.tx_nonce,
+                    sender_state_seq: dispatch.sender_metadata.state_nonce,
                 }),
             }),
 

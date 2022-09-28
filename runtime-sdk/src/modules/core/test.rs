@@ -10,6 +10,7 @@ use crate::{
     module::{self, Module as _, TransactionHandler as _},
     runtime::Runtime,
     sdk_derive,
+    sender::SenderMeta,
     testing::{configmap, keys, mock},
     types::{token, transaction, transaction::CallerAddress},
 };
@@ -746,6 +747,25 @@ fn test_add_priority_overflow() {
         u64::MAX,
         Core::take_priority(&mut ctx),
         "adding priority should work"
+    );
+}
+
+#[test]
+fn test_set_sender_meta() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    let sender_meta = SenderMeta {
+        address: keys::alice::address(),
+        tx_nonce: 42,
+        state_nonce: 43,
+    };
+    Core::set_sender_meta(&mut ctx, sender_meta.clone());
+
+    let taken_sender_meta = Core::take_sender_meta(&mut ctx);
+    assert_eq!(
+        taken_sender_meta, sender_meta,
+        "setting sender metadata should work"
     );
 }
 
