@@ -23,7 +23,7 @@
         "cborg": "^1.9.5",
         "grpc-web": "^1.4.0",
         "js-sha512": "^0.8.0",
-        "protobufjs": "~7.1.1",
+        "protobufjs": "~7.1.2",
         "tweetnacl": "^1.0.3"
     },
     "devDependencies": {
