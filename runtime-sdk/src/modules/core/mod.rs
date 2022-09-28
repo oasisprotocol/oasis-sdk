@@ -130,6 +130,10 @@ pub enum Error {
     #[sdk_error(code = 25)]
     ReadOnlyTransaction,
 
+    #[error("future nonce")]
+    #[sdk_error(code = 26)]
+    FutureNonce,
+
     #[error("{0}")]
     #[sdk_error(transparent)]
     TxSimulationFailed(#[from] TxSimulationFailure),

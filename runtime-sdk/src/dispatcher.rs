@@ -115,6 +115,8 @@ pub struct DispatchOptions<'a> {
     pub tx_index: usize,
     /// Optionally only allow methods for which the provided authorizer closure returns true.
     pub method_authorizer: Option<&'a dyn Fn(&str) -> bool>,
+    /// Optionally skip authentication.
+    pub skip_authentication: bool,
 }
 
 /// The runtime dispatcher.
@@ -244,8 +246,10 @@ impl<R: Runtime> Dispatcher<R> {
         opts: &DispatchOptions<'_>,
     ) -> Result<DispatchResult, Error> {
         // Run pre-processing hooks.
-        if let Err(err) = R::Modules::authenticate_tx(ctx, &tx) {
-            return Ok(err.into_call_result().into());
+        if !opts.skip_authentication {
+            if let Err(err) = R::Modules::authenticate_tx(ctx, &tx) {
+                return Ok(err.into_call_result().into());
+            }
         }
         let tx_auth_info = tx.auth_info.clone();
         let is_read_only = tx.call.read_only;
@@ -656,21 +660,50 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                         }
 
                         // Determine the current transaction index.
-                        let index = new_batch.len();
+                        let tx_index = new_batch.len();
 
                         // First run the transaction in check tx mode in a separate subcontext. If
-                        // that fails, skip and reject transaction.
-                        let check_result = ctx.with_child(Mode::CheckTx, |mut ctx| {
-                            Self::dispatch_tx(&mut ctx, tx_size, tx.clone(), index)
-                        })?;
-                        if let module::CallResult::Failed { .. } = check_result.result {
-                            // Skip and reject transaction.
-                            tx_reject_hashes.push(Hash::digest_bytes(&raw_tx));
+                        // that fails, skip and (sometimes) reject transaction.
+                        let skip =
+                            ctx.with_child(Mode::PreScheduleTx, |mut ctx| -> Result<_, Error> {
+                                // First authenticate the transaction to get any nonce related errors.
+                                match R::Modules::authenticate_tx(&mut ctx, &tx) {
+                                    Err(modules::core::Error::FutureNonce) => {
+                                        // Only skip transaction as it may become valid in the future.
+                                        return Ok(true);
+                                    }
+                                    Err(_) => {
+                                        // Skip and reject the transaction.
+                                    }
+                                    Ok(_) => {
+                                        // Run additional checks on the transaction.
+                                        let check_result = Self::dispatch_tx_opts(
+                                            &mut ctx,
+                                            tx.clone(),
+                                            &DispatchOptions {
+                                                tx_size,
+                                                tx_index,
+                                                skip_authentication: true, // Already done.
+                                                ..Default::default()
+                                            },
+                                        )?;
+                                        if check_result.result.is_success() {
+                                            // Checks successful, execute transaction as usual.
+                                            return Ok(false);
+                                        }
+                                    }
+                                }
+
+                                // Skip and reject the transaction.
+                                tx_reject_hashes.push(Hash::digest_bytes(&raw_tx));
+                                Ok(true)
+                            })?;
+                        if skip {
                             continue;
                         }
 
                         new_batch.push(raw_tx);
-                        results.push(Self::execute_tx(ctx, tx_size, tx, index)?);
+                        results.push(Self::execute_tx(ctx, tx_size, tx, tx_index)?);
                     }
 
                     // If there's more room in the block and we got the maximum number of

@@ -1,5 +1,6 @@
 //! Accounts module.
 use std::{
+    cmp::Ordering,
     collections::{BTreeMap, BTreeSet},
     convert::TryInto,
 };
@@ -16,7 +17,9 @@ use crate::{
     modules,
     modules::core::{Error as CoreError, API as _},
     runtime::Runtime,
-    sdk_derive, storage,
+    sdk_derive,
+    sender::SenderMeta,
+    storage,
     storage::Prefix,
     types::{
         address::{Address, SignatureAddressSpec},
@@ -31,6 +34,10 @@ pub mod types;
 
 /// Unique module name.
 const MODULE_NAME: &str = "accounts";
+
+/// Maximum delta that the transaction nonce can be in the future from the current nonce to still
+/// be accepted during transaction checks.
+const MAX_CHECK_NONCE_FUTURE_DELTA: u64 = 0; // Increase once supported in Oasis Core.
 
 /// Errors emitted by the accounts module.
 #[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
@@ -230,7 +237,7 @@ pub trait API {
     fn check_signer_nonces<C: Context>(
         ctx: &mut C,
         tx_auth_info: &AuthInfo,
-    ) -> Result<Option<Address>, modules::core::Error>;
+    ) -> Result<Address, modules::core::Error>;
 
     /// Update transaction signer account nonces.
     fn update_signer_nonces<C: Context>(
@@ -623,7 +630,10 @@ impl API for Module {
     fn check_signer_nonces<C: Context>(
         ctx: &mut C,
         auth_info: &AuthInfo,
-    ) -> Result<Option<Address>, modules::core::Error> {
+    ) -> Result<Address, modules::core::Error> {
+        let is_pre_schedule = ctx.is_pre_schedule();
+        let is_check_only = ctx.is_check_only();
+
         // TODO: Optimize the check/update pair so that the accounts are
         // fetched only once.
         let params = Self::params(ctx.runtime_state());
@@ -631,23 +641,62 @@ impl API for Module {
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let accounts =
             storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
-        let mut payer = None;
+        let mut sender = None;
         for si in auth_info.signer_info.iter() {
             let address = si.address_spec.address();
             let account: types::Account = accounts.get(&address).unwrap_or_default();
-            if account.nonce != si.nonce {
-                // Reject unles nonce checking is disabled.
-                if !params.debug_disable_nonce_check {
-                    return Err(modules::core::Error::InvalidNonce);
-                }
+
+            // First signer pays for the fees and is considered the sender.
+            if sender.is_none() {
+                sender = Some(SenderMeta {
+                    address,
+                    tx_nonce: si.nonce,
+                    state_nonce: account.nonce,
+                });
             }
 
-            // First signer pays for the fees.
-            if payer.is_none() {
-                payer = Some(address);
+            // When nonce checking is disabled, skip the rest of the checks.
+            if params.debug_disable_nonce_check {
+                continue;
+            }
+
+            // Check signer nonce against the corresponding account nonce.
+            match si.nonce.cmp(&account.nonce) {
+                Ordering::Less => {
+                    // In the past and will never become valid, reject.
+                    return Err(modules::core::Error::InvalidNonce);
+                }
+                Ordering::Equal => {} // Ok.
+                Ordering::Greater => {
+                    // If too much in the future, reject.
+                    if si.nonce - account.nonce > MAX_CHECK_NONCE_FUTURE_DELTA {
+                        return Err(modules::core::Error::InvalidNonce);
+                    }
+
+                    // If in the future and this is before scheduling, reject with separate error
+                    // that will make the scheduler skip the transaction.
+                    if is_pre_schedule {
+                        return Err(modules::core::Error::FutureNonce);
+                    }
+
+                    // If in the future and this is during execution, reject.
+                    if !is_check_only {
+                        return Err(modules::core::Error::InvalidNonce);
+                    }
+
+                    // If in the future and this is during checks, accept.
+                }
             }
         }
-        Ok(payer)
+
+        // Configure the sender.
+        let sender = sender.expect("at least one signer is always present");
+        let sender_address = sender.address;
+        if is_check_only {
+            <C::Runtime as Runtime>::Core::set_sender_meta(ctx, sender);
+        }
+
+        Ok(sender_address)
     }
 
     fn update_signer_nonces<C: Context>(
@@ -869,8 +918,6 @@ impl module::TransactionHandler for Module {
 
         // Charge the specified amount of fees.
         if !tx.auth_info.fee.amount.amount().is_zero() {
-            let payer = payer.expect("at least one signer is always present");
-
             if ctx.is_check_only() {
                 // Do not update balances during transaction checks. In case of checks, only do it
                 // after all the other checks have already passed as otherwise retrying the
@@ -918,7 +965,6 @@ impl module::TransactionHandler for Module {
 
         // Update payer balance.
         let payer = Self::check_signer_nonces(ctx, tx_auth_info).unwrap(); // Already checked.
-        let payer = payer.unwrap(); // Already checked.
         let amount = &tx_auth_info.fee.amount;
         Self::sub_amount(ctx.runtime_state(), payer, amount).unwrap(); // Already checked.
 
