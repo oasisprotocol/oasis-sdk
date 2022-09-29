@@ -17,6 +17,8 @@ thiserror = "1.0.30"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 oasis-contract-sdk-crypto = { path = "crypto" }
 oasis-runtime-sdk = { path = "../runtime-sdk" }
+rand_core = "0.6.4"
+rand_xorshift = "0.3.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wee_alloc = "0.4.5"
