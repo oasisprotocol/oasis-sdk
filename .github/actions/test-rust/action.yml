@@ -1,7 +1,7 @@
 name: Unit Test Rust Worskapce with Coverage
 description: Run unit tests on a Rust workspace with coverage and uploads results to codecov
 inputs:
-  manfiest_path:
+  manifest_path:
     description: Path to the Cargo.toml manifest of the Rust sources to build and test
     default: ${{ github.workspace }}/Cargo.toml
     required: false
@@ -12,7 +12,7 @@ runs:
       uses: actions-rs/tarpaulin@v0.1
       with:
         version: '0.20.1'
-        args: '--avoid-cfg-tarpaulin --manifest-path ${{ inputs.manfiest_path }} -- --test-threads 1'
+        args: '--avoid-cfg-tarpaulin --manifest-path ${{ inputs.manifest_path }} -- --test-threads 1'
       env:
         # Required as tarpaulin doesn't honor .cargo/config.
         RUSTFLAGS: -C target-feature=+aes,+ssse3

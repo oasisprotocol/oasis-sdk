@@ -21,7 +21,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   test-rust:
     # NOTE: This name appears in GitHub's Checks API.
     name: test-rust
@@ -46,12 +45,12 @@ jobs:
       - name: Test Hello contract code
         uses: ./.github/actions/test-rust
         with:
-          manfiest_path: tests/contracts/hello/Cargo.toml
+          manifest_path: tests/contracts/hello/Cargo.toml
 
       - name: Test OAS-20 contract
         uses: ./.github/actions/test-rust
         with:
-          manfiest_path: contract-sdk/specs/token/oas20/Cargo.toml
+          manifest_path: contract-sdk/specs/token/oas20/Cargo.toml
 
   test-rust-sgx:
     # NOTE: This name appears in GitHub's Checks API.

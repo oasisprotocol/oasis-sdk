@@ -1,12 +1,12 @@
 name: Lint Rust Worskapce
 description: Run lints and format checks on Rust workspace code
 inputs:
-  manfiest_path:
+  manifest_path:
     description: Path to the Cargo.toml manifest of the Rust sources to lint
     default: ${{ github.workspace }}/Cargo.toml
     required: false
   token:
-    description: GitHub secret token used by cliipy-check action
+    description: GitHub secret token used by clippy-check action
     required: true
 runs:
   using: composite
@@ -18,7 +18,7 @@ runs:
         args: |
           --all-features
           --locked
-          --manifest-path ${{ inputs.manfiest_path }}
+          --manifest-path ${{ inputs.manifest_path }}
           --
           -D warnings
           -D clippy::dbg_macro
@@ -28,4 +28,4 @@ runs:
       uses: actions-rs/cargo@v1
       with:
         command: fmt
-        args: --all --manifest-path ${{ inputs.manfiest_path }} -- --check
+        args: --all --manifest-path ${{ inputs.manifest_path }} -- --check
