@@ -1,3 +1,6 @@
+import DocCard from '@theme/DocCard';
+import {findSidebarItem} from '@site/src/sidebarUtils';
+
 # Confidential Hello World
 
 In this chapter we are going to see how to:
@@ -302,6 +305,16 @@ Regardless of the confidential storage used in the smart contract, any [emitted
 event][emit_event] will be public.
 
 :::
+
+:::info
+
+You can view and download a [complete example] from the Oasis SDK repository.
+
+:::
+
+## See also
+
+<DocCard item={findSidebarItem('/node/run-your-node/paratime-client-node')} />
 
 <!-- markdownlint-disable line-length -->
 [emit_event]:
