@@ -21,9 +21,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   lint-rust:
-    # NOTE: This name appears in GitHub's Checks API.
     name: lint-rust
     runs-on: ubuntu-latest
     steps:
@@ -44,13 +42,13 @@ jobs:
         uses: ./.github/actions/lint-rust
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          manfiest_path: tests/contracts/hello/Cargo.toml
+          manifest_path: tests/contracts/hello/Cargo.toml
 
       - name: Lint OAS-20 contract code
         uses: ./.github/actions/lint-rust
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          manfiest_path: contract-sdk/specs/token/oas20/Cargo.toml
+          manifest_path: contract-sdk/specs/token/oas20/Cargo.toml
 
   lint-go-client-sdk:
     name: lint-go-client-sdk
