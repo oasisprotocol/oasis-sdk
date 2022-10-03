@@ -1,3 +1,6 @@
+import DocCard from '@theme/DocCard';
+import {findSidebarItem} from '@site/src/sidebarUtils';
+
 # Hello World
 
 This section will show you how to quickly create, build and test a minimal
@@ -340,5 +343,20 @@ the instantiated contract. Next, you can test calling the contract.
 ```
 oasis contracts call INSTANCEID '{say_hello: {who: "me"}}'
 ```
+
+:::info
+
+You can view and download a [complete example] from the Oasis SDK repository.
+
+:::
+
+## See also
+
+<DocCard item={findSidebarItem('/node/run-your-node/paratime-client-node')} />
+
+<!-- markdownlint-disable line-length -->
+[complete example]:
+  https://github.com/oasisprotocol/oasis-sdk/tree/main/examples/contract-sdk/hello-world
+<!-- markdownlint-enable line-length -->
 
 <!-- TODO: Expand. -->
