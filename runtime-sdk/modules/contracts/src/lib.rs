@@ -141,6 +141,22 @@ pub enum Error {
     #[sdk_error(code = 25)]
     CodeDeclaresMultipleSubVersions,
 
+    #[error("crypto: malformed private key")]
+    #[sdk_error(code = 26)]
+    CryptoMalformedPrivateKey,
+
+    #[error("crypto: malformed encryption key")]
+    #[sdk_error(code = 27)]
+    CryptoMalformedKey,
+
+    #[error("crypto: malformed nonce")]
+    #[sdk_error(code = 28)]
+    CryptoMalformedNonce,
+
+    #[error("crypto: key derivation function failure")]
+    #[sdk_error(code = 29)]
+    CryptoKeyDerivationFunctionFailure,
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),
@@ -186,6 +202,9 @@ pub struct GasCosts {
     pub wasm_crypto_signature_verify_ed25519: u64,
     pub wasm_crypto_signature_verify_secp256k1: u64,
     pub wasm_crypto_signature_verify_sr25519: u64,
+    pub wasm_crypto_x25519_derive_symmetric: u64,
+    pub wasm_crypto_deoxysii_base: u64,
+    pub wasm_crypto_deoxysii_byte: u64,
 }
 
 impl Default for GasCosts {
@@ -217,6 +236,9 @@ impl Default for GasCosts {
             wasm_crypto_signature_verify_ed25519: 500_000,
             wasm_crypto_signature_verify_secp256k1: 500_000,
             wasm_crypto_signature_verify_sr25519: 500_000,
+            wasm_crypto_x25519_derive_symmetric: 250_000,
+            wasm_crypto_deoxysii_base: 1_000,
+            wasm_crypto_deoxysii_byte: 3,
         }
     }
 }

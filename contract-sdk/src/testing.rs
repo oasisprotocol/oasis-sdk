@@ -6,7 +6,7 @@ use oasis_runtime_sdk::crypto::signature;
 
 use crate::{
     context::Context,
-    env::{Crypto, Env},
+    env::{Crypto, CryptoError, Env},
     event::Event,
     storage::{ConfidentialStore, PublicStore, Store},
     types::{
@@ -127,6 +127,33 @@ impl Crypto for MockEnv {
         };
         let sig: signature::Signature = signature.to_vec().into();
         key.verify(context, message, &sig).is_ok()
+    }
+
+    fn x25519_derive_symmetric(&self, public_key: &[u8], private_key: &[u8]) -> [u8; 32] {
+        crypto::x25519::derive_symmetric(public_key, private_key).unwrap()
+    }
+
+    fn deoxysii_seal(
+        &self,
+        key: &[u8],
+        nonce: &[u8],
+        message: &[u8],
+        additional_data: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        Ok(crypto::deoxysii::seal(key, nonce, message, additional_data).unwrap())
+    }
+
+    fn deoxysii_open(
+        &self,
+        key: &[u8],
+        nonce: &[u8],
+        message: &[u8],
+        additional_data: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        crypto::deoxysii::open(key, nonce, message, additional_data).map_err(|e| match e {
+            crypto::deoxysii::Error::DecryptionFailed => CryptoError::DecryptionFailed,
+            _ => panic!("unexpected crypto error"),
+        })
     }
 }
 

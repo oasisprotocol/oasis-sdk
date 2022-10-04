@@ -121,6 +121,142 @@ impl<Cfg: Config> OasisV1<Cfg> {
             },
         );
 
+        // crypto.x25519_derive_symmetric(public_key, private_key) -> symmetric_key
+        #[allow(clippy::type_complexity)]
+        let _ = instance.link_function(
+            "crypto",
+            "x25519_derive_symmetric",
+            |ctx,
+             (public_key, private_key, output_key): ((u32, u32), (u32, u32), (u32, u32))|
+             -> Result<u32, wasm3::Trap> {
+                // Make sure function was called in valid context.
+                let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
+
+                gas::use_gas(
+                    ctx.instance,
+                    ec.params.gas_costs.wasm_crypto_x25519_derive_symmetric,
+                )?;
+
+                ctx.instance
+                    .runtime()
+                    .try_with_memory(|mut memory| -> Result<_, wasm3::Trap> {
+                        let public = Region::from_arg(public_key)
+                            .as_slice(&memory)
+                            .map_err(|_| wasm3::Trap::Abort)?
+                            .to_vec();
+                        let private = Region::from_arg(private_key)
+                            .as_slice(&memory)
+                            .map_err(|_| wasm3::Trap::Abort)?
+                            .to_vec();
+                        let output: &mut [u8; crypto::x25519::KEY_SIZE] =
+                            Region::from_arg(output_key)
+                                .as_slice_mut(&mut memory)
+                                .map_err(|_| wasm3::Trap::Abort)?
+                                .try_into()
+                                .map_err(|_| wasm3::Trap::Abort)?;
+                        let derived =
+                            crypto::x25519::derive_symmetric(&public, &private).map_err(|e| {
+                                let err = match e {
+                                    crypto::x25519::Error::MalformedPublicKey => {
+                                        Error::CryptoMalformedPublicKey
+                                    }
+                                    crypto::x25519::Error::MalformedPrivateKey => {
+                                        Error::CryptoMalformedPrivateKey
+                                    }
+                                    crypto::x25519::Error::KeyDerivationFunctionFailure => {
+                                        Error::CryptoKeyDerivationFunctionFailure
+                                    }
+                                };
+                                ec.aborted = Some(err);
+                                wasm3::Trap::Abort
+                            })?;
+                        if output.len() != derived.len() {
+                            return Err(wasm3::Trap::Abort);
+                        }
+                        output.copy_from_slice(&derived);
+                        Ok(0)
+                    })?
+            },
+        );
+
+        #[allow(clippy::type_complexity)]
+        let deoxysii_factory =
+            |func: fn(&[u8], &[u8], &[u8], &[u8]) -> Result<Vec<u8>, crypto::deoxysii::Error>| {
+                move |ctx: wasm3::CallContext<'_, ExecutionContext<'_, C>>,
+                      (key, nonce, message, additional_data): (
+                    (u32, u32),
+                    (u32, u32),
+                    (u32, u32),
+                    (u32, u32),
+                )|
+                      -> Result<u32, wasm3::Trap> {
+                    // Make sure function was called in valid context.
+                    let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
+
+                    gas::use_gas(
+                        ctx.instance,
+                        ec.params.gas_costs.wasm_crypto_deoxysii_base
+                            + ec.params.gas_costs.wasm_crypto_deoxysii_byte
+                                * (message.1 as u64 + additional_data.1 as u64),
+                    )?;
+
+                    let output = ctx.instance.runtime().try_with_memory(
+                        |memory| -> Result<Option<Vec<u8>>, wasm3::Trap> {
+                            let key = Region::from_arg(key)
+                                .as_slice(&memory)
+                                .map_err(|_| wasm3::Trap::Abort)?;
+                            let nonce = Region::from_arg(nonce)
+                                .as_slice(&memory)
+                                .map_err(|_| wasm3::Trap::Abort)?;
+                            let message = Region::from_arg(message)
+                                .as_slice(&memory)
+                                .map_err(|_| wasm3::Trap::Abort)?;
+                            let additional_data = Region::from_arg(additional_data)
+                                .as_slice(&memory)
+                                .map_err(|_| wasm3::Trap::Abort)?;
+                            func(key, nonce, message, additional_data)
+                                .map(Some)
+                                .or_else(|e| {
+                                    let err = match e {
+                                        crypto::deoxysii::Error::MalformedKey => {
+                                            Error::CryptoMalformedKey
+                                        }
+                                        crypto::deoxysii::Error::MalformedNonce => {
+                                            Error::CryptoMalformedNonce
+                                        }
+                                        crypto::deoxysii::Error::DecryptionFailed => {
+                                            return Ok(None);
+                                        }
+                                    };
+                                    ec.aborted = Some(err);
+                                    Err(wasm3::Trap::Abort)
+                                })
+                        },
+                    )??;
+
+                    if let Some(output) = output {
+                        let output_region = Self::allocate_and_copy(ctx.instance, &output)?;
+                        Self::allocate_region(ctx.instance, output_region).map_err(|e| e.into())
+                    } else {
+                        Ok(0)
+                    }
+                }
+            };
+
+        // crypto.deoxysii_seal(key, nonce, plaintext_message, additional_data) -> encrypted_message
+        let _ = instance.link_function(
+            "crypto",
+            "deoxysii_seal",
+            deoxysii_factory(crypto::deoxysii::seal),
+        );
+
+        // crypto.deoxysii_open(key, nonce, encrypted_message, additional_data) -> plaintext_message
+        let _ = instance.link_function(
+            "crypto",
+            "deoxysii_open",
+            deoxysii_factory(crypto::deoxysii::open),
+        );
+
         Ok(())
     }
 }
@@ -194,6 +330,56 @@ mod test {
         let input = hex::decode("ce0677bb30baa8cf067c88db9811f4333d131bf8bcf12fe7065d211dce97100890f27b8b488db00b00606796d2987f6a5f59ae62ea05effe84fef5b8b0e549984a691139ad57a3f0b906637673aa2f63d1f55cb1a69199d4009eea23ceaddc9301").unwrap();
         b.iter(|| {
             assert!(crypto::ecdsa::recover(&input).is_ok());
+        });
+    }
+
+    #[bench]
+    fn bench_crypto_nonwasm_x25519_derive(b: &mut Bencher) {
+        let public = <[u8; 32] as hex::FromHex>::from_hex(
+            "3046db3fa70ce605457dc47c48837ebd8bd0a26abfde5994d033e1ced68e2576",
+        )
+        .unwrap();
+        let private = <[u8; 32] as hex::FromHex>::from_hex(
+            "c07b151fbc1e7a11dff926111188f8d872f62eba0396da97c0a24adb75161750",
+        )
+        .unwrap();
+        b.iter(|| {
+            assert!(crypto::x25519::derive_symmetric(&public, &private).is_ok());
+        });
+    }
+
+    #[bench]
+    fn bench_crypto_nonwasm_deoxysii_seal_tiny(b: &mut Bencher) {
+        let key = <[u8; 32] as hex::FromHex>::from_hex(
+            "e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586",
+        )
+        .unwrap();
+        b.iter(|| {
+            assert!(crypto::deoxysii::seal(&key, b"0123456789abcde", b"b", b"").is_ok());
+        });
+    }
+
+    #[bench]
+    fn bench_crypto_nonwasm_deoxysii_seal_size1(b: &mut Bencher) {
+        let key = <[u8; 32] as hex::FromHex>::from_hex(
+            "e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586",
+        )
+        .unwrap();
+        b.iter(|| {
+            assert!(crypto::deoxysii::seal(&key, b"0123456789abcde", MESSAGE, b"").is_ok());
+        });
+    }
+
+    #[bench]
+    fn bench_crypto_nonwasm_deoxysii_seal_size2(b: &mut Bencher) {
+        let key = <[u8; 32] as hex::FromHex>::from_hex(
+            "e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586",
+        )
+        .unwrap();
+        let mut message = MESSAGE.to_vec();
+        message.extend_from_slice(MESSAGE);
+        b.iter(|| {
+            assert!(crypto::deoxysii::seal(&key, b"0123456789abcde", &message, b"").is_ok());
         });
     }
 

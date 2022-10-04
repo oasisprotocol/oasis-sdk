@@ -316,6 +316,9 @@ type GasCosts struct {
 	WASMCryptoSignatureVerifyEd25519   uint64 `json:"wasm_crypto_signature_verify_ed25519"`
 	WASMCryptoSignatureVerifySecp256k1 uint64 `json:"wasm_crypto_signature_verify_secp256k1"`
 	WASMCryptoSignatureVerifySr25519   uint64 `json:"wasm_crypto_signature_verify_sr25519"`
+	WASMCryptoX25519DeriveSymmetric    uint64 `json:"wasm_crypto_x25519_derive_symmetric"`
+	WASMCryptoDeoxysIIBase             uint64 `json:"wasm_crypto_deoxysii_base"`
+	WASMCryptoDeoxysIIByte             uint64 `json:"wasm_crypto_deoxysii_byte"`
 }
 
 // Parameters are the parameters for the contracts module.

@@ -1326,9 +1326,13 @@ dependencies = [
 name = "oasis-contract-sdk-crypto"
 version = "0.1.0"
 dependencies = [
+ "hmac",
  "k256",
  "oasis-cbor",
+ "oasis-runtime-sdk",
+ "sha2 0.9.9",
  "thiserror",
+ "x25519-dalek",
 ]
 
 [[package]]

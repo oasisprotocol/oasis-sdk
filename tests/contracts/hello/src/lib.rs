@@ -92,6 +92,28 @@ pub enum Request {
         signature: Vec<u8>,
     },
 
+    #[cbor(rename = "x25519_derive_symmetric")]
+    X25519DeriveSymmetric {
+        public_key: Vec<u8>,
+        private_key: Vec<u8>,
+    },
+
+    #[cbor(rename = "deoxysii_seal")]
+    DeoxysIISeal {
+        key: Vec<u8>,
+        nonce: Vec<u8>,
+        message: Vec<u8>,
+        additional_data: Vec<u8>,
+    },
+
+    #[cbor(rename = "deoxysii_open")]
+    DeoxysIIOpen {
+        key: Vec<u8>,
+        nonce: Vec<u8>,
+        message: Vec<u8>,
+        additional_data: Vec<u8>,
+    },
+
     #[cbor(rename = "invalid_storage_call")]
     InvalidStorageCall,
 
@@ -139,6 +161,12 @@ pub enum Response {
 
     #[cbor(rename = "signature_verify")]
     SignatureVerify { result: bool },
+
+    #[cbor(rename = "x25519_derive_symmetric")]
+    X25519DeriveSymmetric { output: [u8; 32] },
+
+    #[cbor(rename = "deoxysii_response")]
+    DeoxysIIResponse { error: bool, output: Vec<u8> },
 
     #[cbor(rename = "empty")]
     Empty,
@@ -324,6 +352,39 @@ impl sdk::Contract for HelloWorld {
                 };
 
                 Ok(Response::SignatureVerify { result })
+            }
+            Request::X25519DeriveSymmetric {
+                public_key,
+                private_key,
+            } => {
+                let output = ctx.env().x25519_derive_symmetric(&public_key, &private_key);
+                Ok(Response::X25519DeriveSymmetric { output })
+            }
+            Request::DeoxysIISeal {
+                key,
+                nonce,
+                message,
+                additional_data,
+            } => {
+                let output = ctx
+                    .env()
+                    .deoxysii_seal(&key, &nonce, &message, &additional_data);
+                let error = output.is_err();
+                let output = output.unwrap_or_else(|_| Vec::new());
+                Ok(Response::DeoxysIIResponse { error, output })
+            }
+            Request::DeoxysIIOpen {
+                key,
+                nonce,
+                message,
+                additional_data,
+            } => {
+                let output = ctx
+                    .env()
+                    .deoxysii_open(&key, &nonce, &message, &additional_data);
+                let error = output.is_err();
+                let output = output.unwrap_or_else(|_| Vec::new());
+                Ok(Response::DeoxysIIResponse { error, output })
             }
             Request::InvalidStorageCall => {
                 // Generate an invalid storage call.

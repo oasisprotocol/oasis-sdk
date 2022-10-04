@@ -532,6 +532,155 @@ OUTER:
 		return fmt.Errorf("failed to get nonce: %w", err)
 	}
 
+	// Test x25519 key derivation call.
+	// The test keys are the same as for the unit tests in
+	// runtime-sdk::modules::evm::precompile::confidential.
+	publicKey, err := hex.DecodeString("3046db3fa70ce605457dc47c48837ebd8bd0a26abfde5994d033e1ced68e2576")
+	if err != nil {
+		return err
+	}
+	privateKey, err := hex.DecodeString("c07b151fbc1e7a11dff926111188f8d872f62eba0396da97c0a24adb75161750")
+	if err != nil {
+		return err
+	}
+	expectedOutput, err := hex.DecodeString("e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586")
+	if err != nil {
+		return err
+	}
+	tb = ct.Call(
+		instance.ID,
+		map[string]map[string]interface{}{
+			"x25519_derive_symmetric": {
+				"public_key":  publicKey,
+				"private_key": privateKey,
+			},
+		},
+		[]types.BaseUnits{},
+	).
+		SetFeeGas(400_000).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce)
+	_ = tb.AppendSign(ctx, signer)
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
+		return fmt.Errorf("failed to call hello contract derive_symmetric: %w", err)
+	}
+
+	var deriveSymmetricResponse map[string]map[string][]byte
+	if err = cbor.Unmarshal(rawResult, &deriveSymmetricResponse); err != nil {
+		return fmt.Errorf("failed to decode derive_symmetric result: %w", err)
+	}
+	deriveSymmetricOutput := deriveSymmetricResponse["x25519_derive_symmetric"]
+	if deriveSymmetricOutput == nil {
+		return fmt.Errorf("invalid x25519_derive_symmetric response: %v", deriveSymmetricResponse)
+	}
+	if !bytes.Equal(expectedOutput, deriveSymmetricOutput["output"]) {
+		return fmt.Errorf("unexpected x25519_derive_symmetric result: %v", deriveSymmetricOutput["output"])
+	}
+
+	// Test DeoxysII encryption and decryption.
+	deoxysiiKey, err := hex.DecodeString("e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586")
+	if err != nil {
+		return err
+	}
+	deoxysiiNonce, err := hex.DecodeString("757474657220206e6f6e63656e6365")
+	if err != nil {
+		return err
+	}
+	deoxysiiPlainMessage := []byte("a secretive message")
+	deoxysiiAdditionalData := []byte("additional data")
+
+	// Encryption first.
+	tb = ct.Call(
+		instance.ID,
+		map[string]map[string]interface{}{
+			"deoxysii_seal": {
+				"key":             deoxysiiKey,
+				"nonce":           deoxysiiNonce,
+				"message":         deoxysiiPlainMessage,
+				"additional_data": deoxysiiAdditionalData,
+			},
+		},
+		[]types.BaseUnits{},
+	).
+		SetFeeGas(200_000).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+1)
+	_ = tb.AppendSign(ctx, signer)
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
+		return fmt.Errorf("failed to call hello contract deoxysii_seal: %w", err)
+	}
+
+	var deoxysiiResponse map[string]struct {
+		Error  bool   `json:"error"`
+		Output []byte `json:"output"`
+	}
+
+	if err = cbor.Unmarshal(rawResult, &deoxysiiResponse); err != nil {
+		return fmt.Errorf("failed to decode deoxysii_seal result: %w", err)
+	}
+	deoxysiiSealOutput := deoxysiiResponse["deoxysii_response"]
+
+	// Now try decrypting what we got, corrupt additional data first to check error roundtrip.
+	tb = ct.Call(
+		instance.ID,
+		map[string]map[string]interface{}{
+			"deoxysii_open": {
+				"key":             deoxysiiKey,
+				"nonce":           deoxysiiNonce,
+				"message":         deoxysiiSealOutput.Output,
+				"additional_data": append(deoxysiiAdditionalData, []byte("error")...),
+			},
+		},
+		[]types.BaseUnits{},
+	).
+		SetFeeGas(250_000).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+2)
+	_ = tb.AppendSign(ctx, signer)
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
+		return fmt.Errorf("failed to call hello contract deoxysii_open[1]: %w", err)
+	}
+
+	if err = cbor.Unmarshal(rawResult, &deoxysiiResponse); err != nil {
+		return fmt.Errorf("failed to decode deoxysii_open[1] result: %w", err)
+	}
+	deoxysiiOpenOutput := deoxysiiResponse["deoxysii_response"]
+
+	if len(deoxysiiOpenOutput.Output) != 0 || !deoxysiiOpenOutput.Error {
+		return fmt.Errorf("unexpected deoxysii_open result for corrupt additional data: %v", deoxysiiOpenOutput)
+	}
+
+	// Proper decryption.
+	tb = ct.Call(
+		instance.ID,
+		map[string]map[string]interface{}{
+			"deoxysii_open": {
+				"key":             deoxysiiKey,
+				"nonce":           deoxysiiNonce,
+				"message":         deoxysiiSealOutput.Output,
+				"additional_data": deoxysiiAdditionalData,
+			},
+		},
+		[]types.BaseUnits{},
+	).
+		SetFeeGas(250_000).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+3)
+	_ = tb.AppendSign(ctx, signer)
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
+		return fmt.Errorf("failed to call hello contract deoxysii_open[2]: %w", err)
+	}
+
+	if err = cbor.Unmarshal(rawResult, &deoxysiiResponse); err != nil {
+		return fmt.Errorf("failed to decode deoxysii_open[2] result: %w", err)
+	}
+	deoxysiiOpenOutput = deoxysiiResponse["deoxysii_response"]
+
+	if !bytes.Equal(deoxysiiPlainMessage, deoxysiiOpenOutput.Output) || deoxysiiOpenOutput.Error {
+		return fmt.Errorf("unexpected deoxysii_open[2] result: %v", deoxysiiOpenOutput)
+	}
+
+	nonce, err = ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return fmt.Errorf("failed to get nonce: %w", err)
+	}
+
 	// Change upgrade policy.
 	tb = ct.ChangeUpgradePolicy(instanceID, contracts.Policy{Nobody: &struct{}{}}).
 		SetFeeGas(1_000_000).

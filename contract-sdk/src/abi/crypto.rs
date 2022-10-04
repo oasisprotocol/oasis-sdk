@@ -22,4 +22,38 @@ extern "C" {
         signature_ptr: u32,
         signature_len: u32,
     ) -> u32;
+
+    #[link_name = "x25519_derive_symmetric"]
+    pub(crate) fn x25519_derive_symmetric(
+        public_key_ptr: u32,
+        public_key_len: u32,
+        private_key_ptr: u32,
+        private_key_len: u32,
+        output_key_ptr: u32,
+        output_key_len: u32,
+    ) -> u32;
+
+    #[link_name = "deoxysii_seal"]
+    pub(crate) fn deoxysii_seal(
+        key_ptr: u32,
+        key_len: u32,
+        nonce_ptr: u32,
+        nonce_len: u32,
+        message_ptr: u32,
+        message_len: u32,
+        additional_data_ptr: u32,
+        additional_data_len: u32,
+    ) -> u32;
+
+    #[link_name = "deoxysii_open"]
+    pub(crate) fn deoxysii_open(
+        key_ptr: u32,
+        key_len: u32,
+        nonce_ptr: u32,
+        nonce_len: u32,
+        message_ptr: u32,
+        message_len: u32,
+        additional_data_ptr: u32,
+        additional_data_len: u32,
+    ) -> u32;
 }
