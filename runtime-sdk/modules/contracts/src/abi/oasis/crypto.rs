@@ -164,6 +164,7 @@ mod test {
         ecdsa::{self, signature::Verifier as _},
     };
 
+    // cargo build --target wasm32-unknown-unknown --release
     const BENCH_CODE: &[u8] = include_bytes!(
         "../../../../../../tests/contracts/bench/target/wasm32-unknown-unknown/release/bench.wasm"
     );

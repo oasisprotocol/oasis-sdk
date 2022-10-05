@@ -384,6 +384,8 @@ fn inject_metering(
 
 #[cfg(test)]
 mod test {
+    use pretty_assertions::assert_eq;
+
     macro_rules! test_transform {
         (name = $name:ident, source = $src:expr, expected = $expected:expr) => {
             #[test]
@@ -403,7 +405,12 @@ mod test {
                     .parse(&expected)
                     .unwrap();
 
-                assert_eq!(result_module.emit_wasm(), expected_module.emit_wasm());
+                let result_wasm = result_module.emit_wasm();
+                let expected_wasm = expected_module.emit_wasm();
+                let result = wasmprinter::print_bytes(&result_wasm).unwrap();
+                let expected = wasmprinter::print_bytes(&expected_wasm).unwrap();
+
+                assert_eq!(result, expected);
             }
         };
     }
@@ -456,15 +463,15 @@ mod test {
                 (if
                     (i64.lt_u
                         (global.get 0)
-                        (i64.const 6))
+                        (i64.const 18))
                     (then
                         (global.set 1
-                            (i64.const 6))
+                            (i64.const 18))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
                         (global.get 0)
-                        (i64.const 6)))
+                        (i64.const 18)))
                 (block
                     (block
                         (block
@@ -502,15 +509,15 @@ mod test {
                 (if
                     (i64.lt_u
                         (global.get 0)
-                        (i64.const 6))
+                        (i64.const 19))
                     (then
                         (global.set 1
-                            (i64.const 6))
+                            (i64.const 19))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
                         (global.get 0)
-                        (i64.const 6)))
+                        (i64.const 19)))
                 (block
                     (block
                         (block
@@ -520,15 +527,15 @@ mod test {
                             (if
                                 (i64.lt_u
                                     (global.get 0)
-                                    (i64.const 5))
+                                    (i64.const 25))
                                 (then
                                     (global.set 1
-                                        (i64.const 5))
+                                        (i64.const 25))
                                     (unreachable)))
                             (global.set 0
                                 (i64.sub
                                     (global.get 0)
-                                    (i64.const 5)))
+                                    (i64.const 25)))
                             (i32.const 1)
                             (drop)
                             (i32.const 1)
@@ -577,30 +584,30 @@ mod test {
                 (if
                     (i64.lt_u
                         (global.get 0)
-                        (i64.const 2))
+                        (i64.const 11))
                     (then
                         (global.set 1
-                            (i64.const 2))
+                            (i64.const 11))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
                         (global.get 0)
-                        (i64.const 2)))
+                        (i64.const 11)))
                 (i32.const 1)
                 (if
                     (then
                         (if
                             (i64.lt_u
                                 (global.get 0)
-                                (i64.const 4))
+                                (i64.const 22))
                             (then
                                 (global.set 1
-                                    (i64.const 4))
+                                    (i64.const 22))
                                 (unreachable)))
                         (global.set 0
                             (i64.sub
                                 (global.get 0)
-                                (i64.const 4)))
+                                (i64.const 22)))
                         (i32.const 1)
                         (drop)
                         (i32.const 1)
@@ -610,15 +617,15 @@ mod test {
                         (if
                             (i64.lt_u
                                 (global.get 0)
-                                (i64.const 2))
+                                (i64.const 11))
                             (then
                                 (global.set 1
-                                    (i64.const 2))
+                                    (i64.const 11))
                                 (unreachable)))
                         (global.set 0
                             (i64.sub
                                 (global.get 0)
-                                (i64.const 2)))
+                                (i64.const 11)))
                         (i32.const 1)
                         (drop)
                     )

@@ -59,7 +59,7 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
             )],
             fee: transaction::Fee {
                 amount: Default::default(),
-                gas: 1000,
+                gas: 127_000_000,
                 consensus_messages: 0,
             },
             ..Default::default()
@@ -136,7 +136,7 @@ fn test_hello_contract_call() {
         &mut ctx,
         core::Genesis {
             parameters: core::Parameters {
-                max_batch_gas: 10_000_000,
+                max_batch_gas: 1_000_000_000,
                 ..Default::default()
             },
         },
@@ -705,7 +705,7 @@ impl Runtime for ContractRuntime {
         (
             core::Genesis {
                 parameters: core::Parameters {
-                    max_batch_gas: 10_000_000,
+                    max_batch_gas: 1_000_000_000,
                     min_gas_price: BTreeMap::from([(Denomination::NATIVE, 1)]),
                     ..Default::default()
                 },
@@ -770,7 +770,7 @@ fn test_hello_contract_subcalls_overflow() {
             )],
             fee: transaction::Fee {
                 amount: Default::default(),
-                gas: 2_000_000,
+                gas: 3_000_000,
                 consensus_messages: 0,
             },
             ..Default::default()

@@ -93,7 +93,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 
 	tb := ct.Upload(contracts.ABIOasisV1, contracts.Policy{Everyone: &struct{}{}}, helloContractCode).
-		SetFeeGas(1_000_000).
+		SetFeeGas(130_000_000).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce)
 	_ = tb.AppendSign(ctx, signer)
 	var upload contracts.UploadResult
@@ -150,7 +150,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 
 	// Upload OAS20 contract code.
 	tb = ct.Upload(contracts.ABIOasisV1, contracts.Policy{Everyone: &struct{}{}}, oas20ContractCode).
-		SetFeeGas(1_000_000).
+		SetFeeGas(130_000_000).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce+3)
 	_ = tb.AppendSign(ctx, signer)
 	var uploadOas20 contracts.UploadResult
@@ -580,11 +580,11 @@ func ContractsParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 	if err != nil {
 		return fmt.Errorf("parameters: %w", err)
 	}
-	if cs := params.MaxCodeSize; cs != 524288 {
-		return fmt.Errorf("unexpected MaxCodeSize: expected: %v, got: %v", 10, cs)
+	if cs := params.MaxCodeSize; cs != 1_048_576 {
+		return fmt.Errorf("unexpected MaxCodeSize: expected: %v, got: %v", 1_048_576, cs)
 	}
-	if gc := params.GasCosts.TxUpload; gc != 0 {
-		return fmt.Errorf("unexpected GasCosts.TxUpload: expected: %v, got: %v", 0, gc)
+	if gc := params.GasCosts.TxUpload; gc != 30_000_000 {
+		return fmt.Errorf("unexpected GasCosts.TxUpload: expected: %v, got: %v", 30_000_000, gc)
 	}
 
 	return nil

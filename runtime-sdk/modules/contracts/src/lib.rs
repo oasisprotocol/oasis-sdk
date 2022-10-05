@@ -190,28 +190,28 @@ pub struct GasCosts {
 
 impl Default for GasCosts {
     fn default() -> Self {
-        // TODO: Decide what reasonable defaults should be.
+        // The below assume a batch gas limit of 1_000_000_000 ~ 1s.
         GasCosts {
-            tx_upload: 1_000_000,
-            tx_upload_per_byte: 5,
-            tx_instantiate: 10_000,
-            tx_call: 1_000,
-            tx_upgrade: 10_000,
-            tx_change_upgrade_policy: 0,
+            tx_upload: 30_000_000,
+            tx_upload_per_byte: 400,
+            tx_instantiate: 100_000,
+            tx_call: 50_000,
+            tx_upgrade: 50_000,
+            tx_change_upgrade_policy: 30_000,
 
-            subcall_dispatch: 100,
+            subcall_dispatch: 1_000,
 
-            wasm_public_storage_get_base: 5000,
-            wasm_public_storage_insert_base: 8400,
-            wasm_public_storage_remove_base: 6400,
-            wasm_public_storage_key_byte: 3,
-            wasm_public_storage_value_byte: 3,
+            wasm_public_storage_get_base: 5_000,
+            wasm_public_storage_insert_base: 8_400,
+            wasm_public_storage_remove_base: 6_400,
+            wasm_public_storage_key_byte: 3_000,
+            wasm_public_storage_value_byte: 300,
             wasm_confidential_storage_get_base: 10_000,
             wasm_confidential_storage_insert_base: 16_800,
             wasm_confidential_storage_remove_base: 12_800,
-            wasm_confidential_storage_key_byte: 6,
-            wasm_confidential_storage_value_byte: 6,
-            wasm_env_query_base: 10,
+            wasm_confidential_storage_key_byte: 3_500,
+            wasm_confidential_storage_value_byte: 400,
+            wasm_env_query_base: 100,
 
             wasm_crypto_ecdsa_recover: 500_000,
             wasm_crypto_signature_verify_ed25519: 500_000,
@@ -242,11 +242,10 @@ pub struct Parameters {
 
 impl Default for Parameters {
     fn default() -> Self {
-        // TODO: Decide what reasonable defaults should be.
         Parameters {
-            max_code_size: 512 * 1024, // 512 KiB
-            max_stack_size: 60 * 1024, // 60 KiB
-            max_memory_pages: 20,      // 1280 KiB
+            max_code_size: 1024 * 1024, // 1 MiB
+            max_stack_size: 60 * 1024,  // 60 KiB
+            max_memory_pages: 160,      // 10 MiB
 
             max_subcall_depth: 8,
             max_subcall_count: 16,

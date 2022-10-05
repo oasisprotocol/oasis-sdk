@@ -233,6 +233,7 @@ mod bench {
 
     use oasis_runtime_sdk::{context::Context, storage, testing::mock::Mock};
 
+    // cargo build --target wasm32-unknown-unknown --release
     const BENCH_CODE: &[u8] = include_bytes!(
         "../../../../../../tests/contracts/bench/target/wasm32-unknown-unknown/release/bench.wasm"
     );
