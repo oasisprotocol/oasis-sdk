@@ -32,3 +32,4 @@ hex = "0.4.2"
 
 [features]
 debug-utils = []
+benchmarks = [] # Enable inline benchmarks for use with `cargo bench`.

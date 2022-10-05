@@ -194,8 +194,8 @@ fn create_abi<Cfg: Config, C: Context>(abi: types::ABI) -> Result<Box<dyn Abi<C>
     }
 }
 
-#[cfg(test)]
-mod test {
+#[cfg(all(feature = "benchmarks", test))]
+mod bench {
     extern crate test;
     use std::time::Instant;
     use test::Bencher;

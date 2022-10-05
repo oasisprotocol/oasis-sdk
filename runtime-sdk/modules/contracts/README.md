@@ -8,9 +8,9 @@ To replicate, start by running benchmarks from the top of the cargo
 workspace:
 
     # To run all benchmarks:
-    $ cargo bench -- --nocapture
+    $ cargo bench --features benchmarks -- --nocapture
     # To run only the cost-related wasm benchmarks:
-    $ cargo bench -p oasis-runtime-sdk-contracts -- --nocapture wasm
+    $ cargo bench --features benchmarks -p oasis-runtime-sdk-contracts -- --nocapture wasm
 
 The `--nocapture` flag to the test runner is needed due to the two
 single-run benchmarks (the signature verification compiled to WASM and

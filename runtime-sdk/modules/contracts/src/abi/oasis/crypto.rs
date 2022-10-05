@@ -153,7 +153,7 @@ fn get_key(
     }
 }
 
-#[cfg(test)]
+#[cfg(all(feature = "benchmarks", test))]
 mod test {
     extern crate test;
     use super::*;

@@ -224,8 +224,8 @@ fn ensure_value_size<C: Context>(
     Ok(())
 }
 
-#[cfg(test)]
-mod test {
+#[cfg(all(feature = "benchmarks", test))]
+mod bench {
     extern crate test;
     use super::*;
     use std::{cell::RefCell, rc::Rc};
