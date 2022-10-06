@@ -70,9 +70,93 @@ pub fn transform(module: &mut Module) {
 }
 
 /// Instruction cost function.
-fn instruction_cost(_instr: &Instr) -> u64 {
-    // Currently default to 1 for all instructions.
-    1
+fn instruction_cost(instr: &Instr) -> u64 {
+    match instr {
+        Instr::Loop(_) | Instr::Block(_) => 2,
+
+        Instr::LocalGet(_)
+        | Instr::LocalSet(_)
+        | Instr::LocalTee(_)
+        | Instr::GlobalGet(_)
+        | Instr::GlobalSet(_)
+        | Instr::Const(_) => 1,
+
+        Instr::Call(_) => 15,
+
+        Instr::CallIndirect(_) => 20,
+
+        Instr::Br(_) | Instr::BrIf(_) => 3,
+        Instr::BrTable(_) => 4,
+
+        Instr::Binop(op) => match op.op {
+            BinaryOp::I32Eq
+            | BinaryOp::I32Ne
+            | BinaryOp::I32LtS
+            | BinaryOp::I32LtU
+            | BinaryOp::I32GtS
+            | BinaryOp::I32GtU
+            | BinaryOp::I32LeS
+            | BinaryOp::I32LeU
+            | BinaryOp::I32GeS
+            | BinaryOp::I32GeU
+            | BinaryOp::I64Eq
+            | BinaryOp::I64Ne
+            | BinaryOp::I64LtS
+            | BinaryOp::I64LtU
+            | BinaryOp::I64GtS
+            | BinaryOp::I64GtU
+            | BinaryOp::I64LeS
+            | BinaryOp::I64LeU
+            | BinaryOp::I64GeS
+            | BinaryOp::I64GeU
+            | BinaryOp::I32Add
+            | BinaryOp::I32Sub
+            | BinaryOp::I32Mul
+            | BinaryOp::I32And
+            | BinaryOp::I32Or
+            | BinaryOp::I32Xor
+            | BinaryOp::I32Shl
+            | BinaryOp::I32ShrS
+            | BinaryOp::I32ShrU
+            | BinaryOp::I32Rotl
+            | BinaryOp::I32Rotr
+            | BinaryOp::I64Add
+            | BinaryOp::I64Sub
+            | BinaryOp::I64Mul
+            | BinaryOp::I64And
+            | BinaryOp::I64Or
+            | BinaryOp::I64Xor
+            | BinaryOp::I64Shl
+            | BinaryOp::I64ShrS
+            | BinaryOp::I64ShrU
+            | BinaryOp::I64Rotl
+            | BinaryOp::I64Rotr => 1,
+            BinaryOp::I32DivS
+            | BinaryOp::I32DivU
+            | BinaryOp::I32RemS
+            | BinaryOp::I32RemU
+            | BinaryOp::I64DivS
+            | BinaryOp::I64DivU
+            | BinaryOp::I64RemS
+            | BinaryOp::I64RemU => 4,
+            _ => 3,
+        },
+
+        Instr::Unop(op) => match op.op {
+            UnaryOp::I32Eqz
+            | UnaryOp::I32Clz
+            | UnaryOp::I32Ctz
+            | UnaryOp::I32Popcnt
+            | UnaryOp::I64Eqz
+            | UnaryOp::I64Clz
+            | UnaryOp::I64Ctz
+            | UnaryOp::I64Popcnt => 1,
+
+            _ => 3,
+        },
+
+        _ => 10,
+    }
 }
 
 /// A block of instructions which is metered.
@@ -300,6 +384,8 @@ fn inject_metering(
 
 #[cfg(test)]
 mod test {
+    use pretty_assertions::assert_eq;
+
     macro_rules! test_transform {
         (name = $name:ident, source = $src:expr, expected = $expected:expr) => {
             #[test]
@@ -319,7 +405,12 @@ mod test {
                     .parse(&expected)
                     .unwrap();
 
-                assert_eq!(result_module.emit_wasm(), expected_module.emit_wasm());
+                let result_wasm = result_module.emit_wasm();
+                let expected_wasm = expected_module.emit_wasm();
+                let result = wasmprinter::print_bytes(&result_wasm).unwrap();
+                let expected = wasmprinter::print_bytes(&expected_wasm).unwrap();
+
+                assert_eq!(result, expected);
             }
         };
     }
@@ -372,15 +463,15 @@ mod test {
                 (if
                     (i64.lt_u
                         (global.get 0)
-                        (i64.const 6))
+                        (i64.const 18))
                     (then
                         (global.set 1
-                            (i64.const 6))
+                            (i64.const 18))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
                         (global.get 0)
-                        (i64.const 6)))
+                        (i64.const 18)))
                 (block
                     (block
                         (block
@@ -418,15 +509,15 @@ mod test {
                 (if
                     (i64.lt_u
                         (global.get 0)
-                        (i64.const 6))
+                        (i64.const 19))
                     (then
                         (global.set 1
-                            (i64.const 6))
+                            (i64.const 19))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
                         (global.get 0)
-                        (i64.const 6)))
+                        (i64.const 19)))
                 (block
                     (block
                         (block
@@ -436,15 +527,15 @@ mod test {
                             (if
                                 (i64.lt_u
                                     (global.get 0)
-                                    (i64.const 5))
+                                    (i64.const 25))
                                 (then
                                     (global.set 1
-                                        (i64.const 5))
+                                        (i64.const 25))
                                     (unreachable)))
                             (global.set 0
                                 (i64.sub
                                     (global.get 0)
-                                    (i64.const 5)))
+                                    (i64.const 25)))
                             (i32.const 1)
                             (drop)
                             (i32.const 1)
@@ -493,30 +584,30 @@ mod test {
                 (if
                     (i64.lt_u
                         (global.get 0)
-                        (i64.const 2))
+                        (i64.const 11))
                     (then
                         (global.set 1
-                            (i64.const 2))
+                            (i64.const 11))
                         (unreachable)))
                 (global.set 0
                     (i64.sub
                         (global.get 0)
-                        (i64.const 2)))
+                        (i64.const 11)))
                 (i32.const 1)
                 (if
                     (then
                         (if
                             (i64.lt_u
                                 (global.get 0)
-                                (i64.const 4))
+                                (i64.const 22))
                             (then
                                 (global.set 1
-                                    (i64.const 4))
+                                    (i64.const 22))
                                 (unreachable)))
                         (global.set 0
                             (i64.sub
                                 (global.get 0)
-                                (i64.const 4)))
+                                (i64.const 22)))
                         (i32.const 1)
                         (drop)
                         (i32.const 1)
@@ -526,15 +617,15 @@ mod test {
                         (if
                             (i64.lt_u
                                 (global.get 0)
-                                (i64.const 2))
+                                (i64.const 11))
                             (then
                                 (global.set 1
-                                    (i64.const 2))
+                                    (i64.const 11))
                                 (unreachable)))
                         (global.set 0
                             (i64.sub
                                 (global.get 0)
-                                (i64.const 2)))
+                                (i64.const 11)))
                         (i32.const 1)
                         (drop)
                     )

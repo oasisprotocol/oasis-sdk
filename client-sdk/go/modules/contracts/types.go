@@ -300,12 +300,17 @@ type GasCosts struct {
 
 	SubcallDispatch uint64 `json:"subcall_dispatch"`
 
-	WASMStorageGetBase    uint64 `json:"wasm_storage_get_base"`
-	WASMStorageInsertBase uint64 `json:"wasm_storage_insert_base"`
-	WASMStorageRemoveBase uint64 `json:"wasm_storage_remove_base"`
-	WASMStorageKeyByte    uint64 `json:"wasm_storage_key_byte"`
-	WASMStorageValueByte  uint64 `json:"wasm_storage_value_byte"`
-	WASMEnvQueryBase      uint64 `json:"wasm_env_query_base"`
+	WASMPublicStorageGetBase          uint64 `json:"wasm_public_storage_get_base"`
+	WASMPublicStorageInsertBase       uint64 `json:"wasm_public_storage_insert_base"`
+	WASMPublicStorageRemoveBase       uint64 `json:"wasm_public_storage_remove_base"`
+	WASMPublicStorageKeyByte          uint64 `json:"wasm_public_storage_key_byte"`
+	WASMPublicStorageValueByte        uint64 `json:"wasm_public_storage_value_byte"`
+	WASMConfidentialStorageGetBase    uint64 `json:"wasm_confidential_storage_get_base"`
+	WASMConfidentialStorageInsertBase uint64 `json:"wasm_confidential_storage_insert_base"`
+	WASMConfidentialStorageRemoveBase uint64 `json:"wasm_confidential_storage_remove_base"`
+	WASMConfidentialStorageKeyByte    uint64 `json:"wasm_confidential_storage_key_byte"`
+	WASMConfidentialStorageValueByte  uint64 `json:"wasm_confidential_storage_value_byte"`
+	WASMEnvQueryBase                  uint64 `json:"wasm_env_query_base"`
 
 	WASMCryptoECDSARecover             uint64 `json:"wasm_crypto_ecdsa_recover"`
 	WASMCryptoSignatureVerifyEd25519   uint64 `json:"wasm_crypto_signature_verify_ed25519"`

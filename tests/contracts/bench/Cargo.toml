@@ -1,0 +1,29 @@
+cargo-features = ["strip"]
+
+[package]
+name = "bench"
+version = "0.0.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+k256 = { version = "0.9.6", default-features = false, features = ["keccak256", "ecdsa", "sha256"] }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wee_alloc = "0.4.5"
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = "abort"
+incremental = false
+overflow-checks = true
+strip = true
