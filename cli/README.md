@@ -44,8 +44,9 @@ oasis paratime set-default testnet emerald
 ```
 
 To be able to sign transactions you will need to first create or import an
-account into your wallet. Currently, only a local file-based backend is
-supported. To create a new account run:
+account into your wallet. File-based (storing keys in an encrypted file) and
+Ledger-based (storing keys on a Ledger device) backends are supported. To create
+a new file-backed account run:
 
 ```bash
 oasis wallet create myaccount
