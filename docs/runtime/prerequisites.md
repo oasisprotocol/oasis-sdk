@@ -72,8 +72,8 @@ present) and output something similar to:
 active toolchain
 ----------------
 
-nightly-2021-11-04-x86_64-unknown-linux-gnu (overridden by '/code/rust-toolchain')
-rustc 1.58.0-nightly (baba6687d 2021-11-03)
+nightly-2022-08-22-x86_64-unknown-linux-gnu (overridden by '/code/rust-toolchain')
+rustc 1.65.0-nightly (c0941dfb5 2022-08-21)
 ```
 
 #### (OPTIONAL) Fortanix SGX Rust Target
