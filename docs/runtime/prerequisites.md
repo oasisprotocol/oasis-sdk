@@ -141,3 +141,15 @@ export OASIS_CORE_PATH=~/Downloads/oasis_core_22.1.9_linux_amd64
 
 [Oasis Core]: https://github.com/oasisprotocol/oasis-core
 [Oasis Core releases]: https://github.com/oasisprotocol/oasis-core/releases
+
+## Oasis CLI Installation
+
+The rest of the guide uses the Oasis CLI as an easy way to interact with the
+ParaTime. At the time of writing, no precompiled binaries are available. You
+will need to clone the [oasis-sdk git repository] and compile the tool yourself.
+The process is straight forward and is described in the [CLI README].
+
+<!-- markdownlint-disable line-length -->
+[oasis-sdk git repository]: https://github.com/oasisprotocol/oasis-sdk
+[CLI README]: https://github.com/oasisprotocol/oasis-sdk/blob/main/cli/README.md
+<!-- markdownlint-enable line-length -->
