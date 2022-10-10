@@ -1806,7 +1806,6 @@ dependencies = [
  "hex",
  "hmac",
  "k256",
- "oasis-cbor",
  "oasis-runtime-sdk",
  "sha2 0.9.9",
  "thiserror",
