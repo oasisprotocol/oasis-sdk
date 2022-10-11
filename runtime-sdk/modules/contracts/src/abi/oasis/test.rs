@@ -219,6 +219,85 @@ fn test_validate_and_transform() {
         let (_, abi_info) =
             wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1).unwrap();
         assert_eq!(abi_info.abi_sv, 1);
+
+        // WASM code with floating point appearing in various ways.
+        let float_wasms = &[
+            r#"
+            (module
+                (type (;0;) (func))
+                (func (;0;) (type 0))
+
+                (func $call
+                    f32.const 3.14
+                    f32.const 2.71
+                    f32.mul
+                    drop
+                )
+
+                (export "allocate" (func 0))
+                (export "deallocate" (func 0))
+                (export "instantiate" (func 0))
+                (export "call" (func 0))
+                (export "__oasis_sv_1" (func 0))
+            )
+        "#,
+            r#"
+            (module
+                (type (;0;) (func))
+                (func (;0;) (type 0))
+
+                (func $floaty_func (param $smth f32)
+                    i32.const 15
+                    drop
+                )
+
+                (export "allocate" (func 0))
+                (export "deallocate" (func 0))
+                (export "instantiate" (func 0))
+                (export "call" (func 0))
+                (export "__oasis_sv_1" (func 0))
+            )
+        "#,
+            r#"
+            (module
+                (type (;0;) (func))
+                (func (;0;) (type 0))
+                (global $g (mut f32) (f32.const 3.14))
+                (export "allocate" (func 0))
+                (export "deallocate" (func 0))
+                (export "instantiate" (func 0))
+                (export "call" (func 0))
+                (export "__oasis_sv_1" (func 0))
+            )
+        "#,
+            r#"
+            (module
+                (type (;0;) (func))
+                (func (;0;) (type 0))
+
+                (func $floaty_func
+                    (local $f f32)
+                    i32.const 15
+                    drop
+                )
+
+                (export "allocate" (func 0))
+                (export "deallocate" (func 0))
+                (export "instantiate" (func 0))
+                (export "call" (func 0))
+                (export "__oasis_sv_1" (func 0))
+            )
+        "#,
+        ];
+        for (i, s) in float_wasms.iter().enumerate() {
+            let code = wat::parse_str(s).unwrap();
+            let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+            assert!(
+                matches!(result, Err(Error::ModuleUsesFloatingPoint)),
+                "Code with floating point instructions should fail validation (index {})",
+                i
+            );
+        }
     }
 
     let mut mock = mock::Mock::default();

@@ -157,6 +157,10 @@ pub enum Error {
     #[sdk_error(code = 29)]
     CryptoKeyDerivationFunctionFailure,
 
+    #[error("module uses floating point data or operations")]
+    #[sdk_error(code = 30)]
+    ModuleUsesFloatingPoint,
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),
