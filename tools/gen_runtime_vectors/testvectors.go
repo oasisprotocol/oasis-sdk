@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	keySeedPrefix    = "oasis-sdk runtime test vectors: "
-	chainContextSeed = "staking test vectors"
+	keySeedPrefix    = "oasis-sdk runtime test vector: "
+	chainContextSeed = "runtime test vectors"
 )
 
 var chainContext hash.Hash
@@ -21,11 +21,13 @@ var chainContext hash.Hash
 type RuntimeTestVector struct {
 	Kind string      `json:"kind"`
 	Tx   interface{} `json:"tx"`
-	// Meta stores tx-specific information which need
-	// to be verified, but are implicitly part of the SigCtx or Tx.
-	// e.g. ethereum address for deposits. User needs to see the ethereum-formatted
-	// address on Ledger and Ledger needs to verify that the shown address really maps to Tx.Body.To.
-	Meta            interface{}                 `json:"meta"`
+	// Meta stores tx-specific information needed to compute
+	// sig_context and to verify the recipient's address.
+	// e.g. For EVM transactions the user needs to see the ethereum-formatted recipient on
+	// Ledger and Ledger needs to verify that the shown address really maps to Tx.Body.To.
+	Meta interface{} `json:"meta"`
+	// Expected signature context derived from Meta.runtime_id and Meta.chain_context.
+	SigCtx          string                      `json:"sig_context"`
 	SignedTx        types.UnverifiedTransaction `json:"signed_tx"`
 	EncodedTx       []byte                      `json:"encoded_tx"`
 	EncodedMeta     []byte                      `json:"encoded_meta"`
@@ -44,9 +46,8 @@ func init() {
 }
 
 // MakeMeta creates a meta field for the test vector.
-func MakeMeta(sigCtx signature.Context, runtimeId string, chainContext string) map[string]string {
+func MakeMeta(runtimeId string, chainContext string) map[string]string {
 	return map[string]string{
-		"sig_context":   string(sigCtx.New(types.SignatureContextBase)),
 		"runtime_id":    runtimeId,
 		"chain_context": chainContext,
 	}
@@ -60,19 +61,24 @@ func MakeRuntimeTestVector(tx *types.Transaction, txBody interface{}, meta inter
 	// Sign the transaction.
 	ts := tx.PrepareForSigning()
 	if err := ts.AppendSign(sigCtx, w.Signer); err != nil {
-		log.Fatalf("failed to sign transaction: %w", err)
+		log.Fatalf("failed to sign transaction: %v", err)
 	}
 
 	sigTx := ts.UnverifiedTransaction()
 	prettyTx, err := tx.PrettyType(txBody)
 	if err != nil {
-		log.Fatalf("failed to obtain pretty tx: %w", err)
+		log.Fatalf("failed to obtain pretty tx: %v", err)
+	}
+	prettyMethod := "[unknown]"
+	if tx.Call.Method != "" {
+		prettyMethod = tx.Call.Method
 	}
 
 	return RuntimeTestVector{
-		Kind:             keySeedPrefix + tx.Call.Method,
+		Kind:             keySeedPrefix + prettyMethod,
 		Tx:               prettyTx,
 		Meta:             meta,
+		SigCtx:           string(sigCtx.New(types.SignatureContextBase)),
 		SignedTx:         *sigTx,
 		EncodedTx:        ts.UnverifiedTransaction().Body,
 		EncodedMeta:      cbor.Marshal(meta),
