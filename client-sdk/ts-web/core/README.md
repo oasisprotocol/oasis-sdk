@@ -1,6 +1,6 @@
 # An oasis-core SDK for TypeScript
 
-Developers, see [this getting started guide](docs/getting-started.md).
+Users of this package, see [this getting started guide](docs/getting-started.md).
 
 ## Philosophy
 

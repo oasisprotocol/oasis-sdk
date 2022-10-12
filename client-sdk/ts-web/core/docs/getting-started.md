@@ -12,7 +12,10 @@ npm install @oasisprotocol/client@alpha
 ```
 
 Install this package [from
-npm](https://www.npmjs.com/package/@oasisprotocol/client).
+npm](https://www.npmjs.com/package/@oasisprotocol/client?activeTab=versions).
+The `@alpha` is needed because we are publishing to the `alpha` tag.
+Due to technical limitations, npm has also created a `latest` tag which is
+stuck at a very old alpha verison.
 
 **TODO: Update this command when this library gets out of alpha.**
 
@@ -32,6 +35,11 @@ This connects to a public oasis-node instance.
 For security and performance reasons, some methods are not permitted.
 See the Advanced deployment section below for how to set up your own node with
 a custom set of enabled methods.
+
+## Running in Node.js
+
+This package and some of its dependencies do not support running in Node.js.
+Only use this package in browsers.
 
 # Example code
 
