@@ -251,18 +251,15 @@ func main() {
 					}
 				}
 
+				meta = MakeMeta(context.RtIdHex, context.ChainContext)
 				for _, t := range []struct {
-					signer       testing.TestKey
-					rtId         string
-					chainContext string
-					valid        bool
+					signer testing.TestKey
+					valid  bool
 				}{
-					{testing.Alice, context.RtIdHex, context.ChainContext, true},
-					{testing.Dave, context.RtIdHex, context.ChainContext, true},
-					{testing.Frank, context.RtIdHex, context.ChainContext, true},
+					{testing.Alice, true},
+					{testing.Dave, true},
+					{testing.Frank, true},
 				} {
-					meta = MakeMeta(t.rtId, t.chainContext)
-
 					for _, tokens := range [][]types.BaseUnits{
 						{
 							types.BaseUnits{
@@ -377,9 +374,9 @@ func main() {
 
 					// Encrypted transaction, body is types.CallEnvelopeX25519DeoxysII.
 					body := &struct {
-						pk    []byte
-						nonce []byte
-						data  []byte
+						Pk    []byte `json:"pk"`
+						Nonce []byte `json:"nonce"`
+						Data  []byte `json:"data"`
 					}{
 						[]byte("somepublickey123somepublickey123"),
 						[]byte("somerandomnonce"),
@@ -401,6 +398,20 @@ func main() {
 				}
 			}
 		}
+
+		// Invalid transaction call format.
+		txBodyCall := &contracts.Call{
+			ID: contracts.InstanceID(10),
+			Data: cbor.Marshal(map[string]interface{}{
+				"test123": "test1234",
+			}),
+			Tokens: []types.BaseUnits{{
+				Amount:       *quantity.NewFromUint64(1_000_000_000),
+				Denomination: types.NativeDenomination,
+			}}}
+		tx = types.NewTransaction(&types.Fee{Amount: types.NewBaseUnits(*quantity.NewFromUint64(0), types.NativeDenomination), Gas: 2000}, "", txBodyCall)
+		tx.Call.Format = 99
+		vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyCall, meta, false, testing.Alice, 1, sigCtx))
 	}
 
 	// Generate output.
