@@ -13,7 +13,7 @@ pub mod oasis;
 /// Trait for any WASM ABI to implement.
 pub trait Abi<C: Context> {
     /// Validate that the given WASM module conforms to the ABI.
-    fn validate(&self, module: &mut walrus::Module) -> Result<Info, Error>;
+    fn validate(&self, module: &mut walrus::Module, params: &Parameters) -> Result<Info, Error>;
 
     /// Link required functions into the WASM module instance.
     fn link(

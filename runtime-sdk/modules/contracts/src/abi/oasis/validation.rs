@@ -7,7 +7,7 @@ use walrus::{
 
 use crate::{
     abi::oasis::{Info, OasisV1},
-    Config, Error,
+    Config, Error, Parameters,
 };
 
 const EXPORT_SUB_VERSION_PREFIX: &str = "__oasis_sv_";
@@ -409,7 +409,11 @@ impl<'instr> Visitor<'instr> for FloatScanner {
 }
 
 impl<Cfg: Config> OasisV1<Cfg> {
-    pub(super) fn validate_module(module: &mut Module) -> Result<Info, Error> {
+    pub(super) fn validate_module(
+        &self,
+        module: &mut Module,
+        params: &Parameters,
+    ) -> Result<Info, Error> {
         // Verify that all required exports are there.
         let exports: BTreeSet<&str> = module
             .exports
@@ -462,12 +466,17 @@ impl<Cfg: Config> OasisV1<Cfg> {
         }
 
         // Verify that the code doesn't use any floating point instructions.
+        let mut function_count = 0u32;
         for func in module.functions() {
             let func_type = module.types.get(func.ty());
             for val_type in func_type.params().iter().chain(func_type.results().iter()) {
                 check_valtype_acceptable(*val_type)?;
             }
             if let walrus::FunctionKind::Local(local) = &func.kind {
+                function_count += 1;
+                if function_count > params.max_wasm_functions {
+                    return Err(Error::CodeDeclaresTooManyFunctions);
+                }
                 let mut scanner = FloatScanner(false);
                 dfs_in_order(&mut scanner, local, local.entry_block());
                 if scanner.0 {
@@ -492,7 +501,12 @@ impl<Cfg: Config> OasisV1<Cfg> {
         }
 
         // ... just don't think about floats in any way.
+        let mut local_count = 0u32;
         for local in module.locals.iter() {
+            local_count += 1;
+            if local_count > params.max_wasm_locals {
+                return Err(Error::CodeDeclaresTooManyLocals);
+            }
             check_valtype_acceptable(local.ty())?;
         }
 

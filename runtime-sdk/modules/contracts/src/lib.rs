@@ -161,6 +161,14 @@ pub enum Error {
     #[sdk_error(code = 30)]
     ModuleUsesFloatingPoint,
 
+    #[error("code declares too many functions")]
+    #[sdk_error(code = 31)]
+    CodeDeclaresTooManyFunctions,
+
+    #[error("code declares too many locals")]
+    #[sdk_error(code = 32)]
+    CodeDeclaresTooManyLocals,
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),
@@ -254,6 +262,9 @@ pub struct Parameters {
     pub max_stack_size: u32,
     pub max_memory_pages: u32,
 
+    pub max_wasm_functions: u32,
+    pub max_wasm_locals: u32,
+
     pub max_subcall_depth: u16,
     pub max_subcall_count: u16,
 
@@ -272,6 +283,9 @@ impl Default for Parameters {
             max_code_size: 1024 * 1024, // 1 MiB
             max_stack_size: 60 * 1024,  // 60 KiB
             max_memory_pages: 160,      // 10 MiB
+
+            max_wasm_functions: 10_000,
+            max_wasm_locals: 256_000,
 
             max_subcall_depth: 8,
             max_subcall_count: 16,
@@ -454,7 +468,7 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Validate and transform the code.
-        let (code, abi_info) = wasm::validate_and_transform::<Cfg, C>(&code, body.abi)?;
+        let (code, abi_info) = wasm::validate_and_transform::<Cfg, C>(&code, body.abi, &params)?;
         let hash = Hash::digest_bytes(&code);
 
         // Validate code size again and account for any instrumentation. This is here to avoid any

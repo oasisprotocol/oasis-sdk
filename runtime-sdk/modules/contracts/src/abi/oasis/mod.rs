@@ -3,7 +3,7 @@ use oasis_contract_sdk_types as contract_sdk;
 use oasis_runtime_sdk::{context::Context, modules::core, runtime::Runtime, types::token};
 
 use super::{gas, Abi, ExecutionContext, ExecutionResult, Info};
-use crate::{wasm::ContractError, Config, Error};
+use crate::{wasm::ContractError, Config, Error, Parameters};
 
 mod crypto;
 mod env;
@@ -171,8 +171,8 @@ impl<Cfg: Config> OasisV1<Cfg> {
 }
 
 impl<Cfg: Config, C: Context> Abi<C> for OasisV1<Cfg> {
-    fn validate(&self, module: &mut walrus::Module) -> Result<Info, Error> {
-        let info = Self::validate_module(module)?;
+    fn validate(&self, module: &mut walrus::Module, params: &Parameters) -> Result<Info, Error> {
+        let info = self.validate_module(module, params)?;
 
         // Add gas metering instrumentation.
         gas::transform(module);
