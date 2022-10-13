@@ -11,12 +11,12 @@ cbor = { version = "0.2.1", package = "oasis-cbor" }
 oasis-contract-sdk-types = { path = "types" }
 oasis-contract-sdk-macros = { path = "../contract-sdk-macros", optional = true }
 
+# Third party.
+thiserror = "1.0.30"
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 oasis-contract-sdk-crypto = { path = "crypto" }
 oasis-runtime-sdk = { path = "../runtime-sdk" }
-
-# Third party.
-thiserror = "1.0.30"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wee_alloc = "0.4.5"

@@ -5,7 +5,7 @@ use oasis_contract_sdk_types::address::Address;
 
 use crate::{
     abi::crypto,
-    env::{Crypto, Env},
+    env::{Crypto, CryptoError, Env},
     memory::{HostRegion, HostRegionRef},
     types::{
         crypto::SignatureKind,
@@ -74,6 +74,38 @@ impl HostEnv {
             )
         };
         result == 0
+    }
+
+    fn deoxysii_process(
+        &self,
+        func: unsafe extern "C" fn(u32, u32, u32, u32, u32, u32, u32, u32) -> u32,
+        key: &[u8],
+        nonce: &[u8],
+        message: &[u8],
+        additional_data: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        let key_region = HostRegionRef::from_slice(key);
+        let nonce_region = HostRegionRef::from_slice(nonce);
+        let message_region = HostRegionRef::from_slice(message);
+        let additional_data_region = HostRegionRef::from_slice(additional_data);
+
+        unsafe {
+            let output_region_ptr = func(
+                key_region.offset,
+                key_region.length,
+                nonce_region.offset,
+                nonce_region.length,
+                message_region.offset,
+                message_region.length,
+                additional_data_region.offset,
+                additional_data_region.length,
+            );
+            if output_region_ptr == 0 {
+                Err(CryptoError::DecryptionFailed)
+            } else {
+                Ok(HostRegion::deref(output_region_ptr as *const HostRegion).into_vec())
+            }
+        }
     }
 }
 
@@ -156,5 +188,46 @@ impl Crypto for HostEnv {
             message,
             signature,
         )
+    }
+
+    fn x25519_derive_symmetric(&self, public_key: &[u8], private_key: &[u8]) -> [u8; 32] {
+        let public_region = HostRegionRef::from_slice(public_key);
+        let private_region = HostRegionRef::from_slice(private_key);
+
+        let output = [0u8; 32];
+        let output_region = HostRegionRef::from_slice(&output);
+
+        unsafe {
+            crypto::x25519_derive_symmetric(
+                public_region.offset,
+                public_region.length,
+                private_region.offset,
+                private_region.length,
+                output_region.offset,
+                output_region.length,
+            )
+        };
+
+        output
+    }
+
+    fn deoxysii_seal(
+        &self,
+        key: &[u8],
+        nonce: &[u8],
+        message: &[u8],
+        additional_data: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        self.deoxysii_process(crypto::deoxysii_seal, key, nonce, message, additional_data)
+    }
+
+    fn deoxysii_open(
+        &self,
+        key: &[u8],
+        nonce: &[u8],
+        message: &[u8],
+        additional_data: &[u8],
+    ) -> Result<Vec<u8>, CryptoError> {
+        self.deoxysii_process(crypto::deoxysii_open, key, nonce, message, additional_data)
     }
 }
