@@ -1846,15 +1846,46 @@ dependencies = [
 [[package]]
 name = "oasis-core-client"
 version = "0.0.0"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.11#8fe1bf1004ccb68588a2dd40e5a9d202a2255117"
+dependencies = [
+ "anyhow",
+ "futures",
+ "io-context",
+ "oasis-cbor",
+ "oasis-core-runtime 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.11)",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "oasis-core-client"
+version = "0.0.0"
 source = "git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.9#2b35f69b5a8fa3d9b8e1dd19123d4e3da72b5e38"
 dependencies = [
  "anyhow",
  "futures",
  "io-context",
  "oasis-cbor",
- "oasis-core-runtime",
+ "oasis-core-runtime 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.9)",
  "thiserror",
  "tokio",
+]
+
+[[package]]
+name = "oasis-core-keymanager-api-common"
+version = "0.0.0"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.11#8fe1bf1004ccb68588a2dd40e5a9d202a2255117"
+dependencies = [
+ "anyhow",
+ "base64",
+ "lazy_static",
+ "oasis-cbor",
+ "oasis-core-runtime 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.11)",
+ "rand 0.7.3",
+ "rustc-hex",
+ "thiserror",
+ "x25519-dalek",
+ "zeroize",
 ]
 
 [[package]]
@@ -1866,7 +1897,7 @@ dependencies = [
  "base64",
  "lazy_static",
  "oasis-cbor",
- "oasis-core-runtime",
+ "oasis-core-runtime 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.9)",
  "rand 0.7.3",
  "rustc-hex",
  "thiserror",
@@ -1877,16 +1908,72 @@ dependencies = [
 [[package]]
 name = "oasis-core-keymanager-client"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.9#2b35f69b5a8fa3d9b8e1dd19123d4e3da72b5e38"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.11#8fe1bf1004ccb68588a2dd40e5a9d202a2255117"
 dependencies = [
  "futures",
  "io-context",
  "lru",
  "oasis-cbor",
- "oasis-core-client",
- "oasis-core-keymanager-api-common",
- "oasis-core-runtime",
+ "oasis-core-client 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.11)",
+ "oasis-core-keymanager-api-common 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.11)",
+ "oasis-core-runtime 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.11)",
  "thiserror",
+]
+
+[[package]]
+name = "oasis-core-runtime"
+version = "0.0.0"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.11#8fe1bf1004ccb68588a2dd40e5a9d202a2255117"
+dependencies = [
+ "anyhow",
+ "arbitrary",
+ "base64",
+ "base64-serde",
+ "bech32 0.8.1",
+ "bincode",
+ "byteorder",
+ "chrono",
+ "crossbeam",
+ "curve25519-dalek 3.2.0",
+ "deoxysii",
+ "ed25519-dalek",
+ "futures",
+ "hmac",
+ "honggfuzz",
+ "impl-trait-for-tuples",
+ "intrusive-collections",
+ "io-context",
+ "lazy_static",
+ "log",
+ "lru",
+ "num-bigint",
+ "num-traits",
+ "oasis-cbor",
+ "oid-registry",
+ "percent-encoding",
+ "rand 0.7.3",
+ "rsa",
+ "rustc-hex",
+ "serde",
+ "serde_json",
+ "sgx-isa",
+ "sha2 0.9.9",
+ "slog",
+ "slog-json",
+ "slog-scope",
+ "slog-stdlog",
+ "snow",
+ "sp800-185",
+ "tendermint",
+ "tendermint-light-client",
+ "tendermint-proto",
+ "tendermint-rpc",
+ "thiserror",
+ "tiny-keccak 2.0.2",
+ "tokio",
+ "x25519-dalek",
+ "x509-parser",
+ "zeroize",
 ]
 
 [[package]]
@@ -1963,10 +2050,10 @@ dependencies = [
  "k256",
  "num-traits",
  "oasis-cbor",
- "oasis-core-client",
- "oasis-core-keymanager-api-common",
+ "oasis-core-client 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.9)",
+ "oasis-core-keymanager-api-common 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.9)",
  "oasis-core-keymanager-client",
- "oasis-core-runtime",
+ "oasis-core-runtime 0.0.0 (git+https://github.com/oasisprotocol/oasis-core?tag=v22.1.9)",
  "oasis-runtime-sdk-macros",
  "once_cell",
  "schnorrkel",
