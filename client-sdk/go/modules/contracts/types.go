@@ -327,6 +327,9 @@ type Parameters struct {
 	MaxStackSize   uint32 `json:"max_stack_size"`
 	MaxMemoryPages uint32 `json:"max_memory_pages"`
 
+	MaxWASMFunctions uint32 `json:"max_wasm_functions"`
+	MaxWASMLocals    uint32 `json:"max_wasm_locals"`
+
 	MaxSubcallDepth uint16 `json:"max_subcall_depth"`
 	MaxSubcallCount uint16 `json:"max_subcall_count"`
 

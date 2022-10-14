@@ -28,10 +28,10 @@ impl core::Config for CoreConfig {}
 
 #[test]
 fn test_validate_and_transform() {
-    fn test<Cfg: Config, C: TxContext>(_ctx: C) {
+    fn test<Cfg: Config, C: TxContext>(_ctx: C, params: &Parameters) {
         // Non-WASM code.
         let code = Vec::new();
-        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
         assert!(
             matches!(result, Err(Error::CodeMalformed)),
             "malformed code shoud fail validation"
@@ -45,7 +45,7 @@ fn test_validate_and_transform() {
             0x0e, 0xef, 0xff, 0xff, 0xff, 0x0d, 0xea, 0xff, 0x00, 0x00, 0x20, 0xfd, 0x41, 0x10,
             0x82, 0x10, 0x01, 0x6d, 0x6d, 0xec,
         ];
-        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
         assert!(
             matches!(result, Err(Error::CodeMalformed)),
             "malformed WASM code should fail validation"
@@ -59,7 +59,7 @@ fn test_validate_and_transform() {
             0x00, 0x0f, 0x0b, 0x20, 0x00, 0x41, 0x02, 0x6b, 0x10, 0x00, 0x20, 0x00, 0x41, 0x01,
             0x6b, 0x10, 0x00, 0x6a, 0x0f, 0x0b,
         ];
-        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
         assert!(
             matches!(result, Err(Error::CodeMissingRequiredExport(_))),
             "valid WASM, but non-ABI conformant code should fail validation"
@@ -80,7 +80,7 @@ fn test_validate_and_transform() {
         "#,
         )
         .unwrap();
-        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
         assert!(
             result.is_ok(),
             "valid WASM with required exports should be ok"
@@ -104,7 +104,7 @@ fn test_validate_and_transform() {
         "#,
         )
         .unwrap();
-        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
         assert!(
             matches!(result, Err(Error::CodeDeclaresReservedExport(_))),
             "valid WASM, but non-ABI conformant code should fail validation"
@@ -126,7 +126,7 @@ fn test_validate_and_transform() {
         "#,
         )
         .unwrap();
-        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
         assert!(
             matches!(result, Err(Error::CodeDeclaresStartFunction)),
             "WASM with start function defined should fail validation"
@@ -149,7 +149,7 @@ fn test_validate_and_transform() {
         "#,
         )
         .unwrap();
-        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
         assert!(
             matches!(result, Err(Error::CodeDeclaresTooManyMemories)),
             "WASM with multiple memories defined should fail validation"
@@ -172,7 +172,7 @@ fn test_validate_and_transform() {
         "#,
         )
         .unwrap();
-        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
         assert!(
             matches!(result, Err(Error::CodeDeclaresMultipleSubVersions)),
             "WASM with multiple ABI sub-versions defined should fail validation"
@@ -194,7 +194,7 @@ fn test_validate_and_transform() {
         "#,
         )
         .unwrap();
-        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1);
+        let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
         assert!(
             matches!(result, Err(Error::CodeMalformed)),
             "WASM with a malformed ABI sub-version defined should fail validation"
@@ -217,14 +217,94 @@ fn test_validate_and_transform() {
         )
         .unwrap();
         let (_, abi_info) =
-            wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1).unwrap();
+            wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params).unwrap();
         assert_eq!(abi_info.abi_sv, 1);
+
+        // WASM code with floating point appearing in various ways.
+        let float_wasms = &[
+            r#"
+            (module
+                (type (;0;) (func))
+                (func (;0;) (type 0))
+
+                (func $call
+                    f32.const 3.14
+                    f32.const 2.71
+                    f32.mul
+                    drop
+                )
+
+                (export "allocate" (func 0))
+                (export "deallocate" (func 0))
+                (export "instantiate" (func 0))
+                (export "call" (func 0))
+                (export "__oasis_sv_1" (func 0))
+            )
+        "#,
+            r#"
+            (module
+                (type (;0;) (func))
+                (func (;0;) (type 0))
+
+                (func $floaty_func (param $smth f32)
+                    i32.const 15
+                    drop
+                )
+
+                (export "allocate" (func 0))
+                (export "deallocate" (func 0))
+                (export "instantiate" (func 0))
+                (export "call" (func 0))
+                (export "__oasis_sv_1" (func 0))
+            )
+        "#,
+            r#"
+            (module
+                (type (;0;) (func))
+                (func (;0;) (type 0))
+                (global $g (mut f32) (f32.const 3.14))
+                (export "allocate" (func 0))
+                (export "deallocate" (func 0))
+                (export "instantiate" (func 0))
+                (export "call" (func 0))
+                (export "__oasis_sv_1" (func 0))
+            )
+        "#,
+            r#"
+            (module
+                (type (;0;) (func))
+                (func (;0;) (type 0))
+
+                (func $floaty_func
+                    (local $f f32)
+                    i32.const 15
+                    drop
+                )
+
+                (export "allocate" (func 0))
+                (export "deallocate" (func 0))
+                (export "instantiate" (func 0))
+                (export "call" (func 0))
+                (export "__oasis_sv_1" (func 0))
+            )
+        "#,
+        ];
+        for (i, s) in float_wasms.iter().enumerate() {
+            let code = wat::parse_str(s).unwrap();
+            let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
+            assert!(
+                matches!(result, Err(Error::ModuleUsesFloatingPoint)),
+                "Code with floating point instructions should fail validation (index {})",
+                i
+            );
+        }
     }
 
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
+    let params = Parameters::default();
     ctx.with_tx(0, 0, mock::transaction(), |ctx, _| {
-        test::<ContractsConfig, _>(ctx);
+        test::<ContractsConfig, _>(ctx, &params);
     });
 }
 
@@ -252,10 +332,15 @@ fn run_contract_with_defaults(
     tx.auth_info.fee.gas = gas_limit;
 
     ctx.with_tx(0, 0, tx, |mut ctx, _| -> Result<cbor::Value, Error> {
-        fn transform<C: TxContext>(_ctx: &mut C, code: &[u8]) -> (Vec<u8>, abi::Info) {
-            wasm::validate_and_transform::<ContractsConfig, C>(code, types::ABI::OasisV1).unwrap()
+        fn transform<C: TxContext>(
+            _ctx: &mut C,
+            code: &[u8],
+            params: &Parameters,
+        ) -> (Vec<u8>, abi::Info) {
+            wasm::validate_and_transform::<ContractsConfig, C>(code, types::ABI::OasisV1, params)
+                .unwrap()
         }
-        let (code, abi_info) = transform(&mut ctx, code);
+        let (code, abi_info) = transform(&mut ctx, code, &params);
 
         let code_info = types::Code {
             id: 1.into(),
