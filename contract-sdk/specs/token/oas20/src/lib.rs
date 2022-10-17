@@ -4,7 +4,7 @@ extern crate alloc;
 pub mod helpers;
 pub mod types;
 
-use oasis_contract_sdk::{self as sdk};
+use oasis_contract_sdk::{self as sdk, types::message::Reply};
 use oasis_contract_sdk_storage::{cell::PublicCell, map::PublicMap};
 use oasis_contract_sdk_types::address::Address;
 
@@ -49,6 +49,10 @@ impl sdk::Contract for Oas20Token {
 
     fn query<C: sdk::Context>(ctx: &mut C, request: Request) -> Result<Response, Error> {
         helpers::handle_query(ctx, TOKEN_INFO, BALANCES, ALLOWANCES, request)
+    }
+
+    fn handle_reply<C: sdk::Context>(ctx: &mut C, reply: Reply) -> Result<Option<Response>, Error> {
+        helpers::handle_reply(ctx, TOKEN_INFO, BALANCES, ALLOWANCES, reply)
     }
 }
 

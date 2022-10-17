@@ -2,7 +2,7 @@ use oasis_contract_sdk::{
     self as sdk,
     env::Env,
     types::{
-        message::{Message, NotifyReply},
+        message::{CallResult, Message, NotifyReply, Reply},
         InstanceId,
     },
 };
@@ -13,6 +13,9 @@ use crate::types::{
     Error, Event, InitialBalance, ReceiverRequest, Request, Response, TokenInformation,
     TokenInstantiation,
 };
+
+/// Unique identifier for the send subcall.
+pub const CALL_ID_SEND: u64 = 1;
 
 /// Handles an OAS20 request call.
 pub fn handle_call<C: sdk::Context>(
@@ -34,7 +37,16 @@ pub fn handle_call<C: sdk::Context>(
         }
         Request::Send { to, amount, data } => {
             let from = ctx.caller_address().to_owned();
-            send(ctx, balances, from, to, amount, data, 0, NotifyReply::Never)?;
+            send(
+                ctx,
+                balances,
+                from,
+                to,
+                amount,
+                data,
+                CALL_ID_SEND,
+                NotifyReply::OnError, // Rollback if subcall fails.
+            )?;
 
             ctx.emit_event(Event::Oas20Sent { from, to, amount });
 
@@ -117,6 +129,24 @@ pub fn handle_query<C: sdk::Context>(
                 .unwrap_or_default(),
         }),
         _ => Err(Error::BadRequest),
+    }
+}
+
+/// Handles a reply from OAS20 execution.
+pub fn handle_reply<C: sdk::Context>(
+    _ctx: &mut C,
+    _token_info: PublicCell<TokenInformation>,
+    _balances: PublicMap<Address, u128>,
+    _allowances: PublicMap<(Address, Address), u128>,
+    reply: Reply,
+) -> Result<Option<Response>, Error> {
+    match reply {
+        Reply::Call {
+            id: CALL_ID_SEND,
+            result: CallResult::Failed { module, code },
+            ..
+        } => Err(Error::ReceiverCallFailed(module, code)),
+        _ => Ok(None),
     }
 }
 

@@ -90,6 +90,10 @@ pub enum Error {
     #[error("insufficient allowance")]
     #[sdk_error(code = 8)]
     InsufficientAllowance,
+
+    #[error("receiver call failed (module: {0} code: {1})")]
+    #[sdk_error(code = 9)]
+    ReceiverCallFailed(String, u32),
 }
 
 /// All possible events that can be returned by the OAS20 contract.
