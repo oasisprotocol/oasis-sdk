@@ -4,6 +4,7 @@ use std::convert::TryInto;
 use anyhow::anyhow;
 use byteorder::{BigEndian, WriteBytesExt};
 use oasis_core_runtime::consensus::beacon;
+use rand_core::{OsRng, RngCore};
 
 use crate::{
     context::Context,
@@ -206,6 +207,10 @@ pub fn encode_result<C: Context>(
                 .write_u32::<BigEndian>(index.try_into().unwrap())
                 .unwrap();
             nonce.extend(&[0, 0, 0]);
+            if ctx.is_simulation() {
+                // Randomize the lower-order bytes of the nonce to facilitate private queries.
+                OsRng.fill_bytes(&mut nonce[deoxysii::NONCE_SIZE - 3..]);
+            }
             let nonce = nonce.try_into().unwrap();
             // Serialize result.
             let result: CallResult = result.into();
