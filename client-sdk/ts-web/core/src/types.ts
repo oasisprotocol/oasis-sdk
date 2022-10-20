@@ -354,7 +354,7 @@ export interface ConsensusStatus {
 /**
  * Transaction is an unsigned consensus transaction.
  */
-export interface ConsensusTransaction {
+export interface ConsensusTransaction<BODY = unknown> {
     /**
      * Nonce is a nonce to prevent replay.
      */
@@ -371,7 +371,7 @@ export interface ConsensusTransaction {
     /**
      * Body is the method call body.
      */
-    body?: unknown;
+    body?: BODY;
 }
 
 /**

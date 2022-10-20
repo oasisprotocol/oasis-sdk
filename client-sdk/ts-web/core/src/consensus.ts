@@ -114,7 +114,7 @@ export async function hashSignedTransaction(signed: types.SignatureSigned) {
 }
 
 export class TransactionWrapper<BODY> {
-    transaction: types.ConsensusTransaction;
+    transaction: types.ConsensusTransaction<BODY>;
     signedTransaction: types.SignatureSigned;
 
     constructor(method: string) {
