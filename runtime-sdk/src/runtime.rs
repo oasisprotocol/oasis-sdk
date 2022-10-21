@@ -109,9 +109,9 @@ pub trait Runtime {
             .get(modules::core::types::VERSION_GLOBAL_KEY)
             .copied()
             .unwrap_or_default();
-        if global_version != Self::STATE_VERSION {
+        if global_version != Self::STATE_VERSION && !ctx.is_check_only() {
             assert!(
-                // There should either be no state, or it should be the pervious version.
+                // There should either be no state, or it should be the previous version.
                 global_version == 0 || global_version == Self::STATE_VERSION - 1,
                 "inconsistent existing state version (expected: {} got: {})",
                 Self::STATE_VERSION - 1,
