@@ -61,6 +61,7 @@ var (
 		C10lEVMKeyDerivationTest,
 		C10lEVMEncryptionTest,
 		C10lEVMRNGTest,
+		C10lEVMMessageSigningTest,
 		EVMParametersTest,
 	})
 

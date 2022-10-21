@@ -104,6 +104,9 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             (1, 2) => confidential::call_x25519_derive(input, gas_limit, context, is_static),
             (1, 3) => confidential::call_deoxysii_seal(input, gas_limit, context, is_static),
             (1, 4) => confidential::call_deoxysii_open(input, gas_limit, context, is_static),
+            (1, 5) => confidential::call_keypair_generate(input, gas_limit, context, is_static),
+            (1, 6) => confidential::call_sign(input, gas_limit, context, is_static),
+            (1, 7) => confidential::call_verify(input, gas_limit, context, is_static),
             _ => {
                 return Cfg::additional_precompiles()
                     .and_then(|pc| pc.execute(address, input, gas_limit, context, is_static))
@@ -119,7 +122,7 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
         (address[1..19].iter().all(|b| *b == 0)
             && matches!(
                 (first, last, Cfg::CONFIDENTIAL),
-                (0, 1..=5, _) | (1, 1..=4, true)
+                (0, 1..=5, _) | (1, 1..=7, true)
             ))
             || Cfg::additional_precompiles()
                 .map(|pc| pc.is_precompile(address))
