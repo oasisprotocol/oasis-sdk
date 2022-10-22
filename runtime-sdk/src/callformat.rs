@@ -104,8 +104,13 @@ pub fn decode_call_ex<C: Context>(
 
             let decrypt = |epoch: beacon::EpochTime| {
                 let keypair = key_manager
-                    .get_or_create_keys(get_key_pair_id(epoch))
-                    .map_err(|err| Error::Abort(err.into()))?;
+                    .get_or_create_ephemeral_keys(get_key_pair_id(epoch), epoch)
+                    .map_err(|err| match err {
+                        keymanager::KeyManagerError::InvalidEpoch => {
+                            Error::InvalidCallFormat(anyhow!("invalid epoch"))
+                        }
+                        _ => Error::Abort(err.into()),
+                    })?;
                 let sk = keypair.input_keypair.sk;
                 // Derive shared secret via X25519 and open the sealed box.
                 deoxysii::box_open(
@@ -160,7 +165,7 @@ pub fn encode_call<C: Context>(
                 Error::InvalidCallFormat(anyhow!("confidential transactions not available"))
             })?;
             let runtime_keypair = key_manager
-                .get_or_create_keys(get_key_pair_id(ctx.epoch()))
+                .get_or_create_ephemeral_keys(get_key_pair_id(ctx.epoch()), ctx.epoch())
                 .map_err(|err| Error::Abort(err.into()))?;
             let runtime_pk = runtime_keypair.input_keypair.pk;
             let nonce = [0u8; deoxysii::NONCE_SIZE];
@@ -264,7 +269,7 @@ pub fn decode_result<C: Context>(
                 .key_manager()
                 .ok_or_else(|| Error::InvalidCallFormat(anyhow!("confidential txs unavailable")))?;
             let keypair = key_manager
-                .get_or_create_keys(get_key_pair_id(ctx.epoch()))
+                .get_or_create_ephemeral_keys(get_key_pair_id(ctx.epoch()), ctx.epoch())
                 .map_err(|err| Error::Abort(err.into()))?;
             let runtime_pk = keypair.input_keypair.pk;
 

@@ -14,6 +14,7 @@ use crate::{
     context::{BatchContext, Context, TxContext},
     dispatcher,
     error::Error as SDKError,
+    keymanager,
     module::{
         self, CallResult, InvariantHandler as _, MethodHandler as _, Module as _,
         ModuleInfoHandler as _,
@@ -697,8 +698,13 @@ impl<Cfg: Config> Module<Cfg> {
             .key_manager()
             .ok_or_else(|| Error::InvalidArgument(anyhow!("key manager not available")))?;
         let public_key = key_manager
-            .get_public_key(callformat::get_key_pair_id(ctx.epoch()))
-            .map_err(|err| Error::Abort(err.into()))?
+            .get_public_ephemeral_key(callformat::get_key_pair_id(ctx.epoch()), ctx.epoch())
+            .map_err(|err| match err {
+                keymanager::KeyManagerError::InvalidEpoch => {
+                    Error::InvalidCallFormat(anyhow!("invalid epoch"))
+                }
+                _ => Error::Abort(err.into()),
+            })?
             .ok_or_else(|| Error::InvalidArgument(anyhow!("key not available")))?;
 
         Ok(types::CallDataPublicKeyQueryResponse { public_key })
