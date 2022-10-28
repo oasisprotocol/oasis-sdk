@@ -585,14 +585,6 @@ export class GRPCWrapper {
                 desc,
             )
             .catch((e) => {
-                if (e.message === 'Incomplete response') {
-                    // This seems to be normal. Void methods don't send back anything, which makes
-                    // grpc-web freak out. I don't know why we don't send a CBOR undefined or
-                    // something.
-                    // TODO: remove after https://github.com/grpc/grpc-web/pull/1230
-                    //       and see TODO in methodDescriptorConsensusGetSignerNonce
-                    return undefined as never;
-                }
                 if (e.metadata?.['grpc-status-details-bin']) {
                     const statusU8 = misc.fromBase64(e.metadata['grpc-status-details-bin']);
                     const status = proto.google.rpc.Status.decode(statusU8);
