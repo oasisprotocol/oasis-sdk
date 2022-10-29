@@ -13,6 +13,7 @@ replace (
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
 	github.com/adrg/xdg v0.4.0
+	github.com/ethereum/go-ethereum v1.10.19
 	github.com/miguelmota/go-ethereum-hdwallet v0.1.1
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20220328075252-7dd334e3daae
@@ -23,8 +24,8 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.12.0
-	github.com/stretchr/testify v1.7.4
+	github.com/spf13/viper v1.13.0
+	github.com/stretchr/testify v1.8.0
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/zondax/ledger-go v0.12.2
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
@@ -47,7 +48,6 @@ require (
 	github.com/eapache/channels v1.1.0 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
-	github.com/ethereum/go-ethereum v1.10.19 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
@@ -78,7 +78,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.2 // indirect
@@ -90,7 +90,7 @@ require (
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/subosito/gotenv v1.3.0 // indirect
+	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/tendermint/tendermint v0.35.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
@@ -106,7 +106,7 @@ require (
 	google.golang.org/grpc v1.47.0 // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20200902210233-8630cac324bf // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
-	gopkg.in/ini.v1 v1.66.4 // indirect
+	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
