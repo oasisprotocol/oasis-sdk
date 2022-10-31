@@ -434,9 +434,7 @@ const methodDescriptorConsensusEstimateGas = createMethodDescriptorUnary<
 >('Consensus', 'EstimateGas');
 const methodDescriptorConsensusGetSignerNonce = createMethodDescriptorUnary<
     types.ConsensusGetSignerNonceRequest,
-    // TODO: remove `undefined` after https://github.com/grpc/grpc-web/pull/1230
-    //       and see TODO in callUnary.
-    types.longnum | undefined
+    types.longnum
 >('Consensus', 'GetSignerNonce');
 const methodDescriptorConsensusGetBlock = createMethodDescriptorUnary<
     types.longnum,
