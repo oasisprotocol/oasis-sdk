@@ -2965,7 +2965,14 @@ export interface StakingStakeThreshold {
  */
 export interface StakingTakeEscrowEvent {
     owner: Uint8Array;
+    /**
+     * amount is the sum of amounts slashed from active and debonding escrow balances.
+     */
     amount: Uint8Array;
+    /**
+     * debonding_amount is the amount slashed from the debonding escrow balance.
+     */
+    debonding_amount: Uint8Array;
 }
 
 /**
