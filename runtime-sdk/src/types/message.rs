@@ -7,6 +7,7 @@ pub type MessageEvent = consensus::roothash::MessageEvent;
 
 /// Handler name and context to be called after message is executed.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct MessageEventHookInvocation {
     pub hook_name: String,
     pub payload: cbor::Value,

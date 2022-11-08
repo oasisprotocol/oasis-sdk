@@ -9,7 +9,7 @@ use crate::crypto::signature::{Error, Signature};
 
 /// An Ed25519 public key.
 #[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
-#[cbor(transparent)]
+#[cbor(transparent, no_default)]
 pub struct PublicKey(CorePublicKey);
 
 impl PublicKey {

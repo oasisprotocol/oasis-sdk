@@ -315,11 +315,11 @@ pub struct Genesis {
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct LocalConfig {
     /// Gas limit for custom queries that invoke smart contracts.
-    #[cbor(optional, default)]
+    #[cbor(optional)]
     pub query_custom_max_gas: u64,
 
     /// Maximum number of items per page in InstanceRawStorage query result.
-    #[cbor(optional, default)]
+    #[cbor(optional)]
     pub max_instance_raw_storage_query_items: u64,
 }
 

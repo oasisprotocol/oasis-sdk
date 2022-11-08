@@ -6,6 +6,7 @@ use k256::{
         digest::Digest,
         signature::{DigestVerifier, Verifier as _},
     },
+    elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint},
 };
 use sha2::Sha512Trunc256;
 
@@ -24,7 +25,8 @@ impl PublicKey {
     /// Return an alternative byte representation used in deriving Ethereum-compatible addresses.
     pub fn to_uncompressed_untagged_bytes(&self) -> Vec<u8> {
         // Our wrapper type only accepts compressed points, so we shouldn't get None.
-        self.0.to_untagged_bytes().unwrap().to_vec()
+        let pk = k256::PublicKey::from_encoded_point(&self.0).unwrap();
+        pk.to_encoded_point(false).as_bytes()[1..].to_vec()
     }
 
     /// Construct a public key from a slice of bytes.

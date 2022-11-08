@@ -2,15 +2,16 @@
 
 /// An event emitted from the contract.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct Event {
     /// Optional module name.
-    #[cbor(optional, default, skip_serializing_if = "String::is_empty")]
+    #[cbor(optional)]
     pub module: String,
 
     /// Unique code representing the event for the given module.
     pub code: u32,
 
     /// Arbitrary data associated with the event.
-    #[cbor(optional, default, skip_serializing_if = "Vec::is_empty")]
+    #[cbor(optional)]
     pub data: Vec<u8>,
 }

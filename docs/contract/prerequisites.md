@@ -73,8 +73,8 @@ present) and output something similar to:
 active toolchain
 ----------------
 
-nightly-2021-11-04-x86_64-unknown-linux-gnu (overridden by '/code/rust-toolchain')
-rustc 1.58.0-nightly (baba6687d 2021-11-03)
+nightly-2022-08-22-x86_64-unknown-linux-gnu (overridden by '/code/rust-toolchain')
+rustc 1.65.0-nightly (c0941dfb5 2022-08-21)
 ```
 
 #### WebAssembly Target Support
@@ -99,18 +99,18 @@ rustup target add wasm32-unknown-unknown
 
 _Required if you want to use the Go Client SDK._
 
-At least version **1.17.3** is required. If your distribution provides a
+At least version **1.18.5** is required. If your distribution provides a
 new-enough version of Go, just use that.
 
 Otherwise:
 
 * install the Go version provided by your distribution,
 * [ensure `$GOPATH/bin` is in your `PATH`],
-* [install the desired version of Go], e.g. 1.17.3, with:
+* [install the desired version of Go], e.g. 1.18.5, with:
 
   ```
-  go get golang.org/dl/go1.17.3
-  go1.17.3 download
+  go get golang.org/dl/go1.18.5
+  go1.18.5 download
     ```
 
 <!-- markdownlint-disable line-length -->

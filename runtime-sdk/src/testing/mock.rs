@@ -106,7 +106,7 @@ impl Mock {
             runtime_header: roothash::Header::default(),
             runtime_round_results: roothash::RoundResults::default(),
             mkvs: Box::new(mkvs),
-            consensus_state: ConsensusState::new(consensus_tree),
+            consensus_state: ConsensusState::new(1, consensus_tree),
             epoch: 1,
             max_messages: 32,
         }

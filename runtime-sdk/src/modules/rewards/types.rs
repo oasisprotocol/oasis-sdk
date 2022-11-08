@@ -104,6 +104,10 @@ impl cbor::Encode for RewardAction {
 }
 
 impl cbor::Decode for RewardAction {
+    fn try_default() -> Result<Self, cbor::DecodeError> {
+        Ok(Self::NoReward)
+    }
+
     fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
         match value {
             cbor::Value::Unsigned(v) => Ok(Self::Reward(v)),

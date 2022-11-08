@@ -59,7 +59,7 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
             )],
             fee: transaction::Fee {
                 amount: Default::default(),
-                gas: 127_000_000,
+                gas: 140_000_000,
                 consensus_messages: 0,
             },
             ..Default::default()

@@ -16,7 +16,7 @@ const (
 
 var (
 	// SimpleKVRuntime is the basic network + client test case with runtime support.
-	SimpleKVRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-keyvalue", []RunTestFunction{
+	SimpleKVRuntime = NewRuntimeScenario("test-runtime-simple-keyvalue", []RunTestFunction{
 		SimpleKVTest,
 		KVEventTest,
 		KVBalanceTest,
@@ -35,10 +35,10 @@ var (
 	})
 
 	// SimpleConsensusRuntime is the simple-consensus runtime test.
-	SimpleConsensusRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-consensus", []RunTestFunction{SimpleConsensusTest, ConsensusAccountsParametersTest})
+	SimpleConsensusRuntime = NewRuntimeScenario("test-runtime-simple-consensus", []RunTestFunction{SimpleConsensusTest, ConsensusAccountsParametersTest})
 
 	// SimpleEVMRuntime is the simple-evm runtime test.
-	SimpleEVMRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-evm", []RunTestFunction{
+	SimpleEVMRuntime = NewRuntimeScenario("test-runtime-simple-evm", []RunTestFunction{
 		SimpleEVMDepositWithdrawTest,
 		SimpleEVMTest,
 		SimpleSolEVMTest,
@@ -50,7 +50,7 @@ var (
 	})
 
 	// C10lEVMRuntime is the c10l-evm runtime test.
-	C10lEVMRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-c10l-evm", []RunTestFunction{
+	C10lEVMRuntime = NewRuntimeScenario("test-runtime-c10l-evm", []RunTestFunction{
 		SimpleEVMDepositWithdrawTest,
 		C10lEVMTest,
 		C10lSolEVMTest,
@@ -64,7 +64,7 @@ var (
 	})
 
 	// SimpleContractsRuntime is the simple-contracts runtime test.
-	SimpleContractsRuntime *RuntimeScenario = NewRuntimeScenario("test-runtime-simple-contracts", []RunTestFunction{
+	SimpleContractsRuntime = NewRuntimeScenario("test-runtime-simple-contracts", []RunTestFunction{
 		ContractsTest,
 		ContractsParametersTest,
 	})

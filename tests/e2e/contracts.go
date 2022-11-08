@@ -93,7 +93,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 
 	tb := ct.Upload(contracts.ABIOasisV1, contracts.Policy{Everyone: &struct{}{}}, helloContractCode).
-		SetFeeGas(130_000_000).
+		SetFeeGas(140_000_000).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce)
 	_ = tb.AppendSign(ctx, signer)
 	var upload contracts.UploadResult
@@ -143,14 +143,14 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 
 	if result["hello"]["greeting"] != fmt.Sprintf("hello e2e test (%d)", counter) {
-		return fmt.Errorf("unexpected result from contract: %+v", result)
+		return fmt.Errorf("unexpected result from contract (counter: %d): %+v", counter, result)
 	}
 	// Calling say_hello bumps the counter.
 	counter++
 
 	// Upload OAS20 contract code.
 	tb = ct.Upload(contracts.ABIOasisV1, contracts.Policy{Everyone: &struct{}{}}, oas20ContractCode).
-		SetFeeGas(130_000_000).
+		SetFeeGas(140_000_000).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce+3)
 	_ = tb.AppendSign(ctx, signer)
 	var uploadOas20 contracts.UploadResult
@@ -295,7 +295,7 @@ OUTER:
 		},
 		[]types.BaseUnits{},
 	).
-		SetFeeGas(1_000_000).
+		SetFeeGas(2_000_000).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce+6)
 	_ = tb.AppendSign(ctx, signer)
 	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
@@ -326,7 +326,7 @@ OUTER:
 	}
 
 	if result["hello"]["greeting"] != fmt.Sprintf("hello e2e test (%d)", counter) {
-		return fmt.Errorf("unexpected result from contract: %+v", result)
+		return fmt.Errorf("unexpected result from contract (counter: %d): %+v", counter, result)
 	}
 	// Calling say_hello bumps the counter.
 	counter++

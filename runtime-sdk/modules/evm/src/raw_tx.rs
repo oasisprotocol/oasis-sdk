@@ -2,7 +2,7 @@ use std::convert::TryInto;
 
 use anyhow::{anyhow, Context as _};
 use ethereum;
-use k256;
+use k256::{self, elliptic_curve::IsHigh};
 
 use oasis_runtime_sdk::{
     crypto::signature,

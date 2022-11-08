@@ -47,6 +47,7 @@ pub enum ABI {
 
 /// Stored code information.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct Code {
     /// Unique code identifier.
     pub id: CodeId,
@@ -58,7 +59,7 @@ pub struct Code {
     pub abi: ABI,
 
     /// ABI sub-version.
-    #[cbor(optional, default)]
+    #[cbor(optional)]
     pub abi_sv: u32,
 
     /// Code uploader address.
@@ -70,6 +71,7 @@ pub struct Code {
 
 /// Deployed code instance information.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct Instance {
     /// Unique instance identifier.
     pub id: InstanceId,
@@ -98,6 +100,7 @@ impl Instance {
 
 /// Upload call.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct Upload {
     /// ABI.
     pub abi: ABI,
@@ -118,6 +121,7 @@ pub struct UploadResult {
 
 /// Instantiate call.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct Instantiate {
     /// Identifier of code used by the instance.
     pub code_id: CodeId,
@@ -141,6 +145,7 @@ pub struct InstantiateResult {
 
 /// Contract call.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct Call {
     /// Instance identifier.
     pub id: InstanceId,
@@ -159,6 +164,7 @@ pub struct CallResult(pub Vec<u8>);
 
 /// Upgrade call.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct Upgrade {
     /// Instance identifier.
     pub id: InstanceId,
@@ -175,6 +181,7 @@ pub struct Upgrade {
 
 /// Change upgrade policy call.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct ChangeUpgradePolicy {
     /// Instance identifier.
     pub id: InstanceId,
@@ -185,6 +192,7 @@ pub struct ChangeUpgradePolicy {
 
 /// Code information query.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct CodeQuery {
     /// Code identifier.
     pub id: CodeId,
@@ -205,14 +213,14 @@ pub struct CodeStorageQueryResult {
 }
 
 /// Instance information query.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct InstanceQuery {
     /// Instance identifier.
     pub id: InstanceId,
 }
 
 /// Instance storage query.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct InstanceStorageQuery {
     /// Instance identifier.
     pub id: InstanceId,
@@ -221,7 +229,7 @@ pub struct InstanceStorageQuery {
     pub key: Vec<u8>,
 }
 
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct InstanceStorageQueryResult {
     /// Storage value or `None` if key doesn't exist.
     pub value: Option<Vec<u8>>,
@@ -237,6 +245,7 @@ pub enum StoreKind {
 
 /// Instance raw storage query.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct InstanceRawStorageQuery {
     /// Instance identifier.
     pub id: InstanceId,
@@ -245,16 +254,16 @@ pub struct InstanceRawStorageQuery {
     pub store_kind: StoreKind,
 
     /// Maximum number of items per page.
-    #[cbor(optional, default)]
+    #[cbor(optional)]
     pub limit: Option<u64>,
 
     /// Number of skipped items.
-    #[cbor(optional, default)]
+    #[cbor(optional)]
     pub offset: Option<u64>,
 }
 
 /// Instance raw storage query result.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct InstanceRawStorageQueryResult {
     /// List of key-value pairs in contract's public store.
     pub items: Vec<(Vec<u8>, Vec<u8>)>,
@@ -269,6 +278,7 @@ pub enum PublicKeyKind {
 
 /// Public key query.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct PublicKeyQuery {
     /// Instance identifier.
     pub id: InstanceId,
@@ -278,7 +288,7 @@ pub struct PublicKeyQuery {
 }
 
 /// Public key query result.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct PublicKeyQueryResult {
     /// Public key.
     pub key: Vec<u8>,
@@ -291,7 +301,7 @@ pub struct PublicKeyQueryResult {
 }
 
 /// Custom contract query.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct CustomQuery {
     /// Instance identifier.
     pub id: InstanceId,
@@ -301,17 +311,17 @@ pub struct CustomQuery {
 }
 
 /// Custom query result.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 #[cbor(transparent)]
 pub struct CustomQueryResult(pub Vec<u8>);
 
 /// An event emitted from a contract, wrapped to include additional metadata.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct ContractEvent {
     /// Identifier of the instance that emitted the event.
     pub id: InstanceId,
     /// Raw event data emitted by the instance.
-    #[cbor(optional, default, skip_serializing_if = "Vec::is_empty")]
+    #[cbor(optional)]
     pub data: Vec<u8>,
 }
 

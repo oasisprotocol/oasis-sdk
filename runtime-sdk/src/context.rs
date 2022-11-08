@@ -36,11 +36,13 @@ pub enum Mode {
     ExecuteTx,
     CheckTx,
     SimulateTx,
+    PreScheduleTx,
 }
 
 const MODE_CHECK_TX: &str = "check_tx";
 const MODE_EXECUTE_TX: &str = "execute_tx";
 const MODE_SIMULATE_TX: &str = "simulate_tx";
+const MODE_PRE_SCHEDULE_TX: &str = "pre_schedule_tx";
 
 impl fmt::Display for Mode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -54,6 +56,7 @@ impl From<&Mode> for &'static str {
             Mode::CheckTx => MODE_CHECK_TX,
             Mode::ExecuteTx => MODE_EXECUTE_TX,
             Mode::SimulateTx => MODE_SIMULATE_TX,
+            Mode::PreScheduleTx => MODE_PRE_SCHEDULE_TX,
         }
     }
 }
@@ -89,7 +92,12 @@ pub trait Context {
 
     /// Whether the transaction is just being checked for validity.
     fn is_check_only(&self) -> bool {
-        self.mode() == Mode::CheckTx
+        self.mode() == Mode::CheckTx || self.mode() == Mode::PreScheduleTx
+    }
+
+    /// Whether the transaction is just being checked for validity before being scheduled.
+    fn is_pre_schedule(&self) -> bool {
+        self.mode() == Mode::PreScheduleTx
     }
 
     /// Whether the transaction is just being simulated.
@@ -122,7 +130,7 @@ pub trait Context {
                     .unwrap_or_default()
             }
             // When just checking a transaction, we always want to be fast and skip contracts.
-            Mode::CheckTx => false,
+            Mode::CheckTx | Mode::PreScheduleTx => false,
         }
     }
 

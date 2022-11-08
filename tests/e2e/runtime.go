@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
 	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
@@ -128,6 +129,9 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			DefaultLogWatcherHandlerFactories: DefaultRuntimeLogWatcherHandlerFactories,
 			Consensus:                         f.Network.Consensus,
 			DeterministicIdentities:           true, // for allowlisting the client node on the km
+			Beacon: beacon.ConsensusParameters{
+				Backend: beacon.BackendInsecure,
+			},
 			IAS: oasis.IASCfg{
 				Mock: iasMock,
 			},

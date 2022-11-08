@@ -16,6 +16,7 @@ pub mod module;
 pub mod modules;
 pub mod runtime;
 pub mod schedule_control;
+pub mod sender;
 pub mod storage;
 pub mod testing;
 pub mod types;

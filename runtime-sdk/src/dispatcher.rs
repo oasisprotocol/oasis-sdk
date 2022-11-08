@@ -13,7 +13,7 @@ use thiserror::Error;
 use oasis_core_runtime::{
     self,
     common::crypto::hash::Hash,
-    consensus::roothash,
+    consensus::{roothash, verifier::Verifier},
     protocol::HostInfo,
     storage::mkvs,
     transaction::{
@@ -36,6 +36,7 @@ use crate::{
     modules::core::API as _,
     runtime::Runtime,
     schedule_control::ScheduleControlHost,
+    sender::SenderMeta,
     storage::{self, NestedStore, Prefix},
     types,
     types::transaction::{AuthProof, Transaction},
@@ -77,6 +78,8 @@ pub struct DispatchResult {
     pub tags: Tags,
     /// Transaction priority.
     pub priority: u64,
+    /// Transaction sender metadata.
+    pub sender_metadata: SenderMeta,
     /// Call format metadata.
     pub call_format_metadata: callformat::Metadata,
 }
@@ -91,6 +94,7 @@ impl DispatchResult {
             result,
             tags,
             priority: 0,
+            sender_metadata: Default::default(),
             call_format_metadata,
         }
     }
@@ -111,12 +115,15 @@ pub struct DispatchOptions<'a> {
     pub tx_index: usize,
     /// Optionally only allow methods for which the provided authorizer closure returns true.
     pub method_authorizer: Option<&'a dyn Fn(&str) -> bool>,
+    /// Optionally skip authentication.
+    pub skip_authentication: bool,
 }
 
 /// The runtime dispatcher.
 pub struct Dispatcher<R: Runtime> {
     host_info: HostInfo,
     key_manager: Option<Arc<KeyManagerClient>>,
+    consensus_verifier: Arc<dyn Verifier>,
     schedule_control_host: Arc<dyn ScheduleControlHost>,
     _runtime: PhantomData<R>,
 }
@@ -129,11 +136,13 @@ impl<R: Runtime> Dispatcher<R> {
     pub(super) fn new(
         host_info: HostInfo,
         key_manager: Option<Arc<KeyManagerClient>>,
+        consensus_verifier: Arc<dyn Verifier>,
         schedule_control_host: Arc<dyn ScheduleControlHost>,
     ) -> Self {
         Self {
             host_info,
             key_manager,
+            consensus_verifier,
             schedule_control_host,
             _runtime: PhantomData,
         }
@@ -237,8 +246,10 @@ impl<R: Runtime> Dispatcher<R> {
         opts: &DispatchOptions<'_>,
     ) -> Result<DispatchResult, Error> {
         // Run pre-processing hooks.
-        if let Err(err) = R::Modules::authenticate_tx(ctx, &tx) {
-            return Ok(err.into_call_result().into());
+        if !opts.skip_authentication {
+            if let Err(err) = R::Modules::authenticate_tx(ctx, &tx) {
+                return Ok(err.into_call_result().into());
+            }
         }
         let tx_auth_info = tx.auth_info.clone();
         let is_read_only = tx.call.read_only;
@@ -255,8 +266,10 @@ impl<R: Runtime> Dispatcher<R> {
                 );
             }
 
-            // Load priority, weights.
+            // Load priority.
             let priority = R::Core::take_priority(&mut ctx);
+            // Load sender metadata.
+            let sender_metadata = R::Core::take_sender_meta(&mut ctx);
 
             if ctx.is_check_only() {
                 // Rollback state during checks.
@@ -267,6 +280,7 @@ impl<R: Runtime> Dispatcher<R> {
                         result,
                         tags: Vec::new(),
                         priority,
+                        sender_metadata,
                         call_format_metadata,
                     },
                     Vec::new(),
@@ -279,6 +293,7 @@ impl<R: Runtime> Dispatcher<R> {
                         result,
                         tags: etags.into_tags(),
                         priority,
+                        sender_metadata,
                         call_format_metadata,
                     },
                     messages,
@@ -335,7 +350,9 @@ impl<R: Runtime> Dispatcher<R> {
                 error: Default::default(),
                 meta: Some(CheckTxMetadata {
                     priority: dispatch.priority,
-                    weights: None,
+                    sender: dispatch.sender_metadata.id(),
+                    sender_seq: dispatch.sender_metadata.tx_nonce,
+                    sender_state_seq: dispatch.sender_metadata.state_nonce,
                 }),
             }),
 
@@ -532,7 +549,6 @@ impl<R: Runtime> Dispatcher<R> {
             results,
             messages,
             block_tags: block_tags.into_tags(),
-            batch_weight_limits: None,
             tx_reject_hashes: vec![],
             in_msgs_count: 0, // TODO: Support processing incoming messages.
         })
@@ -644,21 +660,50 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                         }
 
                         // Determine the current transaction index.
-                        let index = new_batch.len();
+                        let tx_index = new_batch.len();
 
                         // First run the transaction in check tx mode in a separate subcontext. If
-                        // that fails, skip and reject transaction.
-                        let check_result = ctx.with_child(Mode::CheckTx, |mut ctx| {
-                            Self::dispatch_tx(&mut ctx, tx_size, tx.clone(), index)
-                        })?;
-                        if let module::CallResult::Failed { .. } = check_result.result {
-                            // Skip and reject transaction.
-                            tx_reject_hashes.push(Hash::digest_bytes(&raw_tx));
+                        // that fails, skip and (sometimes) reject transaction.
+                        let skip =
+                            ctx.with_child(Mode::PreScheduleTx, |mut ctx| -> Result<_, Error> {
+                                // First authenticate the transaction to get any nonce related errors.
+                                match R::Modules::authenticate_tx(&mut ctx, &tx) {
+                                    Err(modules::core::Error::FutureNonce) => {
+                                        // Only skip transaction as it may become valid in the future.
+                                        return Ok(true);
+                                    }
+                                    Err(_) => {
+                                        // Skip and reject the transaction.
+                                    }
+                                    Ok(_) => {
+                                        // Run additional checks on the transaction.
+                                        let check_result = Self::dispatch_tx_opts(
+                                            &mut ctx,
+                                            tx.clone(),
+                                            &DispatchOptions {
+                                                tx_size,
+                                                tx_index,
+                                                skip_authentication: true, // Already done.
+                                                ..Default::default()
+                                            },
+                                        )?;
+                                        if check_result.result.is_success() {
+                                            // Checks successful, execute transaction as usual.
+                                            return Ok(false);
+                                        }
+                                    }
+                                }
+
+                                // Skip and reject the transaction.
+                                tx_reject_hashes.push(Hash::digest_bytes(&raw_tx));
+                                Ok(true)
+                            })?;
+                        if skip {
                             continue;
                         }
 
                         new_batch.push(raw_tx);
-                        results.push(Self::execute_tx(ctx, tx_size, tx, index)?);
+                        results.push(Self::execute_tx(ctx, tx_size, tx, tx_index)?);
                     }
 
                     // If there's more room in the block and we got the maximum number of
@@ -768,6 +813,17 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         // appropriately scoped instance of the key manager client.
         let is_confidential_allowed = R::Modules::is_allowed_private_km_query(method)
             && R::is_allowed_private_km_query(method);
+        if is_confidential_allowed {
+            // Perform consensus layer state integrity verification for any queries that allow
+            // access to confidential state.
+            self.consensus_verifier.verify_for_query(
+                ctx.consensus_block.clone(),
+                ctx.header.clone(),
+                ctx.epoch,
+            )?;
+            // Ensure the runtime is still ready to process requests.
+            ctx.protocol.ensure_initialized()?;
+        }
         let key_manager = self.key_manager.as_ref().map(|mgr| {
             if is_confidential_allowed {
                 mgr.with_private_context(ctx.io_ctx.clone())

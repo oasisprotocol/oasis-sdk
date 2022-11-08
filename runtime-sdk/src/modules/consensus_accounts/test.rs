@@ -249,7 +249,7 @@ fn test_api_deposit() {
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x01"); // consensus_accounts.Deposit (code = 1) event
 
     // Decode deposit event.
-    #[derive(Debug, cbor::Decode)]
+    #[derive(Debug, Default, cbor::Decode)]
     struct DepositEvent {
         from: Address,
         nonce: u64,
@@ -578,7 +578,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x02"); // consensus_accounts.Withdraw (code = 2) event
 
     // Decode withdraw event.
-    #[derive(Debug, cbor::Decode)]
+    #[derive(Debug, Default, cbor::Decode)]
     struct WithdrawEvent {
         from: Address,
         nonce: u64,
@@ -760,7 +760,7 @@ fn test_api_withdraw_handler_failure() {
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x02"); // consensus_accounts.Withdraw (code = 2) event
 
     // Decode withdraw event.
-    #[derive(Debug, cbor::Decode)]
+    #[derive(Debug, Default, cbor::Decode)]
     struct WithdrawEvent {
         from: Address,
         nonce: u64,

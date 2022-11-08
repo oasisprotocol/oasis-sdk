@@ -2,12 +2,11 @@
 
 use std::{collections::HashMap, sync::Mutex};
 
-pub use oasis_core_keymanager_api_common::{
+use crate::keymanager::KeyManager;
+pub use crate::keymanager::{
     KeyManagerError, KeyPair, KeyPairId, PrivateKey, PublicKey, SignedPublicKey, StateKey,
     TrustedPolicySigners,
 };
-
-use crate::keymanager::KeyManager;
 
 #[derive(Default)]
 pub struct MockKeyManagerClient {

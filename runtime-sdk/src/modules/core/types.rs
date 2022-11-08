@@ -15,13 +15,9 @@ pub struct Metadata {
     pub versions: BTreeMap<String, u32>,
 }
 
-#[allow(clippy::trivially_copy_pass_by_ref)]
-#[inline]
-const fn is_false(v: &bool) -> bool {
-    !(*v)
-}
 /// Arguments for the EstimateGas query.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
 pub struct EstimateGasQuery {
     /// The address of the caller for which to do estimation. If not specified the authentication
     /// information from the passed transaction is used.
@@ -33,14 +29,11 @@ pub struct EstimateGasQuery {
     /// If true, the query will return the transaction error and not the gas estimation.
     /// Defaults to false.
     #[cbor(optional)]
-    #[cbor(default)]
-    // TODO: remove once oasis-cbor is updated to 0.3.
-    #[cbor(skip_serializing_if = "is_false")]
     pub propagate_failures: bool,
 }
 
 /// Response to the call data public key query.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct CallDataPublicKeyQueryResponse {
     /// Public key used for deriving the shared secret for encrypting call data.
     pub public_key: SignedPublicKey,
@@ -60,6 +53,7 @@ pub enum MethodHandlerKind {
 
 #[derive(Debug, Clone, cbor::Encode, cbor::Decode)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
+#[cbor(no_default)]
 pub struct MethodHandlerInfo {
     pub kind: MethodHandlerKind,
     pub name: String,
@@ -68,6 +62,7 @@ pub struct MethodHandlerInfo {
 /// Metadata for an individual module.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
+#[cbor(no_default)]
 pub struct ModuleInfo {
     pub version: u32,
     pub params: cbor::Value,
@@ -77,6 +72,7 @@ pub struct ModuleInfo {
 /// Response to the RuntimeInfo query.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
+#[cbor(no_default)]
 pub struct RuntimeInfoResponse {
     pub runtime_version: oasis_core_runtime::common::version::Version,
     pub state_version: u32,

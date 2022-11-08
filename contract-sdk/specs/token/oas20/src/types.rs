@@ -30,7 +30,7 @@ pub struct TokenInstantiation {
     /// Number of decimals.
     pub decimals: u8,
     /// Initial balances of the token.
-    #[cbor(optional, default, skip_serializing_if = "Vec::is_empty")]
+    #[cbor(optional)]
     pub initial_balances: Vec<InitialBalance>,
     /// Information about minting in case the token supports minting.
     #[cbor(optional)]
@@ -90,6 +90,10 @@ pub enum Error {
     #[error("insufficient allowance")]
     #[sdk_error(code = 8)]
     InsufficientAllowance,
+
+    #[error("receiver call failed (module: {0} code: {1})")]
+    #[sdk_error(code = 9)]
+    ReceiverCallFailed(String, u32),
 }
 
 /// All possible events that can be returned by the OAS20 contract.

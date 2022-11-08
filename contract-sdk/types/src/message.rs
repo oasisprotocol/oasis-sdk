@@ -12,7 +12,7 @@ pub enum Message {
     /// This can be used to call other smart contracts.
     #[cbor(rename = "call")]
     Call {
-        #[cbor(optional, default)]
+        #[cbor(optional)]
         id: u64,
         reply: NotifyReply,
         method: String,
@@ -41,7 +41,7 @@ pub enum Reply {
     /// Reply from a call message.
     #[cbor(rename = "call")]
     Call {
-        #[cbor(optional, default)]
+        #[cbor(optional)]
         id: u64,
         result: CallResult,
         #[cbor(optional)]
