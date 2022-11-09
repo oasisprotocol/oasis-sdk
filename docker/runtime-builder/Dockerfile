@@ -10,7 +10,7 @@ ARG SGXS_TOOLS_VERSION=0.8.6
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qq && apt-get upgrade -qq && apt-get install -qq \
-    git gcc curl jq pkg-config libssl-dev protobuf-compiler libclang-dev clang-11 gcc-multilib && \
+    git gcc curl jq pkg-config libssl-dev protobuf-compiler libclang-dev clang-11 gcc-multilib cmake && \
     apt-get autoclean && apt-get autoremove && rm -rf /var/cache/apt/archives/* && \
     mkdir -p /src /cargo/.rustup
 
