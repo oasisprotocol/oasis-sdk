@@ -385,7 +385,7 @@ preserved.
 
 Congratulations, you have successfully built and deployed your first runtime!
 
-:::info
+:::info Example
 
 You can view and download complete [runtime example] and [client code in Go]
 from the Oasis SDK repository.
