@@ -10,7 +10,6 @@ replace (
 )
 
 require (
-	github.com/btcsuite/btcd v0.22.1
 	github.com/ethereum/go-ethereum v1.10.19
 	github.com/golang/snappy v0.0.4
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20220708102147-0a8a51822cae
