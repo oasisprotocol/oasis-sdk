@@ -3,7 +3,10 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     convert::TryInto,
     marker::PhantomData,
-    sync::{atomic::AtomicBool, Arc},
+    sync::{
+        atomic::{AtomicBool, AtomicU64, Ordering},
+        Arc,
+    },
 };
 
 use anyhow::anyhow;
@@ -13,7 +16,7 @@ use thiserror::Error;
 use oasis_core_runtime::{
     self,
     common::crypto::hash::Hash,
-    consensus::{roothash, verifier::Verifier},
+    consensus::{beacon, roothash, verifier::Verifier},
     protocol::HostInfo,
     storage::mkvs,
     transaction::{
@@ -511,6 +514,14 @@ impl<R: Runtime> Dispatcher<R> {
             &mut RuntimeBatchContext<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>,
         ) -> Result<Vec<ExecuteTxResult>, RuntimeError>,
     {
+        // Make sure to clear the key manager cache on each epoch.
+        if let Some(ref key_manager) = self.key_manager {
+            static LAST_EPOCH: AtomicU64 = AtomicU64::new(beacon::EPOCH_INVALID);
+            if LAST_EPOCH.swap(rt_ctx.epoch, Ordering::SeqCst) != rt_ctx.epoch {
+                key_manager.clear_cache();
+            }
+        }
+
         // Prepare dispatch context.
         let key_manager = self
             .key_manager
