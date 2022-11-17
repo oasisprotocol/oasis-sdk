@@ -11,7 +11,7 @@ license = "Apache-2.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-cbor = { version = "0.5.0", package = "oasis-cbor" }
+cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-contract-sdk = { path = "../../../contract-sdk" }
 oasis-contract-sdk-storage = { path = "../../../contract-sdk/storage" }
 oasis-contract-sdk-oas20 = { path = "../../../contract-sdk/specs/token/oas20" }

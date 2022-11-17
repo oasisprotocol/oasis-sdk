@@ -6,7 +6,7 @@ edition = "2018"
 license = "Apache-2.0"
 
 [dependencies]
-cbor = { version = "0.2.1", package = "oasis-cbor" }
+cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-runtime-sdk = { path = "../../../runtime-sdk" }
 oasis-runtime-sdk-evm = { path = "../../../runtime-sdk/modules/evm" }
 
