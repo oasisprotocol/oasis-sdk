@@ -15,7 +15,7 @@ name = "oas20"
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
-cbor = { version = "0.5.0", package = "oasis-cbor" }
+cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-contract-sdk = { path = "../../.." }
 oasis-contract-sdk-storage = { path = "../../../storage" }
 oasis-contract-sdk-types = { path = "../../../types" }

@@ -315,11 +315,11 @@ dependencies = [
 
 [[package]]
 name = "blake2"
-version = "0.10.4"
+version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9cf849ee05b2ee5fba5e36f97ff8ec2533916700fc0758d40d92136a42f3388"
+checksum = "b12e5fd123190ce1c2e559308a94c9bacad77907d4c6005d9e58fe1a0689e55e"
 dependencies = [
- "digest 0.10.5",
+ "digest 0.10.6",
 ]
 
 [[package]]
@@ -333,7 +333,7 @@ dependencies = [
  "cc",
  "cfg-if 1.0.0",
  "constant_time_eq",
- "digest 0.10.5",
+ "digest 0.10.6",
 ]
 
 [[package]]
@@ -387,9 +387,9 @@ checksum = "ec8a7b6a70fde80372154c65702f00a0f56f3e1c36abbc6c440484be248856db"
 
 [[package]]
 name = "cc"
-version = "1.0.74"
+version = "1.0.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "581f5dba903aac52ea3feb5ec4810848460ee833876f1f9b0fdeab1f19091574"
+checksum = "76a284da2e6fe2092f2353e51713435363112dfd60030e22add80be333fb928f"
 
 [[package]]
 name = "cexpr"
@@ -439,9 +439,9 @@ dependencies = [
 
 [[package]]
 name = "chrono"
-version = "0.4.22"
+version = "0.4.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfd4d1b31faaa3a89d7934dbded3111da0d2ef28e3ebccdb4f0179f5929d1ef1"
+checksum = "16b0a3d9ed01224b22057780a37bb8c5dbfe1be8ba48678e7bf57ec4b385411f"
 dependencies = [
  "iana-time-zone",
  "js-sys",
@@ -736,9 +736,9 @@ dependencies = [
 
 [[package]]
 name = "cxx"
-version = "1.0.80"
+version = "1.0.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b7d4e43b25d3c994662706a1d4fcfc32aaa6afd287502c111b237093bb23f3a"
+checksum = "97abf9f0eca9e52b7f81b945524e76710e6cb2366aead23b7d4fbf72e281f888"
 dependencies = [
  "cc",
  "cxxbridge-flags",
@@ -748,9 +748,9 @@ dependencies = [
 
 [[package]]
 name = "cxx-build"
-version = "1.0.80"
+version = "1.0.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84f8829ddc213e2c1368e51a2564c552b65a8cb6a28f31e576270ac81d5e5827"
+checksum = "7cc32cc5fea1d894b77d269ddb9f192110069a8a9c1f1d441195fba90553dea3"
 dependencies = [
  "cc",
  "codespan-reporting",
@@ -763,29 +763,19 @@ dependencies = [
 
 [[package]]
 name = "cxxbridge-flags"
-version = "1.0.80"
+version = "1.0.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e72537424b474af1460806647c41d4b6d35d09ef7fe031c5c2fa5766047cc56a"
+checksum = "8ca220e4794c934dc6b1207c3b42856ad4c302f2df1712e9f8d2eec5afaacf1f"
 
 [[package]]
 name = "cxxbridge-macro"
-version = "1.0.80"
+version = "1.0.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "309e4fb93eed90e1e14bea0da16b209f81813ba9fc7830c20ed151dd7bc0a4d7"
+checksum = "b846f081361125bfc8dc9d3940c84e1fd83ba54bbca7b17cd29483c828be0704"
 dependencies = [
  "proc-macro2 1.0.47",
  "quote 1.0.21",
  "syn 1.0.103",
-]
-
-[[package]]
-name = "darling"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a01d95850c592940db9b8194bc39f4bc0e89dee5c4265e4b1807c34a9aba453c"
-dependencies = [
- "darling_core 0.13.4",
- "darling_macro 0.13.4",
 ]
 
 [[package]]
@@ -794,22 +784,8 @@ version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0dd3cd20dc6b5a876612a6e5accfe7f3dd883db6d07acfbf14c128f61550dfa"
 dependencies = [
- "darling_core 0.14.2",
- "darling_macro 0.14.2",
-]
-
-[[package]]
-name = "darling_core"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "859d65a907b6852c9361e3185c862aae7fafd2887876799fa55f5f99dc40d610"
-dependencies = [
- "fnv",
- "ident_case",
- "proc-macro2 1.0.47",
- "quote 1.0.21",
- "strsim 0.10.0",
- "syn 1.0.103",
+ "darling_core",
+ "darling_macro",
 ]
 
 [[package]]
@@ -828,22 +804,11 @@ dependencies = [
 
 [[package]]
 name = "darling_macro"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c972679f83bdf9c42bd905396b6c3588a843a17f0f16dfcfa3e2c5d57441835"
-dependencies = [
- "darling_core 0.13.4",
- "quote 1.0.21",
- "syn 1.0.103",
-]
-
-[[package]]
-name = "darling_macro"
 version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7618812407e9402654622dd402b0a89dff9ba93badd6540781526117b92aab7e"
 dependencies = [
- "darling_core 0.14.2",
+ "darling_core",
  "quote 1.0.21",
  "syn 1.0.103",
 ]
@@ -952,9 +917,9 @@ dependencies = [
 
 [[package]]
 name = "digest"
-version = "0.10.5"
+version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adfbc57365a37acbd2ebf2b64d7e69bb766e2fea813521ed536f5d0520dcf86c"
+checksum = "8168378f4e5023e7218c89c891c0fd8ecdb5e5e4f18cb78f38cf245dd021e76f"
 dependencies = [
  "block-buffer 0.10.3",
  "crypto-common",
@@ -1658,9 +1623,12 @@ dependencies = [
 
 [[package]]
 name = "keccak"
-version = "0.1.2"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9b7d56ba4a8344d6be9729995e6b06f928af29998cdf79fe390cbf6b1fee838"
+checksum = "3afef3b6eff9ce9d8ff9b3601125eec7f0c8cbac7abd14f355d053fa56c98768"
+dependencies = [
+ "cpufeatures",
+]
 
 [[package]]
 name = "lazy_static"
@@ -1701,9 +1669,9 @@ dependencies = [
 
 [[package]]
 name = "libm"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "292a948cd991e376cf75541fe5b97a1081d713c618b4f1b9500f8844e49eb565"
+checksum = "348108ab3fba42ec82ff6e9564fc4ca0247bdccdc68dd8af9764bbc79c3c8ffb"
 
 [[package]]
 name = "link-cplusplus"
@@ -1790,9 +1758,9 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "memmap2"
-version = "0.5.7"
+version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95af15f345b17af2efc8ead6080fb8bc376f8cec1b35277b935637595fe77498"
+checksum = "4b182332558b18d807c4ce1ca8ca983b34c3ee32765e47b3f0f69b90355cc1dc"
 dependencies = [
  "libc",
 ]
@@ -2055,49 +2023,23 @@ dependencies = [
 
 [[package]]
 name = "oasis-cbor"
-version = "0.2.1"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38035ab5ba813379234cc722327cc66f45b09316f109f69b54c589cc0e9e5f03"
+checksum = "937dd928dca340f29f67f096760ccec7853e60ebc156175aadfc8eb203eed37d"
 dependencies = [
  "impl-trait-for-tuples",
- "oasis-cbor-derive 0.2.1",
- "sk-cbor",
- "thiserror",
-]
-
-[[package]]
-name = "oasis-cbor"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dae5d03ada3f2f496b1505477e91b32b9bccf1d21a8527a84b73567133c05165"
-dependencies = [
- "impl-trait-for-tuples",
- "oasis-cbor-derive 0.5.0",
+ "oasis-cbor-derive",
  "oasis-cbor-value",
  "thiserror",
 ]
 
 [[package]]
 name = "oasis-cbor-derive"
-version = "0.2.1"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "329dfab5a691b5059ca211567f795876ad49ebd2cd14ab8680e18c17f4f1a805"
+checksum = "b593c6ebad6e6429a8d1dac3509555da30311f0e6fdf93b96475bce895abef6d"
 dependencies = [
- "darling 0.13.4",
- "proc-macro-crate",
- "proc-macro2 1.0.47",
- "quote 1.0.21",
- "sk-cbor",
- "syn 1.0.103",
-]
-
-[[package]]
-name = "oasis-cbor-derive"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfe7107f968c18b1f384d4d92d7f5a40b655c6ae1262954b3d552b140cef8391"
-dependencies = [
- "darling 0.14.2",
+ "darling",
  "oasis-cbor-value",
  "proc-macro-crate",
  "proc-macro2 1.0.47",
@@ -2107,15 +2049,15 @@ dependencies = [
 
 [[package]]
 name = "oasis-cbor-value"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbeffe8aae62d42a39195627a3f3741c0cb3679c0d3ebb87a724ceb4624374e0"
+checksum = "5fe0d7f5a7c55eba7e8e845046c6c81332f4fa4997f0ed497b9f44db1d7f2050"
 
 [[package]]
 name = "oasis-contract-sdk"
 version = "0.1.0"
 dependencies = [
- "oasis-cbor 0.5.0",
+ "oasis-cbor",
  "oasis-contract-sdk-crypto",
  "oasis-contract-sdk-macros",
  "oasis-contract-sdk-types",
@@ -2131,7 +2073,7 @@ dependencies = [
  "hex",
  "hmac",
  "k256",
- "oasis-cbor 0.5.0",
+ "oasis-cbor",
  "oasis-runtime-sdk",
  "sha2 0.9.9",
  "thiserror",
@@ -2142,7 +2084,7 @@ dependencies = [
 name = "oasis-contract-sdk-macros"
 version = "0.1.0"
 dependencies = [
- "darling 0.14.2",
+ "darling",
  "difference",
  "proc-macro-crate",
  "proc-macro2 1.0.47",
@@ -2154,7 +2096,7 @@ dependencies = [
 name = "oasis-contract-sdk-storage"
 version = "0.1.0"
 dependencies = [
- "oasis-cbor 0.5.0",
+ "oasis-cbor",
  "oasis-contract-sdk",
 ]
 
@@ -2164,7 +2106,7 @@ version = "0.1.0"
 dependencies = [
  "bech32",
  "hex",
- "oasis-cbor 0.5.0",
+ "oasis-cbor",
  "oasis-runtime-sdk",
  "thiserror",
 ]
@@ -2172,7 +2114,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-keymanager"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v22.2.1#751561f02d734de191dd1ad9c93d0c2cde479772"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v22.2.2#401b8292852ef2e7b0be14ca97d0bc10f794afd0"
 dependencies = [
  "anyhow",
  "base64",
@@ -2180,7 +2122,7 @@ dependencies = [
  "io-context",
  "lazy_static",
  "lru",
- "oasis-cbor 0.5.0",
+ "oasis-cbor",
  "oasis-core-runtime",
  "rand 0.7.3",
  "rustc-hex",
@@ -2196,7 +2138,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-runtime"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v22.2.1#751561f02d734de191dd1ad9c93d0c2cde479772"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v22.2.2#401b8292852ef2e7b0be14ca97d0bc10f794afd0"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -2223,7 +2165,7 @@ dependencies = [
  "mbedtls",
  "num-bigint 0.4.3",
  "num-traits",
- "oasis-cbor 0.5.0",
+ "oasis-cbor",
  "oid-registry",
  "percent-encoding",
  "rand 0.7.3",
@@ -2262,14 +2204,14 @@ dependencies = [
  "blake3",
  "byteorder",
  "curve25519-dalek 3.2.0",
- "digest 0.10.5",
+ "digest 0.10.6",
  "hex",
  "hmac",
  "impl-trait-for-tuples",
  "io-context",
  "k256",
  "num-traits",
- "oasis-cbor 0.5.0",
+ "oasis-cbor",
  "oasis-core-keymanager",
  "oasis-core-runtime",
  "oasis-runtime-sdk-macros",
@@ -2295,7 +2237,7 @@ dependencies = [
  "k256",
  "lru",
  "num-traits",
- "oasis-cbor 0.5.0",
+ "oasis-cbor",
  "oasis-contract-sdk-crypto",
  "oasis-contract-sdk-types",
  "oasis-runtime-sdk",
@@ -2324,7 +2266,7 @@ dependencies = [
  "hmac",
  "k256",
  "num 0.4.0",
- "oasis-cbor 0.5.0",
+ "oasis-cbor",
  "oasis-runtime-sdk",
  "once_cell",
  "primitive-types",
@@ -2342,7 +2284,7 @@ dependencies = [
 name = "oasis-runtime-sdk-macros"
 version = "0.1.0"
 dependencies = [
- "darling 0.14.2",
+ "darling",
  "difference",
  "proc-macro2 1.0.47",
  "quote 1.0.21",
@@ -2866,7 +2808,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4cf22754c49613d2b3b119f0e5d46e34a2c628a937e3024b8762de4e7d8c710b"
 dependencies = [
  "byteorder",
- "digest 0.10.5",
+ "digest 0.10.6",
  "num-bigint-dig",
  "num-integer",
  "num-iter",
@@ -3094,7 +3036,7 @@ checksum = "82e6b795fe2e3b1e845bafcb27aa35405c4d47cdfc92af5fc8d3002f76cebdc0"
 dependencies = [
  "cfg-if 1.0.0",
  "cpufeatures",
- "digest 0.10.5",
+ "digest 0.10.6",
 ]
 
 [[package]]
@@ -3115,7 +3057,7 @@ version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bdf0c33fae925bdc080598b84bc15c55e7b9a4a43b3c704da051f977469691c9"
 dependencies = [
- "digest 0.10.5",
+ "digest 0.10.6",
  "keccak",
 ]
 
@@ -3149,12 +3091,6 @@ dependencies = [
  "digest 0.9.0",
  "rand_core 0.6.4",
 ]
-
-[[package]]
-name = "sk-cbor"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e94879a793aba6e65d691f345cfd172c4cc924a78259d5f9612a2cbfb78847a"
 
 [[package]]
 name = "slab"
@@ -3481,7 +3417,7 @@ dependencies = [
 name = "test-runtime-benchmarking"
 version = "0.1.0"
 dependencies = [
- "oasis-cbor 0.5.0",
+ "oasis-cbor",
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-evm",
  "thiserror",
@@ -3491,7 +3427,7 @@ dependencies = [
 name = "test-runtime-simple-consensus"
 version = "0.1.0"
 dependencies = [
- "oasis-cbor 0.2.1",
+ "oasis-cbor",
  "oasis-runtime-sdk",
 ]
 
@@ -3499,7 +3435,7 @@ dependencies = [
 name = "test-runtime-simple-contracts"
 version = "0.1.0"
 dependencies = [
- "oasis-cbor 0.2.1",
+ "oasis-cbor",
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-contracts",
  "thiserror",
@@ -3509,7 +3445,7 @@ dependencies = [
 name = "test-runtime-simple-evm"
 version = "0.1.0"
 dependencies = [
- "oasis-cbor 0.2.1",
+ "oasis-cbor",
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-evm",
  "thiserror",
@@ -3521,7 +3457,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "futures",
- "oasis-cbor 0.5.0",
+ "oasis-cbor",
  "oasis-runtime-sdk",
  "thiserror",
 ]
@@ -3889,9 +3825,9 @@ checksum = "1c38c045535d93ec4f0b4defec448e4291638ee608530863b1e2ba115d4fff7f"
 
 [[package]]
 name = "wasm-encoder"
-version = "0.19.0"
+version = "0.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5816e88e8ea7335016aa62eb0485747f786136d505a9b3890f8c400211d9b5f"
+checksum = "9424cdab516a16d4ea03c8f4a01b14e7b2d04a129dcc2bcdde5bcc5f68f06c41"
 dependencies = [
  "leb128",
 ]
@@ -3927,28 +3863,28 @@ checksum = "b35c86d22e720a07d954ebbed772d01180501afe7d03d464f413bb5f8914a8d6"
 
 [[package]]
 name = "wasmparser"
-version = "0.93.0"
+version = "0.94.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5a4460aa3e271fa180b6a5d003e728f3963fb30e3ba0fa7c9634caa06049328"
+checksum = "cdac7e1d98d70913ae3b4923dd7419c8ea7bdfd4c44a240a0ba305d929b7f191"
 dependencies = [
  "indexmap",
 ]
 
 [[package]]
 name = "wasmprinter"
-version = "0.2.42"
+version = "0.2.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c9f096ba095329c6aa55b7e9cafa26c5b50e9ab7fc2415fd0b26cb80dca8f05"
+checksum = "9c093ddb9e6526cc59d93032b9be7a8d014cc997e8a9372f394c9624f820d209"
 dependencies = [
  "anyhow",
- "wasmparser 0.93.0",
+ "wasmparser 0.94.0",
 ]
 
 [[package]]
 name = "wast"
-version = "48.0.0"
+version = "49.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84825b5ac7164df8260c9e2b2e814075334edbe7ac426f2469b93a5eeac23cce"
+checksum = "05ef81fcd60d244cafffeafac3d17615fdb2fddda6aca18f34a8ae233353587c"
 dependencies = [
  "leb128",
  "memchr",
@@ -3958,9 +3894,9 @@ dependencies = [
 
 [[package]]
 name = "wat"
-version = "1.0.50"
+version = "1.0.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "129da4a03ec6d2a815f42c88f641824e789d5be0d86d2f90aa8a218c7068e0be"
+checksum = "4c347c4460ffb311e95aafccd8c29e4888f241b9e4b3bb0e0ccbd998de2c8c0d"
 dependencies = [
  "wast",
 ]
@@ -4076,9 +4012,9 @@ checksum = "f40009d85759725a34da6d89a94e63d7bdc50a862acf0dbc7c8e488f1edcb6f5"
 
 [[package]]
 name = "wyz"
-version = "0.5.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30b31594f29d27036c383b53b59ed3476874d518f0efb151b27a4c275141390e"
+checksum = "05f360fc0b24296329c78fda852a1e9ae82de9cf7b27dae4b7f62f118f77b9ed"
 dependencies = [
  "tap",
 ]
