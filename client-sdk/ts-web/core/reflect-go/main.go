@@ -265,6 +265,8 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/common/entity":           "Entity",
 	"github.com/oasisprotocol/oasis-core/go/common/node":             "Node",
 	"github.com/oasisprotocol/oasis-core/go/common/sgx":              "SGX",
+	"github.com/oasisprotocol/oasis-core/go/common/sgx/ias":          "SGXIas",
+	"github.com/oasisprotocol/oasis-core/go/common/sgx/pcs":          "SGXPcs",
 	"github.com/oasisprotocol/oasis-core/go/common/version":          "Version",
 	"github.com/oasisprotocol/oasis-core/go/consensus":               "Consensus",
 	"github.com/oasisprotocol/oasis-core/go/control":                 "Control",
