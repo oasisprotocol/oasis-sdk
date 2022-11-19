@@ -170,6 +170,10 @@ const methodDescriptorBeaconWatchEpochs = createMethodDescriptorServerStreaming<
     void,
     types.longnum
 >('Beacon', 'WatchEpochs');
+const methodDescriptorBeaconWatchLatestEpoch = createMethodDescriptorServerStreaming<
+    void,
+    types.longnum
+>('Beacon', 'WatchLatestEpoch');
 
 const methodDescriptorSchedulerConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
@@ -192,6 +196,10 @@ const methodDescriptorSchedulerWatchCommittees = createMethodDescriptorServerStr
     types.SchedulerCommittee
 >('Scheduler', 'WatchCommittees');
 
+const methodDescriptorRegistryConsensusParameters = createMethodDescriptorUnary<
+    types.longnum,
+    types.RegistryConsensusParameters
+>('Registry', 'ConsensusParameters');
 const methodDescriptorRegistryGetEntities = createMethodDescriptorUnary<
     types.longnum,
     types.Entity[]
@@ -214,14 +222,14 @@ const methodDescriptorRegistryGetNodeByConsensusAddress = createMethodDescriptor
 >('Registry', 'GetNodeByConsensusAddress');
 const methodDescriptorRegistryGetNodeStatus = createMethodDescriptorUnary<
     types.RegistryIDQuery,
-    types.Node
+    types.RegistryNodeStatus
 >('Registry', 'GetNodeStatus');
 const methodDescriptorRegistryGetNodes = createMethodDescriptorUnary<types.longnum, types.Node[]>(
     'Registry',
     'GetNodes',
 );
 const methodDescriptorRegistryGetRuntime = createMethodDescriptorUnary<
-    types.RegistryNamespaceQuery,
+    types.RegistryGetRuntimeQuery,
     types.RegistryRuntime
 >('Registry', 'GetRuntime');
 const methodDescriptorRegistryGetRuntimes = createMethodDescriptorUnary<
@@ -338,6 +346,14 @@ const methodDescriptorKeyManagerGetStatuses = createMethodDescriptorUnary<
     types.longnum,
     types.KeyManagerStatus[]
 >('KeyManager', 'GetStatuses');
+const methodDescriptorKeyManagerStateToGenesis = createMethodDescriptorUnary<
+    types.longnum,
+    types.KeyManagerGenesis
+>('KeyManager', 'StateToGenesis');
+const methodDescriptorKeyManagerWatchStatuses = createMethodDescriptorServerStreaming<
+    void,
+    types.KeyManagerStatus
+>('KeyManager', 'WatchStatuses');
 
 const methodDescriptorRootHashConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
@@ -450,10 +466,6 @@ const methodDescriptorStorageWorkerGetLastSyncedRound = createMethodDescriptorUn
     types.WorkerStorageGetLastSyncedRoundRequest,
     types.WorkerStorageGetLastSyncedRoundResponse
 >('StorageWorker', 'GetLastSyncedRound');
-const methodDescriptorStorageWorkerWaitForRound = createMethodDescriptorUnary<
-    types.WorkerStorageWaitForRoundRequest,
-    types.WorkerStorageWaitForRoundResponse
->('StorageWorker', 'WaitForRound');
 const methodDescriptorStorageWorkerPauseCheckpointer = createMethodDescriptorUnary<
     types.WorkerStoragePauseCheckpointerRequest,
     void
@@ -485,7 +497,7 @@ const methodDescriptorRuntimeClientGetTransactions = createMethodDescriptorUnary
 >('RuntimeClient', 'GetTransactions');
 const methodDescriptorRuntimeClientGetTransactionsWithResults = createMethodDescriptorUnary<
     types.RuntimeClientGetTransactionsRequest,
-    types.RuntimeClientTransactionWithResults
+    types.RuntimeClientTransactionWithResults[]
 >('RuntimeClient', 'GetTransactionsWithResults');
 const methodDescriptorRuntimeClientQuery = createMethodDescriptorUnary<
     types.RuntimeClientQueryRequest,
@@ -556,6 +568,10 @@ const methodDescriptorConsensusSubmitTx = createMethodDescriptorUnary<types.Sign
     'Consensus',
     'SubmitTx',
 );
+const methodDescriptorConsensusSubmitTxWithProof = createMethodDescriptorUnary<
+    types.SignatureSigned,
+    types.ConsensusProof
+>('Consensus', 'SubmitTxWithProof');
 const methodDescriptorConsensusWatchBlocks = createMethodDescriptorServerStreaming<
     void,
     types.ConsensusBlock
@@ -565,6 +581,10 @@ const methodDescriptorConsensusLightGetLightBlock = createMethodDescriptorUnary<
     types.longnum,
     types.ConsensusLightBlock
 >('ConsensusLight', 'GetLightBlock');
+const methodDescriptorConsensusLightGetLightBlockForState = createMethodDescriptorUnary<
+    types.longnum,
+    types.ConsensusLightBlock
+>('ConsensusLight', 'GetLightBlockForState');
 const methodDescriptorConsensusLightGetParameters = createMethodDescriptorUnary<
     types.longnum,
     types.ConsensusLightParameters
@@ -577,6 +597,7 @@ const methodDescriptorConsensusLightSubmitTxNoWait = createMethodDescriptorUnary
     types.SignatureSigned,
     void
 >('ConsensusLight', 'SubmitTxNoWait');
+
 const methodDescriptorConsensusLightStateSyncGet = createMethodDescriptorUnary<
     types.StorageGetRequest,
     types.StorageProofResponse
@@ -606,7 +627,7 @@ const methodDescriptorNodeControllerIsSynced = createMethodDescriptorUnary<void,
     'NodeController',
     'IsSynced',
 );
-const methodDescriptorNodeControllerRequestShutdown = createMethodDescriptorUnary<void, void>(
+const methodDescriptorNodeControllerRequestShutdown = createMethodDescriptorUnary<boolean, void>(
     'NodeController',
     'RequestShutdown',
 );
@@ -712,8 +733,20 @@ export class NodeInternal extends GRPCWrapper {
      *
      * Upon subscription the current epoch is sent immediately.
      */
-    beaconWatchEpochs(arg: void) {
-        return this.callServerStreaming(methodDescriptorBeaconWatchEpochs, arg);
+    beaconWatchEpochs() {
+        return this.callServerStreaming(methodDescriptorBeaconWatchEpochs, undefined);
+    }
+
+    /**
+     * WatchLatestEpoch returns a channel that produces a stream of
+     * messages on epoch transitions. If an epoch transition happens
+     * before the previous epoch is read from the channel, the old
+     * epochs are overwritten.
+     *
+     * Upon subscription the current epoch is sent immediately.
+     */
+    beaconWatchLatestEpoch() {
+        return this.callServerStreaming(methodDescriptorBeaconWatchLatestEpoch, undefined);
     }
 
     /**
@@ -758,6 +791,13 @@ export class NodeInternal extends GRPCWrapper {
      */
     schedulerWatchCommittees() {
         return this.callServerStreaming(methodDescriptorSchedulerWatchCommittees, undefined);
+    }
+
+    /**
+     * ConsensusParameters returns the registry consensus parameters.
+     */
+    registryConsensusParameters(height: types.longnum) {
+        return this.callUnary(methodDescriptorRegistryConsensusParameters, height);
     }
 
     /**
@@ -814,7 +854,7 @@ export class NodeInternal extends GRPCWrapper {
     /**
      * GetRuntime gets a runtime by ID.
      */
-    registryGetRuntime(query: types.RegistryNamespaceQuery) {
+    registryGetRuntime(query: types.RegistryGetRuntimeQuery) {
         return this.callUnary(methodDescriptorRegistryGetRuntime, query);
     }
 
@@ -1031,36 +1071,104 @@ export class NodeInternal extends GRPCWrapper {
         return this.callUnary(methodDescriptorKeyManagerGetStatuses, height);
     }
 
+    /**
+     * StateToGenesis returns the genesis state at specified block height.
+     */
+    keyManagerStateToGenesis(height: types.longnum) {
+        return this.callUnary(methodDescriptorKeyManagerStateToGenesis, height);
+    }
+
+    /**
+     * WatchStatuses returns a channel that produces a stream of messages
+     * containing the key manager statuses as it changes over time.
+     *
+     * Upon subscription the current status is sent immediately.
+     */
+    keyManagerWatchStatuses() {
+        return this.callServerStreaming(methodDescriptorKeyManagerWatchStatuses, undefined);
+    }
+
+    /**
+     * ConsensusParameters returns the roothash consensus parameters.
+     */
     rootHashConsensusParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorRootHashConsensusParameters, height);
     }
+
+    /**
+     * GetEvents returns the events at specified block height.
+     */
     rootHashGetEvents(height: types.longnum) {
         return this.callUnary(methodDescriptorRootHashGetEvents, height);
     }
+
+    /**
+     * GetGenesisBlock returns the genesis block.
+     */
     rootHashGetGenesisBlock(request: types.RootHashRuntimeRequest) {
         return this.callUnary(methodDescriptorRootHashGetGenesisBlock, request);
     }
+
+    /**
+     * GetIncomingMessageQueue returns the given runtime's queued incoming messages.
+     */
     rootHashGetIncomingMessageQueue(request: types.RootHashInMessageQueueRequest) {
         return this.callUnary(methodDescriptorRootHashGetIncomingMessageQueue, request);
     }
+
+    /**
+     * GetIncomingMessageQueueMeta returns the given runtime's incoming message queue metadata.
+     */
     rootHashGetIncomingMessageQueueMeta(request: types.RootHashRuntimeRequest) {
         return this.callUnary(methodDescriptorRootHashGetIncomingMessageQueueMeta, request);
     }
+
+    /**
+     * GetLastRoundResults returns the given runtime's last normal round results.
+     */
     rootHashGetLastRoundResults(request: types.RootHashRuntimeRequest) {
         return this.callUnary(methodDescriptorRootHashGetLastRoundResults, request);
     }
+
+    /**
+     * GetLatestBlock returns the latest block.
+     *
+     * The metadata contained in this block can be further used to get
+     * the latest state from the storage backend.
+     */
     rootHashGetLatestBlock(request: types.RootHashRuntimeRequest) {
         return this.callUnary(methodDescriptorRootHashGetLatestBlock, request);
     }
+
+    /**
+     * GetRuntimeState returns the given runtime's state.
+     */
     rootHashGetRuntimeState(request: types.RootHashRuntimeRequest) {
         return this.callUnary(methodDescriptorRootHashGetRuntimeState, request);
     }
+
+    /**
+     * StateToGenesis returns the genesis state at specified block height.
+     */
     rootHashStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorRootHashStateToGenesis, height);
     }
+
+    /**
+     * WatchBlocks returns a channel that produces a stream of
+     * annotated blocks.
+     *
+     * The latest block if any will get pushed to the stream immediately.
+     * Subsequent blocks will be pushed into the stream as they are
+     * confirmed.
+     */
     rootHashWatchBlocks(runtimeID: Uint8Array) {
         return this.callServerStreaming(methodDescriptorRootHashWatchBlocks, runtimeID);
     }
+
+    /**
+     * WatchEvents returns a stream of protocol events.
+     */
     rootHashWatchEvents(runtimeID: Uint8Array) {
         return this.callServerStreaming(methodDescriptorRootHashWatchEvents, runtimeID);
     }
@@ -1096,8 +1204,8 @@ export class NodeInternal extends GRPCWrapper {
     /**
      * Proposal looks up a specific proposal.
      */
-    governanceProposal(request: types.GovernanceProposalQuery) {
-        return this.callUnary(methodDescriptorGovernanceProposal, request);
+    governanceProposal(query: types.GovernanceProposalQuery) {
+        return this.callUnary(methodDescriptorGovernanceProposal, query);
     }
 
     /**
@@ -1117,8 +1225,8 @@ export class NodeInternal extends GRPCWrapper {
     /**
      * Votes looks up votes for a specific proposal.
      */
-    governanceVotes(request: types.GovernanceProposalQuery) {
-        return this.callUnary(methodDescriptorGovernanceVotes, request);
+    governanceVotes(query: types.GovernanceProposalQuery) {
+        return this.callUnary(methodDescriptorGovernanceVotes, query);
     }
 
     /**
@@ -1185,15 +1293,6 @@ export class NodeInternal extends GRPCWrapper {
      */
     storageWorkerPauseCheckpointer(request: types.WorkerStoragePauseCheckpointerRequest) {
         return this.callUnary(methodDescriptorStorageWorkerPauseCheckpointer, request);
-    }
-
-    /**
-     * WaitForRound waits until the storage worker syncs the given round or root.
-     * It returns the round synced to; this will typically equal the given root's
-     * round, but may be higher.
-     */
-    storageWorkerWaitForRound(request: types.WorkerStorageWaitForRoundRequest) {
-        return this.callUnary(methodDescriptorStorageWorkerWaitForRound, request);
     }
 
     /**
@@ -1380,6 +1479,14 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * SubmitTxWithProof submits a signed consensus transaction, waits for the transaction to be
+     * included in a block and returns a proof of inclusion.
+     */
+    consensusSubmitTxWithProof(tx: types.SignatureSigned) {
+        return this.callUnary(methodDescriptorConsensusSubmitTxWithProof, tx);
+    }
+
+    /**
      * WatchBlocks returns a channel that produces a stream of consensus
      * blocks as they are being finalized.
      */
@@ -1393,6 +1500,17 @@ export class NodeInternal extends GRPCWrapper {
      */
     consensusLightGetLightBlock(height: types.longnum) {
         return this.callUnary(methodDescriptorConsensusLightGetLightBlock, height);
+    }
+
+    /**
+     * GetLightBlockForState returns a light block for the state as of executing the consensus layer
+     * block at the specified height. Note that the height of the returned block may differ
+     * depending on consensus layer implementation details.
+     *
+     * In case light block for the given height is not yet available, it returns ErrVersionNotFound.
+     */
+    consensusLightGetLightBlockForState(height: types.longnum) {
+        return this.callUnary(methodDescriptorConsensusLightGetLightBlockForState, height);
     }
 
     /**
@@ -1474,8 +1592,8 @@ export class NodeInternal extends GRPCWrapper {
      * If the wait argument is true then the method will also wait for the
      * shutdown to complete.
      */
-    nodeControllerRequestShudown() {
-        return this.callUnary(methodDescriptorNodeControllerRequestShutdown, undefined);
+    nodeControllerRequestShutdown(wait: boolean) {
+        return this.callUnary(methodDescriptorNodeControllerRequestShutdown, wait);
     }
 
     /**
