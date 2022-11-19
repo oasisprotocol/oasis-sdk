@@ -482,12 +482,17 @@ jobs:
 
       - name: Generate
         working-directory: client-sdk/ts-web/core/reflect-go
-        run: go run . >/tmp/reflect-out.txt
+        run: |
+          go run . >/tmp/reflect-out.ts
+          cd ..
+          npx prettier --config .prettierrc.js --write /tmp/reflect-out.ts
 
       - name: Diff
         working-directory: client-sdk/ts-web/core
         # This is only advisory. Don't fail if there are differences.
-        run: diff -u --color=always /tmp/reflect-out.txt src/types.ts || true
+        run: |
+          cat src/types.ts src/client.ts >/tmp/current.ts
+          diff -u --color=always /tmp/current.ts /tmp/reflect-out.ts || true
 
   benchmark-rt:
     # NOTE: This name appears in GitHub's Checks API.
