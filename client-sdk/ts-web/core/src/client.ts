@@ -35,7 +35,6 @@ function createMethodDescriptorServerStreaming<REQ, RESP>(serviceName: string, m
     );
 }
 
-// beacon
 const methodDescriptorBeaconConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
     types.BeaconConsensusParameters
@@ -73,7 +72,6 @@ const methodDescriptorBeaconWatchEpochs = createMethodDescriptorServerStreaming<
     types.longnum
 >('Beacon', 'WatchEpochs');
 
-// scheduler
 const methodDescriptorSchedulerConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
     types.SchedulerConsensusParameters
@@ -95,7 +93,6 @@ const methodDescriptorSchedulerWatchCommittees = createMethodDescriptorServerStr
     types.SchedulerCommittee
 >('Scheduler', 'WatchCommittees');
 
-// registry
 const methodDescriptorRegistryGetEntities = createMethodDescriptorUnary<
     types.longnum,
     types.Entity[]
@@ -153,7 +150,6 @@ const methodDescriptorRegistryWatchRuntimes = createMethodDescriptorServerStream
     types.RegistryRuntime
 >('Registry', 'WatchRuntimes');
 
-// staking
 const methodDescriptorStakingAccount = createMethodDescriptorUnary<
     types.StakingOwnerQuery,
     types.StakingAccount
@@ -235,7 +231,6 @@ const methodDescriptorStakingWatchEvents = createMethodDescriptorServerStreaming
     types.StakingEvent
 >('Staking', 'WatchEvents');
 
-// keymanager
 const methodDescriptorKeyManagerGetStatus = createMethodDescriptorUnary<
     types.RegistryNamespaceQuery,
     types.KeyManagerStatus
@@ -245,7 +240,6 @@ const methodDescriptorKeyManagerGetStatuses = createMethodDescriptorUnary<
     types.KeyManagerStatus[]
 >('KeyManager', 'GetStatuses');
 
-// roothash
 const methodDescriptorRootHashConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
     types.RootHashConsensusParameters
@@ -291,7 +285,6 @@ const methodDescriptorRootHashWatchEvents = createMethodDescriptorServerStreamin
     types.RootHashEvent
 >('RootHash', 'WatchEvents');
 
-// governance
 const methodDescriptorGovernanceActiveProposals = createMethodDescriptorUnary<
     types.longnum,
     types.GovernanceProposal[]
@@ -329,7 +322,6 @@ const methodDescriptorGovernanceWatchEvents = createMethodDescriptorServerStream
     types.GovernanceEvent
 >('Governance', 'WatchEvents');
 
-// storage
 const methodDescriptorStorageGetCheckpointChunk = createMethodDescriptorServerStreaming<
     types.StorageChunkMetadata,
     Uint8Array
@@ -355,7 +347,6 @@ const methodDescriptorStorageSyncIterate = createMethodDescriptorUnary<
     types.StorageProofResponse
 >('Storage', 'SyncIterate');
 
-// worker/storage
 const methodDescriptorStorageWorkerGetLastSyncedRound = createMethodDescriptorUnary<
     types.WorkerStorageGetLastSyncedRoundRequest,
     types.WorkerStorageGetLastSyncedRoundResponse
@@ -369,7 +360,6 @@ const methodDescriptorStorageWorkerPauseCheckpointer = createMethodDescriptorUna
     void
 >('StorageWorker', 'PauseCheckpointer');
 
-// runtime/client
 const methodDescriptorRuntimeClientCheckTx = createMethodDescriptorUnary<
     types.RuntimeClientCheckTxRequest,
     void
@@ -419,7 +409,6 @@ const methodDescriptorRuntimeClientWatchBlocks = createMethodDescriptorServerStr
     types.RootHashAnnotatedBlock
 >('RuntimeClient', 'WatchBlocks');
 
-// consensus
 const methodDescriptorConsensusEstimateGas = createMethodDescriptorUnary<
     types.ConsensusEstimateGasRequest,
     types.longnum
@@ -502,7 +491,6 @@ const methodDescriptorConsensusLightStateSyncIterate = createMethodDescriptorUna
     types.StorageProofResponse
 >('ConsensusLight', 'StateSyncIterate');
 
-// control
 const methodDescriptorNodeControllerCancelUpgrade = createMethodDescriptorUnary<
     types.UpgradeDescriptor,
     void
@@ -649,8 +637,6 @@ export class NodeInternal extends GRPCWrapper {
         super(base);
     }
 
-    // beacon
-
     /**
      * ConsensusParameters returns the beacon consensus parameters.
      */
@@ -730,8 +716,6 @@ export class NodeInternal extends GRPCWrapper {
         return this.callServerStreaming(methodDescriptorBeaconWatchEpochs, arg);
     }
 
-    // scheduler
-
     /**
      * ConsensusParameters returns the scheduler consensus parameters.
      */
@@ -775,8 +759,6 @@ export class NodeInternal extends GRPCWrapper {
     schedulerWatchCommittees() {
         return this.callServerStreaming(methodDescriptorSchedulerWatchCommittees, undefined);
     }
-
-    // registry
 
     /**
      * GetEntities gets a list of all registered entities.
@@ -886,8 +868,6 @@ export class NodeInternal extends GRPCWrapper {
     registryWatchRuntimes() {
         return this.callServerStreaming(methodDescriptorRegistryWatchRuntimes, undefined);
     }
-
-    // staking
 
     /**
      * Account returns the account descriptor for the given account.
@@ -1037,8 +1017,6 @@ export class NodeInternal extends GRPCWrapper {
         return this.callServerStreaming(methodDescriptorStakingWatchEvents, undefined);
     }
 
-    // keymanager
-
     /**
      * GetStatus returns a key manager status by key manager ID.
      */
@@ -1053,7 +1031,6 @@ export class NodeInternal extends GRPCWrapper {
         return this.callUnary(methodDescriptorKeyManagerGetStatuses, height);
     }
 
-    // roothash
     rootHashConsensusParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorRootHashConsensusParameters, height);
     }
@@ -1087,8 +1064,6 @@ export class NodeInternal extends GRPCWrapper {
     rootHashWatchEvents(runtimeID: Uint8Array) {
         return this.callServerStreaming(methodDescriptorRootHashWatchEvents, runtimeID);
     }
-
-    // governance
 
     /**
      * ActiveProposals returns a list of all proposals that have not yet closed.
@@ -1153,8 +1128,6 @@ export class NodeInternal extends GRPCWrapper {
         return this.callServerStreaming(methodDescriptorGovernanceWatchEvents, undefined);
     }
 
-    // storage
-
     /**
      * GetCheckpointChunk fetches a specific chunk from an existing chekpoint.
      */
@@ -1200,8 +1173,6 @@ export class NodeInternal extends GRPCWrapper {
         return this.callUnary(methodDescriptorStorageSyncIterate, request);
     }
 
-    // worker/storage
-
     /**
      * GetLastSyncedRound retrieves the last synced round for the storage worker.
      */
@@ -1224,8 +1195,6 @@ export class NodeInternal extends GRPCWrapper {
     storageWorkerWaitForRound(request: types.WorkerStorageWaitForRoundRequest) {
         return this.callUnary(methodDescriptorStorageWorkerWaitForRound, request);
     }
-
-    // runtime/client
 
     /**
      * CheckTx asks the local runtime to check the specified transaction.
@@ -1317,8 +1286,6 @@ export class NodeInternal extends GRPCWrapper {
     runtimeClientWatchBlocks(runtimeID: Uint8Array) {
         return this.callServerStreaming(methodDescriptorRuntimeClientWatchBlocks, runtimeID);
     }
-
-    // consensus
 
     /**
      * EstimateGas calculates the amount of gas required to execute the given transaction.
@@ -1472,8 +1439,6 @@ export class NodeInternal extends GRPCWrapper {
     consensusLightStateSyncIterate(request: types.StorageIterateRequest) {
         return this.callUnary(methodDescriptorConsensusLightStateSyncIterate, request);
     }
-
-    // control
 
     /**
      * CancelUpgrade cancels the specific pending upgrade, unless it is already in progress.
