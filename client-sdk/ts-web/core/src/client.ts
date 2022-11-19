@@ -36,74 +36,78 @@ function createMethodDescriptorServerStreaming<REQ, RESP>(serviceName: string, m
 }
 
 // beacon
+const methodDescriptorBeaconConsensusParameters = createMethodDescriptorUnary<
+    types.longnum,
+    types.BeaconConsensusParameters
+>('Beacon', 'ConsensusParameters');
 const methodDescriptorBeaconGetBaseEpoch = createMethodDescriptorUnary<void, types.longnum>(
     'Beacon',
     'GetBaseEpoch',
+);
+const methodDescriptorBeaconGetBeacon = createMethodDescriptorUnary<types.longnum, Uint8Array>(
+    'Beacon',
+    'GetBeacon',
 );
 const methodDescriptorBeaconGetEpoch = createMethodDescriptorUnary<types.longnum, types.longnum>(
     'Beacon',
     'GetEpoch',
 );
-const methodDescriptorBeaconGetFutureEpoch = createMethodDescriptorUnary<
-    types.longnum,
-    types.BeaconEpochTimeState
->('Beacon', 'GetFutureEpoch');
-const methodDescriptorBeaconWaitEpoch = createMethodDescriptorUnary<types.longnum, void>(
-    'Beacon',
-    'WaitEpoch',
-);
 const methodDescriptorBeaconGetEpochBlock = createMethodDescriptorUnary<
     types.longnum,
     types.longnum
 >('Beacon', 'GetEpochBlock');
-const methodDescriptorBeaconGetBeacon = createMethodDescriptorUnary<types.longnum, Uint8Array>(
-    'Beacon',
-    'GetBeacon',
-);
+const methodDescriptorBeaconGetFutureEpoch = createMethodDescriptorUnary<
+    types.longnum,
+    types.BeaconEpochTimeState
+>('Beacon', 'GetFutureEpoch');
 const methodDescriptorBeaconStateToGenesis = createMethodDescriptorUnary<
     types.longnum,
     types.BeaconGenesis
 >('Beacon', 'StateToGenesis');
-const methodDescriptorBeaconConsensusParameters = createMethodDescriptorUnary<
-    types.longnum,
-    types.BeaconConsensusParameters
->('Beacon', 'ConsensusParameters');
+const methodDescriptorBeaconWaitEpoch = createMethodDescriptorUnary<types.longnum, void>(
+    'Beacon',
+    'WaitEpoch',
+);
 const methodDescriptorBeaconWatchEpochs = createMethodDescriptorServerStreaming<
     void,
     types.longnum
 >('Beacon', 'WatchEpochs');
 
 // scheduler
-const methodDescriptorSchedulerGetValidators = createMethodDescriptorUnary<
-    types.longnum,
-    types.SchedulerValidator[]
->('Scheduler', 'GetValidators');
-const methodDescriptorSchedulerGetCommittees = createMethodDescriptorUnary<
-    types.SchedulerGetCommitteesRequest,
-    types.SchedulerCommittee[]
->('Scheduler', 'GetCommittees');
-const methodDescriptorSchedulerStateToGenesis = createMethodDescriptorUnary<
-    types.longnum,
-    types.SchedulerGenesis
->('Scheduler', 'StateToGenesis');
 const methodDescriptorSchedulerConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
     types.SchedulerConsensusParameters
 >('Scheduler', 'ConsensusParameters');
+const methodDescriptorSchedulerGetCommittees = createMethodDescriptorUnary<
+    types.SchedulerGetCommitteesRequest,
+    types.SchedulerCommittee[]
+>('Scheduler', 'GetCommittees');
+const methodDescriptorSchedulerGetValidators = createMethodDescriptorUnary<
+    types.longnum,
+    types.SchedulerValidator[]
+>('Scheduler', 'GetValidators');
+const methodDescriptorSchedulerStateToGenesis = createMethodDescriptorUnary<
+    types.longnum,
+    types.SchedulerGenesis
+>('Scheduler', 'StateToGenesis');
 const methodDescriptorSchedulerWatchCommittees = createMethodDescriptorServerStreaming<
     void,
     types.SchedulerCommittee
 >('Scheduler', 'WatchCommittees');
 
 // registry
-const methodDescriptorRegistryGetEntity = createMethodDescriptorUnary<
-    types.RegistryIDQuery,
-    types.Entity
->('Registry', 'GetEntity');
 const methodDescriptorRegistryGetEntities = createMethodDescriptorUnary<
     types.longnum,
     types.Entity[]
 >('Registry', 'GetEntities');
+const methodDescriptorRegistryGetEntity = createMethodDescriptorUnary<
+    types.RegistryIDQuery,
+    types.Entity
+>('Registry', 'GetEntity');
+const methodDescriptorRegistryGetEvents = createMethodDescriptorUnary<
+    types.longnum,
+    types.RegistryEvent[]
+>('Registry', 'GetEvents');
 const methodDescriptorRegistryGetNode = createMethodDescriptorUnary<
     types.RegistryIDQuery,
     types.Node
@@ -132,28 +136,88 @@ const methodDescriptorRegistryStateToGenesis = createMethodDescriptorUnary<
     types.longnum,
     types.RegistryGenesis
 >('Registry', 'StateToGenesis');
-const methodDescriptorRegistryGetEvents = createMethodDescriptorUnary<
-    types.longnum,
-    types.RegistryEvent[]
->('Registry', 'GetEvents');
 const methodDescriptorRegistryWatchEntities = createMethodDescriptorServerStreaming<
     void,
     types.RegistryEntityEvent
 >('Registry', 'WatchEntities');
-const methodDescriptorRegistryWatchNodes = createMethodDescriptorServerStreaming<
-    void,
-    types.RegistryNodeEvent
->('Registry', 'WatchNodes');
 const methodDescriptorRegistryWatchNodeList = createMethodDescriptorServerStreaming<
     void,
     types.RegistryNodeList
 >('Registry', 'WatchNodeList');
+const methodDescriptorRegistryWatchNodes = createMethodDescriptorServerStreaming<
+    void,
+    types.RegistryNodeEvent
+>('Registry', 'WatchNodes');
 const methodDescriptorRegistryWatchRuntimes = createMethodDescriptorServerStreaming<
     void,
     types.RegistryRuntime
 >('Registry', 'WatchRuntimes');
 
 // staking
+const methodDescriptorStakingAccount = createMethodDescriptorUnary<
+    types.StakingOwnerQuery,
+    types.StakingAccount
+>('Staking', 'Account');
+const methodDescriptorStakingAddresses = createMethodDescriptorUnary<types.longnum, Uint8Array[]>(
+    'Staking',
+    'Addresses',
+);
+const methodDescriptorStakingAllowance = createMethodDescriptorUnary<
+    types.StakingAllowanceQuery,
+    Uint8Array
+>('Staking', 'Allowance');
+const methodDescriptorStakingCommonPool = createMethodDescriptorUnary<types.longnum, Uint8Array>(
+    'Staking',
+    'CommonPool',
+);
+const methodDescriptorStakingConsensusParameters = createMethodDescriptorUnary<
+    types.longnum,
+    types.StakingConsensusParameters
+>('Staking', 'ConsensusParameters');
+const methodDescriptorStakingDebondingDelegationInfosFor = createMethodDescriptorUnary<
+    types.StakingOwnerQuery,
+    Map<Uint8Array, types.StakingDebondingDelegationInfo[]>
+>('Staking', 'DebondingDelegationInfosFor');
+const methodDescriptorStakingDebondingDelegationsFor = createMethodDescriptorUnary<
+    types.StakingOwnerQuery,
+    Map<Uint8Array, types.StakingDebondingDelegation[]>
+>('Staking', 'DebondingDelegationsFor');
+const methodDescriptorStakingDebondingDelegationsTo = createMethodDescriptorUnary<
+    types.StakingOwnerQuery,
+    Map<Uint8Array, types.StakingDebondingDelegation[]>
+>('Staking', 'DebondingDelegationsTo');
+const methodDescriptorStakingDelegationInfosFor = createMethodDescriptorUnary<
+    types.StakingOwnerQuery,
+    Map<Uint8Array, types.StakingDelegationInfo>
+>('Staking', 'DelegationInfosFor');
+const methodDescriptorStakingDelegationsFor = createMethodDescriptorUnary<
+    types.StakingOwnerQuery,
+    Map<Uint8Array, types.StakingDelegation>
+>('Staking', 'DelegationsFor');
+const methodDescriptorStakingDelegationsTo = createMethodDescriptorUnary<
+    types.StakingOwnerQuery,
+    Map<Uint8Array, types.StakingDelegation>
+>('Staking', 'DelegationsTo');
+const methodDescriptorStakingGetEvents = createMethodDescriptorUnary<
+    types.longnum,
+    types.StakingEvent[]
+>('Staking', 'GetEvents');
+const methodDescriptorStakingGovernanceDeposits = createMethodDescriptorUnary<
+    types.longnum,
+    Uint8Array
+>('Staking', 'GovernanceDeposits');
+const methodDescriptorStakingLastBlockFees = createMethodDescriptorUnary<types.longnum, Uint8Array>(
+    'Staking',
+    'LastBlockFees',
+);
+const methodDescriptorStakingStateToGenesis = createMethodDescriptorUnary<
+    types.longnum,
+    types.StakingGenesis
+>('Staking', 'StateToGenesis');
+const methodDescriptorStakingThreshold = createMethodDescriptorUnary<
+    types.StakingThresholdQuery,
+    Uint8Array
+>('Staking', 'Threshold');
 const methodDescriptorStakingTokenSymbol = createMethodDescriptorUnary<void, string>(
     'Staking',
     'TokenSymbol',
@@ -166,70 +230,6 @@ const methodDescriptorStakingTotalSupply = createMethodDescriptorUnary<types.lon
     'Staking',
     'TotalSupply',
 );
-const methodDescriptorStakingCommonPool = createMethodDescriptorUnary<types.longnum, Uint8Array>(
-    'Staking',
-    'CommonPool',
-);
-const methodDescriptorStakingLastBlockFees = createMethodDescriptorUnary<types.longnum, Uint8Array>(
-    'Staking',
-    'LastBlockFees',
-);
-const methodDescriptorStakingGovernanceDeposits = createMethodDescriptorUnary<
-    types.longnum,
-    Uint8Array
->('Staking', 'GovernanceDeposits');
-const methodDescriptorStakingThreshold = createMethodDescriptorUnary<
-    types.StakingThresholdQuery,
-    Uint8Array
->('Staking', 'Threshold');
-const methodDescriptorStakingAddresses = createMethodDescriptorUnary<types.longnum, Uint8Array[]>(
-    'Staking',
-    'Addresses',
-);
-const methodDescriptorStakingAccount = createMethodDescriptorUnary<
-    types.StakingOwnerQuery,
-    types.StakingAccount
->('Staking', 'Account');
-const methodDescriptorStakingDelegationsFor = createMethodDescriptorUnary<
-    types.StakingOwnerQuery,
-    Map<Uint8Array, types.StakingDelegation>
->('Staking', 'DelegationsFor');
-const methodDescriptorStakingDelegationInfosFor = createMethodDescriptorUnary<
-    types.StakingOwnerQuery,
-    Map<Uint8Array, types.StakingDelegationInfo>
->('Staking', 'DelegationInfosFor');
-const methodDescriptorStakingDelegationsTo = createMethodDescriptorUnary<
-    types.StakingOwnerQuery,
-    Map<Uint8Array, types.StakingDelegation>
->('Staking', 'DelegationsTo');
-const methodDescriptorStakingDebondingDelegationsFor = createMethodDescriptorUnary<
-    types.StakingOwnerQuery,
-    Map<Uint8Array, types.StakingDebondingDelegation[]>
->('Staking', 'DebondingDelegationsFor');
-const methodDescriptorStakingDebondingDelegationInfosFor = createMethodDescriptorUnary<
-    types.StakingOwnerQuery,
-    Map<Uint8Array, types.StakingDebondingDelegationInfo[]>
->('Staking', 'DebondingDelegationInfosFor');
-const methodDescriptorStakingDebondingDelegationsTo = createMethodDescriptorUnary<
-    types.StakingOwnerQuery,
-    Map<Uint8Array, types.StakingDebondingDelegation[]>
->('Staking', 'DebondingDelegationsTo');
-const methodDescriptorStakingAllowance = createMethodDescriptorUnary<
-    types.StakingAllowanceQuery,
-    Uint8Array
->('Staking', 'Allowance');
-const methodDescriptorStakingStateToGenesis = createMethodDescriptorUnary<
-    types.longnum,
-    types.StakingGenesis
->('Staking', 'StateToGenesis');
-const methodDescriptorStakingConsensusParameters = createMethodDescriptorUnary<
-    types.longnum,
-    types.StakingConsensusParameters
->('Staking', 'ConsensusParameters');
-const methodDescriptorStakingGetEvents = createMethodDescriptorUnary<
-    types.longnum,
-    types.StakingEvent[]
->('Staking', 'GetEvents');
 const methodDescriptorStakingWatchEvents = createMethodDescriptorServerStreaming<
     void,
     types.StakingEvent
@@ -246,34 +246,6 @@ const methodDescriptorKeyManagerGetStatuses = createMethodDescriptorUnary<
 >('KeyManager', 'GetStatuses');
 
 // roothash
-const methodDescriptorRootHashGetGenesisBlock = createMethodDescriptorUnary<
-    types.RootHashRuntimeRequest,
-    types.RootHashBlock
->('RootHash', 'GetGenesisBlock');
-const methodDescriptorRootHashGetLatestBlock = createMethodDescriptorUnary<
-    types.RootHashRuntimeRequest,
-    types.RootHashBlock
->('RootHash', 'GetLatestBlock');
-const methodDescriptorRootHashGetRuntimeState = createMethodDescriptorUnary<
-    types.RootHashRuntimeRequest,
-    types.RootHashRuntimeState
->('RootHash', 'GetRuntimeState');
-const methodDescriptorRootHashGetLastRoundResults = createMethodDescriptorUnary<
-    types.RootHashRuntimeRequest,
-    types.RootHashRoundResults
->('RootHash', 'GetLastRoundResults');
-const methodDescriptorRootHashGetIncomingMessageQueueMeta = createMethodDescriptorUnary<
-    types.RootHashRuntimeRequest,
-    types.RootHashIncomingMessageQueueMeta
->('RootHash', 'GetIncomingMessageQueueMeta');
-const methodDescriptorRootHashGetIncomingMessageQueue = createMethodDescriptorUnary<
-    types.RootHashInMessageQueueRequest,
-    types.RootHashIncomingMessage[]
->('RootHash', 'GetIncomingMessageQueue');
-const methodDescriptorRootHashStateToGenesis = createMethodDescriptorUnary<
-    types.longnum,
-    types.RootHashGenesis
->('RootHash', 'StateToGenesis');
 const methodDescriptorRootHashConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
     types.RootHashConsensusParameters
@@ -282,6 +254,34 @@ const methodDescriptorRootHashGetEvents = createMethodDescriptorUnary<
     types.longnum,
     types.RootHashEvent[]
 >('RootHash', 'GetEvents');
+const methodDescriptorRootHashGetGenesisBlock = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashBlock
+>('RootHash', 'GetGenesisBlock');
+const methodDescriptorRootHashGetIncomingMessageQueue = createMethodDescriptorUnary<
+    types.RootHashInMessageQueueRequest,
+    types.RootHashIncomingMessage[]
+>('RootHash', 'GetIncomingMessageQueue');
+const methodDescriptorRootHashGetIncomingMessageQueueMeta = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashIncomingMessageQueueMeta
+>('RootHash', 'GetIncomingMessageQueueMeta');
+const methodDescriptorRootHashGetLastRoundResults = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashRoundResults
+>('RootHash', 'GetLastRoundResults');
+const methodDescriptorRootHashGetLatestBlock = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashBlock
+>('RootHash', 'GetLatestBlock');
+const methodDescriptorRootHashGetRuntimeState = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    types.RootHashRuntimeState
+>('RootHash', 'GetRuntimeState');
+const methodDescriptorRootHashStateToGenesis = createMethodDescriptorUnary<
+    types.longnum,
+    types.RootHashGenesis
+>('RootHash', 'StateToGenesis');
 const methodDescriptorRootHashWatchBlocks = createMethodDescriptorServerStreaming<
     Uint8Array,
     types.RootHashAnnotatedBlock
@@ -296,26 +296,6 @@ const methodDescriptorGovernanceActiveProposals = createMethodDescriptorUnary<
     types.longnum,
     types.GovernanceProposal[]
 >('Governance', 'ActiveProposals');
-const methodDescriptorGovernanceProposals = createMethodDescriptorUnary<
-    types.longnum,
-    types.GovernanceProposal[]
->('Governance', 'Proposals');
-const methodDescriptorGovernanceProposal = createMethodDescriptorUnary<
-    types.GovernanceProposalQuery,
-    types.GovernanceProposal
->('Governance', 'Proposal');
-const methodDescriptorGovernanceVotes = createMethodDescriptorUnary<
-    types.GovernanceProposalQuery,
-    types.GovernanceVoteEntry[]
->('Governance', 'Votes');
-const methodDescriptorGovernancePendingUpgrades = createMethodDescriptorUnary<
-    types.longnum,
-    types.UpgradeDescriptor[]
->('Governance', 'PendingUpgrades');
-const methodDescriptorGovernanceStateToGenesis = createMethodDescriptorUnary<
-    types.longnum,
-    types.GovernanceGenesis
->('Governance', 'StateToGenesis');
 const methodDescriptorGovernanceConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
     types.GovernanceConsensusParameters
@@ -324,12 +304,44 @@ const methodDescriptorGovernanceGetEvents = createMethodDescriptorUnary<
     types.longnum,
     types.GovernanceEvent[]
 >('Governance', 'GetEvents');
+const methodDescriptorGovernancePendingUpgrades = createMethodDescriptorUnary<
+    types.longnum,
+    types.UpgradeDescriptor[]
+>('Governance', 'PendingUpgrades');
+const methodDescriptorGovernanceProposal = createMethodDescriptorUnary<
+    types.GovernanceProposalQuery,
+    types.GovernanceProposal
+>('Governance', 'Proposal');
+const methodDescriptorGovernanceProposals = createMethodDescriptorUnary<
+    types.longnum,
+    types.GovernanceProposal[]
+>('Governance', 'Proposals');
+const methodDescriptorGovernanceStateToGenesis = createMethodDescriptorUnary<
+    types.longnum,
+    types.GovernanceGenesis
+>('Governance', 'StateToGenesis');
+const methodDescriptorGovernanceVotes = createMethodDescriptorUnary<
+    types.GovernanceProposalQuery,
+    types.GovernanceVoteEntry[]
+>('Governance', 'Votes');
 const methodDescriptorGovernanceWatchEvents = createMethodDescriptorServerStreaming<
     void,
     types.GovernanceEvent
 >('Governance', 'WatchEvents');
 
 // storage
+const methodDescriptorStorageGetCheckpointChunk = createMethodDescriptorServerStreaming<
+    types.StorageChunkMetadata,
+    Uint8Array
+>('Storage', 'GetCheckpointChunk');
+const methodDescriptorStorageGetCheckpoints = createMethodDescriptorUnary<
+    types.StorageGetCheckpointsRequest,
+    types.StorageMetadata[]
+>('Storage', 'GetCheckpoints');
+const methodDescriptorStorageGetDiff = createMethodDescriptorServerStreaming<
+    types.StorageGetDiffRequest,
+    types.StorageSyncChunk
+>('Storage', 'GetDiff');
 const methodDescriptorStorageSyncGet = createMethodDescriptorUnary<
     types.StorageGetRequest,
     types.StorageProofResponse
@@ -342,18 +354,6 @@ const methodDescriptorStorageSyncIterate = createMethodDescriptorUnary<
     types.StorageIterateRequest,
     types.StorageProofResponse
 >('Storage', 'SyncIterate');
-const methodDescriptorStorageGetCheckpoints = createMethodDescriptorUnary<
-    types.StorageGetCheckpointsRequest,
-    types.StorageMetadata[]
->('Storage', 'GetCheckpoints');
-const methodDescriptorStorageGetDiff = createMethodDescriptorServerStreaming<
-    types.StorageGetDiffRequest,
-    types.StorageSyncChunk
->('Storage', 'GetDiff');
-const methodDescriptorStorageGetCheckpointChunk = createMethodDescriptorServerStreaming<
-    types.StorageChunkMetadata,
-    Uint8Array
->('Storage', 'GetCheckpointChunk');
 
 // worker/storage
 const methodDescriptorStorageWorkerGetLastSyncedRound = createMethodDescriptorUnary<
@@ -370,30 +370,22 @@ const methodDescriptorStorageWorkerPauseCheckpointer = createMethodDescriptorUna
 >('StorageWorker', 'PauseCheckpointer');
 
 // runtime/client
-const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorUnary<
-    types.RuntimeClientSubmitTxRequest,
-    Uint8Array
->('RuntimeClient', 'SubmitTx');
-const methodDescriptorRuntimeClientSubmitTxMeta = createMethodDescriptorUnary<
-    types.RuntimeClientSubmitTxRequest,
-    types.RuntimeClientSubmitTxMetaResponse
->('RuntimeClient', 'SubmitTxMeta');
-const methodDescriptorRuntimeClientSubmitTxNoWait = createMethodDescriptorUnary<
-    types.RuntimeClientSubmitTxRequest,
-    void
->('RuntimeClient', 'SubmitTxNoWait');
 const methodDescriptorRuntimeClientCheckTx = createMethodDescriptorUnary<
     types.RuntimeClientCheckTxRequest,
     void
 >('RuntimeClient', 'CheckTx');
-const methodDescriptorRuntimeClientGetGenesisBlock = createMethodDescriptorUnary<
-    Uint8Array,
-    types.RootHashBlock
->('RuntimeClient', 'GetGenesisBlock');
 const methodDescriptorRuntimeClientGetBlock = createMethodDescriptorUnary<
     types.RuntimeClientGetBlockRequest,
     types.RootHashBlock
 >('RuntimeClient', 'GetBlock');
+const methodDescriptorRuntimeClientGetEvents = createMethodDescriptorUnary<
+    types.RuntimeClientGetEventsRequest,
+    types.RuntimeClientEvent[]
+>('RuntimeClient', 'GetEvents');
+const methodDescriptorRuntimeClientGetGenesisBlock = createMethodDescriptorUnary<
+    Uint8Array,
+    types.RootHashBlock
+>('RuntimeClient', 'GetGenesisBlock');
 const methodDescriptorRuntimeClientGetLastRetainedBlock = createMethodDescriptorUnary<
     Uint8Array,
     types.RootHashBlock
@@ -406,40 +398,56 @@ const methodDescriptorRuntimeClientGetTransactionsWithResults = createMethodDesc
     types.RuntimeClientGetTransactionsRequest,
     types.RuntimeClientTransactionWithResults
 >('RuntimeClient', 'GetTransactionsWithResults');
-const methodDescriptorRuntimeClientGetEvents = createMethodDescriptorUnary<
-    types.RuntimeClientGetEventsRequest,
-    types.RuntimeClientEvent[]
->('RuntimeClient', 'GetEvents');
 const methodDescriptorRuntimeClientQuery = createMethodDescriptorUnary<
     types.RuntimeClientQueryRequest,
     types.RuntimeClientQueryResponse
 >('RuntimeClient', 'Query');
+const methodDescriptorRuntimeClientSubmitTx = createMethodDescriptorUnary<
+    types.RuntimeClientSubmitTxRequest,
+    Uint8Array
+>('RuntimeClient', 'SubmitTx');
+const methodDescriptorRuntimeClientSubmitTxMeta = createMethodDescriptorUnary<
+    types.RuntimeClientSubmitTxRequest,
+    types.RuntimeClientSubmitTxMetaResponse
+>('RuntimeClient', 'SubmitTxMeta');
+const methodDescriptorRuntimeClientSubmitTxNoWait = createMethodDescriptorUnary<
+    types.RuntimeClientSubmitTxRequest,
+    void
+>('RuntimeClient', 'SubmitTxNoWait');
 const methodDescriptorRuntimeClientWatchBlocks = createMethodDescriptorServerStreaming<
     Uint8Array,
     types.RootHashAnnotatedBlock
 >('RuntimeClient', 'WatchBlocks');
 
 // consensus
-const methodDescriptorConsensusSubmitTx = createMethodDescriptorUnary<types.SignatureSigned, void>(
-    'Consensus',
-    'SubmitTx',
-);
-const methodDescriptorConsensusStateToGenesis = createMethodDescriptorUnary<
-    types.longnum,
-    types.GenesisDocument
->('Consensus', 'StateToGenesis');
 const methodDescriptorConsensusEstimateGas = createMethodDescriptorUnary<
     types.ConsensusEstimateGasRequest,
     types.longnum
 >('Consensus', 'EstimateGas');
-const methodDescriptorConsensusGetSignerNonce = createMethodDescriptorUnary<
-    types.ConsensusGetSignerNonceRequest,
-    types.longnum
->('Consensus', 'GetSignerNonce');
 const methodDescriptorConsensusGetBlock = createMethodDescriptorUnary<
     types.longnum,
     types.ConsensusBlock
 >('Consensus', 'GetBlock');
+const methodDescriptorConsensusGetChainContext = createMethodDescriptorUnary<void, string>(
+    'Consensus',
+    'GetChainContext',
+);
+const methodDescriptorConsensusGetGenesisDocument = createMethodDescriptorUnary<
+    void,
+    types.GenesisDocument
+>('Consensus', 'GetGenesisDocument');
+const methodDescriptorConsensusGetNextBlockState = createMethodDescriptorUnary<
+    void,
+    types.ConsensusNextBlockState
+>('Consensus', 'GetNextBlockState');
+const methodDescriptorConsensusGetSignerNonce = createMethodDescriptorUnary<
+    types.ConsensusGetSignerNonceRequest,
+    types.longnum
+>('Consensus', 'GetSignerNonce');
+const methodDescriptorConsensusGetStatus = createMethodDescriptorUnary<void, types.ConsensusStatus>(
+    'Consensus',
+    'GetStatus',
+);
 const methodDescriptorConsensusGetTransactions = createMethodDescriptorUnary<
     types.longnum,
     Uint8Array[]
@@ -452,26 +460,19 @@ const methodDescriptorConsensusGetUnconfirmedTransactions = createMethodDescript
     void,
     Uint8Array[]
 >('Consensus', 'GetUnconfirmedTransactions');
-const methodDescriptorConsensusGetGenesisDocument = createMethodDescriptorUnary<
-    void,
+const methodDescriptorConsensusStateToGenesis = createMethodDescriptorUnary<
+    types.longnum,
     types.GenesisDocument
->('Consensus', 'GetGenesisDocument');
-const methodDescriptorConsensusGetChainContext = createMethodDescriptorUnary<void, string>(
+>('Consensus', 'StateToGenesis');
+const methodDescriptorConsensusSubmitTx = createMethodDescriptorUnary<types.SignatureSigned, void>(
     'Consensus',
-    'GetChainContext',
+    'SubmitTx',
 );
-const methodDescriptorConsensusGetStatus = createMethodDescriptorUnary<void, types.ConsensusStatus>(
-    'Consensus',
-    'GetStatus',
-);
-const methodDescriptorConsensusGetNextBlockState = createMethodDescriptorUnary<
-    void,
-    types.ConsensusNextBlockState
->('Consensus', 'GetNextBlockState');
 const methodDescriptorConsensusWatchBlocks = createMethodDescriptorServerStreaming<
     void,
     types.ConsensusBlock
 >('Consensus', 'WatchBlocks');
+
 const methodDescriptorConsensusLightGetLightBlock = createMethodDescriptorUnary<
     types.longnum,
     types.ConsensusLightBlock
@@ -480,6 +481,14 @@ const methodDescriptorConsensusLightGetParameters = createMethodDescriptorUnary<
     types.longnum,
     types.ConsensusLightParameters
 >('ConsensusLight', 'GetParameters');
+const methodDescriptorConsensusLightSubmitEvidence = createMethodDescriptorUnary<
+    types.ConsensusEvidence,
+    void
+>('ConsensusLight', 'SubmitEvidence');
+const methodDescriptorConsensusLightSubmitTxNoWait = createMethodDescriptorUnary<
+    types.SignatureSigned,
+    void
+>('ConsensusLight', 'SubmitTxNoWait');
 const methodDescriptorConsensusLightStateSyncGet = createMethodDescriptorUnary<
     types.StorageGetRequest,
     types.StorageProofResponse
@@ -492,40 +501,8 @@ const methodDescriptorConsensusLightStateSyncIterate = createMethodDescriptorUna
     types.StorageIterateRequest,
     types.StorageProofResponse
 >('ConsensusLight', 'StateSyncIterate');
-const methodDescriptorConsensusLightSubmitTxNoWait = createMethodDescriptorUnary<
-    types.SignatureSigned,
-    void
->('ConsensusLight', 'SubmitTxNoWait');
-const methodDescriptorConsensusLightSubmitEvidence = createMethodDescriptorUnary<
-    types.ConsensusEvidence,
-    void
->('ConsensusLight', 'SubmitEvidence');
 
 // control
-const methodDescriptorNodeControllerRequestShutdown = createMethodDescriptorUnary<void, void>(
-    'NodeController',
-    'RequestShutdown',
-);
-const methodDescriptorNodeControllerWaitSync = createMethodDescriptorUnary<void, void>(
-    'NodeController',
-    'WaitSync',
-);
-const methodDescriptorNodeControllerIsSynced = createMethodDescriptorUnary<void, boolean>(
-    'NodeController',
-    'IsSynced',
-);
-const methodDescriptorNodeControllerWaitReady = createMethodDescriptorUnary<void, void>(
-    'NodeController',
-    'WaitReady',
-);
-const methodDescriptorNodeControllerIsReady = createMethodDescriptorUnary<void, boolean>(
-    'NodeController',
-    'IsReady',
-);
-const methodDescriptorNodeControllerUpgradeBinary = createMethodDescriptorUnary<
-    types.UpgradeDescriptor,
-    void
->('NodeController', 'UpgradeBinary');
 const methodDescriptorNodeControllerCancelUpgrade = createMethodDescriptorUnary<
     types.UpgradeDescriptor,
     void
@@ -534,6 +511,31 @@ const methodDescriptorNodeControllerGetStatus = createMethodDescriptorUnary<
     void,
     types.ControlStatus
 >('NodeController', 'GetStatus');
+const methodDescriptorNodeControllerIsReady = createMethodDescriptorUnary<void, boolean>(
+    'NodeController',
+    'IsReady',
+);
+const methodDescriptorNodeControllerIsSynced = createMethodDescriptorUnary<void, boolean>(
+    'NodeController',
+    'IsSynced',
+);
+const methodDescriptorNodeControllerRequestShutdown = createMethodDescriptorUnary<void, void>(
+    'NodeController',
+    'RequestShutdown',
+);
+const methodDescriptorNodeControllerUpgradeBinary = createMethodDescriptorUnary<
+    types.UpgradeDescriptor,
+    void
+>('NodeController', 'UpgradeBinary');
+const methodDescriptorNodeControllerWaitReady = createMethodDescriptorUnary<void, void>(
+    'NodeController',
+    'WaitReady',
+);
+const methodDescriptorNodeControllerWaitSync = createMethodDescriptorUnary<void, void>(
+    'NodeController',
+    'WaitSync',
+);
+
 const methodDescriptorDebugControllerSetEpoch = createMethodDescriptorUnary<types.longnum, void>(
     'DebugController',
     'SetEpoch',
@@ -650,10 +652,26 @@ export class NodeInternal extends GRPCWrapper {
     // beacon
 
     /**
+     * ConsensusParameters returns the beacon consensus parameters.
+     */
+    beaconConsensusParameters(height: types.longnum) {
+        return this.callUnary(methodDescriptorBeaconConsensusParameters, height);
+    }
+
+    /**
      * GetBaseEpoch returns the base epoch.
      */
     beaconGetBaseEpoch() {
         return this.callUnary(methodDescriptorBeaconGetBaseEpoch, undefined);
+    }
+
+    /**
+     * GetBeacon gets the beacon for the provided block height.
+     * Calling this method with height `consensus.HeightLatest` should
+     * return the beacon for the latest finalized block.
+     */
+    beaconGetBeacon(height: types.longnum) {
+        return this.callUnary(methodDescriptorBeaconGetBeacon, height);
     }
 
     /**
@@ -663,6 +681,14 @@ export class NodeInternal extends GRPCWrapper {
      */
     beaconGetEpoch(height: types.longnum) {
         return this.callUnary(methodDescriptorBeaconGetEpoch, height);
+    }
+
+    /**
+     * GetEpochBlock returns the block height at the start of the said
+     * epoch.
+     */
+    beaconGetEpochBlock(epoch: types.longnum) {
+        return this.callUnary(methodDescriptorBeaconGetEpochBlock, epoch);
     }
 
     /**
@@ -677,6 +703,13 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * StateToGenesis returns the genesis state at specified block height.
+     */
+    beaconStateToGenesis(height: types.longnum) {
+        return this.callUnary(methodDescriptorBeaconStateToGenesis, height);
+    }
+
+    /**
      * WaitEpoch waits for a specific epoch.
      *
      * Note that an epoch is considered reached even if any epoch greater
@@ -685,37 +718,6 @@ export class NodeInternal extends GRPCWrapper {
      */
     beaconWaitEpoch(epoch: types.longnum) {
         return this.callUnary(methodDescriptorBeaconWaitEpoch, epoch);
-    }
-
-    /**
-     * GetEpochBlock returns the block height at the start of the said
-     * epoch.
-     */
-    beaconGetEpochBlock(epoch: types.longnum) {
-        return this.callUnary(methodDescriptorBeaconGetEpochBlock, epoch);
-    }
-
-    /**
-     * GetBeacon gets the beacon for the provided block height.
-     * Calling this method with height `consensus.HeightLatest` should
-     * return the beacon for the latest finalized block.
-     */
-    beaconGetBeacon(height: types.longnum) {
-        return this.callUnary(methodDescriptorBeaconGetBeacon, height);
-    }
-
-    /**
-     * StateToGenesis returns the genesis state at specified block height.
-     */
-    beaconStateToGenesis(height: types.longnum) {
-        return this.callUnary(methodDescriptorBeaconStateToGenesis, height);
-    }
-
-    /**
-     * ConsensusParameters returns the beacon consensus parameters.
-     */
-    beaconConsensusParameters(height: types.longnum) {
-        return this.callUnary(methodDescriptorBeaconConsensusParameters, height);
     }
 
     /**
@@ -731,11 +733,10 @@ export class NodeInternal extends GRPCWrapper {
     // scheduler
 
     /**
-     * GetValidators returns the vector of consensus validators for
-     * a given epoch.
+     * ConsensusParameters returns the scheduler consensus parameters.
      */
-    schedulerGetValidators(height: types.longnum) {
-        return this.callUnary(methodDescriptorSchedulerGetValidators, height);
+    schedulerConsensusParameters(height: types.longnum) {
+        return this.callUnary(methodDescriptorSchedulerConsensusParameters, height);
     }
 
     /**
@@ -750,17 +751,18 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * GetValidators returns the vector of consensus validators for
+     * a given epoch.
+     */
+    schedulerGetValidators(height: types.longnum) {
+        return this.callUnary(methodDescriptorSchedulerGetValidators, height);
+    }
+
+    /**
      * StateToGenesis returns the genesis state at specified block height.
      */
     schedulerStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorSchedulerStateToGenesis, height);
-    }
-
-    /**
-     * ConsensusParameters returns the scheduler consensus parameters.
-     */
-    schedulerConsensusParameters(height: types.longnum) {
-        return this.callUnary(methodDescriptorSchedulerConsensusParameters, height);
     }
 
     /**
@@ -777,6 +779,13 @@ export class NodeInternal extends GRPCWrapper {
     // registry
 
     /**
+     * GetEntities gets a list of all registered entities.
+     */
+    registryGetEntities(height: types.longnum) {
+        return this.callUnary(methodDescriptorRegistryGetEntities, height);
+    }
+
+    /**
      * GetEntity gets an entity by ID.
      */
     registryGetEntity(query: types.RegistryIDQuery) {
@@ -784,10 +793,10 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * GetEntities gets a list of all registered entities.
+     * GetEvents returns the events at specified block height.
      */
-    registryGetEntities(height: types.longnum) {
-        return this.callUnary(methodDescriptorRegistryGetEntities, height);
+    registryGetEvents(height: types.longnum) {
+        return this.callUnary(methodDescriptorRegistryGetEvents, height);
     }
 
     /**
@@ -843,26 +852,11 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * GetEvents returns the events at specified block height.
-     */
-    registryGetEvents(height: types.longnum) {
-        return this.callUnary(methodDescriptorRegistryGetEvents, height);
-    }
-
-    /**
      * WatchEntities returns a channel that produces a stream of
      * EntityEvent on entity registration changes.
      */
     registryWatchEntities() {
         return this.callServerStreaming(methodDescriptorRegistryWatchEntities, undefined);
-    }
-
-    /**
-     * WatchNodes returns a channel that produces a stream of
-     * NodeEvent on node registration changes.
-     */
-    registryWatchNodes() {
-        return this.callServerStreaming(methodDescriptorRegistryWatchNodes, undefined);
     }
 
     /**
@@ -878,6 +872,14 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * WatchNodes returns a channel that produces a stream of
+     * NodeEvent on node registration changes.
+     */
+    registryWatchNodes() {
+        return this.callServerStreaming(methodDescriptorRegistryWatchNodes, undefined);
+    }
+
+    /**
      * WatchRuntimes returns a stream of Runtime.  Upon subscription,
      * all runtimes will be sent immediately.
      */
@@ -886,6 +888,125 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     // staking
+
+    /**
+     * Account returns the account descriptor for the given account.
+     */
+    stakingAccount(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingAccount, query);
+    }
+
+    /**
+     * Addresses returns the addresses of all accounts with a non-zero general
+     * or escrow balance.
+     */
+    stakingAddresses(height: types.longnum) {
+        return this.callUnary(methodDescriptorStakingAddresses, height);
+    }
+
+    /**
+     * Allowance looks up the allowance for the given owner/beneficiary combination.
+     */
+    stakingAllowance(query: types.StakingAllowanceQuery) {
+        return this.callUnary(methodDescriptorStakingAllowance, query);
+    }
+
+    /**
+     * CommonPool returns the common pool balance.
+     */
+    stakingCommonPool(height: types.longnum) {
+        return this.callUnary(methodDescriptorStakingCommonPool, height);
+    }
+
+    /**
+     * ConsensusParameters returns the staking consensus parameters.
+     */
+    stakingConsensusParameters(height: types.longnum) {
+        return this.callUnary(methodDescriptorStakingConsensusParameters, height);
+    }
+
+    /**
+     * DebondingDelegationsInfosFor returns (outgoing) debonding delegations
+     * with additional information for the given owner (delegator).
+     */
+    stakingDebondingDelegationInfosFor(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDebondingDelegationInfosFor, query);
+    }
+
+    /**
+     * DebondingDelegationsFor returns the list of (outgoing) debonding
+     * delegations for the given owner (delegator).
+     */
+    stakingDebondingDelegationsFor(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDebondingDelegationsFor, query);
+    }
+
+    /**
+     * DebondingDelegationsTo returns the list of (incoming) debonding
+     * delegations to the given account.
+     */
+    stakingDebondingDelegationsTo(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDebondingDelegationsTo, query);
+    }
+
+    /**
+     * DelegationsInfosFor returns (outgoing) delegations with additional
+     * information for the given owner (delegator).
+     */
+    stakingDelegationInfosFor(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDelegationInfosFor, query);
+    }
+
+    /**
+     * DelegationsFor returns the list of (outgoing) delegations for the given
+     * owner (delegator).
+     */
+    stakingDelegationsFor(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDelegationsFor, query);
+    }
+
+    /**
+     * DelegationsTo returns the list of (incoming) delegations to the given
+     * account.
+     */
+    stakingDelegationsTo(query: types.StakingOwnerQuery) {
+        return this.callUnary(methodDescriptorStakingDelegationsTo, query);
+    }
+
+    /**
+     * GetEvents returns the events at specified block height.
+     */
+    stakingGetEvents(height: types.longnum) {
+        return this.callUnary(methodDescriptorStakingGetEvents, height);
+    }
+
+    /**
+     * GovernanceDeposits returns the governance deposits account balance.
+     */
+    stakingGovernanceDeposits(height: types.longnum) {
+        return this.callUnary(methodDescriptorStakingGovernanceDeposits, height);
+    }
+
+    /**
+     * LastBlockFees returns the collected fees for previous block.
+     */
+    stakingLastBlockFees(height: types.longnum) {
+        return this.callUnary(methodDescriptorStakingLastBlockFees, height);
+    }
+
+    /**
+     * StateToGenesis returns the genesis state at specified block height.
+     */
+    stakingStateToGenesis(height: types.longnum) {
+        return this.callUnary(methodDescriptorStakingStateToGenesis, height);
+    }
+
+    /**
+     * Threshold returns the specific staking threshold by kind.
+     */
+    stakingThreshold(query: types.StakingThresholdQuery) {
+        return this.callUnary(methodDescriptorStakingThreshold, query);
+    }
 
     /**
      * TokenSymbol returns the token's ticker symbol.
@@ -907,125 +1028,6 @@ export class NodeInternal extends GRPCWrapper {
      */
     stakingTotalSupply(height: types.longnum) {
         return this.callUnary(methodDescriptorStakingTotalSupply, height);
-    }
-
-    /**
-     * CommonPool returns the common pool balance.
-     */
-    stakingCommonPool(height: types.longnum) {
-        return this.callUnary(methodDescriptorStakingCommonPool, height);
-    }
-
-    /**
-     * LastBlockFees returns the collected fees for previous block.
-     */
-    stakingLastBlockFees(height: types.longnum) {
-        return this.callUnary(methodDescriptorStakingLastBlockFees, height);
-    }
-
-    /**
-     * GovernanceDeposits returns the governance deposits account balance.
-     */
-    stakingGovernanceDeposits(height: types.longnum) {
-        return this.callUnary(methodDescriptorStakingGovernanceDeposits, height);
-    }
-
-    /**
-     * Threshold returns the specific staking threshold by kind.
-     */
-    stakingThreshold(query: types.StakingThresholdQuery) {
-        return this.callUnary(methodDescriptorStakingThreshold, query);
-    }
-
-    /**
-     * Addresses returns the addresses of all accounts with a non-zero general
-     * or escrow balance.
-     */
-    stakingAddresses(height: types.longnum) {
-        return this.callUnary(methodDescriptorStakingAddresses, height);
-    }
-
-    /**
-     * Account returns the account descriptor for the given account.
-     */
-    stakingAccount(query: types.StakingOwnerQuery) {
-        return this.callUnary(methodDescriptorStakingAccount, query);
-    }
-
-    /**
-     * DelegationsFor returns the list of (outgoing) delegations for the given
-     * owner (delegator).
-     */
-    stakingDelegationsFor(query: types.StakingOwnerQuery) {
-        return this.callUnary(methodDescriptorStakingDelegationsFor, query);
-    }
-
-    /**
-     * DelegationsInfosFor returns (outgoing) delegations with additional
-     * information for the given owner (delegator).
-     */
-    stakingDelegationInfosFor(query: types.StakingOwnerQuery) {
-        return this.callUnary(methodDescriptorStakingDelegationInfosFor, query);
-    }
-
-    /**
-     * DelegationsTo returns the list of (incoming) delegations to the given
-     * account.
-     */
-    stakingDelegationsTo(query: types.StakingOwnerQuery) {
-        return this.callUnary(methodDescriptorStakingDelegationsTo, query);
-    }
-
-    /**
-     * DebondingDelegationsFor returns the list of (outgoing) debonding
-     * delegations for the given owner (delegator).
-     */
-    stakingDebondingDelegationsFor(query: types.StakingOwnerQuery) {
-        return this.callUnary(methodDescriptorStakingDebondingDelegationsFor, query);
-    }
-
-    /**
-     * DebondingDelegationsInfosFor returns (outgoing) debonding delegations
-     * with additional information for the given owner (delegator).
-     */
-    stakingDebondingDelegationInfosFor(query: types.StakingOwnerQuery) {
-        return this.callUnary(methodDescriptorStakingDebondingDelegationInfosFor, query);
-    }
-
-    /**
-     * DebondingDelegationsTo returns the list of (incoming) debonding
-     * delegations to the given account.
-     */
-    stakingDebondingDelegationsTo(query: types.StakingOwnerQuery) {
-        return this.callUnary(methodDescriptorStakingDebondingDelegationsTo, query);
-    }
-
-    /**
-     * Allowance looks up the allowance for the given owner/beneficiary combination.
-     */
-    stakingAllowance(query: types.StakingAllowanceQuery) {
-        return this.callUnary(methodDescriptorStakingAllowance, query);
-    }
-
-    /**
-     * StateToGenesis returns the genesis state at specified block height.
-     */
-    stakingStateToGenesis(height: types.longnum) {
-        return this.callUnary(methodDescriptorStakingStateToGenesis, height);
-    }
-
-    /**
-     * ConsensusParameters returns the staking consensus parameters.
-     */
-    stakingConsensusParameters(height: types.longnum) {
-        return this.callUnary(methodDescriptorStakingConsensusParameters, height);
-    }
-
-    /**
-     * GetEvents returns the events at specified block height.
-     */
-    stakingGetEvents(height: types.longnum) {
-        return this.callUnary(methodDescriptorStakingGetEvents, height);
     }
 
     /**
@@ -1052,8 +1054,23 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     // roothash
+    rootHashConsensusParameters(height: types.longnum) {
+        return this.callUnary(methodDescriptorRootHashConsensusParameters, height);
+    }
+    rootHashGetEvents(height: types.longnum) {
+        return this.callUnary(methodDescriptorRootHashGetEvents, height);
+    }
     rootHashGetGenesisBlock(request: types.RootHashRuntimeRequest) {
         return this.callUnary(methodDescriptorRootHashGetGenesisBlock, request);
+    }
+    rootHashGetIncomingMessageQueue(request: types.RootHashInMessageQueueRequest) {
+        return this.callUnary(methodDescriptorRootHashGetIncomingMessageQueue, request);
+    }
+    rootHashGetIncomingMessageQueueMeta(request: types.RootHashRuntimeRequest) {
+        return this.callUnary(methodDescriptorRootHashGetIncomingMessageQueueMeta, request);
+    }
+    rootHashGetLastRoundResults(request: types.RootHashRuntimeRequest) {
+        return this.callUnary(methodDescriptorRootHashGetLastRoundResults, request);
     }
     rootHashGetLatestBlock(request: types.RootHashRuntimeRequest) {
         return this.callUnary(methodDescriptorRootHashGetLatestBlock, request);
@@ -1061,23 +1078,8 @@ export class NodeInternal extends GRPCWrapper {
     rootHashGetRuntimeState(request: types.RootHashRuntimeRequest) {
         return this.callUnary(methodDescriptorRootHashGetRuntimeState, request);
     }
-    rootHashGetLastRoundResults(request: types.RootHashRuntimeRequest) {
-        return this.callUnary(methodDescriptorRootHashGetLastRoundResults, request);
-    }
-    rootHashGetIncomingMessageQueueMeta(request: types.RootHashRuntimeRequest) {
-        return this.callUnary(methodDescriptorRootHashGetIncomingMessageQueueMeta, request);
-    }
-    rootHashGetIncomingMessageQueue(request: types.RootHashInMessageQueueRequest) {
-        return this.callUnary(methodDescriptorRootHashGetIncomingMessageQueue, request);
-    }
     rootHashStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorRootHashStateToGenesis, height);
-    }
-    rootHashConsensusParameters(height: types.longnum) {
-        return this.callUnary(methodDescriptorRootHashConsensusParameters, height);
-    }
-    rootHashGetEvents(height: types.longnum) {
-        return this.callUnary(methodDescriptorRootHashGetEvents, height);
     }
     rootHashWatchBlocks(runtimeID: Uint8Array) {
         return this.callServerStreaming(methodDescriptorRootHashWatchBlocks, runtimeID);
@@ -1096,41 +1098,6 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * Proposals returns a list of all proposals.
-     */
-    governanceProposals(height: types.longnum) {
-        return this.callUnary(methodDescriptorGovernanceProposals, height);
-    }
-
-    /**
-     * Proposal looks up a specific proposal.
-     */
-    governanceProposal(request: types.GovernanceProposalQuery) {
-        return this.callUnary(methodDescriptorGovernanceProposal, request);
-    }
-
-    /**
-     * Votes looks up votes for a specific proposal.
-     */
-    governanceVotes(request: types.GovernanceProposalQuery) {
-        return this.callUnary(methodDescriptorGovernanceVotes, request);
-    }
-
-    /**
-     * PendingUpgrades returns a list of all pending upgrades.
-     */
-    governancePendingUpgrades(height: types.longnum) {
-        return this.callUnary(methodDescriptorGovernancePendingUpgrades, height);
-    }
-
-    /**
-     * StateToGenesis returns the genesis state at specified block height.
-     */
-    governanceStateToGenesis(height: types.longnum) {
-        return this.callUnary(methodDescriptorGovernanceStateToGenesis, height);
-    }
-
-    /**
      * ConsensusParameters returns the governance consensus parameters.
      */
     governanceConsensusParameters(height: types.longnum) {
@@ -1145,6 +1112,41 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * PendingUpgrades returns a list of all pending upgrades.
+     */
+    governancePendingUpgrades(height: types.longnum) {
+        return this.callUnary(methodDescriptorGovernancePendingUpgrades, height);
+    }
+
+    /**
+     * Proposal looks up a specific proposal.
+     */
+    governanceProposal(request: types.GovernanceProposalQuery) {
+        return this.callUnary(methodDescriptorGovernanceProposal, request);
+    }
+
+    /**
+     * Proposals returns a list of all proposals.
+     */
+    governanceProposals(height: types.longnum) {
+        return this.callUnary(methodDescriptorGovernanceProposals, height);
+    }
+
+    /**
+     * StateToGenesis returns the genesis state at specified block height.
+     */
+    governanceStateToGenesis(height: types.longnum) {
+        return this.callUnary(methodDescriptorGovernanceStateToGenesis, height);
+    }
+
+    /**
+     * Votes looks up votes for a specific proposal.
+     */
+    governanceVotes(request: types.GovernanceProposalQuery) {
+        return this.callUnary(methodDescriptorGovernanceVotes, request);
+    }
+
+    /**
      * WatchEvents returns a channel that produces a stream of Events.
      */
     governanceWatchEvents() {
@@ -1152,6 +1154,28 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     // storage
+
+    /**
+     * GetCheckpointChunk fetches a specific chunk from an existing chekpoint.
+     */
+    storageGetCheckpointChunk(chunk: types.StorageChunkMetadata) {
+        return this.callServerStreaming(methodDescriptorStorageGetCheckpointChunk, chunk);
+    }
+
+    /**
+     * GetCheckpoints returns a list of checkpoint metadata for all known checkpoints.
+     */
+    storageGetCheckpoints(request: types.StorageGetCheckpointsRequest) {
+        return this.callUnary(methodDescriptorStorageGetCheckpoints, request);
+    }
+
+    /**
+     * GetDiff returns an iterator of write log entries that must be applied
+     * to get from the first given root to the second one.
+     */
+    storageGetDiff(request: types.StorageGetDiffRequest) {
+        return this.callServerStreaming(methodDescriptorStorageGetDiff, request);
+    }
 
     /**
      * SyncGet fetches a single key and returns the corresponding proof.
@@ -1176,28 +1200,6 @@ export class NodeInternal extends GRPCWrapper {
         return this.callUnary(methodDescriptorStorageSyncIterate, request);
     }
 
-    /**
-     * GetCheckpoints returns a list of checkpoint metadata for all known checkpoints.
-     */
-    storageGetCheckpoints(request: types.StorageGetCheckpointsRequest) {
-        return this.callUnary(methodDescriptorStorageGetCheckpoints, request);
-    }
-
-    /**
-     * GetDiff returns an iterator of write log entries that must be applied
-     * to get from the first given root to the second one.
-     */
-    storageGetDiff(request: types.StorageGetDiffRequest) {
-        return this.callServerStreaming(methodDescriptorStorageGetDiff, request);
-    }
-
-    /**
-     * GetCheckpointChunk fetches a specific chunk from an existing chekpoint.
-     */
-    storageGetCheckpointChunk(chunk: types.StorageChunkMetadata) {
-        return this.callServerStreaming(methodDescriptorStorageGetCheckpointChunk, chunk);
-    }
-
     // worker/storage
 
     /**
@@ -1205,6 +1207,13 @@ export class NodeInternal extends GRPCWrapper {
      */
     storageWorkerGetLastSyncedRound(request: types.WorkerStorageGetLastSyncedRoundRequest) {
         return this.callUnary(methodDescriptorStorageWorkerGetLastSyncedRound, request);
+    }
+
+    /**
+     * PauseCheckpointer pauses or unpauses the storage worker's checkpointer.
+     */
+    storageWorkerPauseCheckpointer(request: types.WorkerStoragePauseCheckpointerRequest) {
+        return this.callUnary(methodDescriptorStorageWorkerPauseCheckpointer, request);
     }
 
     /**
@@ -1216,14 +1225,64 @@ export class NodeInternal extends GRPCWrapper {
         return this.callUnary(methodDescriptorStorageWorkerWaitForRound, request);
     }
 
+    // runtime/client
+
     /**
-     * PauseCheckpointer pauses or unpauses the storage worker's checkpointer.
+     * CheckTx asks the local runtime to check the specified transaction.
      */
-    storageWorkerPauseCheckpointer(request: types.WorkerStoragePauseCheckpointerRequest) {
-        return this.callUnary(methodDescriptorStorageWorkerPauseCheckpointer, request);
+    runtimeClientCheckTx(request: types.RuntimeClientCheckTxRequest) {
+        return this.callUnary(methodDescriptorRuntimeClientCheckTx, request);
     }
 
-    // runtime/client
+    /**
+     * GetBlock fetches the given runtime block.
+     */
+    runtimeClientGetBlock(request: types.RuntimeClientGetBlockRequest) {
+        return this.callUnary(methodDescriptorRuntimeClientGetBlock, request);
+    }
+
+    /**
+     * GetEvents returns all events emitted in a given block.
+     */
+    runtimeClientGetEvents(request: types.RuntimeClientGetEventsRequest) {
+        return this.callUnary(methodDescriptorRuntimeClientGetEvents, request);
+    }
+
+    /**
+     * GetGenesisBlock returns the genesis block.
+     */
+    runtimeClientGetGenesisBlock(runtimeID: Uint8Array) {
+        return this.callUnary(methodDescriptorRuntimeClientGetGenesisBlock, runtimeID);
+    }
+
+    /**
+     * GetLastRetainedBlock returns the last retained block.
+     */
+    runtimeClientGetLastRetainedBlock(runtimeID: Uint8Array) {
+        return this.callUnary(methodDescriptorRuntimeClientGetLastRetainedBlock, runtimeID);
+    }
+
+    /**
+     * GetTransactions fetches all runtime transactions in a given block.
+     */
+    runtimeClientGetTransactions(request: types.RuntimeClientGetTransactionsRequest) {
+        return this.callUnary(methodDescriptorRuntimeClientGetTransactions, request);
+    }
+
+    /**
+     * GetTransactionsWithResults fetches all runtime transactions in a given block together with
+     * its results (outputs and emitted events).
+     */
+    runtimeClientGetTransactionsWithResults(request: types.RuntimeClientGetTransactionsRequest) {
+        return this.callUnary(methodDescriptorRuntimeClientGetTransactionsWithResults, request);
+    }
+
+    /**
+     * Query makes a runtime-specific query.
+     */
+    runtimeClientQuery(request: types.RuntimeClientQueryRequest) {
+        return this.callUnary(methodDescriptorRuntimeClientQuery, request);
+    }
 
     /**
      * SubmitTx submits a transaction to the runtime transaction scheduler and waits
@@ -1253,63 +1312,6 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * CheckTx asks the local runtime to check the specified transaction.
-     */
-    runtimeClientCheckTx(request: types.RuntimeClientCheckTxRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientCheckTx, request);
-    }
-
-    /**
-     * GetGenesisBlock returns the genesis block.
-     */
-    runtimeClientGetGenesisBlock(runtimeID: Uint8Array) {
-        return this.callUnary(methodDescriptorRuntimeClientGetGenesisBlock, runtimeID);
-    }
-
-    /**
-     * GetBlock fetches the given runtime block.
-     */
-    runtimeClientGetBlock(request: types.RuntimeClientGetBlockRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientGetBlock, request);
-    }
-
-    /**
-     * GetLastRetainedBlock returns the last retained block.
-     */
-    runtimeClientGetLastRetainedBlock(runtimeID: Uint8Array) {
-        return this.callUnary(methodDescriptorRuntimeClientGetLastRetainedBlock, runtimeID);
-    }
-
-    /**
-     * GetTransactions fetches all runtime transactions in a given block.
-     */
-    runtimeClientGetTransactions(request: types.RuntimeClientGetTransactionsRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientGetTransactions, request);
-    }
-
-    /**
-     * GetTransactionsWithResults fetches all runtime transactions in a given block together with
-     * its results (outputs and emitted events).
-     */
-    runtimeClientGetTransactionsWithResults(request: types.RuntimeClientGetTransactionsRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientGetTransactionsWithResults, request);
-    }
-
-    /**
-     * GetEvents returns all events emitted in a given block.
-     */
-    runtimeClientGetEvents(request: types.RuntimeClientGetEventsRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientGetEvents, request);
-    }
-
-    /**
-     * Query makes a runtime-specific query.
-     */
-    runtimeClientQuery(request: types.RuntimeClientQueryRequest) {
-        return this.callUnary(methodDescriptorRuntimeClientQuery, request);
-    }
-
-    /**
      * WatchBlocks subscribes to blocks for a specific runtimes.
      */
     runtimeClientWatchBlocks(runtimeID: Uint8Array) {
@@ -1319,25 +1321,38 @@ export class NodeInternal extends GRPCWrapper {
     // consensus
 
     /**
-     * SubmitTx submits a signed consensus transaction and waits for the transaction to be included
-     * in a block. Use SubmitTxNoWait if you only need to broadcast the transaction.
-     */
-    consensusSubmitTx(tx: types.SignatureSigned) {
-        return this.callUnary(methodDescriptorConsensusSubmitTx, tx);
-    }
-
-    /**
-     * StateToGenesis returns the genesis state at the specified block height.
-     */
-    consensusStateToGenesis(height: types.longnum) {
-        return this.callUnary(methodDescriptorConsensusStateToGenesis, height);
-    }
-
-    /**
      * EstimateGas calculates the amount of gas required to execute the given transaction.
      */
     consensusEstimateGas(req: types.ConsensusEstimateGasRequest) {
         return this.callUnary(methodDescriptorConsensusEstimateGas, req);
+    }
+
+    /**
+     * GetBlock returns a consensus block at a specific height.
+     */
+    consensusGetBlock(height: types.longnum) {
+        return this.callUnary(methodDescriptorConsensusGetBlock, height);
+    }
+
+    /**
+     * GetChainContext returns the chain domain separation context.
+     */
+    consensusGetChainContext() {
+        return this.callUnary(methodDescriptorConsensusGetChainContext, undefined);
+    }
+
+    /**
+     * GetGenesisDocument returns the original genesis document.
+     */
+    consensusGetGenesisDocument() {
+        return this.callUnary(methodDescriptorConsensusGetGenesisDocument, undefined);
+    }
+
+    /**
+     * GetNextBlockState returns the state of the next block being voted on by validators.
+     */
+    consensusGetNextBlockState() {
+        return this.callUnary(methodDescriptorConsensusGetNextBlockState, undefined);
     }
 
     /**
@@ -1349,10 +1364,10 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * GetBlock returns a consensus block at a specific height.
+     * GetStatus returns the current status overview.
      */
-    consensusGetBlock(height: types.longnum) {
-        return this.callUnary(methodDescriptorConsensusGetBlock, height);
+    consensusGetStatus() {
+        return this.callUnary(methodDescriptorConsensusGetStatus, undefined);
     }
 
     /**
@@ -1383,31 +1398,18 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * GetGenesisDocument returns the original genesis document.
+     * StateToGenesis returns the genesis state at the specified block height.
      */
-    consensusGetGenesisDocument() {
-        return this.callUnary(methodDescriptorConsensusGetGenesisDocument, undefined);
+    consensusStateToGenesis(height: types.longnum) {
+        return this.callUnary(methodDescriptorConsensusStateToGenesis, height);
     }
 
     /**
-     * GetChainContext returns the chain domain separation context.
+     * SubmitTx submits a signed consensus transaction and waits for the transaction to be included
+     * in a block. Use SubmitTxNoWait if you only need to broadcast the transaction.
      */
-    consensusGetChainContext() {
-        return this.callUnary(methodDescriptorConsensusGetChainContext, undefined);
-    }
-
-    /**
-     * GetStatus returns the current status overview.
-     */
-    consensusGetStatus() {
-        return this.callUnary(methodDescriptorConsensusGetStatus, undefined);
-    }
-
-    /**
-     * GetNextBlockState returns the state of the next block being voted on by validators.
-     */
-    consensusGetNextBlockState() {
-        return this.callUnary(methodDescriptorConsensusGetNextBlockState, undefined);
+    consensusSubmitTx(tx: types.SignatureSigned) {
+        return this.callUnary(methodDescriptorConsensusSubmitTx, tx);
     }
 
     /**
@@ -1434,6 +1436,21 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * SubmitEvidence submits evidence of misbehavior.
+     */
+    consensusLightSubmitEvidence(evidence: types.ConsensusEvidence) {
+        return this.callUnary(methodDescriptorConsensusLightSubmitEvidence, evidence);
+    }
+
+    /**
+     * SubmitTxNoWait submits a signed consensus transaction, but does not wait for the transaction
+     * to be included in a block. Use SubmitTx if you need to wait for execution.
+     */
+    consensusLightSubmitTxNoWait(tx: types.SignatureSigned) {
+        return this.callUnary(methodDescriptorConsensusLightSubmitTxNoWait, tx);
+    }
+
+    /**
      * SyncGet fetches a single key and returns the corresponding proof.
      */
     consensusLightStateSyncGet(request: types.StorageGetRequest) {
@@ -1456,69 +1473,7 @@ export class NodeInternal extends GRPCWrapper {
         return this.callUnary(methodDescriptorConsensusLightStateSyncIterate, request);
     }
 
-    /**
-     * SubmitTxNoWait submits a signed consensus transaction, but does not wait for the transaction
-     * to be included in a block. Use SubmitTx if you need to wait for execution.
-     */
-    consensusLightSubmitTxNoWait(tx: types.SignatureSigned) {
-        return this.callUnary(methodDescriptorConsensusLightSubmitTxNoWait, tx);
-    }
-
-    /**
-     * SubmitEvidence submits evidence of misbehavior.
-     */
-    consensusLightSubmitEvidence(evidence: types.ConsensusEvidence) {
-        return this.callUnary(methodDescriptorConsensusLightSubmitEvidence, evidence);
-    }
-
     // control
-
-    /**
-     * RequestShutdown requests the node to shut down gracefully.
-     *
-     * If the wait argument is true then the method will also wait for the
-     * shutdown to complete.
-     */
-    nodeControllerRequestShudown() {
-        return this.callUnary(methodDescriptorNodeControllerRequestShutdown, undefined);
-    }
-
-    /**
-     * WaitSync waits for the node to finish syncing.
-     */
-    nodeControllerWaitSync() {
-        return this.callUnary(methodDescriptorNodeControllerWaitSync, undefined);
-    }
-
-    /**
-     * IsSynced checks whether the node has finished syncing.
-     */
-    nodeControllerIsSynced() {
-        return this.callUnary(methodDescriptorNodeControllerIsSynced, undefined);
-    }
-
-    /**
-     * WaitReady waits for the node to accept runtime work.
-     */
-    nodeControllerWaitReady() {
-        return this.callUnary(methodDescriptorNodeControllerWaitReady, undefined);
-    }
-
-    /**
-     * IsReady checks whether the node is ready to accept runtime work.
-     */
-    nodeControllerIsReady() {
-        return this.callUnary(methodDescriptorNodeControllerIsReady, undefined);
-    }
-
-    /**
-     * UpgradeBinary submits an upgrade descriptor to a running node.
-     * The node will wait for the appropriate epoch, then update its binaries
-     * and shut down.
-     */
-    nodeControllerUpgradeBinary(descriptor: types.UpgradeDescriptor) {
-        return this.callUnary(methodDescriptorNodeControllerUpgradeBinary, descriptor);
-    }
 
     /**
      * CancelUpgrade cancels the specific pending upgrade, unless it is already in progress.
@@ -1532,6 +1487,53 @@ export class NodeInternal extends GRPCWrapper {
      */
     nodeControllerGetStatus() {
         return this.callUnary(methodDescriptorNodeControllerGetStatus, undefined);
+    }
+
+    /**
+     * IsReady checks whether the node is ready to accept runtime work.
+     */
+    nodeControllerIsReady() {
+        return this.callUnary(methodDescriptorNodeControllerIsReady, undefined);
+    }
+
+    /**
+     * IsSynced checks whether the node has finished syncing.
+     */
+    nodeControllerIsSynced() {
+        return this.callUnary(methodDescriptorNodeControllerIsSynced, undefined);
+    }
+
+    /**
+     * RequestShutdown requests the node to shut down gracefully.
+     *
+     * If the wait argument is true then the method will also wait for the
+     * shutdown to complete.
+     */
+    nodeControllerRequestShudown() {
+        return this.callUnary(methodDescriptorNodeControllerRequestShutdown, undefined);
+    }
+
+    /**
+     * UpgradeBinary submits an upgrade descriptor to a running node.
+     * The node will wait for the appropriate epoch, then update its binaries
+     * and shut down.
+     */
+    nodeControllerUpgradeBinary(descriptor: types.UpgradeDescriptor) {
+        return this.callUnary(methodDescriptorNodeControllerUpgradeBinary, descriptor);
+    }
+
+    /**
+     * WaitReady waits for the node to accept runtime work.
+     */
+    nodeControllerWaitReady() {
+        return this.callUnary(methodDescriptorNodeControllerWaitReady, undefined);
+    }
+
+    /**
+     * WaitSync waits for the node to finish syncing.
+     */
+    nodeControllerWaitSync() {
+        return this.callUnary(methodDescriptorNodeControllerWaitSync, undefined);
     }
 
     /**
