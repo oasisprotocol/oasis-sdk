@@ -35,6 +35,105 @@ function createMethodDescriptorServerStreaming<REQ, RESP>(serviceName: string, m
     );
 }
 
+// see oasis-core/go/common/grpc/errors.go
+/**
+ * grpcError is a serializable error.
+ */
+interface GRPCError {
+    module?: string;
+    code?: number;
+}
+
+export class OasisCodedError extends Error {
+    oasisCode?: number;
+    oasisModule?: string;
+}
+
+export class GRPCWrapper {
+    client: grpcWeb.AbstractClientBase;
+    base: string;
+
+    constructor(base: string) {
+        this.client = new grpcWeb.GrpcWebClientBase({});
+        this.base = base;
+    }
+
+    protected callUnary<REQ, RESP>(
+        desc: grpcWeb.MethodDescriptor<REQ, RESP>,
+        request: REQ,
+    ): Promise<RESP> {
+        const method = this.base + desc.getName();
+        // Some browsers with enormous market share aren't able to preserve the stack between here
+        // and our `.catch` callback below. Save a copy explicitly.
+        const invocationStack = new Error().stack;
+        return this.client
+            .thenableCall(
+                method,
+                request,
+                // @ts-expect-error metadata nullability not modeled
+                null,
+                desc,
+            )
+            .catch((e) => {
+                if (e.metadata?.['grpc-status-details-bin']) {
+                    const statusU8 = misc.fromBase64(e.metadata['grpc-status-details-bin']);
+                    const status = proto.google.rpc.Status.decode(statusU8);
+                    const details = status.details;
+                    // `errorFromGrpc` from oasis-core checks for exactly one entry in Details.
+                    // We additionally check that the type URL is empty, consistent with how
+                    // `errorToGrpc` leaves it blank.
+                    if (details.length === 1 && details[0].type_url === '' && details[0].value) {
+                        const grpcError = misc.fromCBOR(details[0].value) as GRPCError;
+                        const innerMessage =
+                            e.message ||
+                            `Message missing, module=${grpcError.module} code=${grpcError.code}`;
+                        const message = `callUnary method ${method}: ${innerMessage}`;
+                        // @ts-expect-error options and cause not modeled
+                        const wrapped = new OasisCodedError(message, {cause: e});
+                        wrapped.oasisCode = grpcError.code;
+                        wrapped.oasisModule = grpcError.module;
+                        wrapped.stack += `
+Cause stack:
+${e.stack}
+End of cause stack
+Invocation stack:
+${invocationStack}
+End of invocation stack`;
+                        throw wrapped;
+                    }
+                }
+                // Just in case there's some non-Error rejection reason that doesn't come with metadata
+                // from oasis-core as expected above, try using JSON to stringify it so that we don't
+                // end up with [object Object].
+                const innerMessage = e instanceof Error ? e.toString() : JSON.stringify(e);
+                const message = `callUnary method ${method}: ${innerMessage}`;
+                // @ts-expect-error options and cause not modeled
+                const wrapped = new Error(message, {cause: e});
+                wrapped.stack += `
+Cause stack:
+${e.stack}
+End of cause stack
+Invocation stack:
+${invocationStack}
+End of invocation stack`;
+                throw wrapped;
+            });
+    }
+
+    protected callServerStreaming<REQ, RESP>(
+        desc: grpcWeb.MethodDescriptor<REQ, RESP>,
+        request: REQ,
+    ): grpcWeb.ClientReadableStream<RESP> {
+        return this.client.serverStreaming(
+            this.base + desc.getName(),
+            request,
+            // @ts-expect-error metadata nullability not modeled
+            null,
+            desc,
+        );
+    }
+}
+
 const methodDescriptorBeaconConsensusParameters = createMethodDescriptorUnary<
     types.longnum,
     types.BeaconConsensusParameters
@@ -532,105 +631,6 @@ const methodDescriptorDebugControllerWaitNodesRegistered = createMethodDescripto
     number,
     void
 >('DebugController', 'WaitNodesRegistered');
-
-// see oasis-core/go/common/grpc/errors.go
-/**
- * grpcError is a serializable error.
- */
-interface GRPCError {
-    module?: string;
-    code?: number;
-}
-
-export class OasisCodedError extends Error {
-    oasisCode?: number;
-    oasisModule?: string;
-}
-
-export class GRPCWrapper {
-    client: grpcWeb.AbstractClientBase;
-    base: string;
-
-    constructor(base: string) {
-        this.client = new grpcWeb.GrpcWebClientBase({});
-        this.base = base;
-    }
-
-    protected callUnary<REQ, RESP>(
-        desc: grpcWeb.MethodDescriptor<REQ, RESP>,
-        request: REQ,
-    ): Promise<RESP> {
-        const method = this.base + desc.getName();
-        // Some browsers with enormous market share aren't able to preserve the stack between here
-        // and our `.catch` callback below. Save a copy explicitly.
-        const invocationStack = new Error().stack;
-        return this.client
-            .thenableCall(
-                method,
-                request,
-                // @ts-expect-error metadata nullability not modeled
-                null,
-                desc,
-            )
-            .catch((e) => {
-                if (e.metadata?.['grpc-status-details-bin']) {
-                    const statusU8 = misc.fromBase64(e.metadata['grpc-status-details-bin']);
-                    const status = proto.google.rpc.Status.decode(statusU8);
-                    const details = status.details;
-                    // `errorFromGrpc` from oasis-core checks for exactly one entry in Details.
-                    // We additionally check that the type URL is empty, consistent with how
-                    // `errorToGrpc` leaves it blank.
-                    if (details.length === 1 && details[0].type_url === '' && details[0].value) {
-                        const grpcError = misc.fromCBOR(details[0].value) as GRPCError;
-                        const innerMessage =
-                            e.message ||
-                            `Message missing, module=${grpcError.module} code=${grpcError.code}`;
-                        const message = `callUnary method ${method}: ${innerMessage}`;
-                        // @ts-expect-error options and cause not modeled
-                        const wrapped = new OasisCodedError(message, {cause: e});
-                        wrapped.oasisCode = grpcError.code;
-                        wrapped.oasisModule = grpcError.module;
-                        wrapped.stack += `
-Cause stack:
-${e.stack}
-End of cause stack
-Invocation stack:
-${invocationStack}
-End of invocation stack`;
-                        throw wrapped;
-                    }
-                }
-                // Just in case there's some non-Error rejection reason that doesn't come with metadata
-                // from oasis-core as expected above, try using JSON to stringify it so that we don't
-                // end up with [object Object].
-                const innerMessage = e instanceof Error ? e.toString() : JSON.stringify(e);
-                const message = `callUnary method ${method}: ${innerMessage}`;
-                // @ts-expect-error options and cause not modeled
-                const wrapped = new Error(message, {cause: e});
-                wrapped.stack += `
-Cause stack:
-${e.stack}
-End of cause stack
-Invocation stack:
-${invocationStack}
-End of invocation stack`;
-                throw wrapped;
-            });
-    }
-
-    protected callServerStreaming<REQ, RESP>(
-        desc: grpcWeb.MethodDescriptor<REQ, RESP>,
-        request: REQ,
-    ): grpcWeb.ClientReadableStream<RESP> {
-        return this.client.serverStreaming(
-            this.base + desc.getName(),
-            request,
-            // @ts-expect-error metadata nullability not modeled
-            null,
-            desc,
-        );
-    }
-}
 
 export class NodeInternal extends GRPCWrapper {
     constructor(base: string) {
