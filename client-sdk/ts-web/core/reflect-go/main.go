@@ -53,8 +53,9 @@ type clientCode struct {
 }
 
 var (
-	used = []*usedType{}
-	memo = map[reflect.Type]*usedType{}
+	used      = []*usedType{}
+	usedNames = map[string]bool{}
+	memo      = map[reflect.Type]*usedType{}
 )
 
 func collectPath(fn interface{}, stripComponents string) string {
@@ -368,6 +369,9 @@ func visitStruct(t reflect.Type) string { // nolint: gocyclo
 	}
 	sourceDoc := renderDocComment(getTypeDoc(t), "")
 	ref := getStructName(t)
+	if usedNames[ref] {
+		panic(fmt.Sprintf("name collision %s", ref))
+	}
 	var extendsType reflect.Type
 	extendsRef := ""
 	sourceExtends := ""
@@ -482,6 +486,7 @@ func visitStruct(t reflect.Type) string { // nolint: gocyclo
 	}
 	ut := usedType{ref, source}
 	used = append(used, &ut)
+	usedNames[ref] = true
 	memo[t] = &ut
 	return ref
 }
