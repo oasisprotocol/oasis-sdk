@@ -8,6 +8,8 @@ Little things:
   return falsy values (e.g. 0) instead of `undefined`.
   Our thanks to the grpc-web team that helped us add support for this in their
   library!
+- Compatibility with oasis-core is updated to 22.2.2.
+  They told me to keep pressing 2 until it auto completed a Git tag.
 
 ## v0.1.1-alpha.2
 
