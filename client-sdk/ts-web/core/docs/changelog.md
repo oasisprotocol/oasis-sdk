@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased changes
+
+Little things:
+
+- Requests for scalar values (e.g. `consensusGetSignerNonce`) now properly
+  return falsy values (e.g. 0) instead of `undefined`.
+  Our thanks to the grpc-web team that helped us add support for this in their
+  library!
+
 ## v0.1.1-alpha.2
 
 Spotlight change:

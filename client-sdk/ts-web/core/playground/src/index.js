@@ -49,11 +49,10 @@ export const playground = (async function () {
         console.log('computed from genesis', ourChainContext);
         if (ourChainContext !== chainContext) throw new Error('computed chain context mismatch');
 
-        const nonce =
-            (await nic.consensusGetSignerNonce({
-                account_address: await oasis.staking.addressFromPublicKey(src.public()),
-                height: oasis.consensus.HEIGHT_LATEST,
-            })) ?? 0;
+        const nonce = await nic.consensusGetSignerNonce({
+            account_address: await oasis.staking.addressFromPublicKey(src.public()),
+            height: oasis.consensus.HEIGHT_LATEST,
+        });
         console.log('nonce', nonce);
 
         const account = await nic.stakingAccount({
