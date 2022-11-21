@@ -24,7 +24,7 @@ export interface BeaconConsensusParameters {
      */
     insecure_parameters?: BeaconInsecureParameters;
     /**
-     * VRFParamenters are the beacon parameters for the VRF backend.
+     * VRFParameters are the beacon parameters for the VRF backend.
      */
     vrf_parameters?: BeaconVRFParameters;
 }
@@ -278,6 +278,20 @@ export interface ConsensusParameters {
 }
 
 /**
+ * Proof is a proof of transaction inclusion in a block.
+ */
+export interface ConsensusProof {
+    /**
+     * Height is the block height at which the transaction was published.
+     */
+    height: longnum;
+    /**
+     * RawProof is the actual raw proof.
+     */
+    raw_proof: Uint8Array;
+}
+
+/**
  * Result is a transaction execution result.
  */
 export interface ConsensusResult {
@@ -290,6 +304,10 @@ export interface ConsensusResult {
  */
 export interface ConsensusStatus {
     /**
+     * Status is an concise status of the consensus backend.
+     */
+    status: number;
+    /**
      * Version is the version of the consensus protocol that the node is using.
      */
     version: Version;
@@ -297,6 +315,10 @@ export interface ConsensusStatus {
      * Backend is the consensus backend identifier.
      */
     backend: string;
+    /**
+     * Mode is the consensus mode identifier.
+     */
+    mode: string;
     /**
      * Features are the indicated consensus backend features.
      */
@@ -505,13 +527,17 @@ export interface ControlRuntimeStatus {
     last_retained_hash: Uint8Array;
     /**
      * Committee contains the runtime worker status in case this node is a (candidate) member of a
-     * runtime committee (e.g., compute or storage).
+     * runtime committee.
      */
     committee: WorkerCommonStatus;
     /**
+     * Executor contains the executor worker status in case this node is an executor node.
+     */
+    executor?: WorkerComputeStatus;
+    /**
      * Storage contains the storage worker status in case this node is a storage node.
      */
-    storage: WorkerStorageStatus;
+    storage?: WorkerStorageStatus;
 }
 
 /**
@@ -537,15 +563,19 @@ export interface ControlStatus {
     /**
      * Runtimes is the status overview for each runtime supported by the node.
      */
-    runtimes: Map<Uint8Array, ControlRuntimeStatus>;
+    runtimes?: Map<Uint8Array, ControlRuntimeStatus>;
     /**
      * Registration is the node's registration status.
      */
     registration: ControlRegistrationStatus;
     /**
+     * Keymanager is the node's key manager worker status in case this node is a key manager node.
+     */
+    keymanager?: WorkerKeyManagerStatus;
+    /**
      * PendingUpgrades are the node's pending upgrades.
      */
-    pending_upgrades: UpgradePendingUpgrade[];
+    pending_upgrades?: UpgradePendingUpgrade[];
 }
 
 /**
@@ -636,6 +666,20 @@ export interface GovernanceCancelUpgradeProposal {
 }
 
 /**
+ * ChangeParametersProposal is a consensus change parameters proposal.
+ */
+export interface GovernanceChangeParametersProposal {
+    /**
+     * Module identifies the consensus backend module to which changes should be applied.
+     */
+    module: string;
+    /**
+     * Changes are consensus parameter changes that should be applied to the module.
+     */
+    changes: unknown;
+}
+
+/**
  * ConsensusParameters are the governance consensus parameters.
  */
 export interface GovernanceConsensusParameters {
@@ -670,6 +714,10 @@ export interface GovernanceConsensusParameters {
      * epoch and the proposed upgrade epoch for the upgrade cancellation proposal to be valid.
      */
     upgrade_cancel_min_epoch_diff?: longnum;
+    /**
+     * EnableChangeParametersProposal is true iff change parameters proposals are allowed.
+     */
+    enable_change_parameters_proposal?: boolean;
 }
 
 /**
@@ -755,6 +803,7 @@ export interface GovernanceProposal {
 export interface GovernanceProposalContent {
     upgrade?: UpgradeDescriptor;
     cancel_upgrade?: GovernanceCancelUpgradeProposal;
+    change_parameters?: GovernanceChangeParametersProposal;
 }
 
 /**
@@ -928,15 +977,6 @@ export interface KeyManagerStatus {
 }
 
 /**
- * TCPAddr represents the address of a TCP end point.
- */
-export interface NetTCPAddr {
-    IP: Uint8Array;
-    Port: number;
-    Zone: string;
-}
-
-/**
  * Node represents public connectivity information about an Oasis node.
  */
 export interface Node extends CBORVersioned {
@@ -991,6 +1031,15 @@ export interface Node extends CBORVersioned {
 }
 
 /**
+ * Address represents a TCP address for the purpose of node descriptors.
+ */
+export interface NodeAddress {
+    IP: Uint8Array;
+    Port: longnum;
+    Zone: string;
+}
+
+/**
  * Capabilities represents a node's capabilities.
  */
 export interface NodeCapabilities {
@@ -1032,7 +1081,7 @@ export interface NodeConsensusAddress {
     /**
      * Address is the address at which the node can be reached.
      */
-    address: NetTCPAddr;
+    address: NodeAddress;
 }
 
 /**
@@ -1061,7 +1110,7 @@ export interface NodeP2PInfo {
     /**
      * Addresses is the list of addresses at which the node can be reached.
      */
-    addresses: NetTCPAddr[];
+    addresses: NodeAddress[];
 }
 
 /**
@@ -1090,18 +1139,58 @@ export interface NodeRuntime {
 /**
  * SGXConstraints are the Intel SGX TEE constraints.
  */
-export interface NodeSGXConstraints {
+export interface NodeSGXConstraints extends CBORVersioned {
     /**
      * Enclaves is the allowed MRENCLAVE/MRSIGNER pairs.
      */
     enclaves?: SGXEnclaveIdentity[];
     /**
-     * AllowedQuoteStatuses are the allowed quote statuses for the node
-     * to be scheduled as a compute worker.
-     *
-     * Note: QuoteOK and QuoteSwHardeningNeeded are ALWAYS allowed, and do not need to be specified.
+     * Policy is the quote policy.
      */
-    allowed_quote_statuses?: number[];
+    policy?: SGXPolicy;
+    /**
+     * MaxAttestationAge is the maximum attestation age (in blocks).
+     */
+    max_attestation_age?: longnum;
+}
+
+/**
+ * TEEFeatures are the supported TEE features as advertised by the consensus layer.
+ */
+export interface NodeTEEFeatures {
+    /**
+     * SGX contains the supported TEE features for Intel SGX.
+     */
+    sgx: NodeTEEFeaturesSGX;
+    /**
+     * FreshnessProofs is a feature flag specifying whether ProveFreshness transactions are
+     * supported and processed, or ignored and handled as non-existing transactions.
+     */
+    freshness_proofs: boolean;
+}
+
+/**
+ * TEEFeaturesSGX are the supported Intel SGX-specific TEE features.
+ */
+export interface NodeTEEFeaturesSGX {
+    /**
+     * PCS is a feature flag specifying whether support for Platform Certification Service-based
+     * remote attestation is supported for Intel SGX-based TEEs.
+     */
+    pcs: boolean;
+    /**
+     * SignedAttestations is a feature flag specifying whether attestations need to include an
+     * additional signature binding it to a specific node.
+     */
+    signed_attestations?: boolean;
+    /**
+     * DefaultPolicy is the default quote policy.
+     */
+    default_policy?: SGXPolicy;
+    /**
+     * DefaultMaxAttestationAge is the default maximum attestation age (in blocks).
+     */
+    max_attestation_age?: longnum;
 }
 
 /**
@@ -1119,7 +1208,7 @@ export interface NodeTLSAddress {
     /**
      * Address is the address at which the node can be reached.
      */
-    address: NetTCPAddr;
+    address: NodeAddress;
 }
 
 /**
@@ -1173,7 +1262,7 @@ export interface RegistryConsensusAddressQuery {
 export interface RegistryConsensusParameters {
     /**
      * DebugAllowUnroutableAddresses is true iff node registration should
-     * allow unroutable addreses.
+     * allow unroutable addresses.
      */
     debug_allow_unroutable_addresses?: boolean;
     /**
@@ -1197,7 +1286,7 @@ export interface RegistryConsensusParameters {
      */
     disable_runtime_registration?: boolean;
     /**
-     * DisableRuntimeRegistration is true iff key manager runtime registration should be
+     * DisableKeyManagerRuntimeRegistration is true iff key manager runtime registration should be
      * disabled outside of the genesis block.
      */
     disable_km_runtime_registration?: boolean;
@@ -1214,6 +1303,14 @@ export interface RegistryConsensusParameters {
      * EnableRuntimeGovernanceModels is a set of enabled runtime governance models.
      */
     enable_runtime_governance_models?: Map<number, boolean>;
+    /**
+     * TEEFeatures contains the configuration of supported TEE features.
+     */
+    tee_features?: NodeTEEFeatures;
+    /**
+     * MaxRuntimeDeployments is the maximum number of runtime deployments.
+     */
+    max_runtime_deployments?: number;
 }
 
 /**
@@ -1346,6 +1443,15 @@ export interface RegistryGenesis {
      * NodeStatuses is a set of node statuses.
      */
     node_statuses?: Map<Uint8Array, RegistryNodeStatus>;
+}
+
+/**
+ * GetRuntimeQuery is a registry query by namespace (Runtime ID).
+ */
+export interface RegistryGetRuntimeQuery {
+    height: longnum;
+    id: Uint8Array;
+    include_suspended?: boolean;
 }
 
 /**
@@ -1964,7 +2070,7 @@ export interface RootHashIncomingMessage {
      */
     tokens?: Uint8Array;
     /**
-     * Data is arbitrary runtime-dependent data.
+     * Data is a runtime transaction.
      */
     data?: Uint8Array;
 }
@@ -2442,9 +2548,9 @@ export interface SchedulerForceElectCommitteeRole {
      */
     kind: number;
     /**
-     * Role is the role that the given node is force elected as.
+     * Roles are the roles that the given node is force elected as.
      */
-    role: number;
+    roles: Uint8Array;
     /**
      * IsScheduler is true iff the node should be set as the scheduler.
      */
@@ -2489,6 +2595,49 @@ export interface SchedulerValidator {
 export interface SGXEnclaveIdentity {
     mr_enclave: Uint8Array;
     mr_signer: Uint8Array;
+}
+
+/**
+ * QuotePolicy is the quote validity policy.
+ */
+export interface SGXIasQuotePolicy {
+    /**
+     * Disabled specifies whether IAS quotes are disabled and will always be rejected.
+     */
+    disabled?: boolean;
+    /**
+     * AllowedQuoteStatuses are the allowed quote statuses.
+     *
+     * Note: QuoteOK and QuoteSwHardeningNeeded are ALWAYS allowed, and do not need to be specified.
+     */
+    allowed_quote_statuses?: number[];
+}
+
+/**
+ * QuotePolicy is the quote validity policy.
+ */
+export interface SGXPcsQuotePolicy {
+    /**
+     * Disabled specifies whether PCS quotes are disabled and will always be rejected.
+     */
+    disabled?: boolean;
+    /**
+     * TCBValidityPeriod is the validity (in days) of the TCB collateral.
+     */
+    tcb_validity_period: number;
+    /**
+     * MinTCBEvaluationDataNumber is the minimum TCB evaluation data number that is considered to be
+     * valid. TCB bundles containing smaller values will be invalid.
+     */
+    min_tcb_evaluation_data_number: number;
+}
+
+/**
+ * Policy is the quote validity policy.
+ */
+export interface SGXPolicy {
+    ias?: SGXIasQuotePolicy;
+    pcs?: SGXPcsQuotePolicy;
 }
 
 /**
@@ -2749,7 +2898,7 @@ export interface StakingDebondingDelegationInfo extends StakingDebondingDelegati
 }
 
 /**
- * DebondingStartEvent is the event emitted when the debonding process has
+ * DebondingStartEscrowEvent is the event emitted when the debonding process has
  * started and the given number of active shares have been moved into the
  * debonding pool and started debonding.
  *
@@ -3237,6 +3386,10 @@ export interface WorkerCommonLivenessStatus {
  */
 export interface WorkerCommonStatus {
     /**
+     * Status is a concise status of the committee node.
+     */
+    status: number;
+    /**
      * ActiveVersion is the currently active version.
      */
     active_version: Version;
@@ -3271,6 +3424,60 @@ export interface WorkerCommonStatus {
 }
 
 /**
+ * Status is the executor worker status.
+ */
+export interface WorkerComputeStatus {
+    /**
+     * Status is a concise status of the committee node.
+     */
+    status: number;
+}
+
+/**
+ * RuntimeAccessList is an access control lists for a runtime.
+ */
+export interface WorkerKeyManagerRuntimeAccessList {
+    /**
+     * RuntimeID is the runtime ID of the runtime this access list is for.
+     */
+    runtime_id: Uint8Array;
+    /**
+     * Peers is a list of peers that are allowed to call protected methods.
+     */
+    peers: string[];
+}
+
+/**
+ * Status is the key manager worker status.
+ */
+export interface WorkerKeyManagerStatus {
+    /**
+     * Status is a concise status of the key manager worker.
+     */
+    status: number;
+    /**
+     * MayGenerate returns whether the enclave can generate a master secret.
+     */
+    may_generate: boolean;
+    /**
+     * RuntimeID is the runtime ID of the key manager.
+     */
+    runtime_id: Uint8Array;
+    /**
+     * ClientRuntimes is a list of compute runtimes that use this key manager.
+     */
+    client_runtimes: Uint8Array[];
+    /**
+     * AccessList is per-runtime list of peers that are allowed to call protected methods.
+     */
+    access_list: WorkerKeyManagerRuntimeAccessList[];
+    /**
+     * PrivatePeers is a list of peers that are always allowed to call protected methods.
+     */
+    private_peers: string[];
+}
+
+/**
  * GetLastSyncedRoundRequest is a GetLastSyncedRound request.
  */
 export interface WorkerStorageGetLastSyncedRoundRequest {
@@ -3302,20 +3509,4 @@ export interface WorkerStorageStatus {
      * LastFinalizedRound is the last synced and finalized round.
      */
     last_finalized_round: longnum;
-}
-
-/**
- * WaitForRoundRequest is a WaitForStorageRound request.
- */
-export interface WorkerStorageWaitForRoundRequest {
-    runtime_id: Uint8Array;
-    round: longnum;
-    root: StorageRoot;
-}
-
-/**
- * WaitForRoundResponse is a WaitForRound response.
- */
-export interface WorkerStorageWaitForRoundResponse {
-    last_round: longnum;
 }
