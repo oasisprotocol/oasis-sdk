@@ -1,9 +1,9 @@
 module example.com/oasisprotocol/minimal-runtime-client
 
-go 1.17
+go 1.18
 
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2202.2
+	github.com/oasisprotocol/oasis-core/go v0.2202.3
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.0
 	google.golang.org/grpc v1.49.0
 )
