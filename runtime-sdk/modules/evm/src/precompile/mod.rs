@@ -39,6 +39,10 @@ const PRECOMPILE_DATACOPY: H160 = H160([
 const PRECOMPILE_BIGMODEXP: H160 = H160([
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
 ]);
+/// Transaction and call format (non-encrypted/encrypted).
+const PRECOMPILE_CALL_FORMAT: H160 = H160([
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x06,
+]);
 /// Derive symmetric key from public/private key pair for X25519.
 const PRECOMPILE_X25519_DERIVE: H160 = H160([
     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02,
@@ -99,6 +103,7 @@ pub fn get_precompiles<Cfg: Config>() -> &'static PrecompileSetType {
             (PRECOMPILE_RIPEMD160, standard::call_ripemd160),
             (PRECOMPILE_DATACOPY, standard::call_datacopy),
             (PRECOMPILE_BIGMODEXP, standard::call_bigmodexp),
+            (PRECOMPILE_CALL_FORMAT, standard::call_format),
         ]);
         if Cfg::CONFIDENTIAL {
             map.extend([

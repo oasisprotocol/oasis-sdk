@@ -281,6 +281,20 @@ pub(super) fn call_bigmodexp(
     }
 }
 
+pub(super) fn call_format(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> PrecompileResult {
+    Ok(PrecompileOutput {
+        exit_status: ExitSucceed::Returned,
+        cost: 1, // TODO
+        output: vec![0], // TODO: vec![ctx.call_format()]
+        logs: Default::default(),
+    })
+}
+
 fn calculate_multiplication_complexity(
     base_length: u64,
     mod_length: u64,
