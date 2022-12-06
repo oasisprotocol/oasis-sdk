@@ -124,7 +124,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
 
-                let num_bytes = (dst_len as u64).min(1 * 1024 * 1024 /* 1 MiB */);
+                let num_bytes = (dst_len as u64).min(1024 /* 1 KiB */);
 
                 // Charge gas.
                 let cost = ec

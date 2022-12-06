@@ -114,6 +114,9 @@ pub enum Request {
         additional_data: Vec<u8>,
     },
 
+    #[cbor(rename = "random_bytes")]
+    RandomBytes { count: u32 },
+
     #[cbor(rename = "invalid_storage_call")]
     InvalidStorageCall,
 
@@ -164,6 +167,9 @@ pub enum Response {
 
     #[cbor(rename = "x25519_derive_symmetric")]
     X25519DeriveSymmetric { output: [u8; 32] },
+
+    #[cbor(rename = "random_bytes")]
+    RandomBytes { output: Vec<u8> },
 
     #[cbor(rename = "deoxysii_response")]
     DeoxysIIResponse { error: bool, output: Vec<u8> },
@@ -385,6 +391,12 @@ impl sdk::Contract for HelloWorld {
                 let error = output.is_err();
                 let output = output.unwrap_or_else(|_| Vec::new());
                 Ok(Response::DeoxysIIResponse { error, output })
+            }
+            Request::RandomBytes { count } => {
+                let mut buf = vec![0; count as usize];
+                let bytes_written = ctx.env().random_bytes(&mut buf);
+                buf.truncate(bytes_written);
+                Ok(Response::RandomBytes { output: buf })
             }
             Request::InvalidStorageCall => {
                 // Generate an invalid storage call.

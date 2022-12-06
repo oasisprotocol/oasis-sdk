@@ -681,6 +681,34 @@ OUTER:
 		return fmt.Errorf("failed to get nonce: %w", err)
 	}
 
+	// Generate some random bytes
+	tb = ct.Call(
+		instance.ID,
+		map[string]map[string]interface{}{
+			"random_bytes": {
+				"count": 42,
+			},
+		},
+		[]types.BaseUnits{},
+	).
+		SetFeeGas(250_000).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+4)
+	_ = tb.AppendSign(ctx, signer)
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
+		return fmt.Errorf("failed to call hello contract random_bytes: %w", err)
+	}
+
+	var randomBytesResponse map[string]struct {
+		Output []byte `json:"output"`
+	}
+	if err = cbor.Unmarshal(rawResult, &randomBytesResponse); err != nil {
+		return fmt.Errorf("failed to decode random_bytes result: %w", err)
+	}
+	randomBytesOutput := randomBytesResponse["random_bytes"]
+	if len(randomBytesOutput.Output) != 42 {
+		return fmt.Errorf("unexpected random_bytes result: %v", randomBytesOutput)
+	}
+
 	// Change upgrade policy.
 	tb = ct.ChangeUpgradePolicy(instanceID, contracts.Policy{Nobody: &struct{}{}}).
 		SetFeeGas(1_000_000).
