@@ -398,7 +398,7 @@ mod test {
     }
 
     #[test]
-    fn test_oasis_random_bytes() {
+    fn test_random_bytes() {
         struct MockBackend;
         impl crate::backend::EVMBackendExt for MockBackend {
             fn random_bytes(&self, num_words: u64) -> Vec<u8> {
@@ -406,20 +406,14 @@ mod test {
             }
         }
         let input = "0000000000000002";
-        let ret = crate::PRECOMPILE_CONTEXT
-            .with(|pc| {
-                pc.borrow_mut().replace(&MockBackend);
-                let ret = call_contract(
-                    H160([
-                        0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    ]),
-                    &hex::decode(input).unwrap(),
-                    6000,
-                );
-                pc.borrow_mut().take();
-                ret
-            })
-            .unwrap();
+        let ret = call_contract(
+            H160([
+                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+            ]),
+            &hex::decode(input).unwrap(),
+            10_200,
+        )
+        .unwrap();
         assert_eq!(hex::encode(ret.unwrap().output), "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f");
     }
 

@@ -1,8 +1,8 @@
-use evm::Context;
+use evm::{executor::stack::PrecompileSet, Context};
 use oasis_runtime_sdk::{modules::accounts::Module, types::token::Denomination};
 pub use primitive_types::H160;
 
-use super::{get_precompiles, PrecompileResult};
+use super::{PrecompileResult, Precompiles};
 
 struct TestConfig;
 
@@ -16,13 +16,19 @@ impl crate::Config for TestConfig {
     const CONFIDENTIAL: bool = true;
 }
 
+struct MockBackend;
+impl crate::backend::EVMBackendExt for MockBackend {
+    fn random_bytes(&self, num_words: u64) -> Vec<u8> {
+        (0..num_words).map(|i| i as u8).collect()
+    }
+}
+
 pub fn call_contract(address: H160, input: &[u8], target_gas: u64) -> Option<PrecompileResult> {
     let context: Context = Context {
         address: Default::default(),
         caller: Default::default(),
         apparent_value: From::from(0),
     };
-    let map = get_precompiles::<TestConfig>();
-    map.get(&address)
-        .map(|pf| pf(input, Some(target_gas), &context, false))
+    let precompiles: Precompiles<'_, TestConfig, MockBackend> = Precompiles::new(&MockBackend);
+    precompiles.execute(address, input, Some(target_gas), &context, false)
 }

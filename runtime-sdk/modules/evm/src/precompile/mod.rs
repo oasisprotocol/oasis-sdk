@@ -1,12 +1,14 @@
 //! EVM precompiles.
 
+use std::marker::PhantomData;
+
 use evm::{
     executor::stack::{PrecompileFailure, PrecompileOutput, PrecompileSet},
     ExitError,
 };
 use primitive_types::H160;
 
-use crate::backend::EVMBackendExt;
+use crate::{backend::EVMBackendExt, Config};
 
 mod confidential;
 mod standard;
@@ -44,17 +46,21 @@ fn linear_cost(
     Ok(cost)
 }
 
-pub(crate) struct Precompiles<'a, B: EVMBackendExt> {
+pub(crate) struct Precompiles<'a, Cfg: Config, B: EVMBackendExt> {
     backend: &'a B,
+    config: PhantomData<Cfg>,
 }
 
-impl<'a, B: EVMBackendExt> Precompiles<'a, B> {
+impl<'a, Cfg: Config, B: EVMBackendExt> Precompiles<'a, Cfg, B> {
     pub(crate) fn new(backend: &'a B) -> Self {
-        Self { backend }
+        Self {
+            backend,
+            config: PhantomData,
+        }
     }
 }
 
-impl<B: EVMBackendExt> PrecompileSet for Precompiles<'_, B> {
+impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
     fn execute(
         &self,
         address: H160,
@@ -84,9 +90,13 @@ impl<B: EVMBackendExt> PrecompileSet for Precompiles<'_, B> {
 
     fn is_precompile(&self, address: H160) -> bool {
         // All Ethereum precompiles are zero except for the last byte, which is no more than five.
-        // Otherwise, Oasis precompiles start with one and have a last byte of no more than four.
+        // Otherwise, when confidentiality is enabled, Oasis precompiles start with one and have a last byte of no more than four.
         let addr_bytes = address.as_bytes();
         let (first, last) = (address[0], addr_bytes[19]);
-        address[1..19].iter().all(|b| *b == 0) && matches!((first, last), (0, 1..=5) | (1, 1..=4))
+        address[1..19].iter().all(|b| *b == 0)
+            && matches!(
+                (first, last, Cfg::CONFIDENTIAL),
+                (0, 1..=5, _) | (1, 1..=4, true)
+            )
     }
 }

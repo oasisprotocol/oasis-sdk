@@ -530,7 +530,7 @@ impl<Cfg: Config> Module<Cfg> {
                 'static,
                 '_,
                 MemoryStackState<'_, 'static, backend::Backend<'_, C, Cfg>>,
-                precompile::Precompiles<backend::Backend<'_, C, Cfg>>,
+                precompile::Precompiles<Cfg, backend::Backend<'_, C, Cfg>>,
             >,
             u64,
         ) -> (evm::ExitReason, Vec<u8>),
