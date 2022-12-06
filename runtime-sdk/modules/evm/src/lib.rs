@@ -11,8 +11,6 @@ mod signed_call;
 pub mod state;
 pub mod types;
 
-use std::{cell::RefCell, collections::BTreeMap};
-
 use evm::{
     executor::stack::{MemoryStackState, StackExecutor, StackSubstateMetadata},
     Config as EVMConfig,
@@ -40,7 +38,7 @@ use oasis_runtime_sdk::{
     },
 };
 
-use backend::{ApplyBackendResult, EVMBackendExt};
+use backend::ApplyBackendResult;
 use types::{H160, H256, U256};
 
 #[cfg(test)]
@@ -48,11 +46,6 @@ mod test;
 
 /// Unique module name.
 const MODULE_NAME: &str = "evm";
-
-thread_local! {
-    pub(crate) static PRECOMPILE_CONTEXT: RefCell<Option<&'static dyn EVMBackendExt>>
-        = Default::default();
-}
 
 /// Module configuration.
 pub trait Config: 'static {
@@ -83,7 +76,7 @@ pub trait Config: 'static {
     /// If any of the precompile addresses returned is the same as for one of
     /// the builtin precompiles, then the returned implementation will
     /// overwrite the builtin implementation.
-    fn additional_precompiles() -> Option<precompile::PrecompileSetType> {
+    fn additional_precompiles() -> Option<()> {
         None
     }
 
@@ -537,7 +530,7 @@ impl<Cfg: Config> Module<Cfg> {
                 'static,
                 '_,
                 MemoryStackState<'_, 'static, backend::Backend<'_, C, Cfg>>,
-                precompile::PrecompileSetType,
+                precompile::Precompiles<backend::Backend<'_, C, Cfg>>,
             >,
             u64,
         ) -> (evm::ExitReason, Vec<u8>),
@@ -561,21 +554,11 @@ impl<Cfg: Config> Module<Cfg> {
         let mut backend = backend::Backend::<'_, C, Cfg>::new(ctx, vicinity);
         let metadata = StackSubstateMetadata::new(gas_limit, cfg);
         let stackstate = MemoryStackState::new(metadata, &backend);
-        let mut executor = StackExecutor::new_with_precompiles(
-            stackstate,
-            cfg,
-            precompile::get_precompiles::<Cfg>(),
-        );
+        let precompiles = precompile::Precompiles::new(&backend);
+        let mut executor = StackExecutor::new_with_precompiles(stackstate, cfg, &precompiles);
 
         // Run EVM and process the result.
-        let (exit_reason, exit_value) = PRECOMPILE_CONTEXT.with(|pc| {
-            let backend_ext: &dyn EVMBackendExt = &backend as _;
-            pc.borrow_mut()
-                .replace(unsafe { std::mem::transmute::<&_, &'static _>(backend_ext) });
-            let exit = f(&mut executor, gas_limit);
-            pc.borrow_mut().take(); // The global reference does not outlive the referent's actual lifetime.
-            exit
-        });
+        let (exit_reason, exit_value) = f(&mut executor, gas_limit);
         let gas_used = executor.used_gas();
         let fee = executor.fee(gas_price);
 

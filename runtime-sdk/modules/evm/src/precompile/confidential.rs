@@ -6,6 +6,8 @@ use hmac::{Hmac, Mac, NewMac as _};
 use num::{BigUint, ToPrimitive as _};
 use oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::{DeoxysII, KEY_SIZE, NONCE_SIZE};
 
+use crate::backend::EVMBackendExt;
+
 use super::{linear_cost, PrecompileResult};
 
 /// The base setup cost for encryption and decryption.
@@ -55,11 +57,12 @@ pub(super) fn call_x25519_derive(
     })
 }
 
-fn call_oasis_random_bytes(
+pub(super) fn call_random_bytes<B: EVMBackendExt>(
     input: &[u8],
     target_gas: Option<u64>,
     _context: &Context,
     _is_static: bool,
+    backend: &B,
 ) -> PrecompileResult {
     let mut num_bytes_bytes = [0u8; std::mem::size_of::<u64>()];
     if input.len() != num_bytes_bytes.len() {
@@ -73,27 +76,26 @@ fn call_oasis_random_bytes(
     // This operation shouldn't be too cheap to start since it invokes a key manager.
     // Each byte is generated using hashing, so it's neither expensive nor cheap.
     // Thus:
-    // * The base gas is the minimum SSTORE gas since one may think that it is
-    //   as difficult to to hit a storage node as the KM (another "remote" node).
-    // * The word gas is twice the SHA256 gas since the CSPRNG is reasonably expected
+    // * The base gas is 2x the SSTORE gas since storing requires as much effort
+    //   as accessing the key manager (which storing does as well).
+    // * The word gas is no 4x SHA256 gas since the CSPRNG is reasonably expected
     //   to use an efficient cryptographic hash function with some bookkeeping.
     // In any case, it's much cheaper than using a VRF oracle, and even a Solidity DRBG,
     // which has a cost-per-byte upwards of 1000.
-    let gas_cost = linear_cost(target_gas, num_bytes, 5_000, 24)?;
+    let gas_cost = linear_cost(target_gas, num_bytes, 10_000, 100)?;
 
-    let random_bytes =
-        crate::PRECOMPILE_CONTEXT.with(|pc| pc.borrow().map(|pc| pc.random_bytes(num_bytes)));
-    match random_bytes {
-        Some(rb) if rb.len() as u64 == num_bytes => Ok(PrecompileOutput {
-            exit_status: ExitSucceed::Returned,
-            cost: gas_cost,
-            output: rb,
-            logs: Default::default(),
-        }),
-        _ => Err(PrecompileFailure::Error {
+    let bytes = backend.random_bytes(num_bytes);
+    if bytes.len() != num_bytes as usize {
+        return Err(PrecompileFailure::Error {
             exit_status: ExitError::Other("not enough entropy".into()),
-        }),
+        });
     }
+    Ok(PrecompileOutput {
+        exit_status: ExitSucceed::Returned,
+        cost: gas_cost,
+        output: bytes,
+        logs: Default::default(),
+    })
 }
 
 #[allow(clippy::type_complexity)]

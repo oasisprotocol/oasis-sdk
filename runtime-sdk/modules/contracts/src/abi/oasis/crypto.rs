@@ -40,7 +40,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                         .try_into()
                         .map_err(|_| wasm3::Trap::Abort)?;
 
-                    let key = crypto::ecdsa::recover(&input).unwrap_or_else(|_| [0; 65]);
+                    let key = crypto::ecdsa::recover(&input).unwrap_or_default();
                     output.copy_from_slice(&key);
 
                     Ok(())
@@ -124,26 +124,28 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
 
+                let num_bytes = (dst_len as u64).min(1 * 1024 * 1024 /* 1 MiB */);
+
                 // Charge gas.
                 let cost = ec
                     .params
                     .gas_costs
                     .wasm_crypto_random_bytes_byte
-                    .checked_mul(dst_len as u64)
+                    .checked_mul(num_bytes)
                     .and_then(|g| g.checked_add(ec.params.gas_costs.wasm_crypto_random_bytes_base))
                     .unwrap_or(u64::max_value()); // This will certainly exhaust the gas limit.
                 gas::use_gas(ctx.instance, cost)?;
 
                 let rt = ctx.instance.runtime();
                 rt.try_with_memory(|mut memory| -> Result<_, wasm3::Trap> {
-                    let output = Region::from_arg((dst_ptr, dst_len))
+                    let output = Region::from_arg((dst_ptr, num_bytes))
                         .as_slice_mut(&mut memory)
                         .map_err(|_| wasm3::Trap::Abort)?;
                     Ok(ec
                         .tx_context
                         .rng()
                         .and_then(|rng| rand_core::RngCore::try_fill_bytes(rng, output).ok())
-                        .map(|_| dst_len)
+                        .map(|_| num_bytes)
                         .unwrap_or_default())
                 })?
             },

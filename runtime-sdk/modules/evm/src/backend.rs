@@ -186,6 +186,12 @@ impl<T: EVMBackendExt> EVMBackendExt for &T {
 
 impl<'ctx, C: Context, Cfg: Config> EVMBackendExt for Backend<'ctx, C, Cfg> {
     fn random_bytes(&self, num_words: u64) -> Vec<u8> {
+        if num_words > 64 {
+            // Refuse to generate more than 2 KiB in one go.
+            // EVM memory gas is checked only before and after calls, so we won't
+            // see the quadratic memory cost until after this call uses its time.
+            return vec![];
+        }
         let mut ctx = self.ctx.borrow_mut();
         let num_bytes = num_words.checked_mul(32).unwrap_or_default();
         let mut rand_bytes = vec![0u8; num_bytes.min(usize::max_value() as u64) as usize];
