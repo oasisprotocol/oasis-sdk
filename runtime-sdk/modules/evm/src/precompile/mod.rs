@@ -55,7 +55,7 @@ fn multilinear_cost(
     let ax = ensure_gas!(a.checked_mul(bytes_to_words(x)));
     let by = ensure_gas!(b.checked_mul(bytes_to_words(y)));
     let cost = ensure_gas!(cost.checked_add(ax));
-    let cost = dbg!(ensure_gas!(cost.checked_add(by)));
+    let cost = ensure_gas!(cost.checked_add(by));
     if let Some(target_gas) = target_gas {
         if cost > target_gas {
             return Err(PrecompileFailure::Error {

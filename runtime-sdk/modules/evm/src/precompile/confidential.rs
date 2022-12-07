@@ -17,11 +17,6 @@ const DEOXYSII_WORD_COST: u64 = 100;
 /// Length of an EVM word, in bytes.
 const WORD: usize = 32;
 
-/// Rounds the input to the nearest multiple of the word size.
-fn round_up_nybles(x: u64) -> u64 {
-    x.saturating_add(31) & (!0x1f)
-}
-
 fn bigint_bytes_to_u64(item: &'static str, bytes: &[u8; 32]) -> Result<u64, PrecompileFailure> {
     BigUint::from_bytes_be(bytes)
         .to_u64()
@@ -151,18 +146,18 @@ fn decode_deoxysii_call_args(
     let mut words = fixed_inputs.array_chunks::<WORD>();
     let key = words.next().unwrap();
     let nonce_word = words.next().unwrap();
-    let text_len = round_up_nybles(bigint_bytes_to_u64("msg len", words.next().unwrap())?);
-    let ad_len = round_up_nybles(bigint_bytes_to_u64("ad len", words.next().unwrap())?);
+    let text_len = bigint_bytes_to_u64("msg len", words.next().unwrap())?;
+    let ad_len = bigint_bytes_to_u64("ad len", words.next().unwrap())?;
 
     if (var_inputs.len() as u64) < text_len {
         return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("text length too short".into()),
+            exit_status: ExitError::Other("text or associated data too short".into()),
         });
     }
     let (text, ad) = var_inputs.split_at(text_len as usize);
     if (ad.len() as u64) < ad_len {
         return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("associated data length too short".into()),
+            exit_status: ExitError::Other("associated data too short".into()),
         });
     }
 
@@ -370,19 +365,7 @@ mod test {
         .expect_err("call should fail");
 
         plain_input.extend_from_slice(plaintext);
-        plain_input.resize((plain_input.len() + 31) & (!31), 0);
         plain_input.extend_from_slice(ad);
-        call_contract(
-            H160([
-                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
-            ]),
-            &plain_input,
-            1_000_000,
-        )
-        .expect("call should return something")
-        .expect_err("call should fail");
-
-        plain_input.resize((plain_input.len() + 31) & (!31), 0);
 
         // Get ciphertext.
         let result = call_contract(
@@ -404,9 +387,7 @@ mod test {
         cipher_input.extend_from_slice(&ciphertext_len);
         cipher_input.extend_from_slice(&ad_len);
         cipher_input.extend_from_slice(&ciphertext);
-        cipher_input.resize((cipher_input.len() + 31) & (!31), 0);
         cipher_input.extend_from_slice(ad);
-        cipher_input.resize((cipher_input.len() + 31) & (!31), 0);
 
         // Try decrypting and compare.
         let result = call_contract(
