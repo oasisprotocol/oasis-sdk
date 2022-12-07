@@ -40,8 +40,10 @@ impl<Cfg: Config> OasisV1<Cfg> {
                         .try_into()
                         .map_err(|_| wasm3::Trap::Abort)?;
 
-                    let key = crypto::ecdsa::recover(&input).unwrap_or_default();
-                    output.copy_from_slice(&key);
+                    match crypto::ecdsa::recover(&input) {
+                        Ok(key) => output.copy_from_slice(&key),
+                        Err(_) => output.iter_mut().for_each(|b| *b = 0),
+                    }
 
                     Ok(())
                 })?
@@ -124,14 +126,14 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
 
-                let num_bytes = (dst_len as u64).min(1024 /* 1 KiB */);
+                let num_bytes = (dst_len as u64).min(1024 /* 1 KiB */) as u32;
 
                 // Charge gas.
                 let cost = ec
                     .params
                     .gas_costs
                     .wasm_crypto_random_bytes_byte
-                    .checked_mul(num_bytes)
+                    .checked_mul(num_bytes as u64)
                     .and_then(|g| g.checked_add(ec.params.gas_costs.wasm_crypto_random_bytes_base))
                     .unwrap_or(u64::max_value()); // This will certainly exhaust the gas limit.
                 gas::use_gas(ctx.instance, cost)?;
@@ -141,12 +143,10 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     let output = Region::from_arg((dst_ptr, num_bytes))
                         .as_slice_mut(&mut memory)
                         .map_err(|_| wasm3::Trap::Abort)?;
-                    Ok(ec
-                        .tx_context
-                        .rng()
-                        .and_then(|rng| rand_core::RngCore::try_fill_bytes(rng, output).ok())
-                        .map(|_| num_bytes)
-                        .unwrap_or_default())
+                    let rng = ec.tx_context.rng().map_err(|_| wasm3::Trap::Abort)?;
+                    rand_core::RngCore::try_fill_bytes(rng, output)
+                        .map_err(|_| wasm3::Trap::Abort)?;
+                    Ok(num_bytes)
                 })?
             },
         );

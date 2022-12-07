@@ -229,6 +229,7 @@ impl Crypto for HostEnv {
         additional_data: &[u8],
     ) -> Result<Vec<u8>, CryptoError> {
         self.deoxysii_process(crypto::deoxysii_open, key, nonce, message, additional_data)
+    }
 
     fn random_bytes(&self, dst: &mut [u8]) -> usize {
         let dst_region = HostRegionRef::from_slice(dst);
