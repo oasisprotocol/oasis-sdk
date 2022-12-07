@@ -80,12 +80,12 @@ fn decode_random_bytes_call_args(input: &[u8]) -> Result<(u64, &[u8]), Precompil
     let mut words = fixed_inputs.array_chunks::<WORD>();
     let num_words = bigint_bytes_to_u64("num words", words.next().unwrap())?;
     let pers_str_len = bigint_bytes_to_u64("pers length", words.next().unwrap())?;
-    if (pers_str.len() as u64) != pers_str_len {
+    if pers_str_len > (pers_str.len() as u64) {
         return Err(PrecompileFailure::Error {
             exit_status: ExitError::Other("input too short".into()),
         });
     }
-    Ok((num_words, pers_str))
+    Ok((num_words, &pers_str[..(pers_str_len as usize)]))
 }
 
 pub(super) fn call_x25519_derive(
@@ -142,29 +142,33 @@ fn decode_deoxysii_call_args(
         });
     }
 
-    let (fixed_inputs, var_inputs) = input.split_at(SLOTS * WORD);
-    let mut words = fixed_inputs.array_chunks::<WORD>();
+    let mut words = input.array_chunks::<WORD>().take(SLOTS);
     let key = words.next().unwrap();
     let nonce_word = words.next().unwrap();
-    let text_len = bigint_bytes_to_u64("msg len", words.next().unwrap())?;
-    let ad_len = bigint_bytes_to_u64("ad len", words.next().unwrap())?;
-
-    if (var_inputs.len() as u64) < text_len {
-        return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("text or associated data too short".into()),
-        });
-    }
-    let (text, ad) = var_inputs.split_at(text_len as usize);
-    if (ad.len() as u64) < ad_len {
-        return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("associated data too short".into()),
-        });
-    }
+    let text_len = words.next().unwrap();
+    let ad_len = words.next().unwrap();
 
     // Only the initial NONCE_SIZE bytes of the nonce field are used - bytes at
     // lower addresses in the input.
     let mut nonce = [0u8; NONCE_SIZE];
     nonce.copy_from_slice(&nonce_word[..NONCE_SIZE]);
+
+    let text_len = bigint_bytes_to_u64("text length", text_len)? as usize;
+    let text_size = text_len.saturating_add(31) & (!0x1f); // Round up to 32 bytes.
+
+    let ad_len = bigint_bytes_to_u64("ad length", ad_len)? as usize;
+    let ad_size = ad_len.saturating_add(31) & (!0x1f); // Round up to 32 bytes.
+    let input_len = ad_size
+        .checked_add(text_size)
+        .and_then(|s| s.checked_add(SLOTS * WORD));
+    if input_len != Some(input.len()) {
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("input too short".into()),
+        });
+    }
+
+    let text = &input[(SLOTS * WORD)..(SLOTS * WORD + text_len)];
+    let ad = &input[(SLOTS * WORD + text_size)..(SLOTS * WORD + text_size + ad_len)];
 
     Ok((*key, nonce, text, ad))
 }
@@ -365,7 +369,19 @@ mod test {
         .expect_err("call should fail");
 
         plain_input.extend_from_slice(plaintext);
+        plain_input.resize((plain_input.len() + 31) & (!31), 0);
         plain_input.extend_from_slice(ad);
+        call_contract(
+            H160([
+                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
+            ]),
+            &plain_input,
+            1_000_000,
+        )
+        .expect("call should return something")
+        .expect_err("call should fail");
+
+        plain_input.resize((plain_input.len() + 31) & (!31), 0);
 
         // Get ciphertext.
         let result = call_contract(
@@ -387,7 +403,9 @@ mod test {
         cipher_input.extend_from_slice(&ciphertext_len);
         cipher_input.extend_from_slice(&ad_len);
         cipher_input.extend_from_slice(&ciphertext);
+        cipher_input.resize((cipher_input.len() + 31) & (!31), 0);
         cipher_input.extend_from_slice(ad);
+        cipher_input.resize((cipher_input.len() + 31) & (!31), 0);
 
         // Try decrypting and compare.
         let result = call_contract(
@@ -404,22 +422,16 @@ mod test {
 
     #[test]
     fn test_random_bytes() {
-        struct MockBackend;
-        impl crate::backend::EVMBackendExt for MockBackend {
-            fn random_bytes(&self, num_words: u64, _pers: &[u8]) -> Vec<u8> {
-                (0..num_words).map(|i| i as u8).collect()
-            }
-        }
-        let input = "00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000";
+        let input = "00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002beef000000000000000000000000000000000000000000000000000000000000";
         let ret = call_contract(
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
             ]),
             &hex::decode(input).unwrap(),
-            10_200,
+            10_260,
         )
         .unwrap();
-        assert_eq!(hex::encode(ret.unwrap().output), "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f");
+        assert_eq!(hex::encode(ret.unwrap().output), "beef02030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f");
     }
 
     #[bench]

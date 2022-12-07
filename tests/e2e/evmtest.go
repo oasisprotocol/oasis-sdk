@@ -1137,6 +1137,11 @@ func rngEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) err
 	return nil
 }
 
+// C10lEVMRNGTest does a simple key derivation contract test.
+func C10lEVMRNGTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	return rngEVMTest(log, rtc, c10l)
+}
+
 // C10lEVMKeyDerivationTest does a simple key derivation contract test.
 func C10lEVMKeyDerivationTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return keyDerivationEVMTest(log, rtc, c10l)

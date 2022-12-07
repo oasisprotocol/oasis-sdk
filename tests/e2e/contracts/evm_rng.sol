@@ -1,42 +1,33 @@
 pragma solidity ^0.8.0;
 
 contract Test {
-    constructor() {}
-    function test() public view {
-        assembly {
-            // Generate some bytes.
-            let num_words := 0x2a
-            let num_bytes := mul(num_words, 0x20)
-            let pers_str := 0xbeef000000000000000000000000000000000000000000000000000000000000
-            let buf := mload(0x40)
-            mstore(buf, num_words)
-            mstore(add(buf, 0x20), 2) // personalization string length
-            mstore(add(buf, 0x40), pers_str)
-            let status := staticcall(gas(), 0x0100000000000000000000000000000000000001, buf, 0x42, buf, 0)
-            if eq(status, 0) {
-                revert(0, 0)
-            }
-            if not(eq(returndatasize(), num_bytes)) {
-                revert(0, 0)
-            }
-            returndatacopy(buf, 0, num_bytes)
-            // Make sure that the output isn't obviously buggy.
-            let output_sum := 0
-            for { let i := 0 } lt(i, num_words) { i := add(i, 0x20) } {
-                output_sum := add(output_sum, mload(add(buf, i)))
-            }
-            if eq(output_sum, 0) {
-                revert(0, 0)
-            }
+    address constant private RANDOM_BYTES = 0x0100000000000000000000000000000000000001;
 
-            // Generate an unreasonable number of bytes.
-            num_words := 0xffff
-            num_bytes := mul(num_words, 0x20)
-            mstore(buf, num_words)
-            status := staticcall(gas(), 0x0100000000000000000000000000000000000001, buf, 0x20, buf, num_bytes)
-            if eq(status, 1) {
-                revert(0, 0) // It shouldn't work because the number of bytes is unreasonable.
-            }
+    function randomBytes(uint256 count, bytes memory pers) internal view returns (bool, bytes memory) {
+        return RANDOM_BYTES.staticcall(abi.encode(count, pers));
+    }
+
+    function test() external view {
+        // Generate a normal amount of bytes with no personalization.
+        (bool success1, bytes memory out1) = randomBytes(10, bytes("personalized!"));
+        require(success1, "1");
+        uint256 outSum = 0;
+        for(uint256 i = 0; i < out1.length; ++i) {
+            outSum += uint256(uint8(out1[i]));
         }
+        require(outSum > 0, "0");
+
+        // Generate some more bytes and make sure they don't match.
+        (bool success2, bytes memory out2) = randomBytes(10, "");
+        require(success2, "2");
+        bool allEq = true;
+        for(uint256 i = 0; i < out1.length; ++i) {
+            allEq = allEq && out1[i] == out2[i];
+        }
+        require(!allEq, "=");
+
+        // Generate too many bytes.
+        (bool success3, ) = randomBytes(500, "");
+        require(!success3, "!");
     }
 }
