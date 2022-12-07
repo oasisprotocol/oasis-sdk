@@ -27,6 +27,11 @@ macro_rules! ensure_gas {
     };
 }
 
+// ceil(bytes/32)
+fn bytes_to_words(bytes: u64) -> u64 {
+    bytes.saturating_add(31) / 32
+}
+
 /// Linear gas cost: base + word*ceil(len/32)
 fn linear_cost(
     target_gas: Option<u64>,
@@ -34,8 +39,23 @@ fn linear_cost(
     base: u64,
     word: u64,
 ) -> Result<u64, PrecompileFailure> {
-    let word_cost = ensure_gas!(word.checked_mul(len.saturating_add(31) / 32));
-    let cost = ensure_gas!(base.checked_add(word_cost));
+    multilinear_cost(target_gas, len, 0, word, 0, base)
+}
+
+// Returns a*ceil(x/32) + b*ceil(y/32) + c, or an error if out of gas.
+fn multilinear_cost(
+    target_gas: Option<u64>,
+    x: u64,
+    y: u64,
+    a: u64,
+    b: u64,
+    c: u64,
+) -> Result<u64, PrecompileFailure> {
+    let cost = c;
+    let ax = ensure_gas!(a.checked_mul(bytes_to_words(x)));
+    let by = ensure_gas!(b.checked_mul(bytes_to_words(y)));
+    let cost = ensure_gas!(cost.checked_add(ax));
+    let cost = dbg!(ensure_gas!(cost.checked_add(by)));
     if let Some(target_gas) = target_gas {
         if cost > target_gas {
             return Err(PrecompileFailure::Error {

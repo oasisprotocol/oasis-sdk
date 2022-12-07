@@ -172,7 +172,7 @@ impl Crypto for MockEnv {
         })
     }
 
-    fn random_bytes(&self, dst: &mut [u8]) -> usize {
+    fn random_bytes(&self, _pers: &[u8], dst: &mut [u8]) -> usize {
         self.rng.lock().unwrap().fill_bytes(dst);
         dst.len()
     }

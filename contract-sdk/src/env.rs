@@ -69,5 +69,6 @@ pub trait Crypto {
 
     /// Fills `dst` with cryptographically secure random bytes.
     /// Returns the number of bytes written.
-    fn random_bytes(&self, dst: &mut [u8]) -> usize;
+    /// If the optional personalization string (`pers`) is provided, it will be mixed into the RNG to provide additional domain separation.
+    fn random_bytes(&self, pers: &[u8], dst: &mut [u8]) -> usize;
 }

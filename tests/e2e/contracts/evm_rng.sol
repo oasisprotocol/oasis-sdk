@@ -7,9 +7,12 @@ contract Test {
             // Generate some bytes.
             let num_words := 0x2a
             let num_bytes := mul(num_words, 0x20)
+            let pers_str := 0xbeef000000000000000000000000000000000000000000000000000000000000
             let buf := mload(0x40)
             mstore(buf, num_words)
-            let status := staticcall(gas(), 0x0100000000000000000000000000000000000001, buf, 0x20, buf, 0)
+            mstore(add(buf, 0x20), 2) // personalization string length
+            mstore(add(buf, 0x40), pers_str)
+            let status := staticcall(gas(), 0x0100000000000000000000000000000000000001, buf, 0x42, buf, 0)
             if eq(status, 0) {
                 revert(0, 0)
             }

@@ -231,8 +231,16 @@ impl Crypto for HostEnv {
         self.deoxysii_process(crypto::deoxysii_open, key, nonce, message, additional_data)
     }
 
-    fn random_bytes(&self, dst: &mut [u8]) -> usize {
+    fn random_bytes(&self, pers: &[u8], dst: &mut [u8]) -> usize {
+        let pers_region = HostRegionRef::from_slice(pers);
         let dst_region = HostRegionRef::from_slice(dst);
-        unsafe { crypto::crypto_random_bytes(dst_region.offset, dst_region.length) as usize }
+        unsafe {
+            crypto::crypto_random_bytes(
+                pers_region.offset,
+                pers_region.length,
+                dst_region.offset,
+                dst_region.length,
+            ) as usize
+        }
     }
 }

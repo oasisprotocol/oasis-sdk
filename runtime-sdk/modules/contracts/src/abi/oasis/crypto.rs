@@ -122,29 +122,34 @@ impl<Cfg: Config> OasisV1<Cfg> {
         let _ = instance.link_function(
             "crypto",
             "random_bytes",
-            |ctx, ((dst_ptr, dst_len),): ((u32, u32),)| -> Result<u32, wasm3::Trap> {
+            |ctx,
+             ((pers_ptr, pers_len, dst_ptr, dst_len),): ((u32, u32, u32, u32),)|
+             -> Result<u32, wasm3::Trap> {
                 // Make sure function was called in valid context.
                 let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
 
-                let num_bytes = (dst_len as u64).min(1024 /* 1 KiB */) as u32;
+                let num_bytes = dst_len.min(1024 /* 1 KiB */);
 
                 // Charge gas.
                 let cost = ec
                     .params
                     .gas_costs
                     .wasm_crypto_random_bytes_byte
-                    .checked_mul(num_bytes as u64)
+                    .checked_mul(num_bytes as u64 + pers_len as u64)
                     .and_then(|g| g.checked_add(ec.params.gas_costs.wasm_crypto_random_bytes_base))
                     .unwrap_or(u64::max_value()); // This will certainly exhaust the gas limit.
                 gas::use_gas(ctx.instance, cost)?;
 
                 let rt = ctx.instance.runtime();
                 rt.try_with_memory(|mut memory| -> Result<_, wasm3::Trap> {
+                    let pers = Region::from_arg((pers_ptr, pers_len))
+                        .as_slice(&memory)
+                        .map_err(|_| wasm3::Trap::Abort)?;
+                    let mut rng = ec.tx_context.rng(pers).map_err(|_| wasm3::Trap::Abort)?;
                     let output = Region::from_arg((dst_ptr, num_bytes))
                         .as_slice_mut(&mut memory)
                         .map_err(|_| wasm3::Trap::Abort)?;
-                    let rng = ec.tx_context.rng().map_err(|_| wasm3::Trap::Abort)?;
-                    rand_core::RngCore::try_fill_bytes(rng, output)
+                    rand_core::RngCore::try_fill_bytes(&mut rng, output)
                         .map_err(|_| wasm3::Trap::Abort)?;
                     Ok(num_bytes)
                 })?

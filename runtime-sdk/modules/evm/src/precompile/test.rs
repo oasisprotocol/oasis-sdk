@@ -18,7 +18,7 @@ impl crate::Config for TestConfig {
 
 struct MockBackend;
 impl crate::backend::EVMBackendExt for MockBackend {
-    fn random_bytes(&self, num_words: u64) -> Vec<u8> {
+    fn random_bytes(&self, num_words: u64, _pers: &[u8]) -> Vec<u8> {
         (0..num_words).map(|i| i as u8).collect()
     }
 }

@@ -175,17 +175,17 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
 }
 
 pub(crate) trait EVMBackendExt {
-    fn random_bytes(&self, num_words: u64) -> Vec<u8>;
+    fn random_bytes(&self, num_words: u64, pers: &[u8]) -> Vec<u8>;
 }
 
 impl<T: EVMBackendExt> EVMBackendExt for &T {
-    fn random_bytes(&self, num_words: u64) -> Vec<u8> {
-        (*self).random_bytes(num_words)
+    fn random_bytes(&self, num_words: u64, pers: &[u8]) -> Vec<u8> {
+        (*self).random_bytes(num_words, pers)
     }
 }
 
 impl<'ctx, C: Context, Cfg: Config> EVMBackendExt for Backend<'ctx, C, Cfg> {
-    fn random_bytes(&self, num_words: u64) -> Vec<u8> {
+    fn random_bytes(&self, num_words: u64, pers: &[u8]) -> Vec<u8> {
         if num_words > 64 {
             // Refuse to generate more than 2 KiB in one go.
             // EVM memory gas is checked only before and after calls, so we won't
@@ -194,11 +194,11 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackendExt for Backend<'ctx, C, Cfg> {
         }
         let mut ctx = self.ctx.borrow_mut();
         let num_bytes = num_words.checked_mul(32).unwrap_or_default();
-        ctx.rng()
+        ctx.rng(pers)
             .ok()
-            .and_then(|rng| {
+            .and_then(|mut rng| {
                 let mut rand_bytes = vec![0u8; num_bytes as usize /* bounds checked above */];
-                rand_core::RngCore::try_fill_bytes(rng, &mut rand_bytes).ok()?;
+                rand_core::RngCore::try_fill_bytes(&mut rng, &mut rand_bytes).ok()?;
                 Some(rand_bytes)
             })
             .unwrap_or_default()

@@ -394,7 +394,7 @@ impl sdk::Contract for HelloWorld {
             }
             Request::RandomBytes { count } => {
                 let mut buf = vec![0; count as usize];
-                let bytes_written = ctx.env().random_bytes(&mut buf);
+                let bytes_written = ctx.env().random_bytes(&[], &mut buf);
                 buf.truncate(bytes_written);
                 Ok(Response::RandomBytes { output: buf })
             }

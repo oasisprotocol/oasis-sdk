@@ -28,7 +28,7 @@ impl Rng {
             .get_or_create_keys(key_id)
             .map_err(|err| Error::Abort(dispatcher::Error::KeyManagerFailure(err)))?
             .input_keypair;
-        // The KM returns an ed25519 key, but it needs to be in "expanded" for to use with
+        // The KM returns an ed25519 key, but it needs to be in "expanded" form to use with
         // schnorrkel. Please refer to [`schnorrkel::keys::MiniSecretKey`] for further details.
         let kp = MiniSecretKey::from_bytes(&km_kp.sk.0)
             .map_err(|err| {
@@ -43,9 +43,10 @@ impl Rng {
     }
 
     /// Create an independent RNG using this RNG as its parent.
-    pub fn fork(&mut self) -> Self {
+    pub fn fork(&mut self, pers: &[u8]) -> Self {
         let mut transcript = self.transcript.clone();
-        transcript.append_message(b"", b"fork");
+        transcript.append_message(b"fork", &[]);
+        transcript.append_message(b"pers", pers);
         let rng = transcript.build_rng().finalize(&mut self.rng);
         Self { transcript, rng }
     }

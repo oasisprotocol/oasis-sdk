@@ -58,5 +58,10 @@ extern "C" {
     ) -> u32;
 
     #[link_name = "random_bytes"]
-    pub(crate) fn crypto_random_bytes(output_ptr: u32, output_len: u32) -> u32;
+    pub(crate) fn crypto_random_bytes(
+        pers_ptr: u32,
+        pers_len: u32,
+        output_ptr: u32,
+        output_len: u32,
+    ) -> u32;
 }

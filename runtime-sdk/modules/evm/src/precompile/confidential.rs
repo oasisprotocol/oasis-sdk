@@ -8,7 +8,7 @@ use oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::{DeoxysII, KEY_SIZE
 
 use crate::backend::EVMBackendExt;
 
-use super::{linear_cost, PrecompileResult};
+use super::{linear_cost, multilinear_cost, PrecompileResult};
 
 /// The base setup cost for encryption and decryption.
 const DEOXYSII_BASE_COST: u64 = 50_000;
@@ -16,6 +16,82 @@ const DEOXYSII_BASE_COST: u64 = 50_000;
 const DEOXYSII_WORD_COST: u64 = 100;
 /// Length of an EVM word, in bytes.
 const WORD: usize = 32;
+
+/// Rounds the input to the nearest multiple of the word size.
+fn round_up_nybles(x: u64) -> u64 {
+    x.saturating_add(31) & (!0x1f)
+}
+
+fn bigint_bytes_to_u64(item: &'static str, bytes: &[u8; 32]) -> Result<u64, PrecompileFailure> {
+    BigUint::from_bytes_be(bytes)
+        .to_u64()
+        .ok_or_else(|| PrecompileFailure::Error {
+            exit_status: ExitError::Other(format!("{} input is too big", item).into()),
+        })
+}
+
+pub(super) fn call_random_bytes<B: EVMBackendExt>(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+    backend: &B,
+) -> PrecompileResult {
+    let (num_words, pers_str) = decode_random_bytes_call_args(input)?;
+    // This operation shouldn't be too cheap to start since it invokes a key manager.
+    // Each byte is generated using hashing, so it's neither expensive nor cheap.
+    // Thus:
+    // * The base gas is 2x the SSTORE gas since storing requires as much effort
+    //   as accessing the key manager (which storing does as well).
+    // * The word gas is no 4x SHA256 gas since the CSPRNG is reasonably expected
+    //   to use an efficient cryptographic hash function with some bookkeeping.
+    // In any case, it's much cheaper than using a VRF oracle, and even a Solidity DRBG,
+    // which has a cost-per-byte upwards of 1000.
+    let num_bytes = num_words
+        .checked_mul(WORD as u64)
+        .ok_or_else(|| PrecompileFailure::Error {
+            exit_status: ExitError::Other("requested too many bytes".into()),
+        })?;
+    let gas_cost = multilinear_cost(
+        target_gas,
+        num_bytes,
+        pers_str.len() as u64,
+        100,
+        60,
+        10_000,
+    )?;
+    let bytes = backend.random_bytes(num_bytes, pers_str);
+    if bytes.len() != num_bytes as usize {
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("not enough entropy".into()),
+        });
+    }
+    Ok(PrecompileOutput {
+        exit_status: ExitSucceed::Returned,
+        cost: gas_cost,
+        output: bytes,
+        logs: Default::default(),
+    })
+}
+
+fn decode_random_bytes_call_args(input: &[u8]) -> Result<(u64, &[u8]), PrecompileFailure> {
+    const SLOTS: usize = 2;
+    if input.len() < SLOTS * WORD {
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("input length must be at least 64 bytes".into()),
+        });
+    }
+    let (fixed_inputs, pers_str) = input.split_at(SLOTS * WORD);
+    let mut words = fixed_inputs.array_chunks::<WORD>();
+    let num_words = bigint_bytes_to_u64("num words", words.next().unwrap())?;
+    let pers_str_len = bigint_bytes_to_u64("pers length", words.next().unwrap())?;
+    if (pers_str.len() as u64) != pers_str_len {
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("input too short".into()),
+        });
+    }
+    Ok((num_words, pers_str))
+}
 
 pub(super) fn call_x25519_derive(
     input: &[u8],
@@ -57,47 +133,6 @@ pub(super) fn call_x25519_derive(
     })
 }
 
-pub(super) fn call_random_bytes<B: EVMBackendExt>(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-    backend: &B,
-) -> PrecompileResult {
-    let mut num_bytes_bytes = [0u8; std::mem::size_of::<u64>()];
-    if input.len() != num_bytes_bytes.len() {
-        return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("input must be a uint64".into()),
-        });
-    }
-    num_bytes_bytes.copy_from_slice(input);
-    let num_bytes = (256 /* u256 */ / 8) * u64::from_be_bytes(num_bytes_bytes);
-
-    // This operation shouldn't be too cheap to start since it invokes a key manager.
-    // Each byte is generated using hashing, so it's neither expensive nor cheap.
-    // Thus:
-    // * The base gas is 2x the SSTORE gas since storing requires as much effort
-    //   as accessing the key manager (which storing does as well).
-    // * The word gas is no 4x SHA256 gas since the CSPRNG is reasonably expected
-    //   to use an efficient cryptographic hash function with some bookkeeping.
-    // In any case, it's much cheaper than using a VRF oracle, and even a Solidity DRBG,
-    // which has a cost-per-byte upwards of 1000.
-    let gas_cost = linear_cost(target_gas, num_bytes, 10_000, 100)?;
-
-    let bytes = backend.random_bytes(num_bytes);
-    if bytes.len() != num_bytes as usize {
-        return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("not enough entropy".into()),
-        });
-    }
-    Ok(PrecompileOutput {
-        exit_status: ExitSucceed::Returned,
-        cost: gas_cost,
-        output: bytes,
-        logs: Default::default(),
-    })
-}
-
 #[allow(clippy::type_complexity)]
 fn decode_deoxysii_call_args(
     input: &[u8],
@@ -112,40 +147,29 @@ fn decode_deoxysii_call_args(
         });
     }
 
-    let mut words = input.array_chunks::<WORD>().take(SLOTS);
+    let (fixed_inputs, var_inputs) = input.split_at(SLOTS * WORD);
+    let mut words = fixed_inputs.array_chunks::<WORD>();
     let key = words.next().unwrap();
     let nonce_word = words.next().unwrap();
-    let text_len = words.next().unwrap();
-    let ad_len = words.next().unwrap();
+    let text_len = round_up_nybles(bigint_bytes_to_u64("msg len", words.next().unwrap())?);
+    let ad_len = round_up_nybles(bigint_bytes_to_u64("ad len", words.next().unwrap())?);
+
+    if (var_inputs.len() as u64) < text_len {
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("text length too short".into()),
+        });
+    }
+    let (text, ad) = var_inputs.split_at(text_len as usize);
+    if (ad.len() as u64) < ad_len {
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("associated data length too short".into()),
+        });
+    }
 
     // Only the initial NONCE_SIZE bytes of the nonce field are used - bytes at
     // lower addresses in the input.
     let mut nonce = [0u8; NONCE_SIZE];
     nonce.copy_from_slice(&nonce_word[..NONCE_SIZE]);
-
-    let text_len_big = BigUint::from_bytes_be(text_len);
-    let text_len = text_len_big
-        .to_usize()
-        .ok_or_else(|| PrecompileFailure::Error {
-            exit_status: ExitError::Other("text length out of bounds".into()),
-        })?;
-    let text_size = text_len.saturating_add(31) & (!0x1f); // Round up to 32 bytes.
-
-    let ad_len_big = BigUint::from_bytes_be(ad_len);
-    let ad_len = ad_len_big
-        .to_usize()
-        .ok_or_else(|| PrecompileFailure::Error {
-            exit_status: ExitError::Other("additional data length out of bounds".into()),
-        })?;
-    let ad_size = ad_len.saturating_add(31) & (!0x1f); // Round up to 32 bytes.
-    if input.len() != SLOTS * WORD + ad_size + text_size {
-        return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("input too short".into()),
-        });
-    }
-
-    let text = &input[(SLOTS * WORD)..(SLOTS * WORD + text_len)];
-    let ad = &input[(SLOTS * WORD + text_size)..(SLOTS * WORD + text_size + ad_len)];
 
     Ok((*key, nonce, text, ad))
 }
@@ -401,11 +425,11 @@ mod test {
     fn test_random_bytes() {
         struct MockBackend;
         impl crate::backend::EVMBackendExt for MockBackend {
-            fn random_bytes(&self, num_words: u64) -> Vec<u8> {
+            fn random_bytes(&self, num_words: u64, _pers: &[u8]) -> Vec<u8> {
                 (0..num_words).map(|i| i as u8).collect()
             }
         }
-        let input = "0000000000000002";
+        let input = "00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000";
         let ret = call_contract(
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,

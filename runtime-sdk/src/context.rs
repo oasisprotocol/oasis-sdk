@@ -285,8 +285,8 @@ pub trait Context {
         self.with_child(Mode::SimulateTx, f)
     }
 
-    /// Returns the context's random number generator, if it is available.
-    fn rng(&mut self) -> Result<&mut Rng, Error>;
+    /// Returns a random number generator, if it is available, with optional personalization.
+    fn rng(&mut self, pers: &[u8]) -> Result<Rng, Error>;
 }
 
 impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
@@ -379,8 +379,8 @@ impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
         self.deref_mut().with_child(mode, f)
     }
 
-    fn rng(&mut self) -> Result<&mut Rng, Error> {
-        self.deref_mut().rng()
+    fn rng(&mut self, pers: &[u8]) -> Result<Rng, Error> {
+        self.deref_mut().rng(pers)
     }
 }
 
@@ -684,17 +684,17 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
-            rng: self.rng.as_mut().map(Rng::fork),
+            rng: self.rng.as_mut().map(|rng| rng.fork(&[])),
             _runtime: PhantomData,
         };
         f(child_ctx)
     }
 
-    fn rng(&mut self) -> Result<&mut Rng, Error> {
+    fn rng(&mut self, pers: &[u8]) -> Result<Rng, Error> {
         if self.rng.is_none() {
             self.rng = Some(Rng::new(self)?);
         }
-        Ok(self.rng.as_mut().unwrap())
+        Ok(self.rng.as_mut().unwrap().fork(pers))
     }
 }
 
@@ -741,7 +741,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
             messages: Vec::new(),
             values: &mut self.values,
             tx_values: BTreeMap::new(),
-            rng: self.rng.as_mut().map(Rng::fork),
+            rng: self.rng.as_mut().map(|rng| rng.fork(&[])),
             _runtime: PhantomData,
         };
         f(tx_ctx, tx.call)
@@ -944,17 +944,17 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
-            rng: self.rng.as_mut().map(Rng::fork),
+            rng: self.rng.as_mut().map(|rng| rng.fork(&[])),
             _runtime: PhantomData,
         };
         f(child_ctx)
     }
 
-    fn rng(&mut self) -> Result<&mut Rng, Error> {
+    fn rng(&mut self, pers: &[u8]) -> Result<Rng, Error> {
         if self.rng.is_none() {
             self.rng = Some(Rng::new(self)?);
         }
-        Ok(self.rng.as_mut().unwrap())
+        Ok(self.rng.as_mut().unwrap().fork(pers))
     }
 }
 
