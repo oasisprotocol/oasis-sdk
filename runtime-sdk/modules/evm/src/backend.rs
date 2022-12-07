@@ -194,15 +194,14 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackendExt for Backend<'ctx, C, Cfg> {
         }
         let mut ctx = self.ctx.borrow_mut();
         let num_bytes = num_words.checked_mul(32).unwrap_or_default();
-        let mut rand_bytes = vec![0u8; num_bytes.min(usize::max_value() as u64) as usize];
-        if ctx
-            .rng()
-            .and_then(|rng| rand_core::RngCore::try_fill_bytes(rng, &mut rand_bytes).ok())
-            .is_none()
-        {
-            return vec![];
-        }
-        rand_bytes
+        ctx.rng()
+            .ok()
+            .and_then(|rng| {
+                let mut rand_bytes = vec![0u8; num_bytes as usize /* bounds checked above */];
+                rand_core::RngCore::try_fill_bytes(rng, &mut rand_bytes).ok()?;
+                Some(rand_bytes)
+            })
+            .unwrap_or_default()
     }
 }
 

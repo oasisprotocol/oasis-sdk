@@ -285,8 +285,8 @@ pub trait Context {
         self.with_child(Mode::SimulateTx, f)
     }
 
-    /// Returns the context's random number generator.
-    fn rng(&mut self) -> Option<&mut Rng>;
+    /// Returns the context's random number generator, if it is available.
+    fn rng(&mut self) -> Result<&mut Rng, Error>;
 }
 
 impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
@@ -379,7 +379,7 @@ impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
         self.deref_mut().with_child(mode, f)
     }
 
-    fn rng(&mut self) -> Option<&mut Rng> {
+    fn rng(&mut self) -> Result<&mut Rng, Error> {
         self.deref_mut().rng()
     }
 }
@@ -690,11 +690,11 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
         f(child_ctx)
     }
 
-    fn rng(&mut self) -> Option<&mut Rng> {
+    fn rng(&mut self) -> Result<&mut Rng, Error> {
         if self.rng.is_none() {
-            self.rng = Some(Rng::new(self));
+            self.rng = Some(Rng::new(self)?);
         }
-        self.rng.as_mut()
+        Ok(self.rng.as_mut().unwrap())
     }
 }
 
@@ -950,11 +950,11 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
         f(child_ctx)
     }
 
-    fn rng(&mut self) -> Option<&mut Rng> {
+    fn rng(&mut self) -> Result<&mut Rng, Error> {
         if self.rng.is_none() {
-            self.rng = Some(Rng::new(self));
+            self.rng = Some(Rng::new(self)?);
         }
-        self.rng.as_mut()
+        Ok(self.rng.as_mut().unwrap())
     }
 }
 
