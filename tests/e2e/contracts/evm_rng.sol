@@ -27,7 +27,7 @@ contract Test {
         require(!allEq, "=");
 
         // Generate too many bytes.
-        (bool success3, ) = randomBytes(500, "");
-        require(!success3, "!");
+        (bool success3, bytes memory out3) = randomBytes(500, "");
+        require(success3 && out3.length < 4096, "!");
     }
 }
