@@ -16,6 +16,7 @@ use evm::{
     Config as EVMConfig,
 };
 use once_cell::sync::OnceCell;
+use std::cell::RefCell;
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
@@ -34,7 +35,7 @@ use oasis_runtime_sdk::{
     types::{
         address::{self, Address},
         token, transaction,
-        transaction::Transaction,
+        transaction::{CallFormat, Transaction},
     },
 };
 
@@ -43,6 +44,10 @@ use types::{H160, H256, U256};
 
 #[cfg(test)]
 mod test;
+
+thread_local! {
+    pub static TX_CONTEXT_CALL_FORMAT: RefCell<Option<CallFormat>> = RefCell::new(None);
+}
 
 /// Unique module name.
 const MODULE_NAME: &str = "evm";
@@ -545,6 +550,8 @@ impl<Cfg: Config> Module<Cfg> {
             gas_price: gas_price.into(),
             origin: source,
         };
+
+        TX_CONTEXT_CALL_FORMAT.with(|txcf| { *txcf.borrow_mut() = Some(ctx.tx_call_format())});
 
         // The maximum gas fee has already been withdrawn in authenticate_tx().
         let max_gas_fee = gas_price

@@ -3,11 +3,9 @@ use std::{
     convert::TryFrom,
     ops::BitAnd,
 };
+use std::borrow::Cow;
 
-use evm::{
-    executor::stack::{PrecompileFailure, PrecompileOutput},
-    Context, ExitError, ExitSucceed,
-};
+use evm::{executor::stack::{PrecompileFailure, PrecompileOutput}, Context, ExitError, ExitSucceed};
 use k256::{
     ecdsa::recoverable,
     elliptic_curve::{sec1::ToEncodedPoint, IsHigh},
@@ -282,16 +280,23 @@ pub(super) fn call_bigmodexp(
 }
 
 pub(super) fn call_format(
-    input: &[u8],
-    target_gas: Option<u64>,
+    _input: &[u8],
+    _target_gas: Option<u64>,
     _context: &Context,
     _is_static: bool,
 ) -> PrecompileResult {
-    Ok(PrecompileOutput {
-        exit_status: ExitSucceed::Returned,
-        cost: 1, // TODO
-        output: vec![0], // TODO: vec![ctx.call_format()]
-        logs: Default::default(),
+    crate::TX_CONTEXT_CALL_FORMAT.with(|txcf| {
+        match *txcf.borrow() {
+            Some(cf) => Ok(PrecompileOutput {
+                exit_status: ExitSucceed::Returned,
+                cost: 1, // TODO
+                output: vec![ cf as u8 ],
+                logs: Default::default(),
+            }),
+            None => Err( PrecompileFailure::Error {
+                exit_status: ExitError::Other(Cow::Owned("call_format not defined".to_string())),
+            })
+        }
     })
 }
 
