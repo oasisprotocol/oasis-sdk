@@ -66,4 +66,9 @@ pub trait Crypto {
         message: &[u8],
         additional_data: &[u8],
     ) -> Result<Vec<u8>, CryptoError>;
+
+    /// Fills `dst` with cryptographically secure random bytes.
+    /// Returns the number of bytes written.
+    /// If the optional personalization string (`pers`) is provided, it will be mixed into the RNG to provide additional domain separation.
+    fn random_bytes(&self, pers: &[u8], dst: &mut [u8]) -> usize;
 }

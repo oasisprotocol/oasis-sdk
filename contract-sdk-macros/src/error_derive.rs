@@ -210,7 +210,7 @@ mod tests {
         let expected: syn::Stmt = syn::parse_quote!(
             #[doc(hidden)]
             const _: () = {
-                use oasis_contract_sdk as __sdk;
+                use :: oasis_contract_sdk as __sdk;
                 #[automatically_derived]
                 impl __sdk::error::Error for Error {
                     fn module_name(&self) -> &str {
@@ -257,7 +257,7 @@ mod tests {
         let expected: syn::Stmt = syn::parse_quote!(
             #[doc(hidden)]
             const _: () = {
-                use oasis_contract_sdk as __sdk;
+                use :: oasis_contract_sdk as __sdk;
                 #[automatically_derived]
                 impl __sdk::error::Error for Error {
                     fn module_name(&self) -> &str {
@@ -286,7 +286,7 @@ mod tests {
         let expected: syn::Stmt = syn::parse_quote!(
             #[doc(hidden)]
             const _: () = {
-                use oasis_contract_sdk as __sdk;
+                use :: oasis_contract_sdk as __sdk;
                 #[automatically_derived]
                 impl __sdk::error::Error for Error {
                     fn module_name(&self) -> &str {

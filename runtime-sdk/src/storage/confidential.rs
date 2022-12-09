@@ -364,7 +364,7 @@ mod test {
         // Insert even items, then verify they're
         // exactly the ones that exist.
         for (k, v) in items.iter().step_by(2) {
-            store.insert(&k, &v);
+            store.insert(k, v);
         }
         for (i, (k, v)) in items.iter().enumerate() {
             if i % 2 == 0 {
@@ -381,7 +381,7 @@ mod test {
         // The stepper should remove key0 and key6, and also
         // try removing key3 and key9.
         for (k, _) in items.iter().step_by(3) {
-            store.remove(&k);
+            store.remove(k);
         }
         for (i, (k, v)) in items.iter().enumerate() {
             if i % 2 == 0 && i % 3 != 0 {
@@ -415,7 +415,6 @@ mod test {
         iter.rewind();
         let (key, value) = Iterator::next(&mut iter).expect("should have one item");
         drop(iter);
-        drop(plain_store);
 
         // Actually encrypted?
         let (_, enc_key) = unpack_nonce_slice(&key).expect("unpacking encrypted key should work");
@@ -468,10 +467,9 @@ mod test {
         iter.rewind();
         let (key, value) = Iterator::next(&mut iter).expect("should have one item");
         drop(iter);
-        drop(plain_store);
 
         // Corrupt the nonce part of the value.
-        let mut corrupt_value_nonce = value.clone();
+        let mut corrupt_value_nonce = value;
         corrupt_value_nonce[4] ^= 0xaau8;
         ctx.runtime_state().remove(&key);
         ctx.runtime_state().insert(&key, &corrupt_value_nonce);
@@ -503,10 +501,9 @@ mod test {
         iter.rewind();
         let (key, value) = Iterator::next(&mut iter).expect("should have one item");
         drop(iter);
-        drop(plain_store);
 
         // Corrupt the nonce part of the value.
-        let mut corrupt_value_value = value.clone();
+        let mut corrupt_value_value = value;
         *corrupt_value_value.last_mut().unwrap() ^= 0xaau8;
         ctx.runtime_state().remove(&key);
         ctx.runtime_state().insert(&key, &corrupt_value_value);

@@ -729,6 +729,7 @@ checksum = "1c359b7249347e46fb28804470d071c921156ad62b3eef5d34e2ba867533dec8"
 dependencies = [
  "byteorder",
  "digest 0.9.0",
+ "packed_simd_2",
  "rand_core 0.6.4",
  "subtle-ng",
  "zeroize",
@@ -1669,6 +1670,12 @@ dependencies = [
 
 [[package]]
 name = "libm"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fc7aa29613bd6a620df431842069224d8bc9011086b1db4c0e0cd47fa03ec9a"
+
+[[package]]
+name = "libm"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "348108ab3fba42ec82ff6e9564fc4ca0247bdccdc68dd8af9764bbc79c3c8ffb"
@@ -1906,7 +1913,7 @@ checksum = "2399c9463abc5f909349d8aa9ba080e0b88b3ce2885389b60b993f39b1a56905"
 dependencies = [
  "byteorder",
  "lazy_static",
- "libm",
+ "libm 0.2.6",
  "num-integer",
  "num-iter",
  "num-traits",
@@ -2008,7 +2015,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "578ede34cf02f8924ab9447f50c28075b4d3e5b269972345e7e0372b38c6cdcd"
 dependencies = [
  "autocfg",
- "libm",
+ "libm 0.2.6",
 ]
 
 [[package]]
@@ -2062,6 +2069,8 @@ dependencies = [
  "oasis-contract-sdk-macros",
  "oasis-contract-sdk-types",
  "oasis-runtime-sdk",
+ "rand_core 0.6.4",
+ "rand_xorshift",
  "thiserror",
  "wee_alloc",
 ]
@@ -2210,6 +2219,7 @@ dependencies = [
  "impl-trait-for-tuples",
  "io-context",
  "k256",
+ "merlin",
  "num-traits",
  "oasis-cbor",
  "oasis-core-keymanager",
@@ -2243,6 +2253,7 @@ dependencies = [
  "oasis-runtime-sdk",
  "once_cell",
  "pretty_assertions",
+ "rand_core 0.6.4",
  "snap",
  "thiserror",
  "walrus",
@@ -2271,6 +2282,7 @@ dependencies = [
  "once_cell",
  "primitive-types",
  "rand 0.7.3",
+ "rand_core 0.6.4",
  "ripemd160",
  "rlp",
  "sha2 0.9.9",
@@ -2328,6 +2340,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "628223faebab4e3e40667ee0b2336d34a5b960ff60ea743ddfdbcf7770bcfb66"
 dependencies = [
  "winapi",
+]
+
+[[package]]
+name = "packed_simd_2"
+version = "0.3.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1914cd452d8fccd6f9db48147b29fd4ae05bea9dc5d9ad578509f72415de282"
+dependencies = [
+ "cfg-if 1.0.0",
+ "libm 0.1.4",
 ]
 
 [[package]]
@@ -2724,6 +2746,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rand_xorshift"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d25bf25ec5ae4a3f1b92f929810509a2f53d7dca2f50b794ff57e3face536c8f"
+dependencies = [
+ "rand_core 0.6.4",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3026,6 +3057,7 @@ dependencies = [
  "cpufeatures",
  "digest 0.9.0",
  "opaque-debug",
+ "sha2-asm",
 ]
 
 [[package]]
@@ -3037,6 +3069,15 @@ dependencies = [
  "cfg-if 1.0.0",
  "cpufeatures",
  "digest 0.10.6",
+]
+
+[[package]]
+name = "sha2-asm"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf27176fb5d15398e3a479c652c20459d9dac830dedd1fa55b42a77dbcdbfcea"
+dependencies = [
+ "cc",
 ]
 
 [[package]]

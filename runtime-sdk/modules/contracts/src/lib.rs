@@ -217,6 +217,8 @@ pub struct GasCosts {
     pub wasm_crypto_x25519_derive_symmetric: u64,
     pub wasm_crypto_deoxysii_base: u64,
     pub wasm_crypto_deoxysii_byte: u64,
+    pub wasm_crypto_random_bytes_base: u64,
+    pub wasm_crypto_random_bytes_byte: u64,
 }
 
 impl Default for GasCosts {
@@ -251,6 +253,8 @@ impl Default for GasCosts {
             wasm_crypto_x25519_derive_symmetric: 250_000,
             wasm_crypto_deoxysii_base: 1_000,
             wasm_crypto_deoxysii_byte: 3,
+            wasm_crypto_random_bytes_base: 1_000,
+            wasm_crypto_random_bytes_byte: 3,
         }
     }
 }

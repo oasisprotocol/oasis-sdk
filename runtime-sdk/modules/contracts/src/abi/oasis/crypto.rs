@@ -27,25 +27,26 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 // Charge gas.
                 gas::use_gas(ctx.instance, ec.params.gas_costs.wasm_crypto_ecdsa_recover)?;
 
-                ctx.instance
-                    .runtime()
-                    .try_with_memory(|mut memory| -> Result<_, wasm3::Trap> {
-                        let input = Region::from_arg(request.0)
-                            .as_slice(&memory)
-                            .map_err(|_| wasm3::Trap::Abort)?
-                            .to_vec();
+                let rt = ctx.instance.runtime();
+                rt.try_with_memory(|mut memory| -> Result<_, wasm3::Trap> {
+                    let input = Region::from_arg(request.0)
+                        .as_slice(&memory)
+                        .map_err(|_| wasm3::Trap::Abort)?
+                        .to_vec();
 
-                        let output: &mut [u8; 65] = Region::from_arg(request.1)
-                            .as_slice_mut(&mut memory)
-                            .map_err(|_| wasm3::Trap::Abort)?
-                            .try_into()
-                            .map_err(|_| wasm3::Trap::Abort)?;
+                    let output: &mut [u8; 65] = Region::from_arg(request.1)
+                        .as_slice_mut(&mut memory)
+                        .map_err(|_| wasm3::Trap::Abort)?
+                        .try_into()
+                        .map_err(|_| wasm3::Trap::Abort)?;
 
-                        let key = crypto::ecdsa::recover(&input).unwrap_or([0; 65]);
-                        output.copy_from_slice(&key);
+                    match crypto::ecdsa::recover(&input) {
+                        Ok(key) => output.copy_from_slice(&key),
+                        Err(_) => output.iter_mut().for_each(|b| *b = 0),
+                    }
 
-                        Ok(())
-                    })?
+                    Ok(())
+                })?
             },
         );
 
@@ -91,33 +92,72 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 };
                 gas::use_gas(ctx.instance, cost)?;
 
-                ctx.instance
-                    .runtime()
-                    .try_with_memory(|memory| -> Result<_, wasm3::Trap> {
-                        let key = get_key(kind, key, &memory).map_err(|err| {
-                            ec.aborted = Some(Error::CryptoMalformedPublicKey);
-                            err
-                        })?;
-                        let message = Region::from_arg(message)
+                let rt = ctx.instance.runtime();
+                rt.try_with_memory(|memory| -> Result<_, wasm3::Trap> {
+                    let key = get_key(kind, key, &memory).map_err(|err| {
+                        ec.aborted = Some(Error::CryptoMalformedPublicKey);
+                        err
+                    })?;
+                    let message = Region::from_arg(message)
+                        .as_slice(&memory)
+                        .map_err(|_| wasm3::Trap::Abort)?;
+                    let signature: signature::Signature = Region::from_arg(signature)
+                        .as_slice(&memory)
+                        .map_err(|_| wasm3::Trap::Abort)?
+                        .to_vec()
+                        .into();
+                    if context.0 != 0 && context.1 != 0 && matches!(kind, SignatureKind::Sr25519) {
+                        let context = Region::from_arg(context)
                             .as_slice(&memory)
                             .map_err(|_| wasm3::Trap::Abort)?;
-                        let signature: signature::Signature = Region::from_arg(signature)
-                            .as_slice(&memory)
-                            .map_err(|_| wasm3::Trap::Abort)?
-                            .to_vec()
-                            .into();
-                        if context.0 != 0
-                            && context.1 != 0
-                            && matches!(kind, SignatureKind::Sr25519)
-                        {
-                            let context = Region::from_arg(context)
-                                .as_slice(&memory)
-                                .map_err(|_| wasm3::Trap::Abort)?;
-                            Ok(1 - key.verify(context, message, &signature).is_ok() as u32)
-                        } else {
-                            Ok(1 - key.verify_raw(message, &signature).is_ok() as u32)
-                        }
-                    })?
+                        Ok(1 - key.verify(context, message, &signature).is_ok() as u32)
+                    } else {
+                        Ok(1 - key.verify_raw(message, &signature).is_ok() as u32)
+                    }
+                })?
+            },
+        );
+
+        // crypto.random_bytes(dst) -> bytes_written
+        let _ = instance.link_function(
+            "crypto",
+            "random_bytes",
+            |ctx,
+             ((pers_ptr, pers_len, dst_ptr, dst_len),): ((u32, u32, u32, u32),)|
+             -> Result<u32, wasm3::Trap> {
+                // Make sure function was called in valid context.
+                let ec = ctx.context.ok_or(wasm3::Trap::Abort)?;
+
+                let num_bytes = dst_len.min(1024 /* 1 KiB */);
+
+                // Charge gas.
+                let cost = ec
+                    .params
+                    .gas_costs
+                    .wasm_crypto_random_bytes_byte
+                    .checked_mul(num_bytes as u64 + pers_len as u64)
+                    .and_then(|g| g.checked_add(ec.params.gas_costs.wasm_crypto_random_bytes_base))
+                    .unwrap_or(u64::max_value()); // This will certainly exhaust the gas limit.
+                gas::use_gas(ctx.instance, cost)?;
+
+                let rt = ctx.instance.runtime();
+                rt.try_with_memory(|mut memory| -> Result<_, wasm3::Trap> {
+                    let pers = Region::from_arg((pers_ptr, pers_len))
+                        .as_slice(&memory)
+                        .map_err(|_| wasm3::Trap::Abort)?;
+                    let mut rng = ec.tx_context.rng(pers).map_err(|e| {
+                        ec.aborted = Some(e.into());
+                        wasm3::Trap::Abort
+                    })?;
+                    let output = Region::from_arg((dst_ptr, num_bytes))
+                        .as_slice_mut(&mut memory)
+                        .map_err(|_| wasm3::Trap::Abort)?;
+                    rand_core::RngCore::try_fill_bytes(&mut rng, output).map_err(|e| {
+                        ec.aborted = Some(Error::ExecutionFailed(e.into()));
+                        wasm3::Trap::Abort
+                    })?;
+                    Ok(num_bytes)
+                })?
             },
         );
 

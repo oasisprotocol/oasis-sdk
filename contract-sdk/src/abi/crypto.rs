@@ -3,15 +3,10 @@
 #[link(wasm_import_module = "crypto")]
 extern "C" {
     #[link_name = "ecdsa_recover"]
-    pub(crate) fn crypto_ecdsa_recover(
-        input_ptr: u32,
-        input_len: u32,
-        output_ptr: u32,
-        output_len: u32,
-    );
+    pub(crate) fn ecdsa_recover(input_ptr: u32, input_len: u32, output_ptr: u32, output_len: u32);
 
     #[link_name = "signature_verify"]
-    pub(crate) fn crypto_signature_verify(
+    pub(crate) fn signature_verify(
         kind: u32,
         key_ptr: u32,
         key_len: u32,
@@ -55,5 +50,13 @@ extern "C" {
         message_len: u32,
         additional_data_ptr: u32,
         additional_data_len: u32,
+    ) -> u32;
+
+    #[link_name = "random_bytes"]
+    pub(crate) fn random_bytes(
+        pers_ptr: u32,
+        pers_len: u32,
+        output_ptr: u32,
+        output_len: u32,
     ) -> u32;
 }

@@ -233,11 +233,11 @@ fn test_config_batch() {
             vec![
                 dummy_sig_a.clone(),
                 dummy_sig_b.clone(),
-                dummy_sig_c.clone(),
-                dummy_sig_d.clone(),
-                dummy_sig_e.clone(),
-                dummy_sig_f.clone(),
-                dummy_sig_g.clone(),
+                dummy_sig_c,
+                dummy_sig_d,
+                dummy_sig_e,
+                dummy_sig_f,
+                dummy_sig_g,
             ]
         )
     );
@@ -246,8 +246,8 @@ fn test_config_batch() {
         .expect_err("too few signature slots");
     config
         .batch(&[
-            Some(dummy_sig_a.clone()),
-            Some(dummy_sig_b.clone()),
+            Some(dummy_sig_a),
+            Some(dummy_sig_b),
             None,
             None,
             None,

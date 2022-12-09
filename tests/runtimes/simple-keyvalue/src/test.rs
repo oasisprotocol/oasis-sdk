@@ -34,7 +34,7 @@ fn test_impl_for_tuple() {
             dummy_bytes.clone(),
             vec![
                 transaction::AuthProof::Signature(dummy_bytes.clone().into()),
-                transaction::AuthProof::Signature(dummy_bytes.clone().into()),
+                transaction::AuthProof::Signature(dummy_bytes.into()),
             ],
         ),
     )

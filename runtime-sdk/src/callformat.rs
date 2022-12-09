@@ -46,8 +46,8 @@ impl std::fmt::Debug for Metadata {
 
 /// Derive the key pair ID for the call data encryption key pair.
 pub fn get_key_pair_id(epoch: beacon::EpochTime) -> keymanager::KeyPairId {
-    keymanager::get_key_pair_id(&[
-        &get_chain_context_for(types::callformat::CALL_DATA_KEY_PAIR_ID_CONTEXT_BASE),
+    keymanager::get_key_pair_id([
+        get_chain_context_for(types::callformat::CALL_DATA_KEY_PAIR_ID_CONTEXT_BASE).as_slice(),
         &epoch.to_be_bytes(),
     ])
 }

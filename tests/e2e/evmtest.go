@@ -31,38 +31,51 @@ import (
 
 // We store the compiled EVM bytecode for the SimpleSolEVMTest in a separate
 // file (in hex) to preserve readability of this file.
+//
 //go:embed contracts/evm_sol_test_compiled.hex
 var evmSolTestCompiledHex string
 
 // We store the compiled EVM bytecode for the SimpleSolEVMTestCreateMulti in a separate
 // file (in hex) to preserve readability of this file.
+//
 //go:embed contracts/evm_create_multi.hex
 var evmSolCreateMultiCompiledHex string
 
 // We store the compiled EVM bytecode for the SimpleERC20EVMTest in a separate
 // file (in hex) to preserve readability of this file.
+//
 //go:embed contracts/evm_erc20_test_compiled.hex
 var evmERC20TestCompiledHex string
 
 // We store the compiled EVM bytecode for the SimpleEVMSuicideTest in a separate
 // file (in hex) to preserve readability of this file.
+//
 //go:embed contracts/evm_suicide_test_compiled.hex
 var evmSuicideTestCompiledHex string
 
 // We store the compiled EVM bytecode for the SimpleEVMCallSuicideTest in a separate
 // file (in hex) to preserve readability of this file.
+//
 //go:embed contracts/evm_call_suicide_test_compiled.hex
 var evmCallSuicideTestCompiledHex string
 
 // We store the compiled EVM bytecode for the SimpleEVMEncryptionTest in a separate
 // file (in hex) to preserve readability of this file.
+//
 //go:embed contracts/evm_encryption_compiled.hex
 var evmEncryptionCompiledHex string
 
 // We store the compiled EVM bytecode for the SimpleEVMKeyDerivationTest in a separate
 // file (in hex) to preserve readability of this file.
+//
 //go:embed contracts/evm_key_derivation_compiled.hex
 var evmKeyDerivationCompiledHex string
+
+// We store the compiled EVM bytecode for the SimpleEVMRngTest in a separate
+// file (in hex) to preserve readability of this file.
+//
+//go:embed contracts/evm_rng_compiled.hex
+var evmRngHex string
 
 type c10lity bool
 
@@ -127,7 +140,7 @@ func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer sig
 	}
 	var out []byte
 	if err = txB.DecodeResult(result, &out); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal evmCall result: %w", err)
+		return nil, fmt.Errorf("evmCall encountered a problem: %w", err)
 	}
 	return out, nil
 }
@@ -1050,22 +1063,14 @@ func C10lEVMCallSuicideTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc
 func encryptionEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
 	// To generate the contract bytecode, use https://remix.ethereum.org/
 	// with the following settings:
-	//     Compiler: 0.8.7+commit.e28d00a7
+	//     Compiler: 0.8.17+commit.8df45f5f.Darwin.appleclang
 	//     EVM version: london
-	//     Enable optimization: yes, 200
+	//     Enable optimization: yes, 1, via-ir
 	// on the source in evm_encryption.sol next to the hex file.
-
-	res, err := simpleEVMCallTest(log, rtc, c10l, evmEncryptionCompiledHex, "test", "f8a8fd6d", "")
+	_, err := simpleEVMCallTest(log, rtc, c10l, evmEncryptionCompiledHex, "test", "f8a8fd6d", "")
 	if err != nil {
 		return err
 	}
-	if len(res) != 192 {
-		return fmt.Errorf("returned value has wrong length (expected 192, got %d)", len(res))
-	}
-	if res[126:192] != "206120706c61696e7465787420746f2072756c65207468656d20616c6c2c207961" {
-		return fmt.Errorf("returned value is incorrect (got '%s')", res[126:192])
-	}
-
 	return nil
 }
 
@@ -1081,28 +1086,44 @@ func C10lEVMEncryptionTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.
 func keyDerivationEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
 	// To generate the contract bytecode, use https://remix.ethereum.org/
 	// with the following settings:
-	//     Compiler: 0.8.7+commit.e28d00a7
+	//     Compiler: 0.8.17+commit.8df45f5f.Darwin.appleclang
 	//     EVM version: london
-	//     Enable optimization: yes, 200
+	//     Enable optimization: yes, 1, via-ir
 	// on the source in evm_key_derivation.sol next to the hex file.
 
 	// Fixed random key material to pass to the contract.
 	publicKey := "3046db3fa70ce605457dc47c48837ebd8bd0a26abfde5994d033e1ced68e2576"
 	privateKey := "c07b151fbc1e7a11dff926111188f8d872f62eba0396da97c0a24adb75161750"
 	expected := "e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586"
-
-	res, err := simpleEVMCallTest(log, rtc, c10l, evmKeyDerivationCompiledHex, "test", "92e2a69c", publicKey+privateKey+expected)
+	_, err := simpleEVMCallTest(log, rtc, c10l, evmKeyDerivationCompiledHex, "test", "92e2a69c", publicKey+privateKey+expected)
 	if err != nil {
 		return err
 	}
-	if len(res) != 64 {
-		return fmt.Errorf("returned value has wrong length (expected 192, got %d)", len(res))
-	}
-	if res != strings.Repeat("0", 64) {
-		return fmt.Errorf("returned value is incorrect (got '%s' instead of all zeroes)", res)
-	}
-
 	return nil
+}
+
+// rngEVMTest exercises the RNG precompile.
+//
+// Note that this test will only work with a confidential runtime because
+// it needs the confidential precompiles.
+func rngEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
+	// To generate the contract bytecode, use solc or https://remix.ethereum.org/
+	// with the following settings:
+	//     Compiler: 0.8.17+commit.8df45f5f.Darwin.appleclang
+	//     EVM version: london
+	//     Enable optimization: yes, 1, via-ir
+	// on the source in evm_rng.sol next to the hex file.
+	// (i.e. `solc evm_rng.sol --bin --optimize`)
+	_, err := simpleEVMCallTest(log, rtc, c10l, evmRngHex, "test", "f8a8fd6d", "")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// C10lEVMRNGTest does a simple key derivation contract test.
+func C10lEVMRNGTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	return rngEVMTest(log, rtc, c10l)
 }
 
 // C10lEVMKeyDerivationTest does a simple key derivation contract test.

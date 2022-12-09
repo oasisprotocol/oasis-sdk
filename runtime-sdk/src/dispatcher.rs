@@ -1026,9 +1026,8 @@ mod test {
         // Dispatch read-only transaction of a method that writes.
         tx.call.method = "alphabet.NotReadOnly".to_owned();
 
-        let dispatch_result =
-            Dispatcher::<AlphabetRuntime>::dispatch_tx(&mut ctx, 1024, tx.clone(), 0)
-                .expect("read only method dispatch should work");
+        let dispatch_result = Dispatcher::<AlphabetRuntime>::dispatch_tx(&mut ctx, 1024, tx, 0)
+            .expect("read only method dispatch should work");
         match dispatch_result.result {
             module::CallResult::Failed {
                 module,

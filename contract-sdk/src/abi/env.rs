@@ -56,12 +56,12 @@ impl HostEnv {
                 let region = HostRegionRef::from_slice(context);
                 (region.offset, region.length)
             }
-            None | _ => (0, 0),
+            _ => (0, 0),
         };
         let message_region = HostRegionRef::from_slice(message);
         let signature_region = HostRegionRef::from_slice(signature);
         let result = unsafe {
-            crypto::crypto_signature_verify(
+            crypto::signature_verify(
                 kind as u32,
                 key_region.offset,
                 key_region.length,
@@ -147,7 +147,7 @@ impl Crypto for HostEnv {
         let dst_region = HostRegionRef::from_slice(&dst);
 
         unsafe {
-            crypto::crypto_ecdsa_recover(
+            crypto::ecdsa_recover(
                 input_region.offset,
                 input_region.length,
                 dst_region.offset,
@@ -229,5 +229,18 @@ impl Crypto for HostEnv {
         additional_data: &[u8],
     ) -> Result<Vec<u8>, CryptoError> {
         self.deoxysii_process(crypto::deoxysii_open, key, nonce, message, additional_data)
+    }
+
+    fn random_bytes(&self, pers: &[u8], dst: &mut [u8]) -> usize {
+        let pers_region = HostRegionRef::from_slice(pers);
+        let dst_region = HostRegionRef::from_slice(dst);
+        unsafe {
+            crypto::random_bytes(
+                pers_region.offset,
+                pers_region.length,
+                dst_region.offset,
+                dst_region.length,
+            ) as usize
+        }
     }
 }

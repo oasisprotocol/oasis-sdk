@@ -270,7 +270,7 @@ mod tests {
     fn generate_error_impl_auto_abort() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
-                use oasis_runtime_sdk::{self as __sdk, error::Error as _};
+                use ::oasis_runtime_sdk::{self as __sdk, error::Error as _};
                 #[automatically_derived]
                 impl __sdk::error::Error for Error {
                     fn module_name(&self) -> &str {
@@ -332,7 +332,7 @@ mod tests {
     fn generate_error_impl_manual() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
-                use oasis_runtime_sdk::{self as __sdk, error::Error as _};
+                use ::oasis_runtime_sdk::{self as __sdk, error::Error as _};
                 #[automatically_derived]
                 impl __sdk::error::Error for Error {
                     fn module_name(&self) -> &str {
@@ -369,7 +369,7 @@ mod tests {
     fn generate_error_impl_from() {
         let expected: syn::Stmt = syn::parse_quote!(
             const _: () = {
-                use oasis_runtime_sdk::{self as __sdk, error::Error as _};
+                use ::oasis_runtime_sdk::{self as __sdk, error::Error as _};
                 #[automatically_derived]
                 impl __sdk::error::Error for Error {
                     fn module_name(&self) -> &str {

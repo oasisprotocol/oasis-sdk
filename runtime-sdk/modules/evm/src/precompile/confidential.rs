@@ -1,12 +1,14 @@
+use ethabi::ParamType;
 use evm::{
     executor::stack::{PrecompileFailure, PrecompileOutput},
-    Context, ExitError, ExitSucceed,
+    Context, ExitError, ExitRevert, ExitSucceed,
 };
 use hmac::{Hmac, Mac, NewMac as _};
-use num::{BigUint, ToPrimitive as _};
 use oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::{DeoxysII, KEY_SIZE, NONCE_SIZE};
 
-use super::{linear_cost, PrecompileResult};
+use crate::backend::{EVMBackendExt, RNG_MAX_BYTES};
+
+use super::{linear_cost, multilinear_cost, PrecompileResult};
 
 /// The base setup cost for encryption and decryption.
 const DEOXYSII_BASE_COST: u64 = 50_000;
@@ -14,6 +16,50 @@ const DEOXYSII_BASE_COST: u64 = 50_000;
 const DEOXYSII_WORD_COST: u64 = 100;
 /// Length of an EVM word, in bytes.
 const WORD: usize = 32;
+
+pub(super) fn call_random_bytes<B: EVMBackendExt>(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+    backend: &B,
+) -> PrecompileResult {
+    let mut call_args =
+        ethabi::decode(&[ParamType::Uint(256), ParamType::Bytes], input).map_err(|e| {
+            PrecompileFailure::Error {
+                exit_status: ExitError::Other(e.to_string().into()),
+            }
+        })?;
+    let pers_str = call_args.pop().unwrap().into_bytes().unwrap();
+    let num_bytes_big = call_args.pop().unwrap().into_uint().unwrap();
+    let num_bytes = num_bytes_big
+        .try_into()
+        .unwrap_or(u64::max_value())
+        .min(RNG_MAX_BYTES);
+    // This operation shouldn't be too cheap to start since it invokes a key manager.
+    // Each byte is generated using hashing, so it's neither expensive nor cheap.
+    // Thus:
+    // * The base gas is 2x the SSTORE gas since storing requires as much effort
+    //   as accessing the key manager (which storing does as well).
+    // * The word gas is 4x SHA256 gas since the CSPRNG is reasonably expected
+    //   to use an efficient cryptographic hash function with some bookkeeping.
+    // In any case, it's much cheaper than using a VRF oracle, and even a Solidity DRBG,
+    // which has a cost-per-byte upwards of 1000.
+    let gas_cost = multilinear_cost(
+        target_gas,
+        num_bytes,
+        pers_str.len() as u64,
+        240,
+        60,
+        10_000,
+    )?;
+    Ok(PrecompileOutput {
+        exit_status: ExitSucceed::Returned,
+        cost: gas_cost,
+        output: backend.random_bytes(num_bytes, &pers_str),
+        logs: Default::default(),
+    })
+}
 
 pub(super) fn call_x25519_derive(
     input: &[u8],
@@ -58,53 +104,30 @@ pub(super) fn call_x25519_derive(
 #[allow(clippy::type_complexity)]
 fn decode_deoxysii_call_args(
     input: &[u8],
-) -> Result<([u8; KEY_SIZE], [u8; NONCE_SIZE], &[u8], &[u8]), PrecompileFailure> {
-    // Number of fixed words in the input (key, nonce word, two lengths; see
-    // comments in the precompiles).
-    const SLOTS: usize = 4;
+) -> Result<([u8; KEY_SIZE], [u8; NONCE_SIZE], Vec<u8>, Vec<u8>), PrecompileFailure> {
+    let mut call_args = ethabi::decode(
+        &[
+            ParamType::FixedBytes(32), // key
+            ParamType::FixedBytes(32), // nonce
+            ParamType::Bytes,          // plain or ciphertext
+            ParamType::Bytes,          // associated data
+        ],
+        input,
+    )
+    .map_err(|e| PrecompileFailure::Error {
+        exit_status: ExitError::Other(e.to_string().into()),
+    })?;
+    let ad = call_args.pop().unwrap().into_bytes().unwrap();
+    let text = call_args.pop().unwrap().into_bytes().unwrap();
+    let nonce_bytes = call_args.pop().unwrap().into_fixed_bytes().unwrap();
+    let key_bytes = call_args.pop().unwrap().into_fixed_bytes().unwrap();
 
-    if input.len() < SLOTS * WORD {
-        return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("input length must be at least 128 bytes".into()),
-        });
-    }
-
-    let mut words = input.array_chunks::<WORD>().take(SLOTS);
-    let key = words.next().unwrap();
-    let nonce_word = words.next().unwrap();
-    let text_len = words.next().unwrap();
-    let ad_len = words.next().unwrap();
-
-    // Only the initial NONCE_SIZE bytes of the nonce field are used - bytes at
-    // lower addresses in the input.
     let mut nonce = [0u8; NONCE_SIZE];
-    nonce.copy_from_slice(&nonce_word[..NONCE_SIZE]);
+    nonce.copy_from_slice(&nonce_bytes[..NONCE_SIZE]);
+    let mut key = [0u8; KEY_SIZE];
+    key.copy_from_slice(&key_bytes);
 
-    let text_len_big = BigUint::from_bytes_be(text_len);
-    let text_len = text_len_big
-        .to_usize()
-        .ok_or_else(|| PrecompileFailure::Error {
-            exit_status: ExitError::Other("text length out of bounds".into()),
-        })?;
-    let text_size = text_len.saturating_add(31) & (!0x1f); // Round up to 32 bytes.
-
-    let ad_len_big = BigUint::from_bytes_be(ad_len);
-    let ad_len = ad_len_big
-        .to_usize()
-        .ok_or_else(|| PrecompileFailure::Error {
-            exit_status: ExitError::Other("additional data length out of bounds".into()),
-        })?;
-    let ad_size = ad_len.saturating_add(31) & (!0x1f); // Round up to 32 bytes.
-    if input.len() != SLOTS * WORD + ad_size + text_size {
-        return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("input too short".into()),
-        });
-    }
-
-    let text = &input[(SLOTS * WORD)..(SLOTS * WORD + text_len)];
-    let ad = &input[(SLOTS * WORD + text_size)..(SLOTS * WORD + text_size + ad_len)];
-
-    Ok((*key, nonce, text, ad))
+    Ok((key, nonce, text, ad))
 }
 
 pub(super) fn call_deoxysii_seal(
@@ -119,13 +142,9 @@ pub(super) fn call_deoxysii_seal(
         DEOXYSII_BASE_COST,
         DEOXYSII_WORD_COST,
     )?;
-
-    // Input encoding: bytes32 key || bytes32 nonce || uint plaintext_len || uint ad_len || plaintext || ad.
     let (key, nonce, text, ad) = decode_deoxysii_call_args(input)?;
-
     let deoxysii = DeoxysII::new(&key);
     let encrypted = deoxysii.seal(&nonce, text, ad);
-
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
         cost: gas_cost,
@@ -146,11 +165,8 @@ pub(super) fn call_deoxysii_open(
         DEOXYSII_BASE_COST,
         DEOXYSII_WORD_COST,
     )?;
-
-    // Input encoding: bytes32 key || bytes32 nonce || uint ciphertext_len || uint ad_len || ciphertext || ad.
     let (key, nonce, ciphertext, ad) = decode_deoxysii_call_args(input)?;
     let ciphertext = ciphertext.to_vec();
-
     let deoxysii = DeoxysII::new(&key);
     match deoxysii.open(&nonce, ciphertext, ad) {
         Ok(decrypted) => Ok(PrecompileOutput {
@@ -159,8 +175,10 @@ pub(super) fn call_deoxysii_open(
             output: decrypted,
             logs: Default::default(),
         }),
-        Err(_) => Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("decryption error".into()),
+        Err(_) => Err(PrecompileFailure::Revert {
+            exit_status: ExitRevert::Reverted,
+            output: vec![],
+            cost: gas_cost,
         }),
     }
 }
@@ -169,6 +187,7 @@ pub(super) fn call_deoxysii_open(
 mod test {
     extern crate test;
 
+    use ethabi::Token;
     use rand::rngs::OsRng;
     use test::Bencher;
 
@@ -258,129 +277,75 @@ mod test {
         });
     }
 
-    fn get_usize_bytes(u: usize) -> [u8; 32] {
-        let short = u.to_be_bytes();
-        let mut long = [0u8; 32];
-        long[(32 - short.len())..].copy_from_slice(&short);
-        long
-    }
-
     #[test]
     fn test_deoxysii() {
-        let mut key = [0u8; 32];
-        key.copy_from_slice(b"this must be the excelentest key");
-        let mut nonce = [0u8; 32];
-        nonce.copy_from_slice(b"complete noncence, and too long.");
-        let plaintext = b"plaintext";
-        let plaintext_len = get_usize_bytes(plaintext.len());
+        let key = b"this must be the excelentest key";
+        let nonce = b"complete noncence, and too long.";
+        let plaintext = b"0123456789";
         let ad = b"additional data";
-        let ad_len = get_usize_bytes(ad.len());
-
-        // Compose the input blob and try calling with partial fragments.
-        let mut plain_input: Vec<u8> = Vec::new();
-        plain_input.extend_from_slice(&key);
-        plain_input.extend_from_slice(&nonce);
-        plain_input.extend_from_slice(&plaintext_len);
-        call_contract(
+        let ret_ct = call_contract(
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
             ]),
-            &plain_input,
-            1_000_000,
-        )
-        .expect("call should return something")
-        .expect_err("call should fail");
-
-        plain_input.extend_from_slice(&ad_len);
-        call_contract(
-            H160([
-                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
+            &ethabi::encode(&[
+                Token::FixedBytes(key.to_vec()),
+                Token::FixedBytes(nonce.to_vec()),
+                Token::Bytes(plaintext.to_vec()),
+                Token::Bytes(ad.to_vec()),
             ]),
-            &plain_input,
-            1_000_000,
-        )
-        .expect("call should return something")
-        .expect_err("call should fail");
-
-        plain_input.extend_from_slice(plaintext);
-        plain_input.resize((plain_input.len() + 31) & (!31), 0);
-        plain_input.extend_from_slice(ad);
-        call_contract(
-            H160([
-                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
-            ]),
-            &plain_input,
-            1_000_000,
-        )
-        .expect("call should return something")
-        .expect_err("call should fail");
-
-        plain_input.resize((plain_input.len() + 31) & (!31), 0);
-
-        // Get ciphertext.
-        let result = call_contract(
-            H160([
-                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
-            ]),
-            &plain_input,
-            1_000_000,
+            10_000_000,
         )
         .expect("call should return something")
         .expect("call should succeed");
-        let ciphertext = result.output;
-        let ciphertext_len = get_usize_bytes(ciphertext.len());
+        assert_ne!(plaintext.as_slice(), ret_ct.output);
 
-        // Compose input blob for decryption.
-        let mut cipher_input: Vec<u8> = Vec::new();
-        cipher_input.extend_from_slice(&key);
-        cipher_input.extend_from_slice(&nonce);
-        cipher_input.extend_from_slice(&ciphertext_len);
-        cipher_input.extend_from_slice(&ad_len);
-        cipher_input.extend_from_slice(&ciphertext);
-        cipher_input.resize((cipher_input.len() + 31) & (!31), 0);
-        cipher_input.extend_from_slice(ad);
-        cipher_input.resize((cipher_input.len() + 31) & (!31), 0);
-
-        // Try decrypting and compare.
-        let result = call_contract(
+        let ret_pt = call_contract(
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04,
             ]),
-            &cipher_input,
-            1_000_000,
+            &ethabi::encode(&[
+                Token::FixedBytes(key.to_vec()),
+                Token::FixedBytes(nonce.to_vec()),
+                Token::Bytes(ret_ct.output),
+                Token::Bytes(ad.to_vec()),
+            ]),
+            10_000_000,
         )
         .expect("call should return something")
         .expect("call should succeed");
-        assert_eq!(result.output, plaintext);
+        assert_eq!(plaintext.as_slice(), ret_pt.output);
+    }
+
+    #[test]
+    fn test_random_bytes() {
+        let ret = call_contract(
+            H160([
+                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+            ]),
+            &ethabi::encode(&[Token::Uint(4.into()), Token::Bytes(vec![0xbe, 0xef])]),
+            10_560,
+        )
+        .unwrap();
+        assert_eq!(hex::encode(ret.unwrap().output), "beef0203");
     }
 
     #[bench]
     fn bench_deoxysii_short(b: &mut Bencher) {
-        let mut key = [0u8; 32];
-        key.copy_from_slice(b"this must be the excelentest key");
-        let mut nonce = [0u8; 32];
-        nonce.copy_from_slice(b"complete noncence, and too long.");
+        let key = b"this must be the excelentest key";
+        let nonce = b"complete noncence, and too long.";
         let plaintext = b"01234567890123456789";
-        let plaintext_len = get_usize_bytes(plaintext.len());
         let ad = b"additional data";
-        let ad_len = get_usize_bytes(ad.len());
-
-        let mut plain_input: Vec<u8> = Vec::new();
-        plain_input.extend_from_slice(&key);
-        plain_input.extend_from_slice(&nonce);
-        plain_input.extend_from_slice(&plaintext_len);
-        plain_input.extend_from_slice(&ad_len);
-        plain_input.extend_from_slice(plaintext);
-        plain_input.resize((plain_input.len() + 31) & (!31), 0);
-        plain_input.extend_from_slice(ad);
-        plain_input.resize((plain_input.len() + 31) & (!31), 0);
-
         b.iter(|| {
             call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
                 ]),
-                &plain_input,
+                &ethabi::encode(&[
+                    Token::FixedBytes(key.to_vec()),
+                    Token::FixedBytes(nonce.to_vec()),
+                    Token::Bytes(plaintext.to_vec()),
+                    Token::Bytes(ad.to_vec()),
+                ]),
                 10_000_000,
             )
             .expect("call should return something")
@@ -390,31 +355,21 @@ mod test {
 
     #[bench]
     fn bench_deoxysii_long(b: &mut Bencher) {
-        let mut key = [0u8; 32];
-        key.copy_from_slice(b"this must be the excelentest key");
-        let mut nonce = [0u8; 32];
-        nonce.copy_from_slice(b"complete noncence, and too long.");
+        let key = b"this must be the excelentest key";
+        let nonce = b"complete noncence, and too long.";
         let plaintext = b"0123456789".repeat(200);
-        let plaintext_len = get_usize_bytes(plaintext.len());
         let ad = b"additional data";
-        let ad_len = get_usize_bytes(ad.len());
-
-        let mut plain_input: Vec<u8> = Vec::new();
-        plain_input.extend_from_slice(&key);
-        plain_input.extend_from_slice(&nonce);
-        plain_input.extend_from_slice(&plaintext_len);
-        plain_input.extend_from_slice(&ad_len);
-        plain_input.extend_from_slice(&plaintext);
-        plain_input.resize((plain_input.len() + 31) & (!31), 0);
-        plain_input.extend_from_slice(ad);
-        plain_input.resize((plain_input.len() + 31) & (!31), 0);
-
         b.iter(|| {
             call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
                 ]),
-                &plain_input,
+                &ethabi::encode(&[
+                    Token::FixedBytes(key.to_vec()),
+                    Token::FixedBytes(nonce.to_vec()),
+                    Token::Bytes(plaintext.to_vec()),
+                    Token::Bytes(ad.to_vec()),
+                ]),
                 10_000_000,
             )
             .expect("call should return something")

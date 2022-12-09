@@ -93,7 +93,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 
 	tb := ct.Upload(contracts.ABIOasisV1, contracts.Policy{Everyone: &struct{}{}}, helloContractCode).
-		SetFeeGas(140_000_000).
+		SetFeeGas(142_000_000).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce)
 	_ = tb.AppendSign(ctx, signer)
 	var upload contracts.UploadResult
@@ -150,7 +150,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 
 	// Upload OAS20 contract code.
 	tb = ct.Upload(contracts.ABIOasisV1, contracts.Policy{Everyone: &struct{}{}}, oas20ContractCode).
-		SetFeeGas(140_000_000).
+		SetFeeGas(142_000_000).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce+3)
 	_ = tb.AppendSign(ctx, signer)
 	var uploadOas20 contracts.UploadResult
@@ -674,6 +674,34 @@ OUTER:
 
 	if !bytes.Equal(deoxysiiPlainMessage, deoxysiiOpenOutput.Output) || deoxysiiOpenOutput.Error {
 		return fmt.Errorf("unexpected deoxysii_open[2] result: %v", deoxysiiOpenOutput)
+	}
+
+	// Generate some random bytes
+	tb = ct.Call(
+		instance.ID,
+		map[string]map[string]interface{}{
+			"random_bytes": {
+				"count": 42,
+			},
+		},
+		[]types.BaseUnits{},
+	).
+		SetFeeGas(250_000).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+4)
+	_ = tb.AppendSign(ctx, signer)
+	if err = tb.SubmitTx(ctx, &rawResult); err != nil {
+		return fmt.Errorf("failed to call hello contract random_bytes: %w", err)
+	}
+
+	var randomBytesResponse map[string]struct {
+		Output []byte `json:"output"`
+	}
+	if err = cbor.Unmarshal(rawResult, &randomBytesResponse); err != nil {
+		return fmt.Errorf("failed to decode random_bytes result: %w", err)
+	}
+	randomBytesOutput := randomBytesResponse["random_bytes"]
+	if len(randomBytesOutput.Output) != 42 {
+		return fmt.Errorf("unexpected random_bytes result: %v", randomBytesOutput)
 	}
 
 	nonce, err = ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)

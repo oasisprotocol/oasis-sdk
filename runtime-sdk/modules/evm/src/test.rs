@@ -375,11 +375,11 @@ fn test_c10l_enc_call_identity_decoded() {
     // Calls sent using the Oasis encrypted envelope format (not inner-enveloped)
     // should not be decoded:
     let mut mock = mock::Mock::default();
-    let mut ctx =
+    let ctx =
         mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(context::Mode::ExecuteTx);
     let data = vec![1, 2, 3, 4, 5];
     let (decoded_data, metadata) = EVMModule::<ConfidentialEVMConfig>::decode_call_data(
-        &mut ctx,
+        &ctx,
         data.clone(),
         transaction::CallFormat::EncryptedX25519DeoxysII,
         0,

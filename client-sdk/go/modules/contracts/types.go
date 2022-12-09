@@ -319,6 +319,8 @@ type GasCosts struct {
 	WASMCryptoX25519DeriveSymmetric    uint64 `json:"wasm_crypto_x25519_derive_symmetric"`
 	WASMCryptoDeoxysIIBase             uint64 `json:"wasm_crypto_deoxysii_base"`
 	WASMCryptoDeoxysIIByte             uint64 `json:"wasm_crypto_deoxysii_byte"`
+	WASMCryptoRandomBytesBase          uint64 `json:"wasm_crypto_random_bytes_base"`
+	WASMCryptoRandomBytesByte          uint64 `json:"wasm_crypto_random_bytes_byte"`
 }
 
 // Parameters are the parameters for the contracts module.

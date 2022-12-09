@@ -1,5 +1,11 @@
 //! Utilities for testing smart contracts.
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+};
+
+use rand_core::{RngCore as _, SeedableRng as _};
+use rand_xorshift::XorShiftRng;
 
 use oasis_contract_sdk_crypto as crypto;
 use oasis_runtime_sdk::crypto::signature;
@@ -51,13 +57,23 @@ impl PublicStore for MockStore {}
 impl ConfidentialStore for MockStore {}
 
 /// Mock environment.
-#[derive(Clone, Default)]
-pub struct MockEnv {}
+#[derive(Clone)]
+pub struct MockEnv {
+    rng: Arc<Mutex<XorShiftRng>>,
+}
 
 impl MockEnv {
     /// Create a new mock environment.
     pub fn new() -> Self {
-        Self {}
+        Default::default()
+    }
+}
+
+impl Default for MockEnv {
+    fn default() -> Self {
+        Self {
+            rng: Arc::new(Mutex::new(XorShiftRng::seed_from_u64(0))),
+        }
     }
 }
 
@@ -154,6 +170,11 @@ impl Crypto for MockEnv {
             crypto::deoxysii::Error::DecryptionFailed => CryptoError::DecryptionFailed,
             _ => panic!("unexpected crypto error"),
         })
+    }
+
+    fn random_bytes(&self, _pers: &[u8], dst: &mut [u8]) -> usize {
+        self.rng.lock().unwrap().fill_bytes(dst);
+        dst.len()
     }
 }
 

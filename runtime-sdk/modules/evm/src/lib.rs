@@ -76,7 +76,7 @@ pub trait Config: 'static {
     /// If any of the precompile addresses returned is the same as for one of
     /// the builtin precompiles, then the returned implementation will
     /// overwrite the builtin implementation.
-    fn additional_precompiles() -> Option<precompile::PrecompileSetType> {
+    fn additional_precompiles() -> Option<&'static dyn evm::executor::stack::PrecompileSet> {
         None
     }
 
@@ -530,7 +530,7 @@ impl<Cfg: Config> Module<Cfg> {
                 'static,
                 '_,
                 MemoryStackState<'_, 'static, backend::Backend<'_, C, Cfg>>,
-                precompile::PrecompileSetType,
+                precompile::Precompiles<Cfg, backend::Backend<'_, C, Cfg>>,
             >,
             u64,
         ) -> (evm::ExitReason, Vec<u8>),
@@ -554,11 +554,8 @@ impl<Cfg: Config> Module<Cfg> {
         let mut backend = backend::Backend::<'_, C, Cfg>::new(ctx, vicinity);
         let metadata = StackSubstateMetadata::new(gas_limit, cfg);
         let stackstate = MemoryStackState::new(metadata, &backend);
-        let mut executor = StackExecutor::new_with_precompiles(
-            stackstate,
-            cfg,
-            precompile::get_precompiles::<Cfg>(),
-        );
+        let precompiles = precompile::Precompiles::new(&backend);
+        let mut executor = StackExecutor::new_with_precompiles(stackstate, cfg, &precompiles);
 
         // Run EVM and process the result.
         let (exit_reason, exit_value) = f(&mut executor, gas_limit);

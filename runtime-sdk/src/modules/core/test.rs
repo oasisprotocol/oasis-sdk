@@ -112,7 +112,7 @@ fn test_use_gas() {
     Core::use_batch_gas(&mut ctx, 1).expect_err("batch gas should accumulate outside tx");
 
     let mut ctx = mock.create_check_ctx();
-    let mut big_tx = tx.clone();
+    let mut big_tx = tx;
     big_tx.auth_info.fee.gas = u64::MAX;
     ctx.with_tx(0, 0, big_tx, |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, u64::MAX)
@@ -543,7 +543,7 @@ fn test_query_estimate_gas() {
         // Test tx estimation with propagate failures enabled.
         let args = types::EstimateGasQuery {
             caller: None,
-            tx: tx.clone(),
+            tx,
             propagate_failures: true,
         };
         let est =
@@ -563,7 +563,7 @@ fn test_query_estimate_gas() {
         // Test a failing transaction with propagate failures enabled.
         let args = types::EstimateGasQuery {
             caller: None,
-            tx: tx_fail.clone(),
+            tx: tx_fail,
             propagate_failures: true,
         };
         let result = Core::query_estimate_gas(&mut ctx, args)
@@ -588,7 +588,7 @@ fn test_query_estimate_gas() {
         // Test huge tx estimation with propagate failures enabled.
         let args = types::EstimateGasQuery {
             caller: None,
-            tx: tx_huge.clone(),
+            tx: tx_huge,
             propagate_failures: true,
         };
         let est =
@@ -614,7 +614,7 @@ fn test_query_estimate_gas() {
         // Test a transaction that requires specific amount of gas, with propagate failures enabled.
         let args = types::EstimateGasQuery {
             caller: None,
-            tx: tx_specific_gas.clone(),
+            tx: tx_specific_gas,
             propagate_failures: true,
         };
         let est =
@@ -640,7 +640,7 @@ fn test_query_estimate_gas() {
         // Test a transaction that requires specific amount of gas, with propagate failures enabled.
         let args = types::EstimateGasQuery {
             caller: None,
-            tx: tx_specific_gas_huge.clone(),
+            tx: tx_specific_gas_huge,
             propagate_failures: true,
         };
         let est =
@@ -700,7 +700,7 @@ fn test_approve_unverified_tx() {
         &transaction::UnverifiedTransaction(
             dummy_bytes.clone(),
             vec![
-                transaction::AuthProof::Signature(dummy_bytes.clone().into()),
+                transaction::AuthProof::Signature(dummy_bytes.into()),
                 transaction::AuthProof::Multisig(vec![None, None, None]),
             ],
         ),
@@ -723,7 +723,7 @@ fn test_add_priority() {
     Core::add_priority(&mut ctx, 11).expect("adding priority should succeed");
 
     let tx = mock::transaction();
-    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
+    ctx.with_tx(0, 0, tx, |mut tx_ctx, _call| {
         Core::add_priority(&mut tx_ctx, 10)
             .expect("adding priority from tx context should succeed");
     });
@@ -890,7 +890,7 @@ fn test_min_gas_price() {
 
     tx.auth_info.fee.amount = token::BaseUnits::new(0, token::Denomination::NATIVE);
 
-    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
         super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
             .expect("method should be gas price exempt");
     });
@@ -911,9 +911,7 @@ fn test_emit_events() {
             "testevent"
         }
         fn code(&self) -> u32 {
-            match self {
-                TestEvent { .. } => 0u32,
-            }
+            0
         }
     }
 
@@ -976,7 +974,7 @@ fn test_gas_used_events() {
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = 100_000;
 
-    let etags = ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
+    let etags = ctx.with_tx(0, 0, tx, |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, 10).expect("using gas under limit should succeed");
         assert_eq!(Core::used_tx_gas(&mut tx_ctx), 10);
         Core::after_handle_call(&mut tx_ctx).unwrap();

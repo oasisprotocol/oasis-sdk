@@ -3,7 +3,7 @@ name = "oasis-contract-sdk-types"
 description = "A collection of types for the Oasis Contract SDK."
 version = "0.1.0"
 authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
-edition = "2018"
+edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]

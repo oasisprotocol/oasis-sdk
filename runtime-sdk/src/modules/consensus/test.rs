@@ -469,7 +469,6 @@ fn test_init_bad_scaling_factor_1() {
                 // Zero scaling factor is invalid.
                 consensus_scaling_factor: 0,
             },
-            ..Default::default()
         },
     );
 }
@@ -488,7 +487,6 @@ fn test_init_bad_scaling_factor_2() {
                 // Scaling factor that is not a power of 10 is invalid.
                 consensus_scaling_factor: 1230,
             },
-            ..Default::default()
         },
     );
 }

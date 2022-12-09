@@ -58,8 +58,9 @@ var (
 		C10lERC20EVMTest,
 		C10lEVMSuicideTest,
 		C10lEVMCallSuicideTest,
-		C10lEVMEncryptionTest,
 		C10lEVMKeyDerivationTest,
+		C10lEVMEncryptionTest,
+		C10lEVMRNGTest,
 		EVMParametersTest,
 	})
 

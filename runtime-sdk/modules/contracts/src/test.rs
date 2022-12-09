@@ -37,7 +37,7 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
     // Compress contract code.
     let mut code = Vec::with_capacity(HELLO_CONTRACT_CODE.len() << 3);
     let mut encoder = snap::write::FrameEncoder::new(&mut code);
-    encoder.write(HELLO_CONTRACT_CODE).unwrap();
+    encoder.write_all(HELLO_CONTRACT_CODE).unwrap();
     drop(encoder); // Make sure data is flushed.
 
     let tx = transaction::Transaction {
@@ -59,7 +59,7 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
             )],
             fee: transaction::Fee {
                 amount: Default::default(),
-                gas: 140_000_000,
+                gas: 141_000_000,
                 consensus_messages: 0,
             },
             ..Default::default()
@@ -399,7 +399,7 @@ fn test_hello_contract_call() {
     let result = Contracts::query_code_storage(&mut ctx, types::CodeStorageQuery { id: 0.into() })
         .expect("code storage query should succeed");
     // Stored code is the original code plus some injected gas billing calls.
-    assert_eq!(result.code.len() >= HELLO_CONTRACT_CODE.len(), true);
+    assert!(result.code.len() >= HELLO_CONTRACT_CODE.len());
 
     // Invalid code queries should fail.
     Contracts::query_code(&mut ctx, types::CodeQuery { id: 9999.into() })
