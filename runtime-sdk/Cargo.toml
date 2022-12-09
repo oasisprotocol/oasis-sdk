@@ -19,7 +19,7 @@ hmac = "0.11.0"
 sha2 = "0.9.8"
 sha3 = { version = "0.10.1", default-features = false }
 k256 = { version = "0.10.4" }
-schnorrkel = { version = "0.10.2", features = ["asm", "avx2_backend"] }
+schnorrkel = "0.10.2"
 merlin = "3.0.0"
 thiserror = "1.0.30"
 hex = "0.4.2"
