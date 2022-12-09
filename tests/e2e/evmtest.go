@@ -1063,9 +1063,9 @@ func C10lEVMCallSuicideTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc
 func encryptionEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
 	// To generate the contract bytecode, use https://remix.ethereum.org/
 	// with the following settings:
-	//     Compiler: 0.8.17+commit.e28d00a7
+	//     Compiler: 0.8.17+commit.8df45f5f.Darwin.appleclang
 	//     EVM version: london
-	//     Enable optimization: yes, 200
+	//     Enable optimization: yes, 1, via-ir
 	// on the source in evm_encryption.sol next to the hex file.
 	_, err := simpleEVMCallTest(log, rtc, c10l, evmEncryptionCompiledHex, "test", "f8a8fd6d", "")
 	if err != nil {
@@ -1086,27 +1086,19 @@ func C10lEVMEncryptionTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.
 func keyDerivationEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
 	// To generate the contract bytecode, use https://remix.ethereum.org/
 	// with the following settings:
-	//     Compiler: 0.8.7+commit.e28d00a7
+	//     Compiler: 0.8.17+commit.8df45f5f.Darwin.appleclang
 	//     EVM version: london
-	//     Enable optimization: yes, 200
+	//     Enable optimization: yes, 1, via-ir
 	// on the source in evm_key_derivation.sol next to the hex file.
 
 	// Fixed random key material to pass to the contract.
 	publicKey := "3046db3fa70ce605457dc47c48837ebd8bd0a26abfde5994d033e1ced68e2576"
 	privateKey := "c07b151fbc1e7a11dff926111188f8d872f62eba0396da97c0a24adb75161750"
 	expected := "e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586"
-
-	res, err := simpleEVMCallTest(log, rtc, c10l, evmKeyDerivationCompiledHex, "test", "92e2a69c", publicKey+privateKey+expected)
+	_, err := simpleEVMCallTest(log, rtc, c10l, evmKeyDerivationCompiledHex, "test", "92e2a69c", publicKey+privateKey+expected)
 	if err != nil {
 		return err
 	}
-	if len(res) != 64 {
-		return fmt.Errorf("returned value has wrong length (expected 192, got %d)", len(res))
-	}
-	if res != strings.Repeat("0", 64) {
-		return fmt.Errorf("returned value is incorrect (got '%s' instead of all zeroes)", res)
-	}
-
 	return nil
 }
 
@@ -1119,7 +1111,7 @@ func rngEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) err
 	// with the following settings:
 	//     Compiler: 0.8.17+commit.8df45f5f.Darwin.appleclang
 	//     EVM version: london
-	//     Enable optimization: yes, 200
+	//     Enable optimization: yes, 1, via-ir
 	// on the source in evm_rng.sol next to the hex file.
 	// (i.e. `solc evm_rng.sol --bin --optimize`)
 	_, err := simpleEVMCallTest(log, rtc, c10l, evmRngHex, "test", "f8a8fd6d", "")
