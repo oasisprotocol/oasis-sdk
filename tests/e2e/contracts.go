@@ -93,7 +93,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 	}
 
 	tb := ct.Upload(contracts.ABIOasisV1, contracts.Policy{Everyone: &struct{}{}}, helloContractCode).
-		SetFeeGas(140_000_000).
+		SetFeeGas(142_000_000).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce)
 	_ = tb.AppendSign(ctx, signer)
 	var upload contracts.UploadResult
@@ -150,7 +150,7 @@ func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 
 	// Upload OAS20 contract code.
 	tb = ct.Upload(contracts.ABIOasisV1, contracts.Policy{Everyone: &struct{}{}}, oas20ContractCode).
-		SetFeeGas(140_000_000).
+		SetFeeGas(142_000_000).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce+3)
 	_ = tb.AppendSign(ctx, signer)
 	var uploadOas20 contracts.UploadResult
@@ -676,11 +676,6 @@ OUTER:
 		return fmt.Errorf("unexpected deoxysii_open[2] result: %v", deoxysiiOpenOutput)
 	}
 
-	nonce, err = ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
-	if err != nil {
-		return fmt.Errorf("failed to get nonce: %w", err)
-	}
-
 	// Generate some random bytes
 	tb = ct.Call(
 		instance.ID,
@@ -707,6 +702,11 @@ OUTER:
 	randomBytesOutput := randomBytesResponse["random_bytes"]
 	if len(randomBytesOutput.Output) != 42 {
 		return fmt.Errorf("unexpected random_bytes result: %v", randomBytesOutput)
+	}
+
+	nonce, err = ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return fmt.Errorf("failed to get nonce: %w", err)
 	}
 
 	// Change upgrade policy.
