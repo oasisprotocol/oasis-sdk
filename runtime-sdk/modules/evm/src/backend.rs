@@ -16,6 +16,8 @@ use crate::{
     Config,
 };
 
+pub(crate) const RNG_MAX_BYTES: u64 = 1024;
+
 /// Information required by the evm crate.
 #[derive(Clone, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 pub struct Vicinity {
@@ -185,12 +187,11 @@ impl<T: EVMBackendExt> EVMBackendExt for &T {
 }
 
 impl<'ctx, C: Context, Cfg: Config> EVMBackendExt for Backend<'ctx, C, Cfg> {
-    fn random_bytes(&self, num_words: u64, pers: &[u8]) -> Vec<u8> {
-        // Refuse to generate more than 2 KiB in one go.
+    fn random_bytes(&self, num_bytes: u64, pers: &[u8]) -> Vec<u8> {
+        // Refuse to generate more than 1 KiB in one go.
         // EVM memory gas is checked only before and after calls, so we won't
         // see the quadratic memory cost until after this call uses its time.
-        let num_words = num_words.min(64);
-        let num_bytes = (num_words * 32) as usize;
+        let num_bytes = num_bytes.min(RNG_MAX_BYTES) as usize;
         let mut ctx = self.ctx.borrow_mut();
         ctx.rng(pers)
             .ok()

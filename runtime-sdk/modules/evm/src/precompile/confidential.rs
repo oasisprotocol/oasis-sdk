@@ -6,7 +6,7 @@ use evm::{
 use hmac::{Hmac, Mac, NewMac as _};
 use oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::{DeoxysII, KEY_SIZE, NONCE_SIZE};
 
-use crate::backend::EVMBackendExt;
+use crate::backend::{EVMBackendExt, RNG_MAX_BYTES};
 
 use super::{linear_cost, multilinear_cost, PrecompileResult};
 
@@ -31,8 +31,11 @@ pub(super) fn call_random_bytes<B: EVMBackendExt>(
             }
         })?;
     let pers_str = call_args.pop().unwrap().into_bytes().unwrap();
-    let num_words_big = call_args.pop().unwrap().into_uint().unwrap();
-    let num_words = num_words_big.try_into().unwrap_or(u64::max_value());
+    let num_bytes_big = call_args.pop().unwrap().into_uint().unwrap();
+    let num_bytes = num_bytes_big
+        .try_into()
+        .unwrap_or(u64::max_value())
+        .min(RNG_MAX_BYTES);
     // This operation shouldn't be too cheap to start since it invokes a key manager.
     // Each byte is generated using hashing, so it's neither expensive nor cheap.
     // Thus:
@@ -44,7 +47,7 @@ pub(super) fn call_random_bytes<B: EVMBackendExt>(
     // which has a cost-per-byte upwards of 1000.
     let gas_cost = multilinear_cost(
         target_gas,
-        num_words,
+        num_bytes,
         pers_str.len() as u64,
         240,
         60,
@@ -53,7 +56,7 @@ pub(super) fn call_random_bytes<B: EVMBackendExt>(
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
         cost: gas_cost,
-        output: backend.random_bytes(num_words, &pers_str),
+        output: backend.random_bytes(num_bytes, &pers_str),
         logs: Default::default(),
     })
 }
@@ -319,11 +322,11 @@ mod test {
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
             ]),
-            &ethabi::encode(&[Token::Uint(2.into()), Token::Bytes(vec![0xbe, 0xef])]),
+            &ethabi::encode(&[Token::Uint(4.into()), Token::Bytes(vec![0xbe, 0xef])]),
             10_560,
         )
         .unwrap();
-        assert_eq!(hex::encode(ret.unwrap().output), "beef02030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f");
+        assert_eq!(hex::encode(ret.unwrap().output), "beef0203");
     }
 
     #[bench]
