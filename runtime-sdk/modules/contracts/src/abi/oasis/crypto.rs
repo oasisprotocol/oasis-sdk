@@ -145,12 +145,17 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     let pers = Region::from_arg((pers_ptr, pers_len))
                         .as_slice(&memory)
                         .map_err(|_| wasm3::Trap::Abort)?;
-                    let mut rng = ec.tx_context.rng(pers).map_err(|_| wasm3::Trap::Abort)?;
+                    let mut rng = ec.tx_context.rng(pers).map_err(|e| {
+                        ec.aborted = Some(e.into());
+                        wasm3::Trap::Abort
+                    })?;
                     let output = Region::from_arg((dst_ptr, num_bytes))
                         .as_slice_mut(&mut memory)
                         .map_err(|_| wasm3::Trap::Abort)?;
-                    rand_core::RngCore::try_fill_bytes(&mut rng, output)
-                        .map_err(|_| wasm3::Trap::Abort)?;
+                    rand_core::RngCore::try_fill_bytes(&mut rng, output).map_err(|e| {
+                        ec.aborted = Some(Error::ExecutionFailed(e.into()));
+                        wasm3::Trap::Abort
+                    })?;
                     Ok(num_bytes)
                 })?
             },

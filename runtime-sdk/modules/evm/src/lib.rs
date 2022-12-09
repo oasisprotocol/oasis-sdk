@@ -76,7 +76,7 @@ pub trait Config: 'static {
     /// If any of the precompile addresses returned is the same as for one of
     /// the builtin precompiles, then the returned implementation will
     /// overwrite the builtin implementation.
-    fn additional_precompiles() -> Option<()> {
+    fn additional_precompiles() -> Option<&'static dyn evm::executor::stack::PrecompileSet> {
         None
     }
 

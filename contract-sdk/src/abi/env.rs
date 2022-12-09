@@ -61,7 +61,7 @@ impl HostEnv {
         let message_region = HostRegionRef::from_slice(message);
         let signature_region = HostRegionRef::from_slice(signature);
         let result = unsafe {
-            crypto::crypto_signature_verify(
+            crypto::signature_verify(
                 kind as u32,
                 key_region.offset,
                 key_region.length,
@@ -147,7 +147,7 @@ impl Crypto for HostEnv {
         let dst_region = HostRegionRef::from_slice(&dst);
 
         unsafe {
-            crypto::crypto_ecdsa_recover(
+            crypto::ecdsa_recover(
                 input_region.offset,
                 input_region.length,
                 dst_region.offset,
@@ -235,7 +235,7 @@ impl Crypto for HostEnv {
         let pers_region = HostRegionRef::from_slice(pers);
         let dst_region = HostRegionRef::from_slice(dst);
         unsafe {
-            crypto::crypto_random_bytes(
+            crypto::random_bytes(
                 pers_region.offset,
                 pers_region.length,
                 dst_region.offset,

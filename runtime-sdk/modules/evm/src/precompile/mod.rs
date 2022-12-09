@@ -104,7 +104,10 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             (1, 2) => confidential::call_x25519_derive(input, gas_limit, context, is_static),
             (1, 3) => confidential::call_deoxysii_seal(input, gas_limit, context, is_static),
             (1, 4) => confidential::call_deoxysii_open(input, gas_limit, context, is_static),
-            _ => return None,
+            _ => {
+                return Cfg::additional_precompiles()
+                    .and_then(|pc| pc.execute(address, input, gas_limit, context, is_static))
+            }
         })
     }
 
@@ -113,10 +116,13 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
         // Otherwise, when confidentiality is enabled, Oasis precompiles start with one and have a last byte of no more than four.
         let addr_bytes = address.as_bytes();
         let (first, last) = (address[0], addr_bytes[19]);
-        address[1..19].iter().all(|b| *b == 0)
+        (address[1..19].iter().all(|b| *b == 0)
             && matches!(
                 (first, last, Cfg::CONFIDENTIAL),
                 (0, 1..=5, _) | (1, 1..=4, true)
-            )
+            ))
+            || Cfg::additional_precompiles()
+                .map(|pc| pc.is_precompile(address))
+                .unwrap_or_default()
     }
 }
