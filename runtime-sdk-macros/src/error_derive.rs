@@ -20,6 +20,11 @@ struct Error {
     /// only append errors or release only breaking changes.
     #[darling(rename = "autonumber")]
     autonumber: Flag,
+
+    /// Whether the `into_abort` function should return itself. This can only be used when the type
+    /// being annotated is the dispatcher error type so it is only for internal use.
+    #[darling(rename = "abort_self")]
+    abort_self: Flag,
 }
 
 #[derive(FromVariant)]
@@ -77,6 +82,7 @@ pub fn derive_error(input: DeriveInput) -> TokenStream {
         module_name,
         &error.data.as_ref().take_enum().unwrap(),
         error.autonumber.is_present(),
+        error.abort_self.is_present(),
     );
 
     let sdk_crate = gen::sdk_crate_path();
@@ -113,6 +119,7 @@ fn convert_variants(
     module_name: Path,
     variants: &[&ErrorVariant],
     autonumber: bool,
+    abort_self: bool,
 ) -> (TokenStream, TokenStream, TokenStream) {
     if variants.is_empty() {
         return (quote!(#module_name), quote!(0), quote!(Err(#enum_binding)));
@@ -121,37 +128,7 @@ fn convert_variants(
     let mut next_autonumber = 0u32;
     let mut reserved_numbers = std::collections::BTreeSet::new();
 
-    let abort_variants: Vec<_> = variants
-        .iter()
-        .filter_map(|variant| {
-            if !variant.abort.is_present() {
-                return None;
-            }
-
-            let variant_ident = &variant.ident;
-
-            Some(quote! {
-                match #enum_binding {
-                    Self::#variant_ident(err) => Ok(err),
-                    _ => Err(#enum_binding),
-                }
-            })
-        })
-        .collect();
-    let abort_variant = match abort_variants.len() {
-        0 => quote!(Err(#enum_binding)),
-        1 => abort_variants.into_iter().next().unwrap(),
-        _ => {
-            enum_binding
-                .span()
-                .unwrap()
-                .error("multiple abort variants specified")
-                .emit();
-            return (quote!(), quote!(), quote!());
-        }
-    };
-
-    let (module_name_matches, code_matches): (Vec<_>, Vec<_>) = variants
+    let (module_name_matches, (code_matches, abort_matches)): (Vec<_>, (Vec<_>, Vec<_>)) = variants
         .iter()
         .map(|variant| {
             let variant_ident = &variant.ident;
@@ -170,7 +147,7 @@ fn convert_variants(
                         .unwrap()
                         .error("multiple error sources specified for variant")
                         .emit();
-                    return (quote!(), quote!());
+                    return (quote!(), (quote!(), quote!()));
                 }
                 if source.is_none() {
                     variant_ident
@@ -178,7 +155,7 @@ fn convert_variants(
                         .unwrap()
                         .error("no source error specified for variant")
                         .emit();
-                    return (quote!(), quote!());
+                    return (quote!(), (quote!(), quote!()));
                 }
                 let (field_index, field_ident) = source.unwrap();
 
@@ -190,17 +167,44 @@ fn convert_variants(
                     }),
                 };
 
+                // Get all other fields that are needed for forwarding in abort variants.
+                let non_source_fields = variant
+                    .fields
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, f)| (i != field_index).then(|| {
+                        let pat = match f.ident {
+                            Some(ref ident) => Member::Named(ident.clone()),
+                            None => Member::Unnamed(Index {
+                                index: i as u32,
+                                span: variant_ident.span(),
+                            }),
+                        };
+                        let ident = Ident::new(&format!("__a{}", i), variant_ident.span());
+                        let binding = quote!( #pat: #ident, );
+
+                        binding
+                    }));
+                let non_source_field_bindings = non_source_fields.clone();
+
                 let source = quote!(source);
                 let module_name = quote_spanned!(variant_ident.span()=> #source.module_name());
                 let code = quote_spanned!(variant_ident.span()=> #source.code());
+                let abort_reclaim = quote!(Self::#variant_ident { #field: e, #(#non_source_fields)* });
+                let abort = quote_spanned!(variant_ident.span()=> #source.into_abort().map_err(|e| #abort_reclaim));
 
                 (
                     quote! {
                         Self::#variant_ident { #field: #source, .. } => #module_name,
                     },
-                    quote! {
-                        Self::#variant_ident { #field: #source, .. } => #code,
-                    },
+                    (
+                        quote! {
+                            Self::#variant_ident { #field: #source, .. } => #code,
+                        },
+                        quote! {
+                            Self::#variant_ident { #field: #source, #(#non_source_field_bindings)* } => #abort,
+                        },
+                    ),
                 )
             } else {
                 // Regular case without forwarding.
@@ -212,7 +216,7 @@ fn convert_variants(
                                 .unwrap()
                                 .error(format!("code {} already used", code))
                                 .emit();
-                            return (quote!(), quote!());
+                            return (quote!(), (quote!(), quote!()));
                         }
                         reserved_numbers.insert(code);
                         code
@@ -233,7 +237,17 @@ fn convert_variants(
                             .unwrap()
                             .error("missing `code` for variant")
                             .emit();
-                        return (quote!(), quote!());
+                        return (quote!(), (quote!(), quote!()));
+                    }
+                };
+
+                let abort = if variant.abort.is_present() {
+                    quote!{
+                        Self::#variant_ident(err) => Ok(err),
+                    }
+                } else {
+                    quote!{
+                        Self::#variant_ident { .. } => Err(#enum_binding),
                     }
                 };
 
@@ -241,13 +255,26 @@ fn convert_variants(
                     quote! {
                         Self::#variant_ident { .. } => #module_name,
                     },
-                    quote! {
-                        Self::#variant_ident { .. } => #code,
-                    },
+                    (
+                        quote! {
+                            Self::#variant_ident { .. } => #code,
+                        },
+                        abort,
+                    ),
                 )
             }
         })
         .unzip();
+
+    let abort_body = if abort_self {
+        quote!(Ok(self))
+    } else {
+        quote! {
+            match #enum_binding {
+                #(#abort_matches)*
+            }
+        }
+    };
 
     (
         quote! {
@@ -260,7 +287,7 @@ fn convert_variants(
                 #(#code_matches)*
             }
         },
-        abort_variant,
+        abort_body,
     )
 }
 
@@ -293,8 +320,11 @@ mod tests {
                     }
                     fn into_abort(self) -> Result<__sdk::dispatcher::Error, Self> {
                         match self {
+                            Self::Error0 { .. } => Err(self),
+                            Self::Error2 { .. } => Err(self),
+                            Self::Error1 { .. } => Err(self),
+                            Self::Error3 { .. } => Err(self),
                             Self::ErrorAbort(err) => Ok(err),
-                            _ => Err(self),
                         }
                     }
                 }
@@ -383,7 +413,11 @@ mod tests {
                         }
                     }
                     fn into_abort(self) -> Result<__sdk::dispatcher::Error, Self> {
-                        Err(self)
+                        match self {
+                            Self::Foo { 0: source } => {
+                                source.into_abort().map_err(|e| Self::Foo { 0: e })
+                            }
+                        }
                     }
                 }
                 #[automatically_derived]
@@ -401,6 +435,54 @@ mod tests {
             pub enum Error {
                 #[sdk_error(transparent)]
                 Foo(#[from] AnotherError),
+            }
+        );
+        let error_derivation = super::derive_error(input);
+        let actual: syn::Stmt = syn::parse2(error_derivation).unwrap();
+
+        crate::assert_empty_diff!(actual, expected);
+    }
+
+    #[test]
+    fn generate_error_impl_abort_self() {
+        let expected: syn::Stmt = syn::parse_quote!(
+            const _: () = {
+                use ::oasis_runtime_sdk::{self as __sdk, error::Error as _};
+                #[automatically_derived]
+                impl __sdk::error::Error for Error {
+                    fn module_name(&self) -> &str {
+                        match self {
+                            Self::Foo { .. } => THE_MODULE_NAME,
+                            Self::Bar { .. } => THE_MODULE_NAME,
+                        }
+                    }
+                    fn code(&self) -> u32 {
+                        match self {
+                            Self::Foo { .. } => 1u32,
+                            Self::Bar { .. } => 2u32,
+                        }
+                    }
+                    fn into_abort(self) -> Result<__sdk::dispatcher::Error, Self> {
+                        Ok(self)
+                    }
+                }
+                #[automatically_derived]
+                impl From<Error> for __sdk::error::RuntimeError {
+                    fn from(err: Error) -> Self {
+                        Self::new(err.module_name(), err.code(), &err.to_string())
+                    }
+                }
+            };
+        );
+
+        let input: syn::DeriveInput = syn::parse_quote!(
+            #[derive(Error)]
+            #[sdk_error(module_name = "THE_MODULE_NAME", abort_self)]
+            pub enum Error {
+                #[sdk_error(code = 1)]
+                Foo,
+                #[sdk_error(code = 2)]
+                Bar,
             }
         );
         let error_derivation = super::derive_error(input);

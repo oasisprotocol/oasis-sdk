@@ -48,6 +48,7 @@ const MODULE_NAME: &str = "dispatcher";
 /// Error emitted by the dispatch process. Note that this indicates an error in the dispatch
 /// process itself and should not be used for any transaction-related errors.
 #[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
+#[sdk_error(abort_self)]
 pub enum Error {
     #[error("dispatch aborted")]
     #[sdk_error(code = 1)]
@@ -863,13 +864,20 @@ mod test {
     impl core::Config for CoreConfig {}
     type Core = core::Module<CoreConfig>;
 
+    #[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
+    enum AlphabetError {
+        #[error("{0}")]
+        #[sdk_error(transparent, abort)]
+        Core(#[source] core::Error),
+    }
+
     /// A module with multiple no-op methods; intended for testing routing.
     struct AlphabetModule;
 
     impl module::Module for AlphabetModule {
         const NAME: &'static str = "alphabet";
         const VERSION: u32 = 42;
-        type Error = core::Error;
+        type Error = AlphabetError;
         type Event = ();
         type Parameters = ();
     }
@@ -877,24 +885,30 @@ mod test {
     #[sdk_derive(MethodHandler)]
     impl AlphabetModule {
         #[handler(call = "alphabet.ReadOnly")]
-        fn read_only<C: TxContext>(ctx: &mut C, _args: ()) -> Result<u64, core::Error> {
+        fn read_only<C: TxContext>(ctx: &mut C, _args: ()) -> Result<u64, AlphabetError> {
             let _ = ctx.runtime_state().get(b"key"); // Read something and ignore result.
             Ok(42)
         }
 
         #[handler(call = "alphabet.NotReadOnly")]
-        fn not_read_only<C: TxContext>(ctx: &mut C, _args: ()) -> Result<u64, core::Error> {
+        fn not_read_only<C: TxContext>(ctx: &mut C, _args: ()) -> Result<u64, AlphabetError> {
             ctx.runtime_state().insert(b"key", b"value");
             Ok(10)
         }
 
+        #[handler(call = "alphabet.Aborting")]
+        fn aborting<C: TxContext>(_ctx: &mut C, _args: ()) -> Result<(), AlphabetError> {
+            // Use a deeply nested abort to make sure this is handled correctly.
+            Err(AlphabetError::Core(core::Error::Abort(Error::Aborted)))
+        }
+
         #[handler(query = "alphabet.Alpha")]
-        fn alpha<C: Context>(_ctx: &mut C, _args: ()) -> Result<(), core::Error> {
+        fn alpha<C: Context>(_ctx: &mut C, _args: ()) -> Result<(), AlphabetError> {
             Ok(())
         }
 
         #[handler(query = "alphabet.Omega", expensive)]
-        fn expensive<C: Context>(_ctx: &mut C, _args: ()) -> Result<(), core::Error> {
+        fn expensive<C: Context>(_ctx: &mut C, _args: ()) -> Result<(), AlphabetError> {
             // Nothing actually expensive here. We're just pretending for testing purposes.
             Ok(())
         }
@@ -1040,5 +1054,39 @@ mod test {
             }
             _ => panic!("not read only method execution did not fail"),
         }
+    }
+
+    #[test]
+    fn test_dispatch_abort_forwarding() {
+        let mut mock = Mock::default();
+        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::ExecuteTx);
+
+        AlphabetRuntime::migrate(&mut ctx);
+
+        let tx = transaction::Transaction {
+            version: 1,
+            call: transaction::Call {
+                format: transaction::CallFormat::Plain,
+                method: "alphabet.Aborting".to_owned(),
+                ..Default::default()
+            },
+            auth_info: transaction::AuthInfo {
+                signer_info: vec![transaction::SignerInfo::new_sigspec(
+                    keys::alice::sigspec(),
+                    0,
+                )],
+                fee: transaction::Fee {
+                    amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                    gas: 1000,
+                    consensus_messages: 0,
+                },
+                ..Default::default()
+            },
+        };
+
+        // Dispatch transaction and make sure the abort gets propagated.
+        let dispatch_result =
+            Dispatcher::<AlphabetRuntime>::dispatch_tx(&mut ctx, 1024, tx.clone(), 0);
+        assert!(matches!(dispatch_result, Err(Error::Aborted)));
     }
 }
