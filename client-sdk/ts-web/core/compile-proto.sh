@@ -1,4 +1,6 @@
 #!/bin/sh -eu
+
+# uses protobufjs-cli
 pbjs \
     -t static-module \
     -o proto/index.js \
