@@ -1,21 +1,68 @@
-use ethabi::ParamType;
+use std::{collections::HashMap, convert::TryInto};
+
+use ethabi::{ParamType, Token};
 use evm::{
     executor::stack::{PrecompileFailure, PrecompileOutput},
     Context, ExitError, ExitRevert, ExitSucceed,
 };
 use hmac::{Hmac, Mac, NewMac as _};
-use oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::{DeoxysII, KEY_SIZE, NONCE_SIZE};
+use once_cell::sync::Lazy;
+
+use oasis_runtime_sdk::{
+    core::common::crypto::mrae::deoxysii::{DeoxysII, KEY_SIZE, NONCE_SIZE},
+    crypto::signature::{self, SignatureType},
+};
 
 use crate::backend::{EVMBackendExt, RNG_MAX_BYTES};
 
 use super::{linear_cost, multilinear_cost, PrecompileResult};
 
+/// Length of an EVM word, in bytes.
+pub const WORD: usize = 32;
+
+/// The base cost for x25519 key derivation.
+const X25519_KEY_DERIVATION_BASE_COST: u64 = 100_000;
+
 /// The base setup cost for encryption and decryption.
 const DEOXYSII_BASE_COST: u64 = 50_000;
 /// The cost for encryption and decryption per word of input.
 const DEOXYSII_WORD_COST: u64 = 100;
-/// Length of an EVM word, in bytes.
-const WORD: usize = 32;
+
+/// The cost of a key pair generation operation, per method.
+static KEYPAIR_GENERATE_BASE_COST: Lazy<HashMap<SignatureType, u64>> = Lazy::new(|| {
+    HashMap::from([
+        (SignatureType::Ed25519_Oasis, 35_000),
+        (SignatureType::Ed25519_Pure, 35_000),
+        (SignatureType::Ed25519_PrehashedSha512, 35_000),
+        (SignatureType::Secp256k1_Oasis, 110_000),
+        (SignatureType::Secp256k1_PrehashedKeccak256, 110_000),
+        (SignatureType::Secp256k1_PrehashedSha256, 110_000),
+    ])
+});
+
+/// The costs of a message signing operation.
+static SIGN_MESSAGE_COST: Lazy<HashMap<SignatureType, (u64, u64)>> = Lazy::new(|| {
+    HashMap::from([
+        (SignatureType::Ed25519_Oasis, (75_000, 8)),
+        (SignatureType::Ed25519_Pure, (75_000, 8)),
+        (SignatureType::Ed25519_PrehashedSha512, (75_000, 0)),
+        (SignatureType::Secp256k1_Oasis, (150_000, 8)),
+        (SignatureType::Secp256k1_PrehashedKeccak256, (150_000, 0)),
+        (SignatureType::Secp256k1_PrehashedSha256, (150_000, 0)),
+    ])
+});
+
+/// The costs of a signature verification operation.
+static VERIFY_MESSAGE_COST: Lazy<HashMap<SignatureType, (u64, u64)>> = Lazy::new(|| {
+    HashMap::from([
+        (SignatureType::Ed25519_Oasis, (110_000, 8)),
+        (SignatureType::Ed25519_Pure, (110_000, 8)),
+        (SignatureType::Ed25519_PrehashedSha512, (110_000, 0)),
+        (SignatureType::Secp256k1_Oasis, (210_000, 8)),
+        (SignatureType::Secp256k1_PrehashedKeccak256, (210_000, 0)),
+        (SignatureType::Secp256k1_PrehashedSha256, (210_000, 0)),
+    ])
+});
 
 pub(super) fn call_random_bytes<B: EVMBackendExt>(
     input: &[u8],
@@ -67,7 +114,12 @@ pub(super) fn call_x25519_derive(
     _context: &Context,
     _is_static: bool,
 ) -> PrecompileResult {
-    let gas_cost = linear_cost(target_gas, input.len() as u64, 100_000, 0)?;
+    let gas_cost = linear_cost(
+        target_gas,
+        input.len() as u64,
+        X25519_KEY_DERIVATION_BASE_COST,
+        0,
+    )?;
 
     // Input encoding: bytes32 public || bytes32 private.
     let mut public = [0u8; WORD];
@@ -183,15 +235,201 @@ pub(super) fn call_deoxysii_open(
     }
 }
 
+pub(super) fn call_keypair_generate(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> PrecompileResult {
+    let mut call_args = ethabi::decode(
+        &[
+            ParamType::Uint(256), // method
+            ParamType::Bytes,     // seed
+        ],
+        input,
+    )
+    .map_err(|e| PrecompileFailure::Error {
+        exit_status: ExitError::Other(e.to_string().into()),
+    })?;
+
+    let seed = call_args.pop().unwrap().into_bytes().unwrap();
+    let method: usize = call_args
+        .pop()
+        .unwrap()
+        .into_uint()
+        .unwrap()
+        .try_into()
+        .map_err(|_| PrecompileFailure::Error {
+            exit_status: ExitError::Other("method identifier out of bounds".into()),
+        })?;
+
+    let sig_type: SignatureType = <usize as TryInto<u8>>::try_into(method)
+        .map_err(|_| PrecompileFailure::Error {
+            exit_status: ExitError::Other("method identifier out of bounds".into()),
+        })?
+        .try_into()
+        .map_err(|_| PrecompileFailure::Error {
+            exit_status: ExitError::Other("unknown signature type".into()),
+        })?;
+    let signer = signature::MemorySigner::new_from_seed(sig_type, &seed).map_err(|err| {
+        PrecompileFailure::Error {
+            exit_status: ExitError::Other(format!("error creating signer: {}", err).into()),
+        }
+    })?;
+    let public = signer.public_key().as_bytes().to_vec();
+    let private = signer.to_bytes();
+
+    let gas_cost = linear_cost(
+        target_gas,
+        input.len() as u64,
+        *KEYPAIR_GENERATE_BASE_COST.get(&sig_type).unwrap(),
+        0,
+    )?;
+
+    Ok(PrecompileOutput {
+        exit_status: ExitSucceed::Returned,
+        cost: gas_cost,
+        output: ethabi::encode(&[Token::Bytes(public), Token::Bytes(private)]),
+        logs: Default::default(),
+    })
+}
+
+pub(super) fn call_sign(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> PrecompileResult {
+    let mut call_args = ethabi::decode(
+        &[
+            ParamType::Uint(256), // signature type
+            ParamType::Bytes,     // private key
+            ParamType::Bytes,     // context or precomputed hash bytes
+            ParamType::Bytes,     // message; should be zero-length if precomputed hash given
+        ],
+        input,
+    )
+    .map_err(|e| PrecompileFailure::Error {
+        exit_status: ExitError::Other(e.to_string().into()),
+    })?;
+
+    let message = call_args.pop().unwrap().into_bytes().unwrap();
+    let ctx_or_hash = call_args.pop().unwrap().into_bytes().unwrap();
+    let pk = call_args.pop().unwrap().into_bytes().unwrap();
+    let method = call_args
+        .pop()
+        .unwrap()
+        .into_uint()
+        .unwrap()
+        .try_into()
+        .map_err(|_| PrecompileFailure::Error {
+            exit_status: ExitError::Other("signature type identifier out of bounds".into()),
+        })?;
+
+    let sig_type: SignatureType = <usize as TryInto<u8>>::try_into(method)
+        .map_err(|_| PrecompileFailure::Error {
+            exit_status: ExitError::Other("signature type identifier out of bounds".into()),
+        })?
+        .try_into()
+        .map_err(|_| PrecompileFailure::Error {
+            exit_status: ExitError::Other("unknown signature type".into()),
+        })?;
+
+    let signer = signature::MemorySigner::from_bytes(sig_type, &pk).map_err(|e| {
+        PrecompileFailure::Error {
+            exit_status: ExitError::Other(format!("error creating signer: {}", e).into()),
+        }
+    })?;
+
+    let result = signer.sign_by_type(sig_type, &ctx_or_hash, &message);
+    let result = result.map_err(|e| PrecompileFailure::Error {
+        exit_status: ExitError::Other(format!("error signing message: {}", e).into()),
+    })?;
+
+    let costs = *SIGN_MESSAGE_COST.get(&sig_type).unwrap();
+    let gas_cost = linear_cost(target_gas, input.len() as u64, costs.0, costs.1)?;
+
+    Ok(PrecompileOutput {
+        exit_status: ExitSucceed::Returned,
+        cost: gas_cost,
+        output: result.into(),
+        logs: Default::default(),
+    })
+}
+
+pub(super) fn call_verify(
+    input: &[u8],
+    target_gas: Option<u64>,
+    _context: &Context,
+    _is_static: bool,
+) -> PrecompileResult {
+    let mut call_args = ethabi::decode(
+        &[
+            ParamType::Uint(256), // signature type
+            ParamType::Bytes,     // public key
+            ParamType::Bytes,     // context or precomputed hash bytes
+            ParamType::Bytes,     // message; should be zero-length if precomputed hash given
+            ParamType::Bytes,     // signature
+        ],
+        input,
+    )
+    .map_err(|e| PrecompileFailure::Error {
+        exit_status: ExitError::Other(e.to_string().into()),
+    })?;
+
+    let signature = call_args.pop().unwrap().into_bytes().unwrap();
+    let message = call_args.pop().unwrap().into_bytes().unwrap();
+    let ctx_or_hash = call_args.pop().unwrap().into_bytes().unwrap();
+    let pk = call_args.pop().unwrap().into_bytes().unwrap();
+    let method = call_args
+        .pop()
+        .unwrap()
+        .into_uint()
+        .unwrap()
+        .try_into()
+        .map_err(|_| PrecompileFailure::Error {
+            exit_status: ExitError::Other("signature type identifier out of bounds".into()),
+        })?;
+
+    let sig_type: SignatureType = <usize as TryInto<u8>>::try_into(method)
+        .map_err(|_| PrecompileFailure::Error {
+            exit_status: ExitError::Other("signature type identifier out of bounds".into()),
+        })?
+        .try_into()
+        .map_err(|_| PrecompileFailure::Error {
+            exit_status: ExitError::Other("unknown signature type".into()),
+        })?;
+
+    let signature: signature::Signature = signature.into();
+    let public_key =
+        signature::PublicKey::from_bytes(sig_type, &pk).map_err(|_| PrecompileFailure::Error {
+            exit_status: ExitError::Other("error reading public key".into()),
+        })?;
+
+    let result = public_key.verify_by_type(sig_type, &ctx_or_hash, &message, &signature);
+
+    let costs = *VERIFY_MESSAGE_COST.get(&sig_type).unwrap();
+    let gas_cost = linear_cost(target_gas, input.len() as u64, costs.0, costs.1)?;
+
+    Ok(PrecompileOutput {
+        exit_status: ExitSucceed::Returned,
+        cost: gas_cost,
+        output: ethabi::encode(&[Token::Bool(result.is_ok())]),
+        logs: Default::default(),
+    })
+}
+
 #[cfg(test)]
 mod test {
     extern crate test;
 
-    use ethabi::Token;
+    use ethabi::{ParamType, Token};
     use rand::rngs::OsRng;
     use test::Bencher;
 
-    use super::super::test::*;
+    use oasis_runtime_sdk::crypto::signature::{self, SignatureType};
+
+    use crate::precompile::{test::*, PrecompileResult};
 
     #[test]
     fn test_x25519_derive() {
@@ -375,5 +613,556 @@ mod test {
             .expect("call should return something")
             .expect("call should succeed");
         });
+    }
+
+    #[test]
+    fn test_keypair_generate() {
+        // Invalid method.
+        let params = ethabi::encode(&[
+            Token::Uint(50.into()),
+            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
+        ]);
+        call_contract(
+            H160([
+                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
+            ]),
+            &params,
+            10_000_000,
+        )
+        .expect("call should return something")
+        .expect_err("call should fail");
+
+        // Working test.
+        let params = ethabi::encode(&[
+            Token::Uint(SignatureType::Ed25519_Oasis.as_int().into()),
+            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
+        ]);
+        let output1 = call_contract(
+            H160([
+                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
+            ]),
+            &params,
+            10_000_000,
+        )
+        .expect("call should return something")
+        .expect("call should succeed")
+        .output;
+
+        // Again, should be repeatable.
+        let params = ethabi::encode(&[
+            Token::Uint(SignatureType::Ed25519_Oasis.as_int().into()),
+            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
+        ]);
+        let output2 = call_contract(
+            H160([
+                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
+            ]),
+            &params,
+            10_000_000,
+        )
+        .expect("call should return something")
+        .expect("call should succeed")
+        .output;
+
+        assert_eq!(output1, output2);
+    }
+
+    fn bench_keypair_generate(b: &mut Bencher, signature_type: SignatureType) {
+        let params = ethabi::encode(&[
+            Token::Uint(signature_type.as_int().into()),
+            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
+        ]);
+        b.iter(|| {
+            call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
+                ]),
+                &params,
+                10_000_000,
+            )
+            .expect("call should return something")
+            .expect("call should succeed")
+        });
+    }
+
+    #[bench]
+    fn bench_keypair_generate_ed25519(b: &mut Bencher) {
+        bench_keypair_generate(b, SignatureType::Ed25519_Oasis);
+    }
+
+    #[bench]
+    fn bench_keypair_generate_secp256k1(b: &mut Bencher) {
+        bench_keypair_generate(b, SignatureType::Secp256k1_Oasis);
+    }
+
+    #[test]
+    fn test_basic_roundtrip() {
+        let seed = b"01234567890123456789012345678901";
+        let context = b"test context";
+        let message = b"test message";
+
+        for method in 0u8..6u8 {
+            let sig_type: SignatureType = method.try_into().unwrap();
+            if sig_type.is_prehashed() {
+                // Tested in test_basic_roundtrip_prehashed below.
+                continue;
+            }
+
+            // Generate key pair from a fixed seed.
+            let params = ethabi::encode(&[Token::Uint(method.into()), Token::Bytes(seed.to_vec())]);
+            let output = call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
+                ]),
+                &params,
+                10_000_000,
+            )
+            .unwrap()
+            .unwrap()
+            .output;
+
+            let mut call_output =
+                ethabi::decode(&[ParamType::Bytes, ParamType::Bytes], &output).unwrap();
+            let private_key = call_output.pop().unwrap().into_bytes().unwrap().to_vec();
+            let public_key = call_output.pop().unwrap().into_bytes().unwrap().to_vec();
+
+            // Sign message.
+            let params = ethabi::encode(&[
+                Token::Uint(method.into()),
+                Token::Bytes(private_key),
+                Token::Bytes(context.to_vec()),
+                Token::Bytes(message.to_vec()),
+            ]);
+            let output = call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x06,
+                ]),
+                &params,
+                10_000_000,
+            )
+            .unwrap()
+            .unwrap()
+            .output;
+
+            let signature = output.to_vec();
+
+            // Verify signature.
+            let params = ethabi::encode(&[
+                Token::Uint(method.into()),
+                Token::Bytes(public_key),
+                Token::Bytes(context.to_vec()),
+                Token::Bytes(message.to_vec()),
+                Token::Bytes(signature),
+            ]);
+            let output = call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x07,
+                ]),
+                &params,
+                10_000_000,
+            )
+            .unwrap()
+            .unwrap()
+            .output;
+            let status = ethabi::decode(&[ParamType::Bool], &output)
+                .unwrap()
+                .pop()
+                .unwrap()
+                .into_bool()
+                .unwrap();
+            assert_eq!(status, true);
+        }
+    }
+
+    #[test]
+    fn test_basic_roundtrip_prehashed() {
+        let seed = b"01234567890123456789012345678901";
+        let message = b"test message";
+
+        let sig_types: &[(SignatureType, Box<dyn Fn(&[u8]) -> Vec<u8>>)] = &[
+            (
+                SignatureType::Ed25519_PrehashedSha512,
+                Box::new(|message: &[u8]| -> Vec<u8> {
+                    use sha2::digest::Digest as _;
+                    let mut digest = sha2::Sha512::default();
+                    <sha2::Sha512 as sha2::digest::Update>::update(&mut digest, message);
+                    digest.finalize().to_vec()
+                }),
+            ),
+            (
+                SignatureType::Secp256k1_PrehashedKeccak256,
+                Box::new(|message: &[u8]| -> Vec<u8> {
+                    use sha3::digest::Digest as _;
+                    let mut digest = sha3::Keccak256::default();
+                    <sha3::Keccak256 as sha3::digest::Update>::update(&mut digest, message);
+                    digest.finalize().to_vec()
+                }),
+            ),
+            (
+                SignatureType::Secp256k1_PrehashedSha256,
+                Box::new(|message: &[u8]| -> Vec<u8> {
+                    use sha2::digest::Digest as _;
+                    let mut digest = sha2::Sha256::default();
+                    <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, message);
+                    digest.finalize().to_vec()
+                }),
+            ),
+        ];
+
+        for (sig_type, hasher) in sig_types {
+            let method: u8 = sig_type.as_int();
+
+            // Generate key pair from a fixed seed.
+            let params = ethabi::encode(&[Token::Uint(method.into()), Token::Bytes(seed.to_vec())]);
+            let output = call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
+                ]),
+                &params,
+                10_000_000,
+            )
+            .unwrap()
+            .unwrap()
+            .output;
+
+            let mut call_output =
+                ethabi::decode(&[ParamType::Bytes, ParamType::Bytes], &output).unwrap();
+            let private_key = call_output.pop().unwrap().into_bytes().unwrap().to_vec();
+            let public_key = call_output.pop().unwrap().into_bytes().unwrap().to_vec();
+
+            // Sign message.
+            let params = ethabi::encode(&[
+                Token::Uint(method.into()),
+                Token::Bytes(private_key),
+                Token::Bytes(hasher(message)),
+                Token::Bytes(Vec::new()),
+            ]);
+            let output = call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x06,
+                ]),
+                &params,
+                10_000_000,
+            )
+            .unwrap()
+            .unwrap()
+            .output;
+
+            let signature = output.to_vec();
+
+            // Verify signature.
+            let params = ethabi::encode(&[
+                Token::Uint(method.into()),
+                Token::Bytes(public_key),
+                Token::Bytes(hasher(message)),
+                Token::Bytes(Vec::new()),
+                Token::Bytes(signature),
+            ]);
+            let output = call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x07,
+                ]),
+                &params,
+                10_000_000,
+            )
+            .unwrap()
+            .unwrap()
+            .output;
+            let status = ethabi::decode(&[ParamType::Bool], &output)
+                .unwrap()
+                .pop()
+                .unwrap()
+                .into_bool()
+                .unwrap();
+            assert_eq!(status, true);
+        }
+    }
+
+    #[test]
+    fn test_signing_params() {
+        fn push_all_and_test(
+            method: Option<u8>,
+            pk: Option<&[u8]>,
+            context: Option<&[u8]>,
+            message: Option<&[u8]>,
+        ) -> Option<PrecompileResult> {
+            let def_pk = signature::MemorySigner::new_from_seed(
+                SignatureType::Ed25519_Oasis,
+                b"01234567890123456789012345678901",
+            )
+            .unwrap()
+            .to_bytes();
+            let def_ctx = b"default context";
+            let def_msg = b"default message";
+
+            let ctx_method = if context.map(|o| o.len()).unwrap_or(1) == 0 {
+                SignatureType::Ed25519_Pure.as_int()
+            } else {
+                SignatureType::Ed25519_Oasis.as_int()
+            };
+
+            let params = ethabi::encode(&[
+                Token::Uint(method.unwrap_or(ctx_method).into()),
+                Token::Bytes(pk.map(|o| o.to_vec()).unwrap_or(def_pk)),
+                Token::Bytes(context.unwrap_or(def_ctx).to_vec()),
+                Token::Bytes(message.unwrap_or(def_msg).to_vec()),
+            ]);
+            call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x06,
+                ]),
+                &params,
+                10_000_000,
+            )
+        }
+
+        // Bogus method.
+        push_all_and_test(Some(55), None, None, None)
+            .expect("call should return something")
+            .expect_err("call should fail");
+
+        // Invalid private key.
+        let zeroes: Vec<u8> = vec![0; 32];
+        push_all_and_test(None, Some(&zeroes), None, None)
+            .expect("call should return something")
+            .expect_err("call should fail");
+
+        // All ok, with context.
+        push_all_and_test(None, None, None, None)
+            .expect("call should return something")
+            .expect("call should succeed");
+
+        // All ok, raw.
+        push_all_and_test(None, None, Some(b""), None)
+            .expect("call should return something")
+            .expect("call should succeed");
+    }
+
+    fn bench_signer(
+        b: &mut Bencher,
+        signature_type: SignatureType,
+        context_long: bool,
+        message_long: bool,
+    ) {
+        let signer = signature::MemorySigner::new_from_seed(
+            signature_type,
+            b"01234567890123456789012345678901",
+        )
+        .unwrap();
+
+        let context = b"0123456789".repeat(if context_long { 200 } else { 1 });
+        let message = b"0123456789".repeat(if message_long { 200 } else { 1 });
+
+        let params = ethabi::encode(&[
+            Token::Uint(signature_type.as_int().into()),
+            Token::Bytes(signer.to_bytes()),
+            Token::Bytes(context),
+            Token::Bytes(message),
+        ]);
+
+        b.iter(|| {
+            call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x06,
+                ]),
+                &params,
+                10_000_000,
+            )
+            .expect("call should return something")
+            .expect("call should succeed");
+        });
+    }
+
+    #[bench]
+    fn bench_sign_ed25519_shortctx_shortmsg(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Ed25519_Oasis, false, false);
+    }
+
+    #[bench]
+    fn bench_sign_ed25519_shortctx_longmsg(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Ed25519_Oasis, false, true);
+    }
+
+    #[bench]
+    fn bench_sign_ed25519_longctx_shortmsg(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Ed25519_Oasis, true, false);
+    }
+
+    #[bench]
+    fn bench_sign_ed25519_longctx_longmsg(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Ed25519_Oasis, true, true);
+    }
+
+    #[bench]
+    fn bench_sign_secp256k1_short(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Secp256k1_Oasis, false, false);
+    }
+
+    #[bench]
+    fn bench_sign_secp256k1_long(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Secp256k1_Oasis, false, true);
+    }
+
+    #[test]
+    fn test_verification_params() {
+        fn push_all_and_test(
+            method: Option<u8>,
+            pk: Option<&[u8]>,
+            signature: Option<&[u8]>,
+            context: Option<&[u8]>,
+            message: Option<&[u8]>,
+        ) -> Option<PrecompileResult> {
+            let def_pk = signature::MemorySigner::new_from_seed(
+                SignatureType::Ed25519_Oasis,
+                b"01234567890123456789012345678901",
+            )
+            .unwrap()
+            .public_key()
+            .as_bytes()
+            .to_vec();
+            let def_sig: signature::Signature = hex::decode("6377cc65a95c5cbc2e9bb59a7a8bc6b9ab70517c49eeefa359302750347b585865b7d7dd0e46b43f81b20bd45b727286cbca50725f09c0793352c7d383e8ed08").unwrap().into();
+            let def_ctx = b"default context";
+            let def_msg = b"default message";
+
+            let params = ethabi::encode(&[
+                Token::Uint(
+                    method
+                        .unwrap_or(SignatureType::Ed25519_Oasis.as_int())
+                        .into(),
+                ),
+                Token::Bytes(pk.map(|o| o.to_vec()).unwrap_or(def_pk)),
+                Token::Bytes(context.unwrap_or(def_ctx).to_vec()),
+                Token::Bytes(message.unwrap_or(def_msg).to_vec()),
+                Token::Bytes(signature.unwrap_or(def_sig.as_ref()).to_vec()),
+            ]);
+            call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x07,
+                ]),
+                &params,
+                10_000_000,
+            )
+        }
+
+        // Bogus method.
+        push_all_and_test(Some(55), None, None, None, None)
+            .expect("call should return something")
+            .expect_err("call should fail");
+
+        // Invalid public key.
+        let zeroes: Vec<u8> = vec![0; 32];
+        let mut output = push_all_and_test(None, Some(&zeroes), None, None, None)
+            .expect("call should return something")
+            .expect("call should succeed")
+            .output;
+        // Verification should have failed.
+        assert_eq!(
+            ethabi::decode(&[ParamType::Bool], &output)
+                .unwrap()
+                .pop()
+                .unwrap()
+                .into_bool()
+                .unwrap(),
+            false
+        );
+
+        // Invalid signature.
+        let long_zeroes: Vec<u8> = vec![0; 64];
+        output = push_all_and_test(None, None, Some(&long_zeroes), None, None)
+            .expect("call should return something")
+            .expect("call should succeed")
+            .output;
+        // Verification should have failed.
+        assert_eq!(
+            ethabi::decode(&[ParamType::Bool], &output)
+                .unwrap()
+                .pop()
+                .unwrap()
+                .into_bool()
+                .unwrap(),
+            false
+        );
+
+        // All ok.
+        output = push_all_and_test(None, None, None, None, None)
+            .expect("call should return something")
+            .expect("call should succeed")
+            .output;
+        assert_eq!(
+            ethabi::decode(&[ParamType::Bool], &output)
+                .unwrap()
+                .pop()
+                .unwrap()
+                .into_bool()
+                .unwrap(),
+            true
+        );
+    }
+
+    fn bench_verification(
+        b: &mut Bencher,
+        signature_type: SignatureType,
+        context_long: bool,
+        message_long: bool,
+    ) {
+        let signer = signature::MemorySigner::new_from_seed(
+            signature_type,
+            b"01234567890123456789012345678901",
+        )
+        .unwrap();
+
+        let context = b"0123456789".repeat(if context_long { 200 } else { 1 });
+        let message = b"0123456789".repeat(if message_long { 200 } else { 1 });
+        let signature = signer.sign(&context, &message).unwrap();
+
+        let params = ethabi::encode(&[
+            Token::Uint(signature_type.as_int().into()),
+            Token::Bytes(signer.public_key().as_bytes().to_vec()),
+            Token::Bytes(context),
+            Token::Bytes(message),
+            Token::Bytes(signature.as_ref().to_vec()),
+        ]);
+
+        b.iter(|| {
+            call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x07,
+                ]),
+                &params,
+                10_000_000,
+            )
+            .expect("call should return something")
+            .expect("call should succeed");
+        });
+    }
+
+    #[bench]
+    fn bench_verify_ed25519_shortctx_shortmsg(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Ed25519_Oasis, false, false);
+    }
+
+    #[bench]
+    fn bench_verify_ed25519_shortctx_longmsg(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Ed25519_Oasis, false, true);
+    }
+
+    #[bench]
+    fn bench_verify_ed25519_longctx_shortmsg(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Ed25519_Oasis, true, false);
+    }
+
+    #[bench]
+    fn bench_verify_ed25519_longctx_longmsg(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Ed25519_Oasis, true, true);
+    }
+
+    #[bench]
+    fn bench_verify_secp256k1_short(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Secp256k1_Oasis, false, false);
+    }
+
+    #[bench]
+    fn bench_verify_secp256k1_long(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Secp256k1_Oasis, false, true);
     }
 }

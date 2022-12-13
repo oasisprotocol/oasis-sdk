@@ -59,13 +59,13 @@ var evmSuicideTestCompiledHex string
 //go:embed contracts/evm_call_suicide_test_compiled.hex
 var evmCallSuicideTestCompiledHex string
 
-// We store the compiled EVM bytecode for the SimpleEVMEncryptionTest in a separate
+// We store the compiled EVM bytecode for the C10lEVMEncryptionTest in a separate
 // file (in hex) to preserve readability of this file.
 //
 //go:embed contracts/evm_encryption_compiled.hex
 var evmEncryptionCompiledHex string
 
-// We store the compiled EVM bytecode for the SimpleEVMKeyDerivationTest in a separate
+// We store the compiled EVM bytecode for the C10lEVMKeyDerivationTest in a separate
 // file (in hex) to preserve readability of this file.
 //
 //go:embed contracts/evm_key_derivation_compiled.hex
@@ -76,6 +76,12 @@ var evmKeyDerivationCompiledHex string
 //
 //go:embed contracts/evm_rng_compiled.hex
 var evmRngHex string
+
+// We store the compiled EVM bytecode for the C10lEVMMessageSigningTest in a separate
+// file (in hex) to preserve readability of this file.
+//
+//go:embed contracts/evm_message_signing_compiled.hex
+var evmMessageSigningCompiledHex string
 
 type c10lity bool
 
@@ -125,7 +131,7 @@ func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer sig
 
 	// Check if gas estimation works.
 	var err error
-	var gasLimit uint64 = 1_000_000
+	var gasLimit uint64 = 2_000_000
 	if !c10l {
 		// Gas estimation does not work with confidentiality.
 		if gasLimit, err = core.NewV1(rtc).EstimateGasForCaller(ctx, client.RoundLatest, types.CallerAddress{Address: &testing.Dave.Address}, txB.GetTransaction(), false); err != nil {
@@ -1129,6 +1135,34 @@ func C10lEVMRNGTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 // C10lEVMKeyDerivationTest does a simple key derivation contract test.
 func C10lEVMKeyDerivationTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return keyDerivationEVMTest(log, rtc, c10l)
+}
+
+// messageSigningEVMTest does a simple evm key generation and signing precompile test.
+//
+// Note that this test will only work with a confidential runtime because
+// it needs the confidential precompiles.
+func messageSigningEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
+	// To generate the contract bytecode, use https://remix.ethereum.org/
+	// with the following settings:
+	//     Compiler: 0.8.7+commit.e28d00a7
+	//     EVM version: london
+	//     Enable optimization: yes, 200
+	// on the source in evm_message_signing.sol next to the hex file.
+
+	res, err := simpleEVMCallTest(log, rtc, c10l, evmMessageSigningCompiledHex, "test", "f8a8fd6d", "")
+	if err != nil {
+		return err
+	}
+	if !strings.Contains(res, "6f6b") {
+		return fmt.Errorf("returned value does not contain 'ok': %v", res)
+	}
+
+	return nil
+}
+
+// C10lEVMMessageSigningTest does a simple key derivation contract test.
+func C10lEVMMessageSigningTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	return messageSigningEVMTest(log, rtc, c10l)
 }
 
 // EVMParametersTest tests parameters methods.
