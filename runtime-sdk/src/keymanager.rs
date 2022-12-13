@@ -13,7 +13,7 @@ pub use oasis_core_keymanager::{
 };
 use oasis_core_runtime::{
     common::{logger::get_logger, namespace::Namespace},
-    consensus::verifier::Verifier,
+    consensus::{beacon::EpochTime, verifier::Verifier},
     protocol::Protocol,
     rak::RAK,
     RpcDispatcher,
@@ -98,6 +98,34 @@ impl KeyManagerClient {
     ) -> Result<Option<SignedPublicKey>, KeyManagerError> {
         self.inner.get_public_key(ctx, key_pair_id).await
     }
+
+    /// Get or create named ephemeral key pair for given epoch.
+    ///
+    /// See the oasis-core documentation for details.
+    pub(crate) async fn get_or_create_ephemeral_keys(
+        &self,
+        ctx: IoContext,
+        key_pair_id: KeyPairId,
+        epoch: EpochTime,
+    ) -> Result<KeyPair, KeyManagerError> {
+        self.inner
+            .get_or_create_ephemeral_keys(ctx, key_pair_id, epoch)
+            .await
+    }
+
+    /// Get ephemeral public key for an epoch and a key pair id.
+    ///
+    /// See the oasis-core documentation for details.
+    pub(crate) async fn get_public_ephemeral_key(
+        &self,
+        ctx: IoContext,
+        key_pair_id: KeyPairId,
+        epoch: EpochTime,
+    ) -> Result<Option<SignedPublicKey>, KeyManagerError> {
+        self.inner
+            .get_public_ephemeral_key(ctx, key_pair_id, epoch)
+            .await
+    }
 }
 
 /// Key manager interface.
@@ -120,6 +148,26 @@ pub trait KeyManager {
     fn get_public_key(
         &self,
         key_pair_id: KeyPairId,
+    ) -> Result<Option<SignedPublicKey>, KeyManagerError>;
+
+    /// Get or create named ephemeral key pair for given epoch.
+    ///
+    /// See the oasis-core documentation for details. This variant of the method
+    /// synchronously blocks for the result.
+    fn get_or_create_ephemeral_keys(
+        &self,
+        key_pair_id: KeyPairId,
+        epoch: EpochTime,
+    ) -> Result<KeyPair, KeyManagerError>;
+
+    /// Get ephemeral public key for an epoch and a key pair id.
+    ///
+    /// See the oasis-core documentation for details. This variant of the method
+    /// synchronously blocks for the result.
+    fn get_public_ephemeral_key(
+        &self,
+        key_pair_id: KeyPairId,
+        epoch: EpochTime,
     ) -> Result<Option<SignedPublicKey>, KeyManagerError>;
 
     fn box_clone(&self) -> Box<dyn KeyManager>;
@@ -182,6 +230,38 @@ impl KeyManagerClientWithContext {
             .get_public_key(IoContext::create_child(&self.ctx), key_pair_id)
             .await
     }
+
+    /// Get ephemeral public key for an epoch and a key pair id.
+    ///
+    /// See the oasis-core documentation for details.
+    async fn get_or_create_ephemeral_keys_async(
+        &self,
+        key_pair_id: KeyPairId,
+        epoch: EpochTime,
+    ) -> Result<KeyPair, KeyManagerError> {
+        if !self.allow_private {
+            return Err(KeyManagerError::Other(anyhow::anyhow!(
+                "not allowed by local runtime policy"
+            )));
+        }
+
+        self.parent
+            .get_or_create_ephemeral_keys(IoContext::create_child(&self.ctx), key_pair_id, epoch)
+            .await
+    }
+
+    /// Get ephemeral public key for an epoch and a key pair id.
+    ///
+    /// See the oasis-core documentation for details.
+    async fn get_public_ephemeral_key_async(
+        &self,
+        key_pair_id: KeyPairId,
+        epoch: EpochTime,
+    ) -> Result<Option<SignedPublicKey>, KeyManagerError> {
+        self.parent
+            .get_public_ephemeral_key(IoContext::create_child(&self.ctx), key_pair_id, epoch)
+            .await
+    }
 }
 
 impl KeyManager for KeyManagerClientWithContext {
@@ -198,6 +278,22 @@ impl KeyManager for KeyManagerClientWithContext {
         key_pair_id: KeyPairId,
     ) -> Result<Option<SignedPublicKey>, KeyManagerError> {
         TokioHandle::current().block_on(self.get_public_key_async(key_pair_id))
+    }
+
+    fn get_or_create_ephemeral_keys(
+        &self,
+        key_pair_id: KeyPairId,
+        epoch: EpochTime,
+    ) -> Result<KeyPair, KeyManagerError> {
+        TokioHandle::current().block_on(self.get_or_create_ephemeral_keys_async(key_pair_id, epoch))
+    }
+
+    fn get_public_ephemeral_key(
+        &self,
+        key_pair_id: KeyPairId,
+        epoch: EpochTime,
+    ) -> Result<Option<SignedPublicKey>, KeyManagerError> {
+        TokioHandle::current().block_on(self.get_public_ephemeral_key_async(key_pair_id, epoch))
     }
 
     fn box_clone(&self) -> Box<dyn KeyManager> {

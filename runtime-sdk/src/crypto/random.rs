@@ -25,7 +25,7 @@ impl Rng {
             round_header_hash.as_ref(),
         ]);
         let km_kp = km
-            .get_or_create_keys(key_id)
+            .get_or_create_ephemeral_keys(key_id, ctx.epoch())
             .map_err(|err| Error::Abort(dispatcher::Error::KeyManagerFailure(err)))?
             .input_keypair;
         // The KM returns an ed25519 key, but it needs to be in "expanded" form to use with
