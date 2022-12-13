@@ -6,11 +6,14 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
+	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
+
 	"github.com/oasisprotocol/oasis-sdk/cli/config"
 	"github.com/oasisprotocol/oasis-sdk/cli/wallet"
 	"github.com/oasisprotocol/oasis-sdk/cli/wallet/test"
 	configSdk "github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/helpers"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
@@ -111,6 +114,37 @@ func CheckLocalAccountIsConsensusCapable(cfg *config.Config, address string) err
 	for name, acc := range cfg.AddressBook.All {
 		if acc.Address == address && acc.GetEthAddress() != nil {
 			return fmt.Errorf("destination address named '%s' (%s) will not be able to sign transactions on consensus layer", name, acc.GetEthAddress().Hex())
+		}
+	}
+
+	return nil
+}
+
+// CheckAddressNotReserved checks whether the given native address is potentially
+// unspendable like the reserved addresses for the staking pool, burn address
+// or the native ParaTime addresses.
+func CheckAddressNotReserved(cfg *config.Config, address string) error {
+	if address == rewards.RewardPoolAddress.String() {
+		return fmt.Errorf("address '%s' is a reward pool address", address)
+	}
+
+	if address == staking.CommonPoolAddress.String() {
+		return fmt.Errorf("address '%s' is a common pool address", address)
+	}
+
+	if address == staking.FeeAccumulatorAddress.String() {
+		return fmt.Errorf("address '%s' is a fee accumulator address", address)
+	}
+
+	if address == staking.GovernanceDepositsAddress.String() {
+		return fmt.Errorf("address '%s' is a governance deposit address", address)
+	}
+
+	for netName, net := range cfg.Networks.All {
+		for ptName, pt := range net.ParaTimes.All {
+			if types.NewAddressFromConsensus(staking.NewRuntimeAddress(pt.Namespace())).String() == address {
+				return fmt.Errorf("address '%s' is a native address of paratime:%s on %s", address, ptName, netName)
+			}
 		}
 	}
 
