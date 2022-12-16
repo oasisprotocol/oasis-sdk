@@ -63,16 +63,25 @@ This is it! You now have a simple hello world smart contract with included unit
 tests for its functionality. You can also look at other smart contract handles
 supported by the [Oasis Contract SDK].
 
-:::tip
+:::tip PublicCell object
 
 `PublicCell<T>` can use any type `T` which implements `oasis_cbor::Encode` and
 `oasis_cbor::Decode`.
 
 :::
 
+:::tip Context object
+
+The `ctx` argument contains the contract context analogous to `msg` and `this`
+in the EVM world. To learn more head to the [Context] trait in our Rust API.
+
+:::
+
 <!-- markdownlint-disable line-length -->
 [Oasis Contract SDK]:
   https://github.com/oasisprotocol/oasis-sdk/blob/main/contract-sdk/src/contract.rs
+[Context]:
+  https://api.docs.oasis.io/oasis-sdk/oasis_contract_sdk/context/trait.Context.html
 <!-- markdownlint-enable line-length -->
 
 ## Testing
