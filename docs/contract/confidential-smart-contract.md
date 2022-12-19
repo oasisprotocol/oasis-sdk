@@ -1,10 +1,17 @@
 # Confidential Hello World
 
-In this chapter we are going to see how to:
+Confidential smart contract execution on Oasis is assured by three mechanisms:
 
-1. write a smart contract which stores and loads data to and from a
-   confidential store and
-2. instantiate and call the smart contract without revealing the call arguments.
+- the contract is executed in a trusted execution environment,
+- the contract's storage on the blockchain is encrypted,
+- the client's transactions and queries are end-to-end encrypted.
+
+The first mechanism is implemented as part of the ParaTime attestation process
+on the consensus layer and is opaque to the dApp developer.
+
+The other two mechanisms are available to dApp developers. The remainder of
+this chapter will show you how to use an encrypted contract storage
+and perform contract operations with end-to-end encryption on Cipher.
 
 ## Confidential cell
 
@@ -79,27 +86,33 @@ oasis contracts upload hello_world.wasm
 
 ## Confidential Instantiation and Calling
 
-To generate a confidential transaction, the `oasis contracts` subcommand
-accepts an `--encrypted` flag. Confidential transactions have encrypted
+To generate an encrypted transaction, the `oasis contracts` subcommand
+expects a `--encrypted` flag. The client (`oasis` command in our case) will
+generate and use an ephemeral keypair for encryption. If the original
+transaction was encrypted, the returned transaction result will also be
+encrypted inside the trusted execution environment to prevent a
+man-in-the-middle attack by the compute node.
+
+Encrypted transactions have the following encrypted fields:
 contract address, function name, parameters and the amounts and types of tokens
-sent. **However, the *authorization information* which contains information on
-the signer is public!** Namely, it contains the public key of your
-account or a list of expected multisig keys together with the gas limit and
-the amount of fee to be paid for processing the transaction.
+sent.
+
+**Encrypted transactions are not anonymous!** Namely, the transaction contains
+unencrypted public key of your account or a list of expected multisig keys,
+the gas limit and the amount of fee paid for the transaction execution.
 
 :::danger
 
-While the transaction itself is confidential, the effects of a smart contract
-execution may reveal some information. For example, the account balances are
-public. If the effect is, say, subtraction of 10 tokens from the signer's
-account, this most probably implies that they have been transferred as part of
-this transaction.
+While the transaction execution is confidential, its effects may reveal some
+information. For example, the account balances are public. If the effect is,
+say, subtraction of 10 tokens from the signer's account, this most probably
+implies that they have been transferred as part of this transaction.
 
 :::
 
 Before we instantiate the contract we need to consider the gas usage of our
 confidential smart contract. Since the execution of the smart contract is
-dependent on the (encrypted) smart contract state, the gas limit cannot be
+dependent on the (confidential) smart contract state, the gas limit cannot be
 computed automatically. Currently, the gas limit for confidential transactions
 is tailored towards simple transaction execution (e.g. no gas is reserved for
 accessing the contract state). For more expensive transactions, we
@@ -136,10 +149,20 @@ Finally, we make a confidential call:
 oasis contracts call INSTANCEID '{say_hello: {who: "me"}}' --encrypted --gas-limit 60000
 ```
 
+:::tip Call Format
+
+The [Context] object has a special [`call_format`] attribute which holds
+information on whether the transaction was encrypted by the client's ephemeral
+key or not. Having access control based on this value is useful as an
+additional safety precaution to prevent leakage of any confidential
+information unencrypted out of the trusted execution environment by mistake.
+
+:::
+
 :::danger
 
-Regardless of the confidential storage used in the smart contract, any [emitted
-event][emit_event] will be public.
+Regardless of the encrypted transaction and confidential storage used in the
+smart contract, any [emitted event][emit_event] will be public.
 
 :::
 
@@ -150,6 +173,10 @@ You can view and download a [complete example] from the Oasis SDK repository.
 :::
 
 <!-- markdownlint-disable line-length -->
+[Context]:
+  https://api.docs.oasis.io/oasis-sdk/oasis_contract_sdk/context/trait.Context.html
+[`call_format`]:
+  https://api.docs.oasis.io/oasis-sdk/oasis_contract_sdk/context/trait.Context.html#tymethod.call_format
 [emit_event]:
   https://api.docs.oasis.io/oasis-sdk/oasis_contract_sdk/context/trait.Context.html#tymethod.emit_event
 [complete example]:
