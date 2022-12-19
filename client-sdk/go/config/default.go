@@ -37,6 +37,17 @@ var DefaultNetworks = Networks{
 							},
 						},
 					},
+
+					// Sapphire on Mainnet.
+					"sapphire": {
+						ID: "000000000000000000000000000000000000000000000000f80306c9858e7279",
+						Denominations: map[string]*DenominationInfo{
+							NativeDenominationKey: {
+								Symbol:   "ROSE",
+								Decimals: 18,
+							},
+						},
+					},
 				},
 			},
 		},
