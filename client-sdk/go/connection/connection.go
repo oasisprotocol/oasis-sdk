@@ -20,6 +20,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensusaccounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/contracts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
 )
 
@@ -32,6 +33,7 @@ type RuntimeClient struct {
 	Rewards           rewards.V1
 	ConsensusAccounts consensusaccounts.V1
 	Contracts         contracts.V1
+	Evm               evm.V1
 }
 
 // Connection is the general node connection interface.
@@ -71,6 +73,7 @@ func (c *connection) Runtime(pt *config.ParaTime) RuntimeClient {
 		Rewards:           rewards.NewV1(cli),
 		ConsensusAccounts: consensusaccounts.NewV1(cli),
 		Contracts:         contracts.NewV1(cli),
+		Evm:               evm.NewV1(cli),
 	}
 }
 
