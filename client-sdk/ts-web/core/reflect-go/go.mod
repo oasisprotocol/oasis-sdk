@@ -2,7 +2,7 @@ module github.com/oasisprotocol/oasis-sdk/client-sdk/ts-web/core/reflect-go
 
 go 1.18
 
-require github.com/oasisprotocol/oasis-core/go v0.2202.3
+require github.com/oasisprotocol/oasis-core/go v0.2202.5
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
