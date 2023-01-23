@@ -882,8 +882,8 @@ github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7 h1:1102pQc2
 github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7/go.mod h1:UqoUn6cHESlliMhOnKLWr+CBH+e3bazUPvFj1XZwAjs=
 github.com/oasisprotocol/metadata-registry-tools v0.0.0-20220406100644-7e9a2b991920 h1:rugJRYKamNl6WGBaU+b0wLQFkYcsnBr0ycX5QmB+AYU=
 github.com/oasisprotocol/metadata-registry-tools v0.0.0-20220406100644-7e9a2b991920/go.mod h1:MKr/giwakLyCCjSWh0W9Pbaf7rDD1K96Wr57OhNoUK0=
-github.com/oasisprotocol/oasis-core/go v0.2202.3 h1:EmHrtx9P/4BW/LROkql/syApCV2vRbTSCCBqVNMAyFg=
-github.com/oasisprotocol/oasis-core/go v0.2202.3/go.mod h1:hKUgtuPPq371HokUQL5ashT5MZLZxK/VkWNKRLb9m+w=
+github.com/oasisprotocol/oasis-core/go v0.2202.5 h1:SwT3XIKz4W5gYZd9I2fe+4qGPYaVvqG0kF8jsancd4E=
+github.com/oasisprotocol/oasis-core/go v0.2202.5/go.mod h1:hKUgtuPPq371HokUQL5ashT5MZLZxK/VkWNKRLb9m+w=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
