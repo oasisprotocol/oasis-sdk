@@ -64,7 +64,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
       - name: "Rebuild oasisprotocol/oasis-sdk-benchmark:${{ steps.determine_tag.outputs.tag }}"
-        uses: docker/build-push-action@v3.2.0
+        uses: docker/build-push-action@v3.3.0
         with:
           context: .
           file: tests/benchmark/Dockerfile
