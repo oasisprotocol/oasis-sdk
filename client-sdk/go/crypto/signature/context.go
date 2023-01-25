@@ -2,7 +2,10 @@ package signature
 
 import (
 	"github.com/oasisprotocol/oasis-core/go/common"
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
+
+	ethCommon "github.com/ethereum/go-ethereum/common"
 )
 
 const chainContextSeparator = " for chain "
@@ -24,4 +27,24 @@ func DeriveChainContext(runtimeID common.Namespace, consensusChainContext string
 		rawRuntimeID,
 		[]byte(consensusChainContext),
 	).String())
+}
+
+type HwSignRtMetadata struct {
+	RuntimeID    common.Namespace   `json:"runtime_id"`
+	ChainContext string             `json:"chain_context"`
+	OrigTo       *ethCommon.Address `json:"orig_to,omitempty"`
+}
+
+// EncodeAsMetadata encodes runtime ID, consensus chain context and tx-specific details
+// as defined in ADR 14.
+func EncodeAsMetadata(runtimeID common.Namespace, consensusChainContext string, txDetails map[string]interface{}) []byte {
+	// Optional transaction details.
+	origToEthAddr := txDetails["origTo"].(*ethCommon.Address)
+	metadata := HwSignRtMetadata{
+		RuntimeID:    runtimeID,
+		ChainContext: consensusChainContext,
+		OrigTo:       origToEthAddr,
+	}
+
+	return cbor.Marshal(metadata)
 }

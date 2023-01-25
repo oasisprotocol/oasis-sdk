@@ -106,10 +106,10 @@ func (ts *TransactionSigner) allocateProofs() {
 	}
 }
 
-// AppendSign signs the transaction and appends the signature.
+// AppendRawSign signs the transaction using the raw context and appends the signature.
 //
 // The signer must be specified in the AuthInfo.
-func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.Signer) error {
+func (ts *TransactionSigner) AppendRawSign(ctx []byte, signer signature.Signer) error {
 	pk := signer.Public()
 	any := false
 	for i, si := range ts.tx.AuthInfo.SignerInfo {
@@ -121,7 +121,7 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 
 			any = true
 			ts.allocateProofs()
-			sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
+			sig, err := signer.ContextSign(ctx, ts.ut.Body)
 			if err != nil {
 				return fmt.Errorf("signer info %d: failed to sign transaction: %w", i, err)
 			}
@@ -134,7 +134,7 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 
 				any = true
 				ts.allocateProofs()
-				sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
+				sig, err := signer.ContextSign(ctx, ts.ut.Body)
 				if err != nil {
 					return fmt.Errorf("signer info %d: failed to sign transaction: %w", i, err)
 				}
@@ -148,6 +148,13 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 		return fmt.Errorf("transaction: signer not found in AuthInfo")
 	}
 	return nil
+}
+
+// AppendSign signs the transaction and appends the signature.
+//
+// The signer must be specified in the AuthInfo.
+func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.Signer) error {
+	return ts.AppendRawSign(ctx.New(SignatureContextBase), signer)
 }
 
 // UnverifiedTransaction returns the (signed) unverified transaction.
