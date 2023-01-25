@@ -21,11 +21,12 @@ var chainContext hash.Hash
 type RuntimeTestVector struct {
 	Kind string      `json:"kind"`
 	Tx   interface{} `json:"tx"`
-	// Meta stores tx-specific information needed to compute
+	// Meta stores transaction-specific information needed to compute
 	// sig_context and to verify the recipient's address.
 	// e.g. For EVM transactions the user needs to see the ethereum-formatted recipient on
-	// Ledger and Ledger needs to verify that the shown address really maps to Tx.Body.To.
-	Meta interface{} `json:"meta"`
+	// hardware wallet and the firmware needs to verify that the shown address really maps
+	// to Tx.Body.To.
+	Meta signature.HwContext `json:"meta"`
 	// Expected signature context derived from Meta.runtime_id and Meta.chain_context.
 	SigCtx          string                      `json:"sig_context"`
 	SignedTx        types.UnverifiedTransaction `json:"signed_tx"`
@@ -45,17 +46,8 @@ func init() {
 	chainContext.FromBytes([]byte(chainContextSeed))
 }
 
-// MakeMeta creates a meta field for the test vector.
-func MakeMeta(runtimeId string, chainContext string) map[string]string {
-	return map[string]string{
-		"runtime_id":    runtimeId,
-		"chain_context": chainContext,
-	}
-
-}
-
 // MakeRuntimeTestVector generates a new test vector from a transaction using a specific signer.
-func MakeRuntimeTestVector(tx *types.Transaction, txBody interface{}, meta interface{}, valid bool, w testing.TestKey, nonce uint64, sigCtx signature.Context) RuntimeTestVector {
+func MakeRuntimeTestVector(tx *types.Transaction, txBody interface{}, sigCtx *signature.RichContext, valid bool, w testing.TestKey, nonce uint64) RuntimeTestVector {
 	tx.AppendAuthSignature(w.SigSpec, nonce)
 
 	// Sign the transaction.
@@ -74,11 +66,12 @@ func MakeRuntimeTestVector(tx *types.Transaction, txBody interface{}, meta inter
 		prettyMethod = tx.Call.Method
 	}
 
+	meta := signature.NewHwContext(sigCtx)
 	return RuntimeTestVector{
 		Kind:             keySeedPrefix + prettyMethod,
 		Tx:               prettyTx,
-		Meta:             meta,
-		SigCtx:           string(sigCtx.New(types.SignatureContextBase)),
+		Meta:             *meta,
+		SigCtx:           string(sigCtx.Derive()),
 		SignedTx:         *sigTx,
 		EncodedTx:        ts.UnverifiedTransaction().Body,
 		EncodedMeta:      cbor.Marshal(meta),

@@ -16,8 +16,8 @@ func (w wrappedSigner) Public() signature.PublicKey {
 	return PublicKey(w.signer.Public())
 }
 
-func (w wrappedSigner) ContextSign(context, message []byte) ([]byte, error) {
-	return w.signer.ContextSign(coreSignature.Context(context), message)
+func (w wrappedSigner) ContextSign(context signature.Context, message []byte) ([]byte, error) {
+	return w.signer.ContextSign(coreSignature.Context(context.Derive()), message)
 }
 
 func (w wrappedSigner) Sign(message []byte) ([]byte, error) {

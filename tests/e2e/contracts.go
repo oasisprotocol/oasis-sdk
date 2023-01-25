@@ -20,7 +20,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
+	sdkSignature "github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/sr25519"
@@ -46,13 +46,13 @@ type voiEd25519Signer struct {
 	privateKey voiEd.PrivateKey
 }
 
-func (v *voiEd25519Signer) Public() signature.PublicKey {
+func (v *voiEd25519Signer) Public() sdkSignature.PublicKey {
 	var pk coreSignature.PublicKey
 	_ = pk.UnmarshalBinary(v.privateKey.Public().(voiEd.PublicKey))
 	return ed25519.PublicKey(pk)
 }
 
-func (v *voiEd25519Signer) ContextSign(context, message []byte) ([]byte, error) {
+func (v *voiEd25519Signer) ContextSign(context sdkSignature.Context, message []byte) ([]byte, error) {
 	return nil, fmt.Errorf("test signer only for raw signing")
 }
 
@@ -77,7 +77,7 @@ func newEd25519Signer(seed string) *voiEd25519Signer {
 }
 
 // ContractsTest does a simple upload/instantiate/call contract test.
-func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { // nolint: gocyclo
+func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
 	ctx := context.Background()
 
 	counter := uint64(24)
@@ -474,7 +474,7 @@ OUTER:
 
 	message := []byte("message")
 	signers := []struct {
-		signer   signature.Signer
+		signer   sdkSignature.Signer
 		keyBytes []byte
 		context  []byte
 	}{{ed25519Signer, ed25519PkBytes, []byte{}}, {secp256k1Signer, secp256k1PkBytes, []byte{}}, {sr25519Signer, sr25519PkBytes, []byte("context")}}
@@ -483,7 +483,8 @@ OUTER:
 	for _, messageSigner := range signers {
 		var signature []byte
 		if len(messageSigner.context) > 0 {
-			signature, err = messageSigner.signer.ContextSign(messageSigner.context, message)
+			sigCtx := sdkSignature.RawContext(messageSigner.context)
+			signature, err = messageSigner.signer.ContextSign(sigCtx, message)
 		} else {
 			signature, err = messageSigner.signer.Sign(message)
 		}

@@ -12,19 +12,19 @@ array of objects (test vectors). Each test vector has the following fields:
   given test vector is describing (e.g., `"oasis-sdk runtime test vectors:
   consensus.Deposit"`).
 
+* `meta` are meta-data sent to the hardware wallet containing `runtime_id`,
+  `chain_context` and optional `orig_to` field. `runtime_id` and
+  `chain_context` are used by the hardware wallet to compute the [domain
+  separation context] needed to sign the transaction. Check [chain context
+  derivation] code for more information. `orig_to` is used by the hardware
+  wallet to show a human-readable Ethereum address, because the transaction
+  itself only contains the oasis native address.
+
 * `tx` is the human-readable _interpreted_ unsigned transaction. Its purpose is
   to make it easier for the developer to understand what the content of the
   transaction is. For example `call.body` is represented as a readable JSON
   while in the encoded transaction this would be CBOR-encoded blob or an
   encrypted content.
-
-* `meta` are meta-data sent to the hardware wallet containing `sig_context`,
-  `runtime_id`, `chain_context` and optional `orig_to` field. `sig_context` is
-  the [domain separation context] used for signing the transaction derived
-  from `runtime_id` and `chain_context`. Check [chain context derivation] code
-  for more information. `orig_to` is used by the hardware wallet to show a
-  human-readable Ethereum address, because the transaction itself only contains
-  the oasis native address.
 
 * `signed_tx` is the human-readable signed transaction to make it easier for the
   developer to understand how the `call.body` and `ai` fields looks like in

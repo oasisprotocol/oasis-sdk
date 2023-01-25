@@ -28,9 +28,9 @@ const (
 )
 
 // ResolveAddress resolves a string address into the corresponding account address.
-func ResolveAddress(net *config.Network, address string) (*types.Address, error) {
-	if addr, _, _ := ResolveEthOrOasisAddress(address); addr != nil {
-		return addr, nil
+func ResolveAddress(net *config.Network, address string) (*types.Address, *ethCommon.Address, error) {
+	if addr, ethAddr, _ := ResolveEthOrOasisAddress(address); addr != nil {
+		return addr, ethAddr, nil
 	}
 
 	switch {
@@ -41,32 +41,32 @@ func ResolveAddress(net *config.Network, address string) (*types.Address, error)
 			// ParaTime.
 			pt := net.ParaTimes.All[data]
 			if pt == nil {
-				return nil, fmt.Errorf("paratime '%s' does not exist", data)
+				return nil, nil, fmt.Errorf("paratime '%s' does not exist", data)
 			}
 
 			addr := types.NewAddressFromConsensus(staking.NewRuntimeAddress(pt.Namespace()))
-			return &addr, nil
+			return &addr, nil, nil
 		case addressExplicitPool:
 			// Pool.
 			switch data {
 			case poolRewards:
 				// Reward pool address.
-				return &rewards.RewardPoolAddress, nil
+				return &rewards.RewardPoolAddress, nil, nil
 			default:
-				return nil, fmt.Errorf("unsupported pool kind: %s", data)
+				return nil, nil, fmt.Errorf("unsupported pool kind: %s", data)
 			}
 		case addressExplicitTest:
 			// Test key.
 			if testKey, ok := testing.TestAccounts[data]; ok {
-				return &testKey.Address, nil
+				return &testKey.Address, &testKey.EthAddress, nil
 			}
-			return nil, fmt.Errorf("unsupported test account: %s", data)
+			return nil, nil, fmt.Errorf("unsupported test account: %s", data)
 		default:
 			// Unsupported kind.
-			return nil, fmt.Errorf("unsupported explicit address kind: %s", kind)
+			return nil, nil, fmt.Errorf("unsupported explicit address kind: %s", kind)
 		}
 	default:
-		return nil, fmt.Errorf("unsupported address format")
+		return nil, nil, fmt.Errorf("unsupported address format")
 	}
 }
 
@@ -107,9 +107,8 @@ func ParseTestAccountAddress(name string) string {
 	return ""
 }
 
-// EthAddressFromPubKey takes public key, extracts the ethereum address and returns its checksummed
-// case-sensitive variant.
-func EthAddressFromPubKey(pk secp256k1.PublicKey) string {
+// EthAddressFromPubKey takes public key, extracts the ethereum address and returns it.
+func EthAddressFromPubKey(pk secp256k1.PublicKey) ethCommon.Address {
 	h := sha3.NewLegacyKeccak256()
 	untaggedPk, _ := pk.MarshalBinaryUncompressedUntagged()
 	h.Write(untaggedPk)
@@ -118,5 +117,5 @@ func EthAddressFromPubKey(pk secp256k1.PublicKey) string {
 	var ethAddress ethCommon.Address
 	ethAddress.SetBytes(hash[32-20:])
 
-	return ethAddress.Hex()
+	return ethAddress
 }

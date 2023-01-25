@@ -9,12 +9,14 @@ import (
 	"os"
 	"strings"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
+
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/helpers"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensusaccounts"
@@ -25,30 +27,16 @@ import (
 )
 
 const (
-	// Invalid ETH address for orig_to field (should match the native address).
-	unknownEthAddr = "0x4ad80CBfBFe645BACCe3504166EF38aA5C15a35f"
-
-	// Invalid empty runtime ID to test signature context generation.
-	emptyRtIdHex = ""
-
 	// Invalid empty chain context to test signature context generation.
 	emptyChainContext = ""
-
-	// Invalid 33-byte long runtime ID to test signature context generation.
-	invalidRtIdHex = "800000000000000000000000000000000000000000000000000000000123456789"
 
 	// Invalid 33-byte chain context to test signature context generation.
 	invalidChainContext = "800000000000000000000000000000000000000000000000000000000123456789"
 )
 
 var (
-	aliceNativeAddr = testing.Alice.Address.String()
-	bobNativeAddr   = testing.Bob.Address.String()
-	daveNativeAddr  = testing.Dave.Address.String()
-	daveEthAddr     = helpers.EthAddressFromPubKey(testing.Dave.Signer.Public().(secp256k1.PublicKey))
-	erinEthAddr     = helpers.EthAddressFromPubKey(testing.Erin.Signer.Public().(secp256k1.PublicKey))
-	frankNativeAddr = testing.Frank.Address.String()
-	graceNativeAddr = testing.Grace.Address.String()
+	// orig_to ETH address which does not match the native address.
+	unknownEthAddr = ethCommon.HexToAddress("0x4ad80CBfBFe645BACCe3504166EF38aA5C15a35f")
 
 	// wRoseAddr is the wROSE smart contract address deployed on Emerald ParaTime on Mainnet.
 	wRoseAddr, _ = hex.DecodeString("21C718C22D52d0F3a789b752D4c2fD5908a8A733")
@@ -64,7 +52,6 @@ func main() {
 	var vectors []RuntimeTestVector
 
 	var tx *types.Transaction
-	var meta map[string]string
 
 	for _, context := range []struct {
 		RtIdHex      string
@@ -86,8 +73,6 @@ func main() {
 		var rtId common.Namespace
 		rtId.UnmarshalHex(context.RtIdHex)
 
-		sigCtx := signature.DeriveChainContext(rtId, context.ChainContext)
-
 		for _, fee := range []*types.Fee{
 			{},
 			{Amount: types.NewBaseUnits(*quantity.NewFromUint64(0), types.NativeDenomination), Gas: 2000},
@@ -99,53 +84,40 @@ func main() {
 					// consensusaccounts.Deposit
 					for _, t := range []struct {
 						to           string
-						origTo       string
-						rtId         string
+						origTo       *ethCommon.Address
 						chainContext string
 						valid        bool
 					}{
 						// Valid Deposit: Alice -> Alice's native address on ParaTime
-						{"", "", context.RtIdHex, context.ChainContext, true},
+						{"", nil, context.ChainContext, true},
 						// Valid Deposit: Alice -> Bob's native address on ParaTime
-						{bobNativeAddr, "", context.RtIdHex, context.ChainContext, true},
+						{testing.Bob.Address.String(), nil, context.ChainContext, true},
 						// Valid Deposit: Alice -> Dave's native address on ParaTime
-						{daveNativeAddr, "", context.RtIdHex, context.ChainContext, true},
+						{testing.Dave.Address.String(), nil, context.ChainContext, true},
 						// Valid Deposit: Alice -> Dave's ethereum address on ParaTime
-						{daveEthAddr, daveEthAddr, context.RtIdHex, context.ChainContext, true},
-						// Valid Deposit: Alice -> Dave's ethereum address on ParaTime, lowercased
-						{daveEthAddr, strings.ToLower(daveEthAddr), context.RtIdHex, context.ChainContext, true},
-						// Valid Deposit: Alice -> Dave's ethereum address on ParaTime, uppercased
-						{daveEthAddr, strings.ToUpper(daveEthAddr), context.RtIdHex, context.ChainContext, true},
-						// Valid Deposit: Alice -> Dave's ethereum address on ParaTime without 0x
-						{daveEthAddr, daveEthAddr[2:], context.RtIdHex, context.ChainContext, true},
-						// Valid Deposit: Alice -> Dave's ethereum address on ParaTime, lowercase without 0x
-						{daveEthAddr, strings.ToLower(daveEthAddr[2:]), context.RtIdHex, context.ChainContext, true},
-						// Valid Deposit: Alice -> Dave's ethereum address on ParaTime, uppercase without 0x
-						{daveEthAddr, strings.ToUpper(daveEthAddr[2:]), context.RtIdHex, context.ChainContext, true},
+						{testing.Dave.EthAddress.String(), &testing.Dave.EthAddress, context.ChainContext, true},
 						// Valid Deposit: Alice -> Frank's native address on ParaTime
-						{frankNativeAddr, "", context.RtIdHex, context.ChainContext, true},
+						{testing.Frank.Address.String(), nil, context.ChainContext, true},
 						// Invalid Deposit: orig_to doesn't match transaction's to
-						{daveEthAddr, unknownEthAddr, context.RtIdHex, context.ChainContext, false},
-						// Invalid Deposit: runtime_id empty
-						{daveEthAddr, daveEthAddr, emptyRtIdHex, context.ChainContext, false},
+						{testing.Dave.EthAddress.String(), &unknownEthAddr, context.ChainContext, false},
 						// Invalid Deposit: chain_context empty
-						{daveEthAddr, daveEthAddr, context.RtIdHex, emptyChainContext, false},
-						// Invalid Deposit: runtime_id invalid
-						{daveEthAddr, daveEthAddr, invalidRtIdHex, context.ChainContext, false},
+						{testing.Dave.EthAddress.String(), &testing.Dave.EthAddress, emptyChainContext, false},
 						// Invalid Deposit: chain_context invalid
-						{daveEthAddr, daveEthAddr, context.RtIdHex, invalidChainContext, false},
+						{testing.Dave.EthAddress.String(), &testing.Dave.EthAddress, invalidChainContext, false},
 					} {
-						to, _ := helpers.ResolveAddress(nil, t.to)
+						to, ethTo, _ := helpers.ResolveAddress(nil, t.to)
 						txBody := &consensusaccounts.Deposit{
 							To:     to,
 							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
 						}
 						tx = consensusaccounts.NewDepositTx(fee, txBody)
-						meta = MakeMeta(t.rtId, t.chainContext)
-						if t.origTo != "" {
-							meta["orig_to"] = t.origTo
+						meta := &signature.RichContext{
+							RuntimeID:    rtId,
+							ChainContext: t.chainContext,
+							Base:         types.SignatureContextBase,
+							TxDetails:    &signature.TxDetails{OrigTo: ethTo},
 						}
-						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, testing.Alice, nonce, sigCtx))
+						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, testing.Alice, nonce))
 					}
 
 					// consensusaccounts.Withdraw
@@ -154,104 +126,80 @@ func main() {
 					// address equals the signer's one or being empty for secp256k1 and sr25519
 					// signatures.
 					for _, t := range []struct {
-						to           string
-						signer       testing.TestKey
-						rtId         string
-						chainContext string
-						valid        bool
+						to     string
+						signer testing.TestKey
+						valid  bool
 					}{
 						// Valid Withdraw: Alice -> own account on consensus
-						{"", testing.Alice, context.RtIdHex, context.ChainContext, true},
+						{"", testing.Alice, true},
 						// Valid Withdraw: Alice -> Bob on consensus
-						{bobNativeAddr, testing.Alice, context.RtIdHex, context.ChainContext, true},
+						{testing.Bob.Address.String(), testing.Alice, true},
 						// Valid Withdraw: Dave -> Alice on consensus
-						{aliceNativeAddr, testing.Dave, context.RtIdHex, context.ChainContext, true},
+						{testing.Alice.Address.String(), testing.Dave, true},
 						// Valid Withdraw: Frank -> Alice on consensus
-						{aliceNativeAddr, testing.Frank, context.RtIdHex, context.ChainContext, true},
+						{testing.Alice.Address.String(), testing.Frank, true},
 					} {
-						to, _ := helpers.ResolveAddress(nil, t.to)
+						to, _, _ := helpers.ResolveAddress(nil, t.to)
 						txBody := &consensusaccounts.Withdraw{
 							To:     to,
 							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
 						}
 						tx = consensusaccounts.NewWithdrawTx(fee, txBody)
-						meta = MakeMeta(t.rtId, t.chainContext)
-						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, t.signer, nonce, sigCtx))
+						meta := &signature.RichContext{
+							RuntimeID:    rtId,
+							ChainContext: context.ChainContext,
+							Base:         types.SignatureContextBase,
+						}
+						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, t.signer, nonce))
 					}
 
 					// accounts.Transfer
 					for _, t := range []struct {
-						to           string
-						origTo       string
-						signer       testing.TestKey
-						rtId         string
-						chainContext string
-						valid        bool
+						to     string
+						origTo *ethCommon.Address
+						signer testing.TestKey
+						valid  bool
 					}{
 						// Valid Transfer: Alice -> Bob's native address on ParaTime
-						{bobNativeAddr, "", testing.Alice, context.RtIdHex, context.ChainContext, true},
+						{testing.Bob.Address.String(), nil, testing.Alice, true},
 						// Valid Transfer: Alice -> Dave's native address on ParaTime
-						{daveNativeAddr, "", testing.Alice, context.RtIdHex, context.ChainContext, true},
+						{testing.Dave.Address.String(), nil, testing.Alice, true},
 						// Valid Transfer: Alice -> Dave's ethereum address on ParaTime
-						{daveEthAddr, daveEthAddr, testing.Alice, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Alice -> Dave's ethereum address on ParaTime, lowercase
-						{daveEthAddr, strings.ToLower(daveEthAddr), testing.Alice, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Alice -> Dave's ethereum address on ParaTime, uppercase
-						{daveEthAddr, strings.ToUpper(daveEthAddr), testing.Alice, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Alice -> Dave's ethereum address on ParaTime, without 0x
-						{daveEthAddr, daveEthAddr[2:], testing.Alice, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Alice -> Dave's ethereum address on ParaTime, lowercase without 0x
-						{daveEthAddr, strings.ToLower(daveEthAddr[2:]), testing.Alice, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Alice -> Dave's ethereum address on ParaTime, uppercase without 0x
-						{daveEthAddr, strings.ToUpper(daveEthAddr[2:]), testing.Alice, context.RtIdHex, context.ChainContext, true},
+						{testing.Dave.EthAddress.String(), &testing.Dave.EthAddress, testing.Alice, true},
 						// Valid Transfer: Alice -> Frank's native address on ParaTime
-						{frankNativeAddr, "", testing.Alice, context.RtIdHex, context.ChainContext, true},
+						{testing.Frank.Address.String(), nil, testing.Alice, true},
 						// Valid Transfer: Dave -> Alice's native address on ParaTime
-						{aliceNativeAddr, "", testing.Dave, context.RtIdHex, context.ChainContext, true},
+						{testing.Alice.Address.String(), nil, testing.Dave, true},
 						// Valid Transfer: Dave -> Erin's ethereum address on ParaTime
-						{erinEthAddr, erinEthAddr, testing.Dave, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Dave -> Erin's ethereum address on ParaTime, lowercase
-						{erinEthAddr, strings.ToLower(erinEthAddr), testing.Dave, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Dave -> Erin's ethereum address on ParaTime, uppercase
-						{erinEthAddr, strings.ToUpper(erinEthAddr), testing.Dave, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Dave -> Erin's ethereum address on ParaTime, without 0x
-						{erinEthAddr, erinEthAddr[2:], testing.Dave, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Dave -> Erin's ethereum address on ParaTime, lowercase without 0x
-						{erinEthAddr, strings.ToLower(erinEthAddr[2:]), testing.Dave, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Dave -> Erin's ethereum address on ParaTime, uppercase without 0x
-						{erinEthAddr, strings.ToUpper(erinEthAddr[2:]), testing.Dave, context.RtIdHex, context.ChainContext, true},
+						{testing.Erin.EthAddress.String(), &testing.Erin.EthAddress, testing.Dave, true},
 						// Valid Transfer: Frank -> Alice's native address on ParaTime
-						{aliceNativeAddr, "", testing.Frank, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Frank -> Dave's ethereum address on ParaTime, lowercase
-						{daveEthAddr, strings.ToLower(daveEthAddr), testing.Frank, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Frank -> Dave's ethereum address on ParaTime, uppercase
-						{daveEthAddr, strings.ToUpper(daveEthAddr), testing.Frank, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Frank -> Dave's ethereum address on ParaTime, without 0x
-						{daveEthAddr, daveEthAddr[2:], testing.Frank, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Frank -> Dave's ethereum address on ParaTime, lowercase without 0x
-						{daveEthAddr, strings.ToLower(daveEthAddr[2:]), testing.Frank, context.RtIdHex, context.ChainContext, true},
-						// Valid Transfer: Frank -> Dave's ethereum address on ParaTime, uppercase without 0x
-						{daveEthAddr, strings.ToUpper(daveEthAddr[2:]), testing.Frank, context.RtIdHex, context.ChainContext, true},
+						{testing.Alice.Address.String(), nil, testing.Frank, true},
 						// Valid Transfer: Frank -> Grace native address on ParaTime
-						{graceNativeAddr, "", testing.Frank, context.RtIdHex, context.ChainContext, true},
+						{testing.Grace.Address.String(), nil, testing.Frank, true},
 						// Invalid Transfer: orig_to doesn't match transaction's to
-						{daveEthAddr, unknownEthAddr, testing.Alice, context.RtIdHex, context.ChainContext, false},
+						{testing.Dave.EthAddress.String(), &unknownEthAddr, testing.Alice, false},
 					} {
-						to, _ := helpers.ResolveAddress(nil, t.to)
+						to, ethTo, _ := helpers.ResolveAddress(nil, t.to)
 						txBody := &accounts.Transfer{
 							To:     *to,
 							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
 						}
 						tx = accounts.NewTransferTx(fee, txBody)
-						meta = MakeMeta(t.rtId, t.chainContext)
-						if t.origTo != "" {
-							meta["orig_to"] = t.origTo
+						meta := &signature.RichContext{
+							RuntimeID:    rtId,
+							ChainContext: context.ChainContext,
+							Base:         types.SignatureContextBase,
+							TxDetails:    &signature.TxDetails{OrigTo: ethTo},
 						}
-						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, t.signer, nonce, sigCtx))
+						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, t.signer, nonce))
 					}
 				}
 
-				meta = MakeMeta(context.RtIdHex, context.ChainContext)
+				meta := &signature.RichContext{
+					RuntimeID:    rtId,
+					ChainContext: context.ChainContext,
+					Base:         types.SignatureContextBase,
+				}
 				for _, t := range []struct {
 					signer testing.TestKey
 					valid  bool
@@ -291,21 +239,20 @@ func main() {
 					} {
 						for _, id := range []uint64{0, 1, math.MaxUint64} {
 							// contracts.ChangeUpgradePolicy
-							addr, _ := helpers.ResolveAddress(nil, daveNativeAddr)
 							for _, p := range []contracts.Policy{
 								// Valid policy, everyone can instantiate/upgrade it.
 								{Everyone: &struct{}{}},
 								// Valid policy, noone can instantiate/upgrade it.
 								{Nobody: &struct{}{}},
 								// Valid policy, arbitrary address can instantiate/upgrade it.
-								{Address: addr},
+								{Address: &testing.Dave.Address},
 							} {
 								txBodyChangeUpgradePolicy := &contracts.ChangeUpgradePolicy{
 									ID:             contracts.InstanceID(id),
 									UpgradesPolicy: p,
 								}
 								tx = contracts.NewChangeUpgradePolicyTx(fee, txBodyChangeUpgradePolicy)
-								vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyChangeUpgradePolicy, meta, t.valid, t.signer, nonce, sigCtx))
+								vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyChangeUpgradePolicy, meta, t.valid, t.signer, nonce))
 							}
 
 							for _, d := range []map[string]interface{}{
@@ -328,14 +275,13 @@ func main() {
 									"test123": "test1234",
 								},
 							} {
-								addr, _ := helpers.ResolveAddress(nil, daveNativeAddr)
 								for _, p := range []contracts.Policy{
 									// Valid policy, everyone can instantiate/upgrade it.
 									{Everyone: &struct{}{}},
 									// Valid policy, noone can instantiate/upgrade it.
 									{Nobody: &struct{}{}},
 									// Valid policy, arbitrary address can instantiate/upgrade it.
-									{Address: addr},
+									{Address: &testing.Dave.Address},
 								} {
 									// contracts.Upload not supported by Ledger due to tx bytecode size.
 
@@ -347,7 +293,7 @@ func main() {
 										Tokens:         tokens,
 									}
 									tx = contracts.NewInstantiateTx(fee, txBodyInstantiate)
-									vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyInstantiate, meta, t.valid, t.signer, nonce, sigCtx))
+									vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyInstantiate, meta, t.valid, t.signer, nonce))
 								}
 
 								// contracts.Call
@@ -357,7 +303,7 @@ func main() {
 									Tokens: tokens,
 								}
 								tx = contracts.NewCallTx(fee, txBodyCall)
-								vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyCall, meta, t.valid, t.signer, nonce, sigCtx))
+								vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyCall, meta, t.valid, t.signer, nonce))
 
 								// contracts.Upgrade
 								txBodyUpgrade := &contracts.Upgrade{
@@ -367,7 +313,7 @@ func main() {
 									Tokens: tokens,
 								}
 								tx = contracts.NewUpgradeTx(fee, txBodyUpgrade)
-								vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyUpgrade, meta, t.valid, t.signer, nonce, sigCtx))
+								vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyUpgrade, meta, t.valid, t.signer, nonce))
 							}
 						}
 					}
@@ -383,7 +329,7 @@ func main() {
 						wRoseTransferEnc,
 					}
 					tx = types.NewEncryptedTransaction(fee, body)
-					vectors = append(vectors, MakeRuntimeTestVector(tx, body, meta, t.valid, t.signer, nonce, sigCtx))
+					vectors = append(vectors, MakeRuntimeTestVector(tx, body, meta, t.valid, t.signer, nonce))
 
 					// evm.Create not supported by Ledger due to tx bytecode size.
 
@@ -394,7 +340,7 @@ func main() {
 						Data:    wRoseTransfer,
 					}
 					tx = evm.NewCallTx(fee, txBodyCall)
-					vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyCall, meta, t.valid, t.signer, nonce, sigCtx))
+					vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyCall, meta, t.valid, t.signer, nonce))
 				}
 			}
 		}
@@ -411,7 +357,12 @@ func main() {
 			}}}
 		tx = types.NewTransaction(&types.Fee{Amount: types.NewBaseUnits(*quantity.NewFromUint64(0), types.NativeDenomination), Gas: 2000}, "", txBodyCall)
 		tx.Call.Format = 99
-		vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyCall, meta, false, testing.Alice, 1, sigCtx))
+		meta := &signature.RichContext{
+			RuntimeID:    rtId,
+			ChainContext: context.ChainContext,
+			Base:         types.SignatureContextBase,
+		}
+		vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyCall, meta, false, testing.Alice, 1))
 	}
 
 	// Generate output.

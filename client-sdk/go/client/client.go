@@ -169,8 +169,12 @@ func (rc *runtimeClient) GetInfo(ctx context.Context) (*types.RuntimeInfo, error
 	}
 
 	rc.runtimeInfo = &types.RuntimeInfo{
-		ID:           rc.runtimeID,
-		ChainContext: signature.DeriveChainContext(rc.runtimeID, chainCtx),
+		ID: rc.runtimeID,
+		ChainContext: &signature.RichContext{
+			RuntimeID:    rc.runtimeID,
+			ChainContext: chainCtx,
+			Base:         types.SignatureContextBase,
+		},
 	}
 	return rc.runtimeInfo, nil
 }

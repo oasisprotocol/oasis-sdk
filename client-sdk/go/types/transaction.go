@@ -62,7 +62,7 @@ func (ut *UnverifiedTransaction) Verify(ctx signature.Context) (*Transaction, er
 	}
 
 	// Verify all signatures.
-	txCtx := ctx.New(SignatureContextBase)
+	txCtx := ctx.Derive()
 	// We'll need at least one signature per proof, so we might as well preallocate that.
 	// Could be more though.
 	publicKeys := make([]PublicKey, 0, len(ut.AuthProofs))
@@ -121,7 +121,7 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 
 			any = true
 			ts.allocateProofs()
-			sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
+			sig, err := signer.ContextSign(ctx, ts.ut.Body)
 			if err != nil {
 				return fmt.Errorf("signer info %d: failed to sign transaction: %w", i, err)
 			}
@@ -134,7 +134,7 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 
 				any = true
 				ts.allocateProofs()
-				sig, err := signer.ContextSign(ctx.New(SignatureContextBase), ts.ut.Body)
+				sig, err := signer.ContextSign(ctx, ts.ut.Body)
 				if err != nil {
 					return fmt.Errorf("signer info %d: failed to sign transaction: %w", i, err)
 				}
