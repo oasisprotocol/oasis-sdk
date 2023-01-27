@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 )
 
 // Event is an event emitted by a runtime in the form of a runtime transaction tag.
@@ -13,10 +15,11 @@ type Event struct {
 	Module string
 	Code   uint32
 	Value  []byte
+	TxHash *hash.Hash
 }
 
 // UnmarshalRaw decodes the event from a raw key/value pair.
-func (ev *Event) UnmarshalRaw(key, value []byte) error {
+func (ev *Event) UnmarshalRaw(key, value []byte, txHash *hash.Hash) error {
 	if len(key) < 4 {
 		return fmt.Errorf("malformed event key")
 	}
@@ -24,6 +27,7 @@ func (ev *Event) UnmarshalRaw(key, value []byte) error {
 	ev.Module = string(key[:len(key)-4])
 	ev.Code = binary.BigEndian.Uint32(key[len(key)-4:])
 	ev.Value = value
+	ev.TxHash = txHash
 	return nil
 }
 
