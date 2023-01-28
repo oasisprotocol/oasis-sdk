@@ -224,6 +224,10 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npx --package cypress -c 'cypress run'
 
+      - name: Nodejs e2e run
+        working-directory: client-sdk/ts-web/core
+        run: node --unhandled-rejections=strict test/e2e-nodejs.js
+
       - name: Upload screenshot
         if: failure()
         uses: actions/upload-artifact@v3
