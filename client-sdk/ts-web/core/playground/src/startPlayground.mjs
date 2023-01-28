@@ -1,10 +1,8 @@
 // @ts-check
+import * as oasis from '@oasisprotocol/client';
 
-import * as oasis from './../..';
-
-const nic = new oasis.client.NodeInternal('http://localhost:42280');
-
-export const playground = (async function () {
+export async function startPlayground() {
+    const nic = new oasis.client.NodeInternal('http://localhost:42280');
     // Wait for ready.
     {
         console.log('waiting for node to be ready');
@@ -156,8 +154,4 @@ export const playground = (async function () {
         );
         console.log('done watching');
     }
-})();
-
-playground.catch((e) => {
-    console.error(e);
-});
+}
