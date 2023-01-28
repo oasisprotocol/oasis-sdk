@@ -1,10 +1,8 @@
 // @ts-check
 
-import * as oasis from './../..';
-
-const nic = new oasis.client.NodeInternal('http://localhost:42280');
-
-export const playground = (async function () {
+/** @param {import('./../..')} oasis */
+export async function startPlayground(oasis) {
+    const nic = new oasis.client.NodeInternal('http://localhost:42280');
     // Wait for ready.
     {
         console.log('waiting for node to be ready');
@@ -94,7 +92,7 @@ export const playground = (async function () {
         const transactions = response.transactions || [];
         const results = response.results || [];
         for (let i = 0; i < transactions.length; i++) {
-            const signedTransaction = /** @type {oasis.types.SignatureSigned} */ (
+            const signedTransaction = /** @type {import('./../..').types.SignatureSigned} */ (
                 oasis.misc.fromCBOR(transactions[i])
             );
             const transaction = await oasis.consensus.openSignedTransaction(
@@ -156,8 +154,4 @@ export const playground = (async function () {
         );
         console.log('done watching');
     }
-})();
-
-playground.catch((e) => {
-    console.error(e);
-});
+}
