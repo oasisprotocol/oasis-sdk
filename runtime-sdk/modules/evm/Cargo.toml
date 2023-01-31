@@ -31,7 +31,7 @@ ethabi = { version = "17.0.0", default-features = false, features = ["std"]}
 ethereum = "0.12"
 evm = "0.35.0"
 fixed-hash = "0.7.0"
-primitive-types = { version = "0.11", default-features = false, features = ["rlp", "num-traits"] }
+primitive-types = { version = "0.12", default-features = false, features = ["rlp", "num-traits"] }
 rlp = "0.5.1"
 uint = "0.9.1"
 
