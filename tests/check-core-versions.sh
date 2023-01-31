@@ -25,7 +25,6 @@ for m in \
   client-sdk/ts-web/core/reflect-go/go.mod \
   tests/benchmark/go.mod \
   tests/e2e/go.mod \
-  cli/go.mod \
   tools/orc/go.mod \
   tools/gen_runtime_vectors/go.mod \
   examples/client-sdk/go/minimal-runtime-client/go.mod \

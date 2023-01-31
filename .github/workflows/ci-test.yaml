@@ -114,32 +114,6 @@ jobs:
         with:
           directory: client-sdk/go
 
-  test-go-cli:
-    # NOTE: This name appears in GitHub's Checks API.
-    name: test-cli
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Go 1.18
-        uses: actions/setup-go@v3
-        with:
-          go-version: "1.18.x"
-
-      - name: Test build
-        working-directory: cli
-        run: go build
-
-      - name: Unit tests with coverage
-        working-directory: cli
-        run: go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
-
-      - name: Upload to codecov.io
-        uses: codecov/codecov-action@v3.1.1
-        with:
-          directory: cli
-
   test-go-tools:
     # NOTE: This name appears in GitHub's Checks API.
     name: test-tools
