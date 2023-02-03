@@ -81,11 +81,8 @@ impl CallResult {
                 module,
                 code,
                 message,
-            } => panic!(
-                "{} reported failure with code {}: {}",
-                module, code, message
-            ),
-            Self::Aborted(e) => panic!("tx aborted with error: {}", e),
+            } => panic!("{module} reported failure with code {code}: {message}"),
+            Self::Aborted(e) => panic!("tx aborted with error: {e}"),
         }
     }
 }

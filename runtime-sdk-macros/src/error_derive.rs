@@ -180,7 +180,7 @@ fn convert_variants(
                                 span: variant_ident.span(),
                             }),
                         };
-                        let ident = Ident::new(&format!("__a{}", i), variant_ident.span());
+                        let ident = Ident::new(&format!("__a{i}"), variant_ident.span());
                         let binding = quote!( #pat: #ident, );
 
                         binding
@@ -214,7 +214,7 @@ fn convert_variants(
                             variant_ident
                                 .span()
                                 .unwrap()
-                                .error(format!("code {} already used", code))
+                                .error(format!("code {code} already used"))
                                 .emit();
                             return (quote!(), (quote!(), quote!()));
                         }

@@ -148,7 +148,7 @@ impl Address {
                 ADDRESS_V0_VERSION,
                 // Use a scheme such that we can compute Secp256k1 addresses from Ethereum
                 // addresses as this makes things more interoperable.
-                &sha3::Keccak256::digest(&pk.to_uncompressed_untagged_bytes())[32 - 20..],
+                &sha3::Keccak256::digest(pk.to_uncompressed_untagged_bytes())[32 - 20..],
             ),
             SignatureAddressSpec::Sr25519(pk) => Address::new(
                 ADDRESS_V0_SR25519_CONTEXT,
@@ -207,7 +207,7 @@ impl From<&'static str> for Address {
 impl fmt::LowerHex for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for i in &self.0[..] {
-            write!(f, "{:02x}", i)?;
+            write!(f, "{i:02x}")?;
         }
         Ok(())
     }

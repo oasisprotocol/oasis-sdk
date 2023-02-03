@@ -90,7 +90,7 @@ fn hash_call_toplevel<Cfg: Config>(query: &SimulateCallQuery, leash: &Leash) -> 
     encoded_call[0..2].copy_from_slice(b"\x19\x01");
     encoded_call[2..34].copy_from_slice(domain_separator);
     encoded_call[34..].copy_from_slice(&call_struct_hash);
-    Keccak256::digest(&encoded_call).into()
+    Keccak256::digest(encoded_call).into()
 }
 
 fn hash_call(query: &SimulateCallQuery, leash: &Leash) -> [u8; 32] {
@@ -147,7 +147,7 @@ fn encode_bytes(s: impl AsRef<[u8]>) -> Token {
 }
 
 fn hash_encoded(tokens: &[Token]) -> [u8; 32] {
-    Keccak256::digest(&ethabi::encode(tokens)).into()
+    Keccak256::digest(ethabi::encode(tokens)).into()
 }
 
 #[cfg(test)]

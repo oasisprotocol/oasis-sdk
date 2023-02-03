@@ -273,7 +273,7 @@ pub(super) fn call_keypair_generate(
         })?;
     let signer = signature::MemorySigner::new_from_seed(sig_type, &seed).map_err(|err| {
         PrecompileFailure::Error {
-            exit_status: ExitError::Other(format!("error creating signer: {}", err).into()),
+            exit_status: ExitError::Other(format!("error creating signer: {err}").into()),
         }
     })?;
     let public = signer.public_key().as_bytes().to_vec();
@@ -337,13 +337,13 @@ pub(super) fn call_sign(
 
     let signer = signature::MemorySigner::from_bytes(sig_type, &pk).map_err(|e| {
         PrecompileFailure::Error {
-            exit_status: ExitError::Other(format!("error creating signer: {}", e).into()),
+            exit_status: ExitError::Other(format!("error creating signer: {e}").into()),
         }
     })?;
 
     let result = signer.sign_by_type(sig_type, &ctx_or_hash, &message);
     let result = result.map_err(|e| PrecompileFailure::Error {
-        exit_status: ExitError::Other(format!("error signing message: {}", e).into()),
+        exit_status: ExitError::Other(format!("error signing message: {e}").into()),
     })?;
 
     let costs = *SIGN_MESSAGE_COST.get(&sig_type).unwrap();

@@ -256,7 +256,7 @@ impl sdk::Contract for HelloWorld {
 
                 // Return the greeting as a response.
                 Ok(Response::Hello {
-                    greeting: format!("hello {} ({})", who, counter),
+                    greeting: format!("hello {who} ({counter})"),
                 })
             }
             Request::CallSelf { once } => {
@@ -419,7 +419,7 @@ impl sdk::Contract for HelloWorld {
                     timestamp,
                     ..
                 } => Ok(Response::Hello {
-                    greeting: format!("round: {} epoch: {} timestamp: {}", round, epoch, timestamp),
+                    greeting: format!("round: {round} epoch: {epoch} timestamp: {timestamp}"),
                 }),
 
                 _ => Err(Error::QueryFailed),
@@ -480,10 +480,7 @@ impl sdk::Contract for HelloWorld {
                 match result {
                     CallResult::Failed { module, code } => {
                         // Propagate all failures.
-                        Err(Error::SubcallFailed(format!(
-                            "module={} code={}",
-                            module, code
-                        )))
+                        Err(Error::SubcallFailed(format!("module={module} code={code}")))
                     }
                     CallResult::Ok(val) => {
                         // Replace result with the subcall's result.

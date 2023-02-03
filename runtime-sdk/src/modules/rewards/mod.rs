@@ -145,8 +145,8 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
         // Load previous epoch.
         let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let mut tstore = storage::TypedStore::new(&mut store);
-        let previous_epoch: beacon::EpochTime = tstore.get(&state::LAST_EPOCH).unwrap_or_default();
-        tstore.insert(&state::LAST_EPOCH, &epoch);
+        let previous_epoch: beacon::EpochTime = tstore.get(state::LAST_EPOCH).unwrap_or_default();
+        tstore.insert(state::LAST_EPOCH, epoch);
 
         // Load rewards accumulator for the current epoch.
         let epochs = storage::TypedStore::new(storage::PrefixStore::new(store, &state::REWARDS));
@@ -202,7 +202,7 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
                             // specify a lower amount or a different denomination.
                             continue 'epochs;
                         }
-                        Err(err) => panic!("failed to disburse rewards: {:?}", err),
+                        Err(err) => panic!("failed to disburse rewards: {err:?}"),
                     }
                 }
             }

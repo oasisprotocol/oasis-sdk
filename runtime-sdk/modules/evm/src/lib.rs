@@ -437,7 +437,7 @@ impl<Cfg: Config> API for Module<Cfg> {
 
     fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
         let s = state::public_storage(ctx, &address);
-        let result: H256 = s.get(&index).unwrap_or_default();
+        let result: H256 = s.get(index).unwrap_or_default();
         Ok(result.as_bytes().to_vec())
     }
 
@@ -445,7 +445,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         let store = storage::PrefixStore::new(ctx.runtime_state(), &crate::MODULE_NAME);
         let codes = storage::TypedStore::new(storage::PrefixStore::new(store, &state::CODES));
 
-        Ok(codes.get(&address).unwrap_or_default())
+        Ok(codes.get(address).unwrap_or_default())
     }
 
     fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<u128, Error> {
@@ -816,11 +816,11 @@ impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
         let mut block_hashes = state::block_hashes(ctx.runtime_state());
 
         let current_number = block_number;
-        block_hashes.insert(&block_number.to_be_bytes(), block_hash);
+        block_hashes.insert(block_number.to_be_bytes(), block_hash);
 
         if current_number > state::BLOCK_HASH_WINDOW_SIZE {
             let start_number = current_number - state::BLOCK_HASH_WINDOW_SIZE;
-            block_hashes.remove(&start_number.to_be_bytes());
+            block_hashes.remove(start_number.to_be_bytes());
         }
     }
 }

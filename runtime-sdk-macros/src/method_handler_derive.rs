@@ -423,8 +423,7 @@ fn parse_attrs(attrs: &[syn::Attribute]) -> Option<MethodHandlerAttr> {
         .parse_args()
         .map_err(|err| {
             emit_compile_error(format!(
-                "Unsupported format of #[handler(...)] attribute: {}",
-                err
+                "Unsupported format of #[handler(...)] attribute: {err}"
             ))
         })
         .ok()

@@ -90,7 +90,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     .try_with_memory(|memory| -> Result<_, wasm3::Trap> {
                         let msg_bytes = Region::from_arg(request).as_slice(&memory)?;
                         if let Ok(msg) = std::str::from_utf8(msg_bytes) {
-                            eprintln!("{}", msg);
+                            eprintln!("{msg}");
                         }
                         Ok(())
                     })?

@@ -100,7 +100,7 @@ impl Env for MockEnv {
 
     #[cfg(feature = "debug-utils")]
     fn debug_print(&self, msg: &str) {
-        eprintln!("{}", msg);
+        eprintln!("{msg}");
     }
 }
 

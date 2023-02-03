@@ -340,10 +340,7 @@ impl CallResult {
                 module,
                 code,
                 message,
-            } => panic!(
-                "{} reported failure with code {}: {}",
-                module, code, message
-            ),
+            } => panic!("{module} reported failure with code {code}: {message}"),
         }
     }
 

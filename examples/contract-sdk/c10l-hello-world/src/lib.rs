@@ -86,7 +86,7 @@ impl sdk::Contract for HelloWorld {
 
                 // Return the greeting as a response.
                 Ok(Response::Hello {
-                    greeting: format!("hello {} ({})", who, counter),
+                    greeting: format!("hello {who} ({counter})"),
                 })
             }
             _ => Err(Error::BadRequest),
