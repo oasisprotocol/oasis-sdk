@@ -52,6 +52,10 @@ pub trait Config: 'static {
     /// Module that is used for accessing accounts.
     type Accounts: modules::accounts::API;
 
+    /// AdditionalPrecompileSet is the type used for the additional precompiles.
+    /// Use `()` if unused.
+    type AdditionalPrecompileSet: evm::executor::stack::PrecompileSet;
+
     /// The chain ID to supply when a contract requests it. Ethereum-format transactions must use
     /// this chain ID.
     const CHAIN_ID: u64;
@@ -76,7 +80,7 @@ pub trait Config: 'static {
     /// If any of the precompile addresses returned is the same as for one of
     /// the builtin precompiles, then the returned implementation will
     /// overwrite the builtin implementation.
-    fn additional_precompiles() -> Option<&'static dyn evm::executor::stack::PrecompileSet> {
+    fn additional_precompiles() -> Option<Self::AdditionalPrecompileSet> {
         None
     }
 
@@ -171,7 +175,7 @@ impl From<evm::ExitError> for Error {
             CallTooDeep => "call too deep",
             CreateCollision => "create collision",
             CreateContractLimit => "create contract limit",
-            InvalidCode => "invalid code",
+            InvalidCode(..) => "invalid code",
 
             OutOfOffset => "out of offset",
             OutOfGas => "out of gas",

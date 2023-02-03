@@ -16,6 +16,8 @@ impl modules::core::Config for Config {}
 impl oasis_runtime_sdk_evm::Config for Config {
     type Accounts = modules::accounts::Module;
 
+    type AdditionalPrecompileSet = ();
+
     const CHAIN_ID: u64 = 123456;
 
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;

@@ -33,6 +33,8 @@ pub(crate) struct EVMConfig;
 impl Config for EVMConfig {
     type Accounts = Accounts;
 
+    type AdditionalPrecompileSet = ();
+
     const CHAIN_ID: u64 = 0xa515;
 
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
@@ -42,6 +44,8 @@ pub(crate) struct ConfidentialEVMConfig;
 
 impl Config for ConfidentialEVMConfig {
     type Accounts = Accounts;
+
+    type AdditionalPrecompileSet = ();
 
     const CHAIN_ID: u64 = 0x5afe;
 

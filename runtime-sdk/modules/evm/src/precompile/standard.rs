@@ -5,35 +5,29 @@ use std::{
 };
 
 use evm::{
-    executor::stack::{PrecompileFailure, PrecompileOutput},
-    Context, ExitError, ExitSucceed,
+    executor::stack::{PrecompileFailure, PrecompileHandle, PrecompileOutput},
+    ExitError, ExitSucceed,
 };
 use k256::{
     ecdsa::recoverable,
     elliptic_curve::{sec1::ToEncodedPoint, IsHigh},
 };
 use num::{BigUint, FromPrimitive, One, ToPrimitive, Zero};
-use ripemd160::Ripemd160;
+use ripemd160::{Digest as _, Ripemd160};
 use sha2::Sha256;
-use sha3::Keccak256;
+use sha3::{Digest as _, Keccak256};
 
-use super::{linear_cost, PrecompileResult};
+use super::{record_linear_cost, PrecompileResult};
 
 /// Minimum gas cost of ModExp contract from eip-2565
 /// https://eips.ethereum.org/EIPS/eip-2565
 const MIN_GAS_COST: u64 = 200;
 
-pub(super) fn call_ecrecover(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-) -> PrecompileResult {
-    use sha3::Digest;
+pub(super) fn call_ecrecover(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+    record_linear_cost(handle, handle.input().len() as u64, 3000, 0)?;
 
-    let gas_cost = linear_cost(target_gas, input.len() as u64, 3000, 0)?;
-
-    // Make right padding for input
+    // Make right padding for input.
+    let input = handle.input();
     let mut padding = [0u8; 128];
     padding[..min(input.len(), 128)].copy_from_slice(&input[..min(input.len(), 128)]);
 
@@ -55,9 +49,7 @@ pub(super) fn call_ecrecover(
     if padding[32..63] != [0; 31] {
         return Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: gas_cost,
             output: vec![],
-            logs: Default::default(),
         });
     }
 
@@ -66,9 +58,7 @@ pub(super) fn call_ecrecover(
         Err(_) => {
             return Ok(PrecompileOutput {
                 exit_status: ExitSucceed::Returned,
-                cost: gas_cost,
                 output: vec![],
-                logs: Default::default(),
             });
         }
     };
@@ -77,9 +67,7 @@ pub(super) fn call_ecrecover(
     if dsa_sig.s().is_high().into() {
         return Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: gas_cost,
             output: vec![],
-            logs: Default::default(),
         });
     }
 
@@ -98,79 +86,48 @@ pub(super) fn call_ecrecover(
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        cost: gas_cost,
         output: result.to_vec(),
-        logs: Default::default(),
     })
 }
 
-pub(super) fn call_sha256(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-) -> PrecompileResult {
-    use sha2::Digest;
-
-    let gas_cost = linear_cost(target_gas, input.len() as u64, 60, 12)?;
+pub(super) fn call_sha256(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+    record_linear_cost(handle, handle.input().len() as u64, 60, 12)?;
 
     let mut hasher = Sha256::new();
-    hasher.update(input);
+    hasher.update(handle.input());
     let digest = hasher.finalize();
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        cost: gas_cost,
         output: digest.to_vec(),
-        logs: Default::default(),
     })
 }
 
-pub(super) fn call_ripemd160(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-) -> PrecompileResult {
-    use ripemd160::Digest;
-
-    let gas_cost = linear_cost(target_gas, input.len() as u64, 600, 120)?;
+pub(super) fn call_ripemd160(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+    record_linear_cost(handle, handle.input().len() as u64, 600, 120)?;
 
     let mut hasher = Ripemd160::new();
-    hasher.update(input);
+    hasher.update(handle.input());
     let mut result = [0u8; 32];
     result[12..32].copy_from_slice(&hasher.finalize());
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        cost: gas_cost,
         output: result.to_vec(),
-        logs: Default::default(),
     })
 }
 
-pub(super) fn call_datacopy(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-) -> PrecompileResult {
-    let gas_cost = linear_cost(target_gas, input.len() as u64, 15, 3)?;
+pub(super) fn call_datacopy(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+    record_linear_cost(handle, handle.input().len() as u64, 15, 3)?;
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        cost: gas_cost,
-        output: input.to_vec(),
-        logs: Default::default(),
+        output: handle.input().to_vec(),
     })
 }
 
-pub(super) fn call_bigmodexp(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-) -> PrecompileResult {
+pub(super) fn call_bigmodexp(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+    let input = handle.input();
     if input.len() < 96 {
         return Err(PrecompileFailure::Error {
             exit_status: ExitError::Other("input must contain at least 96 bytes".into()),
@@ -234,8 +191,8 @@ pub(super) fn call_bigmodexp(
         let gas_cost =
             calculate_modexp_gas_cost(base_len as u64, exp_len as u64, mod_len as u64, &exponent)?;
 
-        if let Some(target_gas) = target_gas {
-            if target_gas < gas_cost {
+        if let Some(gas_limit) = handle.gas_limit() {
+            if gas_limit < gas_cost {
                 return Err(PrecompileFailure::Error {
                     exit_status: ExitError::OutOfGas,
                 });
@@ -251,6 +208,7 @@ pub(super) fn call_bigmodexp(
             (base.modpow(&exponent, &modulus), gas_cost)
         }
     };
+    handle.record_cost(gas_cost)?;
 
     // write output to given memory, left padded and same length as the modulus.
     let bytes = r.to_bytes_be();
@@ -260,9 +218,7 @@ pub(super) fn call_bigmodexp(
     match bytes.len().cmp(&mod_len) {
         Ordering::Equal => Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: gas_cost,
             output: bytes.to_vec(),
-            logs: Default::default(),
         }),
         Ordering::Less => {
             let mut ret = Vec::with_capacity(mod_len);
@@ -270,9 +226,7 @@ pub(super) fn call_bigmodexp(
             ret.extend_from_slice(&bytes[..]);
             Ok(PrecompileOutput {
                 exit_status: ExitSucceed::Returned,
-                cost: gas_cost,
                 output: ret.to_vec(),
-                logs: Default::default(),
             })
         }
         Ordering::Greater => Err(PrecompileFailure::Error {
