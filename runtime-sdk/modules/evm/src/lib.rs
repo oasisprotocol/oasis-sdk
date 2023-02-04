@@ -432,7 +432,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             ctx.is_simulation()
                 && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
         );
-        Self::encode_evm_result(ctx, evm_result, tx_metadata, ctx.tx_call_format())
+        Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 
     fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
@@ -518,7 +518,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                 )
             })
         });
-        Self::encode_evm_result(ctx, evm_result, tx_metadata, transaction::CallFormat::Plain)
+        Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 }
 
@@ -614,14 +614,15 @@ impl<Cfg: Config> Module<Cfg> {
         tx_index: usize,
         assume_km_reachable: bool,
     ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
-        if !Cfg::CONFIDENTIAL || format != transaction::CallFormat::Plain || data.is_empty() {
+        if !Cfg::CONFIDENTIAL || format != transaction::CallFormat::Plain {
             // Either the runtime is non-confidential and all txs are plaintext, or the tx
-            // is sent using a confidential call format and the whole tx is encrypted.
+            // is sent using a confidential call format and the tx has already been decrypted.
             return Ok(Some((data, callformat::Metadata::Empty)));
         }
-        let call = cbor::from_slice(&data)
-            .map_err(|_| CoreError::InvalidCallFormat(anyhow::anyhow!("invalid packed call")))?;
-        Self::decode_call(ctx, call, tx_index, assume_km_reachable)
+        match cbor::from_slice(&data) {
+            Ok(call) => Self::decode_call(ctx, call, tx_index, assume_km_reachable),
+            Err(_) => Ok(Some((data, callformat::Metadata::Empty))), // It's not encrypted.
+        }
     }
 
     /// Returns the decrypted call data or `None` if this transaction is simulated in
@@ -691,9 +692,8 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &C,
         evm_result: Result<Vec<u8>, Error>,
         tx_metadata: callformat::Metadata, // Potentially parsed from an inner enveloped tx.
-        outer_call_format: transaction::CallFormat, // The outermost call format.
     ) -> Result<Vec<u8>, Error> {
-        if !Cfg::CONFIDENTIAL || !matches!(outer_call_format, transaction::CallFormat::Plain) {
+        if matches!(tx_metadata, callformat::Metadata::Empty) {
             // Either the runtime is non-confidential and all responses are plaintext,
             // or the tx was sent using a confidential call format and dispatcher will
             // encrypt the call in the normal way.
