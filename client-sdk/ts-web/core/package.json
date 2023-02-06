@@ -20,7 +20,7 @@
     "dependencies": {
         "bech32": "^2.0.0",
         "bip39": "^3.0.4",
-        "cborg": "^1.9.5",
+        "cborg": "^1.10.0",
         "grpc-web": "^1.4.2",
         "js-sha512": "^0.8.0",
         "protobufjs": "~7.1.2",
