@@ -118,3 +118,14 @@ Otherwise:
 [ensure `$GOPATH/bin` is in your `PATH`]: https://tip.golang.org/doc/code.html#GOPATH
 [install the desired version of Go]: https://golang.org/doc/install#extra_versions
 <!-- markdownlint-enable line-length -->
+
+## Oasis CLI Installation
+
+The rest of the guide uses the Oasis CLI as an easy way to interact with the
+smart contract. You can use [one of the binary releases] or
+[compile it yourself].
+
+<!-- markdownlint-disable line-length -->
+[one of the binary releases]: https://github.com/oasisprotocol/cli/releases
+[compile it yourself]: https://github.com/oasisprotocol/cli/blob/master/README.md
+<!-- markdownlint-enable line-length -->
