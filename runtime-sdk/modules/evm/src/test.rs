@@ -94,7 +94,7 @@ fn test_evm_caller_addr_derivation() {
     assert_eq!(derived, expected);
 }
 
-fn do_test_evm_calls<C: Config>() {
+fn do_test_evm_calls<C: Config>(force_plain: bool) {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
     let client_keypair =
@@ -102,7 +102,7 @@ fn do_test_evm_calls<C: Config>() {
 
     macro_rules! encode_data {
         ($data:expr) => {
-            if C::CONFIDENTIAL {
+            if C::CONFIDENTIAL && !force_plain {
                 cbor::to_vec(
                     callformat::encode_call(
                         &ctx,
@@ -126,7 +126,7 @@ fn do_test_evm_calls<C: Config>() {
         ($tx_ctx:ident, $result:expr$(,)?) => {
             match $result {
                 Ok(evm_result) => {
-                    if C::CONFIDENTIAL {
+                    if C::CONFIDENTIAL && !force_plain {
                         let call_result: transaction::CallResult =
                             cbor::from_slice(&evm_result).unwrap();
                         callformat::decode_result(
@@ -276,13 +276,19 @@ fn do_test_evm_calls<C: Config>() {
 
 #[test]
 fn test_evm_calls() {
-    do_test_evm_calls::<EVMConfig>();
+    do_test_evm_calls::<EVMConfig>(false);
 }
 
 #[test]
-fn test_c10l_evm_calls() {
+fn test_c10l_evm_calls_enc() {
     crypto::signature::context::set_chain_context(Default::default(), "test");
-    do_test_evm_calls::<ConfidentialEVMConfig>();
+    do_test_evm_calls::<ConfidentialEVMConfig>(false);
+}
+
+#[test]
+fn test_c10l_evm_calls_plain() {
+    crypto::signature::context::set_chain_context(Default::default(), "test");
+    do_test_evm_calls::<ConfidentialEVMConfig>(true /* force_plain */);
 }
 
 #[test]
