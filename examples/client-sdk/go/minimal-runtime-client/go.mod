@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/oasisprotocol/oasis-core/go v0.2202.5
-	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.2.0
+	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.3.0
 	google.golang.org/grpc v1.49.0
 )
 
@@ -17,6 +17,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eapache/channels v1.1.0 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
+	github.com/ethereum/go-ethereum v1.10.19 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect

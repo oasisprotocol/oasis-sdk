@@ -1,7 +1,7 @@
 [package]
 name = "hello-world"
 version = "0.0.0"
-edition = "2018"
+edition = "2021"
 license = "Apache-2.0"
 
 [lib]
@@ -9,8 +9,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 cbor = { version = "0.5.1", package = "oasis-cbor" }
-oasis-contract-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk" }
-oasis-contract-sdk-storage = { git = "https://github.com/oasisprotocol/oasis-sdk" }
+oasis-contract-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "contract-sdk/v0.3.0" }
+oasis-contract-sdk-storage = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "contract-sdk/v0.3.0" }
 
 # Third party.
 thiserror = "1.0.30"
