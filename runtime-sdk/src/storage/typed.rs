@@ -77,7 +77,7 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         Iterator::next(&mut self.inner).map(|(k, v)| {
-            let key = K::try_from(&k).unwrap_or_else(|e| panic!("corrupted storage key: {}", e));
+            let key = K::try_from(&k).unwrap_or_else(|e| panic!("corrupted storage key: {e}"));
             let value = cbor::from_slice(&v).unwrap();
             (key, value)
         })

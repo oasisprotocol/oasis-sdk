@@ -2,8 +2,8 @@ use std::{collections::HashMap, convert::TryInto};
 
 use ethabi::{ParamType, Token};
 use evm::{
-    executor::stack::{PrecompileFailure, PrecompileOutput},
-    Context, ExitError, ExitRevert, ExitSucceed,
+    executor::stack::{PrecompileFailure, PrecompileHandle, PrecompileOutput},
+    ExitError, ExitRevert, ExitSucceed,
 };
 use hmac::{Hmac, Mac, NewMac as _};
 use once_cell::sync::Lazy;
@@ -15,7 +15,7 @@ use oasis_runtime_sdk::{
 
 use crate::backend::{EVMBackendExt, RNG_MAX_BYTES};
 
-use super::{linear_cost, multilinear_cost, PrecompileResult};
+use super::{record_linear_cost, record_multilinear_cost, PrecompileResult};
 
 /// Length of an EVM word, in bytes.
 pub const WORD: usize = 32;
@@ -65,18 +65,13 @@ static VERIFY_MESSAGE_COST: Lazy<HashMap<SignatureType, (u64, u64)>> = Lazy::new
 });
 
 pub(super) fn call_random_bytes<B: EVMBackendExt>(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
+    handle: &mut impl PrecompileHandle,
     backend: &B,
 ) -> PrecompileResult {
-    let mut call_args =
-        ethabi::decode(&[ParamType::Uint(256), ParamType::Bytes], input).map_err(|e| {
-            PrecompileFailure::Error {
-                exit_status: ExitError::Other(e.to_string().into()),
-            }
-        })?;
+    let mut call_args = ethabi::decode(&[ParamType::Uint(256), ParamType::Bytes], handle.input())
+        .map_err(|e| PrecompileFailure::Error {
+        exit_status: ExitError::Other(e.to_string().into()),
+    })?;
     let pers_str = call_args.pop().unwrap().into_bytes().unwrap();
     let num_bytes_big = call_args.pop().unwrap().into_uint().unwrap();
     let num_bytes = num_bytes_big
@@ -92,36 +87,23 @@ pub(super) fn call_random_bytes<B: EVMBackendExt>(
     //   to use an efficient cryptographic hash function with some bookkeeping.
     // In any case, it's much cheaper than using a VRF oracle, and even a Solidity DRBG,
     // which has a cost-per-byte upwards of 1000.
-    let gas_cost = multilinear_cost(
-        target_gas,
-        num_bytes,
-        pers_str.len() as u64,
-        240,
-        60,
-        10_000,
-    )?;
+    record_multilinear_cost(handle, num_bytes, pers_str.len() as u64, 240, 60, 10_000)?;
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        cost: gas_cost,
         output: backend.random_bytes(num_bytes, &pers_str),
-        logs: Default::default(),
     })
 }
 
-pub(super) fn call_x25519_derive(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-) -> PrecompileResult {
-    let gas_cost = linear_cost(
-        target_gas,
-        input.len() as u64,
+pub(super) fn call_x25519_derive(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+    record_linear_cost(
+        handle,
+        handle.input().len() as u64,
         X25519_KEY_DERIVATION_BASE_COST,
         0,
     )?;
 
     // Input encoding: bytes32 public || bytes32 private.
+    let input = handle.input();
     let mut public = [0u8; WORD];
     let mut private = [0u8; WORD];
     if input.len() != 2 * WORD {
@@ -147,9 +129,7 @@ pub(super) fn call_x25519_derive(
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        cost: gas_cost,
         output: derived_key.to_vec(),
-        logs: Default::default(),
     })
 }
 
@@ -182,71 +162,55 @@ fn decode_deoxysii_call_args(
     Ok((key, nonce, text, ad))
 }
 
-pub(super) fn call_deoxysii_seal(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-) -> PrecompileResult {
-    let gas_cost = linear_cost(
-        target_gas,
-        input.len() as u64,
+pub(super) fn call_deoxysii_seal(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+    record_linear_cost(
+        handle,
+        handle.input().len() as u64,
         DEOXYSII_BASE_COST,
         DEOXYSII_WORD_COST,
     )?;
-    let (key, nonce, text, ad) = decode_deoxysii_call_args(input)?;
+
+    let (key, nonce, text, ad) = decode_deoxysii_call_args(handle.input())?;
     let deoxysii = DeoxysII::new(&key);
     let encrypted = deoxysii.seal(&nonce, text, ad);
+
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        cost: gas_cost,
         output: encrypted,
-        logs: Default::default(),
     })
 }
 
-pub(super) fn call_deoxysii_open(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-) -> PrecompileResult {
-    let gas_cost = linear_cost(
-        target_gas,
-        input.len() as u64,
+pub(super) fn call_deoxysii_open(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+    record_linear_cost(
+        handle,
+        handle.input().len() as u64,
         DEOXYSII_BASE_COST,
         DEOXYSII_WORD_COST,
     )?;
-    let (key, nonce, ciphertext, ad) = decode_deoxysii_call_args(input)?;
+
+    let (key, nonce, ciphertext, ad) = decode_deoxysii_call_args(handle.input())?;
     let ciphertext = ciphertext.to_vec();
     let deoxysii = DeoxysII::new(&key);
+
     match deoxysii.open(&nonce, ciphertext, ad) {
         Ok(decrypted) => Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            cost: gas_cost,
             output: decrypted,
-            logs: Default::default(),
         }),
         Err(_) => Err(PrecompileFailure::Revert {
             exit_status: ExitRevert::Reverted,
             output: vec![],
-            cost: gas_cost,
         }),
     }
 }
 
-pub(super) fn call_keypair_generate(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-) -> PrecompileResult {
+pub(super) fn call_keypair_generate(handle: &mut impl PrecompileHandle) -> PrecompileResult {
     let mut call_args = ethabi::decode(
         &[
             ParamType::Uint(256), // method
             ParamType::Bytes,     // seed
         ],
-        input,
+        handle.input(),
     )
     .map_err(|e| PrecompileFailure::Error {
         exit_status: ExitError::Other(e.to_string().into()),
@@ -271,35 +235,29 @@ pub(super) fn call_keypair_generate(
         .map_err(|_| PrecompileFailure::Error {
             exit_status: ExitError::Other("unknown signature type".into()),
         })?;
+
+    record_linear_cost(
+        handle,
+        handle.input().len() as u64,
+        *KEYPAIR_GENERATE_BASE_COST.get(&sig_type).unwrap(),
+        0,
+    )?;
+
     let signer = signature::MemorySigner::new_from_seed(sig_type, &seed).map_err(|err| {
         PrecompileFailure::Error {
-            exit_status: ExitError::Other(format!("error creating signer: {}", err).into()),
+            exit_status: ExitError::Other(format!("error creating signer: {err}").into()),
         }
     })?;
     let public = signer.public_key().as_bytes().to_vec();
     let private = signer.to_bytes();
 
-    let gas_cost = linear_cost(
-        target_gas,
-        input.len() as u64,
-        *KEYPAIR_GENERATE_BASE_COST.get(&sig_type).unwrap(),
-        0,
-    )?;
-
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        cost: gas_cost,
         output: ethabi::encode(&[Token::Bytes(public), Token::Bytes(private)]),
-        logs: Default::default(),
     })
 }
 
-pub(super) fn call_sign(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-) -> PrecompileResult {
+pub(super) fn call_sign(handle: &mut impl PrecompileHandle) -> PrecompileResult {
     let mut call_args = ethabi::decode(
         &[
             ParamType::Uint(256), // signature type
@@ -307,7 +265,7 @@ pub(super) fn call_sign(
             ParamType::Bytes,     // context or precomputed hash bytes
             ParamType::Bytes,     // message; should be zero-length if precomputed hash given
         ],
-        input,
+        handle.input(),
     )
     .map_err(|e| PrecompileFailure::Error {
         exit_status: ExitError::Other(e.to_string().into()),
@@ -335,34 +293,27 @@ pub(super) fn call_sign(
             exit_status: ExitError::Other("unknown signature type".into()),
         })?;
 
+    let costs = *SIGN_MESSAGE_COST.get(&sig_type).unwrap();
+    record_linear_cost(handle, handle.input().len() as u64, costs.0, costs.1)?;
+
     let signer = signature::MemorySigner::from_bytes(sig_type, &pk).map_err(|e| {
         PrecompileFailure::Error {
-            exit_status: ExitError::Other(format!("error creating signer: {}", e).into()),
+            exit_status: ExitError::Other(format!("error creating signer: {e}").into()),
         }
     })?;
 
     let result = signer.sign_by_type(sig_type, &ctx_or_hash, &message);
     let result = result.map_err(|e| PrecompileFailure::Error {
-        exit_status: ExitError::Other(format!("error signing message: {}", e).into()),
+        exit_status: ExitError::Other(format!("error signing message: {e}").into()),
     })?;
-
-    let costs = *SIGN_MESSAGE_COST.get(&sig_type).unwrap();
-    let gas_cost = linear_cost(target_gas, input.len() as u64, costs.0, costs.1)?;
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        cost: gas_cost,
         output: result.into(),
-        logs: Default::default(),
     })
 }
 
-pub(super) fn call_verify(
-    input: &[u8],
-    target_gas: Option<u64>,
-    _context: &Context,
-    _is_static: bool,
-) -> PrecompileResult {
+pub(super) fn call_verify(handle: &mut impl PrecompileHandle) -> PrecompileResult {
     let mut call_args = ethabi::decode(
         &[
             ParamType::Uint(256), // signature type
@@ -371,7 +322,7 @@ pub(super) fn call_verify(
             ParamType::Bytes,     // message; should be zero-length if precomputed hash given
             ParamType::Bytes,     // signature
         ],
-        input,
+        handle.input(),
     )
     .map_err(|e| PrecompileFailure::Error {
         exit_status: ExitError::Other(e.to_string().into()),
@@ -400,6 +351,9 @@ pub(super) fn call_verify(
             exit_status: ExitError::Other("unknown signature type".into()),
         })?;
 
+    let costs = *VERIFY_MESSAGE_COST.get(&sig_type).unwrap();
+    record_linear_cost(handle, handle.input().len() as u64, costs.0, costs.1)?;
+
     let signature: signature::Signature = signature.into();
     let public_key =
         signature::PublicKey::from_bytes(sig_type, &pk).map_err(|_| PrecompileFailure::Error {
@@ -408,14 +362,9 @@ pub(super) fn call_verify(
 
     let result = public_key.verify_by_type(sig_type, &ctx_or_hash, &message, &signature);
 
-    let costs = *VERIFY_MESSAGE_COST.get(&sig_type).unwrap();
-    let gas_cost = linear_cost(target_gas, input.len() as u64, costs.0, costs.1)?;
-
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        cost: gas_cost,
         output: ethabi::encode(&[Token::Bool(result.is_ok())]),
-        logs: Default::default(),
     })
 }
 

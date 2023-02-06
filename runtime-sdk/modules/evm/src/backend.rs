@@ -155,7 +155,7 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
 
         let mut ctx = self.ctx.borrow_mut();
         let store = state::codes(ctx.runtime_state());
-        store.get(&address).unwrap_or_default()
+        store.get(address).unwrap_or_default()
     }
 
     fn storage(
@@ -167,7 +167,7 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
         let idx: H256 = index.into();
 
         let mut ctx = self.ctx.borrow_mut();
-        let res: H256 = with_storage!(*ctx, &address, |store| store.get(&idx).unwrap_or_default());
+        let res: H256 = with_storage!(*ctx, &address, |store| store.get(idx).unwrap_or_default());
         res.into()
     }
 
@@ -288,11 +288,11 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
                             // Origin's nonce must stay the same as we cancelled out the changes. Note
                             // that in reality this means that the nonce has been incremented by one.
                             assert!(nonce == old_nonce,
-                                "evm execution would not increment origin nonce correctly ({} -> {})", old_nonce, nonce);
+                                "evm execution would not increment origin nonce correctly ({old_nonce} -> {nonce})");
                         } else {
                             // Other nonces must either stay the same or increment.
                             assert!(nonce >= old_nonce,
-                                "evm execution would not update non-origin nonce correctly ({} -> {})", old_nonce, nonce);
+                                "evm execution would not update non-origin nonce correctly ({old_nonce} -> {nonce})");
                         }
                     }
                     Cfg::Accounts::set_nonce(&mut state, address, nonce);
@@ -301,7 +301,7 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
                     if let Some(code) = code {
                         let state = self.ctx.get_mut().runtime_state();
                         let mut store = state::codes(state);
-                        store.insert(&addr, code);
+                        store.insert(addr, code);
                     }
 
                     // Handle storage updates.
@@ -311,9 +311,9 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
 
                         let ctx = self.ctx.get_mut();
                         if value == primitive_types::H256::default() {
-                            with_storage!(*ctx, &addr, |store| store.remove(&idx));
+                            with_storage!(*ctx, &addr, |store| store.remove(idx));
                         } else {
-                            with_storage!(*ctx, &addr, |store| store.insert(&idx, val));
+                            with_storage!(*ctx, &addr, |store| store.insert(idx, val));
                         }
                     }
                 }
@@ -324,9 +324,7 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
         //       so we better abort to avoid corrupting state.
         assert!(
             total_supply_add == total_supply_sub,
-            "evm execution would lead to invariant violation ({} != {})",
-            total_supply_add,
-            total_supply_sub
+            "evm execution would lead to invariant violation ({total_supply_add} != {total_supply_sub})",
         );
 
         // Emit logs as events.

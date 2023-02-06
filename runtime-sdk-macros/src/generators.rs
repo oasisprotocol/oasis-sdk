@@ -61,7 +61,7 @@ pub fn enum_code_converter<V: CodedVariant>(
                     variant_ident
                         .span()
                         .unwrap()
-                        .error(format!("code {} already used", code))
+                        .error(format!("code {code} already used"))
                         .emit();
                     return quote!({});
                 }

@@ -123,8 +123,8 @@ where
 }
 
 /// Instantiate the contract.
-pub(super) fn instantiate<'ctx, Cfg: Config, C: Context>(
-    ctx: &mut ExecutionContext<'ctx, C>,
+pub(super) fn instantiate<Cfg: Config, C: Context>(
+    ctx: &mut ExecutionContext<'_, C>,
     contract: &Contract<'_>,
     call: &types::Instantiate,
 ) -> ExecutionResult {
@@ -134,8 +134,8 @@ pub(super) fn instantiate<'ctx, Cfg: Config, C: Context>(
 }
 
 /// Call the contract.
-pub(super) fn call<'ctx, Cfg: Config, C: Context>(
-    ctx: &'ctx mut ExecutionContext<'_, C>,
+pub(super) fn call<Cfg: Config, C: Context>(
+    ctx: &mut ExecutionContext<'_, C>,
     contract: &Contract<'_>,
     call: &types::Call,
 ) -> ExecutionResult {
@@ -145,8 +145,8 @@ pub(super) fn call<'ctx, Cfg: Config, C: Context>(
 }
 
 /// Invoke the contract's reply handler.
-pub(super) fn handle_reply<'ctx, Cfg: Config, C: Context>(
-    ctx: &'ctx mut ExecutionContext<'_, C>,
+pub(super) fn handle_reply<Cfg: Config, C: Context>(
+    ctx: &mut ExecutionContext<'_, C>,
     contract: &Contract<'_>,
     reply: Reply,
 ) -> ExecutionResult {
@@ -156,8 +156,8 @@ pub(super) fn handle_reply<'ctx, Cfg: Config, C: Context>(
 }
 
 /// Invoke the contract's pre-upgrade handler.
-pub(super) fn pre_upgrade<'ctx, Cfg: Config, C: Context>(
-    ctx: &'ctx mut ExecutionContext<'_, C>,
+pub(super) fn pre_upgrade<Cfg: Config, C: Context>(
+    ctx: &mut ExecutionContext<'_, C>,
     contract: &Contract<'_>,
     upgrade: &types::Upgrade,
 ) -> ExecutionResult {
@@ -167,8 +167,8 @@ pub(super) fn pre_upgrade<'ctx, Cfg: Config, C: Context>(
 }
 
 /// Invoke the contract's post-upgrade handler.
-pub(super) fn post_upgrade<'ctx, Cfg: Config, C: Context>(
-    ctx: &'ctx mut ExecutionContext<'_, C>,
+pub(super) fn post_upgrade<Cfg: Config, C: Context>(
+    ctx: &mut ExecutionContext<'_, C>,
     contract: &Contract<'_>,
     upgrade: &types::Upgrade,
 ) -> ExecutionResult {
@@ -178,8 +178,8 @@ pub(super) fn post_upgrade<'ctx, Cfg: Config, C: Context>(
 }
 
 /// Query the contract.
-pub(super) fn query<'ctx, Cfg: Config, C: Context>(
-    ctx: &'ctx mut ExecutionContext<'_, C>,
+pub(super) fn query<Cfg: Config, C: Context>(
+    ctx: &mut ExecutionContext<'_, C>,
     contract: &Contract<'_>,
     query: &types::CustomQuery,
 ) -> ExecutionResult {

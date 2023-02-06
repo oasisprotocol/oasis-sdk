@@ -1105,7 +1105,7 @@ impl<'a, V: Any + Default> ContextValue<'a, V> {
     pub fn or_default(self) -> &'a mut V {
         match self.inner {
             Entry::Occupied(oe) => oe.into_mut(),
-            Entry::Vacant(ve) => ve.insert(Box::new(V::default())),
+            Entry::Vacant(ve) => ve.insert(Box::<V>::default()),
         }
         .downcast_mut()
         .expect("type should stay the same")

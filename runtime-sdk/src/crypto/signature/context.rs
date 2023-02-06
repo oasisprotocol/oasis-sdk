@@ -53,7 +53,7 @@ pub fn get_chain_context_for(base: &[u8]) -> Vec<u8> {
 /// This function will panic in case the global chain domain separation context was already set.
 ///
 pub fn set_chain_context(runtime_id: Namespace, consensus_chain_context: &str) {
-    let ctx = hex::encode(&Hash::digest_bytes_list(&[
+    let ctx = hex::encode(Hash::digest_bytes_list(&[
         runtime_id.as_ref(),
         consensus_chain_context.as_bytes(),
     ]));
@@ -64,7 +64,7 @@ pub fn set_chain_context(runtime_id: Namespace, consensus_chain_context: &str) {
         }
         let ex = String::from_utf8(existing.clone()).unwrap();
         drop(guard); // Avoid poisioning the global lock.
-        panic!("chain domain separation context already set: {}", ex,);
+        panic!("chain domain separation context already set: {ex}");
     }
     *guard = Some(ctx.into_bytes());
 }

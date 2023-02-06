@@ -2,7 +2,7 @@ cargo-features = ["strip"]
 
 [package]
 name = "oasis-contract-sdk-oas20"
-version = "0.1.0"
+version = "0.3.0"
 description = "OAS-20 contract"
 authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
 edition = "2021"

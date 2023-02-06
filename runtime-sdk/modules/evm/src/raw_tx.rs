@@ -1,7 +1,7 @@
 use std::convert::TryInto;
 
 use anyhow::{anyhow, Context as _};
-use ethereum;
+use ethereum::{self, EnvelopedDecodable};
 use k256::{self, elliptic_curve::IsHigh};
 
 use oasis_runtime_sdk::{
@@ -22,7 +22,7 @@ pub fn recover_low(
         .with_context(|| "recover verify key from digest")
 }
 
-fn decode_enveloped(
+pub fn decode(
     body: &[u8],
     expected_chain_id: Option<u64>,
 ) -> Result<transaction::Transaction, anyhow::Error> {
@@ -36,8 +36,8 @@ fn decode_enveloped(
         eth_nonce,
         eth_gas_price,
         eth_gas_limit,
-    ) = match rlp::decode::<ethereum::TransactionV2>(body)
-        .with_context(|| "decoding transaction rlp")?
+    ) = match ethereum::TransactionV2::decode(body)
+        .map_err(|_| anyhow!("decoding transaction rlp"))?
     {
         ethereum::TransactionV2::Legacy(eth_tx) => {
             let sig = k256::ecdsa::recoverable::Signature::new(
@@ -183,20 +183,6 @@ fn decode_enveloped(
             ..Default::default()
         },
     })
-}
-
-pub fn decode(
-    body: &[u8],
-    expected_chain_id: Option<u64>,
-) -> Result<transaction::Transaction, anyhow::Error> {
-    // `ethereum` crate is broken: it expects EIP-2718 typed transactions to be wrapped in an RLP
-    // item.
-    if let Some(0..=0x7f) = body.first() {
-        // TODO: remove this case
-        decode_enveloped(&rlp::encode(&body), expected_chain_id)
-    } else {
-        decode_enveloped(body, expected_chain_id)
-    }
 }
 
 #[cfg(test)]

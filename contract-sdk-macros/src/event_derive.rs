@@ -89,7 +89,7 @@ fn convert_variants(
                         variant_ident
                             .span()
                             .unwrap()
-                            .error(format!("code {} already used", code))
+                            .error(format!("code {code} already used"))
                             .emit();
                         return (quote!(), quote!());
                     }
