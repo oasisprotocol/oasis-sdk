@@ -197,39 +197,69 @@ pub fn encode_result<C: Context>(
     result: module::CallResult,
     metadata: Metadata,
 ) -> CallResult {
+    encode_result_ex(ctx, result, metadata, false /* expose_failure */)
+}
+
+/// Encode call results.
+///
+/// If `expose_failure` is set, then this method will not encrypt errors.
+pub fn encode_result_ex<C: Context>(
+    ctx: &C,
+    result: module::CallResult,
+    metadata: Metadata,
+    expose_failure: bool,
+) -> CallResult {
     match metadata {
         // In case of the plain-text data format, we simply pass on the data unchanged.
         Metadata::Empty => result.into(),
 
         // Encrypted data format using X25519 key exchange and Deoxys-II symmetric encryption.
         Metadata::EncryptedX25519DeoxysII { pk, sk, index } => {
-            // Generate nonce for the output as Round (8 bytes) || Index (4 bytes) || 00 00 00.
-            let mut nonce = Vec::with_capacity(deoxysii::NONCE_SIZE);
-            nonce
-                .write_u64::<BigEndian>(ctx.runtime_header().round)
-                .unwrap();
-            nonce
-                .write_u32::<BigEndian>(index.try_into().unwrap())
-                .unwrap();
-            nonce.extend(&[0, 0, 0]);
-            if ctx.is_simulation() {
-                // Randomize the lower-order bytes of the nonce to facilitate private queries.
-                OsRng.fill_bytes(&mut nonce[deoxysii::NONCE_SIZE - 3..]);
-            }
-            let nonce = nonce.try_into().unwrap();
             // Serialize result.
             let result: CallResult = result.into();
-            let result = cbor::to_vec(result);
-            // Seal the result.
-            let data = deoxysii::box_seal(&nonce, result, vec![], &pk, &sk.0).unwrap();
 
-            // Generate an envelope.
-            let envelope =
-                cbor::to_value(types::callformat::ResultEnvelopeX25519DeoxysII { nonce, data });
+            if expose_failure {
+                if result.is_success() {
+                    return CallResult::Ok(encrypt_result_x25519_deoxysii(
+                        ctx, result, pk, sk, index,
+                    ));
+                }
 
-            CallResult::Unknown(envelope)
+                return result;
+            }
+
+            CallResult::Unknown(encrypt_result_x25519_deoxysii(ctx, result, pk, sk, index))
         }
     }
+}
+
+/// Encrypt a call result using the X25519-Deoxys-II encryption scheme.
+pub fn encrypt_result_x25519_deoxysii<C: Context>(
+    ctx: &C,
+    result: types::transaction::CallResult,
+    pk: [u8; 32],
+    sk: oasis_core_keymanager::crypto::PrivateKey,
+    index: usize,
+) -> cbor::Value {
+    // Generate nonce for the output as Round (8 bytes) || Index (4 bytes) || 00 00 00.
+    let mut nonce = Vec::with_capacity(deoxysii::NONCE_SIZE);
+    nonce
+        .write_u64::<BigEndian>(ctx.runtime_header().round)
+        .unwrap();
+    nonce
+        .write_u32::<BigEndian>(index.try_into().unwrap())
+        .unwrap();
+    nonce.extend(&[0, 0, 0]);
+    if ctx.is_simulation() {
+        // Randomize the lower-order bytes of the nonce to facilitate private queries.
+        OsRng.fill_bytes(&mut nonce[deoxysii::NONCE_SIZE - 3..]);
+    }
+    let nonce = nonce.try_into().unwrap();
+    let result = cbor::to_vec(result);
+    let data = deoxysii::box_seal(&nonce, result, vec![], &pk, &sk.0).unwrap();
+
+    // Return an envelope.
+    cbor::to_value(types::callformat::ResultEnvelopeX25519DeoxysII { nonce, data })
 }
 
 #[cfg(any(test, feature = "test"))]
