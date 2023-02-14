@@ -711,10 +711,11 @@ impl<Cfg: Config> Module<Cfg> {
                 message: e.to_string(),
             },
         };
-        Ok(cbor::to_vec(callformat::encode_result(
+        Ok(cbor::to_vec(callformat::encode_result_ex(
             ctx,
             call_result,
             tx_metadata,
+            true,
         )))
     }
 }
