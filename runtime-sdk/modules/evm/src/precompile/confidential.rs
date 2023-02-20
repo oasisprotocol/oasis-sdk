@@ -23,6 +23,10 @@ pub const WORD: usize = 32;
 /// The base cost for x25519 key derivation.
 const X25519_KEY_DERIVATION_BASE_COST: u64 = 100_000;
 
+/// The cost for converting a Curve25519 secret key to public key.
+/// It's one scalar multiplication, so it shouldn't be too expensive.
+const CURVE25519_COMPUTE_PUBLIC_COST: u64 = 30_000;
+
 /// The base setup cost for encryption and decryption.
 const DEOXYSII_BASE_COST: u64 = 50_000;
 /// The cost for encryption and decryption per word of input.
@@ -91,6 +95,24 @@ pub(super) fn call_random_bytes<B: EVMBackendExt>(
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
         output: backend.random_bytes(num_bytes, &pers_str),
+    })
+}
+
+pub(super) fn call_curve25519_compute_public(
+    handle: &mut impl PrecompileHandle,
+) -> PrecompileResult {
+    handle.record_cost(CURVE25519_COMPUTE_PUBLIC_COST)?;
+    let input = handle.input(); // Input encoding: bytes32 private.
+    if input.len() != 32 {
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("input length must be 32 bytes".into()),
+        });
+    }
+    let private = <&[u8; WORD]>::try_from(input).unwrap();
+    let secret = x25519_dalek::StaticSecret::from(*private);
+    Ok(PrecompileOutput {
+        exit_status: ExitSucceed::Returned,
+        output: x25519_dalek::PublicKey::from(&secret).as_bytes().to_vec(),
     })
 }
 
@@ -562,6 +584,41 @@ mod test {
             .expect("call should return something")
             .expect("call should succeed");
         });
+    }
+
+    #[test]
+    fn test_curve25519_compute_public() {
+        let params =
+            hex::decode(b"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20")
+                .unwrap();
+        call_contract(
+            H160([
+                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x08,
+            ]),
+            &params,
+            10_000_000,
+        )
+        .expect("call should return something")
+        .expect_err("call should fail as it has an extra byte of input");
+
+        let params =
+            hex::decode(b"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f")
+                .unwrap();
+        let output = call_contract(
+            H160([
+                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x08,
+            ]),
+            &params,
+            10_000_000,
+        )
+        .expect("call should return something")
+        .expect("call should succeed")
+        .output;
+
+        assert_eq!(
+            hex::encode(output),
+            "8f40c5adb68f25624ae5b214ea767a6ec94d829d3d7b5e1ad1ba6f3e2138285f"
+        );
     }
 
     #[test]

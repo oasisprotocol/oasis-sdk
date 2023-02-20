@@ -93,6 +93,7 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             (1, 5) => confidential::call_keypair_generate(handle),
             (1, 6) => confidential::call_sign(handle),
             (1, 7) => confidential::call_verify(handle),
+            (1, 8) => confidential::call_curve25519_compute_public(handle),
             _ => return Cfg::additional_precompiles().and_then(|pc| pc.execute(handle)),
         })
     }
@@ -105,7 +106,7 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
         (address[1..19].iter().all(|b| *b == 0)
             && matches!(
                 (first, last, Cfg::CONFIDENTIAL),
-                (0, 1..=5, _) | (1, 1..=7, true)
+                (0, 1..=5, _) | (1, 1..=8, true)
             ))
             || Cfg::additional_precompiles()
                 .map(|pc| pc.is_precompile(address))
