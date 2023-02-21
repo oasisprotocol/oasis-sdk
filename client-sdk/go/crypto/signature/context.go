@@ -9,7 +9,15 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 )
 
-const chainContextSeparator = " for chain "
+type contextKey string
+
+const (
+	chainContextSeparator = " for chain "
+
+	// ContextKeySigContext is the key to retrieve the transaction's signature context object from a
+	// context.
+	ContextKeySigContext = contextKey("runtime/signature-context")
+)
 
 // Context is the interface used to derive the chain domain separation context.
 type Context interface {

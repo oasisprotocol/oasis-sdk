@@ -11,15 +11,15 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
-const (
+var (
 	// Callable methods.
-	methodDeposit  = "consensus.Deposit"
-	methodWithdraw = "consensus.Withdraw"
+	methodDeposit  = types.NewMethodName("consensus.Deposit", Deposit{})
+	methodWithdraw = types.NewMethodName("consensus.Withdraw", Withdraw{})
 
 	// Queries.
-	methodParameters = "consensus_accounts.Parameters"
-	methodBalance    = "consensus.Balance"
-	methodAccount    = "consensus.Account"
+	methodParameters = types.NewMethodName("consensus_accounts.Parameters", nil)
+	methodBalance    = types.NewMethodName("consensus.Balance", BalanceQuery{})
+	methodAccount    = types.NewMethodName("consensus.Account", AccountQuery{})
 )
 
 // V1 is the v1 consensus accounts module interface.

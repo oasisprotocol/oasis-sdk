@@ -1,6 +1,9 @@
 package accounts
 
 import (
+	"context"
+	"io"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -8,6 +11,16 @@ import (
 type Transfer struct {
 	To     types.Address   `json:"to"`
 	Amount types.BaseUnits `json:"amount"`
+}
+
+// PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
+func (f *Transfer) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+	types.PrettyPrintToAmount(ctx, prefix, w, &f.To, f.Amount)
+}
+
+// PrettyType returns a representation of the type that can be used for pretty printing.
+func (f *Transfer) PrettyType() (interface{}, error) {
+	return f, nil
 }
 
 // NonceQuery are the arguments for the accounts.Nonce query.
