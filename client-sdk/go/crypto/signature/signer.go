@@ -8,7 +8,7 @@ type Signer interface {
 
 	// ContextSign generates a signature with the private key over the context and
 	// message.
-	ContextSign(context, message []byte) ([]byte, error)
+	ContextSign(context Context, message []byte) ([]byte, error)
 
 	// Sign generates a signature with the private key over the message only.
 	Sign(message []byte) ([]byte, error)

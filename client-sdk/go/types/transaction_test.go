@@ -63,7 +63,11 @@ func TestTransactionSigning(t *testing.T) {
 	var runtimeID common.Namespace
 	_ = runtimeID.UnmarshalHex("8000000000000000000000000000000000000000000000000000000000000000")
 
-	chainCtx := signature.DeriveChainContext(runtimeID, "0000000000000000000000000000000000000000000000000000000000000001")
+	chainCtx := &signature.RichContext{
+		RuntimeID:    runtimeID,
+		ChainContext: "0000000000000000000000000000000000000000000000000000000000000001",
+		Base:         SignatureContextBase,
+	}
 
 	ts := tx.PrepareForSigning()
 	err = ts.AppendSign(chainCtx, signer)

@@ -71,7 +71,7 @@ func (pk PublicKey) Verify(context, message, signature []byte) bool {
 	if err != nil {
 		return false
 	}
-	data, err := PrepareSignerMessage(sdkSignature.Context(context), message)
+	data, err := PrepareSignerMessage(context, message)
 	if err != nil {
 		return false
 	}

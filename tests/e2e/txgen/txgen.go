@@ -71,7 +71,7 @@ func NewClient(clientNodeUnixSocketPath string, runtimeID common.Namespace) (cli
 func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.Context, error) {
 	info, err := rtc.GetInfo(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return info.ChainContext, nil
 }

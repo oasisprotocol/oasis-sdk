@@ -114,7 +114,7 @@ func sigspecForSigner(signer signature.Signer) types.SignatureAddressSpec {
 func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.Context, error) {
 	info, err := rtc.GetInfo(ctx)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return info.ChainContext, nil
 }
@@ -303,7 +303,8 @@ func kvInsertSpecialGreeting(rtc client.RuntimeClient, signer signature.Signer, 
 		Nonce:    nonce,
 		Greeting: greeting,
 	})
-	sig, err := signer.ContextSign([]byte("oasis-runtime-sdk-test/simplekv-special-greeting: v0"), paramsCBOR)
+	sigCtx := signature.RawContext("oasis-runtime-sdk-test/simplekv-special-greeting: v0")
+	sig, err := signer.ContextSign(sigCtx, paramsCBOR)
 	if err != nil {
 		return fmt.Errorf("signing special greeting: %w", err)
 	}

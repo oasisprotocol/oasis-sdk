@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/stretchr/testify/require"
 
 	sdkSignature "github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -30,50 +31,58 @@ func TestSecp256k1SignAndVerify(t *testing.T) {
 	require := require.New(t)
 	s := newTestSigner(t)
 
-	ctx1 := []byte("ctx1")
+	ctx1 := &sdkSignature.RichContext{
+		RuntimeID:    common.Namespace{},
+		ChainContext: "ctx1",
+		Base:         []byte("some base"),
+	}
 	msg1 := []byte("msg1")
 	sig1, err := s.ContextSign(ctx1, msg1)
 	require.NoError(err, "ContextSign")
 	require.NotNil(sig1, "signature should not be nil")
 
-	ver1 := s.Public().Verify(ctx1, msg1, sig1)
+	ver1 := s.Public().Verify(ctx1.Derive(), msg1, sig1)
 	require.True(ver1, "verification should succeed")
 
-	ctx2 := []byte("ctx2")
+	ctx2 := &sdkSignature.RichContext{
+		RuntimeID:    common.Namespace{},
+		ChainContext: "ctx2",
+		Base:         []byte("some base"),
+	}
 	msg2 := []byte("msg2")
 	sig2, err := s.ContextSign(ctx2, msg2)
 	require.NoError(err, "ContextSign")
 	require.NotNil(sig2, "signature should not be nil")
 
-	ver2 := s.Public().Verify(ctx2, msg2, sig2)
+	ver2 := s.Public().Verify(ctx2.Derive(), msg2, sig2)
 	require.True(ver2, "verification should succeed")
 
-	require.False(s.Public().Verify(ctx1, msg2, sig1))
-	require.False(s.Public().Verify(ctx1, msg2, sig2))
-	require.False(s.Public().Verify(ctx2, msg2, sig1))
-	require.False(s.Public().Verify(ctx2, msg1, sig2))
-	require.False(s.Public().Verify(ctx1, msg1, sig2))
-	require.False(s.Public().Verify(ctx2, msg2, sig1))
-	require.False(s.Public().Verify(ctx2, msg1, sig1))
+	require.False(s.Public().Verify(ctx1.Derive(), msg2, sig1))
+	require.False(s.Public().Verify(ctx1.Derive(), msg2, sig2))
+	require.False(s.Public().Verify(ctx2.Derive(), msg2, sig1))
+	require.False(s.Public().Verify(ctx2.Derive(), msg1, sig2))
+	require.False(s.Public().Verify(ctx1.Derive(), msg1, sig2))
+	require.False(s.Public().Verify(ctx2.Derive(), msg2, sig1))
+	require.False(s.Public().Verify(ctx2.Derive(), msg1, sig1))
 
-	require.False(s.Public().Verify(ctx2, []byte("foo"), sig2))
+	require.False(s.Public().Verify(ctx2.Derive(), []byte("foo"), sig2))
 	require.False(s.Public().Verify([]byte("bar"), msg2, sig2))
 
 	// Try the example from btcec too, the signature should match.
-	ctx3 := []byte("")
+	ctx3 := &sdkSignature.RawContext{}
 	msg3 := []byte("test message")
 	sig3, err := s.ContextSign(ctx3, msg3)
 	require.NoError(err, "ContextSign")
 	require.NotNil(sig3, "signature should not be nil")
 	require.EqualValues(hex.EncodeToString(sig3), "304502210082fa505a49af65ba0e90450dfb9a03e69947840bf49bba04ee0091fa5173124902205b33fae275be8e59d851568151c95fb15f18e5d23d4bff39e57333df0814bce4")
 
-	ver3 := s.Public().Verify(ctx3, msg3, sig3)
+	ver3 := s.Public().Verify(ctx3.Derive(), msg3, sig3)
 	require.True(ver3, "verification should succeed")
 
-	ver4 := s.Public().Verify(ctx3, msg3, []byte("asdfghjkl"))
+	ver4 := s.Public().Verify(ctx3.Derive(), msg3, []byte("asdfghjkl"))
 	require.False(ver4, "verification should fail")
 
-	ver5 := s.Public().Verify(ctx3, msg3, []byte(""))
+	ver5 := s.Public().Verify(ctx3.Derive(), msg3, []byte(""))
 	require.False(ver5, "verification should fail")
 }
 
@@ -121,17 +130,21 @@ func TestSecp256k1Reset(t *testing.T) {
 	require := require.New(t)
 	s := newTestSigner(t)
 
-	ctx1 := []byte("ctx1")
+	ctx1 := &sdkSignature.RichContext{
+		RuntimeID:    common.Namespace{},
+		ChainContext: "ctx1",
+		Base:         []byte("some base"),
+	}
 	msg1 := []byte("msg1")
 	sig1, err := s.ContextSign(ctx1, msg1)
 	require.NoError(err, "ContextSign")
 	require.NotNil(sig1, "signature should not be nil")
 
-	ver1 := s.Public().Verify(ctx1, msg1, sig1)
+	ver1 := s.Public().Verify(ctx1.Derive(), msg1, sig1)
 	require.True(ver1, "verification should succeed")
 
 	s.Reset()
 
-	ver2 := s.Public().Verify(ctx1, msg1, sig1)
+	ver2 := s.Public().Verify(ctx1.Derive(), msg1, sig1)
 	require.False(ver2, "verification should fail after reset")
 }

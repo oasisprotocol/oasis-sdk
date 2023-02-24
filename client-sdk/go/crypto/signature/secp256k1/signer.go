@@ -19,8 +19,8 @@ func (s Signer) Public() sdkSignature.PublicKey {
 	return PublicKey(*s.privateKey.PubKey())
 }
 
-func (s Signer) ContextSign(context, message []byte) ([]byte, error) {
-	data, err := PrepareSignerMessage(sdkSignature.Context(context), message)
+func (s Signer) ContextSign(context sdkSignature.Context, message []byte) ([]byte, error) {
+	data, err := PrepareSignerMessage(context.Derive(), message)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func NewSigner(pk []byte) sdkSignature.Signer {
 }
 
 // PrepareSignerMessage prepares a context and message for signing by a Signer.
-func PrepareSignerMessage(context sdkSignature.Context, message []byte) ([]byte, error) {
-	h := hash.NewFromBytes([]byte(context), message)
+func PrepareSignerMessage(context, message []byte) ([]byte, error) {
+	h := hash.NewFromBytes(context, message)
 	return h.MarshalBinary()
 }

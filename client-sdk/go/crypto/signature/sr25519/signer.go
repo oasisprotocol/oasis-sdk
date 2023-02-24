@@ -18,8 +18,8 @@ func (s *signer) Public() signature.PublicKey {
 	}
 }
 
-func (s *signer) ContextSign(context, message []byte) ([]byte, error) {
-	transcript := newSigningTranscript(context, message)
+func (s *signer) ContextSign(context signature.Context, message []byte) ([]byte, error) {
+	transcript := newSigningTranscript(context.Derive(), message)
 
 	sig, err := s.keyPair.Sign(nil, transcript)
 	if err != nil {
