@@ -930,6 +930,9 @@ func evmSuicideTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity)
 		return fmt.Errorf("suicide method call should fail")
 	case strings.Contains(err.Error(), "SELFDESTRUCT not supported"):
 		// Expected error message.
+		if !strings.Contains(err.Error(), "module: evm code: 2") {
+			return fmt.Errorf("error should include module and evm code: %w", err)
+		}
 	default:
 		return fmt.Errorf("unexpected suicide call error: %w", err)
 	}

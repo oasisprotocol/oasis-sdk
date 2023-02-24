@@ -2,7 +2,6 @@ package callformat
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 
 	"github.com/oasisprotocol/deoxysii"
@@ -82,20 +81,19 @@ func DecodeResult(result *types.CallResult, meta interface{}) (*types.CallResult
 		// In case of plain-text data format, we simply pass on the result unchanged.
 		return result, nil
 	case *metaEncryptedX25519DeoxysII:
-		// Make sure the result makes sense in this context.
+		var envelope types.ResultEnvelopeX25519DeoxysII
 		switch {
 		case result.IsUnknown():
+			if err := cbor.Unmarshal(result.Unknown, &envelope); err != nil {
+				return nil, fmt.Errorf("callformat: malformed result envelope: %w", err)
+			}
 		case result.IsSuccess():
-			// Unexpected as a successful result shouldn't be plain.
-			return nil, fmt.Errorf("callformat: unexpected result: %s", base64.StdEncoding.EncodeToString(result.Ok))
+			if err := cbor.Unmarshal(result.Ok, &envelope); err != nil {
+				return nil, fmt.Errorf("callformat: malformed result envelope: %w", err)
+			}
 		default:
 			// Submission could fail before call format processing so the result would be plain.
 			return nil, result.Failed
-		}
-
-		var envelope types.ResultEnvelopeX25519DeoxysII
-		if err := cbor.Unmarshal(result.Unknown, &envelope); err != nil {
-			return nil, fmt.Errorf("callformat: malformed result envelope: %w", err)
 		}
 
 		// Open sealed envelope.
