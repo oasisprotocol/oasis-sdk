@@ -69,8 +69,8 @@ runs:
               popd
             done
           fi
-          echo "::set-output name=hashes::$(cd "$CARGO_TARGET_DIR/$TARGET/release"; shasum -a 512256 -b $(tr ',' ' ' <<< "${{ inputs.binaries }}") | cut -d' ' -f1 | tr '\n' ',' | sed -e 's/,$//g')"
-          echo "::set-output name=build-path::$(sed -e 's/^\/src//g' <<< "$CARGO_TARGET_DIR")/$TARGET/release"
+          echo "hashes=$(cd "$CARGO_TARGET_DIR/$TARGET/release"; shasum -a 512256 -b $(tr ',' ' ' <<< "${{ inputs.binaries }}") | cut -d' ' -f1 | tr '\n' ',' | sed -e 's/,$//g')" >> $GITHUB_OUTPUT
+          echo "build-path=$(sed -e 's/^\/src//g' <<< "$CARGO_TARGET_DIR")/$TARGET/release" >> $GITHUB_OUTPUT
           if [ "${{ inputs.clean }}" == "yes" ]; then
             cargo clean
           fi

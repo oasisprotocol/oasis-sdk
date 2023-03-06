@@ -10,4 +10,4 @@ runs:
     - shell: bash
       id: version
       run: |
-        echo "::set-output name=version::$(sed -e 's/^nightly-//g' < rust-toolchain)"
+        echo "version=$(sed -e 's/^nightly-//g' < rust-toolchain)" >> $GITHUB_OUTPUT

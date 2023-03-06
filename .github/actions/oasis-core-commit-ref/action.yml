@@ -11,4 +11,4 @@ runs:
       id: ref
       run: |
         REF=$(cargo metadata --format-version 1 | jq -cr '.packages[] | select(.name == "oasis-core-runtime") | .source' | grep -o '\?.*#' | cut -d= -f2 | tr -d '#')
-        echo "::set-output name=ref::$(echo ${REF})"
+        echo "ref=$(echo ${REF})" >> $GITHUB_OUTPUT

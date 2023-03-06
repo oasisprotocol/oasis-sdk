@@ -36,8 +36,8 @@ jobs:
         run: |
           . tests/consts.sh
           . tests/paths.sh
-          echo "::set-output name=oasis_core_node_binary_path::$(echo ${TEST_NODE_BINARY})"
-          echo "::set-output name=oasis_core_runtime_loader_path::$(echo ${TEST_RUNTIME_LOADER})"
+          echo "oasis_core_node_binary_path=$(echo ${TEST_NODE_BINARY})" >> ${GITHUB_OUTPUT}
+          echo "oasis_core_runtime_loader_path=$(echo ${TEST_RUNTIME_LOADER})" >> ${GITHUB_OUTPUT}
         env:
           TESTS_DIR: tests
 
