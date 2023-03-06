@@ -38,6 +38,14 @@ var (
 	_ encoding.TextUnmarshaler   = (*Address)(nil)
 )
 
+type contextKey string
+
+// ContextKeyAccountNames is the key to retrieve the public key to account name map from context.
+const ContextKeyAccountNames = contextKey("runtime/account-names")
+
+// AccountNames maps public key or address to user-defined account name for pretty printing.
+type AccountNames map[string]string
+
 // SignatureAddressSpec is information for signature-based authentication and public key-based
 // address derivation.
 type SignatureAddressSpec struct {

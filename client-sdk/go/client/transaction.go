@@ -20,7 +20,7 @@ type TransactionBuilder struct {
 }
 
 // NewTransactionBuilder creates a new transaction builder.
-func NewTransactionBuilder(rc RuntimeClient, method string, body interface{}) *TransactionBuilder {
+func NewTransactionBuilder(rc RuntimeClient, method types.MethodName, body interface{}) *TransactionBuilder {
 	return &TransactionBuilder{
 		rc: rc,
 		tx: types.NewTransaction(nil, method, body),

@@ -4,12 +4,11 @@ import (
 	"context"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
-const (
-	// Queries.
-	methodParameters = "consensus.Parameters"
-)
+// Queries.
+var methodParameters = types.NewMethodName("consensus.Parameters", nil)
 
 // V1 is the v1 consensus module interface.
 type V1 interface {

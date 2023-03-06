@@ -1,6 +1,11 @@
 package consensusaccounts
 
-import "github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
+import (
+	"context"
+	"io"
+
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
+)
 
 // Deposit are the arguments for consensus.Deposit method.
 type Deposit struct {
@@ -8,10 +13,30 @@ type Deposit struct {
 	Amount types.BaseUnits `json:"amount"`
 }
 
+// PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
+func (f *Deposit) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+	types.PrettyPrintToAmount(ctx, prefix, w, f.To, f.Amount)
+}
+
+// PrettyType returns a representation of the type that can be used for pretty printing.
+func (f *Deposit) PrettyType() (interface{}, error) {
+	return f, nil
+}
+
 // Withdraw are the arguments for consensus.Withdraw method.
 type Withdraw struct {
 	To     *types.Address  `json:"to,omitempty"`
 	Amount types.BaseUnits `json:"amount"`
+}
+
+// PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
+func (f *Withdraw) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+	types.PrettyPrintToAmount(ctx, prefix, w, f.To, f.Amount)
+}
+
+// PrettyType returns a representation of the type that can be used for pretty printing.
+func (f *Withdraw) PrettyType() (interface{}, error) {
+	return f, nil
 }
 
 // BalanceQuery are the arguments for consensus.Balance method.

@@ -87,7 +87,7 @@ type RuntimeClient interface {
 	WatchEvents(ctx context.Context, decoders []EventDecoder, includeUndecoded bool) (<-chan *BlockEvents, error)
 
 	// Query makes a runtime-specific query.
-	Query(ctx context.Context, round uint64, method string, args, rsp interface{}) error
+	Query(ctx context.Context, round uint64, method types.MethodName, args, rsp interface{}) error
 }
 
 // EventDecoder is an event decoder interface.
@@ -448,11 +448,11 @@ func (rc *runtimeClient) WatchEvents(ctx context.Context, decoders []EventDecode
 }
 
 // Implements RuntimeClient.
-func (rc *runtimeClient) Query(ctx context.Context, round uint64, method string, args, rsp interface{}) error {
+func (rc *runtimeClient) Query(ctx context.Context, round uint64, method types.MethodName, args, rsp interface{}) error {
 	raw, err := rc.cc.Query(ctx, &coreClient.QueryRequest{
 		RuntimeID: rc.runtimeID,
 		Round:     round,
-		Method:    method,
+		Method:    string(method),
 		Args:      cbor.Marshal(args),
 	})
 	if err != nil {

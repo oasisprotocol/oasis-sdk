@@ -2,17 +2,29 @@
 package types
 
 import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"io"
+	"reflect"
+	"sync"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
+	"github.com/oasisprotocol/oasis-core/go/common/prettyprint"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 )
 
-// SignatureContextBase is the transaction signature domain separation context base.
-var SignatureContextBase = []byte("oasis-runtime-sdk/tx: v0")
+var (
+	// SignatureContextBase is the transaction signature domain separation context base.
+	SignatureContextBase = []byte("oasis-runtime-sdk/tx: v0")
+
+	// registeredMethods maps method name -> class instance.
+	registeredMethods sync.Map
+)
 
 // LatestTransactionVersion is the latest transaction format version.
 const LatestTransactionVersion = 1
@@ -85,6 +97,47 @@ func (ut *UnverifiedTransaction) Verify(ctx signature.Context) (*Transaction, er
 	}
 
 	return &tx, nil
+}
+
+// PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
+func (ut *UnverifiedTransaction) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+	fmt.Fprintf(w, "%sHash: %s\n", prefix, ut.Hash())
+
+	var tx Transaction
+	if err := cbor.Unmarshal(ut.Body, &tx); err != nil {
+		fmt.Fprintf(w, "%s  <error: %s>\n", prefix, fmt.Errorf("transaction: malformed transaction body: %w", err))
+		return
+	}
+
+	// Verify and print each signer and signature.
+	publicKeys := make([]PublicKey, 0, len(ut.AuthProofs))
+	signatures := make([][]byte, 0, len(ut.AuthProofs))
+	for i, ap := range ut.AuthProofs {
+		pks, sigs, err := tx.AuthInfo.SignerInfo[i].AddressSpec.Batch(ap)
+		if err != nil {
+			fmt.Fprintf(w, "%s  <error: %s>\n", prefix, fmt.Errorf("transaction: auth proof %d batch: %w", i, err))
+		}
+		publicKeys = append(publicKeys, pks...)
+		signatures = append(signatures, sigs...)
+	}
+
+	fmt.Fprintf(w, "%sSigner(s):\n", prefix)
+	sigCtx, _ := ctx.Value(signature.ContextKeySigContext).(signature.Context)
+	for i, pk := range publicKeys {
+		fmt.Fprintf(w, "%s%d. %s\n", prefix, i+1, pk)
+		fmt.Fprintf(w, "%s   (signature: %s)\n", prefix, base64.StdEncoding.EncodeToString(signatures[i]))
+		if !pk.Verify(sigCtx.Derive(), ut.Body, signatures[i]) {
+			fmt.Fprintf(w, "%s   [INVALID SIGNATURE]\n", prefix)
+		}
+	}
+
+	fmt.Fprintf(w, "%sContent:\n", prefix)
+	tx.PrettyPrint(ctx, prefix+"  ", w)
+}
+
+// PrettyType returns a representation of the type that can be used for pretty printing.
+func (ut *UnverifiedTransaction) PrettyType() (interface{}, error) {
+	return ut, nil
 }
 
 type TransactionSigner struct {
@@ -203,10 +256,29 @@ func (t *Transaction) PrepareForSigning() *TransactionSigner {
 	}
 }
 
-// PrettyType returns a representation of the Transaction that can be used for pretty printing.
-func (t *Transaction) PrettyType(txBody interface{}) (*PrettyTransaction, error) {
-	if err := cbor.Unmarshal(t.Call.Body, txBody); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal transaction call body: %w", err)
+// PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
+func (t *Transaction) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+	pt, err := t.PrettyType()
+	if err != nil {
+		fmt.Fprintf(w, "%s<error: %s>\n", prefix, err)
+	}
+	pt.(prettyprint.PrettyPrinter).PrettyPrint(ctx, prefix, w)
+}
+
+// PrettyType returns a representation of the type that can be used for pretty printing.
+func (t *Transaction) PrettyType() (interface{}, error) {
+	var body interface{}
+	bodyType := t.Call.Method.BodyType()
+	if bodyType != nil {
+		// Use the original type.
+		body = reflect.New(reflect.TypeOf(bodyType)).Interface()
+	} else {
+		// Assume a generic map.
+		body = &map[string]interface{}{}
+	}
+	// Try decoding it. If it fails, just take the raw data.
+	if err := cbor.Unmarshal(t.Call.Body, body); err != nil {
+		body = t.Call.Body
 	}
 
 	return &PrettyTransaction{
@@ -214,14 +286,14 @@ func (t *Transaction) PrettyType(txBody interface{}) (*PrettyTransaction, error)
 		Call: PrettyCall{
 			Format: t.Call.Format,
 			Method: t.Call.Method,
-			Body:   txBody,
+			Body:   body,
 		},
 		AuthInfo: t.AuthInfo,
 	}, nil
 }
 
 // NewTransaction creates a new unsigned transaction.
-func NewTransaction(fee *Fee, method string, body interface{}) *Transaction {
+func NewTransaction(fee *Fee, method MethodName, body interface{}) *Transaction {
 	tx := &Transaction{
 		Versioned: cbor.NewVersioned(LatestTransactionVersion),
 		Call: Call{
@@ -290,7 +362,7 @@ func (cf CallFormat) String() string {
 // Call is a method call.
 type Call struct {
 	Format   CallFormat      `json:"format,omitempty"`
-	Method   string          `json:"method,omitempty"`
+	Method   MethodName      `json:"method,omitempty"`
 	Body     cbor.RawMessage `json:"body"`
 	ReadOnly bool            `json:"ro,omitempty"`
 }
@@ -328,6 +400,24 @@ func (f *Fee) GasPrice() *quantity.Quantity {
 		panic(err)
 	}
 	return amt
+}
+
+// PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
+func (f *Fee) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+	fmt.Fprintf(w, "%sAmount: ", prefix)
+	f.Amount.PrettyPrint(ctx, prefix, w)
+	fmt.Fprintln(w)
+
+	fmt.Fprintf(w, "%sGas limit: %d\n", prefix, f.Gas)
+	fmt.Fprintf(w, "%s(gas price: ", prefix)
+	gp := NewBaseUnits(*f.GasPrice(), NativeDenomination)
+	gp.PrettyPrint(ctx, prefix, w)
+	fmt.Fprintln(w, " per gas unit)")
+}
+
+// PrettyType returns a representation of the type that can be used for pretty printing.
+func (f *Fee) PrettyType() (interface{}, error) {
+	return f, nil
 }
 
 // CallerAddress is a caller address.
@@ -419,9 +509,100 @@ type PrettyTransaction struct {
 	AuthInfo AuthInfo   `json:"ai"`
 }
 
+// PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
+func (ptx *PrettyTransaction) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+	fmt.Fprintf(w, "%sFormat: %s\n", prefix, ptx.Call.Format)
+
+	if ptx.Call.Method != "" {
+		fmt.Fprintf(w, "%sMethod: %s\n", prefix, ptx.Call.Method)
+	}
+
+	fmt.Fprintf(w, "%sBody:\n", prefix)
+	// If the body type supports pretty printing, use that.
+	if pp, ok := ptx.Call.Body.(prettyprint.PrettyPrinter); ok {
+		pp.PrettyPrint(ctx, prefix+"  ", w)
+	} else {
+		// Otherwise, just serialize into JSON and display that.
+		data, err := json.MarshalIndent(ptx.Call.Body, prefix+"  ", "  ")
+		if err != nil {
+			fmt.Fprintf(w, "%s<error: %s>\n", prefix+"  ", err)
+		}
+		fmt.Fprintf(w, "%s%s\n", prefix+"  ", data)
+	}
+
+	fmt.Fprintf(w, "%sAuthorized signer(s):\n", prefix)
+	for idx, si := range ptx.AuthInfo.SignerInfo {
+		fmt.Fprintf(w, "%s%d. %s (%s)\n", prefix, idx+1, si.AddressSpec.Signature.PublicKey(), prettyAddressSpecSig(si.AddressSpec.Signature))
+		fmt.Fprintf(w, "%s   Nonce: %d\n", prefix, si.Nonce)
+	}
+
+	fmt.Fprintf(w, "%sFee:\n", prefix)
+	ptx.AuthInfo.Fee.PrettyPrint(ctx, prefix+"  ", w)
+}
+
+func prettyAddressSpecSig(spec interface{}) string {
+	specMap := map[string]interface{}{}
+
+	specBytes, _ := json.Marshal(spec)
+	_ = json.Unmarshal(specBytes, &specMap)
+
+	for k := range specMap {
+		return k
+	}
+	return ""
+}
+
+func (ptx *PrettyTransaction) PrettyType() (interface{}, error) {
+	return ptx, nil
+}
+
 // PrettyCall returns a representation of the type that can be used for pretty printing.
 type PrettyCall struct {
 	Format CallFormat  `json:"format,omitempty"`
-	Method string      `json:"method,omitempty"`
+	Method MethodName  `json:"method,omitempty"`
 	Body   interface{} `json:"body"`
+}
+
+// MethodName is a method name.
+type MethodName string
+
+// SanityCheck performs a basic sanity check on the method name.
+func (m MethodName) SanityCheck() error {
+	if len(m) == 0 {
+		return fmt.Errorf("transaction: empty method")
+	}
+
+	return nil
+}
+
+// BodyType returns the registered body type associated with this method.
+func (m MethodName) BodyType() interface{} {
+	bodyType, _ := registeredMethods.Load(string(m))
+	return bodyType
+}
+
+// NewMethodName creates a new method name.
+//
+// Module and method pair must be unique. If they are not, this method
+// will panic.
+func NewMethodName(name string, bodyType interface{}) MethodName {
+	// Check for duplicate method names.
+	if _, isRegistered := registeredMethods.Load(name); isRegistered {
+		panic(fmt.Errorf("transaction: method already registered: %s", name))
+	}
+	registeredMethods.Store(name, bodyType)
+
+	return MethodName(name)
+}
+
+// MethodNames returns a map of all registered method names and its class instances.
+func MethodNames() map[string]interface{} {
+	// Make a copy of method names instead of exposing it directly.
+	cp := map[string]interface{}{}
+	registeredMethods.Range(func(k, v interface{}) bool {
+		cp[fmt.Sprint(k)] = v
+		return true
+	})
+
+	return cp
 }

@@ -21,7 +21,7 @@ func ParseConsensusDenomination(net *config.Network, amount string) (*types.Quan
 
 // ParseParaTimeDenomination parses an amount for the given ParaTime denomination.
 func ParseParaTimeDenomination(pt *config.ParaTime, amount string, denom types.Denomination) (*types.BaseUnits, error) {
-	return parseDenomination(pt.GetDenominationInfo(denom), amount, denom)
+	return parseDenomination(pt.GetDenominationInfo(string(denom)), amount, denom)
 }
 
 func parseDenomination(di *config.DenominationInfo, amount string, denom types.Denomination) (*types.BaseUnits, error) {
@@ -47,7 +47,7 @@ func FormatConsensusDenomination(net *config.Network, amount types.Quantity) str
 
 // FormatParaTimeDenomination formats the given base unit amount as a ParaTime denomination.
 func FormatParaTimeDenomination(pt *config.ParaTime, amount types.BaseUnits) string {
-	return formatDenomination(pt.GetDenominationInfo(amount.Denomination), amount.Amount)
+	return formatDenomination(pt.GetDenominationInfo(string(amount.Denomination)), amount.Amount)
 }
 
 func formatDenomination(di *config.DenominationInfo, amount types.Quantity) string {

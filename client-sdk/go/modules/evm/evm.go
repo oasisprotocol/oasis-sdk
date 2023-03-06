@@ -10,17 +10,17 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
-const (
+var (
 	// Callable methods.
-	methodCreate = "evm.Create"
-	methodCall   = "evm.Call"
+	methodCreate = types.NewMethodName("evm.Create", Create{})
+	methodCall   = types.NewMethodName("evm.Call", Call{})
 
 	// Queries.
-	methodStorage      = "evm.Storage"
-	methodCode         = "evm.Code"
-	methodBalance      = "evm.Balance"
-	methodSimulateCall = "evm.SimulateCall"
-	methodParameters   = "evm.Parameters"
+	methodStorage      = types.NewMethodName("evm.Storage", StorageQuery{})
+	methodCode         = types.NewMethodName("evm.Code", CodeQuery{})
+	methodBalance      = types.NewMethodName("evm.Balance", BalanceQuery{})
+	methodSimulateCall = types.NewMethodName("evm.SimulateCall", SimulateCallQuery{})
+	methodParameters   = types.NewMethodName("evm.Parameters", nil)
 )
 
 // V1 is the v1 EVM module interface.

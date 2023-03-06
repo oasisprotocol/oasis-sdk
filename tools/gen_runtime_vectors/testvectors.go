@@ -57,13 +57,13 @@ func MakeRuntimeTestVector(tx *types.Transaction, txBody interface{}, sigCtx *si
 	}
 
 	sigTx := ts.UnverifiedTransaction()
-	prettyTx, err := tx.PrettyType(txBody)
+	prettyTx, err := tx.PrettyType()
 	if err != nil {
 		log.Fatalf("failed to obtain pretty tx: %v", err)
 	}
 	prettyMethod := "[unknown]"
 	if tx.Call.Method != "" {
-		prettyMethod = tx.Call.Method
+		prettyMethod = string(tx.Call.Method)
 	}
 
 	meta := signature.NewHwContext(sigCtx)

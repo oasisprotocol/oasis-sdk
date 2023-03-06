@@ -10,14 +10,14 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
-const (
+var (
 	// Queries.
-	methodParameters        = "core.Parameters"
-	methodEstimateGas       = "core.EstimateGas"
-	methodMinGasPrice       = "core.MinGasPrice"
-	methodRuntimeInfo       = "core.RuntimeInfo"
-	methodCallDataPublicKey = "core.CallDataPublicKey"
-	methodExecuteReadOnlyTx = "core.ExecuteReadOnlyTx"
+	methodParameters        = types.NewMethodName("core.Parameters", nil)
+	methodEstimateGas       = types.NewMethodName("core.EstimateGas", EstimateGasQuery{})
+	methodMinGasPrice       = types.NewMethodName("core.MinGasPrice", nil)
+	methodRuntimeInfo       = types.NewMethodName("core.RuntimeInfo", nil)
+	methodCallDataPublicKey = types.NewMethodName("core.CallDataPublicKey", nil)
+	methodExecuteReadOnlyTx = types.NewMethodName("core.ExecuteReadOnlyTx", ExecuteReadOnlyTxQuery{})
 )
 
 // V1 is the v1 core module interface.

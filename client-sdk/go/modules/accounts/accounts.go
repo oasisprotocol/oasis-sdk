@@ -10,16 +10,16 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
-const (
+var (
 	// Callable methods.
-	methodTransfer = "accounts.Transfer"
+	methodTransfer = types.NewMethodName("accounts.Transfer", Transfer{})
 
 	// Queries.
-	methodParameters       = "accounts.Parameters"
-	methodNonce            = "accounts.Nonce"
-	methodBalances         = "accounts.Balances"
-	methodAddresses        = "accounts.Addresses"
-	methodDenominationInfo = "accounts.DenominationInfo"
+	methodParameters       = types.NewMethodName("accounts.Parameters", nil)
+	methodNonce            = types.NewMethodName("accounts.Nonce", NonceQuery{})
+	methodBalances         = types.NewMethodName("accounts.Balances", BalancesQuery{})
+	methodAddresses        = types.NewMethodName("accounts.Addresses", AddressesQuery{})
+	methodDenominationInfo = types.NewMethodName("accounts.DenominationInfo", DenominationInfoQuery{})
 )
 
 // V1 is the v1 accounts module interface.

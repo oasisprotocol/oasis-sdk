@@ -4,11 +4,17 @@ import (
 	"fmt"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
-// NativeDenominationKey is the key used to signify the native denomination.
-const NativeDenominationKey = "_"
+type contextKey string
+
+const (
+	// NativeDenominationKey is the key used to signify the native denomination.
+	NativeDenominationKey = "_"
+
+	// ContextKeyParaTimeCfg is the key to retrieve the current ParaTime config from a context.
+	ContextKeyParaTimeCfg = contextKey("runtime/paratime-cfg")
+)
 
 // ParaTimes contains the configuration of supported paratimes.
 type ParaTimes struct {
@@ -145,12 +151,12 @@ func (p *ParaTime) Namespace() common.Namespace {
 // GetDenominationInfo returns the denomination information for the given denomination.
 //
 // In case the given denomination does not exist, it provides sane defaults.
-func (p *ParaTime) GetDenominationInfo(d types.Denomination) *DenominationInfo {
+func (p *ParaTime) GetDenominationInfo(d string) *DenominationInfo {
 	var di *DenominationInfo
-	if d.IsNative() {
+	if len(d) == 0 {
 		di = p.Denominations[NativeDenominationKey]
 	} else {
-		di = p.Denominations[string(d)]
+		di = p.Denominations[d]
 	}
 
 	if di != nil {
@@ -159,6 +165,6 @@ func (p *ParaTime) GetDenominationInfo(d types.Denomination) *DenominationInfo {
 
 	return &DenominationInfo{
 		Decimals: 9,
-		Symbol:   string(d),
+		Symbol:   d,
 	}
 }

@@ -4,12 +4,11 @@ import (
 	"context"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
-const (
-	// Queries.
-	methodParameters = "rewards.Parameters"
-)
+// Queries.
+var methodParameters = types.NewMethodName("rewards.Parameters", nil)
 
 // V1 is the v1 rewards module interface.
 type V1 interface {

@@ -14,23 +14,23 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
-const (
+var (
 	// Callable methods.
-	methodUpload              = "contracts.Upload"
-	methodInstantiate         = "contracts.Instantiate"
-	methodCall                = "contracts.Call"
-	methodUpgrade             = "contracts.Upgrade"
-	methodChangeUpgradePolicy = "contracts.ChangeUpgradePolicy"
+	methodUpload              = types.NewMethodName("contracts.Upload", Upload{})
+	methodInstantiate         = types.NewMethodName("contracts.Instantiate", Instantiate{})
+	methodCall                = types.NewMethodName("contracts.Call", Call{})
+	methodUpgrade             = types.NewMethodName("contracts.Upgrade", Upgrade{})
+	methodChangeUpgradePolicy = types.NewMethodName("contracts.ChangeUpgradePolicy", ChangeUpgradePolicy{})
 
 	// Queries.
-	methodCode               = "contracts.Code"
-	methodCodeStorage        = "contracts.CodeStorage"
-	methodInstance           = "contracts.Instance"
-	methodInstanceStorage    = "contracts.InstanceStorage"
-	methodInstanceRawStorage = "contracts.InstanceRawStorage"
-	methodPublicKey          = "contracts.PublicKey"
-	methodCustom             = "contracts.Custom"
-	methodParameters         = "contracts.Parameters"
+	methodCode               = types.NewMethodName("contracts.Code", CodeQuery{})
+	methodCodeStorage        = types.NewMethodName("contracts.CodeStorage", CodeStorageQuery{})
+	methodInstance           = types.NewMethodName("contracts.Instance", InstanceQuery{})
+	methodInstanceStorage    = types.NewMethodName("contracts.InstanceStorage", InstanceStorageQuery{})
+	methodInstanceRawStorage = types.NewMethodName("contracts.InstanceRawStorage", InstanceRawStorageQuery{})
+	methodPublicKey          = types.NewMethodName("contracts.PublicKey", PublicKeyQuery{})
+	methodCustom             = types.NewMethodName("contracts.Custom", CustomQuery{})
+	methodParameters         = types.NewMethodName("contracts.Parameters", nil)
 )
 
 // V1 is the v1 contracts module interface.
