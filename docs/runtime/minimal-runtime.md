@@ -19,10 +19,10 @@ directory for version control using Git. The rest of the guide assumes that you
 are executing commands from within this directory.
 
 Since the Runtime SDK requires a nightly version of the Rust toolchain, you need
-to specify a version to use by creating a special file called `rust-toolchain`
-containing the following information:
+to specify a version to use by creating a special file called
+`rust-toolchain.toml` containing the following information:
 
-![code](../../examples/runtime-sdk/minimal-runtime/rust-toolchain)
+![code](../../examples/runtime-sdk/minimal-runtime/rust-toolchain.toml)
 
 Additionally, due to the requirements of some upstream dependencies, you need to
 configure Cargo to always build with specific target CPU platform features
@@ -45,17 +45,17 @@ as follows:
 ```
 minimal-runtime
 ├── .cargo
-│   └── config      # Cargo configuration.
-├── Cargo.lock      # Rust dependency tree checksums.
-├── Cargo.toml      # Rust crate defintion.
-├── rust-toolchain  # Rust toolchain version configuration.
+│   └── config           # Cargo configuration.
+├── Cargo.lock           # Rust dependency tree checksums.
+├── Cargo.toml           # Rust crate defintion.
+├── rust-toolchain.toml  # Rust toolchain version configuration.
 ├── src
-│   ├── lib.rs      # The runtime definition.
-│   └── main.rs     # Some boilerplate for building the runtime.
+│   ├── lib.rs           # The runtime definition.
+│   └── main.rs          # Some boilerplate for building the runtime.
 └── test
-    ├── go.mod      # Go module definition
-    ├── go.sum      # Go dependency tree checksums.
-    └── test.go     # Test client implementation.
+    ├── go.mod           # Go module definition
+    ├── go.sum           # Go dependency tree checksums.
+    └── test.go          # Test client implementation.
 ```
 
 [`cargo`]: https://doc.rust-lang.org/cargo

@@ -30,10 +30,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          components: rustfmt # rustfmt is required for macros tests.
-          target: wasm32-unknown-unknown # For building test contracts.
+        run: rustup show
 
       - name: Build test contracts
         working-directory: tests/contracts/hello
@@ -67,16 +64,10 @@ jobs:
           sudo apt-get install gcc-multilib clang-11
 
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          components: rustfmt # rustfmt is required for macros tests.
-          target: x86_64-fortanix-unknown-sgx
+        run: rustup show
 
       - name: Build for SGX
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --target x86_64-fortanix-unknown-sgx
+        run: cargo build --target x86_64-fortanix-unknown-sgx
         env:
           CFLAGS_x86_64_fortanix_unknown_sgx: -isystem/usr/include/x86_64-linux-gnu -mlvi-hardening -mllvm -x86-experimental-lvi-inline-asm-hardening
           CC_x86_64_fortanix_unknown_sgx: clang-11
@@ -368,9 +359,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          target: wasm32-unknown-unknown # For building test contracts.
+        run: rustup show
 
       - name: Set up Go 1.18
         uses: actions/setup-go@v3
@@ -478,7 +467,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+        run: rustup show
 
       - name: Set up Go 1.18
         uses: actions/setup-go@v3

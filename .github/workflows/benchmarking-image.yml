@@ -42,15 +42,18 @@ jobs:
           TESTS_DIR: tests
 
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+        run: rustup show
+
       - name: Set up Go 1.18
         uses: actions/setup-go@v3
         with:
           go-version: "1.18.x"
+
       - name: Install Oasis dependencies
         run: |
           sudo apt-get update
           sudo apt-get install bubblewrap build-essential libseccomp-dev libssl-dev protobuf-compiler
+
       - name: Build benchmarks
         working-directory: tests/benchmark
         run: ./build-benchmarks.sh
