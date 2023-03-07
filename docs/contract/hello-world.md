@@ -21,18 +21,18 @@ Since the Contract SDK requires a nightly version of the Rust toolchain, you
 need to specify a version to use by creating a special file called
 `rust-toolchain` containing the following information:
 
-![code](../../examples/contract-sdk/hello-world/rust-toolchain)
+![code](../../examples/contract-sdk/hello-world/rust-toolchain.toml)
 
 After you complete this guide, the minimal runtime directory structure will look
 as follows:
 
 ```
 hello-world
-├── Cargo.lock      # Dependency tree checksums (generated on first compilation).
-├── Cargo.toml      # Rust crate definition.
-├── rust-toolchain  # Rust toolchain version configuration.
+├── Cargo.lock           # Dependency tree checksums (generated on first compilation).
+├── Cargo.toml           # Rust crate definition.
+├── rust-toolchain.toml  # Rust toolchain version configuration.
 └── src
-    └── lib.rs      # Smart contract source code.
+    └── lib.rs           # Smart contract source code.
 ```
 
 [`cargo`]: https://doc.rust-lang.org/cargo

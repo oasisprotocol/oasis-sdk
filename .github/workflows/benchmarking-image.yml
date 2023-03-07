@@ -36,21 +36,24 @@ jobs:
         run: |
           . tests/consts.sh
           . tests/paths.sh
-          echo "::set-output name=oasis_core_node_binary_path::$(echo ${TEST_NODE_BINARY})"
-          echo "::set-output name=oasis_core_runtime_loader_path::$(echo ${TEST_RUNTIME_LOADER})"
+          echo "oasis_core_node_binary_path=$(echo ${TEST_NODE_BINARY})" >> ${GITHUB_OUTPUT}
+          echo "oasis_core_runtime_loader_path=$(echo ${TEST_RUNTIME_LOADER})" >> ${GITHUB_OUTPUT}
         env:
           TESTS_DIR: tests
 
       - name: Set up Rust
-        uses: actions-rs/toolchain@v1
+        run: rustup show
+
       - name: Set up Go 1.18
         uses: actions/setup-go@v3
         with:
           go-version: "1.18.x"
+
       - name: Install Oasis dependencies
         run: |
           sudo apt-get update
           sudo apt-get install bubblewrap build-essential libseccomp-dev libssl-dev protobuf-compiler
+
       - name: Build benchmarks
         working-directory: tests/benchmark
         run: ./build-benchmarks.sh

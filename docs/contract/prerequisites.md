@@ -49,13 +49,13 @@ version of Rust on your system.
 #### Rust Toolchain Version
 
 The version of the Rust toolchain we use in the Oasis SDK is specified in the
-[rust-toolchain] file.
+[`rust-toolchain.toml`] file.
 
 The rustup-installed versions of `cargo`, `rustc` and other tools will
 [automatically detect this file and use the appropriate version of the Rust
 toolchain][rust-toolchain-precedence]. When you are building applications that
-use the SDK, it is recommended that you copy the same [rust-toolchain] file to
-your project's top-level directory as well.
+use the SDK, it is recommended that you copy the same [`rust-toolchain.toml`]
+file to your project's top-level directory as well.
 
 To install the appropriate version of the Rust toolchain, make sure you are
 in the project directory and run:
@@ -77,21 +77,12 @@ nightly-2022-08-22-x86_64-unknown-linux-gnu (overridden by '/code/rust-toolchain
 rustc 1.65.0-nightly (c0941dfb5 2022-08-21)
 ```
 
-#### WebAssembly Target Support
-
-In order to be able to compile Rust programs into WebAssembly you need to also
-install the WebAssembly target by running:
-
-```
-rustup target add wasm32-unknown-unknown
-```
-
 <!-- markdownlint-disable line-length -->
 [rustup]: https://rustup.rs/
 [rust-upstream-rustup]: https://www.rust-lang.org/tools/install
 [download `rustup-init` executable for your platform]: https://rust-lang.github.io/rustup/installation/other.html
 [Rust]: https://www.rust-lang.org/
-[rust-toolchain]: https://github.com/oasisprotocol/oasis-sdk/tree/master/rust-toolchain
+[`rust-toolchain.toml`]: https://github.com/oasisprotocol/oasis-sdk/tree/main/rust-toolchain.toml
 [rust-toolchain-precedence]: https://github.com/rust-lang/rustup/blob/master/README.md#override-precedence
 <!-- markdownlint-enable line-length -->
 
