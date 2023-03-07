@@ -142,7 +142,7 @@ func TestPrettyPrintTransaction(t *testing.T) {
 		}
 		require.Contains(buf.String(), "Method: consensus.Deposit")
 		require.Contains(buf.String(), testBody.Expected)
-		require.Contains(buf.String(), "Authorized signer(s):\n1. NcPzNW3YU2T+ugNUtUWtoQnRvbOL9dYSaBfbjHLP1pE= (ed25519)\n   Nonce: 15\n")
+		require.Contains(buf.String(), "Authorized signer(s):\n  1. NcPzNW3YU2T+ugNUtUWtoQnRvbOL9dYSaBfbjHLP1pE= (ed25519)\n     Nonce: 15\n")
 		require.Contains(buf.String(), "Fee:\n")
 	}
 }
