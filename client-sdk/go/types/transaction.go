@@ -124,10 +124,10 @@ func (ut *UnverifiedTransaction) PrettyPrint(ctx context.Context, prefix string,
 	fmt.Fprintf(w, "%sSigner(s):\n", prefix)
 	sigCtx, _ := ctx.Value(signature.ContextKeySigContext).(signature.Context)
 	for i, pk := range publicKeys {
-		fmt.Fprintf(w, "%s%d. %s\n", prefix, i+1, pk)
-		fmt.Fprintf(w, "%s   (signature: %s)\n", prefix, base64.StdEncoding.EncodeToString(signatures[i]))
+		fmt.Fprintf(w, "%s  %d. %s\n", prefix, i+1, pk)
+		fmt.Fprintf(w, "%s     (signature: %s)\n", prefix, base64.StdEncoding.EncodeToString(signatures[i]))
 		if !pk.Verify(sigCtx.Derive(), ut.Body, signatures[i]) {
-			fmt.Fprintf(w, "%s   [INVALID SIGNATURE]\n", prefix)
+			fmt.Fprintf(w, "%s     [INVALID SIGNATURE]\n", prefix)
 		}
 	}
 
@@ -532,8 +532,8 @@ func (ptx *PrettyTransaction) PrettyPrint(ctx context.Context, prefix string, w 
 
 	fmt.Fprintf(w, "%sAuthorized signer(s):\n", prefix)
 	for idx, si := range ptx.AuthInfo.SignerInfo {
-		fmt.Fprintf(w, "%s%d. %s (%s)\n", prefix, idx+1, si.AddressSpec.Signature.PublicKey(), prettyAddressSpecSig(si.AddressSpec.Signature))
-		fmt.Fprintf(w, "%s   Nonce: %d\n", prefix, si.Nonce)
+		fmt.Fprintf(w, "%s  %d. %s (%s)\n", prefix, idx+1, si.AddressSpec.Signature.PublicKey(), prettyAddressSpecSig(si.AddressSpec.Signature))
+		fmt.Fprintf(w, "%s     Nonce: %d\n", prefix, si.Nonce)
 	}
 
 	fmt.Fprintf(w, "%sFee:\n", prefix)
