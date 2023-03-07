@@ -4,7 +4,8 @@ import (
 	"crypto/sha256"
 	"runtime"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 
@@ -25,19 +26,13 @@ func (s Signer) ContextSign(context sdkSignature.Context, message []byte) ([]byt
 		return nil, err
 	}
 
-	sig, err := s.privateKey.Sign(data)
-	if err != nil {
-		return nil, err
-	}
+	sig := ecdsa.Sign(&s.privateKey, data)
 	return sig.Serialize(), nil
 }
 
 func (s Signer) Sign(message []byte) ([]byte, error) {
 	digest := sha256.Sum256(message)
-	sig, err := s.privateKey.Sign(digest[:])
-	if err != nil {
-		return nil, err
-	}
+	sig := ecdsa.Sign(&s.privateKey, digest[:])
 	return sig.Serialize(), nil
 }
 
@@ -46,15 +41,13 @@ func (s Signer) String() string {
 }
 
 func (s Signer) Reset() {
-	s.privateKey.D.SetBytes([]byte{})
-	s.privateKey.X.SetBytes([]byte{})
-	s.privateKey.Y.SetBytes([]byte{})
+	s.privateKey.Zero()
 	runtime.GC()
 }
 
 // NewSigner creates a new Secp256k1 signer using the given private key (S256 curve is assumed).
 func NewSigner(pk []byte) sdkSignature.Signer {
-	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), pk)
+	privKey, _ := btcec.PrivKeyFromBytes(pk)
 	return Signer{privateKey: *privKey}
 }
 
