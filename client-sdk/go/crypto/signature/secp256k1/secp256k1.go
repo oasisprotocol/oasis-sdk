@@ -3,7 +3,8 @@ package secp256k1
 import (
 	"encoding/base64"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 
 	sdkSignature "github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 )
@@ -25,7 +26,7 @@ func (pk PublicKey) MarshalBinaryUncompressedUntagged() ([]byte, error) {
 
 // UnmarshalBinary decodes a binary marshaled public key.
 func (pk *PublicKey) UnmarshalBinary(data []byte) error {
-	parsedPK, err := btcec.ParsePubKey(data, btcec.S256())
+	parsedPK, err := btcec.ParsePubKey(data)
 	if err != nil {
 		return err
 	}
@@ -67,7 +68,7 @@ func (pk PublicKey) Equal(other sdkSignature.PublicKey) bool {
 
 // Verify returns true iff the signature is valid for the public key over the context and message.
 func (pk PublicKey) Verify(context, message, signature []byte) bool {
-	sig, err := btcec.ParseSignature(signature, btcec.S256())
+	sig, err := ecdsa.ParseSignature(signature)
 	if err != nil {
 		return false
 	}

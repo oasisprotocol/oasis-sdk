@@ -5,14 +5,13 @@ go 1.18
 replace github.com/oasisprotocol/oasis-sdk/client-sdk/go => ../../client-sdk/go
 
 require (
-	github.com/ethereum/go-ethereum v1.11.2
+	github.com/ethereum/go-ethereum v1.11.3
 	github.com/oasisprotocol/oasis-core/go v0.2202.5
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.0
 )
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/btcsuite/btcd v0.22.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
 	github.com/cenkalti/backoff/v4 v4.1.3 // indirect
@@ -64,7 +63,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
-	golang.org/x/crypto v0.1.0 // indirect
+	golang.org/x/crypto v0.7.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect

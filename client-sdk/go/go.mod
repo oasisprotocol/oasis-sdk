@@ -10,21 +10,20 @@ replace (
 )
 
 require (
-	github.com/btcsuite/btcd v0.22.1
-	github.com/ethereum/go-ethereum v1.11.2
+	github.com/btcsuite/btcd/btcec/v2 v2.2.0
+	github.com/ethereum/go-ethereum v1.11.3
 	github.com/golang/snappy v0.0.4
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20220708102147-0a8a51822cae
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
 	github.com/oasisprotocol/oasis-core/go v0.2202.5
 	github.com/shopspring/decimal v1.3.1
 	github.com/stretchr/testify v1.8.2
-	golang.org/x/crypto v0.1.0
+	golang.org/x/crypto v0.7.0
 	google.golang.org/grpc v1.53.0
 )
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
 	github.com/cenkalti/backoff/v4 v4.1.3 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
