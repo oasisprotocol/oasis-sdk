@@ -5,6 +5,10 @@ inputs:
     description: The root directory for the sources to inspect
     default: ${{ github.workspace }}
     required: false
+  use_base_for_pr:
+    description: Should the base branch be used for pull requests
+    default: no
+    required: false
 outputs:
   tag:
     description: The tag derived from the branch information
@@ -21,6 +25,9 @@ runs:
         if [[ -z $GITHUB_BASE_REF ]]; then
           # On master/stable branches.
           branch=${GITHUB_REF#refs/heads/}
+        elif [[ "${{ inputs.use_base_for_pr }}" == "yes" ]]; then
+          # Use base branch.
+          branch=$GITHUB_BASE_REF
         else
           # On pull request branches.
           branch=pr-$(git describe --always --match '' --abbrev=7)

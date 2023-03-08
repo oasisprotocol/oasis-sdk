@@ -7,6 +7,14 @@ on:
     branches:
       - main
       - stable/*
+  # Or when a pull request event occurs for a pull request against one of the
+  # matched branches and at least one modified file matches the configured paths.
+  pull_request:
+    branches:
+      - main
+      - stable/*
+    paths:
+      - .github/actions/**
   # Besides pushes on the branches above, also check every day at 00:00 UTC.
   schedule:
     - cron: "0 0 * * *"
@@ -29,6 +37,8 @@ jobs:
       - name: Determine tag name
         id: determine-tag
         uses: ./.github/actions/determine-tag
+        with:
+          use_base_for_pr: yes
 
       - name: Build test binaries, 1.
         id: build-1
