@@ -41,7 +41,8 @@ runs:
     - shell: bash
       id: build
       run: |
-        docker run --rm -i -e GITHUB_OUTPUT -v $(dirname "$GITHUB_OUTPUT") -v ${{ inputs.dir }}:/src ${{ inputs.image }} /bin/bash <<-'EOF'
+        GITHUB_TEMP_DIR=$(dirname "$GITHUB_OUTPUT")
+        docker run --rm -i -e GITHUB_OUTPUT -v ${GITHUB_TEMP_DIR}:${GITHUB_TEMP_DIR} -v ${{ inputs.dir }}:/src ${{ inputs.image }} /bin/bash <<-'EOF'
           set -e
           ${{ inputs.setup }}
           cd /src
