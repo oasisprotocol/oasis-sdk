@@ -69,7 +69,7 @@ jobs:
         with:
           context: docker/runtime-builder
           file: docker/runtime-builder/Dockerfile
-          tags: oasisprotocol/runtime-builder:${{ steps.determine-tag.outputs.tag }}
+          tags: ghcr.io/oasisprotocol/runtime-builder:${{ steps.determine-tag.outputs.tag }}
           pull: true
           push: true
           build-args: |
