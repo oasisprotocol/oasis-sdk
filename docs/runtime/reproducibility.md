@@ -22,13 +22,13 @@ git clone https://github.com/oasisprotocol/oasis-sdk.git
 
 ## Running the Image
 
-The images are available in the `oasisprotocol/runtime-builder`
+The images are available in the `ghcr.io/oasisprotocol/runtime-builder`
 repository on Docker Hub and are tagged with the same version numbers as
 releases of the SDK. To pull the image and run a container with it, run
 the following:
 
 ```bash
-docker run -t -i -v /home/user/oasis-sdk:/src oasisprotocol/runtime-builder:main /bin/bash
+docker run -t -i -v /home/user/oasis-sdk:/src ghcr.io/oasisprotocol/runtime-builder:main /bin/bash
 ```
 
 where:

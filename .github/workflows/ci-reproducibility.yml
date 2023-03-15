@@ -45,14 +45,14 @@ jobs:
         uses: ./.github/actions/hash-rust
         with:
           binaries: test-runtime-simple-consensus,test-runtime-simple-keyvalue
-          image: oasisprotocol/runtime-builder:${{ steps.determine-tag.outputs.tag }}
+          image: ghcr.io/oasisprotocol/runtime-builder:${{ steps.determine-tag.outputs.tag }}
 
       - name: Build test binaries, 2.
         id: build-2
         uses: ./.github/actions/hash-rust
         with:
           binaries: test-runtime-simple-consensus,test-runtime-simple-keyvalue
-          image: oasisprotocol/runtime-builder:${{ steps.determine-tag.outputs.tag }}
+          image: ghcr.io/oasisprotocol/runtime-builder:${{ steps.determine-tag.outputs.tag }}
 
       - name: Check result is non-empty
         run: |
