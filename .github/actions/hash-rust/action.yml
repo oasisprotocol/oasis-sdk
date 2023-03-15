@@ -7,7 +7,7 @@ inputs:
     required: false
   image:
     description: The docker image to use for the build
-    default: oasisprotocol/runtime-builder:v0.0
+    default: ghcr.io/oasisprotocol/runtime-builder:v0.0
     required: false
   pkg-dirs:
     description: The list of subdirectories to start build in
