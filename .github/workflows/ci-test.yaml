@@ -91,10 +91,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Go 1.18
-        uses: actions/setup-go@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          go-version: "1.18.x"
+          go-version: "1.20.x"
 
       - name: Unit tests with coverage
         working-directory: client-sdk/go
@@ -113,10 +113,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Go 1.18
-        uses: actions/setup-go@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          go-version: "1.18.x"
+          go-version: "1.20.x"
 
       - name: Test build orc
         working-directory: tools/orc
@@ -361,10 +361,10 @@ jobs:
       - name: Set up Rust
         run: rustup show
 
-      - name: Set up Go 1.18
-        uses: actions/setup-go@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          go-version: "1.18.x"
+          go-version: "1.19.x" # XXX: Cannot update to 1.20 due to quic-go dependency for E2E test suite.
 
       - name: Install Oasis dependencies
         run: |
@@ -438,10 +438,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Go 1.18
-        uses: actions/setup-go@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          go-version: "1.18.x"
+          go-version: "1.20.x"
 
       - name: Generate
         working-directory: client-sdk/ts-web/core/reflect-go
@@ -469,10 +469,10 @@ jobs:
       - name: Set up Rust
         run: rustup show
 
-      - name: Set up Go 1.18
-        uses: actions/setup-go@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          go-version: "1.18.x"
+          go-version: "1.19.x" # XXX: Cannot update to 1.20 due to quic-go dependency for E2E test suite.
 
       - name: Install Oasis dependencies
         run: |

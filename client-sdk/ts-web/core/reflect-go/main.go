@@ -365,7 +365,7 @@ const (
 	structModeEmptyMap = "empty-map"
 )
 
-func visitStruct(t reflect.Type) string { // nolint: gocyclo
+func visitStruct(t reflect.Type) string { //nolint: gocyclo
 	if ut, ok := memo[t]; ok {
 		return ut.ref
 	}
@@ -394,7 +394,7 @@ func visitStruct(t reflect.Type) string { // nolint: gocyclo
 		}
 		var name string
 		var optional string
-		if cborTag, ok := f.Tag.Lookup("cbor"); ok { // nolint: nestif
+		if cborTag, ok := f.Tag.Lookup("cbor"); ok { //nolint: nestif
 			parts := strings.Split(cborTag, ",")
 			name = parts[0]
 			parts = parts[1:]
@@ -687,6 +687,7 @@ func writeClient(internal clientCode, className string) {
 }
 
 // might be nicer to add a function to list these in oasis-core
+//
 //go:linkname registeredMethods github.com/oasisprotocol/oasis-core/go/consensus/api/transaction.registeredMethods
 var registeredMethods sync.Map
 

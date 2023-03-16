@@ -89,18 +89,18 @@ rustc 1.65.0-nightly (c0941dfb5 2022-08-21)
 
 _Required if you want to use the Go Client SDK._
 
-At least version **1.18.5** is required. If your distribution provides a
+At least version **1.20.2** is required. If your distribution provides a
 new-enough version of Go, just use that.
 
 Otherwise:
 
 * install the Go version provided by your distribution,
 * [ensure `$GOPATH/bin` is in your `PATH`],
-* [install the desired version of Go], e.g. 1.18.5, with:
+* [install the desired version of Go], e.g. 1.20.2, with:
 
   ```
-  go get golang.org/dl/go1.18.5
-  go1.18.5 download
+  go get golang.org/dl/go1.20.2
+  go1.20.2 download
     ```
 
 <!-- markdownlint-disable line-length -->
