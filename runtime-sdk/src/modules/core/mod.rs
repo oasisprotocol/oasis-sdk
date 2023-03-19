@@ -312,6 +312,10 @@ pub struct LocalConfig {
     /// This setting should likely be kept at 0, unless the runtime is using the EVM module.
     #[cbor(optional)]
     pub estimate_gas_search_max_iters: u64,
+
+    /// An extra gas amount to be added to all returned gas estimates.
+    #[cbor(optional)]
+    pub estimate_gas_extra: u64,
 }
 
 /// State schema constants.
@@ -334,6 +338,9 @@ pub trait Config: 'static {
     /// Default local estimate gas max search iterations configuration that is used in case no overrides
     /// are set in the local per-node configuration.
     const DEFAULT_LOCAL_ESTIMATE_GAS_SEARCH_MAX_ITERS: u64 = 0;
+
+    /// Default local estimate gas amount to be added to the final estimation.
+    const DEFAULT_LOCAL_ESTIMATE_GAS_EXTRA: u64 = 0;
 
     /// Methods which are exempt from minimum gas price requirements.
     const MIN_GAS_PRICE_EXEMPT_METHODS: once_cell::unsync::Lazy<BTreeSet<&'static str>> =
@@ -491,6 +498,7 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         mut args: types::EstimateGasQuery,
     ) -> Result<u64, Error> {
+        let mut extra_gas = Self::get_estimate_gas_extra(ctx);
         // In case the runtime is confidential we are unable to authenticate the caller so we must
         // make sure to zeroize it to avoid leaking private information.
         if ctx.is_confidential() {
@@ -550,7 +558,6 @@ impl<Cfg: Config> Module<Cfg> {
         let bs_max_iters = Self::estimate_gas_search_max_iters(ctx);
 
         // Update the address used within the transaction when caller address is passed.
-        let mut extra_gas = 0;
         if let Some(caller) = args.caller.clone() {
             let address_spec = transaction::AddressSpec::Internal(caller);
             match args.tx.auth_info.signer_info.first_mut() {
@@ -686,12 +693,15 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // hi == cap if binary search is disabled or this is a failing transaction.
-        if hi == cap.into() {
+        let result = if hi == cap.into() {
             // Simulate one last time with maximum gas limit.
             simulate(&args.tx, cap, propagate_failures).map(|est| est + extra_gas)
         } else {
             Ok(hi as u64 + extra_gas)
-        }
+        };
+
+        // Make sure the final result is clamped.
+        result.map(|est| est.clamp(0, cap))
     }
 
     /// Check invariants of all modules in the runtime.
@@ -830,6 +840,13 @@ impl<Cfg: Config> Module<Cfg> {
             .as_ref()
             .map(|cfg: &LocalConfig| cfg.max_estimated_gas)
             .unwrap_or_default()
+    }
+
+    fn get_estimate_gas_extra<C: Context>(ctx: &C) -> u64 {
+        ctx.local_config(MODULE_NAME)
+            .as_ref()
+            .map(|cfg: &LocalConfig| cfg.estimate_gas_extra)
+            .unwrap_or(Cfg::DEFAULT_LOCAL_ESTIMATE_GAS_EXTRA)
     }
 
     fn enforce_min_gas_price<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {

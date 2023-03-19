@@ -474,6 +474,33 @@ fn test_query_estimate_gas() {
         assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
     }
 
+    // Test extra gas estimation.
+    {
+        let estimate_gas_extra = 1000;
+        let local_config = configmap! {
+            "core" => configmap! {
+                "estimate_gas_extra" => estimate_gas_extra,
+            },
+        };
+        let mut mock = mock::Mock::with_local_config(local_config);
+        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
+        GasWasterRuntime::migrate(&mut ctx);
+
+        // Test estimation with caller derived from the transaction.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx.clone(),
+            propagate_failures: false,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(
+            est,
+            tx_reference_gas + estimate_gas_extra,
+            "estimated gas should be correct"
+        );
+    }
+
     // Test expensive estimates.
     {
         let max_estimated_gas = tx_reference_gas - 1;
