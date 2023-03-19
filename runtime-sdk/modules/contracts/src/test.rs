@@ -130,7 +130,7 @@ fn deploy_hello_contract<C: BatchContext>(
 #[test]
 fn test_hello_contract_call() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
 
     Core::<CoreConfig>::init(
         &mut ctx,
@@ -740,7 +740,7 @@ fn test_hello_contract_subcalls_overflow() {
     use cbor::cbor_map;
 
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
 
     ContractRuntime::migrate(&mut ctx);
 
@@ -794,7 +794,7 @@ fn test_hello_contract_subcalls() {
     use cbor::cbor_map;
 
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
 
     ContractRuntime::migrate(&mut ctx);
 
@@ -847,7 +847,7 @@ fn test_hello_contract_subcalls() {
     });
 
     // Gas estimation should work.
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::CheckTx);
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::CheckTx, true);
     let args = core::types::EstimateGasQuery {
         caller: None,
         tx,
@@ -866,7 +866,7 @@ fn test_hello_contract_query() {
     mock.runtime_header.timestamp = 1629117379;
     mock.epoch = 42;
 
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
 
     ContractRuntime::migrate(&mut ctx);
 
@@ -1002,7 +1002,7 @@ fn test_hello_contract_query() {
 #[test]
 fn test_hello_contract_upgrade() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
 
     ContractRuntime::migrate(&mut ctx);
 
@@ -1047,7 +1047,7 @@ fn test_hello_contract_upgrade() {
 #[test]
 fn test_hello_contract_upgrade_fail_policy() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
 
     ContractRuntime::migrate(&mut ctx);
 
@@ -1094,7 +1094,7 @@ fn test_hello_contract_upgrade_fail_policy() {
 #[test]
 fn test_hello_contract_upgrade_fail_pre() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
 
     ContractRuntime::migrate(&mut ctx);
 
@@ -1144,7 +1144,7 @@ fn test_hello_contract_upgrade_fail_pre() {
 #[test]
 fn test_hello_contract_upgrade_fail_post() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
 
     ContractRuntime::migrate(&mut ctx);
 
@@ -1194,7 +1194,7 @@ fn test_hello_contract_upgrade_fail_post() {
 #[test]
 fn test_hello_contract_change_upgrade_policy() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
 
     ContractRuntime::migrate(&mut ctx);
 
@@ -1236,7 +1236,7 @@ fn test_hello_contract_change_upgrade_policy() {
 #[test]
 fn test_hello_contract_change_upgrade_policy_fail() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx);
+    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
 
     ContractRuntime::migrate(&mut ctx);
 

@@ -22,7 +22,9 @@ use crate::{
     sender::SenderMeta,
     types::{
         token,
-        transaction::{self, AddressSpec, AuthProof, Call, CallFormat, UnverifiedTransaction},
+        transaction::{
+            self, AddressSpec, AuthProof, Call, CallFormat, CallerAddress, UnverifiedTransaction,
+        },
     },
     Runtime,
 };
@@ -484,11 +486,21 @@ impl<Cfg: Config> Module<Cfg> {
     /// in the context's method registry. Transactions that fail still use gas, and this query will
     /// estimate that and return successfully, so do not use this query to see if a transaction will
     /// succeed.
-    #[handler(query = "core.EstimateGas")]
+    #[handler(query = "core.EstimateGas", allow_private_km)]
     pub fn query_estimate_gas<C: Context>(
         ctx: &mut C,
         mut args: types::EstimateGasQuery,
     ) -> Result<u64, Error> {
+        // In case the runtime is confidential we are unable to authenticate the caller so we must
+        // make sure to zeroize it to avoid leaking private information.
+        if ctx.is_confidential() {
+            args.caller = Some(
+                args.caller
+                    .unwrap_or(CallerAddress::Address(Default::default()))
+                    .zeroized(),
+            );
+            args.propagate_failures = false; // Likely to fail as caller is zeroized.
+        }
         // Assume maximum amount of gas in a batch, a reasonable maximum fee and maximum amount of consensus messages.
         args.tx.auth_info.fee.gas = {
             let local_max_estimated_gas = Self::get_local_max_estimated_gas(ctx);

@@ -953,7 +953,7 @@ mod test {
     #[test]
     fn test_allowed_queries_defaults() {
         let mut mock = Mock::with_local_config(BTreeMap::new());
-        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::CheckTx);
+        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::CheckTx, false);
 
         Dispatcher::<AlphabetRuntime>::dispatch_query(
             &mut ctx,
@@ -983,7 +983,7 @@ mod test {
         };
         let mut mock = Mock::with_local_config(local_config);
         // For queries, oasis-core always generates a `CheckTx` context; test with that.
-        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::CheckTx);
+        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::CheckTx, false);
 
         Dispatcher::<AlphabetRuntime>::dispatch_query(
             &mut ctx,
@@ -1003,7 +1003,7 @@ mod test {
     #[test]
     fn test_dispatch_read_only_call() {
         let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::ExecuteTx);
+        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::ExecuteTx, false);
 
         AlphabetRuntime::migrate(&mut ctx);
 
@@ -1059,7 +1059,7 @@ mod test {
     #[test]
     fn test_dispatch_abort_forwarding() {
         let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::ExecuteTx);
+        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(Mode::ExecuteTx, false);
 
         AlphabetRuntime::migrate(&mut ctx);
 

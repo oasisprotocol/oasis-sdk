@@ -216,6 +216,14 @@ impl CallerAddress {
             ),
         }
     }
+
+    /// Maps the caller address to one of the same type but with an all-zero address.
+    pub fn zeroized(&self) -> Self {
+        match self {
+            CallerAddress::Address(_) => CallerAddress::Address(Default::default()),
+            CallerAddress::EthAddress(_) => CallerAddress::EthAddress(Default::default()),
+        }
+    }
 }
 
 /// Common information that specifies an address as well as how to authenticate.

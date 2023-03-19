@@ -1,6 +1,6 @@
 //! Tests for Oasis ABIs.
 use oasis_runtime_sdk::{
-    context::{BatchContext, TxContext},
+    context::{self, BatchContext, TxContext},
     core::common::crypto::hash::Hash,
     error::Error as _,
     modules,
@@ -315,7 +315,7 @@ fn run_contract_with_defaults(
     call_data: cbor::Value,
 ) -> Result<cbor::Value, Error> {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let mut ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(context::Mode::ExecuteTx, true);
     let params = Parameters::default();
 
     core::Module::<CoreConfig>::init(

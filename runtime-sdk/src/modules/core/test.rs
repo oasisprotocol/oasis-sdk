@@ -12,7 +12,7 @@ use crate::{
     sdk_derive,
     sender::SenderMeta,
     testing::{configmap, keys, mock},
-    types::{token, transaction, transaction::CallerAddress},
+    types::{address::Address, token, transaction, transaction::CallerAddress},
 };
 
 use super::{types, Event, Parameters, API as _};
@@ -198,9 +198,13 @@ impl GasWasterModule {
     const CALL_GAS_HUGE: u64 = u64::MAX - 10_000;
     const CALL_GAS_SPECIFIC: u64 = 123456;
     const CALL_GAS_SPECIFIC_HUGE: u64 = u64::MAX - 10_000;
+    const CALL_GAS_CALLER_ADDR_ZERO: u64 = 424242;
+    const CALL_GAS_CALLER_ADDR_ETHZERO: u64 = 101010;
+
     const METHOD_WASTE_GAS: &'static str = "test.WasteGas";
     const METHOD_WASTE_GAS_AND_FAIL: &'static str = "test.WasteGasAndFail";
     const METHOD_WASTE_GAS_HUGE: &'static str = "test.WasteGasHuge";
+    const METHOD_WASTE_GAS_CALLER: &'static str = "test.WasteGasCaller";
     const METHOD_SPECIFIC_GAS_REQUIRED: &'static str = "test.SpecificGasRequired";
     const METHOD_SPECIFIC_GAS_REQUIRED_HUGE: &'static str = "test.SpecificGasRequiredHuge";
 }
@@ -242,6 +246,23 @@ impl GasWasterModule {
         Ok(())
     }
 
+    #[handler(call = Self::METHOD_WASTE_GAS_CALLER)]
+    fn waste_gas_caller<C: TxContext>(
+        ctx: &mut C,
+        _args: (),
+    ) -> Result<(), <GasWasterModule as module::Module>::Error> {
+        // Uses a different amount of gas based on the caller.
+        let addr_zero = Address::default();
+        let addr_ethzero = CallerAddress::EthAddress([0u8; 20]).address();
+
+        if ctx.tx_caller_address() == addr_zero {
+            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS_CALLER_ADDR_ZERO)?;
+        } else if ctx.tx_caller_address() == addr_ethzero {
+            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS_CALLER_ADDR_ETHZERO)?;
+        }
+        Ok(())
+    }
+
     #[handler(call = Self::METHOD_SPECIFIC_GAS_REQUIRED)]
     fn specific_gas_required<C: TxContext>(
         ctx: &mut C,
@@ -254,6 +275,7 @@ impl GasWasterModule {
             Ok(())
         }
     }
+
     #[handler(call = Self::METHOD_SPECIFIC_GAS_REQUIRED_HUGE)]
     fn specific_gas_required_huge<C: TxContext>(
         ctx: &mut C,
@@ -325,7 +347,7 @@ fn test_reject_txs() {
     // The gas waster runtime doesn't implement any authenticate_tx handler,
     // so it should accept all transactions.
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
 
     GasWasterRuntime::migrate(&mut ctx);
 
@@ -399,6 +421,9 @@ fn test_query_estimate_gas() {
     let mut tx_huge = tx.clone();
     tx_huge.call.method = GasWasterModule::METHOD_WASTE_GAS_HUGE.to_owned();
 
+    let mut tx_caller_specific = tx.clone();
+    tx_caller_specific.call.method = GasWasterModule::METHOD_WASTE_GAS_CALLER.to_owned();
+
     let mut tx_specific_gas = tx.clone();
     tx_specific_gas.call.method = GasWasterModule::METHOD_SPECIFIC_GAS_REQUIRED.to_owned();
 
@@ -415,11 +440,17 @@ fn test_query_estimate_gas() {
         + GasWasterModule::CALL_GAS_HUGE;
     let tx_specific_gas_reference_gas = GasWasterModule::CALL_GAS_SPECIFIC;
     let tx_specific_gas_huge_reference_gas = GasWasterModule::CALL_GAS_SPECIFIC_HUGE;
+    let tx_caller_gas_addr_zero = GasWasterRuntime::AUTH_SIGNATURE_GAS
+        + GasWasterRuntime::AUTH_MULTISIG_GAS
+        + GasWasterModule::CALL_GAS_CALLER_ADDR_ZERO;
+    let tx_caller_gas_addr_ethzero = GasWasterRuntime::AUTH_SIGNATURE_GAS
+        + GasWasterRuntime::AUTH_MULTISIG_GAS
+        + GasWasterModule::CALL_GAS_CALLER_ADDR_ETHZERO;
 
     // Test happy-path execution with default settings.
     {
         let mut mock = mock::Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
         GasWasterRuntime::migrate(&mut ctx);
 
         // Test estimation with caller derived from the transaction.
@@ -452,7 +483,7 @@ fn test_query_estimate_gas() {
             },
         };
         let mut mock = mock::Mock::with_local_config(local_config);
-        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
         GasWasterRuntime::migrate(&mut ctx);
 
         // Test with limited max_estimated_gas.
@@ -493,7 +524,7 @@ fn test_query_estimate_gas() {
     // Test transactions that fail.
     {
         let mut mock = mock::Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
         GasWasterRuntime::migrate(&mut ctx);
 
         // Test with propagate failures disabled.
@@ -527,7 +558,7 @@ fn test_query_estimate_gas() {
             },
         };
         let mut mock = mock::Mock::with_local_config(local_config);
-        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
         GasWasterRuntime::migrate(&mut ctx);
 
         // Test tx estimation.
@@ -647,6 +678,52 @@ fn test_query_estimate_gas() {
             Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
         assert_eq!(
             est, tx_specific_gas_huge_reference_gas,
+            "estimated gas should be correct"
+        );
+    }
+
+    // Test confidential estimation that should zeroize the caller.
+    {
+        let mut mock = mock::Mock::default();
+        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, true);
+        GasWasterRuntime::migrate(&mut ctx);
+
+        // Test estimation with caller derived from the transaction.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_caller_specific.clone(),
+            propagate_failures: false,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(
+            est, tx_caller_gas_addr_zero,
+            "estimated gas should be correct"
+        );
+
+        // Test estimation with specified caller.
+        let args = types::EstimateGasQuery {
+            caller: Some(CallerAddress::Address(keys::alice::address())),
+            tx: tx_caller_specific.clone(),
+            propagate_failures: false,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(
+            est, tx_caller_gas_addr_zero,
+            "estimated gas should be correct"
+        );
+
+        // Test estimation with specified caller (eth address).
+        let args = types::EstimateGasQuery {
+            caller: Some(CallerAddress::EthAddress([42u8; 20])),
+            tx: tx_caller_specific.clone(),
+            propagate_failures: false,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(
+            est, tx_caller_gas_addr_ethzero,
             "estimated gas should be correct"
         );
     }
@@ -772,7 +849,7 @@ fn test_set_sender_meta() {
 #[test]
 fn test_min_gas_price() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
 
     Core::set_params(
         ctx.runtime_state(),
@@ -1018,7 +1095,7 @@ fn test_module_info() {
     use types::{MethodHandlerInfo, MethodHandlerKind};
 
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx);
+    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
 
     // Set bogus params on the core module; we want to see them reflected in response to the `runtime_info()` query.
     let core_params = Parameters {
@@ -1057,6 +1134,7 @@ fn test_module_info() {
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGas".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGasAndFail".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGasHuge".to_string() },
+                            MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGasCaller".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.SpecificGasRequired".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.SpecificGasRequiredHuge".to_string() },
                         ],

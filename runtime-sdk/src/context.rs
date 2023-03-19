@@ -211,6 +211,11 @@ pub trait Context {
     /// The key manager, if the runtime is confidential.
     fn key_manager(&self) -> Option<&dyn KeyManager>;
 
+    /// Whether the context has a key manager available (e.g. the runtime is confidential).
+    fn is_confidential(&self) -> bool {
+        self.key_manager().is_some()
+    }
+
     /// Last runtime block header.
     fn runtime_header(&self) -> &roothash::Header;
 
