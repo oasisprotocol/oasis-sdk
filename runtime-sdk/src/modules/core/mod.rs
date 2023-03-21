@@ -504,7 +504,14 @@ impl<Cfg: Config> Module<Cfg> {
         if ctx.is_confidential() {
             args.caller = Some(
                 args.caller
-                    .unwrap_or(CallerAddress::Address(Default::default()))
+                    .unwrap_or_else(|| {
+                        args.tx
+                            .auth_info
+                            .signer_info
+                            .first()
+                            .map(|si| si.address_spec.caller_address())
+                            .unwrap_or(CallerAddress::Address(Default::default()))
+                    })
                     .zeroized(),
             );
             args.propagate_failures = false; // Likely to fail as caller is zeroized.
@@ -559,17 +566,16 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Update the address used within the transaction when caller address is passed.
         if let Some(caller) = args.caller.clone() {
-            let address_spec = transaction::AddressSpec::Internal(caller);
-            match args.tx.auth_info.signer_info.first_mut() {
-                Some(si) => si.address_spec = address_spec,
-                None => {
-                    // If no existing auth info, push some.
-                    args.tx.auth_info.signer_info.push(transaction::SignerInfo {
-                        address_spec,
-                        nonce: 0,
-                    });
-                }
-            }
+            args.tx.auth_info.signer_info = vec![transaction::SignerInfo {
+                address_spec: transaction::AddressSpec::Internal(caller),
+                nonce: args
+                    .tx
+                    .auth_info
+                    .signer_info
+                    .first()
+                    .map(|si| si.nonce)
+                    .unwrap_or_default(),
+            }];
 
             // When passing an address we don't know what scheme is used for authenticating the
             // address so the estimate may be off. Assume a regular signature for now.
