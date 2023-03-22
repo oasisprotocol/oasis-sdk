@@ -251,6 +251,17 @@ impl AddressSpec {
         }
     }
 
+    /// Derives the caller address.
+    pub fn caller_address(&self) -> CallerAddress {
+        match self {
+            AddressSpec::Signature(SignatureAddressSpec::Secp256k1Eth(pk)) => {
+                CallerAddress::EthAddress(pk.to_eth_address().try_into().unwrap())
+            }
+            AddressSpec::Internal(caller) => caller.clone(),
+            _ => CallerAddress::Address(self.address()),
+        }
+    }
+
     /// Checks that the address specification and the authentication proof are acceptable.
     /// Returns vectors of public keys and signatures for batch verification of included signatures.
     pub fn batch(&self, auth_proof: &AuthProof) -> Result<(Vec<PublicKey>, Vec<Signature>), Error> {

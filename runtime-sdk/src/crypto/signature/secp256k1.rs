@@ -1,4 +1,5 @@
 //! Secp256k1 signatures.
+use digest::Digest as _;
 use k256::{
     self,
     ecdsa::{
@@ -27,6 +28,11 @@ impl PublicKey {
         // Our wrapper type only accepts compressed points, so we shouldn't get None.
         let pk = k256::PublicKey::from_encoded_point(&self.0).unwrap();
         pk.to_encoded_point(false).as_bytes()[1..].to_vec()
+    }
+
+    /// Derive an Ethereum-compatible address.
+    pub fn to_eth_address(&self) -> Vec<u8> {
+        sha3::Keccak256::digest(self.to_uncompressed_untagged_bytes())[32 - 20..].to_vec()
     }
 
     /// Construct a public key from a slice of bytes.
