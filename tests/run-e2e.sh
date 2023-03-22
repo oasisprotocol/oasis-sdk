@@ -2,6 +2,9 @@
 set -o nounset -o pipefail -o errexit
 trap "exit 1" INT
 
+# Allow the caller to override the used Go binary.
+OASIS_GO=${OASIS_GO:-go}
+
 # Get the root directory of the tests dir inside the repository.
 TESTS_DIR="$(
 	cd $(dirname $0)
@@ -26,7 +29,7 @@ cleanup() {
 trap "cleanup" EXIT
 
 # Make sure we have build tools installed.
-if [[ "$(which go)" == "" ]]; then
+if [[ "$(which ${OASIS_GO})" == "" ]]; then
 	printf "${RED}### Please install 'go'.${OFF}\n"
 	exit 1
 fi
@@ -79,7 +82,7 @@ cp "${TESTS_DIR}"/../contract-sdk/specs/token/oas20/target/wasm32-unknown-unknow
 
 printf "${CYAN}### Building e2e test harness...${OFF}\n"
 cd "${TESTS_DIR}"/e2e
-go build
+${OASIS_GO} build
 cp "${TESTS_DIR}"/e2e/e2e "${TEST_BASE_DIR}"/
 
 cd "${TEST_BASE_DIR}"
