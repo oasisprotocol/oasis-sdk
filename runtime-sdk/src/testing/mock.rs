@@ -57,24 +57,29 @@ impl Mock {
     pub fn create_ctx(
         &mut self,
     ) -> RuntimeBatchContext<'_, EmptyRuntime, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
-        self.create_ctx_for_runtime(Mode::ExecuteTx)
+        self.create_ctx_for_runtime(Mode::ExecuteTx, false)
     }
 
     pub fn create_check_ctx(
         &mut self,
     ) -> RuntimeBatchContext<'_, EmptyRuntime, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
-        self.create_ctx_for_runtime(Mode::CheckTx)
+        self.create_ctx_for_runtime(Mode::CheckTx, false)
     }
 
     /// Create a new mock dispatch context.
     pub fn create_ctx_for_runtime<R: Runtime>(
         &mut self,
         mode: Mode,
+        confidential: bool,
     ) -> RuntimeBatchContext<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
         RuntimeBatchContext::new(
             mode,
             &self.host_info,
-            Some(Box::new(MockKeyManagerClient::new()) as Box<dyn KeyManager>),
+            if confidential {
+                Some(Box::new(MockKeyManagerClient::new()) as Box<dyn KeyManager>)
+            } else {
+                None
+            },
             &self.runtime_header,
             &self.runtime_round_results,
             storage::MKVSStore::new(IoContext::background().freeze(), self.mkvs.as_mut()),

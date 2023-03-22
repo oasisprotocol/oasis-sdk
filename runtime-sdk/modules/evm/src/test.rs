@@ -100,7 +100,7 @@ fn test_evm_caller_addr_derivation() {
 
 fn do_test_evm_calls<C: Config>(force_plain: bool) {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let mut ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(context::Mode::ExecuteTx, true);
     let client_keypair =
         oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::generate_key_pair();
 
@@ -385,8 +385,10 @@ fn test_c10l_enc_call_identity_decoded() {
     // Calls sent using the Oasis encrypted envelope format (not inner-enveloped)
     // should not be decoded:
     let mut mock = mock::Mock::default();
-    let ctx =
-        mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(context::Mode::ExecuteTx);
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(
+        context::Mode::ExecuteTx,
+        true,
+    );
     let data = vec![1, 2, 3, 4, 5];
     let (decoded_data, metadata) = EVMModule::<ConfidentialEVMConfig>::decode_call_data(
         &ctx,
@@ -450,7 +452,7 @@ impl<C: Config> Runtime for EVMRuntime<C> {
 
 fn do_test_evm_runtime<C: Config>() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime<C>>(context::Mode::ExecuteTx);
+    let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime<C>>(context::Mode::ExecuteTx, true);
     let client_keypair =
         oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::generate_key_pair();
 

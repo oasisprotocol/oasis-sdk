@@ -2,7 +2,6 @@
 use std::{convert::TryFrom, fmt};
 
 use bech32::{self, FromBase32, ToBase32, Variant};
-use digest::Digest;
 use thiserror::Error;
 
 use oasis_core_runtime::{
@@ -148,7 +147,7 @@ impl Address {
                 ADDRESS_V0_VERSION,
                 // Use a scheme such that we can compute Secp256k1 addresses from Ethereum
                 // addresses as this makes things more interoperable.
-                &sha3::Keccak256::digest(pk.to_uncompressed_untagged_bytes())[32 - 20..],
+                &pk.to_eth_address(),
             ),
             SignatureAddressSpec::Sr25519(pk) => Address::new(
                 ADDRESS_V0_SR25519_CONTEXT,

@@ -216,6 +216,14 @@ impl CallerAddress {
             ),
         }
     }
+
+    /// Maps the caller address to one of the same type but with an all-zero address.
+    pub fn zeroized(&self) -> Self {
+        match self {
+            CallerAddress::Address(_) => CallerAddress::Address(Default::default()),
+            CallerAddress::EthAddress(_) => CallerAddress::EthAddress(Default::default()),
+        }
+    }
 }
 
 /// Common information that specifies an address as well as how to authenticate.
@@ -240,6 +248,17 @@ impl AddressSpec {
             AddressSpec::Signature(spec) => Address::from_sigspec(spec),
             AddressSpec::Multisig(config) => Address::from_multisig(config.clone()),
             AddressSpec::Internal(caller) => caller.address(),
+        }
+    }
+
+    /// Derives the caller address.
+    pub fn caller_address(&self) -> CallerAddress {
+        match self {
+            AddressSpec::Signature(SignatureAddressSpec::Secp256k1Eth(pk)) => {
+                CallerAddress::EthAddress(pk.to_eth_address().try_into().unwrap())
+            }
+            AddressSpec::Internal(caller) => caller.clone(),
+            _ => CallerAddress::Address(self.address()),
         }
     }
 
