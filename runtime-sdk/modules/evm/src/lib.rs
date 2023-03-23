@@ -21,7 +21,6 @@ use thiserror::Error;
 use oasis_runtime_sdk::{
     callformat,
     context::{BatchContext, Context, TxContext},
-    error::Error as _,
     handler,
     module::{self, Module as _},
     modules::{
@@ -703,14 +702,8 @@ impl<Cfg: Config> Module<Cfg> {
             // encrypt the call in the normal way.
             return evm_result;
         }
-        let call_result = match evm_result {
-            Ok(exit_value) => module::CallResult::Ok(exit_value.into()),
-            Err(e) => module::CallResult::Failed {
-                module: e.module_name().into(),
-                code: e.code(),
-                message: e.to_string(),
-            },
-        };
+        // Always propagate errors in plaintext.
+        let call_result = module::CallResult::Ok(evm_result?.into());
         Ok(cbor::to_vec(callformat::encode_result_ex(
             ctx,
             call_result,
