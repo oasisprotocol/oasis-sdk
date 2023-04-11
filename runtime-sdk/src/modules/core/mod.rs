@@ -316,6 +316,10 @@ pub struct LocalConfig {
     /// An extra gas amount to be added to all returned gas estimates.
     #[cbor(optional)]
     pub estimate_gas_extra: u64,
+
+    /// An extra gas amount to be added to failed transaction simulations.
+    #[cbor(optional)]
+    pub estimate_gas_extra_fail: u64,
 }
 
 /// State schema constants.
@@ -341,6 +345,9 @@ pub trait Config: 'static {
 
     /// Default local estimate gas amount to be added to the final estimation.
     const DEFAULT_LOCAL_ESTIMATE_GAS_EXTRA: u64 = 0;
+
+    /// Default local estimate gas amount to be added to failed transaction simulations.
+    const DEFAULT_LOCAL_ESTIMATE_GAS_EXTRA_FAIL: u64 = 0;
 
     /// Methods which are exempt from minimum gas price requirements.
     const MIN_GAS_PRICE_EXEMPT_METHODS: once_cell::unsync::Lazy<BTreeSet<&'static str>> =
@@ -499,6 +506,7 @@ impl<Cfg: Config> Module<Cfg> {
         mut args: types::EstimateGasQuery,
     ) -> Result<u64, Error> {
         let mut extra_gas = Self::get_estimate_gas_extra(ctx);
+        let extra_gas_fail = Self::get_estimate_gas_extra_fail(ctx);
         // In case the runtime is confidential we are unable to authenticate the caller so we must
         // make sure to zeroize it to avoid leaking private information.
         if ctx.is_confidential() {
@@ -602,7 +610,11 @@ impl<Cfg: Config> Module<Cfg> {
                     // Don't report success or failure. If the call fails, we still report
                     // how much gas it uses while it fails.
                     let gas_used = *tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
-                    Ok(gas_used)
+                    if result.is_success() {
+                        Ok(gas_used)
+                    } else {
+                        Ok(gas_used.saturating_add(extra_gas_fail).clamp(0, gas))
+                    }
                 })
             })
         };
@@ -701,13 +713,13 @@ impl<Cfg: Config> Module<Cfg> {
         // hi == cap if binary search is disabled or this is a failing transaction.
         let result = if hi == cap.into() {
             // Simulate one last time with maximum gas limit.
-            simulate(&args.tx, cap, propagate_failures).map(|est| est + extra_gas)
+            simulate(&args.tx, cap, propagate_failures)
         } else {
-            Ok(hi as u64 + extra_gas)
+            Ok(hi as u64)
         };
 
         // Make sure the final result is clamped.
-        result.map(|est| est.clamp(0, cap))
+        result.map(|est| est.saturating_add(extra_gas).clamp(0, cap))
     }
 
     /// Check invariants of all modules in the runtime.
@@ -853,6 +865,13 @@ impl<Cfg: Config> Module<Cfg> {
             .as_ref()
             .map(|cfg: &LocalConfig| cfg.estimate_gas_extra)
             .unwrap_or(Cfg::DEFAULT_LOCAL_ESTIMATE_GAS_EXTRA)
+    }
+
+    fn get_estimate_gas_extra_fail<C: Context>(ctx: &C) -> u64 {
+        ctx.local_config(MODULE_NAME)
+            .as_ref()
+            .map(|cfg: &LocalConfig| cfg.estimate_gas_extra_fail)
+            .unwrap_or(Cfg::DEFAULT_LOCAL_ESTIMATE_GAS_EXTRA_FAIL)
     }
 
     fn enforce_min_gas_price<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {

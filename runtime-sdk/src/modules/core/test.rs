@@ -480,9 +480,11 @@ fn test_query_estimate_gas() {
     // Test extra gas estimation.
     {
         let estimate_gas_extra = 1000;
+        let estimate_gas_extra_fail = 10_000;
         let local_config = configmap! {
             "core" => configmap! {
                 "estimate_gas_extra" => estimate_gas_extra,
+                "estimate_gas_extra_fail" => estimate_gas_extra_fail,
             },
         };
         let mut mock = mock::Mock::with_local_config(local_config);
@@ -500,6 +502,20 @@ fn test_query_estimate_gas() {
         assert_eq!(
             est,
             tx_reference_gas + estimate_gas_extra,
+            "estimated gas should be correct"
+        );
+
+        // Test estimation on failure.
+        let args = types::EstimateGasQuery {
+            caller: None,
+            tx: tx_fail.clone(),
+            propagate_failures: false,
+        };
+        let est =
+            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
+        assert_eq!(
+            est,
+            tx_reference_gas + estimate_gas_extra + estimate_gas_extra_fail,
             "estimated gas should be correct"
         );
     }
