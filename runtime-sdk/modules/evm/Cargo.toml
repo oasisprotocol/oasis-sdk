@@ -37,4 +37,4 @@ uint = "0.9.1"
 
 [dev-dependencies]
 oasis-runtime-sdk = { path = "../..", features = ["test"] }
-rand = "0.7.3"
+rand = "0.8.5"
