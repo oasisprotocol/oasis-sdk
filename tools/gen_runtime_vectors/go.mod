@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/oasis-sdk/tools/gen_runtime_vectors
 
-go 1.18
+go 1.19
 
 replace github.com/oasisprotocol/oasis-sdk/client-sdk/go => ../../client-sdk/go
 
