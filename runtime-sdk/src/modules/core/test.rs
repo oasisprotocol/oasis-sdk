@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use once_cell::unsync::Lazy;
+
 use crate::{
     context::{BatchContext, Context, Mode, TxContext},
     core::common::version::Version,
@@ -200,9 +202,11 @@ impl GasWasterModule {
     const CALL_GAS_SPECIFIC_HUGE: u64 = u64::MAX - 10_000;
     const CALL_GAS_CALLER_ADDR_ZERO: u64 = 424242;
     const CALL_GAS_CALLER_ADDR_ETHZERO: u64 = 101010;
+    const CALL_GAS_EXTRA: u64 = 10_000;
 
     const METHOD_WASTE_GAS: &'static str = "test.WasteGas";
     const METHOD_WASTE_GAS_AND_FAIL: &'static str = "test.WasteGasAndFail";
+    const METHOD_WASTE_GAS_AND_FAIL_EXTRA: &'static str = "test.WasteGasAndFailExtra";
     const METHOD_WASTE_GAS_HUGE: &'static str = "test.WasteGasHuge";
     const METHOD_WASTE_GAS_CALLER: &'static str = "test.WasteGasCaller";
     const METHOD_SPECIFIC_GAS_REQUIRED: &'static str = "test.SpecificGasRequired";
@@ -230,6 +234,15 @@ impl GasWasterModule {
 
     #[handler(call = Self::METHOD_WASTE_GAS_AND_FAIL)]
     fn fail<C: TxContext>(
+        ctx: &mut C,
+        _args: (),
+    ) -> Result<(), <GasWasterModule as module::Module>::Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS)?;
+        Err(<GasWasterModule as module::Module>::Error::Forbidden)
+    }
+
+    #[handler(call = Self::METHOD_WASTE_GAS_AND_FAIL_EXTRA)]
+    fn fail_extra<C: TxContext>(
         ctx: &mut C,
         _args: (),
     ) -> Result<(), <GasWasterModule as module::Module>::Error> {
@@ -299,7 +312,15 @@ impl module::InvariantHandler for GasWasterModule {}
 
 struct Config;
 
-impl super::Config for Config {}
+impl super::Config for Config {
+    const ESTIMATE_GAS_EXTRA_FAIL: Lazy<BTreeMap<&'static str, u64>> = Lazy::new(|| {
+        [(
+            GasWasterModule::METHOD_WASTE_GAS_AND_FAIL_EXTRA,
+            GasWasterModule::CALL_GAS_EXTRA,
+        )]
+        .into()
+    });
+}
 
 // Runtime that knows how to waste gas.
 struct GasWasterRuntime;
@@ -418,6 +439,9 @@ fn test_query_estimate_gas() {
     let mut tx_fail = tx.clone();
     tx_fail.call.method = GasWasterModule::METHOD_WASTE_GAS_AND_FAIL.to_owned();
 
+    let mut tx_fail_extra = tx.clone();
+    tx_fail_extra.call.method = GasWasterModule::METHOD_WASTE_GAS_AND_FAIL_EXTRA.to_owned();
+
     let mut tx_huge = tx.clone();
     tx_huge.call.method = GasWasterModule::METHOD_WASTE_GAS_HUGE.to_owned();
 
@@ -479,43 +503,21 @@ fn test_query_estimate_gas() {
 
     // Test extra gas estimation.
     {
-        let estimate_gas_extra = 1000;
-        let estimate_gas_extra_fail = 10_000;
-        let local_config = configmap! {
-            "core" => configmap! {
-                "estimate_gas_extra" => estimate_gas_extra,
-                "estimate_gas_extra_fail" => estimate_gas_extra_fail,
-            },
-        };
-        let mut mock = mock::Mock::with_local_config(local_config);
+        let mut mock = mock::Mock::default();
         let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
         GasWasterRuntime::migrate(&mut ctx);
-
-        // Test estimation with caller derived from the transaction.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx.clone(),
-            propagate_failures: false,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est,
-            tx_reference_gas + estimate_gas_extra,
-            "estimated gas should be correct"
-        );
 
         // Test estimation on failure.
         let args = types::EstimateGasQuery {
             caller: None,
-            tx: tx_fail.clone(),
+            tx: tx_fail_extra.clone(),
             propagate_failures: false,
         };
         let est =
             Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
         assert_eq!(
             est,
-            tx_reference_gas + estimate_gas_extra + estimate_gas_extra_fail,
+            tx_reference_gas + GasWasterModule::CALL_GAS_EXTRA,
             "estimated gas should be correct"
         );
     }
@@ -1179,6 +1181,7 @@ fn test_module_info() {
                         methods: vec![
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGas".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGasAndFail".to_string() },
+                            MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGasAndFailExtra".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGasHuge".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGasCaller".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.SpecificGasRequired".to_string() },

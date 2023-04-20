@@ -312,14 +312,6 @@ pub struct LocalConfig {
     /// This setting should likely be kept at 0, unless the runtime is using the EVM module.
     #[cbor(optional)]
     pub estimate_gas_search_max_iters: u64,
-
-    /// An extra gas amount to be added to all returned gas estimates.
-    #[cbor(optional)]
-    pub estimate_gas_extra: u64,
-
-    /// An extra gas amount to be added to failed transaction simulations.
-    #[cbor(optional)]
-    pub estimate_gas_extra_fail: u64,
 }
 
 /// State schema constants.
@@ -343,11 +335,9 @@ pub trait Config: 'static {
     /// are set in the local per-node configuration.
     const DEFAULT_LOCAL_ESTIMATE_GAS_SEARCH_MAX_ITERS: u64 = 0;
 
-    /// Default local estimate gas amount to be added to the final estimation.
-    const DEFAULT_LOCAL_ESTIMATE_GAS_EXTRA: u64 = 0;
-
-    /// Default local estimate gas amount to be added to failed transaction simulations.
-    const DEFAULT_LOCAL_ESTIMATE_GAS_EXTRA_FAIL: u64 = 0;
+    /// Estimated gas amount to be added to failed transaction simulations for selected methods.
+    const ESTIMATE_GAS_EXTRA_FAIL: once_cell::unsync::Lazy<BTreeMap<&'static str, u64>> =
+        once_cell::unsync::Lazy::new(BTreeMap::new);
 
     /// Methods which are exempt from minimum gas price requirements.
     const MIN_GAS_PRICE_EXEMPT_METHODS: once_cell::unsync::Lazy<BTreeSet<&'static str>> =
@@ -505,8 +495,7 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         mut args: types::EstimateGasQuery,
     ) -> Result<u64, Error> {
-        let mut extra_gas = Self::get_estimate_gas_extra(ctx);
-        let extra_gas_fail = Self::get_estimate_gas_extra_fail(ctx);
+        let mut extra_gas = 0;
         // In case the runtime is confidential we are unable to authenticate the caller so we must
         // make sure to zeroize it to avoid leaking private information.
         if ctx.is_confidential() {
@@ -590,6 +579,12 @@ impl<Cfg: Config> Module<Cfg> {
             let params = Self::params(ctx.runtime_state());
             extra_gas += params.gas_costs.auth_signature;
         }
+
+        // Determine if we need to add any extra gas for failing calls.
+        #[allow(clippy::borrow_interior_mutable_const)]
+        let extra_gas_fail = *Cfg::ESTIMATE_GAS_EXTRA_FAIL
+            .get(args.tx.call.method.as_str())
+            .unwrap_or(&0);
 
         // Simulates transaction with a specific gas limit.
         let mut simulate = |tx: &transaction::Transaction, gas: u64, report_failure: bool| {
@@ -858,20 +853,6 @@ impl<Cfg: Config> Module<Cfg> {
             .as_ref()
             .map(|cfg: &LocalConfig| cfg.max_estimated_gas)
             .unwrap_or_default()
-    }
-
-    fn get_estimate_gas_extra<C: Context>(ctx: &C) -> u64 {
-        ctx.local_config(MODULE_NAME)
-            .as_ref()
-            .map(|cfg: &LocalConfig| cfg.estimate_gas_extra)
-            .unwrap_or(Cfg::DEFAULT_LOCAL_ESTIMATE_GAS_EXTRA)
-    }
-
-    fn get_estimate_gas_extra_fail<C: Context>(ctx: &C) -> u64 {
-        ctx.local_config(MODULE_NAME)
-            .as_ref()
-            .map(|cfg: &LocalConfig| cfg.estimate_gas_extra_fail)
-            .unwrap_or(Cfg::DEFAULT_LOCAL_ESTIMATE_GAS_EXTRA_FAIL)
     }
 
     fn enforce_min_gas_price<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {
