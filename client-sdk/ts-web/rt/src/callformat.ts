@@ -1,6 +1,5 @@
 import * as oasis from '@oasisprotocol/client';
-// @ts-expect-error missing declaration
-import * as deoxysii from 'deoxysii';
+import * as deoxysii from '@oasisprotocol/deoxysii';
 import * as nacl from 'tweetnacl';
 // @ts-expect-error missing declaration
 import * as randomBytes from 'randombytes';
