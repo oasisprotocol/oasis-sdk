@@ -224,9 +224,14 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npx --package cypress -c 'cypress run'
 
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x"
+
       - name: Nodejs e2e run
         working-directory: client-sdk/ts-web/core
-        run: node --unhandled-rejections=strict test/e2e-nodejs.js
+        run: node test/e2e-nodejs.js
 
       - name: Upload screenshot
         if: failure()
