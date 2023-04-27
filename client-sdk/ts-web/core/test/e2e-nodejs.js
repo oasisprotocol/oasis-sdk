@@ -9,5 +9,5 @@ const oasis = require('./..');
 import('../playground/src/startPlayground.mjs').then(({startPlayground}) => {
   setTimeout(async () => {
     await startPlayground(oasis);
-  }, 1000)
+  }, 2*60*1000)
 });
