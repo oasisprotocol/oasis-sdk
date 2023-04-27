@@ -25,7 +25,7 @@ type TestKey struct {
 	SigSpec   types.SignatureAddressSpec
 
 	// EthAddress is the corresponding Ethereum address if the key is secp256k1.
-	EthAddress ethCommon.Address
+	EthAddress *ethCommon.Address
 }
 
 func newEd25519TestKey(seed string) TestKey {
@@ -48,7 +48,7 @@ func newSecp256k1TestKey(seed string) TestKey {
 	h := sha3.NewLegacyKeccak256()
 	untaggedPk, _ := sigspec.Secp256k1Eth.MarshalBinaryUncompressedUntagged()
 	h.Write(untaggedPk)
-	var ethAddress [20]byte
+	var ethAddress ethCommon.Address
 	copy(ethAddress[:], h.Sum(nil)[32-20:])
 
 	return TestKey{
@@ -56,7 +56,7 @@ func newSecp256k1TestKey(seed string) TestKey {
 		Signer:     signer,
 		Address:    types.NewAddress(sigspec),
 		SigSpec:    sigspec,
-		EthAddress: ethAddress,
+		EthAddress: &ethAddress,
 	}
 }
 
