@@ -14,7 +14,7 @@ oasis-runtime-sdk = { path = "../../runtime-sdk" }
 k256 = { version = "0.10.4", default-features = false, features = ["keccak256", "ecdsa"] }
 thiserror = "1.0.30"
 x25519-dalek = "1.1.0"
-sha2 = "0.9.8"
+sha2 = "0.10.6"
 hmac = "0.11.0"
 
 [dev-dependencies]

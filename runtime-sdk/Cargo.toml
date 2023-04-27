@@ -17,7 +17,7 @@ curve25519-dalek = "3.2.0"
 ed25519-dalek = "1.0.1"
 digest = "0.10.3"
 hmac = "0.11.0"
-sha2 = "0.9.8"
+sha2 = "0.10.6"
 sha3 = { version = "0.10.1", default-features = false }
 sha3_0_9_1 = { package = "sha3", version = "0.9.1", default-features = false }
 k256 = { version = "0.10.4" }
