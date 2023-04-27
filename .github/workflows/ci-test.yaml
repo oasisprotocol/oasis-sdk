@@ -176,12 +176,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Node.js 18
+      - name: Set up Node.js 14
         uses: actions/setup-node@v3
         with:
-          node-version: "18.x"
+          node-version: "14.x"
           cache: npm
           cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
+
+      - name: Set up npm
+        run: npm install npm@7 -g
 
       - name: Install dependencies and build
         working-directory: client-sdk/ts-web
