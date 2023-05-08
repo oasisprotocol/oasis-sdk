@@ -95,15 +95,15 @@ func main() {
 						// Valid Deposit: Alice -> Dave's native address on ParaTime
 						{testing.Dave.Address.String(), nil, context.ChainContext, true},
 						// Valid Deposit: Alice -> Dave's ethereum address on ParaTime
-						{testing.Dave.EthAddress.String(), &testing.Dave.EthAddress, context.ChainContext, true},
+						{testing.Dave.EthAddress.String(), testing.Dave.EthAddress, context.ChainContext, true},
 						// Valid Deposit: Alice -> Frank's native address on ParaTime
 						{testing.Frank.Address.String(), nil, context.ChainContext, true},
 						// Invalid Deposit: orig_to doesn't match transaction's to
 						{testing.Dave.EthAddress.String(), &unknownEthAddr, context.ChainContext, false},
 						// Invalid Deposit: chain_context empty
-						{testing.Dave.EthAddress.String(), &testing.Dave.EthAddress, emptyChainContext, false},
+						{testing.Dave.EthAddress.String(), testing.Dave.EthAddress, emptyChainContext, false},
 						// Invalid Deposit: chain_context invalid
-						{testing.Dave.EthAddress.String(), &testing.Dave.EthAddress, invalidChainContext, false},
+						{testing.Dave.EthAddress.String(), testing.Dave.EthAddress, invalidChainContext, false},
 					} {
 						to, ethTo, _ := helpers.ResolveAddress(nil, t.to)
 						txBody := &consensusaccounts.Deposit{
@@ -165,13 +165,13 @@ func main() {
 						// Valid Transfer: Alice -> Dave's native address on ParaTime
 						{testing.Dave.Address.String(), nil, testing.Alice, true},
 						// Valid Transfer: Alice -> Dave's ethereum address on ParaTime
-						{testing.Dave.EthAddress.String(), &testing.Dave.EthAddress, testing.Alice, true},
+						{testing.Dave.EthAddress.String(), testing.Dave.EthAddress, testing.Alice, true},
 						// Valid Transfer: Alice -> Frank's native address on ParaTime
 						{testing.Frank.Address.String(), nil, testing.Alice, true},
 						// Valid Transfer: Dave -> Alice's native address on ParaTime
 						{testing.Alice.Address.String(), nil, testing.Dave, true},
 						// Valid Transfer: Dave -> Erin's ethereum address on ParaTime
-						{testing.Erin.EthAddress.String(), &testing.Erin.EthAddress, testing.Dave, true},
+						{testing.Erin.EthAddress.String(), testing.Erin.EthAddress, testing.Dave, true},
 						// Valid Transfer: Frank -> Alice's native address on ParaTime
 						{testing.Alice.Address.String(), nil, testing.Frank, true},
 						// Valid Transfer: Frank -> Grace native address on ParaTime

@@ -58,7 +58,7 @@ func ResolveAddress(net *config.Network, address string) (*types.Address, *ethCo
 		case addressExplicitTest:
 			// Test key.
 			if testKey, ok := testing.TestAccounts[data]; ok {
-				return &testKey.Address, &testKey.EthAddress, nil
+				return &testKey.Address, testKey.EthAddress, nil
 			}
 			return nil, nil, fmt.Errorf("unsupported test account: %s", data)
 		default:
