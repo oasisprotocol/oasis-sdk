@@ -45,8 +45,8 @@ jobs:
       - name: 'proxy: Install Envoy'
         # https://github.com/tetratelabs/archive-envoy
         run: |
-          curl -sL 'https://github.com/tetratelabs/archive-envoy/releases/download/v1.18.3/envoy-v1.18.3-linux-amd64.tar.xz' | sudo tar -xJC /opt
-          sudo ln -s /opt/envoy-v1.18.3-linux-amd64/bin/envoy /usr/local/bin
+          curl -sL 'https://github.com/tetratelabs/archive-envoy/releases/download/v1.26.1/envoy-v1.26.1-linux-amd64.tar.xz' | sudo tar -xJC /opt
+          sudo ln -s /opt/envoy-v1.26.1-linux-amd64/bin/envoy /usr/local/bin
 
       - name: 'proxy: Start'
         working-directory: client-sdk/ts-web/core/playground

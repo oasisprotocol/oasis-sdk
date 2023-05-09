@@ -32,8 +32,14 @@ static_resources:
                 max_age: '1728000'
           http_filters:
           - name: envoy.filters.http.grpc_web
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_web.v3.GrpcWeb
           - name: envoy.filters.http.cors
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
           - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
   - name: oasis_node_grpc
     connect_timeout: 0.25s
@@ -45,7 +51,6 @@ static_resources:
             address:
               pipe:
                 path: /tmp/oasis-net-runner-sdk-rt/net-runner/network/client-0/internal.sock
-    http2_protocol_options: {}
 # admin:
 #   access_log_path: /dev/null
 #   address:
