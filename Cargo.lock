@@ -2104,7 +2104,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2 1.0.56",
  "quote 1.0.26",
- "syn 1.0.109",
+ "syn 2.0.14",
 ]
 
 [[package]]
@@ -2308,7 +2308,7 @@ dependencies = [
  "difference",
  "proc-macro2 1.0.56",
  "quote 1.0.26",
- "syn 1.0.109",
+ "syn 2.0.14",
 ]
 
 [[package]]
