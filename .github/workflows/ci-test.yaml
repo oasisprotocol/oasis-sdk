@@ -70,4 +70,4 @@ jobs:
 
       - name: Nodejs e2e run
         working-directory: client-sdk/ts-web/core
-        run: NODE_DEBUG=http,http2 node --dns-result-order=ipv4first test/e2e-nodejs.js
+        run: NODE_DEBUG=http,http2,net node --dns-result-order=ipv4first test/e2e-nodejs.js
