@@ -70,4 +70,4 @@ jobs:
 
       - name: Nodejs e2e run
         working-directory: client-sdk/ts-web/core
-        run: node test/e2e-nodejs.js
+        run: NODE_DEBUG=http,http2 node test/e2e-nodejs.js
