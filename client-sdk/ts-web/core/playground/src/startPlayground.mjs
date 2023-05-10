@@ -2,7 +2,7 @@
 
 /** @param {import('./../..')} oasis */
 export async function startPlayground(oasis) {
-    const nic = new oasis.client.NodeInternal('http://localhost:42280');
+    const nic = new oasis.client.NodeInternal('http://127.0.0.1:42280');
     const msgs = []
     // Wait for ready.
     {
