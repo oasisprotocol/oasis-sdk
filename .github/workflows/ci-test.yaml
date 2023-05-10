@@ -68,6 +68,10 @@ jobs:
             sleep 1
           done
 
+      - name: Cypress run
+        working-directory: client-sdk/ts-web/core
+        run: npx --package cypress -c 'cypress run'
+
       - name: Nodejs e2e run
         working-directory: client-sdk/ts-web/core
         run: NODE_DEBUG=http,http2,net node --dns-result-order=ipv4first test/e2e-nodejs.js
