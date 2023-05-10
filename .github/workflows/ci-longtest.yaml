@@ -1,0 +1,45 @@
+# NOTE: This name appears in GitHub's Checks API and in workflow's status badge.
+name: ci-longtest
+
+# Trigger the workflow when:
+on:
+  # Every day at 00:00 UTC.
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+
+  e2e-rt-long:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: e2e-rt-long
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        run: rustup show
+
+      - name: Set up Go 1.20
+        uses: actions/setup-go@v3
+        with:
+          go-version: "1.20.x"
+
+      - name: Install Oasis dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install bubblewrap build-essential libseccomp-dev libssl-dev protobuf-compiler
+
+      - name: Download artifacts
+        working-directory: tests/
+        run: ./download-artifacts.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run long end-to-end tests
+        run: |
+          ./tests/run-e2e.sh \
+            --e2e/test-runtime-simple-keyvalue.txgen.coins_per_acct=100000 \
+            --e2e/test-runtime-simple-keyvalue.txgen.num_accounts=100 \
+            --e2e/test-runtime-simple-keyvalue.txgen.duration=15m
+

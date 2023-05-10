@@ -4,8 +4,6 @@ describe('playground.cy.ts', () => {
         // This is similar to `.its('playground')`, except that
         // (i) it doesn't retry if `w.playground` rejects, and
         // (ii) it passes when `w.playground` fulfills with `undefined`.
-        cy.window().then({timeout: 120_000}, (w) => w.playground).then(msgs => {
-            cy.task('log', JSON.stringify(msgs, (key, value) => typeof value === 'bigint' ? value.toString() : value, 2))
-        })
+        cy.window().then({timeout: 120_000}, (w) => w.playground);
     });
 });

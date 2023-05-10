@@ -1,0 +1,49 @@
+# NOTE: This name appears in GitHub's Checks API and in workflow's status badge.
+name: ci-docs
+
+# Trigger the workflow when:
+on:
+  # A push occurs to one of the matched branches.
+  push:
+    branches:
+      - main
+
+# Cancel in-progress jobs on same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
+jobs:
+
+  publish-docs:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: publish-docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        run: rustup show
+
+      - name: Build docs
+        run: |
+          cargo doc \
+            --no-deps --all-features \
+            --package oasis-core-runtime \
+            --package oasis-runtime-sdk \
+            --package oasis-runtime-sdk-macros \
+            --package oasis-runtime-sdk-contracts \
+            --package oasis-contract-sdk \
+            --package oasis-contract-sdk-types \
+            --package oasis-contract-sdk-storage
+
+      - name: Publish docs
+        uses: crazy-max/ghaction-github-pages@v3
+        with:
+          target_branch: api-reference
+          build_dir: target/doc
+          commit_message: Deploy API reference
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
