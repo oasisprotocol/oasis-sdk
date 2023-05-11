@@ -21,7 +21,8 @@
         "lint": "prettier --check playground/src src test",
         "playground": "cd playground && webpack s -c webpack.config.js",
         "test": "jest",
-        "test-e2e-cy": "cypress run"
+        "test-e2e-cy": "cypress run",
+        "test-e2e-node": "node --experimental-global-webcrypto playground/e2e-test-nodejs.js"
     },
     "dependencies": {
         "bech32": "^2.0.0",
@@ -45,6 +46,7 @@
         "typescript": "^5.0.4",
         "webpack": "^5.79.0",
         "webpack-cli": "^5.0.1",
-        "webpack-dev-server": "^4.13.3"
+        "webpack-dev-server": "^4.13.3",
+        "xhr2": "^0.2.1"
     }
 }

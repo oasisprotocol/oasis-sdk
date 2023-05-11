@@ -183,5 +183,5 @@ When you create an `oasis.client.NodeInternal`, pass the HTTP endpoint of your
 Envoy proxy:
 
 ```js
-const client = new oasis.client.NodeInternal('http://localhost:42280');
+const client = new oasis.client.NodeInternal('http://127.0.0.1:42280');
 ```
