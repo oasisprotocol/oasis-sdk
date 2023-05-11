@@ -1,8 +1,7 @@
 // @ts-check
 
 import * as oasis from '@oasisprotocol/client';
-
-import * as oasisRT from './../..';
+import * as oasisRT from '@oasisprotocol/client-rt';
 
 const CONSENSUS_RT_ID = oasis.misc.fromHex(
     '8000000000000000000000000000000000000000000000000000000000000001',

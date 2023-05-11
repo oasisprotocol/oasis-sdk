@@ -2,8 +2,7 @@
 
 import * as oasis from '@oasisprotocol/client';
 import * as oasisRT from '@oasisprotocol/client-rt';
-
-import * as oasisExt from './../..';
+import * as oasisExt from '@oasisprotocol/client-ext-utils';
 
 const testNoninteractive = new URL(window.location.href).searchParams.has('test_noninteractive');
 

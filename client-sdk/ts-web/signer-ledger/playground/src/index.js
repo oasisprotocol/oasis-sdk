@@ -1,7 +1,7 @@
 // @ts-check
 
 import * as oasis from '@oasisprotocol/client';
-import * as oasisLedger from './../..';
+import * as oasisLedger from '@oasisprotocol/client-signer-ledger';
 
 async function play() {
     try {
