@@ -1,3 +1,7 @@
+import * as outputConsoleLogs from './../../../core/cypress/outputConsoleLogs';
+
+outputConsoleLogs.beforeWindowLoadListener();
+
 describe('playground.cy.ts', () => {
     it('should finish', () => {
         cy.visit('http://localhost:8080/?ext=http://localhost:8081&test_noninteractive=1');

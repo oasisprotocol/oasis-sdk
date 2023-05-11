@@ -13,6 +13,7 @@
     ],
     "main": "dist/index.js",
     "scripts": {
+        "prepare": "tsc",
         "check-sample-page": "cd sample-page && tsc -p jsconfig.json",
         "check-sample-ext": "cd sample-ext && tsc -p jsconfig.json",
         "fmt": "prettier --write sample-ext/src sample-page/src src",
@@ -20,7 +21,7 @@
         "sample-page": "cd sample-page && webpack s -c webpack.config.js",
         "sample-ext": "cd sample-ext && webpack -c webpack.config.js",
         "fake-sample-ext": "cd sample-ext && webpack s -c webpack.config.js",
-        "prepare": "tsc"
+        "test-e2e-cy": "cypress run"
     },
     "dependencies": {
         "@oasisprotocol/client": "^0.1.1-alpha.2"

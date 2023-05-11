@@ -222,7 +222,7 @@ jobs:
 
       - name: Cypress run
         working-directory: client-sdk/ts-web/core
-        run: npx --package cypress -c 'cypress run'
+        run: npm run-script test-e2e-cy
 
       - name: Upload screenshot
         if: failure()
@@ -263,7 +263,7 @@ jobs:
 
       - name: Cypress run
         working-directory: client-sdk/ts-web/ext-utils
-        run: npx --package cypress -c 'cypress run'
+        run: npm run-script test-e2e-cy
 
       - name: Upload screenshot
         if: failure()
@@ -333,7 +333,7 @@ jobs:
 
       - name: Cypress run
         working-directory: client-sdk/ts-web/rt
-        run: npx --package cypress -c 'cypress run'
+        run: npm run-script test-e2e-cy
 
       - name: Upload screenshot
         if: failure()

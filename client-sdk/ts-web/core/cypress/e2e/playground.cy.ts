@@ -1,3 +1,7 @@
+import * as outputConsoleLogs from './../outputConsoleLogs';
+
+outputConsoleLogs.beforeWindowLoadListener();
+
 describe('playground.cy.ts', () => {
     it('should finish', () => {
         cy.visit('http://localhost:8080/');
