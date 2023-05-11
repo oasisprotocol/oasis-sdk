@@ -7,7 +7,7 @@ export default defineConfig({
         setupNodeEvents(on, config) {
             on('task', {
                 log(message) {
-                    console.log(message)
+                    console.log('console.log', message)
                     return null
                 },
             })
