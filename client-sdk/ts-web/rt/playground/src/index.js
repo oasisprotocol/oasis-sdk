@@ -87,7 +87,7 @@ function moduleEventHandler(
     return /** @type {oasisRT.event.ModuleHandler} */ ([MODULE_NAME, codes]);
 }
 
-const nic = new oasis.client.NodeInternal('http://localhost:42280');
+const nic = new oasis.client.NodeInternal('http://127.0.0.1:42280');
 const accountsWrapper = new oasisRT.accounts.Wrapper(KEYVALUE_RUNTIME_ID);
 const rewardsWrapper = new oasisRT.rewards.Wrapper(KEYVALUE_RUNTIME_ID);
 const coreWrapper = new oasisRT.core.Wrapper(KEYVALUE_RUNTIME_ID);

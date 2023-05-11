@@ -20,7 +20,7 @@ function delay(duration) {
     });
 }
 
-const nic = new oasis.client.NodeInternal('http://localhost:42280');
+const nic = new oasis.client.NodeInternal('http://127.0.0.1:42280');
 const accountsWrapper = new oasisRT.accounts.Wrapper(CONSENSUS_RT_ID);
 const consensusWrapper = new oasisRT.consensusAccounts.Wrapper(CONSENSUS_RT_ID);
 

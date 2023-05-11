@@ -2,7 +2,7 @@
 import * as oasis from '@oasisprotocol/client';
 
 export async function startPlayground() {
-    const nic = new oasis.client.NodeInternal('http://localhost:42280');
+    const nic = new oasis.client.NodeInternal('http://127.0.0.1:42280');
     // Wait for ready.
     {
         console.log('waiting for node to be ready');
