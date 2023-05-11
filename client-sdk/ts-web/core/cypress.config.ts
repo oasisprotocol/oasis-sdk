@@ -6,8 +6,8 @@ export default defineConfig({
         supportFile: false,
         setupNodeEvents(on, config) {
             on('task', {
-                log(message) {
-                    console.log('console.log', message)
+                log(stringifiedArray) {
+                    console.log('console.log', ...JSON.parse(stringifiedArray))
                     return null
                 },
             })

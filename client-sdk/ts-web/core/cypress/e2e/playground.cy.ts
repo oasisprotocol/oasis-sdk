@@ -1,11 +1,11 @@
 function log(...args) {
-    const message = JSON.stringify(args, (key, value) => (typeof value === 'bigint' ? value.toString() : value), 2);
+    const stringifiedArray = JSON.stringify(args, (key, value) => (typeof value === 'bigint' ? value.toString() : value), 2);
 
-    // Workaround: `cy.task('log', message)` throws that cypress command is inside cypress command.
+    // Workaround: `cy.task('log', stringifiedArray)` throws that cypress command is inside cypress command.
     Cypress.emit(
         'backend:request',
         'task',
-        { task: 'log', arg: message },
+        { task: 'log', arg: stringifiedArray },
         () => {},
     );
 }
