@@ -1,3 +1,7 @@
+import * as outputConsoleLogs from './../../../core/cypress/outputConsoleLogs';
+
+outputConsoleLogs.beforeWindowLoadListener();
+
 describe('playground.cy.ts', () => {
     it('should finish simple-keyvalue', () => {
         cy.visit('http://localhost:8080/');
