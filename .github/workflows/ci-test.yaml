@@ -224,6 +224,15 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npm run-script test-e2e-cy
 
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x"
+
+      - name: Node.js 18 e2e run
+        working-directory: client-sdk/ts-web/core
+        run: npm run-script test-e2e-node
+
       - name: Upload screenshot
         if: failure()
         uses: actions/upload-artifact@v3
