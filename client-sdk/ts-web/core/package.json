@@ -15,12 +15,13 @@
     ],
     "main": "dist/index.js",
     "scripts": {
+        "prepare": "./compile-proto.sh && tsc",
         "check-playground": "cd playground && tsc -p jsconfig.json",
         "fmt": "prettier --write playground/src src test",
         "lint": "prettier --check playground/src src test",
         "playground": "cd playground && webpack s -c webpack.config.js",
-        "prepare": "./compile-proto.sh && tsc",
-        "test": "jest"
+        "test": "jest",
+        "test-e2e-cy": "cypress run"
     },
     "dependencies": {
         "bech32": "^2.0.0",

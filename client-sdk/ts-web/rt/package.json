@@ -18,7 +18,8 @@
         "fmt": "prettier --write playground/src src test",
         "lint": "prettier --check playground/src src test",
         "playground": "cd playground && webpack s -c webpack.config.js",
-        "test": "jest"
+        "test": "jest",
+        "test-e2e-cy": "cypress run"
     },
     "dependencies": {
         "@oasisprotocol/client": "^0.1.1-alpha.2",
