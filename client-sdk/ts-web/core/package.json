@@ -15,7 +15,9 @@
         "lint": "prettier --check playground/src src test",
         "playground": "cd playground && webpack s -c webpack.config.js",
         "prepare": "./compile-proto.sh && tsc",
-        "test": "jest"
+        "test": "jest",
+        "test-e2e-cy": "cypress run --project playground/test/",
+        "test-e2e-node": "node --experimental-global-webcrypto playground/test/e2e-nodejs.js"
     },
     "dependencies": {
         "bech32": "^2.0.0",

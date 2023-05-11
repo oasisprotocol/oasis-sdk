@@ -1,4 +1,4 @@
-function log(...args) {
+function log(...args: any[]) {
     const stringifiedArray = JSON.stringify(args, (key, value) => (typeof value === 'bigint' ? value.toString() : value), 2);
 
     // Workaround: `cy.task('log', stringifiedArray)` throws that cypress command is inside cypress command.
