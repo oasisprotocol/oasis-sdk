@@ -77,7 +77,7 @@ func (ut *UnverifiedTransaction) Verify(ctx signature.Context) (*Transaction, er
 	txCtx := ctx.Derive()
 	// We'll need at least one signature per proof, so we might as well preallocate that.
 	// Could be more though.
-	publicKeys := make([]PublicKey, 0, len(ut.AuthProofs))
+	publicKeys := make([]signature.PublicKey, 0, len(ut.AuthProofs))
 	signatures := make([][]byte, 0, len(ut.AuthProofs))
 	for i, ap := range ut.AuthProofs {
 		pks, sigs, err := tx.AuthInfo.SignerInfo[i].AddressSpec.Batch(ap)
@@ -110,7 +110,7 @@ func (ut *UnverifiedTransaction) PrettyPrint(ctx context.Context, prefix string,
 	}
 
 	// Verify and print each signer and signature.
-	publicKeys := make([]PublicKey, 0, len(ut.AuthProofs))
+	publicKeys := make([]signature.PublicKey, 0, len(ut.AuthProofs))
 	signatures := make([][]byte, 0, len(ut.AuthProofs))
 	for i, ap := range ut.AuthProofs {
 		pks, sigs, err := tx.AuthInfo.SignerInfo[i].AddressSpec.Batch(ap)
@@ -450,10 +450,10 @@ func (as *AddressSpec) Address() (Address, error) {
 
 // Batch checks that the address specification and the authentication proof are acceptable.
 // Returns vectors of public keys and signatures for batch verification of included signatures.
-func (as *AddressSpec) Batch(ap AuthProof) ([]PublicKey, [][]byte, error) {
+func (as *AddressSpec) Batch(ap AuthProof) ([]signature.PublicKey, [][]byte, error) {
 	switch {
 	case as.Signature != nil && ap.Signature != nil:
-		return []PublicKey{as.Signature.PublicKey()}, [][]byte{ap.Signature}, nil
+		return []signature.PublicKey{as.Signature.PublicKey()}, [][]byte{ap.Signature}, nil
 	case as.Multisig != nil && ap.Multisig != nil:
 		return as.Multisig.Batch(ap.Multisig)
 	default:
