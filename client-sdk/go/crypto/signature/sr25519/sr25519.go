@@ -59,8 +59,13 @@ func (pk PublicKey) String() string {
 
 // Equal compares vs another public key for equality.
 func (pk PublicKey) Equal(other signature.PublicKey) bool {
-	opk, ok := other.(PublicKey)
-	if !ok {
+	var opk *PublicKey
+	switch otherPk := other.(type) {
+	case PublicKey:
+		opk = &otherPk
+	case *PublicKey:
+		opk = otherPk
+	default:
 		return false
 	}
 	if pk.inner == nil && opk.inner != nil || pk.inner != nil && opk.inner == nil {
@@ -94,4 +99,13 @@ func newSigningTranscript(context, message []byte) *sr25519.SigningTranscript {
 	_, _ = h.Write(message)
 
 	return signingContext.NewTranscriptHash(h)
+}
+
+// NewPublicKey creates a new public key from the given Base64 representation or
+// panics.
+func NewPublicKey(text string) (pk PublicKey) {
+	if err := pk.UnmarshalText([]byte(text)); err != nil {
+		panic(err)
+	}
+	return
 }

@@ -57,11 +57,16 @@ func (pk PublicKey) String() string {
 
 // Equal compares vs another public key for equality.
 func (pk PublicKey) Equal(other sdkSignature.PublicKey) bool {
-	opk, ok := other.(PublicKey)
-	if !ok {
+	var opk *PublicKey
+	switch otherPk := other.(type) {
+	case PublicKey:
+		opk = &otherPk
+	case *PublicKey:
+		opk = otherPk
+	default:
 		return false
 	}
-	obpk := btcec.PublicKey(opk)
+	obpk := btcec.PublicKey(*opk)
 	bpk := btcec.PublicKey(pk)
 	return bpk.IsEqual(&obpk)
 }
