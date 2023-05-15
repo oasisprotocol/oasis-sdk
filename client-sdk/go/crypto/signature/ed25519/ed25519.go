@@ -45,11 +45,16 @@ func (pk PublicKey) String() string {
 
 // Equal compares vs another public key for equality.
 func (pk PublicKey) Equal(other sdkSignature.PublicKey) bool {
-	opk, ok := other.(PublicKey)
-	if !ok {
+	var opk *PublicKey
+	switch otherPk := other.(type) {
+	case PublicKey:
+		opk = &otherPk
+	case *PublicKey:
+		opk = otherPk
+	default:
 		return false
 	}
-	return (signature.PublicKey)(pk).Equal((signature.PublicKey)(opk))
+	return (signature.PublicKey)(pk).Equal((signature.PublicKey)(*opk))
 }
 
 // Verify returns true iff the signature is valid for the public key over the context and message.

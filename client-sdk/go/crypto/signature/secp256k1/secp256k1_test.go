@@ -148,3 +148,23 @@ func TestSecp256k1Reset(t *testing.T) {
 	ver2 := s.Public().Verify(ctx1.Derive(), msg1, sig1)
 	require.False(ver2, "verification should fail after reset")
 }
+
+func TestSecp256k1Equal(t *testing.T) {
+	require := require.New(t)
+
+	pk1 := NewPublicKey("AwF6GNjbybMzhi3XRj5R1oTiMMkO1nAwB7NZAlH1X4BE")
+	pk2 := NewPublicKey("A9i0oSK+5sLSONbMYGmaFUA+Fb8zzqYEMUMspacIgO09")
+	pk3 := NewPublicKey("AwF6GNjbybMzhi3XRj5R1oTiMMkO1nAwB7NZAlH1X4BE")
+
+	require.True(pk1.Equal(pk1)) //nolint: gocritic
+	require.True(pk1.Equal(&pk1))
+	require.True(pk1.Equal(pk3))
+	require.True(pk1.Equal(&pk3))
+	require.True(pk3.Equal(pk3)) //nolint: gocritic
+	require.True(pk3.Equal(&pk3))
+	require.True(pk3.Equal(pk1))
+	require.True(pk3.Equal(&pk1))
+
+	require.False(pk1.Equal(pk2))
+	require.False(pk1.Equal(&pk2))
+}
