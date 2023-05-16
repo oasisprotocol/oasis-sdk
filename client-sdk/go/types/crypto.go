@@ -144,7 +144,7 @@ func (mc *MultisigConfig) ValidateBasic() error {
 
 // Batch checks that enough signers have signed and returns vectors of public keys and signatures
 // for batch verification of those signatures. This internally calls `ValidateBasic`.
-func (mc *MultisigConfig) Batch(signatureSet [][]byte) ([]PublicKey, [][]byte, error) {
+func (mc *MultisigConfig) Batch(signatureSet [][]byte) ([]signature.PublicKey, [][]byte, error) {
 	if err := mc.ValidateBasic(); err != nil {
 		return nil, nil, err
 	}
@@ -152,12 +152,12 @@ func (mc *MultisigConfig) Batch(signatureSet [][]byte) ([]PublicKey, [][]byte, e
 		return nil, nil, fmt.Errorf("mismatched signature set length")
 	}
 	var total uint64
-	var publicKeys []PublicKey
+	var publicKeys []signature.PublicKey
 	var signatures [][]byte
 	for i := 0; i < len(mc.Signers); i++ {
 		if signatureSet[i] != nil {
 			total += mc.Signers[i].Weight
-			publicKeys = append(publicKeys, mc.Signers[i].PublicKey)
+			publicKeys = append(publicKeys, mc.Signers[i].PublicKey.PublicKey)
 			signatures = append(signatures, signatureSet[i])
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/encoding/bech32"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
+	sdkSignature "github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/sr25519"
@@ -60,16 +61,17 @@ type SignatureAddressSpec struct {
 }
 
 // PublicKey returns the public key of the authentication/address derivation specification.
-func (as *SignatureAddressSpec) PublicKey() PublicKey {
+func (as *SignatureAddressSpec) PublicKey() sdkSignature.PublicKey {
 	switch {
 	case as.Ed25519 != nil:
-		return PublicKey{PublicKey: as.Ed25519}
+		return as.Ed25519
 	case as.Secp256k1Eth != nil:
-		return PublicKey{PublicKey: as.Secp256k1Eth}
+		return as.Secp256k1Eth
 	case as.Sr25519 != nil:
-		return PublicKey{PublicKey: as.Sr25519}
+		return as.Sr25519
+	default:
+		return nil
 	}
-	return PublicKey{}
 }
 
 // NewSignatureAddressSpecEd25519 creates a new address specification for an Ed25519 public key.
