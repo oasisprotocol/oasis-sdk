@@ -25,11 +25,11 @@
         "test-e2e-node": "node --experimental-global-webcrypto playground/e2e-test-nodejs.js"
     },
     "dependencies": {
+        "@noble/hashes": "^1.4.0",
         "bech32": "^2.0.0",
         "bip39": "^3.1.0",
         "cborg": "^2.0.3",
         "grpc-web": "^1.5.0",
-        "js-sha512": "^0.9.0",
         "protobufjs": "~7.2.6",
         "tweetnacl": "^1.0.3"
     },
