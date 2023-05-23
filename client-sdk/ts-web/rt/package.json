@@ -27,7 +27,6 @@
         "@oasisprotocol/deoxysii": "^0.0.5",
         "elliptic": "^6.5.5",
         "randombytes": "^2.0.1",
-        "sha3": "^2.1.4",
         "tweetnacl": "^1.0.3"
     },
     "devDependencies": {

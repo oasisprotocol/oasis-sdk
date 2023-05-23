@@ -1,6 +1,6 @@
+import {keccak_256} from '@noble/hashes/sha3';
 import * as oasis from '@oasisprotocol/client';
 import * as elliptic from 'elliptic';
-import {Keccak} from 'sha3';
 
 import * as types from './types';
 
@@ -20,9 +20,7 @@ export async function fromSigspec(spec: types.SignatureAddressSpec) {
         const untaggedPk = SECP256K1.keyFromPublic(spec.secp256k1eth)
             .getPublic(false, 'array')
             .slice(1);
-        const hash = new Keccak(256);
-        hash.update(Buffer.from(untaggedPk));
-        const pkData = hash.digest().slice(32 - 20);
+        const pkData = keccak_256(new Uint8Array(untaggedPk)).slice(32 - 20);
         return await oasis.address.fromData(
             V0_SECP256K1ETH_CONTEXT_IDENTIFIER,
             V0_SECP256K1ETH_CONTEXT_VERSION,
