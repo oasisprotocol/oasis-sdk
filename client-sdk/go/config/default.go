@@ -14,7 +14,7 @@ var DefaultNetworks = Networks{
 				Decimals: 9,
 			},
 			ParaTimes: ParaTimes{
-				Default: "emerald",
+				Default: "sapphire",
 				All: map[string]*ParaTime{
 					// Cipher on Mainnet.
 					"cipher": {
@@ -61,7 +61,7 @@ var DefaultNetworks = Networks{
 				Decimals: 9,
 			},
 			ParaTimes: ParaTimes{
-				Default: "emerald",
+				Default: "sapphire",
 				All: map[string]*ParaTime{
 					// Cipher on Testnet.
 					"cipher": {
