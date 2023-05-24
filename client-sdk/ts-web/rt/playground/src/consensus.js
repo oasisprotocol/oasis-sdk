@@ -140,7 +140,7 @@ export const playground = (async function () {
         }
 
         // Import the key into a signer.
-        const dave = oasisRT.signatureSecp256k1.EllipticSigner.fromPrivate(
+        const dave = oasisRT.signatureSecp256k1.NobleSigner.fromPrivate(
             davePriv,
             'this key is not important',
         );
