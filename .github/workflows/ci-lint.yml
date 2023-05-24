@@ -173,3 +173,51 @@ jobs:
         uses: nosborn/github-action-markdown-cli@v3.3.0
         with:
           files: docs
+
+  lint-go-tools-extract-runtime-txs:
+    name: lint-go-tools-extract-runtime-txs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.17.x'
+
+      - name: Lint Go cli
+        uses: golangci/golangci-lint-action@v3.1.0
+        with:
+          # NOTE: The version must be specified without the patch version.
+          version: v1.40
+          working-directory: tools/extract-runtime-txs
+
+  lint-generated-docs:
+    name: lint-generated-docs
+    runs-on: ubuntu-latest
+    env:
+      TXS_FILE: ../../docs/runtime/transactions.md
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+
+      - name: Compile extract-runtime-txs
+        working-directory: tools/extract-runtime-txs
+        run: go build
+
+      - name: Check runtime transactions sync
+        working-directory: tools/extract-runtime-txs
+        run: |
+          cp ${TXS_FILE} ${TXS_FILE}.orig
+          ./extract-runtime-txs \
+            --codebase.path ../.. \
+            --markdown \
+            --markdown.template.file ${TXS_FILE}.tpl \
+            --codebase.url https://github.com/oasisprotocol/oasis-sdk/tree/master/ \
+            > ${TXS_FILE}
+          diff -u ${TXS_FILE}.orig ${TXS_FILE} || \
+            (echo "Runtime transactions docs should be updated. Check tools/extract-runtime-txs/README.md on how to do it." && exit 1)
