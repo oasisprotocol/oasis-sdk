@@ -1,7 +1,6 @@
 import * as oasis from '@oasisprotocol/client';
 import * as deoxysii from '@oasisprotocol/deoxysii';
 import * as nacl from 'tweetnacl';
-import * as randomBytes from 'randombytes';
 
 import * as mraeDeoxysii from './mrae/deoxysii';
 import * as transaction from './transaction';
@@ -86,7 +85,8 @@ export async function encodeCall(
     format: types.CallFormat,
     config?: EncodeConfig,
 ): Promise<[types.Call, unknown]> {
-    const nonce = randomBytes(deoxysii.NonceSize);
+    const nonce = new Uint8Array(deoxysii.NonceSize);
+    crypto.getRandomValues(nonce);
     const keyPair = nacl.box.keyPair();
     return await encodeCallWithNonceAndKeys(
         nonce,
