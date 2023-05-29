@@ -37,7 +37,7 @@ const EventWaitTimeout = 20 * time.Second
 const defaultGasAmount = 400
 
 // expectedKVTransferGasUsed is the expected gas used by the kv transfer transaction.
-const expectedKVTransferGasUsed = 373
+const expectedKVTransferGasUsed = 374
 
 // expectedKVTransferFailGasUsed is the expected gas used by the failing kv transfer transaction.
 const expectedKVTransferFailGasUsed = 376
@@ -723,6 +723,7 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	log.Info("transferring 100 units from Alice to Bob")
 	tb := ac.Transfer(testing.Bob.Address, types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination)).
 		SetFeeGas(defaultGasAmount).
+		SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	var meta *client.TransactionMeta
@@ -749,28 +750,40 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	if err != nil {
 		return fmt.Errorf("failed to fetch events: %w", err)
 	}
-	expected := accounts.TransferEvent{
-		From:   testing.Alice.Address,
-		To:     testing.Bob.Address,
-		Amount: types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination),
-	}
-	var gotTransfer bool
+	var gotTransfer, gotFee bool
 	for _, ev := range evs {
 		if ev.Transfer == nil {
 			continue
 		}
 		transfer := ev.Transfer
-		if transfer.From != expected.From {
+		if transfer.From != testing.Alice.Address {
 			// There can also be reward disbursements.
 			continue
 		}
-		if transfer.To != expected.To || transfer.Amount.Amount.Cmp(&expected.Amount.Amount) != 0 {
-			return fmt.Errorf("unexpected event, expected: %v, got: %v", expected, transfer)
+		switch transfer.To {
+		case testing.Bob.Address:
+			// Expected transfer event for the Alice->Bob transfer.
+			expected := types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination)
+			if transfer.Amount.Amount.Cmp(&expected.Amount) != 0 {
+				return fmt.Errorf("unexpected transfer event amount, expected: %v, got: %v", expected, transfer)
+			}
+			gotTransfer = true
+		case accounts.FeeAccumulatorAddress:
+			// Expected transfer event for the fee payment.
+			expected := types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)
+			if transfer.Amount.Amount.Cmp(&expected.Amount) != 0 {
+				return fmt.Errorf("unexpected transfer event amount for fee payment, expected: %v, got: %v", expected, transfer)
+			}
+			gotFee = true
+		default:
+			return fmt.Errorf("unexpected transfer event for Alice to address: %v", transfer.To)
 		}
-		gotTransfer = true
 	}
 	if !gotTransfer {
 		return fmt.Errorf("did not receive the expected transfer event")
+	}
+	if !gotFee {
+		return fmt.Errorf("did not receive the expected transfer event for fee payment")
 	}
 
 	log.Info("checking Alice's account balance")
@@ -779,8 +792,8 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 		return err
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(100_002_900)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 100002900, got %s)", q.String()) //nolint: stylecheck
+		if q.Cmp(quantity.NewFromUint64(100_002_899)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 100002899, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
@@ -895,8 +908,8 @@ func KVDaveTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn,
 		return err
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(100_002_910)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 100002910, got %s)", q.String()) //nolint: stylecheck
+		if q.Cmp(quantity.NewFromUint64(100_002_909)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 100002909, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck

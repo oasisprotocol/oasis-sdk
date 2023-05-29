@@ -591,7 +591,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Move the difference from the fee accumulator back to the caller.
         let caller_address = Cfg::map_address(source.into());
-        Cfg::Accounts::move_from_fee_accumulator(
+        Cfg::Accounts::return_tx_fee(
             ctx,
             caller_address,
             &token::BaseUnits::new(return_fee.as_u128(), fee_denomination),
