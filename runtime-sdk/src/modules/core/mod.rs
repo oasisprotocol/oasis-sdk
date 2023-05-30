@@ -268,8 +268,8 @@ pub trait API {
     /// Configured minimum gas price.
     fn min_gas_price<C: Context>(ctx: &mut C, denom: &token::Denomination) -> u128;
 
-    /// Increase transaction priority for the provided amount.
-    fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error>;
+    /// Sets the transaction priority to the provided amount.
+    fn set_priority<C: Context>(ctx: &mut C, priority: u64);
 
     /// Takes and returns the stored transaction priority.
     fn take_priority<C: Context>(ctx: &mut C) -> u64;
@@ -451,13 +451,8 @@ impl<Cfg: Config> API for Module<Cfg> {
             .unwrap_or_default()
     }
 
-    fn add_priority<C: Context>(ctx: &mut C, priority: u64) -> Result<(), Error> {
-        let p = ctx.value::<u64>(CONTEXT_KEY_PRIORITY).or_default();
-        let added_p = p.checked_add(priority).unwrap_or(u64::MAX);
-
-        ctx.value::<u64>(CONTEXT_KEY_PRIORITY).set(added_p);
-
-        Ok(())
+    fn set_priority<C: Context>(ctx: &mut C, priority: u64) {
+        ctx.value::<u64>(CONTEXT_KEY_PRIORITY).set(priority);
     }
 
     fn take_priority<C: Context>(ctx: &mut C) -> u64 {

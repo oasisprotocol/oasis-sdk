@@ -834,7 +834,7 @@ fn test_approve_unverified_tx() {
 }
 
 #[test]
-fn test_add_priority() {
+fn test_set_priority() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
@@ -844,34 +844,18 @@ fn test_add_priority() {
         "default priority should be 0"
     );
 
-    Core::add_priority(&mut ctx, 1).expect("adding priority should succeed");
-    Core::add_priority(&mut ctx, 11).expect("adding priority should succeed");
+    Core::set_priority(&mut ctx, 1);
+    Core::set_priority(&mut ctx, 11);
 
     let tx = mock::transaction();
     ctx.with_tx(0, 0, tx, |mut tx_ctx, _call| {
-        Core::add_priority(&mut tx_ctx, 10)
-            .expect("adding priority from tx context should succeed");
+        Core::set_priority(&mut tx_ctx, 10);
     });
 
     assert_eq!(
-        22,
+        10,
         Core::take_priority(&mut ctx),
-        "adding priority should work"
-    );
-}
-
-#[test]
-fn test_add_priority_overflow() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-
-    Core::add_priority(&mut ctx, u64::MAX).expect("adding priority should succeed");
-    Core::add_priority(&mut ctx, u64::MAX).expect("adding priority should succeed");
-
-    assert_eq!(
-        u64::MAX,
-        Core::take_priority(&mut ctx),
-        "adding priority should work"
+        "setting priority should work"
     );
 }
 
