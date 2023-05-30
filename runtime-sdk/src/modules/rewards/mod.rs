@@ -9,7 +9,10 @@ use crate::{
     context::Context,
     core::consensus::beacon,
     module::{self, Module as _, Parameters as _},
-    modules, sdk_derive, storage,
+    modules::{self, core::API as _},
+    runtime::Runtime,
+    sdk_derive,
+    storage::{self, Store},
     types::address::{Address, SignatureAddressSpec},
 };
 
@@ -72,8 +75,8 @@ pub struct Genesis {
 
 /// State schema constants.
 pub mod state {
-    /// Last epoch that we processed.
-    pub const LAST_EPOCH: &[u8] = &[0x01];
+    // 0x01 is reserved.
+
     /// Map of epochs to rewards pending distribution.
     pub const REWARDS: &[u8] = &[0x02];
 }
@@ -88,6 +91,7 @@ pub static ADDRESS_REWARD_POOL: Lazy<Address> =
 
 impl<Accounts: modules::accounts::API> module::Module for Module<Accounts> {
     const NAME: &'static str = MODULE_NAME;
+    const VERSION: u32 = 2;
     type Error = Error;
     type Event = ();
     type Parameters = Parameters;
@@ -109,9 +113,20 @@ impl<Accounts: modules::accounts::API> Module<Accounts> {
     }
 
     /// Migrate state from a previous version.
-    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
-        // No migrations currently supported.
-        false
+    fn migrate<C: Context>(ctx: &mut C, from: u32) -> bool {
+        match from {
+            1 => Self::migrate_v1_to_v2(ctx),
+            2 => return false, // Current version.
+            _ => panic!("unsupported source module version: {from}"),
+        }
+
+        true
+    }
+
+    fn migrate_v1_to_v2<C: Context>(ctx: &mut C) {
+        // Version 2 removes the LAST_EPOCH storage state which was at 0x01.
+        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
+        store.remove(&[0x01]);
     }
 }
 
@@ -142,13 +157,8 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
     fn end_block<C: Context>(ctx: &mut C) {
         let epoch = ctx.epoch();
 
-        // Load previous epoch.
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let mut tstore = storage::TypedStore::new(&mut store);
-        let previous_epoch: beacon::EpochTime = tstore.get(state::LAST_EPOCH).unwrap_or_default();
-        tstore.insert(state::LAST_EPOCH, epoch);
-
         // Load rewards accumulator for the current epoch.
+        let store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
         let epochs = storage::TypedStore::new(storage::PrefixStore::new(store, &state::REWARDS));
         let mut rewards: types::EpochRewards =
             epochs.get(epoch.to_storage_key()).unwrap_or_default();
@@ -166,7 +176,7 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
         }
 
         // Disburse any rewards for previous epochs when the epoch changes.
-        if epoch != previous_epoch {
+        if <C::Runtime as Runtime>::Core::has_epoch_changed(ctx) {
             let params = Self::params(ctx.runtime_state());
             let store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
             let mut epochs =

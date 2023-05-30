@@ -439,7 +439,7 @@ impl API for Module {
         to: Address,
         amount: &token::BaseUnits,
     ) -> Result<(), Error> {
-        if ctx.is_check_only() {
+        if ctx.is_check_only() || amount.amount() == 0 {
             return Ok(());
         }
 
@@ -459,6 +459,10 @@ impl API for Module {
     }
 
     fn mint<C: Context>(ctx: &mut C, to: Address, amount: &token::BaseUnits) -> Result<(), Error> {
+        if ctx.is_check_only() || amount.amount() == 0 {
+            return Ok(());
+        }
+
         // Add to destination account.
         Self::add_amount(ctx.runtime_state(), to, amount)?;
 
@@ -479,6 +483,10 @@ impl API for Module {
         from: Address,
         amount: &token::BaseUnits,
     ) -> Result<(), Error> {
+        if ctx.is_check_only() || amount.amount() == 0 {
+            return Ok(());
+        }
+
         // Remove from target account.
         Self::sub_amount(ctx.runtime_state(), from, amount)?;
 

@@ -57,6 +57,36 @@ func makeTransferCheck(from, to staking.Address, amount *quantity.Quantity) func
 	}
 }
 
+func makeAddEscrowCheck(from, to staking.Address, amount *quantity.Quantity) func(e *staking.Event) bool {
+	return func(e *staking.Event) bool {
+		if e.Escrow == nil || e.Escrow.Add == nil {
+			return false
+		}
+		if e.Escrow.Add.Owner != from {
+			return false
+		}
+		if e.Escrow.Add.Escrow != to {
+			return false
+		}
+		return e.Escrow.Add.Amount.Cmp(amount) == 0
+	}
+}
+
+func makeReclaimEscrowCheck(from, to staking.Address, amount *quantity.Quantity) func(e *staking.Event) bool {
+	return func(e *staking.Event) bool {
+		if e.Escrow == nil || e.Escrow.Reclaim == nil {
+			return false
+		}
+		if e.Escrow.Reclaim.Owner != to {
+			return false
+		}
+		if e.Escrow.Reclaim.Escrow != from {
+			return false
+		}
+		return e.Escrow.Reclaim.Amount.Cmp(amount) == 0
+	}
+}
+
 func ensureRuntimeEvent(log *logging.Logger, ch <-chan *client.BlockEvents, check func(event client.DecodedEvent) bool) error {
 	log.Info("waiting for expected runtime event...")
 	for {
@@ -133,7 +163,88 @@ func makeWithdrawCheck(from types.Address, nonce uint64, to types.Address, amoun
 	}
 }
 
-func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func makeDelegateCheck(from types.Address, nonce uint64, to types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
+	return func(e client.DecodedEvent) bool {
+		ae, ok := e.(*consensusAccounts.Event)
+		if !ok {
+			return false
+		}
+		if ae.Delegate == nil {
+			return false
+		}
+		if !ae.Delegate.From.Equal(from) {
+			return false
+		}
+		if ae.Delegate.Nonce != nonce {
+			return false
+		}
+		if !ae.Delegate.To.Equal(to) {
+			return false
+		}
+		if ae.Delegate.Amount.Amount.Cmp(&amount.Amount) != 0 {
+			return false
+		}
+		if ae.Delegate.Amount.Denomination != amount.Denomination {
+			return false
+		}
+		return true
+	}
+}
+
+func makeUndelegateStartCheck(from types.Address, nonce uint64, to types.Address, shares *types.Quantity) func(e client.DecodedEvent) bool {
+	return func(e client.DecodedEvent) bool {
+		ae, ok := e.(*consensusAccounts.Event)
+		if !ok {
+			return false
+		}
+		if ae.UndelegateStart == nil {
+			return false
+		}
+		if !ae.UndelegateStart.From.Equal(from) {
+			return false
+		}
+		if ae.UndelegateStart.Nonce != nonce {
+			return false
+		}
+		if !ae.UndelegateStart.To.Equal(to) {
+			return false
+		}
+		if ae.UndelegateStart.Shares.Cmp(shares) != 0 {
+			return false
+		}
+		return true
+	}
+}
+
+func makeUndelegateDoneCheck(from, to types.Address, shares *types.Quantity, amount types.BaseUnits) func(e client.DecodedEvent) bool {
+	return func(e client.DecodedEvent) bool {
+		ae, ok := e.(*consensusAccounts.Event)
+		if !ok {
+			return false
+		}
+		if ae.UndelegateDone == nil {
+			return false
+		}
+		if !ae.UndelegateDone.From.Equal(from) {
+			return false
+		}
+		if !ae.UndelegateDone.To.Equal(to) {
+			return false
+		}
+		if ae.UndelegateDone.Shares.Cmp(shares) != 0 {
+			return false
+		}
+		if ae.UndelegateDone.Amount.Amount.Cmp(&amount.Amount) != 0 {
+			return false
+		}
+		if ae.UndelegateDone.Amount.Denomination != amount.Denomination {
+			return false
+		}
+		return true
+	}
+}
+
+func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -209,6 +320,10 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return fmt.Errorf("after deposit, expected bob balance 50000, got %s", resp.Balance)
 	}
 
+	if err = sc.CheckInvariants(ctx); err != nil {
+		return err
+	}
+
 	amount.Amount = *quantity.NewFromUint64(40_000)
 	consensusAmount = quantity.NewFromUint64(40)
 	log.Info("bob depositing into runtime to alice")
@@ -237,6 +352,10 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return fmt.Errorf("after deposit, expected alice balance 40, got %s", resp.Balance)
 	}
 
+	if err = sc.CheckInvariants(ctx); err != nil {
+		return err
+	}
+
 	amount.Amount = *quantity.NewFromUint64(25_000)
 	consensusAmount = quantity.NewFromUint64(25)
 	log.Info("alice withdrawing to bob")
@@ -254,6 +373,10 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return fmt.Errorf("ensuring alice withdraw runtime event: %w", err)
 	}
 
+	if err = sc.CheckInvariants(ctx); err != nil {
+		return err
+	}
+
 	amount.Amount = *quantity.NewFromUint64(50_000)
 	log.Info("charlie withdrawing")
 	tb = consAccounts.Withdraw(&testing.Charlie.Address, amount).
@@ -266,6 +389,10 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return fmt.Errorf("charlie withdrawing should fail")
 	}
 
+	if err = sc.CheckInvariants(ctx); err != nil {
+		return err
+	}
+
 	log.Info("alice withdrawing with invalid nonce")
 	tb = consAccounts.Withdraw(&testing.Bob.Address, amount).
 		SetFeeConsensusMessages(1).
@@ -275,6 +402,10 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		log.Info("alice invalid nonce failed request failed (as expected)", "err", err)
 	} else {
 		return fmt.Errorf("alice withdrawing with invalid nonce should fail")
+	}
+
+	if err = sc.CheckInvariants(ctx); err != nil {
+		return err
 	}
 
 	log.Info("alice query balance")
@@ -314,6 +445,10 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 		return fmt.Errorf("dave depositing should fail")
 	}
 
+	if err = sc.CheckInvariants(ctx); err != nil {
+		return err
+	}
+
 	log.Info("query consensus addresses")
 	addrs, err := ac.Addresses(ctx, client.RoundLatest, consDenomination)
 	if err != nil {
@@ -321,6 +456,163 @@ func SimpleConsensusTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cl
 	}
 	if len(addrs) != 3 { // Alice, Bob (Charlie has 0 balance), pending withdrawals.
 		return fmt.Errorf("unexpected number of addresses (expected: %d, got: %d)", 3, len(addrs))
+	}
+
+	return nil
+}
+
+func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	cons := consensus.NewConsensusClient(conn)
+	stakingClient := cons.Staking()
+	ch, sub, err := stakingClient.WatchEvents(ctx)
+	defer sub.Close()
+	if err != nil {
+		return err
+	}
+
+	consDenomination := types.Denomination("TEST")
+
+	consAccounts := consensusAccounts.NewV1(rtc)
+	ac := accounts.NewV1(rtc)
+
+	acCh, err := rtc.WatchEvents(ctx, []client.EventDecoder{consAccounts}, false)
+	if err != nil {
+		return err
+	}
+
+	runtimeAddr := staking.NewRuntimeAddress(runtimeID)
+
+	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
+	if err != nil {
+		return err
+	}
+
+	log.Info("alice delegating to bob")
+	// NOTE: The test runtime uses a scaling factor of 1000 so all balances in the runtime are
+	//       1000x larger than in the consensus layer.
+	amount := types.NewBaseUnits(*quantity.NewFromUint64(10_000), consDenomination)
+	consensusAmount := quantity.NewFromUint64(10)
+	tb := consAccounts.Delegate(testing.Bob.Address, amount).
+		SetFeeConsensusMessages(1).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce)
+	_ = tb.AppendSign(ctx, testing.Alice.Signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
+		return err
+	}
+
+	if err = ensureStakingEvent(log, ch, makeAddEscrowCheck(runtimeAddr, staking.Address(testing.Bob.Address), consensusAmount)); err != nil {
+		return fmt.Errorf("ensuring runtime->bob add escrow consensus event: %w", err)
+	}
+
+	if err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(testing.Alice.Address, nonce, testing.Bob.Address, amount)); err != nil {
+		return fmt.Errorf("ensuring alice delegate runtime event: %w", err)
+	}
+
+	// Test Balance query.
+	log.Info("testing Balance query")
+	resp, err := consAccounts.Balance(ctx, client.RoundLatest, &consensusAccounts.BalanceQuery{
+		Address: testing.Alice.Address,
+	})
+	if err != nil {
+		return err
+	}
+	if resp.Balance.Cmp(quantity.NewFromUint64(5_000)) != 0 {
+		return fmt.Errorf("after delegate, expected alice balance 5000, got %s", resp.Balance)
+	}
+
+	// Test Delegation query.
+	log.Info("testing Delegation query")
+	di, err := consAccounts.Delegation(ctx, client.RoundLatest, &consensusAccounts.DelegationQuery{
+		From: testing.Alice.Address,
+		To:   testing.Bob.Address,
+	})
+	if err != nil {
+		return err
+	}
+	// Shares correspond 1:1 to amount as there are no other delegations/rewards/slashing.
+	if di.Shares.Cmp(consensusAmount) != 0 {
+		return fmt.Errorf("expected delegation shares to be %s, got %s", amount.Amount, di.Shares)
+	}
+
+	// Test Delegations query.
+	log.Info("testing Delegations query")
+	dis, err := consAccounts.Delegations(ctx, client.RoundLatest, &consensusAccounts.DelegationsQuery{
+		From: testing.Alice.Address,
+	})
+	if err != nil {
+		return err
+	}
+	if len(dis) != 1 {
+		return fmt.Errorf("expected 1 delegation, got %d", len(dis))
+	}
+	if dis[0].To != testing.Bob.Address {
+		return fmt.Errorf("expected delegation destination to be %s, got %s", testing.Bob.Address, dis[0].To)
+	}
+	// Shares correspond 1:1 to amount as there are no other delegations/rewards/slashing.
+	if dis[0].Shares.Cmp(consensusAmount) != 0 {
+		return fmt.Errorf("expected delegation shares to be %s, got %s", amount.Amount, dis[0].Shares)
+	}
+
+	log.Info("alice delegating to alice")
+	// NOTE: The test runtime uses a scaling factor of 1000 so all balances in the runtime are
+	//       1000x larger than in the consensus layer.
+	amount = types.NewBaseUnits(*quantity.NewFromUint64(3_000), consDenomination)
+	consensusAmount = quantity.NewFromUint64(3)
+	tb = consAccounts.Delegate(testing.Alice.Address, amount).
+		SetFeeConsensusMessages(1).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+1)
+	_ = tb.AppendSign(ctx, testing.Alice.Signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
+		return err
+	}
+
+	if err = ensureStakingEvent(log, ch, makeAddEscrowCheck(runtimeAddr, staking.Address(testing.Alice.Address), consensusAmount)); err != nil {
+		return fmt.Errorf("ensuring runtime->alice add escrow consensus event: %w", err)
+	}
+
+	if err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(testing.Alice.Address, nonce+1, testing.Alice.Address, amount)); err != nil {
+		return fmt.Errorf("ensuring alice delegate runtime event: %w", err)
+	}
+
+	if err = sc.CheckInvariants(ctx); err != nil {
+		return err
+	}
+
+	log.Info("alice reclaiming part of delegation from bob and alice")
+	// NOTE: The test runtime uses a scaling factor of 1000 so all balances in the runtime are
+	//       1000x larger than in the consensus layer.
+	amountB := types.NewBaseUnits(*quantity.NewFromUint64(6_000), consDenomination)
+	sharesB := quantity.NewFromUint64(6)
+	consensusAmountB := quantity.NewFromUint64(6)
+	sharesA := quantity.NewFromUint64(1)
+	tb = consAccounts.Undelegate(testing.Bob.Address, *sharesB).
+		SetFeeConsensusMessages(1).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+2)
+	_ = tb.AppendSign(ctx, testing.Alice.Signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
+		return err
+	}
+	tb = consAccounts.Undelegate(testing.Alice.Address, *sharesA).
+		SetFeeConsensusMessages(1).
+		AppendAuthSignature(testing.Alice.SigSpec, nonce+3)
+	_ = tb.AppendSign(ctx, testing.Alice.Signer)
+	if err = tb.SubmitTx(ctx, nil); err != nil {
+		return err
+	}
+
+	if err = ensureRuntimeEvent(log, acCh, makeUndelegateStartCheck(testing.Bob.Address, nonce+2, testing.Alice.Address, consensusAmountB)); err != nil {
+		return fmt.Errorf("ensuring bob->alice undelegate start runtime event: %w", err)
+	}
+
+	if err = ensureStakingEvent(log, ch, makeReclaimEscrowCheck(staking.Address(testing.Bob.Address), runtimeAddr, consensusAmountB)); err != nil {
+		return fmt.Errorf("ensuring bob->runtime reclaim escrow consensus event: %w", err)
+	}
+
+	if err = ensureRuntimeEvent(log, acCh, makeUndelegateDoneCheck(testing.Bob.Address, testing.Alice.Address, consensusAmountB, amountB)); err != nil {
+		return fmt.Errorf("ensuring bob->alice undelegate done runtime event: %w", err)
 	}
 
 	return nil

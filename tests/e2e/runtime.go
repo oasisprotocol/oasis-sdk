@@ -73,6 +73,8 @@ type RuntimeScenario struct {
 
 	// RunTest is a list of test functions to run once the network is up.
 	RunTest []RunTestFunction
+
+	client client.RuntimeClient
 }
 
 // NewRuntimeScenario creates a new runtime test scenario using the given
@@ -137,7 +139,8 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			},
 			StakingGenesis: &api.Genesis{
 				Parameters: api.ConsensusParameters{
-					MaxAllowances: 10,
+					MaxAllowances:       10,
+					AllowEscrowMessages: true,
 				},
 				TotalSupply: *quantity.NewFromUint64(200),
 				Ledger: map[api.Address]*api.Account{
@@ -326,6 +329,14 @@ func (sc *RuntimeScenario) waitNodesSynced() error {
 	return nil
 }
 
+// CheckInvariants issues a check of invariants in all modules in the runtime.
+func (sc *RuntimeScenario) CheckInvariants(ctx context.Context) error {
+	if sc.client == nil {
+		return fmt.Errorf("scenario is not running")
+	}
+	return txgen.CheckInvariants(ctx, sc.client)
+}
+
 func (sc *RuntimeScenario) Run(childEnv *env.Env) error {
 	ctx := context.Background()
 
@@ -355,6 +366,10 @@ func (sc *RuntimeScenario) Run(childEnv *env.Env) error {
 		return err
 	}
 	rtc := client.New(conn, runtimeID)
+	sc.client = rtc
+	defer func() {
+		sc.client = nil
+	}()
 
 	// Hack: otherwise sometimes the initial invariants check happens to soon.
 	// TODO: find a better solution.

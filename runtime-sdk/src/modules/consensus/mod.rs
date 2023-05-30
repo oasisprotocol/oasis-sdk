@@ -1,23 +1,29 @@
 //! Consensus module.
 //!
 //! Low level consensus module for communicating with the consensus layer.
-use std::str::FromStr;
+use std::{convert::TryInto, num::NonZeroUsize, str::FromStr, sync::Mutex};
 
+use once_cell::sync::Lazy;
 use thiserror::Error;
 
 use oasis_core_runtime::{
     common::versioned::Versioned,
     consensus::{
+        beacon::EpochTime,
         roothash::{Message, StakingMessage},
         staking,
-        staking::Account as ConsensusAccount,
-        state::{staking::ImmutableState as StakingImmutableState, StateError},
+        staking::{Account as ConsensusAccount, Delegation as ConsensusDelegation},
+        state::{
+            beacon::ImmutableState as BeaconImmutableState,
+            staking::ImmutableState as StakingImmutableState, StateError,
+        },
+        HEIGHT_LATEST,
     },
 };
 
 use crate::{
     context::{Context, TxContext},
-    module,
+    history, module,
     module::{Module as _, Parameters as _},
     modules, sdk_derive,
     types::{
@@ -112,6 +118,10 @@ pub enum Error {
     #[error("amount not representable")]
     #[sdk_error(code = 5)]
     AmountNotRepresentable,
+
+    #[error("history: {0}")]
+    #[sdk_error(transparent)]
+    History(#[from] history::Error),
 }
 
 /// Interface that can be called from other modules.
@@ -157,11 +167,22 @@ pub trait API {
     /// Query consensus account info.
     fn account<C: Context>(ctx: &C, addr: Address) -> Result<ConsensusAccount, Error>;
 
+    /// Query consensus delegation info.
+    fn delegation<C: Context>(
+        ctx: &C,
+        delegator_addr: Address,
+        escrow_addr: Address,
+    ) -> Result<ConsensusDelegation, Error>;
+
     /// Convert runtime amount to consensus amount, scaling as needed.
     fn amount_from_consensus<C: Context>(ctx: &mut C, amount: u128) -> Result<u128, Error>;
 
     /// Convert consensus amount to runtime amount, scaling as needed.
     fn amount_to_consensus<C: Context>(ctx: &mut C, amount: u128) -> Result<u128, Error>;
+
+    /// Determine consensus height corresponding to the given epoch transition. This query may be
+    /// expensive in case the epoch is far back.
+    fn height_for_epoch<C: Context>(ctx: &C, epoch: EpochTime) -> Result<u64, Error>;
 }
 
 pub struct Module;
@@ -291,6 +312,17 @@ impl API for Module {
             .map_err(Error::InternalStateError)
     }
 
+    fn delegation<C: Context>(
+        ctx: &C,
+        delegator_addr: Address,
+        escrow_addr: Address,
+    ) -> Result<ConsensusDelegation, Error> {
+        let state = StakingImmutableState::new(ctx.consensus_state());
+        state
+            .delegation(ctx.io_ctx(), delegator_addr.into(), escrow_addr.into())
+            .map_err(Error::InternalStateError)
+    }
+
     fn amount_from_consensus<C: Context>(ctx: &mut C, amount: u128) -> Result<u128, Error> {
         let params = Self::params(ctx.runtime_state());
         let scaling_factor = params.consensus_scaling_factor;
@@ -315,6 +347,45 @@ impl API for Module {
         }
 
         Ok(scaled)
+    }
+
+    fn height_for_epoch<C: Context>(ctx: &C, epoch: EpochTime) -> Result<u64, Error> {
+        static HEIGHT_CACHE: Lazy<Mutex<lru::LruCache<EpochTime, u64>>> =
+            Lazy::new(|| Mutex::new(lru::LruCache::new(NonZeroUsize::new(128).unwrap())));
+
+        // Check the cache first to avoid more expensive traversals.
+        let mut cache = HEIGHT_CACHE.lock().unwrap();
+        if let Some(height) = cache.get(&epoch) {
+            return Ok(*height);
+        }
+
+        // Resolve height for the given epoch.
+        let mut height = HEIGHT_LATEST;
+        loop {
+            let state = ctx.history().consensus_state_at(height)?;
+
+            let beacon = BeaconImmutableState::new(&state);
+
+            let mut epoch_state = beacon.future_epoch_state(ctx.io_ctx())?;
+            if epoch_state.height > state.height().try_into().unwrap() {
+                // Use current epoch if future epoch is in the future.
+                epoch_state = beacon.epoch_state(ctx.io_ctx()).unwrap();
+            }
+            height = epoch_state.height.try_into().unwrap();
+
+            // Cache height for later queries.
+            cache.put(epoch_state.epoch, height);
+
+            if epoch_state.epoch == epoch {
+                return Ok(height);
+            }
+
+            assert!(epoch_state.epoch > epoch);
+            assert!(height > 1);
+
+            // Go one height before epoch transition.
+            height -= 1;
+        }
     }
 }
 

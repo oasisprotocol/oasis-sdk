@@ -23,6 +23,7 @@ use oasis_core_runtime::{
 use crate::{
     crypto::random::Rng,
     event::{Event, EventTag, EventTags},
+    history,
     keymanager::KeyManager,
     module::MethodHandler as _,
     modules::core::Error,
@@ -228,6 +229,9 @@ pub trait Context {
     /// Consensus state.
     fn consensus_state(&self) -> &consensus::state::ConsensusState;
 
+    /// Historical state.
+    fn history(&self) -> &dyn history::HistoryHost;
+
     /// Current epoch.
     fn epoch(&self) -> consensus::beacon::EpochTime;
 
@@ -328,6 +332,10 @@ impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
 
     fn consensus_state(&self) -> &consensus::state::ConsensusState {
         self.deref().consensus_state()
+    }
+
+    fn history(&self) -> &dyn history::HistoryHost {
+        self.deref().history()
     }
 
     fn epoch(&self) -> consensus::beacon::EpochTime {
@@ -470,6 +478,7 @@ pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: NestedStore> {
     runtime_storage: S,
     // TODO: linked consensus layer block
     consensus_state: &'a consensus::state::ConsensusState,
+    history: &'a dyn history::HistoryHost,
     epoch: consensus::beacon::EpochTime,
     io_ctx: Arc<IoContext>,
     logger: slog::Logger,
@@ -505,6 +514,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
         runtime_round_results: &'a roothash::RoundResults,
         runtime_storage: S,
         consensus_state: &'a consensus::state::ConsensusState,
+        history: &'a dyn history::HistoryHost,
         epoch: consensus::beacon::EpochTime,
         io_ctx: Arc<IoContext>,
         max_messages: u32,
@@ -516,6 +526,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             runtime_round_results,
             runtime_storage,
             consensus_state,
+            history,
             epoch,
             io_ctx,
             key_manager,
@@ -536,6 +547,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
         ctx: &'a mut RuntimeContext<'_>,
         host_info: &'a HostInfo,
         key_manager: Option<Box<dyn KeyManager>>,
+        history: &'a dyn history::HistoryHost,
     ) -> RuntimeBatchContext<'a, R, storage::MKVSStore<&'a mut dyn mkvs::MKVS>> {
         let mode = if ctx.check_only {
             Mode::CheckTx
@@ -550,6 +562,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             runtime_round_results: ctx.round_results,
             runtime_storage: storage::MKVSStore::new(ctx.io_ctx.clone(), ctx.runtime_state),
             consensus_state: &ctx.consensus_state,
+            history,
             epoch: ctx.epoch,
             io_ctx: ctx.io_ctx.clone(),
             logger: get_logger("runtime-sdk")
@@ -599,6 +612,10 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
 
     fn consensus_state(&self) -> &consensus::state::ConsensusState {
         self.consensus_state
+    }
+
+    fn history(&self) -> &dyn history::HistoryHost {
+        self.history
     }
 
     fn epoch(&self) -> consensus::beacon::EpochTime {
@@ -676,6 +693,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
             runtime_round_results: self.runtime_round_results,
             runtime_storage: store,
             consensus_state: self.consensus_state,
+            history: self.history,
             epoch: self.epoch,
             io_ctx: self.io_ctx.clone(),
             logger: self
@@ -728,6 +746,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
             consensus_state: self.consensus_state,
+            history: self.history,
             epoch: self.epoch,
             store,
             io_ctx: self.io_ctx.clone(),
@@ -775,6 +794,7 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
     runtime_header: &'round roothash::Header,
     runtime_round_results: &'round roothash::RoundResults,
     consensus_state: &'round consensus::state::ConsensusState,
+    history: &'round dyn history::HistoryHost,
     epoch: consensus::beacon::EpochTime,
     // TODO: linked consensus layer block
     store: storage::OverlayStore<&'store mut S>,
@@ -853,6 +873,10 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
 
     fn consensus_state(&self) -> &consensus::state::ConsensusState {
         self.consensus_state
+    }
+
+    fn history(&self) -> &dyn history::HistoryHost {
+        self.history
     }
 
     fn epoch(&self) -> consensus::beacon::EpochTime {
@@ -936,6 +960,7 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
             runtime_round_results: self.runtime_round_results,
             runtime_storage: store,
             consensus_state: self.consensus_state,
+            history: self.history,
             epoch: self.epoch,
             io_ctx: self.io_ctx.clone(),
             logger: self

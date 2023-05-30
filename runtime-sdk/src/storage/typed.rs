@@ -35,7 +35,7 @@ impl<S: Store> TypedStore<S> {
     pub fn iter<'store, K, V>(&'store self) -> TypedStoreIterator<'store, K, V>
     where
         K: for<'k> TryFrom<&'k [u8]>,
-        V: cbor::Decode,
+        V: cbor::Decode + Default,
     {
         TypedStoreIterator::new(self.parent.iter())
     }
@@ -45,7 +45,7 @@ impl<S: Store> TypedStore<S> {
 pub struct TypedStoreIterator<'store, K, V>
 where
     K: for<'k> TryFrom<&'k [u8]>,
-    V: cbor::Decode,
+    V: Default + cbor::Decode,
 {
     inner: Box<dyn mkvs::Iterator + 'store>,
 
@@ -56,7 +56,7 @@ where
 impl<'store, K, V> TypedStoreIterator<'store, K, V>
 where
     K: for<'k> TryFrom<&'k [u8]>,
-    V: cbor::Decode,
+    V: cbor::Decode + Default,
 {
     fn new(inner: Box<dyn mkvs::Iterator + 'store>) -> Self {
         Self {
@@ -70,15 +70,20 @@ where
 impl<'store, K, V, E> Iterator for TypedStoreIterator<'store, K, V>
 where
     K: for<'k> TryFrom<&'k [u8], Error = E>,
-    E: std::error::Error,
-    V: cbor::Decode,
+    E: std::fmt::Display,
+    V: cbor::Decode + Default,
 {
     type Item = (K, V);
 
     fn next(&mut self) -> Option<Self::Item> {
         Iterator::next(&mut self.inner).map(|(k, v)| {
             let key = K::try_from(&k).unwrap_or_else(|e| panic!("corrupted storage key: {e}"));
-            let value = cbor::from_slice(&v).unwrap();
+            let value = if v.is_empty() {
+                // Ignore empty values as those would fail CBOR decoding.
+                Default::default()
+            } else {
+                cbor::from_slice(&v).unwrap()
+            };
             (key, value)
         })
     }
