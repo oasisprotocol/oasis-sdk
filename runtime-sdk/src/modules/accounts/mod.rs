@@ -927,11 +927,11 @@ impl module::TransactionHandler for Module {
             // TODO: Emit event that fee has been paid.
 
             let gas_price = tx.auth_info.fee.gas_price();
-            // Bump transaction priority.
-            <C::Runtime as Runtime>::Core::add_priority(
+            // Set transaction priority.
+            <C::Runtime as Runtime>::Core::set_priority(
                 ctx,
                 gas_price.try_into().unwrap_or(u64::MAX),
-            )?;
+            );
         }
 
         // Do not update nonces early during transaction checks. In case of checks, only do it after
