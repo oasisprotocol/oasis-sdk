@@ -382,8 +382,12 @@ pub trait TransactionHandler {
     /// Perform any action after call, within the transaction context.
     ///
     /// If an error is returned the transaction call fails and updates are rolled back.
-    fn after_handle_call<C: TxContext>(_ctx: &mut C, _result: &CallResult) {
+    fn after_handle_call<C: TxContext>(
+        _ctx: &mut C,
+        result: CallResult,
+    ) -> Result<CallResult, modules::core::Error> {
         // Default implementation doesn't do anything.
+        Ok(result)
     }
 
     /// Perform any action after dispatching the transaction, in batch context.
@@ -437,8 +441,14 @@ impl TransactionHandler for Tuple {
         Ok(())
     }
 
-    fn after_handle_call<C: TxContext>(ctx: &mut C, result: &CallResult) {
-        for_tuples!( #( Tuple::after_handle_call(ctx, result); )* );
+    fn after_handle_call<C: TxContext>(
+        ctx: &mut C,
+        mut result: CallResult,
+    ) -> Result<CallResult, modules::core::Error> {
+        for_tuples!( #(
+            result = Tuple::after_handle_call(ctx, result)?;
+        )* );
+        Ok(result)
     }
 
     fn after_dispatch_tx<C: Context>(ctx: &mut C, tx_auth_info: &AuthInfo, result: &CallResult) {

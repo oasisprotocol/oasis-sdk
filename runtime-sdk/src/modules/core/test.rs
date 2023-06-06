@@ -1088,8 +1088,9 @@ fn test_gas_used_events() {
         assert_eq!(Core::used_tx_gas(&mut tx_ctx), 10);
         Core::after_handle_call(
             &mut tx_ctx,
-            &module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
-        );
+            module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
+        )
+        .expect("after_handle_call should succeed");
 
         let (etags, _) = tx_ctx.commit();
         let tags = etags.clone().into_tags();

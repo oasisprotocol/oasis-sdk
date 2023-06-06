@@ -952,7 +952,10 @@ impl module::TransactionHandler for Module {
         Ok(())
     }
 
-    fn after_handle_call<C: TxContext>(ctx: &mut C, _result: &module::CallResult) {
+    fn after_handle_call<C: TxContext>(
+        ctx: &mut C,
+        result: module::CallResult,
+    ) -> Result<module::CallResult, modules::core::Error> {
         let acc = ctx
             .value::<FeeAccumulator>(CONTEXT_KEY_TX_FEE_ACCUMULATOR)
             .take()
@@ -974,6 +977,8 @@ impl module::TransactionHandler for Module {
         for (denom, amount) in acc.total_fees.into_iter() {
             fee_acc.add(&token::BaseUnits(amount, denom));
         }
+
+        Ok(result)
     }
 
     fn after_dispatch_tx<C: Context>(

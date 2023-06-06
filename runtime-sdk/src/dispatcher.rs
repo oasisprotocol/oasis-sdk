@@ -196,7 +196,13 @@ impl<R: Runtime> Dispatcher<R> {
         let (result, metadata) = Self::_dispatch_tx_call(ctx, call, opts);
 
         // Unconditionally call after handle call hook.
-        R::Modules::after_handle_call(ctx, &result);
+        let result = match R::Modules::after_handle_call(ctx, result) {
+            Ok(result) => result,
+            Err(e) => {
+                // If the call failed, return the error.
+                return (e.into_call_result(), metadata);
+            }
+        };
 
         // Make sure that a read-only call did not result in any modifications.
         if read_only && ctx.runtime_state().has_pending_updates() {
