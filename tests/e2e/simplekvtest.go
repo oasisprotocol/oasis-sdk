@@ -4,16 +4,20 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	mathRand "math/rand"
 	"sort"
 	"time"
 
+	"github.com/oasisprotocol/deoxysii"
 	"google.golang.org/grpc"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/drbg"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/mathrand"
+	mrae "github.com/oasisprotocol/oasis-core/go/common/crypto/mrae/api"
+	mraeDeoxysii "github.com/oasisprotocol/oasis-core/go/common/crypto/mrae/deoxysii"
 	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
@@ -26,7 +30,6 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
-
 	"github.com/oasisprotocol/oasis-sdk/tests/e2e/txgen"
 )
 
@@ -36,8 +39,11 @@ const EventWaitTimeout = 20 * time.Second
 // defaultGasAmount is the default amount of gas to specify.
 const defaultGasAmount = 400
 
+// expectedConfidentialInvalidInsertGasUsed is the expected gas used by the invalid confidential insert transaction.
+const expectedConfidentialInvalidInsertGasUsed = 417
+
 // expectedKVTransferGasUsed is the expected gas used by the kv transfer transaction.
-const expectedKVTransferGasUsed = 373
+const expectedKVTransferGasUsed = 374
 
 // expectedKVTransferFailGasUsed is the expected gas used by the failing kv transfer transaction.
 const expectedKVTransferFailGasUsed = 376
@@ -437,6 +443,94 @@ func ConfidentialTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 		return fmt.Errorf("fetching removed key should fail")
 	}
 
+	// Following tests a specific runtime SDK case where transaction fails in the `before_handle_call` hook.
+	// This test ensures that `after_handle_call` hooks are called, even when the call fails in the `before_handle_call` hook.
+	// This tests a bugfix fixed in: #1380, where gas used events were not emitted in such scenarios.
+	log.Info("test transaction execution failure")
+
+	// Makes the call invalid by negating the encoded read-only flag. This makes the call pass
+	// check transaction, but fail in execution after decryption, with: "invalid call format: read-only flag mismatch".
+	invalidCall := func(tx *types.Transaction) (*types.Call, error) {
+		var rsp *core.CallDataPublicKeyResponse
+		rsp, err = core.NewV1(rtc).CallDataPublicKey(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query calldata X25519 public key: %w", err)
+		}
+
+		// Generate ephemeral X25519 key pair.
+		pk, sk, kerr := mrae.GenerateKeyPair(rand.Reader)
+		if kerr != nil {
+			return nil, fmt.Errorf("failed to generate ephemeral X25519 key pair: %w", kerr)
+		}
+		// Generate random nonce.
+		var nonce [deoxysii.NonceSize]byte
+		if _, err = rand.Read(nonce[:]); err != nil {
+			return nil, fmt.Errorf("failed to generate random nonce: %w", err)
+		}
+		// Seal serialized plain call.
+		rawCall := cbor.Marshal(tx.Call)
+		sealedCall := mraeDeoxysii.Box.Seal(nil, nonce[:], rawCall, nil, &rsp.PublicKey.PublicKey, sk)
+
+		encoded := &types.Call{
+			Format: types.CallFormatEncryptedX25519DeoxysII,
+			Method: "",
+			Body: cbor.Marshal(&types.CallEnvelopeX25519DeoxysII{
+				Pk:    *pk,
+				Nonce: nonce,
+				Data:  sealedCall,
+			}),
+			ReadOnly: !tx.Call.ReadOnly, // Use inverted read-only flag to cause an error during transaction execution.
+		}
+		return encoded, nil
+	}
+
+	nonce, err = ac.Nonce(ctx, client.RoundLatest, types.NewAddress(sigspecForSigner(signer)))
+	if err != nil {
+		return fmt.Errorf("failed to query nonce: %w", err)
+	}
+	tx := types.NewTransaction(nil, "keyvalue.Insert", kvKeyValue{
+		Key:   testKey,
+		Value: testValue,
+	})
+	tx.AuthInfo.Fee.Gas = 2 * defaultGasAmount
+
+	call, err := invalidCall(tx)
+	if err != nil {
+		return err
+	}
+	tx.Call = *call
+	tx.AppendAuthSignature(sigspecForSigner(signer), nonce)
+	ts := tx.PrepareForSigning()
+	rtInfo, err := rtc.GetInfo(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve runtime info: %w", err)
+	}
+	if err = ts.AppendSign(rtInfo.ChainContext, signer); err != nil {
+		return err
+	}
+	// Ensure that the transaction failed during execution.
+	meta, err := rtc.SubmitTxMeta(ctx, ts.UnverifiedTransaction())
+	if err == nil {
+		return fmt.Errorf("invalid transaction should have failed")
+	}
+	if meta == nil {
+		return fmt.Errorf("meta should not be nil")
+	}
+	if meta.CheckTxError != nil {
+		return fmt.Errorf("transaction should not fail during check transaction: %v", meta.CheckTxError)
+	}
+	// Ensure that the expected gas used event was emitted.
+	cevs, err := core.NewV1(rtc).GetEvents(ctx, meta.Round)
+	if err != nil {
+		return err
+	}
+	if len(cevs) != 1 {
+		return fmt.Errorf("expected 1 core event, got %d", len(cevs))
+	}
+	if cevs[0].GasUsed.Amount != expectedConfidentialInvalidInsertGasUsed {
+		return fmt.Errorf("expected gas used %d, got %d", expectedConfidentialInvalidInsertGasUsed, cevs[0].GasUsed.Amount)
+	}
+
 	return nil
 }
 
@@ -723,6 +817,7 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	log.Info("transferring 100 units from Alice to Bob")
 	tb := ac.Transfer(testing.Bob.Address, types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination)).
 		SetFeeGas(defaultGasAmount).
+		SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	var meta *client.TransactionMeta
@@ -749,28 +844,40 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	if err != nil {
 		return fmt.Errorf("failed to fetch events: %w", err)
 	}
-	expected := accounts.TransferEvent{
-		From:   testing.Alice.Address,
-		To:     testing.Bob.Address,
-		Amount: types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination),
-	}
-	var gotTransfer bool
+	var gotTransfer, gotFee bool
 	for _, ev := range evs {
 		if ev.Transfer == nil {
 			continue
 		}
 		transfer := ev.Transfer
-		if transfer.From != expected.From {
+		if transfer.From != testing.Alice.Address {
 			// There can also be reward disbursements.
 			continue
 		}
-		if transfer.To != expected.To || transfer.Amount.Amount.Cmp(&expected.Amount.Amount) != 0 {
-			return fmt.Errorf("unexpected event, expected: %v, got: %v", expected, transfer)
+		switch transfer.To {
+		case testing.Bob.Address:
+			// Expected transfer event for the Alice->Bob transfer.
+			expected := types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination)
+			if transfer.Amount.Amount.Cmp(&expected.Amount) != 0 {
+				return fmt.Errorf("unexpected transfer event amount, expected: %v, got: %v", expected, transfer)
+			}
+			gotTransfer = true
+		case accounts.FeeAccumulatorAddress:
+			// Expected transfer event for the fee payment.
+			expected := types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)
+			if transfer.Amount.Amount.Cmp(&expected.Amount) != 0 {
+				return fmt.Errorf("unexpected transfer event amount for fee payment, expected: %v, got: %v", expected, transfer)
+			}
+			gotFee = true
+		default:
+			return fmt.Errorf("unexpected transfer event for Alice to address: %v", transfer.To)
 		}
-		gotTransfer = true
 	}
 	if !gotTransfer {
 		return fmt.Errorf("did not receive the expected transfer event")
+	}
+	if !gotFee {
+		return fmt.Errorf("did not receive the expected transfer event for fee payment")
 	}
 
 	log.Info("checking Alice's account balance")
@@ -779,8 +886,8 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 		return err
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(100_002_900)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 100002900, got %s)", q.String()) //nolint: stylecheck
+		if q.Cmp(quantity.NewFromUint64(100_002_899)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 100002899, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
@@ -895,8 +1002,8 @@ func KVDaveTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn,
 		return err
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
-		if q.Cmp(quantity.NewFromUint64(100_002_910)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 100002910, got %s)", q.String()) //nolint: stylecheck
+		if q.Cmp(quantity.NewFromUint64(100_002_909)) != 0 {
+			return fmt.Errorf("Alice's account balance is wrong (expected 100002909, got %s)", q.String()) //nolint: stylecheck
 		}
 	} else {
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
@@ -1044,7 +1151,7 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 	if err != nil {
 		return err
 	}
-	rng := rand.New(mathrand.New(rngSrc)) //nolint: gosec
+	rng := mathRand.New(mathrand.New(rngSrc)) //nolint:gosec
 
 	// Generate accounts.
 	log.Info("generating accounts", "num_accounts", numAccounts, "coins_per_account", coinsPerAccount, "rng_seed", seed)

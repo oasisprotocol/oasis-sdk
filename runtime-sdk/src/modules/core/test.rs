@@ -1086,7 +1086,11 @@ fn test_gas_used_events() {
     let etags = ctx.with_tx(0, 0, tx, |mut tx_ctx, _call| {
         Core::use_tx_gas(&mut tx_ctx, 10).expect("using gas under limit should succeed");
         assert_eq!(Core::used_tx_gas(&mut tx_ctx), 10);
-        Core::after_handle_call(&mut tx_ctx).unwrap();
+        Core::after_handle_call(
+            &mut tx_ctx,
+            module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
+        )
+        .expect("after_handle_call should succeed");
 
         let (etags, _) = tx_ctx.commit();
         let tags = etags.clone().into_tags();

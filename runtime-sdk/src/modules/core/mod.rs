@@ -999,14 +999,17 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
         Ok(())
     }
 
-    fn after_handle_call<C: TxContext>(ctx: &mut C) -> Result<(), Error> {
+    fn after_handle_call<C: TxContext>(
+        ctx: &mut C,
+        result: module::CallResult,
+    ) -> Result<module::CallResult, Error> {
         // Emit gas used event.
         if Cfg::EMIT_GAS_USED_EVENTS {
             let used_gas = Self::used_tx_gas(ctx);
             ctx.emit_unconditional_event(Event::GasUsed { amount: used_gas });
         }
 
-        Ok(())
+        Ok(result)
     }
 }
 

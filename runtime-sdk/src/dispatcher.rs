@@ -190,6 +190,39 @@ impl<R: Runtime> Dispatcher<R> {
     where
         C::Store: NestedStore,
     {
+        let read_only = call.read_only;
+
+        // Dispatch the call.
+        let (result, metadata) = Self::_dispatch_tx_call(ctx, call, opts);
+
+        // Unconditionally call after handle call hook.
+        let result = match R::Modules::after_handle_call(ctx, result) {
+            Ok(result) => result,
+            Err(e) => {
+                // If the call failed, return the error.
+                return (e.into_call_result(), metadata);
+            }
+        };
+
+        // Make sure that a read-only call did not result in any modifications.
+        if read_only && ctx.runtime_state().has_pending_updates() {
+            return (
+                modules::core::Error::ReadOnlyTransaction.into_call_result(),
+                metadata,
+            );
+        }
+
+        (result, metadata)
+    }
+
+    fn _dispatch_tx_call<C: TxContext>(
+        ctx: &mut C,
+        call: types::transaction::Call,
+        opts: &DispatchOptions<'_>,
+    ) -> (module::CallResult, callformat::Metadata)
+    where
+        C::Store: NestedStore,
+    {
         if let Err(e) = R::Modules::before_handle_call(ctx, &call) {
             return (e.into_call_result(), callformat::Metadata::Empty);
         }
@@ -223,19 +256,6 @@ impl<R: Runtime> Dispatcher<R> {
                 modules::core::Error::InvalidMethod(call.method).into_call_result()
             }
         };
-
-        // Call after hook.
-        if let Err(e) = R::Modules::after_handle_call(ctx) {
-            return (e.into_call_result(), call_format_metadata);
-        }
-
-        // Make sure that a read-only call did not result in any modifications.
-        if call.read_only && ctx.runtime_state().has_pending_updates() {
-            return (
-                modules::core::Error::ReadOnlyTransaction.into_call_result(),
-                call_format_metadata,
-            );
-        }
 
         (result, call_format_metadata)
     }

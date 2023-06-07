@@ -218,15 +218,15 @@ pub trait API {
         denomination: &token::Denomination,
     ) -> Result<types::DenominationInfo, Error>;
 
-    /// Move amount from address into fee accumulator.
-    fn move_into_fee_accumulator<C: Context>(
+    /// Moves the amount into the per-transaction fee accumulator.
+    fn charge_tx_fee<C: Context>(
         ctx: &mut C,
         from: Address,
         amount: &token::BaseUnits,
     ) -> Result<(), modules::core::Error>;
 
-    /// Move amount from fee accumulator into address.
-    fn move_from_fee_accumulator<C: Context>(
+    /// Returns the amount from the per-transaction fee accumulator to the account.
+    fn return_tx_fee<C: Context>(
         ctx: &mut C,
         to: Address,
         amount: &token::BaseUnits,
@@ -429,7 +429,9 @@ impl FeeAccumulator {
     }
 }
 
-/// Context key for the fee accumulator.
+/// Context key for the per-transaction fee accumulator.
+const CONTEXT_KEY_TX_FEE_ACCUMULATOR: &str = "accounts.TxFeeAccumulator";
+/// Context key for the per block fee accumulator.
 const CONTEXT_KEY_FEE_ACCUMULATOR: &str = "accounts.FeeAccumulator";
 
 impl API for Module {
@@ -596,7 +598,7 @@ impl API for Module {
             .ok_or(Error::NotFound)
     }
 
-    fn move_into_fee_accumulator<C: Context>(
+    fn charge_tx_fee<C: Context>(
         ctx: &mut C,
         from: Address,
         amount: &token::BaseUnits,
@@ -608,14 +610,14 @@ impl API for Module {
         Self::sub_amount(ctx.runtime_state(), from, amount)
             .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
 
-        ctx.value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
+        ctx.value::<FeeAccumulator>(CONTEXT_KEY_TX_FEE_ACCUMULATOR)
             .or_default()
             .add(amount);
 
         Ok(())
     }
 
-    fn move_from_fee_accumulator<C: Context>(
+    fn return_tx_fee<C: Context>(
         ctx: &mut C,
         to: Address,
         amount: &token::BaseUnits,
@@ -624,7 +626,7 @@ impl API for Module {
             return Ok(());
         }
 
-        ctx.value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
+        ctx.value::<FeeAccumulator>(CONTEXT_KEY_TX_FEE_ACCUMULATOR)
             .or_default()
             .sub(amount)
             .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
@@ -929,10 +931,8 @@ impl module::TransactionHandler for Module {
                     .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
             } else {
                 // Actually perform the move.
-                Self::move_into_fee_accumulator(ctx, payer, &tx.auth_info.fee.amount)?;
+                Self::charge_tx_fee(ctx, payer, &tx.auth_info.fee.amount)?;
             }
-
-            // TODO: Emit event that fee has been paid.
 
             let gas_price = tx.auth_info.fee.gas_price();
             // Set transaction priority.
@@ -950,6 +950,35 @@ impl module::TransactionHandler for Module {
         }
 
         Ok(())
+    }
+
+    fn after_handle_call<C: TxContext>(
+        ctx: &mut C,
+        result: module::CallResult,
+    ) -> Result<module::CallResult, modules::core::Error> {
+        let acc = ctx
+            .value::<FeeAccumulator>(CONTEXT_KEY_TX_FEE_ACCUMULATOR)
+            .take()
+            .unwrap_or_default();
+
+        // Emit events for paid fees.
+        for (denom, amount) in acc.total_fees.iter() {
+            ctx.emit_unconditional_event(Event::Transfer {
+                from: ctx.tx_caller_address(),
+                to: *ADDRESS_FEE_ACCUMULATOR,
+                amount: token::BaseUnits::new(*amount, denom.clone()),
+            });
+        }
+
+        // Move transaction fees into the block fee accumulator.
+        let fee_acc = ctx
+            .value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
+            .or_default();
+        for (denom, amount) in acc.total_fees.into_iter() {
+            fee_acc.add(&token::BaseUnits(amount, denom));
+        }
+
+        Ok(result)
     }
 
     fn after_dispatch_tx<C: Context>(
@@ -1029,18 +1058,29 @@ impl module::BlockHandler for Module {
 
                     Self::add_amount(ctx.runtime_state(), address, amount)
                         .expect("add_amount must succeed for fee disbursement");
+
+                    // Emit transfer event for fee disbursement.
+                    ctx.emit_event(Event::Transfer {
+                        from: *ADDRESS_FEE_ACCUMULATOR,
+                        to: address,
+                        amount: amount.clone(),
+                    });
                 }
             }
         }
 
         // Transfer remainder to a common pool account.
         for (denom, remainder) in previous_fees.into_iter() {
-            Self::add_amount(
-                ctx.runtime_state(),
-                *ADDRESS_COMMON_POOL,
-                &token::BaseUnits::new(remainder, denom),
-            )
-            .expect("add_amount must succeed for transfer to common pool")
+            let amount = token::BaseUnits::new(remainder, denom);
+            Self::add_amount(ctx.runtime_state(), *ADDRESS_COMMON_POOL, &amount)
+                .expect("add_amount must succeed for transfer to common pool");
+
+            // Emit transfer event for fee disbursement.
+            ctx.emit_event(Event::Transfer {
+                from: *ADDRESS_FEE_ACCUMULATOR,
+                to: *ADDRESS_COMMON_POOL,
+                amount,
+            })
         }
 
         // Fees for the active block should be transferred to the fee accumulator address.

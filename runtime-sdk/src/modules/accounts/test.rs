@@ -8,7 +8,7 @@ use anyhow::anyhow;
 
 use crate::{
     context::{BatchContext, Context},
-    module::{BlockHandler, InvariantHandler, MethodHandler, TransactionHandler},
+    module::{self, BlockHandler, InvariantHandler, MethodHandler, TransactionHandler},
     modules::{core, core::API as _},
     testing::{keys, mock},
     types::{
@@ -571,6 +571,16 @@ fn test_fee_disbursement() {
 
     // Authenticate transaction, fees should be moved to accumulator.
     Accounts::authenticate_tx(&mut ctx, &tx).expect("transaction authentication should succeed");
+    ctx.with_tx(0, 0, tx, |mut tx_ctx, _call| {
+        // Run after call tx handler.
+        Accounts::after_handle_call(
+            &mut tx_ctx,
+            module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
+        )
+        .expect("after_handle_call should succeed");
+        tx_ctx.commit()
+    });
+
     // Run end block handler.
     Accounts::end_block(&mut ctx);
 
@@ -1019,14 +1029,14 @@ fn test_fee_acc() {
 
     init_accounts(&mut ctx);
 
-    // Check that Accounts::move_{into,from}_fee_accumulator work.
+    // Check that Accounts::{charge,return}_tx_fee work.
     ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
-        Accounts::move_into_fee_accumulator(
+        Accounts::charge_tx_fee(
             &mut tx_ctx,
             keys::alice::address(),
             &BaseUnits::new(1_000, Denomination::NATIVE),
         )
-        .expect("move into should succeed");
+        .expect("charge tx fee should succeed");
 
         let ab = Accounts::get_balance(
             tx_ctx.runtime_state(),
@@ -1036,12 +1046,12 @@ fn test_fee_acc() {
         .expect("get_balance should succeed");
         assert_eq!(ab, 999_000, "balance in source account should be correct");
 
-        Accounts::move_from_fee_accumulator(
+        Accounts::return_tx_fee(
             &mut tx_ctx,
             keys::alice::address(),
             &BaseUnits::new(1_000, Denomination::NATIVE),
         )
-        .expect("move from should succeed");
+        .expect("return tx fee should succeed");
 
         let ab = Accounts::get_balance(
             tx_ctx.runtime_state(),
@@ -1060,16 +1070,16 @@ fn test_fee_acc_sim() {
 
     init_accounts(&mut ctx);
 
-    // Check that Accounts::move_{into,from}_fee_accumulator don't do
+    // Check that Accounts::{charge,return}_tx_fee don't do
     // anything in simulation mode.
     ctx.with_simulation(|mut sctx| {
         sctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
-            Accounts::move_into_fee_accumulator(
+            Accounts::charge_tx_fee(
                 &mut tx_ctx,
                 keys::alice::address(),
                 &BaseUnits::new(1_000, Denomination::NATIVE),
             )
-            .expect("move into should succeed");
+            .expect("charge tx fee should succeed");
 
             let ab = Accounts::get_balance(
                 tx_ctx.runtime_state(),
@@ -1079,12 +1089,12 @@ fn test_fee_acc_sim() {
             .expect("get_balance should succeed");
             assert_eq!(ab, 1_000_000, "balance in source account should be correct");
 
-            Accounts::move_from_fee_accumulator(
+            Accounts::return_tx_fee(
                 &mut tx_ctx,
                 keys::alice::address(),
                 &BaseUnits::new(1_000, Denomination::NATIVE),
             )
-            .expect("move from should succeed");
+            .expect("return tx fee should succeed");
 
             let ab = Accounts::get_balance(
                 tx_ctx.runtime_state(),
