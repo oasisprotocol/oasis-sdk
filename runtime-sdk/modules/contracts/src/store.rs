@@ -5,9 +5,10 @@ use oasis_runtime_sdk::{
     dispatcher,
     keymanager::{self, StateKey},
     storage::{self, Store},
+    subcall,
 };
 
-use crate::{results, state, types, Error, MODULE_NAME};
+use crate::{state, types, Error, MODULE_NAME};
 
 /// Confidential store key pair ID domain separation context base.
 pub const CONFIDENTIAL_STORE_KEY_PAIR_ID_CONTEXT_BASE: &[u8] =
@@ -30,7 +31,7 @@ pub fn for_instance<'a, C: Context>(
     // which becomes unavailable after the first PrefixStore is created, since that
     // keeps a mutable reference to it (via runtime_state()).
     let subcall_count = if let StoreKind::Confidential = store_kind {
-        results::get_current_subcall_depth(ctx)
+        subcall::get_current_subcall_depth(ctx)
     } else {
         0
     };

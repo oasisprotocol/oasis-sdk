@@ -101,10 +101,7 @@ pub enum Error {
     #[sdk_error(code = 15)]
     InsufficientCallerBalance,
 
-    #[error("call depth exceeded (depth: {0} max: {1})")]
-    #[sdk_error(code = 16)]
-    CallDepthExceeded(u16, u16),
-
+    // Error code 16 is reserved.
     #[error("result size exceeded (size: {0} max: {1})")]
     #[sdk_error(code = 17)]
     ResultTooLarge(u32, u32),

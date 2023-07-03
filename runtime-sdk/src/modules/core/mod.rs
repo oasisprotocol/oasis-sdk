@@ -139,6 +139,10 @@ pub enum Error {
     #[sdk_error(code = 26)]
     FutureNonce,
 
+    #[error("call depth exceeded (depth: {0} max: {1})")]
+    #[sdk_error(code = 27)]
+    CallDepthExceeded(u16, u16),
+
     #[error("{0}")]
     #[sdk_error(transparent)]
     TxSimulationFailed(#[from] TxSimulationFailure),

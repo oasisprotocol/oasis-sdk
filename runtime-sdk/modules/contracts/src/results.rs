@@ -1,5 +1,5 @@
 //! Processing of execution results.
-use std::{collections::BTreeMap, convert::TryInto};
+use std::convert::TryInto;
 
 use oasis_contract_sdk_types::{
     event::Event,
@@ -7,12 +7,12 @@ use oasis_contract_sdk_types::{
     ExecutionOk,
 };
 use oasis_runtime_sdk::{
-    context::{BatchContext, Context, TxContext},
-    dispatcher,
+    context::TxContext,
     event::etag_for_event,
     modules::core::API as _,
     runtime::Runtime,
-    types::{token, transaction, transaction::CallerAddress},
+    subcall::{self, SubcallInfo},
+    types::transaction::CallerAddress,
 };
 
 use crate::{
@@ -20,14 +20,6 @@ use crate::{
     types::ContractEvent,
     wasm, Config, Error, Parameters, MODULE_NAME,
 };
-
-/// Context key used for tracking the execution call depth to make sure that the maximum depth is
-/// not exceeded as that could result in a stack overflow.
-const CONTEXT_KEY_DEPTH: &str = "contracts.CallDepth";
-
-pub(crate) fn get_current_subcall_depth<C: Context>(ctx: &mut C) -> u16 {
-    *ctx.value(CONTEXT_KEY_DEPTH).or_default()
-}
 
 /// Process an execution result by performing gas accounting and returning the inner result.
 pub(crate) fn process_execution_result<C: TxContext>(
@@ -91,16 +83,6 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
     messages: Vec<Message>,
     data: Vec<u8>,
 ) -> Result<Vec<u8>, Error> {
-    // Ensure the call depth is not too large. Note that gas limits should prevent this growing
-    // overly large, but as a defense in depth we also enforce limits.
-    let current_depth: u16 = *ctx.value(CONTEXT_KEY_DEPTH).or_default();
-    if !messages.is_empty() && current_depth >= params.max_subcall_depth {
-        return Err(Error::CallDepthExceeded(
-            current_depth + 1,
-            params.max_subcall_depth,
-        ));
-    }
-
     // By default the resulting data is what the call returned. Message reply processing may
     // overwrite this data when it is non-empty.
     let mut result_data = data;
@@ -141,7 +123,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                 body,
                 max_gas,
             } => {
-                // Calculate how much gas the child message can use.
+                // Compute the amount of gas that can be used.
                 let remaining_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
                 let max_gas = max_gas.unwrap_or(remaining_gas);
                 let max_gas = if max_gas > remaining_gas {
@@ -149,85 +131,25 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                 } else {
                     max_gas
                 };
-                // Calculate how many consensus messages the child call can emit.
-                let remaining_messages = ctx.remaining_messages();
 
-                // Execute a transaction in a child context.
-                let (result, gas, etags, messages) = ctx.with_child(ctx.mode(), |mut ctx| {
-                    // Generate an internal transaction.
-                    let tx = transaction::Transaction {
-                        version: transaction::LATEST_TRANSACTION_VERSION,
-                        call: transaction::Call {
-                            format: transaction::CallFormat::Plain,
-                            method,
-                            body,
-                            ..Default::default()
-                        },
-                        auth_info: transaction::AuthInfo {
-                            signer_info: vec![transaction::SignerInfo {
-                                // The call is being performed on the contract's behalf.
-                                address_spec: transaction::AddressSpec::Internal(
-                                    CallerAddress::Address(contract.instance_info.address()),
-                                ),
-                                nonce: 0,
-                            }],
-                            fee: transaction::Fee {
-                                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
-                                // Limit gas usage inside the child context to the allocated maximum.
-                                gas: max_gas,
-                                consensus_messages: remaining_messages,
-                            },
-                            ..Default::default()
-                        },
-                    };
-
-                    let result = ctx.with_tx(0, 0, tx, |ctx, call| {
-                        // Mark this sub-context as internal as it belongs to an existing transaction.
-                        let mut ctx = ctx.internal();
-                        // Propagate call depth.
-                        ctx.value(CONTEXT_KEY_DEPTH).set(current_depth + 1);
-
-                        // Dispatch the call.
-                        let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
-                            &mut ctx,
-                            call,
-                            &Default::default(),
-                        );
-                        // Retrieve remaining gas.
-                        let gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(&mut ctx);
-
-                        // Commit store and return emitted tags and messages on successful dispatch,
-                        // otherwise revert state and ignore any emitted events/messages.
-                        if result.is_success() {
-                            let (etags, messages) = ctx.commit();
-                            (result, gas, etags, messages)
-                        } else {
-                            // Ignore tags/messages on failure.
-                            (result, gas, BTreeMap::new(), vec![])
-                        }
-                    });
-
-                    // Commit storage. Note that if child context didn't commit, this is
-                    // basically a no-op.
-                    ctx.commit();
-
-                    result
-                });
+                let result = subcall::call(
+                    ctx,
+                    SubcallInfo {
+                        caller: CallerAddress::Address(contract.instance_info.address()),
+                        method,
+                        body,
+                        max_depth: params.max_subcall_depth,
+                        max_gas,
+                    },
+                    subcall::AllowAllValidator,
+                )?;
 
                 // Use any gas that was used inside the child context. This should never fail as we
                 // preconfigured the amount of available gas.
-                <C::Runtime as Runtime>::Core::use_tx_gas(ctx, max_gas.saturating_sub(gas))?;
-
-                // Forward any emitted event tags.
-                ctx.emit_etags(etags);
-
-                // Forward any emitted runtime messages.
-                for (msg, hook) in messages {
-                    // This should never fail as child context has the right limits configured.
-                    ctx.emit_message(msg, hook)?;
-                }
+                <C::Runtime as Runtime>::Core::use_tx_gas(ctx, result.gas_used)?;
 
                 // Process replies based on filtering criteria.
+                let result = result.call_result;
                 match (reply, result.is_success()) {
                     (NotifyReply::OnError, false)
                     | (NotifyReply::OnSuccess, true)
