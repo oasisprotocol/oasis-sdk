@@ -205,3 +205,8 @@ func NewAddressFromConsensus(addr staking.Address) Address {
 func NewAddressFromConsensusPublicKey(pk signature.PublicKey) Address {
 	return NewAddress(NewSignatureAddressSpecEd25519(ed25519.PublicKey(pk)))
 }
+
+// NewAddressFromEth creates a new address from an Eth-compatible address.
+func NewAddressFromEth(ethAddress []byte) Address {
+	return NewAddressRaw(AddressV0Secp256k1EthContext, ethAddress)
+}

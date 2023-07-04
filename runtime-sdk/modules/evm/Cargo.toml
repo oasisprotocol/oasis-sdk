@@ -42,6 +42,7 @@ oasis-runtime-sdk = { path = "../..", features = ["test"] }
 rand = "0.7.3"
 serde = { version = "1.0.144", features = ["derive"] }
 serde_json = { version = "1.0.87", features = ["raw_value"] }
+ethabi = { version = "18.0.0", default-features = false, features = ["std", "full-serde"]}
 
 [[bench]]
 name = "criterion_benchmark"

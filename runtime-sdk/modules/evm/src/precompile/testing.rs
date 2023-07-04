@@ -4,7 +4,11 @@ use evm::{
 };
 pub use primitive_types::{H160, H256};
 
-use oasis_runtime_sdk::{modules::accounts::Module, types::token::Denomination};
+use oasis_runtime_sdk::{
+    modules::{accounts::Module, core::Error},
+    subcall,
+    types::token::Denomination,
+};
 
 use super::{PrecompileResult, Precompiles};
 
@@ -29,6 +33,14 @@ impl crate::backend::EVMBackendExt for MockBackend {
             .copied()
             .chain((pers.len()..(num_bytes as usize)).map(|i| i as u8))
             .collect()
+    }
+
+    fn subcall<V: subcall::Validator + 'static>(
+        &self,
+        _info: subcall::SubcallInfo,
+        _validator: V,
+    ) -> Result<subcall::SubcallResult, Error> {
+        unimplemented!()
     }
 }
 

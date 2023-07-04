@@ -40,6 +40,8 @@ impl sdk::Runtime for Runtime {
 
     type Modules = (
         modules::accounts::Module,
+        modules::consensus::Module,
+        modules::consensus_accounts::Module<modules::accounts::Module, modules::consensus::Module>,
         modules::core::Module<Config>,
         evm::Module<Config>,
     );
@@ -75,6 +77,21 @@ impl sdk::Runtime for Runtime {
                     ts
                 },
                 ..Default::default()
+            },
+            modules::consensus::Genesis {
+                parameters: modules::consensus::Parameters {
+                    consensus_denomination: Denomination::NATIVE,
+                    // Test scaling consensus base units when transferring them into the runtime.
+                    consensus_scaling_factor: 1000,
+                },
+            },
+            modules::consensus_accounts::Genesis {
+                parameters: modules::consensus_accounts::Parameters {
+                    // These are free, in order to simplify testing. We do test gas accounting
+                    // with other methods elsewhere though.
+                    gas_costs: Default::default(),
+                    ..Default::default()
+                },
             },
             modules::core::Genesis {
                 parameters: modules::core::Parameters {

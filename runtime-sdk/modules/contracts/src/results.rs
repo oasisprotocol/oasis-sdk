@@ -148,6 +148,15 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                 // preconfigured the amount of available gas.
                 <C::Runtime as Runtime>::Core::use_tx_gas(ctx, result.gas_used)?;
 
+                // Forward any emitted event tags.
+                ctx.emit_etags(result.state.events);
+
+                // Forward any emitted runtime messages.
+                for (msg, hook) in result.state.messages {
+                    // This should never fail as child context has the right limits configured.
+                    ctx.emit_message(msg, hook)?;
+                }
+
                 // Process replies based on filtering criteria.
                 let result = result.call_result;
                 match (reply, result.is_success()) {

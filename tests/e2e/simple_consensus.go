@@ -251,10 +251,10 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 	cons := consensus.NewConsensusClient(conn)
 	stakingClient := cons.Staking()
 	ch, sub, err := stakingClient.WatchEvents(ctx)
-	defer sub.Close()
 	if err != nil {
 		return err
 	}
+	defer sub.Close()
 
 	consDenomination := types.Denomination("TEST")
 
@@ -468,10 +468,10 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 	cons := consensus.NewConsensusClient(conn)
 	stakingClient := cons.Staking()
 	ch, sub, err := stakingClient.WatchEvents(ctx)
-	defer sub.Close()
 	if err != nil {
 		return err
 	}
+	defer sub.Close()
 
 	consDenomination := types.Denomination("TEST")
 

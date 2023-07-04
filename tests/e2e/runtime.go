@@ -74,31 +74,51 @@ type RuntimeScenario struct {
 	// RunTest is a list of test functions to run once the network is up.
 	RunTest []RunTestFunction
 
-	client client.RuntimeClient
+	client          client.RuntimeClient
+	fixtureModifier FixtureModifierFunc
+}
+
+// ScenarioOption is an option that can be specified to modify an aspect of the scenario.
+type ScenarioOption func(*RuntimeScenario)
+
+// FixtureModifierFunc is a function that performs arbitrary modifications to a given fixture.
+type FixtureModifierFunc func(*oasis.NetworkFixture)
+
+// WithCustomFixture applies the given fixture modifier function to the runtime scenario fixture.
+func WithCustomFixture(fm FixtureModifierFunc) ScenarioOption {
+	return func(sc *RuntimeScenario) {
+		sc.fixtureModifier = fm
+	}
 }
 
 // NewRuntimeScenario creates a new runtime test scenario using the given
 // runtime and test functions.
-func NewRuntimeScenario(runtimeName string, tests []RunTestFunction) *RuntimeScenario {
+func NewRuntimeScenario(runtimeName string, tests []RunTestFunction, opts ...ScenarioOption) *RuntimeScenario {
 	sc := &RuntimeScenario{
 		Scenario:    *e2e.NewScenario(runtimeName),
 		RuntimeName: runtimeName,
 		RunTest:     tests,
 	}
+
 	sc.Flags.String(cfgRuntimeBinaryDirDefault, "../../target/debug", "path to the runtime binaries directory")
 	sc.Flags.String(cfgRuntimeLoader, "../../../oasis-core/target/default/debug/oasis-core-runtime-loader", "path to the runtime loader")
 	sc.Flags.String(cfgKeymanagerBinary, "", "path to the keymanager binary")
 	sc.Flags.Bool(cfgIasMock, true, "if mock IAS service should be used")
 	sc.Flags.String(cfgRuntimeProvisioner, "sandboxed", "the runtime provisioner: mock, unconfined, or sandboxed")
 
+	for _, opt := range opts {
+		opt(sc)
+	}
+
 	return sc
 }
 
 func (sc *RuntimeScenario) Clone() scenario.Scenario {
 	return &RuntimeScenario{
-		Scenario:    sc.Scenario.Clone(),
-		RuntimeName: sc.RuntimeName,
-		RunTest:     append(make([]RunTestFunction, 0, len(sc.RunTest)), sc.RunTest...),
+		Scenario:        sc.Scenario.Clone(),
+		RuntimeName:     sc.RuntimeName,
+		RunTest:         append(make([]RunTestFunction, 0, len(sc.RunTest)), sc.RunTest...),
+		fixtureModifier: sc.fixtureModifier,
 	}
 }
 
@@ -270,6 +290,11 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				PrivatePeerPubKeys: []string{"pr+KLREDcBxpWgQ/80yUrHXbyhDuBDcnxzo3td4JiIo="}, // The deterministic client node pub key.
 			},
 		}
+	}
+
+	// Apply fixture modifier function when configured.
+	if sc.fixtureModifier != nil {
+		sc.fixtureModifier(ff)
 	}
 
 	return ff, nil

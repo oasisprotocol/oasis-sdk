@@ -13,6 +13,7 @@ use crate::{backend::EVMBackendExt, Config};
 mod confidential;
 mod sha512;
 mod standard;
+mod subcall;
 
 pub mod testing;
 
@@ -91,7 +92,7 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             return None;
         }
         Some(match (address[0], address[18], address[19]) {
-            // Standard precompiles.
+            // Ethereum-compatible.
             (0, 0, 1) => standard::call_ecrecover(handle),
             (0, 0, 2) => standard::call_sha256(handle),
             (0, 0, 3) => standard::call_ripemd160(handle),
@@ -100,7 +101,7 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             (0, 0, 6) => standard::call_bn128_add(handle),
             (0, 0, 7) => standard::call_bn128_mul(handle),
             (0, 0, 8) => standard::call_bn128_pairing(handle),
-            // Confidential precompiles.
+            // Oasis-specific, confidential.
             (1, 0, 1) => confidential::call_random_bytes(handle, self.backend),
             (1, 0, 2) => confidential::call_x25519_derive(handle),
             (1, 0, 3) => confidential::call_deoxysii_seal(handle),
@@ -109,24 +110,26 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             (1, 0, 6) => confidential::call_sign(handle),
             (1, 0, 7) => confidential::call_verify(handle),
             (1, 0, 8) => confidential::call_curve25519_compute_public(handle),
-            // Other precompiles.
+            // Oasis-specific, general.
             (1, 1, 1) => sha512::call_sha512_256(handle),
+            (1, 1, 2) => subcall::call_subcall(handle, self.backend),
             _ => return Cfg::additional_precompiles().and_then(|pc| pc.execute(handle)),
         })
     }
 
     fn is_precompile(&self, address: H160) -> bool {
+        // See above table in `execute` for matching on what is a valid precompile address.
         let addr_bytes = address.as_bytes();
         let (a0, a18, a19) = (address[0], addr_bytes[18], addr_bytes[19]);
         (address[1..18].iter().all(|b| *b == 0)
             && matches!(
                 (a0, a18, a19, Cfg::CONFIDENTIAL),
-                // Standard.
+                // Ethereum-compatible.
                 (0, 0, 1..=8, _) |
-                // Confidential.
+                // Oasis-specific, confidential.
                 (1, 0, 1..=8, true) |
-                // Other.
-                (1, 1, 1, _)
+                // Oasis-specific, general.
+                (1, 1, 1..=2, _)
             ))
             || Cfg::additional_precompiles()
                 .map(|pc| pc.is_precompile(address))

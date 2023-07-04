@@ -12,15 +12,15 @@ use oasis_core_runtime::{
 };
 
 use crate::{
-    context::{Mode, RuntimeBatchContext},
-    history,
+    context::{BatchContext, Mode, RuntimeBatchContext},
+    dispatcher, history,
     keymanager::KeyManager,
     module::MigrationHandler,
     modules,
     runtime::Runtime,
     storage::{CurrentStore, MKVSStore},
     testing::{configmap, keymanager::MockKeyManagerClient},
-    types::transaction,
+    types::{address::SignatureAddressSpec, transaction},
 };
 
 pub struct Config;
@@ -174,5 +174,85 @@ pub fn transaction() -> transaction::Transaction {
             },
             ..Default::default()
         },
+    }
+}
+
+/// Options that can be used during mock signer calls.
+#[derive(Clone, Debug)]
+pub struct CallOptions {
+    /// Transaction fee.
+    pub fee: transaction::Fee,
+}
+
+impl Default for CallOptions {
+    fn default() -> Self {
+        Self {
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 1_000_000,
+                consensus_messages: 0,
+            },
+        }
+    }
+}
+
+/// A mock signer for use during tests.
+pub struct Signer {
+    nonce: u64,
+    sigspec: SignatureAddressSpec,
+}
+
+impl Signer {
+    /// Create a new mock signer using the given nonce and signature spec.
+    pub fn new(nonce: u64, sigspec: SignatureAddressSpec) -> Self {
+        Self { nonce, sigspec }
+    }
+
+    /// Dispatch a call to the given method.
+    pub fn call<C, B>(&mut self, ctx: &mut C, method: &str, body: B) -> dispatcher::DispatchResult
+    where
+        C: BatchContext,
+        B: cbor::Encode,
+    {
+        self.call_opts(ctx, method, body, Default::default())
+    }
+
+    /// Dispatch a call to the given method with the given options.
+    pub fn call_opts<C, B>(
+        &mut self,
+        ctx: &mut C,
+        method: &str,
+        body: B,
+        opts: CallOptions,
+    ) -> dispatcher::DispatchResult
+    where
+        C: BatchContext,
+        B: cbor::Encode,
+    {
+        let tx = transaction::Transaction {
+            version: 1,
+            call: transaction::Call {
+                format: transaction::CallFormat::Plain,
+                method: method.to_owned(),
+                body: cbor::to_value(body),
+                ..Default::default()
+            },
+            auth_info: transaction::AuthInfo {
+                signer_info: vec![transaction::SignerInfo::new_sigspec(
+                    self.sigspec.clone(),
+                    self.nonce,
+                )],
+                fee: opts.fee,
+                ..Default::default()
+            },
+        };
+
+        let result = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx(ctx, 1024, tx, 0)
+            .expect("dispatch should work");
+
+        // Increment the nonce.
+        self.nonce += 1;
+
+        result
     }
 }

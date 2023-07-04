@@ -1,5 +1,4 @@
 //! EVM module.
-
 #![feature(array_chunks)]
 #![feature(test)]
 
@@ -14,7 +13,7 @@ pub mod state;
 pub mod types;
 
 use evm::{
-    executor::stack::{MemoryStackState, StackExecutor, StackSubstateMetadata},
+    executor::stack::{StackExecutor, StackSubstateMetadata},
     Config as EVMConfig,
 };
 use once_cell::sync::OnceCell;
@@ -40,9 +39,9 @@ use oasis_runtime_sdk::{
     },
 };
 
-use backend::ApplyBackendResult;
 use types::{H160, H256, U256};
 
+pub mod mock;
 #[cfg(test)]
 mod test;
 
@@ -525,8 +524,8 @@ impl<Cfg: Config> Module<Cfg> {
             &mut StackExecutor<
                 'static,
                 '_,
-                MemoryStackState<'_, 'static, backend::Backend<'_, C, Cfg>>,
-                precompile::Precompiles<Cfg, backend::Backend<'_, C, Cfg>>,
+                backend::OasisStackState<'_, '_, 'static, C, Cfg>,
+                precompile::Precompiles<Cfg, backend::OasisBackend<'_, C, Cfg>>,
             >,
             u64,
         ) -> (evm::ExitReason, Vec<u8>),
@@ -538,8 +537,8 @@ impl<Cfg: Config> Module<Cfg> {
         let fee_denomination = ctx.tx_auth_info().fee.amount.denomination().clone();
 
         let vicinity = backend::Vicinity {
-            gas_price: gas_price.into(),
-            origin: source,
+            gas_price,
+            origin: source.into(),
         };
 
         // The maximum gas fee has already been withdrawn in authenticate_tx().
@@ -547,9 +546,9 @@ impl<Cfg: Config> Module<Cfg> {
             .checked_mul(primitive_types::U256::from(gas_limit))
             .ok_or(Error::FeeOverflow)?;
 
-        let mut backend = backend::Backend::<'_, C, Cfg>::new(ctx, vicinity);
+        let backend = backend::OasisBackend::<'_, C, Cfg>::new(ctx, vicinity);
         let metadata = StackSubstateMetadata::new(gas_limit, cfg);
-        let stackstate = MemoryStackState::new(metadata, &backend);
+        let stackstate = backend::OasisStackState::new(metadata, &backend);
         let precompiles = precompile::Precompiles::new(&backend);
         let mut executor = StackExecutor::new_with_precompiles(stackstate, cfg, &precompiles);
 
@@ -571,11 +570,8 @@ impl<Cfg: Config> Module<Cfg> {
             .checked_sub(fee)
             .ok_or(Error::InsufficientBalance)?;
 
-        let (vals, logs) = executor.into_state().deconstruct();
-
         // Apply can fail in case of unsupported actions.
-        let exit_reason = backend.apply(vals, logs);
-        if let Err(err) = process_evm_result(exit_reason, Vec::new()) {
+        if let Err(err) = executor.into_state().apply() {
             <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
             return Err(err);
         };

@@ -61,6 +61,27 @@ impl From<&Mode> for &'static str {
     }
 }
 
+/// State after applying the context.
+#[derive(Clone, Debug, Default)]
+pub struct State {
+    /// Emitted event tags.
+    pub events: EventTags,
+    /// Emitted messages to consensus layer.
+    pub messages: Vec<(roothash::Message, MessageEventHookInvocation)>,
+}
+
+impl State {
+    /// Merge a different state into this state.
+    pub fn merge_from(&mut self, other: State) {
+        for (key, event) in other.events {
+            let events = self.events.entry(key).or_insert_with(Vec::new);
+            events.extend(event);
+        }
+
+        self.messages.extend(other.messages);
+    }
+}
+
 /// Local configuration key the value of which determines whether expensive queries should be
 /// allowed or not, and also whether smart contracts should be simulated for `core.EstimateGas`.
 /// DEPRECATED and superseded by LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS and LOCAL_CONFIG_ALLOWED_QUERIES.
@@ -244,12 +265,7 @@ pub trait Context {
     /// # Storage
     ///
     /// This does not commit any storage transaction.
-    fn commit(
-        self,
-    ) -> (
-        EventTags,
-        Vec<(roothash::Message, MessageEventHookInvocation)>,
-    );
+    fn commit(self) -> State;
 
     /// Rollback any changes made by this context. This method only needs to be called explicitly
     /// in case you want to retrieve possibly emitted unconditional events. Simply dropping the
@@ -358,12 +374,7 @@ impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
         self.deref().io_ctx()
     }
 
-    fn commit(
-        self,
-    ) -> (
-        EventTags,
-        Vec<(roothash::Message, MessageEventHookInvocation)>,
-    ) {
+    fn commit(self) -> State {
         unimplemented!()
     }
 
@@ -460,6 +471,56 @@ pub trait TxContext: Context {
     /// Similar as `emit_event` but the event will persist even in case the transaction that owns
     /// this context fails.
     fn emit_unconditional_event<E: Event>(&mut self, event: E);
+}
+
+impl<'a, 'b, C: TxContext> TxContext for std::cell::RefMut<'a, &'b mut C> {
+    fn tx_index(&self) -> usize {
+        self.deref().tx_index()
+    }
+
+    fn tx_size(&self) -> u32 {
+        self.deref().tx_size()
+    }
+
+    fn tx_auth_info(&self) -> &transaction::AuthInfo {
+        self.deref().tx_auth_info()
+    }
+
+    fn tx_call_format(&self) -> transaction::CallFormat {
+        self.deref().tx_call_format()
+    }
+
+    fn is_read_only(&self) -> bool {
+        self.deref().is_read_only()
+    }
+
+    fn is_internal(&self) -> bool {
+        self.deref().is_internal()
+    }
+
+    fn internal(self) -> Self {
+        unimplemented!()
+    }
+
+    fn tx_caller_address(&self) -> Address {
+        self.deref().tx_caller_address()
+    }
+
+    fn tx_value<V: Any>(&mut self, key: &'static str) -> ContextValue<'_, V> {
+        self.deref_mut().tx_value(key)
+    }
+
+    fn emit_message(
+        &mut self,
+        msg: roothash::Message,
+        hook: MessageEventHookInvocation,
+    ) -> Result<(), Error> {
+        self.deref_mut().emit_message(msg, hook)
+    }
+
+    fn emit_unconditional_event<E: Event>(&mut self, event: E) {
+        self.deref_mut().emit_unconditional_event(event)
+    }
 }
 
 /// Dispatch context for the whole batch.
@@ -596,13 +657,11 @@ impl<'a, R: runtime::Runtime> Context for RuntimeBatchContext<'a, R> {
         IoContext::create_child(&self.io_ctx)
     }
 
-    fn commit(
-        self,
-    ) -> (
-        EventTags,
-        Vec<(roothash::Message, MessageEventHookInvocation)>,
-    ) {
-        (self.block_etags, self.messages)
+    fn commit(self) -> State {
+        State {
+            events: self.block_etags,
+            messages: self.messages,
+        }
     }
 
     fn rollback(self) -> EventTags {
@@ -837,19 +896,17 @@ impl<'round, 'store, R: runtime::Runtime> Context for RuntimeTxContext<'round, '
         IoContext::create_child(&self.io_ctx)
     }
 
-    fn commit(
-        mut self,
-    ) -> (
-        EventTags,
-        Vec<(roothash::Message, MessageEventHookInvocation)>,
-    ) {
+    fn commit(mut self) -> State {
         // Merge unconditional events into regular events on success.
         for (key, val) in self.etags_unconditional {
             let tag = self.etags.entry(key).or_insert_with(Vec::new);
             tag.extend(val)
         }
 
-        (self.etags, self.messages)
+        State {
+            events: self.etags,
+            messages: self.messages,
+        }
     }
 
     fn rollback(self) -> EventTags {

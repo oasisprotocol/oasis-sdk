@@ -178,7 +178,8 @@ pub fn decode(
             fee: transaction::Fee {
                 amount: token::BaseUnits(resolved_fee_amount, token::Denomination::NATIVE),
                 gas: gas_limit,
-                consensus_messages: 0,
+                // TODO: Allow customization, maybe through call data?
+                consensus_messages: 1,
             },
             ..Default::default()
         },

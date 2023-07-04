@@ -163,6 +163,15 @@ impl Address {
         Address::new(ADDRESS_V0_MULTISIG_CONTEXT, ADDRESS_V0_VERSION, &config_vec)
     }
 
+    /// Creates a new address from an Ethereum-compatible address.
+    pub fn from_eth(eth_address: &[u8]) -> Self {
+        Address::new(
+            ADDRESS_V0_SECP256K1ETH_CONTEXT,
+            ADDRESS_V0_VERSION,
+            eth_address,
+        )
+    }
+
     /// Tries to create a new address from Bech32-encoded string.
     pub fn from_bech32(data: &str) -> Result<Self, Error> {
         let (hrp, data, variant) = bech32::decode(data).map_err(|_| Error::MalformedAddress)?;
@@ -373,6 +382,16 @@ mod test {
         assert_eq!(
             addr.to_bech32(),
             "oasis1qq398yyk4wt2zxhtt8c66raynelgt6ngh5yq87xg"
+        );
+    }
+
+    #[test]
+    fn test_address_from_eth() {
+        let eth_address = hex::decode("dce075e1c39b1ae0b75d554558b6451a226ffe00").unwrap();
+        let addr = Address::from_eth(&eth_address);
+        assert_eq!(
+            addr.to_bech32(),
+            "oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt"
         );
     }
 

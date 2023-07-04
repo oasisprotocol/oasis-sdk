@@ -1018,8 +1018,8 @@ fn test_emit_events() {
         ctx.emit_event(TestEvent { i: 3 });
         ctx.emit_event(TestEvent { i: 1 });
 
-        let (etags, _) = ctx.commit();
-        let tags = etags.clone().into_tags();
+        let state = ctx.commit();
+        let tags = state.events.clone().into_tags();
         assert_eq!(tags.len(), 1, "1 emitted tag expected");
 
         let events: Vec<TestEvent> = cbor::from_slice(&tags[0].value).unwrap();
@@ -1028,15 +1028,15 @@ fn test_emit_events() {
         assert_eq!(TestEvent { i: 3 }, events[1], "expected events emitted");
         assert_eq!(TestEvent { i: 1 }, events[2], "expected events emitted");
 
-        etags
+        state.events
     });
     // Forward tx emitted etags.
     ctx.emit_etags(etags);
     // Emit one more event.
     ctx.emit_event(TestEvent { i: 0 });
 
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert_eq!(tags.len(), 1, "1 emitted tag expected");
 
     let events: Vec<TestEvent> = cbor::from_slice(&tags[0].value).unwrap();
@@ -1077,20 +1077,20 @@ fn test_gas_used_events() {
         )
         .expect("after_handle_call should succeed");
 
-        let (etags, _) = tx_ctx.commit();
-        let tags = etags.clone().into_tags();
+        let state = tx_ctx.commit();
+        let tags = state.events.clone().into_tags();
         assert_eq!(tags.len(), 1, "1 emitted tag expected");
 
         let expected = cbor::to_vec(vec![Event::GasUsed { amount: 10 }]);
         assert_eq!(tags[0].value, expected, "expected events emitted");
 
-        etags
+        state.events
     });
     // Forward tx emitted etags.
     ctx.emit_etags(etags);
 
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert_eq!(tags.len(), 1, "1 emitted tags expected");
 
     let expected = cbor::to_vec(vec![Event::GasUsed { amount: 10 }]);
