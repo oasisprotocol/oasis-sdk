@@ -11,10 +11,10 @@ use primitive_types::H160;
 use crate::{backend::EVMBackendExt, Config};
 
 mod confidential;
+mod sha512;
 mod standard;
 
-#[cfg(test)]
-mod test;
+pub mod testing;
 
 // Some types matching evm::executor::stack.
 type PrecompileResult = Result<PrecompileOutput, PrecompileFailure>;
@@ -80,33 +80,40 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
         if !self.is_precompile(address) {
             return None;
         }
-        Some(match (address[0], address[19]) {
-            (0, 1) => standard::call_ecrecover(handle),
-            (0, 2) => standard::call_sha256(handle),
-            (0, 3) => standard::call_ripemd160(handle),
-            (0, 4) => standard::call_datacopy(handle),
-            (0, 5) => standard::call_bigmodexp(handle),
-            (1, 1) => confidential::call_random_bytes(handle, self.backend),
-            (1, 2) => confidential::call_x25519_derive(handle),
-            (1, 3) => confidential::call_deoxysii_seal(handle),
-            (1, 4) => confidential::call_deoxysii_open(handle),
-            (1, 5) => confidential::call_keypair_generate(handle),
-            (1, 6) => confidential::call_sign(handle),
-            (1, 7) => confidential::call_verify(handle),
-            (1, 8) => confidential::call_curve25519_compute_public(handle),
+        Some(match (address[0], address[18], address[19]) {
+            // Standard precompiles.
+            (0, 0, 1) => standard::call_ecrecover(handle),
+            (0, 0, 2) => standard::call_sha256(handle),
+            (0, 0, 3) => standard::call_ripemd160(handle),
+            (0, 0, 4) => standard::call_datacopy(handle),
+            (0, 0, 5) => standard::call_bigmodexp(handle),
+            // Confidential precompiles.
+            (1, 0, 1) => confidential::call_random_bytes(handle, self.backend),
+            (1, 0, 2) => confidential::call_x25519_derive(handle),
+            (1, 0, 3) => confidential::call_deoxysii_seal(handle),
+            (1, 0, 4) => confidential::call_deoxysii_open(handle),
+            (1, 0, 5) => confidential::call_keypair_generate(handle),
+            (1, 0, 6) => confidential::call_sign(handle),
+            (1, 0, 7) => confidential::call_verify(handle),
+            (1, 0, 8) => confidential::call_curve25519_compute_public(handle),
+            // Other precompiles.
+            (1, 1, 1) => sha512::call_sha512_256(handle),
             _ => return Cfg::additional_precompiles().and_then(|pc| pc.execute(handle)),
         })
     }
 
     fn is_precompile(&self, address: H160) -> bool {
-        // All Ethereum precompiles are zero except for the last byte, which is no more than five.
-        // Otherwise, when confidentiality is enabled, Oasis precompiles start with one and have a last byte of no more than four.
         let addr_bytes = address.as_bytes();
-        let (first, last) = (address[0], addr_bytes[19]);
-        (address[1..19].iter().all(|b| *b == 0)
+        let (a0, a18, a19) = (address[0], addr_bytes[18], addr_bytes[19]);
+        (address[1..18].iter().all(|b| *b == 0)
             && matches!(
-                (first, last, Cfg::CONFIDENTIAL),
-                (0, 1..=5, _) | (1, 1..=8, true)
+                (a0, a18, a19, Cfg::CONFIDENTIAL),
+                // Standard.
+                (0, 0, 1..=5, _) |
+                // Confidential.
+                (1, 0, 1..=8, true) |
+                // Other.
+                (1, 1, 1, _)
             ))
             || Cfg::additional_precompiles()
                 .map(|pc| pc.is_precompile(address))

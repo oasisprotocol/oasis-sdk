@@ -1,3 +1,4 @@
+//! Implements the confidential precompiles.
 use std::{collections::HashMap, convert::TryInto};
 
 use ethabi::{ParamType, Token};
@@ -400,7 +401,7 @@ mod test {
 
     use oasis_runtime_sdk::crypto::signature::{self, SignatureType};
 
-    use crate::precompile::{test::*, PrecompileResult};
+    use crate::precompile::{testing::*, PrecompileResult};
 
     #[test]
     fn test_x25519_derive() {
