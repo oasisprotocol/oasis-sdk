@@ -345,7 +345,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         shares: u128,
     ) -> Result<(), Error> {
         // Subtract shares from delegation, making sure there are enough there.
-        state::sub_delegation(ctx, to, from, shares)?;
+        state::sub_delegation(to, from, shares)?;
 
         Consensus::reclaim_escrow(
             ctx,
@@ -373,7 +373,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     /// Deposit in the runtime.
     #[handler(call = "consensus.Deposit")]
     fn tx_deposit<C: TxContext>(ctx: &mut C, body: types::Deposit) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_deposit)?;
 
         // Check whether deposit is allowed.
@@ -411,7 +411,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     #[handler(call = "consensus.Withdraw")]
     fn tx_withdraw<C: TxContext>(ctx: &mut C, body: types::Withdraw) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_withdraw)?;
 
         // Check whether withdraw is allowed.
@@ -435,7 +435,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     #[handler(call = "consensus.Delegate")]
     fn tx_delegate<C: TxContext>(ctx: &mut C, body: types::Delegate) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_delegate)?;
 
         // Check whether delegate is allowed.
@@ -452,7 +452,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     #[handler(call = "consensus.Undelegate")]
     fn tx_undelegate<C: TxContext>(ctx: &mut C, body: types::Undelegate) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_undelegate)?;
 
         // Check whether undelegate is allowed.
@@ -473,8 +473,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         args: types::BalanceQuery,
     ) -> Result<types::AccountBalance, Error> {
         let denomination = Consensus::consensus_denomination(ctx)?;
-        let balances = Accounts::get_balances(ctx.runtime_state(), args.address)
-            .map_err(|_| Error::InvalidArgument)?;
+        let balances = Accounts::get_balances(args.address).map_err(|_| Error::InvalidArgument)?;
         let balance = balances
             .balances
             .get(&denomination)
@@ -493,18 +492,18 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     #[handler(query = "consensus.Delegation")]
     fn query_delegation<C: Context>(
-        ctx: &mut C,
+        _ctx: &mut C,
         args: types::DelegationQuery,
     ) -> Result<types::DelegationInfo, Error> {
-        state::get_delegation(ctx, args.from, args.to)
+        state::get_delegation(args.from, args.to)
     }
 
     #[handler(query = "consensus.Delegations")]
     fn query_delegations<C: Context>(
-        ctx: &mut C,
+        _ctx: &mut C,
         args: types::DelegationsQuery,
     ) -> Result<Vec<types::ExtendedDelegationInfo>, Error> {
-        state::get_delegations(ctx, args.from)
+        state::get_delegations(args.from)
     }
 
     #[handler(message_result = CONSENSUS_TRANSFER_HANDLER)]
@@ -617,7 +616,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         let result: AddEscrowResult = cbor::from_value(result).unwrap();
         let shares = result.new_shares.try_into().unwrap();
 
-        state::add_delegation(ctx, context.from, context.to, shares).unwrap();
+        state::add_delegation(context.from, context.to, shares).unwrap();
 
         // Emit delegation successful event.
         ctx.emit_event(Event::Delegate {
@@ -637,7 +636,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     ) {
         if !me.is_success() {
             // Undelegation failed, add shares back.
-            state::add_delegation(ctx, context.to, context.from, context.shares).unwrap();
+            state::add_delegation(context.to, context.from, context.shares).unwrap();
 
             // Emit undelegation failed event.
             ctx.emit_event(Event::UndelegateStart {
@@ -660,7 +659,6 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         let debonding_shares = result.debonding_shares.try_into().unwrap();
 
         state::add_undelegation(
-            ctx,
             context.from,
             context.to,
             result.debond_end_time,
@@ -698,7 +696,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
     type Genesis = Genesis;
 
     fn init_or_migrate<C: Context>(
-        ctx: &mut C,
+        _ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
         genesis: Self::Genesis,
     ) -> bool {
@@ -706,7 +704,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
         if version == 0 {
             // Initialize state from genesis.
             // Set genesis parameters.
-            Self::set_params(ctx.runtime_state(), genesis.parameters);
+            Self::set_params(genesis.parameters);
             meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
             return true;
         }
@@ -735,9 +733,9 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
 
         let own_address = Address::from_runtime_id(ctx.runtime_id());
         let denomination = Consensus::consensus_denomination(ctx).unwrap();
-        let qd = state::get_queued_undelegations(ctx, ctx.epoch()).unwrap();
+        let qd = state::get_queued_undelegations(ctx.epoch()).unwrap();
         for ud in qd {
-            let udi = state::take_undelegation(ctx, &ud).unwrap();
+            let udi = state::take_undelegation(&ud).unwrap();
 
             // Determine total amount the runtime got during the reclaim operation.
             let (total_amount, total_shares) =
@@ -817,9 +815,9 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
 
         let den = Consensus::consensus_denomination(ctx).unwrap();
         #[allow(clippy::or_fun_call)]
-        let ts = Accounts::get_total_supplies(ctx.runtime_state()).or(Err(
-            CoreError::InvariantViolation("unable to get total supplies".to_string()),
-        ))?;
+        let ts = Accounts::get_total_supplies().or(Err(CoreError::InvariantViolation(
+            "unable to get total supplies".to_string(),
+        )))?;
 
         let rt_addr = Address::from_runtime_id(ctx.runtime_id());
         let rt_acct = Consensus::account(ctx, rt_addr).unwrap_or_default();
@@ -843,7 +841,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
         // Check that the number of shares the runtime has escrowed in consensus is >= what is in
         // its internally tracked delegation state.
 
-        let delegations = state::get_delegations_by_destination(ctx)
+        let delegations = state::get_delegations_by_destination()
             .map_err(|_| CoreError::InvariantViolation("unable to get delegations".to_string()))?;
 
         for (to, shares) in delegations {

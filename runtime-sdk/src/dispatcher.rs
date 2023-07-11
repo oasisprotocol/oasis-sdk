@@ -15,7 +15,6 @@ use oasis_core_runtime::{
     common::crypto::hash::Hash,
     consensus::{roothash, verifier::Verifier},
     protocol::HostInfo,
-    storage::mkvs,
     transaction::{
         self,
         dispatcher::{ExecuteBatchResult, ExecuteTxResult},
@@ -37,7 +36,7 @@ use crate::{
     runtime::Runtime,
     schedule_control::ScheduleControlHost,
     sender::SenderMeta,
-    storage::{self, NestedStore, Prefix},
+    storage::{self, current::TransactionResult, CurrentStore, Prefix},
     types,
     types::transaction::{AuthProof, Transaction},
 };
@@ -72,6 +71,7 @@ pub enum Error {
 }
 
 /// Result of dispatching a transaction.
+#[derive(Debug)]
 pub struct DispatchResult {
     /// Transaction call result.
     pub result: module::CallResult,
@@ -186,10 +186,7 @@ impl<R: Runtime> Dispatcher<R> {
         ctx: &mut C,
         call: types::transaction::Call,
         opts: &DispatchOptions<'_>,
-    ) -> (module::CallResult, callformat::Metadata)
-    where
-        C::Store: NestedStore,
-    {
+    ) -> (module::CallResult, callformat::Metadata) {
         let read_only = call.read_only;
 
         // Dispatch the call.
@@ -205,7 +202,7 @@ impl<R: Runtime> Dispatcher<R> {
         };
 
         // Make sure that a read-only call did not result in any modifications.
-        if read_only && ctx.runtime_state().has_pending_updates() {
+        if read_only && CurrentStore::has_pending_updates() {
             return (
                 modules::core::Error::ReadOnlyTransaction.into_call_result(),
                 metadata,
@@ -219,10 +216,7 @@ impl<R: Runtime> Dispatcher<R> {
         ctx: &mut C,
         call: types::transaction::Call,
         opts: &DispatchOptions<'_>,
-    ) -> (module::CallResult, callformat::Metadata)
-    where
-        C::Store: NestedStore,
-    {
+    ) -> (module::CallResult, callformat::Metadata) {
         if let Err(e) = R::Modules::before_handle_call(ctx, &call) {
             return (e.into_call_result(), callformat::Metadata::Empty);
         }
@@ -275,51 +269,53 @@ impl<R: Runtime> Dispatcher<R> {
         let tx_auth_info = tx.auth_info.clone();
         let is_read_only = tx.call.read_only;
 
-        let (result, messages) = ctx.with_tx(opts.tx_index, opts.tx_size, tx, |mut ctx, call| {
-            let (result, call_format_metadata) = Self::dispatch_tx_call(&mut ctx, call, opts);
-            if !result.is_success() || is_read_only {
-                // Retrieve unconditional events by doing an explicit rollback.
-                let etags = ctx.rollback();
+        let (result, messages) = CurrentStore::with_transaction(|| {
+            ctx.with_tx(opts.tx_index, opts.tx_size, tx, |mut ctx, call| {
+                let (result, call_format_metadata) = Self::dispatch_tx_call(&mut ctx, call, opts);
+                if !result.is_success() || is_read_only {
+                    // Retrieve unconditional events by doing an explicit rollback.
+                    let etags = ctx.rollback();
 
-                return (
-                    DispatchResult::new(result, etags.into_tags(), call_format_metadata),
-                    Vec::new(),
-                );
-            }
+                    return TransactionResult::Rollback((
+                        DispatchResult::new(result, etags.into_tags(), call_format_metadata),
+                        Vec::new(),
+                    ));
+                }
 
-            // Load priority.
-            let priority = R::Core::take_priority(&mut ctx);
-            // Load sender metadata.
-            let sender_metadata = R::Core::take_sender_meta(&mut ctx);
+                // Load priority.
+                let priority = R::Core::take_priority(&mut ctx);
+                // Load sender metadata.
+                let sender_metadata = R::Core::take_sender_meta(&mut ctx);
 
-            if ctx.is_check_only() {
-                // Rollback state during checks.
-                ctx.rollback();
+                if ctx.is_check_only() {
+                    // Rollback state during checks.
+                    ctx.rollback();
 
-                (
-                    DispatchResult {
-                        result,
-                        tags: Vec::new(),
-                        priority,
-                        sender_metadata,
-                        call_format_metadata,
-                    },
-                    Vec::new(),
-                )
-            } else {
-                // Commit store and return emitted tags and messages.
-                let (etags, messages) = ctx.commit();
-                (
-                    DispatchResult {
-                        result,
-                        tags: etags.into_tags(),
-                        priority,
-                        sender_metadata,
-                        call_format_metadata,
-                    },
-                    messages,
-                )
-            }
+                    TransactionResult::Rollback((
+                        DispatchResult {
+                            result,
+                            tags: Vec::new(),
+                            priority,
+                            sender_metadata,
+                            call_format_metadata,
+                        },
+                        Vec::new(),
+                    ))
+                } else {
+                    // Commit store and return emitted tags and messages.
+                    let (etags, messages) = ctx.commit();
+                    TransactionResult::Commit((
+                        DispatchResult {
+                            result,
+                            tags: etags.into_tags(),
+                            priority,
+                            sender_metadata,
+                            call_format_metadata,
+                        },
+                        messages,
+                    ))
+                }
+            })
         });
 
         // Run after dispatch hooks.
@@ -447,13 +443,17 @@ impl<R: Runtime> Dispatcher<R> {
     fn handle_last_round_messages<C: Context>(ctx: &mut C) -> Result<(), modules::core::Error> {
         let message_events = ctx.runtime_round_results().messages.clone();
 
-        let store = storage::TypedStore::new(storage::PrefixStore::new(
-            ctx.runtime_state(),
-            &modules::core::MODULE_NAME,
-        ));
-        let mut handlers: BTreeMap<u32, types::message::MessageEventHookInvocation> = store
-            .get(modules::core::state::MESSAGE_HANDLERS)
-            .unwrap_or_default();
+        let mut handlers = CurrentStore::with(|store| {
+            let store = storage::TypedStore::new(storage::PrefixStore::new(
+                store,
+                &modules::core::MODULE_NAME,
+            ));
+            let handlers: BTreeMap<u32, types::message::MessageEventHookInvocation> = store
+                .get(modules::core::state::MESSAGE_HANDLERS)
+                .unwrap_or_default();
+
+            handlers
+        });
 
         for event in message_events {
             let handler = handlers
@@ -480,21 +480,20 @@ impl<R: Runtime> Dispatcher<R> {
         Ok(())
     }
 
-    fn save_emitted_message_handlers<S: storage::Store>(
-        store: S,
-        handlers: Vec<types::message::MessageEventHookInvocation>,
-    ) {
+    fn save_emitted_message_handlers(handlers: Vec<types::message::MessageEventHookInvocation>) {
         let message_handlers: BTreeMap<u32, types::message::MessageEventHookInvocation> = handlers
             .into_iter()
             .enumerate()
             .map(|(idx, h)| (idx as u32, h))
             .collect();
 
-        let mut store = storage::TypedStore::new(storage::PrefixStore::new(
-            store,
-            &modules::core::MODULE_NAME,
-        ));
-        store.insert(modules::core::state::MESSAGE_HANDLERS, message_handlers);
+        CurrentStore::with(|store| {
+            let mut store = storage::TypedStore::new(storage::PrefixStore::new(
+                store,
+                &modules::core::MODULE_NAME,
+            ));
+            store.insert(modules::core::state::MESSAGE_HANDLERS, message_handlers);
+        });
     }
 
     /// Process the given runtime query.
@@ -528,9 +527,7 @@ impl<R: Runtime> Dispatcher<R> {
         f: F,
     ) -> Result<ExecuteBatchResult, RuntimeError>
     where
-        F: FnOnce(
-            &mut RuntimeBatchContext<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>,
-        ) -> Result<Vec<ExecuteTxResult>, RuntimeError>,
+        F: FnOnce(&mut RuntimeBatchContext<'_, R>) -> Result<Vec<ExecuteTxResult>, RuntimeError>,
     {
         // Prepare dispatch context.
         let key_manager = self
@@ -539,41 +536,53 @@ impl<R: Runtime> Dispatcher<R> {
             // NOTE: We are explicitly allowing private key operations during execution.
             .map(|mgr| mgr.with_private_context(rt_ctx.io_ctx.clone()));
         let history = self.consensus_verifier.clone();
-        let mut ctx =
-            RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
-                &mut rt_ctx,
-                &self.host_info,
-                key_manager,
-                &history,
-            );
 
-        // Perform state migrations if required.
-        R::migrate(&mut ctx);
+        let root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), &mut rt_ctx.runtime_state);
+        let mut ctx = RuntimeBatchContext::<'_, R>::new(
+            if rt_ctx.check_only {
+                Mode::CheckTx
+            } else {
+                Mode::ExecuteTx
+            },
+            &self.host_info,
+            key_manager,
+            rt_ctx.header,
+            rt_ctx.round_results,
+            &rt_ctx.consensus_state,
+            &history,
+            rt_ctx.epoch,
+            rt_ctx.io_ctx.clone(),
+            rt_ctx.max_messages,
+        );
 
-        // Handle last round message results.
-        Self::handle_last_round_messages(&mut ctx)?;
+        CurrentStore::enter(root, || {
+            // Perform state migrations if required.
+            R::migrate(&mut ctx);
 
-        // Run begin block hooks.
-        R::Modules::begin_block(&mut ctx);
+            // Handle last round message results.
+            Self::handle_last_round_messages(&mut ctx)?;
 
-        let results = f(&mut ctx)?;
+            // Run begin block hooks.
+            R::Modules::begin_block(&mut ctx);
 
-        // Run end block hooks.
-        R::Modules::end_block(&mut ctx);
+            let results = f(&mut ctx)?;
 
-        // Commit the context and retrieve the emitted messages.
-        let (block_tags, messages) = ctx.commit();
-        let (messages, handlers) = messages.into_iter().unzip();
+            // Run end block hooks.
+            R::Modules::end_block(&mut ctx);
 
-        let state = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), &mut rt_ctx.runtime_state);
-        Self::save_emitted_message_handlers(state, handlers);
+            // Commit the context and retrieve the emitted messages.
+            let (block_tags, messages) = ctx.commit();
+            let (messages, handlers) = messages.into_iter().unzip();
 
-        Ok(ExecuteBatchResult {
-            results,
-            messages,
-            block_tags: block_tags.into_tags(),
-            tx_reject_hashes: vec![],
-            in_msgs_count: 0, // TODO: Support processing incoming messages.
+            Self::save_emitted_message_handlers(handlers);
+
+            Ok(ExecuteBatchResult {
+                results,
+                messages,
+                block_tags: block_tags.into_tags(),
+                tx_reject_hashes: vec![],
+                in_msgs_count: 0, // TODO: Support processing incoming messages.
+            })
         })
     }
 }
@@ -611,8 +620,9 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                     }
                 }
                 if prefetch_enabled {
-                    ctx.runtime_state()
-                        .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
+                    CurrentStore::with(|store| {
+                        store.prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
+                    })
                 }
 
                 // Execute the batch.
@@ -687,40 +697,46 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
 
                         // First run the transaction in check tx mode in a separate subcontext. If
                         // that fails, skip and (sometimes) reject transaction.
-                        let skip =
-                            ctx.with_child(Mode::PreScheduleTx, |mut ctx| -> Result<_, Error> {
-                                // First authenticate the transaction to get any nonce related errors.
-                                match R::Modules::authenticate_tx(&mut ctx, &tx) {
-                                    Err(modules::core::Error::FutureNonce) => {
-                                        // Only skip transaction as it may become valid in the future.
-                                        return Ok(true);
-                                    }
-                                    Err(_) => {
-                                        // Skip and reject the transaction.
-                                    }
-                                    Ok(_) => {
-                                        // Run additional checks on the transaction.
-                                        let check_result = Self::dispatch_tx_opts(
-                                            &mut ctx,
-                                            tx.clone(),
-                                            &DispatchOptions {
-                                                tx_size,
-                                                tx_index,
-                                                skip_authentication: true, // Already done.
-                                                ..Default::default()
-                                            },
-                                        )?;
-                                        if check_result.result.is_success() {
-                                            // Checks successful, execute transaction as usual.
-                                            return Ok(false);
+                        let skip = CurrentStore::with_transaction(|| {
+                            let result = ctx.with_child(
+                                Mode::PreScheduleTx,
+                                |mut ctx| -> Result<_, Error> {
+                                    // First authenticate the transaction to get any nonce related errors.
+                                    match R::Modules::authenticate_tx(&mut ctx, &tx) {
+                                        Err(modules::core::Error::FutureNonce) => {
+                                            // Only skip transaction as it may become valid in the future.
+                                            return Ok(true);
+                                        }
+                                        Err(_) => {
+                                            // Skip and reject the transaction.
+                                        }
+                                        Ok(_) => {
+                                            // Run additional checks on the transaction.
+                                            let check_result = Self::dispatch_tx_opts(
+                                                &mut ctx,
+                                                tx.clone(),
+                                                &DispatchOptions {
+                                                    tx_size,
+                                                    tx_index,
+                                                    skip_authentication: true, // Already done.
+                                                    ..Default::default()
+                                                },
+                                            )?;
+                                            if check_result.result.is_success() {
+                                                // Checks successful, execute transaction as usual.
+                                                return Ok(false);
+                                            }
                                         }
                                     }
-                                }
 
-                                // Skip and reject the transaction.
-                                tx_reject_hashes.push(Hash::digest_bytes(&raw_tx));
-                                Ok(true)
-                            })?;
+                                    // Skip and reject the transaction.
+                                    tx_reject_hashes.push(Hash::digest_bytes(&raw_tx));
+                                    Ok(true)
+                                },
+                            );
+
+                            TransactionResult::Rollback(result) // Always rollback storage changes.
+                        })?;
                         if skip {
                             continue;
                         }
@@ -762,7 +778,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
 
     fn check_batch(
         &self,
-        mut ctx: transaction::Context<'_>,
+        mut rt_ctx: transaction::Context<'_>,
         batch: &TxnBatch,
     ) -> Result<Vec<CheckTxResult>, RuntimeError> {
         // If prefetch limit is set enable prefetch.
@@ -772,56 +788,70 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         let key_manager = self
             .key_manager
             .as_ref()
-            .map(|mgr| mgr.with_context(ctx.io_ctx.clone()));
+            .map(|mgr| mgr.with_context(rt_ctx.io_ctx.clone()));
         let history = self.consensus_verifier.clone();
-        let mut ctx =
-            RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
-                &mut ctx,
-                &self.host_info,
-                key_manager,
-                &history,
-            );
 
-        // Perform state migrations if required.
-        R::migrate(&mut ctx);
+        let root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), &mut rt_ctx.runtime_state);
+        let mut ctx = RuntimeBatchContext::<'_, R>::new(
+            if rt_ctx.check_only {
+                Mode::CheckTx
+            } else {
+                Mode::ExecuteTx
+            },
+            &self.host_info,
+            key_manager,
+            rt_ctx.header,
+            rt_ctx.round_results,
+            &rt_ctx.consensus_state,
+            &history,
+            rt_ctx.epoch,
+            rt_ctx.io_ctx.clone(),
+            rt_ctx.max_messages,
+        );
 
-        // Prefetch.
-        let mut txs: Vec<Result<_, RuntimeError>> = Vec::with_capacity(batch.len());
-        let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
-        for tx in batch.iter() {
-            let tx_size = tx.len().try_into().map_err(|_| {
-                Error::MalformedTransactionInBatch(anyhow!("transaction too large"))
-            })?;
-            let res = match Self::decode_tx(&mut ctx, tx) {
-                Ok(tx) => {
-                    if prefetch_enabled {
-                        Self::prefetch_tx(&mut prefixes, tx.clone()).map(|_| (tx_size, tx))
-                    } else {
-                        Ok((tx_size, tx))
+        CurrentStore::enter(root, || {
+            // Perform state migrations if required.
+            R::migrate(&mut ctx);
+
+            // Prefetch.
+            let mut txs: Vec<Result<_, RuntimeError>> = Vec::with_capacity(batch.len());
+            let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
+            for tx in batch.iter() {
+                let tx_size = tx.len().try_into().map_err(|_| {
+                    Error::MalformedTransactionInBatch(anyhow!("transaction too large"))
+                })?;
+                let res = match Self::decode_tx(&mut ctx, tx) {
+                    Ok(tx) => {
+                        if prefetch_enabled {
+                            Self::prefetch_tx(&mut prefixes, tx.clone()).map(|_| (tx_size, tx))
+                        } else {
+                            Ok((tx_size, tx))
+                        }
                     }
-                }
-                Err(err) => Err(err.into()),
-            };
-            txs.push(res);
-        }
-        if prefetch_enabled {
-            ctx.runtime_state()
-                .prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
-        }
-
-        // Check the batch.
-        let mut results = Vec::with_capacity(batch.len());
-        for tx in txs.into_iter() {
-            match tx {
-                Ok((tx_size, tx)) => results.push(Self::check_tx(&mut ctx, tx_size, tx)?),
-                Err(err) => results.push(CheckTxResult {
-                    error: err,
-                    meta: None,
-                }),
+                    Err(err) => Err(err.into()),
+                };
+                txs.push(res);
             }
-        }
+            if prefetch_enabled {
+                CurrentStore::with(|store| {
+                    store.prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
+                });
+            }
 
-        Ok(results)
+            // Check the batch.
+            let mut results = Vec::with_capacity(batch.len());
+            for tx in txs.into_iter() {
+                match tx {
+                    Ok((tx_size, tx)) => results.push(Self::check_tx(&mut ctx, tx_size, tx)?),
+                    Err(err) => results.push(CheckTxResult {
+                        error: err,
+                        meta: None,
+                    }),
+                }
+            }
+
+            Ok(results)
+        })
     }
 
     fn set_abort_batch_flag(&mut self, _abort_batch: Arc<AtomicBool>) {
@@ -830,7 +860,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
 
     fn query(
         &self,
-        mut ctx: transaction::Context<'_>,
+        mut rt_ctx: transaction::Context<'_>,
         method: &str,
         args: Vec<u8>,
     ) -> Result<Vec<u8>, RuntimeError> {
@@ -842,32 +872,43 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             // Perform consensus layer state integrity verification for any queries that allow
             // access to confidential state.
             self.consensus_verifier.verify_for_query(
-                ctx.consensus_block.clone(),
-                ctx.header.clone(),
-                ctx.epoch,
+                rt_ctx.consensus_block.clone(),
+                rt_ctx.header.clone(),
+                rt_ctx.epoch,
             )?;
             // Ensure the runtime is still ready to process requests.
-            ctx.protocol.ensure_initialized()?;
+            rt_ctx.protocol.ensure_initialized()?;
         }
         let key_manager = self.key_manager.as_ref().map(|mgr| {
             if is_confidential_allowed {
-                mgr.with_private_context(ctx.io_ctx.clone())
+                mgr.with_private_context(rt_ctx.io_ctx.clone())
             } else {
-                mgr.with_context(ctx.io_ctx.clone())
+                mgr.with_context(rt_ctx.io_ctx.clone())
             }
         });
 
         // Prepare dispatch context.
         let history = self.consensus_verifier.clone();
-        let mut ctx =
-            RuntimeBatchContext::<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>>::from_runtime(
-                &mut ctx,
-                &self.host_info,
-                key_manager,
-                &history,
-            );
 
-        Self::dispatch_query(&mut ctx, method, args)
+        let root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), &mut rt_ctx.runtime_state);
+        let mut ctx = RuntimeBatchContext::<'_, R>::new(
+            if rt_ctx.check_only {
+                Mode::CheckTx
+            } else {
+                Mode::ExecuteTx
+            },
+            &self.host_info,
+            key_manager,
+            rt_ctx.header,
+            rt_ctx.round_results,
+            &rt_ctx.consensus_state,
+            &history,
+            rt_ctx.epoch,
+            rt_ctx.io_ctx.clone(),
+            rt_ctx.max_messages,
+        );
+
+        CurrentStore::enter(root, || Self::dispatch_query(&mut ctx, method, args))
     }
 }
 
@@ -879,7 +920,7 @@ mod test {
         module::Module,
         modules::core,
         sdk_derive,
-        storage::Store,
+        storage::{CurrentStore, Store},
         testing::{configmap, keys, mock::Mock},
         types::{token, transaction},
         Version,
@@ -911,14 +952,18 @@ mod test {
     #[sdk_derive(MethodHandler)]
     impl AlphabetModule {
         #[handler(call = "alphabet.ReadOnly")]
-        fn read_only<C: TxContext>(ctx: &mut C, _args: ()) -> Result<u64, AlphabetError> {
-            let _ = ctx.runtime_state().get(b"key"); // Read something and ignore result.
+        fn read_only<C: TxContext>(_ctx: &mut C, _args: ()) -> Result<u64, AlphabetError> {
+            CurrentStore::with(|store| {
+                let _ = store.get(b"key"); // Read something and ignore result.
+            });
             Ok(42)
         }
 
         #[handler(call = "alphabet.NotReadOnly")]
-        fn not_read_only<C: TxContext>(ctx: &mut C, _args: ()) -> Result<u64, AlphabetError> {
-            ctx.runtime_state().insert(b"key", b"value");
+        fn not_read_only<C: TxContext>(_ctx: &mut C, _args: ()) -> Result<u64, AlphabetError> {
+            CurrentStore::with(|store| {
+                store.insert(b"key", b"value");
+            });
             Ok(10)
         }
 

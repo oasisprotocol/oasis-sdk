@@ -1,6 +1,9 @@
-use crate::types::H160;
+use oasis_runtime_sdk::{
+    context::Context,
+    storage::{ConfidentialStore, CurrentStore, HashedStore, PrefixStore, Store, TypedStore},
+};
 
-use oasis_runtime_sdk::{context::Context, storage};
+use crate::{types::H160, Config};
 
 /// Prefix for Ethereum account code in our storage (maps H160 -> Vec<u8>).
 pub const CODES: &[u8] = &[0x01];
@@ -19,19 +22,40 @@ const CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT: &str = "evm.ConfidentialSto
 /// The number of hash blocks that can be obtained from the current blockchain.
 pub const BLOCK_HASH_WINDOW_SIZE: u64 = 256;
 
-pub fn public_storage<'a, C: Context>(
-    ctx: &'a mut C,
-    address: &'a H160,
-) -> storage::TypedStore<impl storage::Store + 'a> {
-    storage::TypedStore::new(storage::HashedStore::<_, blake3::Hasher>::new(
-        contract_storage(ctx.runtime_state(), STORAGES, address),
-    ))
+/// Run closure with the store of the provided contract address. Based on configuration this will
+/// be either confidential or public storage.
+pub fn with_storage<Cfg, C, F, R>(ctx: &mut C, address: &H160, f: F) -> R
+where
+    Cfg: Config,
+    C: Context,
+    F: FnOnce(&mut TypedStore<&mut dyn Store>) -> R,
+{
+    if Cfg::CONFIDENTIAL {
+        with_confidential_storage(ctx, address, f)
+    } else {
+        with_public_storage(address, f)
+    }
 }
 
-pub fn confidential_storage<'a, C: Context>(
-    ctx: &'a mut C,
-    address: &'a H160,
-) -> storage::TypedStore<Box<dyn storage::Store + 'a>> {
+/// Run closure with the public store of the provided contract address.
+pub fn with_public_storage<F, R>(address: &H160, f: F) -> R
+where
+    F: FnOnce(&mut TypedStore<&mut dyn Store>) -> R,
+{
+    CurrentStore::with(|store| {
+        let mut store =
+            HashedStore::<_, blake3::Hasher>::new(contract_storage(store, STORAGES, address));
+        let mut store = TypedStore::new(&mut store as &mut dyn Store);
+        f(&mut store)
+    })
+}
+
+/// Run closure with the confidential store of the provided contract address.
+pub fn with_confidential_storage<'a, C, F, R>(ctx: &'a mut C, address: &'a H160, f: F) -> R
+where
+    C: Context,
+    F: FnOnce(&mut TypedStore<&mut dyn Store>) -> R,
+{
     let kmgr_client = ctx
         .key_manager()
         .expect("key manager must be available to use confidentiality");
@@ -57,41 +81,40 @@ pub fn confidential_storage<'a, C: Context>(
     };
     let mode = ctx.mode();
 
-    let contract_storages = contract_storage(ctx.runtime_state(), CONFIDENTIAL_STORAGES, address);
-    let confidential_storages = storage::ConfidentialStore::new_with_key(
-        contract_storages,
-        confidential_key.0,
-        &[
-            round.to_le_bytes().as_slice(),
-            instance_count.to_le_bytes().as_slice(),
-            &[mode as u8],
-        ],
-    );
-    storage::TypedStore::new(Box::new(confidential_storages))
+    CurrentStore::with(|store| {
+        let contract_storages = contract_storage(store, CONFIDENTIAL_STORAGES, address);
+        let mut confidential_storages = ConfidentialStore::new_with_key(
+            contract_storages,
+            confidential_key.0,
+            &[
+                round.to_le_bytes().as_slice(),
+                instance_count.to_le_bytes().as_slice(),
+                &[mode as u8],
+            ],
+        );
+        let mut store = TypedStore::new(&mut confidential_storages as &mut dyn Store);
+        f(&mut store)
+    })
 }
 
-fn contract_storage<'a, S: storage::Store + 'a>(
+fn contract_storage<'a, S: Store + 'a>(
     state: S,
     prefix: &'a [u8],
     address: &'a H160,
-) -> storage::PrefixStore<impl storage::Store + 'a, &'a H160> {
-    let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-    let storages = storage::PrefixStore::new(store, prefix);
-    storage::PrefixStore::new(storages, address)
+) -> PrefixStore<impl Store + 'a, &'a H160> {
+    let store = PrefixStore::new(state, &crate::MODULE_NAME);
+    let storages = PrefixStore::new(store, prefix);
+    PrefixStore::new(storages, address)
 }
 
 /// Get a typed store for codes of all contracts.
-pub fn codes<'a, S: storage::Store + 'a>(
-    state: S,
-) -> storage::TypedStore<impl storage::Store + 'a> {
-    let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-    storage::TypedStore::new(storage::PrefixStore::new(store, &CODES))
+pub fn codes<'a, S: Store + 'a>(state: S) -> TypedStore<impl Store + 'a> {
+    let store = PrefixStore::new(state, &crate::MODULE_NAME);
+    TypedStore::new(PrefixStore::new(store, &CODES))
 }
 
 /// Get a typed store for historic block hashes.
-pub fn block_hashes<'a, S: storage::Store + 'a>(
-    state: S,
-) -> storage::TypedStore<impl storage::Store + 'a> {
-    let store = storage::PrefixStore::new(state, &crate::MODULE_NAME);
-    storage::TypedStore::new(storage::PrefixStore::new(store, &BLOCK_HASHES))
+pub fn block_hashes<'a, S: Store + 'a>(state: S) -> TypedStore<impl Store + 'a> {
+    let store = PrefixStore::new(state, &crate::MODULE_NAME);
+    TypedStore::new(PrefixStore::new(store, &BLOCK_HASHES))
 }

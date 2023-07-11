@@ -36,4 +36,8 @@ impl<S: Store, D: digest::Digest> Store for HashedStore<S, D> {
     fn iter(&self) -> Box<dyn mkvs::Iterator + '_> {
         self.parent.iter()
     }
+
+    fn prefetch_prefixes(&mut self, prefixes: Vec<mkvs::Prefix>, limit: u16) {
+        self.parent.prefetch_prefixes(prefixes, limit);
+    }
 }

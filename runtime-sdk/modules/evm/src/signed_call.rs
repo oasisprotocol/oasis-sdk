@@ -7,6 +7,7 @@ use sha3::{Digest as _, Keccak256};
 
 use oasis_runtime_sdk::{
     context::Context, core::common::crypto::hash::Hash, modules::accounts::API as _,
+    storage::CurrentStore,
 };
 
 use crate::{
@@ -41,21 +42,23 @@ pub(crate) fn verify<C: Context, Cfg: Config>(
 
     // Next, verify the leash.
     let current_block = ctx.runtime_header().round;
-    let mut state = ctx.runtime_state();
     let sdk_address = Cfg::map_address(query.caller.into());
-    let nonce = Cfg::Accounts::get_nonce(&mut state, sdk_address).unwrap();
+    let nonce = Cfg::Accounts::get_nonce(sdk_address).unwrap();
     if nonce > leash.nonce {
         return Err(Error::InvalidSignedSimulateCall("stale nonce"));
     }
 
-    let block_hashes = state::block_hashes(state);
-    let base_block_hash = match block_hashes.get::<_, Hash>(&leash.block_number.to_be_bytes()) {
-        Some(hash) => hash,
-        None => return Err(Error::InvalidSignedSimulateCall("base block not found")),
-    };
+    let base_block_hash = CurrentStore::with(|store| {
+        let block_hashes = state::block_hashes(store);
+        match block_hashes.get::<_, Hash>(&leash.block_number.to_be_bytes()) {
+            Some(hash) => Ok(hash),
+            None => Err(Error::InvalidSignedSimulateCall("base block not found")),
+        }
+    })?;
     if base_block_hash.as_ref() != leash.block_hash.as_ref() {
         return Err(Error::InvalidSignedSimulateCall("unexpected base block"));
     }
+
     #[allow(clippy::unnecessary_lazy_evaluations)]
     let block_delta = current_block
         .checked_sub(leash.block_number)
@@ -186,24 +189,24 @@ mod test {
         )
     }
 
-    fn setup_nonce<C: Context>(ctx: &mut C, caller: &H160, leash: &Leash) {
-        let mut state = ctx.runtime_state();
+    fn setup_nonce(caller: &H160, leash: &Leash) {
         let sdk_address = C10lCfg::map_address((*caller).into());
-        <C10lCfg as Config>::Accounts::set_nonce(&mut state, sdk_address, leash.nonce);
+        <C10lCfg as Config>::Accounts::set_nonce(sdk_address, leash.nonce);
     }
 
-    fn setup_stale_nonce<C: Context>(ctx: &mut C, caller: &H160, leash: &Leash) {
-        let mut state = ctx.runtime_state();
+    fn setup_stale_nonce(caller: &H160, leash: &Leash) {
         let sdk_address = C10lCfg::map_address((*caller).into());
-        <C10lCfg as Config>::Accounts::set_nonce(&mut state, sdk_address, leash.nonce + 1);
+        <C10lCfg as Config>::Accounts::set_nonce(sdk_address, leash.nonce + 1);
     }
 
-    fn setup_block<C: Context>(ctx: &mut C, leash: &Leash) {
-        let mut block_hashes = state::block_hashes(ctx.runtime_state());
-        block_hashes.insert::<_, Hash>(
-            &leash.block_number.to_be_bytes(),
-            leash.block_hash.as_ref().into(),
-        );
+    fn setup_block(leash: &Leash) {
+        CurrentStore::with(|store| {
+            let mut block_hashes = state::block_hashes(store);
+            block_hashes.insert::<_, Hash>(
+                &leash.block_number.to_be_bytes(),
+                leash.block_hash.as_ref().into(),
+            );
+        });
     }
 
     #[test]
@@ -214,8 +217,8 @@ mod test {
         mock.runtime_header.round = data_pack.leash.block_number;
         let mut ctx = mock.create_ctx();
 
-        setup_nonce(&mut ctx, &query.caller, &data_pack.leash);
-        setup_block(&mut ctx, &data_pack.leash);
+        setup_nonce(&query.caller, &data_pack.leash);
+        setup_block(&data_pack.leash);
 
         verify::<_, C10lCfg>(&mut ctx, query, data_pack.leash, data_pack.signature).unwrap();
     }
@@ -228,8 +231,8 @@ mod test {
         mock.runtime_header.round = data_pack.leash.block_number;
         let mut ctx = mock.create_ctx();
 
-        setup_nonce(&mut ctx, &query.caller, &data_pack.leash);
-        setup_block(&mut ctx, &data_pack.leash);
+        setup_nonce(&query.caller, &data_pack.leash);
+        setup_block(&data_pack.leash);
 
         data_pack.signature[0] ^= 1;
         assert!(matches!(
@@ -247,8 +250,8 @@ mod test {
         mock.runtime_header.round = data_pack.leash.block_number;
         let mut ctx = mock.create_ctx();
 
-        setup_stale_nonce(&mut ctx, &query.caller, &data_pack.leash);
-        setup_block(&mut ctx, &data_pack.leash);
+        setup_stale_nonce(&query.caller, &data_pack.leash);
+        setup_block(&data_pack.leash);
 
         assert!(matches!(
             verify::<_, C10lCfg>(&mut ctx, query, data_pack.leash, data_pack.signature)
@@ -265,7 +268,7 @@ mod test {
         mock.runtime_header.round = data_pack.leash.block_number;
         let mut ctx = mock.create_ctx();
 
-        setup_nonce(&mut ctx, &query.caller, &data_pack.leash);
+        setup_nonce(&query.caller, &data_pack.leash);
 
         assert!(matches!(
             verify::<_, C10lCfg>(&mut ctx, query, data_pack.leash, data_pack.signature)
@@ -281,8 +284,8 @@ mod test {
         let mut mock = mock::Mock::default();
         let mut ctx = mock.create_ctx();
 
-        setup_nonce(&mut ctx, &query.caller, &data_pack.leash);
-        setup_block(&mut ctx, &data_pack.leash);
+        setup_nonce(&query.caller, &data_pack.leash);
+        setup_block(&data_pack.leash);
 
         assert!(matches!(
             verify::<_, C10lCfg>(&mut ctx, query, data_pack.leash, data_pack.signature)
@@ -306,8 +309,8 @@ mod test {
         c10l_mock.runtime_header.round = data_pack.leash.block_number;
         let mut c10l_ctx = c10l_mock.create_ctx();
 
-        setup_nonce(&mut c10l_ctx, &signed_body.caller, &data_pack.leash);
-        setup_block(&mut c10l_ctx, &data_pack.leash);
+        setup_nonce(&signed_body.caller, &data_pack.leash);
+        setup_block(&data_pack.leash);
 
         let mut non_c10l_decode = |body: &SimulateCallQuery| {
             EVMModule::<Cfg>::decode_simulate_call_query(&mut ctx, body.clone())

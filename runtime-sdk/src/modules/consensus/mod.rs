@@ -293,9 +293,8 @@ impl API for Module {
         Ok(())
     }
 
-    fn consensus_denomination<C: Context>(ctx: &mut C) -> Result<token::Denomination, Error> {
-        let params = Self::params(ctx.runtime_state());
-        Ok(params.consensus_denomination)
+    fn consensus_denomination<C: Context>(_ctx: &mut C) -> Result<token::Denomination, Error> {
+        Ok(Self::params().consensus_denomination)
     }
 
     fn ensure_compatible_tx_signer<C: TxContext>(ctx: &C) -> Result<(), Error> {
@@ -323,17 +322,15 @@ impl API for Module {
             .map_err(Error::InternalStateError)
     }
 
-    fn amount_from_consensus<C: Context>(ctx: &mut C, amount: u128) -> Result<u128, Error> {
-        let params = Self::params(ctx.runtime_state());
-        let scaling_factor = params.consensus_scaling_factor;
+    fn amount_from_consensus<C: Context>(_ctx: &mut C, amount: u128) -> Result<u128, Error> {
+        let scaling_factor = Self::params().consensus_scaling_factor;
         amount
             .checked_mul(scaling_factor.into())
             .ok_or(Error::AmountNotRepresentable)
     }
 
-    fn amount_to_consensus<C: Context>(ctx: &mut C, amount: u128) -> Result<u128, Error> {
-        let params = Self::params(ctx.runtime_state());
-        let scaling_factor = params.consensus_scaling_factor;
+    fn amount_to_consensus<C: Context>(_ctx: &mut C, amount: u128) -> Result<u128, Error> {
+        let scaling_factor = Self::params().consensus_scaling_factor;
         let scaled = amount
             .checked_div(scaling_factor.into())
             .ok_or(Error::AmountNotRepresentable)?;
@@ -399,7 +396,7 @@ impl module::Module for Module {
 
 impl Module {
     /// Initialize state from genesis.
-    fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
+    fn init<C: Context>(_ctx: &mut C, genesis: Genesis) {
         // TODO: enable loading consensus denomination from consensus state after:
         // https://github.com/oasisprotocol/oasis-core/issues/3868
 
@@ -410,7 +407,7 @@ impl Module {
             .expect("invalid genesis parameters");
 
         // Set genesis parameters.
-        Self::set_params(ctx.runtime_state(), genesis.parameters);
+        Self::set_params(genesis.parameters);
     }
 
     /// Migrate state from a previous version.

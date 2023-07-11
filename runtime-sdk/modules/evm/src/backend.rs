@@ -6,6 +6,7 @@ use evm::backend::{Apply, Backend as EVMBackend, Basic, Log};
 use oasis_runtime_sdk::{
     core::common::crypto::hash::Hash,
     modules::{accounts::API as _, core::API as _},
+    storage::CurrentStore,
     types::token,
     Context, Runtime,
 };
@@ -27,23 +28,6 @@ pub(crate) const RNG_MAX_BYTES: u64 = 1024;
 pub struct Vicinity {
     pub gas_price: U256,
     pub origin: H160,
-}
-
-/// This macro is like `fn with_storage(ctx, addr, f: FnOnce(impl Storage) -> T) ->T`
-/// that chooses public/confidential storage, if that such a function were possible to
-/// write without the compiler complaining about unspecified generic type errors.
-macro_rules! with_storage {
-    ($ctx:expr, $addr:expr, |$store:ident| $handler:expr) => {
-        if Cfg::CONFIDENTIAL {
-            #[allow(unused_mut)]
-            let mut $store = state::confidential_storage($ctx, $addr);
-            $handler
-        } else {
-            #[allow(unused_mut)]
-            let mut $store = state::public_storage($ctx, $addr);
-            $handler
-        }
-    };
 }
 
 /// Backend for the evm crate that enables the use of our storage.
@@ -73,14 +57,15 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
     }
 
     fn block_hash(&self, number: primitive_types::U256) -> primitive_types::H256 {
-        let mut ctx = self.ctx.borrow_mut();
-        let block_hashes = state::block_hashes(ctx.runtime_state());
+        CurrentStore::with(|store| {
+            let block_hashes = state::block_hashes(store);
 
-        if let Some(hash) = block_hashes.get::<_, Hash>(&number.low_u64().to_be_bytes()) {
-            primitive_types::H256::from_slice(hash.as_ref())
-        } else {
-            primitive_types::H256::default()
-        }
+            if let Some(hash) = block_hashes.get::<_, Hash>(&number.low_u64().to_be_bytes()) {
+                primitive_types::H256::from_slice(hash.as_ref())
+            } else {
+                primitive_types::H256::default()
+            }
+        })
     }
 
     fn block_number(&self) -> primitive_types::U256 {
@@ -125,15 +110,13 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
     }
 
     fn basic(&self, address: primitive_types::H160) -> Basic {
-        let mut ctx = self.ctx.borrow_mut();
-        let mut state = ctx.runtime_state();
+        let ctx = self.ctx.borrow_mut();
 
         // Derive SDK account address from the Ethereum address.
         let sdk_address = Cfg::map_address(address);
         // Fetch balance and nonce from SDK accounts. Note that these can never fail.
-        let balance =
-            Cfg::Accounts::get_balance(&mut state, sdk_address, Cfg::TOKEN_DENOMINATION).unwrap();
-        let mut nonce = Cfg::Accounts::get_nonce(&mut state, sdk_address).unwrap();
+        let balance = Cfg::Accounts::get_balance(sdk_address, Cfg::TOKEN_DENOMINATION).unwrap();
+        let mut nonce = Cfg::Accounts::get_nonce(sdk_address).unwrap();
 
         // If this is the caller's address and this is not a simulation context, return the nonce
         // decremented by one to cancel out the SDK nonce changes.
@@ -153,9 +136,10 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
     fn code(&self, address: primitive_types::H160) -> Vec<u8> {
         let address: H160 = address.into();
 
-        let mut ctx = self.ctx.borrow_mut();
-        let store = state::codes(ctx.runtime_state());
-        store.get(address).unwrap_or_default()
+        CurrentStore::with(|store| {
+            let store = state::codes(store);
+            store.get(address).unwrap_or_default()
+        })
     }
 
     fn storage(
@@ -167,7 +151,9 @@ impl<'ctx, C: Context, Cfg: Config> EVMBackend for Backend<'ctx, C, Cfg> {
         let idx: H256 = index.into();
 
         let mut ctx = self.ctx.borrow_mut();
-        let res: H256 = with_storage!(*ctx, &address, |store| store.get(idx).unwrap_or_default());
+        let res: H256 = state::with_storage::<Cfg, _, _, _>(*ctx, &address, |store| {
+            store.get(idx).unwrap_or_default()
+        });
         res.into()
     }
 
@@ -260,11 +246,9 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
                     let address = Cfg::map_address(address);
 
                     // Update account balance and nonce.
-                    let mut state = self.ctx.get_mut().runtime_state();
                     let amount = basic.balance.as_u128();
                     let old_amount =
-                        Cfg::Accounts::get_balance(&mut state, address, Cfg::TOKEN_DENOMINATION)
-                            .unwrap();
+                        Cfg::Accounts::get_balance(address, Cfg::TOKEN_DENOMINATION).unwrap();
                     if amount > old_amount {
                         total_supply_add =
                             total_supply_add.checked_add(amount - old_amount).unwrap();
@@ -276,13 +260,13 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
                     // Setting the balance like this is dangerous, but we have a sanity check below
                     // to ensure that this never results in any tokens being either minted or
                     // burned.
-                    Cfg::Accounts::set_balance(&mut state, address, &amount);
+                    Cfg::Accounts::set_balance(address, &amount);
 
                     // Sanity check nonce updates to make sure that they behave exactly the same as
                     // what we do anyway when authenticating transactions.
                     let nonce = basic.nonce.low_u64();
                     if !is_simulation {
-                        let old_nonce = Cfg::Accounts::get_nonce(&mut state, address).unwrap();
+                        let old_nonce = Cfg::Accounts::get_nonce(address).unwrap();
 
                         if addr == origin {
                             // Origin's nonce must stay the same as we cancelled out the changes. Note
@@ -295,13 +279,14 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
                                 "evm execution would not update non-origin nonce correctly ({old_nonce} -> {nonce})");
                         }
                     }
-                    Cfg::Accounts::set_nonce(&mut state, address, nonce);
+                    Cfg::Accounts::set_nonce(address, nonce);
 
                     // Handle code updates.
                     if let Some(code) = code {
-                        let state = self.ctx.get_mut().runtime_state();
-                        let mut store = state::codes(state);
-                        store.insert(addr, code);
+                        CurrentStore::with(|store| {
+                            let mut store = state::codes(store);
+                            store.insert(addr, code);
+                        });
                     }
 
                     // Handle storage updates.
@@ -311,9 +296,13 @@ impl<'c, C: Context, Cfg: Config> ApplyBackendResult for Backend<'c, C, Cfg> {
 
                         let ctx = self.ctx.get_mut();
                         if value == primitive_types::H256::default() {
-                            with_storage!(*ctx, &addr, |store| store.remove(idx));
+                            state::with_storage::<Cfg, _, _, _>(*ctx, &addr, |store| {
+                                store.remove(idx)
+                            });
                         } else {
-                            with_storage!(*ctx, &addr, |store| store.insert(idx, val));
+                            state::with_storage::<Cfg, _, _, _>(*ctx, &addr, |store| {
+                                store.insert(idx, val)
+                            });
                         }
                     }
                 }

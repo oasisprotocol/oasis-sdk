@@ -21,7 +21,7 @@ use crate::{
         ModuleInfoHandler as _,
     },
     sender::SenderMeta,
-    storage,
+    storage::{self, current::TransactionResult, CurrentStore},
     types::{
         token,
         transaction::{
@@ -376,9 +376,9 @@ const CONTEXT_KEY_EPOCH_CHANGED: &str = "core.EpochChanged";
 
 impl<Cfg: Config> Module<Cfg> {
     /// Initialize state from genesis.
-    pub fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
+    pub fn init<C: Context>(_ctx: &mut C, genesis: Genesis) {
         // Set genesis parameters.
-        Self::set_params(ctx.runtime_state(), genesis.parameters);
+        Self::set_params(genesis.parameters);
     }
 
     /// Migrate state from a previous version.
@@ -396,7 +396,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         if ctx.is_check_only() {
             return Ok(());
         }
-        let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
+        let batch_gas_limit = Self::params().max_batch_gas;
         let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
         // NOTE: Going over the batch limit should trigger an abort as the scheduler should never
         //       allow scheduling past the batch limit but a malicious proposer might include too
@@ -433,7 +433,7 @@ impl<Cfg: Config> API for Module<Cfg> {
     }
 
     fn remaining_batch_gas<C: Context>(ctx: &mut C) -> u64 {
-        let batch_gas_limit = Self::params(ctx.runtime_state()).max_batch_gas;
+        let batch_gas_limit = Self::params().max_batch_gas;
         let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
         batch_gas_limit.saturating_sub(*batch_gas_used)
     }
@@ -451,12 +451,12 @@ impl<Cfg: Config> API for Module<Cfg> {
         *ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default()
     }
 
-    fn max_batch_gas<C: Context>(ctx: &mut C) -> u64 {
-        Self::params(ctx.runtime_state()).max_batch_gas
+    fn max_batch_gas<C: Context>(_ctx: &mut C) -> u64 {
+        Self::params().max_batch_gas
     }
 
-    fn min_gas_price<C: Context>(ctx: &mut C, denom: &token::Denomination) -> u128 {
-        Self::params(ctx.runtime_state())
+    fn min_gas_price<C: Context>(_ctx: &mut C, denom: &token::Denomination) -> u128 {
+        Self::params()
             .min_gas_price
             .get(denom)
             .copied()
@@ -528,7 +528,7 @@ impl<Cfg: Config> Module<Cfg> {
         args.tx.auth_info.fee.gas = {
             let local_max_estimated_gas = Self::get_local_max_estimated_gas(ctx);
             if local_max_estimated_gas == 0 {
-                Self::params(ctx.runtime_state()).max_batch_gas
+                Self::params().max_batch_gas
             } else {
                 local_max_estimated_gas
             }
@@ -587,8 +587,7 @@ impl<Cfg: Config> Module<Cfg> {
 
             // When passing an address we don't know what scheme is used for authenticating the
             // address so the estimate may be off. Assume a regular signature for now.
-            let params = Self::params(ctx.runtime_state());
-            extra_gas += params.gas_costs.auth_signature;
+            extra_gas += Self::params().gas_costs.auth_signature;
         }
 
         // Determine if we need to add any extra gas for failing calls.
@@ -601,27 +600,32 @@ impl<Cfg: Config> Module<Cfg> {
         let mut simulate = |tx: &transaction::Transaction, gas: u64, report_failure: bool| {
             let mut tx = tx.clone();
             tx.auth_info.fee.gas = gas;
-            ctx.with_simulation(|mut sim_ctx| {
-                sim_ctx.with_tx(0 /* index */, tx_size, tx, |mut tx_ctx, call| {
-                    let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
-                        &mut tx_ctx,
-                        call,
-                        &Default::default(),
-                    );
-                    if !result.is_success() && report_failure {
-                        // Report failure.
-                        let err: TxSimulationFailure = result.try_into().unwrap(); // Guaranteed to be a Failed CallResult.
-                        return Err(Error::TxSimulationFailed(err));
-                    }
-                    // Don't report success or failure. If the call fails, we still report
-                    // how much gas it uses while it fails.
-                    let gas_used = *tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
-                    if result.is_success() {
-                        Ok(gas_used)
-                    } else {
-                        Ok(gas_used.saturating_add(extra_gas_fail).clamp(0, gas))
-                    }
-                })
+
+            CurrentStore::with_transaction(|| {
+                let result = ctx.with_simulation(|mut sim_ctx| {
+                    sim_ctx.with_tx(0 /* index */, tx_size, tx, |mut tx_ctx, call| {
+                        let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
+                            &mut tx_ctx,
+                            call,
+                            &Default::default(),
+                        );
+                        if !result.is_success() && report_failure {
+                            // Report failure.
+                            let err: TxSimulationFailure = result.try_into().unwrap(); // Guaranteed to be a Failed CallResult.
+                            return Err(Error::TxSimulationFailed(err));
+                        }
+                        // Don't report success or failure. If the call fails, we still report
+                        // how much gas it uses while it fails.
+                        let gas_used = *tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
+                        if result.is_success() {
+                            Ok(gas_used)
+                        } else {
+                            Ok(gas_used.saturating_add(extra_gas_fail).clamp(0, gas))
+                        }
+                    })
+                });
+
+                TransactionResult::Rollback(result) // Always rollback storage changes.
             })
         };
 
@@ -762,7 +766,7 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         _args: (),
     ) -> Result<BTreeMap<token::Denomination, u128>, Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
 
         // Generate a combined view with local overrides.
         let mut mgp = params.min_gas_price;
@@ -873,7 +877,7 @@ impl<Cfg: Config> Module<Cfg> {
             return Ok(());
         }
 
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
         let fee = ctx.tx_auth_info().fee.clone();
         let denom = fee.amount.denomination();
 
@@ -910,8 +914,8 @@ impl<Cfg: Config> module::Module for Module<Cfg> {
 }
 
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
-    fn approve_raw_tx<C: Context>(ctx: &mut C, tx: &[u8]) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
+    fn approve_raw_tx<C: Context>(_ctx: &mut C, tx: &[u8]) -> Result<(), Error> {
+        let params = Self::params();
         if tx.len() > params.max_tx_size.try_into().unwrap() {
             return Err(Error::OversizedTransaction);
         }
@@ -919,10 +923,10 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
     }
 
     fn approve_unverified_tx<C: Context>(
-        ctx: &mut C,
+        _ctx: &mut C,
         utx: &UnverifiedTransaction,
     ) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
         if utx.1.len() > params.max_tx_signers as usize {
             return Err(Error::TooManyAuth);
         }
@@ -938,7 +942,7 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
 
     fn before_handle_call<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {
         // Ensure that specified gas limit is not greater than batch gas limit.
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
         let gas = ctx.tx_auth_info().fee.gas;
         if gas > params.max_batch_gas {
             return Err(Error::GasOverflow);
@@ -1040,19 +1044,21 @@ impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
 
 impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
     fn begin_block<C: Context>(ctx: &mut C) {
-        let epoch = ctx.epoch();
+        CurrentStore::with(|store| {
+            let epoch = ctx.epoch();
 
-        // Load previous epoch.
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let mut tstore = storage::TypedStore::new(&mut store);
-        let previous_epoch: EpochTime = tstore.get(state::LAST_EPOCH).unwrap_or_default();
-        if epoch != previous_epoch {
-            tstore.insert(state::LAST_EPOCH, epoch);
-        }
+            // Load previous epoch.
+            let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let mut tstore = storage::TypedStore::new(&mut store);
+            let previous_epoch: EpochTime = tstore.get(state::LAST_EPOCH).unwrap_or_default();
+            if epoch != previous_epoch {
+                tstore.insert(state::LAST_EPOCH, epoch);
+            }
 
-        // Set the epoch changed key as needed.
-        ctx.value(CONTEXT_KEY_EPOCH_CHANGED)
-            .set(epoch != previous_epoch);
+            // Set the epoch changed key as needed.
+            ctx.value(CONTEXT_KEY_EPOCH_CHANGED)
+                .set(epoch != previous_epoch);
+        });
     }
 }
 

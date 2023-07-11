@@ -250,14 +250,9 @@ fn test_api_deposit() {
     );
 
     // Ensure runtime balance is updated.
-    let balance = Accounts::get_balance(
-        ctx.runtime_state(),
-        test::keys::bob::address(),
-        denom.clone(),
-    )
-    .unwrap();
+    let balance = Accounts::get_balance(test::keys::bob::address(), denom.clone()).unwrap();
     assert_eq!(balance, 1_000u128, "deposited balance should be minted");
-    let total_supplies = Accounts::get_total_supplies(ctx.runtime_state()).unwrap();
+    let total_supplies = Accounts::get_total_supplies().unwrap();
     assert_eq!(total_supplies.len(), 1);
     assert_eq!(
         total_supplies[&denom], 2_000u128,
@@ -492,16 +487,10 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
     });
 
     // Make sure that withdrawn balance is in the module's pending withdrawal account.
-    let balance =
-        Accounts::get_balance(ctx.runtime_state(), signer_address, denom.clone()).unwrap();
+    let balance = Accounts::get_balance(signer_address, denom.clone()).unwrap();
     assert_eq!(balance, 0u128, "withdrawn balance should be locked");
 
-    let balance = Accounts::get_balance(
-        ctx.runtime_state(),
-        *ADDRESS_PENDING_WITHDRAWAL,
-        denom.clone(),
-    )
-    .unwrap();
+    let balance = Accounts::get_balance(*ADDRESS_PENDING_WITHDRAWAL, denom.clone()).unwrap();
     assert_eq!(balance, 1_000u128, "withdrawn balance should be locked");
 
     // Simulate the message being processed and make sure withdrawal is successfully completed.
@@ -513,17 +502,11 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
     );
 
     // Ensure runtime balance is updated.
-    let balance = Accounts::get_balance(
-        ctx.runtime_state(),
-        *ADDRESS_PENDING_WITHDRAWAL,
-        denom.clone(),
-    )
-    .unwrap();
+    let balance = Accounts::get_balance(*ADDRESS_PENDING_WITHDRAWAL, denom.clone()).unwrap();
     assert_eq!(balance, 0u128, "withdrawn balance should be burned");
-    let balance =
-        Accounts::get_balance(ctx.runtime_state(), signer_address, denom.clone()).unwrap();
+    let balance = Accounts::get_balance(signer_address, denom.clone()).unwrap();
     assert_eq!(balance, 0u128, "withdrawn balance should be burned");
-    let total_supplies = Accounts::get_total_supplies(ctx.runtime_state()).unwrap();
+    let total_supplies = Accounts::get_total_supplies().unwrap();
     assert_eq!(total_supplies.len(), 1);
     assert_eq!(
         total_supplies[&denom], 0u128,
@@ -636,16 +619,10 @@ fn test_api_withdraw_handler_failure() {
     });
 
     // Make sure that withdrawn balance is in the module's pending withdrawal account.
-    let balance =
-        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+    let balance = Accounts::get_balance(keys::alice::address(), denom.clone()).unwrap();
     assert_eq!(balance, 0u128, "withdrawn balance should be locked");
 
-    let balance = Accounts::get_balance(
-        ctx.runtime_state(),
-        *ADDRESS_PENDING_WITHDRAWAL,
-        denom.clone(),
-    )
-    .unwrap();
+    let balance = Accounts::get_balance(*ADDRESS_PENDING_WITHDRAWAL, denom.clone()).unwrap();
     assert_eq!(balance, 1_000u128, "withdrawn balance should be locked");
 
     // Simulate the message failing and make sure withdrawal amount is refunded.
@@ -662,17 +639,11 @@ fn test_api_withdraw_handler_failure() {
     );
 
     // Ensure amount is refunded.
-    let balance = Accounts::get_balance(
-        ctx.runtime_state(),
-        *ADDRESS_PENDING_WITHDRAWAL,
-        denom.clone(),
-    )
-    .unwrap();
+    let balance = Accounts::get_balance(*ADDRESS_PENDING_WITHDRAWAL, denom.clone()).unwrap();
     assert_eq!(balance, 0u128, "withdrawn balance should be refunded");
-    let balance =
-        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+    let balance = Accounts::get_balance(keys::alice::address(), denom.clone()).unwrap();
     assert_eq!(balance, 1_000u128, "withdrawn balance should be refunded");
-    let total_supplies = Accounts::get_total_supplies(ctx.runtime_state()).unwrap();
+    let total_supplies = Accounts::get_total_supplies().unwrap();
     assert_eq!(total_supplies.len(), 1);
     assert_eq!(
         total_supplies[&denom], 1_000u128,
@@ -735,7 +706,7 @@ fn test_consensus_withdraw_handler() {
     Module::<Accounts, Consensus>::message_result_withdraw(&mut ctx, me, h_ctx);
 
     // Ensure runtime balance is updated.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::alice::address()).unwrap();
+    let bals = Accounts::get_balances(keys::alice::address()).unwrap();
     assert_eq!(bals.balances[&denom], 1_001, "alice balance deposited in")
 }
 
@@ -800,16 +771,10 @@ fn perform_delegation<C: BatchContext>(ctx: &mut C, success: bool) -> u64 {
     });
 
     // Make sure that delegated balance is in the module's pending delegations account.
-    let balance =
-        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+    let balance = Accounts::get_balance(keys::alice::address(), denom.clone()).unwrap();
     assert_eq!(balance, 0u128, "delegated balance should be locked");
 
-    let balance = Accounts::get_balance(
-        ctx.runtime_state(),
-        *ADDRESS_PENDING_DELEGATION,
-        denom.clone(),
-    )
-    .unwrap();
+    let balance = Accounts::get_balance(*ADDRESS_PENDING_DELEGATION, denom.clone()).unwrap();
     assert_eq!(balance, 1_000u128, "delegated balance should be locked");
 
     // Simulate the message being processed.
@@ -852,17 +817,11 @@ fn test_api_delegate() {
     let nonce = perform_delegation(&mut ctx, true);
 
     // Ensure runtime balance is updated.
-    let balance = Accounts::get_balance(
-        ctx.runtime_state(),
-        *ADDRESS_PENDING_DELEGATION,
-        denom.clone(),
-    )
-    .unwrap();
+    let balance = Accounts::get_balance(*ADDRESS_PENDING_DELEGATION, denom.clone()).unwrap();
     assert_eq!(balance, 0u128, "delegated balance should be burned");
-    let balance =
-        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+    let balance = Accounts::get_balance(keys::alice::address(), denom.clone()).unwrap();
     assert_eq!(balance, 0u128, "delegated balance should be burned");
-    let total_supplies = Accounts::get_total_supplies(ctx.runtime_state()).unwrap();
+    let total_supplies = Accounts::get_total_supplies().unwrap();
     assert_eq!(total_supplies.len(), 1);
     assert_eq!(
         total_supplies[&denom], 0u128,
@@ -971,23 +930,17 @@ fn test_api_delegate_fail() {
     perform_delegation(&mut ctx, false);
 
     // Ensure runtime balance is updated.
-    let balance = Accounts::get_balance(
-        ctx.runtime_state(),
-        *ADDRESS_PENDING_DELEGATION,
-        denom.clone(),
-    )
-    .unwrap();
+    let balance = Accounts::get_balance(*ADDRESS_PENDING_DELEGATION, denom.clone()).unwrap();
     assert_eq!(
         balance, 0u128,
         "pending delegation balance should be returned on failure"
     );
-    let balance =
-        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+    let balance = Accounts::get_balance(keys::alice::address(), denom.clone()).unwrap();
     assert_eq!(
         balance, 1_000u128,
         "delegated balance should be returned on failure"
     );
-    let total_supplies = Accounts::get_total_supplies(ctx.runtime_state()).unwrap();
+    let total_supplies = Accounts::get_total_supplies().unwrap();
     assert_eq!(total_supplies.len(), 1);
     assert_eq!(
         total_supplies[&denom], 1_000u128,
@@ -1271,11 +1224,9 @@ fn test_api_undelegate() {
     assert_eq!(event.amount.denomination(), &denom);
 
     // Ensure runtime balance is updated.
-    let mut ctx = mock.create_ctx();
-    let balance =
-        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+    let balance = Accounts::get_balance(keys::alice::address(), denom.clone()).unwrap();
     assert_eq!(balance, 410u128, "undelegated balance should be minted");
-    let total_supplies = Accounts::get_total_supplies(ctx.runtime_state()).unwrap();
+    let total_supplies = Accounts::get_total_supplies().unwrap();
     assert_eq!(total_supplies.len(), 1);
     assert_eq!(
         total_supplies[&denom], 410u128,
@@ -1460,11 +1411,9 @@ fn test_api_undelegate_suspension() {
     assert_eq!(event.amount.denomination(), &denom);
 
     // Ensure runtime balance is updated.
-    let mut ctx = mock.create_ctx();
-    let balance =
-        Accounts::get_balance(ctx.runtime_state(), keys::alice::address(), denom.clone()).unwrap();
+    let balance = Accounts::get_balance(keys::alice::address(), denom.clone()).unwrap();
     assert_eq!(balance, 410u128, "undelegated balance should be minted");
-    let total_supplies = Accounts::get_total_supplies(ctx.runtime_state()).unwrap();
+    let total_supplies = Accounts::get_total_supplies().unwrap();
     assert_eq!(total_supplies.len(), 1);
     assert_eq!(
         total_supplies[&denom], 410u128,

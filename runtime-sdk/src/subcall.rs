@@ -7,6 +7,7 @@ use crate::{
     module::CallResult,
     modules::core::{Error, API as _},
     runtime::Runtime,
+    storage::{current::TransactionResult, CurrentStore},
     types::{token, transaction, transaction::CallerAddress},
 };
 
@@ -162,32 +163,33 @@ pub fn call<C: TxContext, V: Validator + 'static>(
             },
         };
 
-        let result = ctx.with_tx(0, 0, tx, |ctx, call| {
-            // Mark this sub-context as internal as it belongs to an existing transaction.
-            let mut ctx = ctx.internal();
+        let result = CurrentStore::with_transaction(|| {
+            ctx.with_tx(0, 0, tx, |ctx, call| {
+                // Mark this sub-context as internal as it belongs to an existing transaction.
+                let mut ctx = ctx.internal();
 
-            // Dispatch the call.
-            let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
-                &mut ctx,
-                call,
-                &Default::default(),
-            );
-            // Retrieve remaining gas.
-            let gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(&mut ctx);
+                // Dispatch the call.
+                let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
+                    &mut ctx,
+                    call,
+                    &Default::default(),
+                );
+                // Retrieve remaining gas.
+                let gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(&mut ctx);
 
-            // Commit store and return emitted tags and messages on successful dispatch,
-            // otherwise revert state and ignore any emitted events/messages.
-            if result.is_success() {
-                let (etags, messages) = ctx.commit();
-                (result, gas, etags, messages)
-            } else {
-                // Ignore tags/messages on failure.
-                (result, gas, BTreeMap::new(), vec![])
-            }
+                // Commit store and return emitted tags and messages on successful dispatch,
+                // otherwise revert state and ignore any emitted events/messages.
+                if result.is_success() {
+                    let (etags, messages) = ctx.commit();
+                    TransactionResult::Commit((result, gas, etags, messages))
+                } else {
+                    // Ignore tags/messages on failure.
+                    TransactionResult::Rollback((result, gas, BTreeMap::new(), vec![]))
+                }
+            })
         });
 
-        // Commit storage. Note that if child context didn't commit, this is
-        // basically a no-op.
+        // Commit. Note that if child context didn't commit, this is basically a no-op.
         ctx.commit();
 
         result

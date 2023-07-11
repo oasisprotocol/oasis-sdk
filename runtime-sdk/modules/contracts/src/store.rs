@@ -4,7 +4,7 @@ use oasis_runtime_sdk::{
     context::Context,
     dispatcher,
     keymanager::{self, StateKey},
-    storage::{self, Store},
+    storage::{self, CurrentStore, Store},
     subcall,
 };
 
@@ -16,16 +16,21 @@ pub const CONFIDENTIAL_STORE_KEY_PAIR_ID_CONTEXT_BASE: &[u8] =
 
 const CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT: &str = "contracts.ConfidentialStoreCounter";
 
-/// Create a contract instance store.
+/// Run a closure with the contract instance store.
 ///
 /// Confidential stores will only work when private key queries for the key
 /// manager are available. In others, an error will be returned describing the
 /// particular key manager failure.
-pub fn for_instance<'a, C: Context>(
-    ctx: &'a mut C,
+pub fn with_instance_store<C, F, R>(
+    ctx: &mut C,
     instance_info: &types::Instance,
     store_kind: StoreKind,
-) -> Result<Box<dyn Store + 'a>, Error> {
+    f: F,
+) -> Result<R, Error>
+where
+    C: Context,
+    F: FnOnce(&mut dyn Store) -> R,
+{
     // subcall_count, instance_count, round are all used as nonce derivation context
     // in the confidential store. Along with confidential_key, they all need ctx,
     // which becomes unavailable after the first PrefixStore is created, since that
@@ -60,41 +65,47 @@ pub fn for_instance<'a, C: Context>(
         None
     };
 
-    let contract_state = get_instance_raw_store(ctx, instance_info, store_kind);
-
-    match store_kind {
-        // For public storage we use a hashed store using the Blake3 hash function.
-        StoreKind::Public => Ok(Box::new(storage::HashedStore::<_, blake3::Hasher>::new(
-            contract_state,
-        ))),
-
-        StoreKind::Confidential => {
-            let confidential_store = storage::ConfidentialStore::new_with_key(
+    with_instance_raw_store(instance_info, store_kind, |contract_state| {
+        match store_kind {
+            // For public storage we use a hashed store using the Blake3 hash function.
+            StoreKind::Public => Ok(f(&mut storage::HashedStore::<_, blake3::Hasher>::new(
                 contract_state,
-                confidential_key.unwrap().0,
-                &[
-                    round.to_le_bytes().as_slice(),
-                    subcall_count.to_le_bytes().as_slice(),
-                    instance_count.unwrap().to_le_bytes().as_slice(),
-                ],
-            );
-            Ok(Box::new(confidential_store))
+            ))),
+
+            StoreKind::Confidential => {
+                let mut confidential_store = storage::ConfidentialStore::new_with_key(
+                    contract_state,
+                    confidential_key.unwrap().0,
+                    &[
+                        round.to_le_bytes().as_slice(),
+                        subcall_count.to_le_bytes().as_slice(),
+                        instance_count.unwrap().to_le_bytes().as_slice(),
+                    ],
+                );
+                Ok(f(&mut confidential_store))
+            }
         }
-    }
+    })
 }
 
-/// Return the public of confidential raw store of the provided contract instance.
-pub fn get_instance_raw_store<'a, C: Context>(
-    ctx: &'a mut C,
+/// Run a closure with the per-contract-instance raw (public) store.
+pub fn with_instance_raw_store<F, R>(
     instance_info: &types::Instance,
     store_kind: StoreKind,
-) -> impl Store + 'a {
-    let store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-    let instance_prefix = instance_info.id.to_storage_key();
-    let contract_state = storage::PrefixStore::new(
-        storage::PrefixStore::new(store, &state::INSTANCE_STATE),
-        instance_prefix,
-    );
+    f: F,
+) -> R
+where
+    F: FnOnce(&mut dyn Store) -> R,
+{
+    CurrentStore::with(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let instance_prefix = instance_info.id.to_storage_key();
+        let contract_state = storage::PrefixStore::new(
+            storage::PrefixStore::new(store, &state::INSTANCE_STATE),
+            instance_prefix,
+        );
 
-    storage::PrefixStore::new(contract_state, store_kind.prefix())
+        let mut store = storage::PrefixStore::new(contract_state, store_kind.prefix());
+        f(&mut store)
+    })
 }

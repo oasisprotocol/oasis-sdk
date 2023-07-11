@@ -145,10 +145,10 @@ impl sdk::Runtime for Runtime {
         )
     }
 
-    fn migrate_state<C: sdk::Context>(ctx: &mut C) {
+    fn migrate_state<C: sdk::Context>(_ctx: &mut C) {
         // Fetch current parameters.
         type Rewards = modules::rewards::Module<modules::accounts::Module>;
-        let mut params = Rewards::params(ctx.runtime_state());
+        let mut params = Rewards::params();
 
         // Update the participation threshold (one of the E2E tests checks this and would fail
         // if we don't do this).
@@ -156,6 +156,6 @@ impl sdk::Runtime for Runtime {
         params.participation_threshold_denominator = 4;
 
         // Store parameters.
-        Rewards::set_params(ctx.runtime_state(), params)
+        Rewards::set_params(params)
     }
 }

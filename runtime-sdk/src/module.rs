@@ -14,7 +14,7 @@ use crate::{
     event, modules,
     modules::core::types::{MethodHandlerInfo, ModuleInfo},
     storage,
-    storage::{Prefix, Store},
+    storage::{CurrentStore, Prefix},
     types::{
         message::MessageResult,
         transaction::{self, AuthInfo, Call, Transaction, UnverifiedTransaction},
@@ -544,13 +544,13 @@ pub trait ModuleInfoHandler {
 }
 
 impl<M: Module + MethodHandler> ModuleInfoHandler for M {
-    fn module_info<C: Context>(ctx: &mut C) -> BTreeMap<String, ModuleInfo> {
+    fn module_info<C: Context>(_ctx: &mut C) -> BTreeMap<String, ModuleInfo> {
         let mut info = BTreeMap::new();
         info.insert(
             Self::NAME.to_string(),
             ModuleInfo {
                 version: Self::VERSION,
-                params: Self::params(ctx.runtime_state()).into_cbor_value(),
+                params: Self::params().into_cbor_value(),
                 methods: Self::supported_methods(),
             },
         );
@@ -588,17 +588,21 @@ pub trait Module {
     type Parameters: Parameters + 'static;
 
     /// Return the module's parameters.
-    fn params<S: Store>(store: S) -> Self::Parameters {
-        let store = storage::PrefixStore::new(store, &Self::NAME);
-        let store = storage::TypedStore::new(store);
-        store.get(Self::Parameters::STORE_KEY).unwrap_or_default()
+    fn params() -> Self::Parameters {
+        CurrentStore::with(|store| {
+            let store = storage::PrefixStore::new(store, &Self::NAME);
+            let store = storage::TypedStore::new(store);
+            store.get(Self::Parameters::STORE_KEY).unwrap_or_default()
+        })
     }
 
     /// Set the module's parameters.
-    fn set_params<S: Store>(store: S, params: Self::Parameters) {
-        let store = storage::PrefixStore::new(store, &Self::NAME);
-        let mut store = storage::TypedStore::new(store);
-        store.insert(Self::Parameters::STORE_KEY, params);
+    fn set_params(params: Self::Parameters) {
+        CurrentStore::with(|store| {
+            let store = storage::PrefixStore::new(store, &Self::NAME);
+            let mut store = storage::TypedStore::new(store);
+            store.insert(Self::Parameters::STORE_KEY, params);
+        });
     }
 }
 

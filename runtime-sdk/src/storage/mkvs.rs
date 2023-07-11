@@ -21,12 +21,6 @@ impl<M: mkvs::MKVS> MKVSStore<M> {
     fn create_ctx(&self) -> Context {
         Context::create_child(&self.ctx)
     }
-
-    /// Populate the in-memory tree with nodes for keys starting with given prefixes.
-    pub fn prefetch_prefixes(&mut self, prefixes: Vec<mkvs::Prefix>, limit: u16) {
-        self.parent
-            .prefetch_prefixes(self.create_ctx(), &prefixes, limit)
-    }
 }
 
 impl<M: mkvs::MKVS> Store for MKVSStore<M> {
@@ -45,6 +39,11 @@ impl<M: mkvs::MKVS> Store for MKVSStore<M> {
     fn iter(&self) -> Box<dyn mkvs::Iterator + '_> {
         self.parent.iter(self.create_ctx())
     }
+
+    fn prefetch_prefixes(&mut self, prefixes: Vec<mkvs::Prefix>, limit: u16) {
+        self.parent
+            .prefetch_prefixes(self.create_ctx(), &prefixes, limit);
+    }
 }
 
 impl<M: mkvs::MKVS> NestedStore for MKVSStore<M> {
@@ -53,6 +52,10 @@ impl<M: mkvs::MKVS> NestedStore for MKVSStore<M> {
     fn commit(self) -> Self::Inner {
         // Commit is not needed.
         self.parent
+    }
+
+    fn rollback(self) -> Self::Inner {
+        panic!("attempted to rollback a non-transactional store");
     }
 
     fn has_pending_updates(&self) -> bool {

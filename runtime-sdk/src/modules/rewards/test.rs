@@ -143,9 +143,7 @@ fn test_reward_disbursement() {
     }
 
     // Check reward pool account balances.
-    let mut ctx = mock.create_ctx();
-    let bals = Accounts::get_balances(ctx.runtime_state(), *ADDRESS_REWARD_POOL)
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(*ADDRESS_REWARD_POOL).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         1_000_000,
@@ -161,8 +159,7 @@ fn test_reward_disbursement() {
     Rewards::end_block(&mut ctx);
 
     // Check reward pool account balance.
-    let bals = Accounts::get_balances(ctx.runtime_state(), *ADDRESS_REWARD_POOL)
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(*ADDRESS_REWARD_POOL).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         998_000,
@@ -170,16 +167,15 @@ fn test_reward_disbursement() {
     );
 
     // Check entity account balances.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::bob::address())
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(keys::bob::address()).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         1_000,
         "rewards should have been disbursed"
     );
 
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::charlie::address())
-        .expect("get_balances should succeed");
+    let bals =
+        Accounts::get_balances(keys::charlie::address()).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         1_000,
@@ -209,9 +205,7 @@ fn test_reward_disbursement() {
     }
 
     // Check reward pool account balances.
-    let mut ctx = mock.create_ctx();
-    let bals = Accounts::get_balances(ctx.runtime_state(), *ADDRESS_REWARD_POOL)
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(*ADDRESS_REWARD_POOL).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         998_000,
@@ -227,8 +221,7 @@ fn test_reward_disbursement() {
     Rewards::end_block(&mut ctx);
 
     // Check reward pool account balance.
-    let bals = Accounts::get_balances(ctx.runtime_state(), *ADDRESS_REWARD_POOL)
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(*ADDRESS_REWARD_POOL).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         997_000,
@@ -236,16 +229,15 @@ fn test_reward_disbursement() {
     );
 
     // Check entity account balances.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::bob::address())
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(keys::bob::address()).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         2_000,
         "rewards should have been disbursed to good entities"
     );
 
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::charlie::address())
-        .expect("get_balances should succeed");
+    let bals =
+        Accounts::get_balances(keys::charlie::address()).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         1_000,
@@ -274,9 +266,7 @@ fn test_reward_disbursement() {
     }
 
     // Check reward pool account balances.
-    let mut ctx = mock.create_ctx();
-    let bals = Accounts::get_balances(ctx.runtime_state(), *ADDRESS_REWARD_POOL)
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(*ADDRESS_REWARD_POOL).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         997_000,
@@ -292,8 +282,7 @@ fn test_reward_disbursement() {
     Rewards::end_block(&mut ctx);
 
     // Check reward pool account balance.
-    let bals = Accounts::get_balances(ctx.runtime_state(), *ADDRESS_REWARD_POOL)
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(*ADDRESS_REWARD_POOL).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         996_000,
@@ -301,16 +290,15 @@ fn test_reward_disbursement() {
     );
 
     // Check entity account balances.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::bob::address())
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(keys::bob::address()).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         2_000,
         "rewards should not have been disbursed to non-participating entities"
     );
 
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::charlie::address())
-        .expect("get_balances should succeed");
+    let bals =
+        Accounts::get_balances(keys::charlie::address()).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         2_000,

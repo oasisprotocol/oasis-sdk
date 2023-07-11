@@ -29,7 +29,8 @@ use oasis_runtime_sdk::{
         core::{Error as CoreError, API as _},
     },
     runtime::Runtime,
-    sdk_derive, storage,
+    sdk_derive,
+    storage::CurrentStore,
     types::{
         address::{self, Address},
         token, transaction,
@@ -438,23 +439,23 @@ impl<Cfg: Config> API for Module<Cfg> {
         Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 
-    fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
-        let s = state::public_storage(ctx, &address);
-        let result: H256 = s.get(index).unwrap_or_default();
-        Ok(result.as_bytes().to_vec())
+    fn get_storage<C: Context>(_ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
+        state::with_public_storage(&address, |store| {
+            let result: H256 = store.get(index).unwrap_or_default();
+            Ok(result.as_bytes().to_vec())
+        })
     }
 
-    fn get_code<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error> {
-        let store = storage::PrefixStore::new(ctx.runtime_state(), &crate::MODULE_NAME);
-        let codes = storage::TypedStore::new(storage::PrefixStore::new(store, &state::CODES));
-
-        Ok(codes.get(address).unwrap_or_default())
+    fn get_code<C: Context>(_ctx: &mut C, address: H160) -> Result<Vec<u8>, Error> {
+        CurrentStore::with(|store| {
+            let codes = state::codes(store);
+            Ok(codes.get(address).unwrap_or_default())
+        })
     }
 
-    fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<u128, Error> {
-        let state = ctx.runtime_state();
+    fn get_balance<C: Context>(_ctx: &mut C, address: H160) -> Result<u128, Error> {
         let address = Cfg::map_address(address.into());
-        Ok(Cfg::Accounts::get_balance(state, address, Cfg::TOKEN_DENOMINATION).unwrap_or_default())
+        Ok(Cfg::Accounts::get_balance(address, Cfg::TOKEN_DENOMINATION).unwrap_or_default())
     }
 
     fn simulate_call<C: Context>(
@@ -757,9 +758,9 @@ impl<Cfg: Config> Module<Cfg> {
 
 impl<Cfg: Config> Module<Cfg> {
     /// Initialize state from genesis.
-    fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
+    fn init<C: Context>(_ctx: &mut C, genesis: Genesis) {
         // Set genesis parameters.
-        Self::set_params(ctx.runtime_state(), genesis.parameters);
+        Self::set_params(genesis.parameters);
     }
 
     /// Migrate state from a previous version.
@@ -808,18 +809,20 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
 
 impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
     fn end_block<C: Context>(ctx: &mut C) {
-        // Update the list of historic block hashes.
-        let block_number = ctx.runtime_header().round;
-        let block_hash = ctx.runtime_header().encoded_hash();
-        let mut block_hashes = state::block_hashes(ctx.runtime_state());
+        CurrentStore::with(|store| {
+            // Update the list of historic block hashes.
+            let block_number = ctx.runtime_header().round;
+            let block_hash = ctx.runtime_header().encoded_hash();
+            let mut block_hashes = state::block_hashes(store);
 
-        let current_number = block_number;
-        block_hashes.insert(block_number.to_be_bytes(), block_hash);
+            let current_number = block_number;
+            block_hashes.insert(block_number.to_be_bytes(), block_hash);
 
-        if current_number > state::BLOCK_HASH_WINDOW_SIZE {
-            let start_number = current_number - state::BLOCK_HASH_WINDOW_SIZE;
-            block_hashes.remove(start_number.to_be_bytes());
-        }
+            if current_number > state::BLOCK_HASH_WINDOW_SIZE {
+                let start_number = current_number - state::BLOCK_HASH_WINDOW_SIZE;
+                block_hashes.remove(start_number.to_be_bytes());
+            }
+        });
     }
 }
 

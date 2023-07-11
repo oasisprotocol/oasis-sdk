@@ -13,6 +13,7 @@ use oasis_runtime_sdk::{
         accounts::{self, Module as Accounts},
         core::{self, Module as Core},
     },
+    storage::{current::TransactionResult, CurrentStore},
     testing::{keys, mock},
     types::{address::SignatureAddressSpec, token::Denomination, transaction},
     BatchContext, Context, Runtime, Version,
@@ -624,26 +625,30 @@ fn do_test_evm_runtime<C: Config>() {
     <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &call_name_tx).unwrap();
 
     // Test transaction call in simulate mode.
-    ctx.with_child(context::Mode::SimulateTx, |mut sim_ctx| {
-        let erc20_name = sim_ctx.with_tx(0, 0, call_name_tx.clone(), |mut tx_ctx, call| {
-            let name: Vec<u8> = cbor::from_value(
-                decode_result!(
-                    tx_ctx,
-                    EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    CurrentStore::with_transaction(|| {
+        ctx.with_simulation(|mut sim_ctx| {
+            let erc20_name = sim_ctx.with_tx(0, 0, call_name_tx.clone(), |mut tx_ctx, call| {
+                let name: Vec<u8> = cbor::from_value(
+                    decode_result!(
+                        tx_ctx,
+                        EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+                    )
+                    .unwrap(),
                 )
-                .unwrap(),
-            )
-            .unwrap();
+                .unwrap();
 
-            EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
+                EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
 
-            tx_ctx.commit();
+                tx_ctx.commit();
 
-            name
+                name
+            });
+            assert_eq!(erc20_name.len(), 96);
+            assert_eq!(erc20_name[63], 0x04); // Name is 4 bytes long.
+            assert_eq!(erc20_name[64..68], vec![0x54, 0x65, 0x73, 0x74]); // "Test".
         });
-        assert_eq!(erc20_name.len(), 96);
-        assert_eq!(erc20_name[63], 0x04); // Name is 4 bytes long.
-        assert_eq!(erc20_name[64..68], vec![0x54, 0x65, 0x73, 0x74]); // "Test".
+
+        TransactionResult::Rollback(()) // Ignore simulation results.
     });
 
     let erc20_name = ctx.with_tx(0, 0, call_name_tx.clone(), |mut tx_ctx, call| {

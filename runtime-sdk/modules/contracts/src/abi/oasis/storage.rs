@@ -49,7 +49,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 let value = ctx.instance.runtime().try_with_memory(
                     |memory| -> Result<_, wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
-                        Ok(get_instance_store(ec, store_kind)?.get(key))
+                        with_instance_store(ec, store_kind, |store| store.get(key))
                     },
                 )??;
 
@@ -123,8 +123,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     .try_with_memory(|memory| -> Result<(), wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
                         let value = Region::from_arg(value).as_slice(&memory)?;
-                        get_instance_store(ec, store_kind)?.insert(key, value);
-                        Ok(())
+                        with_instance_store(ec, store_kind, |store| store.insert(key, value))
                     })??;
 
                 Ok(())
@@ -166,8 +165,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     .runtime()
                     .try_with_memory(|memory| -> Result<(), wasm3::Trap> {
                         let key = Region::from_arg(key).as_slice(&memory)?;
-                        get_instance_store(ec, store_kind)?.remove(key);
-                        Ok(())
+                        with_instance_store(ec, store_kind, |store| store.remove(key))
                     })??;
 
                 Ok(())
@@ -178,20 +176,24 @@ impl<Cfg: Config> OasisV1<Cfg> {
     }
 }
 
-/// Create a contract instance store.
-fn get_instance_store<'a, C: Context>(
-    ec: &'a mut ExecutionContext<'_, C>,
+/// Run a closure with the contract instance store.
+fn with_instance_store<C, F, R>(
+    ec: &mut ExecutionContext<'_, C>,
     store_kind: StoreKind,
-) -> Result<Box<dyn Store + 'a>, wasm3::Trap> {
-    let instance_store = store::for_instance(ec.tx_context, ec.instance_info, store_kind);
-    match instance_store {
-        Err(err) => {
-            // Propagate the underlying error.
-            ec.aborted = Some(err);
-            Err(wasm3::Trap::Abort)
-        }
-        Ok(store) => Ok(store),
-    }
+    f: F,
+) -> Result<R, wasm3::Trap>
+where
+    C: Context,
+    F: FnOnce(&mut dyn Store) -> R,
+{
+    store::with_instance_store(ec.tx_context, ec.instance_info, store_kind, |store| {
+        f(store)
+    })
+    .map_err(|err| {
+        // Propagate the underlying error.
+        ec.aborted = Some(err);
+        wasm3::Trap::Abort
+    })
 }
 
 /// Make sure that the key size is within the range specified in module parameters.

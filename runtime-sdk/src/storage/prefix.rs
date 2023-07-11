@@ -1,6 +1,6 @@
 use oasis_core_runtime::storage::mkvs;
 
-use super::Store;
+use super::{Prefix, Store};
 
 /// A key-value store that prefixes all keys with the given prefix.
 pub struct PrefixStore<S: Store, P: AsRef<[u8]>> {
@@ -34,6 +34,10 @@ impl<S: Store, P: AsRef<[u8]>> Store for PrefixStore<S, P> {
             self.parent.iter(),
             self.prefix.as_ref(),
         ))
+    }
+
+    fn prefetch_prefixes(&mut self, prefixes: Vec<Prefix>, limit: u16) {
+        self.parent.prefetch_prefixes(prefixes, limit);
     }
 }
 
