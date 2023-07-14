@@ -728,6 +728,11 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
             return;
         }
 
+        let logger = ctx.get_logger("consensus_accounts");
+        slog::debug!(logger, "epoch changed, processing queued undelegations";
+            "epoch" => ctx.epoch(),
+        );
+
         let mut reclaims: lru::LruCache<(EpochTime, Address), (u128, u128)> =
             lru::LruCache::new(NonZeroUsize::new(128).unwrap());
 
@@ -736,6 +741,10 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
         let qd = state::get_queued_undelegations(ctx.epoch()).unwrap();
         for ud in qd {
             let udi = state::take_undelegation(&ud).unwrap();
+
+            slog::debug!(logger, "processing undelegation";
+                "shares" => udi.shares,
+            );
 
             // Determine total amount the runtime got during the reclaim operation.
             let (total_amount, total_shares) =

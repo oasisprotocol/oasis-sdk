@@ -164,7 +164,10 @@ pub fn add_undelegation(
         // Add to undelegation queue (if existing item is there, this will have no effect).
         let store = storage::PrefixStore::new(root_store, &MODULE_NAME);
         let mut queue = storage::PrefixStore::new(store, &UNDELEGATION_QUEUE);
-        queue.insert(&queue_entry_key(from, to, epoch), &[]);
+        queue.insert(
+            &queue_entry_key(from, to, epoch),
+            &[0xF6], /* CBOR NULL */
+        );
 
         Ok(())
     })
