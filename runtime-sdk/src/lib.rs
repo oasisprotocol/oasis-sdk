@@ -1,7 +1,6 @@
 //! Oasis runtime SDK.
 #![feature(test)]
 #![deny(rust_2018_idioms, unreachable_pub)]
-#![forbid(unsafe_code)]
 
 pub mod callformat;
 pub mod config;
@@ -18,6 +17,7 @@ pub mod runtime;
 pub mod schedule_control;
 pub mod sender;
 pub mod storage;
+pub mod subcall;
 pub mod testing;
 pub mod types;
 

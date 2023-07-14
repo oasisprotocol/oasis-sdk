@@ -27,21 +27,18 @@ fn test_use_gas() {
     const BLOCK_MAX_GAS: u64 = 3 * MAX_GAS + 2;
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
-    Core::set_params(
-        ctx.runtime_state(),
-        Parameters {
-            max_batch_gas: BLOCK_MAX_GAS,
-            max_tx_size: 32 * 1024,
-            max_tx_signers: 8,
-            max_multisig_signers: 8,
-            gas_costs: Default::default(),
-            min_gas_price: {
-                let mut mgp = BTreeMap::new();
-                mgp.insert(token::Denomination::NATIVE, 0);
-                mgp
-            },
+    Core::set_params(Parameters {
+        max_batch_gas: BLOCK_MAX_GAS,
+        max_tx_size: 32 * 1024,
+        max_tx_signers: 8,
+        max_multisig_signers: 8,
+        gas_costs: Default::default(),
+        min_gas_price: {
+            let mut mgp = BTreeMap::new();
+            mgp.insert(token::Denomination::NATIVE, 0);
+            mgp
         },
-    );
+    });
 
     assert_eq!(Core::max_batch_gas(&mut ctx), BLOCK_MAX_GAS);
 
@@ -126,22 +123,19 @@ fn test_use_gas() {
 fn test_query_min_gas_price() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
-    Core::set_params(
-        ctx.runtime_state(),
-        Parameters {
-            max_batch_gas: 10000,
-            max_tx_size: 32 * 1024,
-            max_tx_signers: 8,
-            max_multisig_signers: 8,
-            gas_costs: Default::default(),
-            min_gas_price: {
-                let mut mgp = BTreeMap::new();
-                mgp.insert(token::Denomination::NATIVE, 123);
-                mgp.insert("SMALLER".parse().unwrap(), 1000);
-                mgp
-            },
+    Core::set_params(Parameters {
+        max_batch_gas: 10000,
+        max_tx_size: 32 * 1024,
+        max_tx_signers: 8,
+        max_multisig_signers: 8,
+        gas_costs: Default::default(),
+        min_gas_price: {
+            let mut mgp = BTreeMap::new();
+            mgp.insert(token::Denomination::NATIVE, 123);
+            mgp.insert("SMALLER".parse().unwrap(), 1000);
+            mgp
         },
-    );
+    });
 
     assert_eq!(
         Core::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
@@ -781,21 +775,18 @@ fn test_query_estimate_gas() {
 fn test_approve_unverified_tx() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
-    Core::set_params(
-        ctx.runtime_state(),
-        Parameters {
-            max_batch_gas: u64::MAX,
-            max_tx_size: 32 * 1024,
-            max_tx_signers: 2,
-            max_multisig_signers: 2,
-            gas_costs: Default::default(),
-            min_gas_price: {
-                let mut mgp = BTreeMap::new();
-                mgp.insert(token::Denomination::NATIVE, 0);
-                mgp
-            },
+    Core::set_params(Parameters {
+        max_batch_gas: u64::MAX,
+        max_tx_size: 32 * 1024,
+        max_tx_signers: 2,
+        max_multisig_signers: 2,
+        gas_costs: Default::default(),
+        min_gas_price: {
+            let mut mgp = BTreeMap::new();
+            mgp.insert(token::Denomination::NATIVE, 0);
+            mgp
         },
-    );
+    });
     let dummy_bytes = b"you look, you die".to_vec();
     Core::approve_unverified_tx(
         &mut ctx,
@@ -883,27 +874,24 @@ fn test_min_gas_price() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
 
-    Core::set_params(
-        ctx.runtime_state(),
-        Parameters {
-            max_batch_gas: u64::MAX,
-            max_tx_size: 32 * 1024,
-            max_tx_signers: 8,
-            max_multisig_signers: 8,
-            gas_costs: super::GasCosts {
-                tx_byte: 0,
-                auth_signature: GasWasterRuntime::AUTH_SIGNATURE_GAS,
-                auth_multisig_signer: GasWasterRuntime::AUTH_MULTISIG_GAS,
-                callformat_x25519_deoxysii: 0,
-            },
-            min_gas_price: {
-                let mut mgp = BTreeMap::new();
-                mgp.insert(token::Denomination::NATIVE, 1000);
-                mgp.insert("SMALLER".parse().unwrap(), 100);
-                mgp
-            },
+    Core::set_params(Parameters {
+        max_batch_gas: u64::MAX,
+        max_tx_size: 32 * 1024,
+        max_tx_signers: 8,
+        max_multisig_signers: 8,
+        gas_costs: super::GasCosts {
+            tx_byte: 0,
+            auth_signature: GasWasterRuntime::AUTH_SIGNATURE_GAS,
+            auth_multisig_signer: GasWasterRuntime::AUTH_MULTISIG_GAS,
+            callformat_x25519_deoxysii: 0,
         },
-    );
+        min_gas_price: {
+            let mut mgp = BTreeMap::new();
+            mgp.insert(token::Denomination::NATIVE, 1000);
+            mgp.insert("SMALLER".parse().unwrap(), 100);
+            mgp
+        },
+    });
 
     let mut tx = transaction::Transaction {
         version: 1,
@@ -1064,21 +1052,18 @@ fn test_emit_events() {
 fn test_gas_used_events() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
-    Core::set_params(
-        ctx.runtime_state(),
-        Parameters {
-            max_batch_gas: 1_000_000,
-            max_tx_size: 32 * 1024,
-            max_tx_signers: 8,
-            max_multisig_signers: 8,
-            gas_costs: Default::default(),
-            min_gas_price: {
-                let mut mgp = BTreeMap::new();
-                mgp.insert(token::Denomination::NATIVE, 0);
-                mgp
-            },
+    Core::set_params(Parameters {
+        max_batch_gas: 1_000_000,
+        max_tx_size: 32 * 1024,
+        max_tx_signers: 8,
+        max_multisig_signers: 8,
+        gas_costs: Default::default(),
+        min_gas_price: {
+            let mut mgp = BTreeMap::new();
+            mgp.insert(token::Denomination::NATIVE, 0);
+            mgp
         },
-    );
+    });
 
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = 100_000;
@@ -1140,7 +1125,7 @@ fn test_module_info() {
         max_multisig_signers: 567,
         ..Default::default()
     };
-    Core::set_params(ctx.runtime_state(), core_params.clone());
+    Core::set_params(core_params.clone());
 
     let info = Core::query_runtime_info(&mut ctx, ()).unwrap();
     assert_eq!(

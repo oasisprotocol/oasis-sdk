@@ -170,6 +170,10 @@ impl<S: Store> Store for ConfidentialStore<S> {
     fn iter(&self) -> Box<dyn mkvs::Iterator + '_> {
         Box::new(ConfidentialStoreIterator::new(self))
     }
+
+    fn prefetch_prefixes(&mut self, prefixes: Vec<mkvs::Prefix>, limit: u16) {
+        self.inner.prefetch_prefixes(prefixes, limit);
+    }
 }
 
 struct ConfidentialStoreIterator<'store, S: Store> {
@@ -293,7 +297,7 @@ impl<'store, S: Store> mkvs::Iterator for ConfidentialStoreIterator<'store, S> {
 mod test {
     extern crate test;
     use super::*;
-    use crate::{context::Context, keymanager::KeyPair, storage, testing::mock::Mock};
+    use crate::{keymanager::KeyPair, storage, testing::mock::empty_store};
     use test::Bencher;
 
     const ITEM_COUNT: usize = 10_000;
@@ -311,13 +315,13 @@ mod test {
         ))
     }
 
-    fn make_inner<'ctx, C: Context>(
-        ctx: &'ctx mut C,
+    fn make_inner<'ctx, S: Store + 'ctx>(
+        store: S,
         make_confidential: bool,
     ) -> Box<dyn Store + 'ctx> {
         let inner = storage::PrefixStore::new(
             storage::PrefixStore::new(
-                storage::PrefixStore::new(ctx.runtime_state(), "test module"),
+                storage::PrefixStore::new(store, "test module"),
                 "instance prefix",
             ),
             "type prefix",
@@ -347,9 +351,7 @@ mod test {
 
     #[test]
     fn basic_operations() {
-        let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx();
-        let mut store = confidential(ctx.runtime_state(), true);
+        let mut store = confidential(empty_store(), true);
         let items = make_items(10);
 
         // Nothing should exist at the beginning.
@@ -397,9 +399,8 @@ mod test {
 
     #[test]
     fn base_corruption() {
-        let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx();
-        let mut store = confidential(ctx.runtime_state(), true);
+        let mut plain_store = empty_store();
+        let mut store = confidential(&mut plain_store, true);
 
         // Insert something, try corrupting its bytes, then see
         // what the confidential store does with it.
@@ -410,7 +411,6 @@ mod test {
         // know the actual bytes in the underlying store.
         store.insert(KEY, VALUE);
         drop(store);
-        let plain_store = ctx.runtime_state();
         let mut iter = plain_store.iter();
         iter.rewind();
         let (key, value) = Iterator::next(&mut iter).expect("should have one item");
@@ -423,34 +423,33 @@ mod test {
         // Corrupt nonce part of the key.
         let mut corrupt_key_nonce = key.clone();
         corrupt_key_nonce[4] ^= 0xaau8;
-        ctx.runtime_state().insert(&corrupt_key_nonce, &value);
-        ctx.runtime_state().remove(&key);
-        let store = confidential(ctx.runtime_state(), true);
+        plain_store.insert(&corrupt_key_nonce, &value);
+        plain_store.remove(&key);
+        let store = confidential(&mut plain_store, true);
         assert!(store.get(KEY).is_none());
         drop(store);
-        ctx.runtime_state().remove(&corrupt_key_nonce);
+        plain_store.remove(&corrupt_key_nonce);
 
         // Corrupt key part of the key.
         let mut corrupt_key_key = key.clone();
         *corrupt_key_key.last_mut().unwrap() ^= 0xaau8;
-        ctx.runtime_state().insert(&corrupt_key_key, &value);
-        let store = confidential(ctx.runtime_state(), true);
+        plain_store.insert(&corrupt_key_key, &value);
+        let store = confidential(&mut plain_store, true);
         assert!(store.get(KEY).is_none());
         drop(store);
-        ctx.runtime_state().remove(&corrupt_key_key);
+        plain_store.remove(&corrupt_key_key);
 
         // Validate inserting into underlying store.
-        ctx.runtime_state().insert(&key, &value);
-        let store = confidential(ctx.runtime_state(), true);
+        plain_store.insert(&key, &value);
+        let store = confidential(&mut plain_store, true);
         assert_eq!(store.get(KEY).expect("key should exist"), VALUE);
     }
 
     #[test]
     #[should_panic]
     fn corruption_value_nonce() {
-        let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx();
-        let mut store = confidential(ctx.runtime_state(), true);
+        let mut plain_store = empty_store();
+        let mut store = confidential(&mut plain_store, true);
 
         // Insert something, try corrupting its bytes, then see
         // what the confidential store does with it.
@@ -462,7 +461,6 @@ mod test {
         store.insert(KEY, VALUE);
         assert!(store.get(KEY).is_some());
         drop(store);
-        let plain_store = ctx.runtime_state();
         let mut iter = plain_store.iter();
         iter.rewind();
         let (key, value) = Iterator::next(&mut iter).expect("should have one item");
@@ -471,20 +469,19 @@ mod test {
         // Corrupt the nonce part of the value.
         let mut corrupt_value_nonce = value;
         corrupt_value_nonce[4] ^= 0xaau8;
-        ctx.runtime_state().remove(&key);
-        ctx.runtime_state().insert(&key, &corrupt_value_nonce);
-        let store = confidential(ctx.runtime_state(), true);
+        plain_store.remove(&key);
+        plain_store.insert(&key, &corrupt_value_nonce);
+        let store = confidential(&mut plain_store, true);
         store.get(KEY);
         drop(store);
-        ctx.runtime_state().remove(&key);
+        plain_store.remove(&key);
     }
 
     #[test]
     #[should_panic]
     fn corruption_value_value() {
-        let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx();
-        let mut store = confidential(ctx.runtime_state(), true);
+        let mut plain_store = empty_store();
+        let mut store = confidential(&mut plain_store, true);
 
         // Insert something, try corrupting its bytes, then see
         // what the confidential store does with it.
@@ -496,7 +493,6 @@ mod test {
         store.insert(KEY, VALUE);
         assert!(store.get(KEY).is_some());
         drop(store);
-        let plain_store = ctx.runtime_state();
         let mut iter = plain_store.iter();
         iter.rewind();
         let (key, value) = Iterator::next(&mut iter).expect("should have one item");
@@ -505,21 +501,19 @@ mod test {
         // Corrupt the nonce part of the value.
         let mut corrupt_value_value = value;
         *corrupt_value_value.last_mut().unwrap() ^= 0xaau8;
-        ctx.runtime_state().remove(&key);
-        ctx.runtime_state().insert(&key, &corrupt_value_value);
-        let store = confidential(ctx.runtime_state(), true);
+        plain_store.remove(&key);
+        plain_store.insert(&key, &corrupt_value_value);
+        let store = confidential(&mut plain_store, true);
         store.get(KEY);
         drop(store);
-        ctx.runtime_state().remove(&key);
+        plain_store.remove(&key);
     }
 
     fn run<F>(confidential: bool, inserts: usize, mut cb: F)
     where
         F: FnMut(&mut Box<dyn Store + '_>, &Vec<(Vec<u8>, Vec<u8>)>),
     {
-        let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx();
-        let mut store = make_inner(&mut ctx, confidential);
+        let mut store = make_inner(empty_store(), confidential);
 
         let items = make_items(0);
         for i in 0..inserts {

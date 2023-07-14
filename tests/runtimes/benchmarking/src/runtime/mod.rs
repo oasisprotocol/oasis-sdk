@@ -185,7 +185,7 @@ impl<Accounts: modules::accounts::API> module::MigrationHandler for Module<Accou
     type Genesis = Genesis;
 
     fn init_or_migrate<C: Context>(
-        ctx: &mut C,
+        _ctx: &mut C,
         meta: &mut modules::core::types::Metadata,
         genesis: Self::Genesis,
     ) -> bool {
@@ -193,7 +193,7 @@ impl<Accounts: modules::accounts::API> module::MigrationHandler for Module<Accou
         if version == 0 {
             // Initialize state from genesis.
             // Set genesis parameters.
-            Self::set_params(ctx.runtime_state(), genesis.parameters);
+            Self::set_params(genesis.parameters);
             meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
             return true;
         }

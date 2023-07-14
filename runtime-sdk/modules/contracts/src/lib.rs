@@ -10,7 +10,6 @@ use std::{convert::TryInto, io::Read};
 
 use thiserror::Error;
 
-use crate::store::get_instance_raw_store;
 use oasis_contract_sdk_types::storage::StoreKind;
 use oasis_runtime_sdk::{
     self as sdk,
@@ -22,9 +21,11 @@ use oasis_runtime_sdk::{
     modules::{accounts::API as _, core::API as _},
     runtime::Runtime,
     sdk_derive, storage,
-    storage::Store,
+    storage::{CurrentStore, Store},
     types::transaction::CallFormat,
 };
+
+use crate::store::with_instance_raw_store;
 
 mod abi;
 mod code;
@@ -101,10 +102,7 @@ pub enum Error {
     #[sdk_error(code = 15)]
     InsufficientCallerBalance,
 
-    #[error("call depth exceeded (depth: {0} max: {1})")]
-    #[sdk_error(code = 16)]
-    CallDepthExceeded(u16, u16),
-
+    // Error code 16 is reserved.
     #[error("result size exceeded (size: {0} max: {1})")]
     #[sdk_error(code = 17)]
     ResultTooLarge(u32, u32),
@@ -365,56 +363,59 @@ pub struct Module<Cfg: Config> {
 
 impl<Cfg: Config> Module<Cfg> {
     /// Loads code information for the specified code identifier.
-    fn load_code_info<C: Context>(
-        ctx: &mut C,
-        code_id: types::CodeId,
-    ) -> Result<types::Code, Error> {
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let code_info_store =
-            storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::CODE_INFO));
-        let code_info = code_info_store
-            .get(code_id.to_storage_key())
-            .ok_or_else(|| Error::CodeNotFound(code_id.as_u64()))?;
+    fn load_code_info(code_id: types::CodeId) -> Result<types::Code, Error> {
+        CurrentStore::with(|store| {
+            let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let code_info_store =
+                storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::CODE_INFO));
+            let code_info = code_info_store
+                .get(code_id.to_storage_key())
+                .ok_or_else(|| Error::CodeNotFound(code_id.as_u64()))?;
 
-        Ok(code_info)
+            Ok(code_info)
+        })
     }
 
     /// Stores specified code information.
-    fn store_code_info<C: Context>(ctx: &mut C, code_info: types::Code) -> Result<(), Error> {
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let mut code_info_store =
-            storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::CODE_INFO));
-        code_info_store.insert(code_info.id.to_storage_key(), code_info);
+    fn store_code_info(code_info: types::Code) -> Result<(), Error> {
+        CurrentStore::with(|store| {
+            let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let mut code_info_store =
+                storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::CODE_INFO));
+            code_info_store.insert(code_info.id.to_storage_key(), code_info);
 
-        Ok(())
+            Ok(())
+        })
     }
 
     /// Loads specified instance information.
-    fn load_instance_info<C: Context>(
-        ctx: &mut C,
-        instance_id: types::InstanceId,
-    ) -> Result<types::Instance, Error> {
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let instance_info_store =
-            storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::INSTANCE_INFO));
-        let instance_info = instance_info_store
-            .get(instance_id.to_storage_key())
-            .ok_or_else(|| Error::InstanceNotFound(instance_id.as_u64()))?;
+    fn load_instance_info(instance_id: types::InstanceId) -> Result<types::Instance, Error> {
+        CurrentStore::with(|store| {
+            let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let instance_info_store = storage::TypedStore::new(storage::PrefixStore::new(
+                &mut store,
+                &state::INSTANCE_INFO,
+            ));
+            let instance_info = instance_info_store
+                .get(instance_id.to_storage_key())
+                .ok_or_else(|| Error::InstanceNotFound(instance_id.as_u64()))?;
 
-        Ok(instance_info)
+            Ok(instance_info)
+        })
     }
 
     /// Stores specified instance information.
-    fn store_instance_info<C: Context>(
-        ctx: &mut C,
-        instance_info: types::Instance,
-    ) -> Result<(), Error> {
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let mut instance_info_store =
-            storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::INSTANCE_INFO));
-        instance_info_store.insert(instance_info.id.to_storage_key(), instance_info);
+    fn store_instance_info(instance_info: types::Instance) -> Result<(), Error> {
+        CurrentStore::with(|store| {
+            let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let mut instance_info_store = storage::TypedStore::new(storage::PrefixStore::new(
+                &mut store,
+                &state::INSTANCE_INFO,
+            ));
+            instance_info_store.insert(instance_info.id.to_storage_key(), instance_info);
 
-        Ok(())
+            Ok(())
+        })
     }
 }
 
@@ -425,7 +426,7 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         body: types::Upload,
     ) -> Result<types::UploadResult, Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
         let uploader = ctx.tx_caller_address();
 
         // Validate code size.
@@ -493,10 +494,13 @@ impl<Cfg: Config> Module<Cfg> {
         )?;
 
         // Assign next identifier.
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let mut tstore = storage::TypedStore::new(&mut store);
-        let id: types::CodeId = tstore.get(state::NEXT_CODE_IDENTIFIER).unwrap_or_default();
-        tstore.insert(state::NEXT_CODE_IDENTIFIER, id.increment());
+        let id = CurrentStore::with(|store| {
+            let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let mut tstore = storage::TypedStore::new(&mut store);
+            let id: types::CodeId = tstore.get(state::NEXT_CODE_IDENTIFIER).unwrap_or_default();
+            tstore.insert(state::NEXT_CODE_IDENTIFIER, id.increment());
+            id
+        });
 
         // Store information about uploaded code.
         let code_info = types::Code {
@@ -507,8 +511,8 @@ impl<Cfg: Config> Module<Cfg> {
             uploader,
             instantiate_policy: body.instantiate_policy,
         };
-        Self::store_code(ctx, &code_info, &code)?;
-        Self::store_code_info(ctx, code_info)?;
+        Self::store_code(&code_info, &code)?;
+        Self::store_code_info(code_info)?;
 
         Ok(types::UploadResult { id })
     }
@@ -518,7 +522,7 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         body: types::Instantiate,
     ) -> Result<types::InstantiateResult, Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
         let creator = ctx.tx_caller_address();
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_instantiate)?;
@@ -529,17 +533,20 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Load code information, enforce instantiation policy and load the code.
-        let code_info = Self::load_code_info(ctx, body.code_id)?;
+        let code_info = Self::load_code_info(body.code_id)?;
         code_info.instantiate_policy.enforce(ctx)?;
-        let code = Self::load_code(ctx, &code_info)?;
+        let code = Self::load_code(&code_info)?;
 
         // Assign next identifier.
-        let mut store = storage::PrefixStore::new(ctx.runtime_state(), &MODULE_NAME);
-        let mut tstore = storage::TypedStore::new(&mut store);
-        let id: types::InstanceId = tstore
-            .get(state::NEXT_INSTANCE_IDENTIFIER)
-            .unwrap_or_default();
-        tstore.insert(state::NEXT_INSTANCE_IDENTIFIER, id.increment());
+        let id = CurrentStore::with(|store| {
+            let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let mut tstore = storage::TypedStore::new(&mut store);
+            let id: types::InstanceId = tstore
+                .get(state::NEXT_INSTANCE_IDENTIFIER)
+                .unwrap_or_default();
+            tstore.insert(state::NEXT_INSTANCE_IDENTIFIER, id.increment());
+            id
+        });
 
         // Store instance information.
         let instance_info = types::Instance {
@@ -548,7 +555,7 @@ impl<Cfg: Config> Module<Cfg> {
             creator,
             upgrades_policy: body.upgrades_policy,
         };
-        Self::store_instance_info(ctx, instance_info.clone())?;
+        Self::store_instance_info(instance_info.clone())?;
 
         // Transfer any attached tokens.
         for tokens in &body.tokens {
@@ -583,7 +590,7 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         body: types::Call,
     ) -> Result<types::CallResult, Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
         let caller = ctx.tx_caller_address();
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_call)?;
@@ -594,9 +601,9 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Load instance information and code.
-        let instance_info = Self::load_instance_info(ctx, body.id)?;
-        let code_info = Self::load_code_info(ctx, instance_info.code_id)?;
-        let code = Self::load_code(ctx, &code_info)?;
+        let instance_info = Self::load_instance_info(body.id)?;
+        let code_info = Self::load_code_info(instance_info.code_id)?;
+        let code = Self::load_code(&code_info)?;
 
         // Transfer any attached tokens.
         for tokens in &body.tokens {
@@ -631,7 +638,7 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         body: types::ChangeUpgradePolicy,
     ) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_change_upgrade_policy)?;
 
@@ -640,19 +647,19 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Load instance information.
-        let mut instance_info = Self::load_instance_info(ctx, body.id)?;
+        let mut instance_info = Self::load_instance_info(body.id)?;
         instance_info.upgrades_policy.enforce(ctx)?;
 
         // Change upgrade policy.
         instance_info.upgrades_policy = body.upgrades_policy;
-        Self::store_instance_info(ctx, instance_info.clone())?;
+        Self::store_instance_info(instance_info.clone())?;
 
         Ok(())
     }
 
     #[handler(call = "contracts.Upgrade")]
     pub fn tx_upgrade<C: TxContext>(ctx: &mut C, body: types::Upgrade) -> Result<(), Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
         let caller = ctx.tx_caller_address();
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_upgrade)?;
@@ -663,13 +670,13 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Load instance information and code.
-        let mut instance_info = Self::load_instance_info(ctx, body.id)?;
+        let mut instance_info = Self::load_instance_info(body.id)?;
         instance_info.upgrades_policy.enforce(ctx)?;
         if instance_info.code_id == body.code_id {
             return Err(Error::CodeAlreadyUpgraded(body.code_id.as_u64()));
         }
-        let code_info = Self::load_code_info(ctx, instance_info.code_id)?;
-        let code = Self::load_code(ctx, &code_info)?;
+        let code_info = Self::load_code_info(instance_info.code_id)?;
+        let code = Self::load_code(&code_info)?;
 
         // Transfer any attached tokens.
         for tokens in &body.tokens {
@@ -699,9 +706,9 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Update the contract code.
         instance_info.code_id = body.code_id;
-        let code_info = Self::load_code_info(ctx, instance_info.code_id)?;
-        let code = Self::load_code(ctx, &code_info)?;
-        Self::store_instance_info(ctx, instance_info.clone())?;
+        let code_info = Self::load_code_info(instance_info.code_id)?;
+        let code = Self::load_code(&code_info)?;
+        Self::store_instance_info(instance_info.clone())?;
 
         let contract = wasm::Contract {
             code_info: &code_info,
@@ -727,29 +734,29 @@ impl<Cfg: Config> Module<Cfg> {
 
     #[handler(query = "contracts.Code")]
     pub fn query_code<C: Context>(
-        ctx: &mut C,
+        _ctx: &mut C,
         args: types::CodeQuery,
     ) -> Result<types::Code, Error> {
-        Self::load_code_info(ctx, args.id)
+        Self::load_code_info(args.id)
     }
 
     #[handler(query = "contracts.CodeStorage")]
     pub fn query_code_storage<C: Context>(
-        ctx: &mut C,
+        _ctx: &mut C,
         args: types::CodeStorageQuery,
     ) -> Result<types::CodeStorageQueryResult, Error> {
-        let code_info = Self::load_code_info(ctx, args.id)?;
-        let code = Self::load_code(ctx, &code_info)?;
+        let code_info = Self::load_code_info(args.id)?;
+        let code = Self::load_code(&code_info)?;
 
         Ok(types::CodeStorageQueryResult { code })
     }
 
     #[handler(query = "contracts.Instance")]
     pub fn query_instance<C: Context>(
-        ctx: &mut C,
+        _ctx: &mut C,
         args: types::InstanceQuery,
     ) -> Result<types::Instance, Error> {
-        Self::load_instance_info(ctx, args.id)
+        Self::load_instance_info(args.id)
     }
 
     #[handler(query = "contracts.InstanceStorage")]
@@ -757,13 +764,13 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         args: types::InstanceStorageQuery,
     ) -> Result<types::InstanceStorageQueryResult, Error> {
-        let instance_info = Self::load_instance_info(ctx, args.id)?;
+        let instance_info = Self::load_instance_info(args.id)?;
         // NOTE: We can only access the public store here.
-        let store = store::for_instance(ctx, &instance_info, StoreKind::Public)?;
+        let value = store::with_instance_store(ctx, &instance_info, StoreKind::Public, |store| {
+            store.get(&args.key)
+        })?;
 
-        Ok(types::InstanceStorageQueryResult {
-            value: store.get(&args.key),
-        })
+        Ok(types::InstanceStorageQueryResult { value })
     }
 
     #[handler(query = "contracts.InstanceRawStorage", expensive)]
@@ -784,21 +791,22 @@ impl<Cfg: Config> Module<Cfg> {
             .try_into()
             .map_err(|_| Error::InvalidArgument)?;
 
-        let instance_info = Self::load_instance_info(ctx, args.id)?;
+        let instance_info = Self::load_instance_info(args.id)?;
         // Convert contracts API StoreKind to internal storage StoreKind.
         let sk: StoreKind = (args.store_kind as u32)
             .try_into()
             .map_err(|_| Error::InvalidArgument)?;
-        let store = get_instance_raw_store(ctx, &instance_info, sk);
 
-        let items: Vec<(Vec<u8>, Vec<u8>)> = store
-            .iter()
-            // Shave off first 32 bytes of the key to get the contract instance-level key name.
-            .filter(|(k, _)| k.len() >= 32)
-            .map(|(k, v)| (k[32..].to_vec(), v.to_vec()))
-            .skip(offset)
-            .take(limit)
-            .collect();
+        let items: Vec<(Vec<u8>, Vec<u8>)> = with_instance_raw_store(&instance_info, sk, |store| {
+            store
+                .iter()
+                // Shave off first 32 bytes of the key to get the contract instance-level key name.
+                .filter(|(k, _)| k.len() >= 32)
+                .map(|(k, v)| (k[32..].to_vec(), v.to_vec()))
+                .skip(offset)
+                .take(limit)
+                .collect()
+        });
 
         Ok(types::InstanceRawStorageQueryResult { items })
     }
@@ -816,12 +824,12 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         args: types::CustomQuery,
     ) -> Result<types::CustomQueryResult, Error> {
-        let params = Self::params(ctx.runtime_state());
+        let params = Self::params();
 
         // Load instance information and code.
-        let instance_info = Self::load_instance_info(ctx, args.id)?;
-        let code_info = Self::load_code_info(ctx, instance_info.code_id)?;
-        let code = Self::load_code(ctx, &code_info)?;
+        let instance_info = Self::load_instance_info(args.id)?;
+        let code_info = Self::load_code_info(instance_info.code_id)?;
+        let code = Self::load_code(&code_info)?;
 
         // Load local configuration.
         let cfg: LocalConfig = ctx.local_config(MODULE_NAME).unwrap_or_default();
@@ -857,9 +865,9 @@ impl<Cfg: Config> module::Module for Module<Cfg> {
 
 impl<Cfg: Config> Module<Cfg> {
     /// Initialize state from genesis.
-    pub fn init<C: Context>(ctx: &mut C, genesis: Genesis) {
+    pub fn init<C: Context>(_ctx: &mut C, genesis: Genesis) {
         // Set genesis parameters.
-        Self::set_params(ctx.runtime_state(), genesis.parameters);
+        Self::set_params(genesis.parameters);
     }
 
     /// Migrate state from a previous version.

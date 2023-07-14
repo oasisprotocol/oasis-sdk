@@ -5,7 +5,7 @@ use std::{
 
 use oasis_core_runtime::storage::mkvs;
 
-use super::{NestedStore, Store};
+use super::{NestedStore, Prefix, Store};
 
 /// An overlay store which keeps values locally until explicitly committed.
 pub struct OverlayStore<S: Store> {
@@ -43,6 +43,10 @@ impl<S: Store> NestedStore for OverlayStore<S> {
         self.parent
     }
 
+    fn rollback(self) -> Self::Inner {
+        self.parent
+    }
+
     fn has_pending_updates(&self) -> bool {
         !self.dirty.is_empty()
     }
@@ -77,6 +81,10 @@ impl<S: Store> Store for OverlayStore<S> {
 
     fn iter(&self) -> Box<dyn mkvs::Iterator + '_> {
         Box::new(OverlayStoreIterator::new(self))
+    }
+
+    fn prefetch_prefixes(&mut self, prefixes: Vec<Prefix>, limit: u16) {
+        self.parent.prefetch_prefixes(prefixes, limit);
     }
 }
 

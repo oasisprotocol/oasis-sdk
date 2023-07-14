@@ -19,7 +19,8 @@ use crate::{
         BlockHandler, InvariantHandler, MethodHandler, MigrationHandler, ModuleInfoHandler,
         TransactionHandler,
     },
-    modules, storage,
+    modules,
+    storage::{self, CurrentStore},
 };
 
 /// A runtime.
@@ -90,13 +91,17 @@ pub trait Runtime {
 
     /// Perform state migrations if required.
     fn migrate<C: Context>(ctx: &mut C) {
-        let store = storage::TypedStore::new(storage::PrefixStore::new(
-            ctx.runtime_state(),
-            &modules::core::MODULE_NAME,
-        ));
-        let mut metadata: modules::core::types::Metadata = store
-            .get(modules::core::state::METADATA)
-            .unwrap_or_default();
+        let mut metadata = CurrentStore::with(|store| {
+            let store = storage::TypedStore::new(storage::PrefixStore::new(
+                store,
+                &modules::core::MODULE_NAME,
+            ));
+            let metadata: modules::core::types::Metadata = store
+                .get(modules::core::state::METADATA)
+                .unwrap_or_default();
+
+            metadata
+        });
 
         // Perform state migrations/initialization on all modules.
         let mut has_changes =
@@ -129,11 +134,13 @@ pub trait Runtime {
 
         // If there are any changes, update metadata.
         if has_changes {
-            let mut store = storage::TypedStore::new(storage::PrefixStore::new(
-                ctx.runtime_state(),
-                &modules::core::MODULE_NAME,
-            ));
-            store.insert(modules::core::state::METADATA, metadata);
+            CurrentStore::with(|store| {
+                let mut store = storage::TypedStore::new(storage::PrefixStore::new(
+                    store,
+                    &modules::core::MODULE_NAME,
+                ));
+                store.insert(modules::core::state::METADATA, metadata);
+            });
         }
     }
 

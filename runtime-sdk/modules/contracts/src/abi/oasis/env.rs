@@ -124,7 +124,7 @@ fn dispatch_query<Cfg: Config, C: Context>(ctx: &mut C, query: QueryRequest) -> 
 
 /// Perform accounts API query dispatch.
 fn dispatch_accounts_query<Cfg: Config, C: Context>(
-    ctx: &mut C,
+    _ctx: &mut C,
     query: AccountsQuery,
 ) -> QueryResponse {
     match query {
@@ -132,12 +132,8 @@ fn dispatch_accounts_query<Cfg: Config, C: Context>(
             address,
             denomination,
         } => {
-            let balance = Cfg::Accounts::get_balance(
-                ctx.runtime_state(),
-                address.into(),
-                denomination.into(),
-            )
-            .unwrap_or_default();
+            let balance =
+                Cfg::Accounts::get_balance(address.into(), denomination.into()).unwrap_or_default();
 
             AccountsResponse::Balance { balance }.into()
         }

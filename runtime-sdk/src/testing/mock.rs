@@ -18,7 +18,7 @@ use crate::{
     module::MigrationHandler,
     modules,
     runtime::Runtime,
-    storage,
+    storage::{CurrentStore, MKVSStore},
     testing::{configmap, keymanager::MockKeyManagerClient},
     types::transaction,
 };
@@ -63,7 +63,6 @@ pub struct Mock {
     pub host_info: HostInfo,
     pub runtime_header: roothash::Header,
     pub runtime_round_results: roothash::RoundResults,
-    pub mkvs: Box<dyn mkvs::MKVS>,
     pub consensus_state: ConsensusState,
     pub history: Box<dyn history::HistoryHost>,
     pub epoch: beacon::EpochTime,
@@ -73,15 +72,11 @@ pub struct Mock {
 
 impl Mock {
     /// Create a new mock dispatch context.
-    pub fn create_ctx(
-        &mut self,
-    ) -> RuntimeBatchContext<'_, EmptyRuntime, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
+    pub fn create_ctx(&mut self) -> RuntimeBatchContext<'_, EmptyRuntime> {
         self.create_ctx_for_runtime(Mode::ExecuteTx, false)
     }
 
-    pub fn create_check_ctx(
-        &mut self,
-    ) -> RuntimeBatchContext<'_, EmptyRuntime, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
+    pub fn create_check_ctx(&mut self) -> RuntimeBatchContext<'_, EmptyRuntime> {
         self.create_ctx_for_runtime(Mode::CheckTx, false)
     }
 
@@ -90,7 +85,7 @@ impl Mock {
         &mut self,
         mode: Mode,
         confidential: bool,
-    ) -> RuntimeBatchContext<'_, R, storage::MKVSStore<&mut dyn mkvs::MKVS>> {
+    ) -> RuntimeBatchContext<'_, R> {
         RuntimeBatchContext::new(
             mode,
             &self.host_info,
@@ -101,7 +96,6 @@ impl Mock {
             },
             &self.runtime_header,
             &self.runtime_round_results,
-            storage::MKVSStore::new(IoContext::background().freeze(), self.mkvs.as_mut()),
             &self.consensus_state,
             &self.history,
             self.epoch,
@@ -112,11 +106,10 @@ impl Mock {
 
     /// Create an instance with the given local configuration.
     pub fn with_local_config(local_config: BTreeMap<String, cbor::Value>) -> Self {
-        let mkvs = mkvs::OverlayTree::new(
-            mkvs::Tree::builder()
-                .with_root_type(mkvs::RootType::State)
-                .build(Box::new(mkvs::sync::NoopReadSyncer)),
-        );
+        // Ensure a current store is always available during tests. Note that one can always use a
+        // different store by calling CurrentStore::enter explicitly.
+        CurrentStore::init_local_fallback();
+
         let consensus_tree = mkvs::Tree::builder()
             .with_root_type(mkvs::RootType::State)
             .build(Box::new(mkvs::sync::NoopReadSyncer));
@@ -131,7 +124,6 @@ impl Mock {
             },
             runtime_header: roothash::Header::default(),
             runtime_round_results: roothash::RoundResults::default(),
-            mkvs: Box::new(mkvs),
             consensus_state: ConsensusState::new(1, consensus_tree),
             history: Box::new(EmptyHistory),
             epoch: 1,
@@ -151,6 +143,16 @@ impl Default for Mock {
         };
         Self::with_local_config(local_config_for_tests)
     }
+}
+
+/// Create an empty MKVS store.
+pub fn empty_store() -> MKVSStore<mkvs::OverlayTree<mkvs::Tree>> {
+    let root = mkvs::OverlayTree::new(
+        mkvs::Tree::builder()
+            .with_root_type(mkvs::RootType::State)
+            .build(Box::new(mkvs::sync::NoopReadSyncer)),
+    );
+    MKVSStore::new(io_context::Context::background().into(), root)
 }
 
 /// Create a new mock transaction.

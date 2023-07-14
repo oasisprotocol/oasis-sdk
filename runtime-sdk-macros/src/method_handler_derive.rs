@@ -120,8 +120,8 @@ pub fn derive_method_handler(impl_block: syn::ItemImpl) -> TokenStream {
 
     let query_parameters_impl = {
         quote! {
-            fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
-                Ok(Self::params(ctx.runtime_state()))
+            fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                Ok(Self::params())
             }
         }
     };
@@ -486,8 +486,8 @@ mod tests {
                             }
                         }
                         impl<C: Cfg> MyModule<C> {
-                            fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
-                                Ok(Self::params(ctx.runtime_state()))
+                            fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                                Ok(Self::params())
                             }
                         }
                     };
@@ -573,8 +573,8 @@ mod tests {
                             }
                         }
                         impl<C: Cfg> MyModule<C> {
-                            fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
-                                Ok(Self::params(ctx.runtime_state()))
+                            fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                                Ok(Self::params())
                             }
                             #[handler(prefetch = "my_module.MyCall")]
                             fn prefetch_for_my_call() {}
@@ -650,11 +650,11 @@ mod tests {
                         }
                         impl<C: Cfg> MyModule<C> {
                             fn query_parameters<C: Context>(
-                                ctx: &mut C,
+                                _ctx: &mut C,
                                 _args: (),
                             ) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error>
                             {
-                                Ok(Self::params(ctx.runtime_state()))
+                                Ok(Self::params())
                             }
                             #[handler(query = RPC_NAME_OF_MY_QUERY)]
                             fn my_query() -> () {}
@@ -707,8 +707,8 @@ mod tests {
                             }
                         }
                         impl<C: Cfg> MyModule<C> {
-                            fn query_parameters<C: Context>(ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
-                                Ok(Self::params(ctx.runtime_state()))
+                            fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                                Ok(Self::params())
                             }
                             #[handler(query = "my_module.MyMC")]
                             fn my_method_call() -> () {}

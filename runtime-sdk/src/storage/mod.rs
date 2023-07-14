@@ -2,6 +2,7 @@
 use oasis_core_runtime::storage::mkvs::Iterator;
 
 pub mod confidential;
+pub mod current;
 mod hashed;
 mod mkvs;
 mod overlay;
@@ -21,6 +22,9 @@ pub trait Store {
 
     /// Returns an iterator over the tree.
     fn iter(&self) -> Box<dyn Iterator + '_>;
+
+    /// Populate the in-memory tree with nodes for keys starting with given prefixes.
+    fn prefetch_prefixes(&mut self, prefixes: Vec<Prefix>, limit: u16);
 }
 
 /// A key-value store that supports the commit operation.
@@ -32,6 +36,9 @@ pub trait NestedStore: Store {
     ///
     /// If this method is not called the changes may be discarded by the store.
     fn commit(self) -> Self::Inner;
+
+    /// Rollback any changes.
+    fn rollback(self) -> Self::Inner;
 
     /// Whether there are any store updates pending to be committed.
     fn has_pending_updates(&self) -> bool;
@@ -53,6 +60,10 @@ impl<S: Store + ?Sized> Store for &mut S {
     fn iter(&self) -> Box<dyn Iterator + '_> {
         S::iter(self)
     }
+
+    fn prefetch_prefixes(&mut self, prefixes: Vec<Prefix>, limit: u16) {
+        S::prefetch_prefixes(self, prefixes, limit)
+    }
 }
 
 impl<S: Store + ?Sized> Store for Box<S> {
@@ -71,9 +82,14 @@ impl<S: Store + ?Sized> Store for Box<S> {
     fn iter(&self) -> Box<dyn Iterator + '_> {
         S::iter(self)
     }
+
+    fn prefetch_prefixes(&mut self, prefixes: Vec<Prefix>, limit: u16) {
+        S::prefetch_prefixes(self, prefixes, limit)
+    }
 }
 
 pub use confidential::{ConfidentialStore, Error as ConfidentialStoreError};
+pub use current::CurrentStore;
 pub use hashed::HashedStore;
 pub use mkvs::MKVSStore;
 pub use overlay::OverlayStore;

@@ -85,13 +85,10 @@ fn test_api_transfer_scaling_unrepresentable() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    Consensus::set_params(
-        ctx.runtime_state(),
-        Parameters {
-            consensus_scaling_factor: 1_000, // Everything is multiplied by 1000.
-            ..Default::default()
-        },
-    );
+    Consensus::set_params(Parameters {
+        consensus_scaling_factor: 1_000, // Everything is multiplied by 1000.
+        ..Default::default()
+    });
 
     ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
@@ -113,13 +110,10 @@ fn test_api_transfer_scaling() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    Consensus::set_params(
-        ctx.runtime_state(),
-        Parameters {
-            consensus_scaling_factor: 1_000, // Everything is multiplied by 1000.
-            ..Default::default()
-        },
-    );
+    Consensus::set_params(Parameters {
+        consensus_scaling_factor: 1_000, // Everything is multiplied by 1000.
+        ..Default::default()
+    });
 
     ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
@@ -202,13 +196,10 @@ fn test_api_withdraw_scaling() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    Consensus::set_params(
-        ctx.runtime_state(),
-        Parameters {
-            consensus_scaling_factor: 1_000, // Everything is multiplied by 1000.
-            ..Default::default()
-        },
-    );
+    Consensus::set_params(Parameters {
+        consensus_scaling_factor: 1_000, // Everything is multiplied by 1000.
+        ..Default::default()
+    });
 
     ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
@@ -290,13 +281,10 @@ fn test_api_escrow_scaling() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    Consensus::set_params(
-        ctx.runtime_state(),
-        Parameters {
-            consensus_scaling_factor: 1_000, // Everything is multiplied by 1000.
-            ..Default::default()
-        },
-    );
+    Consensus::set_params(Parameters {
+        consensus_scaling_factor: 1_000, // Everything is multiplied by 1000.
+        ..Default::default()
+    });
 
     ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
@@ -338,13 +326,10 @@ fn test_api_reclaim_escrow() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    Consensus::set_params(
-        ctx.runtime_state(),
-        Parameters {
-            consensus_scaling_factor: 1_000, // NOTE: Should be ignored for share amounts.
-            ..Default::default()
-        },
-    );
+    Consensus::set_params(Parameters {
+        consensus_scaling_factor: 1_000, // NOTE: Should be ignored for share amounts.
+        ..Default::default()
+    });
 
     ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
@@ -401,13 +386,10 @@ fn test_api_scaling() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    Consensus::set_params(
-        ctx.runtime_state(),
-        Parameters {
-            consensus_scaling_factor: 1_000, // Everything is multiplied by 1000.
-            ..Default::default()
-        },
-    );
+    Consensus::set_params(Parameters {
+        consensus_scaling_factor: 1_000, // Everything is multiplied by 1000.
+        ..Default::default()
+    });
 
     // Not representable.
     Consensus::amount_to_consensus(&mut ctx, 100).unwrap_err();
@@ -449,7 +431,7 @@ fn test_query_parameters() {
         consensus_denomination: Denomination::NATIVE,
         consensus_scaling_factor: 1_000,
     };
-    Consensus::set_params(ctx.runtime_state(), params.clone());
+    Consensus::set_params(params.clone());
 
     let queried_params = Consensus::query_parameters(&mut ctx, ()).unwrap();
     assert_eq!(queried_params, params);

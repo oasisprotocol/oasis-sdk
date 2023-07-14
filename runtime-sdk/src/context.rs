@@ -16,8 +16,6 @@ use oasis_core_runtime::{
     consensus,
     consensus::roothash,
     protocol::HostInfo,
-    storage::mkvs,
-    transaction::context::Context as RuntimeContext,
 };
 
 use crate::{
@@ -28,7 +26,6 @@ use crate::{
     module::MethodHandler as _,
     modules::core::Error,
     runtime,
-    storage::{self, NestedStore, Store},
     types::{address::Address, message::MessageEventHookInvocation, transaction},
 };
 
@@ -84,8 +81,6 @@ const LOCAL_CONFIG_ALLOWED_QUERIES_ALL_EXPENSIVE: &str = "all_expensive";
 pub trait Context {
     /// Runtime that the context is being invoked in.
     type Runtime: runtime::Runtime;
-    /// Runtime state output type.
-    type Store: Store;
 
     /// Returns a logger.
     fn get_logger(&self, module: &'static str) -> slog::Logger;
@@ -223,9 +218,6 @@ pub trait Context {
     /// Results of executing the last successful runtime round.
     fn runtime_round_results(&self) -> &roothash::RoundResults;
 
-    /// Runtime state store.
-    fn runtime_state(&mut self) -> &mut Self::Store;
-
     /// Consensus state.
     fn consensus_state(&self) -> &consensus::state::ConsensusState;
 
@@ -247,8 +239,11 @@ pub trait Context {
     /// Returns a child io_ctx.
     fn io_ctx(&self) -> IoContext;
 
-    /// Commit any changes made to storage, return any emitted tags and runtime messages. It
-    /// consumes the transaction context.
+    /// Return any emitted tags and runtime messages. It consumes the transaction context.
+    ///
+    /// # Storage
+    ///
+    /// This does not commit any storage transaction.
     fn commit(
         self,
     ) -> (
@@ -259,6 +254,10 @@ pub trait Context {
     /// Rollback any changes made by this context. This method only needs to be called explicitly
     /// in case you want to retrieve possibly emitted unconditional events. Simply dropping the
     /// context without calling `commit` will also result in a rollback.
+    ///
+    /// # Storage
+    ///
+    /// This does not rollback any storage transaction.
     fn rollback(self) -> EventTags;
 
     /// Fetches a value entry associated with the context.
@@ -275,21 +274,27 @@ pub trait Context {
     /// Executes a function in a child context with the given mode.
     ///
     /// The context collects its own messages and starts with an empty set of context values.
+    ///
+    /// # Storage
+    ///
+    /// This does not start a new storage transaction. Start a transaction and explicitly commit or
+    /// rollback if you want to discard storage side effects.
     fn with_child<F, Rs>(&mut self, mode: Mode, f: F) -> Rs
     where
-        F: FnOnce(
-            RuntimeBatchContext<'_, Self::Runtime, storage::OverlayStore<&mut dyn Store>>,
-        ) -> Rs;
+        F: FnOnce(RuntimeBatchContext<'_, Self::Runtime>) -> Rs;
 
     /// Executes a function in a simulation context.
     ///
     /// The simulation context collects its own messages and starts with an empty set of context
     /// values.
+    ///
+    /// # Storage
+    ///
+    /// This does not start a new storage transaction. Start a transaction and explicitly commit or
+    /// rollback if you want to discard storage side effects.
     fn with_simulation<F, Rs>(&mut self, f: F) -> Rs
     where
-        F: FnOnce(
-            RuntimeBatchContext<'_, Self::Runtime, storage::OverlayStore<&mut dyn Store>>,
-        ) -> Rs,
+        F: FnOnce(RuntimeBatchContext<'_, Self::Runtime>) -> Rs,
     {
         self.with_child(Mode::SimulateTx, f)
     }
@@ -300,7 +305,6 @@ pub trait Context {
 
 impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
     type Runtime = C::Runtime;
-    type Store = C::Store;
 
     fn get_logger(&self, module: &'static str) -> slog::Logger {
         self.deref().get_logger(module)
@@ -324,10 +328,6 @@ impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
 
     fn runtime_round_results(&self) -> &roothash::RoundResults {
         self.deref().runtime_round_results()
-    }
-
-    fn runtime_state(&mut self) -> &mut Self::Store {
-        self.deref_mut().runtime_state()
     }
 
     fn consensus_state(&self) -> &consensus::state::ConsensusState {
@@ -385,9 +385,7 @@ impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
 
     fn with_child<F, Rs>(&mut self, mode: Mode, f: F) -> Rs
     where
-        F: FnOnce(
-            RuntimeBatchContext<'_, Self::Runtime, storage::OverlayStore<&mut dyn Store>>,
-        ) -> Rs,
+        F: FnOnce(RuntimeBatchContext<'_, Self::Runtime>) -> Rs,
     {
         self.deref_mut().with_child(mode, f)
     }
@@ -408,10 +406,7 @@ pub trait BatchContext: Context {
         f: F,
     ) -> Rs
     where
-        F: FnOnce(
-            RuntimeTxContext<'_, '_, <Self as Context>::Runtime, <Self as Context>::Store>,
-            transaction::Call,
-        ) -> Rs;
+        F: FnOnce(RuntimeTxContext<'_, '_, <Self as Context>::Runtime>, transaction::Call) -> Rs;
 
     /// Emit consensus messages.
     fn emit_messages(
@@ -468,14 +463,13 @@ pub trait TxContext: Context {
 }
 
 /// Dispatch context for the whole batch.
-pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: NestedStore> {
+pub struct RuntimeBatchContext<'a, R: runtime::Runtime> {
     mode: Mode,
 
     host_info: &'a HostInfo,
     key_manager: Option<Box<dyn KeyManager>>,
     runtime_header: &'a roothash::Header,
     runtime_round_results: &'a roothash::RoundResults,
-    runtime_storage: S,
     // TODO: linked consensus layer block
     consensus_state: &'a consensus::state::ConsensusState,
     history: &'a dyn history::HistoryHost,
@@ -503,7 +497,7 @@ pub struct RuntimeBatchContext<'a, R: runtime::Runtime, S: NestedStore> {
     _runtime: PhantomData<R>,
 }
 
-impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
+impl<'a, R: runtime::Runtime> RuntimeBatchContext<'a, R> {
     /// Create a new dispatch context.
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -512,7 +506,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
         key_manager: Option<Box<dyn KeyManager>>,
         runtime_header: &'a roothash::Header,
         runtime_round_results: &'a roothash::RoundResults,
-        runtime_storage: S,
         consensus_state: &'a consensus::state::ConsensusState,
         history: &'a dyn history::HistoryHost,
         epoch: consensus::beacon::EpochTime,
@@ -524,7 +517,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             host_info,
             runtime_header,
             runtime_round_results,
-            runtime_storage,
             consensus_state,
             history,
             epoch,
@@ -541,46 +533,10 @@ impl<'a, R: runtime::Runtime, S: NestedStore> RuntimeBatchContext<'a, R, S> {
             _runtime: PhantomData,
         }
     }
-
-    /// Create a new dispatch context from the low-level runtime context.
-    pub(crate) fn from_runtime(
-        ctx: &'a mut RuntimeContext<'_>,
-        host_info: &'a HostInfo,
-        key_manager: Option<Box<dyn KeyManager>>,
-        history: &'a dyn history::HistoryHost,
-    ) -> RuntimeBatchContext<'a, R, storage::MKVSStore<&'a mut dyn mkvs::MKVS>> {
-        let mode = if ctx.check_only {
-            Mode::CheckTx
-        } else {
-            Mode::ExecuteTx
-        };
-        RuntimeBatchContext {
-            mode,
-            host_info,
-            key_manager,
-            runtime_header: ctx.header,
-            runtime_round_results: ctx.round_results,
-            runtime_storage: storage::MKVSStore::new(ctx.io_ctx.clone(), ctx.runtime_state),
-            consensus_state: &ctx.consensus_state,
-            history,
-            epoch: ctx.epoch,
-            io_ctx: ctx.io_ctx.clone(),
-            logger: get_logger("runtime-sdk")
-                .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
-            internal: false,
-            block_etags: EventTags::new(),
-            max_messages: ctx.max_messages,
-            messages: Vec::new(),
-            values: BTreeMap::new(),
-            rng: Default::default(),
-            _runtime: PhantomData,
-        }
-    }
 }
 
-impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a, R, S> {
+impl<'a, R: runtime::Runtime> Context for RuntimeBatchContext<'a, R> {
     type Runtime = R;
-    type Store = S;
 
     fn get_logger(&self, module: &'static str) -> slog::Logger {
         self.logger.new(o!("sdk_module" => module))
@@ -604,10 +560,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
 
     fn runtime_round_results(&self) -> &roothash::RoundResults {
         self.runtime_round_results
-    }
-
-    fn runtime_state(&mut self) -> &mut Self::Store {
-        &mut self.runtime_storage
     }
 
     fn consensus_state(&self) -> &consensus::state::ConsensusState {
@@ -650,7 +602,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
         EventTags,
         Vec<(roothash::Message, MessageEventHookInvocation)>,
     ) {
-        self.runtime_storage.commit();
         (self.block_etags, self.messages)
     }
 
@@ -677,13 +628,9 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
 
     fn with_child<F, Rs>(&mut self, mode: Mode, f: F) -> Rs
     where
-        F: FnOnce(
-            RuntimeBatchContext<'_, Self::Runtime, storage::OverlayStore<&mut dyn Store>>,
-        ) -> Rs,
+        F: FnOnce(RuntimeBatchContext<'_, Self::Runtime>) -> Rs,
     {
         let remaining_messages = self.remaining_messages();
-        // Create a store wrapped by an overlay store so any state changes don't leak.
-        let store = storage::OverlayStore::new((&mut self.runtime_storage) as &mut dyn Store);
 
         let child_ctx = RuntimeBatchContext {
             mode,
@@ -691,7 +638,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
             key_manager: self.key_manager.clone(),
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
-            runtime_storage: store,
             consensus_state: self.consensus_state,
             history: self.history,
             epoch: self.epoch,
@@ -721,7 +667,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> Context for RuntimeBatchContext<'a
     }
 }
 
-impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchContext<'a, R, S> {
+impl<'a, R: runtime::Runtime> BatchContext for RuntimeBatchContext<'a, R> {
     fn with_tx<F, Rs>(
         &mut self,
         tx_index: usize,
@@ -730,14 +676,9 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
         f: F,
     ) -> Rs
     where
-        F: FnOnce(
-            RuntimeTxContext<'_, '_, <Self as Context>::Runtime, <Self as Context>::Store>,
-            transaction::Call,
-        ) -> Rs,
+        F: FnOnce(RuntimeTxContext<'_, '_, <Self as Context>::Runtime>, transaction::Call) -> Rs,
     {
         let remaining_messages = self.remaining_messages();
-        // Create a store wrapped by an overlay store so we can either rollback or commit.
-        let store = storage::OverlayStore::new(&mut self.runtime_storage);
 
         let tx_ctx = RuntimeTxContext {
             mode: self.mode,
@@ -748,7 +689,6 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
             consensus_state: self.consensus_state,
             history: self.history,
             epoch: self.epoch,
-            store,
             io_ctx: self.io_ctx.clone(),
             logger: self
                 .logger
@@ -786,7 +726,7 @@ impl<'a, R: runtime::Runtime, S: NestedStore> BatchContext for RuntimeBatchConte
 }
 
 /// Per-transaction/method dispatch sub-context.
-pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
+pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime> {
     mode: Mode,
 
     host_info: &'round HostInfo,
@@ -797,7 +737,6 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
     history: &'round dyn history::HistoryHost,
     epoch: consensus::beacon::EpochTime,
     // TODO: linked consensus layer block
-    store: storage::OverlayStore<&'store mut S>,
     io_ctx: Arc<IoContext>,
     logger: slog::Logger,
 
@@ -837,11 +776,8 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime, S: Store> {
     _runtime: PhantomData<R>,
 }
 
-impl<'round, 'store, R: runtime::Runtime, S: Store> Context
-    for RuntimeTxContext<'round, 'store, R, S>
-{
+impl<'round, 'store, R: runtime::Runtime> Context for RuntimeTxContext<'round, 'store, R> {
     type Runtime = R;
-    type Store = storage::OverlayStore<&'store mut S>;
 
     fn get_logger(&self, module: &'static str) -> slog::Logger {
         self.logger.new(o!("sdk_module" => module))
@@ -865,10 +801,6 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
 
     fn runtime_round_results(&self) -> &roothash::RoundResults {
         self.runtime_round_results
-    }
-
-    fn runtime_state(&mut self) -> &mut Self::Store {
-        &mut self.store
     }
 
     fn consensus_state(&self) -> &consensus::state::ConsensusState {
@@ -917,7 +849,6 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
             tag.extend(val)
         }
 
-        self.store.commit();
         (self.etags, self.messages)
     }
 
@@ -944,13 +875,9 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
 
     fn with_child<F, Rs>(&mut self, mode: Mode, f: F) -> Rs
     where
-        F: FnOnce(
-            RuntimeBatchContext<'_, Self::Runtime, storage::OverlayStore<&mut dyn Store>>,
-        ) -> Rs,
+        F: FnOnce(RuntimeBatchContext<'_, Self::Runtime>) -> Rs,
     {
         let remaining_messages = self.remaining_messages();
-        // Create a store wrapped by an overlay store so any state changes don't leak.
-        let store = storage::OverlayStore::new((&mut self.store) as &mut dyn Store);
 
         let child_ctx = RuntimeBatchContext {
             mode,
@@ -958,7 +885,6 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
             key_manager: self.key_manager.clone(),
             runtime_header: self.runtime_header,
             runtime_round_results: self.runtime_round_results,
-            runtime_storage: store,
             consensus_state: self.consensus_state,
             history: self.history,
             epoch: self.epoch,
@@ -988,7 +914,7 @@ impl<'round, 'store, R: runtime::Runtime, S: Store> Context
     }
 }
 
-impl<R: runtime::Runtime, S: Store> TxContext for RuntimeTxContext<'_, '_, R, S> {
+impl<R: runtime::Runtime> TxContext for RuntimeTxContext<'_, '_, R> {
     fn tx_index(&self) -> usize {
         self.tx_index
     }

@@ -175,8 +175,7 @@ fn test_hello_contract_call() {
         deploy_hello_contract(&mut ctx, vec![BaseUnits::new(1_000, Denomination::NATIVE)]);
 
     // Check caller account balances.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::alice::address())
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(keys::alice::address()).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         999_000, // -1_000
@@ -189,11 +188,8 @@ fn test_hello_contract_call() {
     );
 
     // Check contract account balances.
-    let bals = Accounts::get_balances(
-        ctx.runtime_state(),
-        types::Instance::address_for(instance_id),
-    )
-    .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(types::Instance::address_for(instance_id))
+        .expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         1_000, // +1_000
@@ -252,8 +248,8 @@ fn test_hello_contract_call() {
         );
 
         // Check caller account balances.
-        let bals = Accounts::get_balances(tx_ctx.runtime_state(), keys::alice::address())
-            .expect("get_balances should succeed");
+        let bals =
+            Accounts::get_balances(keys::alice::address()).expect("get_balances should succeed");
         assert_eq!(
             bals.balances[&Denomination::NATIVE],
             997_000, // -2_000
@@ -266,11 +262,8 @@ fn test_hello_contract_call() {
         );
 
         // Check contract account balances.
-        let bals = Accounts::get_balances(
-            tx_ctx.runtime_state(),
-            types::Instance::address_for(instance_id),
-        )
-        .expect("get_balances should succeed");
+        let bals = Accounts::get_balances(types::Instance::address_for(instance_id))
+            .expect("get_balances should succeed");
         assert_eq!(
             bals.balances[&Denomination::NATIVE],
             3_000, // +2_000
@@ -349,8 +342,8 @@ fn test_hello_contract_call() {
         );
 
         // Check caller account balances.
-        let bals = Accounts::get_balances(tx_ctx.runtime_state(), keys::alice::address())
-            .expect("get_balances should succeed");
+        let bals =
+            Accounts::get_balances(keys::alice::address()).expect("get_balances should succeed");
         assert_eq!(
             bals.balances[&Denomination::NATIVE],
             997_000, // No change.
@@ -363,11 +356,8 @@ fn test_hello_contract_call() {
         );
 
         // Check contract account balances.
-        let bals = Accounts::get_balances(
-            tx_ctx.runtime_state(),
-            types::Instance::address_for(instance_id),
-        )
-        .expect("get_balances should succeed");
+        let bals = Accounts::get_balances(types::Instance::address_for(instance_id))
+            .expect("get_balances should succeed");
         assert_eq!(
             bals.balances[&Denomination::NATIVE],
             3_000, // No change.

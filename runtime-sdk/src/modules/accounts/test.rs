@@ -355,8 +355,8 @@ fn test_api_transfer() {
         assert!(matches!(result, Err(Error::InsufficientBalance)));
 
         // Check source account balances.
-        let bals = Accounts::get_balances(tx_ctx.runtime_state(), keys::alice::address())
-            .expect("get_balances should succeed");
+        let bals =
+            Accounts::get_balances(keys::alice::address()).expect("get_balances should succeed");
         assert_eq!(
             bals.balances[&Denomination::NATIVE],
             999_000,
@@ -369,20 +369,16 @@ fn test_api_transfer() {
         );
 
         // Check source account balance.
-        let balance = Accounts::get_balance(
-            tx_ctx.runtime_state(),
-            keys::alice::address(),
-            Denomination::NATIVE,
-        )
-        .expect("get_balance should succeed");
+        let balance = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
+            .expect("get_balance should succeed");
         assert_eq!(
             balance, 999_000,
             "balance in source account should be correct"
         );
 
         // Check destination account balances.
-        let bals = Accounts::get_balances(tx_ctx.runtime_state(), keys::bob::address())
-            .expect("get_balances should succeed");
+        let bals =
+            Accounts::get_balances(keys::bob::address()).expect("get_balances should succeed");
         assert_eq!(
             bals.balances[&Denomination::NATIVE],
             1_000,
@@ -431,8 +427,7 @@ fn test_authenticate_tx() {
     // Should succeed with enough funds to pay for fees.
     Accounts::authenticate_tx(&mut ctx, &tx).expect("transaction authentication should succeed");
     // Check source account balances.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::alice::address())
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(keys::alice::address()).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         999_000,
@@ -444,8 +439,7 @@ fn test_authenticate_tx() {
         "there should only be one denomination"
     );
     // Check source account nonce.
-    let nonce = Accounts::get_nonce(ctx.runtime_state(), keys::alice::address())
-        .expect("get_nonce should succeed");
+    let nonce = Accounts::get_nonce(keys::alice::address()).expect("get_nonce should succeed");
     assert_eq!(nonce, 1, "nonce should be incremented");
     // Check priority.
     let priority = core::Module::<mock::Config>::take_priority(&mut ctx);
@@ -500,8 +494,8 @@ fn test_tx_transfer() {
             .expect("transfer should succeed");
 
         // Check source account balances.
-        let bals = Accounts::get_balances(tx_ctx.runtime_state(), keys::alice::address())
-            .expect("get_balances should succeed");
+        let bals =
+            Accounts::get_balances(keys::alice::address()).expect("get_balances should succeed");
         assert_eq!(
             bals.balances[&Denomination::NATIVE],
             999_000,
@@ -514,8 +508,8 @@ fn test_tx_transfer() {
         );
 
         // Check destination account balances.
-        let bals = Accounts::get_balances(tx_ctx.runtime_state(), keys::bob::address())
-            .expect("get_balances should succeed");
+        let bals =
+            Accounts::get_balances(keys::bob::address()).expect("get_balances should succeed");
         assert_eq!(
             bals.balances[&Denomination::NATIVE],
             1_000,
@@ -585,25 +579,23 @@ fn test_fee_disbursement() {
     Accounts::end_block(&mut ctx);
 
     // Check source account balances.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::alice::address())
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(keys::alice::address()).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         998_999,
         "fees should be subtracted from source account"
     );
     // Nothing should be disbursed yet to good compute entity accounts.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::bob::address())
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(keys::bob::address()).expect("get_balances should succeed");
     assert!(bals.balances.is_empty(), "nothing should be disbursed yet");
     // Check second good compute entity account balances.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::charlie::address())
-        .expect("get_balances should succeed");
+    let bals =
+        Accounts::get_balances(keys::charlie::address()).expect("get_balances should succeed");
     assert!(bals.balances.is_empty(), "nothing should be disbursed yet");
 
     // Fees should be placed in the fee accumulator address to be disbursed in the next round.
-    let bals = Accounts::get_balances(ctx.runtime_state(), *ADDRESS_FEE_ACCUMULATOR)
-        .expect("get_balances should succeed");
+    let bals =
+        Accounts::get_balances(*ADDRESS_FEE_ACCUMULATOR).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         1001,
@@ -614,8 +606,8 @@ fn test_fee_disbursement() {
     Accounts::end_block(&mut ctx);
 
     // Fees should be removed from the fee accumulator address.
-    let bals = Accounts::get_balances(ctx.runtime_state(), *ADDRESS_FEE_ACCUMULATOR)
-        .expect("get_balances should succeed");
+    let bals =
+        Accounts::get_balances(*ADDRESS_FEE_ACCUMULATOR).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         0,
@@ -623,16 +615,15 @@ fn test_fee_disbursement() {
     );
 
     // Check first good compute entity account balances.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::bob::address())
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(keys::bob::address()).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         500,
         "fees should be disbursed to good compute entity"
     );
     // Check second good compute entity account balances.
-    let bals = Accounts::get_balances(ctx.runtime_state(), keys::charlie::address())
-        .expect("get_balances should succeed");
+    let bals =
+        Accounts::get_balances(keys::charlie::address()).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         500,
@@ -640,8 +631,7 @@ fn test_fee_disbursement() {
     );
 
     // Check the common pool which should have the remainder.
-    let bals = Accounts::get_balances(ctx.runtime_state(), *ADDRESS_COMMON_POOL)
-        .expect("get_balances should succeed");
+    let bals = Accounts::get_balances(*ADDRESS_COMMON_POOL).expect("get_balances should succeed");
     assert_eq!(
         bals.balances[&Denomination::NATIVE],
         1,
@@ -751,8 +741,7 @@ fn test_get_all_balances_and_total_supplies_basic() {
 
     Accounts::init(&mut ctx, gen);
 
-    let all_bals =
-        Accounts::get_all_balances(ctx.runtime_state()).expect("get_all_balances should succeed");
+    let all_bals = Accounts::get_all_balances().expect("get_all_balances should succeed");
     for (addr, bals) in &all_bals {
         assert_eq!(bals.len(), 1, "exactly one denomination should be present");
         assert!(
@@ -776,8 +765,7 @@ fn test_get_all_balances_and_total_supplies_basic() {
         }
     }
 
-    let ts = Accounts::get_total_supplies(ctx.runtime_state())
-        .expect("get_total_supplies should succeed");
+    let ts = Accounts::get_total_supplies().expect("get_total_supplies should succeed");
     assert_eq!(
         ts.len(),
         1,
@@ -840,8 +828,7 @@ fn test_get_all_balances_and_total_supplies_more() {
 
     Accounts::init(&mut ctx, gen);
 
-    let all_bals =
-        Accounts::get_all_balances(ctx.runtime_state()).expect("get_all_balances should succeed");
+    let all_bals = Accounts::get_all_balances().expect("get_all_balances should succeed");
     for (addr, bals) in &all_bals {
         if addr == &alice {
             assert_eq!(bals.len(), 3, "Alice should have exactly 3 denominations");
@@ -860,8 +847,7 @@ fn test_get_all_balances_and_total_supplies_more() {
         }
     }
 
-    let ts = Accounts::get_total_supplies(ctx.runtime_state())
-        .expect("get_total_supplies should succeed");
+    let ts = Accounts::get_total_supplies().expect("get_total_supplies should succeed");
     assert_eq!(
         ts.len(),
         4,
@@ -954,12 +940,7 @@ fn test_check_invariants_more() {
     );
 
     assert!(
-        Accounts::add_amount(
-            ctx.runtime_state(),
-            charlie,
-            &BaseUnits::new(100, d1.clone())
-        )
-        .is_ok(),
+        Accounts::add_amount(charlie, &BaseUnits::new(100, d1.clone())).is_ok(),
         "giving Charlie money should succeed"
     );
     assert!(
@@ -968,7 +949,7 @@ fn test_check_invariants_more() {
     );
 
     assert!(
-        Accounts::inc_total_supply(ctx.runtime_state(), &BaseUnits::new(100, d1)).is_ok(),
+        Accounts::inc_total_supply(&BaseUnits::new(100, d1)).is_ok(),
         "increasing total supply should succeed"
     );
     assert!(
@@ -979,12 +960,7 @@ fn test_check_invariants_more() {
     let d4: Denomination = "den4".parse().unwrap();
 
     assert!(
-        Accounts::add_amount(
-            ctx.runtime_state(),
-            charlie,
-            &BaseUnits::new(300, d4.clone())
-        )
-        .is_ok(),
+        Accounts::add_amount(charlie, &BaseUnits::new(300, d4.clone())).is_ok(),
         "giving Charlie more money should succeed"
     );
     assert!(
@@ -993,7 +969,7 @@ fn test_check_invariants_more() {
     );
 
     assert!(
-        Accounts::inc_total_supply(ctx.runtime_state(), &BaseUnits::new(300, d4)).is_ok(),
+        Accounts::inc_total_supply(&BaseUnits::new(300, d4)).is_ok(),
         "increasing total supply should succeed"
     );
     assert!(
@@ -1004,7 +980,7 @@ fn test_check_invariants_more() {
     let d5: Denomination = "den5".parse().unwrap();
 
     assert!(
-        Accounts::inc_total_supply(ctx.runtime_state(), &BaseUnits::new(123, d5.clone())).is_ok(),
+        Accounts::inc_total_supply(&BaseUnits::new(123, d5.clone())).is_ok(),
         "increasing total supply should succeed"
     );
     assert!(
@@ -1013,7 +989,7 @@ fn test_check_invariants_more() {
     );
 
     assert!(
-        Accounts::add_amount(ctx.runtime_state(), charlie, &BaseUnits::new(123, d5)).is_ok(),
+        Accounts::add_amount(charlie, &BaseUnits::new(123, d5)).is_ok(),
         "giving Charlie more money should succeed"
     );
     assert!(
@@ -1038,12 +1014,8 @@ fn test_fee_acc() {
         )
         .expect("charge tx fee should succeed");
 
-        let ab = Accounts::get_balance(
-            tx_ctx.runtime_state(),
-            keys::alice::address(),
-            Denomination::NATIVE,
-        )
-        .expect("get_balance should succeed");
+        let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
+            .expect("get_balance should succeed");
         assert_eq!(ab, 999_000, "balance in source account should be correct");
 
         Accounts::return_tx_fee(
@@ -1053,12 +1025,8 @@ fn test_fee_acc() {
         )
         .expect("return tx fee should succeed");
 
-        let ab = Accounts::get_balance(
-            tx_ctx.runtime_state(),
-            keys::alice::address(),
-            Denomination::NATIVE,
-        )
-        .expect("get_balance should succeed");
+        let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
+            .expect("get_balance should succeed");
         assert_eq!(ab, 1_000_000, "balance in source account should be correct");
     });
 }
@@ -1081,12 +1049,8 @@ fn test_fee_acc_sim() {
             )
             .expect("charge tx fee should succeed");
 
-            let ab = Accounts::get_balance(
-                tx_ctx.runtime_state(),
-                keys::alice::address(),
-                Denomination::NATIVE,
-            )
-            .expect("get_balance should succeed");
+            let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
+                .expect("get_balance should succeed");
             assert_eq!(ab, 1_000_000, "balance in source account should be correct");
 
             Accounts::return_tx_fee(
@@ -1096,12 +1060,8 @@ fn test_fee_acc_sim() {
             )
             .expect("return tx fee should succeed");
 
-            let ab = Accounts::get_balance(
-                tx_ctx.runtime_state(),
-                keys::alice::address(),
-                Denomination::NATIVE,
-            )
-            .expect("get_balance should succeed");
+            let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
+                .expect("get_balance should succeed");
             assert_eq!(ab, 1_000_000, "balance in source account should be correct");
         });
     });
@@ -1114,12 +1074,12 @@ fn test_get_set_nonce() {
 
     init_accounts(&mut ctx);
 
-    let nonce = Accounts::get_nonce(ctx.runtime_state(), keys::alice::address()).unwrap();
+    let nonce = Accounts::get_nonce(keys::alice::address()).unwrap();
     assert_eq!(nonce, 0);
 
-    Accounts::set_nonce(ctx.runtime_state(), keys::alice::address(), 2);
+    Accounts::set_nonce(keys::alice::address(), 2);
 
-    let nonce = Accounts::get_nonce(ctx.runtime_state(), keys::alice::address()).unwrap();
+    let nonce = Accounts::get_nonce(keys::alice::address()).unwrap();
     assert_eq!(nonce, 2);
 }
 
@@ -1130,26 +1090,15 @@ fn test_get_set_balance() {
 
     init_accounts(&mut ctx);
 
-    let balance = Accounts::get_balance(
-        ctx.runtime_state(),
-        keys::alice::address(),
-        Denomination::NATIVE,
-    )
-    .unwrap();
+    let balance = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE).unwrap();
     assert_eq!(balance, 1_000_000);
 
     Accounts::set_balance(
-        ctx.runtime_state(),
         keys::alice::address(),
         &BaseUnits::new(500_000, Denomination::NATIVE),
     );
 
-    let balance = Accounts::get_balance(
-        ctx.runtime_state(),
-        keys::alice::address(),
-        Denomination::NATIVE,
-    )
-    .unwrap();
+    let balance = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE).unwrap();
     assert_eq!(balance, 500_000);
 }
 
@@ -1160,8 +1109,7 @@ fn test_get_set_total_supply() {
 
     init_accounts(&mut ctx);
 
-    let ts = Accounts::get_total_supplies(ctx.runtime_state())
-        .expect("get_total_supplies should succeed");
+    let ts = Accounts::get_total_supplies().expect("get_total_supplies should succeed");
     assert_eq!(
         ts.len(),
         1,
@@ -1178,13 +1126,9 @@ fn test_get_set_total_supply() {
     );
 
     // Set total supply to 2m, note that this violates invariants.
-    Accounts::set_total_supply(
-        ctx.runtime_state(),
-        &BaseUnits::new(2_000_000, Denomination::NATIVE),
-    );
+    Accounts::set_total_supply(&BaseUnits::new(2_000_000, Denomination::NATIVE));
 
-    let ts = Accounts::get_total_supplies(ctx.runtime_state())
-        .expect("get_total_supplies should succeed");
+    let ts = Accounts::get_total_supplies().expect("get_total_supplies should succeed");
     assert_eq!(
         ts.len(),
         1,
