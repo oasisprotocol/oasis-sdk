@@ -66,7 +66,7 @@ type RunTestFunction func(*RuntimeScenario, *logging.Logger, *grpc.ClientConn, c
 
 // RuntimeScenario is a base class for e2e test scenarios involving runtimes.
 type RuntimeScenario struct {
-	e2e.E2E
+	e2e.Scenario
 
 	// RuntimeName is the name of the runtime binary.
 	RuntimeName string
@@ -81,7 +81,7 @@ type RuntimeScenario struct {
 // runtime and test functions.
 func NewRuntimeScenario(runtimeName string, tests []RunTestFunction) *RuntimeScenario {
 	sc := &RuntimeScenario{
-		E2E:         *e2e.NewE2E(runtimeName),
+		Scenario:    *e2e.NewScenario(runtimeName),
 		RuntimeName: runtimeName,
 		RunTest:     tests,
 	}
@@ -96,7 +96,7 @@ func NewRuntimeScenario(runtimeName string, tests []RunTestFunction) *RuntimeSce
 
 func (sc *RuntimeScenario) Clone() scenario.Scenario {
 	return &RuntimeScenario{
-		E2E:         sc.E2E.Clone(),
+		Scenario:    sc.Scenario.Clone(),
 		RuntimeName: sc.RuntimeName,
 		RunTest:     append(make([]RunTestFunction, 0, len(sc.RunTest)), sc.RunTest...),
 	}
@@ -107,7 +107,7 @@ func (sc *RuntimeScenario) PreInit(childEnv *env.Env) error {
 }
 
 func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
-	f, err := sc.E2E.Fixture()
+	f, err := sc.Scenario.Fixture()
 	if err != nil {
 		return nil, err
 	}

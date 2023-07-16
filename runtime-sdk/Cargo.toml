@@ -7,8 +7,8 @@ license = "Apache-2.0"
 
 [dependencies]
 cbor = { version = "0.5.1", package = "oasis-cbor" }
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v22.2.5" }
-oasis-core-keymanager = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v22.2.5" }
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v22.2.9" }
+oasis-core-keymanager = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v22.2.9" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
@@ -38,6 +38,9 @@ tiny-keccak = { version = "2.0", features = ["tuple_hash"] }
 tokio = { version = "~1.24.1", features = ["rt"] }
 zeroize = "1.4"
 lru = "0.8.0"
+
+# TODO: Remove this once broken version 0.3.6 is yanked upstream (https://github.com/fortanix/rust-sgx/issues/497).
+dcap-ql = { version = ">=0.3.4, <0.3.6", default-features = false, features = ["verify"] }
 
 [dev-dependencies]
 blake3 = { version = "1.3.1", features = ["traits-preview"] }
