@@ -1,3 +1,4 @@
+//! Implements the standard precompiles as defined in the EVM specification.
 use std::{
     cmp::{max, min, Ordering},
     convert::TryFrom,
@@ -295,7 +296,7 @@ fn calculate_modexp_gas_cost(
 
 #[cfg(test)]
 mod test {
-    use super::{super::test::*, *};
+    use super::{super::testing::*, *};
     // The following test data is from "go-ethereum/core/vm/contracts_test.go"
 
     #[test]

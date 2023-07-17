@@ -91,6 +91,7 @@ impl<'a> PrecompileHandle for MockPrecompileHandle<'a> {
     }
 }
 
+#[doc(hidden)]
 pub fn call_contract(address: H160, input: &[u8], gas_limit: u64) -> Option<PrecompileResult> {
     let context: Context = Context {
         address: Default::default(),
