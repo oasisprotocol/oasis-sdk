@@ -29,25 +29,25 @@ pub(super) fn call_ecrecover(handle: &mut impl PrecompileHandle) -> PrecompileRe
 
     // Make right padding for input.
     let input = handle.input();
-    let mut padding = [0u8; 128];
-    padding[..min(input.len(), 128)].copy_from_slice(&input[..min(input.len(), 128)]);
 
+    // Input encoded as [hash, v, r, s].
     let mut msg = [0u8; 32];
+    let mut padding = [0u8; 32];
     let mut sig = [0u8; 65];
 
-    // input encoded as [hash, v, r, s]
-    msg.copy_from_slice(&padding[0..32]);
-    sig[0..64].copy_from_slice(&padding[64..]);
+    read_input(input, &mut msg, 0);
+    read_input(input, &mut padding, 32);
+    read_input(input, &mut sig[..64], 64);
 
     // Check EIP-155
-    if padding[63] > 26 {
-        sig[64] = padding[63] - 27;
+    if padding[31] > 26 {
+        sig[64] = padding[31] - 27;
     } else {
-        sig[64] = padding[63];
+        sig[64] = padding[31];
     }
 
-    // Ensure bytes 32..63 are all zero.
-    if padding[32..63] != [0; 31] {
+    // Ensure input bytes 32..63 are all zero.
+    if padding[..31] != [0; 31] {
         return Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
             output: vec![],
@@ -292,6 +292,16 @@ fn calculate_modexp_gas_cost(
     );
 
     Ok(gas)
+}
+
+/// Copies bytes from source to target.
+fn read_input(source: &[u8], target: &mut [u8], offset: usize) {
+    if source.len() <= offset {
+        return;
+    }
+
+    let len = min(target.len(), source.len() - offset);
+    target[..len].copy_from_slice(&source[offset..offset + len]);
 }
 
 #[cfg(test)]
