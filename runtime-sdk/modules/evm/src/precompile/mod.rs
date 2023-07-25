@@ -87,6 +87,9 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             (0, 0, 3) => standard::call_ripemd160(handle),
             (0, 0, 4) => standard::call_datacopy(handle),
             (0, 0, 5) => standard::call_bigmodexp(handle),
+            (0, 0, 6) => standard::call_bn128_add(handle),
+            (0, 0, 7) => standard::call_bn128_mul(handle),
+            (0, 0, 8) => standard::call_bn128_pairing(handle),
             // Confidential precompiles.
             (1, 0, 1) => confidential::call_random_bytes(handle, self.backend),
             (1, 0, 2) => confidential::call_x25519_derive(handle),
@@ -109,7 +112,7 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             && matches!(
                 (a0, a18, a19, Cfg::CONFIDENTIAL),
                 // Standard.
-                (0, 0, 1..=5, _) |
+                (0, 0, 1..=8, _) |
                 // Confidential.
                 (1, 0, 1..=8, true) |
                 // Other.

@@ -3,6 +3,8 @@
 #![feature(array_chunks)]
 #![feature(test)]
 
+extern crate substrate_bn as bn;
+
 pub mod backend;
 pub mod derive_caller;
 pub mod precompile;
