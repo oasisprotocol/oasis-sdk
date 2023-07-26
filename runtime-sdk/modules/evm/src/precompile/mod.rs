@@ -1,6 +1,6 @@
 //! EVM precompiles.
 
-use std::marker::PhantomData;
+use std::{cmp::min, marker::PhantomData};
 
 use evm::{
     executor::stack::{PrecompileFailure, PrecompileHandle, PrecompileOutput, PrecompileSet},
@@ -58,6 +58,16 @@ fn record_multilinear_cost(
     let cost = ensure_gas!(cost.checked_add(by));
     handle.record_cost(cost)?;
     Ok(())
+}
+
+/// Copies bytes from source to target.
+fn read_input(source: &[u8], target: &mut [u8], offset: usize) {
+    if source.len() <= offset {
+        return;
+    }
+
+    let len = min(target.len(), source.len() - offset);
+    target[..len].copy_from_slice(&source[offset..offset + len]);
 }
 
 pub(crate) struct Precompiles<'a, Cfg: Config, B: EVMBackendExt> {
