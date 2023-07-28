@@ -303,7 +303,7 @@ fn test_validate_and_transform() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
     let params = Parameters::default();
-    ctx.with_tx(0, 0, mock::transaction(), |ctx, _| {
+    ctx.with_tx(mock::transaction().into(), |ctx, _| {
         test::<ContractsConfig, _>(ctx, &params);
     });
 }
@@ -331,7 +331,7 @@ fn run_contract_with_defaults(
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = gas_limit;
 
-    ctx.with_tx(0, 0, tx, |mut ctx, _| -> Result<cbor::Value, Error> {
+    ctx.with_tx(tx.into(), |mut ctx, _| -> Result<cbor::Value, Error> {
         fn transform<C: TxContext>(
             _ctx: &mut C,
             code: &[u8],

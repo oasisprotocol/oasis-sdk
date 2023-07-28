@@ -26,7 +26,8 @@ use oasis_core_runtime::{
 
 use crate::{
     callformat,
-    context::{BatchContext, Context, Mode, RuntimeBatchContext, TxContext},
+    context::{BatchContext, Context, Mode, RuntimeBatchContext, TransactionWithMeta, TxContext},
+    crypto::random::RootRng,
     error::{Error as _, RuntimeError},
     event::IntoTags,
     keymanager::{KeyManagerClient, KeyManagerError},
@@ -114,6 +115,8 @@ pub struct DispatchOptions<'a> {
     pub tx_size: u32,
     /// Transaction index within the batch.
     pub tx_index: usize,
+    /// Transaction hash.
+    pub tx_hash: Hash,
     /// Optionally only allow methods for which the provided authorizer closure returns true.
     pub method_authorizer: Option<&'a dyn Fn(&str) -> bool>,
     /// Optionally skip authentication.
@@ -270,52 +273,61 @@ impl<R: Runtime> Dispatcher<R> {
         let is_read_only = tx.call.read_only;
 
         let (result, messages) = CurrentStore::with_transaction(|| {
-            ctx.with_tx(opts.tx_index, opts.tx_size, tx, |mut ctx, call| {
-                let (result, call_format_metadata) = Self::dispatch_tx_call(&mut ctx, call, opts);
-                if !result.is_success() || is_read_only {
-                    // Retrieve unconditional events by doing an explicit rollback.
-                    let etags = ctx.rollback();
+            ctx.with_tx(
+                TransactionWithMeta {
+                    tx,
+                    tx_size: opts.tx_size,
+                    tx_index: opts.tx_index,
+                    tx_hash: opts.tx_hash,
+                },
+                |mut ctx, call| {
+                    let (result, call_format_metadata) =
+                        Self::dispatch_tx_call(&mut ctx, call, opts);
+                    if !result.is_success() || is_read_only {
+                        // Retrieve unconditional events by doing an explicit rollback.
+                        let etags = ctx.rollback();
 
-                    return TransactionResult::Rollback((
-                        DispatchResult::new(result, etags.into_tags(), call_format_metadata),
-                        Vec::new(),
-                    ));
-                }
+                        return TransactionResult::Rollback((
+                            DispatchResult::new(result, etags.into_tags(), call_format_metadata),
+                            Vec::new(),
+                        ));
+                    }
 
-                // Load priority.
-                let priority = R::Core::take_priority(&mut ctx);
-                // Load sender metadata.
-                let sender_metadata = R::Core::take_sender_meta(&mut ctx);
+                    // Load priority.
+                    let priority = R::Core::take_priority(&mut ctx);
+                    // Load sender metadata.
+                    let sender_metadata = R::Core::take_sender_meta(&mut ctx);
 
-                if ctx.is_check_only() {
-                    // Rollback state during checks.
-                    ctx.rollback();
+                    if ctx.is_check_only() {
+                        // Rollback state during checks.
+                        ctx.rollback();
 
-                    TransactionResult::Rollback((
-                        DispatchResult {
-                            result,
-                            tags: Vec::new(),
-                            priority,
-                            sender_metadata,
-                            call_format_metadata,
-                        },
-                        Vec::new(),
-                    ))
-                } else {
-                    // Commit store and return emitted tags and messages.
-                    let state = ctx.commit();
-                    TransactionResult::Commit((
-                        DispatchResult {
-                            result,
-                            tags: state.events.into_tags(),
-                            priority,
-                            sender_metadata,
-                            call_format_metadata,
-                        },
-                        state.messages,
-                    ))
-                }
-            })
+                        TransactionResult::Rollback((
+                            DispatchResult {
+                                result,
+                                tags: Vec::new(),
+                                priority,
+                                sender_metadata,
+                                call_format_metadata,
+                            },
+                            Vec::new(),
+                        ))
+                    } else {
+                        // Commit store and return emitted tags and messages.
+                        let state = ctx.commit();
+                        TransactionResult::Commit((
+                            DispatchResult {
+                                result,
+                                tags: state.events.into_tags(),
+                                priority,
+                                sender_metadata,
+                                call_format_metadata,
+                            },
+                            state.messages,
+                        ))
+                    }
+                },
+            )
         });
 
         // Run after dispatch hooks.
@@ -410,6 +422,7 @@ impl<R: Runtime> Dispatcher<R> {
     pub fn execute_tx<C: BatchContext>(
         ctx: &mut C,
         tx_size: u32,
+        tx_hash: Hash,
         tx: Transaction,
         tx_index: usize,
     ) -> Result<ExecuteTxResult, Error> {
@@ -419,6 +432,7 @@ impl<R: Runtime> Dispatcher<R> {
             &DispatchOptions {
                 tx_size,
                 tx_index,
+                tx_hash,
                 ..Default::default()
             },
         )?;
@@ -536,14 +550,11 @@ impl<R: Runtime> Dispatcher<R> {
             // NOTE: We are explicitly allowing private key operations during execution.
             .map(|mgr| mgr.with_private_context(rt_ctx.io_ctx.clone()));
         let history = self.consensus_verifier.clone();
+        let rng = RootRng::new();
 
         let root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), &mut rt_ctx.runtime_state);
         let mut ctx = RuntimeBatchContext::<'_, R>::new(
-            if rt_ctx.check_only {
-                Mode::CheckTx
-            } else {
-                Mode::ExecuteTx
-            },
+            Mode::ExecuteTx,
             &self.host_info,
             key_manager,
             rt_ctx.header,
@@ -551,6 +562,7 @@ impl<R: Runtime> Dispatcher<R> {
             &rt_ctx.consensus_state,
             &history,
             rt_ctx.epoch,
+            &rng,
             rt_ctx.io_ctx.clone(),
             rt_ctx.max_messages,
         );
@@ -605,6 +617,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                     let tx_size = tx.len().try_into().map_err(|_| {
                         Error::MalformedTransactionInBatch(anyhow!("transaction too large"))
                     })?;
+                    let tx_hash = Hash::digest_bytes(tx);
                     // It is an error to include a malformed transaction in a batch. So instead of only
                     // reporting a failed execution result, we fail the whole batch. This will make the compute
                     // node vote for failure and the round will fail.
@@ -612,7 +625,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                     // Correct proposers should only include transactions which have passed check_tx.
                     let tx = Self::decode_tx(ctx, tx)
                         .map_err(|err| Error::MalformedTransactionInBatch(err.into()))?;
-                    txs.push((tx_size, tx.clone()));
+                    txs.push((tx_size, tx_hash, tx.clone()));
 
                     if prefetch_enabled {
                         Self::prefetch_tx(&mut prefixes, tx)?;
@@ -626,8 +639,8 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
 
                 // Execute the batch.
                 let mut results = Vec::with_capacity(batch.len());
-                for (index, (tx_size, tx)) in txs.into_iter().enumerate() {
-                    results.push(Self::execute_tx(ctx, tx_size, tx, index)?);
+                for (index, (tx_size, tx_hash, tx)) in txs.into_iter().enumerate() {
+                    results.push(Self::execute_tx(ctx, tx_size, tx_hash, tx, index)?);
                 }
 
                 Ok(results)
@@ -670,12 +683,13 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                         }
 
                         // Decode transaction.
+                        let tx_hash = Hash::digest_bytes(&raw_tx);
                         let tx = match Self::decode_tx(ctx, &raw_tx) {
                             Ok(tx) => tx,
                             Err(_) => {
                                 // Transaction is malformed, make sure it gets removed from the
                                 // queue and don't include it in a block.
-                                tx_reject_hashes.push(Hash::digest_bytes(&raw_tx));
+                                tx_reject_hashes.push(tx_hash);
                                 continue;
                             }
                         };
@@ -717,6 +731,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                                                 &DispatchOptions {
                                                     tx_size,
                                                     tx_index,
+                                                    tx_hash,
                                                     skip_authentication: true, // Already done.
                                                     ..Default::default()
                                                 },
@@ -729,7 +744,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                                     }
 
                                     // Skip and reject the transaction.
-                                    tx_reject_hashes.push(Hash::digest_bytes(&raw_tx));
+                                    tx_reject_hashes.push(tx_hash);
                                     Ok(true)
                                 },
                             );
@@ -741,7 +756,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                         }
 
                         new_batch.push(raw_tx);
-                        results.push(Self::execute_tx(ctx, tx_size, tx, tx_index)?);
+                        results.push(Self::execute_tx(ctx, tx_size, tx_hash, tx, tx_index)?);
                     }
 
                     // If there's more room in the block and we got the maximum number of
@@ -789,14 +804,11 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             .as_ref()
             .map(|mgr| mgr.with_context(rt_ctx.io_ctx.clone()));
         let history = self.consensus_verifier.clone();
+        let rng = RootRng::new();
 
         let root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), &mut rt_ctx.runtime_state);
         let mut ctx = RuntimeBatchContext::<'_, R>::new(
-            if rt_ctx.check_only {
-                Mode::CheckTx
-            } else {
-                Mode::ExecuteTx
-            },
+            Mode::CheckTx,
             &self.host_info,
             key_manager,
             rt_ctx.header,
@@ -804,6 +816,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             &rt_ctx.consensus_state,
             &history,
             rt_ctx.epoch,
+            &rng,
             rt_ctx.io_ctx.clone(),
             rt_ctx.max_messages,
         );
@@ -886,16 +899,17 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             }
         });
 
+        // Initialize the root RNG. For queries which don't need to be deterministic as they are
+        // node-local we mix in local (private) entropy.
+        let rng = RootRng::new();
+        rng.append_local_entropy();
+
         // Prepare dispatch context.
         let history = self.consensus_verifier.clone();
 
         let root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), &mut rt_ctx.runtime_state);
         let mut ctx = RuntimeBatchContext::<'_, R>::new(
-            if rt_ctx.check_only {
-                Mode::CheckTx
-            } else {
-                Mode::ExecuteTx
-            },
+            Mode::CheckTx,
             &self.host_info,
             key_manager,
             rt_ctx.header,
@@ -903,6 +917,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             &rt_ctx.consensus_state,
             &history,
             rt_ctx.epoch,
+            &rng,
             rt_ctx.io_ctx.clone(),
             rt_ctx.max_messages,
         );

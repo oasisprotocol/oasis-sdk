@@ -115,7 +115,7 @@ fn test_api_deposit_invalid_denomination() {
         },
     };
 
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Module::<Accounts, Consensus>::tx_deposit(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -161,7 +161,7 @@ fn test_api_deposit_incompatible_signer() {
         },
     };
 
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Module::<Accounts, Consensus>::tx_deposit(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -209,7 +209,7 @@ fn test_api_deposit() {
         },
     };
 
-    let hook = ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    let hook = ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         Module::<Accounts, Consensus>::tx_deposit(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -321,7 +321,7 @@ fn test_api_withdraw_invalid_denomination() {
         },
     };
 
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -367,7 +367,7 @@ fn test_api_withdraw_insufficient_balance() {
         },
     };
 
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -408,7 +408,7 @@ fn test_api_withdraw_incompatible_signer() {
         },
     };
 
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -454,7 +454,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
         },
     };
 
-    let hook = ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    let hook = ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -586,7 +586,7 @@ fn test_api_withdraw_handler_failure() {
         },
     };
 
-    let hook = ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    let hook = ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         Module::<Accounts, Consensus>::tx_withdraw(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -738,7 +738,7 @@ fn perform_delegation<C: BatchContext>(ctx: &mut C, success: bool) -> u64 {
         },
     };
 
-    let hook = ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    let hook = ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         Module::<Accounts, Consensus>::tx_delegate(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -910,7 +910,7 @@ fn test_api_delegate_insufficient_balance() {
         },
     };
 
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Module::<Accounts, Consensus>::tx_delegate(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -986,7 +986,7 @@ fn perform_undelegation<C: BatchContext>(
         },
     };
 
-    let hook = ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    let hook = ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         Module::<Accounts, Consensus>::tx_undelegate(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -1265,7 +1265,7 @@ fn test_api_undelegate_insufficient_balance() {
         },
     };
 
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Module::<Accounts, Consensus>::tx_undelegate(
             &mut tx_ctx,
             cbor::from_value(call.body).unwrap(),
@@ -1456,7 +1456,7 @@ fn test_prefetch() {
         auth_info: auth_info.clone(),
     };
     // Withdraw should result in one prefix getting prefetched.
-    ctx.with_tx(0, 0, tx, |mut _tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut _tx_ctx, call| {
         let mut prefixes = BTreeSet::new();
         let result = Module::<Accounts, Consensus>::prefetch(
             &mut prefixes,
@@ -1488,7 +1488,7 @@ fn test_prefetch() {
         auth_info: auth_info.clone(),
     };
     // Deposit should result in zero prefixes.
-    ctx.with_tx(0, 0, tx, |mut _tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut _tx_ctx, call| {
         let mut prefixes = BTreeSet::new();
         let result = Module::<Accounts, Consensus>::prefetch(
             &mut prefixes,

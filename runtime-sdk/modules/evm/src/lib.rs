@@ -21,7 +21,7 @@ use thiserror::Error;
 
 use oasis_runtime_sdk::{
     callformat,
-    context::{BatchContext, Context, TxContext},
+    context::{BatchContext, Context, TransactionWithMeta, TxContext},
     handler,
     module::{self, Module as _},
     modules::{
@@ -495,24 +495,27 @@ impl<Cfg: Config> API for Module<Cfg> {
                     ..Default::default()
                 },
             };
-            sctx.with_tx(0, 0, call_tx, |mut txctx, _call| {
-                Self::do_evm(
-                    caller,
-                    &mut txctx,
-                    |exec, gas_limit| {
-                        exec.transact_call(
-                            caller.into(),
-                            address.into(),
-                            value.into(),
-                            data,
-                            gas_limit,
-                            vec![],
-                        )
-                    },
-                    // Simulate call is never called from EstimateGas.
-                    false,
-                )
-            })
+            sctx.with_tx(
+                TransactionWithMeta::internal(call_tx),
+                |mut txctx, _call| {
+                    Self::do_evm(
+                        caller,
+                        &mut txctx,
+                        |exec, gas_limit| {
+                            exec.transact_call(
+                                caller.into(),
+                                address.into(),
+                                value.into(),
+                                data,
+                                gas_limit,
+                                vec![],
+                            )
+                        },
+                        // Simulate call is never called from EstimateGas.
+                        false,
+                    )
+                },
+            )
         });
         Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }

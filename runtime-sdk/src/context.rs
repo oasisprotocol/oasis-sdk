@@ -12,14 +12,14 @@ use io_context::Context as IoContext;
 use slog::{self, o};
 
 use oasis_core_runtime::{
-    common::{logger::get_logger, namespace::Namespace},
+    common::{crypto::hash::Hash, logger::get_logger, namespace::Namespace},
     consensus,
     consensus::roothash,
     protocol::HostInfo,
 };
 
 use crate::{
-    crypto::random::Rng,
+    crypto::random::{LeafRng, RootRng},
     event::{Event, EventTag, EventTags},
     history,
     keymanager::KeyManager,
@@ -316,7 +316,7 @@ pub trait Context {
     }
 
     /// Returns a random number generator, if it is available, with optional personalization.
-    fn rng(&mut self, pers: &[u8]) -> Result<Rng, Error>;
+    fn rng(&mut self, pers: &[u8]) -> Result<LeafRng, Error>;
 }
 
 impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
@@ -401,21 +401,49 @@ impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
         self.deref_mut().with_child(mode, f)
     }
 
-    fn rng(&mut self, pers: &[u8]) -> Result<Rng, Error> {
+    fn rng(&mut self, pers: &[u8]) -> Result<LeafRng, Error> {
         self.deref_mut().rng(pers)
+    }
+}
+
+/// Decoded transaction with additional metadata.
+#[derive(Clone)]
+pub struct TransactionWithMeta {
+    /// Decoded transaction.
+    pub tx: transaction::Transaction,
+    /// Transaction size.
+    pub tx_size: u32,
+    /// Transaction index within the batch.
+    pub tx_index: usize,
+    /// Transaction hash.
+    pub tx_hash: Hash,
+}
+
+impl TransactionWithMeta {
+    /// Create transaction with metadata for an internally generated transaction.
+    ///
+    /// Internally generated transactions have zero size, index and hash.
+    pub fn internal(tx: transaction::Transaction) -> Self {
+        Self {
+            tx,
+            tx_size: 0,
+            tx_index: 0,
+            tx_hash: Default::default(),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "test"))]
+impl From<transaction::Transaction> for TransactionWithMeta {
+    fn from(tx: transaction::Transaction) -> Self {
+        Self::internal(tx) // For use in tests.
     }
 }
 
 /// Runtime SDK batch-wide context.
 pub trait BatchContext: Context {
     /// Executes a function in a per-transaction context.
-    fn with_tx<F, Rs>(
-        &mut self,
-        tx_index: usize,
-        tx_size: u32,
-        tx: transaction::Transaction,
-        f: F,
-    ) -> Rs
+    fn with_tx<F, Rs>(&mut self, tx: TransactionWithMeta, f: F) -> Rs
     where
         F: FnOnce(RuntimeTxContext<'_, '_, <Self as Context>::Runtime>, transaction::Call) -> Rs;
 
@@ -553,7 +581,8 @@ pub struct RuntimeBatchContext<'a, R: runtime::Runtime> {
     /// Per-context values.
     values: BTreeMap<&'static str, Box<dyn Any>>,
 
-    rng: Option<Rng>,
+    /// A reference to the root RNG.
+    rng: &'a RootRng,
 
     _runtime: PhantomData<R>,
 }
@@ -570,6 +599,7 @@ impl<'a, R: runtime::Runtime> RuntimeBatchContext<'a, R> {
         consensus_state: &'a consensus::state::ConsensusState,
         history: &'a dyn history::HistoryHost,
         epoch: consensus::beacon::EpochTime,
+        rng: &'a RootRng,
         io_ctx: Arc<IoContext>,
         max_messages: u32,
     ) -> Self {
@@ -590,7 +620,7 @@ impl<'a, R: runtime::Runtime> RuntimeBatchContext<'a, R> {
             max_messages,
             messages: Vec::new(),
             values: BTreeMap::new(),
-            rng: Default::default(),
+            rng,
             _runtime: PhantomData,
         }
     }
@@ -690,6 +720,10 @@ impl<'a, R: runtime::Runtime> Context for RuntimeBatchContext<'a, R> {
         F: FnOnce(RuntimeBatchContext<'_, Self::Runtime>) -> Rs,
     {
         let remaining_messages = self.remaining_messages();
+        if !self.is_pre_schedule() && mode != Mode::PreScheduleTx {
+            // Update RNG state to include entering this subcontext.
+            self.rng.append_subcontext();
+        }
 
         let child_ctx = RuntimeBatchContext {
             mode,
@@ -712,32 +746,27 @@ impl<'a, R: runtime::Runtime> Context for RuntimeBatchContext<'a, R> {
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
-            rng: self.rng.as_mut().map(|rng| rng.fork(&[])),
+            rng: self.rng,
             _runtime: PhantomData,
         };
         f(child_ctx)
     }
 
-    fn rng(&mut self, pers: &[u8]) -> Result<Rng, Error> {
-        if self.rng.is_none() {
-            self.rng = Some(Rng::new(self)?);
-        }
-        Ok(self.rng.as_mut().unwrap().fork(pers))
+    fn rng(&mut self, pers: &[u8]) -> Result<LeafRng, Error> {
+        self.rng.fork(self, pers)
     }
 }
 
 impl<'a, R: runtime::Runtime> BatchContext for RuntimeBatchContext<'a, R> {
-    fn with_tx<F, Rs>(
-        &mut self,
-        tx_index: usize,
-        tx_size: u32,
-        tx: transaction::Transaction,
-        f: F,
-    ) -> Rs
+    fn with_tx<F, Rs>(&mut self, tm: TransactionWithMeta, f: F) -> Rs
     where
         F: FnOnce(RuntimeTxContext<'_, '_, <Self as Context>::Runtime>, transaction::Call) -> Rs,
     {
         let remaining_messages = self.remaining_messages();
+        if !self.is_pre_schedule() {
+            // Update RNG state to include entering this transaction context.
+            self.rng.append_tx(tm.tx_hash);
+        }
 
         let tx_ctx = RuntimeTxContext {
             mode: self.mode,
@@ -752,11 +781,11 @@ impl<'a, R: runtime::Runtime> BatchContext for RuntimeBatchContext<'a, R> {
             logger: self
                 .logger
                 .new(o!("ctx" => "transaction", "mode" => Into::<&'static str>::into(&self.mode))),
-            tx_index,
-            tx_size,
-            tx_auth_info: tx.auth_info,
-            tx_call_format: tx.call.format,
-            read_only: tx.call.read_only,
+            tx_index: tm.tx_index,
+            tx_size: tm.tx_size,
+            tx_auth_info: tm.tx.auth_info,
+            tx_call_format: tm.tx.call.format,
+            read_only: tm.tx.call.read_only,
             internal: self.internal,
             etags: BTreeMap::new(),
             etags_unconditional: BTreeMap::new(),
@@ -764,10 +793,10 @@ impl<'a, R: runtime::Runtime> BatchContext for RuntimeBatchContext<'a, R> {
             messages: Vec::new(),
             values: &mut self.values,
             tx_values: BTreeMap::new(),
-            rng: self.rng.as_mut().map(|rng| rng.fork(&[])),
+            rng: self.rng,
             _runtime: PhantomData,
         };
-        f(tx_ctx, tx.call)
+        f(tx_ctx, tm.tx.call)
     }
 
     fn emit_messages(
@@ -830,7 +859,7 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime> {
     tx_values: BTreeMap<&'static str, Box<dyn Any>>,
 
     /// The RNG associated with the context.
-    rng: Option<Rng>,
+    rng: &'round RootRng,
 
     _runtime: PhantomData<R>,
 }
@@ -935,6 +964,10 @@ impl<'round, 'store, R: runtime::Runtime> Context for RuntimeTxContext<'round, '
         F: FnOnce(RuntimeBatchContext<'_, Self::Runtime>) -> Rs,
     {
         let remaining_messages = self.remaining_messages();
+        if !self.is_pre_schedule() && mode != Mode::PreScheduleTx {
+            // Update RNG state to include entering this subcontext.
+            self.rng.append_subcontext();
+        }
 
         let child_ctx = RuntimeBatchContext {
             mode,
@@ -957,17 +990,14 @@ impl<'round, 'store, R: runtime::Runtime> Context for RuntimeTxContext<'round, '
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
-            rng: self.rng.as_mut().map(|rng| rng.fork(&[])),
+            rng: self.rng,
             _runtime: PhantomData,
         };
         f(child_ctx)
     }
 
-    fn rng(&mut self, pers: &[u8]) -> Result<Rng, Error> {
-        if self.rng.is_none() {
-            self.rng = Some(Rng::new(self)?);
-        }
-        Ok(self.rng.as_mut().unwrap().fork(pers))
+    fn rng(&mut self, pers: &[u8]) -> Result<LeafRng, Error> {
+        self.rng.fork(self, pers)
     }
 }
 
@@ -1187,7 +1217,7 @@ mod test {
                 ..Default::default()
             },
         };
-        ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, _call| {
+        ctx.with_tx(tx.clone().into(), |mut tx_ctx, _call| {
             let mut y = tx_ctx.value::<u64>("module.TestKey");
             let y = y.get_mut().unwrap();
             assert_eq!(*y, 42);
@@ -1211,7 +1241,7 @@ mod test {
         let x = ctx.value::<u64>("module.TestKey").get();
         assert_eq!(x, Some(&48));
 
-        ctx.with_tx(0, 0, tx, |mut tx_ctx, _call| {
+        ctx.with_tx(tx.into(), |mut tx_ctx, _call| {
             let z = tx_ctx.value::<u64>("module.TestKey").take();
             assert_eq!(z, Some(48));
 
@@ -1249,7 +1279,7 @@ mod test {
                 ..Default::default()
             },
         };
-        ctx.with_tx(0, 0, tx, |mut tx_ctx, _call| {
+        ctx.with_tx(tx.into(), |mut tx_ctx, _call| {
             // Changing the type of a key should result in a panic.
             tx_ctx.value::<Option<u32>>("module.TestKey").get();
         });
@@ -1291,7 +1321,7 @@ mod test {
         let max_messages = mock.max_messages;
         let mut ctx = mock.create_ctx();
 
-        ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+        ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
             for i in 0..max_messages {
                 assert_eq!(tx_ctx.remaining_messages(), max_messages - i);
 
@@ -1359,7 +1389,7 @@ mod test {
         assert_eq!(ctx.remaining_messages(), 0);
 
         // Also in transaction contexts.
-        ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+        ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
             tx_ctx
                 .emit_message(messages[0].0.clone(), messages[0].1.clone())
                 .expect_err("emitting a message should fail");
@@ -1388,7 +1418,7 @@ mod test {
             MessageEventHookInvocation::new("test".to_string(), ""),
         )];
 
-        ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+        ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
             tx_ctx.limit_max_messages(1).unwrap();
 
             tx_ctx.with_child(tx_ctx.mode(), |mut child_ctx| {
@@ -1407,9 +1437,17 @@ mod test {
     fn test_tx_ctx_metadata() {
         let mut mock = Mock::default();
         let mut ctx = mock.create_ctx();
-        ctx.with_tx(42, 888, mock::transaction(), |tx_ctx, _call| {
-            assert_eq!(tx_ctx.tx_index(), 42);
-            assert_eq!(tx_ctx.tx_size(), 888);
-        });
+        ctx.with_tx(
+            TransactionWithMeta {
+                tx: mock::transaction(),
+                tx_size: 888,
+                tx_index: 42,
+                tx_hash: Default::default(),
+            },
+            |tx_ctx, _call| {
+                assert_eq!(tx_ctx.tx_index(), 42);
+                assert_eq!(tx_ctx.tx_size(), 888);
+            },
+        );
     }
 }

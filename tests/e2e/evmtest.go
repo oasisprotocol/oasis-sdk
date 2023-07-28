@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
 
 	ethMath "github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -31,6 +32,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
+	contractRng "github.com/oasisprotocol/oasis-sdk/tests/e2e/contracts/rng"
 	contractSubcall "github.com/oasisprotocol/oasis-sdk/tests/e2e/contracts/subcall"
 	"github.com/oasisprotocol/oasis-sdk/tests/e2e/txgen"
 )
@@ -76,12 +78,6 @@ var evmEncryptionCompiledHex string
 //
 //go:embed contracts/evm_key_derivation_compiled.hex
 var evmKeyDerivationCompiledHex string
-
-// We store the compiled EVM bytecode for the SimpleEVMRngTest in a separate
-// file (in hex) to preserve readability of this file.
-//
-//go:embed contracts/evm_rng_compiled.hex
-var evmRngHex string
 
 // We store the compiled EVM bytecode for the C10lEVMMessageSigningTest in a separate
 // file (in hex) to preserve readability of this file.
@@ -1126,17 +1122,109 @@ func keyDerivationEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c1
 // Note that this test will only work with a confidential runtime because
 // it needs the confidential precompiles.
 func rngEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
-	// To generate the contract bytecode, use solc or https://remix.ethereum.org/
-	// with the following settings:
-	//     Compiler: 0.8.17+commit.8df45f5f.Darwin.appleclang
-	//     EVM version: london
-	//     Enable optimization: yes, 1, via-ir
-	// on the source in evm_rng.sol next to the hex file.
-	// (i.e. `solc evm_rng.sol --bin --optimize`)
-	_, err := simpleEVMCallTest(log, rtc, c10l, evmRngHex, "test", "f8a8fd6d", "")
+	ctx := context.Background()
+	ev := evm.NewV1(rtc)
+	gasPrice := uint64(2)
+	value := big.NewInt(0).Bytes() // Don't send any tokens with the calls.
+
+	// Deploy the contract.
+	contractAddr, err := evmCreate(ctx, rtc, ev, testing.Dave.Signer, value, contractRng.Compiled, gasPrice, c10l)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to deploy contract: %w", err)
 	}
+
+	// Call the basic test method.
+	data, err := contractRng.ABI.Pack("test")
+	if err != nil {
+		return fmt.Errorf("failed to pack arguments: %w", err)
+	}
+	_, err = evmCall(ctx, rtc, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, c10l)
+	if err != nil {
+		return fmt.Errorf("failed to call contract: %w", err)
+	}
+
+	// Create some accounts so we will be able to run test in parallel.
+	numAccounts := 5
+	log.Info("creating secp256k1 accounts", "num_accounts", numAccounts)
+
+	var signers []signature.Signer
+	for i := 0; i < numAccounts; i++ {
+		var signer signature.Signer
+		signer, err = txgen.CreateAndFundAccount(ctx, rtc, testing.Dave.Signer, i, txgen.AccountSecp256k1, 10_000_000)
+		if err != nil {
+			return err
+		}
+
+		signers = append(signers, signer)
+	}
+
+	// Repeatedly invoke the RNG from multiple signers in parallel.
+	reqLen := 32
+	pers := []byte("")
+	iterations := 10
+
+	data, err = contractRng.ABI.Pack("testGenerate", big.NewInt(int64(reqLen)), pers)
+	if err != nil {
+		return fmt.Errorf("failed to pack arguments: %w", err)
+	}
+
+	var wg sync.WaitGroup
+	resultCh := make(chan interface{}, len(signers)*iterations)
+	callFn := func(startCh chan struct{}, signer signature.Signer) {
+		defer wg.Done()
+
+		// Synchronize calls among all goroutines as we want to increase the chances of transactions
+		// landing in the same block.
+		<-startCh
+
+		rawResult, err := evmCall(ctx, rtc, ev, signer, contractAddr, value, data, gasPrice, c10l)
+		if err != nil {
+			resultCh <- fmt.Errorf("failed to call contract: %w", err)
+			return
+		}
+		result, err := contractRng.ABI.Unpack("testGenerate", rawResult)
+		if err != nil {
+			resultCh <- fmt.Errorf("failed to unpack result: %w", err)
+			return
+		}
+		resultCh <- result[0].([]byte)
+	}
+
+	log.Info("executing EVM calls to RNG")
+
+	for i := 0; i < iterations; i++ {
+		startCh := make(chan struct{})
+		for _, signer := range signers {
+			wg.Add(1)
+			go callFn(startCh, signer)
+		}
+		close(startCh)
+		wg.Wait()
+	}
+
+	close(resultCh)
+
+	// Do basic checks on all received outputs from the RNG.
+	seen := make(map[string]struct{})
+	for result := range resultCh {
+		var randomBytes []byte
+		switch r := result.(type) {
+		case error:
+			return r
+		case []byte:
+			randomBytes = r
+		}
+
+		if resLen := len(randomBytes); resLen != reqLen {
+			return fmt.Errorf("result has incorrect length (expected: %d got: %d)", reqLen, resLen)
+		}
+
+		if _, ok := seen[string(randomBytes)]; ok {
+			return fmt.Errorf("got duplicate value: %X", randomBytes)
+		}
+		seen[string(randomBytes)] = struct{}{}
+	}
+
 	return nil
 }
 
