@@ -18,6 +18,12 @@ use crate::{
     },
 };
 
+/// Maximum age of an ephemeral key in the number of epochs.
+///
+/// This is half the current window as enforced by the key manager as negative results are not
+/// cached and randomized queries could open the scheme to a potential DoS attack.
+const MAX_EPHEMERAL_KEY_AGE: beacon::EpochTime = 5;
+
 /// Additional metadata required by the result encoding function.
 pub enum Metadata {
     Empty,
@@ -50,6 +56,18 @@ pub fn get_key_pair_id(epoch: beacon::EpochTime) -> keymanager::KeyPairId {
         get_chain_context_for(types::callformat::CALL_DATA_KEY_PAIR_ID_CONTEXT_BASE).as_slice(),
         &epoch.to_be_bytes(),
     ])
+}
+
+fn verify_epoch<C: Context>(ctx: &C, epoch: beacon::EpochTime) -> Result<(), Error> {
+    if epoch > ctx.epoch() {
+        return Err(Error::InvalidCallFormat(anyhow!("epoch in the future")));
+    }
+    if epoch < ctx.epoch().saturating_sub(MAX_EPHEMERAL_KEY_AGE) {
+        return Err(Error::InvalidCallFormat(anyhow!(
+            "epoch too far in the past"
+        )));
+    }
+    Ok(())
 }
 
 /// Decode call arguments.
@@ -124,11 +142,16 @@ pub fn decode_call_ex<C: Context>(
             };
 
             // Get transaction key pair from the key manager. Note that only the `input_keypair`
-            // portion is used.  In case of failure, also try with previous epoch key in case the epoch
-            // transition just occurred.
-            let (data, sk) = decrypt(ctx.epoch())
-                .or_else(|_| decrypt(ctx.epoch() - 1))
-                .map_err(Error::InvalidCallFormat)?;
+            // portion is used.
+            let (data, sk) = if envelope.epoch > 0 {
+                verify_epoch(ctx, envelope.epoch)?;
+                decrypt(envelope.epoch)
+            } else {
+                // In case of failure, also try with previous epoch key in case the epoch
+                // transition just occurred.
+                decrypt(ctx.epoch()).or_else(|_| decrypt(ctx.epoch() - 1))
+            }
+            .map_err(Error::InvalidCallFormat)?;
 
             let read_only = call.read_only;
             let call: Call = cbor::from_slice(&data)
@@ -164,8 +187,9 @@ pub fn encode_call<C: Context>(
             let key_manager = ctx.key_manager().ok_or_else(|| {
                 Error::InvalidCallFormat(anyhow!("confidential transactions not available"))
             })?;
+            let epoch = ctx.epoch();
             let runtime_keypair = key_manager
-                .get_or_create_ephemeral_keys(get_key_pair_id(ctx.epoch()), ctx.epoch())
+                .get_or_create_ephemeral_keys(get_key_pair_id(epoch), epoch)
                 .map_err(|err| Error::Abort(err.into()))?;
             let runtime_pk = runtime_keypair.input_keypair.pk;
             let nonce = [0u8; deoxysii::NONCE_SIZE];
@@ -176,6 +200,7 @@ pub fn encode_call<C: Context>(
                 body: cbor::to_value(types::callformat::CallEnvelopeX25519DeoxysII {
                     pk: client_keypair.0,
                     nonce,
+                    epoch,
                     data: deoxysii::box_seal(
                         &nonce,
                         cbor::to_vec(call),

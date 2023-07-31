@@ -37,6 +37,8 @@ pub struct EstimateGasQuery {
 pub struct CallDataPublicKeyQueryResponse {
     /// Public key used for deriving the shared secret for encrypting call data.
     pub public_key: SignedPublicKey,
+    /// Epoch of the ephemeral runtime key.
+    pub epoch: u64,
 }
 
 #[derive(Debug, Copy, Clone, cbor::Encode, cbor::Decode)]

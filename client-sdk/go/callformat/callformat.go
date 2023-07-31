@@ -16,6 +16,8 @@ import (
 type EncodeConfig struct {
 	// PublicKey is an optional runtime's call data public key to use for encrypted call formats.
 	PublicKey *types.SignedPublicKey
+	// Epoch is the epoch of the ephemeral runtime key (when PublicKey is set).
+	Epoch uint64
 }
 
 type metaEncryptedX25519DeoxysII struct {
@@ -60,6 +62,7 @@ func EncodeCall(call *types.Call, cf types.CallFormat, cfg *EncodeConfig) (*type
 			Body: cbor.Marshal(&types.CallEnvelopeX25519DeoxysII{
 				Pk:    *pk,
 				Nonce: nonce,
+				Epoch: cfg.Epoch,
 				Data:  sealedCall,
 			}),
 			ReadOnly: call.ReadOnly,

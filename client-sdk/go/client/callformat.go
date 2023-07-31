@@ -11,7 +11,10 @@ import (
 const methodCallDataPublicKey = "core.CallDataPublicKey"
 
 type callDataPublicKeyQueryResponse struct {
+	// PublicKey is the ephemeral X25519 runtime public key.
 	PublicKey types.SignedPublicKey `json:"public_key"`
+	// Epoch is the epoch of the ephemeral runtime key.
+	Epoch uint64 `json:"epoch,omitempty"`
 }
 
 // encodeCall performs call encoding based on the specified call format.
@@ -30,6 +33,7 @@ func (tb *TransactionBuilder) encodeCall(ctx context.Context, call *types.Call, 
 		// TODO: In case the node we are connecting to is not trusted, validate the key manager signature.
 
 		cfg.PublicKey = &rsp.PublicKey
+		cfg.Epoch = rsp.Epoch
 	default:
 	}
 

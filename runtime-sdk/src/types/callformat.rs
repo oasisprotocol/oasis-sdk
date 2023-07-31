@@ -11,6 +11,9 @@ pub struct CallEnvelopeX25519DeoxysII {
     pub pk: [u8; 32],
     /// Nonce.
     pub nonce: [u8; deoxysii::NONCE_SIZE],
+    /// Epoch of the ephemeral runtime key.
+    #[cbor(optional)]
+    pub epoch: u64,
     /// Encrypted call data.
     pub data: Vec<u8>,
 }

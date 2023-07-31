@@ -201,7 +201,10 @@ func evmSimulateCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, ca
 	if err != nil {
 		return nil, fmt.Errorf("failed to get call data public key: %w", err)
 	}
-	encData, encMeta, err := callformat.EncodeCall(&signedCallDataPack.Data, types.CallFormatEncryptedX25519DeoxysII, &callformat.EncodeConfig{PublicKey: &callDataPublicKey.PublicKey})
+	encData, encMeta, err := callformat.EncodeCall(&signedCallDataPack.Data, types.CallFormatEncryptedX25519DeoxysII, &callformat.EncodeConfig{
+		PublicKey: &callDataPublicKey.PublicKey,
+		Epoch:     callDataPublicKey.Epoch,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode signed call data: %w", err)
 	}
