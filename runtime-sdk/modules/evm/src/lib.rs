@@ -107,7 +107,7 @@ pub trait Config: 'static {
                 }
             })
         } else {
-            EVM_CONFIG.get_or_init(EVMConfig::london)
+            EVM_CONFIG.get_or_init(EVMConfig::shanghai)
         }
     }
 }
@@ -186,6 +186,7 @@ impl From<evm::ExitError> for Error {
             PCUnderflow => "PC underflow",
 
             CreateEmpty => "create empty",
+            MaxNonce => "nonce overflow",
 
             Other(msg) => return Error::ExecutionFailed(msg.to_string()),
         };

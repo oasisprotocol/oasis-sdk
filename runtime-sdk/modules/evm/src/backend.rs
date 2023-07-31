@@ -340,6 +340,10 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
         U256::zero()
     }
 
+    fn block_randomness(&self) -> Option<H256> {
+        None
+    }
+
     fn block_gas_limit(&self) -> U256 {
         <C::Runtime as Runtime>::Core::max_batch_gas(&mut self.backend.ctx.borrow_mut()).into()
     }
@@ -466,14 +470,15 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> StackState<'config>
             .recursive_is_cold(&|a: &Accessed| a.accessed_storage.contains(&(address, key)))
     }
 
-    fn inc_nonce(&mut self, address: H160) {
+    fn inc_nonce(&mut self, address: H160) -> Result<(), ExitError> {
         // Do not increment the origin nonce as that has already been handled by the SDK.
         if address == self.origin() {
-            return;
+            return Ok(());
         }
 
         let address = Cfg::map_address(address);
         Cfg::Accounts::inc_nonce(address);
+        Ok(())
     }
 
     fn set_storage(&mut self, address: H160, key: H256, value: H256) {

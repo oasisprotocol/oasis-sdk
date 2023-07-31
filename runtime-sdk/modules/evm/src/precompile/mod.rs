@@ -3,7 +3,9 @@
 use std::{cmp::min, marker::PhantomData};
 
 use evm::{
-    executor::stack::{PrecompileFailure, PrecompileHandle, PrecompileOutput, PrecompileSet},
+    executor::stack::{
+        IsPrecompileResult, PrecompileFailure, PrecompileHandle, PrecompileOutput, PrecompileSet,
+    },
     ExitError,
 };
 use primitive_types::H160;
@@ -88,8 +90,14 @@ impl<'a, Cfg: Config, B: EVMBackendExt> Precompiles<'a, Cfg, B> {
 impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
     fn execute(&self, handle: &mut impl PrecompileHandle) -> Option<PrecompileResult> {
         let address = handle.code_address();
-        if !self.is_precompile(address) {
-            return None;
+        match self.is_precompile(address, handle.remaining_gas()) {
+            IsPrecompileResult::Answer {
+                is_precompile: true,
+                ..
+            } => { /* Ok. */ }
+            _ => {
+                return None;
+            }
         }
         Some(match (address[0], address[18], address[19]) {
             // Ethereum-compatible.
@@ -117,11 +125,11 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
         })
     }
 
-    fn is_precompile(&self, address: H160) -> bool {
+    fn is_precompile(&self, address: H160, remaining_gas: u64) -> IsPrecompileResult {
         // See above table in `execute` for matching on what is a valid precompile address.
         let addr_bytes = address.as_bytes();
         let (a0, a18, a19) = (address[0], addr_bytes[18], addr_bytes[19]);
-        (address[1..18].iter().all(|b| *b == 0)
+        if address[1..18].iter().all(|b| *b == 0)
             && matches!(
                 (a0, a18, a19, Cfg::CONFIDENTIAL),
                 // Ethereum-compatible.
@@ -130,9 +138,19 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
                 (1, 0, 1..=8, true) |
                 // Oasis-specific, general.
                 (1, 1, 1..=2, _)
-            ))
-            || Cfg::additional_precompiles()
-                .map(|pc| pc.is_precompile(address))
-                .unwrap_or_default()
+            )
+        {
+            IsPrecompileResult::Answer {
+                is_precompile: true,
+                extra_cost: 0,
+            }
+        } else {
+            Cfg::additional_precompiles()
+                .map(|pc| pc.is_precompile(address, remaining_gas))
+                .unwrap_or(IsPrecompileResult::Answer {
+                    is_precompile: false,
+                    extra_cost: 0,
+                })
+        }
     }
 }

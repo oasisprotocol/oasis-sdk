@@ -30,7 +30,7 @@ rand_core = { version = "0.6.4", default-features = false }
 # Ethereum.
 ethabi = { version = "18.0.0", default-features = false, features = ["std"] }
 ethereum = "0.14"
-evm = "0.37.0"
+evm = "0.39.1"
 fixed-hash = "0.8.0"
 primitive-types = { version = "0.12", default-features = false, features = ["rlp", "num-traits"] }
 rlp = "0.5.2"
