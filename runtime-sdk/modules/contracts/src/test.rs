@@ -275,10 +275,13 @@ fn test_hello_contract_call() {
             "there should only be one denomination"
         );
 
-        let (etags, messages) = tx_ctx.commit();
-        let tags = etags.into_tags();
+        let state = tx_ctx.commit();
+        let tags = state.events.into_tags();
         // Make sure no runtime messages got emitted.
-        assert!(messages.is_empty(), "no runtime messages should be emitted");
+        assert!(
+            state.messages.is_empty(),
+            "no runtime messages should be emitted"
+        );
         // Make sure a contract event was emitted and is properly formatted.
         assert_eq!(tags.len(), 2, "two events should have been emitted");
         assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event

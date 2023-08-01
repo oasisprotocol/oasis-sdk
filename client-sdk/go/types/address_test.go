@@ -68,3 +68,17 @@ func TestAddressRaw(t *testing.T) {
 	addr := NewAddressRaw(AddressV0Secp256k1EthContext, ethAddress)
 	require.EqualValues("oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt", addr.String())
 }
+
+func TestNewAddressFromEth(t *testing.T) {
+	// Dave from test keys.
+	ethAddr, err := hex.DecodeString("Dce075E1C39b1ae0b75D554558b6451A226ffe00")
+	require.NoError(t, err, "hex.DecodeString")
+	addr := NewAddressFromEth(ethAddr)
+	require.Equal(t, addr.String(), "oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt")
+
+	// Erin from test keys.
+	ethAddr, err = hex.DecodeString("709EEbd979328A2B3605A160915DEB26E186abF8")
+	require.NoError(t, err, "hex.DecodeString")
+	addr = NewAddressFromEth(ethAddr)
+	require.Equal(t, addr.String(), "oasis1qqcd0qyda6gtwdrfcqawv3s8cr2kupzw9v967au6")
+}

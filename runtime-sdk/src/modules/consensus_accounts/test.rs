@@ -216,9 +216,9 @@ fn test_api_deposit() {
         )
         .expect("deposit tx should succeed");
 
-        let (_, mut msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.pop().unwrap();
+        let mut state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.pop().unwrap();
 
         assert_eq!(
             Message::Staking(Versioned::new(
@@ -260,8 +260,8 @@ fn test_api_deposit() {
     );
 
     // Make sure events were emitted.
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert_eq!(tags.len(), 2, "deposit and mint events should be emitted");
     assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x03"); // accounts.Mint (code = 3) event
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x01"); // consensus_accounts.Deposit (code = 1) event
@@ -461,9 +461,9 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
         )
         .expect("withdraw tx should succeed");
 
-        let (_, mut msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.pop().unwrap();
+        let mut state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.pop().unwrap();
 
         assert_eq!(
             Message::Staking(Versioned::new(
@@ -514,8 +514,8 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
     );
 
     // Make sure events were emitted.
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert_eq!(tags.len(), 2, "withdraw and burn events should be emitted");
     assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x02"); // accounts.Burn (code = 2) event
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x02"); // consensus_accounts.Withdraw (code = 2) event
@@ -593,9 +593,9 @@ fn test_api_withdraw_handler_failure() {
         )
         .expect("withdraw tx should succeed");
 
-        let (_, mut msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.pop().unwrap();
+        let mut state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.pop().unwrap();
 
         assert_eq!(
             Message::Staking(Versioned::new(
@@ -651,8 +651,8 @@ fn test_api_withdraw_handler_failure() {
     );
 
     // Make sure events were emitted.
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert_eq!(
         tags.len(),
         2,
@@ -745,9 +745,9 @@ fn perform_delegation<C: BatchContext>(ctx: &mut C, success: bool) -> u64 {
         )
         .expect("delegate tx should succeed");
 
-        let (_, mut msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.pop().unwrap();
+        let mut state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.pop().unwrap();
 
         assert_eq!(
             Message::Staking(Versioned::new(
@@ -829,8 +829,8 @@ fn test_api_delegate() {
     );
 
     // Make sure events were emitted.
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert_eq!(tags.len(), 2, "delegate and burn events should be emitted");
     assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x02"); // accounts.Burn (code = 2) event
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x03"); // consensus_accounts.Delegate (code = 3) event
@@ -948,8 +948,8 @@ fn test_api_delegate_fail() {
     );
 
     // Make sure events were emitted.
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert_eq!(tags.len(), 2, "delegate and burn events should be emitted");
     assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x03"); // consensus_accounts.Delegate (code = 3) event
@@ -993,9 +993,9 @@ fn perform_undelegation<C: BatchContext>(
         )
         .expect("undelegate tx should succeed");
 
-        let (_, mut msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.pop().unwrap();
+        let mut state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.pop().unwrap();
 
         assert_eq!(
             Message::Staking(Versioned::new(
@@ -1154,8 +1154,8 @@ fn test_api_undelegate() {
     let rt_address = Address::from_runtime_id(ctx.runtime_id());
 
     // Make sure events were emitted.
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert_eq!(tags.len(), 1, "undelegate start event should be emitted");
     assert_eq!(tags[0].key, b"consensus_accounts\x00\x00\x00\x04"); // consensus_accounts.UndelegateStart (code = 4) event
 
@@ -1179,8 +1179,8 @@ fn test_api_undelegate() {
         Module::<Accounts, Consensus>::end_block(&mut ctx);
 
         // Make sure nothing changes.
-        let (etags, _) = ctx.commit();
-        let tags = etags.into_tags();
+        let state = ctx.commit();
+        let tags = state.events.into_tags();
         assert_eq!(tags.len(), 0, "no events should be emitted");
     }
 
@@ -1203,8 +1203,8 @@ fn test_api_undelegate() {
     Module::<Accounts, Consensus>::end_block(&mut ctx);
 
     // Make sure events were emitted.
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert_eq!(
         tags.len(),
         2,
@@ -1289,8 +1289,8 @@ fn test_api_undelegate_fail() {
     let (nonce, _) = perform_undelegation(&mut ctx, Some(false));
 
     // Make sure events were emitted.
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert_eq!(tags.len(), 1, "undelegate start event should be emitted");
     assert_eq!(tags[0].key, b"consensus_accounts\x00\x00\x00\x04"); // consensus_accounts.UndelegateStart (code = 4) event
 
@@ -1331,8 +1331,8 @@ fn test_api_undelegate_suspension() {
     let rt_address = Address::from_runtime_id(ctx.runtime_id());
 
     // Make sure no events were emitted.
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert!(tags.is_empty(), "no events should be emitted");
 
     // Simulate the runtime resuming and processing both undelegate results and the debonding period
@@ -1378,8 +1378,8 @@ fn test_api_undelegate_suspension() {
     Module::<Accounts, Consensus>::end_block(&mut ctx);
 
     // Make sure events were emitted.
-    let (etags, _) = ctx.commit();
-    let tags = etags.into_tags();
+    let state = ctx.commit();
+    let tags = state.events.into_tags();
     assert_eq!(
         tags.len(),
         3,

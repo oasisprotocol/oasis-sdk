@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strings"
 
 	ethMath "github.com/ethereum/go-ethereum/common/math"
@@ -16,16 +17,21 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
+	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
+	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/callformat"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
+	consensusAccounts "github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensusaccounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
+	contractSubcall "github.com/oasisprotocol/oasis-sdk/tests/e2e/contracts/subcall"
 	"github.com/oasisprotocol/oasis-sdk/tests/e2e/txgen"
 )
 
@@ -139,6 +145,7 @@ func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer sig
 		}
 	}
 
+	txB.SetFeeConsensusMessages(1)
 	tx := txB.SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(gasPrice * gasLimit), types.NativeDenomination)).GetTransaction()
 	result, err := txgen.SignAndSubmitTxRaw(ctx, rtc, signer, *tx, gasLimit)
 	if err != nil {
@@ -1168,6 +1175,63 @@ func C10lEVMMessageSigningTest(sc *RuntimeScenario, log *logging.Logger, conn *g
 	return messageSigningEVMTest(log, rtc, c10l)
 }
 
+// SubcallDelegationTest performs a delegation from the EVM by using the subcall precompile.
+func SubcallDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	ev := evm.NewV1(rtc)
+	consAccounts := consensusAccounts.NewV1(rtc)
+	gasPrice := uint64(2)
+
+	// Deploy the contract.
+	value := big.NewInt(0).Bytes() // Don't send any tokens.
+	contractAddr, err := evmCreate(ctx, rtc, ev, testing.Dave.Signer, value, contractSubcall.Compiled, gasPrice, nonc10l)
+	if err != nil {
+		return fmt.Errorf("failed to deploy contract: %w", err)
+	}
+
+	// Start watching consensus and runtime events.
+	cons := consensus.NewConsensusClient(conn)
+	stakingClient := cons.Staking()
+	ch, sub, err := stakingClient.WatchEvents(ctx)
+	if err != nil {
+		return err
+	}
+	defer sub.Close()
+	acCh, err := rtc.WatchEvents(ctx, []client.EventDecoder{consAccounts}, false)
+	if err != nil {
+		return err
+	}
+
+	// Call the method.
+	amount := types.NewBaseUnits(*quantity.NewFromUint64(10_000), types.NativeDenomination)
+	consensusAmount := quantity.NewFromUint64(10) // Consensus amount is scaled.
+	data, err := contractSubcall.ABI.Pack("test", []byte("consensus.Delegate"), cbor.Marshal(consensusAccounts.Delegate{
+		To:     testing.Alice.Address,
+		Amount: amount,
+	}))
+	if err != nil {
+		return fmt.Errorf("failed to pack arguments: %w", err)
+	}
+
+	value = big.NewInt(10_000).Bytes() // Send tokens to contract so it has something to delegate.
+	_, err = evmCall(ctx, rtc, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, nonc10l)
+	if err != nil {
+		return fmt.Errorf("failed to call contract: %w", err)
+	}
+
+	// Verify that delegation succeeded.
+	runtimeAddr := staking.NewRuntimeAddress(runtimeID)
+	contractSdkAddress := types.NewAddressFromEth(contractAddr)
+	if err = ensureStakingEvent(log, ch, makeAddEscrowCheck(runtimeAddr, staking.Address(testing.Alice.Address), consensusAmount)); err != nil {
+		return fmt.Errorf("ensuring runtime->alice add escrow consensus event: %w", err)
+	}
+	if err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(contractSdkAddress, 0, testing.Alice.Address, amount)); err != nil {
+		return fmt.Errorf("ensuring contract delegate runtime event: %w", err)
+	}
+
+	return nil
+}
+
 // EVMParametersTest tests parameters methods.
 func EVMParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
@@ -1179,4 +1243,18 @@ func EVMParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clie
 	}
 
 	return nil
+}
+
+// EVMRuntimeFixture prepares the runtime fixture for the EVM tests.
+func EVMRuntimeFixture(ff *oasis.NetworkFixture) {
+	// The EVM runtime has 110_000 TEST tokens already minted internally. Since we connect it to the
+	// consensus layer (via the consensus module), we should make sure that the runtime's account in
+	// the consensus layer also has a similar amount as otherwise the delegation tests will fail.
+	runtimeAddress := staking.NewRuntimeAddress(ff.Runtimes[1].ID)
+	_ = ff.Network.StakingGenesis.TotalSupply.Add(quantity.NewFromUint64(110_000))
+	ff.Network.StakingGenesis.Ledger[runtimeAddress] = &staking.Account{
+		General: staking.GeneralAccount{
+			Balance: *quantity.NewFromUint64(110_000),
+		},
+	}
 }

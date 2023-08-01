@@ -303,16 +303,16 @@ impl<R: Runtime> Dispatcher<R> {
                     ))
                 } else {
                     // Commit store and return emitted tags and messages.
-                    let (etags, messages) = ctx.commit();
+                    let state = ctx.commit();
                     TransactionResult::Commit((
                         DispatchResult {
                             result,
-                            tags: etags.into_tags(),
+                            tags: state.events.into_tags(),
                             priority,
                             sender_metadata,
                             call_format_metadata,
                         },
-                        messages,
+                        state.messages,
                     ))
                 }
             })
@@ -571,15 +571,14 @@ impl<R: Runtime> Dispatcher<R> {
             R::Modules::end_block(&mut ctx);
 
             // Commit the context and retrieve the emitted messages.
-            let (block_tags, messages) = ctx.commit();
-            let (messages, handlers) = messages.into_iter().unzip();
-
+            let state = ctx.commit();
+            let (messages, handlers) = state.messages.into_iter().unzip();
             Self::save_emitted_message_handlers(handlers);
 
             Ok(ExecuteBatchResult {
                 results,
                 messages,
-                block_tags: block_tags.into_tags(),
+                block_tags: state.events.into_tags(),
                 tx_reject_hashes: vec![],
                 in_msgs_count: 0, // TODO: Support processing incoming messages.
             })

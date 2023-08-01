@@ -56,9 +56,9 @@ fn test_api_transfer() {
         )
         .expect("transfer should succeed");
 
-        let (_, msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.first().unwrap();
+        let state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.first().unwrap();
 
         assert_eq!(
             &Message::Staking(Versioned::new(
@@ -126,9 +126,9 @@ fn test_api_transfer_scaling() {
         )
         .expect("transfer should succeed");
 
-        let (_, msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.first().unwrap();
+        let state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.first().unwrap();
 
         assert_eq!(
             &Message::Staking(Versioned::new(
@@ -167,9 +167,9 @@ fn test_api_withdraw() {
         )
         .expect("withdraw should succeed");
 
-        let (_, msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.first().unwrap();
+        let state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.first().unwrap();
 
         assert_eq!(
             &Message::Staking(Versioned::new(
@@ -212,9 +212,9 @@ fn test_api_withdraw_scaling() {
         )
         .expect("withdraw should succeed");
 
-        let (_, msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.first().unwrap();
+        let state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.first().unwrap();
 
         assert_eq!(
             &Message::Staking(Versioned::new(
@@ -252,9 +252,9 @@ fn test_api_escrow() {
         )
         .expect("escrow should succeed");
 
-        let (_, msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.first().unwrap();
+        let state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.first().unwrap();
 
         assert_eq!(
             &Message::Staking(Versioned::new(
@@ -297,9 +297,9 @@ fn test_api_escrow_scaling() {
         )
         .expect("escrow should succeed");
 
-        let (_, msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.first().unwrap();
+        let state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.first().unwrap();
 
         assert_eq!(
             &Message::Staking(Versioned::new(
@@ -342,9 +342,9 @@ fn test_api_reclaim_escrow() {
         )
         .expect("reclaim escrow should succeed");
 
-        let (_, msgs) = tx_ctx.commit();
-        assert_eq!(1, msgs.len(), "one message should be emitted");
-        let (msg, hook) = msgs.first().unwrap();
+        let state = tx_ctx.commit();
+        assert_eq!(1, state.messages.len(), "one message should be emitted");
+        let (msg, hook) = state.messages.first().unwrap();
 
         assert_eq!(
             &Message::Staking(Versioned::new(

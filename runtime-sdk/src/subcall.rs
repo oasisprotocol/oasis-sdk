@@ -1,8 +1,8 @@
 //! Subcall dispatch.
-use std::{cell::RefCell, collections::BTreeMap};
+use std::cell::RefCell;
 
 use crate::{
-    context::{BatchContext, Context, TxContext},
+    context::{BatchContext, Context, State, TxContext},
     dispatcher,
     module::CallResult,
     modules::core::{Error, API as _},
@@ -49,6 +49,8 @@ pub struct SubcallInfo {
 /// Result of dispatching a subcall.
 #[derive(Debug)]
 pub struct SubcallResult {
+    /// State after applying the subcall context.
+    pub state: State,
     /// Result of the subcall.
     pub call_result: CallResult,
     /// Gas used by the subcall.
@@ -137,7 +139,7 @@ pub fn call<C: TxContext, V: Validator + 'static>(
     let remaining_messages = ctx.remaining_messages();
 
     // Execute a transaction in a child context.
-    let (call_result, gas, etags, messages) = ctx.with_child(ctx.mode(), |mut ctx| {
+    let (call_result, gas, state) = ctx.with_child(ctx.mode(), |mut ctx| {
         // Generate an internal transaction.
         let tx = transaction::Transaction {
             version: transaction::LATEST_TRANSACTION_VERSION,
@@ -180,11 +182,11 @@ pub fn call<C: TxContext, V: Validator + 'static>(
                 // Commit store and return emitted tags and messages on successful dispatch,
                 // otherwise revert state and ignore any emitted events/messages.
                 if result.is_success() {
-                    let (etags, messages) = ctx.commit();
-                    TransactionResult::Commit((result, gas, etags, messages))
+                    let state = ctx.commit();
+                    TransactionResult::Commit((result, gas, state))
                 } else {
                     // Ignore tags/messages on failure.
-                    TransactionResult::Rollback((result, gas, BTreeMap::new(), vec![]))
+                    TransactionResult::Rollback((result, gas, Default::default()))
                 }
             })
         });
@@ -198,16 +200,8 @@ pub fn call<C: TxContext, V: Validator + 'static>(
     // Compute the amount of gas used.
     let gas_used = info.max_gas.saturating_sub(gas);
 
-    // Forward any emitted event tags.
-    ctx.emit_etags(etags);
-
-    // Forward any emitted runtime messages.
-    for (msg, hook) in messages {
-        // This should never fail as child context has the right limits configured.
-        ctx.emit_message(msg, hook)?;
-    }
-
     Ok(SubcallResult {
+        state,
         call_result,
         gas_used,
     })

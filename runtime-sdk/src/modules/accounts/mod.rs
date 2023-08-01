@@ -147,6 +147,9 @@ pub trait API {
         amount: &token::BaseUnits,
     ) -> Result<(), Error>;
 
+    /// Transfer an amount from one account to the other without emitting an event.
+    fn transfer_silent(from: Address, to: Address, amount: &token::BaseUnits) -> Result<(), Error>;
+
     /// Mint new tokens, increasing the total supply.
     fn mint<C: Context>(ctx: &mut C, to: Address, amount: &token::BaseUnits) -> Result<(), Error>;
 
@@ -159,6 +162,9 @@ pub trait API {
 
     /// Fetch an account's current nonce.
     fn get_nonce(address: Address) -> Result<u64, Error>;
+
+    /// Increments an account's nonce.
+    fn inc_nonce(address: Address);
 
     /// Sets an account's balance of the given denomination.
     ///
@@ -423,10 +429,7 @@ impl API for Module {
             return Ok(());
         }
 
-        // Subtract from source account.
-        Self::sub_amount(from, amount)?;
-        // Add to destination account.
-        Self::add_amount(to, amount)?;
+        Self::transfer_silent(from, to, amount)?;
 
         // Emit a transfer event.
         ctx.emit_event(Event::Transfer {
@@ -434,6 +437,15 @@ impl API for Module {
             to,
             amount: amount.clone(),
         });
+
+        Ok(())
+    }
+
+    fn transfer_silent(from: Address, to: Address, amount: &token::BaseUnits) -> Result<(), Error> {
+        // Subtract from source account.
+        Self::sub_amount(from, amount)?;
+        // Add to destination account.
+        Self::add_amount(to, amount)?;
 
         Ok(())
     }
@@ -501,6 +513,17 @@ impl API for Module {
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
             let account: types::Account = accounts.get(address).unwrap_or_default();
             Ok(account.nonce)
+        })
+    }
+
+    fn inc_nonce(address: Address) {
+        CurrentStore::with(|store| {
+            let store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let mut accounts =
+                storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
+            let mut account: types::Account = accounts.get(address).unwrap_or_default();
+            account.nonce = account.nonce.saturating_add(1);
+            accounts.insert(address, account);
         })
     }
 

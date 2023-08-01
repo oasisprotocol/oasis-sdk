@@ -50,8 +50,9 @@ var (
 		SimpleERC20EVMTest,
 		SimpleEVMSuicideTest,
 		SimpleEVMCallSuicideTest,
+		SubcallDelegationTest,
 		EVMParametersTest,
-	})
+	}, WithCustomFixture(EVMRuntimeFixture))
 
 	// C10lEVMRuntime is the c10l-evm runtime test.
 	C10lEVMRuntime = NewRuntimeScenario("test-runtime-c10l-evm", []RunTestFunction{
@@ -67,7 +68,7 @@ var (
 		C10lEVMRNGTest,
 		C10lEVMMessageSigningTest,
 		EVMParametersTest,
-	})
+	}, WithCustomFixture(EVMRuntimeFixture))
 
 	// SimpleContractsRuntime is the simple-contracts runtime test.
 	SimpleContractsRuntime = NewRuntimeScenario("test-runtime-simple-contracts", []RunTestFunction{
