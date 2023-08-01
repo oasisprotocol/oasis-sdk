@@ -11,7 +11,7 @@ import (
 
 // CompiledHex is the compiled subcall contract in hex encoding.
 //
-//go:embed evm_subcall_compiled.hex
+//go:embed evm_subcall.hex
 var CompiledHex string
 
 // Compiled is the compiled subcall contract.
@@ -23,7 +23,7 @@ var Compiled = func() []byte {
 	return contract
 }()
 
-//go:embed evm_subcall_abi.json
+//go:embed evm_subcall.abi
 var evmSubcallABIJson string
 
 // ABI is the ABI of the subcall contract.

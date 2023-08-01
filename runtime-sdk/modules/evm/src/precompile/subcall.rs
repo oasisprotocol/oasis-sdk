@@ -198,10 +198,10 @@ mod test {
 
     /// Test contract code.
     static TEST_CONTRACT_CODE_HEX: &str =
-        include_str!("../../../../../tests/e2e/contracts/subcall/evm_subcall_compiled.hex");
+        include_str!("../../../../../tests/e2e/contracts/subcall/evm_subcall.hex");
     /// Test contract ABI.
     static TEST_CONTRACT_ABI_JSON: &str =
-        include_str!("../../../../../tests/e2e/contracts/subcall/evm_subcall_abi.json");
+        include_str!("../../../../../tests/e2e/contracts/subcall/evm_subcall.abi");
 
     fn init_and_deploy_contract<C: BatchContext>(ctx: &mut C, signer: &mut EvmSigner) -> H160 {
         TestRuntime::migrate(ctx);
