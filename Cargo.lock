@@ -1583,6 +1583,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hmac"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
+dependencies = [
+ "digest 0.10.6",
+]
+
+[[package]]
 name = "honggfuzz"
 version = "0.5.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2239,7 +2248,7 @@ name = "oasis-contract-sdk-crypto"
 version = "0.3.0"
 dependencies = [
  "hex",
- "hmac",
+ "hmac 0.12.1",
  "k256",
  "oasis-cbor",
  "oasis-runtime-sdk",
@@ -2322,7 +2331,7 @@ dependencies = [
  "deoxysii",
  "ed25519-dalek",
  "futures",
- "hmac",
+ "hmac 0.11.0",
  "honggfuzz",
  "impl-trait-for-tuples",
  "intrusive-collections",
@@ -2375,7 +2384,7 @@ dependencies = [
  "digest 0.10.7",
  "ed25519-dalek",
  "hex",
- "hmac",
+ "hmac 0.12.1",
  "impl-trait-for-tuples",
  "io-context",
  "k256",
@@ -2437,7 +2446,7 @@ dependencies = [
  "evm",
  "fixed-hash",
  "hex",
- "hmac",
+ "hmac 0.12.1",
  "k256",
  "num 0.4.1",
  "oasis-cbor",
@@ -3025,7 +3034,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96ef608575f6392792f9ecf7890c00086591d29a83910939d430753f7c050525"
 dependencies = [
  "crypto-bigint",
- "hmac",
+ "hmac 0.11.0",
  "zeroize",
 ]
 
