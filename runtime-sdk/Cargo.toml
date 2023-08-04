@@ -39,9 +39,6 @@ tokio = { version = "~1.24.1", features = ["rt"] }
 zeroize = "1.4"
 lru = "0.8.0"
 
-# TODO: Remove this once broken version 0.3.6 is yanked upstream (https://github.com/fortanix/rust-sgx/issues/497).
-dcap-ql = { version = ">=0.3.4, <0.3.6", default-features = false, features = ["verify"] }
-
 [dev-dependencies]
 blake3 = { version = "1.3.1", features = ["traits-preview"] }
 

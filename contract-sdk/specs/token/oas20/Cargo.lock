@@ -673,9 +673,9 @@ checksum = "c2e66c9d817f1720209181c316d28635c050fa304f9c79e47a520882661b7308"
 
 [[package]]
 name = "dcap-ql"
-version = "0.3.5"
+version = "0.3.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "748bb654a716b7f26ffdae746f3eacd22d72bc1858cef5b582bb68c90bde533e"
+checksum = "0a63d5f9b6526bb82ba697e303d9789a87849753815c84346444e94a5be2de43"
 dependencies = [
  "byteorder",
  "failure",
@@ -1793,7 +1793,6 @@ dependencies = [
  "bech32",
  "byteorder",
  "curve25519-dalek 3.2.0",
- "dcap-ql",
  "digest 0.10.7",
  "ed25519-dalek",
  "hex",
