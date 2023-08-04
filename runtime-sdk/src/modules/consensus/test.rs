@@ -26,7 +26,7 @@ fn test_api_transfer_invalid_denomination() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::NATIVE);
 
@@ -45,7 +45,7 @@ fn test_api_transfer() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::transfer(
@@ -90,7 +90,7 @@ fn test_api_transfer_scaling_unrepresentable() {
         ..Default::default()
     });
 
-    ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         // Amount is not representable as it must be in multiples of 1000.
         let amount = BaseUnits::new(500, Denomination::from_str("TEST").unwrap());
@@ -115,7 +115,7 @@ fn test_api_transfer_scaling() {
         ..Default::default()
     });
 
-    ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::transfer(
@@ -156,7 +156,7 @@ fn test_api_withdraw() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::withdraw(
@@ -201,7 +201,7 @@ fn test_api_withdraw_scaling() {
         ..Default::default()
     });
 
-    ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::withdraw(
@@ -241,7 +241,7 @@ fn test_api_escrow() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::escrow(
@@ -286,7 +286,7 @@ fn test_api_escrow_scaling() {
         ..Default::default()
     });
 
-    ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = BaseUnits::new(1_000, Denomination::from_str("TEST").unwrap());
         Consensus::escrow(
@@ -331,7 +331,7 @@ fn test_api_reclaim_escrow() {
         ..Default::default()
     });
 
-    ctx.with_tx(0, 0, mock::transaction(), |mut tx_ctx, _call| {
+    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
         let hook_name = "test_event_handler";
         let amount = 1_000u128;
         Consensus::reclaim_escrow(

@@ -13,6 +13,7 @@ use oasis_core_runtime::{
 
 use crate::{
     context::{BatchContext, Mode, RuntimeBatchContext},
+    crypto::random::RootRng,
     dispatcher, history,
     keymanager::KeyManager,
     module::MigrationHandler,
@@ -66,6 +67,7 @@ pub struct Mock {
     pub consensus_state: ConsensusState,
     pub history: Box<dyn history::HistoryHost>,
     pub epoch: beacon::EpochTime,
+    pub rng: RootRng,
 
     pub max_messages: u32,
 }
@@ -99,6 +101,7 @@ impl Mock {
             &self.consensus_state,
             &self.history,
             self.epoch,
+            &self.rng,
             IoContext::background().freeze(),
             self.max_messages,
         )
@@ -127,6 +130,7 @@ impl Mock {
             consensus_state: ConsensusState::new(1, consensus_tree),
             history: Box::new(EmptyHistory),
             epoch: 1,
+            rng: RootRng::new(),
             max_messages: 32,
         }
     }

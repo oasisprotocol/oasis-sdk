@@ -11,7 +11,7 @@ use thiserror::Error;
 
 use crate::{
     callformat,
-    context::{BatchContext, Context, TxContext},
+    context::{BatchContext, Context, TransactionWithMeta, TxContext},
     core::consensus::beacon::EpochTime,
     dispatcher,
     error::Error as SDKError,
@@ -603,26 +603,35 @@ impl<Cfg: Config> Module<Cfg> {
 
             CurrentStore::with_transaction(|| {
                 let result = ctx.with_simulation(|mut sim_ctx| {
-                    sim_ctx.with_tx(0 /* index */, tx_size, tx, |mut tx_ctx, call| {
-                        let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
-                            &mut tx_ctx,
-                            call,
-                            &Default::default(),
-                        );
-                        if !result.is_success() && report_failure {
-                            // Report failure.
-                            let err: TxSimulationFailure = result.try_into().unwrap(); // Guaranteed to be a Failed CallResult.
-                            return Err(Error::TxSimulationFailed(err));
-                        }
-                        // Don't report success or failure. If the call fails, we still report
-                        // how much gas it uses while it fails.
-                        let gas_used = *tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
-                        if result.is_success() {
-                            Ok(gas_used)
-                        } else {
-                            Ok(gas_used.saturating_add(extra_gas_fail).clamp(0, gas))
-                        }
-                    })
+                    sim_ctx.with_tx(
+                        TransactionWithMeta {
+                            tx,
+                            tx_size,
+                            tx_index: 0,
+                            tx_hash: Default::default(),
+                        },
+                        |mut tx_ctx, call| {
+                            let (result, _) =
+                                dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
+                                    &mut tx_ctx,
+                                    call,
+                                    &Default::default(),
+                                );
+                            if !result.is_success() && report_failure {
+                                // Report failure.
+                                let err: TxSimulationFailure = result.try_into().unwrap(); // Guaranteed to be a Failed CallResult.
+                                return Err(Error::TxSimulationFailed(err));
+                            }
+                            // Don't report success or failure. If the call fails, we still report
+                            // how much gas it uses while it fails.
+                            let gas_used = *tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
+                            if result.is_success() {
+                                Ok(gas_used)
+                            } else {
+                                Ok(gas_used.saturating_add(extra_gas_fail).clamp(0, gas))
+                            }
+                        },
+                    )
                 });
 
                 TransactionResult::Rollback(result) // Always rollback storage changes.
@@ -747,8 +756,9 @@ impl<Cfg: Config> Module<Cfg> {
         let key_manager = ctx
             .key_manager()
             .ok_or_else(|| Error::InvalidArgument(anyhow!("key manager not available")))?;
+        let epoch = ctx.epoch();
         let public_key = key_manager
-            .get_public_ephemeral_key(callformat::get_key_pair_id(ctx.epoch()), ctx.epoch())
+            .get_public_ephemeral_key(callformat::get_key_pair_id(epoch), epoch)
             .map_err(|err| match err {
                 keymanager::KeyManagerError::InvalidEpoch => {
                     Error::InvalidCallFormat(anyhow!("invalid epoch"))
@@ -757,7 +767,7 @@ impl<Cfg: Config> Module<Cfg> {
             })?
             .ok_or_else(|| Error::InvalidArgument(anyhow!("key not available")))?;
 
-        Ok(types::CallDataPublicKeyQueryResponse { public_key })
+        Ok(types::CallDataPublicKeyQueryResponse { public_key, epoch })
     }
 
     /// Query the minimum gas price.

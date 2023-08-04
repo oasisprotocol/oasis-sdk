@@ -8,6 +8,8 @@ type CallEnvelopeX25519DeoxysII struct {
 	Pk [32]byte `json:"pk"`
 	// Nonce.
 	Nonce [deoxysii.NonceSize]byte `json:"nonce"`
+	// Epoch is the epoch of the ephemeral runtime key.
+	Epoch uint64 `json:"epoch,omitempty"`
 	// Data is the encrypted call data.
 	Data []byte `json:"data"`
 }

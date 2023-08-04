@@ -1,0 +1,1 @@
+[{"inputs":[],"name":"test","outputs":[],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"count","type":"uint256"},{"internalType":"bytes","name":"pers","type":"bytes"}],"name":"testGenerate","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"}]

@@ -1,18 +1,43 @@
+//! Random number generator based on root VRF key and Merlin transcripts.
+use std::cell::RefCell;
+
 use merlin::{Transcript, TranscriptRng};
-use rand_core::{CryptoRng, RngCore};
-use schnorrkel::keys::{ExpansionMode, MiniSecretKey};
+use rand_core::{CryptoRng, OsRng, RngCore};
+use schnorrkel::keys::{ExpansionMode, Keypair, MiniSecretKey};
+
+use oasis_core_runtime::common::crypto::hash::Hash;
 
 use crate::{context::Context, dispatcher, keymanager::KeyManagerError, modules::core::Error};
 
-pub struct Rng {
-    transcript: Transcript,
-    rng: TranscriptRng,
+/// RNG domain separation context.
+const RNG_CONTEXT: &[u8] = b"oasis-runtime-sdk/crypto: rng v1";
+/// Per-block root VRF key domain separation context.
+const VRF_KEY_CONTEXT: &[u8] = b"oasis-runtime-sdk/crypto: root vrf key v1";
+
+/// A root RNG that can be used to derive domain-separated leaf RNGs.
+pub struct RootRng {
+    inner: RefCell<Inner>,
 }
 
-impl Rng {
-    /// Creates a new RNG, potentially seeded using the provided `ctx`.
-    /// This should only be called once per top-level context.
-    pub fn new<C: Context + ?Sized>(ctx: &C) -> Result<Self, Error> {
+struct Inner {
+    /// Merlin transcript for initializing the RNG.
+    transcript: Transcript,
+    /// A transcript-based RNG (when initialized).
+    rng: Option<TranscriptRng>,
+}
+
+impl RootRng {
+    /// Create a new root RNG.
+    pub fn new() -> Self {
+        Self {
+            inner: RefCell::new(Inner {
+                transcript: Transcript::new(RNG_CONTEXT),
+                rng: None,
+            }),
+        }
+    }
+
+    fn derive_root_vrf_key<C: Context + ?Sized>(ctx: &C) -> Result<Keypair, Error> {
         let km = ctx
             .key_manager()
             .ok_or(Error::Abort(dispatcher::Error::KeyManagerFailure(
@@ -20,12 +45,13 @@ impl Rng {
             )))?;
         let round_header_hash = ctx.runtime_header().encoded_hash();
         let key_id = crate::keymanager::get_key_pair_id([
-            b"oasis-runtime-sdk/crypto: random_bytes".as_slice(),
+            VRF_KEY_CONTEXT,
             &[ctx.mode() as u8],
             round_header_hash.as_ref(),
         ]);
+        // Use previous epoch's ephemeral key to ensure it is available.
         let km_kp = km
-            .get_or_create_ephemeral_keys(key_id, ctx.epoch())
+            .get_or_create_ephemeral_keys(key_id, ctx.epoch().saturating_sub(1))
             .map_err(|err| Error::Abort(dispatcher::Error::KeyManagerFailure(err)))?
             .input_keypair;
         // The KM returns an ed25519 key, but it needs to be in "expanded" form to use with
@@ -37,37 +63,269 @@ impl Rng {
                 ))
             })?
             .expand_to_keypair(ExpansionMode::Uniform);
-        let mut transcript = Transcript::new(b"MakeRNG");
-        let rng = kp.vrf_sign(&mut transcript).0.make_merlin_rng(&[]);
-        Ok(Self { transcript, rng })
+
+        Ok(kp)
     }
 
-    /// Create an independent RNG using this RNG as its parent.
-    pub fn fork(&mut self, pers: &[u8]) -> Self {
-        let mut transcript = self.transcript.clone();
-        transcript.append_message(b"fork", &[]);
-        transcript.append_message(b"pers", pers);
-        let rng = transcript.build_rng().finalize(&mut self.rng);
-        Self { transcript, rng }
+    /// Append local entropy to the root RNG.
+    ///
+    /// # Non-determinism
+    ///
+    /// Using this method will result in the RNG being non-deterministic.
+    pub fn append_local_entropy(&self) {
+        let mut bytes = [0u8; 32];
+        OsRng.fill_bytes(&mut bytes);
+
+        let mut inner = self.inner.borrow_mut();
+        inner.transcript.append_message(b"local-rng", &bytes);
+    }
+
+    /// Append an observed transaction hash to RNG transcript.
+    pub fn append_tx(&self, tx_hash: Hash) {
+        let mut inner = self.inner.borrow_mut();
+        inner.transcript.append_message(b"tx", tx_hash.as_ref());
+    }
+
+    /// Append an observed subcontext to RNG transcript.
+    pub fn append_subcontext(&self) {
+        let mut inner = self.inner.borrow_mut();
+        inner.transcript.append_message(b"subctx", &[]);
+    }
+
+    /// Create an independent leaf RNG using this RNG as its parent.
+    pub fn fork<C: Context + ?Sized>(&self, ctx: &C, pers: &[u8]) -> Result<LeafRng, Error> {
+        let mut inner = self.inner.borrow_mut();
+
+        // Ensure the RNG is initialized and initialize it if not.
+        if inner.rng.is_none() {
+            // Derive the root VRF key for the current block.
+            let root_vrf_key = Self::derive_root_vrf_key(ctx)?;
+
+            // Initialize the root RNG.
+            let rng = root_vrf_key
+                .vrf_create_hash(&mut inner.transcript)
+                .make_merlin_rng(&[]);
+            inner.rng = Some(rng);
+        }
+
+        // Generate the leaf RNG.
+        inner.transcript.append_message(b"fork", pers);
+
+        let rng_builder = inner.transcript.build_rng();
+        let parent_rng = inner.rng.as_mut().expect("rng must be initialized");
+        let rng = rng_builder.finalize(parent_rng);
+
+        Ok(LeafRng(rng))
     }
 }
 
-impl RngCore for Rng {
+impl Default for RootRng {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// A leaf RNG.
+pub struct LeafRng(TranscriptRng);
+
+impl RngCore for LeafRng {
     fn next_u32(&mut self) -> u32 {
-        self.rng.next_u32()
+        self.0.next_u32()
     }
 
     fn next_u64(&mut self) -> u64 {
-        self.rng.next_u64()
+        self.0.next_u64()
     }
 
     fn fill_bytes(&mut self, dest: &mut [u8]) {
-        self.rng.fill_bytes(dest)
+        self.0.fill_bytes(dest)
     }
 
     fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
-        self.rng.try_fill_bytes(dest)
+        self.0.try_fill_bytes(dest)
     }
 }
 
-impl CryptoRng for Rng {}
+impl CryptoRng for LeafRng {}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use crate::{context::Mode, testing::mock};
+
+    #[test]
+    fn test_rng_basic() {
+        let mut mock = mock::Mock::default();
+        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(Mode::ExecuteTx, true);
+
+        // Create first root RNG.
+        let root_rng = RootRng::new();
+
+        let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
+        let mut bytes1 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes1);
+
+        let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
+        let mut bytes1_1 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes1_1);
+
+        assert_ne!(bytes1, bytes1_1, "rng should apply domain separation");
+
+        // Create second root RNG using the same context so the ephemeral key is shared.
+        let root_rng = RootRng::new();
+
+        let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
+        let mut bytes2 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes2);
+
+        assert_eq!(bytes1, bytes2, "rng should be deterministic");
+
+        let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
+        let mut bytes2_1 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes2_1);
+
+        assert_ne!(bytes2, bytes2_1, "rng should apply domain separation");
+        assert_eq!(bytes1_1, bytes2_1, "rng should be deterministic");
+
+        // Create third root RNG using the same context, but with different personalization.
+        let root_rng = RootRng::new();
+
+        let mut leaf_rng = root_rng
+            .fork(&ctx, b"domsep")
+            .expect("rng fork should work");
+        let mut bytes3 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes3);
+
+        assert_ne!(bytes2, bytes3, "rng should apply domain separation");
+
+        // Create another root RNG using the same context, but with different history.
+        let root_rng = RootRng::new();
+        root_rng
+            .append_tx("0000000000000000000000000000000000000000000000000000000000000001".into());
+
+        let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
+        let mut bytes4 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes4);
+
+        assert_ne!(bytes2, bytes4, "rng should apply domain separation");
+
+        // Create another root RNG using the same context, but with different history.
+        let root_rng = RootRng::new();
+        root_rng
+            .append_tx("0000000000000000000000000000000000000000000000000000000000000002".into());
+
+        let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
+        let mut bytes5 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes5);
+
+        assert_ne!(bytes4, bytes5, "rng should apply domain separation");
+
+        // Create another root RNG using the same context, but with same history as four.
+        let root_rng = RootRng::new();
+        root_rng
+            .append_tx("0000000000000000000000000000000000000000000000000000000000000001".into());
+
+        let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
+        let mut bytes6 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes6);
+
+        assert_eq!(bytes4, bytes6, "rng should be deterministic");
+
+        // Create another root RNG using the same context, but with different history.
+        let root_rng = RootRng::new();
+        root_rng
+            .append_tx("0000000000000000000000000000000000000000000000000000000000000001".into());
+        root_rng
+            .append_tx("0000000000000000000000000000000000000000000000000000000000000002".into());
+
+        let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
+        let mut bytes7 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes7);
+
+        assert_ne!(bytes4, bytes7, "rng should apply domain separation");
+
+        // Create another root RNG using the same context, but with different init point.
+        let root_rng = RootRng::new();
+        root_rng
+            .append_tx("0000000000000000000000000000000000000000000000000000000000000001".into());
+        let _ = root_rng.fork(&ctx, &[]).expect("rng fork should work"); // Force init.
+        root_rng
+            .append_tx("0000000000000000000000000000000000000000000000000000000000000002".into());
+
+        let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
+        let mut bytes8 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes8);
+
+        assert_ne!(bytes7, bytes8, "rng should apply domain separation");
+        assert_ne!(bytes6, bytes8, "rng should apply domain separation");
+    }
+
+    #[test]
+    fn test_rng_fail_nonconfidential() {
+        let mut mock = mock::Mock::default();
+        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(Mode::ExecuteTx, false);
+
+        let root_rng = RootRng::new();
+        assert!(
+            root_rng.fork(&ctx, &[]).is_err(),
+            "rng fork should fail on non-confidential runtimes"
+        );
+    }
+
+    #[test]
+    fn test_rng_local_entropy() {
+        let mut mock = mock::Mock::default();
+        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(Mode::ExecuteTx, true);
+
+        // Create first root RNG.
+        let root_rng = RootRng::new();
+
+        let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
+        let mut bytes1 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes1);
+
+        // Create second root RNG using the same context, but mix in local entropy.
+        let root_rng = RootRng::new();
+        root_rng.append_local_entropy();
+
+        let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
+        let mut bytes2 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes2);
+
+        assert_ne!(bytes1, bytes2, "rng should apply domain separation");
+    }
+
+    #[test]
+    fn test_rng_parent_fork_propagation() {
+        let mut mock = mock::Mock::default();
+        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(Mode::ExecuteTx, true);
+
+        // Create first root RNG.
+        let root_rng = RootRng::new();
+
+        let mut leaf_rng = root_rng.fork(&ctx, b"a").expect("rng fork should work");
+        let mut bytes1 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes1);
+
+        let mut leaf_rng = root_rng.fork(&ctx, b"a").expect("rng fork should work");
+        let mut bytes1_1 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes1_1);
+
+        // Create second root RNG.
+        let root_rng = RootRng::new();
+
+        let mut leaf_rng = root_rng.fork(&ctx, b"b").expect("rng fork should work");
+        let mut bytes2 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes2);
+
+        let mut leaf_rng = root_rng.fork(&ctx, b"a").expect("rng fork should work");
+        let mut bytes2_1 = [0u8; 32];
+        leaf_rng.fill_bytes(&mut bytes2_1);
+
+        assert_ne!(
+            bytes1_1, bytes2_1,
+            "forks should propagate domain separator to parent"
+        );
+    }
+}

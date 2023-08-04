@@ -65,7 +65,7 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let code_id = Contracts::tx_upload(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("upload should succeed")
             .id;
@@ -115,7 +115,7 @@ fn deploy_hello_contract<C: BatchContext>(
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let instance_id =
             Contracts::tx_instantiate(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("instantiate should succeed")
@@ -232,7 +232,7 @@ fn test_hello_contract_call() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
@@ -329,7 +329,7 @@ fn test_hello_contract_call() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
@@ -482,7 +482,7 @@ fn test_hello_contract_call() {
                 ..Default::default()
             },
         };
-        ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+        ctx.with_tx(tx.into(), |mut tx_ctx, call| {
             let _result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("call should succeed");
             tx_ctx.commit();
@@ -569,7 +569,7 @@ fn test_hello_contract_call() {
                 ..Default::default()
             },
         };
-        ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+        ctx.with_tx(tx.into(), |mut tx_ctx, call| {
             let _result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("call should succeed");
             tx_ctx.commit();
@@ -667,13 +667,13 @@ fn test_hello_contract_call() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, invalid_tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(invalid_tx.clone().into(), |mut tx_ctx, call| {
         Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect_err("invalid call should fail");
     });
 
     ctx.with_child(context::Mode::CheckTx, |mut check_ctx| {
-        check_ctx.with_tx(0, 0, invalid_tx, |mut tx_ctx, call| {
+        check_ctx.with_tx(invalid_tx.into(), |mut tx_ctx, call| {
             Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect("invalid call should succeed check-tx");
         });
@@ -769,7 +769,7 @@ fn test_hello_contract_subcalls_overflow() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect_err("call should fail");
 
@@ -823,7 +823,7 @@ fn test_hello_contract_subcalls() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx.clone(), |mut tx_ctx, call| {
+    ctx.with_tx(tx.clone().into(), |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
@@ -891,7 +891,7 @@ fn test_hello_contract_query() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
@@ -933,7 +933,7 @@ fn test_hello_contract_query() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
@@ -975,7 +975,7 @@ fn test_hello_contract_query() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
@@ -1029,7 +1029,7 @@ fn test_hello_contract_upgrade() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("upgrade should succeed");
 
@@ -1074,7 +1074,7 @@ fn test_hello_contract_upgrade_fail_policy() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect_err("upgrade should fail");
 
@@ -1121,7 +1121,7 @@ fn test_hello_contract_upgrade_fail_pre() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect_err("upgrade should fail");
 
@@ -1171,7 +1171,7 @@ fn test_hello_contract_upgrade_fail_post() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result = Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect_err("upgrade should fail");
 
@@ -1218,7 +1218,7 @@ fn test_hello_contract_change_upgrade_policy() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         Contracts::tx_change_upgrade_policy(&mut tx_ctx, cbor::from_value(call.body).unwrap())
             .expect("upgrade should succeed");
 
@@ -1260,7 +1260,7 @@ fn test_hello_contract_change_upgrade_policy_fail() {
             ..Default::default()
         },
     };
-    ctx.with_tx(0, 0, tx, |mut tx_ctx, call| {
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
         let result =
             Contracts::tx_change_upgrade_policy(&mut tx_ctx, cbor::from_value(call.body).unwrap())
                 .expect_err("change upgrade policy should fail");

@@ -27,4 +27,10 @@ contract Test {
         require(success4, "unsuccessful4");
         require(out4.length == 1024, "bad length 4");
     }
+
+    function testGenerate(uint256 count, bytes calldata pers) external view returns (bytes memory) {
+        (bool success, bytes memory data) = randomBytes(count, pers);
+        require(success, "failed");
+        return data;
+    }
 }

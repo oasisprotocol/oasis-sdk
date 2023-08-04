@@ -100,6 +100,8 @@ const (
 type CallDataPublicKeyResponse struct {
 	// PublicKey is the signed runtime call data public key.
 	PublicKey types.SignedPublicKey `json:"public_key"`
+	// Epoch is the epoch of the ephemeral runtime key.
+	Epoch uint64 `json:"epoch,omitempty"`
 }
 
 // ExecuteReadOnlyTxQuery is the body of the core.ExecuteReadOnlyTx query.

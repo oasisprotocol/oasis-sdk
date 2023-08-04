@@ -2,7 +2,7 @@
 use std::cell::RefCell;
 
 use crate::{
-    context::{BatchContext, Context, State, TxContext},
+    context::{BatchContext, Context, State, TransactionWithMeta, TxContext},
     dispatcher,
     module::CallResult,
     modules::core::{Error, API as _},
@@ -166,7 +166,7 @@ pub fn call<C: TxContext, V: Validator + 'static>(
         };
 
         let result = CurrentStore::with_transaction(|| {
-            ctx.with_tx(0, 0, tx, |ctx, call| {
+            ctx.with_tx(TransactionWithMeta::internal(tx), |ctx, call| {
                 // Mark this sub-context as internal as it belongs to an existing transaction.
                 let mut ctx = ctx.internal();
 
