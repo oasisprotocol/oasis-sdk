@@ -18,7 +18,7 @@ pub fn recover_low(
     if sig.s().is_high().into() {
         return Err(anyhow!("signature s high"));
     }
-    sig.recover_verify_key_from_digest_bytes(sig_hash.as_fixed_bytes().into())
+    sig.recover_verifying_key_from_digest_bytes(sig_hash.as_fixed_bytes().into())
         .with_context(|| "recover verify key from digest")
 }
 

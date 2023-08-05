@@ -62,7 +62,7 @@ pub fn call_ecrecover(handle: &mut impl PrecompileHandle) -> PrecompileResult {
         });
     }
 
-    let result = match dsa_sig.recover_verify_key_from_digest_bytes(&msg.into()) {
+    let result = match dsa_sig.recover_verifying_key_from_digest_bytes(&msg.into()) {
         Ok(recovered_key) => {
             // Convert Ethereum style address
             let p = recovered_key.to_encoded_point(false);

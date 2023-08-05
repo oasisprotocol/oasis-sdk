@@ -51,7 +51,7 @@ pub fn recover(input: &[u8]) -> Result<[u8; 65], Error> {
         return Err(Error::MalformedSignature);
     }
 
-    match signature.recover_verify_key_from_digest_bytes(&msg.into()) {
+    match signature.recover_verifying_key_from_digest_bytes(&msg.into()) {
         Ok(recovered_key) => {
             let key = recovered_key.to_encoded_point(false);
 
