@@ -711,43 +711,40 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                         // First run the transaction in check tx mode in a separate subcontext. If
                         // that fails, skip and (sometimes) reject transaction.
                         let skip = CurrentStore::with_transaction(|| {
-                            let result = ctx.with_child(
-                                Mode::PreScheduleTx,
-                                |mut ctx| -> Result<_, Error> {
-                                    // First authenticate the transaction to get any nonce related errors.
-                                    match R::Modules::authenticate_tx(&mut ctx, &tx) {
-                                        Err(modules::core::Error::FutureNonce) => {
-                                            // Only skip transaction as it may become valid in the future.
-                                            return Ok(true);
-                                        }
-                                        Err(_) => {
-                                            // Skip and reject the transaction.
-                                        }
-                                        Ok(_) => {
-                                            // Run additional checks on the transaction.
-                                            let check_result = Self::dispatch_tx_opts(
-                                                &mut ctx,
-                                                tx.clone(),
-                                                &DispatchOptions {
-                                                    tx_size,
-                                                    tx_index,
-                                                    tx_hash,
-                                                    skip_authentication: true, // Already done.
-                                                    ..Default::default()
-                                                },
-                                            )?;
-                                            if check_result.result.is_success() {
-                                                // Checks successful, execute transaction as usual.
-                                                return Ok(false);
-                                            }
+                            let result = ctx.with_pre_schedule(|mut ctx| -> Result<_, Error> {
+                                // First authenticate the transaction to get any nonce related errors.
+                                match R::Modules::authenticate_tx(&mut ctx, &tx) {
+                                    Err(modules::core::Error::FutureNonce) => {
+                                        // Only skip transaction as it may become valid in the future.
+                                        return Ok(true);
+                                    }
+                                    Err(_) => {
+                                        // Skip and reject the transaction.
+                                    }
+                                    Ok(_) => {
+                                        // Run additional checks on the transaction.
+                                        let check_result = Self::dispatch_tx_opts(
+                                            &mut ctx,
+                                            tx.clone(),
+                                            &DispatchOptions {
+                                                tx_size,
+                                                tx_index,
+                                                tx_hash,
+                                                skip_authentication: true, // Already done.
+                                                ..Default::default()
+                                            },
+                                        )?;
+                                        if check_result.result.is_success() {
+                                            // Checks successful, execute transaction as usual.
+                                            return Ok(false);
                                         }
                                     }
+                                }
 
-                                    // Skip and reject the transaction.
-                                    tx_reject_hashes.push(tx_hash);
-                                    Ok(true)
-                                },
-                            );
+                                // Skip and reject the transaction.
+                                tx_reject_hashes.push(tx_hash);
+                                Ok(true)
+                            });
 
                             TransactionResult::Rollback(result) // Always rollback storage changes.
                         })?;

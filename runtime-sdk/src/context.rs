@@ -624,6 +624,48 @@ impl<'a, R: runtime::Runtime> RuntimeBatchContext<'a, R> {
             _runtime: PhantomData,
         }
     }
+
+    /// Executes a function in a child context in pre-schedule mode.
+    ///
+    /// The context collects its own messages and starts with an empty set of context values.
+    ///
+    /// # Random Number Generator
+    ///
+    /// The pre-schedule context has the random number generator disabled and any attempts to obtain
+    /// a leaf RNG will result in an error.
+    ///
+    /// # Storage
+    ///
+    /// This does not start a new storage transaction. Start a transaction and explicitly commit or
+    /// rollback if you want to discard storage side effects.
+    pub(crate) fn with_pre_schedule<F, Rs>(&mut self, f: F) -> Rs
+    where
+        F: FnOnce(RuntimeBatchContext<'_, <Self as Context>::Runtime>) -> Rs,
+    {
+        // Use an invalid RNG as its use is not allowed in pre-schedule context.
+        let rng = RootRng::invalid();
+
+        let child_ctx = RuntimeBatchContext {
+            mode: Mode::PreScheduleTx,
+            host_info: self.host_info,
+            key_manager: self.key_manager.clone(),
+            runtime_header: self.runtime_header,
+            runtime_round_results: self.runtime_round_results,
+            consensus_state: self.consensus_state,
+            history: self.history,
+            epoch: self.epoch,
+            io_ctx: self.io_ctx.clone(),
+            logger: self.logger.clone(),
+            internal: self.internal,
+            block_etags: EventTags::new(),
+            max_messages: self.remaining_messages(),
+            messages: Vec::new(),
+            values: BTreeMap::new(),
+            rng: &rng,
+            _runtime: PhantomData,
+        };
+        f(child_ctx)
+    }
 }
 
 impl<'a, R: runtime::Runtime> Context for RuntimeBatchContext<'a, R> {
@@ -719,11 +761,8 @@ impl<'a, R: runtime::Runtime> Context for RuntimeBatchContext<'a, R> {
     where
         F: FnOnce(RuntimeBatchContext<'_, Self::Runtime>) -> Rs,
     {
-        let remaining_messages = self.remaining_messages();
-        if !self.is_pre_schedule() && mode != Mode::PreScheduleTx {
-            // Update RNG state to include entering this subcontext.
-            self.rng.append_subcontext();
-        }
+        // Update RNG state to include entering this subcontext.
+        self.rng.append_subcontext();
 
         let child_ctx = RuntimeBatchContext {
             mode,
@@ -742,7 +781,7 @@ impl<'a, R: runtime::Runtime> Context for RuntimeBatchContext<'a, R> {
             block_etags: EventTags::new(),
             max_messages: match mode {
                 Mode::SimulateTx => self.max_messages,
-                _ => remaining_messages,
+                _ => self.remaining_messages(),
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
@@ -762,11 +801,8 @@ impl<'a, R: runtime::Runtime> BatchContext for RuntimeBatchContext<'a, R> {
     where
         F: FnOnce(RuntimeTxContext<'_, '_, <Self as Context>::Runtime>, transaction::Call) -> Rs,
     {
-        let remaining_messages = self.remaining_messages();
-        if !self.is_pre_schedule() {
-            // Update RNG state to include entering this transaction context.
-            self.rng.append_tx(tm.tx_hash);
-        }
+        // Update RNG state to include entering this transaction context.
+        self.rng.append_tx(tm.tx_hash);
 
         let tx_ctx = RuntimeTxContext {
             mode: self.mode,
@@ -789,7 +825,7 @@ impl<'a, R: runtime::Runtime> BatchContext for RuntimeBatchContext<'a, R> {
             internal: self.internal,
             etags: BTreeMap::new(),
             etags_unconditional: BTreeMap::new(),
-            max_messages: remaining_messages,
+            max_messages: self.remaining_messages(),
             messages: Vec::new(),
             values: &mut self.values,
             tx_values: BTreeMap::new(),
@@ -963,11 +999,8 @@ impl<'round, 'store, R: runtime::Runtime> Context for RuntimeTxContext<'round, '
     where
         F: FnOnce(RuntimeBatchContext<'_, Self::Runtime>) -> Rs,
     {
-        let remaining_messages = self.remaining_messages();
-        if !self.is_pre_schedule() && mode != Mode::PreScheduleTx {
-            // Update RNG state to include entering this subcontext.
-            self.rng.append_subcontext();
-        }
+        // Update RNG state to include entering this subcontext.
+        self.rng.append_subcontext();
 
         let child_ctx = RuntimeBatchContext {
             mode,
@@ -986,7 +1019,7 @@ impl<'round, 'store, R: runtime::Runtime> Context for RuntimeTxContext<'round, '
             block_etags: EventTags::new(),
             max_messages: match mode {
                 Mode::SimulateTx => self.max_messages,
-                _ => remaining_messages,
+                _ => self.remaining_messages(),
             },
             messages: Vec::new(),
             values: BTreeMap::new(),
