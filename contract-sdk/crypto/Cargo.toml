@@ -11,7 +11,7 @@ cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-runtime-sdk = { path = "../../runtime-sdk" }
 
 # Third party.
-k256 = { version = "0.11.6", default-features = false, features = ["keccak256", "ecdsa"] }
+k256 = "0.13.1"
 thiserror = "1.0.30"
 x25519-dalek = "1.1.0"
 sha2 = "0.9.8"

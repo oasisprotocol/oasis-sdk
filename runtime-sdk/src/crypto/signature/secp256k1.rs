@@ -138,13 +138,13 @@ impl MemorySigner {
 
 impl super::Signer for MemorySigner {
     fn new_from_seed(seed: &[u8]) -> Result<Self, Error> {
-        let sk = ecdsa::SigningKey::from_bytes(seed).map_err(|_| Error::InvalidArgument)?;
+        let sk = ecdsa::SigningKey::from_slice(seed).map_err(|_| Error::InvalidArgument)?;
         Ok(Self { sk })
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         Ok(Self {
-            sk: ecdsa::SigningKey::from_bytes(bytes).map_err(|_| Error::MalformedPrivateKey)?,
+            sk: ecdsa::SigningKey::from_slice(bytes).map_err(|_| Error::MalformedPrivateKey)?,
         })
     }
 
@@ -153,9 +153,7 @@ impl super::Signer for MemorySigner {
     }
 
     fn public_key(&self) -> super::PublicKey {
-        super::PublicKey::Secp256k1(PublicKey(k256::EncodedPoint::from(
-            &self.sk.verifying_key(),
-        )))
+        super::PublicKey::Secp256k1(PublicKey(self.sk.verifying_key().to_encoded_point(true)))
     }
 
     fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {

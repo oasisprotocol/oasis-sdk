@@ -73,7 +73,7 @@ fn check_derivation(seed: &str, priv_hex: &str, addr_hex: &str) {
     let priv_key = k256::ecdsa::SigningKey::from_bytes(&priv_bytes).unwrap();
     let pub_key = priv_key.verifying_key();
     let sdk_pub_key =
-        secp256k1::PublicKey::from_bytes(k256::EncodedPoint::from(&pub_key).as_bytes()).unwrap();
+        secp256k1::PublicKey::from_bytes(pub_key.to_encoded_point(true).as_bytes()).unwrap();
     let addr =
         derive_caller::from_sigspec(&SignatureAddressSpec::Secp256k1Eth(sdk_pub_key)).unwrap();
     assert_eq!(addr.as_bytes(), Vec::from_hex(addr_hex).unwrap().as_slice());
