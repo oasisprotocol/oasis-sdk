@@ -1,6 +1,7 @@
 //! Random number generator based on root VRF key and Merlin transcripts.
 use std::cell::RefCell;
 
+use anyhow::anyhow;
 use merlin::{Transcript, TranscriptRng};
 use rand_core::{CryptoRng, OsRng, RngCore};
 use schnorrkel::keys::{ExpansionMode, Keypair, MiniSecretKey};
@@ -17,6 +18,7 @@ const VRF_KEY_CONTEXT: &[u8] = b"oasis-runtime-sdk/crypto: root vrf key v1";
 /// A root RNG that can be used to derive domain-separated leaf RNGs.
 pub struct RootRng {
     inner: RefCell<Inner>,
+    valid: bool,
 }
 
 struct Inner {
@@ -34,6 +36,18 @@ impl RootRng {
                 transcript: Transcript::new(RNG_CONTEXT),
                 rng: None,
             }),
+            valid: true,
+        }
+    }
+
+    /// Create an invalid root RNG which will fail when any leaf RNGs are requested.
+    pub fn invalid() -> Self {
+        Self {
+            inner: RefCell::new(Inner {
+                transcript: Transcript::new(&[]),
+                rng: None,
+            }),
+            valid: false,
         }
     }
 
@@ -73,6 +87,10 @@ impl RootRng {
     ///
     /// Using this method will result in the RNG being non-deterministic.
     pub fn append_local_entropy(&self) {
+        if !self.valid {
+            return;
+        }
+
         let mut bytes = [0u8; 32];
         OsRng.fill_bytes(&mut bytes);
 
@@ -82,18 +100,30 @@ impl RootRng {
 
     /// Append an observed transaction hash to RNG transcript.
     pub fn append_tx(&self, tx_hash: Hash) {
+        if !self.valid {
+            return;
+        }
+
         let mut inner = self.inner.borrow_mut();
         inner.transcript.append_message(b"tx", tx_hash.as_ref());
     }
 
     /// Append an observed subcontext to RNG transcript.
     pub fn append_subcontext(&self) {
+        if !self.valid {
+            return;
+        }
+
         let mut inner = self.inner.borrow_mut();
         inner.transcript.append_message(b"subctx", &[]);
     }
 
     /// Create an independent leaf RNG using this RNG as its parent.
     pub fn fork<C: Context + ?Sized>(&self, ctx: &C, pers: &[u8]) -> Result<LeafRng, Error> {
+        if !self.valid {
+            return Err(Error::InvalidArgument(anyhow!("rng is not available")));
+        }
+
         let mut inner = self.inner.borrow_mut();
 
         // Ensure the RNG is initialized and initialize it if not.
@@ -326,6 +356,18 @@ mod test {
         assert_ne!(
             bytes1_1, bytes2_1,
             "forks should propagate domain separator to parent"
+        );
+    }
+
+    #[test]
+    fn test_rng_invalid() {
+        let mut mock = mock::Mock::default();
+        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(Mode::ExecuteTx, true);
+
+        let root_rng = RootRng::invalid();
+        assert!(
+            root_rng.fork(&ctx, b"a").is_err(),
+            "rng fork should fail for invalid rng"
         );
     }
 }
