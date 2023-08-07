@@ -96,7 +96,7 @@ const keyvalueWrapper = new Wrapper(KEYVALUE_RUNTIME_ID);
 export const playground = (async function () {
     // Try secp256k1 signing.
     {
-        const signer = oasisRT.signatureSecp256k1.EllipticSigner.fromRandom(
+        const signer = oasisRT.signatureSecp256k1.NobleSigner.fromRandom(
             'this key is not important',
         );
         console.log('signer', signer);
