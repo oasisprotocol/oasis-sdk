@@ -126,6 +126,10 @@ pub fn call_datacopy(handle: &mut impl PrecompileHandle) -> PrecompileResult {
 
 #[cfg(test)]
 mod test {
+    extern crate test;
+
+    use test::Bencher;
+
     use crate::precompile::testing::*;
 
     // The following test data is from "go-ethereum/core/vm/contracts_test.go"
@@ -205,5 +209,23 @@ mod test {
         )
         .unwrap();
         assert_eq!(hex::encode(ret.unwrap().output), "38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e000000000000000000000000000000000000000000000000000000000000001b38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e789d1dd423d25f0772d2748d60f7e4b81bb14d086eba8e8e8efb6dcff8a4ae02");
+    }
+
+    #[bench]
+    fn bench_ecrecover(b: &mut Bencher) {
+        let input = "38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e000000000000000000000000000000000000000000000000000000000000001b38d18acb67d25c8bb9942764b62f18e17054f66a817bd4295423adf9ed98873e789d1dd423d25f0772d2748d60f7e4b81bb14d086eba8e8e8efb6dcff8a4ae02";
+        let input = hex::decode(input).unwrap();
+
+        b.iter(|| {
+            call_contract(
+                H160([
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01,
+                ]),
+                &input,
+                3000,
+            )
+            .expect("call should return something")
+            .expect("call should succeed");
+        });
     }
 }

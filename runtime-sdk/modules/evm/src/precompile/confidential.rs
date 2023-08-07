@@ -22,53 +22,53 @@ use super::{record_linear_cost, record_multilinear_cost, PrecompileResult};
 pub const WORD: usize = 32;
 
 /// The base cost for x25519 key derivation.
-const X25519_KEY_DERIVATION_BASE_COST: u64 = 100_000;
+const X25519_KEY_DERIVATION_BASE_COST: u64 = 1_100;
 
 /// The cost for converting a Curve25519 secret key to public key.
 /// It's one scalar multiplication, so it shouldn't be too expensive.
-const CURVE25519_COMPUTE_PUBLIC_COST: u64 = 30_000;
+const CURVE25519_COMPUTE_PUBLIC_COST: u64 = 1_000;
 
 /// The base setup cost for encryption and decryption.
-const DEOXYSII_BASE_COST: u64 = 50_000;
+const DEOXYSII_BASE_COST: u64 = 100;
 /// The cost for encryption and decryption per word of input.
-const DEOXYSII_WORD_COST: u64 = 100;
+const DEOXYSII_WORD_COST: u64 = 10;
 
 /// The cost of a key pair generation operation, per method.
 static KEYPAIR_GENERATE_BASE_COST: Lazy<HashMap<SignatureType, u64>> = Lazy::new(|| {
     HashMap::from([
-        (SignatureType::Ed25519_Oasis, 35_000),
-        (SignatureType::Ed25519_Pure, 35_000),
-        (SignatureType::Ed25519_PrehashedSha512, 35_000),
-        (SignatureType::Secp256k1_Oasis, 110_000),
-        (SignatureType::Secp256k1_PrehashedKeccak256, 110_000),
-        (SignatureType::Secp256k1_PrehashedSha256, 110_000),
-        (SignatureType::Secp256r1_PrehashedSha256, 308_000),
+        (SignatureType::Ed25519_Oasis, 1_000),
+        (SignatureType::Ed25519_Pure, 1_000),
+        (SignatureType::Ed25519_PrehashedSha512, 1_000),
+        (SignatureType::Secp256k1_Oasis, 1_500),
+        (SignatureType::Secp256k1_PrehashedKeccak256, 1_500),
+        (SignatureType::Secp256k1_PrehashedSha256, 1_500),
+        (SignatureType::Secp256r1_PrehashedSha256, 4_000),
     ])
 });
 
 /// The costs of a message signing operation.
 static SIGN_MESSAGE_COST: Lazy<HashMap<SignatureType, (u64, u64)>> = Lazy::new(|| {
     HashMap::from([
-        (SignatureType::Ed25519_Oasis, (75_000, 8)),
-        (SignatureType::Ed25519_Pure, (75_000, 8)),
-        (SignatureType::Ed25519_PrehashedSha512, (75_000, 0)),
-        (SignatureType::Secp256k1_Oasis, (150_000, 8)),
-        (SignatureType::Secp256k1_PrehashedKeccak256, (150_000, 0)),
-        (SignatureType::Secp256k1_PrehashedSha256, (150_000, 0)),
-        (SignatureType::Secp256r1_PrehashedSha256, (510_000, 0)),
+        (SignatureType::Ed25519_Oasis, (1_500, 8)),
+        (SignatureType::Ed25519_Pure, (1_500, 8)),
+        (SignatureType::Ed25519_PrehashedSha512, (1_500, 0)),
+        (SignatureType::Secp256k1_Oasis, (3_000, 8)),
+        (SignatureType::Secp256k1_PrehashedKeccak256, (3_000, 0)),
+        (SignatureType::Secp256k1_PrehashedSha256, (3_000, 0)),
+        (SignatureType::Secp256r1_PrehashedSha256, (9_000, 0)),
     ])
 });
 
 /// The costs of a signature verification operation.
 static VERIFY_MESSAGE_COST: Lazy<HashMap<SignatureType, (u64, u64)>> = Lazy::new(|| {
     HashMap::from([
-        (SignatureType::Ed25519_Oasis, (110_000, 8)),
-        (SignatureType::Ed25519_Pure, (110_000, 8)),
-        (SignatureType::Ed25519_PrehashedSha512, (110_000, 0)),
-        (SignatureType::Secp256k1_Oasis, (210_000, 8)),
-        (SignatureType::Secp256k1_PrehashedKeccak256, (210_000, 0)),
-        (SignatureType::Secp256k1_PrehashedSha256, (210_000, 0)),
-        (SignatureType::Secp256r1_PrehashedSha256, (703_000, 0)),
+        (SignatureType::Ed25519_Oasis, (2_000, 8)),
+        (SignatureType::Ed25519_Pure, (2_000, 8)),
+        (SignatureType::Ed25519_PrehashedSha512, (2_000, 0)),
+        (SignatureType::Secp256k1_Oasis, (3_000, 8)),
+        (SignatureType::Secp256k1_PrehashedKeccak256, (3_000, 0)),
+        (SignatureType::Secp256k1_PrehashedSha256, (3_000, 0)),
+        (SignatureType::Secp256r1_PrehashedSha256, (7_900, 0)),
     ])
 });
 
@@ -445,7 +445,7 @@ mod test {
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02,
             ]),
             &blob,
-            10_000,
+            1_000,
         )
         .expect("call should return something")
         .expect_err("call should fail");
@@ -493,6 +493,27 @@ mod test {
             call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02,
+                ]),
+                &blob,
+                1_000_000,
+            )
+            .expect("call should return something")
+            .expect("call should succeed");
+        });
+    }
+
+    #[bench]
+    fn bench_curve25519_compute_public(b: &mut Bencher) {
+        let mut rng = OsRng {};
+        let static_secret = x25519_dalek::StaticSecret::new(&mut rng);
+
+        let mut blob = [0u8; 32];
+        blob[..32].copy_from_slice(&static_secret.to_bytes());
+
+        b.iter(|| {
+            call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x08,
                 ]),
                 &blob,
                 1_000_000,
