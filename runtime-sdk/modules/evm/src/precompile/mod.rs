@@ -93,8 +93,15 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
         match self.is_precompile(address, handle.remaining_gas()) {
             IsPrecompileResult::Answer {
                 is_precompile: true,
-                ..
-            } => { /* Ok. */ }
+                extra_cost,
+            } => {
+                if let Err(e) = handle.record_cost(extra_cost) {
+                    return Some(Err(e.into()));
+                }
+            }
+            IsPrecompileResult::OutOfGas => {
+                return Some(Err(ExitError::OutOfGas.into()));
+            }
             _ => {
                 return None;
             }
