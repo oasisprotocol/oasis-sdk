@@ -4,10 +4,7 @@ use evm::{
     executor::stack::{PrecompileHandle, PrecompileOutput},
     ExitSucceed,
 };
-use k256::{
-    ecdsa::recoverable,
-    elliptic_curve::{sec1::ToEncodedPoint, IsHigh},
-};
+use k256::elliptic_curve::scalar::IsHigh;
 use ripemd160::{Digest as _, Ripemd160};
 use sha2::Sha256;
 use sha3::{Digest as _, Keccak256};
@@ -20,12 +17,12 @@ pub fn call_ecrecover(handle: &mut impl PrecompileHandle) -> PrecompileResult {
     // Make right padding for input.
     let input = handle.input();
 
-    // Input encoded as [hash, v, r, s].
-    let mut msg = [0u8; 32];
+    // Input encoded as [hash, r, s, v].
+    let mut prehash = [0u8; 32];
     let mut padding = [0u8; 32];
     let mut sig = [0u8; 65];
 
-    read_input(input, &mut msg, 0);
+    read_input(input, &mut prehash, 0);
     read_input(input, &mut padding, 32);
     read_input(input, &mut sig[..64], 64);
 
@@ -44,25 +41,35 @@ pub fn call_ecrecover(handle: &mut impl PrecompileHandle) -> PrecompileResult {
         });
     }
 
-    let dsa_sig = match recoverable::Signature::try_from(&sig[..]) {
+    let recid = match k256::ecdsa::RecoveryId::from_byte(sig[64]) {
+        Some(recid) if !recid.is_x_reduced() => recid,
+        _ => {
+            return Ok(PrecompileOutput {
+                exit_status: ExitSucceed::Returned,
+                output: vec![],
+            })
+        }
+    };
+
+    let sig = match k256::ecdsa::Signature::try_from(&sig[..64]) {
         Ok(s) => s,
         Err(_) => {
             return Ok(PrecompileOutput {
                 exit_status: ExitSucceed::Returned,
                 output: vec![],
-            });
+            })
         }
     };
 
     // Reject high s to make consistent with our Ethereum transaction signature verification.
-    if dsa_sig.s().is_high().into() {
+    if sig.s().is_high().into() {
         return Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
             output: vec![],
         });
     }
 
-    let result = match dsa_sig.recover_verify_key_from_digest_bytes(&msg.into()) {
+    let output = match k256::ecdsa::VerifyingKey::recover_from_prehash(&prehash, &sig, recid) {
         Ok(recovered_key) => {
             // Convert Ethereum style address
             let p = recovered_key.to_encoded_point(false);
@@ -77,7 +84,7 @@ pub fn call_ecrecover(handle: &mut impl PrecompileHandle) -> PrecompileResult {
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        output: result.to_vec(),
+        output,
     })
 }
 

@@ -1,15 +1,14 @@
 //! Secp256k1 signatures.
-use digest::Digest as _;
+use digest::{consts::U32, Digest, FixedOutput};
 use k256::{
     self,
     ecdsa::{
         self,
-        digest::{consts::U32, BlockInput, Digest, FixedOutput, Reset, Update},
         signature::{DigestSigner as _, DigestVerifier, Signer as _, Verifier as _},
     },
     elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint},
+    sha2::Sha512_256,
 };
-use sha2::Sha512Trunc256;
 
 use crate::crypto::signature::{Error, Signature};
 
@@ -55,13 +54,13 @@ impl PublicKey {
         message: &[u8],
         signature: &Signature,
     ) -> Result<(), Error> {
-        // Note that we must use Sha512Trunc256 instead of our Hash here,
+        // Note that we must use Sha512_256 instead of our Hash here,
         // even though it's the same thing, because it implements the Digest
         // trait, so we can use verify_digest() below, which doesn't pre-hash
         // the data (verify() does).
-        let mut digest = Sha512Trunc256::new();
+        let mut digest = Sha512_256::new();
         for byte in &[context, message] {
-            <Sha512Trunc256 as Digest>::update(&mut digest, byte);
+            <Sha512_256 as Digest>::update(&mut digest, byte);
         }
         let sig = ecdsa::Signature::from_der(signature.0.as_ref())
             .map_err(|_| Error::MalformedSignature)?;
@@ -87,7 +86,7 @@ impl PublicKey {
     /// Verify signature of a pre-hashed message.
     pub fn verify_digest<D>(&self, digest: D, signature: &Signature) -> Result<(), Error>
     where
-        D: Reset + Update + BlockInput + FixedOutput<OutputSize = U32> + Default + Clone,
+        D: Digest + FixedOutput<OutputSize = U32>,
     {
         let sig = ecdsa::Signature::from_der(signature.as_ref())
             .map_err(|_| Error::MalformedSignature)?;
@@ -130,7 +129,7 @@ pub struct MemorySigner {
 impl MemorySigner {
     pub fn sign_digest<D>(&self, digest: D) -> Result<Signature, Error>
     where
-        D: Reset + Update + BlockInput + FixedOutput<OutputSize = U32> + Default + Clone,
+        D: Digest + FixedOutput<OutputSize = U32>,
     {
         let signature: ecdsa::Signature = self.sk.sign_digest(digest);
         Ok(signature.to_der().as_bytes().to_vec().into())
@@ -139,13 +138,13 @@ impl MemorySigner {
 
 impl super::Signer for MemorySigner {
     fn new_from_seed(seed: &[u8]) -> Result<Self, Error> {
-        let sk = ecdsa::SigningKey::from_bytes(seed).map_err(|_| Error::InvalidArgument)?;
+        let sk = ecdsa::SigningKey::from_slice(seed).map_err(|_| Error::InvalidArgument)?;
         Ok(Self { sk })
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         Ok(Self {
-            sk: ecdsa::SigningKey::from_bytes(bytes).map_err(|_| Error::MalformedPrivateKey)?,
+            sk: ecdsa::SigningKey::from_slice(bytes).map_err(|_| Error::MalformedPrivateKey)?,
         })
     }
 
@@ -154,15 +153,13 @@ impl super::Signer for MemorySigner {
     }
 
     fn public_key(&self) -> super::PublicKey {
-        super::PublicKey::Secp256k1(PublicKey(k256::EncodedPoint::from(
-            &self.sk.verifying_key(),
-        )))
+        super::PublicKey::Secp256k1(PublicKey(self.sk.verifying_key().to_encoded_point(true)))
     }
 
     fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
-        let mut digest = Sha512Trunc256::new();
-        <Sha512Trunc256 as Digest>::update(&mut digest, context);
-        <Sha512Trunc256 as Digest>::update(&mut digest, message);
+        let mut digest = Sha512_256::new();
+        <Sha512_256 as Digest>::update(&mut digest, context);
+        <Sha512_256 as Digest>::update(&mut digest, message);
         let signature: ecdsa::Signature = self.sk.sign_digest(digest);
         Ok(signature.to_der().as_bytes().to_vec().into())
     }

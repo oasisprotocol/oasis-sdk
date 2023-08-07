@@ -1,8 +1,8 @@
 use std::convert::TryInto;
 
 use k256::{
-    ecdsa::{recoverable, Signature},
-    elliptic_curve::{sec1::ToEncodedPoint, IsHigh},
+    ecdsa::{RecoveryId, Signature, VerifyingKey},
+    elliptic_curve::scalar::IsHigh,
 };
 use thiserror::Error;
 
@@ -41,17 +41,16 @@ pub fn recover(input: &[u8]) -> Result<[u8; 65], Error> {
     s[0..].copy_from_slice(&input[64..96]);
 
     let signature = Signature::from_scalars(r, s).map_err(|_| Error::MalformedSignature)?;
-    let signature = recoverable::Signature::new(
-        &signature,
-        recoverable::Id::new(v).map_err(|_| Error::MalformedSignature)?,
-    )
-    .map_err(|_| Error::MalformedSignature)?;
+    let recid = RecoveryId::from_byte(v).ok_or(Error::MalformedSignature)?;
 
+    if recid.is_x_reduced() {
+        return Err(Error::MalformedSignature);
+    }
     if signature.s().is_high().into() {
         return Err(Error::MalformedSignature);
     }
 
-    match signature.recover_verify_key_from_digest_bytes(&msg.into()) {
+    match VerifyingKey::recover_from_prehash(&msg, &signature, recid) {
         Ok(recovered_key) => {
             let key = recovered_key.to_encoded_point(false);
 
