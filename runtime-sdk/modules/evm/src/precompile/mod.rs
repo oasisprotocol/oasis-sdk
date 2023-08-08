@@ -127,7 +127,8 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             (1, 0, 8) => confidential::call_curve25519_compute_public(handle),
             // Oasis-specific, general.
             (1, 1, 1) => sha512::call_sha512_256(handle),
-            (1, 1, 2) => subcall::call_subcall(handle, self.backend),
+            (1, 1, 2) => sha512::call_sha512(handle),
+            (1, 1, 3) => subcall::call_subcall(handle, self.backend),
             _ => return Cfg::additional_precompiles().and_then(|pc| pc.execute(handle)),
         })
     }
@@ -144,7 +145,7 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
                 // Oasis-specific, confidential.
                 (1, 0, 1..=8, true) |
                 // Oasis-specific, general.
-                (1, 1, 1..=2, _)
+                (1, 1, 1..=3, _)
             )
         {
             IsPrecompileResult::Answer {
