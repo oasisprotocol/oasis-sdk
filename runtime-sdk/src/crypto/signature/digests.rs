@@ -61,6 +61,13 @@ where
     type OutputSize = <D as digest::OutputSizeUser>::OutputSize;
 }
 
+impl<D> digest::core_api::BlockSizeUser for DummyDigest<D>
+where
+    D: digest::core_api::BlockSizeUser,
+{
+    type BlockSize = <D as digest::core_api::BlockSizeUser>::BlockSize;
+}
+
 impl<D> digest::FixedOutput for DummyDigest<D>
 where
     D: digest::FixedOutput,
@@ -68,6 +75,19 @@ where
     fn finalize_into(self, out: &mut digest::Output<Self>) {
         if let Some(digest) = self.underlying {
             digest.finalize_into(out);
+        } else {
+            out.as_mut_slice().copy_from_slice(&self.preexisting);
+        }
+    }
+}
+
+impl<D> digest::FixedOutputReset for DummyDigest<D>
+where
+    D: digest::FixedOutputReset,
+{
+    fn finalize_into_reset(&mut self, out: &mut digest::Output<Self>) {
+        if let Some(digest) = &mut self.underlying {
+            digest.finalize_into_reset(out);
         } else {
             out.as_mut_slice().copy_from_slice(&self.preexisting);
         }

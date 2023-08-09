@@ -22,50 +22,53 @@ use super::{record_linear_cost, record_multilinear_cost, PrecompileResult};
 pub const WORD: usize = 32;
 
 /// The base cost for x25519 key derivation.
-const X25519_KEY_DERIVATION_BASE_COST: u64 = 100_000;
+const X25519_KEY_DERIVATION_BASE_COST: u64 = 1_100;
 
 /// The cost for converting a Curve25519 secret key to public key.
 /// It's one scalar multiplication, so it shouldn't be too expensive.
-const CURVE25519_COMPUTE_PUBLIC_COST: u64 = 30_000;
+const CURVE25519_COMPUTE_PUBLIC_COST: u64 = 1_000;
 
 /// The base setup cost for encryption and decryption.
-const DEOXYSII_BASE_COST: u64 = 50_000;
+const DEOXYSII_BASE_COST: u64 = 100;
 /// The cost for encryption and decryption per word of input.
-const DEOXYSII_WORD_COST: u64 = 100;
+const DEOXYSII_WORD_COST: u64 = 10;
 
 /// The cost of a key pair generation operation, per method.
 static KEYPAIR_GENERATE_BASE_COST: Lazy<HashMap<SignatureType, u64>> = Lazy::new(|| {
     HashMap::from([
-        (SignatureType::Ed25519_Oasis, 35_000),
-        (SignatureType::Ed25519_Pure, 35_000),
-        (SignatureType::Ed25519_PrehashedSha512, 35_000),
-        (SignatureType::Secp256k1_Oasis, 110_000),
-        (SignatureType::Secp256k1_PrehashedKeccak256, 110_000),
-        (SignatureType::Secp256k1_PrehashedSha256, 110_000),
+        (SignatureType::Ed25519_Oasis, 1_000),
+        (SignatureType::Ed25519_Pure, 1_000),
+        (SignatureType::Ed25519_PrehashedSha512, 1_000),
+        (SignatureType::Secp256k1_Oasis, 1_500),
+        (SignatureType::Secp256k1_PrehashedKeccak256, 1_500),
+        (SignatureType::Secp256k1_PrehashedSha256, 1_500),
+        (SignatureType::Secp256r1_PrehashedSha256, 4_000),
     ])
 });
 
 /// The costs of a message signing operation.
 static SIGN_MESSAGE_COST: Lazy<HashMap<SignatureType, (u64, u64)>> = Lazy::new(|| {
     HashMap::from([
-        (SignatureType::Ed25519_Oasis, (75_000, 8)),
-        (SignatureType::Ed25519_Pure, (75_000, 8)),
-        (SignatureType::Ed25519_PrehashedSha512, (75_000, 0)),
-        (SignatureType::Secp256k1_Oasis, (150_000, 8)),
-        (SignatureType::Secp256k1_PrehashedKeccak256, (150_000, 0)),
-        (SignatureType::Secp256k1_PrehashedSha256, (150_000, 0)),
+        (SignatureType::Ed25519_Oasis, (1_500, 8)),
+        (SignatureType::Ed25519_Pure, (1_500, 8)),
+        (SignatureType::Ed25519_PrehashedSha512, (1_500, 0)),
+        (SignatureType::Secp256k1_Oasis, (3_000, 8)),
+        (SignatureType::Secp256k1_PrehashedKeccak256, (3_000, 0)),
+        (SignatureType::Secp256k1_PrehashedSha256, (3_000, 0)),
+        (SignatureType::Secp256r1_PrehashedSha256, (9_000, 0)),
     ])
 });
 
 /// The costs of a signature verification operation.
 static VERIFY_MESSAGE_COST: Lazy<HashMap<SignatureType, (u64, u64)>> = Lazy::new(|| {
     HashMap::from([
-        (SignatureType::Ed25519_Oasis, (110_000, 8)),
-        (SignatureType::Ed25519_Pure, (110_000, 8)),
-        (SignatureType::Ed25519_PrehashedSha512, (110_000, 0)),
-        (SignatureType::Secp256k1_Oasis, (210_000, 8)),
-        (SignatureType::Secp256k1_PrehashedKeccak256, (210_000, 0)),
-        (SignatureType::Secp256k1_PrehashedSha256, (210_000, 0)),
+        (SignatureType::Ed25519_Oasis, (2_000, 8)),
+        (SignatureType::Ed25519_Pure, (2_000, 8)),
+        (SignatureType::Ed25519_PrehashedSha512, (2_000, 0)),
+        (SignatureType::Secp256k1_Oasis, (3_000, 8)),
+        (SignatureType::Secp256k1_PrehashedKeccak256, (3_000, 0)),
+        (SignatureType::Secp256k1_PrehashedSha256, (3_000, 0)),
+        (SignatureType::Secp256r1_PrehashedSha256, (7_900, 0)),
     ])
 });
 
@@ -262,7 +265,11 @@ pub(super) fn call_keypair_generate(handle: &mut impl PrecompileHandle) -> Preco
     record_linear_cost(
         handle,
         handle.input().len() as u64,
-        *KEYPAIR_GENERATE_BASE_COST.get(&sig_type).unwrap(),
+        *KEYPAIR_GENERATE_BASE_COST
+            .get(&sig_type)
+            .ok_or(PrecompileFailure::Error {
+                exit_status: ExitError::Other("unknown signature type".into()),
+            })?,
         0,
     )?;
 
@@ -316,7 +323,11 @@ pub(super) fn call_sign(handle: &mut impl PrecompileHandle) -> PrecompileResult 
             exit_status: ExitError::Other("unknown signature type".into()),
         })?;
 
-    let costs = *SIGN_MESSAGE_COST.get(&sig_type).unwrap();
+    let costs = *SIGN_MESSAGE_COST
+        .get(&sig_type)
+        .ok_or(PrecompileFailure::Error {
+            exit_status: ExitError::Other("unknown signature type".into()),
+        })?;
     record_linear_cost(handle, handle.input().len() as u64, costs.0, costs.1)?;
 
     let signer = signature::MemorySigner::from_bytes(sig_type, &pk).map_err(|e| {
@@ -374,7 +385,11 @@ pub(super) fn call_verify(handle: &mut impl PrecompileHandle) -> PrecompileResul
             exit_status: ExitError::Other("unknown signature type".into()),
         })?;
 
-    let costs = *VERIFY_MESSAGE_COST.get(&sig_type).unwrap();
+    let costs = *VERIFY_MESSAGE_COST
+        .get(&sig_type)
+        .ok_or(PrecompileFailure::Error {
+            exit_status: ExitError::Other("unknown signature type".into()),
+        })?;
     record_linear_cost(handle, handle.input().len() as u64, costs.0, costs.1)?;
 
     let signature: signature::Signature = signature.into();
@@ -430,7 +445,7 @@ mod test {
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02,
             ]),
             &blob,
-            10_000,
+            1_000,
         )
         .expect("call should return something")
         .expect_err("call should fail");
@@ -478,6 +493,27 @@ mod test {
             call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02,
+                ]),
+                &blob,
+                1_000_000,
+            )
+            .expect("call should return something")
+            .expect("call should succeed");
+        });
+    }
+
+    #[bench]
+    fn bench_curve25519_compute_public(b: &mut Bencher) {
+        let mut rng = OsRng {};
+        let static_secret = x25519_dalek::StaticSecret::new(&mut rng);
+
+        let mut blob = [0u8; 32];
+        blob[..32].copy_from_slice(&static_secret.to_bytes());
+
+        b.iter(|| {
+            call_contract(
+                H160([
+                    0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x08,
                 ]),
                 &blob,
                 1_000_000,
@@ -639,6 +675,21 @@ mod test {
         .expect("call should return something")
         .expect_err("call should fail");
 
+        // Unsupported method.
+        let params = ethabi::encode(&[
+            Token::Uint(6.into()), // sr25519 is not yet supported.
+            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
+        ]);
+        call_contract(
+            H160([
+                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
+            ]),
+            &params,
+            10_000_000,
+        )
+        .expect("call should return something")
+        .expect_err("call should fail");
+
         // Working test.
         let params = ethabi::encode(&[
             Token::Uint(SignatureType::Ed25519_Oasis.as_int().into()),
@@ -700,6 +751,11 @@ mod test {
     #[bench]
     fn bench_keypair_generate_secp256k1(b: &mut Bencher) {
         bench_keypair_generate(b, SignatureType::Secp256k1_Oasis);
+    }
+
+    #[bench]
+    fn bench_keypair_generate_secp256r1(b: &mut Bencher) {
+        bench_keypair_generate(b, SignatureType::Secp256r1_PrehashedSha256);
     }
 
     #[test]
@@ -807,6 +863,15 @@ mod test {
             ),
             (
                 SignatureType::Secp256k1_PrehashedSha256,
+                Box::new(|message: &[u8]| -> Vec<u8> {
+                    use sha2::digest::Digest as _;
+                    let mut digest = sha2::Sha256::default();
+                    <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, message);
+                    digest.finalize().to_vec()
+                }),
+            ),
+            (
+                SignatureType::Secp256r1_PrehashedSha256,
                 Box::new(|message: &[u8]| -> Vec<u8> {
                     use sha2::digest::Digest as _;
                     let mut digest = sha2::Sha256::default();
@@ -928,6 +993,11 @@ mod test {
             .expect("call should return something")
             .expect_err("call should fail");
 
+        // Unsupported method.
+        push_all_and_test(Some(6), None, None, None) // sr25519 is not yet supported.
+            .expect("call should return something")
+            .expect_err("call should fail");
+
         // Invalid private key.
         let zeroes: Vec<u8> = vec![0; 32];
         push_all_and_test(None, Some(&zeroes), None, None)
@@ -957,8 +1027,18 @@ mod test {
         )
         .unwrap();
 
-        let context = b"0123456789".repeat(if context_long { 200 } else { 1 });
         let message = b"0123456789".repeat(if message_long { 200 } else { 1 });
+        let (context, message) = if signature_type.is_prehashed() {
+            use sha2::digest::Digest as _;
+            let mut digest = sha2::Sha256::default();
+            <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, message);
+            (digest.finalize().to_vec(), vec![])
+        } else {
+            (
+                b"0123456789".repeat(if context_long { 200 } else { 1 }),
+                message,
+            )
+        };
 
         let params = ethabi::encode(&[
             Token::Uint(signature_type.as_int().into()),
@@ -1010,6 +1090,16 @@ mod test {
         bench_signer(b, SignatureType::Secp256k1_Oasis, false, true);
     }
 
+    #[bench]
+    fn bench_sign_secp256k1_prehashed_sha256(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Secp256k1_PrehashedSha256, false, false);
+    }
+
+    #[bench]
+    fn bench_sign_secp256r1_prehashed_sha256(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Secp256r1_PrehashedSha256, false, false);
+    }
+
     #[test]
     fn test_verification_params() {
         fn push_all_and_test(
@@ -1053,6 +1143,11 @@ mod test {
 
         // Bogus method.
         push_all_and_test(Some(55), None, None, None, None)
+            .expect("call should return something")
+            .expect_err("call should fail");
+
+        // Unsupported method.
+        push_all_and_test(Some(6), None, None, None, None) // sr25519 is not yet supported.
             .expect("call should return something")
             .expect_err("call should fail");
 
@@ -1118,8 +1213,18 @@ mod test {
         )
         .unwrap();
 
-        let context = b"0123456789".repeat(if context_long { 200 } else { 1 });
         let message = b"0123456789".repeat(if message_long { 200 } else { 1 });
+        let (context, message) = if signature_type.is_prehashed() {
+            use sha2::digest::Digest as _;
+            let mut digest = sha2::Sha256::default();
+            <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, message);
+            (digest.finalize().to_vec(), vec![])
+        } else {
+            (
+                b"0123456789".repeat(if context_long { 200 } else { 1 }),
+                message,
+            )
+        };
         let signature = signer.sign(&context, &message).unwrap();
 
         let params = ethabi::encode(&[
@@ -1171,5 +1276,15 @@ mod test {
     #[bench]
     fn bench_verify_secp256k1_long(b: &mut Bencher) {
         bench_verification(b, SignatureType::Secp256k1_Oasis, false, true);
+    }
+
+    #[bench]
+    fn bench_verify_secp256k1_prehashed_sha256(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Secp256k1_PrehashedSha256, false, false);
+    }
+
+    #[bench]
+    fn bench_verify_secp256r1_prehashed_sha256(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Secp256r1_PrehashedSha256, false, false);
     }
 }
