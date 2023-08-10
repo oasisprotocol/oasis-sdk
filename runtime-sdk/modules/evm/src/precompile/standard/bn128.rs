@@ -169,46 +169,9 @@ fn read_field_element_fr(source: &[u8], offset: usize) -> Result<Fr, PrecompileF
 
 #[cfg(test)]
 mod test {
-    use std::fs;
-
     use crate::precompile::testing::*;
 
     use super::*;
-
-    /// Test case for precompiled contract tests.
-    #[derive(serde::Deserialize)]
-    struct TestCase {
-        #[serde(rename = "Input")]
-        pub input: String,
-
-        #[serde(rename = "Expected")]
-        pub expected: String,
-
-        #[serde(rename = "Name")]
-        pub _name: String,
-
-        #[serde(default)]
-        #[serde(rename = "Gas")]
-        pub gas: u64,
-
-        #[serde(default)]
-        #[serde(rename = "NoBenchmark")]
-        pub _no_benchmark: bool,
-    }
-
-    /// Reads test cases from the specified file.
-    ///
-    /// The test cases are from "go-ethereum/core/vm/testdata/precompiles"
-    /// and from "frontier/frame/evm/precompile/testdata".
-    ///
-    /// See https://github.com/ethereum/go-ethereum/tree/master/core/vm/testdata/precompiles and
-    /// https://github.com/paritytech/frontier/tree/master/frame/evm/precompile/testdata.
-    fn read_test_cases(name: &str) -> Vec<TestCase> {
-        let path = format!("src/precompile/testdata/{}.json", name);
-        let contents = fs::read_to_string(path).expect("json file should be readable");
-
-        serde_json::from_str(&contents).expect("json decoding should succeed")
-    }
 
     #[test]
     fn test_bn128_add() {

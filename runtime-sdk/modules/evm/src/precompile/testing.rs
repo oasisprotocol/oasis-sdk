@@ -105,6 +105,15 @@ impl<'a> PrecompileHandle for MockPrecompileHandle<'a> {
 
 #[doc(hidden)]
 pub fn call_contract(address: H160, input: &[u8], gas_limit: u64) -> Option<PrecompileResult> {
+    call_contract_with_gas_report(address, input, gas_limit).map(|(result, _)| result)
+}
+
+#[doc(hidden)]
+pub fn call_contract_with_gas_report(
+    address: H160,
+    input: &[u8],
+    gas_limit: u64,
+) -> Option<(PrecompileResult, u64)> {
     let context: Context = Context {
         address: Default::default(),
         caller: Default::default(),
@@ -118,5 +127,44 @@ pub fn call_contract(address: H160, input: &[u8], gas_limit: u64) -> Option<Prec
         gas_limit,
         gas_cost: 0,
     };
-    precompiles.execute(&mut handle)
+    precompiles
+        .execute(&mut handle)
+        .map(|result| (result, handle.gas_cost))
+}
+
+/// Test case for precompiled contract tests.
+#[cfg(test)]
+#[derive(serde::Deserialize)]
+pub struct TestCase {
+    #[serde(rename = "Input")]
+    pub input: String,
+
+    #[serde(rename = "Expected")]
+    pub expected: String,
+
+    #[serde(rename = "Name")]
+    pub _name: String,
+
+    #[serde(default)]
+    #[serde(rename = "Gas")]
+    pub gas: u64,
+
+    #[serde(default)]
+    #[serde(rename = "NoBenchmark")]
+    pub _no_benchmark: bool,
+}
+
+/// Reads test cases from the specified file.
+///
+/// The test cases are from "go-ethereum/core/vm/testdata/precompiles"
+/// and from "frontier/frame/evm/precompile/testdata".
+///
+/// See https://github.com/ethereum/go-ethereum/tree/master/core/vm/testdata/precompiles and
+/// https://github.com/paritytech/frontier/tree/master/frame/evm/precompile/testdata.
+#[cfg(test)]
+pub fn read_test_cases(name: &str) -> Vec<TestCase> {
+    let path = format!("src/precompile/testdata/{}.json", name);
+    let contents = std::fs::read_to_string(path).expect("json file should be readable");
+
+    serde_json::from_str(&contents).expect("json decoding should succeed")
 }
