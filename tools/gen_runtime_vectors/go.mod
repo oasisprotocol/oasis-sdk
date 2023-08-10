@@ -6,7 +6,7 @@ replace github.com/oasisprotocol/oasis-sdk/client-sdk/go => ../../client-sdk/go
 
 require (
 	github.com/ethereum/go-ethereum v1.11.5
-	github.com/oasisprotocol/oasis-core/go v0.2202.9
+	github.com/oasisprotocol/oasis-core/go v0.2202.11
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.0
 )
 
@@ -57,17 +57,17 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.13.0 // indirect
-	github.com/stretchr/testify v1.8.2 // indirect
+	github.com/stretchr/testify v1.8.4 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/tendermint/tendermint v0.34.21 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/crypto v0.8.0 // indirect
-	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/crypto v0.11.0 // indirect
+	golang.org/x/net v0.13.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/text v0.11.0 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	google.golang.org/grpc v1.54.0 // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20221004221323-12db695f1648 // indirect

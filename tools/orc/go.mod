@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/BurntSushi/toml v1.2.0
-	github.com/oasisprotocol/oasis-core/go v0.2202.9
+	github.com/oasisprotocol/oasis-core/go v0.2202.11
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5
 )
@@ -34,9 +34,9 @@ require (
 	github.com/subosito/gotenv v1.4.1 // indirect
 	github.com/tendermint/tendermint v0.34.21 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/net v0.13.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/text v0.11.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
