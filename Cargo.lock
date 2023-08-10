@@ -2427,7 +2427,7 @@ dependencies = [
 
 [[package]]
 name = "oasis-runtime-sdk"
-version = "0.5.0"
+version = "0.7.0"
 dependencies = [
  "anyhow",
  "base64",
@@ -2466,7 +2466,7 @@ dependencies = [
 
 [[package]]
 name = "oasis-runtime-sdk-contracts"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "blake3",
@@ -2491,7 +2491,7 @@ dependencies = [
 
 [[package]]
 name = "oasis-runtime-sdk-evm"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "base64",
