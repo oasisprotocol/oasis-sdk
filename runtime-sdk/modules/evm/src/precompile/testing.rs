@@ -133,7 +133,7 @@ pub fn call_contract_with_gas_report(
 }
 
 /// Test case for precompiled contract tests.
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 #[derive(serde::Deserialize)]
 pub struct TestCase {
     #[serde(rename = "Input")]
@@ -161,9 +161,9 @@ pub struct TestCase {
 ///
 /// See https://github.com/ethereum/go-ethereum/tree/master/core/vm/testdata/precompiles and
 /// https://github.com/paritytech/frontier/tree/master/frame/evm/precompile/testdata.
-#[cfg(test)]
+#[cfg(any(test, feature = "test"))]
 pub fn read_test_cases(name: &str) -> Vec<TestCase> {
-    let path = format!("src/precompile/testdata/{}.json", name);
+    let path = format!("src/precompile/testdata/{name}.json");
     let contents = std::fs::read_to_string(path).expect("json file should be readable");
 
     serde_json::from_str(&contents).expect("json decoding should succeed")

@@ -2503,6 +2503,7 @@ dependencies = [
  "fixed-hash",
  "hex",
  "hmac 0.11.0",
+ "honggfuzz",
  "k256",
  "num 0.4.1",
  "oasis-cbor",

@@ -36,6 +36,11 @@ primitive-types = { version = "0.12", default-features = false, features = ["rlp
 rlp = "0.5.2"
 uint = "0.9.1"
 
+# Fuzzing.
+honggfuzz = "0.5.55"
+serde = { version = "1.0.144", features = ["derive"], optional = true }
+serde_json = { version = "1.0.87", features = ["raw_value"], optional = true }
+
 [dev-dependencies]
 criterion = "0.5.1"
 oasis-runtime-sdk = { path = "../..", features = ["test"] }
@@ -44,6 +49,19 @@ serde = { version = "1.0.144", features = ["derive"] }
 serde_json = { version = "1.0.87", features = ["raw_value"] }
 ethabi = { version = "18.0.0", default-features = false, features = ["std", "full-serde"]}
 
+[features]
+default = []
+test = ["serde", "serde_json"]
+
 [[bench]]
 name = "criterion_benchmark"
 harness = false
+
+[[bin]]
+name = "fuzz-precompile"
+path = "fuzz/precompile.rs"
+
+[[bin]]
+name = "fuzz-precompile-corpus"
+path = "fuzz/precompile_corpus.rs"
+required-features = ["test"]
