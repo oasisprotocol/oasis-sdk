@@ -459,7 +459,7 @@ func (rc *runtimeClient) Query(ctx context.Context, round uint64, method types.M
 		return err
 	}
 	if rsp != nil {
-		if err = cbor.Unmarshal(raw.Data, rsp); err != nil {
+		if err = cbor.UnmarshalRPC(raw.Data, rsp); err != nil {
 			return fmt.Errorf("failed to unmarshal response: %w", err)
 		}
 	}
