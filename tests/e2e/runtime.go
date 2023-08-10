@@ -362,9 +362,7 @@ func (sc *RuntimeScenario) CheckInvariants(ctx context.Context) error {
 	return txgen.CheckInvariants(ctx, sc.client)
 }
 
-func (sc *RuntimeScenario) Run(childEnv *env.Env) error {
-	ctx := context.Background()
-
+func (sc *RuntimeScenario) Run(ctx context.Context, childEnv *env.Env) error {
 	// Start the test network.
 	if err := sc.Net.Start(); err != nil {
 		return err
