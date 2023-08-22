@@ -544,6 +544,16 @@ fn do_test_evm_runtime<C: Config>() {
         addr
     });
 
+    // Make sure the derived address matches the expected value. If this fails it likely indicates
+    // a problem with nonce increment semantics between the SDK and EVM.
+    assert_eq!(
+        erc20_addr,
+        "0x3e6a6598a229b84e1411005d55003d88e3b11067"
+            .parse()
+            .unwrap(),
+        "derived address should be correct"
+    );
+
     // Submitting an invalid create transaction should fail.
     let out_of_gas_create = transaction::Transaction {
         version: 1,

@@ -136,6 +136,7 @@ struct OasisStackSubstate<'config> {
     logs: Vec<Log>,
     deletes: BTreeSet<H160>,
     state: context::State,
+    origin_nonce_incremented: bool,
 }
 
 impl<'config> OasisStackSubstate<'config> {
@@ -146,6 +147,7 @@ impl<'config> OasisStackSubstate<'config> {
             logs: Vec::new(),
             deletes: BTreeSet::new(),
             state: context::State::default(),
+            origin_nonce_incremented: false,
         }
     }
 
@@ -164,6 +166,7 @@ impl<'config> OasisStackSubstate<'config> {
             logs: Vec::new(),
             deletes: BTreeSet::new(),
             state: context::State::default(),
+            origin_nonce_incremented: false,
         };
         mem::swap(&mut entering, self);
 
@@ -178,6 +181,7 @@ impl<'config> OasisStackSubstate<'config> {
         self.logs.append(&mut exited.logs);
         self.deletes.append(&mut exited.deletes);
         self.state.merge_from(exited.state);
+        self.origin_nonce_incremented |= exited.origin_nonce_incremented;
 
         Ok(())
     }
@@ -371,7 +375,18 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
         let sdk_address = Cfg::map_address(address);
         // Fetch balance and nonce from SDK accounts. Note that these can never fail.
         let balance = Cfg::Accounts::get_balance(sdk_address, Cfg::TOKEN_DENOMINATION).unwrap();
-        let nonce = Cfg::Accounts::get_nonce(sdk_address).unwrap();
+        let mut nonce = Cfg::Accounts::get_nonce(sdk_address).unwrap();
+
+        // If this is the caller's address, the caller nonce has not yet been incremented based on
+        // the EVM semantics and this is not a simulation context, return the nonce decremented by
+        // one to cancel out the SDK nonce changes.
+        let ctx = self.backend.ctx.borrow_mut();
+        if address == self.origin()
+            && !self.substate.origin_nonce_incremented
+            && !ctx.is_simulation()
+        {
+            nonce = nonce.saturating_sub(1);
+        }
 
         Basic {
             nonce: nonce.into(),
@@ -471,8 +486,13 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> StackState<'config>
     }
 
     fn inc_nonce(&mut self, address: H160) -> Result<(), ExitError> {
-        // Do not increment the origin nonce as that has already been handled by the SDK.
-        if address == self.origin() {
+        let ctx = self.backend.ctx.borrow_mut();
+
+        // Do not increment the origin nonce as that has already been handled by the SDK. But do
+        // record that the nonce should be incremented based on EVM semantics so we can adjust any
+        // results from the `basic` method.
+        if address == self.origin() && !ctx.is_simulation() {
+            self.substate.origin_nonce_incremented = true;
             return Ok(());
         }
 
