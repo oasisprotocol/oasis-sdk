@@ -519,18 +519,25 @@ impl<R: Runtime> Dispatcher<R> {
         let args = cbor::from_slice(&args)
             .map_err(|err| modules::core::Error::InvalidArgument(err.into()))?;
 
-        // Catch any panics that occur during query dispatch.
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            // Perform state migrations if required.
-            R::migrate(ctx);
+        CurrentStore::with_transaction(|| {
+            // Catch any panics that occur during query dispatch.
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                // Perform state migrations if required.
+                R::migrate(ctx);
 
-            if !R::is_allowed_query(method) || !ctx.is_allowed_query::<R>(method) {
-                return Err(modules::core::Error::Forbidden.into());
-            }
+                if !R::is_allowed_query(method) || !ctx.is_allowed_query::<R>(method) {
+                    return Err(modules::core::Error::Forbidden.into());
+                }
 
-            R::Modules::dispatch_query(ctx, method, args)
-                .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?
-        }))
+                R::Modules::dispatch_query(ctx, method, args)
+                    .ok_or_else(|| modules::core::Error::InvalidMethod(method.into()))?
+            }));
+
+            // Always rollback any changes to storage. Note that this is usually a no-op because
+            // Oasis Core would rollback any storage changes related to queries, but this makes it
+            // explicit to ensure this remains the case regardless of upstream changes.
+            TransactionResult::Rollback(result)
+        })
         .map_err(|err| -> RuntimeError { Error::QueryAborted(format!("{err:?}")).into() })?
         .map(cbor::to_vec)
     }
