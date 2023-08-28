@@ -1021,8 +1021,8 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
         ctx: &mut C,
         result: module::CallResult,
     ) -> Result<module::CallResult, Error> {
-        // Emit gas used event.
-        if Cfg::EMIT_GAS_USED_EVENTS {
+        // Emit gas used event (if this is not an internally generated call).
+        if Cfg::EMIT_GAS_USED_EVENTS && !ctx.is_internal() {
             let used_gas = Self::used_tx_gas(ctx);
             ctx.emit_unconditional_event(Event::GasUsed { amount: used_gas });
         }
