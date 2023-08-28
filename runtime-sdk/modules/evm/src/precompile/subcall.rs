@@ -307,6 +307,17 @@ mod test {
         assert_eq!(event.from, Address::from_eth(contract_address.as_ref()));
         assert_eq!(event.to, keys::alice::address());
         assert_eq!(event.amount, BaseUnits::new(1_000, Denomination::NATIVE));
+
+        // Make sure only one gas used event was emitted (e.g. subcall should not emit its own gas
+        // used events).
+        #[derive(Debug, Default, cbor::Decode)]
+        struct GasUsedEvent {
+            amount: u64,
+        }
+
+        let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
+        assert_eq!(events.len(), 1); // Just one gas used event.
+        assert_eq!(events[0].amount, 25742);
     }
 
     #[test]
