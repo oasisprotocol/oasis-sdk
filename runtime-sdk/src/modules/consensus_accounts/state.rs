@@ -199,6 +199,48 @@ pub fn take_undelegation(ud: &Undelegation) -> Result<types::DelegationInfo, Err
     })
 }
 
+struct AddressWithEpoch {
+    from: Address,
+    epoch: EpochTime,
+}
+
+impl TryFrom<&[u8]> for AddressWithEpoch {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        if value.len() != Address::SIZE + 8 {
+            anyhow::bail!("incorrect address with epoch key size");
+        }
+
+        Ok(Self {
+            from: Address::try_from(&value[..Address::SIZE])?,
+            epoch: EpochTime::from_be_bytes(value[Address::SIZE..].try_into()?),
+        })
+    }
+}
+
+/// Retrieve all undelegation metadata to a given address.
+pub fn get_undelegations(to: Address) -> Result<Vec<types::UndelegationInfo>, Error> {
+    CurrentStore::with(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let undelegations = storage::PrefixStore::new(store, &UNDELEGATIONS);
+        let account = storage::TypedStore::new(storage::PrefixStore::new(undelegations, &to));
+
+        Ok(account
+            .iter()
+            .map(
+                |(ae, di): (AddressWithEpoch, types::DelegationInfo)| -> types::UndelegationInfo {
+                    types::UndelegationInfo {
+                        from: ae.from,
+                        epoch: ae.epoch,
+                        shares: di.shares,
+                    }
+                },
+            )
+            .collect())
+    })
+}
+
 /// Undelegation metadata.
 pub struct Undelegation {
     pub from: Address,
@@ -304,6 +346,7 @@ mod test {
 
         add_undelegation(keys::alice::address(), keys::bob::address(), 42, 500).unwrap();
         add_undelegation(keys::alice::address(), keys::bob::address(), 42, 500).unwrap();
+        add_undelegation(keys::alice::address(), keys::bob::address(), 84, 200).unwrap();
 
         let qd = get_queued_undelegations(10).unwrap();
         assert!(qd.is_empty());
@@ -318,10 +361,24 @@ mod test {
         assert_eq!(qd[0].to, keys::bob::address());
         assert_eq!(qd[0].epoch, 42);
 
+        let udis = get_undelegations(keys::alice::address()).unwrap();
+        assert!(udis.is_empty());
+        let udis = get_undelegations(keys::bob::address()).unwrap();
+        assert_eq!(udis.len(), 2);
+        assert_eq!(udis[0].from, keys::alice::address());
+        assert_eq!(udis[0].shares, 1000);
+        assert_eq!(udis[0].epoch, 42);
+        assert_eq!(udis[1].from, keys::alice::address());
+        assert_eq!(udis[1].shares, 200);
+        assert_eq!(udis[1].epoch, 84);
+
         let di = take_undelegation(&qd[0]).unwrap();
         assert_eq!(di.shares, 1000);
 
         let qd = get_queued_undelegations(42).unwrap();
         assert!(qd.is_empty());
+
+        let udis = get_undelegations(keys::bob::address()).unwrap();
+        assert_eq!(udis.len(), 1);
     }
 }

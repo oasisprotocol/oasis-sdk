@@ -101,6 +101,11 @@ type DelegationsQuery struct {
 	From types.Address `json:"from"`
 }
 
+// UndelegationsQuery are the arguments for consensus.Undelegations method.
+type UndelegationsQuery struct {
+	To types.Address `json:"to"`
+}
+
 // DelegationInfo is information about a delegation.
 type DelegationInfo struct {
 	Shares types.Quantity `json:"shares"`
@@ -110,6 +115,13 @@ type DelegationInfo struct {
 type ExtendedDelegationInfo struct {
 	To     types.Address  `json:"to"`
 	Shares types.Quantity `json:"shares"`
+}
+
+// UndelegationInfo is information about an undelegation.
+type UndelegationInfo struct {
+	From   types.Address    `json:"from"`
+	Epoch  beacon.EpochTime `json:"epoch"`
+	Shares types.Quantity   `json:"shares"`
 }
 
 // GasCosts are the consensus accounts module gas costs.

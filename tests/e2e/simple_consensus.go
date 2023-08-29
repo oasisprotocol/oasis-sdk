@@ -588,6 +588,7 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 	sharesB := quantity.NewFromUint64(6)
 	consensusAmountB := quantity.NewFromUint64(6)
 	sharesA := quantity.NewFromUint64(1)
+	consensusAmountA := quantity.NewFromUint64(1)
 	tb = consAccounts.Undelegate(testing.Bob.Address, *sharesB).
 		SetFeeConsensusMessages(1).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce+2)
@@ -605,6 +606,31 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 
 	if err = ensureRuntimeEvent(log, acCh, makeUndelegateStartCheck(testing.Bob.Address, nonce+2, testing.Alice.Address, consensusAmountB)); err != nil {
 		return fmt.Errorf("ensuring bob->alice undelegate start runtime event: %w", err)
+	}
+
+	if err = ensureRuntimeEvent(log, acCh, makeUndelegateStartCheck(testing.Alice.Address, nonce+3, testing.Alice.Address, consensusAmountA)); err != nil {
+		return fmt.Errorf("ensuring alice->alice undelegate start runtime event: %w", err)
+	}
+
+	// Test Undelegations query.
+	log.Info("testing Undelegations query")
+	udis, err := consAccounts.Undelegations(ctx, client.RoundLatest, &consensusAccounts.UndelegationsQuery{
+		To: testing.Alice.Address,
+	})
+	if err != nil {
+		return err
+	}
+	if len(udis) != 2 {
+		return fmt.Errorf("expected 2 undelegations, got %d", len(udis))
+	}
+	if udis[0].From != testing.Bob.Address {
+		return fmt.Errorf("expected undelegation source to be %s, got %s", testing.Bob.Address, udis[0].From)
+	}
+	if expectedEpoch := 3; int(udis[0].Epoch) != expectedEpoch {
+		return fmt.Errorf("expected undelegation epoch to be %d, got %d", expectedEpoch, udis[0].Epoch)
+	}
+	if udis[0].Shares.Cmp(sharesB) != 0 {
+		return fmt.Errorf("expected undelegation shares to be %s, got %s", sharesB, udis[0].Shares)
 	}
 
 	if err = ensureStakingEvent(log, ch, makeReclaimEscrowCheck(staking.Address(testing.Bob.Address), runtimeAddr, consensusAmountB)); err != nil {
