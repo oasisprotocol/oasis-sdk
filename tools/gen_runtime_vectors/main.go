@@ -193,6 +193,80 @@ func main() {
 						}
 						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, t.signer, nonce))
 					}
+
+					// consensusaccounts.Delegate
+					for _, t := range []struct {
+						to           string
+						origTo       *ethCommon.Address
+						chainContext string
+						valid        bool
+					}{
+						// Valid Delegate: Alice -> Bob's native address on ParaTime
+						{testing.Bob.Address.String(), nil, context.ChainContext, true},
+						// Valid Delegate: Alice -> Dave's native address on ParaTime
+						{testing.Dave.Address.String(), nil, context.ChainContext, true},
+						// Valid Delegate: Alice -> Dave's ethereum address on ParaTime
+						{testing.Dave.EthAddress.String(), testing.Dave.EthAddress, context.ChainContext, true},
+						// Valid Delegate: Alice -> Frank's native address on ParaTime
+						{testing.Frank.Address.String(), nil, context.ChainContext, true},
+						// Invalid Delegate: orig_to doesn't match transaction's to
+						{testing.Dave.EthAddress.String(), &unknownEthAddr, context.ChainContext, false},
+						// Invalid Delegate: chain_context empty
+						{testing.Dave.EthAddress.String(), testing.Dave.EthAddress, emptyChainContext, false},
+						// Invalid Delegate: chain_context invalid
+						{testing.Dave.EthAddress.String(), testing.Dave.EthAddress, invalidChainContext, false},
+					} {
+						to, ethTo, _ := helpers.ResolveAddress(nil, t.to)
+						txBody := &consensusaccounts.Delegate{
+							To:     *to,
+							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
+						}
+						tx = consensusaccounts.NewDelegateTx(fee, txBody)
+						meta := &signature.RichContext{
+							RuntimeID:    rtId,
+							ChainContext: t.chainContext,
+							Base:         types.SignatureContextBase,
+							TxDetails:    &signature.TxDetails{OrigTo: ethTo},
+						}
+						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, testing.Alice, nonce))
+					}
+
+					// consensusaccounts.Undelegate
+					for _, t := range []struct {
+						from         string
+						origTo       *ethCommon.Address
+						chainContext string
+						valid        bool
+					}{
+						// Valid Undelegate: Alice from Bob's native address on ParaTime
+						{testing.Bob.Address.String(), nil, context.ChainContext, true},
+						// Valid Undelegate: Alice from Dave's native address on ParaTime
+						{testing.Dave.Address.String(), nil, context.ChainContext, true},
+						// Valid Undelegate: Alice from Dave's ethereum address on ParaTime
+						{testing.Dave.EthAddress.String(), testing.Dave.EthAddress, context.ChainContext, true},
+						// Valid Undelegate: Alice from Frank's native address on ParaTime
+						{testing.Frank.Address.String(), nil, context.ChainContext, true},
+						// Invalid Undelegate: orig_to doesn't match transaction's from
+						{testing.Dave.EthAddress.String(), &unknownEthAddr, context.ChainContext, false},
+						// Invalid Undelegate: chain_context empty
+						{testing.Dave.EthAddress.String(), testing.Dave.EthAddress, emptyChainContext, false},
+						// Invalid Undelegate: chain_context invalid
+						{testing.Dave.EthAddress.String(), testing.Dave.EthAddress, invalidChainContext, false},
+					} {
+						from, ethTo, _ := helpers.ResolveAddress(nil, t.from)
+						txBody := &consensusaccounts.Undelegate{
+							From:   *from,
+							Shares: *quantity.NewFromUint64(amt),
+						}
+						tx = consensusaccounts.NewUndelegateTx(fee, txBody)
+						meta := &signature.RichContext{
+							RuntimeID:    rtId,
+							ChainContext: t.chainContext,
+							Base:         types.SignatureContextBase,
+							TxDetails:    &signature.TxDetails{OrigTo: ethTo}, // although this value is the address we undelegate FROM, let's keep orig_to for consistency
+						}
+						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, testing.Alice, nonce))
+					}
 				}
 
 				meta := &signature.RichContext{
@@ -283,7 +357,7 @@ func main() {
 									// Valid policy, arbitrary address can instantiate/upgrade it.
 									{Address: &testing.Dave.Address},
 								} {
-									// contracts.Upload not supported by Ledger due to tx bytecode size.
+									// contracts.Upload not supported by Ledger due from tx bytecode size.
 
 									// contracts.Instantiate
 									txBodyInstantiate := &contracts.Instantiate{
@@ -331,7 +405,7 @@ func main() {
 					tx = types.NewEncryptedTransaction(fee, body)
 					vectors = append(vectors, MakeRuntimeTestVector(tx, body, meta, t.valid, t.signer, nonce))
 
-					// evm.Create not supported by Ledger due to tx bytecode size.
+					// evm.Create not supported by Ledger due from tx bytecode size.
 
 					// evm.Call
 					txBodyCall := &evm.Call{
