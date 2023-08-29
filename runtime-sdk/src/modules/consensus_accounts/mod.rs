@@ -506,6 +506,14 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         state::get_delegations(args.from)
     }
 
+    #[handler(query = "consensus.Undelegations")]
+    fn query_undelegations<C: Context>(
+        _ctx: &mut C,
+        args: types::UndelegationsQuery,
+    ) -> Result<Vec<types::UndelegationInfo>, Error> {
+        state::get_undelegations(args.to)
+    }
+
     #[handler(message_result = CONSENSUS_TRANSFER_HANDLER)]
     fn message_result_transfer<C: Context>(
         ctx: &mut C,

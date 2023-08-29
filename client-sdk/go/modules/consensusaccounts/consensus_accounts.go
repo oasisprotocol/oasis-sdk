@@ -19,11 +19,12 @@ var (
 	methodUndelegate = types.NewMethodName("consensus.Undelegate", Undelegate{})
 
 	// Queries.
-	methodParameters  = types.NewMethodName("consensus_accounts.Parameters", nil)
-	methodBalance     = types.NewMethodName("consensus.Balance", BalanceQuery{})
-	methodAccount     = types.NewMethodName("consensus.Account", AccountQuery{})
-	methodDelegation  = types.NewMethodName("consensus.Delegation", DelegationQuery{})
-	methodDelegations = types.NewMethodName("consensus.Delegations", DelegationsQuery{})
+	methodParameters    = types.NewMethodName("consensus_accounts.Parameters", nil)
+	methodBalance       = types.NewMethodName("consensus.Balance", BalanceQuery{})
+	methodAccount       = types.NewMethodName("consensus.Account", AccountQuery{})
+	methodDelegation    = types.NewMethodName("consensus.Delegation", DelegationQuery{})
+	methodDelegations   = types.NewMethodName("consensus.Delegations", DelegationsQuery{})
+	methodUndelegations = types.NewMethodName("consensus.Undelegations", UndelegationsQuery{})
 )
 
 // V1 is the v1 consensus accounts module interface.
@@ -56,6 +57,9 @@ type V1 interface {
 
 	// Delegations queries all delegation metadata originating from a given account.
 	Delegations(ctx context.Context, round uint64, query *DelegationsQuery) ([]*ExtendedDelegationInfo, error)
+
+	// Undelegations queries all undelegation metadata to a given account.
+	Undelegations(ctx context.Context, round uint64, query *UndelegationsQuery) ([]*UndelegationInfo, error)
 
 	// GetEvents returns all consensus accounts events emitted in a given block.
 	GetEvents(ctx context.Context, round uint64) ([]*Event, error)
@@ -145,6 +149,16 @@ func (a *v1) Delegations(ctx context.Context, round uint64, query *DelegationsQu
 		return nil, err
 	}
 	return dis, nil
+}
+
+// Implements V1.
+func (a *v1) Undelegations(ctx context.Context, round uint64, query *UndelegationsQuery) ([]*UndelegationInfo, error) {
+	var udis []*UndelegationInfo
+	err := a.rc.Query(ctx, round, methodUndelegations, query, &udis)
+	if err != nil {
+		return nil, err
+	}
+	return udis, nil
 }
 
 // Implements V1.

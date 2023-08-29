@@ -1,4 +1,6 @@
 //! Consensus module types.
+use oasis_core_runtime::consensus::beacon::EpochTime;
+
 use crate::types::{address::Address, message::MessageEvent, token};
 
 /// Deposit into runtime call.
@@ -61,6 +63,12 @@ pub struct DelegationsQuery {
     pub from: Address,
 }
 
+/// Undelegations query.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct UndelegationsQuery {
+    pub to: Address,
+}
+
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct AccountBalance {
     pub balance: u128,
@@ -76,9 +84,20 @@ pub struct DelegationInfo {
 /// Extended information about a delegation.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct ExtendedDelegationInfo {
-    /// Address delegation to.
+    /// Address delegated to.
     pub to: Address,
     /// The amount of owned shares.
+    pub shares: u128,
+}
+
+/// Information about an undelegation.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct UndelegationInfo {
+    /// Address being undelegated from.
+    pub from: Address,
+    /// Epoch when the undelegation will be complete.
+    pub epoch: EpochTime,
+    /// The amount of undelegated shares.
     pub shares: u128,
 }
 
