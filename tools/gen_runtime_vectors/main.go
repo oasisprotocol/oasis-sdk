@@ -193,6 +193,60 @@ func main() {
 						}
 						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, t.signer, nonce))
 					}
+
+					// consensusaccounts.Delegate
+					for _, t := range []struct {
+						to           string
+						chainContext string
+						valid        bool
+					}{
+						// Valid Delegate: Alice -> Bob's native address on ParaTime
+						{testing.Bob.Address.String(), context.ChainContext, true},
+						// Invalid Delegate: chain_context empty
+						{testing.Dave.EthAddress.String(), emptyChainContext, false},
+						// Invalid Delegate: chain_context invalid
+						{testing.Dave.EthAddress.String(), invalidChainContext, false},
+					} {
+						to, _, _ := helpers.ResolveAddress(nil, t.to)
+						txBody := &consensusaccounts.Delegate{
+							To:     *to,
+							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
+						}
+						tx = consensusaccounts.NewDelegateTx(fee, txBody)
+						meta := &signature.RichContext{
+							RuntimeID:    rtId,
+							ChainContext: t.chainContext,
+							Base:         types.SignatureContextBase,
+						}
+						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, testing.Alice, nonce))
+					}
+
+					// consensusaccounts.Undelegate
+					for _, t := range []struct {
+						from         string
+						chainContext string
+						valid        bool
+					}{
+						// Valid Undelegate: Alice from Bob's native address on ParaTime
+						{testing.Bob.Address.String(), context.ChainContext, true},
+						// Invalid Undelegate: chain_context empty
+						{testing.Dave.EthAddress.String(), emptyChainContext, false},
+						// Invalid Undelegate: chain_context invalid
+						{testing.Dave.EthAddress.String(), invalidChainContext, false},
+					} {
+						from, _, _ := helpers.ResolveAddress(nil, t.from)
+						txBody := &consensusaccounts.Undelegate{
+							From:   *from,
+							Shares: *quantity.NewFromUint64(amt),
+						}
+						tx = consensusaccounts.NewUndelegateTx(fee, txBody)
+						meta := &signature.RichContext{
+							RuntimeID:    rtId,
+							ChainContext: t.chainContext,
+							Base:         types.SignatureContextBase,
+						}
+						vectors = append(vectors, MakeRuntimeTestVector(tx, txBody, meta, t.valid, testing.Alice, nonce))
+					}
 				}
 
 				meta := &signature.RichContext{
