@@ -289,8 +289,12 @@ var (
 				if bnd.Manifest.SGX.Signature != "" {
 					fmt.Printf("SGXS signature: %s\n", bnd.Manifest.SGX.Signature)
 
-					_, sigStruct, err := sigstruct.Verify(bnd.Data[bnd.Manifest.SGX.Signature])
+					sigPk, sigStruct, err := sigstruct.Verify(bnd.Data[bnd.Manifest.SGX.Signature])
 					cobra.CheckErr(err) // Already checked during Open so it should never fail.
+
+					var mrSigner sgx.MrSigner
+					err = mrSigner.FromPublicKey(sigPk)
+					cobra.CheckErr(err)
 
 					fmt.Printf("SGXS SIGSTRUCT:\n")
 					fmt.Printf("  Build date:       %s\n", sigStruct.BuildDate)
@@ -316,6 +320,7 @@ var (
 					fmt.Printf("  Attributes XFRM:  %016X\n", sigStruct.Attributes.Xfrm)
 					fmt.Printf("  Attributes mask:  %016X %016X\n", sigStruct.AttributesMask[0], sigStruct.AttributesMask[1])
 					fmt.Printf("  MRENCLAVE:        %s\n", sigStruct.EnclaveHash)
+					fmt.Printf("  MRSIGNER:         %s\n", mrSigner)
 					fmt.Printf("  ISV product ID:   %d\n", sigStruct.ISVProdID)
 					fmt.Printf("  ISV SVN:          %d\n", sigStruct.ISVSVN)
 				} else {
