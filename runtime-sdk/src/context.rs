@@ -1227,6 +1227,32 @@ mod test {
     }
 
     #[test]
+    fn test_value_child_context_no_propagation() {
+        let mut mock = Mock::default();
+        let mut ctx = mock.create_ctx();
+
+        ctx.value("module.TestKey").set(42u64);
+
+        ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
+            // Create a child context inside a transaction context and make sure that it starts
+            // with an empty set of values and that modifications are not propagated.
+            tx_ctx.with_child(tx_ctx.mode(), |mut child_ctx| {
+                let v = child_ctx.value::<u64>("module.TestKey").get();
+                assert!(v.is_none(), "values should not propagate to child context");
+
+                child_ctx.value("module.TestKey").set(48u64);
+            });
+
+            let v = tx_ctx.value::<u64>("module.TestKey").get();
+            assert_eq!(
+                v,
+                Some(&42u64),
+                "values should not propagate outside child context"
+            );
+        });
+    }
+
+    #[test]
     fn test_value_tx_context() {
         let mut mock = Mock::default();
         let mut ctx = mock.create_ctx();

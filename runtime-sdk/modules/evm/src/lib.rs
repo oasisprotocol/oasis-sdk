@@ -67,6 +67,9 @@ pub trait Config: 'static {
     /// Whether to use confidential storage by default, and transaction data encryption.
     const CONFIDENTIAL: bool = false;
 
+    /// Whether to refund unused transaction fee.
+    const REFUND_UNUSED_FEE: bool = true;
+
     /// Maps an Ethereum address into an SDK account address.
     fn map_address(address: primitive_types::H160) -> Address {
         Address::new(
@@ -538,17 +541,11 @@ impl<Cfg: Config> Module<Cfg> {
         let cfg = Cfg::evm_config(estimate_gas);
         let gas_limit: u64 = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
         let gas_price: primitive_types::U256 = ctx.tx_auth_info().fee.gas_price().into();
-        let fee_denomination = ctx.tx_auth_info().fee.amount.denomination().clone();
 
         let vicinity = backend::Vicinity {
             gas_price,
             origin: source.into(),
         };
-
-        // The maximum gas fee has already been withdrawn in authenticate_tx().
-        let max_gas_fee = gas_price
-            .checked_mul(primitive_types::U256::from(gas_limit))
-            .ok_or(Error::FeeOverflow)?;
 
         let backend = backend::OasisBackend::<'_, C, Cfg>::new(ctx, vicinity);
         let metadata = StackSubstateMetadata::new(gas_limit, cfg);
@@ -559,37 +556,24 @@ impl<Cfg: Config> Module<Cfg> {
         // Run EVM and process the result.
         let (exit_reason, exit_value) = f(&mut executor, gas_limit);
         let gas_used = executor.used_gas();
-        let fee = executor.fee(gas_price);
 
         let exit_value = match process_evm_result(exit_reason, exit_value) {
             Ok(exit_value) => exit_value,
             Err(err) => {
                 <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
+                Cfg::Accounts::set_refund_unused_tx_fee(ctx, Cfg::REFUND_UNUSED_FEE);
                 return Err(err);
             }
         };
 
-        // Return the difference between the pre-paid max_gas and actually used gas.
-        let return_fee = max_gas_fee
-            .checked_sub(fee)
-            .ok_or(Error::InsufficientBalance)?;
-
         // Apply can fail in case of unsupported actions.
         if let Err(err) = executor.into_state().apply() {
             <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
-            return Err(err);
+            return Err(err); // Do not refund unused fee.
         };
 
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
-
-        // Move the difference from the fee accumulator back to the caller.
-        let caller_address = Cfg::map_address(source.into());
-        Cfg::Accounts::return_tx_fee(
-            ctx,
-            caller_address,
-            &token::BaseUnits::new(return_fee.as_u128(), fee_denomination),
-        )
-        .map_err(|_| Error::InsufficientBalance)?;
+        Cfg::Accounts::set_refund_unused_tx_fee(ctx, Cfg::REFUND_UNUSED_FEE);
 
         Ok(exit_value)
     }

@@ -270,7 +270,7 @@ mod test {
         );
 
         // Call into test contract again.
-        let dispatch_result = signer.call_evm(
+        let dispatch_result = signer.call_evm_opts(
             &mut ctx,
             contract_address,
             "test",
@@ -285,6 +285,13 @@ mod test {
                     amount: BaseUnits::new(1_000, Denomination::NATIVE),
                 })),
             ],
+            CallOptions {
+                fee: Fee {
+                    amount: BaseUnits::new(100, Denomination::NATIVE),
+                    gas: 1_000_000,
+                    ..Default::default()
+                },
+            },
         );
         assert!(dispatch_result.result.is_success(), "call should succeed");
 
@@ -307,6 +314,9 @@ mod test {
         assert_eq!(event.from, Address::from_eth(contract_address.as_ref()));
         assert_eq!(event.to, keys::alice::address());
         assert_eq!(event.amount, BaseUnits::new(1_000, Denomination::NATIVE));
+        let event = &events[1];
+        assert_eq!(event.from, keys::dave::address());
+        assert_eq!(event.amount, BaseUnits::new(100, Denomination::NATIVE));
 
         // Make sure only one gas used event was emitted (e.g. subcall should not emit its own gas
         // used events).
