@@ -20,6 +20,11 @@ func TestValidateIdentifier(t *testing.T) {
 		{"222", true},
 		{"abc", true},
 		{"abc_2", true},
+		{"_v", false},
+		{"_foo", false},
+		{"default", false},
+		{"a", true},
+		{"2", true},
 	} {
 		if tc.valid {
 			require.NoError(ValidateIdentifier(tc.id), tc.id)
