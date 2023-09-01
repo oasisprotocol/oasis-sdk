@@ -7,20 +7,125 @@ use std::{
 use anyhow::anyhow;
 
 use crate::{
-    context::{BatchContext, Context},
-    module::{self, BlockHandler, InvariantHandler, MethodHandler, TransactionHandler},
-    modules::{core, core::API as _},
+    context::{self, BatchContext, Context, TxContext},
+    handler,
+    module::{self, BlockHandler, InvariantHandler, MethodHandler, Module, TransactionHandler},
+    modules::{
+        core,
+        core::{Error as CoreError, Module as Core, API as _},
+    },
+    sdk_derive, subcall,
     testing::{keys, mock},
     types::{
+        address::Address,
         token::{BaseUnits, Denomination},
         transaction,
     },
+    Runtime, Version,
 };
 
 use super::{
-    types::*, Error, Genesis, Module as Accounts, Parameters, ADDRESS_COMMON_POOL,
+    types::*, Error, GasCosts, Genesis, Module as Accounts, Parameters, ADDRESS_COMMON_POOL,
     ADDRESS_FEE_ACCUMULATOR, API as _,
 };
+
+struct CoreConfig;
+
+impl core::Config for CoreConfig {}
+
+/// Test runtime.
+struct TestRuntime;
+
+impl Runtime for TestRuntime {
+    const VERSION: Version = Version::new(0, 0, 0);
+
+    type Core = Core<CoreConfig>;
+
+    type Modules = (Core<CoreConfig>, Accounts, TestModule);
+
+    fn genesis_state() -> <Self::Modules as module::MigrationHandler>::Genesis {
+        (
+            core::Genesis {
+                parameters: core::Parameters {
+                    max_batch_gas: 10_000_000,
+                    min_gas_price: BTreeMap::from([(Denomination::NATIVE, 0)]),
+                    ..Default::default()
+                },
+            },
+            Genesis {
+                balances: BTreeMap::from([(
+                    keys::alice::address(),
+                    BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
+                )]),
+                total_supplies: BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
+                parameters: Parameters {
+                    gas_costs: GasCosts { tx_transfer: 1_000 },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            (), // Test module has no genesis.
+        )
+    }
+}
+
+/// A module with multiple no-op methods; intended for testing routing.
+struct TestModule;
+
+impl module::Module for TestModule {
+    const NAME: &'static str = "test";
+    type Error = CoreError;
+    type Event = ();
+    type Parameters = ();
+}
+
+#[sdk_derive(MethodHandler)]
+impl TestModule {
+    #[handler(call = "test.RefundFee")]
+    fn refund_fee<C: TxContext>(ctx: &mut C, fail: bool) -> Result<(), CoreError> {
+        // Use some gas.
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, 10_000)?;
+        // Ask the runtime to refund the rest (even on failures).
+        Accounts::set_refund_unused_tx_fee(ctx, true);
+
+        if fail {
+            Err(CoreError::Forbidden)
+        } else {
+            Ok(())
+        }
+    }
+
+    #[handler(call = "test.Subcall")]
+    fn subcall<C: TxContext>(ctx: &mut C, _args: ()) -> Result<(), CoreError> {
+        // Use some gas.
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, 1_000)?;
+
+        let max_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
+        let result = subcall::call(
+            ctx,
+            subcall::SubcallInfo {
+                caller: transaction::CallerAddress::Address(Default::default()),
+                method: "test.RefundFee".to_string(),
+                body: cbor::to_value(false),
+                max_depth: 8,
+                max_gas,
+            },
+            subcall::AllowAllValidator,
+        )?;
+
+        // Propagate gas use.
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, result.gas_used)?;
+
+        Ok(())
+    }
+}
+
+impl module::BlockHandler for TestModule {}
+impl module::TransactionHandler for TestModule {}
+impl module::MigrationHandler for TestModule {
+    type Genesis = ();
+}
+impl module::InvariantHandler for TestModule {}
 
 #[test]
 #[should_panic]
@@ -565,7 +670,7 @@ fn test_fee_disbursement() {
 
     // Authenticate transaction, fees should be moved to accumulator.
     Accounts::authenticate_tx(&mut ctx, &tx).expect("transaction authentication should succeed");
-    ctx.with_tx(tx.into(), |mut tx_ctx, _call| {
+    ctx.with_tx(tx.clone().into(), |mut tx_ctx, _call| {
         // Run after call tx handler.
         Accounts::after_handle_call(
             &mut tx_ctx,
@@ -575,6 +680,12 @@ fn test_fee_disbursement() {
         tx_ctx.commit()
     });
 
+    // Run after dispatch hooks.
+    Accounts::after_dispatch_tx(
+        &mut ctx,
+        &tx.auth_info,
+        &module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
+    );
     // Run end block handler.
     Accounts::end_block(&mut ctx);
 
@@ -999,13 +1110,13 @@ fn test_check_invariants_more() {
 }
 
 #[test]
-fn test_fee_acc() {
+fn test_fee_manager_normal() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
     init_accounts(&mut ctx);
 
-    // Check that Accounts::{charge,return}_tx_fee work.
+    // Check that Accounts::charge_tx_fee works.
     ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
         Accounts::charge_tx_fee(
             &mut tx_ctx,
@@ -1018,28 +1129,23 @@ fn test_fee_acc() {
             .expect("get_balance should succeed");
         assert_eq!(ab, 999_000, "balance in source account should be correct");
 
-        Accounts::return_tx_fee(
-            &mut tx_ctx,
-            keys::alice::address(),
-            &BaseUnits::new(1_000, Denomination::NATIVE),
-        )
-        .expect("return tx fee should succeed");
+        // Setting the refund request should have no effect.
+        Accounts::set_refund_unused_tx_fee(&mut tx_ctx, true);
 
         let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
             .expect("get_balance should succeed");
-        assert_eq!(ab, 1_000_000, "balance in source account should be correct");
+        assert_eq!(ab, 999_000, "balance in source account should be correct");
     });
 }
 
 #[test]
-fn test_fee_acc_sim() {
+fn test_fee_manager_sim() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
     init_accounts(&mut ctx);
 
-    // Check that Accounts::{charge,return}_tx_fee don't do
-    // anything in simulation mode.
+    // Check that Accounts::charge_tx_fee doesn't do anything in simulation mode.
     ctx.with_simulation(|mut sctx| {
         sctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
             Accounts::charge_tx_fee(
@@ -1048,17 +1154,6 @@ fn test_fee_acc_sim() {
                 &BaseUnits::new(1_000, Denomination::NATIVE),
             )
             .expect("charge tx fee should succeed");
-
-            let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
-                .expect("get_balance should succeed");
-            assert_eq!(ab, 1_000_000, "balance in source account should be correct");
-
-            Accounts::return_tx_fee(
-                &mut tx_ctx,
-                keys::alice::address(),
-                &BaseUnits::new(1_000, Denomination::NATIVE),
-            )
-            .expect("return tx fee should succeed");
 
             let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
                 .expect("get_balance should succeed");
@@ -1224,4 +1319,178 @@ fn test_transaction_expiry() {
     let mut ctx = mock.create_ctx();
     let err = Accounts::authenticate_tx(&mut ctx, &tx).expect_err("tx should be expired");
     assert!(matches!(err, core::Error::ExpiredTransaction));
+}
+
+#[test]
+fn test_fee_disbursement_2() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+    let mut signer = mock::Signer::new(0, keys::alice::sigspec());
+
+    TestRuntime::migrate(&mut ctx);
+
+    // Do a simple transfer.
+    let dispatch_result = signer.call_opts(
+        &mut ctx,
+        "accounts.Transfer",
+        Transfer {
+            to: keys::bob::address(),
+            amount: BaseUnits::new(5_000, Denomination::NATIVE),
+        },
+        mock::CallOptions {
+            fee: transaction::Fee {
+                amount: BaseUnits::new(1_500, Denomination::NATIVE),
+                gas: 1_500,
+                ..Default::default()
+            },
+        },
+    );
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Make sure two events were emitted and are properly formatted.
+    let tags = &dispatch_result.tags;
+    assert_eq!(tags.len(), 2, "two events should have been emitted");
+    assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
+    assert_eq!(tags[1].key, b"core\x00\x00\x00\x01"); // core.GasUsed (code = 1) event
+
+    #[derive(Debug, Default, cbor::Decode)]
+    struct TransferEvent {
+        from: Address,
+        to: Address,
+        amount: BaseUnits,
+    }
+
+    let events: Vec<TransferEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 2); // One event for transfer, one event for fee payment.
+    let event = &events[0];
+    assert_eq!(event.from, keys::alice::address());
+    assert_eq!(event.to, keys::bob::address());
+    assert_eq!(event.amount, BaseUnits::new(5_000, Denomination::NATIVE));
+    let event = &events[1];
+    assert_eq!(event.from, keys::alice::address());
+    assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
+    assert_eq!(event.amount, BaseUnits::new(1_500, Denomination::NATIVE));
+
+    // Make sure only one gas used event was emitted.
+    #[derive(Debug, Default, cbor::Decode)]
+    struct GasUsedEvent {
+        amount: u64,
+    }
+
+    let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(events.len(), 1); // Just one gas used event.
+    assert_eq!(events[0].amount, 1_000);
+}
+
+#[test]
+fn test_fee_refund() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+    let mut signer = mock::Signer::new(0, keys::alice::sigspec());
+
+    TestRuntime::migrate(&mut ctx);
+
+    // Test refund on success and failure.
+    for fail in [false, true] {
+        let dispatch_result = signer.call_opts(
+            &mut ctx,
+            "test.RefundFee",
+            fail,
+            mock::CallOptions {
+                fee: transaction::Fee {
+                    amount: BaseUnits::new(100_000, Denomination::NATIVE),
+                    gas: 100_000,
+                    ..Default::default()
+                },
+            },
+        );
+
+        assert_eq!(dispatch_result.result.is_success(), !fail);
+
+        // Make sure two events were emitted and are properly formatted.
+        let tags = &dispatch_result.tags;
+        assert_eq!(tags.len(), 2, "two events should have been emitted");
+        assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
+        assert_eq!(tags[1].key, b"core\x00\x00\x00\x01"); // core.GasUsed (code = 1) event
+
+        #[derive(Debug, Default, cbor::Decode)]
+        struct TransferEvent {
+            from: Address,
+            to: Address,
+            amount: BaseUnits,
+        }
+
+        let events: Vec<TransferEvent> = cbor::from_slice(&tags[0].value).unwrap();
+        assert_eq!(events.len(), 1); // One event for fee payment.
+        let event = &events[0];
+        assert_eq!(event.from, keys::alice::address());
+        assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
+        assert_eq!(event.amount, BaseUnits::new(10_000, Denomination::NATIVE));
+
+        #[derive(Debug, Default, cbor::Decode)]
+        struct GasUsedEvent {
+            amount: u64,
+        }
+
+        let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].amount, 10_000);
+    }
+}
+
+#[test]
+fn test_fee_refund_subcall() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+    let mut signer = mock::Signer::new(0, keys::alice::sigspec());
+
+    TestRuntime::migrate(&mut ctx);
+
+    // Make sure that having a subcall that refunds fees does not affect the transaction.
+    let dispatch_result = signer.call_opts(
+        &mut ctx,
+        "test.Subcall",
+        (),
+        mock::CallOptions {
+            fee: transaction::Fee {
+                amount: BaseUnits::new(100_000, Denomination::NATIVE),
+                gas: 100_000,
+                ..Default::default()
+            },
+        },
+    );
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Make sure two events were emitted and are properly formatted.
+    let tags = &dispatch_result.tags;
+    assert_eq!(tags.len(), 2, "two events should have been emitted");
+    assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
+    assert_eq!(tags[1].key, b"core\x00\x00\x00\x01"); // core.GasUsed (code = 1) event
+
+    #[derive(Debug, Default, cbor::Decode)]
+    struct TransferEvent {
+        from: Address,
+        to: Address,
+        amount: BaseUnits,
+    }
+
+    let events: Vec<TransferEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 1); // One event for fee payment.
+    let event = &events[0];
+    assert_eq!(event.from, keys::alice::address());
+    assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
+    assert_eq!(
+        event.amount,
+        BaseUnits::new(100_000, Denomination::NATIVE),
+        "no fee refunds"
+    );
+
+    #[derive(Debug, Default, cbor::Decode)]
+    struct GasUsedEvent {
+        amount: u64,
+    }
+
+    let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].amount, 11_000);
 }

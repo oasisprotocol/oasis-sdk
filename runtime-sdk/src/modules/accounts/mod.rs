@@ -28,6 +28,7 @@ use crate::{
     },
 };
 
+pub mod fee;
 #[cfg(test)]
 pub(crate) mod test;
 pub mod types;
@@ -214,12 +215,15 @@ pub trait API {
         amount: &token::BaseUnits,
     ) -> Result<(), modules::core::Error>;
 
-    /// Returns the amount from the per-transaction fee accumulator to the account.
-    fn return_tx_fee<C: Context>(
-        ctx: &mut C,
-        to: Address,
-        amount: &token::BaseUnits,
-    ) -> Result<(), modules::core::Error>;
+    /// Indicates that the unused portion of the transaction fee should be refunded after the
+    /// transaction completes (even in case it fails).
+    fn set_refund_unused_tx_fee<C: Context>(ctx: &mut C, refund: bool);
+
+    /// Take the flag indicating that the unused portion of the transaction fee should be refunded
+    /// after the transaction completes is set.
+    ///
+    /// After calling this method the flag is reset to `false`.
+    fn take_refund_unused_tx_fee<C: Context>(ctx: &mut C) -> bool;
 
     /// Check transaction signer account nonces.
     /// Return payer address.
@@ -282,6 +286,10 @@ impl std::convert::TryFrom<&[u8]> for AddressWithDenomination {
 impl Module {
     /// Add given amount of tokens to the specified account's balance.
     fn add_amount(addr: Address, amount: &token::BaseUnits) -> Result<(), Error> {
+        if amount.amount() == 0 {
+            return Ok(());
+        }
+
         CurrentStore::with(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let balances = storage::PrefixStore::new(store, &state::BALANCES);
@@ -298,6 +306,10 @@ impl Module {
 
     /// Subtract given amount of tokens from the specified account's balance.
     fn sub_amount(addr: Address, amount: &token::BaseUnits) -> Result<(), Error> {
+        if amount.amount() == 0 {
+            return Ok(());
+        }
+
         CurrentStore::with(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let balances = storage::PrefixStore::new(store, &state::BALANCES);
@@ -314,6 +326,10 @@ impl Module {
 
     /// Increment the total supply for the given amount.
     fn inc_total_supply(amount: &token::BaseUnits) -> Result<(), Error> {
+        if amount.amount() == 0 {
+            return Ok(());
+        }
+
         CurrentStore::with(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut total_supplies =
@@ -332,6 +348,10 @@ impl Module {
 
     /// Decrement the total supply for the given amount.
     fn dec_total_supply(amount: &token::BaseUnits) -> Result<(), Error> {
+        if amount.amount() == 0 {
+            return Ok(());
+        }
+
         CurrentStore::with(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut total_supplies =
@@ -382,41 +402,10 @@ impl Module {
     }
 }
 
-/// A fee accumulator that stores fees from all transactions in a block.
-#[derive(Default)]
-struct FeeAccumulator {
-    total_fees: BTreeMap<token::Denomination, u128>,
-}
-
-impl FeeAccumulator {
-    /// Add given fee to the accumulator.
-    fn add(&mut self, fee: &token::BaseUnits) {
-        let current = self
-            .total_fees
-            .entry(fee.denomination().clone())
-            .or_default();
-
-        *current = current.checked_add(fee.amount()).unwrap(); // Should never overflow.
-    }
-
-    /// Subtract given fee from the accumulator.
-    fn sub(&mut self, fee: &token::BaseUnits) -> Result<(), Error> {
-        let current = self
-            .total_fees
-            .entry(fee.denomination().clone())
-            .or_default();
-
-        *current = current
-            .checked_sub(fee.amount())
-            .ok_or(Error::InsufficientBalance)?;
-        Ok(())
-    }
-}
-
-/// Context key for the per-transaction fee accumulator.
-const CONTEXT_KEY_TX_FEE_ACCUMULATOR: &str = "accounts.TxFeeAccumulator";
-/// Context key for the per block fee accumulator.
-const CONTEXT_KEY_FEE_ACCUMULATOR: &str = "accounts.FeeAccumulator";
+/// Context key for the per-transaction unused fee refund decision.
+const CONTEXT_KEY_TX_FEE_REFUND_UNUSED: &str = "accounts.TxRefundUnusedFee";
+/// Context key for the per block fee manager.
+const CONTEXT_KEY_FEE_MANAGER: &str = "accounts.FeeManager";
 
 impl API for Module {
     fn transfer<C: Context>(
@@ -615,30 +604,29 @@ impl API for Module {
 
         Self::sub_amount(from, amount).map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
 
-        ctx.value::<FeeAccumulator>(CONTEXT_KEY_TX_FEE_ACCUMULATOR)
+        ctx.value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
             .or_default()
-            .add(amount);
+            .record_fee(from, amount);
 
         Ok(())
     }
 
-    fn return_tx_fee<C: Context>(
-        ctx: &mut C,
-        to: Address,
-        amount: &token::BaseUnits,
-    ) -> Result<(), modules::core::Error> {
+    fn set_refund_unused_tx_fee<C: Context>(ctx: &mut C, refund: bool) {
         if ctx.is_simulation() {
-            return Ok(());
+            return;
         }
 
-        ctx.value::<FeeAccumulator>(CONTEXT_KEY_TX_FEE_ACCUMULATOR)
-            .or_default()
-            .sub(amount)
-            .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
+        ctx.value(CONTEXT_KEY_TX_FEE_REFUND_UNUSED).set(refund);
+    }
 
-        Self::add_amount(to, amount).map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
+    fn take_refund_unused_tx_fee<C: Context>(ctx: &mut C) -> bool {
+        if ctx.is_simulation() {
+            return false;
+        }
 
-        Ok(())
+        ctx.value(CONTEXT_KEY_TX_FEE_REFUND_UNUSED)
+            .take()
+            .unwrap_or(false)
     }
 
     fn check_signer_nonces<C: Context>(
@@ -970,26 +958,32 @@ impl module::TransactionHandler for Module {
         ctx: &mut C,
         result: module::CallResult,
     ) -> Result<module::CallResult, modules::core::Error> {
-        let acc = ctx
-            .value::<FeeAccumulator>(CONTEXT_KEY_TX_FEE_ACCUMULATOR)
-            .take()
-            .unwrap_or_default();
+        // Check whether unused part of the fee should be refunded.
+        let refund_fee = if Self::take_refund_unused_tx_fee(ctx) {
+            let remaining_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
+            let gas_price = ctx.tx_auth_info().fee.gas_price();
 
-        // Emit events for paid fees.
-        for (denom, amount) in acc.total_fees.iter() {
-            ctx.emit_unconditional_event(Event::Transfer {
-                from: ctx.tx_caller_address(),
-                to: *ADDRESS_FEE_ACCUMULATOR,
-                amount: token::BaseUnits::new(*amount, denom.clone()),
-            });
-        }
+            gas_price.saturating_mul(remaining_gas.into())
+        } else {
+            0
+        };
 
-        // Move transaction fees into the block fee accumulator.
-        let fee_acc = ctx
-            .value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
+        let mgr = ctx
+            .value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
             .or_default();
-        for (denom, amount) in acc.total_fees.into_iter() {
-            fee_acc.add(&token::BaseUnits(amount, denom));
+
+        // Update the per-tx fee accumulator. State must be updated in `after_dispatch_tx` as
+        // otherwise any state updates may be reverted in case call result is a failure.
+        mgr.record_refund(refund_fee);
+
+        // Emit event for paid fee.
+        let tx_fee = mgr.tx_fee().cloned().unwrap_or_default();
+        if tx_fee.amount() > 0 {
+            ctx.emit_unconditional_event(Event::Transfer {
+                from: tx_fee.payer(),
+                to: *ADDRESS_FEE_ACCUMULATOR,
+                amount: token::BaseUnits::new(tx_fee.amount(), tx_fee.denomination()),
+            });
         }
 
         Ok(result)
@@ -1000,8 +994,16 @@ impl module::TransactionHandler for Module {
         tx_auth_info: &AuthInfo,
         result: &module::CallResult,
     ) {
+        // Move transaction fees into the per-block fee accumulator.
+        let mgr = ctx
+            .value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
+            .or_default();
+        let fee_updates = mgr.commit_tx();
+        // Refund any fees. This needs to happen after tx dispatch to ensure state is updated.
+        Self::add_amount(fee_updates.payer, &fee_updates.refund).unwrap();
+
         if !ctx.is_check_only() {
-            // Do nothing outside transaction checks.
+            // Do nothing further outside transaction checks.
             return;
         }
         if !matches!(result, module::CallResult::Ok(_)) {
@@ -1097,11 +1099,11 @@ impl module::BlockHandler for Module {
         }
 
         // Fees for the active block should be transferred to the fee accumulator address.
-        let acc = ctx
-            .value::<FeeAccumulator>(CONTEXT_KEY_FEE_ACCUMULATOR)
+        let mgr = ctx
+            .value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
             .take()
             .unwrap_or_default();
-        for (denom, amount) in acc.total_fees.into_iter() {
+        for (denom, amount) in mgr.commit_block().into_iter() {
             Self::add_amount(
                 *ADDRESS_FEE_ACCUMULATOR,
                 &token::BaseUnits::new(amount, denom),

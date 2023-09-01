@@ -1,6 +1,7 @@
 //! Tests for the EVM module.
 use std::collections::BTreeMap;
 
+use ethabi::{ParamType, Token};
 use sha3::Digest as _;
 use uint::hex::FromHex;
 
@@ -10,17 +11,24 @@ use oasis_runtime_sdk::{
     error::Error as _,
     module::{self, InvariantHandler as _, TransactionHandler as _},
     modules::{
-        accounts::{self, Module as Accounts},
+        accounts::{self, Module as Accounts, ADDRESS_FEE_ACCUMULATOR, API as _},
         core::{self, Module as Core},
     },
     storage::{current::TransactionResult, CurrentStore},
-    testing::{keys, mock},
-    types::{address::SignatureAddressSpec, token::Denomination, transaction},
+    testing::{keys, mock, mock::CallOptions},
+    types::{
+        address::{Address, SignatureAddressSpec},
+        token::{self, Denomination},
+        transaction,
+        transaction::Fee,
+    },
     BatchContext, Context, Runtime, Version,
 };
 
 use crate::{
-    derive_caller, process_evm_result,
+    derive_caller,
+    mock::{load_contract_bytecode, EvmSigner},
+    process_evm_result,
     types::{self, H160},
     Config, Error, Genesis, Module as EVMModule,
 };
@@ -423,6 +431,7 @@ impl<C: Config> Runtime for EVMRuntime<C> {
             core::Genesis {
                 parameters: core::Parameters {
                     max_batch_gas: 10_000_000,
+                    min_gas_price: BTreeMap::from([(token::Denomination::NATIVE, 0)]),
                     ..Default::default()
                 },
             },
@@ -878,4 +887,135 @@ fn test_revert_reason_decoding() {
             _ => panic!("expected Error::Reverted(_) variant"),
         }
     }
+}
+
+#[test]
+fn test_fee_refunds() {
+    let mut mock = mock::Mock::default();
+    let mut ctx =
+        mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(context::Mode::ExecuteTx, true);
+    let mut signer = EvmSigner::new(0, keys::dave::sigspec());
+
+    EVMRuntime::<EVMConfig>::migrate(&mut ctx);
+
+    // Give Dave some tokens.
+    Accounts::mint(
+        &mut ctx,
+        keys::dave::address(),
+        &token::BaseUnits(1_000_000_000, Denomination::NATIVE),
+    )
+    .unwrap();
+
+    // Create contract.
+    let dispatch_result = signer.call(
+        &mut ctx,
+        "evm.Create",
+        types::Create {
+            value: 0.into(),
+            init_code: load_contract_bytecode(TEST_CONTRACT_CODE_HEX),
+        },
+    );
+    let result = dispatch_result.result.unwrap();
+    let result: Vec<u8> = cbor::from_value(result).unwrap();
+    let contract_address = H160::from_slice(&result);
+
+    // Call the `name` method on the contract.
+    let dispatch_result = signer.call_evm_opts(
+        &mut ctx,
+        contract_address,
+        "name",
+        &[],
+        &[],
+        CallOptions {
+            fee: Fee {
+                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                gas: 100_000,
+                ..Default::default()
+            },
+        },
+    );
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Make sure two events were emitted and are properly formatted.
+    let tags = &dispatch_result.tags;
+    assert_eq!(tags.len(), 2, "two events should have been emitted");
+    assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
+    assert_eq!(tags[1].key, b"core\x00\x00\x00\x01"); // core.GasUsed (code = 1) event
+
+    #[derive(Debug, Default, cbor::Decode)]
+    struct TransferEvent {
+        from: Address,
+        to: Address,
+        amount: token::BaseUnits,
+    }
+
+    let events: Vec<TransferEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 1); // One event for fee payment.
+    let event = &events[0];
+    assert_eq!(event.from, keys::dave::address());
+    assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
+    assert_eq!(
+        event.amount,
+        token::BaseUnits::new(242_700, Denomination::NATIVE)
+    );
+
+    #[derive(Debug, Default, cbor::Decode)]
+    struct GasUsedEvent {
+        amount: u64,
+    }
+
+    let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].amount, 24_270);
+
+    // Call the `transfer` method on the contract with invalid parameters so it reverts.
+    let dispatch_result = signer.call_evm_opts(
+        &mut ctx,
+        contract_address,
+        "transfer",
+        &[ParamType::Address, ParamType::Uint(256)],
+        &[
+            Token::Address(contract_address.into()),
+            Token::Uint(u128::MAX.into()), // Too much so it reverts.
+        ],
+        CallOptions {
+            fee: Fee {
+                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                gas: 100_000,
+                ..Default::default()
+            },
+        },
+    );
+    if let module::CallResult::Failed {
+        module,
+        code,
+        message,
+    } = dispatch_result.result
+    {
+        assert_eq!(module, "evm");
+        assert_eq!(code, 8);
+        assert_eq!(message, "reverted: ERC20: transfer amount exceeds balance");
+    } else {
+        panic!("call should revert");
+    }
+
+    // Make sure two events were emitted and are properly formatted.
+    let tags = &dispatch_result.tags;
+    assert_eq!(tags.len(), 2, "two events should have been emitted");
+    assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
+    assert_eq!(tags[1].key, b"core\x00\x00\x00\x01"); // core.GasUsed (code = 1) event
+
+    let events: Vec<TransferEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 1); // One event for fee payment.
+    let event = &events[0];
+    assert_eq!(event.from, keys::dave::address());
+    assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
+    assert_eq!(
+        event.amount,
+        token::BaseUnits::new(245_850, Denomination::NATIVE) // Note the refund.
+    );
+
+    let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].amount, 24_585);
 }
