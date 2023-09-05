@@ -29,7 +29,7 @@ jobs:
         example: [runtime-sdk/minimal-runtime]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Rust
         run: rustup show
@@ -57,7 +57,7 @@ jobs:
         example: [contract-sdk/hello-world, contract-sdk/c10l-hello-world]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Rust
         run: rustup show
@@ -89,7 +89,7 @@ jobs:
         example: [client-sdk/go/minimal-runtime-client]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Go
         uses: actions/setup-go@v4
