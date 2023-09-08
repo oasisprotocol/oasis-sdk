@@ -139,7 +139,7 @@ mod test {
 
     use crate as evm;
     use crate::{
-        mock::{load_contract_bytecode, EvmSigner},
+        mock::{decode_reverted, load_contract_bytecode, EvmSigner},
         types::{self, H160},
         Config as _,
     };
@@ -364,7 +364,7 @@ mod test {
         {
             assert_eq!(module, "evm");
             assert_eq!(code, 8);
-            assert_eq!(message, "reverted: subcall failed");
+            assert_eq!(decode_reverted(&message).unwrap(), "subcall failed");
         } else {
             panic!("call should fail due to delegatecall");
         }
@@ -416,7 +416,7 @@ mod test {
         {
             assert_eq!(module, "evm");
             assert_eq!(code, 8);
-            assert_eq!(message, "reverted: subcall failed");
+            assert_eq!(decode_reverted(&message).unwrap(), "subcall failed");
         } else {
             panic!("call should fail due to re-entrancy not being allowed");
         }

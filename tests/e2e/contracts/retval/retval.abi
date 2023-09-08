@@ -1,0 +1,1 @@
+[{"inputs":[],"name":"testRevert","outputs":[],"stateMutability":"view","type":"function"},{"inputs":[],"name":"testSuccess","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"}]
