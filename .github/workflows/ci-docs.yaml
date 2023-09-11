@@ -40,7 +40,7 @@ jobs:
             --package oasis-contract-sdk-storage
 
       - name: Publish docs
-        uses: crazy-max/ghaction-github-pages@v3
+        uses: crazy-max/ghaction-github-pages@v4
         with:
           target_branch: api-reference
           build_dir: target/doc
