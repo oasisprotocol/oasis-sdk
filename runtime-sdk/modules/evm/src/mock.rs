@@ -2,13 +2,20 @@
 use uint::hex::FromHex;
 
 use oasis_runtime_sdk::{
+    callformat,
+    core::common::crypto::mrae::deoxysii,
     dispatcher,
+    error::RuntimeError,
+    module,
     testing::mock::{CallOptions, Signer},
-    types::address::SignatureAddressSpec,
+    types::{address::SignatureAddressSpec, transaction},
     BatchContext,
 };
 
-use crate::types::{self, H160};
+use crate::{
+    derive_caller,
+    types::{self, H160},
+};
 
 /// A mock EVM signer for use during tests.
 pub struct EvmSigner(Signer);
@@ -64,6 +71,104 @@ impl EvmSigner {
             opts,
         )
     }
+
+    /// Ethereum address for this signer.
+    pub fn address(&self) -> H160 {
+        derive_caller::from_sigspec(self.sigspec()).expect("caller should be evm-compatible")
+    }
+
+    /// Dispatch a query to the given EVM contract method.
+    pub fn query_evm<C>(
+        &self,
+        ctx: &mut C,
+        address: H160,
+        name: &str,
+        param_types: &[ethabi::ParamType],
+        params: &[ethabi::Token],
+    ) -> Result<Vec<u8>, RuntimeError>
+    where
+        C: BatchContext,
+    {
+        self.query_evm_opts(ctx, address, name, param_types, params, Default::default())
+    }
+
+    /// Dispatch a query to the given EVM contract method.
+    pub fn query_evm_opts<C>(
+        &self,
+        ctx: &mut C,
+        address: H160,
+        name: &str,
+        param_types: &[ethabi::ParamType],
+        params: &[ethabi::Token],
+        opts: QueryOptions,
+    ) -> Result<Vec<u8>, RuntimeError>
+    where
+        C: BatchContext,
+    {
+        let mut data = [
+            ethabi::short_signature(name, param_types).to_vec(),
+            ethabi::encode(params),
+        ]
+        .concat();
+
+        // Handle optional encryption.
+        let client_keypair = deoxysii::generate_key_pair();
+        if opts.encrypt {
+            data = cbor::to_vec(
+                callformat::encode_call(
+                    ctx,
+                    transaction::Call {
+                        format: transaction::CallFormat::EncryptedX25519DeoxysII,
+                        method: "".into(),
+                        body: cbor::Value::from(data),
+                        ..Default::default()
+                    },
+                    &client_keypair,
+                )
+                .unwrap(),
+            );
+        }
+
+        let mut result: Vec<u8> = self.query(
+            ctx,
+            "evm.SimulateCall",
+            types::SimulateCallQuery {
+                gas_price: 0.into(),
+                gas_limit: opts.gas_limit,
+                caller: opts.caller.unwrap_or_else(|| self.address()),
+                address,
+                value: 0.into(),
+                data,
+            },
+        )?;
+
+        // Handle optional decryption.
+        if opts.encrypt {
+            let call_result: transaction::CallResult =
+                cbor::from_slice(&result).expect("result from EVM should be properly encoded");
+            let call_result = callformat::decode_result(
+                ctx,
+                transaction::CallFormat::EncryptedX25519DeoxysII,
+                call_result,
+                &client_keypair,
+            )
+            .expect("callformat decoding should succeed");
+
+            result = match call_result {
+                module::CallResult::Ok(v) => {
+                    cbor::from_value(v).expect("result from EVM should be correct")
+                }
+                module::CallResult::Failed {
+                    module,
+                    code,
+                    message,
+                } => return Err(RuntimeError::new(&module, code, &message)),
+                module::CallResult::Aborted(e) => panic!("aborted with error: {e}"),
+            };
+        }
+
+        Ok(result)
+    }
 }
 
 impl std::ops::Deref for EvmSigner {
@@ -77,6 +182,26 @@ impl std::ops::Deref for EvmSigner {
 impl std::ops::DerefMut for EvmSigner {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+/// Options for making queries.
+pub struct QueryOptions {
+    /// Whether the call should be encrypted.
+    pub encrypt: bool,
+    /// Gas limit.
+    pub gas_limit: u64,
+    /// Use specified caller instead of signer.
+    pub caller: Option<H160>,
+}
+
+impl Default for QueryOptions {
+    fn default() -> Self {
+        Self {
+            encrypt: false,
+            gas_limit: 10_000_000,
+            caller: None,
+        }
     }
 }
 
