@@ -27,10 +27,9 @@ use oasis_runtime_sdk::{
 
 use crate::{
     derive_caller,
-    mock::{load_contract_bytecode, EvmSigner},
-    process_evm_result,
+    mock::{decode_reverted, decode_reverted_raw, load_contract_bytecode, EvmSigner},
     types::{self, H160},
-    Config, Error, Genesis, Module as EVMModule,
+    Config, Genesis, Module as EVMModule,
 };
 
 /// Test contract code.
@@ -812,84 +811,6 @@ fn test_c10l_evm_runtime() {
 }
 
 #[test]
-fn test_revert_reason_decoding() {
-    let long_reason = vec![0x61; 1050];
-    let long_reason_hex = hex::encode(&long_reason);
-    let long_reason_str = String::from_utf8(long_reason).unwrap();
-    let long_reason_hex = &[
-        "08c379a0\
-        0000000000000000000000000000000000000000000000000000000000000020\
-        000000000000000000000000000000000000000000000000000000000000041a",
-        &long_reason_hex,
-    ]
-    .concat();
-
-    let tcs = vec![
-        // Valid values.
-        (
-            "08c379a0\
-            0000000000000000000000000000000000000000000000000000000000000020\
-            0000000000000000000000000000000000000000000000000000000000000018\
-            4461692f696e73756666696369656e742d62616c616e63650000000000000000",
-            "Dai/insufficient-balance",
-        ),
-        (
-            "08c379a0\
-            0000000000000000000000000000000000000000000000000000000000000020\
-            0000000000000000000000000000000000000000000000000000000000000047\
-            6d7946756e6374696f6e206f6e6c79206163636570747320617267756d656e74\
-            7320776869636820617265206772656174686572207468616e206f7220657175\
-            616c20746f203500000000000000000000000000000000000000000000000000",
-            "myFunction only accepts arguments which are greather than or equal to 5",
-        ),
-        // Valid value, empty reason.
-        (
-            "08c379a0\
-            0000000000000000000000000000000000000000000000000000000000000020\
-            0000000000000000000000000000000000000000000000000000000000000000",
-            "",
-        ),
-        // Valid value, reason too long and should be truncated.
-        (long_reason_hex, &long_reason_str[..1024]),
-        // No revert reason.
-        ("", "no revert reason"),
-        // Malformed output, incorrect selector and bad length.
-        (
-            "BADBADBADBADBADBAD",
-            "utututututut",
-        ),
-        // Malformed output, bad selector.
-        (
-            "BAAAAAAD\
-            0000000000000000000000000000000000000000000000000000000000000020\
-            0000000000000000000000000000000000000000000000000000000000000018\
-            4461692f696e73756666696369656e742d62616c616e63650000000000000000",
-            "uqqqrQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABhEYWkvaW5zdWZmaWNpZW50LWJhbGFuY2UAAAAAAAAAAA==",
-        ),
-        // Malformed output, corrupted length.
-        (
-            "08c379a0\
-            0000000000000000000000000000000000000000000000000000000000000020\
-            00000000000000000000000000000000000000000000000000000000FFFFFFFF\
-            4461692f696e73756666696369656e742d62616c616e63650000000000000000",
-            "CMN5oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP////9EYWkvaW5zdWZmaWNpZW50LWJhbGFuY2UAAAAAAAAAAA==",
-        ),
-    ];
-
-    for tc in tcs {
-        let raw = hex::decode(tc.0).unwrap();
-        let err = process_evm_result(evm::ExitReason::Revert(evm::ExitRevert::Reverted), raw)
-            .unwrap_err();
-        match err {
-            Error::Reverted(reason) => {
-                assert_eq!(&reason, tc.1, "revert reason should be decoded correctly");
-            }
-            _ => panic!("expected Error::Reverted(_) variant"),
-        }
-    }
-}
-
-#[test]
 fn test_fee_refunds() {
     let mut mock = mock::Mock::default();
     let mut ctx =
@@ -994,7 +915,10 @@ fn test_fee_refunds() {
     {
         assert_eq!(module, "evm");
         assert_eq!(code, 8);
-        assert_eq!(message, "reverted: ERC20: transfer amount exceeds balance");
+        assert_eq!(
+            decode_reverted(&message).unwrap(),
+            "ERC20: transfer amount exceeds balance"
+        );
     } else {
         panic!("call should revert");
     }
@@ -1018,4 +942,90 @@ fn test_fee_refunds() {
     let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].amount, 24_585);
+}
+
+#[test]
+fn test_return_value_limits() {
+    let mut mock = mock::Mock::default();
+    let mut ctx =
+        mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(context::Mode::ExecuteTx, true);
+    let mut signer = EvmSigner::new(0, keys::dave::sigspec());
+
+    EVMRuntime::<EVMConfig>::migrate(&mut ctx);
+
+    // Give Dave some tokens.
+    Accounts::mint(
+        &mut ctx,
+        keys::dave::address(),
+        &token::BaseUnits(1_000_000_000, Denomination::NATIVE),
+    )
+    .unwrap();
+
+    static RETVAL_CONTRACT_CODE_HEX: &str =
+        include_str!("../../../../tests/e2e/contracts/retval/retval.hex");
+
+    // Create contract.
+    let dispatch_result = signer.call(
+        &mut ctx,
+        "evm.Create",
+        types::Create {
+            value: 0.into(),
+            init_code: load_contract_bytecode(RETVAL_CONTRACT_CODE_HEX),
+        },
+    );
+    let result = dispatch_result.result.unwrap();
+    let result: Vec<u8> = cbor::from_value(result).unwrap();
+    let contract_address = H160::from_slice(&result);
+
+    // Call the `testSuccess` method on the contract.
+    let dispatch_result = signer.call_evm_opts(
+        &mut ctx,
+        contract_address,
+        "testSuccess",
+        &[],
+        &[],
+        CallOptions {
+            fee: Fee {
+                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                gas: 100_000,
+                ..Default::default()
+            },
+        },
+    );
+    let result: Vec<u8> = cbor::from_value(dispatch_result.result.unwrap()).unwrap();
+    assert_eq!(result.len(), 1024, "result should be correctly trimmed");
+    // Actual payload is ABI-encoded so the raw result starts at offset 64.
+    assert_eq!(result[64], 0xFF, "result should be correct");
+    assert_eq!(result[1023], 0x42, "result should be correct");
+
+    // Call the `testRevert` method on the contract.
+    let dispatch_result = signer.call_evm_opts(
+        &mut ctx,
+        contract_address,
+        "testRevert",
+        &[],
+        &[],
+        CallOptions {
+            fee: Fee {
+                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                gas: 100_000,
+                ..Default::default()
+            },
+        },
+    );
+    if let module::CallResult::Failed {
+        module,
+        code,
+        message,
+    } = dispatch_result.result
+    {
+        assert_eq!(module, "evm");
+        assert_eq!(code, 8);
+        let message = decode_reverted_raw(&message).unwrap();
+        // Actual payload is ABI-encoded so the raw result starts at offset 68.
+        assert_eq!(message[68], 0xFF, "result should be correct");
+        assert_eq!(message[1023], 0x42, "result should be correct");
+    } else {
+        panic!("call should revert");
+    }
 }

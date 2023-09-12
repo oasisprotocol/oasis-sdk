@@ -70,6 +70,9 @@ pub trait Config: 'static {
     /// Whether to refund unused transaction fee.
     const REFUND_UNUSED_FEE: bool = true;
 
+    /// Maximum result size in bytes.
+    const MAX_RESULT_SIZE: usize = 1024;
+
     /// Maps an Ethereum address into an SDK account address.
     fn map_address(address: primitive_types::H160) -> Address {
         Address::new(
@@ -207,56 +210,6 @@ impl From<evm::ExitFatal> for Error {
             Other(msg) => return Error::ExecutionFailed(msg.to_string()),
         };
         Error::ExecutionFailed(msg.to_string())
-    }
-}
-
-/// Process an EVM result to return either a successful result or a (readable) error reason.
-fn process_evm_result(exit_reason: evm::ExitReason, data: Vec<u8>) -> Result<Vec<u8>, Error> {
-    match exit_reason {
-        evm::ExitReason::Succeed(_) => Ok(data),
-        evm::ExitReason::Revert(_) => {
-            if data.is_empty() {
-                return Err(Error::Reverted("no revert reason".to_string()));
-            }
-
-            // Decode revert reason, format is as follows:
-            //
-            // 08c379a0                                                         <- Function selector
-            // 0000000000000000000000000000000000000000000000000000000000000020 <- Offset of string return value
-            // 0000000000000000000000000000000000000000000000000000000000000047 <- Length of string return value (the revert reason)
-            // 6d7946756e6374696f6e206f6e6c79206163636570747320617267756d656e74 <- First 32 bytes of the revert reason
-            // 7320776869636820617265206772656174686572207468616e206f7220657175 <- Next 32 bytes of the revert reason
-            // 616c20746f203500000000000000000000000000000000000000000000000000 <- Last 7 bytes of the revert reason
-            //
-            const ERROR_STRING_SELECTOR: &[u8] = &[0x08, 0xc3, 0x79, 0xa0]; // Keccak256("Error(string)")
-            const FIELD_OFFSET_START: usize = 4;
-            const FIELD_LENGTH_START: usize = FIELD_OFFSET_START + 32;
-            const FIELD_REASON_START: usize = FIELD_LENGTH_START + 32;
-            const MIN_SIZE: usize = FIELD_REASON_START;
-            const MAX_REASON_SIZE: usize = 1024;
-
-            let max_raw_len = data.len().clamp(0, MAX_REASON_SIZE);
-            if data.len() < MIN_SIZE || !data.starts_with(ERROR_STRING_SELECTOR) {
-                return Err(Error::Reverted(base64::encode(&data[..max_raw_len])));
-            }
-            // Decode and validate length.
-            let mut length =
-                primitive_types::U256::from(&data[FIELD_LENGTH_START..FIELD_LENGTH_START + 32])
-                    .low_u32() as usize;
-            if FIELD_REASON_START + length > data.len() {
-                return Err(Error::Reverted(base64::encode(&data[..max_raw_len])));
-            }
-            // Make sure that this doesn't ever return huge reason values as this is at least
-            // somewhat contract-controlled.
-            if length > MAX_REASON_SIZE {
-                length = MAX_REASON_SIZE;
-            }
-            let reason =
-                String::from_utf8_lossy(&data[FIELD_REASON_START..FIELD_REASON_START + length]);
-            Err(Error::Reverted(reason.to_string()))
-        }
-        evm::ExitReason::Error(err) => Err(err.into()),
-        evm::ExitReason::Fatal(err) => Err(err.into()),
     }
 }
 
@@ -538,6 +491,7 @@ impl<Cfg: Config> Module<Cfg> {
         ) -> (evm::ExitReason, Vec<u8>),
         C: TxContext,
     {
+        let is_query = ctx.is_check_only();
         let cfg = Cfg::evm_config(estimate_gas);
         let gas_limit: u64 = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
         let gas_price: primitive_types::U256 = ctx.tx_auth_info().fee.gas_price().into();
@@ -557,9 +511,23 @@ impl<Cfg: Config> Module<Cfg> {
         let (exit_reason, exit_value) = f(&mut executor, gas_limit);
         let gas_used = executor.used_gas();
 
-        let exit_value = match process_evm_result(exit_reason, exit_value) {
-            Ok(exit_value) => exit_value,
-            Err(err) => {
+        // Clamp data based on maximum allowed result size.
+        let exit_value = if !is_query && exit_value.len() > Cfg::MAX_RESULT_SIZE {
+            exit_value[..Cfg::MAX_RESULT_SIZE].to_vec()
+        } else {
+            exit_value
+        };
+
+        let exit_value = match exit_reason {
+            evm::ExitReason::Succeed(_) => exit_value,
+            err => {
+                let err = match err {
+                    evm::ExitReason::Revert(_) => Error::Reverted(base64::encode(exit_value)),
+                    evm::ExitReason::Error(err) => err.into(),
+                    evm::ExitReason::Fatal(err) => err.into(),
+                    _ => unreachable!("already handled above"),
+                };
+
                 <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
                 Cfg::Accounts::set_refund_unused_tx_fee(ctx, Cfg::REFUND_UNUSED_FEE);
                 return Err(err);

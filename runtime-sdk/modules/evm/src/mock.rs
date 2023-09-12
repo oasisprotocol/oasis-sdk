@@ -85,3 +85,40 @@ pub fn load_contract_bytecode(raw: &str) -> Vec<u8> {
     Vec::from_hex(raw.split_whitespace().collect::<String>())
         .expect("compiled contract should be a valid hex string")
 }
+
+/// Decode a basic revert reason.
+pub fn decode_reverted(msg: &str) -> Option<String> {
+    decode_reverted_abi(
+        msg,
+        ethabi::AbiError {
+            name: "Error".to_string(),
+            inputs: vec![ethabi::Param {
+                name: "message".to_string(),
+                kind: ethabi::ParamType::String,
+                internal_type: None,
+            }],
+        },
+    )?
+    .pop()
+    .unwrap()
+    .into_string()
+}
+
+/// Decode a revert reason accoording to the given API.
+pub fn decode_reverted_abi(msg: &str, abi: ethabi::AbiError) -> Option<Vec<ethabi::Token>> {
+    let raw = decode_reverted_raw(msg)?;
+
+    // Strip (and validate) error signature.
+    let signature = abi.signature();
+    let raw = raw.strip_prefix(&signature.as_bytes()[..4])?;
+
+    Some(abi.decode(raw).unwrap())
+}
+
+/// Decode a base64-encoded revert reason.
+pub fn decode_reverted_raw(msg: &str) -> Option<Vec<u8>> {
+    // Trim the optional reverted prefix.
+    let msg = msg.trim_start_matches("reverted: ");
+
+    base64::decode(msg).ok()
+}
