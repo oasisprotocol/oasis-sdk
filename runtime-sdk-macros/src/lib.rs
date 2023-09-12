@@ -6,7 +6,7 @@ use proc_macro::TokenStream;
 mod error_derive;
 mod event_derive;
 mod generators;
-mod method_handler_derive;
+mod module_derive;
 #[cfg(test)]
 mod test_utils;
 mod version_from_cargo;
@@ -52,7 +52,8 @@ pub fn error_derive(input: TokenStream) -> TokenStream {
 pub fn sdk_derive(args: TokenStream, input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as syn::ItemImpl);
     if args.to_string() == "MethodHandler" {
-        method_handler_derive::derive_method_handler(input).into()
+        // TODO: Change to Module once we have more handlers.
+        module_derive::derive_module(input).into()
     } else {
         emit_compile_error("#[sdk_derive] only supports #[sdk_derive(MethodHandler)]");
     }
