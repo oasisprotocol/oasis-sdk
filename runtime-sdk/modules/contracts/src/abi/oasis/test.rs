@@ -318,15 +318,12 @@ fn run_contract_with_defaults(
     let mut ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(context::Mode::ExecuteTx, true);
     let params = Parameters::default();
 
-    core::Module::<CoreConfig>::init(
-        &mut ctx,
-        core::Genesis {
-            parameters: core::Parameters {
-                max_batch_gas: gas_limit,
-                ..Default::default()
-            },
+    core::Module::<CoreConfig>::init(core::Genesis {
+        parameters: core::Parameters {
+            max_batch_gas: gas_limit,
+            ..Default::default()
         },
-    );
+    });
 
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = gas_limit;

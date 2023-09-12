@@ -15,7 +15,7 @@ use crate::{
     core::consensus::beacon::EpochTime,
     dispatcher,
     error::Error as SDKError,
-    keymanager,
+    keymanager, migration,
     module::{
         self, CallResult, InvariantHandler as _, MethodHandler as _, Module as _,
         ModuleInfoHandler as _,
@@ -374,20 +374,6 @@ const CONTEXT_KEY_PRIORITY: &str = "core.Priority";
 const CONTEXT_KEY_SENDER_META: &str = "core.SenderMeta";
 const CONTEXT_KEY_EPOCH_CHANGED: &str = "core.EpochChanged";
 
-impl<Cfg: Config> Module<Cfg> {
-    /// Initialize state from genesis.
-    pub fn init<C: Context>(_ctx: &mut C, genesis: Genesis) {
-        // Set genesis parameters.
-        Self::set_params(genesis.parameters);
-    }
-
-    /// Migrate state from a previous version.
-    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
-        // No migrations currently supported.
-        false
-    }
-}
-
 impl<Cfg: Config> API for Module<Cfg> {
     type Config = Cfg;
 
@@ -495,8 +481,16 @@ impl<Cfg: Config> API for Module<Cfg> {
     }
 }
 
-#[sdk_derive(MethodHandler)]
+#[sdk_derive(Module)]
 impl<Cfg: Config> Module<Cfg> {
+    type Genesis = Genesis;
+
+    #[migration(init)]
+    pub fn init(genesis: Genesis) {
+        // Set genesis parameters.
+        Self::set_params(genesis.parameters);
+    }
+
     /// Run a transaction in simulation and return how much gas it uses. This looks up the method
     /// in the context's method registry. Transactions that fail still use gas, and this query will
     /// estimate that and return successfully, so do not use this query to see if a transaction will
@@ -1028,27 +1022,6 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
         }
 
         Ok(result)
-    }
-}
-
-impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
-    type Genesis = Genesis;
-
-    fn init_or_migrate<C: Context>(
-        ctx: &mut C,
-        meta: &mut types::Metadata,
-        genesis: Self::Genesis,
-    ) -> bool {
-        let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
-        if version == 0 {
-            // Initialize state from genesis.
-            Self::init(ctx, genesis);
-            meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
-            return true;
-        }
-
-        // Perform migration.
-        Self::migrate(ctx, version)
     }
 }
 

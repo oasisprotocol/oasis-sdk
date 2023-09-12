@@ -12,7 +12,7 @@ use thiserror::Error;
 use crate::{
     context::{Context, TxContext},
     core::common::quantity::Quantity,
-    handler, module,
+    handler, migration, module,
     module::{Module as _, Parameters as _},
     modules,
     modules::core::{Error as CoreError, API as _},
@@ -730,8 +730,69 @@ impl API for Module {
     }
 }
 
-#[sdk_derive(MethodHandler)]
+#[sdk_derive(Module)]
 impl Module {
+    type Genesis = Genesis;
+
+    #[migration(init)]
+    pub fn init(genesis: Genesis) {
+        CurrentStore::with(|store| {
+            // Create accounts.
+            let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let mut accounts =
+                storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
+            for (address, account) in genesis.accounts {
+                accounts.insert(address, account);
+            }
+
+            // Create balances.
+            let mut balances = storage::PrefixStore::new(&mut store, &state::BALANCES);
+            let mut computed_total_supply: BTreeMap<token::Denomination, u128> = BTreeMap::new();
+            for (address, denominations) in genesis.balances.iter() {
+                let mut account =
+                    storage::TypedStore::new(storage::PrefixStore::new(&mut balances, &address));
+                for (denomination, value) in denominations {
+                    account.insert(denomination, value);
+
+                    // Update computed total supply.
+                    computed_total_supply
+                        .entry(denomination.clone())
+                        .and_modify(|v| *v += value)
+                        .or_insert_with(|| *value);
+                }
+            }
+
+            // Validate and set total supply.
+            let mut total_supplies = storage::TypedStore::new(storage::PrefixStore::new(
+                &mut store,
+                &state::TOTAL_SUPPLY,
+            ));
+            for (denomination, total_supply) in genesis.total_supplies.iter() {
+                let computed = computed_total_supply
+                    .remove(denomination)
+                    .expect("unexpected total supply");
+                assert!(
+                    &computed == total_supply,
+                    "unexpected total supply (expected: {total_supply} got: {computed})",
+                );
+
+                total_supplies.insert(denomination, total_supply);
+            }
+            for (denomination, total_supply) in computed_total_supply.iter() {
+                panic!("missing expected total supply: {total_supply} {denomination}",);
+            }
+        });
+
+        // Validate genesis parameters.
+        genesis
+            .parameters
+            .validate_basic()
+            .expect("invalid genesis parameters");
+
+        // Set genesis parameters.
+        Self::set_params(genesis.parameters);
+    }
+
     #[handler(prefetch = "accounts.Transfer")]
     fn prefetch_transfer(
         add_prefix: &mut dyn FnMut(Prefix),
@@ -810,94 +871,6 @@ impl module::Module for Module {
     type Error = Error;
     type Event = Event;
     type Parameters = Parameters;
-}
-
-impl Module {
-    /// Initialize state from genesis.
-    pub fn init<C: Context>(_ctx: &mut C, genesis: Genesis) {
-        CurrentStore::with(|store| {
-            // Create accounts.
-            let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
-            let mut accounts =
-                storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::ACCOUNTS));
-            for (address, account) in genesis.accounts {
-                accounts.insert(address, account);
-            }
-
-            // Create balances.
-            let mut balances = storage::PrefixStore::new(&mut store, &state::BALANCES);
-            let mut computed_total_supply: BTreeMap<token::Denomination, u128> = BTreeMap::new();
-            for (address, denominations) in genesis.balances.iter() {
-                let mut account =
-                    storage::TypedStore::new(storage::PrefixStore::new(&mut balances, &address));
-                for (denomination, value) in denominations {
-                    account.insert(denomination, value);
-
-                    // Update computed total supply.
-                    computed_total_supply
-                        .entry(denomination.clone())
-                        .and_modify(|v| *v += value)
-                        .or_insert_with(|| *value);
-                }
-            }
-
-            // Validate and set total supply.
-            let mut total_supplies = storage::TypedStore::new(storage::PrefixStore::new(
-                &mut store,
-                &state::TOTAL_SUPPLY,
-            ));
-            for (denomination, total_supply) in genesis.total_supplies.iter() {
-                let computed = computed_total_supply
-                    .remove(denomination)
-                    .expect("unexpected total supply");
-                assert!(
-                    &computed == total_supply,
-                    "unexpected total supply (expected: {total_supply} got: {computed})",
-                );
-
-                total_supplies.insert(denomination, total_supply);
-            }
-            for (denomination, total_supply) in computed_total_supply.iter() {
-                panic!("missing expected total supply: {total_supply} {denomination}",);
-            }
-        });
-
-        // Validate genesis parameters.
-        genesis
-            .parameters
-            .validate_basic()
-            .expect("invalid genesis parameters");
-
-        // Set genesis parameters.
-        Self::set_params(genesis.parameters);
-    }
-
-    /// Migrate state from a previous version.
-    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
-        // No migrations currently supported.
-        false
-    }
-}
-
-impl module::MigrationHandler for Module {
-    type Genesis = Genesis;
-
-    fn init_or_migrate<C: Context>(
-        ctx: &mut C,
-        meta: &mut modules::core::types::Metadata,
-        genesis: Self::Genesis,
-    ) -> bool {
-        let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
-        if version == 0 {
-            // Initialize state from genesis.
-            Self::init(ctx, genesis);
-            meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
-            return true;
-        }
-
-        // Perform migration.
-        Self::migrate(ctx, version)
-    }
 }
 
 impl module::TransactionHandler for Module {

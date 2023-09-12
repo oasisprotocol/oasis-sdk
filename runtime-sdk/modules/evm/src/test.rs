@@ -157,44 +157,35 @@ fn do_test_evm_calls<C: Config>(force_plain: bool) {
         };
     }
 
-    Core::<CoreConfig>::init(
-        &mut ctx,
-        core::Genesis {
-            parameters: core::Parameters {
-                max_batch_gas: 10_000_000,
-                ..Default::default()
-            },
-        },
-    );
-
-    Accounts::init(
-        &mut ctx,
-        accounts::Genesis {
-            balances: {
-                let mut b = BTreeMap::new();
-                // Dave.
-                b.insert(keys::dave::address(), {
-                    let mut d = BTreeMap::new();
-                    d.insert(Denomination::NATIVE, 1_000_000);
-                    d
-                });
-                b
-            },
-            total_supplies: {
-                let mut ts = BTreeMap::new();
-                ts.insert(Denomination::NATIVE, 1_000_000);
-                ts
-            },
+    Core::<CoreConfig>::init(core::Genesis {
+        parameters: core::Parameters {
+            max_batch_gas: 10_000_000,
             ..Default::default()
         },
-    );
+    });
 
-    EVMModule::<C>::init(
-        &mut ctx,
-        Genesis {
-            parameters: Default::default(),
+    Accounts::init(accounts::Genesis {
+        balances: {
+            let mut b = BTreeMap::new();
+            // Dave.
+            b.insert(keys::dave::address(), {
+                let mut d = BTreeMap::new();
+                d.insert(Denomination::NATIVE, 1_000_000);
+                d
+            });
+            b
         },
-    );
+        total_supplies: {
+            let mut ts = BTreeMap::new();
+            ts.insert(Denomination::NATIVE, 1_000_000);
+            ts
+        },
+        ..Default::default()
+    });
+
+    EVMModule::<C>::init(Genesis {
+        parameters: Default::default(),
+    });
 
     let erc20 = load_erc20();
 
@@ -309,34 +300,25 @@ fn test_c10l_evm_balance_transfer() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    Core::<CoreConfig>::init(
-        &mut ctx,
-        core::Genesis {
-            parameters: core::Parameters {
-                max_batch_gas: 10_000_000,
-                ..Default::default()
-            },
-        },
-    );
-
-    Accounts::init(
-        &mut ctx,
-        accounts::Genesis {
-            balances: BTreeMap::from([(
-                keys::dave::address(),
-                BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
-            )]),
-            total_supplies: BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
+    Core::<CoreConfig>::init(core::Genesis {
+        parameters: core::Parameters {
+            max_batch_gas: 10_000_000,
             ..Default::default()
         },
-    );
+    });
 
-    EVMModule::<ConfidentialEVMConfig>::init(
-        &mut ctx,
-        Genesis {
-            parameters: Default::default(),
-        },
-    );
+    Accounts::init(accounts::Genesis {
+        balances: BTreeMap::from([(
+            keys::dave::address(),
+            BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
+        )]),
+        total_supplies: BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
+        ..Default::default()
+    });
+
+    EVMModule::<ConfidentialEVMConfig>::init(Genesis {
+        parameters: Default::default(),
+    });
 
     let recipient = ethabi::Address::repeat_byte(42);
     let transfer_tx = transaction::Transaction {

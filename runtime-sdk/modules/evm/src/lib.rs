@@ -22,7 +22,7 @@ use thiserror::Error;
 use oasis_runtime_sdk::{
     callformat,
     context::{BatchContext, Context, TransactionWithMeta, TxContext},
-    handler,
+    handler, migration,
     module::{self, Module as _},
     modules::{
         self,
@@ -658,8 +658,16 @@ impl<Cfg: Config> Module<Cfg> {
     }
 }
 
-#[sdk_derive(MethodHandler)]
+#[sdk_derive(Module)]
 impl<Cfg: Config> Module<Cfg> {
+    type Genesis = Genesis;
+
+    #[migration(init)]
+    fn init(genesis: Genesis) {
+        // Set genesis parameters.
+        Self::set_params(genesis.parameters);
+    }
+
     #[handler(call = "evm.Create")]
     fn tx_create<C: TxContext>(ctx: &mut C, body: types::Create) -> Result<Vec<u8>, Error> {
         Self::create(ctx, body.value, body.init_code)
@@ -697,41 +705,6 @@ impl<Cfg: Config> Module<Cfg> {
             ));
         }
         Self::simulate_call(ctx, body)
-    }
-}
-
-impl<Cfg: Config> Module<Cfg> {
-    /// Initialize state from genesis.
-    fn init<C: Context>(_ctx: &mut C, genesis: Genesis) {
-        // Set genesis parameters.
-        Self::set_params(genesis.parameters);
-    }
-
-    /// Migrate state from a previous version.
-    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
-        // No migrations currently supported.
-        false
-    }
-}
-
-impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
-    type Genesis = Genesis;
-
-    fn init_or_migrate<C: Context>(
-        ctx: &mut C,
-        meta: &mut modules::core::types::Metadata,
-        genesis: Self::Genesis,
-    ) -> bool {
-        let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
-        if version == 0 {
-            // Initialize state from genesis.
-            Self::init(ctx, genesis);
-            meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
-            return true;
-        }
-
-        // Perform migration.
-        Self::migrate(ctx, version)
     }
 }
 

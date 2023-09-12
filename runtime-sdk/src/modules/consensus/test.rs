@@ -440,35 +440,23 @@ fn test_query_parameters() {
 #[test]
 #[should_panic]
 fn test_init_bad_scaling_factor_1() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-
-    Consensus::init(
-        &mut ctx,
-        Genesis {
-            parameters: Parameters {
-                consensus_denomination: Denomination::NATIVE,
-                // Zero scaling factor is invalid.
-                consensus_scaling_factor: 0,
-            },
+    Consensus::init(Genesis {
+        parameters: Parameters {
+            consensus_denomination: Denomination::NATIVE,
+            // Zero scaling factor is invalid.
+            consensus_scaling_factor: 0,
         },
-    );
+    });
 }
 
 #[test]
 #[should_panic]
 fn test_init_bad_scaling_factor_2() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-
-    Consensus::init(
-        &mut ctx,
-        Genesis {
-            parameters: Parameters {
-                consensus_denomination: Denomination::NATIVE,
-                // Scaling factor that is not a power of 10 is invalid.
-                consensus_scaling_factor: 1230,
-            },
+    Consensus::init(Genesis {
+        parameters: Parameters {
+            consensus_denomination: Denomination::NATIVE,
+            // Scaling factor that is not a power of 10 is invalid.
+            consensus_scaling_factor: 1230,
         },
-    );
+    });
 }

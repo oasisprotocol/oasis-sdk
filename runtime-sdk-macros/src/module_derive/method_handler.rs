@@ -275,6 +275,7 @@ impl super::Deriver for DeriveMethodHandler {
         };
 
         quote! {
+            #[automatically_derived]
             impl #generics sdk::module::MethodHandler for #ty {
                 #prefetch_impl
                 #dispatch_call_impl
@@ -286,6 +287,7 @@ impl super::Deriver for DeriveMethodHandler {
                 #allowed_interactive_calls_impl
             }
 
+            #[automatically_derived]
             impl #generics #ty {
                 #query_parameters_impl
 

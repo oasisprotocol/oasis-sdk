@@ -1,4 +1,5 @@
 mod method_handler;
+mod migration_handler;
 
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -15,7 +16,10 @@ pub fn derive_module(impl_block: syn::ItemImpl) -> TokenStream {
     let mut base_impls: Vec<TokenStream> = Vec::new();
     let mut derivations: Vec<TokenStream> = Vec::new();
 
-    let mut derivers: Vec<Box<dyn Deriver>> = vec![method_handler::DeriveMethodHandler::new()];
+    let mut derivers: Vec<Box<dyn Deriver>> = vec![
+        migration_handler::DeriveMigrationHandler::new(),
+        method_handler::DeriveMethodHandler::new(),
+    ];
 
     // Iterate through all impl items, collecting them and then deriving everything.
     'items: for item in impl_block.items {
@@ -43,6 +47,7 @@ pub fn derive_module(impl_block: syn::ItemImpl) -> TokenStream {
         None
     } else {
         Some(quote! {
+            #[automatically_derived]
             impl #module_generics #module_ty {
                 #(#base_impls)*
             }
@@ -73,7 +78,7 @@ trait Deriver {
 #[cfg(test)]
 mod tests {
     // Helper; asserts that `derive_module` generates the `expected` code from `input`.
-    fn expect_method_handler_impl(input: syn::ItemImpl, expected: syn::Stmt) {
+    fn expect_module_impl(input: syn::ItemImpl, expected: syn::Stmt) {
         let derivation = super::derive_module(input);
         let actual: syn::Stmt = syn::parse2(derivation).unwrap();
 
@@ -103,12 +108,13 @@ mod tests {
             }
         );
 
-        expect_method_handler_impl(
+        expect_module_impl(
             input,
             USES.with(|uses| {
                 syn::parse_quote!(
                     const _: () = {
                         #uses
+                        #[automatically_derived]
                         impl<C: Cfg> sdk::module::MethodHandler for MyModule<C> {
                             fn dispatch_query<C: Context>(
                                 ctx: &mut C,
@@ -124,11 +130,13 @@ mod tests {
                                 }
                             }
                         }
+                        #[automatically_derived]
                         impl<C: Cfg> MyModule<C> {
                             fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
                                 Ok(Self::params())
                             }
                         }
+                        #[automatically_derived]
                         impl<C: Cfg> MyModule<C> {
                             fn unannotated_fn_should_be_passed_thru(foo: Bar) -> Baz {}
                         }
@@ -151,12 +159,13 @@ mod tests {
             }
         );
 
-        expect_method_handler_impl(
+        expect_module_impl(
             input,
             USES.with(|uses| {
                 syn::parse_quote!(
                     const _: () = {
                         #uses
+                        #[automatically_derived]
                         impl<C: Cfg> sdk::module::MethodHandler for MyModule<C> {
                             fn prefetch(
                                 prefixes: &mut BTreeSet<Prefix>,
@@ -214,6 +223,7 @@ mod tests {
                                 ]
                             }
                         }
+                        #[automatically_derived]
                         impl<C: Cfg> MyModule<C> {
                             fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
                                 Ok(Self::params())
@@ -244,12 +254,13 @@ mod tests {
             }
         );
 
-        expect_method_handler_impl(
+        expect_module_impl(
             input,
             USES.with(|uses| {
                 syn::parse_quote!(
                     const _: () = {
                         #uses
+                        #[automatically_derived]
                         impl<C: Cfg> sdk::module::MethodHandler for MyModule<C> {
                             fn dispatch_query<C: Context>(
                                 ctx: &mut C,
@@ -290,6 +301,7 @@ mod tests {
                                 ["module.ConfidentialQuery"].contains(&method)
                             }
                         }
+                        #[automatically_derived]
                         impl<C: Cfg> MyModule<C> {
                             fn query_parameters<C: Context>(
                                 _ctx: &mut C,
@@ -320,12 +332,13 @@ mod tests {
             }
         );
 
-        expect_method_handler_impl(
+        expect_module_impl(
             input,
             USES.with(|uses| {
                 syn::parse_quote!(
                     const _: () = {
                         #uses
+                        #[automatically_derived]
                         impl<C: Cfg> sdk::module::MethodHandler for MyModule<C> {
                             fn dispatch_query<C: Context>(
                                 ctx: &mut C,
@@ -348,6 +361,117 @@ mod tests {
                                 }]
                             }
                         }
+                        #[automatically_derived]
+                        impl<C: Cfg> MyModule<C> {
+                            fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                                Ok(Self::params())
+                            }
+                            #[handler(query = "my_module.MyMC")]
+                            fn my_method_call() -> () {}
+                        }
+                    };
+                )
+            }),
+        );
+    }
+
+    #[test]
+    fn generate_migration_handler_impl() {
+        let input = syn::parse_quote!(
+            impl<C: Cfg> MyModule<C> {
+                type Genesis = Genesis;
+
+                #[migration(init)]
+                fn init(genesis: Genesis) {
+                    Self::set_params(genesis.parameters);
+                }
+
+                #[migration(from = 2)]
+                fn migrate_v2_to_v3() {}
+
+                #[migration(from = 1)]
+                fn migrate_v1_to_v2() {}
+
+                #[handler(query = "my_module.MyMC")]
+                fn my_method_call() -> () {}
+            }
+        );
+
+        expect_module_impl(
+            input,
+            USES.with(|uses| {
+                syn::parse_quote!(
+                    const _: () = {
+                        #uses
+                        #[automatically_derived]
+                        impl<C: Cfg> sdk::module::MigrationHandler for MyModule<C> {
+                            type Genesis = Genesis;
+                            fn init_or_migrate<C: Context>(
+                                _ctx: &mut C,
+                                meta: &mut sdk::modules::core::types::Metadata,
+                                genesis: Self::Genesis,
+                            ) -> bool {
+                                let mut version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
+                                if version == Self::VERSION {
+                                    return false;
+                                }
+                                if version == 0u32 {
+                                    Self::init(genesis);
+                                    version = Self::VERSION;
+                                }
+                                if version == 1u32 && version < Self::VERSION {
+                                    Self::migrate_v1_to_v2();
+                                    version += 1;
+                                }
+                                if version == 2u32 && version < Self::VERSION {
+                                    Self::migrate_v2_to_v3();
+                                    version += 1;
+                                }
+                                if version != Self::VERSION {
+                                    panic!(
+                                        "no migration for module state from version {version} to {}",
+                                        Self::VERSION
+                                    )
+                                }
+                                meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
+                                return true;
+                            }
+                        }
+                        #[automatically_derived]
+                        impl<C: Cfg> MyModule<C> {
+                            #[migration(init)]
+                            fn init(genesis: Genesis) {
+                                Self::set_params(genesis.parameters);
+                            }
+                            #[migration(from = 1)]
+                            fn migrate_v1_to_v2() {}
+                            #[migration(from = 2)]
+                            fn migrate_v2_to_v3() {}
+                        }
+                        #[automatically_derived]
+                        impl<C: Cfg> sdk::module::MethodHandler for MyModule<C> {
+                            fn dispatch_query<C: Context>(
+                                ctx: &mut C,
+                                method: &str,
+                                args: cbor::Value,
+                            ) -> DispatchResult<cbor::Value, Result<cbor::Value, sdk::error::RuntimeError>>
+                            {
+                                match method {
+                                    "my_module.MyMC" => module::dispatch_query(ctx, args, Self::my_method_call),
+                                    q if q == format!("{}.Parameters", Self::NAME) => {
+                                        module::dispatch_query(ctx, args, Self::query_parameters)
+                                    }
+                                    _ => DispatchResult::Unhandled(args),
+                                }
+                            }
+                            fn supported_methods() -> Vec<core_types::MethodHandlerInfo> {
+                                vec![core_types::MethodHandlerInfo {
+                                    kind: core_types::MethodHandlerKind::Query,
+                                    name: "my_module.MyMC".to_string(),
+                                }]
+                            }
+                        }
+                        #[automatically_derived]
                         impl<C: Cfg> MyModule<C> {
                             fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
                                 Ok(Self::params())

@@ -967,8 +967,10 @@ mod test {
         type Parameters = ();
     }
 
-    #[sdk_derive(MethodHandler)]
+    #[sdk_derive(Module)]
     impl AlphabetModule {
+        type Genesis = ();
+
         #[handler(call = "alphabet.ReadOnly")]
         fn read_only<C: TxContext>(_ctx: &mut C, _args: ()) -> Result<u64, AlphabetError> {
             CurrentStore::with(|store| {
@@ -1005,9 +1007,6 @@ mod test {
 
     impl module::BlockHandler for AlphabetModule {}
     impl module::TransactionHandler for AlphabetModule {}
-    impl module::MigrationHandler for AlphabetModule {
-        type Genesis = ();
-    }
     impl module::InvariantHandler for AlphabetModule {}
 
     struct AlphabetRuntime;

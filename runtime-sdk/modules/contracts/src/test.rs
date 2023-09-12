@@ -132,44 +132,35 @@ fn test_hello_contract_call() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
 
-    Core::<CoreConfig>::init(
-        &mut ctx,
-        core::Genesis {
-            parameters: core::Parameters {
-                max_batch_gas: 1_000_000_000,
-                ..Default::default()
-            },
-        },
-    );
-
-    Accounts::init(
-        &mut ctx,
-        accounts::Genesis {
-            balances: {
-                let mut balances = BTreeMap::new();
-                // Alice.
-                balances.insert(keys::alice::address(), {
-                    let mut denominations = BTreeMap::new();
-                    denominations.insert(Denomination::NATIVE, 1_000_000);
-                    denominations
-                });
-                balances
-            },
-            total_supplies: {
-                let mut total_supplies = BTreeMap::new();
-                total_supplies.insert(Denomination::NATIVE, 1_000_000);
-                total_supplies
-            },
+    Core::<CoreConfig>::init(core::Genesis {
+        parameters: core::Parameters {
+            max_batch_gas: 1_000_000_000,
             ..Default::default()
         },
-    );
+    });
 
-    Contracts::init(
-        &mut ctx,
-        Genesis {
-            parameters: Default::default(),
+    Accounts::init(accounts::Genesis {
+        balances: {
+            let mut balances = BTreeMap::new();
+            // Alice.
+            balances.insert(keys::alice::address(), {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(Denomination::NATIVE, 1_000_000);
+                denominations
+            });
+            balances
         },
-    );
+        total_supplies: {
+            let mut total_supplies = BTreeMap::new();
+            total_supplies.insert(Denomination::NATIVE, 1_000_000);
+            total_supplies
+        },
+        ..Default::default()
+    });
+
+    Contracts::init(Genesis {
+        parameters: Default::default(),
+    });
 
     let instance_id =
         deploy_hello_contract(&mut ctx, vec![BaseUnits::new(1_000, Denomination::NATIVE)]);

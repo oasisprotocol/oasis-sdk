@@ -215,8 +215,10 @@ impl module::Module for GasWasterModule {
     type Parameters = ();
 }
 
-#[sdk_derive(MethodHandler)]
+#[sdk_derive(Module)]
 impl GasWasterModule {
+    type Genesis = ();
+
     #[handler(call = Self::METHOD_WASTE_GAS)]
     fn waste_gas<C: TxContext>(
         ctx: &mut C,
@@ -299,9 +301,6 @@ impl GasWasterModule {
 
 impl module::BlockHandler for GasWasterModule {}
 impl module::TransactionHandler for GasWasterModule {}
-impl module::MigrationHandler for GasWasterModule {
-    type Genesis = ();
-}
 impl module::InvariantHandler for GasWasterModule {}
 
 struct Config;
