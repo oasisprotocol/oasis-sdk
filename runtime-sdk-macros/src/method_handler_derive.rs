@@ -15,7 +15,7 @@ pub fn derive_method_handler(impl_block: syn::ItemImpl) -> TokenStream {
     fn maybe_parse_handler(item: &syn::ImplItem) -> Option<HandlerInfo> {
         // Consider only fns
         let method = match item {
-            syn::ImplItem::Method(m) => m,
+            syn::ImplItem::Fn(f) => f,
             _ => return None,
         };
         Some(HandlerInfo {
@@ -418,7 +418,7 @@ impl syn::parse::Parse for MethodHandlerAttr {
 }
 
 fn parse_attrs(attrs: &[syn::Attribute]) -> Option<MethodHandlerAttr> {
-    let handler_meta = attrs.iter().find(|attr| attr.path.is_ident("handler"))?;
+    let handler_meta = attrs.iter().find(|attr| attr.path().is_ident("handler"))?;
     handler_meta
         .parse_args()
         .map_err(|err| {
