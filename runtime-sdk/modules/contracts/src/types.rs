@@ -24,7 +24,7 @@ pub enum Policy {
 impl Policy {
     /// Enforce the given policy by returning an error if the policy is not satisfied by the passed
     /// transaction context.
-    pub fn enforce<C: TxContext>(&self, ctx: &mut C) -> Result<(), Error> {
+    pub fn enforce<C: TxContext>(&self, ctx: &C) -> Result<(), Error> {
         match self {
             // Nobody is allowed to perform the action.
             Policy::Nobody => Err(Error::Forbidden),

@@ -74,7 +74,7 @@ impl State {
     /// Merge a different state into this state.
     pub fn merge_from(&mut self, other: State) {
         for (key, event) in other.events {
-            let events = self.events.entry(key).or_insert_with(Vec::new);
+            let events = self.events.entry(key).or_default();
             events.extend(event);
         }
 
@@ -709,18 +709,18 @@ impl<'a, R: runtime::Runtime> Context for RuntimeBatchContext<'a, R> {
 
     fn emit_event<E: Event>(&mut self, event: E) {
         let etag = event.into_event_tag();
-        let tag = self.block_etags.entry(etag.key).or_insert_with(Vec::new);
+        let tag = self.block_etags.entry(etag.key).or_default();
         tag.push(etag.value);
     }
 
     fn emit_etag(&mut self, etag: EventTag) {
-        let tag = self.block_etags.entry(etag.key).or_insert_with(Vec::new);
+        let tag = self.block_etags.entry(etag.key).or_default();
         tag.push(etag.value);
     }
 
     fn emit_etags(&mut self, etags: EventTags) {
         for (key, val) in etags {
-            let tag = self.block_etags.entry(key).or_insert_with(Vec::new);
+            let tag = self.block_etags.entry(key).or_default();
             tag.extend(val)
         }
     }
@@ -941,18 +941,18 @@ impl<'round, 'store, R: runtime::Runtime> Context for RuntimeTxContext<'round, '
 
     fn emit_event<E: Event>(&mut self, event: E) {
         let etag = event.into_event_tag();
-        let tag = self.etags.entry(etag.key).or_insert_with(Vec::new);
+        let tag = self.etags.entry(etag.key).or_default();
         tag.push(etag.value);
     }
 
     fn emit_etag(&mut self, etag: EventTag) {
-        let tag = self.etags.entry(etag.key).or_insert_with(Vec::new);
+        let tag = self.etags.entry(etag.key).or_default();
         tag.push(etag.value);
     }
 
     fn emit_etags(&mut self, etags: EventTags) {
         for (key, val) in etags {
-            let tag = self.etags.entry(key).or_insert_with(Vec::new);
+            let tag = self.etags.entry(key).or_default();
             tag.extend(val)
         }
     }
@@ -964,7 +964,7 @@ impl<'round, 'store, R: runtime::Runtime> Context for RuntimeTxContext<'round, '
     fn commit(mut self) -> State {
         // Merge unconditional events into regular events on success.
         for (key, val) in self.etags_unconditional {
-            let tag = self.etags.entry(key).or_insert_with(Vec::new);
+            let tag = self.etags.entry(key).or_default();
             tag.extend(val)
         }
 
@@ -1085,10 +1085,7 @@ impl<R: runtime::Runtime> TxContext for RuntimeTxContext<'_, '_, R> {
 
     fn emit_unconditional_event<E: Event>(&mut self, event: E) {
         let etag = event.into_event_tag();
-        let tag = self
-            .etags_unconditional
-            .entry(etag.key)
-            .or_insert_with(Vec::new);
+        let tag = self.etags_unconditional.entry(etag.key).or_default();
         tag.push(etag.value);
     }
 }

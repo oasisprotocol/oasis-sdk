@@ -74,6 +74,7 @@ pub fn derive_module(impl_block: syn::ItemImpl) -> TokenStream {
 trait Deriver {
     fn preprocess(&mut self, item: syn::ImplItem) -> Option<syn::ImplItem>;
 
+    #[allow(clippy::borrowed_box)]
     fn derive(&mut self, generics: &syn::Generics, ty: &Box<syn::Type>) -> TokenStream;
 }
 

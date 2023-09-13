@@ -862,7 +862,7 @@ impl<Cfg: Config> Module<Cfg> {
 }
 
 impl<Cfg: Config> Module<Cfg> {
-    fn get_local_min_gas_price<C: Context>(ctx: &mut C, denom: &token::Denomination) -> u128 {
+    fn get_local_min_gas_price<C: Context>(ctx: &C, denom: &token::Denomination) -> u128 {
         #[allow(clippy::borrow_interior_mutable_const)]
         ctx.local_config(MODULE_NAME)
             .as_ref()
@@ -871,14 +871,14 @@ impl<Cfg: Config> Module<Cfg> {
             .unwrap_or_default()
     }
 
-    fn get_local_max_estimated_gas<C: Context>(ctx: &mut C) -> u64 {
+    fn get_local_max_estimated_gas<C: Context>(ctx: &C) -> u64 {
         ctx.local_config(MODULE_NAME)
             .as_ref()
             .map(|cfg: &LocalConfig| cfg.max_estimated_gas)
             .unwrap_or_default()
     }
 
-    fn enforce_min_gas_price<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {
+    fn enforce_min_gas_price<C: TxContext>(ctx: &C, call: &Call) -> Result<(), Error> {
         // If the method is exempt from min gas price requirements, checks always pass.
         #[allow(clippy::borrow_interior_mutable_const)]
         if Cfg::MIN_GAS_PRICE_EXEMPT_METHODS.contains(call.method.as_str()) {

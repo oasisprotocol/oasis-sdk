@@ -108,14 +108,12 @@ pub struct Leash {
 //
 // Thanks to Nick for providing the fancy macros below :)
 
-// This `mod` exists solely to place an `#[allow(warnings)]` around the generated code.
-#[allow(warnings)]
+// This `mod` exists solely to place an `#[allow(...)]` around the generated code.
+#[allow(clippy::assign_op_pattern, clippy::incorrect_clone_impl_on_copy_type)]
 mod eth {
     use std::convert::TryFrom;
 
     use thiserror::Error;
-
-    use super::*;
 
     #[derive(Error, Debug)]
     pub enum NoError {}

@@ -539,7 +539,7 @@ impl<Cfg: Config> Module<Cfg> {
         Ok(exit_value)
     }
 
-    fn derive_caller<C>(ctx: &mut C) -> Result<H160, Error>
+    fn derive_caller<C>(ctx: &C) -> Result<H160, Error>
     where
         C: TxContext,
     {
@@ -590,7 +590,7 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     fn decode_simulate_call_query<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         call: types::SimulateCallQuery,
     ) -> Result<(types::SimulateCallQuery, callformat::Metadata), Error> {
         if !Cfg::CONFIDENTIAL {

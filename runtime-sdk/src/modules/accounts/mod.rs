@@ -388,7 +388,7 @@ impl Module {
                 let den = &addrden.1;
 
                 // Fetch existing account's balances or insert blank ones.
-                let addr_bals = b.entry(*addr).or_insert_with(BTreeMap::new);
+                let addr_bals = b.entry(*addr).or_default();
 
                 // Add to given denomination's balance or insert it if new.
                 addr_bals

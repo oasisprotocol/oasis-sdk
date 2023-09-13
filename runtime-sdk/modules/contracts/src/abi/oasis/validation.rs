@@ -411,7 +411,7 @@ impl<'instr> Visitor<'instr> for FloatScanner {
 impl<Cfg: Config> OasisV1<Cfg> {
     pub(super) fn validate_module(
         &self,
-        module: &mut Module,
+        module: &Module,
         params: &Parameters,
     ) -> Result<Info, Error> {
         // Verify that all required exports are there.

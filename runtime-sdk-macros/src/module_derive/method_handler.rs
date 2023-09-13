@@ -60,11 +60,11 @@ impl super::Deriver for DeriveMethodHandler {
         }
 
         let prefetch_impl = {
-            let (handler_names, handler_idents) = filter_by_kind(&handlers, HandlerKind::Prefetch);
+            let (handler_names, handler_idents) = filter_by_kind(handlers, HandlerKind::Prefetch);
 
             // Find call handlers; for every call handler without a corresponding prefetch handler, we'll
             // generate a dummy prefetch handler.
-            let (call_handler_names, _) = filter_by_kind(&handlers, HandlerKind::Call);
+            let (call_handler_names, _) = filter_by_kind(handlers, HandlerKind::Call);
             let handler_names_without_impl: Vec<&syn::Expr> = call_handler_names
                 .iter()
                 .filter(|n| !handler_names.contains(n))
@@ -100,7 +100,7 @@ impl super::Deriver for DeriveMethodHandler {
         };
 
         let dispatch_call_impl = {
-            let (handler_names, handler_idents) = filter_by_kind(&handlers, HandlerKind::Call);
+            let (handler_names, handler_idents) = filter_by_kind(handlers, HandlerKind::Call);
 
             if handler_names.is_empty() {
                 quote! {}
@@ -131,7 +131,7 @@ impl super::Deriver for DeriveMethodHandler {
         };
 
         let dispatch_query_impl = {
-            let (handler_names, handler_idents) = filter_by_kind(&handlers, HandlerKind::Query);
+            let (handler_names, handler_idents) = filter_by_kind(handlers, HandlerKind::Query);
 
             if handler_names.is_empty() {
                 quote! {
@@ -167,7 +167,7 @@ impl super::Deriver for DeriveMethodHandler {
 
         let dispatch_message_result_impl = {
             let (handler_names, handler_idents) =
-                filter_by_kind(&handlers, HandlerKind::MessageResult);
+                filter_by_kind(handlers, HandlerKind::MessageResult);
 
             if handler_names.is_empty() {
                 quote! {}

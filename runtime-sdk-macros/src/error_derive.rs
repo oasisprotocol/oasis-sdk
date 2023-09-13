@@ -139,7 +139,8 @@ fn convert_variants(
                     .fields
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, f)| (!f.attrs.is_empty()).then(|| (i, f.ident.clone())));
+                    .filter(|(_, f)| (!f.attrs.is_empty()))
+                    .map(|(i, f)| (i, f.ident.clone()));
                 let source = maybe_sources.next();
                 if maybe_sources.count() != 0 {
                     variant_ident
@@ -172,7 +173,8 @@ fn convert_variants(
                     .fields
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, f)| (i != field_index).then(|| {
+                    .filter(|(i, _)| i != &field_index)
+                    .map(|(i, f)| {
                         let pat = match f.ident {
                             Some(ref ident) => Member::Named(ident.clone()),
                             None => Member::Unnamed(Index {
@@ -184,7 +186,7 @@ fn convert_variants(
                         let binding = quote!( #pat: #ident, );
 
                         binding
-                    }));
+                    });
                 let non_source_field_bindings = non_source_fields.clone();
 
                 let source = quote!(source);
