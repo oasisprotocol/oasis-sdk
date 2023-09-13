@@ -732,6 +732,10 @@ impl API for Module {
 
 #[sdk_derive(Module)]
 impl Module {
+    const NAME: &'static str = MODULE_NAME;
+    type Error = Error;
+    type Event = Event;
+    type Parameters = Parameters;
     type Genesis = Genesis;
 
     #[migration(init)]
@@ -864,13 +868,6 @@ impl Module {
     ) -> Result<types::DenominationInfo, Error> {
         Self::get_denomination_info(&args.denomination)
     }
-}
-
-impl module::Module for Module {
-    const NAME: &'static str = MODULE_NAME;
-    type Error = Error;
-    type Event = Event;
-    type Parameters = Parameters;
 }
 
 impl module::TransactionHandler for Module {

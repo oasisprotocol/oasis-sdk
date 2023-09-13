@@ -90,16 +90,13 @@ pub struct Module<Accounts: modules::accounts::API> {
 pub static ADDRESS_REWARD_POOL: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "reward-pool"));
 
-impl<Accounts: modules::accounts::API> module::Module for Module<Accounts> {
+#[sdk_derive(Module)]
+impl<Accounts: modules::accounts::API> Module<Accounts> {
     const NAME: &'static str = MODULE_NAME;
     const VERSION: u32 = 2;
     type Error = Error;
     type Event = ();
     type Parameters = Parameters;
-}
-
-#[sdk_derive(Module)]
-impl<Accounts: modules::accounts::API> Module<Accounts> {
     type Genesis = Genesis;
 
     #[migration(init)]

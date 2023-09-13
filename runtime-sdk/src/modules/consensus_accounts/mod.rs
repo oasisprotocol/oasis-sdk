@@ -370,6 +370,11 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     Module<Accounts, Consensus>
 {
+    const NAME: &'static str = MODULE_NAME;
+    const VERSION: u32 = 1;
+    type Error = Error;
+    type Event = Event;
+    type Parameters = Parameters;
     type Genesis = Genesis;
 
     #[migration(init)]
@@ -692,16 +697,6 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
             error: None,
         });
     }
-}
-
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::Module
-    for Module<Accounts, Consensus>
-{
-    const NAME: &'static str = MODULE_NAME;
-    const VERSION: u32 = 1;
-    type Error = Error;
-    type Event = Event;
-    type Parameters = Parameters;
 }
 
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>

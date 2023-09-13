@@ -959,16 +959,13 @@ mod test {
     /// A module with multiple no-op methods; intended for testing routing.
     struct AlphabetModule;
 
-    impl module::Module for AlphabetModule {
+    #[sdk_derive(Module)]
+    impl AlphabetModule {
         const NAME: &'static str = "alphabet";
         const VERSION: u32 = 42;
         type Error = AlphabetError;
         type Event = ();
         type Parameters = ();
-    }
-
-    #[sdk_derive(Module)]
-    impl AlphabetModule {
         type Genesis = ();
 
         #[handler(call = "alphabet.ReadOnly")]

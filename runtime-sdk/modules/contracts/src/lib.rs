@@ -421,6 +421,10 @@ impl<Cfg: Config> Module<Cfg> {
 
 #[sdk_derive(Module)]
 impl<Cfg: Config> Module<Cfg> {
+    const NAME: &'static str = MODULE_NAME;
+    type Error = Error;
+    type Event = Event;
+    type Parameters = Parameters;
     type Genesis = Genesis;
 
     #[migration(init)]
@@ -862,13 +866,6 @@ impl<Cfg: Config> Module<Cfg> {
 
         Ok(types::CustomQueryResult(result.data))
     }
-}
-
-impl<Cfg: Config> module::Module for Module<Cfg> {
-    const NAME: &'static str = MODULE_NAME;
-    type Error = Error;
-    type Event = Event;
-    type Parameters = Parameters;
 }
 
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {}

@@ -260,13 +260,6 @@ pub enum Event {
     },
 }
 
-impl<Cfg: Config> module::Module for Module<Cfg> {
-    const NAME: &'static str = MODULE_NAME;
-    type Error = Error;
-    type Event = Event;
-    type Parameters = Parameters;
-}
-
 /// Interface that can be called from other modules.
 pub trait API {
     /// Perform an Ethereum CREATE transaction.
@@ -660,6 +653,10 @@ impl<Cfg: Config> Module<Cfg> {
 
 #[sdk_derive(Module)]
 impl<Cfg: Config> Module<Cfg> {
+    const NAME: &'static str = MODULE_NAME;
+    type Error = Error;
+    type Event = Event;
+    type Parameters = Parameters;
     type Genesis = Genesis;
 
     #[migration(init)]

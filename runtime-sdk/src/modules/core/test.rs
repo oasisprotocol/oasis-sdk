@@ -207,16 +207,13 @@ impl GasWasterModule {
     const METHOD_SPECIFIC_GAS_REQUIRED_HUGE: &'static str = "test.SpecificGasRequiredHuge";
 }
 
-impl module::Module for GasWasterModule {
+#[sdk_derive(Module)]
+impl GasWasterModule {
     const NAME: &'static str = "gaswaster";
     const VERSION: u32 = 42;
     type Error = crate::modules::core::Error;
     type Event = ();
     type Parameters = ();
-}
-
-#[sdk_derive(Module)]
-impl GasWasterModule {
     type Genesis = ();
 
     #[handler(call = Self::METHOD_WASTE_GAS)]

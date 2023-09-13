@@ -202,6 +202,11 @@ impl Module {
 
 #[sdk_derive(Module)]
 impl Module {
+    const NAME: &'static str = MODULE_NAME;
+    const VERSION: u32 = 1;
+    type Error = Error;
+    type Event = Event;
+    type Parameters = Parameters;
     type Genesis = Genesis;
 
     #[migration(init)]
@@ -398,14 +403,6 @@ impl API for Module {
             height -= 1;
         }
     }
-}
-
-impl module::Module for Module {
-    const NAME: &'static str = MODULE_NAME;
-    const VERSION: u32 = 1;
-    type Error = Error;
-    type Event = Event;
-    type Parameters = Parameters;
 }
 
 impl module::TransactionHandler for Module {}

@@ -72,15 +72,12 @@ impl Runtime for TestRuntime {
 /// A module with multiple no-op methods; intended for testing routing.
 struct TestModule;
 
-impl module::Module for TestModule {
+#[sdk_derive(Module)]
+impl TestModule {
     const NAME: &'static str = "test";
     type Error = CoreError;
     type Event = ();
     type Parameters = ();
-}
-
-#[sdk_derive(Module)]
-impl TestModule {
     type Genesis = ();
 
     #[handler(call = "test.RefundFee")]

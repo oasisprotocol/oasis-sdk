@@ -1,5 +1,6 @@
 mod method_handler;
 mod migration_handler;
+mod module;
 
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -17,6 +18,7 @@ pub fn derive_module(impl_block: syn::ItemImpl) -> TokenStream {
     let mut derivations: Vec<TokenStream> = Vec::new();
 
     let mut derivers: Vec<Box<dyn Deriver>> = vec![
+        module::DeriveModule::new(),
         migration_handler::DeriveMigrationHandler::new(),
         method_handler::DeriveMethodHandler::new(),
     ];
@@ -376,9 +378,14 @@ mod tests {
     }
 
     #[test]
-    fn generate_migration_handler_impl() {
+    fn generate_module_impl() {
         let input = syn::parse_quote!(
             impl<C: Cfg> MyModule<C> {
+                const NAME: &'static str = MODULE_NAME;
+                const VERSION: u32 = 2;
+                type Error = Error;
+                type Event = ();
+                type Parameters = Parameters;
                 type Genesis = Genesis;
 
                 #[migration(init)]
@@ -403,6 +410,14 @@ mod tests {
                 syn::parse_quote!(
                     const _: () = {
                         #uses
+                        #[automatically_derived]
+                        impl<C: Cfg> sdk::module::Module for MyModule<C> {
+                            const NAME: &'static str = MODULE_NAME;
+                            const VERSION: u32 = 2;
+                            type Error = Error;
+                            type Event = ();
+                            type Parameters = Parameters;
+                        }
                         #[automatically_derived]
                         impl<C: Cfg> sdk::module::MigrationHandler for MyModule<C> {
                             type Genesis = Genesis;
