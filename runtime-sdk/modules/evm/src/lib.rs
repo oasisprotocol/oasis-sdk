@@ -654,6 +654,7 @@ impl<Cfg: Config> Module<Cfg> {
 #[sdk_derive(Module)]
 impl<Cfg: Config> Module<Cfg> {
     const NAME: &'static str = MODULE_NAME;
+    const VERSION: u32 = 2;
     type Error = Error;
     type Event = Event;
     type Parameters = Parameters;
@@ -663,6 +664,11 @@ impl<Cfg: Config> Module<Cfg> {
     fn init(genesis: Genesis) {
         // Set genesis parameters.
         Self::set_params(genesis.parameters);
+    }
+
+    #[migration(from = 1)]
+    fn migrate_v1_to_v2() {
+        // No state migration is needed for v2.
     }
 
     #[handler(call = "evm.Create")]
