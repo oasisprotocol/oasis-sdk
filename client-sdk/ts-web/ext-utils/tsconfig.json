@@ -5,6 +5,7 @@
         "module": "CommonJS",
         "target": "ES2020",
         "declaration": true,
+        "declarationMap": true,
         "resolveJsonModule": true
     },
     "include": [
