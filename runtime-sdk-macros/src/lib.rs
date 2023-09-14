@@ -6,7 +6,7 @@ use proc_macro::TokenStream;
 mod error_derive;
 mod event_derive;
 mod generators;
-mod method_handler_derive;
+mod module_derive;
 #[cfg(test)]
 mod test_utils;
 mod version_from_cargo;
@@ -45,21 +45,21 @@ pub fn error_derive(input: TokenStream) -> TokenStream {
 
 /// Derives traits from a non-trait `impl` block (rather than from a `struct`).
 ///
-/// Only the `MethodHandler` trait is supported. In other words, given an
-/// `impl MyModule` block, the macro derives `impl MethodHandler for MyModule`.
-/// See also the `#[handler]` attribute.
+/// Only the `Module` trait is supported. In other words, given an `impl MyModule` block, the macro
+/// derives implementations needed for implementing a module.
+/// See also the `#[handler]` and `#[migration]` attributes.
 #[proc_macro_attribute]
 pub fn sdk_derive(args: TokenStream, input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as syn::ItemImpl);
-    if args.to_string() == "MethodHandler" {
-        method_handler_derive::derive_method_handler(input).into()
+    if args.to_string() == "Module" {
+        module_derive::derive_module(input).into()
     } else {
-        emit_compile_error("#[sdk_derive] only supports #[sdk_derive(MethodHandler)]");
+        emit_compile_error("#[sdk_derive] only supports #[sdk_derive(Module)]");
     }
 }
 
 /// A helper attribute for `#[sdk_derive(...)]`. It doesn't do anyting on its own;
-/// it only mark functions that represent a paratime method handler.
+/// it only marks functions that represent a paratime method handler.
 /// The permitted forms are:
 ///  - `#[handler(call = "my_module.MyCall")]`: Marks a function that handles
 ///        the "my_module.MyCall" call and can be passed to
@@ -88,6 +88,18 @@ pub fn sdk_derive(args: TokenStream, input: TokenStream) -> TokenStream {
 /// `#[oasis_runtime_sdk_macros::handler]` or other paths/aliases.
 #[proc_macro_attribute]
 pub fn handler(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+/// A helper attribute for `#[sdk_derive(...)]`. It doesn't do anything on its own;
+/// it only marks functions that represent a module state migration.
+///
+/// The permitted forms are:
+///  - `#[migration(init)]`: Marks the initial (genesis) migration.
+///  - `#[migration(from = v)]`: Marks a migration from version v to v+1, where v is
+///    a non-negative integer.
+#[proc_macro_attribute]
+pub fn migration(_args: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
 

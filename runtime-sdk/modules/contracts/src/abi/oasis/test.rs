@@ -318,15 +318,12 @@ fn run_contract_with_defaults(
     let mut ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(context::Mode::ExecuteTx, true);
     let params = Parameters::default();
 
-    core::Module::<CoreConfig>::init(
-        &mut ctx,
-        core::Genesis {
-            parameters: core::Parameters {
-                max_batch_gas: gas_limit,
-                ..Default::default()
-            },
+    core::Module::<CoreConfig>::init(core::Genesis {
+        parameters: core::Parameters {
+            max_batch_gas: gas_limit,
+            ..Default::default()
         },
-    );
+    });
 
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = gas_limit;
@@ -452,7 +449,7 @@ fn test_hello_contract_out_of_gas() {
     assert_eq!(result.code(), 12);
     assert_eq!(
         &result.to_string(),
-        "core: out of gas (limit: 1000 wanted: 1010)"
+        "core: out of gas (limit: 1000 wanted: 1017)"
     );
 }
 

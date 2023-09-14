@@ -72,15 +72,14 @@ impl Runtime for TestRuntime {
 /// A module with multiple no-op methods; intended for testing routing.
 struct TestModule;
 
-impl module::Module for TestModule {
+#[sdk_derive(Module)]
+impl TestModule {
     const NAME: &'static str = "test";
     type Error = CoreError;
     type Event = ();
     type Parameters = ();
-}
+    type Genesis = ();
 
-#[sdk_derive(MethodHandler)]
-impl TestModule {
     #[handler(call = "test.RefundFee")]
     fn refund_fee<C: TxContext>(ctx: &mut C, fail: bool) -> Result<(), CoreError> {
         // Use some gas.
@@ -122,167 +121,140 @@ impl TestModule {
 
 impl module::BlockHandler for TestModule {}
 impl module::TransactionHandler for TestModule {}
-impl module::MigrationHandler for TestModule {
-    type Genesis = ();
-}
 impl module::InvariantHandler for TestModule {}
 
 #[test]
 #[should_panic]
 fn test_init_incorrect_total_supply_1() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
-    Accounts::init(
-        &mut ctx,
-        Genesis {
-            balances: {
-                let mut balances = BTreeMap::new();
-                // Alice.
-                balances.insert(keys::alice::address(), {
-                    let mut denominations = BTreeMap::new();
-                    denominations.insert(Denomination::NATIVE, 1_000_000);
-                    denominations
-                });
-                balances
-            },
-            ..Default::default()
+    Accounts::init(Genesis {
+        balances: {
+            let mut balances = BTreeMap::new();
+            // Alice.
+            balances.insert(keys::alice::address(), {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(Denomination::NATIVE, 1_000_000);
+                denominations
+            });
+            balances
         },
-    );
+        ..Default::default()
+    });
 }
 
 #[test]
 #[should_panic]
 fn test_init_incorrect_total_supply_2() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
-    Accounts::init(
-        &mut ctx,
-        Genesis {
-            balances: {
-                let mut balances = BTreeMap::new();
-                // Alice.
-                balances.insert(keys::alice::address(), {
-                    let mut denominations = BTreeMap::new();
-                    denominations.insert(Denomination::NATIVE, 1_000_000);
-                    denominations
-                });
-                // Bob.
-                balances.insert(keys::bob::address(), {
-                    let mut denominations = BTreeMap::new();
-                    denominations.insert(Denomination::NATIVE, 1_000_000);
-                    denominations
-                });
-                balances
-            },
-            total_supplies: {
-                let mut total_supplies = BTreeMap::new();
-                total_supplies.insert(Denomination::NATIVE, 1_000_000);
-                total_supplies
-            },
-            ..Default::default()
+    Accounts::init(Genesis {
+        balances: {
+            let mut balances = BTreeMap::new();
+            // Alice.
+            balances.insert(keys::alice::address(), {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(Denomination::NATIVE, 1_000_000);
+                denominations
+            });
+            // Bob.
+            balances.insert(keys::bob::address(), {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(Denomination::NATIVE, 1_000_000);
+                denominations
+            });
+            balances
         },
-    );
+        total_supplies: {
+            let mut total_supplies = BTreeMap::new();
+            total_supplies.insert(Denomination::NATIVE, 1_000_000);
+            total_supplies
+        },
+        ..Default::default()
+    });
 }
 
 #[cfg(feature = "unsafe-allow-debug")]
 #[test]
 fn test_debug_option_set() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
-    Accounts::init(
-        &mut ctx,
-        Genesis {
-            parameters: Parameters {
-                debug_disable_nonce_check: true,
-                ..Default::default()
-            },
+    Accounts::init(Genesis {
+        parameters: Parameters {
+            debug_disable_nonce_check: true,
             ..Default::default()
         },
-    );
+        ..Default::default()
+    });
 }
 
 #[cfg(not(feature = "unsafe-allow-debug"))]
 #[test]
 #[should_panic]
 fn test_debug_option_set() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
-    Accounts::init(
-        &mut ctx,
-        Genesis {
-            parameters: Parameters {
-                debug_disable_nonce_check: true,
-                ..Default::default()
-            },
+    Accounts::init(Genesis {
+        parameters: Parameters {
+            debug_disable_nonce_check: true,
             ..Default::default()
         },
-    );
+        ..Default::default()
+    });
 }
 
 #[test]
 fn test_init_1() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
-    Accounts::init(
-        &mut ctx,
-        Genesis {
-            balances: {
-                let mut balances = BTreeMap::new();
-                // Alice.
-                balances.insert(keys::alice::address(), {
-                    let mut denominations = BTreeMap::new();
-                    denominations.insert(Denomination::NATIVE, 1_000_000);
-                    denominations
-                });
-                balances
-            },
-            total_supplies: {
-                let mut total_supplies = BTreeMap::new();
-                total_supplies.insert(Denomination::NATIVE, 1_000_000);
-                total_supplies
-            },
-            ..Default::default()
+    Accounts::init(Genesis {
+        balances: {
+            let mut balances = BTreeMap::new();
+            // Alice.
+            balances.insert(keys::alice::address(), {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(Denomination::NATIVE, 1_000_000);
+                denominations
+            });
+            balances
         },
-    );
+        total_supplies: {
+            let mut total_supplies = BTreeMap::new();
+            total_supplies.insert(Denomination::NATIVE, 1_000_000);
+            total_supplies
+        },
+        ..Default::default()
+    });
 }
 
 #[test]
 fn test_init_2() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
-    Accounts::init(
-        &mut ctx,
-        Genesis {
-            balances: {
-                let mut balances = BTreeMap::new();
-                // Alice.
-                balances.insert(keys::alice::address(), {
-                    let mut denominations = BTreeMap::new();
-                    denominations.insert(Denomination::NATIVE, 1_000_000);
-                    denominations
-                });
-                // Bob.
-                balances.insert(keys::bob::address(), {
-                    let mut denominations = BTreeMap::new();
-                    denominations.insert(Denomination::NATIVE, 1_000_000);
-                    denominations
-                });
-                balances
-            },
-            total_supplies: {
-                let mut total_supplies = BTreeMap::new();
-                total_supplies.insert(Denomination::NATIVE, 2_000_000);
-                total_supplies
-            },
-            ..Default::default()
+    Accounts::init(Genesis {
+        balances: {
+            let mut balances = BTreeMap::new();
+            // Alice.
+            balances.insert(keys::alice::address(), {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(Denomination::NATIVE, 1_000_000);
+                denominations
+            });
+            // Bob.
+            balances.insert(keys::bob::address(), {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(Denomination::NATIVE, 1_000_000);
+                denominations
+            });
+            balances
         },
-    );
+        total_supplies: {
+            let mut total_supplies = BTreeMap::new();
+            total_supplies.insert(Denomination::NATIVE, 2_000_000);
+            total_supplies
+        },
+        ..Default::default()
+    });
 }
 
 #[test]
@@ -290,32 +262,29 @@ fn test_api_tx_transfer_disabled() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
 
-    Accounts::init(
-        &mut ctx,
-        Genesis {
-            balances: {
-                let mut balances = BTreeMap::new();
-                // Alice.
-                balances.insert(keys::alice::address(), {
-                    let mut denominations = BTreeMap::new();
-                    denominations.insert(Denomination::NATIVE, 1_000_000);
-                    denominations
-                });
-                balances
-            },
-            total_supplies: {
-                let mut total_supplies = BTreeMap::new();
-                total_supplies.insert(Denomination::NATIVE, 1_000_000);
-                total_supplies
-            },
-            parameters: Parameters {
-                transfers_disabled: true,
-                debug_disable_nonce_check: false,
-                ..Default::default()
-            },
+    Accounts::init(Genesis {
+        balances: {
+            let mut balances = BTreeMap::new();
+            // Alice.
+            balances.insert(keys::alice::address(), {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(Denomination::NATIVE, 1_000_000);
+                denominations
+            });
+            balances
+        },
+        total_supplies: {
+            let mut total_supplies = BTreeMap::new();
+            total_supplies.insert(Denomination::NATIVE, 1_000_000);
+            total_supplies
+        },
+        parameters: Parameters {
+            transfers_disabled: true,
+            debug_disable_nonce_check: false,
             ..Default::default()
         },
-    );
+        ..Default::default()
+    });
 
     let tx = transaction::Transaction {
         version: 1,
@@ -401,37 +370,33 @@ fn test_prefetch() {
     });
 }
 
-pub(crate) fn init_accounts<C: Context>(ctx: &mut C) {
-    Accounts::init(
-        ctx,
-        Genesis {
-            balances: {
-                let mut balances = BTreeMap::new();
-                // Alice.
-                balances.insert(keys::alice::address(), {
-                    let mut denominations = BTreeMap::new();
-                    denominations.insert(Denomination::NATIVE, 1_000_000);
-                    denominations
-                });
-                balances
-            },
-            total_supplies: {
-                let mut total_supplies = BTreeMap::new();
-                total_supplies.insert(Denomination::NATIVE, 1_000_000);
-                total_supplies
-            },
-            parameters: Parameters {
-                denomination_infos: {
-                    let mut denomination_infos = BTreeMap::new();
-                    denomination_infos
-                        .insert(Denomination::NATIVE, DenominationInfo { decimals: 9 });
-                    denomination_infos
-                },
-                ..Default::default()
+pub(crate) fn init_accounts<C: Context>(_ctx: &mut C) {
+    Accounts::init(Genesis {
+        balances: {
+            let mut balances = BTreeMap::new();
+            // Alice.
+            balances.insert(keys::alice::address(), {
+                let mut denominations = BTreeMap::new();
+                denominations.insert(Denomination::NATIVE, 1_000_000);
+                denominations
+            });
+            balances
+        },
+        total_supplies: {
+            let mut total_supplies = BTreeMap::new();
+            total_supplies.insert(Denomination::NATIVE, 1_000_000);
+            total_supplies
+        },
+        parameters: Parameters {
+            denomination_infos: {
+                let mut denomination_infos = BTreeMap::new();
+                denomination_infos.insert(Denomination::NATIVE, DenominationInfo { decimals: 9 });
+                denomination_infos
             },
             ..Default::default()
         },
-    );
+        ..Default::default()
+    });
 }
 
 #[test]
@@ -794,7 +759,7 @@ fn test_query_addresses() {
         ..Default::default()
     };
 
-    Accounts::init(&mut ctx, gen);
+    Accounts::init(gen);
 
     ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
         let accs = Accounts::query_addresses(&mut tx_ctx, AddressesQuery { denomination: d1 })
@@ -819,8 +784,7 @@ fn test_query_addresses() {
 
 #[test]
 fn test_get_all_balances_and_total_supplies_basic() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
     let alice = keys::alice::address();
     let bob = keys::bob::address();
@@ -850,7 +814,7 @@ fn test_get_all_balances_and_total_supplies_basic() {
         ..Default::default()
     };
 
-    Accounts::init(&mut ctx, gen);
+    Accounts::init(gen);
 
     let all_bals = Accounts::get_all_balances().expect("get_all_balances should succeed");
     for (addr, bals) in &all_bals {
@@ -895,8 +859,7 @@ fn test_get_all_balances_and_total_supplies_basic() {
 
 #[test]
 fn test_get_all_balances_and_total_supplies_more() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
     let dn = Denomination::NATIVE;
     let d1: Denomination = "den1".parse().unwrap();
@@ -937,7 +900,7 @@ fn test_get_all_balances_and_total_supplies_more() {
         ..Default::default()
     };
 
-    Accounts::init(&mut ctx, gen);
+    Accounts::init(gen);
 
     let all_bals = Accounts::get_all_balances().expect("get_all_balances should succeed");
     for (addr, bals) in &all_bals {
@@ -1044,7 +1007,7 @@ fn test_check_invariants_more() {
         ..Default::default()
     };
 
-    Accounts::init(&mut ctx, gen);
+    Accounts::init(gen);
     assert!(
         Accounts::check_invariants(&mut ctx).is_ok(),
         "initial inv chk should succeed"

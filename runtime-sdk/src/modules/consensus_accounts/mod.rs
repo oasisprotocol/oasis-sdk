@@ -19,7 +19,7 @@ use oasis_runtime_sdk_macros::{handler, sdk_derive};
 
 use crate::{
     context::{Context, TxContext},
-    error, module,
+    error, migration, module,
     module::Module as _,
     modules,
     modules::core::{Error as CoreError, API as _},
@@ -366,10 +366,23 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
     }
 }
 
-#[sdk_derive(MethodHandler)]
+#[sdk_derive(Module)]
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     Module<Accounts, Consensus>
 {
+    const NAME: &'static str = MODULE_NAME;
+    const VERSION: u32 = 1;
+    type Error = Error;
+    type Event = Event;
+    type Parameters = Parameters;
+    type Genesis = Genesis;
+
+    #[migration(init)]
+    pub fn init(genesis: Genesis) {
+        // Set genesis parameters.
+        Self::set_params(genesis.parameters);
+    }
+
     /// Deposit in the runtime.
     #[handler(call = "consensus.Deposit")]
     fn tx_deposit<C: TxContext>(ctx: &mut C, body: types::Deposit) -> Result<(), Error> {
@@ -683,42 +696,6 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
             debond_end_time: result.debond_end_time,
             error: None,
         });
-    }
-}
-
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::Module
-    for Module<Accounts, Consensus>
-{
-    const NAME: &'static str = MODULE_NAME;
-    const VERSION: u32 = 1;
-    type Error = Error;
-    type Event = Event;
-    type Parameters = Parameters;
-}
-
-/// Module methods.
-
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::MigrationHandler
-    for Module<Accounts, Consensus>
-{
-    type Genesis = Genesis;
-
-    fn init_or_migrate<C: Context>(
-        _ctx: &mut C,
-        meta: &mut modules::core::types::Metadata,
-        genesis: Self::Genesis,
-    ) -> bool {
-        let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
-        if version == 0 {
-            // Initialize state from genesis.
-            // Set genesis parameters.
-            Self::set_params(genesis.parameters);
-            meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
-            return true;
-        }
-
-        // Migrations are not supported.
-        false
     }
 }
 

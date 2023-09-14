@@ -959,16 +959,15 @@ mod test {
     /// A module with multiple no-op methods; intended for testing routing.
     struct AlphabetModule;
 
-    impl module::Module for AlphabetModule {
+    #[sdk_derive(Module)]
+    impl AlphabetModule {
         const NAME: &'static str = "alphabet";
         const VERSION: u32 = 42;
         type Error = AlphabetError;
         type Event = ();
         type Parameters = ();
-    }
+        type Genesis = ();
 
-    #[sdk_derive(MethodHandler)]
-    impl AlphabetModule {
         #[handler(call = "alphabet.ReadOnly")]
         fn read_only<C: TxContext>(_ctx: &mut C, _args: ()) -> Result<u64, AlphabetError> {
             CurrentStore::with(|store| {
@@ -1005,9 +1004,6 @@ mod test {
 
     impl module::BlockHandler for AlphabetModule {}
     impl module::TransactionHandler for AlphabetModule {}
-    impl module::MigrationHandler for AlphabetModule {
-        type Genesis = ();
-    }
     impl module::InvariantHandler for AlphabetModule {}
 
     struct AlphabetRuntime;

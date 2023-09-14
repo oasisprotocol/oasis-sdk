@@ -15,7 +15,7 @@ use crate::{
     core::consensus::beacon::EpochTime,
     dispatcher,
     error::Error as SDKError,
-    keymanager,
+    keymanager, migration,
     module::{
         self, CallResult, InvariantHandler as _, MethodHandler as _, Module as _,
         ModuleInfoHandler as _,
@@ -374,20 +374,6 @@ const CONTEXT_KEY_PRIORITY: &str = "core.Priority";
 const CONTEXT_KEY_SENDER_META: &str = "core.SenderMeta";
 const CONTEXT_KEY_EPOCH_CHANGED: &str = "core.EpochChanged";
 
-impl<Cfg: Config> Module<Cfg> {
-    /// Initialize state from genesis.
-    pub fn init<C: Context>(_ctx: &mut C, genesis: Genesis) {
-        // Set genesis parameters.
-        Self::set_params(genesis.parameters);
-    }
-
-    /// Migrate state from a previous version.
-    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
-        // No migrations currently supported.
-        false
-    }
-}
-
 impl<Cfg: Config> API for Module<Cfg> {
     type Config = Cfg;
 
@@ -495,8 +481,20 @@ impl<Cfg: Config> API for Module<Cfg> {
     }
 }
 
-#[sdk_derive(MethodHandler)]
+#[sdk_derive(Module)]
 impl<Cfg: Config> Module<Cfg> {
+    const NAME: &'static str = MODULE_NAME;
+    type Error = Error;
+    type Event = Event;
+    type Parameters = Parameters;
+    type Genesis = Genesis;
+
+    #[migration(init)]
+    pub fn init(genesis: Genesis) {
+        // Set genesis parameters.
+        Self::set_params(genesis.parameters);
+    }
+
     /// Run a transaction in simulation and return how much gas it uses. This looks up the method
     /// in the context's method registry. Transactions that fail still use gas, and this query will
     /// estimate that and return successfully, so do not use this query to see if a transaction will
@@ -864,7 +862,7 @@ impl<Cfg: Config> Module<Cfg> {
 }
 
 impl<Cfg: Config> Module<Cfg> {
-    fn get_local_min_gas_price<C: Context>(ctx: &mut C, denom: &token::Denomination) -> u128 {
+    fn get_local_min_gas_price<C: Context>(ctx: &C, denom: &token::Denomination) -> u128 {
         #[allow(clippy::borrow_interior_mutable_const)]
         ctx.local_config(MODULE_NAME)
             .as_ref()
@@ -873,14 +871,14 @@ impl<Cfg: Config> Module<Cfg> {
             .unwrap_or_default()
     }
 
-    fn get_local_max_estimated_gas<C: Context>(ctx: &mut C) -> u64 {
+    fn get_local_max_estimated_gas<C: Context>(ctx: &C) -> u64 {
         ctx.local_config(MODULE_NAME)
             .as_ref()
             .map(|cfg: &LocalConfig| cfg.max_estimated_gas)
             .unwrap_or_default()
     }
 
-    fn enforce_min_gas_price<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {
+    fn enforce_min_gas_price<C: TxContext>(ctx: &C, call: &Call) -> Result<(), Error> {
         // If the method is exempt from min gas price requirements, checks always pass.
         #[allow(clippy::borrow_interior_mutable_const)]
         if Cfg::MIN_GAS_PRICE_EXEMPT_METHODS.contains(call.method.as_str()) {
@@ -914,13 +912,6 @@ impl<Cfg: Config> Module<Cfg> {
 
         Ok(())
     }
-}
-
-impl<Cfg: Config> module::Module for Module<Cfg> {
-    const NAME: &'static str = MODULE_NAME;
-    type Error = Error;
-    type Event = Event;
-    type Parameters = Parameters;
 }
 
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
@@ -1028,27 +1019,6 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
         }
 
         Ok(result)
-    }
-}
-
-impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
-    type Genesis = Genesis;
-
-    fn init_or_migrate<C: Context>(
-        ctx: &mut C,
-        meta: &mut types::Metadata,
-        genesis: Self::Genesis,
-    ) -> bool {
-        let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
-        if version == 0 {
-            // Initialize state from genesis.
-            Self::init(ctx, genesis);
-            meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
-            return true;
-        }
-
-        // Perform migration.
-        Self::migrate(ctx, version)
     }
 }
 

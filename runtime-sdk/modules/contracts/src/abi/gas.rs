@@ -211,7 +211,7 @@ impl MeteredBlocks {
     }
 }
 
-fn determine_metered_blocks(func: &mut LocalFunction) -> BTreeMap<InstrSeqId, Vec<MeteredBlock>> {
+fn determine_metered_blocks(func: &LocalFunction) -> BTreeMap<InstrSeqId, Vec<MeteredBlock>> {
     // NOTE: This is based on walrus::ir::dfs_in_order but we need more information.
 
     let mut blocks = MeteredBlocks::default();

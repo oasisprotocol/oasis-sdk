@@ -23,7 +23,7 @@ use oasis_core_runtime::{
 
 use crate::{
     context::{Context, TxContext},
-    history, module,
+    history, migration, module,
     module::{Module as _, Parameters as _},
     modules, sdk_derive,
     types::{
@@ -200,8 +200,27 @@ impl Module {
     }
 }
 
-#[sdk_derive(MethodHandler)]
-impl Module {}
+#[sdk_derive(Module)]
+impl Module {
+    const NAME: &'static str = MODULE_NAME;
+    const VERSION: u32 = 1;
+    type Error = Error;
+    type Event = Event;
+    type Parameters = Parameters;
+    type Genesis = Genesis;
+
+    #[migration(init)]
+    pub fn init(genesis: Genesis) {
+        // Validate genesis parameters.
+        genesis
+            .parameters
+            .validate_basic()
+            .expect("invalid genesis parameters");
+
+        // Set genesis parameters.
+        Self::set_params(genesis.parameters);
+    }
+}
 
 impl API for Module {
     fn transfer<C: TxContext>(
@@ -383,58 +402,6 @@ impl API for Module {
             // Go one height before epoch transition.
             height -= 1;
         }
-    }
-}
-
-impl module::Module for Module {
-    const NAME: &'static str = MODULE_NAME;
-    const VERSION: u32 = 1;
-    type Error = Error;
-    type Event = Event;
-    type Parameters = Parameters;
-}
-
-impl Module {
-    /// Initialize state from genesis.
-    fn init<C: Context>(_ctx: &mut C, genesis: Genesis) {
-        // TODO: enable loading consensus denomination from consensus state after:
-        // https://github.com/oasisprotocol/oasis-core/issues/3868
-
-        // Validate genesis parameters.
-        genesis
-            .parameters
-            .validate_basic()
-            .expect("invalid genesis parameters");
-
-        // Set genesis parameters.
-        Self::set_params(genesis.parameters);
-    }
-
-    /// Migrate state from a previous version.
-    fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
-        // No migrations currently supported.
-        false
-    }
-}
-
-impl module::MigrationHandler for Module {
-    type Genesis = Genesis;
-
-    fn init_or_migrate<C: Context>(
-        ctx: &mut C,
-        meta: &mut modules::core::types::Metadata,
-        genesis: Self::Genesis,
-    ) -> bool {
-        let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
-        if version == 0 {
-            // Initialize state from genesis.
-            Self::init(ctx, genesis);
-            meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
-            return true;
-        }
-
-        // Perform migration.
-        Self::migrate(ctx, version)
     }
 }
 

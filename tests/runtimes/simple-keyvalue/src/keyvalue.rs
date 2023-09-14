@@ -290,7 +290,7 @@ impl Module {
         }
     }
 
-    fn get_key_pair<C: Context>(ctx: &mut C, id: &[u8]) -> Result<KeyPair, Error> {
+    fn get_key_pair<C: Context>(ctx: &C, id: &[u8]) -> Result<KeyPair, Error> {
         let kid = get_key_pair_id([id]);
         let kmgr = ctx
             .key_manager()

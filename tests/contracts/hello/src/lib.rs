@@ -476,7 +476,7 @@ impl sdk::Contract for HelloWorld {
     ) -> Result<Option<Self::Response>, Error> {
         // This method is called to handle any replies for emitted messages.
         match reply {
-            Reply::Call { id, result, .. } if id == 0 => {
+            Reply::Call { id: 0, result, .. } => {
                 match result {
                     CallResult::Failed { module, code } => {
                         // Propagate all failures.
@@ -490,7 +490,11 @@ impl sdk::Contract for HelloWorld {
                     }
                 }
             }
-            Reply::Call { id, result, data } if id == 42 => {
+            Reply::Call {
+                id: 42,
+                result,
+                data,
+            } => {
                 let data = cbor::from_value(data.unwrap()).unwrap();
 
                 let result: InstantiateResult = match result {

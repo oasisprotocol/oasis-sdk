@@ -15,7 +15,7 @@ use oasis_runtime_sdk::{
     self as sdk,
     context::{Context, TxContext},
     core::common::crypto::hash::Hash,
-    handler, module,
+    handler, migration, module,
     module::Module as _,
     modules,
     modules::{accounts::API as _, core::API as _},
@@ -419,8 +419,20 @@ impl<Cfg: Config> Module<Cfg> {
     }
 }
 
-#[sdk_derive(MethodHandler)]
+#[sdk_derive(Module)]
 impl<Cfg: Config> Module<Cfg> {
+    const NAME: &'static str = MODULE_NAME;
+    type Error = Error;
+    type Event = Event;
+    type Parameters = Parameters;
+    type Genesis = Genesis;
+
+    #[migration(init)]
+    fn init(genesis: Genesis) {
+        // Set genesis parameters.
+        Self::set_params(genesis.parameters);
+    }
+
     #[handler(call = "contracts.Upload")]
     pub fn tx_upload<C: TxContext>(
         ctx: &mut C,
@@ -853,48 +865,6 @@ impl<Cfg: Config> Module<Cfg> {
         let result = wasm::query::<Cfg, C>(&mut exec_ctx, &contract, &args).inner?; // No need to handle gas.
 
         Ok(types::CustomQueryResult(result.data))
-    }
-}
-
-impl<Cfg: Config> module::Module for Module<Cfg> {
-    const NAME: &'static str = MODULE_NAME;
-    type Error = Error;
-    type Event = Event;
-    type Parameters = Parameters;
-}
-
-impl<Cfg: Config> Module<Cfg> {
-    /// Initialize state from genesis.
-    pub fn init<C: Context>(_ctx: &mut C, genesis: Genesis) {
-        // Set genesis parameters.
-        Self::set_params(genesis.parameters);
-    }
-
-    /// Migrate state from a previous version.
-    pub fn migrate<C: Context>(_ctx: &mut C, _from: u32) -> bool {
-        // No migrations currently supported.
-        false
-    }
-}
-
-impl<Cfg: Config> module::MigrationHandler for Module<Cfg> {
-    type Genesis = Genesis;
-
-    fn init_or_migrate<C: Context>(
-        ctx: &mut C,
-        meta: &mut modules::core::types::Metadata,
-        genesis: Self::Genesis,
-    ) -> bool {
-        let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
-        if version == 0 {
-            // Initialize state from genesis.
-            Self::init(ctx, genesis);
-            meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
-            return true;
-        }
-
-        // Perform migration.
-        Self::migrate(ctx, version)
     }
 }
 

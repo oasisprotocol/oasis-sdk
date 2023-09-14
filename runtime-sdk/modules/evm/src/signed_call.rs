@@ -19,7 +19,7 @@ use crate::{
 ///
 /// See [`crate::types::SignedSimulateCallEnvelope`] for details on the signature format.
 pub(crate) fn verify<C: Context, Cfg: Config>(
-    ctx: &mut C,
+    ctx: &C,
     query: SimulateCallQuery,
     leash: Leash,
     mut signature: [u8; 65],

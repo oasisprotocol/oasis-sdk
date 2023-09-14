@@ -102,7 +102,8 @@ fn convert_variants(
                     .fields
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, f)| (!f.attrs.is_empty()).then(|| (i, f.ident.clone())));
+                    .filter(|(_, f)| (!f.attrs.is_empty()))
+                    .map(|(i, f)| (i, f.ident.clone()));
                 let source = maybe_sources.next();
                 if maybe_sources.count() != 0 {
                     variant_ident

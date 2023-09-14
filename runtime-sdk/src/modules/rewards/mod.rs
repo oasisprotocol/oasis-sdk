@@ -8,6 +8,7 @@ use thiserror::Error;
 use crate::{
     context::Context,
     core::consensus::beacon,
+    migration,
     module::{self, Module as _, Parameters as _},
     modules::{self, core::API as _},
     runtime::Runtime,
@@ -89,20 +90,17 @@ pub struct Module<Accounts: modules::accounts::API> {
 pub static ADDRESS_REWARD_POOL: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "reward-pool"));
 
-impl<Accounts: modules::accounts::API> module::Module for Module<Accounts> {
+#[sdk_derive(Module)]
+impl<Accounts: modules::accounts::API> Module<Accounts> {
     const NAME: &'static str = MODULE_NAME;
     const VERSION: u32 = 2;
     type Error = Error;
     type Event = ();
     type Parameters = Parameters;
-}
+    type Genesis = Genesis;
 
-#[sdk_derive(MethodHandler)]
-impl<Accounts: modules::accounts::API> Module<Accounts> {}
-
-impl<Accounts: modules::accounts::API> Module<Accounts> {
-    /// Initialize state from genesis.
-    fn init<C: Context>(_ctx: &mut C, genesis: Genesis) {
+    #[migration(init)]
+    fn init(genesis: Genesis) {
         genesis
             .parameters
             .validate_basic()
@@ -112,44 +110,13 @@ impl<Accounts: modules::accounts::API> Module<Accounts> {
         Self::set_params(genesis.parameters);
     }
 
-    /// Migrate state from a previous version.
-    fn migrate<C: Context>(_ctx: &mut C, from: u32) -> bool {
-        match from {
-            1 => Self::migrate_v1_to_v2(),
-            2 => return false, // Current version.
-            _ => panic!("unsupported source module version: {from}"),
-        }
-
-        true
-    }
-
+    #[migration(from = 1)]
     fn migrate_v1_to_v2() {
         CurrentStore::with(|store| {
             // Version 2 removes the LAST_EPOCH storage state which was at 0x01.
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             store.remove(&[0x01]);
         });
-    }
-}
-
-impl<Accounts: modules::accounts::API> module::MigrationHandler for Module<Accounts> {
-    type Genesis = Genesis;
-
-    fn init_or_migrate<C: Context>(
-        ctx: &mut C,
-        meta: &mut modules::core::types::Metadata,
-        genesis: Self::Genesis,
-    ) -> bool {
-        let version = meta.versions.get(Self::NAME).copied().unwrap_or_default();
-        if version == 0 {
-            // Initialize state from genesis.
-            Self::init(ctx, genesis);
-            meta.versions.insert(Self::NAME.to_owned(), Self::VERSION);
-            return true;
-        }
-
-        // Perform migration.
-        Self::migrate(ctx, version)
     }
 }
 
