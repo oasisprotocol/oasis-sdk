@@ -5,14 +5,23 @@ use evm::{
 pub use primitive_types::{H160, H256};
 
 use oasis_runtime_sdk::{
-    modules::{accounts::Module, core::Error},
+    module::{self},
+    modules::{accounts, accounts::Module, core, core::Error},
     subcall,
-    types::token::Denomination,
+    testing::keys,
+    types::token::{self, Denomination},
+    BatchContext, Runtime, Version,
+};
+
+use crate::{
+    mock::{load_contract_bytecode, EvmSigner},
+    types::{self},
 };
 
 use super::{PrecompileResult, Precompiles};
+use std::collections::BTreeMap;
 
-struct TestConfig;
+pub(crate) struct TestConfig;
 
 impl crate::Config for TestConfig {
     type Accounts = Module;
@@ -50,6 +59,7 @@ struct MockPrecompileHandle<'a> {
     context: &'a Context,
     gas_limit: u64,
     gas_cost: u64,
+    gas_used: u64,
 }
 
 impl<'a> PrecompileHandle for MockPrecompileHandle<'a> {
@@ -70,6 +80,7 @@ impl<'a> PrecompileHandle for MockPrecompileHandle<'a> {
             return Err(ExitError::OutOfGas);
         }
         self.gas_cost = self.gas_cost.saturating_add(cost);
+        self.gas_used = self.gas_used.saturating_add(cost);
 
         Ok(())
     }
@@ -101,6 +112,23 @@ impl<'a> PrecompileHandle for MockPrecompileHandle<'a> {
     fn gas_limit(&self) -> Option<u64> {
         Some(self.gas_limit)
     }
+
+    fn record_external_cost(
+        &mut self,
+        _ref_time: Option<u64>,
+        _proof_size: Option<u64>,
+        _storage_growth: Option<u64>,
+    ) -> Result<(), ExitError> {
+        unimplemented!()
+    }
+
+    fn refund_external_cost(&mut self, _ref_time: Option<u64>, _proof_size: Option<u64>) {
+        unimplemented!()
+    }
+
+    fn used_gas(&self) -> u64 {
+        self.gas_used
+    }
 }
 
 #[doc(hidden)]
@@ -126,6 +154,7 @@ pub fn call_contract_with_gas_report(
         context: &context,
         gas_limit,
         gas_cost: 0,
+        gas_used: 0,
     };
     precompiles
         .execute(&mut handle)
@@ -167,4 +196,68 @@ pub fn read_test_cases(name: &str) -> Vec<TestCase> {
     let contents = std::fs::read_to_string(path).expect("json file should be readable");
 
     serde_json::from_str(&contents).expect("json decoding should succeed")
+}
+
+type Core = core::Module<TestConfig>;
+type Accounts = accounts::Module;
+type Evm = crate::Module<TestConfig>;
+
+impl core::Config for TestConfig {}
+
+pub(crate) struct TestRuntime;
+
+impl Runtime for TestRuntime {
+    const VERSION: Version = Version::new(0, 0, 0);
+    type Core = Core;
+    type Modules = (Core, Accounts, Evm);
+
+    fn genesis_state() -> <Self::Modules as module::MigrationHandler>::Genesis {
+        (
+            core::Genesis {
+                parameters: core::Parameters {
+                    max_batch_gas: u64::MAX,
+                    max_tx_size: 32 * 1024,
+                    max_tx_signers: 1,
+                    max_multisig_signers: 8,
+                    gas_costs: Default::default(),
+                    min_gas_price: BTreeMap::from([(token::Denomination::NATIVE, 0)]),
+                },
+            },
+            accounts::Genesis {
+                balances: BTreeMap::from([(
+                    keys::dave::address(),
+                    BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
+                )]),
+                total_supplies: BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
+                ..Default::default()
+            },
+            crate::Genesis {
+                ..Default::default()
+            },
+        )
+    }
+}
+
+#[cfg(any(test, feature = "test"))]
+pub fn init_and_deploy_contract<C: BatchContext>(
+    ctx: &mut C,
+    signer: &mut EvmSigner,
+    bytecode: &str,
+) -> H160 {
+    TestRuntime::migrate(ctx);
+
+    let test_contract = load_contract_bytecode(bytecode);
+
+    // Create contract.
+    let dispatch_result = signer.call(
+        ctx,
+        "evm.Create",
+        types::Create {
+            value: 0.into(),
+            init_code: test_contract,
+        },
+    );
+    let result = dispatch_result.result.unwrap();
+    let result: Vec<u8> = cbor::from_value(result).unwrap();
+    H160::from_slice(&result)
 }

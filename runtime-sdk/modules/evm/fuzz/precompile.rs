@@ -13,7 +13,7 @@ fn main() {
             let mut address = [0u8; 20];
             address[0] = data[0] % 2;
             address[18] = data[1] % 2;
-            address[19] = data[2] % 9;
+            address[19] = data[2] % 11;
             let data = &data[3..];
 
             call_contract(address.into(), data, 1_000_000);
