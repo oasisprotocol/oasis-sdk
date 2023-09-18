@@ -39,8 +39,9 @@ use oasis_runtime_sdk::{
     },
 };
 
-use types::{H160, H256, U256};
+use types::{FeatureMask, H160, H256, U256};
 
+#[cfg(any(test, feature = "test"))]
 pub mod mock;
 #[cfg(test)]
 mod test;
@@ -596,6 +597,7 @@ impl<Cfg: Config> Module<Cfg> {
         if !Cfg::CONFIDENTIAL {
             return Ok((call, callformat::Metadata::Empty));
         }
+
         if let Ok(types::SignedCallDataPack {
             data,
             leash,
@@ -615,13 +617,22 @@ impl<Cfg: Config> Module<Cfg> {
             ));
         }
 
+        // Determine the caller based on per-contract features.
+        let caller = if state::get_metadata(&call.address)
+            .has_features(FeatureMask::QUERIES_NO_CALLER_ZEROIZE)
+        {
+            call.caller
+        } else {
+            Default::default() // Zeroize caller.
+        };
+
         // The call is not signed, but it must be encoded as an oasis-sdk call.
         let tx_call_format = transaction::CallFormat::Plain; // Queries cannot be encrypted.
         let (data, tx_metadata) = Self::decode_call_data(ctx, call.data, tx_call_format, 0, true)?
             .expect("processing always proceeds");
         Ok((
             types::SimulateCallQuery {
-                caller: Default::default(), // The sender cannot be spoofed.
+                caller,
                 data,
                 ..call
             },
@@ -654,6 +665,7 @@ impl<Cfg: Config> Module<Cfg> {
 #[sdk_derive(Module)]
 impl<Cfg: Config> Module<Cfg> {
     const NAME: &'static str = MODULE_NAME;
+    const VERSION: u32 = 2;
     type Error = Error;
     type Event = Event;
     type Parameters = Parameters;
@@ -663,6 +675,11 @@ impl<Cfg: Config> Module<Cfg> {
     fn init(genesis: Genesis) {
         // Set genesis parameters.
         Self::set_params(genesis.parameters);
+    }
+
+    #[migration(from = 1)]
+    fn migrate_v1_to_v2() {
+        // No state migration is needed for v2.
     }
 
     #[handler(call = "evm.Create")]

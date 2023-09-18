@@ -27,7 +27,8 @@ use oasis_runtime_sdk::{
 
 use crate::{
     derive_caller,
-    mock::{decode_reverted, decode_reverted_raw, load_contract_bytecode, EvmSigner},
+    mock::{decode_reverted, decode_reverted_raw, load_contract_bytecode, EvmSigner, QueryOptions},
+    state,
     types::{self, H160},
     Config, Genesis, Module as EVMModule,
 };
@@ -790,6 +791,91 @@ fn test_evm_runtime() {
 fn test_c10l_evm_runtime() {
     crypto::signature::context::set_chain_context(Default::default(), "test");
     do_test_evm_runtime::<ConfidentialEVMConfig>();
+}
+
+#[test]
+fn test_c10l_queries() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(
+        context::Mode::ExecuteTx,
+        true,
+    );
+    let mut signer = EvmSigner::new(0, keys::dave::sigspec());
+
+    EVMRuntime::<ConfidentialEVMConfig>::migrate(&mut ctx);
+
+    static QUERY_CONTRACT_CODE_HEX: &str =
+        include_str!("../../../../tests/e2e/contracts/query/query.hex");
+
+    // Create contract.
+    let dispatch_result = signer.call(
+        &mut ctx,
+        "evm.Create",
+        types::Create {
+            value: 0.into(),
+            init_code: load_contract_bytecode(QUERY_CONTRACT_CODE_HEX),
+        },
+    );
+    let result = dispatch_result.result.unwrap();
+    let result: Vec<u8> = cbor::from_value(result).unwrap();
+    let contract_address = H160::from_slice(&result);
+
+    let mut ctx = mock
+        .create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(context::Mode::CheckTx, true);
+
+    // Call the `test` method on the contract via a query.
+    let result = signer
+        .query_evm(&mut ctx, contract_address, "test", &[], &[])
+        .expect("query should succeed");
+
+    let mut result =
+        ethabi::decode(&[ParamType::Address], &result).expect("output should be correct");
+
+    let test = result.pop().unwrap().into_address().unwrap();
+    assert_eq!(
+        test,
+        signer.address().into(),
+        "msg.signer should be correct (non-zeroized)"
+    );
+
+    // Test call with confidential envelope.
+    let result = signer
+        .query_evm_opts(
+            &mut ctx,
+            contract_address,
+            "test",
+            &[],
+            &[],
+            QueryOptions {
+                encrypt: true,
+                ..Default::default()
+            },
+        )
+        .expect("query should succeed");
+
+    let mut result =
+        ethabi::decode(&[ParamType::Address], &result).expect("output should be correct");
+
+    let test = result.pop().unwrap().into_address().unwrap();
+    assert_eq!(
+        test,
+        signer.address().into(),
+        "msg.signer should be correct (non-zeroized)"
+    );
+
+    // Reset the contract metadata to remove the QUERIES_NO_CALLER_ZEROIZE feature.
+    state::set_metadata(&contract_address, Default::default());
+
+    // Call the `test` method again on the contract via a query.
+    let result = signer
+        .query_evm(&mut ctx, contract_address, "test", &[], &[])
+        .expect("query should succeed");
+
+    let mut result =
+        ethabi::decode(&[ParamType::Address], &result).expect("output should be correct");
+
+    let test = result.pop().unwrap().into_address().unwrap();
+    assert_eq!(test, Default::default(), "msg.signer should be zeroized");
 }
 
 #[test]

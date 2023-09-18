@@ -14,7 +14,9 @@ use oasis_core_runtime::{
 use crate::{
     context::{BatchContext, Mode, RuntimeBatchContext},
     crypto::random::RootRng,
-    dispatcher, history,
+    dispatcher,
+    error::RuntimeError,
+    history,
     keymanager::KeyManager,
     module::MigrationHandler,
     modules,
@@ -212,6 +214,11 @@ impl Signer {
         Self { nonce, sigspec }
     }
 
+    /// Address specification for this signer.
+    pub fn sigspec(&self) -> &SignatureAddressSpec {
+        &self.sigspec
+    }
+
     /// Dispatch a call to the given method.
     pub fn call<C, B>(&mut self, ctx: &mut C, method: &str, body: B) -> dispatcher::DispatchResult
     where
@@ -258,5 +265,17 @@ impl Signer {
         self.nonce += 1;
 
         result
+    }
+
+    /// Dispatch a query to the given method.
+    pub fn query<C, A, R>(&self, ctx: &mut C, method: &str, args: A) -> Result<R, RuntimeError>
+    where
+        C: BatchContext,
+        A: cbor::Encode,
+        R: cbor::Decode,
+    {
+        let result =
+            dispatcher::Dispatcher::<C::Runtime>::dispatch_query(ctx, method, cbor::to_vec(args))?;
+        Ok(cbor::from_slice(&result).expect("result should decode correctly"))
     }
 }

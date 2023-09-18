@@ -3,7 +3,10 @@ use oasis_runtime_sdk::{
     storage::{ConfidentialStore, CurrentStore, HashedStore, PrefixStore, Store, TypedStore},
 };
 
-use crate::{types::H160, Config};
+use crate::{
+    types::{ContractMetadata, H160},
+    Config,
+};
 
 /// Prefix for Ethereum account code in our storage (maps H160 -> Vec<u8>).
 pub const CODES: &[u8] = &[0x01];
@@ -14,6 +17,8 @@ pub const STORAGES: &[u8] = &[0x02];
 pub const BLOCK_HASHES: &[u8] = &[0x03];
 /// Prefix for Ethereum account storage in our confidential storage (maps H160||H256 -> H256).
 pub const CONFIDENTIAL_STORAGES: &[u8] = &[0x04];
+/// Prefix for contract metadata (maps H160 -> ContractMetadata).
+pub const METADATA: &[u8] = &[0x05];
 
 /// Confidential store key pair ID domain separation context base.
 pub const CONFIDENTIAL_STORE_KEY_PAIR_ID_CONTEXT_BASE: &[u8] = b"oasis-runtime-sdk/evm: state";
@@ -117,4 +122,22 @@ pub fn codes<'a, S: Store + 'a>(state: S) -> TypedStore<impl Store + 'a> {
 pub fn block_hashes<'a, S: Store + 'a>(state: S) -> TypedStore<impl Store + 'a> {
     let store = PrefixStore::new(state, &crate::MODULE_NAME);
     TypedStore::new(PrefixStore::new(store, &BLOCK_HASHES))
+}
+
+/// Set contract metadata.
+pub fn set_metadata(address: &H160, metadata: ContractMetadata) {
+    CurrentStore::with(|store| {
+        let store = PrefixStore::new(store, &crate::MODULE_NAME);
+        let mut store = TypedStore::new(PrefixStore::new(store, &METADATA));
+        store.insert(address, metadata);
+    })
+}
+
+/// Get contract metadata.
+pub fn get_metadata(address: &H160) -> ContractMetadata {
+    CurrentStore::with(|store| {
+        let store = PrefixStore::new(store, &crate::MODULE_NAME);
+        let store = TypedStore::new(PrefixStore::new(store, &METADATA));
+        store.get(address).unwrap_or_default()
+    })
 }
