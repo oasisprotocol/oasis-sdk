@@ -89,18 +89,18 @@ rustc 1.65.0-nightly (c0941dfb5 2022-08-21)
 
 _Required if you want to use the Go Client SDK._
 
-At least version **1.20.2** is required. If your distribution provides a
+At least version **1.21.2** is required. If your distribution provides a
 new-enough version of Go, just use that.
 
 Otherwise:
 
 * install the Go version provided by your distribution,
 * [ensure `$GOPATH/bin` is in your `PATH`],
-* [install the desired version of Go], e.g. 1.20.2, with:
+* [install the desired version of Go], e.g. 1.21.2, with:
 
   ```
-  go get golang.org/dl/go1.20.2
-  go1.20.2 download
+  go get golang.org/dl/go1.21.2
+  go1.21.2 download
     ```
 
 <!-- markdownlint-disable line-length -->
@@ -115,16 +115,16 @@ The SDK requires utilities provided by [Oasis Core] in order to be able to run
 a local test network for development purposes.
 
 The recommended way is to download a pre-built release (at least version
-22.2) from the [Oasis Core releases] page. After downloading the binary
-release (e.g. into `~/Downloads/oasis_core_22.2_linux_amd64.tar.gz`), unpack
+23.0) from the [Oasis Core releases] page. After downloading the binary
+release (e.g. into `~/Downloads/oasis_core_23.0_linux_amd64.tar.gz`), unpack
 it as follows:
 
 ```bash
 cd ~/Downloads
-tar xf ~/Downloads/oasis_core_22.2_linux_amd64.tar.gz --strip-components=1
+tar xf ~/Downloads/oasis_core_23.0_linux_amd64.tar.gz --strip-components=1
 
 # This environment variable will be used throughout this guide.
-export OASIS_CORE_PATH=~/Downloads/oasis_core_22.2_linux_amd64
+export OASIS_CORE_PATH=~/Downloads/oasis_core_23.0_linux_amd64
 ```
 
 [Oasis Core]: https://github.com/oasisprotocol/oasis-core

@@ -1,7 +1,6 @@
-use std::{collections::BTreeMap, str::FromStr, sync::Arc};
+use std::{collections::BTreeMap, str::FromStr};
 
 use anyhow::anyhow;
-use io_context::Context as IoContext;
 
 use oasis_core_runtime::{
     common::versioned::Versioned,
@@ -1118,14 +1117,12 @@ impl history::HistoryHost for MockHistory {
     fn consensus_state_at(&self, height: u64) -> Result<ConsensusState, history::Error> {
         match height {
             HEIGHT_LATEST => {
-                let io_ctx = Arc::new(IoContext::background());
                 let mut mkvs = mkvs::Tree::builder()
                     .with_root_type(mkvs::RootType::State)
                     .build(Box::new(mkvs::sync::NoopReadSyncer));
 
                 BeaconMutableState::set_epoch_state(
                     &mut mkvs,
-                    IoContext::create_child(&io_ctx),
                     beacon::EpochTimeState {
                         epoch: 14,
                         height: 50,
@@ -1135,7 +1132,6 @@ impl history::HistoryHost for MockHistory {
 
                 BeaconMutableState::set_future_epoch_state(
                     &mut mkvs,
-                    IoContext::create_child(&io_ctx),
                     beacon::EpochTimeState {
                         epoch: 15,
                         height: 70,

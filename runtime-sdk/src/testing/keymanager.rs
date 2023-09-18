@@ -3,8 +3,7 @@
 use std::{collections::HashMap, sync::Mutex};
 
 pub use crate::keymanager::{
-    KeyManagerError, KeyPair, KeyPairId, PrivateKey, PublicKey, SignedPublicKey, StateKey,
-    TrustedPolicySigners,
+    KeyManagerError, KeyPair, KeyPairId, SignedPublicKey, StateKey, TrustedPolicySigners,
 };
 use crate::{core::consensus::beacon::EpochTime, keymanager::KeyManager};
 
@@ -48,10 +47,7 @@ impl KeyManager for MockKeyManagerClient {
             .clone())
     }
 
-    fn get_public_key(
-        &self,
-        _key_pair_id: KeyPairId,
-    ) -> Result<Option<SignedPublicKey>, KeyManagerError> {
+    fn get_public_key(&self, _key_pair_id: KeyPairId) -> Result<SignedPublicKey, KeyManagerError> {
         Err(KeyManagerError::NotInitialized)
     }
 
@@ -75,7 +71,7 @@ impl KeyManager for MockKeyManagerClient {
         &self,
         _key_pair_id: KeyPairId,
         _epoch: EpochTime,
-    ) -> Result<Option<SignedPublicKey>, KeyManagerError> {
+    ) -> Result<SignedPublicKey, KeyManagerError> {
         Err(KeyManagerError::NotInitialized)
     }
 

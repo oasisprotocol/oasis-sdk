@@ -16,12 +16,6 @@
 [codecov-link]: https://codecov.io/gh/oasisprotocol/oasis-sdk
 <!-- markdownlint-enable line-length -->
 
-## Note
-
-* **The SDK currently depends on v22.2.5 of [Oasis Core].**
-
-[Oasis Core]: https://github.com/oasisprotocol/oasis-core
-
 ## Directories
 
 * [`client-sdk`]: Client libraries for interacting with the Oasis consensus layer

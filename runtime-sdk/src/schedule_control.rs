@@ -26,10 +26,7 @@ pub trait ScheduleControlHost: Send + Sync {
 
 impl ScheduleControlHost for Protocol {
     fn fetch_tx_batch(&self, offset: Option<Hash>, limit: u32) -> Result<Option<TxnBatch>, Error> {
-        match self.call_host(
-            io_context::Context::background(),
-            Body::HostFetchTxBatchRequest { offset, limit },
-        ) {
+        match self.call_host(Body::HostFetchTxBatchRequest { offset, limit }) {
             Ok(Body::HostFetchTxBatchResponse { batch }) => Ok(batch),
             _ => Err(Error::FailedToFetchBatch),
         }

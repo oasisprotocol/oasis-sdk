@@ -20,7 +20,7 @@ static_resources:
               - match:
                   safe_regex:
                     google_re2: {}
-                    regex: '/oasis-core\.(Registry/(GetNodes)|Staking/(Account|DebondingDelegationInfosFor|DelegationInfosFor|DelegationsTo|GetEvents)|Consensus/(SubmitTx|EstimateGas|GetSignerNonce|GetBlock|GetTransactionsWithResults|GetGenesisDocument|GetChainContext|WatchBlocks)|NodeController/(WaitReady))'
+                    regex: '/oasis-core\.(Registry/(GetNodes)|Staking/(Account|DebondingDelegationInfosFor|DelegationInfosFor|DelegationsTo|GetEvents)|Consensus/(SubmitTx|EstimateGas|GetSignerNonce|GetBlock|GetTransactionsWithResults|GetGenesisDocument|GetChainContext|WatchBlocks)|NodeController/(WaitReady|WaitSync))'
                 route:
                   cluster: oasis_node_grpc
                   timeout: 0s

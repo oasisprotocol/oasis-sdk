@@ -29,7 +29,7 @@ func (s *signer) ContextSign(context signature.Context, message []byte) ([]byte,
 	return sig.MarshalBinary()
 }
 
-func (s *signer) Sign(message []byte) ([]byte, error) {
+func (s *signer) Sign(_ []byte) ([]byte, error) {
 	return nil, fmt.Errorf("sr25519: signing without context not implemented")
 }
 

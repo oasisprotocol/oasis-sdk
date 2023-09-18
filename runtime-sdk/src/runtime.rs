@@ -164,7 +164,7 @@ pub trait Runtime {
                     hi.runtime_id,
                     state.protocol.clone(),
                     state.consensus_verifier.clone(),
-                    state.rak.clone(),
+                    state.identity.clone(),
                     state.rpc_dispatcher,
                     4096,
                     signers,
@@ -189,6 +189,7 @@ pub trait Runtime {
             schedule_control: Some(FeatureScheduleControl {
                 initial_batch_size: Self::SCHEDULE_CONTROL.initial_batch_size,
             }),
+            ..Default::default()
         };
 
         // Start the runtime.

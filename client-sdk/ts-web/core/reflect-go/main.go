@@ -273,6 +273,7 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/genesis":                 "Genesis",
 	"github.com/oasisprotocol/oasis-core/go/governance":              "Governance",
 	"github.com/oasisprotocol/oasis-core/go/keymanager":              "KeyManager",
+	"github.com/oasisprotocol/oasis-core/go/p2p":                     "P2P",
 	"github.com/oasisprotocol/oasis-core/go/registry":                "Registry",
 	"github.com/oasisprotocol/oasis-core/go/roothash":                "RootHash",
 	"github.com/oasisprotocol/oasis-core/go/runtime/client":          "RuntimeClient",
@@ -562,13 +563,6 @@ var skipMethods = map[string]bool{
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Governance": true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.RootHash":   true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.State":      true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.LightClientBackend.State": true,
-	// methods in consensus ClientBackend that we need to emit from LightClientBackend instead
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.GetLightBlock":         true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.GetLightBlockForState": true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.GetParameters":         true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.SubmitTxNoWait":        true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.SubmitEvidence":        true,
 }
 var skipMethodsConsulted = map[string]bool{}
 
@@ -704,8 +698,7 @@ func main() {
 	visitClientWithPrefix(&internal, reflect.TypeOf((*workerStorage.StorageWorker)(nil)).Elem(), "StorageWorker")
 	visitClient(&internal, reflect.TypeOf((*runtimeClient.RuntimeClient)(nil)).Elem())
 	visitClient(&internal, reflect.TypeOf((*consensus.ClientBackend)(nil)).Elem())
-	visitClientWithPrefix(&internal, reflect.TypeOf((*consensus.LightClientBackend)(nil)).Elem(), "ConsensusLight")
-	visitClientWithPrefix(&internal, reflect.TypeOf((*syncer.ReadSyncer)(nil)).Elem(), "ConsensusLightState") // this doesn't work right
+	visitClientWithPrefix(&internal, reflect.TypeOf((*syncer.ReadSyncer)(nil)).Elem(), "ConsensusState") // this doesn't work right
 	visitClientWithPrefix(&internal, reflect.TypeOf((*control.NodeController)(nil)).Elem(), "NodeController")
 	visitClientWithPrefix(&internal, reflect.TypeOf((*control.DebugController)(nil)).Elem(), "DebugController")
 

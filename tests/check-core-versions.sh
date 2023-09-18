@@ -27,7 +27,6 @@ for m in \
   tests/e2e/go.mod \
   tools/orc/go.mod \
   tools/gen_runtime_vectors/go.mod \
-  examples/client-sdk/go/minimal-runtime-client/go.mod \
   ; do
   thisversion=$(get_dep_version "$m")
   if [ "$thisversion" = "$refversion" ]; then

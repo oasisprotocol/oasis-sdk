@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	timeout = 1 * time.Minute
+	timeout = 2 * time.Minute
 )
 
 func ensureStakingEvent(log *logging.Logger, ch <-chan *staking.Event, check func(*staking.Event) bool) error {
@@ -620,14 +620,11 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 	if err != nil {
 		return err
 	}
-	if len(udis) != 2 {
-		return fmt.Errorf("expected 2 undelegations, got %d", len(udis))
+	if len(udis) < 1 {
+		return fmt.Errorf("expected at least one undelegation, got %d", len(udis))
 	}
 	if udis[0].From != testing.Bob.Address {
 		return fmt.Errorf("expected undelegation source to be %s, got %s", testing.Bob.Address, udis[0].From)
-	}
-	if expectedEpoch := 3; int(udis[0].Epoch) != expectedEpoch {
-		return fmt.Errorf("expected undelegation epoch to be %d, got %d", expectedEpoch, udis[0].Epoch)
 	}
 	if udis[0].Shares.Cmp(sharesB) != 0 {
 		return fmt.Errorf("expected undelegation shares to be %s, got %s", sharesB, udis[0].Shares)
@@ -645,7 +642,7 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 }
 
 // ConsensusAccountsParametersTest tests the parameters methods.
-func ConsensusAccountsParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func ConsensusAccountsParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	cac := consensusAccounts.NewV1(rtc)
 

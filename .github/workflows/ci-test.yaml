@@ -94,7 +94,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20.x"
+          go-version: "1.21.x"
 
       - name: Unit tests with coverage
         working-directory: client-sdk/go
@@ -116,7 +116,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20.x"
+          go-version: "1.21.x"
 
       - name: Test build orc
         working-directory: tools/orc
@@ -250,6 +250,14 @@ jobs:
           name: e2e-ts-web-core-screenshots
           path: client-sdk/ts-web/core/cypress/screenshots
 
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-ts-web-core-logs
+          path: |
+            /tmp/oasis-net-runner-sdk-core/**/*.log
+
   e2e-ts-web-ext-utils:
     # NOTE: This name appears in GitHub's Checks API.
     name: e2e-ts-web-ext-utils
@@ -377,7 +385,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20.x"
+          go-version: "1.21.x"
 
       - name: Install Oasis dependencies
         run: |
@@ -392,6 +400,14 @@ jobs:
 
       - name: Run end-to-end tests
         run: ./tests/run-e2e.sh
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: e2e-rt-logs
+          path: |
+            /tmp/oasis-test-runner*/**/*.log
 
   jest-ts-web-core:
     name: jest-ts-web-core
@@ -448,7 +464,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20.x"
+          go-version: "1.21.x"
 
       - name: Generate
         working-directory: client-sdk/ts-web/core/reflect-go
@@ -479,7 +495,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.20.x"
+          go-version: "1.21.x"
 
       - name: Install Oasis dependencies
         run: |

@@ -10,18 +10,17 @@ import (
 	"sort"
 	"time"
 
-	"github.com/oasisprotocol/deoxysii"
 	"google.golang.org/grpc"
 
+	"github.com/oasisprotocol/curve25519-voi/primitives/x25519"
+	"github.com/oasisprotocol/deoxysii"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/drbg"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/mathrand"
-	mrae "github.com/oasisprotocol/oasis-core/go/common/crypto/mrae/api"
 	mraeDeoxysii "github.com/oasisprotocol/oasis-core/go/common/crypto/mrae/deoxysii"
 	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
-
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
@@ -331,7 +330,7 @@ func kvInsertSpecialGreeting(rtc client.RuntimeClient, signer signature.Signer, 
 }
 
 // SimpleKVTest does a simple key insert/fetch/remove test.
-func SimpleKVTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleKVTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("test_key")
@@ -381,7 +380,7 @@ func SimpleKVTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCon
 }
 
 // ConfidentialTest tests functions that require a key manager.
-func ConfidentialTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func ConfidentialTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	signer := testing.Alice.Signer
 
@@ -458,7 +457,7 @@ func ConfidentialTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 		}
 
 		// Generate ephemeral X25519 key pair.
-		pk, sk, kerr := mrae.GenerateKeyPair(rand.Reader)
+		pk, sk, kerr := x25519.GenerateKey(rand.Reader)
 		if kerr != nil {
 			return nil, fmt.Errorf("failed to generate ephemeral X25519 key pair: %w", kerr)
 		}
@@ -535,7 +534,7 @@ func ConfidentialTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clien
 }
 
 // TransactionsQueryTest tests SubmitTx*Meta and GetTransactionsWithResults functions.
-func TransactionsQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func TransactionsQueryTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	signer := testing.Alice.Signer
 
@@ -591,7 +590,7 @@ func TransactionsQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.
 }
 
 // BlockQueryTest tests block queries.
-func BlockQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func BlockQueryTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 
 	genBlk, err := rtc.GetGenesisBlock(ctx)
@@ -612,7 +611,7 @@ func BlockQueryTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 }
 
 // KVEventTest tests key insert/remove events.
-func KVEventTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVEventTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("event_test_key")
@@ -744,7 +743,7 @@ WaitRemoveLoop:
 }
 
 // KVBalanceTest checks test accounts' default balances.
-func KVBalanceTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVBalanceTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
@@ -804,7 +803,7 @@ func KVBalanceTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 }
 
 // KVTransferTest does a transfer test and verifies balances.
-func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVTransferTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	core := core.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
@@ -921,7 +920,7 @@ func KVTransferTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 }
 
 // KVTransferFailTest does a failing transfer test.
-func KVTransferFailTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVTransferFailTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	core := core.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
@@ -965,7 +964,7 @@ func KVTransferFailTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Cli
 }
 
 // KVDaveTest does a tx signing test using the secp256k1 signer.
-func KVDaveTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVDaveTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
@@ -1012,7 +1011,7 @@ func KVDaveTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn,
 	return nil
 }
 
-func KVMultisigTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVMultisigTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signerA := testing.Alice.Signer
 	signerB := testing.Bob.Signer
 	config := types.MultisigConfig{
@@ -1074,7 +1073,7 @@ func KVMultisigTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	return nil
 }
 
-func KVRewardsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVRewardsTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	rw := rewards.NewV1(rtc)
 
@@ -1098,7 +1097,7 @@ func KVRewardsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientCo
 }
 
 // KVTxGenTest generates random transactions.
-func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
@@ -1249,7 +1248,7 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn
 }
 
 // ParametersTest tests parameters methods.
-func ParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func ParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 	core := core.NewV1(rtc)
@@ -1278,7 +1277,7 @@ func ParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientC
 	return nil
 }
 
-func IntrospectionTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func IntrospectionTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 
 	log.Info("fetching runtime info")
@@ -1319,7 +1318,7 @@ func IntrospectionTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.Clie
 }
 
 // TransactionCheckTest checks that nonce/fee are correctly taken into account during tx checks.
-func TransactionCheckTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func TransactionCheckTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 

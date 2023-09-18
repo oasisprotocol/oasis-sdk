@@ -20,7 +20,7 @@ func (w *wrappedSigner) ContextSign(context signature.Context, message []byte) (
 	return w.signer.ContextSign(coreSignature.Context(context.Derive()), message)
 }
 
-func (w *wrappedSigner) Sign(message []byte) ([]byte, error) {
+func (w *wrappedSigner) Sign(_ []byte) ([]byte, error) {
 	return nil, fmt.Errorf("ed25519: signing without context not implemented")
 }
 

@@ -64,7 +64,7 @@ func (bu BaseUnits) String() string {
 }
 
 // PrettyPrint writes a pretty-printed representation of the base units to the given writer.
-func (bu *BaseUnits) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+func (bu *BaseUnits) PrettyPrint(ctx context.Context, _ string, w io.Writer) {
 	pt, ok := ctx.Value(config.ContextKeyParaTimeCfg).(*config.ParaTime)
 	if !ok {
 		fmt.Fprintf(w, "<error: ParaTime information not available>")
