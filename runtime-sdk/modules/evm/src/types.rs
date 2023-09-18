@@ -102,46 +102,6 @@ pub struct Leash {
     pub block_range: u64,
 }
 
-/// Features affecting a contract's behavior.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
-#[cbor(transparent)]
-pub struct FeatureMask(pub u32);
-
-impl FeatureMask {
-    /// Caller should never be zeroized in queries.
-    pub const QUERIES_NO_CALLER_ZEROIZE: FeatureMask = FeatureMask(1 << 0);
-}
-
-impl std::ops::BitOr for FeatureMask {
-    type Output = Self;
-
-    fn bitor(self, rhs: Self) -> Self::Output {
-        Self(self.0 | rhs.0)
-    }
-}
-
-impl std::ops::BitAnd for FeatureMask {
-    type Output = Self;
-
-    fn bitand(self, rhs: Self) -> Self::Output {
-        Self(self.0 & rhs.0)
-    }
-}
-
-/// Contract metadata.
-#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-pub struct ContractMetadata {
-    /// Features supported by the contract.
-    pub features: FeatureMask,
-}
-
-impl ContractMetadata {
-    /// Check whether the contract has the specified features.
-    pub fn has_features(&self, mask: FeatureMask) -> bool {
-        self.features & mask == mask
-    }
-}
-
 // The rest of the file contains wrappers for primitive_types::{H160, H256, U256},
 // so that we can implement cbor::{Encode, Decode} for them, ugh.
 // Remove this once oasis-cbor#8 is implemented.
@@ -259,24 +219,3 @@ mod eth {
     impl_upstream_conversions!(H160, H256, U256);
 }
 pub use eth::{H160, H256, U256};
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_contract_metadata() {
-        let meta = ContractMetadata::default();
-        assert!(!meta.has_features(FeatureMask::QUERIES_NO_CALLER_ZEROIZE));
-
-        let meta = ContractMetadata {
-            features: FeatureMask::QUERIES_NO_CALLER_ZEROIZE,
-        };
-        assert!(meta.has_features(FeatureMask::QUERIES_NO_CALLER_ZEROIZE));
-
-        let meta = ContractMetadata {
-            features: FeatureMask(0xff),
-        };
-        assert!(meta.has_features(FeatureMask::QUERIES_NO_CALLER_ZEROIZE));
-    }
-}

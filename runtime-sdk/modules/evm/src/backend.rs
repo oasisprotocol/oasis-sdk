@@ -550,15 +550,6 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> StackState<'config>
             let mut store = state::codes(store);
             store.insert(address, code);
         });
-
-        // Set metadata for newly created contracts.
-        state::set_metadata(
-            &address.into(),
-            types::ContractMetadata {
-                // For all new contracts we don't zeroize the caller in queries.
-                features: types::FeatureMask::QUERIES_NO_CALLER_ZEROIZE,
-            },
-        );
     }
 
     fn transfer(&mut self, transfer: Transfer) -> Result<(), ExitError> {

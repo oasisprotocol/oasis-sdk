@@ -832,11 +832,7 @@ fn test_c10l_queries() {
         ethabi::decode(&[ParamType::Address], &result).expect("output should be correct");
 
     let test = result.pop().unwrap().into_address().unwrap();
-    assert_eq!(
-        test,
-        signer.address().into(),
-        "msg.signer should be correct (non-zeroized)"
-    );
+    assert_eq!(test, Default::default(), "msg.signer should be zeroized");
 
     // Test call with confidential envelope.
     let result = signer
@@ -851,24 +847,6 @@ fn test_c10l_queries() {
                 ..Default::default()
             },
         )
-        .expect("query should succeed");
-
-    let mut result =
-        ethabi::decode(&[ParamType::Address], &result).expect("output should be correct");
-
-    let test = result.pop().unwrap().into_address().unwrap();
-    assert_eq!(
-        test,
-        signer.address().into(),
-        "msg.signer should be correct (non-zeroized)"
-    );
-
-    // Reset the contract metadata to remove the QUERIES_NO_CALLER_ZEROIZE feature.
-    state::set_metadata(&contract_address, Default::default());
-
-    // Call the `test` method again on the contract via a query.
-    let result = signer
-        .query_evm(&mut ctx, contract_address, "test", &[], &[])
         .expect("query should succeed");
 
     let mut result =
