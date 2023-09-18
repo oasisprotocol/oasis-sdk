@@ -30,7 +30,7 @@ rand_core = { version = "0.6.4", default-features = false }
 # Ethereum.
 ethabi = { version = "18.0.0", default-features = false, features = ["std"] }
 ethereum = "0.14"
-evm = "0.39.1"
+evm = { git = "https://github.com/oasisprotocol/evm", tag = "v0.39.1-oasis" }
 fixed-hash = "0.8.0"
 primitive-types = { version = "0.12", default-features = false, features = ["rlp", "num-traits"] }
 rlp = "0.5.2"
@@ -47,7 +47,7 @@ oasis-runtime-sdk = { path = "../..", features = ["test"] }
 rand = "0.7.3"
 serde = { version = "1.0.144", features = ["derive"] }
 serde_json = { version = "1.0.87", features = ["raw_value"] }
-ethabi = { version = "18.0.0", default-features = false, features = ["std", "full-serde"]}
+ethabi = { version = "18.0.0", default-features = false, features = ["std", "full-serde"] }
 
 [features]
 default = []
@@ -60,6 +60,7 @@ harness = false
 [[bin]]
 name = "fuzz-precompile"
 path = "fuzz/precompile.rs"
+required-features = ["test"]
 
 [[bin]]
 name = "fuzz-precompile-corpus"

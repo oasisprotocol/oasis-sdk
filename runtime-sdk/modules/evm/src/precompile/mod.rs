@@ -13,10 +13,12 @@ use primitive_types::H160;
 use crate::{backend::EVMBackendExt, Config};
 
 mod confidential;
+mod gas;
 mod sha512;
 mod standard;
 mod subcall;
 
+#[cfg(any(test, feature = "test"))]
 pub mod testing;
 
 // Some types matching evm::executor::stack.
@@ -125,6 +127,8 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             (1, 0, 6) => confidential::call_sign(handle),
             (1, 0, 7) => confidential::call_verify(handle),
             (1, 0, 8) => confidential::call_curve25519_compute_public(handle),
+            (1, 0, 9) => gas::call_gas_used(handle),
+            (1, 0, 10) => gas::call_pad_gas(handle),
             // Oasis-specific, general.
             (1, 1, 1) => sha512::call_sha512_256(handle),
             (1, 1, 2) => sha512::call_sha512(handle),
@@ -143,7 +147,7 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
                 // Ethereum-compatible.
                 (0, 0, 1..=8, _) |
                 // Oasis-specific, confidential.
-                (1, 0, 1..=8, true) |
+                (1, 0, 1..=10, true) |
                 // Oasis-specific, general.
                 (1, 1, 1..=3, _)
             )

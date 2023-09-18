@@ -117,14 +117,12 @@ pub(super) fn call_subcall<B: EVMBackendExt>(
 
 #[cfg(test)]
 mod test {
-    use std::collections::BTreeMap;
-
     use ethabi::{ParamType, Token};
 
     use oasis_runtime_sdk::{
         context,
         module::{self, Module as _},
-        modules::{accounts, core},
+        modules::accounts,
         testing::{
             keys,
             mock::{CallOptions, Mock},
@@ -134,67 +132,14 @@ mod test {
             token::{self, BaseUnits, Denomination},
             transaction::Fee,
         },
-        BatchContext, Runtime, Version,
     };
 
-    use crate as evm;
     use crate::{
-        mock::{decode_reverted, load_contract_bytecode, EvmSigner},
-        types::{self, H160},
+        self as evm,
+        mock::{decode_reverted, EvmSigner},
+        precompile::testing::{init_and_deploy_contract, TestConfig, TestRuntime},
         Config as _,
     };
-
-    struct TestConfig;
-
-    type Core = core::Module<TestConfig>;
-    type Accounts = accounts::Module;
-    type Evm = evm::Module<TestConfig>;
-
-    impl core::Config for TestConfig {}
-
-    impl evm::Config for TestConfig {
-        type Accounts = Accounts;
-
-        type AdditionalPrecompileSet = ();
-
-        const CHAIN_ID: u64 = 0x42;
-
-        const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
-    }
-
-    struct TestRuntime;
-
-    impl Runtime for TestRuntime {
-        const VERSION: Version = Version::new(0, 0, 0);
-        type Core = Core;
-        type Modules = (Core, Accounts, Evm);
-
-        fn genesis_state() -> <Self::Modules as module::MigrationHandler>::Genesis {
-            (
-                core::Genesis {
-                    parameters: core::Parameters {
-                        max_batch_gas: u64::MAX,
-                        max_tx_size: 32 * 1024,
-                        max_tx_signers: 1,
-                        max_multisig_signers: 8,
-                        gas_costs: Default::default(),
-                        min_gas_price: BTreeMap::from([(token::Denomination::NATIVE, 0)]),
-                    },
-                },
-                accounts::Genesis {
-                    balances: BTreeMap::from([(
-                        keys::dave::address(),
-                        BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
-                    )]),
-                    total_supplies: BTreeMap::from([(Denomination::NATIVE, 1_000_000)]),
-                    ..Default::default()
-                },
-                evm::Genesis {
-                    ..Default::default()
-                },
-            )
-        }
-    }
 
     /// Test contract code.
     static TEST_CONTRACT_CODE_HEX: &str =
@@ -203,27 +148,6 @@ mod test {
     static TEST_CONTRACT_ABI_JSON: &str =
         include_str!("../../../../../tests/e2e/contracts/subcall/evm_subcall.abi");
 
-    fn init_and_deploy_contract<C: BatchContext>(ctx: &mut C, signer: &mut EvmSigner) -> H160 {
-        TestRuntime::migrate(ctx);
-
-        let test_contract = load_contract_bytecode(TEST_CONTRACT_CODE_HEX);
-
-        // Create contract.
-        let dispatch_result = signer.call(
-            ctx,
-            "evm.Create",
-            types::Create {
-                value: 0.into(),
-                init_code: test_contract,
-            },
-        );
-        let result = dispatch_result.result.unwrap();
-        let result: Vec<u8> = cbor::from_value(result).unwrap();
-        let contract_address = H160::from_slice(&result);
-
-        contract_address
-    }
-
     #[test]
     fn test_subcall_dispatch() {
         let mut mock = Mock::default();
@@ -231,12 +155,13 @@ mod test {
         let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
         // Create contract.
-        let contract_address = init_and_deploy_contract(&mut ctx, &mut signer);
+        let contract_address =
+            init_and_deploy_contract(&mut ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
         // Call into the test contract.
         let dispatch_result = signer.call_evm(
             &mut ctx,
-            contract_address,
+            contract_address.into(),
             "test",
             &[
                 ParamType::Bytes, // method
@@ -272,7 +197,7 @@ mod test {
         // Call into test contract again.
         let dispatch_result = signer.call_evm_opts(
             &mut ctx,
-            contract_address,
+            contract_address.into(),
             "test",
             &[
                 ParamType::Bytes, // method
@@ -337,12 +262,13 @@ mod test {
         let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
         // Create contract.
-        let contract_address = init_and_deploy_contract(&mut ctx, &mut signer);
+        let contract_address =
+            init_and_deploy_contract(&mut ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
         // Call into the test contract.
         let dispatch_result = signer.call_evm(
             &mut ctx,
-            contract_address,
+            contract_address.into(),
             "test_delegatecall",
             &[
                 ParamType::Bytes, // method
@@ -377,12 +303,13 @@ mod test {
         let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
         // Create contract.
-        let contract_address = init_and_deploy_contract(&mut ctx, &mut signer);
+        let contract_address =
+            init_and_deploy_contract(&mut ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
         // Call into the test contract.
         let dispatch_result = signer.call_evm(
             &mut ctx,
-            contract_address,
+            contract_address.into(),
             "test",
             &[
                 ParamType::Bytes, // method
@@ -391,7 +318,7 @@ mod test {
             &[
                 Token::Bytes("evm.Call".into()),
                 Token::Bytes(cbor::to_vec(evm::types::Call {
-                    address: contract_address,
+                    address: contract_address.into(),
                     value: 0.into(),
                     data: [
                         ethabi::short_signature("test", &[ParamType::Bytes, ParamType::Bytes])
@@ -429,10 +356,11 @@ mod test {
         let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
         // Create contract.
-        let contract_address = init_and_deploy_contract(&mut ctx, &mut signer);
+        let contract_address =
+            init_and_deploy_contract(&mut ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
         // Make transfers more expensive so we can test an out-of-gas condition.
-        Accounts::set_params(accounts::Parameters {
+        accounts::Module::set_params(accounts::Parameters {
             gas_costs: accounts::GasCosts {
                 tx_transfer: 100_000,
             },
@@ -442,7 +370,7 @@ mod test {
         // First try a call with enough gas.
         let dispatch_result = signer.call_evm_opts(
             &mut ctx,
-            contract_address,
+            contract_address.into(),
             "test",
             &[
                 ParamType::Bytes, // method
@@ -471,7 +399,7 @@ mod test {
         // can still continue (e.g. to trigger the revert).
         let dispatch_result = signer.call_evm_opts(
             &mut ctx,
-            contract_address,
+            contract_address.into(),
             "test",
             &[
                 ParamType::Bytes, // method
@@ -522,7 +450,7 @@ mod test {
         // execution would fail.
         let dispatch_result = signer.call_evm_opts(
             &mut ctx,
-            contract_address,
+            contract_address.into(),
             "test_spin", // Version that spins, wasting gas, after the subcall.
             &[
                 ParamType::Bytes, // method
