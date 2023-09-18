@@ -1,6 +1,7 @@
 //! Historic state access.
 use oasis_core_runtime::{
     consensus::{state::ConsensusState, verifier::Verifier, Event},
+    future::block_on,
     types::EventKind,
 };
 
@@ -40,11 +41,10 @@ impl HistoryHost for Box<dyn HistoryHost> {
 
 impl<V: Verifier> HistoryHost for V {
     fn consensus_state_at(&self, height: u64) -> Result<ConsensusState, Error> {
-        self.state_at(height).map_err(|_| Error::FailedToFetchBlock)
+        block_on(self.state_at(height)).map_err(|_| Error::FailedToFetchBlock)
     }
 
     fn consensus_events_at(&self, height: u64, kind: EventKind) -> Result<Vec<Event>, Error> {
-        self.events_at(height, kind)
-            .map_err(|_| Error::FailedToFetchEvents)
+        block_on(self.events_at(height, kind)).map_err(|_| Error::FailedToFetchEvents)
     }
 }

@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 	"golang.org/x/crypto/sha3"
 
+	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"

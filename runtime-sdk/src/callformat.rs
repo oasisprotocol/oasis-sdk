@@ -8,7 +8,7 @@ use rand_core::{OsRng, RngCore};
 
 use crate::{
     context::Context,
-    core::common::crypto::mrae::deoxysii,
+    core::common::crypto::{mrae::deoxysii, x25519},
     crypto::signature::context::get_chain_context_for,
     keymanager, module,
     modules::core::Error,
@@ -29,9 +29,9 @@ pub enum Metadata {
     Empty,
     EncryptedX25519DeoxysII {
         /// Caller's ephemeral public key used for X25519.
-        pk: [u8; 32],
+        pk: x25519::PublicKey,
         /// Secret key.
-        sk: keymanager::PrivateKey,
+        sk: x25519::PrivateKey,
         /// Transaction index within the batch.
         index: usize,
     },
@@ -124,7 +124,7 @@ pub fn decode_call_ex<C: Context>(
                 let keypair = key_manager
                     .get_or_create_ephemeral_keys(get_key_pair_id(epoch), epoch)
                     .map_err(|err| match err {
-                        keymanager::KeyManagerError::InvalidEpoch => {
+                        keymanager::KeyManagerError::InvalidEpoch(..) => {
                             Error::InvalidCallFormat(anyhow!("invalid epoch"))
                         }
                         _ => Error::Abort(err.into()),
@@ -135,7 +135,7 @@ pub fn decode_call_ex<C: Context>(
                     &envelope.nonce,
                     envelope.data.clone(),
                     vec![],
-                    &envelope.pk,
+                    &envelope.pk.0,
                     &sk.0,
                 )
                 .map(|data| (data, sk))
@@ -176,7 +176,7 @@ pub fn decode_call_ex<C: Context>(
 pub fn encode_call<C: Context>(
     ctx: &C,
     mut call: Call,
-    client_keypair: &([u8; 32], [u8; 32]),
+    client_keypair: &(x25519_dalek::PublicKey, x25519_dalek::StaticSecret),
 ) -> Result<Call, Error> {
     match call.format {
         // In case of the plain-text data format, we simply pass on the call unchanged.
@@ -198,7 +198,7 @@ pub fn encode_call<C: Context>(
                 format: call.format,
                 method: std::mem::take(&mut call.method),
                 body: cbor::to_value(types::callformat::CallEnvelopeX25519DeoxysII {
-                    pk: client_keypair.0,
+                    pk: client_keypair.0.into(),
                     nonce,
                     epoch,
                     data: deoxysii::box_seal(
@@ -262,8 +262,8 @@ pub fn encode_result_ex<C: Context>(
 pub fn encrypt_result_x25519_deoxysii<C: Context>(
     ctx: &C,
     result: types::transaction::CallResult,
-    pk: [u8; 32],
-    sk: oasis_core_keymanager::crypto::PrivateKey,
+    pk: x25519::PublicKey,
+    sk: x25519::PrivateKey,
     index: usize,
 ) -> cbor::Value {
     // Generate nonce for the output as Round (8 bytes) || Index (4 bytes) || 00 00 00.
@@ -281,7 +281,7 @@ pub fn encrypt_result_x25519_deoxysii<C: Context>(
     }
     let nonce = nonce.try_into().unwrap();
     let result = cbor::to_vec(result);
-    let data = deoxysii::box_seal(&nonce, result, vec![], &pk, &sk.0).unwrap();
+    let data = deoxysii::box_seal(&nonce, result, vec![], &pk.0, &sk.0).unwrap();
 
     // Return an envelope.
     cbor::to_value(types::callformat::ResultEnvelopeX25519DeoxysII { nonce, data })
@@ -292,7 +292,7 @@ pub fn decode_result<C: Context>(
     ctx: &C,
     format: CallFormat,
     result: CallResult,
-    client_keypair: &([u8; 32], [u8; 32]),
+    client_keypair: &(x25519_dalek::PublicKey, x25519_dalek::StaticSecret),
 ) -> Result<module::CallResult, Error> {
     if matches!(format, CallFormat::Plain) {
         return Ok(result.into_call_result().expect("CallResult was Unknown"));

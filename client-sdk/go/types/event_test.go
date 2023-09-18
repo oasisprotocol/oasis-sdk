@@ -4,8 +4,9 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/stretchr/testify/require"
+
+	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 )
 
 func TestEventUnmarshal(t *testing.T) {
@@ -34,7 +35,7 @@ func TestEventUnmarshal(t *testing.T) {
 		require.NoError(err)
 
 		var ev Event
-		err = ev.UnmarshalRaw(key, value, &tc.txhash)
+		err = ev.UnmarshalRaw(key, value, &tc.txhash) //nolint: gosec
 		switch tc.ok {
 		case false:
 			require.Error(err, tc.msg)

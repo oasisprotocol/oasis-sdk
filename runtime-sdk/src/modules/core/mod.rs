@@ -758,12 +758,11 @@ impl<Cfg: Config> Module<Cfg> {
         let public_key = key_manager
             .get_public_ephemeral_key(callformat::get_key_pair_id(epoch), epoch)
             .map_err(|err| match err {
-                keymanager::KeyManagerError::InvalidEpoch => {
+                keymanager::KeyManagerError::InvalidEpoch(..) => {
                     Error::InvalidCallFormat(anyhow!("invalid epoch"))
                 }
                 _ => Error::Abort(err.into()),
-            })?
-            .ok_or_else(|| Error::InvalidArgument(anyhow!("key not available")))?;
+            })?;
 
         Ok(types::CallDataPublicKeyQueryResponse { public_key, epoch })
     }

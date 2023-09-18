@@ -94,7 +94,7 @@ impl CurrentStore {
                         .with_root_type(mkvs::RootType::State)
                         .build(Box::new(mkvs::sync::NoopReadSyncer)),
                 );
-                let root = MKVSStore::new(io_context::Context::background().into(), root);
+                let root = MKVSStore::new(root);
 
                 RefCell::new(root)
             };
@@ -272,8 +272,6 @@ impl CurrentStore {
 mod test {
     use oasis_core_runtime::storage::mkvs;
 
-    use io_context::Context as IoContext;
-
     use super::{CurrentStore, TransactionResult};
     use crate::storage::{MKVSStore, Store};
 
@@ -319,7 +317,7 @@ mod test {
                 .with_root_type(mkvs::RootType::State)
                 .build(Box::new(mkvs::sync::NoopReadSyncer)),
         );
-        let mut unrelated = MKVSStore::new(IoContext::background().into(), unrelated);
+        let mut unrelated = MKVSStore::new(unrelated);
 
         CurrentStore::enter(&mut unrelated, || {
             CurrentStore::start_transaction();
@@ -345,7 +343,7 @@ mod test {
                 .with_root_type(mkvs::RootType::State)
                 .build(Box::new(mkvs::sync::NoopReadSyncer)),
         );
-        let mut root = MKVSStore::new(IoContext::background().into(), root);
+        let mut root = MKVSStore::new(root);
 
         CurrentStore::enter(&mut root, || {
             test_store_basic();
@@ -375,7 +373,7 @@ mod test {
                 .with_root_type(mkvs::RootType::State)
                 .build(Box::new(mkvs::sync::NoopReadSyncer)),
         );
-        let mut root = MKVSStore::new(IoContext::background().into(), root);
+        let mut root = MKVSStore::new(root);
 
         CurrentStore::enter(&mut root, || {
             CurrentStore::with(|store| {
@@ -456,7 +454,7 @@ mod test {
                     .with_root_type(mkvs::RootType::State)
                     .build(Box::new(mkvs::sync::NoopReadSyncer)),
             );
-            let mut unrelated = MKVSStore::new(IoContext::background().into(), unrelated);
+            let mut unrelated = MKVSStore::new(unrelated);
 
             CurrentStore::enter(&mut unrelated, || {
                 // Should panic.
@@ -472,7 +470,7 @@ mod test {
                 .with_root_type(mkvs::RootType::State)
                 .build(Box::new(mkvs::sync::NoopReadSyncer)),
         );
-        let mut root = MKVSStore::new(IoContext::background().into(), root);
+        let mut root = MKVSStore::new(root);
 
         CurrentStore::enter(&mut root, || {
             CurrentStore::with(|_| {
@@ -489,7 +487,7 @@ mod test {
                 .with_root_type(mkvs::RootType::State)
                 .build(Box::new(mkvs::sync::NoopReadSyncer)),
         );
-        let mut root = MKVSStore::new(IoContext::background().into(), root);
+        let mut root = MKVSStore::new(root);
 
         CurrentStore::enter(&mut root, || {
             CurrentStore::init_local_fallback(); // Should panic.

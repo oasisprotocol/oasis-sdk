@@ -63,14 +63,13 @@ impl RootRng {
             &[ctx.mode() as u8],
             round_header_hash.as_ref(),
         ]);
-        // Use previous epoch's ephemeral key to ensure it is available.
         let km_kp = km
-            .get_or_create_ephemeral_keys(key_id, ctx.epoch().saturating_sub(1))
+            .get_or_create_ephemeral_keys(key_id, ctx.epoch())
             .map_err(|err| Error::Abort(dispatcher::Error::KeyManagerFailure(err)))?
             .input_keypair;
         // The KM returns an ed25519 key, but it needs to be in "expanded" form to use with
         // schnorrkel. Please refer to [`schnorrkel::keys::MiniSecretKey`] for further details.
-        let kp = MiniSecretKey::from_bytes(&km_kp.sk.0)
+        let kp = MiniSecretKey::from_bytes(km_kp.sk.0.as_ref())
             .map_err(|err| {
                 Error::Abort(dispatcher::Error::KeyManagerFailure(
                     KeyManagerError::Other(anyhow::anyhow!("{}", err)),

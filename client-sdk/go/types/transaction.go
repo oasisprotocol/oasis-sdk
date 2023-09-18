@@ -164,7 +164,7 @@ func (ts *TransactionSigner) allocateProofs() {
 // The signer must be specified in the AuthInfo.
 func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.Signer) error {
 	pk := signer.Public()
-	any := false
+	isAny := false
 	for i, si := range ts.tx.AuthInfo.SignerInfo {
 		switch {
 		case si.AddressSpec.Signature != nil:
@@ -172,7 +172,7 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 				continue
 			}
 
-			any = true
+			isAny = true
 			ts.allocateProofs()
 			sig, err := signer.ContextSign(ctx, ts.ut.Body)
 			if err != nil {
@@ -185,7 +185,7 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 					continue
 				}
 
-				any = true
+				isAny = true
 				ts.allocateProofs()
 				sig, err := signer.ContextSign(ctx, ts.ut.Body)
 				if err != nil {
@@ -197,7 +197,7 @@ func (ts *TransactionSigner) AppendSign(ctx signature.Context, signer signature.
 			return fmt.Errorf("signer info %d: malformed AddressSpec", i)
 		}
 	}
-	if !any {
+	if !isAny {
 		return fmt.Errorf("transaction: signer not found in AuthInfo")
 	}
 	return nil

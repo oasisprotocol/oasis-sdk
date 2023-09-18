@@ -5,10 +5,8 @@ use std::{
     fmt,
     marker::PhantomData,
     ops::{Deref, DerefMut},
-    sync::Arc,
 };
 
-use io_context::Context as IoContext;
 use slog::{self, o};
 
 use oasis_core_runtime::{
@@ -257,9 +255,6 @@ pub trait Context {
     /// Emits event tags.
     fn emit_etags(&mut self, etags: EventTags);
 
-    /// Returns a child io_ctx.
-    fn io_ctx(&self) -> IoContext;
-
     /// Return any emitted tags and runtime messages. It consumes the transaction context.
     ///
     /// # Storage
@@ -368,10 +363,6 @@ impl<'a, 'b, C: Context> Context for std::cell::RefMut<'a, &'b mut C> {
 
     fn emit_etags(&mut self, etags: EventTags) {
         self.deref_mut().emit_etags(etags);
-    }
-
-    fn io_ctx(&self) -> IoContext {
-        self.deref().io_ctx()
     }
 
     fn commit(self) -> State {
@@ -563,7 +554,6 @@ pub struct RuntimeBatchContext<'a, R: runtime::Runtime> {
     consensus_state: &'a consensus::state::ConsensusState,
     history: &'a dyn history::HistoryHost,
     epoch: consensus::beacon::EpochTime,
-    io_ctx: Arc<IoContext>,
     logger: slog::Logger,
 
     /// Whether this context is part of an existing transaction (e.g. a subcall).
@@ -600,7 +590,6 @@ impl<'a, R: runtime::Runtime> RuntimeBatchContext<'a, R> {
         history: &'a dyn history::HistoryHost,
         epoch: consensus::beacon::EpochTime,
         rng: &'a RootRng,
-        io_ctx: Arc<IoContext>,
         max_messages: u32,
     ) -> Self {
         Self {
@@ -611,7 +600,6 @@ impl<'a, R: runtime::Runtime> RuntimeBatchContext<'a, R> {
             consensus_state,
             history,
             epoch,
-            io_ctx,
             key_manager,
             logger: get_logger("runtime-sdk")
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
@@ -654,7 +642,6 @@ impl<'a, R: runtime::Runtime> RuntimeBatchContext<'a, R> {
             consensus_state: self.consensus_state,
             history: self.history,
             epoch: self.epoch,
-            io_ctx: self.io_ctx.clone(),
             logger: self.logger.clone(),
             internal: self.internal,
             block_etags: EventTags::new(),
@@ -725,10 +712,6 @@ impl<'a, R: runtime::Runtime> Context for RuntimeBatchContext<'a, R> {
         }
     }
 
-    fn io_ctx(&self) -> IoContext {
-        IoContext::create_child(&self.io_ctx)
-    }
-
     fn commit(self) -> State {
         State {
             events: self.block_etags,
@@ -773,7 +756,6 @@ impl<'a, R: runtime::Runtime> Context for RuntimeBatchContext<'a, R> {
             consensus_state: self.consensus_state,
             history: self.history,
             epoch: self.epoch,
-            io_ctx: self.io_ctx.clone(),
             logger: self
                 .logger
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),
@@ -813,7 +795,6 @@ impl<'a, R: runtime::Runtime> BatchContext for RuntimeBatchContext<'a, R> {
             consensus_state: self.consensus_state,
             history: self.history,
             epoch: self.epoch,
-            io_ctx: self.io_ctx.clone(),
             logger: self
                 .logger
                 .new(o!("ctx" => "transaction", "mode" => Into::<&'static str>::into(&self.mode))),
@@ -861,7 +842,6 @@ pub struct RuntimeTxContext<'round, 'store, R: runtime::Runtime> {
     history: &'round dyn history::HistoryHost,
     epoch: consensus::beacon::EpochTime,
     // TODO: linked consensus layer block
-    io_ctx: Arc<IoContext>,
     logger: slog::Logger,
 
     /// The index of the transaction in the block.
@@ -957,10 +937,6 @@ impl<'round, 'store, R: runtime::Runtime> Context for RuntimeTxContext<'round, '
         }
     }
 
-    fn io_ctx(&self) -> IoContext {
-        IoContext::create_child(&self.io_ctx)
-    }
-
     fn commit(mut self) -> State {
         // Merge unconditional events into regular events on success.
         for (key, val) in self.etags_unconditional {
@@ -1011,7 +987,6 @@ impl<'round, 'store, R: runtime::Runtime> Context for RuntimeTxContext<'round, '
             consensus_state: self.consensus_state,
             history: self.history,
             epoch: self.epoch,
-            io_ctx: self.io_ctx.clone(),
             logger: self
                 .logger
                 .new(o!("ctx" => "dispatch", "mode" => Into::<&'static str>::into(&mode))),

@@ -308,7 +308,7 @@ func evmPack(bytecode []byte) []byte {
 }
 
 // SimpleEVMDepositWithdrawTest tests deposits and withdrawals.
-func SimpleEVMDepositWithdrawTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleEVMDepositWithdrawTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	e := evm.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
@@ -558,12 +558,12 @@ func evmTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error 
 }
 
 // SimpleEVMTest does a simple EVM test.
-func SimpleEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleEVMTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return evmTest(log, rtc, nonc10l)
 }
 
 // C10lEVMTest does a simple EVM test.
-func C10lEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func C10lEVMTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return evmTest(log, rtc, c10l)
 }
 
@@ -650,12 +650,12 @@ func solEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) err
 }
 
 // SimpleSolEVMTest does a simple Solidity contract test.
-func SimpleSolEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleSolEVMTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return solEVMTest(log, rtc, nonc10l)
 }
 
 // C10lSolEVMTest does a simple Solidity contract test.
-func C10lSolEVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func C10lSolEVMTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return solEVMTest(log, rtc, c10l)
 }
 
@@ -713,12 +713,12 @@ func solEVMTestCreateMulti(log *logging.Logger, rtc client.RuntimeClient, c10l c
 }
 
 // SimpleSolEVMTestCreateMulti does a test of a contract that creates two contracts.
-func SimpleSolEVMTestCreateMulti(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleSolEVMTestCreateMulti(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return solEVMTestCreateMulti(log, rtc, nonc10l)
 }
 
 // C10lSolEVMTestCreateMulti does a test of a contract that creates two contracts.
-func C10lSolEVMTestCreateMulti(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func C10lSolEVMTestCreateMulti(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return solEVMTestCreateMulti(log, rtc, c10l)
 }
 
@@ -871,12 +871,12 @@ func erc20EVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) e
 }
 
 // SimpleERC20EVMTest does a simple ERC20 contract test.
-func SimpleERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleERC20EVMTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return erc20EVMTest(log, rtc, nonc10l)
 }
 
 // C10lERC20EVMTest does a simple ERC20 contract test.
-func C10lERC20EVMTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func C10lERC20EVMTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return erc20EVMTest(log, rtc, c10l)
 }
 
@@ -948,12 +948,12 @@ func evmSuicideTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity)
 }
 
 // SimpleEVMSuicideTest does a simple suicide contract test.
-func SimpleEVMSuicideTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleEVMSuicideTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return evmSuicideTest(log, rtc, nonc10l)
 }
 
 // C10lEVMSuicideTest does a simple suicide contract test.
-func C10lEVMSuicideTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func C10lEVMSuicideTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return evmSuicideTest(log, rtc, c10l)
 }
 
@@ -1063,12 +1063,12 @@ func evmCallSuicideTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10l
 }
 
 // SimpleEVMCallSuicideTest does a simple call suicide contract test.
-func SimpleEVMCallSuicideTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleEVMCallSuicideTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return evmCallSuicideTest(log, rtc, nonc10l)
 }
 
 // C10lEVMCallSuicideTest does a simple call suicide contract test.
-func C10lEVMCallSuicideTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func C10lEVMCallSuicideTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return evmCallSuicideTest(log, rtc, c10l)
 }
 
@@ -1091,7 +1091,7 @@ func encryptionEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10li
 }
 
 // C10lEVMEncryptionTest does a simple encryption contract test.
-func C10lEVMEncryptionTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func C10lEVMEncryptionTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return encryptionEVMTest(log, rtc, c10l)
 }
 
@@ -1108,9 +1108,9 @@ func keyDerivationEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c1
 	// on the source in evm_key_derivation.sol next to the hex file.
 
 	// Fixed random key material to pass to the contract.
-	publicKey := "3046db3fa70ce605457dc47c48837ebd8bd0a26abfde5994d033e1ced68e2576"
-	privateKey := "c07b151fbc1e7a11dff926111188f8d872f62eba0396da97c0a24adb75161750"
-	expected := "e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586"
+	publicKey := "3046db3fa70ce605457dc47c48837ebd8bd0a26abfde5994d033e1ced68e2576"  //nolint: gosec
+	privateKey := "c07b151fbc1e7a11dff926111188f8d872f62eba0396da97c0a24adb75161750" //nolint: gosec
+	expected := "e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586"   //nolint: gosec
 	_, err := simpleEVMCallTest(log, rtc, c10l, evmKeyDerivationCompiledHex, "test", "92e2a69c", publicKey+privateKey+expected)
 	if err != nil {
 		return err
@@ -1230,12 +1230,12 @@ func rngEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) err
 }
 
 // C10lEVMRNGTest does a simple key derivation contract test.
-func C10lEVMRNGTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func C10lEVMRNGTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return rngEVMTest(log, rtc, c10l)
 }
 
 // C10lEVMKeyDerivationTest does a simple key derivation contract test.
-func C10lEVMKeyDerivationTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func C10lEVMKeyDerivationTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return keyDerivationEVMTest(log, rtc, c10l)
 }
 
@@ -1263,12 +1263,12 @@ func messageSigningEVMTest(log *logging.Logger, rtc client.RuntimeClient, c10l c
 }
 
 // C10lEVMMessageSigningTest does a simple key derivation contract test.
-func C10lEVMMessageSigningTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func C10lEVMMessageSigningTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	return messageSigningEVMTest(log, rtc, c10l)
 }
 
 // SubcallDelegationTest performs a delegation from the EVM by using the subcall precompile.
-func SubcallDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SubcallDelegationTest(_ *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ev := evm.NewV1(rtc)
 	consAccounts := consensusAccounts.NewV1(rtc)
@@ -1487,7 +1487,7 @@ func DelegationReceiptsTest(_ *RuntimeScenario, log *logging.Logger, conn *grpc.
 }
 
 // EVMParametersTest tests parameters methods.
-func EVMParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func EVMParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	evm := evm.NewV1(rtc)
 

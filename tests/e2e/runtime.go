@@ -18,12 +18,14 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/node"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/common/version"
+	keymanager "github.com/oasisprotocol/oasis-core/go/keymanager/api"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/env"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/log"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/scenario"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/scenario/e2e"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
+	runtimeCfg "github.com/oasisprotocol/oasis-core/go/runtime/config"
 	scheduler "github.com/oasisprotocol/oasis-core/go/scheduler/api"
 	"github.com/oasisprotocol/oasis-core/go/staking/api"
 
@@ -122,7 +124,7 @@ func (sc *RuntimeScenario) Clone() scenario.Scenario {
 	}
 }
 
-func (sc *RuntimeScenario) PreInit(childEnv *env.Env) error {
+func (sc *RuntimeScenario) PreInit() error {
 	return nil
 }
 
@@ -135,7 +137,11 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 	runtimeBinary := sc.RuntimeName
 	runtimeLoader, _ := sc.Flags.GetString(cfgRuntimeLoader)
 	iasMock, _ := sc.Flags.GetBool(cfgIasMock)
-	runtimeProvisioner, _ := sc.Flags.GetString(cfgRuntimeProvisioner)
+	runtimeProvisionerRaw, _ := sc.Flags.GetString(cfgRuntimeProvisioner)
+	var runtimeProvisioner runtimeCfg.RuntimeProvisioner
+	if err = runtimeProvisioner.UnmarshalText([]byte(runtimeProvisionerRaw)); err != nil {
+		return nil, err
+	}
 
 	keymanagerPath, _ := sc.Flags.GetString(cfgKeymanagerBinary)
 	usingKeymanager := len(keymanagerPath) > 0
@@ -251,9 +257,9 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			},
 		},
 		Validators: []oasis.ValidatorFixture{
-			{Entity: 1, Consensus: oasis.ConsensusFixture{EnableConsensusRPCWorker: true, SupplementarySanityInterval: 1}},
-			{Entity: 1, Consensus: oasis.ConsensusFixture{EnableConsensusRPCWorker: true}},
-			{Entity: 1, Consensus: oasis.ConsensusFixture{EnableConsensusRPCWorker: true}},
+			{Entity: 1, Consensus: oasis.ConsensusFixture{SupplementarySanityInterval: 1}},
+			{Entity: 1, Consensus: oasis.ConsensusFixture{}},
+			{Entity: 1, Consensus: oasis.ConsensusFixture{}},
 		},
 		ComputeWorkers: []oasis.ComputeWorkerFixture{
 			{RuntimeProvisioner: runtimeProvisioner, Entity: 1, Runtimes: []int{1}},
@@ -280,13 +286,15 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			ff.Runtimes[i].Keymanager = 0
 		}
 		ff.KeymanagerPolicies = []oasis.KeymanagerPolicyFixture{
-			{Runtime: 0, Serial: 1},
+			{Runtime: 0, Serial: 1, MasterSecretRotationInterval: 0},
 		}
 		ff.Keymanagers = []oasis.KeymanagerFixture{
 			{
 				RuntimeProvisioner: runtimeProvisioner,
 				Runtime:            0,
 				Entity:             1,
+				Policy:             0,
+				SkipPolicy:         true,
 				PrivatePeerPubKeys: []string{"pr+KLREDcBxpWgQ/80yUrHXbyhDuBDcnxzo3td4JiIo="}, // The deterministic client node pub key.
 			},
 		}
@@ -362,7 +370,63 @@ func (sc *RuntimeScenario) CheckInvariants(ctx context.Context) error {
 	return txgen.CheckInvariants(ctx, sc.client)
 }
 
-func (sc *RuntimeScenario) Run(ctx context.Context, childEnv *env.Env) error {
+// WaitMasterSecret waits until the specified generation of the master secret is generated.
+func (sc *RuntimeScenario) WaitMasterSecret(ctx context.Context, generation uint64) (*keymanager.Status, error) {
+	sc.Logger.Info("waiting for master secret", "generation", generation)
+
+	mstCh, mstSub, err := sc.Net.Controller().Keymanager.WatchMasterSecrets(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer mstSub.Close()
+
+	stCh, stSub, err := sc.Net.Controller().Keymanager.WatchStatuses(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer stSub.Close()
+
+	var last *keymanager.Status
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case secret := <-mstCh:
+			if !secret.Secret.ID.Equal(&keymanagerID) {
+				continue
+			}
+
+			sc.Logger.Info("master secret proposed",
+				"generation", secret.Secret.Generation,
+				"epoch", secret.Secret.Epoch,
+				"num_ciphertexts", len(secret.Secret.Secret.Ciphertexts),
+			)
+		case status := <-stCh:
+			if !status.ID.Equal(&keymanagerID) {
+				continue
+			}
+			if status.NextGeneration() == 0 {
+				continue
+			}
+			if last != nil && status.Generation == last.Generation {
+				last = status
+				continue
+			}
+
+			sc.Logger.Info("master secret rotation",
+				"generation", status.Generation,
+				"rotation_epoch", status.RotationEpoch,
+			)
+
+			if status.Generation >= generation {
+				return status, nil
+			}
+			last = status
+		}
+	}
+}
+
+func (sc *RuntimeScenario) Run(ctx context.Context, _ *env.Env) error {
 	// Start the test network.
 	if err := sc.Net.Start(); err != nil {
 		return err
@@ -376,6 +440,15 @@ func (sc *RuntimeScenario) Run(ctx context.Context, childEnv *env.Env) error {
 	sc.Logger.Info("waiting for network to come up")
 	if err := sc.Net.Controller().WaitNodesRegistered(ctx, sc.Net.NumRegisterNodes()); err != nil {
 		return fmt.Errorf("WaitNodesRegistered: %w", err)
+	}
+
+	if _, err := sc.WaitMasterSecret(ctx, 0); err != nil {
+		return fmt.Errorf("first master secret not generated: %w", err)
+	}
+	// The CometBFT verifier is one block behind, so wait for an additional
+	// two blocks to ensure that the first secret has been loaded.
+	if _, err := sc.WaitBlocks(ctx, 2); err != nil {
+		return fmt.Errorf("failed to wait two blocks: %w", err)
 	}
 
 	// Connect to the client node.

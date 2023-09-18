@@ -4,12 +4,11 @@ import (
 	"crypto/sha512"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	sr25519voi "github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
 	"golang.org/x/crypto/sha3"
 
+	sr25519voi "github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
 	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	memorySigner "github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/memory"
-
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"

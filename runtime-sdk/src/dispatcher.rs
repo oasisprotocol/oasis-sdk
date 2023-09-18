@@ -14,6 +14,7 @@ use oasis_core_runtime::{
     self,
     common::crypto::hash::Hash,
     consensus::{roothash, verifier::Verifier},
+    future::block_on,
     protocol::HostInfo,
     transaction::{
         self,
@@ -555,11 +556,11 @@ impl<R: Runtime> Dispatcher<R> {
             .key_manager
             .as_ref()
             // NOTE: We are explicitly allowing private key operations during execution.
-            .map(|mgr| mgr.with_private_context(rt_ctx.io_ctx.clone()));
+            .map(|mgr| mgr.with_private_context());
         let history = self.consensus_verifier.clone();
         let rng = RootRng::new();
 
-        let root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), &mut rt_ctx.runtime_state);
+        let root = storage::MKVSStore::new(&mut rt_ctx.runtime_state);
         let mut ctx = RuntimeBatchContext::<'_, R>::new(
             Mode::ExecuteTx,
             &self.host_info,
@@ -570,7 +571,6 @@ impl<R: Runtime> Dispatcher<R> {
             &history,
             rt_ctx.epoch,
             &rng,
-            rt_ctx.io_ctx.clone(),
             rt_ctx.max_messages,
         );
 
@@ -803,14 +803,11 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         let prefetch_enabled = R::PREFETCH_LIMIT > 0;
 
         // Prepare dispatch context.
-        let key_manager = self
-            .key_manager
-            .as_ref()
-            .map(|mgr| mgr.with_context(rt_ctx.io_ctx.clone()));
+        let key_manager = self.key_manager.as_ref().map(|mgr| mgr.with_context());
         let history = self.consensus_verifier.clone();
         let rng = RootRng::new();
 
-        let root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), &mut rt_ctx.runtime_state);
+        let root = storage::MKVSStore::new(&mut rt_ctx.runtime_state);
         let mut ctx = RuntimeBatchContext::<'_, R>::new(
             Mode::CheckTx,
             &self.host_info,
@@ -821,7 +818,6 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             &history,
             rt_ctx.epoch,
             &rng,
-            rt_ctx.io_ctx.clone(),
             rt_ctx.max_messages,
         );
 
@@ -887,19 +883,19 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         if is_confidential_allowed {
             // Perform consensus layer state integrity verification for any queries that allow
             // access to confidential state.
-            self.consensus_verifier.verify_for_query(
+            block_on(self.consensus_verifier.verify_for_query(
                 rt_ctx.consensus_block.clone(),
                 rt_ctx.header.clone(),
                 rt_ctx.epoch,
-            )?;
+            ))?;
             // Ensure the runtime is still ready to process requests.
             rt_ctx.protocol.ensure_initialized()?;
         }
         let key_manager = self.key_manager.as_ref().map(|mgr| {
             if is_confidential_allowed {
-                mgr.with_private_context(rt_ctx.io_ctx.clone())
+                mgr.with_private_context()
             } else {
-                mgr.with_context(rt_ctx.io_ctx.clone())
+                mgr.with_context()
             }
         });
 
@@ -911,7 +907,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         // Prepare dispatch context.
         let history = self.consensus_verifier.clone();
 
-        let root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), &mut rt_ctx.runtime_state);
+        let root = storage::MKVSStore::new(&mut rt_ctx.runtime_state);
         let mut ctx = RuntimeBatchContext::<'_, R>::new(
             Mode::CheckTx,
             &self.host_info,
@@ -922,7 +918,6 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             &history,
             rt_ctx.epoch,
             &rng,
-            rt_ctx.io_ctx.clone(),
             rt_ctx.max_messages,
         );
 

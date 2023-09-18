@@ -1,8 +1,6 @@
 //! Mock dispatch context for use in tests.
 use std::collections::BTreeMap;
 
-use io_context::Context as IoContext;
-
 use oasis_core_runtime::{
     common::{namespace::Namespace, version::Version},
     consensus::{beacon, roothash, state::ConsensusState, Event},
@@ -104,7 +102,6 @@ impl Mock {
             &self.history,
             self.epoch,
             &self.rng,
-            IoContext::background().freeze(),
             self.max_messages,
         )
     }
@@ -158,7 +155,7 @@ pub fn empty_store() -> MKVSStore<mkvs::OverlayTree<mkvs::Tree>> {
             .with_root_type(mkvs::RootType::State)
             .build(Box::new(mkvs::sync::NoopReadSyncer)),
     );
-    MKVSStore::new(io_context::Context::background().into(), root)
+    MKVSStore::new(root)
 }
 
 /// Create a new mock transaction.

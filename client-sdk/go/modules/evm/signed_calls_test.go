@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 )
 

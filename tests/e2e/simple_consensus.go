@@ -645,7 +645,7 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 }
 
 // ConsensusAccountsParametersTest tests the parameters methods.
-func ConsensusAccountsParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func ConsensusAccountsParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	cac := consensusAccounts.NewV1(rtc)
 
