@@ -149,13 +149,25 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npm run-script check-playground
 
+      - name: Check ts-web/core typedoc
+        working-directory: client-sdk/ts-web/core
+        run: npx typedoc
+
       - name: Check ts-web/signer-ledger playground
         working-directory: client-sdk/ts-web/signer-ledger
         run: npm run-script check-playground
 
+      - name: Check ts-web/signer-ledger typedoc
+        working-directory: client-sdk/ts-web/signer-ledger
+        run: npx typedoc
+
       - name: Check ts-web/rt playground
         working-directory: client-sdk/ts-web/rt
         run: npm run-script check-playground
+
+      - name: Check ts-web/rt typedoc
+        working-directory: client-sdk/ts-web/rt
+        run: npx typedoc
 
       - name: Check ts-web/ext-utils sample-page
         working-directory: client-sdk/ts-web/ext-utils
@@ -164,6 +176,10 @@ jobs:
       - name: Check ts-web/ext-utils sample-ext
         working-directory: client-sdk/ts-web/ext-utils
         run: npm run-script check-sample-ext
+
+      - name: Check ts-web/ext-utils typedoc
+        working-directory: client-sdk/ts-web/ext-utils
+        run: npx typedoc
 
   e2e-ts-web-core:
     # NOTE: This name appears in GitHub's Checks API.

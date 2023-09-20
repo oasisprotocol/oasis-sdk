@@ -16,9 +16,9 @@ concurrency:
 
 jobs:
 
-  publish-docs:
+  rust-docs:
     # NOTE: This name appears in GitHub's Checks API.
-    name: publish-docs
+    name: rust-docs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -39,11 +39,67 @@ jobs:
             --package oasis-contract-sdk-types \
             --package oasis-contract-sdk-storage
 
-      - name: Publish docs
-        uses: crazy-max/ghaction-github-pages@v3
+      - name: Deploy rust to api-reference branch
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          target_branch: api-reference
-          build_dir: target/doc
-          commit_message: Deploy API reference
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: target/doc
+          publish_branch: api-reference
+          destination_dir: rust
+          commit_message: Deploy rust API reference ${{ github.event.head_commit.message }}
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+
+  js-docs:
+    name: js-docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js LTS
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16.x"
+          cache: npm
+          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
+
+      - name: Install dependencies and build
+        working-directory: client-sdk/ts-web
+        run: npm ci --foreground-scripts
+
+      - name: core
+        working-directory: client-sdk/ts-web/core
+        run: npx typedoc
+
+      - name: rt
+        working-directory: client-sdk/ts-web/rt
+        run: npx typedoc
+
+      - name: ext-utils
+        working-directory: client-sdk/ts-web/ext-utils
+        run: npx typedoc
+
+      - name: signer-ledger
+        working-directory: client-sdk/ts-web/signer-ledger
+        run: npx typedoc
+
+      - name: Merge docs
+        working-directory: client-sdk/ts-web
+        run: |
+          mkdir docs
+          mv core/docs/api docs/client
+          mv rt/docs/api docs/client-rt
+          mv ext-utils/docs/api docs/client-ext-utils
+          mv signer-ledger/docs/api docs/client-signer-ledger
+
+      - name: Deploy js to api-reference branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: client-sdk/ts-web/docs
+          publish_branch: api-reference
+          destination_dir: js
+          commit_message: Deploy js API reference ${{ github.event.head_commit.message }}
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
