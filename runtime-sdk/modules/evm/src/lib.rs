@@ -39,7 +39,7 @@ use oasis_runtime_sdk::{
     },
 };
 
-use types::{FeatureMask, H160, H256, U256};
+use types::{H160, H256, U256};
 
 #[cfg(any(test, feature = "test"))]
 pub mod mock;
@@ -617,22 +617,13 @@ impl<Cfg: Config> Module<Cfg> {
             ));
         }
 
-        // Determine the caller based on per-contract features.
-        let caller = if state::get_metadata(&call.address)
-            .has_features(FeatureMask::QUERIES_NO_CALLER_ZEROIZE)
-        {
-            call.caller
-        } else {
-            Default::default() // Zeroize caller.
-        };
-
         // The call is not signed, but it must be encoded as an oasis-sdk call.
         let tx_call_format = transaction::CallFormat::Plain; // Queries cannot be encrypted.
         let (data, tx_metadata) = Self::decode_call_data(ctx, call.data, tx_call_format, 0, true)?
             .expect("processing always proceeds");
         Ok((
             types::SimulateCallQuery {
-                caller,
+                caller: Default::default(), // The sender cannot be spoofed.
                 data,
                 ..call
             },
