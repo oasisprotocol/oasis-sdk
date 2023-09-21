@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Error","Event","ParameterValidationError"],"mod":["fee","state","types"],"static":["ADDRESS_COMMON_POOL","ADDRESS_FEE_ACCUMULATOR"],"struct":["GasCosts","Genesis","Module","Parameters"],"trait":["API"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["ConfidentialMap","Int","PublicMap"],"trait":["Integer","MapKey"]};

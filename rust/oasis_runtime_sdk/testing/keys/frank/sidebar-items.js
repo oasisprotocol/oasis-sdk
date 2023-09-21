@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["address","pk","pk_sr25519","sigspec"]};

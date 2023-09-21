@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Account","AccountBalances","AddressesQuery","BalancesQuery","DenominationInfo","DenominationInfoQuery","NonceQuery","Transfer"]};

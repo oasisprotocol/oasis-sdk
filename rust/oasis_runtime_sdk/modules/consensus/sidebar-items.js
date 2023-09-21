@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Error","Event","ParameterValidationError"],"struct":["Genesis","Module","Parameters"],"trait":["API"]};

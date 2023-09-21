@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["COMPUTE_RESULTS_HEADER_CONTEXT"],"enum":["Error","HeaderType","Message","RegistryMessage","StakingMessage"],"struct":["AnnotatedBlock","Block","ComputeResultsHeader","Header","IncomingMessage","MessageEvent","RoundResults"]};

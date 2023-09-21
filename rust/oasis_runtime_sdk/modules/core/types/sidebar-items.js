@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["VERSION_GLOBAL_KEY"],"enum":["MethodHandlerKind"],"struct":["CallDataPublicKeyQueryResponse","EstimateGasQuery","ExecuteReadOnlyTxQuery","ExecuteReadOnlyTxResponse","Metadata","MethodHandlerInfo","ModuleInfo","RuntimeInfoResponse"]};

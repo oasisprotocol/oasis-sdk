@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"oasis_runtime_sdk":[["impl&lt;S: <a class=\"trait\" href=\"oasis_runtime_sdk/storage/trait.Store.html\" title=\"trait oasis_runtime_sdk::storage::Store\">Store</a>&gt; Zeroize for <a class=\"struct\" href=\"oasis_runtime_sdk/storage/confidential/struct.ConfidentialStore.html\" title=\"struct oasis_runtime_sdk::storage::confidential::ConfidentialStore\">ConfidentialStore</a>&lt;S&gt;"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

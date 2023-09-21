@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["NONCE_SIZE","TAG_SIZE"],"struct":["Nonce"]};

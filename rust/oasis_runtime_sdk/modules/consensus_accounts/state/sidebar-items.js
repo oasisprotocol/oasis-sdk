@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DELEGATIONS","UNDELEGATIONS","UNDELEGATION_QUEUE"],"fn":["add_delegation","add_undelegation","get_delegation","get_delegations","get_delegations_by_destination","get_queued_undelegations","get_undelegations","sub_delegation","take_undelegation"],"struct":["Undelegation"]};

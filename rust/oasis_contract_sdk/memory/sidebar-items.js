@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["allocate_host","deallocate_host"],"struct":["HostRegion","HostRegionRef"]};

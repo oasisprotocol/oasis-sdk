@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["etag_for_event"],"struct":["EventTag"],"trait":["Event","IntoTags"],"type":["EventTags"]};

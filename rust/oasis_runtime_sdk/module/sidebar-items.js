@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CallResult","DispatchResult"],"fn":["dispatch_call","dispatch_query"],"trait":["BlockHandler","InvariantHandler","MethodHandler","MigrationHandler","Module","ModuleInfoHandler","Parameters","TransactionHandler"]};

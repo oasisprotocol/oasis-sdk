@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["call","get_current_subcall_depth"],"struct":["AllowAllValidator","SubcallInfo","SubcallResult"],"trait":["Validator"]};

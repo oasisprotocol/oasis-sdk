@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CALL_DATA_KEY_PAIR_ID_CONTEXT_BASE"],"struct":["CallEnvelopeX25519DeoxysII","ResultEnvelopeX25519DeoxysII"]};

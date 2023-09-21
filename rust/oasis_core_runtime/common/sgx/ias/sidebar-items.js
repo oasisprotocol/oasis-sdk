@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["QUOTE_CONTEXT_LEN"],"fn":["verify"],"struct":["AVR","QuotePolicy"],"type":["QuoteContext"]};

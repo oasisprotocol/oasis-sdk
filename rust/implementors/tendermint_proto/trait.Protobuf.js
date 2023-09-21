@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"oasis_core_runtime":[["impl <a class=\"trait\" href=\"https://docs.rs/tendermint-proto/0.25.0/tendermint_proto/trait.Protobuf.html\" title=\"trait tendermint_proto::Protobuf\">Protobuf</a>&lt;<a class=\"struct\" href=\"https://docs.rs/tendermint-proto/0.25.0/tendermint_proto/tendermint/types/struct.LightBlock.html\" title=\"struct tendermint_proto::tendermint::types::LightBlock\">LightBlock</a>&gt; for <a class=\"struct\" href=\"oasis_core_runtime/consensus/tendermint/struct.LightBlockMeta.html\" title=\"struct oasis_core_runtime::consensus::tendermint::LightBlockMeta\">LightBlockMeta</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
