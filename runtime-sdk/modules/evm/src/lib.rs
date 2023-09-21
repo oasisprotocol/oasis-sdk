@@ -360,7 +360,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             Self::decode_call_data(ctx, data, ctx.tx_call_format(), ctx.tx_index(), true)?
                 .expect("processing always proceeds");
 
-        let evm_result = Self::do_evm(
+        Self::do_evm(
             caller,
             ctx,
             |exec, gas_limit| {
@@ -377,8 +377,8 @@ impl<Cfg: Config> API for Module<Cfg> {
             // Use estimate mode if not doing binary search for exact gas costs.
             ctx.is_simulation()
                 && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
-        );
-        Self::encode_evm_result(ctx, evm_result, tx_metadata)
+        )?;
+        Ok(vec![])
     }
 
     fn get_storage<C: Context>(_ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
