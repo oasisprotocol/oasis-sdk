@@ -43,6 +43,7 @@
         "protobufjs-cli": "^1.1.2",
         "stream-browserify": "^3.0.0",
         "ts-jest": "^29.1.1",
+        "typedoc": "^0.25.1",
         "typescript": "^5.2.2",
         "webpack": "^5.88.2",
         "webpack-cli": "^5.1.4",
