@@ -32,7 +32,7 @@
     },
     "devDependencies": {
         "@types/elliptic": "^6.4.14",
-        "@types/jest": "^29.5.4",
+        "@types/jest": "^29.5.5",
         "@types/randombytes": "^2.0.0",
         "buffer": "^6.0.3",
         "cypress": "^13.2.0",
