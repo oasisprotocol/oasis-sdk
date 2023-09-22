@@ -159,6 +159,8 @@ mod tests {
                 fn my_call(foo2: Bar2) -> Baz2 {}
                 #[handler(call = "my_module.MyOtherCall")]
                 fn my_other_call(foo3: Bar3) -> Baz3 {}
+                #[handler(call = "my_module.MyInternalCall", internal)]
+                fn my_internal_call(foo4: Bar4) -> Baz4 {}
             }
         );
 
@@ -184,6 +186,7 @@ mod tests {
                                         Self::prefetch_for_my_call(&mut add_prefix, body, auth_info),
                                     ),
                                     "my_module.MyOtherCall" => module::DispatchResult::Handled(Ok(())),
+                                    "my_module.MyInternalCall" => module::DispatchResult::Handled(Ok(())),
                                     _ => module::DispatchResult::Unhandled(body),
                                 }
                             }
@@ -197,6 +200,12 @@ mod tests {
                                     "my_module.MyOtherCall" => {
                                         module::dispatch_call(ctx, body, Self::my_other_call)
                                     }
+                                    "my_module.MyInternalCall" => module::dispatch_call(ctx, body, |ctx, body| {
+                                        if !ctx.is_internal() {
+                                            return Err(sdk::modules::core::Error::Forbidden.into());
+                                        }
+                                        Self::my_internal_call(ctx, body)
+                                    }),
                                     _ => DispatchResult::Unhandled(body),
                                 }
                             }
@@ -223,6 +232,10 @@ mod tests {
                                         kind: core_types::MethodHandlerKind::Call,
                                         name: "my_module.MyOtherCall".to_string(),
                                     },
+                                    core_types::MethodHandlerInfo {
+                                        kind: core_types::MethodHandlerKind::Call,
+                                        name: "my_module.MyInternalCall".to_string(),
+                                    },
                                 ]
                             }
                         }
@@ -237,6 +250,8 @@ mod tests {
                             fn my_call(foo2: Bar2) -> Baz2 {}
                             #[handler(call = "my_module.MyOtherCall")]
                             fn my_other_call(foo3: Bar3) -> Baz3 {}
+                            #[handler(call = "my_module.MyInternalCall", internal)]
+                            fn my_internal_call(foo4: Bar4) -> Baz4 {}
                         }
                     };
                 )
@@ -531,6 +546,18 @@ mod tests {
         let input: syn::ItemImpl = syn::parse_quote!(
             impl<C: Cfg> MyModule<C> {
                 #[handler(call = "foo", allow_private_km)]
+                fn my_method_call() -> () {}
+            }
+        );
+        super::derive_module(input);
+    }
+
+    #[test]
+    #[should_panic(expected = "only allowed on `call` handlers")]
+    fn generate_method_handler_malformed_internal_noncall() {
+        let input: syn::ItemImpl = syn::parse_quote!(
+            impl<C: Cfg> MyModule<C> {
+                #[handler(query = "foo", internal)]
                 fn my_method_call() -> () {}
             }
         );

@@ -100,7 +100,29 @@ impl super::Deriver for DeriveMethodHandler {
         };
 
         let dispatch_call_impl = {
-            let (handler_names, handler_idents) = filter_by_kind(handlers, HandlerKind::Call);
+            let (handler_names, handler_fns): (Vec<_>, Vec<_>) = handlers
+                .iter()
+                .filter_map(|h| h.handler.as_ref())
+                .filter(|h| h.attrs.kind == HandlerKind::Call)
+                .map(|h| {
+                    (h.attrs.rpc_name.clone(), {
+                        let ident = &h.ident;
+
+                        if h.attrs.is_internal {
+                            quote! {
+                                |ctx, body| {
+                                    if !ctx.is_internal() {
+                                        return Err(sdk::modules::core::Error::Forbidden.into());
+                                    }
+                                    Self::#ident(ctx, body)
+                                }
+                            }
+                        } else {
+                            quote! { Self::#ident }
+                        }
+                    })
+                })
+                .unzip();
 
             if handler_names.is_empty() {
                 quote! {}
@@ -113,7 +135,7 @@ impl super::Deriver for DeriveMethodHandler {
                     ) -> DispatchResult<cbor::Value, CallResult> {
                         match method {
                             #(
-                              #handler_names => module::dispatch_call(ctx, body, Self::#handler_idents),
+                              #handler_names => module::dispatch_call(ctx, body, #handler_fns),
                             )*
                             _ => DispatchResult::Unhandled(body),
                         }
@@ -347,6 +369,8 @@ struct MethodHandlerAttr {
     allow_private_km: bool,
     /// Whether this handler is tagged as allowing interactive calls. Only applies to call handlers.
     allow_interactive: bool,
+    /// Whether this handler is tagged as internal.
+    is_internal: bool,
 }
 impl syn::parse::Parse for MethodHandlerAttr {
     fn parse(input: syn::parse::ParseStream<'_>) -> syn::Result<Self> {
@@ -365,6 +389,7 @@ impl syn::parse::Parse for MethodHandlerAttr {
         let mut is_expensive = false;
         let mut allow_private_km = false;
         let mut allow_interactive = false;
+        let mut is_internal = false;
         while input.peek(syn::token::Comma) {
             let _: syn::token::Comma = input.parse()?;
             let tag: syn::Ident = input.parse()?;
@@ -393,10 +418,18 @@ impl syn::parse::Parse for MethodHandlerAttr {
                     ));
                 }
                 allow_interactive = true;
+            } else if tag == "internal" {
+                if kind != HandlerKind::Call {
+                    return Err(syn::Error::new(
+                        tag.span(),
+                        "`internal` tag is only allowed on `call` handlers",
+                    ));
+                }
+                is_internal = true;
             } else {
                 return Err(syn::Error::new(
                     tag.span(),
-                    "invalid handler tag; supported: `expensive`, `allow_private_km`, `allow_interactive`",
+                    "invalid handler tag; supported: `expensive`, `allow_private_km`, `allow_interactive`, `internal`",
                 ));
             }
         }
@@ -410,6 +443,7 @@ impl syn::parse::Parse for MethodHandlerAttr {
             is_expensive,
             allow_private_km,
             allow_interactive,
+            is_internal,
         })
     }
 }
