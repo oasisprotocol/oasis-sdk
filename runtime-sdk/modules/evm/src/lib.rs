@@ -485,7 +485,7 @@ impl<Cfg: Config> Module<Cfg> {
         ) -> (evm::ExitReason, Vec<u8>),
         C: TxContext,
     {
-        let is_query = ctx.is_check_only();
+        let is_query = ctx.is_check_only() || ctx.is_simulation();
         let cfg = Cfg::evm_config(estimate_gas);
         let gas_limit: u64 = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
         let gas_price: primitive_types::U256 = ctx.tx_auth_info().fee.gas_price().into();

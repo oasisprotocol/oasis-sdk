@@ -28,7 +28,6 @@ use oasis_runtime_sdk::{
 use crate::{
     derive_caller,
     mock::{decode_reverted, decode_reverted_raw, load_contract_bytecode, EvmSigner, QueryOptions},
-    state,
     types::{self, H160},
     Config, Genesis, Module as EVMModule,
 };
@@ -1074,4 +1073,24 @@ fn test_return_value_limits() {
     } else {
         panic!("call should revert");
     }
+
+    // Make sure that in query context, the return value is not trimmed.
+    let mut ctx =
+        mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(context::Mode::CheckTx, true);
+
+    let result = signer
+        .query_evm_opts(
+            &mut ctx,
+            contract_address,
+            "testSuccess",
+            &[],
+            &[],
+            Default::default(),
+        )
+        .expect("query should succeed");
+
+    assert_eq!(result.len(), 1120, "result should not be trimmed");
+    // Actual payload is ABI-encoded so the raw result starts at offset 64.
+    assert_eq!(result[64], 0xFF, "result should be correct");
+    assert_eq!(result[1023], 0x42, "result should be correct");
 }
