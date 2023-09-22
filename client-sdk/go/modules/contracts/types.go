@@ -19,7 +19,7 @@ type InstanceID uint64
 func (i *InstanceID) Address() types.Address {
 	id := make([]byte, 8)
 	binary.BigEndian.PutUint64(id, uint64(*i))
-	return types.NewAddressForModule("contracts", id)
+	return types.NewAddressForModule(ModuleName, id)
 }
 
 // Policy is a generic policy that specifies who is allowed to perform an action.

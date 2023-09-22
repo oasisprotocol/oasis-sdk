@@ -12,6 +12,13 @@ import (
 )
 
 var (
+	// PendingWithdrawalAddress is the address of the internal pending withdrawal account in the consensus_accounts module.
+	PendingWithdrawalAddress = types.NewAddressForModule(ModuleName, []byte("pending-withdrawal"))
+	// PendingDelegationAddress is the address of the internal pending delegation account in the consensus_accounts module.
+	PendingDelegationAddress = types.NewAddressForModule(ModuleName, []byte("pending-delegation"))
+)
+
+var (
 	// Callable methods.
 	methodDeposit    = types.NewMethodName("consensus.Deposit", Deposit{})
 	methodWithdraw   = types.NewMethodName("consensus.Withdraw", Withdraw{})
