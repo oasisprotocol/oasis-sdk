@@ -19,6 +19,8 @@ pub const DELEGATIONS: &[u8] = &[0x01];
 pub const UNDELEGATIONS: &[u8] = &[0x02];
 /// An undelegation queue.
 pub const UNDELEGATION_QUEUE: &[u8] = &[0x03];
+/// Receipts.
+pub const RECEIPTS: &[u8] = &[0x04];
 
 /// Add delegation for a given (from, to) pair.
 ///
@@ -140,19 +142,28 @@ pub fn get_delegations_by_destination() -> Result<BTreeMap<Address, u128>, Error
 /// Record new undelegation and add to undelegation queue.
 ///
 /// In case an undelegation for the given (from, to, epoch) tuple already exists, the undelegation
-/// entry is merged by adding shares.
+/// entry is merged by adding shares. When a non-zero receipt identifier is passed, the identifier
+/// is set in case the existing entry has no such identifier yet.
+///
+/// It returns the receipt identifier of the undelegation done receipt.
 pub fn add_undelegation(
     from: Address,
     to: Address,
     epoch: EpochTime,
     shares: u128,
-) -> Result<(), Error> {
+    receipt: u64,
+) -> Result<u64, Error> {
     CurrentStore::with(|mut root_store| {
         let store = storage::PrefixStore::new(&mut root_store, &MODULE_NAME);
         let undelegations = storage::PrefixStore::new(store, &UNDELEGATIONS);
         let account = storage::PrefixStore::new(undelegations, &to);
         let mut entry = storage::TypedStore::new(storage::PrefixStore::new(account, &from));
         let mut di: types::DelegationInfo = entry.get(epoch.to_storage_key()).unwrap_or_default();
+
+        if receipt > 0 && di.receipt == 0 {
+            di.receipt = receipt;
+        }
+        let done_receipt = di.receipt;
 
         di.shares = di
             .shares
@@ -169,7 +180,7 @@ pub fn add_undelegation(
             &[0xF6], /* CBOR NULL */
         );
 
-        Ok(())
+        Ok(done_receipt)
     })
 }
 
@@ -279,6 +290,35 @@ pub fn get_queued_undelegations(epoch: EpochTime) -> Result<Vec<Undelegation>, E
     })
 }
 
+/// Store the given receipt.
+pub fn set_receipt(owner: Address, kind: types::ReceiptKind, id: u64, receipt: types::Receipt) {
+    CurrentStore::with(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let receipts = storage::PrefixStore::new(store, &RECEIPTS);
+        let of_owner = storage::PrefixStore::new(receipts, &owner);
+        let kind = [kind as u8];
+        let mut of_kind = storage::TypedStore::new(storage::PrefixStore::new(of_owner, &kind));
+
+        of_kind.insert(id.to_be_bytes(), receipt);
+    });
+}
+
+/// Remove the given receipt from storage if it exists and return it, otherwise return `None`.
+pub fn take_receipt(owner: Address, kind: types::ReceiptKind, id: u64) -> Option<types::Receipt> {
+    CurrentStore::with(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let receipts = storage::PrefixStore::new(store, &RECEIPTS);
+        let of_owner = storage::PrefixStore::new(receipts, &owner);
+        let kind = [kind as u8];
+        let mut of_kind = storage::TypedStore::new(storage::PrefixStore::new(of_owner, &kind));
+
+        let receipt = of_kind.get(id.to_be_bytes());
+        of_kind.remove(id.to_be_bytes());
+
+        receipt
+    })
+}
+
 /// A trait that exists solely to convert `beacon::EpochTime` to bytes for use as a storage key.
 trait ToStorageKey {
     fn to_storage_key(&self) -> [u8; 8];
@@ -344,9 +384,9 @@ mod test {
     fn test_undelegation() {
         let _mock = mock::Mock::default();
 
-        add_undelegation(keys::alice::address(), keys::bob::address(), 42, 500).unwrap();
-        add_undelegation(keys::alice::address(), keys::bob::address(), 42, 500).unwrap();
-        add_undelegation(keys::alice::address(), keys::bob::address(), 84, 200).unwrap();
+        add_undelegation(keys::alice::address(), keys::bob::address(), 42, 500, 12).unwrap();
+        add_undelegation(keys::alice::address(), keys::bob::address(), 42, 500, 24).unwrap();
+        add_undelegation(keys::alice::address(), keys::bob::address(), 84, 200, 36).unwrap();
 
         let qd = get_queued_undelegations(10).unwrap();
         assert!(qd.is_empty());
@@ -374,11 +414,51 @@ mod test {
 
         let di = take_undelegation(&qd[0]).unwrap();
         assert_eq!(di.shares, 1000);
+        assert_eq!(di.receipt, 12, "receipt id should not be overwritten");
 
         let qd = get_queued_undelegations(42).unwrap();
         assert!(qd.is_empty());
 
         let udis = get_undelegations(keys::bob::address()).unwrap();
         assert_eq!(udis.len(), 1);
+    }
+
+    #[test]
+    fn test_receipts() {
+        let _mock = mock::Mock::default();
+
+        let receipt = types::Receipt {
+            shares: 123,
+            ..Default::default()
+        };
+        set_receipt(
+            keys::alice::address(),
+            types::ReceiptKind::Delegate,
+            42,
+            receipt.clone(),
+        );
+
+        let dec_receipt = take_receipt(keys::alice::address(), types::ReceiptKind::Delegate, 10);
+        assert!(dec_receipt.is_none(), "missing receipt should return None");
+
+        let dec_receipt = take_receipt(
+            keys::alice::address(),
+            types::ReceiptKind::UndelegateStart,
+            42,
+        );
+        assert!(dec_receipt.is_none(), "missing receipt should return None");
+
+        let dec_receipt = take_receipt(
+            keys::alice::address(),
+            types::ReceiptKind::UndelegateDone,
+            42,
+        );
+        assert!(dec_receipt.is_none(), "missing receipt should return None");
+
+        let dec_receipt = take_receipt(keys::alice::address(), types::ReceiptKind::Delegate, 42);
+        assert_eq!(dec_receipt, Some(receipt), "receipt should be correct");
+
+        let dec_receipt = take_receipt(keys::alice::address(), types::ReceiptKind::Delegate, 42);
+        assert!(dec_receipt.is_none(), "receipt should have been removed");
     }
 }

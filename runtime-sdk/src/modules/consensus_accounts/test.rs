@@ -721,6 +721,7 @@ fn perform_delegation<C: BatchContext>(ctx: &mut C, success: bool) -> u64 {
             body: cbor::to_value(Delegate {
                 to: keys::bob::address(),
                 amount: BaseUnits::new(1_000, denom.clone()),
+                receipt: 0,
             }),
             ..Default::default()
         },
@@ -893,6 +894,7 @@ fn test_api_delegate_insufficient_balance() {
             body: cbor::to_value(Delegate {
                 to: keys::bob::address(),
                 amount: BaseUnits::new(5_000, denom.clone()),
+                receipt: 0,
             }),
             ..Default::default()
         },
@@ -955,6 +957,49 @@ fn test_api_delegate_fail() {
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x03"); // consensus_accounts.Delegate (code = 3) event
 }
 
+#[test]
+fn test_api_delegate_receipt_not_internal() {
+    let denom: Denomination = Denomination::from_str("TEST").unwrap();
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+    init_accounts(&mut ctx);
+
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "consensus.Delegate".to_owned(),
+            body: cbor::to_value(Delegate {
+                to: keys::bob::address(),
+                amount: BaseUnits::new(5_000, denom.clone()),
+                receipt: 42, // Receipts should only be allowed internally.
+            }),
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                123,
+            )],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 1000,
+                consensus_messages: 1,
+            },
+            ..Default::default()
+        },
+    };
+
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
+        let result = Module::<Accounts, Consensus>::tx_delegate(
+            &mut tx_ctx,
+            cbor::from_value(call.body).unwrap(),
+        )
+        .unwrap_err();
+        assert!(matches!(result, Error::InvalidArgument));
+    });
+}
+
 fn perform_undelegation<C: BatchContext>(
     ctx: &mut C,
     success: Option<bool>,
@@ -969,6 +1014,7 @@ fn perform_undelegation<C: BatchContext>(
             body: cbor::to_value(Undelegate {
                 from: keys::bob::address(),
                 shares: 400,
+                receipt: 0,
             }),
             ..Default::default()
         },
@@ -1248,6 +1294,7 @@ fn test_api_undelegate_insufficient_balance() {
             body: cbor::to_value(Undelegate {
                 from: keys::bob::address(),
                 shares: 400,
+                receipt: 0,
             }),
             ..Default::default()
         },
@@ -1304,6 +1351,48 @@ fn test_api_undelegate_fail() {
     assert_eq!(event.shares, 400);
     assert_eq!(event.debond_end_time, 0xffffffffffffffff);
     assert!(event.error.is_some());
+}
+
+#[test]
+fn test_api_undelegate_receipt_not_internal() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+    init_accounts(&mut ctx);
+
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "consensus.Undelegate".to_owned(),
+            body: cbor::to_value(Undelegate {
+                from: keys::bob::address(),
+                shares: 400,
+                receipt: 42, // Receipts should only be allowed internally.
+            }),
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                123,
+            )],
+            fee: transaction::Fee {
+                amount: Default::default(),
+                gas: 1000,
+                consensus_messages: 1,
+            },
+            ..Default::default()
+        },
+    };
+
+    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
+        let result = Module::<Accounts, Consensus>::tx_undelegate(
+            &mut tx_ctx,
+            cbor::from_value(call.body).unwrap(),
+        )
+        .unwrap_err();
+        assert!(matches!(result, Error::InvalidArgument));
+    });
 }
 
 #[test]

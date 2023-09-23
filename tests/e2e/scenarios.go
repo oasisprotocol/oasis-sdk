@@ -51,6 +51,7 @@ var (
 		SimpleEVMSuicideTest,
 		SimpleEVMCallSuicideTest,
 		SubcallDelegationTest,
+		DelegationReceiptsTest,
 		EVMParametersTest,
 	}, WithCustomFixture(EVMRuntimeFixture))
 

@@ -52,6 +52,7 @@ impl sdk::Runtime for Runtime {
                     consensus_denomination: "TEST".parse().unwrap(),
                     // Test scaling consensus base units when transferring them into the runtime.
                     consensus_scaling_factor: 1000,
+                    min_delegate_amount: 2,
                 },
             },
             modules::consensus_accounts::Genesis {

@@ -29,6 +29,8 @@ pub struct Withdraw {
 pub struct Delegate {
     pub to: Address,
     pub amount: token::BaseUnits,
+    #[cbor(optional)]
+    pub receipt: u64,
 }
 
 /// Undelegate into runtime call.
@@ -36,6 +38,59 @@ pub struct Delegate {
 pub struct Undelegate {
     pub from: Address,
     pub shares: u128,
+    #[cbor(optional)]
+    pub receipt: u64,
+}
+
+/// Kind of receipt.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
+#[repr(u8)]
+pub enum ReceiptKind {
+    #[default]
+    Invalid = 0,
+    Delegate = 1,
+    UndelegateStart = 2,
+    UndelegateDone = 3,
+}
+
+impl ReceiptKind {
+    /// Whether the receipt kind is valid.
+    pub fn is_valid(&self) -> bool {
+        !matches!(self, Self::Invalid)
+    }
+}
+
+/// Take receipt internal runtime call.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct TakeReceipt {
+    pub kind: ReceiptKind,
+    pub id: u64,
+}
+
+/// A receipt.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
+pub struct Receipt {
+    /// Shares received (for delegations).
+    #[cbor(optional)]
+    pub shares: u128,
+
+    /// Undelegate end epoch.
+    #[cbor(optional)]
+    pub epoch: EpochTime,
+
+    /// Undelegate end receipt.
+    #[cbor(optional)]
+    pub receipt: u64,
+
+    /// Amount of tokens received.
+    #[cbor(optional)]
+    pub amount: u128,
+
+    /// Consensus layer error.
+    #[cbor(optional)]
+    pub error: Option<ConsensusError>,
 }
 
 /// Balance query.
@@ -79,6 +134,10 @@ pub struct AccountBalance {
 pub struct DelegationInfo {
     /// The amount of owned shares.
     pub shares: u128,
+
+    /// Receipt identifier for this undelegation.
+    #[cbor(optional)]
+    pub receipt: u64,
 }
 
 /// Extended information about a delegation.
@@ -130,6 +189,8 @@ pub struct ConsensusDelegateContext {
     pub nonce: u64,
     pub to: Address,
     pub amount: token::BaseUnits,
+    #[cbor(optional)]
+    pub receipt: bool,
 }
 
 /// Context for consensus undelegate message handler.
@@ -139,6 +200,8 @@ pub struct ConsensusUndelegateContext {
     pub nonce: u64,
     pub to: Address,
     pub shares: u128,
+    #[cbor(optional)]
+    pub receipt: bool,
 }
 
 /// Error details from the consensus layer.
