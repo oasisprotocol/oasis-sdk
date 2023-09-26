@@ -75,6 +75,11 @@ pub struct GasCosts {
     pub tx_withdraw: u64,
     pub tx_delegate: u64,
     pub tx_undelegate: u64,
+
+    /// Cost of storing a delegation/undelegation receipt.
+    pub store_receipt: u64,
+    /// Cost of taking a delegation/undelegation receipt.
+    pub take_receipt: u64,
 }
 
 /// Parameters for the consensus module.
@@ -198,6 +203,7 @@ pub trait API {
         nonce: u64,
         to: Address,
         amount: token::BaseUnits,
+        receipt: bool,
     ) -> Result<(), Error>;
 
     /// Start the undelegation process of the given number of shares from consensus staking account
@@ -213,6 +219,7 @@ pub trait API {
         nonce: u64,
         to: Address,
         shares: u128,
+        receipt: bool,
     ) -> Result<(), Error>;
 }
 
@@ -309,6 +316,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         nonce: u64,
         to: Address,
         amount: token::BaseUnits,
+        receipt: bool,
     ) -> Result<(), Error> {
         Consensus::escrow(
             ctx,
@@ -321,6 +329,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
                     nonce,
                     to,
                     amount: amount.clone(),
+                    receipt,
                 },
             ),
         )?;
@@ -343,6 +352,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         nonce: u64,
         to: Address,
         shares: u128,
+        receipt: bool,
     ) -> Result<(), Error> {
         // Subtract shares from delegation, making sure there are enough there.
         state::sub_delegation(to, from, shares)?;
@@ -358,6 +368,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
                     nonce,
                     to,
                     shares,
+                    receipt,
                 },
             ),
         )?;
@@ -450,34 +461,77 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     fn tx_delegate<C: TxContext>(ctx: &mut C, body: types::Delegate) -> Result<(), Error> {
         let params = Self::params();
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_delegate)?;
+        let store_receipt = body.receipt > 0;
+        if store_receipt {
+            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.store_receipt)?;
+        }
 
         // Check whether delegate is allowed.
         if params.disable_delegate {
             return Err(Error::Forbidden);
         }
+        // Make sure receipts can only be requested internally (e.g. via subcalls).
+        if store_receipt && !ctx.is_internal() {
+            return Err(Error::InvalidArgument);
+        }
 
         // Signer.
         let signer = &ctx.tx_auth_info().signer_info[0];
         let from = signer.address_spec.address();
-        let nonce = signer.nonce;
-        Self::delegate(ctx, from, nonce, body.to, body.amount)
+        let nonce = if store_receipt {
+            body.receipt // Use receipt identifier as the nonce.
+        } else {
+            signer.nonce // Use signer nonce as the nonce.
+        };
+        Self::delegate(ctx, from, nonce, body.to, body.amount, store_receipt)
     }
 
     #[handler(call = "consensus.Undelegate")]
     fn tx_undelegate<C: TxContext>(ctx: &mut C, body: types::Undelegate) -> Result<(), Error> {
         let params = Self::params();
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_undelegate)?;
+        let store_receipt = body.receipt > 0;
+        if store_receipt {
+            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.store_receipt)?;
+        }
 
         // Check whether undelegate is allowed.
         if params.disable_undelegate {
             return Err(Error::Forbidden);
         }
+        // Make sure receipts can only be requested internally (e.g. via subcalls).
+        if store_receipt && !ctx.is_internal() {
+            return Err(Error::InvalidArgument);
+        }
 
         // Signer.
         let signer = &ctx.tx_auth_info().signer_info[0];
         let to = signer.address_spec.address();
-        let nonce = signer.nonce;
-        Self::undelegate(ctx, body.from, nonce, to, body.shares)
+        let nonce = if store_receipt {
+            body.receipt // Use receipt identifer as the nonce.
+        } else {
+            signer.nonce // Use signer nonce as the nonce.
+        };
+        Self::undelegate(ctx, body.from, nonce, to, body.shares, store_receipt)
+    }
+
+    #[handler(call = "consensus.TakeReceipt", internal)]
+    fn internal_take_receipt<C: TxContext>(
+        ctx: &mut C,
+        body: types::TakeReceipt,
+    ) -> Result<Option<types::Receipt>, Error> {
+        let params = Self::params();
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.take_receipt)?;
+
+        if !body.kind.is_valid() {
+            return Err(Error::InvalidArgument);
+        }
+
+        Ok(state::take_receipt(
+            ctx.tx_caller_address(),
+            body.kind,
+            body.id,
+        ))
     }
 
     #[handler(query = "consensus.Balance")]
@@ -615,6 +669,19 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
             )
             .expect("should have enough balance");
 
+            // Store receipt if requested.
+            if context.receipt {
+                state::set_receipt(
+                    context.from,
+                    types::ReceiptKind::Delegate,
+                    context.nonce,
+                    types::Receipt {
+                        error: Some(me.clone().into()),
+                        ..Default::default()
+                    },
+                );
+            }
+
             // Emit delegation failed event.
             ctx.emit_event(Event::Delegate {
                 from: context.from,
@@ -639,6 +706,19 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
         state::add_delegation(context.from, context.to, shares).unwrap();
 
+        // Store receipt if requested.
+        if context.receipt {
+            state::set_receipt(
+                context.from,
+                types::ReceiptKind::Delegate,
+                context.nonce,
+                types::Receipt {
+                    shares,
+                    ..Default::default()
+                },
+            );
+        }
+
         // Emit delegation successful event.
         ctx.emit_event(Event::Delegate {
             from: context.from,
@@ -658,6 +738,19 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         if !me.is_success() {
             // Undelegation failed, add shares back.
             state::add_delegation(context.to, context.from, context.shares).unwrap();
+
+            // Store receipt if requested.
+            if context.receipt {
+                state::set_receipt(
+                    context.to,
+                    types::ReceiptKind::UndelegateStart,
+                    context.nonce,
+                    types::Receipt {
+                        error: Some(me.clone().into()),
+                        ..Default::default()
+                    },
+                );
+            }
 
             // Emit undelegation failed event.
             ctx.emit_event(Event::UndelegateStart {
@@ -679,13 +772,34 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         let result: ReclaimEscrowResult = cbor::from_value(result).unwrap();
         let debonding_shares = result.debonding_shares.try_into().unwrap();
 
-        state::add_undelegation(
+        let receipt = if context.receipt {
+            context.nonce
+        } else {
+            0 // No receipt needed for UndelegateEnd.
+        };
+
+        let done_receipt = state::add_undelegation(
             context.from,
             context.to,
             result.debond_end_time,
             debonding_shares,
+            receipt,
         )
         .unwrap();
+
+        // Store receipt if requested.
+        if context.receipt {
+            state::set_receipt(
+                context.to,
+                types::ReceiptKind::UndelegateStart,
+                context.nonce,
+                types::Receipt {
+                    epoch: result.debond_end_time,
+                    receipt: done_receipt,
+                    ..Default::default()
+                },
+            );
+        }
 
         // Emit undelegation started event.
         ctx.emit_event(Event::UndelegateStart {
@@ -781,11 +895,24 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
                 .expect("shares * total_amount should not overflow")
                 .checked_div(total_shares)
                 .expect("total_shares should not be zero");
-            let amount = Consensus::amount_from_consensus(ctx, amount).unwrap();
-            let amount = token::BaseUnits::new(amount, denomination.clone());
+            let raw_amount = Consensus::amount_from_consensus(ctx, amount).unwrap();
+            let amount = token::BaseUnits::new(raw_amount, denomination.clone());
 
             // Mint the given number of tokens.
             Accounts::mint(ctx, ud.to, &amount).unwrap();
+
+            // Store receipt if requested.
+            if udi.receipt > 0 {
+                state::set_receipt(
+                    ud.to,
+                    types::ReceiptKind::UndelegateDone,
+                    udi.receipt,
+                    types::Receipt {
+                        amount: raw_amount,
+                        ..Default::default()
+                    },
+                );
+            }
 
             // Emit undelegation done event.
             ctx.emit_event(Event::UndelegateDone {
@@ -827,7 +954,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
         if let Some(total_supply) = ts.get(&den) {
             if total_supply > &rt_ga_balance {
                 return Err(CoreError::InvariantViolation(
-                    "total supply is greater than runtime's general account balance".to_string(),
+                    format!("total supply ({total_supply}) is greater than runtime's general account balance ({rt_ga_balance})"),
                 ));
             }
         }

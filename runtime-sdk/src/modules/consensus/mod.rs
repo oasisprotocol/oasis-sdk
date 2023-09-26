@@ -45,6 +45,12 @@ const MODULE_NAME: &str = "consensus";
 pub struct Parameters {
     pub consensus_denomination: token::Denomination,
     pub consensus_scaling_factor: u64,
+
+    /// Minimum amount that is allowed to be delegated. This should be greater than or equal to what
+    /// is configured in the consensus layer as the consensus layer will do its own checks.
+    ///
+    /// The amount is in consensus units.
+    pub min_delegate_amount: u128,
 }
 
 impl Default for Parameters {
@@ -52,6 +58,7 @@ impl Default for Parameters {
         Self {
             consensus_denomination: token::Denomination::from_str("TEST").unwrap(),
             consensus_scaling_factor: 1,
+            min_delegate_amount: 0,
         }
     }
 }
@@ -118,6 +125,10 @@ pub enum Error {
     #[error("amount not representable")]
     #[sdk_error(code = 5)]
     AmountNotRepresentable,
+
+    #[error("amount is lower than the minimum delegation amount")]
+    #[sdk_error(code = 6)]
+    UnderMinDelegationAmount,
 
     #[error("history: {0}")]
     #[sdk_error(transparent)]
@@ -277,6 +288,10 @@ impl API for Module {
     ) -> Result<(), Error> {
         Self::ensure_consensus_denomination(ctx, amount.denomination())?;
         let amount = Self::amount_to_consensus(ctx, amount.amount())?;
+
+        if amount < Self::params().min_delegate_amount {
+            return Err(Error::UnderMinDelegationAmount);
+        }
 
         ctx.emit_message(
             Message::Staking(Versioned::new(

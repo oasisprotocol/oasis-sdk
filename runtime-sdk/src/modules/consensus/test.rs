@@ -19,7 +19,7 @@ use crate::{
     },
 };
 
-use super::{Genesis, Parameters, API as _};
+use super::{Error, Genesis, Parameters, API as _};
 
 #[test]
 fn test_api_transfer_invalid_denomination() {
@@ -277,6 +277,43 @@ fn test_api_escrow() {
 }
 
 #[test]
+fn test_api_escrow_min_delegate_amount() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx();
+
+    Consensus::set_params(Parameters {
+        min_delegate_amount: 10,
+        ..Default::default()
+    });
+
+    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
+        let hook_name = "test_event_handler";
+        let amount = BaseUnits::new(5, Denomination::from_str("TEST").unwrap());
+        let result = Consensus::escrow(
+            &mut tx_ctx,
+            keys::alice::address(),
+            &amount,
+            MessageEventHookInvocation::new(hook_name.to_string(), 0),
+        );
+
+        assert!(matches!(result, Err(Error::UnderMinDelegationAmount)));
+    });
+
+    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
+        let hook_name = "test_event_handler";
+        let amount = BaseUnits::new(15, Denomination::from_str("TEST").unwrap());
+        let result = Consensus::escrow(
+            &mut tx_ctx,
+            keys::alice::address(),
+            &amount,
+            MessageEventHookInvocation::new(hook_name.to_string(), 0),
+        );
+
+        assert!(result.is_ok());
+    });
+}
+
+#[test]
 fn test_api_escrow_scaling() {
     let mut mock = mock::Mock::default();
     let mut ctx = mock.create_ctx();
@@ -430,6 +467,7 @@ fn test_query_parameters() {
     let params = Parameters {
         consensus_denomination: Denomination::NATIVE,
         consensus_scaling_factor: 1_000,
+        min_delegate_amount: 10,
     };
     Consensus::set_params(params.clone());
 
@@ -445,6 +483,7 @@ fn test_init_bad_scaling_factor_1() {
             consensus_denomination: Denomination::NATIVE,
             // Zero scaling factor is invalid.
             consensus_scaling_factor: 0,
+            min_delegate_amount: 0,
         },
     });
 }
@@ -457,6 +496,7 @@ fn test_init_bad_scaling_factor_2() {
             consensus_denomination: Denomination::NATIVE,
             // Scaling factor that is not a power of 10 is invalid.
             consensus_scaling_factor: 1230,
+            min_delegate_amount: 0,
         },
     });
 }

@@ -85,6 +85,7 @@ impl sdk::Runtime for Runtime {
                     consensus_denomination: Denomination::NATIVE,
                     // Scale to 18 decimal places as this is what is expected in the EVM ecosystem.
                     consensus_scaling_factor: 1_000_000_000,
+                    min_delegate_amount: 0,
                 },
             },
             Default::default(),
