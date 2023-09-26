@@ -410,6 +410,21 @@
 <a href="#410" id="410">410</a>
 <a href="#411" id="411">411</a>
 <a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Consensus module.
 //!
 //! Low level consensus module for communicating with the consensus layer.
@@ -457,6 +472,12 @@
 </span><span class="kw">pub struct </span>Parameters {
     <span class="kw">pub </span>consensus_denomination: token::Denomination,
     <span class="kw">pub </span>consensus_scaling_factor: u64,
+
+    <span class="doccomment">/// Minimum amount that is allowed to be delegated. This should be greater than or equal to what
+    /// is configured in the consensus layer as the consensus layer will do its own checks.
+    ///
+    /// The amount is in consensus units.
+    </span><span class="kw">pub </span>min_delegate_amount: u128,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>Parameters {
@@ -464,6 +485,7 @@
         <span class="self">Self </span>{
             consensus_denomination: token::Denomination::from_str(<span class="string">&quot;TEST&quot;</span>).unwrap(),
             consensus_scaling_factor: <span class="number">1</span>,
+            min_delegate_amount: <span class="number">0</span>,
         }
     }
 }
@@ -530,6 +552,10 @@
     <span class="attr">#[error(<span class="string">&quot;amount not representable&quot;</span>)]
     #[sdk_error(code = <span class="number">5</span>)]
     </span>AmountNotRepresentable,
+
+    <span class="attr">#[error(<span class="string">&quot;amount is lower than the minimum delegation amount&quot;</span>)]
+    #[sdk_error(code = <span class="number">6</span>)]
+    </span>UnderMinDelegationAmount,
 
     <span class="attr">#[error(<span class="string">&quot;history: {0}&quot;</span>)]
     #[sdk_error(transparent)]
@@ -689,6 +715,10 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="self">Self</span>::ensure_consensus_denomination(ctx, amount.denomination())<span class="question-mark">?</span>;
         <span class="kw">let </span>amount = <span class="self">Self</span>::amount_to_consensus(ctx, amount.amount())<span class="question-mark">?</span>;
+
+        <span class="kw">if </span>amount &lt; <span class="self">Self</span>::params().min_delegate_amount {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::UnderMinDelegationAmount);
+        }
 
         ctx.emit_message(
             Message::Staking(Versioned::new(

@@ -549,6 +549,33 @@
 <a href="#549" id="549">549</a>
 <a href="#550" id="550">550</a>
 <a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
 </pre></div><pre class="rust"><code><span class="kw">mod </span>method_handler;
 <span class="kw">mod </span>migration_handler;
 <span class="kw">mod </span>module;
@@ -710,6 +737,8 @@
                 </span><span class="kw">fn </span>my_call(foo2: Bar2) -&gt; Baz2 {}
                 <span class="attr">#[handler(call = <span class="string">&quot;my_module.MyOtherCall&quot;</span>)]
                 </span><span class="kw">fn </span>my_other_call(foo3: Bar3) -&gt; Baz3 {}
+                <span class="attr">#[handler(call = <span class="string">&quot;my_module.MyInternalCall&quot;</span>, internal)]
+                </span><span class="kw">fn </span>my_internal_call(foo4: Bar4) -&gt; Baz4 {}
             }
         );
 
@@ -735,6 +764,7 @@
                                         <span class="self">Self</span>::prefetch_for_my_call(<span class="kw-2">&amp;mut </span>add_prefix, body, auth_info),
                                     ),
                                     <span class="string">&quot;my_module.MyOtherCall&quot; </span>=&gt; module::DispatchResult::Handled(<span class="prelude-val">Ok</span>(())),
+                                    <span class="string">&quot;my_module.MyInternalCall&quot; </span>=&gt; module::DispatchResult::Handled(<span class="prelude-val">Ok</span>(())),
                                     <span class="kw">_ </span>=&gt; module::DispatchResult::Unhandled(body),
                                 }
                             }
@@ -748,6 +778,12 @@
                                     <span class="string">&quot;my_module.MyOtherCall&quot; </span>=&gt; {
                                         module::dispatch_call(ctx, body, <span class="self">Self</span>::my_other_call)
                                     }
+                                    <span class="string">&quot;my_module.MyInternalCall&quot; </span>=&gt; module::dispatch_call(ctx, body, |ctx, body| {
+                                        <span class="kw">if </span>!ctx.is_internal() {
+                                            <span class="kw">return </span><span class="prelude-val">Err</span>(sdk::modules::core::Error::Forbidden.into());
+                                        }
+                                        <span class="self">Self</span>::my_internal_call(ctx, body)
+                                    }),
                                     <span class="kw">_ </span>=&gt; DispatchResult::Unhandled(body),
                                 }
                             }
@@ -774,6 +810,10 @@
                                         kind: core_types::MethodHandlerKind::Call,
                                         name: <span class="string">&quot;my_module.MyOtherCall&quot;</span>.to_string(),
                                     },
+                                    core_types::MethodHandlerInfo {
+                                        kind: core_types::MethodHandlerKind::Call,
+                                        name: <span class="string">&quot;my_module.MyInternalCall&quot;</span>.to_string(),
+                                    },
                                 ]
                             }
                         }
@@ -788,6 +828,8 @@
                             </span><span class="kw">fn </span>my_call(foo2: Bar2) -&gt; Baz2 {}
                             <span class="attr">#[handler(call = <span class="string">&quot;my_module.MyOtherCall&quot;</span>)]
                             </span><span class="kw">fn </span>my_other_call(foo3: Bar3) -&gt; Baz3 {}
+                            <span class="attr">#[handler(call = <span class="string">&quot;my_module.MyInternalCall&quot;</span>, internal)]
+                            </span><span class="kw">fn </span>my_internal_call(foo4: Bar4) -&gt; Baz4 {}
                         }
                     };
                 )
@@ -1082,6 +1124,18 @@
         <span class="kw">let </span>input: syn::ItemImpl = <span class="macro">syn::parse_quote!</span>(
             <span class="kw">impl</span>&lt;C: Cfg&gt; MyModule&lt;C&gt; {
                 <span class="attr">#[handler(call = <span class="string">&quot;foo&quot;</span>, allow_private_km)]
+                </span><span class="kw">fn </span>my_method_call() -&gt; () {}
+            }
+        );
+        <span class="kw">super</span>::derive_module(input);
+    }
+
+    <span class="attr">#[test]
+    #[should_panic(expected = <span class="string">&quot;only allowed on `call` handlers&quot;</span>)]
+    </span><span class="kw">fn </span>generate_method_handler_malformed_internal_noncall() {
+        <span class="kw">let </span>input: syn::ItemImpl = <span class="macro">syn::parse_quote!</span>(
+            <span class="kw">impl</span>&lt;C: Cfg&gt; MyModule&lt;C&gt; {
+                <span class="attr">#[handler(query = <span class="string">&quot;foo&quot;</span>, internal)]
                 </span><span class="kw">fn </span>my_method_call() -&gt; () {}
             }
         );
