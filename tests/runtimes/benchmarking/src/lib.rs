@@ -59,6 +59,7 @@ impl sdk::Runtime for Runtime {
                         mgp.insert(Denomination::NATIVE, 0);
                         mgp
                     },
+                    dynamic_min_gas_price: Default::default(),
                 },
             },
             modules::accounts::Genesis {

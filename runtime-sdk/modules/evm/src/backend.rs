@@ -354,9 +354,10 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
 
     fn block_base_fee_per_gas(&self) -> U256 {
         <C::Runtime as Runtime>::Core::min_gas_price(
-            &mut self.backend.ctx.borrow_mut(),
+            &self.backend.ctx.borrow_mut(),
             &Cfg::TOKEN_DENOMINATION,
         )
+        .unwrap_or_default()
         .into()
     }
 
