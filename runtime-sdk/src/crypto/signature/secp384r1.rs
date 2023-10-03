@@ -1,7 +1,6 @@
-//! Secp256r1 signatures.
-use digest::{consts::U32, core_api::BlockSizeUser, Digest, FixedOutput, FixedOutputReset};
-use k256::sha2::Sha512_256;
-use p256::{
+//! Secp384r1 signatures.
+use digest::{consts::U48, core_api::BlockSizeUser, Digest, FixedOutput, FixedOutputReset};
+use p384::{
     self,
     ecdsa::{
         self,
@@ -11,9 +10,9 @@ use p256::{
 
 use crate::crypto::signature::{Error, Signature};
 
-/// A Secp256r1 public key (in compressed form).
+/// A Secp384r1 public key (in compressed form).
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PublicKey(p256::EncodedPoint);
+pub struct PublicKey(p384::EncodedPoint);
 
 impl PublicKey {
     /// Return a byte representation of this public key.
@@ -26,7 +25,7 @@ impl PublicKey {
         if bytes.len() != 33 {
             return Err(Error::MalformedPublicKey);
         }
-        let ep = p256::EncodedPoint::from_bytes(bytes).map_err(|_| Error::MalformedPublicKey)?;
+        let ep = p384::EncodedPoint::from_bytes(bytes).map_err(|_| Error::MalformedPublicKey)?;
         if !ep.is_compressed() {
             // This should never happen due to the size check above.
             return Err(Error::MalformedPublicKey);
@@ -41,10 +40,12 @@ impl PublicKey {
         message: &[u8],
         signature: &Signature,
     ) -> Result<(), Error> {
-        let digest = Sha512_256::new()
-            .chain_update(context)
-            .chain_update(message);
-        self.verify_digest(digest, signature)
+        self.verify_digest(
+            sha2::Sha384::new()
+                .chain_update(context)
+                .chain_update(message),
+            signature,
+        )
     }
 
     /// Verify signature without using any domain separation scheme.
@@ -61,7 +62,7 @@ impl PublicKey {
     /// Verify signature of a pre-hashed message.
     pub fn verify_digest<D>(&self, digest: D, signature: &Signature) -> Result<(), Error>
     where
-        D: Digest + FixedOutput<OutputSize = U32>,
+        D: Digest + FixedOutput<OutputSize = U48>,
     {
         let sig = ecdsa::Signature::from_der(signature.as_ref())
             .map_err(|_| Error::MalformedSignature)?;
@@ -96,7 +97,7 @@ impl cbor::Decode for PublicKey {
     }
 }
 
-/// A memory-backed signer for Secp256r1.
+/// A memory-backed signer for Secp384r1.
 pub struct MemorySigner {
     sk: ecdsa::SigningKey,
 }
@@ -104,7 +105,7 @@ pub struct MemorySigner {
 impl MemorySigner {
     pub fn sign_digest<D>(&self, digest: D) -> Result<Signature, Error>
     where
-        D: Digest + FixedOutput<OutputSize = U32> + BlockSizeUser + FixedOutputReset,
+        D: Digest + FixedOutput<OutputSize = U48> + BlockSizeUser + FixedOutputReset,
     {
         let signature: ecdsa::Signature = self.sk.sign_digest(digest);
         Ok(signature.to_der().as_bytes().to_vec().into())
@@ -128,13 +129,13 @@ impl super::Signer for MemorySigner {
     }
 
     fn public_key(&self) -> super::PublicKey {
-        super::PublicKey::Secp256r1(PublicKey(self.sk.verifying_key().to_encoded_point(true)))
+        super::PublicKey::Secp384r1(PublicKey(self.sk.verifying_key().to_encoded_point(true)))
     }
 
     fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
-        let mut digest = Sha512_256::new();
-        <Sha512_256 as Digest>::update(&mut digest, context);
-        <Sha512_256 as Digest>::update(&mut digest, message);
+        let digest = sha2::Sha384::new()
+            .chain_update(context)
+            .chain_update(message);
         let signature: ecdsa::Signature = self.sk.sign_digest(digest);
         Ok(signature.to_der().as_bytes().to_vec().into())
     }

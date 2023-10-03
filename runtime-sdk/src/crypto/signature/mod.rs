@@ -1,8 +1,7 @@
 //! Cryptographic signatures.
 use std::convert::TryFrom;
 
-use digest::typenum::Unsigned as _;
-use sha2::{Digest as _, Sha512, Sha512_256};
+use digest::{typenum::Unsigned as _, Digest as _};
 use thiserror::Error;
 
 pub mod context;
@@ -10,6 +9,7 @@ mod digests;
 pub mod ed25519;
 pub mod secp256k1;
 pub mod secp256r1;
+pub mod secp384r1;
 pub mod sr25519;
 
 /// A specific combination of signature and hash.
@@ -32,6 +32,8 @@ pub enum SignatureType {
     Sr25519,
     #[cbor(rename = "secp256r1_prehashed_sha256")]
     Secp256r1_PrehashedSha256,
+    #[cbor(rename = "secp384r1_prehashed_sha384")]
+    Secp384r1_PrehashedSha384,
 }
 
 impl SignatureType {
@@ -45,6 +47,7 @@ impl SignatureType {
             Self::Secp256k1_PrehashedSha256 => 5,
             Self::Sr25519 => 6,
             Self::Secp256r1_PrehashedSha256 => 7,
+            Self::Secp384r1_PrehashedSha384 => 8,
         }
     }
 
@@ -55,6 +58,7 @@ impl SignatureType {
                 | Self::Secp256k1_PrehashedKeccak256
                 | Self::Secp256k1_PrehashedSha256
                 | Self::Secp256r1_PrehashedSha256
+                | Self::Secp384r1_PrehashedSha384
         )
     }
 
@@ -77,6 +81,10 @@ impl SignatureType {
     pub fn is_secp256r1_variant(&self) -> bool {
         matches!(self, Self::Secp256r1_PrehashedSha256)
     }
+
+    pub fn is_secp384r1_variant(&self) -> bool {
+        matches!(self, Self::Secp384r1_PrehashedSha384)
+    }
 }
 
 impl TryFrom<u8> for SignatureType {
@@ -92,6 +100,7 @@ impl TryFrom<u8> for SignatureType {
             5 => Ok(Self::Secp256k1_PrehashedSha256),
             6 => Ok(Self::Sr25519),
             7 => Ok(Self::Secp256r1_PrehashedSha256),
+            8 => Ok(Self::Secp384r1_PrehashedSha384),
             _ => Err(Error::InvalidArgument),
         }
     }
@@ -108,6 +117,9 @@ pub enum PublicKey {
 
     #[cbor(rename = "secp256r1")]
     Secp256r1(secp256r1::PublicKey),
+
+    #[cbor(rename = "secp384r1")]
+    Secp384r1(secp384r1::PublicKey),
 
     #[cbor(rename = "sr25519")]
     Sr25519(sr25519::PublicKey),
@@ -139,6 +151,7 @@ impl PublicKey {
             PublicKey::Ed25519(pk) => pk.as_bytes(),
             PublicKey::Secp256k1(pk) => pk.as_bytes(),
             PublicKey::Secp256r1(pk) => pk.as_bytes(),
+            PublicKey::Secp384r1(pk) => pk.as_bytes(),
             PublicKey::Sr25519(pk) => pk.as_bytes(),
         }
     }
@@ -159,6 +172,9 @@ impl PublicKey {
             SignatureType::Secp256r1_PrehashedSha256 => {
                 Ok(Self::Secp256r1(secp256r1::PublicKey::from_bytes(bytes)?))
             }
+            SignatureType::Secp384r1_PrehashedSha384 => {
+                Ok(Self::Secp384r1(secp384r1::PublicKey::from_bytes(bytes)?))
+            }
             SignatureType::Sr25519 => Ok(Self::Sr25519(sr25519::PublicKey::from_bytes(bytes)?)),
         }
     }
@@ -174,6 +190,7 @@ impl PublicKey {
             PublicKey::Ed25519(pk) => pk.verify(context, message, signature),
             PublicKey::Secp256k1(pk) => pk.verify(context, message, signature),
             PublicKey::Secp256r1(pk) => pk.verify(context, message, signature),
+            PublicKey::Secp384r1(pk) => pk.verify(context, message, signature),
             PublicKey::Sr25519(pk) => pk.verify(context, message, signature),
         }
     }
@@ -185,6 +202,7 @@ impl PublicKey {
             PublicKey::Ed25519(pk) => pk.verify_raw(message, signature),
             PublicKey::Secp256k1(pk) => pk.verify_raw(message, signature),
             PublicKey::Secp256r1(pk) => pk.verify_raw(message, signature),
+            PublicKey::Secp384r1(pk) => pk.verify_raw(message, signature),
             PublicKey::Sr25519(_) => Err(Error::InvalidArgument),
         }
     }
@@ -203,11 +221,12 @@ impl PublicKey {
                 SignatureType::Ed25519_Pure => pk.verify_raw(message, signature),
                 SignatureType::Ed25519_PrehashedSha512 => {
                     if context_or_hash.len()
-                        != <Sha512 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
+                        != <sha2::Sha512 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
                     {
                         return Err(Error::InvalidArgument);
                     }
-                    let digest = digests::DummyDigest::<Sha512>::new_precomputed(context_or_hash);
+                    let digest =
+                        digests::DummyDigest::<sha2::Sha512>::new_precomputed(context_or_hash);
                     pk.verify_digest(digest, signature)
                 }
                 _ => Err(Error::InvalidArgument),
@@ -246,14 +265,26 @@ impl PublicKey {
                     {
                         return Err(Error::InvalidArgument);
                     }
-                    let digest = digests::DummyDigest::<k256::sha2::Sha256>::new_precomputed(
-                        context_or_hash,
-                    );
+                    let digest =
+                        digests::DummyDigest::<sha2::Sha256>::new_precomputed(context_or_hash);
                     pk.verify_digest(digest, signature)
                 }
                 _ => Err(Error::InvalidArgument),
             },
-            _ => Err(Error::InvalidArgument),
+            Self::Secp384r1(pk) => match signature_type {
+                SignatureType::Secp384r1_PrehashedSha384 => {
+                    if context_or_hash.len()
+                        != <sha2::Sha384 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
+                    {
+                        return Err(Error::InvalidArgument);
+                    }
+                    let digest =
+                        digests::DummyDigest::<sha2::Sha384>::new_precomputed(context_or_hash);
+                    pk.verify_digest(digest, signature)
+                }
+                _ => Err(Error::InvalidArgument),
+            },
+            Self::Sr25519(_) => Err(Error::InvalidArgument),
         }
     }
 
@@ -330,6 +361,7 @@ pub enum MemorySigner {
     Ed25519(ed25519::MemorySigner),
     Secp256k1(secp256k1::MemorySigner),
     Secp256r1(secp256r1::MemorySigner),
+    Secp384r1(secp384r1::MemorySigner),
 }
 
 impl MemorySigner {
@@ -345,6 +377,10 @@ impl MemorySigner {
             Ok(Self::Secp256r1(secp256r1::MemorySigner::new_from_seed(
                 seed,
             )?))
+        } else if sig_type.is_secp384r1_variant() {
+            Ok(Self::Secp384r1(secp384r1::MemorySigner::new_from_seed(
+                seed,
+            )?))
         } else {
             Err(Error::InvalidArgument)
         }
@@ -352,10 +388,11 @@ impl MemorySigner {
 
     /// Create a new signer for testing purposes.
     pub fn new_test(sig_type: SignatureType, name: &str) -> Self {
-        let mut digest = Sha512_256::new();
-        digest.update(name.as_bytes());
-        let seed = digest.finalize();
-        Self::new_from_seed(sig_type, &seed).unwrap()
+        if sig_type.is_secp384r1_variant() {
+            Self::new_from_seed(sig_type, &sha2::Sha384::digest(name)).unwrap()
+        } else {
+            Self::new_from_seed(sig_type, &sha2::Sha512_256::digest(name)).unwrap()
+        }
     }
 
     /// Reconstruct the signer from its byte representation.
@@ -366,6 +403,8 @@ impl MemorySigner {
             Ok(Self::Secp256k1(secp256k1::MemorySigner::from_bytes(bytes)?))
         } else if sig_type.is_secp256r1_variant() {
             Ok(Self::Secp256r1(secp256r1::MemorySigner::from_bytes(bytes)?))
+        } else if sig_type.is_secp384r1_variant() {
+            Ok(Self::Secp384r1(secp384r1::MemorySigner::from_bytes(bytes)?))
         } else {
             Err(Error::InvalidArgument)
         }
@@ -377,6 +416,7 @@ impl MemorySigner {
             Self::Ed25519(signer) => signer.to_bytes(),
             Self::Secp256k1(signer) => signer.to_bytes(),
             Self::Secp256r1(signer) => signer.to_bytes(),
+            Self::Secp384r1(signer) => signer.to_bytes(),
         }
     }
 
@@ -386,6 +426,7 @@ impl MemorySigner {
             Self::Ed25519(signer) => signer.public_key(),
             Self::Secp256k1(signer) => signer.public_key(),
             Self::Secp256r1(signer) => signer.public_key(),
+            Self::Secp384r1(signer) => signer.public_key(),
         }
     }
 
@@ -395,6 +436,7 @@ impl MemorySigner {
             Self::Ed25519(signer) => signer.sign(context, message),
             Self::Secp256k1(signer) => signer.sign(context, message),
             Self::Secp256r1(signer) => signer.sign(context, message),
+            Self::Secp384r1(signer) => signer.sign(context, message),
         }
     }
 
@@ -404,6 +446,7 @@ impl MemorySigner {
             Self::Ed25519(signer) => signer.sign_raw(message),
             Self::Secp256k1(signer) => signer.sign_raw(message),
             Self::Secp256r1(signer) => signer.sign_raw(message),
+            Self::Secp384r1(signer) => signer.sign_raw(message),
         }
     }
 
@@ -420,11 +463,12 @@ impl MemorySigner {
                 SignatureType::Ed25519_Pure => signer.sign_raw(message),
                 SignatureType::Ed25519_PrehashedSha512 => {
                     if context_or_hash.len()
-                        != <Sha512 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
+                        != <sha2::Sha512 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
                     {
                         return Err(Error::InvalidArgument);
                     }
-                    let digest = digests::DummyDigest::<Sha512>::new_precomputed(context_or_hash);
+                    let digest =
+                        digests::DummyDigest::<sha2::Sha512>::new_precomputed(context_or_hash);
                     signer.sign_digest(digest)
                 }
                 _ => Err(Error::InvalidArgument),
@@ -463,9 +507,21 @@ impl MemorySigner {
                     {
                         return Err(Error::InvalidArgument);
                     }
-                    let digest = digests::DummyDigest::<k256::sha2::Sha256>::new_precomputed(
-                        context_or_hash,
-                    );
+                    let digest =
+                        digests::DummyDigest::<sha2::Sha256>::new_precomputed(context_or_hash);
+                    signer.sign_digest(digest)
+                }
+                _ => Err(Error::InvalidArgument),
+            },
+            Self::Secp384r1(signer) => match signature_type {
+                SignatureType::Secp384r1_PrehashedSha384 => {
+                    if context_or_hash.len()
+                        != <sha2::Sha384 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
+                    {
+                        return Err(Error::InvalidArgument);
+                    }
+                    let digest =
+                        digests::DummyDigest::<sha2::Sha384>::new_precomputed(context_or_hash);
                     signer.sign_digest(digest)
                 }
                 _ => Err(Error::InvalidArgument),
@@ -531,35 +587,23 @@ mod test {
         let sig_types: &[(SignatureType, Box<dyn Fn(&[u8]) -> Vec<u8>>)] = &[
             (
                 SignatureType::Ed25519_PrehashedSha512,
-                Box::new(|message: &[u8]| -> Vec<u8> {
-                    let mut digest = Sha512::new();
-                    digest.update(message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha2::Sha512::digest(message).to_vec()),
             ),
             (
                 SignatureType::Secp256k1_PrehashedKeccak256,
-                Box::new(|message: &[u8]| -> Vec<u8> {
-                    let mut digest = sha3::Keccak256::new();
-                    digest.update(message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha3::Keccak256::digest(message).to_vec()),
             ),
             (
                 SignatureType::Secp256k1_PrehashedSha256,
-                Box::new(|message: &[u8]| -> Vec<u8> {
-                    let mut digest = sha2::Sha256::new();
-                    digest.update(message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha2::Sha256::digest(message).to_vec()),
             ),
             (
                 SignatureType::Secp256r1_PrehashedSha256,
-                Box::new(|message: &[u8]| -> Vec<u8> {
-                    let mut digest = sha2::Sha256::new();
-                    digest.update(message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha2::Sha256::digest(message).to_vec()),
+            ),
+            (
+                SignatureType::Secp384r1_PrehashedSha384,
+                Box::new(|message| sha2::Sha384::digest(message).to_vec()),
             ),
         ];
 
