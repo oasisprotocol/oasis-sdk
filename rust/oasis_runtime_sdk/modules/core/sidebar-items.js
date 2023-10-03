@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["MODULE_NAME"],"enum":["Error","Event"],"mod":["state","types"],"struct":["GasCosts","Genesis","LocalConfig","Module","Parameters","TxSimulationFailure"],"trait":["API","Config"]};
+window.SIDEBAR_ITEMS = {"constant":["MODULE_NAME"],"enum":["Error","Event","ParameterValidationError"],"mod":["state","types"],"struct":["DynamicMinGasPrice","GasCosts","Genesis","LocalConfig","Module","Parameters","TxSimulationFailure"],"trait":["API","Config"]};

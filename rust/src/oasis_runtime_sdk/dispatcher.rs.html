@@ -1175,6 +1175,7 @@
 <a href="#1175" id="1175">1175</a>
 <a href="#1176" id="1176">1176</a>
 <a href="#1177" id="1177">1177</a>
+<a href="#1178" id="1178">1178</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Transaction dispatcher.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
@@ -2205,6 +2206,7 @@
                             callformat_x25519_deoxysii: <span class="number">0</span>,
                         },
                         min_gas_price: BTreeMap::from([(token::Denomination::NATIVE, <span class="number">0</span>)]),
+                        dynamic_min_gas_price: Default::default(),
                     },
                 },
                 (),
