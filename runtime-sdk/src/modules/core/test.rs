@@ -9,7 +9,8 @@ use crate::{
     error::Error,
     event::IntoTags,
     handler,
-    module::{self, Module as _, TransactionHandler as _},
+    module::{self, BlockHandler, Module as _, TransactionHandler as _},
+    modules::core::min_gas_price_update,
     runtime::Runtime,
     sdk_derive,
     sender::SenderMeta,
@@ -38,6 +39,7 @@ fn test_use_gas() {
             mgp.insert(token::Denomination::NATIVE, 0);
             mgp
         },
+        dynamic_min_gas_price: Default::default(),
     });
 
     assert_eq!(Core::max_batch_gas(&mut ctx), BLOCK_MAX_GAS);
@@ -135,15 +137,16 @@ fn test_query_min_gas_price() {
             mgp.insert("SMALLER".parse().unwrap(), 1000);
             mgp
         },
+        dynamic_min_gas_price: Default::default(),
     });
 
     assert_eq!(
         Core::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
-        123
+        Some(123)
     );
     assert_eq!(
         Core::min_gas_price(&mut ctx, &"SMALLER".parse().unwrap()),
-        1000
+        Some(1000)
     );
 
     let mgp = Core::query_min_gas_price(&mut ctx, ()).expect("query_min_gas_price should succeed");
@@ -170,11 +173,11 @@ fn test_query_min_gas_price() {
 
     assert_eq!(
         super::Module::<MinGasPriceOverride>::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
-        123
+        Some(123)
     );
     assert_eq!(
         super::Module::<MinGasPriceOverride>::min_gas_price(&mut ctx, &"SMALLER".parse().unwrap()),
-        1000
+        Some(1000)
     );
 
     let mgp = super::Module::<MinGasPriceOverride>::query_min_gas_price(&mut ctx, ())
@@ -346,6 +349,7 @@ impl Runtime for GasWasterRuntime {
                         mgp.insert(token::Denomination::NATIVE, 0);
                         mgp
                     },
+                    dynamic_min_gas_price: Default::default(),
                 },
             },
             (),
@@ -782,6 +786,7 @@ fn test_approve_unverified_tx() {
             mgp.insert(token::Denomination::NATIVE, 0);
             mgp
         },
+        dynamic_min_gas_price: Default::default(),
     });
     let dummy_bytes = b"you look, you die".to_vec();
     Core::approve_unverified_tx(
@@ -887,6 +892,7 @@ fn test_min_gas_price() {
             mgp.insert("SMALLER".parse().unwrap(), 100);
             mgp
         },
+        dynamic_min_gas_price: Default::default(),
     });
 
     let mut tx = transaction::Transaction {
@@ -1059,6 +1065,7 @@ fn test_gas_used_events() {
             mgp.insert(token::Denomination::NATIVE, 0);
             mgp
         },
+        dynamic_min_gas_price: Default::default(),
     });
 
     let mut tx = mock::transaction();
@@ -1160,4 +1167,147 @@ fn test_module_info() {
             }
         }
     );
+}
+
+#[test]
+fn test_min_gas_price_update() {
+    let cases: Vec<(u128, u128, u128, u128, u128)> = vec![
+        // (gas_used, target_gas_used, price_max_change_denominator, price, expected_price)
+        // General cases.
+        (50, 50, 1, 100, 100),  // No change.
+        (100, 50, 1, 100, 200), // Increase.
+        (50, 100, 1, 100, 50),  // Decrease.
+        (0, 50, 1, 100, 0),     // Decrease.
+        // Non base price_max_change_denominator.
+        (100, 50, 2, 100, 150),           // Increase by 50.
+        (100, 50, 8, 100, 112),           // Increase by 12.
+        (50, 100, 2, 100, 75),            // Decrease by 25.
+        (50, 100, 8, 100, 94),            // Decrease by 6.
+        (0, 100, 2, 100, 50),             // Decrease by 50.
+        (0, 100, 8, 100, 88),             // Decrease by 12.
+        (0, u64::MAX as u128, 1, 100, 0), // Decrease by 100%.
+        // Invalid configurations (should be handled gracefully)
+        (100, 100, 0, 100, 100), // price_max_change_denominator == 0.
+        (100, 0, 1, 100, 100),   // target_gas_used == 0
+        (1000, 100, 1, 0, 0),    // price == 0.
+        (u128::MAX, u128::MAX, 1, u128::MAX, u128::MAX), // Overflow.
+        (0, u128::MAX, 1, 100, 99), // Overflow (target_gas_used).
+        (0, u128::MAX / 2, 1, 100, 98), // Overflow. (target_gas_used).
+    ];
+    for (i, (gas_used, target_gas, max_change_denominator, price, expected_price)) in
+        cases.into_iter().enumerate()
+    {
+        let new_price = min_gas_price_update(gas_used, target_gas, max_change_denominator, price);
+        assert_eq!(
+            new_price, expected_price,
+            "dynamic price should match expected price (test case: {:?})",
+            i
+        );
+    }
+}
+
+#[test]
+fn test_dynamic_min_gas_price() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
+
+    let denom: token::Denomination = "SMALLER".parse().unwrap();
+    Core::set_params(Parameters {
+        max_batch_gas: 10_000,
+        max_tx_size: 32 * 1024,
+        max_tx_signers: 8,
+        max_multisig_signers: 8,
+        gas_costs: super::GasCosts {
+            tx_byte: 0,
+            auth_signature: GasWasterRuntime::AUTH_SIGNATURE_GAS,
+            auth_multisig_signer: GasWasterRuntime::AUTH_MULTISIG_GAS,
+            callformat_x25519_deoxysii: 0,
+        },
+        min_gas_price: {
+            let mut mgp = BTreeMap::new();
+            mgp.insert(token::Denomination::NATIVE, 1000);
+            mgp.insert(denom.clone(), 100);
+            mgp
+        },
+        dynamic_min_gas_price: super::DynamicMinGasPrice {
+            enabled: true,
+            target_block_gas_usage_percentage: 50,
+            min_price_max_change_denominator: 8,
+        },
+    });
+
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: GasWasterModule::METHOD_WASTE_GAS.to_owned(),
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![
+                transaction::SignerInfo::new_sigspec(keys::alice::sigspec(), 0),
+                transaction::SignerInfo::new_multisig(
+                    multisig::Config {
+                        signers: vec![multisig::Signer {
+                            public_key: keys::bob::pk(),
+                            weight: 1,
+                        }],
+                        threshold: 1,
+                    },
+                    0,
+                ),
+            ],
+            fee: transaction::Fee {
+                amount: token::BaseUnits::new(1_000_000_000, token::Denomination::NATIVE),
+                gas: 10_000,
+                consensus_messages: 0,
+            },
+            ..Default::default()
+        },
+    };
+    assert_eq!(
+        Core::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
+        Some(1000)
+    );
+    assert_eq!(Core::min_gas_price(&mut ctx, &denom), Some(100));
+
+    // Simulate some full blocks (with max gas usage).
+    for round in 0..=10 {
+        mock.runtime_header.round = round;
+
+        let mut ctx = mock.create_ctx();
+        Core::begin_block(&mut ctx);
+
+        for _ in 0..909 {
+            // Each tx uses 11 gas, this makes it 9999/10_000 block gas used.
+            ctx.with_tx(tx.clone().into(), |mut tx_ctx, call| {
+                Core::before_handle_call(&mut tx_ctx, &call).expect("gas price should be ok");
+            });
+        }
+
+        Core::end_block(&mut ctx);
+    }
+
+    let mut ctx = mock.create_ctx();
+    assert_eq!(
+        Core::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
+        Some(3598) // Gas price should increase.
+    );
+    assert_eq!(Core::min_gas_price(&mut ctx, &denom), Some(350));
+
+    // Simulate some empty blocks.
+    for round in 10..=100 {
+        mock.runtime_header.round = round;
+
+        let mut ctx = mock.create_ctx();
+        Core::begin_block(&mut ctx);
+        Core::end_block(&mut ctx);
+    }
+
+    let mut ctx = mock.create_ctx();
+    assert_eq!(
+        Core::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
+        Some(1000) // Gas price should decrease to the configured min gas price.
+    );
+    assert_eq!(Core::min_gas_price(&mut ctx, &denom), Some(100));
 }

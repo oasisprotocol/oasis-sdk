@@ -1028,6 +1028,7 @@ mod test {
                             callformat_x25519_deoxysii: 0,
                         },
                         min_gas_price: BTreeMap::from([(token::Denomination::NATIVE, 0)]),
+                        dynamic_min_gas_price: Default::default(),
                     },
                 },
                 (),

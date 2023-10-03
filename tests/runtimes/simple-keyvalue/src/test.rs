@@ -24,6 +24,7 @@ fn test_impl_for_tuple() {
             mgp.insert(token::Denomination::NATIVE, 0);
             mgp
         },
+        dynamic_min_gas_price: Default::default(),
     });
 
     let dummy_bytes = b"you look, you die".to_vec();

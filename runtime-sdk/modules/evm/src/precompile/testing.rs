@@ -221,6 +221,7 @@ impl Runtime for TestRuntime {
                     max_multisig_signers: 8,
                     gas_costs: Default::default(),
                     min_gas_price: BTreeMap::from([(token::Denomination::NATIVE, 0)]),
+                    dynamic_min_gas_price: Default::default(),
                 },
             },
             accounts::Genesis {

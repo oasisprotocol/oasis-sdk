@@ -23,7 +23,7 @@ use crate::{
     sender::SenderMeta,
     storage::{self, current::TransactionResult, CurrentStore},
     types::{
-        token,
+        token::{self, Denomination},
         transaction::{
             self, AddressSpec, AuthProof, Call, CallFormat, CallerAddress, UnverifiedTransaction,
         },
@@ -230,6 +230,37 @@ pub struct GasCosts {
     pub callformat_x25519_deoxysii: u64,
 }
 
+/// Dynamic min gas price parameters.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct DynamicMinGasPrice {
+    /// Enables the dynamic min gas price feature which dynamically adjusts the minimum gas price
+    /// based on block fullness, inspired by EIP-1559.
+    ///
+    /// Only takes effect if `min_gas_price`(s) are set.
+    pub enabled: bool,
+
+    /// Target block gas usage indicates the desired block gas usage as a percentage of the total
+    /// block gas limit.
+    ///
+    /// The min gas price will adjust up or down depending on whether the actual gas usage is above
+    /// or below this target.
+    pub target_block_gas_usage_percentage: u8,
+    /// Represents a constant value used to limit the rate at which the min price can change
+    /// between blocks.
+    ///
+    /// For example, if `min_price_max_change_denominator` is set to 8, the maximum change in
+    /// min price is 12.5% between blocks.
+    pub min_price_max_change_denominator: u8,
+}
+
+/// Errors emitted during core parameter validation.
+#[derive(Error, Debug)]
+pub enum ParameterValidationError {
+    #[error("invalid dynamic target block gas usage percentage (10-100)")]
+    InvalidTargetBlockGasUsagePercentage,
+    #[error("invalid dynamic min price max change denominator (1-50)")]
+    InvalidMinPriceMaxChangeDenominator,
+}
 /// Parameters for the core module.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
@@ -239,10 +270,29 @@ pub struct Parameters {
     pub max_multisig_signers: u32,
     pub gas_costs: GasCosts,
     pub min_gas_price: BTreeMap<token::Denomination, u128>,
+    pub dynamic_min_gas_price: DynamicMinGasPrice,
 }
 
 impl module::Parameters for Parameters {
-    type Error = std::convert::Infallible;
+    type Error = ParameterValidationError;
+
+    fn validate_basic(&self) -> Result<(), Self::Error> {
+        // Validate dynamic min gas price parameters.
+        let dmgp = &self.dynamic_min_gas_price;
+        if dmgp.enabled {
+            if dmgp.target_block_gas_usage_percentage < 10
+                || dmgp.target_block_gas_usage_percentage > 100
+            {
+                return Err(ParameterValidationError::InvalidTargetBlockGasUsagePercentage);
+            }
+            if dmgp.min_price_max_change_denominator < 1
+                || dmgp.min_price_max_change_denominator > 50
+            {
+                return Err(ParameterValidationError::InvalidMinPriceMaxChangeDenominator);
+            }
+        }
+        Ok(())
+    }
 }
 
 pub trait API {
@@ -262,6 +312,9 @@ pub trait API {
     /// Returns the remaining batch-wide gas.
     fn remaining_batch_gas<C: Context>(ctx: &mut C) -> u64;
 
+    /// Returns the total batch-wide gas used.
+    fn used_batch_gas<C: Context>(ctx: &mut C) -> u64;
+
     /// Return the remaining tx-wide gas.
     fn remaining_tx_gas<C: TxContext>(ctx: &mut C) -> u64;
 
@@ -272,7 +325,7 @@ pub trait API {
     fn max_batch_gas<C: Context>(ctx: &mut C) -> u64;
 
     /// Configured minimum gas price.
-    fn min_gas_price<C: Context>(ctx: &mut C, denom: &token::Denomination) -> u128;
+    fn min_gas_price<C: Context>(ctx: &C, denom: &token::Denomination) -> Option<u128>;
 
     /// Sets the transaction priority to the provided amount.
     fn set_priority<C: Context>(ctx: &mut C, priority: u64);
@@ -331,6 +384,8 @@ pub mod state {
     pub const MESSAGE_HANDLERS: &[u8] = &[0x02];
     /// Last processed epoch for detecting epoch changes.
     pub const LAST_EPOCH: &[u8] = &[0x03];
+    /// Dynamic min gas price.
+    pub const DYNAMIC_MIN_GAS_PRICE: &[u8] = &[0x04];
 }
 
 /// Module configuration.
@@ -383,7 +438,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(());
         }
         let batch_gas_limit = Self::params().max_batch_gas;
-        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
+        let batch_gas_used = Self::used_batch_gas(ctx);
         // NOTE: Going over the batch limit should trigger an abort as the scheduler should never
         //       allow scheduling past the batch limit but a malicious proposer might include too
         //       many transactions. Make sure to vote for failure in this case.
@@ -420,8 +475,14 @@ impl<Cfg: Config> API for Module<Cfg> {
 
     fn remaining_batch_gas<C: Context>(ctx: &mut C) -> u64 {
         let batch_gas_limit = Self::params().max_batch_gas;
-        let batch_gas_used = ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
-        batch_gas_limit.saturating_sub(*batch_gas_used)
+        batch_gas_limit.saturating_sub(Self::used_batch_gas(ctx))
+    }
+
+    fn used_batch_gas<C: Context>(ctx: &mut C) -> u64 {
+        ctx.value::<u64>(CONTEXT_KEY_GAS_USED)
+            .get()
+            .cloned()
+            .unwrap_or_default()
     }
 
     fn remaining_tx_gas<C: TxContext>(ctx: &mut C) -> u64 {
@@ -441,12 +502,8 @@ impl<Cfg: Config> API for Module<Cfg> {
         Self::params().max_batch_gas
     }
 
-    fn min_gas_price<C: Context>(_ctx: &mut C, denom: &token::Denomination) -> u128 {
-        Self::params()
-            .min_gas_price
-            .get(denom)
-            .copied()
-            .unwrap_or_default()
+    fn min_gas_price<C: Context>(ctx: &C, denom: &token::Denomination) -> Option<u128> {
+        Self::min_gas_prices(ctx).get(denom).copied()
     }
 
     fn set_priority<C: Context>(ctx: &mut C, priority: u64) {
@@ -774,10 +831,9 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &mut C,
         _args: (),
     ) -> Result<BTreeMap<token::Denomination, u128>, Error> {
-        let params = Self::params();
+        let mut mgp = Self::min_gas_prices(ctx);
 
         // Generate a combined view with local overrides.
-        let mut mgp = params.min_gas_price;
         for (denom, price) in mgp.iter_mut() {
             let local_mgp = Self::get_local_min_gas_price(ctx, denom);
             if local_mgp > *price {
@@ -862,6 +918,22 @@ impl<Cfg: Config> Module<Cfg> {
 }
 
 impl<Cfg: Config> Module<Cfg> {
+    fn min_gas_prices<C: Context>(_ctx: &C) -> BTreeMap<Denomination, u128> {
+        let params = Self::params();
+        if params.dynamic_min_gas_price.enabled {
+            CurrentStore::with(|store| {
+                let store =
+                    storage::TypedStore::new(storage::PrefixStore::new(store, &MODULE_NAME));
+                store
+                    .get(state::DYNAMIC_MIN_GAS_PRICE)
+                    // Use static min gas price when dynamic price was not yet computed.
+                    .unwrap_or(params.min_gas_price)
+            })
+        } else {
+            params.min_gas_price
+        }
+    }
+
     fn get_local_min_gas_price<C: Context>(ctx: &C, denom: &token::Denomination) -> u128 {
         #[allow(clippy::borrow_interior_mutable_const)]
         ctx.local_config(MODULE_NAME)
@@ -885,11 +957,10 @@ impl<Cfg: Config> Module<Cfg> {
             return Ok(());
         }
 
-        let params = Self::params();
         let fee = ctx.tx_auth_info().fee.clone();
         let denom = fee.amount.denomination();
 
-        match params.min_gas_price.get(denom) {
+        match Self::min_gas_price(ctx, denom) {
             // If the denomination is not among the global set, reject.
             None => return Err(Error::GasPriceTooLow),
 
@@ -904,7 +975,7 @@ impl<Cfg: Config> Module<Cfg> {
                     }
                 }
 
-                if &fee.gas_price() < min_gas_price {
+                if fee.gas_price() < min_gas_price {
                     return Err(Error::GasPriceTooLow);
                 }
             }
@@ -1022,6 +1093,40 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
     }
 }
 
+/// Computes the new minimum gas price based on the current gas usage and the target gas usage.
+///
+/// The new price is computed as follows (inspired by EIP-1559):
+///  - If the actual gas used is greater than the target gas used, increase the minimum gas price.
+///  - If the actual gas used is less than the target gas used, decrease the minimum gas price.
+///
+/// The price change is controlled by the `min_price_max_change_denominator` parameter.
+fn min_gas_price_update(
+    gas_used: u128,
+    target_gas_used: u128,
+    min_price_max_change_denominator: u128,
+    current_price: u128,
+) -> u128 {
+    // If the target gas used is zero or the denominator is zero, don't change the price.
+    if target_gas_used == 0 || min_price_max_change_denominator == 0 {
+        return current_price;
+    }
+
+    // Calculate the difference (as a percentage) between the actual gas used in the block and the target gas used.
+    let delta = (gas_used.max(target_gas_used) - gas_used.min(target_gas_used)).saturating_mul(100)
+        / target_gas_used;
+
+    // Calculate the change in gas price and divide by `min_price_max_change_denominator`.
+    let price_change =
+        (current_price.saturating_mul(delta) / 100) / min_price_max_change_denominator;
+
+    // Adjust the current price based on whether the gas used was above or below the target.
+    if gas_used > target_gas_used {
+        current_price.saturating_add(price_change)
+    } else {
+        current_price.saturating_sub(price_change)
+    }
+}
+
 impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
     fn begin_block<C: Context>(ctx: &mut C) {
         CurrentStore::with(|store| {
@@ -1038,6 +1143,53 @@ impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
             // Set the epoch changed key as needed.
             ctx.value(CONTEXT_KEY_EPOCH_CHANGED)
                 .set(epoch != previous_epoch);
+        });
+    }
+
+    fn end_block<C: Context>(ctx: &mut C) {
+        let params = Self::params();
+        if !params.dynamic_min_gas_price.enabled {
+            return;
+        }
+
+        // Update dynamic min gas price for next block, inspired by EIP-1559.
+        //
+        // Adjust the min gas price for each block based on the gas used in the previous block and the desired target
+        // gas usage set by `target_block_gas_usage_percentage`.
+        let gas_used = Self::used_batch_gas(ctx) as u128;
+        let max_batch_gas = Self::max_batch_gas(ctx) as u128;
+        let target_gas_used = max_batch_gas.saturating_mul(
+            params
+                .dynamic_min_gas_price
+                .target_block_gas_usage_percentage as u128,
+        ) / 100;
+
+        // Compute new prices.
+        let mut mgp = Self::min_gas_prices(ctx);
+        mgp.iter_mut().for_each(|(d, price)| {
+            let mut new_min_price = min_gas_price_update(
+                gas_used,
+                target_gas_used,
+                params
+                    .dynamic_min_gas_price
+                    .min_price_max_change_denominator as u128,
+                *price,
+            );
+
+            // Ensure that the new price is at least the minimum gas price.
+            if let Some(min_price) = params.min_gas_price.get(d) {
+                if new_min_price < *min_price {
+                    new_min_price = *min_price;
+                }
+            }
+            *price = new_min_price;
+        });
+
+        // Update min prices.
+        CurrentStore::with(|store| {
+            let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let mut tstore = storage::TypedStore::new(&mut store);
+            tstore.insert(state::DYNAMIC_MIN_GAS_PRICE, mgp);
         });
     }
 }
