@@ -3,8 +3,7 @@ use evm::{
     executor::stack::{PrecompileHandle, PrecompileOutput},
     ExitSucceed,
 };
-use ripemd160::Digest as _;
-use sha2::{Sha512, Sha512Trunc256};
+use sha2::{digest::Digest as _, Sha512, Sha512_256};
 
 use super::{record_linear_cost, PrecompileResult};
 
@@ -13,7 +12,7 @@ pub(super) fn call_sha512_256(handle: &mut impl PrecompileHandle) -> PrecompileR
     // See benches/criterion_benchmark.rs for the benchmarks.
     record_linear_cost(handle, handle.input().len() as u64, 115, 13)?;
 
-    let mut hasher = Sha512Trunc256::new();
+    let mut hasher = Sha512_256::new();
     hasher.update(handle.input());
     let digest = hasher.finalize();
 

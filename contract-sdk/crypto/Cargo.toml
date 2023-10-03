@@ -13,9 +13,9 @@ oasis-runtime-sdk = { path = "../../runtime-sdk" }
 # Third party.
 k256 = "0.13.1"
 thiserror = "1.0.30"
-x25519-dalek = "1.1.0"
-sha2 = "0.9.8"
-hmac = "0.11.0"
+x25519-dalek = { version = "2.0.0", features = ["static_secrets"] }
+sha2 = "0.10.8"
+hmac = "0.12.1"
 
 [dev-dependencies]
 hex = "0.4.2"

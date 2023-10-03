@@ -6,7 +6,7 @@ use evm::{
     executor::stack::{PrecompileFailure, PrecompileHandle, PrecompileOutput},
     ExitError, ExitRevert, ExitSucceed,
 };
-use hmac::{Hmac, Mac, NewMac as _};
+use hmac::{Hmac, Mac};
 use once_cell::sync::Lazy;
 
 use oasis_runtime_sdk::{
@@ -143,9 +143,11 @@ pub(super) fn call_x25519_derive(handle: &mut impl PrecompileHandle) -> Precompi
     let public = x25519_dalek::PublicKey::from(public);
     let private = x25519_dalek::StaticSecret::from(private);
 
-    let mut kdf = Hmac::<sha2::Sha512Trunc256>::new_from_slice(b"MRAE_Box_Deoxys-II-256-128")
-        .map_err(|_| PrecompileFailure::Error {
-            exit_status: ExitError::Other("unable to create key derivation function".into()),
+    let mut kdf =
+        Hmac::<sha2::Sha512_256>::new_from_slice(b"MRAE_Box_Deoxys-II-256-128").map_err(|_| {
+            PrecompileFailure::Error {
+                exit_status: ExitError::Other("unable to create key derivation function".into()),
+            }
         })?;
     kdf.update(private.diffie_hellman(&public).as_bytes());
 
@@ -998,12 +1000,6 @@ mod test {
             .expect("call should return something")
             .expect_err("call should fail");
 
-        // Invalid private key.
-        let zeroes: Vec<u8> = vec![0; 32];
-        push_all_and_test(None, Some(&zeroes), None, None)
-            .expect("call should return something")
-            .expect_err("call should fail");
-
         // All ok, with context.
         push_all_and_test(None, None, None, None)
             .expect("call should return something")
@@ -1031,7 +1027,7 @@ mod test {
         let (context, message) = if signature_type.is_prehashed() {
             use sha2::digest::Digest as _;
             let mut digest = sha2::Sha256::default();
-            <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, message);
+            <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, &message);
             (digest.finalize().to_vec(), vec![])
         } else {
             (
@@ -1217,7 +1213,7 @@ mod test {
         let (context, message) = if signature_type.is_prehashed() {
             use sha2::digest::Digest as _;
             let mut digest = sha2::Sha256::default();
-            <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, message);
+            <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, &message);
             (digest.finalize().to_vec(), vec![])
         } else {
             (

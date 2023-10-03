@@ -1,5 +1,5 @@
-use hmac::{Hmac, Mac as _, NewMac as _};
-use sha2::Sha512Trunc256;
+use hmac::{Hmac, Mac as _};
+use sha2::Sha512_256;
 use x25519_dalek::{PublicKey, StaticSecret};
 
 pub use oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::KEY_SIZE;
@@ -33,7 +33,7 @@ pub fn derive_symmetric(public_key: &[u8], private_key: &[u8]) -> Result<[u8; KE
     let public = PublicKey::from(public);
     let private = StaticSecret::from(private);
 
-    let mut kdf = Hmac::<Sha512Trunc256>::new_from_slice(b"MRAE_Box_Deoxys-II-256-128")
+    let mut kdf = Hmac::<Sha512_256>::new_from_slice(b"MRAE_Box_Deoxys-II-256-128")
         .map_err(|_| Error::KeyDerivationFunctionFailure)?;
     kdf.update(private.diffie_hellman(&public).as_bytes());
 

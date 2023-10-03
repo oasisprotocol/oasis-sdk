@@ -1,11 +1,9 @@
 //! Ed25519 signatures.
 use std::convert::TryInto;
 
-use curve25519_dalek::{
-    digest::{consts::U64, Digest},
-    edwards::CompressedEdwardsY,
-};
-use sha2::Sha512Trunc256;
+use curve25519_dalek::{digest::consts::U64, edwards::CompressedEdwardsY};
+use ed25519_dalek::Signer as _;
+use sha2::{Digest as _, Sha512_256};
 
 use oasis_core_runtime::common::crypto::signature::{
     PublicKey as CorePublicKey, Signature as CoreSignature,
@@ -85,7 +83,9 @@ impl PublicKey {
             .as_ref()
             .try_into()
             .map_err(|_| Error::MalformedSignature)?;
-        let pk = ed25519_dalek::PublicKey::from_bytes(self.as_bytes())
+        let pk: ed25519_dalek::VerifyingKey = self
+            .as_bytes()
+            .try_into()
             .map_err(|_| Error::MalformedPublicKey)?;
         pk.verify_prehashed(digest, None, &sig)
             .map_err(|_| Error::VerificationFailed)
@@ -118,7 +118,7 @@ impl From<PublicKey> for CorePublicKey {
 
 /// A memory-backed signer for Ed25519.
 pub struct MemorySigner {
-    sk: ed25519_dalek::ExpandedSecretKey,
+    sk: ed25519_dalek::SigningKey,
 }
 
 impl MemorySigner {
@@ -126,9 +126,8 @@ impl MemorySigner {
     where
         D: ed25519_dalek::Digest<OutputSize = U64>,
     {
-        let pk = ed25519_dalek::PublicKey::from(&self.sk);
         self.sk
-            .sign_prehashed(digest, &pk, None)
+            .sign_prehashed(digest, None)
             .map_err(|_| Error::SigningError)
             .map(|sig| sig.to_bytes().to_vec().into())
     }
@@ -136,15 +135,12 @@ impl MemorySigner {
 
 impl super::Signer for MemorySigner {
     fn new_from_seed(seed: &[u8]) -> Result<Self, Error> {
-        let sk = ed25519_dalek::SecretKey::from_bytes(seed).map_err(|_| Error::InvalidArgument)?;
-        let esk = ed25519_dalek::ExpandedSecretKey::from(&sk);
-        Ok(Self { sk: esk })
+        Self::from_bytes(seed)
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         Ok(Self {
-            sk: ed25519_dalek::ExpandedSecretKey::from_bytes(bytes)
-                .map_err(|_| Error::MalformedPrivateKey)?,
+            sk: bytes.try_into().map_err(|_| Error::MalformedPrivateKey)?,
         })
     }
 
@@ -153,25 +149,23 @@ impl super::Signer for MemorySigner {
     }
 
     fn public_key(&self) -> super::PublicKey {
-        let pk = ed25519_dalek::PublicKey::from(&self.sk);
+        let pk = ed25519_dalek::VerifyingKey::from(&self.sk);
         super::PublicKey::Ed25519(PublicKey::from_bytes(pk.as_bytes()).unwrap())
     }
 
     fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
-        let mut digest = Sha512Trunc256::new();
+        let mut digest = Sha512_256::new();
         digest.update(context);
         digest.update(message);
         let message = digest.finalize();
 
-        let pk = ed25519_dalek::PublicKey::from(&self.sk);
-        let signature = self.sk.sign(&message, &pk);
+        let signature = self.sk.sign(&message);
 
         Ok(signature.to_bytes().to_vec().into())
     }
 
     fn sign_raw(&self, message: &[u8]) -> Result<Signature, Error> {
-        let pk = ed25519_dalek::PublicKey::from(&self.sk);
-        let signature = self.sk.sign(message, &pk);
+        let signature = self.sk.sign(message);
         Ok(signature.to_bytes().to_vec().into())
     }
 }
