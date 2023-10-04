@@ -114,68 +114,6 @@
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
-<a href="#117" id="117">117</a>
-<a href="#118" id="118">118</a>
-<a href="#119" id="119">119</a>
-<a href="#120" id="120">120</a>
-<a href="#121" id="121">121</a>
-<a href="#122" id="122">122</a>
-<a href="#123" id="123">123</a>
-<a href="#124" id="124">124</a>
-<a href="#125" id="125">125</a>
-<a href="#126" id="126">126</a>
-<a href="#127" id="127">127</a>
-<a href="#128" id="128">128</a>
-<a href="#129" id="129">129</a>
-<a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
-<a href="#133" id="133">133</a>
-<a href="#134" id="134">134</a>
-<a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
 </pre></div><pre class="rust"><code><span class="doccomment">/// A digest that either passes through calls to an actual digest or returns
 /// pre-existing hash bytes..
 ///
@@ -225,13 +163,6 @@
     }
 }
 
-<span class="kw">impl</span>&lt;D&gt; digest_0_9::BlockInput <span class="kw">for </span>DummyDigest&lt;D&gt;
-<span class="kw">where
-    </span>D: digest_0_9::BlockInput,
-{
-    <span class="kw">type </span>BlockSize = &lt;D <span class="kw">as </span>digest_0_9::BlockInput&gt;::BlockSize;
-}
-
 <span class="kw">impl</span>&lt;D&gt; digest::OutputSizeUser <span class="kw">for </span>DummyDigest&lt;D&gt;
 <span class="kw">where
     </span>D: digest::OutputSizeUser,
@@ -272,51 +203,9 @@
     }
 }
 
-<span class="kw">impl</span>&lt;D&gt; digest_0_9::FixedOutput <span class="kw">for </span>DummyDigest&lt;D&gt;
-<span class="kw">where
-    </span>D: digest_0_9::FixedOutput,
-{
-    <span class="kw">type </span>OutputSize = &lt;D <span class="kw">as </span>digest_0_9::FixedOutput&gt;::OutputSize;
-
-    <span class="kw">fn </span>finalize_into(
-        <span class="self">self</span>,
-        out: <span class="kw-2">&amp;mut </span>digest_0_9::generic_array::GenericArray&lt;u8, <span class="self">Self</span>::OutputSize&gt;,
-    ) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(digest) = <span class="self">self</span>.underlying {
-            digest.finalize_into(out);
-        } <span class="kw">else </span>{
-            out.as_mut_slice().copy_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.preexisting);
-        }
-    }
-
-    <span class="kw">fn </span>finalize_into_reset(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        out: <span class="kw-2">&amp;mut </span>digest_0_9::generic_array::GenericArray&lt;u8, <span class="self">Self</span>::OutputSize&gt;,
-    ) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>digest) = <span class="self">self</span>.underlying {
-            digest.finalize_into_reset(out);
-        } <span class="kw">else </span>{
-            out.as_mut_slice().copy_from_slice(<span class="kw-2">&amp;</span><span class="self">self</span>.preexisting);
-        }
-    }
-}
-
 <span class="kw">impl</span>&lt;D&gt; digest::Reset <span class="kw">for </span>DummyDigest&lt;D&gt;
 <span class="kw">where
     </span>D: digest::Reset,
-{
-    <span class="kw">fn </span>reset(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>digest) = <span class="self">self</span>.underlying {
-            digest.reset();
-        } <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;mutating dummy digest with precomputed hash&quot;</span>);
-        }
-    }
-}
-
-<span class="kw">impl</span>&lt;D&gt; digest_0_9::Reset <span class="kw">for </span>DummyDigest&lt;D&gt;
-<span class="kw">where
-    </span>D: digest_0_9::Reset,
 {
     <span class="kw">fn </span>reset(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>digest) = <span class="self">self</span>.underlying {
@@ -332,19 +221,6 @@
     </span>D: digest::Update,
 {
     <span class="kw">fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>digest) = <span class="self">self</span>.underlying {
-            digest.update(data);
-        } <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;mutating dummy digest with precomputed hash&quot;</span>);
-        }
-    }
-}
-
-<span class="kw">impl</span>&lt;D&gt; digest_0_9::Update <span class="kw">for </span>DummyDigest&lt;D&gt;
-<span class="kw">where
-    </span>D: digest_0_9::Update,
-{
-    <span class="kw">fn </span>update(<span class="kw-2">&amp;mut </span><span class="self">self</span>, data: <span class="kw">impl </span>AsRef&lt;[u8]&gt;) {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>digest) = <span class="self">self</span>.underlying {
             digest.update(data);
         } <span class="kw">else </span>{

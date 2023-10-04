@@ -71,7 +71,7 @@
 <a href="#71" id="71">71</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Sr25519 signatures.
 </span><span class="kw">use </span>schnorrkel;
-<span class="kw">use </span>sha2::{Digest, Sha512Trunc256};
+<span class="kw">use </span>sha2::{Digest, Sha512_256};
 
 <span class="kw">use </span><span class="kw">crate</span>::crypto::signature::{Error, Signature};
 
@@ -119,9 +119,9 @@
         <span class="comment">// Generate a SigningTranscript from the context, and a pre-hash
         // of the message.
         //
-        // Note: This requires using Sha512Trunc256 instead of our hash,
+        // Note: This requires using Sha512_256 instead of our hash,
         // due to the need for FixedOutput.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>digest = Sha512Trunc256::new();
+        </span><span class="kw">let </span><span class="kw-2">mut </span>digest = Sha512_256::new();
         digest.update(message);
         <span class="kw">let </span>transcript = context.hash256(digest);
 

@@ -609,8 +609,8 @@
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::convert::TryInto <span class="kw">as _</span>;
 
 <span class="kw">use </span>anyhow;
-<span class="kw">use </span>hmac::{Hmac, Mac <span class="kw">as _</span>, NewMac <span class="kw">as _</span>};
-<span class="kw">use </span>sha2::Sha512Trunc256;
+<span class="kw">use </span>hmac::{Hmac, Mac <span class="kw">as _</span>};
+<span class="kw">use </span>sha2::Sha512_256;
 <span class="kw">use </span>slog::error;
 <span class="kw">use </span>thiserror::Error;
 <span class="kw">use </span>zeroize::{Zeroize, Zeroizing};
@@ -628,7 +628,7 @@
 };
 
 <span class="kw">type </span>Nonce = [u8; NONCE_SIZE];
-<span class="kw">type </span>Kdf = Hmac&lt;Sha512Trunc256&gt;;
+<span class="kw">type </span>Kdf = Hmac&lt;Sha512_256&gt;;
 
 <span class="doccomment">/// Unpack the concatenation of (nonce || byte_slice) into (Nonce, &amp;[u8]).
 </span><span class="kw">fn </span>unpack_nonce_slice&lt;<span class="lifetime">&#39;a</span>&gt;(packed: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Nonce, <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8])&gt; {

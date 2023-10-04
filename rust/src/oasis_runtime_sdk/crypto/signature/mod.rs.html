@@ -576,11 +576,15 @@
 <a href="#576" id="576">576</a>
 <a href="#577" id="577">577</a>
 <a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Cryptographic signatures.
 </span><span class="kw">use </span>std::convert::TryFrom;
 
 <span class="kw">use </span>digest::typenum::Unsigned <span class="kw">as _</span>;
-<span class="kw">use </span>sha2::{Digest <span class="kw">as _</span>, Sha512, Sha512Trunc256};
+<span class="kw">use </span>sha2::{Digest <span class="kw">as _</span>, Sha512, Sha512_256};
 <span class="kw">use </span>thiserror::Error;
 
 <span class="kw">pub mod </span>context;
@@ -781,7 +785,7 @@
                 SignatureType::Ed25519_Pure =&gt; pk.verify_raw(message, signature),
                 SignatureType::Ed25519_PrehashedSha512 =&gt; {
                     <span class="kw">if </span>context_or_hash.len()
-                        != &lt;Sha512 <span class="kw">as </span>sha2::digest::FixedOutput&gt;::OutputSize::USIZE
+                        != &lt;Sha512 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
                     {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
@@ -793,7 +797,9 @@
             <span class="self">Self</span>::Secp256k1(pk) =&gt; <span class="kw">match </span>signature_type {
                 SignatureType::Secp256k1_Oasis =&gt; pk.verify(context_or_hash, message, signature),
                 SignatureType::Secp256k1_PrehashedKeccak256 =&gt; {
-                    <span class="kw">if </span>context_or_hash.len() != &lt;sha3_0_9_1::Keccak256 <span class="kw">as </span>sha3_0_9_1::digest::FixedOutput&gt;::OutputSize::USIZE {
+                    <span class="kw">if </span>context_or_hash.len()
+                        != &lt;sha3::Keccak256 <span class="kw">as </span>sha3::digest::OutputSizeUser&gt;::OutputSize::USIZE
+                    {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
                     <span class="comment">// Use SHA-256 for RFC6979 even if Keccak256 was used for the message.
@@ -804,7 +810,7 @@
                 }
                 SignatureType::Secp256k1_PrehashedSha256 =&gt; {
                     <span class="kw">if </span>context_or_hash.len()
-                        != &lt;sha2::Sha256 <span class="kw">as </span>sha2::digest::FixedOutput&gt;::OutputSize::USIZE
+                        != &lt;sha2::Sha256 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
                     {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
@@ -818,7 +824,7 @@
             <span class="self">Self</span>::Secp256r1(pk) =&gt; <span class="kw">match </span>signature_type {
                 SignatureType::Secp256r1_PrehashedSha256 =&gt; {
                     <span class="kw">if </span>context_or_hash.len()
-                        != &lt;sha2::Sha256 <span class="kw">as </span>sha2::digest::FixedOutput&gt;::OutputSize::USIZE
+                        != &lt;sha2::Sha256 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
                     {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
@@ -928,7 +934,7 @@
 
     <span class="doccomment">/// Create a new signer for testing purposes.
     </span><span class="kw">pub fn </span>new_test(sig_type: SignatureType, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha512Trunc256::new();
+        <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha512_256::new();
         digest.update(name.as_bytes());
         <span class="kw">let </span>seed = digest.finalize();
         <span class="self">Self</span>::new_from_seed(sig_type, <span class="kw-2">&amp;</span>seed).unwrap()
@@ -996,7 +1002,7 @@
                 SignatureType::Ed25519_Pure =&gt; signer.sign_raw(message),
                 SignatureType::Ed25519_PrehashedSha512 =&gt; {
                     <span class="kw">if </span>context_or_hash.len()
-                        != &lt;Sha512 <span class="kw">as </span>sha2::digest::FixedOutput&gt;::OutputSize::USIZE
+                        != &lt;Sha512 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
                     {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
@@ -1008,7 +1014,9 @@
             <span class="self">Self</span>::Secp256k1(signer) =&gt; <span class="kw">match </span>signature_type {
                 SignatureType::Secp256k1_Oasis =&gt; signer.sign(context_or_hash, message),
                 SignatureType::Secp256k1_PrehashedKeccak256 =&gt; {
-                    <span class="kw">if </span>context_or_hash.len() != &lt;sha3_0_9_1::Keccak256 <span class="kw">as </span>sha3_0_9_1::digest::FixedOutput&gt;::OutputSize::USIZE {
+                    <span class="kw">if </span>context_or_hash.len()
+                        != &lt;sha3::Keccak256 <span class="kw">as </span>sha3::digest::OutputSizeUser&gt;::OutputSize::USIZE
+                    {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
                     <span class="comment">// Use SHA-256 for RFC6979 even if Keccak256 was used for the message.
@@ -1019,7 +1027,7 @@
                 }
                 SignatureType::Secp256k1_PrehashedSha256 =&gt; {
                     <span class="kw">if </span>context_or_hash.len()
-                        != &lt;sha2::Sha256 <span class="kw">as </span>sha2::digest::FixedOutput&gt;::OutputSize::USIZE
+                        != &lt;sha2::Sha256 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
                     {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
@@ -1033,7 +1041,7 @@
             <span class="self">Self</span>::Secp256r1(signer) =&gt; <span class="kw">match </span>signature_type {
                 SignatureType::Secp256r1_PrehashedSha256 =&gt; {
                     <span class="kw">if </span>context_or_hash.len()
-                        != &lt;sha2::Sha256 <span class="kw">as </span>sha2::digest::FixedOutput&gt;::OutputSize::USIZE
+                        != &lt;sha2::Sha256 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
                     {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
@@ -1114,7 +1122,7 @@
             (
                 SignatureType::Secp256k1_PrehashedKeccak256,
                 Box::new(|message: <span class="kw-2">&amp;</span>[u8]| -&gt; Vec&lt;u8&gt; {
-                    <span class="kw">let </span><span class="kw-2">mut </span>digest = sha3_0_9_1::Keccak256::new();
+                    <span class="kw">let </span><span class="kw-2">mut </span>digest = sha3::Keccak256::new();
                     digest.update(message);
                     digest.finalize().to_vec()
                 }),
