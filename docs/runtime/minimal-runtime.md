@@ -1,6 +1,6 @@
 # Minimal Runtime
 
-This section will show you how to quickly create, build and test a minimal
+This chapter will show you how to quickly create, build and test a minimal
 runtime that allows transfers between accounts by using the `accounts` module
 provided by the Runtime SDK.
 

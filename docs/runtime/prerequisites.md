@@ -4,12 +4,12 @@ description: How to build your first runtime
 
 # Prerequisites
 
-This section will guide you how to install the software required for developing
+This chapter will show you how to install the software required for developing
 a runtime and client using the Oasis SDK. After successfully completing all the
 described steps you will be able to start building your first runtime!
 
 If you already have everything set up, feel free to skip to the [next
-section](minimal-runtime.md).
+chapter](minimal-runtime.md).
 
 ## Environment Setup
 

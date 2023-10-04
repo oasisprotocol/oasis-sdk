@@ -6,7 +6,7 @@ hinted that almost all of the implementation of the state transition function
 is actually hidden inside the _modules_ that are composed together to form a
 runtime.
 
-This section explores how modules are built.
+This chapter explores how modules are built.
 
 [minimal runtime example]: minimal-runtime.md
 
