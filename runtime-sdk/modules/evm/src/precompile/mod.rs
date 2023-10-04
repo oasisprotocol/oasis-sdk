@@ -14,7 +14,7 @@ use crate::{backend::EVMBackendExt, Config};
 
 mod confidential;
 mod gas;
-mod sha512;
+mod sha2;
 mod standard;
 mod subcall;
 
@@ -130,9 +130,10 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             (1, 0, 9) => gas::call_gas_used(handle),
             (1, 0, 10) => gas::call_pad_gas(handle),
             // Oasis-specific, general.
-            (1, 1, 1) => sha512::call_sha512_256(handle),
-            (1, 1, 2) => sha512::call_sha512(handle),
+            (1, 1, 1) => sha2::call_sha512_256(handle),
+            (1, 1, 2) => sha2::call_sha512(handle),
             (1, 1, 3) => subcall::call_subcall(handle, self.backend),
+            (1, 1, 4) => sha2::call_sha384(handle),
             _ => return Cfg::additional_precompiles().and_then(|pc| pc.execute(handle)),
         })
     }
@@ -149,7 +150,7 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
                 // Oasis-specific, confidential.
                 (1, 0, 1..=10, true) |
                 // Oasis-specific, general.
-                (1, 1, 1..=3, _)
+                (1, 1, 1..=4, _)
             )
         {
             IsPrecompileResult::Answer {
