@@ -2,7 +2,7 @@
 use std::convert::TryFrom;
 
 use digest::typenum::Unsigned as _;
-use sha2::{Digest as _, Sha512, Sha512Trunc256};
+use sha2::{Digest as _, Sha512, Sha512_256};
 use thiserror::Error;
 
 pub mod context;
@@ -203,7 +203,7 @@ impl PublicKey {
                 SignatureType::Ed25519_Pure => pk.verify_raw(message, signature),
                 SignatureType::Ed25519_PrehashedSha512 => {
                     if context_or_hash.len()
-                        != <Sha512 as sha2::digest::FixedOutput>::OutputSize::USIZE
+                        != <Sha512 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
                     {
                         return Err(Error::InvalidArgument);
                     }
@@ -215,7 +215,9 @@ impl PublicKey {
             Self::Secp256k1(pk) => match signature_type {
                 SignatureType::Secp256k1_Oasis => pk.verify(context_or_hash, message, signature),
                 SignatureType::Secp256k1_PrehashedKeccak256 => {
-                    if context_or_hash.len() != <sha3_0_9_1::Keccak256 as sha3_0_9_1::digest::FixedOutput>::OutputSize::USIZE {
+                    if context_or_hash.len()
+                        != <sha3::Keccak256 as sha3::digest::OutputSizeUser>::OutputSize::USIZE
+                    {
                         return Err(Error::InvalidArgument);
                     }
                     // Use SHA-256 for RFC6979 even if Keccak256 was used for the message.
@@ -226,7 +228,7 @@ impl PublicKey {
                 }
                 SignatureType::Secp256k1_PrehashedSha256 => {
                     if context_or_hash.len()
-                        != <sha2::Sha256 as sha2::digest::FixedOutput>::OutputSize::USIZE
+                        != <sha2::Sha256 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
                     {
                         return Err(Error::InvalidArgument);
                     }
@@ -240,7 +242,7 @@ impl PublicKey {
             Self::Secp256r1(pk) => match signature_type {
                 SignatureType::Secp256r1_PrehashedSha256 => {
                     if context_or_hash.len()
-                        != <sha2::Sha256 as sha2::digest::FixedOutput>::OutputSize::USIZE
+                        != <sha2::Sha256 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
                     {
                         return Err(Error::InvalidArgument);
                     }
@@ -350,7 +352,7 @@ impl MemorySigner {
 
     /// Create a new signer for testing purposes.
     pub fn new_test(sig_type: SignatureType, name: &str) -> Self {
-        let mut digest = Sha512Trunc256::new();
+        let mut digest = Sha512_256::new();
         digest.update(name.as_bytes());
         let seed = digest.finalize();
         Self::new_from_seed(sig_type, &seed).unwrap()
@@ -418,7 +420,7 @@ impl MemorySigner {
                 SignatureType::Ed25519_Pure => signer.sign_raw(message),
                 SignatureType::Ed25519_PrehashedSha512 => {
                     if context_or_hash.len()
-                        != <Sha512 as sha2::digest::FixedOutput>::OutputSize::USIZE
+                        != <Sha512 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
                     {
                         return Err(Error::InvalidArgument);
                     }
@@ -430,7 +432,9 @@ impl MemorySigner {
             Self::Secp256k1(signer) => match signature_type {
                 SignatureType::Secp256k1_Oasis => signer.sign(context_or_hash, message),
                 SignatureType::Secp256k1_PrehashedKeccak256 => {
-                    if context_or_hash.len() != <sha3_0_9_1::Keccak256 as sha3_0_9_1::digest::FixedOutput>::OutputSize::USIZE {
+                    if context_or_hash.len()
+                        != <sha3::Keccak256 as sha3::digest::OutputSizeUser>::OutputSize::USIZE
+                    {
                         return Err(Error::InvalidArgument);
                     }
                     // Use SHA-256 for RFC6979 even if Keccak256 was used for the message.
@@ -441,7 +445,7 @@ impl MemorySigner {
                 }
                 SignatureType::Secp256k1_PrehashedSha256 => {
                     if context_or_hash.len()
-                        != <sha2::Sha256 as sha2::digest::FixedOutput>::OutputSize::USIZE
+                        != <sha2::Sha256 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
                     {
                         return Err(Error::InvalidArgument);
                     }
@@ -455,7 +459,7 @@ impl MemorySigner {
             Self::Secp256r1(signer) => match signature_type {
                 SignatureType::Secp256r1_PrehashedSha256 => {
                     if context_or_hash.len()
-                        != <sha2::Sha256 as sha2::digest::FixedOutput>::OutputSize::USIZE
+                        != <sha2::Sha256 as sha2::digest::OutputSizeUser>::OutputSize::USIZE
                     {
                         return Err(Error::InvalidArgument);
                     }
@@ -536,7 +540,7 @@ mod test {
             (
                 SignatureType::Secp256k1_PrehashedKeccak256,
                 Box::new(|message: &[u8]| -> Vec<u8> {
-                    let mut digest = sha3_0_9_1::Keccak256::new();
+                    let mut digest = sha3::Keccak256::new();
                     digest.update(message);
                     digest.finalize().to_vec()
                 }),

@@ -1,6 +1,6 @@
 //! Sr25519 signatures.
 use schnorrkel;
-use sha2::{Digest, Sha512Trunc256};
+use sha2::{Digest, Sha512_256};
 
 use crate::crypto::signature::{Error, Signature};
 
@@ -48,9 +48,9 @@ impl PublicKey {
         // Generate a SigningTranscript from the context, and a pre-hash
         // of the message.
         //
-        // Note: This requires using Sha512Trunc256 instead of our hash,
+        // Note: This requires using Sha512_256 instead of our hash,
         // due to the need for FixedOutput.
-        let mut digest = Sha512Trunc256::new();
+        let mut digest = Sha512_256::new();
         digest.update(message);
         let transcript = context.hash256(digest);
 

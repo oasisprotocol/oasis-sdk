@@ -1,8 +1,8 @@
 use std::convert::TryInto as _;
 
 use anyhow;
-use hmac::{Hmac, Mac as _, NewMac as _};
-use sha2::Sha512Trunc256;
+use hmac::{Hmac, Mac as _};
+use sha2::Sha512_256;
 use slog::error;
 use thiserror::Error;
 use zeroize::{Zeroize, Zeroizing};
@@ -20,7 +20,7 @@ use crate::{
 };
 
 type Nonce = [u8; NONCE_SIZE];
-type Kdf = Hmac<Sha512Trunc256>;
+type Kdf = Hmac<Sha512_256>;
 
 /// Unpack the concatenation of (nonce || byte_slice) into (Nonce, &[u8]).
 fn unpack_nonce_slice<'a>(packed: &'a [u8]) -> Option<(&'a Nonce, &'a [u8])> {

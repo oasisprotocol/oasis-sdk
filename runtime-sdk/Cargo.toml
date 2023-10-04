@@ -14,16 +14,14 @@ oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 # Third party.
 byteorder = "1.4.3"
 curve25519-dalek = "3.2.0"
-ed25519-dalek = "1.0.1"
+ed25519-dalek = { version = "2.0.0", features = ["digest", "hazmat"] }
 digest = "0.10.3"
-digest_0_9 = { package = "digest", version = "0.9" } # Needed for ed25519-dalek.
-hmac = "0.11.0"
-sha2 = "0.9.8"
+hmac = "0.12.1"
+sha2 = "0.10.8"
 sha3 = { version = "0.10.1", default-features = false }
-sha3_0_9_1 = { package = "sha3", version = "0.9.1", default-features = false }
 k256 = "0.13.1"
 p256 = "0.13.2"
-schnorrkel = "0.10.2"
+schnorrkel = "0.11.2"
 merlin = "3.0.0"
 thiserror = "1.0.30"
 hex = "0.4.2"

@@ -1,17 +1,15 @@
 //! Ed25519 signatures.
 use std::convert::TryInto;
 
-use curve25519_dalek::{
-    digest::{consts::U64, Digest},
-    edwards::CompressedEdwardsY,
-};
-use sha2::Sha512Trunc256;
+use curve25519_dalek::{digest::consts::U64, edwards::CompressedEdwardsY};
+use ed25519_dalek::Signer as _;
+use sha2::{Digest as _, Sha512, Sha512_256};
 
 use oasis_core_runtime::common::crypto::signature::{
     PublicKey as CorePublicKey, Signature as CoreSignature,
 };
 
-use crate::crypto::signature::{Error, Signature};
+use crate::crypto::signature::{Error, Signature, Signer};
 
 /// An Ed25519 public key.
 #[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
@@ -85,7 +83,9 @@ impl PublicKey {
             .as_ref()
             .try_into()
             .map_err(|_| Error::MalformedSignature)?;
-        let pk = ed25519_dalek::PublicKey::from_bytes(self.as_bytes())
+        let pk: ed25519_dalek::VerifyingKey = self
+            .as_bytes()
+            .try_into()
             .map_err(|_| Error::MalformedPublicKey)?;
         pk.verify_prehashed(digest, None, &sig)
             .map_err(|_| Error::VerificationFailed)
@@ -118,7 +118,91 @@ impl From<PublicKey> for CorePublicKey {
 
 /// A memory-backed signer for Ed25519.
 pub struct MemorySigner {
-    sk: ed25519_dalek::ExpandedSecretKey,
+    key: Key,
+}
+
+/// The original version of the Ed25519 signer returned the "expanded" secret key from `to_bytes`.
+/// A contract may have stored the "expanded" key and expects its use to continue to succeed.
+/// For backwards compatibility, the signer works with both "expanded" and regular keys.
+/// New invocations receive a regular/proper key, and from-"expanded" ones get the old behavior.
+enum Key {
+    Expanded {
+        esk: ed25519_dalek::hazmat::ExpandedSecretKey,
+        /// The hash output that is used to create the "expanded" secret key.
+        /// It is stored to return from `from_bytes` because it is not recoverable from `esk`.
+        hash: zeroize::Zeroizing<[u8; 64]>,
+    },
+    Regular(ed25519_dalek::SigningKey),
+}
+
+impl Key {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+        match bytes.len() {
+            // It's a new/correct-style secret key.
+            32 => bytes
+                .try_into()
+                .map(ed25519_dalek::SigningKey::from_bytes)
+                .map(Self::Regular)
+                .map_err(|_| Error::MalformedPrivateKey),
+            // It's an "expanded" secret key, which is treated as the output of a 64-byte hash function.
+            64 => bytes
+                .try_into()
+                .map(|hash| Self::Expanded {
+                    esk: ed25519_dalek::hazmat::ExpandedSecretKey::from_bytes(&hash),
+                    hash: hash.into(),
+                })
+                .map_err(|_| Error::MalformedPrivateKey),
+            _ => Err(Error::MalformedPrivateKey),
+        }
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            Self::Expanded { hash, .. } => hash.to_vec(),
+            Self::Regular(sk) => sk.to_bytes().to_vec(),
+        }
+    }
+
+    fn sign(&self, message: &[u8]) -> Signature {
+        match self {
+            Self::Expanded { esk, .. } => {
+                let verifying_key = ed25519_dalek::VerifyingKey::from(esk);
+                ed25519_dalek::hazmat::raw_sign::<Sha512>(esk, message, &verifying_key)
+            }
+            Self::Regular(sk) => sk.sign(message),
+        }
+        .to_bytes()
+        .to_vec()
+        .into()
+    }
+
+    fn sign_digest<D>(&self, digest: D) -> Result<Signature, Error>
+    where
+        D: ed25519_dalek::Digest<OutputSize = U64>,
+    {
+        match self {
+            Key::Expanded { esk, .. } => {
+                let verifying_key = ed25519_dalek::VerifyingKey::from(esk);
+                ed25519_dalek::hazmat::raw_sign_prehashed::<Sha512, _>(
+                    esk,
+                    digest,
+                    &verifying_key,
+                    None,
+                )
+            }
+            Key::Regular(sk) => sk.sign_prehashed(digest, None),
+        }
+        .map_err(|_| Error::SigningError)
+        .map(|sig| sig.to_bytes().to_vec().into())
+    }
+
+    fn public_key(&self) -> super::PublicKey {
+        let pk = match self {
+            Self::Expanded { esk, .. } => ed25519_dalek::VerifyingKey::from(esk),
+            Self::Regular(sk) => sk.verifying_key(),
+        };
+        super::PublicKey::Ed25519(PublicKey::from_bytes(pk.as_bytes()).unwrap())
+    }
 }
 
 impl MemorySigner {
@@ -126,52 +210,93 @@ impl MemorySigner {
     where
         D: ed25519_dalek::Digest<OutputSize = U64>,
     {
-        let pk = ed25519_dalek::PublicKey::from(&self.sk);
-        self.sk
-            .sign_prehashed(digest, &pk, None)
-            .map_err(|_| Error::SigningError)
-            .map(|sig| sig.to_bytes().to_vec().into())
+        self.key.sign_digest(digest)
     }
 }
 
-impl super::Signer for MemorySigner {
+impl Signer for MemorySigner {
     fn new_from_seed(seed: &[u8]) -> Result<Self, Error> {
-        let sk = ed25519_dalek::SecretKey::from_bytes(seed).map_err(|_| Error::InvalidArgument)?;
-        let esk = ed25519_dalek::ExpandedSecretKey::from(&sk);
-        Ok(Self { sk: esk })
+        if seed.len() != 32 {
+            return Err(Error::MalformedPublicKey);
+        }
+        Self::from_bytes(seed)
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         Ok(Self {
-            sk: ed25519_dalek::ExpandedSecretKey::from_bytes(bytes)
-                .map_err(|_| Error::MalformedPrivateKey)?,
+            key: Key::from_bytes(bytes)?,
         })
     }
 
     fn to_bytes(&self) -> Vec<u8> {
-        self.sk.to_bytes().to_vec()
+        self.key.to_bytes()
     }
 
     fn public_key(&self) -> super::PublicKey {
-        let pk = ed25519_dalek::PublicKey::from(&self.sk);
-        super::PublicKey::Ed25519(PublicKey::from_bytes(pk.as_bytes()).unwrap())
+        self.key.public_key()
     }
 
     fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
-        let mut digest = Sha512Trunc256::new();
+        let mut digest = Sha512_256::new();
         digest.update(context);
         digest.update(message);
-        let message = digest.finalize();
-
-        let pk = ed25519_dalek::PublicKey::from(&self.sk);
-        let signature = self.sk.sign(&message, &pk);
-
-        Ok(signature.to_bytes().to_vec().into())
+        Ok(self.key.sign(&digest.finalize()))
     }
 
     fn sign_raw(&self, message: &[u8]) -> Result<Signature, Error> {
-        let pk = ed25519_dalek::PublicKey::from(&self.sk);
-        let signature = self.sk.sign(message, &pk);
-        Ok(signature.to_bytes().to_vec().into())
+        Ok(self.key.sign(message))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn legacy_esk_equivalence() {
+        let seed = [42u8; 32];
+        let signer = MemorySigner::new_from_seed(&seed).unwrap();
+
+        let esk = ed25519_dalek::hazmat::ExpandedSecretKey::from(&seed);
+        let esk_hash = Sha512::digest(seed);
+        let esk_signer = MemorySigner::from_bytes(&esk_hash).unwrap();
+
+        let esk_public_key = super::super::PublicKey::Ed25519(
+            PublicKey::from_bytes(&ed25519_dalek::VerifyingKey::from(&esk).to_bytes()).unwrap(),
+        );
+
+        assert_eq!(
+            esk_signer.to_bytes().as_slice(),
+            esk_hash.as_slice(),
+            "esk roundtrip"
+        );
+        assert_eq!(signer.to_bytes(), seed, "sk roundtrip");
+
+        let context = b"tests";
+        let message = b"hello, world!";
+        let digest = Sha512::new().chain_update(context).chain_update(message);
+
+        let sig = signer.sign(context, message).unwrap();
+        let esk_sig = esk_signer.sign(context, message).unwrap();
+        assert_eq!(sig, esk_sig, "sig != esk_sig");
+
+        let raw_sig = signer.sign_raw(message).unwrap();
+        let esk_raw_sig = esk_signer.sign_raw(message).unwrap();
+        assert_eq!(raw_sig, esk_raw_sig, "raw_sig != esk_raw_sig");
+
+        let digest_sig = signer.sign_digest(digest.clone()).unwrap();
+        let esk_digest_sig = esk_signer.sign_digest(digest).unwrap();
+        assert_eq!(digest_sig, esk_digest_sig, "digest_sig != esk_digest_sig");
+
+        assert_eq!(
+            signer.public_key(),
+            esk_public_key,
+            "signer pk != esk_public_key"
+        );
+        assert_eq!(
+            esk_signer.public_key(),
+            esk_public_key,
+            "esk_signer pk != esk_pubic_key"
+        );
     }
 }
