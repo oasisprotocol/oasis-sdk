@@ -43,6 +43,7 @@ static KEYPAIR_GENERATE_BASE_COST: Lazy<HashMap<SignatureType, u64>> = Lazy::new
         (SignatureType::Secp256k1_PrehashedKeccak256, 1_500),
         (SignatureType::Secp256k1_PrehashedSha256, 1_500),
         (SignatureType::Secp256r1_PrehashedSha256, 4_000),
+        (SignatureType::Secp384r1_PrehashedSha384, 18_000),
     ])
 });
 
@@ -56,6 +57,7 @@ static SIGN_MESSAGE_COST: Lazy<HashMap<SignatureType, (u64, u64)>> = Lazy::new(|
         (SignatureType::Secp256k1_PrehashedKeccak256, (3_000, 0)),
         (SignatureType::Secp256k1_PrehashedSha256, (3_000, 0)),
         (SignatureType::Secp256r1_PrehashedSha256, (9_000, 0)),
+        (SignatureType::Secp384r1_PrehashedSha384, (43_200, 0)),
     ])
 });
 
@@ -69,6 +71,7 @@ static VERIFY_MESSAGE_COST: Lazy<HashMap<SignatureType, (u64, u64)>> = Lazy::new
         (SignatureType::Secp256k1_PrehashedKeccak256, (3_000, 0)),
         (SignatureType::Secp256k1_PrehashedSha256, (3_000, 0)),
         (SignatureType::Secp256r1_PrehashedSha256, (7_900, 0)),
+        (SignatureType::Secp384r1_PrehashedSha384, (37_920, 0)),
     ])
 });
 
@@ -728,9 +731,14 @@ mod test {
     }
 
     fn bench_keypair_generate(b: &mut Bencher, signature_type: SignatureType) {
+        let seed = b"01234567".repeat(if signature_type.is_secp384r1_variant() {
+            6
+        } else {
+            4
+        });
         let params = ethabi::encode(&[
             Token::Uint(signature_type.as_int().into()),
-            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
+            Token::Bytes(seed),
         ]);
         b.iter(|| {
             call_contract(
@@ -758,6 +766,11 @@ mod test {
     #[bench]
     fn bench_keypair_generate_secp256r1(b: &mut Bencher) {
         bench_keypair_generate(b, SignatureType::Secp256r1_PrehashedSha256);
+    }
+
+    #[bench]
+    fn bench_keypair_generate_secp384r1(b: &mut Bencher) {
+        bench_keypair_generate(b, SignatureType::Secp384r1_PrehashedSha384);
     }
 
     #[test]
@@ -841,53 +854,44 @@ mod test {
 
     #[test]
     fn test_basic_roundtrip_prehashed() {
-        let seed = b"01234567890123456789012345678901";
+        use sha2::Digest as _;
+
         let message = b"test message";
 
         let sig_types: &[(SignatureType, Box<dyn Fn(&[u8]) -> Vec<u8>>)] = &[
             (
                 SignatureType::Ed25519_PrehashedSha512,
-                Box::new(|message: &[u8]| -> Vec<u8> {
-                    use sha2::digest::Digest as _;
-                    let mut digest = sha2::Sha512::default();
-                    <sha2::Sha512 as sha2::digest::Update>::update(&mut digest, message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha2::Sha512::digest(message).to_vec()),
             ),
             (
                 SignatureType::Secp256k1_PrehashedKeccak256,
-                Box::new(|message: &[u8]| -> Vec<u8> {
-                    use sha3::digest::Digest as _;
-                    let mut digest = sha3::Keccak256::default();
-                    <sha3::Keccak256 as sha3::digest::Update>::update(&mut digest, message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha3::Keccak256::digest(message).to_vec()),
             ),
             (
                 SignatureType::Secp256k1_PrehashedSha256,
-                Box::new(|message: &[u8]| -> Vec<u8> {
-                    use sha2::digest::Digest as _;
-                    let mut digest = sha2::Sha256::default();
-                    <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha2::Sha256::digest(message).to_vec()),
             ),
             (
                 SignatureType::Secp256r1_PrehashedSha256,
-                Box::new(|message: &[u8]| -> Vec<u8> {
-                    use sha2::digest::Digest as _;
-                    let mut digest = sha2::Sha256::default();
-                    <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha2::Sha256::digest(message).to_vec()),
+            ),
+            (
+                SignatureType::Secp384r1_PrehashedSha384,
+                Box::new(|message| sha2::Sha384::digest(message).to_vec()),
             ),
         ];
 
         for (sig_type, hasher) in sig_types {
             let method: u8 = sig_type.as_int();
 
+            let seed = b"01234567".repeat(if sig_type.is_secp384r1_variant() {
+                6
+            } else {
+                4
+            });
+
             // Generate key pair from a fixed seed.
-            let params = ethabi::encode(&[Token::Uint(method.into()), Token::Bytes(seed.to_vec())]);
+            let params = ethabi::encode(&[Token::Uint(method.into()), Token::Bytes(seed)]);
             let output = call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
@@ -1017,18 +1021,23 @@ mod test {
         context_long: bool,
         message_long: bool,
     ) {
-        let signer = signature::MemorySigner::new_from_seed(
-            signature_type,
-            b"01234567890123456789012345678901",
-        )
-        .unwrap();
+        let seed = b"01234567".repeat(if signature_type.is_secp384r1_variant() {
+            6
+        } else {
+            4
+        });
+        let signer = signature::MemorySigner::new_from_seed(signature_type, &seed).unwrap();
 
         let message = b"0123456789".repeat(if message_long { 200 } else { 1 });
         let (context, message) = if signature_type.is_prehashed() {
-            use sha2::digest::Digest as _;
-            let mut digest = sha2::Sha256::default();
-            <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, &message);
-            (digest.finalize().to_vec(), vec![])
+            (
+                if signature_type.is_secp384r1_variant() {
+                    <sha2::Sha384 as sha2::digest::Digest>::digest(&message).to_vec()
+                } else {
+                    <sha2::Sha256 as sha2::digest::Digest>::digest(&message).to_vec()
+                },
+                vec![],
+            )
         } else {
             (
                 b"0123456789".repeat(if context_long { 200 } else { 1 }),
@@ -1094,6 +1103,11 @@ mod test {
     #[bench]
     fn bench_sign_secp256r1_prehashed_sha256(b: &mut Bencher) {
         bench_signer(b, SignatureType::Secp256r1_PrehashedSha256, false, false);
+    }
+
+    #[bench]
+    fn bench_sign_secp384r1_prehashed_sha384(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Secp384r1_PrehashedSha384, false, false);
     }
 
     #[test]
@@ -1203,18 +1217,23 @@ mod test {
         context_long: bool,
         message_long: bool,
     ) {
-        let signer = signature::MemorySigner::new_from_seed(
-            signature_type,
-            b"01234567890123456789012345678901",
-        )
-        .unwrap();
+        let seed = b"01234567".repeat(if signature_type.is_secp384r1_variant() {
+            6
+        } else {
+            4
+        });
+        let signer = signature::MemorySigner::new_from_seed(signature_type, &seed).unwrap();
 
         let message = b"0123456789".repeat(if message_long { 200 } else { 1 });
         let (context, message) = if signature_type.is_prehashed() {
-            use sha2::digest::Digest as _;
-            let mut digest = sha2::Sha256::default();
-            <sha2::Sha256 as sha2::digest::Update>::update(&mut digest, &message);
-            (digest.finalize().to_vec(), vec![])
+            (
+                if signature_type.is_secp384r1_variant() {
+                    <sha2::Sha384 as sha2::digest::Digest>::digest(&message).to_vec()
+                } else {
+                    <sha2::Sha256 as sha2::digest::Digest>::digest(&message).to_vec()
+                },
+                vec![],
+            )
         } else {
             (
                 b"0123456789".repeat(if context_long { 200 } else { 1 }),
@@ -1282,5 +1301,10 @@ mod test {
     #[bench]
     fn bench_verify_secp256r1_prehashed_sha256(b: &mut Bencher) {
         bench_verification(b, SignatureType::Secp256r1_PrehashedSha256, false, false);
+    }
+
+    #[bench]
+    fn bench_verify_secp384r1_prehashed_sha384(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Secp384r1_PrehashedSha384, false, false);
     }
 }

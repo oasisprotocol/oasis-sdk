@@ -22,9 +22,6 @@ impl PublicKey {
 
     /// Construct a public key from a slice of bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        if bytes.len() != 33 {
-            return Err(Error::MalformedPublicKey);
-        }
         let ep = p384::EncodedPoint::from_bytes(bytes).map_err(|_| Error::MalformedPublicKey)?;
         if !ep.is_compressed() {
             // This should never happen due to the size check above.
