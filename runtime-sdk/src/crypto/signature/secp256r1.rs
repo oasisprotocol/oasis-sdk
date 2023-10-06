@@ -23,12 +23,8 @@ impl PublicKey {
 
     /// Construct a public key from a slice of bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        if bytes.len() != 33 {
-            return Err(Error::MalformedPublicKey);
-        }
         let ep = p256::EncodedPoint::from_bytes(bytes).map_err(|_| Error::MalformedPublicKey)?;
         if !ep.is_compressed() {
-            // This should never happen due to the size check above.
             return Err(Error::MalformedPublicKey);
         }
         Ok(PublicKey(ep))
@@ -132,9 +128,9 @@ impl super::Signer for MemorySigner {
     }
 
     fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
-        let mut digest = Sha512_256::new();
-        <Sha512_256 as Digest>::update(&mut digest, context);
-        <Sha512_256 as Digest>::update(&mut digest, message);
+        let digest = sha2::Sha256::new()
+            .chain_update(context)
+            .chain_update(message);
         let signature: ecdsa::Signature = self.sk.sign_digest(digest);
         Ok(signature.to_der().as_bytes().to_vec().into())
     }

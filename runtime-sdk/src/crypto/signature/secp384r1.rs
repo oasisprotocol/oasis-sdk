@@ -24,7 +24,6 @@ impl PublicKey {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         let ep = p384::EncodedPoint::from_bytes(bytes).map_err(|_| Error::MalformedPublicKey)?;
         if !ep.is_compressed() {
-            // This should never happen due to the size check above.
             return Err(Error::MalformedPublicKey);
         }
         Ok(PublicKey(ep))
@@ -37,12 +36,10 @@ impl PublicKey {
         message: &[u8],
         signature: &Signature,
     ) -> Result<(), Error> {
-        self.verify_digest(
-            sha2::Sha384::new()
-                .chain_update(context)
-                .chain_update(message),
-            signature,
-        )
+        let digest = sha2::Sha384::new()
+            .chain_update(context)
+            .chain_update(message);
+        self.verify_digest(digest, signature)
     }
 
     /// Verify signature without using any domain separation scheme.
