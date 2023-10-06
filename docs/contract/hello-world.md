@@ -1,6 +1,6 @@
 # Hello World
 
-This section will show you how to quickly create, build and test a minimal
+This chapter will show you how to quickly create, build and test a minimal
 Oasis WebAssembly smart contract.
 
 ## Repository Structure and Dependencies

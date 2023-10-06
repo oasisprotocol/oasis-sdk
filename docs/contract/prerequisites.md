@@ -4,13 +4,13 @@ description: How to build your first smart contract on Oasis
 
 # Prerequisites
 
-This section will guide you how to install the software required for developing
+This chapter will guide you how to install the software required for developing
 smart contracts using the Oasis SDK. After successfully completing all the
 described steps you will be able to start building your first smart contract
 on Oasis!
 
 If you already have everything set up, feel free to skip to the [next
-section](hello-world.md).
+chapter](hello-world.md).
 
 ## Environment Setup
 
