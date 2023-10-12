@@ -36,12 +36,8 @@ impl PublicKey {
 
     /// Construct a public key from a slice of bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        if bytes.len() != 33 {
-            return Err(Error::MalformedPublicKey);
-        }
         let ep = k256::EncodedPoint::from_bytes(bytes).map_err(|_| Error::MalformedPublicKey)?;
         if !ep.is_compressed() {
-            // This should never happen due to the size check above.
             return Err(Error::MalformedPublicKey);
         }
         Ok(PublicKey(ep))
@@ -54,21 +50,10 @@ impl PublicKey {
         message: &[u8],
         signature: &Signature,
     ) -> Result<(), Error> {
-        // Note that we must use Sha512_256 instead of our Hash here,
-        // even though it's the same thing, because it implements the Digest
-        // trait, so we can use verify_digest() below, which doesn't pre-hash
-        // the data (verify() does).
-        let mut digest = Sha512_256::new();
-        for byte in &[context, message] {
-            <Sha512_256 as Digest>::update(&mut digest, byte);
-        }
-        let sig = ecdsa::Signature::from_der(signature.0.as_ref())
-            .map_err(|_| Error::MalformedSignature)?;
-        let verify_key = ecdsa::VerifyingKey::from_encoded_point(&self.0)
-            .map_err(|_| Error::MalformedPublicKey)?;
-
-        verify_key
-            .verify_digest(digest, &sig)
+        let digest = Sha512_256::new()
+            .chain_update(context)
+            .chain_update(message);
+        self.verify_digest(digest, signature)
             .map_err(|_| Error::VerificationFailed)
     }
 
@@ -157,9 +142,9 @@ impl super::Signer for MemorySigner {
     }
 
     fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
-        let mut digest = Sha512_256::new();
-        <Sha512_256 as Digest>::update(&mut digest, context);
-        <Sha512_256 as Digest>::update(&mut digest, message);
+        let digest = Sha512_256::new()
+            .chain_update(context)
+            .chain_update(message);
         let signature: ecdsa::Signature = self.sk.sign_digest(digest);
         Ok(signature.to_der().as_bytes().to_vec().into())
     }
