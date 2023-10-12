@@ -580,11 +580,54 @@
 <a href="#580" id="580">580</a>
 <a href="#581" id="581">581</a>
 <a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Cryptographic signatures.
 </span><span class="kw">use </span>std::convert::TryFrom;
 
-<span class="kw">use </span>digest::typenum::Unsigned <span class="kw">as _</span>;
-<span class="kw">use </span>sha2::{Digest <span class="kw">as _</span>, Sha512, Sha512_256};
+<span class="kw">use </span>digest::{typenum::Unsigned <span class="kw">as _</span>, Digest <span class="kw">as _</span>};
 <span class="kw">use </span>thiserror::Error;
 
 <span class="kw">pub mod </span>context;
@@ -592,6 +635,7 @@
 <span class="kw">pub mod </span>ed25519;
 <span class="kw">pub mod </span>secp256k1;
 <span class="kw">pub mod </span>secp256r1;
+<span class="kw">pub mod </span>secp384r1;
 <span class="kw">pub mod </span>sr25519;
 
 <span class="doccomment">/// A specific combination of signature and hash.
@@ -614,6 +658,8 @@
     </span>Sr25519,
     <span class="attr">#[cbor(rename = <span class="string">&quot;secp256r1_prehashed_sha256&quot;</span>)]
     </span>Secp256r1_PrehashedSha256,
+    <span class="attr">#[cbor(rename = <span class="string">&quot;secp384r1_prehashed_sha384&quot;</span>)]
+    </span>Secp384r1_PrehashedSha384,
 }
 
 <span class="kw">impl </span>SignatureType {
@@ -627,6 +673,7 @@
             <span class="self">Self</span>::Secp256k1_PrehashedSha256 =&gt; <span class="number">5</span>,
             <span class="self">Self</span>::Sr25519 =&gt; <span class="number">6</span>,
             <span class="self">Self</span>::Secp256r1_PrehashedSha256 =&gt; <span class="number">7</span>,
+            <span class="self">Self</span>::Secp384r1_PrehashedSha384 =&gt; <span class="number">8</span>,
         }
     }
 
@@ -637,6 +684,7 @@
                 | <span class="self">Self</span>::Secp256k1_PrehashedKeccak256
                 | <span class="self">Self</span>::Secp256k1_PrehashedSha256
                 | <span class="self">Self</span>::Secp256r1_PrehashedSha256
+                | <span class="self">Self</span>::Secp384r1_PrehashedSha384
         )
     }
 
@@ -659,6 +707,10 @@
     <span class="kw">pub fn </span>is_secp256r1_variant(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="macro">matches!</span>(<span class="self">self</span>, <span class="self">Self</span>::Secp256r1_PrehashedSha256)
     }
+
+    <span class="kw">pub fn </span>is_secp384r1_variant(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="macro">matches!</span>(<span class="self">self</span>, <span class="self">Self</span>::Secp384r1_PrehashedSha384)
+    }
 }
 
 <span class="kw">impl </span>TryFrom&lt;u8&gt; <span class="kw">for </span>SignatureType {
@@ -674,6 +726,7 @@
             <span class="number">5 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp256k1_PrehashedSha256),
             <span class="number">6 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Sr25519),
             <span class="number">7 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp256r1_PrehashedSha256),
+            <span class="number">8 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp384r1_PrehashedSha384),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
         }
     }
@@ -690,6 +743,9 @@
 
     <span class="attr">#[cbor(rename = <span class="string">&quot;secp256r1&quot;</span>)]
     </span>Secp256r1(secp256r1::PublicKey),
+
+    <span class="attr">#[cbor(rename = <span class="string">&quot;secp384r1&quot;</span>)]
+    </span>Secp384r1(secp384r1::PublicKey),
 
     <span class="attr">#[cbor(rename = <span class="string">&quot;sr25519&quot;</span>)]
     </span>Sr25519(sr25519::PublicKey),
@@ -721,6 +777,7 @@
             PublicKey::Ed25519(pk) =&gt; pk.as_bytes(),
             PublicKey::Secp256k1(pk) =&gt; pk.as_bytes(),
             PublicKey::Secp256r1(pk) =&gt; pk.as_bytes(),
+            PublicKey::Secp384r1(pk) =&gt; pk.as_bytes(),
             PublicKey::Sr25519(pk) =&gt; pk.as_bytes(),
         }
     }
@@ -741,6 +798,9 @@
             SignatureType::Secp256r1_PrehashedSha256 =&gt; {
                 <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp256r1(secp256r1::PublicKey::from_bytes(bytes)<span class="question-mark">?</span>))
             }
+            SignatureType::Secp384r1_PrehashedSha384 =&gt; {
+                <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp384r1(secp384r1::PublicKey::from_bytes(bytes)<span class="question-mark">?</span>))
+            }
             SignatureType::Sr25519 =&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Sr25519(sr25519::PublicKey::from_bytes(bytes)<span class="question-mark">?</span>)),
         }
     }
@@ -756,6 +816,7 @@
             PublicKey::Ed25519(pk) =&gt; pk.verify(context, message, signature),
             PublicKey::Secp256k1(pk) =&gt; pk.verify(context, message, signature),
             PublicKey::Secp256r1(pk) =&gt; pk.verify(context, message, signature),
+            PublicKey::Secp384r1(pk) =&gt; pk.verify(context, message, signature),
             PublicKey::Sr25519(pk) =&gt; pk.verify(context, message, signature),
         }
     }
@@ -767,6 +828,7 @@
             PublicKey::Ed25519(pk) =&gt; pk.verify_raw(message, signature),
             PublicKey::Secp256k1(pk) =&gt; pk.verify_raw(message, signature),
             PublicKey::Secp256r1(pk) =&gt; pk.verify_raw(message, signature),
+            PublicKey::Secp384r1(pk) =&gt; pk.verify_raw(message, signature),
             PublicKey::Sr25519(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
         }
     }
@@ -785,11 +847,12 @@
                 SignatureType::Ed25519_Pure =&gt; pk.verify_raw(message, signature),
                 SignatureType::Ed25519_PrehashedSha512 =&gt; {
                     <span class="kw">if </span>context_or_hash.len()
-                        != &lt;Sha512 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
+                        != &lt;sha2::Sha512 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
                     {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
-                    <span class="kw">let </span>digest = digests::DummyDigest::&lt;Sha512&gt;::new_precomputed(context_or_hash);
+                    <span class="kw">let </span>digest =
+                        digests::DummyDigest::&lt;sha2::Sha512&gt;::new_precomputed(context_or_hash);
                     pk.verify_digest(digest, signature)
                 }
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
@@ -828,14 +891,26 @@
                     {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
-                    <span class="kw">let </span>digest = digests::DummyDigest::&lt;k256::sha2::Sha256&gt;::new_precomputed(
-                        context_or_hash,
-                    );
+                    <span class="kw">let </span>digest =
+                        digests::DummyDigest::&lt;sha2::Sha256&gt;::new_precomputed(context_or_hash);
                     pk.verify_digest(digest, signature)
                 }
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
             },
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
+            <span class="self">Self</span>::Secp384r1(pk) =&gt; <span class="kw">match </span>signature_type {
+                SignatureType::Secp384r1_PrehashedSha384 =&gt; {
+                    <span class="kw">if </span>context_or_hash.len()
+                        != &lt;sha2::Sha384 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
+                    {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
+                    }
+                    <span class="kw">let </span>digest =
+                        digests::DummyDigest::&lt;sha2::Sha384&gt;::new_precomputed(context_or_hash);
+                    pk.verify_digest(digest, signature)
+                }
+                <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
+            },
+            <span class="self">Self</span>::Sr25519(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
         }
     }
 
@@ -912,6 +987,7 @@
     Ed25519(ed25519::MemorySigner),
     Secp256k1(secp256k1::MemorySigner),
     Secp256r1(secp256r1::MemorySigner),
+    Secp384r1(secp384r1::MemorySigner),
 }
 
 <span class="kw">impl </span>MemorySigner {
@@ -927,6 +1003,10 @@
             <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp256r1(secp256r1::MemorySigner::new_from_seed(
                 seed,
             )<span class="question-mark">?</span>))
+        } <span class="kw">else if </span>sig_type.is_secp384r1_variant() {
+            <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp384r1(secp384r1::MemorySigner::new_from_seed(
+                seed,
+            )<span class="question-mark">?</span>))
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(Error::InvalidArgument)
         }
@@ -934,10 +1014,11 @@
 
     <span class="doccomment">/// Create a new signer for testing purposes.
     </span><span class="kw">pub fn </span>new_test(sig_type: SignatureType, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha512_256::new();
-        digest.update(name.as_bytes());
-        <span class="kw">let </span>seed = digest.finalize();
-        <span class="self">Self</span>::new_from_seed(sig_type, <span class="kw-2">&amp;</span>seed).unwrap()
+        <span class="kw">if </span>sig_type.is_secp384r1_variant() {
+            <span class="self">Self</span>::new_from_seed(sig_type, <span class="kw-2">&amp;</span>sha2::Sha384::digest(name)).unwrap()
+        } <span class="kw">else </span>{
+            <span class="self">Self</span>::new_from_seed(sig_type, <span class="kw-2">&amp;</span>sha2::Sha512_256::digest(name)).unwrap()
+        }
     }
 
     <span class="doccomment">/// Reconstruct the signer from its byte representation.
@@ -948,6 +1029,8 @@
             <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp256k1(secp256k1::MemorySigner::from_bytes(bytes)<span class="question-mark">?</span>))
         } <span class="kw">else if </span>sig_type.is_secp256r1_variant() {
             <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp256r1(secp256r1::MemorySigner::from_bytes(bytes)<span class="question-mark">?</span>))
+        } <span class="kw">else if </span>sig_type.is_secp384r1_variant() {
+            <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp384r1(secp384r1::MemorySigner::from_bytes(bytes)<span class="question-mark">?</span>))
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(Error::InvalidArgument)
         }
@@ -959,6 +1042,7 @@
             <span class="self">Self</span>::Ed25519(signer) =&gt; signer.to_bytes(),
             <span class="self">Self</span>::Secp256k1(signer) =&gt; signer.to_bytes(),
             <span class="self">Self</span>::Secp256r1(signer) =&gt; signer.to_bytes(),
+            <span class="self">Self</span>::Secp384r1(signer) =&gt; signer.to_bytes(),
         }
     }
 
@@ -968,6 +1052,7 @@
             <span class="self">Self</span>::Ed25519(signer) =&gt; signer.public_key(),
             <span class="self">Self</span>::Secp256k1(signer) =&gt; signer.public_key(),
             <span class="self">Self</span>::Secp256r1(signer) =&gt; signer.public_key(),
+            <span class="self">Self</span>::Secp384r1(signer) =&gt; signer.public_key(),
         }
     }
 
@@ -977,6 +1062,7 @@
             <span class="self">Self</span>::Ed25519(signer) =&gt; signer.sign(context, message),
             <span class="self">Self</span>::Secp256k1(signer) =&gt; signer.sign(context, message),
             <span class="self">Self</span>::Secp256r1(signer) =&gt; signer.sign(context, message),
+            <span class="self">Self</span>::Secp384r1(signer) =&gt; signer.sign(context, message),
         }
     }
 
@@ -986,6 +1072,7 @@
             <span class="self">Self</span>::Ed25519(signer) =&gt; signer.sign_raw(message),
             <span class="self">Self</span>::Secp256k1(signer) =&gt; signer.sign_raw(message),
             <span class="self">Self</span>::Secp256r1(signer) =&gt; signer.sign_raw(message),
+            <span class="self">Self</span>::Secp384r1(signer) =&gt; signer.sign_raw(message),
         }
     }
 
@@ -1002,11 +1089,12 @@
                 SignatureType::Ed25519_Pure =&gt; signer.sign_raw(message),
                 SignatureType::Ed25519_PrehashedSha512 =&gt; {
                     <span class="kw">if </span>context_or_hash.len()
-                        != &lt;Sha512 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
+                        != &lt;sha2::Sha512 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
                     {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
-                    <span class="kw">let </span>digest = digests::DummyDigest::&lt;Sha512&gt;::new_precomputed(context_or_hash);
+                    <span class="kw">let </span>digest =
+                        digests::DummyDigest::&lt;sha2::Sha512&gt;::new_precomputed(context_or_hash);
                     signer.sign_digest(digest)
                 }
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
@@ -1045,9 +1133,21 @@
                     {
                         <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
                     }
-                    <span class="kw">let </span>digest = digests::DummyDigest::&lt;k256::sha2::Sha256&gt;::new_precomputed(
-                        context_or_hash,
-                    );
+                    <span class="kw">let </span>digest =
+                        digests::DummyDigest::&lt;sha2::Sha256&gt;::new_precomputed(context_or_hash);
+                    signer.sign_digest(digest)
+                }
+                <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
+            },
+            <span class="self">Self</span>::Secp384r1(signer) =&gt; <span class="kw">match </span>signature_type {
+                SignatureType::Secp384r1_PrehashedSha384 =&gt; {
+                    <span class="kw">if </span>context_or_hash.len()
+                        != &lt;sha2::Sha384 <span class="kw">as </span>sha2::digest::OutputSizeUser&gt;::OutputSize::USIZE
+                    {
+                        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
+                    }
+                    <span class="kw">let </span>digest =
+                        digests::DummyDigest::&lt;sha2::Sha384&gt;::new_precomputed(context_or_hash);
                     signer.sign_digest(digest)
                 }
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
@@ -1113,35 +1213,23 @@
         <span class="kw">let </span>sig_types: <span class="kw-2">&amp;</span>[(SignatureType, Box&lt;<span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>[u8]) -&gt; Vec&lt;u8&gt;&gt;)] = <span class="kw-2">&amp;</span>[
             (
                 SignatureType::Ed25519_PrehashedSha512,
-                Box::new(|message: <span class="kw-2">&amp;</span>[u8]| -&gt; Vec&lt;u8&gt; {
-                    <span class="kw">let </span><span class="kw-2">mut </span>digest = Sha512::new();
-                    digest.update(message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha2::Sha512::digest(message).to_vec()),
             ),
             (
                 SignatureType::Secp256k1_PrehashedKeccak256,
-                Box::new(|message: <span class="kw-2">&amp;</span>[u8]| -&gt; Vec&lt;u8&gt; {
-                    <span class="kw">let </span><span class="kw-2">mut </span>digest = sha3::Keccak256::new();
-                    digest.update(message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha3::Keccak256::digest(message).to_vec()),
             ),
             (
                 SignatureType::Secp256k1_PrehashedSha256,
-                Box::new(|message: <span class="kw-2">&amp;</span>[u8]| -&gt; Vec&lt;u8&gt; {
-                    <span class="kw">let </span><span class="kw-2">mut </span>digest = sha2::Sha256::new();
-                    digest.update(message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha2::Sha256::digest(message).to_vec()),
             ),
             (
                 SignatureType::Secp256r1_PrehashedSha256,
-                Box::new(|message: <span class="kw-2">&amp;</span>[u8]| -&gt; Vec&lt;u8&gt; {
-                    <span class="kw">let </span><span class="kw-2">mut </span>digest = sha2::Sha256::new();
-                    digest.update(message);
-                    digest.finalize().to_vec()
-                }),
+                Box::new(|message| sha2::Sha256::digest(message).to_vec()),
+            ),
+            (
+                SignatureType::Secp384r1_PrehashedSha384,
+                Box::new(|message| sha2::Sha384::digest(message).to_vec()),
             ),
         ];
 

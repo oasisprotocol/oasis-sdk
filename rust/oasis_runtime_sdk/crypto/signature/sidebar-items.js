@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error","MemorySigner","PublicKey","SignatureType"],"mod":["context","ed25519","secp256k1","secp256r1","sr25519"],"struct":["Signature"]};
+window.SIDEBAR_ITEMS = {"enum":["Error","MemorySigner","PublicKey","SignatureType"],"mod":["context","ed25519","secp256k1","secp256r1","secp384r1","sr25519"],"struct":["Signature"]};
