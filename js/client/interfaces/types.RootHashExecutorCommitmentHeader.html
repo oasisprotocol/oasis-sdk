@@ -23,11 +23,9 @@
 <section class="tsd-panel tsd-hierarchy">
 <h4>Hierarchy</h4>
 <ul class="tsd-hierarchy">
-<li><a href="types.RootHashComputeResultsHeader.html" class="tsd-signature-type tsd-kind-interface">RootHashComputeResultsHeader</a>
-<ul class="tsd-hierarchy">
-<li><span class="target">RootHashExecutorCommitmentHeader</span></li></ul></li></ul></section><aside class="tsd-sources">
+<li><span class="target">RootHashExecutorCommitmentHeader</span></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L1940">core/src/types.ts:1940</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L2256">core/src/types.ts:2256</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -36,75 +34,42 @@
 <section class="tsd-index-section">
 <h3 class="tsd-index-heading">Properties</h3>
 <div class="tsd-index-list"><a href="types.RootHashExecutorCommitmentHeader.html#failure" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>failure?</span></a>
-<a href="types.RootHashExecutorCommitmentHeader.html#in_msgs_count" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>in_<wbr/>msgs_<wbr/>count?</span></a>
-<a href="types.RootHashExecutorCommitmentHeader.html#in_msgs_hash" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>in_<wbr/>msgs_<wbr/>hash?</span></a>
-<a href="types.RootHashExecutorCommitmentHeader.html#io_root" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>io_<wbr/>root?</span></a>
-<a href="types.RootHashExecutorCommitmentHeader.html#messages_hash" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>messages_<wbr/>hash?</span></a>
-<a href="types.RootHashExecutorCommitmentHeader.html#previous_hash" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>previous_<wbr/>hash</span></a>
+<a href="types.RootHashExecutorCommitmentHeader.html#header" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>header</span></a>
 <a href="types.RootHashExecutorCommitmentHeader.html#rak_sig" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>rak_<wbr/>sig?</span></a>
-<a href="types.RootHashExecutorCommitmentHeader.html#round" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>round</span></a>
-<a href="types.RootHashExecutorCommitmentHeader.html#state_root" class="tsd-index-link tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>state_<wbr/>root?</span></a>
+<a href="types.RootHashExecutorCommitmentHeader.html#scheduler_id" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>scheduler_<wbr/>id</span></a>
 </div></section></div></details></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Properties</h2>
 <section class="tsd-panel tsd-member"><a id="failure" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>failure</span><a href="#failure" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">failure</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div><aside class="tsd-sources">
-<ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L1941">core/src/types.ts:1941</a></li></ul></aside></section>
-<section class="tsd-panel tsd-member tsd-is-inherited"><a id="in_msgs_count" class="tsd-anchor"></a>
-<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>in_<wbr/>msgs_<wbr/>count</span><a href="#in_msgs_count" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">in_<wbr/>msgs_<wbr/>count</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
-<div class="tsd-comment tsd-typography"><p>InMessagesCount is the number of processed incoming messages.</p>
+<div class="tsd-signature"><span class="tsd-kind-property">failure</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
+<div class="tsd-comment tsd-typography"><p>Failure is the executor commitment failure reason.</p>
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
-<p>Inherited from <a href="types.RootHashComputeResultsHeader.html">RootHashComputeResultsHeader</a>.<a href="types.RootHashComputeResultsHeader.html#in_msgs_count">in_msgs_count</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L1820">core/src/types.ts:1820</a></li></ul></aside></section>
-<section class="tsd-panel tsd-member tsd-is-inherited"><a id="in_msgs_hash" class="tsd-anchor"></a>
-<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>in_<wbr/>msgs_<wbr/>hash</span><a href="#in_msgs_hash" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">in_<wbr/>msgs_<wbr/>hash</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type ">Uint8Array</span></div>
-<div class="tsd-comment tsd-typography"><p>InMessagesHash is the hash of processed incoming messages.</p>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L2269">core/src/types.ts:2269</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member"><a id="header" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>header</span><a href="#header" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">header</span><span class="tsd-signature-symbol">:</span> <a href="types.RootHashComputeResultsHeader.html" class="tsd-signature-type tsd-kind-interface">RootHashComputeResultsHeader</a></div>
+<div class="tsd-comment tsd-typography"><p>Header is the compute results header.</p>
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
-<p>Inherited from <a href="types.RootHashComputeResultsHeader.html">RootHashComputeResultsHeader</a>.<a href="types.RootHashComputeResultsHeader.html#in_msgs_hash">in_msgs_hash</a></p>
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L1816">core/src/types.ts:1816</a></li></ul></aside></section>
-<section class="tsd-panel tsd-member tsd-is-inherited"><a id="io_root" class="tsd-anchor"></a>
-<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>io_<wbr/>root</span><a href="#io_root" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">io_<wbr/>root</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type ">Uint8Array</span></div><aside class="tsd-sources">
-<p>Inherited from <a href="types.RootHashComputeResultsHeader.html">RootHashComputeResultsHeader</a>.<a href="types.RootHashComputeResultsHeader.html#io_root">io_root</a></p>
-<ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L1810">core/src/types.ts:1810</a></li></ul></aside></section>
-<section class="tsd-panel tsd-member tsd-is-inherited"><a id="messages_hash" class="tsd-anchor"></a>
-<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>messages_<wbr/>hash</span><a href="#messages_hash" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">messages_<wbr/>hash</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type ">Uint8Array</span></div><aside class="tsd-sources">
-<p>Inherited from <a href="types.RootHashComputeResultsHeader.html">RootHashComputeResultsHeader</a>.<a href="types.RootHashComputeResultsHeader.html#messages_hash">messages_hash</a></p>
-<ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L1812">core/src/types.ts:1812</a></li></ul></aside></section>
-<section class="tsd-panel tsd-member tsd-is-inherited"><a id="previous_hash" class="tsd-anchor"></a>
-<h3 class="tsd-anchor-link"><span>previous_<wbr/>hash</span><a href="#previous_hash" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">previous_<wbr/>hash</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type ">Uint8Array</span></div><aside class="tsd-sources">
-<p>Inherited from <a href="types.RootHashComputeResultsHeader.html">RootHashComputeResultsHeader</a>.<a href="types.RootHashComputeResultsHeader.html#previous_hash">previous_hash</a></p>
-<ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L1809">core/src/types.ts:1809</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L2265">core/src/types.ts:2265</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="rak_sig" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>rak_<wbr/>sig</span><a href="#rak_sig" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">rak_<wbr/>sig</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type ">Uint8Array</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L1942">core/src/types.ts:1942</a></li></ul></aside></section>
-<section class="tsd-panel tsd-member tsd-is-inherited"><a id="round" class="tsd-anchor"></a>
-<h3 class="tsd-anchor-link"><span>round</span><a href="#round" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">round</span><span class="tsd-signature-symbol">:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a></div><aside class="tsd-sources">
-<p>Inherited from <a href="types.RootHashComputeResultsHeader.html">RootHashComputeResultsHeader</a>.<a href="types.RootHashComputeResultsHeader.html#round">round</a></p>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L2270">core/src/types.ts:2270</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member"><a id="scheduler_id" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>scheduler_<wbr/>id</span><a href="#scheduler_id" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">scheduler_<wbr/>id</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type ">Uint8Array</span></div>
+<div class="tsd-comment tsd-typography"><p>SchedulerID is the public key of the node that scheduled transactions
+and prepared the proposal.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L1808">core/src/types.ts:1808</a></li></ul></aside></section>
-<section class="tsd-panel tsd-member tsd-is-inherited"><a id="state_root" class="tsd-anchor"></a>
-<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>state_<wbr/>root</span><a href="#state_root" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">state_<wbr/>root</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type ">Uint8Array</span></div><aside class="tsd-sources">
-<p>Inherited from <a href="types.RootHashComputeResultsHeader.html">RootHashComputeResultsHeader</a>.<a href="types.RootHashComputeResultsHeader.html#state_root">state_root</a></p>
-<ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L1811">core/src/types.ts:1811</a></li></ul></aside></section></section></div>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L2261">core/src/types.ts:2261</a></li></ul></aside></section></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -124,14 +89,9 @@
 <div class="tsd-accordion-details">
 <ul>
 <li><a href="#failure" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>failure</span></a></li>
-<li><a href="#in_msgs_count" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>in_<wbr/>msgs_<wbr/>count</span></a></li>
-<li><a href="#in_msgs_hash" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>in_<wbr/>msgs_<wbr/>hash</span></a></li>
-<li><a href="#io_root" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>io_<wbr/>root</span></a></li>
-<li><a href="#messages_hash" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>messages_<wbr/>hash</span></a></li>
-<li><a href="#previous_hash" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>previous_<wbr/>hash</span></a></li>
+<li><a href="#header" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>header</span></a></li>
 <li><a href="#rak_sig" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>rak_<wbr/>sig</span></a></li>
-<li><a href="#round" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>round</span></a></li>
-<li><a href="#state_root" class="tsd-is-inherited"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>state_<wbr/>root</span></a></li></ul></div></details></div>
+<li><a href="#scheduler_id" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>scheduler_<wbr/>id</span></a></li></ul></div></details></div>
 <div class="site-menu">
 <nav class="tsd-navigation"><a href="../modules.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1"></use></svg><span>@oasisprotocol/client</span></a>
 <ul class="tsd-small-nested-navigation" id="tsd-nav-container" data-base="..">

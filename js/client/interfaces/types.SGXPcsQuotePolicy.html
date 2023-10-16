@@ -25,7 +25,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">SGXPcsQuotePolicy</span></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L2619">core/src/types.ts:2619</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3011">core/src/types.ts:3011</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -34,6 +34,7 @@
 <section class="tsd-index-section">
 <h3 class="tsd-index-heading">Properties</h3>
 <div class="tsd-index-list"><a href="types.SGXPcsQuotePolicy.html#disabled" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>disabled?</span></a>
+<a href="types.SGXPcsQuotePolicy.html#fmspc_blacklist" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>fmspc_<wbr/>blacklist?</span></a>
 <a href="types.SGXPcsQuotePolicy.html#min_tcb_evaluation_data_number" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>min_<wbr/>tcb_<wbr/>evaluation_<wbr/>data_<wbr/>number</span></a>
 <a href="types.SGXPcsQuotePolicy.html#tcb_validity_period" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>tcb_<wbr/>validity_<wbr/>period</span></a>
 </div></section></div></details></section></section>
@@ -46,7 +47,16 @@
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L2623">core/src/types.ts:2623</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3015">core/src/types.ts:3015</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member"><a id="fmspc_blacklist" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>fmspc_<wbr/>blacklist</span><a href="#fmspc_blacklist" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">fmspc_<wbr/>blacklist</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div>
+<div class="tsd-comment tsd-typography"><p>FMSPCBlacklist is a list of hexadecimal encoded FMSPCs specifying which processor
+packages and platform instances are blocked.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3029">core/src/types.ts:3029</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="min_tcb_evaluation_data_number" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>min_<wbr/>tcb_<wbr/>evaluation_<wbr/>data_<wbr/>number</span><a href="#min_tcb_evaluation_data_number" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">min_<wbr/>tcb_<wbr/>evaluation_<wbr/>data_<wbr/>number</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -55,7 +65,7 @@ valid. TCB bundles containing smaller values will be invalid.</p>
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L2632">core/src/types.ts:2632</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3024">core/src/types.ts:3024</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="tcb_validity_period" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>tcb_<wbr/>validity_<wbr/>period</span><a href="#tcb_validity_period" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">tcb_<wbr/>validity_<wbr/>period</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -63,7 +73,7 @@ valid. TCB bundles containing smaller values will be invalid.</p>
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L2627">core/src/types.ts:2627</a></li></ul></aside></section></section></div>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3019">core/src/types.ts:3019</a></li></ul></aside></section></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -83,6 +93,7 @@ valid. TCB bundles containing smaller values will be invalid.</p>
 <div class="tsd-accordion-details">
 <ul>
 <li><a href="#disabled" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>disabled</span></a></li>
+<li><a href="#fmspc_blacklist" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>fmspc_<wbr/>blacklist</span></a></li>
 <li><a href="#min_tcb_evaluation_data_number" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>min_<wbr/>tcb_<wbr/>evaluation_<wbr/>data_<wbr/>number</span></a></li>
 <li><a href="#tcb_validity_period" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>tcb_<wbr/>validity_<wbr/>period</span></a></li></ul></div></details></div>
 <div class="site-menu">

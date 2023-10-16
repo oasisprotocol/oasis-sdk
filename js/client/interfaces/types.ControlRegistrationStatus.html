@@ -25,7 +25,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">ControlRegistrationStatus</span></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L471">core/src/types.ts:471</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L546">core/src/types.ts:546</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -34,6 +34,9 @@
 <section class="tsd-index-section">
 <h3 class="tsd-index-heading">Properties</h3>
 <div class="tsd-index-list"><a href="types.ControlRegistrationStatus.html#descriptor" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>descriptor?</span></a>
+<a href="types.ControlRegistrationStatus.html#last_attempt" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>last_<wbr/>attempt</span></a>
+<a href="types.ControlRegistrationStatus.html#last_attempt_error_message" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>last_<wbr/>attempt_<wbr/>error_<wbr/>message?</span></a>
+<a href="types.ControlRegistrationStatus.html#last_attempt_successful" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>last_<wbr/>attempt_<wbr/>successful</span></a>
 <a href="types.ControlRegistrationStatus.html#last_registration" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>last_<wbr/>registration</span></a>
 <a href="types.ControlRegistrationStatus.html#node_status" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>node_<wbr/>status?</span></a>
 </div></section></div></details></section></section>
@@ -47,7 +50,34 @@ node did not successfully register yet, it will be nil.</p>
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L481">core/src/types.ts:481</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L571">core/src/types.ts:571</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member"><a id="last_attempt" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>last_<wbr/>attempt</span><a href="#last_attempt" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">last_<wbr/>attempt</span><span class="tsd-signature-symbol">:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a></div>
+<div class="tsd-comment tsd-typography"><p>LastAttempt is the time of the last registration attempt.
+In case the node did not successfully register yet, it will be the zero timestamp.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L561">core/src/types.ts:561</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member"><a id="last_attempt_error_message" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>last_<wbr/>attempt_<wbr/>error_<wbr/>message</span><a href="#last_attempt_error_message" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">last_<wbr/>attempt_<wbr/>error_<wbr/>message</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
+<div class="tsd-comment tsd-typography"><p>LastAttemptErrorMessage contains the error message if the last
+registration attempt has not been successful.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L556">core/src/types.ts:556</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member"><a id="last_attempt_successful" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>last_<wbr/>attempt_<wbr/>successful</span><a href="#last_attempt_successful" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">last_<wbr/>attempt_<wbr/>successful</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
+<div class="tsd-comment tsd-typography"><p>LastAttemptSuccessful is true if the last registration attempt has been
+successful.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L551">core/src/types.ts:551</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="last_registration" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>last_<wbr/>registration</span><a href="#last_registration" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">last_<wbr/>registration</span><span class="tsd-signature-symbol">:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a></div>
@@ -56,7 +86,7 @@ service. In case the node did not successfully register yet, it will be the zero
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L476">core/src/types.ts:476</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L566">core/src/types.ts:566</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="node_status" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>node_<wbr/>status</span><a href="#node_status" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">node_<wbr/>status</span><span class="tsd-signature-symbol">?:</span> <a href="types.RegistryNodeStatus.html" class="tsd-signature-type tsd-kind-interface">RegistryNodeStatus</a></div>
@@ -64,7 +94,7 @@ service. In case the node did not successfully register yet, it will be the zero
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L485">core/src/types.ts:485</a></li></ul></aside></section></section></div>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L575">core/src/types.ts:575</a></li></ul></aside></section></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -84,6 +114,9 @@ service. In case the node did not successfully register yet, it will be the zero
 <div class="tsd-accordion-details">
 <ul>
 <li><a href="#descriptor" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>descriptor</span></a></li>
+<li><a href="#last_attempt" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>last_<wbr/>attempt</span></a></li>
+<li><a href="#last_attempt_error_message" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>last_<wbr/>attempt_<wbr/>error_<wbr/>message</span></a></li>
+<li><a href="#last_attempt_successful" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>last_<wbr/>attempt_<wbr/>successful</span></a></li>
 <li><a href="#last_registration" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>last_<wbr/>registration</span></a></li>
 <li><a href="#node_status" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>node_<wbr/>status</span></a></li></ul></div></details></div>
 <div class="site-menu">

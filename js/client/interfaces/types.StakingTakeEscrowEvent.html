@@ -26,7 +26,7 @@ account (i.e. stake is slashed).</p>
 <ul class="tsd-hierarchy">
 <li><span class="target">StakingTakeEscrowEvent</span></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3115">core/src/types.ts:3115</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3517">core/src/types.ts:3517</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -35,20 +35,32 @@ account (i.e. stake is slashed).</p>
 <section class="tsd-index-section">
 <h3 class="tsd-index-heading">Properties</h3>
 <div class="tsd-index-list"><a href="types.StakingTakeEscrowEvent.html#amount" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>amount</span></a>
+<a href="types.StakingTakeEscrowEvent.html#debonding_amount" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>debonding_<wbr/>amount</span></a>
 <a href="types.StakingTakeEscrowEvent.html#owner" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>owner</span></a>
 </div></section></div></details></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Properties</h2>
 <section class="tsd-panel tsd-member"><a id="amount" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>amount</span><a href="#amount" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">amount</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type ">Uint8Array</span></div><aside class="tsd-sources">
+<div class="tsd-signature"><span class="tsd-kind-property">amount</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type ">Uint8Array</span></div>
+<div class="tsd-comment tsd-typography"><p>The sum of amounts slashed from active and debonding escrow balances.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3117">core/src/types.ts:3117</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3522">core/src/types.ts:3522</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member"><a id="debonding_amount" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>debonding_<wbr/>amount</span><a href="#debonding_amount" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">debonding_<wbr/>amount</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type ">Uint8Array</span></div>
+<div class="tsd-comment tsd-typography"><p>The amount slashed from debonding escrow balances.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3526">core/src/types.ts:3526</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="owner" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>owner</span><a href="#owner" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">owner</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type ">Uint8Array</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3116">core/src/types.ts:3116</a></li></ul></aside></section></section></div>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3518">core/src/types.ts:3518</a></li></ul></aside></section></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -68,6 +80,7 @@ account (i.e. stake is slashed).</p>
 <div class="tsd-accordion-details">
 <ul>
 <li><a href="#amount" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>amount</span></a></li>
+<li><a href="#debonding_amount" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>debonding_<wbr/>amount</span></a></li>
 <li><a href="#owner" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>owner</span></a></li></ul></div></details></div>
 <div class="site-menu">
 <nav class="tsd-navigation"><a href="../modules.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1"></use></svg><span>@oasisprotocol/client</span></a>

@@ -25,7 +25,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">WorkerCommonStatus</span></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3387">core/src/types.ts:3387</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3796">core/src/types.ts:3796</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -36,11 +36,11 @@
 <div class="tsd-index-list"><a href="types.WorkerCommonStatus.html#active_version" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>active_<wbr/>version</span></a>
 <a href="types.WorkerCommonStatus.html#executor_roles" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>executor_<wbr/>roles</span></a>
 <a href="types.WorkerCommonStatus.html#host" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>host</span></a>
-<a href="types.WorkerCommonStatus.html#is_txn_scheduler" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>is_<wbr/>txn_<wbr/>scheduler</span></a>
 <a href="types.WorkerCommonStatus.html#latest_height" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>latest_<wbr/>height</span></a>
 <a href="types.WorkerCommonStatus.html#latest_round" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>latest_<wbr/>round</span></a>
 <a href="types.WorkerCommonStatus.html#liveness" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>liveness?</span></a>
 <a href="types.WorkerCommonStatus.html#peers" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>peers</span></a>
+<a href="types.WorkerCommonStatus.html#scheduler_rank" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>scheduler_<wbr/>rank</span></a>
 <a href="types.WorkerCommonStatus.html#status" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>status</span></a>
 </div></section></div></details></section></section>
 <section class="tsd-panel-group tsd-member-group">
@@ -52,7 +52,7 @@
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3395">core/src/types.ts:3395</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3804">core/src/types.ts:3804</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="executor_roles" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>executor_<wbr/>roles</span><a href="#executor_roles" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">executor_<wbr/>roles</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type ">Uint8Array</span></div>
@@ -60,7 +60,7 @@
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3407">core/src/types.ts:3407</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3816">core/src/types.ts:3816</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="host" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>host</span><a href="#host" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">host</span><span class="tsd-signature-symbol">:</span> <a href="types.WorkerCommonHostStatus.html" class="tsd-signature-type tsd-kind-interface">WorkerCommonHostStatus</a></div>
@@ -68,15 +68,7 @@
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3423">core/src/types.ts:3423</a></li></ul></aside></section>
-<section class="tsd-panel tsd-member"><a id="is_txn_scheduler" class="tsd-anchor"></a>
-<h3 class="tsd-anchor-link"><span>is_<wbr/>txn_<wbr/>scheduler</span><a href="#is_txn_scheduler" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
-<div class="tsd-signature"><span class="tsd-kind-property">is_<wbr/>txn_<wbr/>scheduler</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
-<div class="tsd-comment tsd-typography"><p>IsTransactionScheduler indicates whether the node is a transaction scheduler in this round.</p>
-</div>
-<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
-<ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3411">core/src/types.ts:3411</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3833">core/src/types.ts:3833</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="latest_height" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>latest_<wbr/>height</span><a href="#latest_height" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">latest_<wbr/>height</span><span class="tsd-signature-symbol">:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a></div>
@@ -84,7 +76,7 @@
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3403">core/src/types.ts:3403</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3812">core/src/types.ts:3812</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="latest_round" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>latest_<wbr/>round</span><a href="#latest_round" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">latest_<wbr/>round</span><span class="tsd-signature-symbol">:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a></div>
@@ -92,7 +84,7 @@
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3399">core/src/types.ts:3399</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3808">core/src/types.ts:3808</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="liveness" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>liveness</span><a href="#liveness" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">liveness</span><span class="tsd-signature-symbol">?:</span> <a href="types.WorkerCommonLivenessStatus.html" class="tsd-signature-type tsd-kind-interface">WorkerCommonLivenessStatus</a></div>
@@ -100,7 +92,7 @@
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3415">core/src/types.ts:3415</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3825">core/src/types.ts:3825</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="peers" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>peers</span><a href="#peers" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">peers</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></div>
@@ -108,7 +100,16 @@
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3419">core/src/types.ts:3419</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3829">core/src/types.ts:3829</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member"><a id="scheduler_rank" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><span>scheduler_<wbr/>rank</span><a href="#scheduler_rank" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">scheduler_<wbr/>rank</span><span class="tsd-signature-symbol">:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a></div>
+<div class="tsd-comment tsd-typography"><p>SchedulerRank is the position (index) of the node in the committee&#39;s scheduling order
+for the next round.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3821">core/src/types.ts:3821</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="status" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><span>status</span><a href="#status" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">status</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">number</span></div>
@@ -116,7 +117,7 @@
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L3391">core/src/types.ts:3391</a></li></ul></aside></section></section></div>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3800">core/src/types.ts:3800</a></li></ul></aside></section></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -138,11 +139,11 @@
 <li><a href="#active_version" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>active_<wbr/>version</span></a></li>
 <li><a href="#executor_roles" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>executor_<wbr/>roles</span></a></li>
 <li><a href="#host" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>host</span></a></li>
-<li><a href="#is_txn_scheduler" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>is_<wbr/>txn_<wbr/>scheduler</span></a></li>
 <li><a href="#latest_height" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>latest_<wbr/>height</span></a></li>
 <li><a href="#latest_round" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>latest_<wbr/>round</span></a></li>
 <li><a href="#liveness" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>liveness</span></a></li>
 <li><a href="#peers" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>peers</span></a></li>
+<li><a href="#scheduler_rank" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>scheduler_<wbr/>rank</span></a></li>
 <li><a href="#status" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>status</span></a></li></ul></div></details></div>
 <div class="site-menu">
 <nav class="tsd-navigation"><a href="../modules.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1"></use></svg><span>@oasisprotocol/client</span></a>

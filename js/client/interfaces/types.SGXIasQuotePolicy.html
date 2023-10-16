@@ -25,7 +25,7 @@
 <ul class="tsd-hierarchy">
 <li><span class="target">SGXIasQuotePolicy</span></li></ul></section><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L2603">core/src/types.ts:2603</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L2986">core/src/types.ts:2986</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-index-accordion" open><summary class="tsd-accordion-summary tsd-index-summary">
@@ -35,6 +35,8 @@
 <h3 class="tsd-index-heading">Properties</h3>
 <div class="tsd-index-list"><a href="types.SGXIasQuotePolicy.html#allowed_quote_statuses" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>allowed_<wbr/>quote_<wbr/>statuses?</span></a>
 <a href="types.SGXIasQuotePolicy.html#disabled" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>disabled?</span></a>
+<a href="types.SGXIasQuotePolicy.html#gid_blacklist" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>gid_<wbr/>blacklist?</span></a>
+<a href="types.SGXIasQuotePolicy.html#min_tcb_evaluation_data_number" class="tsd-index-link"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>min_<wbr/>tcb_<wbr/>evaluation_<wbr/>data_<wbr/>number?</span></a>
 </div></section></div></details></section></section>
 <section class="tsd-panel-group tsd-member-group">
 <h2>Properties</h2>
@@ -46,7 +48,7 @@
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L2613">core/src/types.ts:2613</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L2996">core/src/types.ts:2996</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member"><a id="disabled" class="tsd-anchor"></a>
 <h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>disabled</span><a href="#disabled" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">disabled</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -54,7 +56,24 @@
 </div>
 <div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/a895d38/client-sdk/ts-web/core/src/types.ts#L2607">core/src/types.ts:2607</a></li></ul></aside></section></section></div>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L2990">core/src/types.ts:2990</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member"><a id="gid_blacklist" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>gid_<wbr/>blacklist</span><a href="#gid_blacklist" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">gid_<wbr/>blacklist</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">[]</span></div>
+<div class="tsd-comment tsd-typography"><p>GIDBlackList is a list of blocked platform EPID group IDs.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3000">core/src/types.ts:3000</a></li></ul></aside></section>
+<section class="tsd-panel tsd-member"><a id="min_tcb_evaluation_data_number" class="tsd-anchor"></a>
+<h3 class="tsd-anchor-link"><code class="tsd-tag ts-flagOptional">Optional</code> <span>min_<wbr/>tcb_<wbr/>evaluation_<wbr/>data_<wbr/>number</span><a href="#min_tcb_evaluation_data_number" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24"><use href="#icon-anchor"></use></svg></a></h3>
+<div class="tsd-signature"><span class="tsd-kind-property">min_<wbr/>tcb_<wbr/>evaluation_<wbr/>data_<wbr/>number</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
+<div class="tsd-comment tsd-typography"><p>MinTCBEvaluationDataNumber is the minimum acceptable TCB Evaluation Data number,
+as used in the attestation verification report structure.</p>
+</div>
+<div class="tsd-comment tsd-typography"></div><aside class="tsd-sources">
+<ul>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/6da45b8/client-sdk/ts-web/core/src/types.ts#L3005">core/src/types.ts:3005</a></li></ul></aside></section></section></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
@@ -74,7 +93,9 @@
 <div class="tsd-accordion-details">
 <ul>
 <li><a href="#allowed_quote_statuses" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>allowed_<wbr/>quote_<wbr/>statuses</span></a></li>
-<li><a href="#disabled" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>disabled</span></a></li></ul></div></details></div>
+<li><a href="#disabled" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>disabled</span></a></li>
+<li><a href="#gid_blacklist" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>gid_<wbr/>blacklist</span></a></li>
+<li><a href="#min_tcb_evaluation_data_number" class=""><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1024"></use></svg><span>min_<wbr/>tcb_<wbr/>evaluation_<wbr/>data_<wbr/>number</span></a></li></ul></div></details></div>
 <div class="site-menu">
 <nav class="tsd-navigation"><a href="../modules.html"><svg class="tsd-kind-icon" viewBox="0 0 24 24"><use href="#icon-1"></use></svg><span>@oasisprotocol/client</span></a>
 <ul class="tsd-small-nested-navigation" id="tsd-nav-container" data-base="..">
