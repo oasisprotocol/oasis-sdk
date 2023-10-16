@@ -313,29 +313,23 @@
 <a href="#313" id="313">313</a>
 <a href="#314" id="314">314</a>
 <a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Keymanager interface.
 </span><span class="kw">use </span>std::sync::Arc;
 
-<span class="kw">use </span>io_context::Context <span class="kw">as </span>IoContext;
 <span class="kw">use </span>tiny_keccak::{Hasher, TupleHash};
-<span class="kw">use </span>tokio::runtime::Handle <span class="kw">as </span>TokioHandle;
 
 <span class="kw">use </span>oasis_core_keymanager::client::{KeyManagerClient <span class="kw">as </span>CoreKeyManagerClient, RemoteClient};
 <span class="kw">pub use </span>oasis_core_keymanager::{
     api::KeyManagerError,
-    crypto::{KeyPair, KeyPairId, PrivateKey, PublicKey, SignedPublicKey, StateKey},
+    crypto::{KeyPair, KeyPairId, SignedPublicKey, StateKey},
     policy::TrustedPolicySigners,
 };
 <span class="kw">use </span>oasis_core_runtime::{
-    common::{logger::get_logger, namespace::Namespace},
+    common::namespace::Namespace,
     consensus::{beacon::EpochTime, verifier::Verifier},
+    future::block_on,
+    identity::Identity,
     protocol::Protocol,
-    rak::RAK,
     RpcDispatcher,
 };
 
@@ -351,7 +345,7 @@
         runtime_id: Namespace,
         protocol: Arc&lt;Protocol&gt;,
         consensus_verifier: Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
-        rak: Arc&lt;RAK&gt;,
+        identity: Arc&lt;Identity&gt;,
         rpc: <span class="kw-2">&amp;mut </span>RpcDispatcher,
         key_cache_sizes: usize,
         signers: TrustedPolicySigners,
@@ -360,16 +354,26 @@
             runtime_id,
             protocol,
             consensus_verifier,
-            rak,
+            identity,
             key_cache_sizes,
             signers,
+            <span class="macro">vec!</span>[],
         ));
-        <span class="kw">let </span>handler_remote_client = remote_client.clone();
-        rpc.set_keymanager_policy_update_handler(<span class="prelude-val">Some</span>(Box::new(<span class="kw">move </span>|raw_signed_policy| {
-            <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = handler_remote_client.set_policy(raw_signed_policy) {
-                <span class="macro">slog::warn!</span>(get_logger(<span class="string">&quot;keymanager/client&quot;</span>), <span class="string">&quot;failed to update key manager policy&quot;</span>; <span class="string">&quot;err&quot; </span>=&gt; %error);
-            }
+
+        <span class="comment">// Setup the quote policy update handler.
+        </span><span class="kw">let </span>handler_remote_client = remote_client.clone();
+        rpc.set_keymanager_quote_policy_update_handler(<span class="prelude-val">Some</span>(Box::new(<span class="kw">move </span>|policy| {
+            handler_remote_client.set_quote_policy(policy);
         })));
+
+        <span class="comment">// Setup the status update handler.
+        </span><span class="kw">let </span>handler_remote_client = remote_client.clone();
+        rpc.set_keymanager_status_update_handler(<span class="prelude-val">Some</span>(Box::new(<span class="kw">move </span>|status| {
+            handler_remote_client
+                .set_status(status)
+                .expect(<span class="string">&quot;failed to update km client status&quot;</span>);
+        })));
+
         KeyManagerClient {
             inner: remote_client,
         }
@@ -377,17 +381,14 @@
 
     <span class="doccomment">/// Create a client proxy which will forward calls to the inner client using the given context.
     /// Only public key queries will be allowed.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>with_context(<span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;<span class="self">Self</span>&gt;, ctx: Arc&lt;IoContext&gt;) -&gt; Box&lt;<span class="kw">dyn </span>KeyManager&gt; {
-        Box::new(KeyManagerClientWithContext::new(<span class="self">self</span>.clone(), ctx, <span class="bool-val">false</span>)) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>KeyManager&gt;
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>with_context(<span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;<span class="self">Self</span>&gt;) -&gt; Box&lt;<span class="kw">dyn </span>KeyManager&gt; {
+        Box::new(KeyManagerClientWithContext::new(<span class="self">self</span>.clone(), <span class="bool-val">false</span>)) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>KeyManager&gt;
     }
 
     <span class="doccomment">/// Create a client proxy which will forward calls to the inner client using the given context.
     /// Public and private key queries will be allowed.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>with_private_context(
-        <span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;<span class="self">Self</span>&gt;,
-        ctx: Arc&lt;IoContext&gt;,
-    ) -&gt; Box&lt;<span class="kw">dyn </span>KeyManager&gt; {
-        Box::new(KeyManagerClientWithContext::new(<span class="self">self</span>.clone(), ctx, <span class="bool-val">true</span>)) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>KeyManager&gt;
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>with_private_context(<span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;<span class="self">Self</span>&gt;) -&gt; Box&lt;<span class="kw">dyn </span>KeyManager&gt; {
+        Box::new(KeyManagerClientWithContext::new(<span class="self">self</span>.clone(), <span class="bool-val">true</span>)) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>KeyManager&gt;
     }
 
     <span class="doccomment">/// Clear local key cache.
@@ -402,10 +403,9 @@
     /// See the oasis-core documentation for details.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>get_or_create_keys(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: IoContext,
         key_pair_id: KeyPairId,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;KeyPair, KeyManagerError&gt; {
-        <span class="self">self</span>.inner.get_or_create_keys(ctx, key_pair_id).<span class="kw">await
+        retryable(|| <span class="self">self</span>.inner.get_or_create_keys(key_pair_id, <span class="number">0</span>)).<span class="kw">await
     </span>}
 
     <span class="doccomment">/// Get public key for a key pair id.
@@ -413,10 +413,9 @@
     /// See the oasis-core documentation for details.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>get_public_key(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: IoContext,
         key_pair_id: KeyPairId,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedPublicKey&gt;, KeyManagerError&gt; {
-        <span class="self">self</span>.inner.get_public_key(ctx, key_pair_id).<span class="kw">await
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SignedPublicKey, KeyManagerError&gt; {
+        retryable(|| <span class="self">self</span>.inner.get_public_key(key_pair_id, <span class="number">0</span>)).<span class="kw">await
     </span>}
 
     <span class="doccomment">/// Get or create named ephemeral key pair for given epoch.
@@ -424,13 +423,10 @@
     /// See the oasis-core documentation for details.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>get_or_create_ephemeral_keys(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: IoContext,
         key_pair_id: KeyPairId,
         epoch: EpochTime,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;KeyPair, KeyManagerError&gt; {
-        <span class="self">self</span>.inner
-            .get_or_create_ephemeral_keys(ctx, key_pair_id, epoch)
-            .<span class="kw">await
+        retryable(|| <span class="self">self</span>.inner.get_or_create_ephemeral_keys(key_pair_id, epoch)).<span class="kw">await
     </span>}
 
     <span class="doccomment">/// Get ephemeral public key for an epoch and a key pair id.
@@ -438,15 +434,25 @@
     /// See the oasis-core documentation for details.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">async fn </span>get_public_ephemeral_key(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: IoContext,
         key_pair_id: KeyPairId,
         epoch: EpochTime,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedPublicKey&gt;, KeyManagerError&gt; {
-        <span class="self">self</span>.inner
-            .get_public_ephemeral_key(ctx, key_pair_id, epoch)
-            .<span class="kw">await
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SignedPublicKey, KeyManagerError&gt; {
+        retryable(|| <span class="self">self</span>.inner.get_public_ephemeral_key(key_pair_id, epoch)).<span class="kw">await
     </span>}
 }
+
+<span class="doccomment">/// Decorator for remote method calls that can be safely retried.
+</span><span class="kw">async fn </span>retryable&lt;A&gt;(action: A) -&gt; <span class="prelude-ty">Result</span>&lt;A::Item, A::Error&gt;
+<span class="kw">where
+    </span>A: tokio_retry::Action,
+{
+    <span class="kw">let </span>retry_strategy = tokio_retry::strategy::ExponentialBackoff::from_millis(<span class="number">4</span>)
+        .max_delay(std::time::Duration::from_millis(<span class="number">250</span>))
+        .map(tokio_retry::strategy::jitter)
+        .take(<span class="number">5</span>);
+
+    tokio_retry::Retry::spawn(retry_strategy, action).<span class="kw">await
+</span>}
 
 <span class="doccomment">/// Key manager interface.
 </span><span class="kw">pub trait </span>KeyManager {
@@ -465,10 +471,7 @@
     ///
     /// See the oasis-core documentation for details. This variant of the method
     /// synchronously blocks for the result.
-    </span><span class="kw">fn </span>get_public_key(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        key_pair_id: KeyPairId,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedPublicKey&gt;, KeyManagerError&gt;;
+    </span><span class="kw">fn </span>get_public_key(<span class="kw-2">&amp;</span><span class="self">self</span>, key_pair_id: KeyPairId) -&gt; <span class="prelude-ty">Result</span>&lt;SignedPublicKey, KeyManagerError&gt;;
 
     <span class="doccomment">/// Get or create named ephemeral key pair for given epoch.
     ///
@@ -488,7 +491,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         key_pair_id: KeyPairId,
         epoch: EpochTime,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedPublicKey&gt;, KeyManagerError&gt;;
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SignedPublicKey, KeyManagerError&gt;;
 
     <span class="kw">fn </span>box_clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>KeyManager&gt;;
 }
@@ -505,18 +508,12 @@
 </span><span class="kw">pub struct </span>KeyManagerClientWithContext {
     parent: Arc&lt;KeyManagerClient&gt;,
     allow_private: bool,
-    ctx: Arc&lt;IoContext&gt;,
 }
 
 <span class="kw">impl </span>KeyManagerClientWithContext {
-    <span class="kw">fn </span>new(
-        parent: Arc&lt;KeyManagerClient&gt;,
-        ctx: Arc&lt;IoContext&gt;,
-        allow_private: bool,
-    ) -&gt; KeyManagerClientWithContext {
+    <span class="kw">fn </span>new(parent: Arc&lt;KeyManagerClient&gt;, allow_private: bool) -&gt; KeyManagerClientWithContext {
         KeyManagerClientWithContext {
             parent,
-            ctx,
             allow_private,
         }
     }
@@ -534,9 +531,7 @@
             </span>)));
         }
 
-        <span class="self">self</span>.parent
-            .get_or_create_keys(IoContext::create_child(<span class="kw-2">&amp;</span><span class="self">self</span>.ctx), key_pair_id)
-            .<span class="kw">await
+        <span class="self">self</span>.parent.get_or_create_keys(key_pair_id).<span class="kw">await
     </span>}
 
     <span class="doccomment">/// Get public key for a key pair id.
@@ -545,10 +540,8 @@
     </span><span class="kw">async fn </span>get_public_key_async(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         key_pair_id: KeyPairId,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedPublicKey&gt;, KeyManagerError&gt; {
-        <span class="self">self</span>.parent
-            .get_public_key(IoContext::create_child(<span class="kw-2">&amp;</span><span class="self">self</span>.ctx), key_pair_id)
-            .<span class="kw">await
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SignedPublicKey, KeyManagerError&gt; {
+        <span class="self">self</span>.parent.get_public_key(key_pair_id).<span class="kw">await
     </span>}
 
     <span class="doccomment">/// Get ephemeral public key for an epoch and a key pair id.
@@ -566,7 +559,7 @@
         }
 
         <span class="self">self</span>.parent
-            .get_or_create_ephemeral_keys(IoContext::create_child(<span class="kw-2">&amp;</span><span class="self">self</span>.ctx), key_pair_id, epoch)
+            .get_or_create_ephemeral_keys(key_pair_id, epoch)
             .<span class="kw">await
     </span>}
 
@@ -577,9 +570,9 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         key_pair_id: KeyPairId,
         epoch: EpochTime,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedPublicKey&gt;, KeyManagerError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SignedPublicKey, KeyManagerError&gt; {
         <span class="self">self</span>.parent
-            .get_public_ephemeral_key(IoContext::create_child(<span class="kw-2">&amp;</span><span class="self">self</span>.ctx), key_pair_id, epoch)
+            .get_public_ephemeral_key(key_pair_id, epoch)
             .<span class="kw">await
     </span>}
 }
@@ -590,14 +583,11 @@
     }
 
     <span class="kw">fn </span>get_or_create_keys(<span class="kw-2">&amp;</span><span class="self">self</span>, key_pair_id: KeyPairId) -&gt; <span class="prelude-ty">Result</span>&lt;KeyPair, KeyManagerError&gt; {
-        TokioHandle::current().block_on(<span class="self">self</span>.get_or_create_keys_async(key_pair_id))
+        block_on(<span class="self">self</span>.get_or_create_keys_async(key_pair_id))
     }
 
-    <span class="kw">fn </span>get_public_key(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        key_pair_id: KeyPairId,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedPublicKey&gt;, KeyManagerError&gt; {
-        TokioHandle::current().block_on(<span class="self">self</span>.get_public_key_async(key_pair_id))
+    <span class="kw">fn </span>get_public_key(<span class="kw-2">&amp;</span><span class="self">self</span>, key_pair_id: KeyPairId) -&gt; <span class="prelude-ty">Result</span>&lt;SignedPublicKey, KeyManagerError&gt; {
+        block_on(<span class="self">self</span>.get_public_key_async(key_pair_id))
     }
 
     <span class="kw">fn </span>get_or_create_ephemeral_keys(
@@ -605,15 +595,15 @@
         key_pair_id: KeyPairId,
         epoch: EpochTime,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;KeyPair, KeyManagerError&gt; {
-        TokioHandle::current().block_on(<span class="self">self</span>.get_or_create_ephemeral_keys_async(key_pair_id, epoch))
+        block_on(<span class="self">self</span>.get_or_create_ephemeral_keys_async(key_pair_id, epoch))
     }
 
     <span class="kw">fn </span>get_public_ephemeral_key(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         key_pair_id: KeyPairId,
         epoch: EpochTime,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedPublicKey&gt;, KeyManagerError&gt; {
-        TokioHandle::current().block_on(<span class="self">self</span>.get_public_ephemeral_key_async(key_pair_id, epoch))
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SignedPublicKey, KeyManagerError&gt; {
+        block_on(<span class="self">self</span>.get_public_ephemeral_key_async(key_pair_id, epoch))
     }
 
     <span class="kw">fn </span>box_clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>KeyManager&gt; {

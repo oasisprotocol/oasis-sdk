@@ -276,13 +276,8 @@
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Mock dispatch context for use in tests.
 </span><span class="kw">use </span>std::collections::BTreeMap;
-
-<span class="kw">use </span>io_context::Context <span class="kw">as </span>IoContext;
 
 <span class="kw">use </span>oasis_core_runtime::{
     common::{namespace::Namespace, version::Version},
@@ -385,7 +380,6 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>.history,
             <span class="self">self</span>.epoch,
             <span class="kw-2">&amp;</span><span class="self">self</span>.rng,
-            IoContext::background().freeze(),
             <span class="self">self</span>.max_messages,
         )
     }
@@ -439,7 +433,7 @@
             .with_root_type(mkvs::RootType::State)
             .build(Box::new(mkvs::sync::NoopReadSyncer)),
     );
-    MKVSStore::new(io_context::Context::background().into(), root)
+    MKVSStore::new(root)
 }
 
 <span class="doccomment">/// Create a new mock transaction.

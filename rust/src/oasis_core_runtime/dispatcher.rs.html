@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/dispatcher.rs`."><title>dispatcher.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/dispatcher.rs`."><title>dispatcher.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -974,20 +974,6 @@
 <a href="#974" id="974">974</a>
 <a href="#975" id="975">975</a>
 <a href="#976" id="976">976</a>
-<a href="#977" id="977">977</a>
-<a href="#978" id="978">978</a>
-<a href="#979" id="979">979</a>
-<a href="#980" id="980">980</a>
-<a href="#981" id="981">981</a>
-<a href="#982" id="982">982</a>
-<a href="#983" id="983">983</a>
-<a href="#984" id="984">984</a>
-<a href="#985" id="985">985</a>
-<a href="#986" id="986">986</a>
-<a href="#987" id="987">987</a>
-<a href="#988" id="988">988</a>
-<a href="#989" id="989">989</a>
-<a href="#990" id="990">990</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Runtime call dispatcher.
 </span><span class="kw">use </span>std::{
     convert::TryInto,
@@ -999,34 +985,37 @@
 };
 
 <span class="kw">use </span>anyhow::Result <span class="kw">as </span>AnyResult;
-<span class="kw">use </span>io_context::Context;
 <span class="kw">use </span>slog::{debug, error, info, warn, Logger};
 <span class="kw">use </span>tokio::sync::mpsc;
 
 <span class="kw">use crate</span>::{
     attestation, cache,
     common::{
-        crypto::{
-            hash::Hash,
-            signature::{Signature, Signer},
-        },
+        crypto::{hash::Hash, signature::Signer},
         logger::get_logger,
         process,
+        sgx::QuotePolicy,
     },
     consensus::{
         beacon::EpochTime,
-        roothash::{<span class="self">self</span>, ComputeResultsHeader, Header, COMPUTE_RESULTS_HEADER_CONTEXT},
+        roothash::{<span class="self">self</span>, ComputeResultsHeader, Header, COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT},
+        state::keymanager::Status <span class="kw">as </span>KeyManagerStatus,
         verifier::Verifier,
         LightBlock,
     },
     enclave_rpc::{
         demux::Demux <span class="kw">as </span>RpcDemux,
         dispatcher::Dispatcher <span class="kw">as </span>RpcDispatcher,
-        types::{Message <span class="kw">as </span>RpcMessage, Request <span class="kw">as </span>RpcRequest},
+        session::SessionInfo,
+        types::{
+            Kind <span class="kw">as </span>RpcKind, Message <span class="kw">as </span>RpcMessage, Request <span class="kw">as </span>RpcRequest, Response <span class="kw">as </span>RpcResponse,
+        },
         Context <span class="kw">as </span>RpcContext,
     },
+    future::block_on,
+    identity::Identity,
+    policy::PolicyVerifier,
     protocol::{Protocol, ProtocolUntrustedLocalStorage},
-    rak::RAK,
     storage::mkvs::{sync::NoopReadSyncer, OverlayTree, Root, RootType},
     transaction::{
         dispatcher::{Dispatcher <span class="kw">as </span>TxnDispatcher, NoopDispatcher <span class="kw">as </span>TxnNoopDispatcher},
@@ -1060,7 +1049,7 @@
     <span class="doccomment">/// Protocol instance.
     </span><span class="kw">pub </span>protocol: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Arc&lt;Protocol&gt;,
     <span class="doccomment">/// Runtime Attestation Key instance.
-    </span><span class="kw">pub </span>rak: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Arc&lt;RAK&gt;,
+    </span><span class="kw">pub </span>identity: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Arc&lt;Identity&gt;,
     <span class="doccomment">/// RPC demultiplexer instance.
     </span><span class="kw">pub </span>rpc_demux: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>RpcDemux,
     <span class="doccomment">/// RPC dispatcher instance.
@@ -1096,7 +1085,7 @@
         Error::new(
             <span class="string">&quot;dispatcher&quot;</span>,
             <span class="number">1</span>,
-            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;error while processing request: {}&quot;</span>, e),
+            <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;error while processing request: {e}&quot;</span>),
         )
     }
 }
@@ -1125,17 +1114,18 @@
     protocol: Arc&lt;Protocol&gt;,
     consensus_verifier: Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
     dispatcher: Arc&lt;Dispatcher&gt;,
-    rpc_demux: Arc&lt;Mutex&lt;RpcDemux&gt;&gt;,
+    rpc_demux: Arc&lt;RpcDemux&gt;,
     rpc_dispatcher: Arc&lt;RpcDispatcher&gt;,
     txn_dispatcher: Arc&lt;<span class="kw">dyn </span>TxnDispatcher&gt;,
     <span class="attr">#[cfg_attr(not(target_env = <span class="string">&quot;sgx&quot;</span>), allow(unused))]
     </span>attestation_handler: attestation::Handler,
+    policy_verifier: Arc&lt;PolicyVerifier&gt;,
     cache_set: cache::CacheSet,
 }
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">enum </span>Command {
-    Request(Context, u64, Body),
+    Request(u64, Body),
     Abort(mpsc::Sender&lt;()&gt;),
 }
 
@@ -1143,44 +1133,32 @@
 </span><span class="kw">pub struct </span>Dispatcher {
     logger: Logger,
     queue_tx: mpsc::Sender&lt;Command&gt;,
-    rak: Arc&lt;RAK&gt;,
+    identity: Arc&lt;Identity&gt;,
     abort_batch: Arc&lt;AtomicBool&gt;,
 
     state: Mutex&lt;<span class="prelude-ty">Option</span>&lt;ProtocolState&gt;&gt;,
     state_cond: Condvar,
 
-    tokio_runtime: tokio::runtime::Runtime,
+    tokio_runtime: tokio::runtime::Handle,
 }
 
 <span class="kw">impl </span>Dispatcher {
-    <span class="attr">#[cfg(target_env = <span class="string">&quot;sgx&quot;</span>)]
-    </span><span class="kw">fn </span>new_tokio_runtime() -&gt; tokio::runtime::Runtime {
-        <span class="comment">// In an SGX environment we use a single-threaded Tokio runtime.
-        </span>tokio::runtime::Builder::new_current_thread()
-            .max_blocking_threads(<span class="number">2</span>) <span class="comment">// Limited in SGX.
-            </span>.thread_keep_alive(std::time::Duration::from_secs(<span class="number">120</span>))
-            .build()
-            .unwrap()
-    }
-
-    <span class="attr">#[cfg(not(target_env = <span class="string">&quot;sgx&quot;</span>))]
-    </span><span class="kw">fn </span>new_tokio_runtime() -&gt; tokio::runtime::Runtime {
-        <span class="comment">// Otherwise we use a fully-fledged Tokio runtime.
-        </span>tokio::runtime::Runtime::new().unwrap()
-    }
-
     <span class="doccomment">/// Create a new runtime call dispatcher.
-    </span><span class="kw">pub fn </span>new(initializer: Box&lt;<span class="kw">dyn </span>Initializer&gt;, rak: Arc&lt;RAK&gt;) -&gt; Arc&lt;<span class="self">Self</span>&gt; {
+    </span><span class="kw">pub fn </span>new(
+        tokio_runtime: tokio::runtime::Handle,
+        initializer: Box&lt;<span class="kw">dyn </span>Initializer&gt;,
+        identity: Arc&lt;Identity&gt;,
+    ) -&gt; Arc&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>(tx, rx) = mpsc::channel(BACKLOG_SIZE);
 
         <span class="kw">let </span>dispatcher = Arc::new(Dispatcher {
             logger: get_logger(<span class="string">&quot;runtime/dispatcher&quot;</span>),
             queue_tx: tx,
-            rak,
+            identity,
             abort_batch: Arc::new(AtomicBool::new(<span class="bool-val">false</span>)),
             state: Mutex::new(<span class="prelude-val">None</span>),
             state_cond: Condvar::new(),
-            tokio_runtime: <span class="self">Self</span>::new_tokio_runtime(),
+            tokio_runtime,
         });
 
         <span class="comment">// Spawn the dispatcher processing thread.
@@ -1205,9 +1183,8 @@
     }
 
     <span class="doccomment">/// Queue a new request to be dispatched.
-    </span><span class="kw">pub fn </span>queue_request(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context, id: u64, body: Body) -&gt; AnyResult&lt;()&gt; {
-        <span class="self">self</span>.queue_tx
-            .blocking_send(Command::Request(ctx, id, body))<span class="question-mark">?</span>;
+    </span><span class="kw">pub fn </span>queue_request(<span class="kw-2">&amp;</span><span class="self">self</span>, id: u64, body: Body) -&gt; AnyResult&lt;()&gt; {
+        <span class="self">self</span>.queue_tx.blocking_send(Command::Request(id, body))<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 
@@ -1238,11 +1215,11 @@
 
         <span class="comment">// Create actual dispatchers for RPCs and transactions.
         </span><span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Starting the runtime dispatcher&quot;</span>);
-        <span class="kw">let </span><span class="kw-2">mut </span>rpc_demux = RpcDemux::new(<span class="self">self</span>.rak.clone());
+        <span class="kw">let </span><span class="kw-2">mut </span>rpc_demux = RpcDemux::new(<span class="self">self</span>.identity.clone());
         <span class="kw">let </span><span class="kw-2">mut </span>rpc_dispatcher = RpcDispatcher::default();
         <span class="kw">let </span>pre_init_state = PreInitState {
             protocol: <span class="kw-2">&amp;</span>protocol,
-            rak: <span class="kw-2">&amp;</span><span class="self">self</span>.rak,
+            identity: <span class="kw-2">&amp;</span><span class="self">self</span>.identity,
             rpc_demux: <span class="kw-2">&amp;mut </span>rpc_demux,
             rpc_dispatcher: <span class="kw-2">&amp;mut </span>rpc_dispatcher,
             consensus_verifier: <span class="kw-2">&amp;</span>consensus_verifier,
@@ -1250,23 +1227,24 @@
         <span class="kw">let </span>post_init_state = initializer.init(pre_init_state);
         <span class="kw">let </span><span class="kw-2">mut </span>txn_dispatcher = post_init_state
             .txn_dispatcher
-            .unwrap_or_else(|| Box::new(TxnNoopDispatcher::default()));
+            .unwrap_or_else(|| Box::&lt;TxnNoopDispatcher&gt;::default());
         txn_dispatcher.set_abort_batch_flag(<span class="self">self</span>.abort_batch.clone());
 
         <span class="kw">let </span>state = State {
             protocol: protocol.clone(),
             consensus_verifier: consensus_verifier.clone(),
             dispatcher: <span class="self">self</span>.clone(),
-            rpc_demux: Arc::new(Mutex::new(rpc_demux)),
+            rpc_demux: Arc::new(rpc_demux),
             rpc_dispatcher: Arc::new(rpc_dispatcher),
             txn_dispatcher: Arc::from(txn_dispatcher),
             attestation_handler: attestation::Handler::new(
-                <span class="self">self</span>.rak.clone(),
+                <span class="self">self</span>.identity.clone(),
                 protocol.clone(),
-                consensus_verifier,
+                consensus_verifier.clone(),
                 protocol.get_runtime_id(),
                 protocol.get_config().version,
             ),
+            policy_verifier: Arc::new(PolicyVerifier::new(consensus_verifier)),
             cache_set: cache::CacheSet::new(protocol.clone()),
         };
 
@@ -1275,14 +1253,14 @@
             <span class="kw">while let </span><span class="prelude-val">Some</span>(cmd) = rx.recv().<span class="kw">await </span>{
                 <span class="comment">// Process received command.
                 </span><span class="kw">match </span>cmd {
-                    Command::Request(ctx, id, request) =&gt; {
+                    Command::Request(id, request) =&gt; {
                         <span class="comment">// Process request in its own task.
                         </span><span class="kw">let </span>state = state.clone();
 
                         tokio::spawn(<span class="kw">async move </span>{
                             <span class="kw">let </span>protocol = state.protocol.clone();
                             <span class="kw">let </span>dispatcher = state.dispatcher.clone();
-                            <span class="kw">let </span>result = dispatcher.handle_request(state, ctx, request).<span class="kw">await</span>;
+                            <span class="kw">let </span>result = dispatcher.handle_request(state, request).<span class="kw">await</span>;
 
                             <span class="comment">// Send response.
                             </span><span class="kw">let </span>response = <span class="kw">match </span>result {
@@ -1303,12 +1281,7 @@
         <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Runtime call dispatcher is terminating&quot;</span>);
     }
 
-    <span class="kw">async fn </span>handle_request(
-        <span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;<span class="self">Self</span>&gt;,
-        state: State,
-        ctx: Context,
-        request: Body,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
+    <span class="kw">async fn </span>handle_request(<span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;<span class="self">Self</span>&gt;, state: State, request: Body) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
         <span class="kw">match </span>request {
             <span class="comment">// Attestation-related requests.
             </span><span class="attr">#[cfg(target_env = <span class="string">&quot;sgx&quot;</span>)]
@@ -1316,32 +1289,27 @@
             | Body::RuntimeCapabilityTEERakReportRequest {}
             | Body::RuntimeCapabilityTEERakAvrRequest { .. }
             | Body::RuntimeCapabilityTEERakQuoteRequest { .. } =&gt; {
-                <span class="prelude-val">Ok</span>(state.attestation_handler.handle(ctx, request)<span class="question-mark">?</span>)
+                <span class="prelude-val">Ok</span>(state.attestation_handler.handle(request).<span class="kw">await</span><span class="question-mark">?</span>)
             }
 
             <span class="comment">// RPC and transaction requests.
-            </span>Body::RuntimeRPCCallRequest { request } =&gt; {
-                <span class="comment">// RPC call.
-                </span><span class="self">self</span>.dispatch_rpc(
-                    <span class="kw-2">&amp;</span>state.rpc_demux,
-                    <span class="kw-2">&amp;</span>state.rpc_dispatcher,
-                    <span class="kw-2">&amp;</span>state.protocol,
-                    <span class="kw-2">&amp;</span>state.consensus_verifier,
-                    ctx,
-                    request,
-                )
-                .<span class="kw">await
-            </span>}
+            </span>Body::RuntimeRPCCallRequest { request, kind } =&gt; {
+                <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Received RPC call request&quot;</span>;
+                    <span class="string">&quot;kind&quot; </span>=&gt; <span class="question-mark">?</span>kind,
+                );
+
+                <span class="kw">match </span>kind {
+                    RpcKind::NoiseSession =&gt; <span class="self">self</span>.dispatch_secure_rpc(state, request).<span class="kw">await</span>,
+                    RpcKind::InsecureQuery =&gt; <span class="self">self</span>.dispatch_insecure_rpc(state, request).<span class="kw">await</span>,
+                    RpcKind::LocalQuery =&gt; <span class="self">self</span>.dispatch_local_rpc(state, request).<span class="kw">await</span>,
+                }
+            }
             Body::RuntimeLocalRPCCallRequest { request } =&gt; {
-                <span class="comment">// Local RPC call.
-                </span><span class="self">self</span>.dispatch_local_rpc(
-                    <span class="kw-2">&amp;</span>state.rpc_dispatcher,
-                    <span class="kw-2">&amp;</span>state.protocol,
-                    <span class="kw-2">&amp;</span>state.consensus_verifier,
-                    ctx,
-                    request,
-                )
-                .<span class="kw">await
+                <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Received RPC call request&quot;</span>;
+                    <span class="string">&quot;kind&quot; </span>=&gt; <span class="question-mark">?</span>RpcKind::LocalQuery,
+                );
+
+                <span class="self">self</span>.dispatch_local_rpc(state, request).<span class="kw">await
             </span>}
             Body::RuntimeExecuteTxBatchRequest {
                 mode,
@@ -1356,7 +1324,6 @@
             } =&gt; {
                 <span class="comment">// Transaction execution.
                 </span><span class="self">self</span>.dispatch_txn(
-                    ctx,
                     state.cache_set,
                     <span class="kw-2">&amp;</span>state.txn_dispatcher,
                     <span class="kw-2">&amp;</span>state.protocol,
@@ -1385,7 +1352,6 @@
             } =&gt; {
                 <span class="comment">// Transaction check.
                 </span><span class="self">self</span>.dispatch_txn(
-                    ctx,
                     state.cache_set,
                     <span class="kw-2">&amp;</span>state.txn_dispatcher,
                     <span class="kw-2">&amp;</span>state.protocol,
@@ -1415,7 +1381,6 @@
             } =&gt; {
                 <span class="comment">// Query.
                 </span><span class="self">self</span>.dispatch_query(
-                    ctx,
                     state.cache_set,
                     <span class="kw-2">&amp;</span>state.txn_dispatcher,
                     <span class="kw-2">&amp;</span>state.protocol,
@@ -1436,14 +1401,22 @@
             </span>}
 
             <span class="comment">// Other requests.
-            </span>Body::RuntimeKeyManagerPolicyUpdateRequest { signed_policy_raw } =&gt; {
-                <span class="comment">// KeyManager policy update local RPC call.
-                </span><span class="self">self</span>.handle_km_policy_update(<span class="kw-2">&amp;</span>state.rpc_dispatcher, ctx, signed_policy_raw)
-            }
+            </span>Body::RuntimeKeyManagerStatusUpdateRequest { status } =&gt; {
+                <span class="comment">// Key manager status update local RPC call.
+                </span><span class="self">self</span>.handle_km_status_update(state, status).<span class="kw">await
+            </span>}
+            Body::RuntimeKeyManagerQuotePolicyUpdateRequest {
+                policy: quote_policy,
+            } =&gt; {
+                <span class="comment">// Key manager quote policy update local RPC call.
+                </span><span class="self">self</span>.handle_km_quote_policy_update(state, quote_policy)
+                    .<span class="kw">await
+            </span>}
             Body::RuntimeConsensusSyncRequest { height } =&gt; state
                 .consensus_verifier
                 .sync(height)
-                .map_err(Into::into)
+                .<span class="kw">await
+                </span>.map_err(Into::into)
                 .map(|<span class="kw">_</span>| Body::RuntimeConsensusSyncResponse {}),
 
             <span class="kw">_ </span>=&gt; {
@@ -1456,7 +1429,6 @@
     <span class="attr">#[allow(clippy::too_many_arguments)]
     </span><span class="kw">async fn </span>dispatch_query(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context,
         cache_set: cache::CacheSet,
         txn_dispatcher: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>TxnDispatcher&gt;,
         protocol: <span class="kw-2">&amp;</span>Arc&lt;Protocol&gt;,
@@ -1487,13 +1459,14 @@
         <span class="kw">let </span>protocol = protocol.clone();
         <span class="kw">let </span>txn_dispatcher = txn_dispatcher.clone();
 
-        tokio::task::spawn_blocking(<span class="kw">move </span>|| {
-            <span class="comment">// For queries we don&#39;t do any consensus layer integrity verification by default and it
-            // is up to the runtime to decide whether this is critical on a query-by-query basis.
-            </span><span class="kw">let </span>consensus_state = state
-                .consensus_verifier
-                .unverified_state(state.consensus_block.clone())<span class="question-mark">?</span>;
+        <span class="comment">// For queries we don&#39;t do any consensus layer integrity verification by default and it
+        // is up to the runtime to decide whether this is critical on a query-by-query basis.
+        </span><span class="kw">let </span>consensus_state = state
+            .consensus_verifier
+            .unverified_state(state.consensus_block.clone())
+            .<span class="kw">await</span><span class="question-mark">?</span>;
 
+        tokio::task::spawn_blocking(<span class="kw">move </span>|| {
             <span class="kw">let </span>cache = cache_set.query(Root {
                 namespace: state.header.namespace,
                 version: state.header.round,
@@ -1504,7 +1477,6 @@
             <span class="kw">let </span><span class="kw-2">mut </span>overlay = OverlayTree::new(cache.tree_mut());
 
             <span class="kw">let </span>txn_ctx = TxnContext::new(
-                ctx.freeze(),
                 protocol,
                 <span class="kw-2">&amp;</span>state.consensus_block,
                 consensus_state,
@@ -1525,7 +1497,6 @@
 
     <span class="kw">fn </span>txn_check_batch(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Arc&lt;Context&gt;,
         protocol: Arc&lt;Protocol&gt;,
         cache_set: cache::CacheSet,
         txn_dispatcher: <span class="kw-2">&amp;</span><span class="kw">dyn </span>TxnDispatcher,
@@ -1533,9 +1504,12 @@
         state: TxDispatchState,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
         <span class="comment">// For check-only we don&#39;t do any consensus layer integrity verification.
-        </span><span class="kw">let </span>consensus_state = state
-            .consensus_verifier
-            .unverified_state(state.consensus_block.clone())<span class="question-mark">?</span>;
+        // TODO: Make this async.
+        </span><span class="kw">let </span>consensus_state = block_on(
+            state
+                .consensus_verifier
+                .unverified_state(state.consensus_block.clone()),
+        )<span class="question-mark">?</span>;
 
         <span class="kw">let </span><span class="kw-2">mut </span>cache = cache_set.check(Root {
             namespace: state.header.namespace,
@@ -1546,7 +1520,6 @@
         <span class="kw">let </span><span class="kw-2">mut </span>overlay = OverlayTree::new(cache.tree_mut());
 
         <span class="kw">let </span>txn_ctx = TxnContext::new(
-            ctx.clone(),
             protocol.clone(),
             <span class="kw-2">&amp;</span>state.consensus_block,
             consensus_state,
@@ -1562,7 +1535,7 @@
         <span class="kw">if </span>protocol.get_config().persist_check_tx_state {
             <span class="comment">// Commit results to in-memory tree so they persist for subsequent batches that are
             // based on the same block.
-            </span><span class="kw">let _ </span>= overlay.commit(Context::create_child(<span class="kw-2">&amp;</span>ctx)).unwrap();
+            </span><span class="kw">let _ </span>= overlay.commit().unwrap();
         }
 
         <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Transaction batch check complete&quot;</span>);
@@ -1573,7 +1546,6 @@
     <span class="attr">#[allow(clippy::too_many_arguments)]
     </span><span class="kw">fn </span>txn_execute_batch(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Arc&lt;Context&gt;,
         protocol: Arc&lt;Protocol&gt;,
         cache_set: cache::CacheSet,
         txn_dispatcher: <span class="kw-2">&amp;</span><span class="kw">dyn </span>TxnDispatcher,
@@ -1583,11 +1555,12 @@
         state: TxDispatchState,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
         <span class="comment">// Verify consensus state and runtime state root integrity before execution.
-        </span><span class="kw">let </span>consensus_state = state.consensus_verifier.verify(
+        // TODO: Make this async.
+        </span><span class="kw">let </span>consensus_state = block_on(state.consensus_verifier.verify(
             state.consensus_block.clone(),
             state.header.clone(),
             state.epoch,
-        )<span class="question-mark">?</span>;
+        ))<span class="question-mark">?</span>;
         <span class="comment">// Ensure the runtime is still ready to process requests.
         </span>protocol.ensure_initialized()<span class="question-mark">?</span>;
 
@@ -1602,7 +1575,6 @@
         <span class="kw">let </span><span class="kw-2">mut </span>overlay = OverlayTree::new(cache.tree_mut());
 
         <span class="kw">let </span>txn_ctx = TxnContext::new(
-            ctx.clone(),
             protocol,
             <span class="kw-2">&amp;</span>state.consensus_block,
             consensus_state,
@@ -1628,11 +1600,7 @@
 
         <span class="comment">// Finalize state.
         </span><span class="kw">let </span>(state_write_log, new_state_root) = overlay
-            .commit_both(
-                Context::create_child(<span class="kw-2">&amp;</span>ctx),
-                header.namespace,
-                header.round + <span class="number">1</span>,
-            )
+            .commit_both(header.namespace, header.round + <span class="number">1</span>)
             .expect(<span class="string">&quot;state commit must succeed&quot;</span>);
 
         txn_dispatcher.finalize(new_state_root);
@@ -1654,17 +1622,11 @@
         <span class="kw">for </span>(batch_order, input) <span class="kw">in </span>inputs.drain(..).enumerate() {
             hashes.push(Hash::digest_bytes(<span class="kw-2">&amp;</span>input));
             txn_tree
-                .add_input(
-                    Context::create_child(<span class="kw-2">&amp;</span>ctx),
-                    input,
-                    batch_order.try_into().unwrap(),
-                )
+                .add_input(input, batch_order.try_into().unwrap())
                 .expect(<span class="string">&quot;add transaction must succeed&quot;</span>);
         }
 
-        <span class="kw">let </span>(input_write_log, input_io_root) = txn_tree
-            .commit(Context::create_child(<span class="kw-2">&amp;</span>ctx))
-            .expect(<span class="string">&quot;io commit must succeed&quot;</span>);
+        <span class="kw">let </span>(input_write_log, input_io_root) = txn_tree.commit().expect(<span class="string">&quot;io commit must succeed&quot;</span>);
 
         <span class="macro">assert!</span>(
             state.mode != ExecutionMode::Execute || input_io_root == io_root,
@@ -1675,22 +1637,15 @@
 
         <span class="kw">for </span>(tx_hash, result) <span class="kw">in </span>hashes.iter().zip(results.results.drain(..)) {
             txn_tree
-                .add_output(
-                    Context::create_child(<span class="kw-2">&amp;</span>ctx),
-                    <span class="kw-2">*</span>tx_hash,
-                    result.output,
-                    result.tags,
-                )
+                .add_output(<span class="kw-2">*</span>tx_hash, result.output, result.tags)
                 .expect(<span class="string">&quot;add transaction must succeed&quot;</span>);
         }
 
         txn_tree
-            .add_block_tags(Context::create_child(<span class="kw-2">&amp;</span>ctx), results.block_tags)
+            .add_block_tags(results.block_tags)
             .expect(<span class="string">&quot;adding block tags must succeed&quot;</span>);
 
-        <span class="kw">let </span>(io_write_log, io_root) = txn_tree
-            .commit(Context::create_child(<span class="kw-2">&amp;</span>ctx))
-            .expect(<span class="string">&quot;io commit must succeed&quot;</span>);
+        <span class="kw">let </span>(io_write_log, io_root) = txn_tree.commit().expect(<span class="string">&quot;io commit must succeed&quot;</span>);
 
         <span class="kw">let </span>header = ComputeResultsHeader {
             round: header.round + <span class="number">1</span>,
@@ -1704,12 +1659,6 @@
             in_msgs_count: results.in_msgs_count.try_into().unwrap(),
         };
 
-        <span class="comment">// Since we&#39;ve computed the batch, we can trust it.
-        </span>state
-            .consensus_verifier
-            .trust(<span class="kw-2">&amp;</span>header)
-            .expect(<span class="string">&quot;trusting a computed header must succeed&quot;</span>);
-
         <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Transaction batch execution complete&quot;</span>;
             <span class="string">&quot;previous_hash&quot; </span>=&gt; <span class="question-mark">?</span>header.previous_hash,
             <span class="string">&quot;io_root&quot; </span>=&gt; <span class="question-mark">?</span>header.io_root,
@@ -1718,16 +1667,13 @@
             <span class="string">&quot;in_msgs_hash&quot; </span>=&gt; <span class="question-mark">?</span>header.in_msgs_hash,
         );
 
-        <span class="kw">let </span>rak_sig = <span class="kw">if </span><span class="self">self</span>.rak.public_key().is_some() {
-            <span class="self">self</span>.rak
-                .sign(
-                    COMPUTE_RESULTS_HEADER_CONTEXT,
-                    <span class="kw-2">&amp;</span>cbor::to_vec(header.clone()),
-                )
-                .unwrap()
-        } <span class="kw">else </span>{
-            Signature::default()
-        };
+        <span class="kw">let </span>rak_sig = <span class="self">self
+            </span>.identity
+            .sign(
+                COMPUTE_RESULTS_HEADER_SIGNATURE_CONTEXT,
+                <span class="kw-2">&amp;</span>cbor::to_vec(header.clone()),
+            )
+            .unwrap();
 
         <span class="prelude-val">Ok</span>(Body::RuntimeExecuteTxBatchResponse {
             batch: ComputedBatch {
@@ -1747,7 +1693,6 @@
     <span class="attr">#[allow(clippy::too_many_arguments)]
     </span><span class="kw">async fn </span>dispatch_txn(
         <span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;<span class="self">Self</span>&gt;,
-        ctx: Context,
         cache_set: cache::CacheSet,
         txn_dispatcher: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>TxnDispatcher&gt;,
         protocol: <span class="kw-2">&amp;</span>Arc&lt;Protocol&gt;,
@@ -1778,17 +1723,15 @@
             protocol.get_runtime_id(),
         );
 
-        <span class="kw">let </span>ctx = ctx.freeze();
         <span class="kw">let </span>protocol = protocol.clone();
         <span class="kw">let </span>dispatcher = <span class="self">self</span>.clone();
         <span class="kw">let </span>txn_dispatcher = txn_dispatcher.clone();
 
         tokio::task::spawn_blocking(<span class="kw">move </span>|| {
             <span class="kw">if </span>state.check_only {
-                dispatcher.txn_check_batch(ctx, protocol, cache_set, <span class="kw-2">&amp;</span>txn_dispatcher, inputs, state)
+                dispatcher.txn_check_batch(protocol, cache_set, <span class="kw-2">&amp;</span>txn_dispatcher, inputs, state)
             } <span class="kw">else </span>{
                 dispatcher.txn_execute_batch(
-                    ctx,
                     protocol,
                     cache_set,
                     <span class="kw-2">&amp;</span>txn_dispatcher,
@@ -1803,29 +1746,16 @@
         </span>.unwrap() <span class="comment">// Propagate panics during transaction dispatch.
     </span>}
 
-    <span class="kw">async fn </span>dispatch_rpc(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        rpc_demux: <span class="kw-2">&amp;</span>Arc&lt;Mutex&lt;RpcDemux&gt;&gt;,
-        rpc_dispatcher: <span class="kw-2">&amp;</span>Arc&lt;RpcDispatcher&gt;,
-        protocol: <span class="kw-2">&amp;</span>Arc&lt;Protocol&gt;,
-        consensus_verifier: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
-        ctx: Context,
-        request: Vec&lt;u8&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
-        <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Received RPC call request&quot;</span>);
+    <span class="kw">async fn </span>dispatch_secure_rpc(<span class="kw-2">&amp;</span><span class="self">self</span>, state: State, request: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
+        <span class="comment">// Make sure to abort the process on panic during RPC processing as that indicates a
+        // serious problem and should make sure to clean up the process.
+        </span><span class="kw">let </span>_guard = AbortOnPanic;
 
         <span class="comment">// Process frame.
         </span><span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
-        <span class="kw">let </span>result = rpc_demux
-            .lock()
-            .unwrap()
-            .process_frame(request, <span class="kw-2">&amp;mut </span>buffer)
-            .map_err(|err| {
-                <span class="macro">error!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Error while processing frame&quot;</span>; <span class="string">&quot;err&quot; </span>=&gt; %err);
-                Error::new(<span class="string">&quot;rhp/dispatcher&quot;</span>, <span class="number">1</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, err))
-            })<span class="question-mark">?</span>;
+        <span class="kw">let </span>(<span class="kw-2">mut </span>session, message) = state.rpc_demux.process_frame(request, <span class="kw-2">&amp;mut </span>buffer).<span class="kw">await</span><span class="question-mark">?</span>;
 
-        <span class="kw">if let </span><span class="prelude-val">Some</span>((session_id, session_info, message, untrusted_plaintext)) = result {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(message) = message {
             <span class="comment">// Dispatch request.
             </span><span class="macro">assert!</span>(
                 buffer.is_empty(),
@@ -1834,69 +1764,36 @@
 
             <span class="kw">match </span>message {
                 RpcMessage::Request(req) =&gt; {
-                    <span class="comment">// First make sure that the untrusted_plaintext matches
-                    // the request&#39;s method!
-                    </span><span class="kw">if </span>untrusted_plaintext != req.method {
-                        <span class="macro">error!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Request methods don&#39;t match!&quot;</span>;
-                            <span class="string">&quot;untrusted_plaintext&quot; </span>=&gt; <span class="question-mark">?</span>untrusted_plaintext,
-                            <span class="string">&quot;method&quot; </span>=&gt; <span class="question-mark">?</span>req.method
-                        );
-                        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::new(
-                            <span class="string">&quot;rhp/dispatcher&quot;</span>,
-                            <span class="number">1</span>,
-                            <span class="string">&quot;Request&#39;s method doesn&#39;t match untrusted_plaintext copy.&quot;</span>,
-                        ));
-                    }
-
                     <span class="comment">// Request, dispatch.
-                    </span><span class="kw">let </span>ctx = ctx.freeze();
-                    <span class="kw">let </span>rak = <span class="self">self</span>.rak.clone();
-                    <span class="kw">let </span>protocol = protocol.clone();
-                    <span class="kw">let </span>consensus_verifier = consensus_verifier.clone();
-                    <span class="kw">let </span>rpc_dispatcher = rpc_dispatcher.clone();
-
-                    <span class="kw">let </span>response = tokio::task::spawn_blocking(<span class="kw">move </span>|| {
-                        <span class="kw">let </span>untrusted_local = Arc::new(ProtocolUntrustedLocalStorage::new(
-                            Context::create_child(<span class="kw-2">&amp;</span>ctx),
-                            protocol.clone(),
-                        ));
-                        <span class="kw">let </span>rpc_ctx = RpcContext::new(
-                            ctx.clone(),
-                            rak,
-                            session_info,
-                            consensus_verifier,
-                            <span class="kw-2">&amp;</span>untrusted_local,
-                        );
-                        <span class="kw">let </span>response = rpc_dispatcher.dispatch(req, rpc_ctx);
-                        RpcMessage::Response(response)
-                    })
-                    .<span class="kw">await</span><span class="question-mark">?</span>;
+                    </span><span class="kw">let </span>response = <span class="self">self
+                        </span>.dispatch_rpc(req, RpcKind::NoiseSession, session.info(), <span class="kw-2">&amp;</span>state)
+                        .<span class="kw">await</span><span class="question-mark">?</span>;
+                    <span class="kw">let </span>response = RpcMessage::Response(response);
 
                     <span class="comment">// Note: MKVS commit is omitted, this MUST be global side-effect free.
 
-                    </span><span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;RPC call dispatch complete&quot;</span>);
+                    </span><span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;RPC call dispatch complete&quot;</span>;
+                        <span class="string">&quot;kind&quot; </span>=&gt; <span class="question-mark">?</span>RpcKind::NoiseSession,
+                    );
 
                     <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
-                    rpc_demux
-                        .lock()
-                        .unwrap()
-                        .write_message(session_id, response, <span class="kw-2">&amp;mut </span>buffer)
+                    session
+                        .write_message(response, <span class="kw-2">&amp;mut </span>buffer)
                         .map_err(|err| {
                             <span class="macro">error!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Error while writing response&quot;</span>; <span class="string">&quot;err&quot; </span>=&gt; %err);
-                            Error::new(<span class="string">&quot;rhp/dispatcher&quot;</span>, <span class="number">1</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, err))
+                            Error::new(<span class="string">&quot;rhp/dispatcher&quot;</span>, <span class="number">1</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{err}&quot;</span>))
                         })
                         .map(|<span class="kw">_</span>| Body::RuntimeRPCCallResponse { response: buffer })
                 }
                 RpcMessage::Close =&gt; {
                     <span class="comment">// Session close.
                     </span><span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
-                    rpc_demux
-                        .lock()
-                        .unwrap()
-                        .close(session_id, <span class="kw-2">&amp;mut </span>buffer)
+                    state
+                        .rpc_demux
+                        .close(session, <span class="kw-2">&amp;mut </span>buffer)
                         .map_err(|err| {
                             <span class="macro">error!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Error while closing session&quot;</span>; <span class="string">&quot;err&quot; </span>=&gt; %err);
-                            Error::new(<span class="string">&quot;rhp/dispatcher&quot;</span>, <span class="number">1</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, err))
+                            Error::new(<span class="string">&quot;rhp/dispatcher&quot;</span>, <span class="number">1</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{err}&quot;</span>))
                         })
                         .map(|<span class="kw">_</span>| Body::RuntimeRPCCallResponse { response: buffer })
                 }
@@ -1911,71 +1808,146 @@
         }
     }
 
-    <span class="kw">async fn </span>dispatch_local_rpc(
-        <span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;<span class="self">Self</span>&gt;,
-        rpc_dispatcher: <span class="kw-2">&amp;</span>Arc&lt;RpcDispatcher&gt;,
-        protocol: <span class="kw-2">&amp;</span>Arc&lt;Protocol&gt;,
-        consensus_verifier: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
-        ctx: Context,
-        request: Vec&lt;u8&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
+    <span class="kw">async fn </span>dispatch_insecure_rpc(<span class="kw-2">&amp;</span><span class="self">self</span>, state: State, request: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
+        <span class="comment">// Make sure to abort the process on panic during RPC processing as that indicates a
+        // serious problem and should make sure to clean up the process.
+        </span><span class="kw">let </span>_guard = AbortOnPanic;
+
+        <span class="kw">let </span>request: RpcRequest = cbor::from_slice(<span class="kw-2">&amp;</span>request)
+            .map_err(|<span class="kw">_</span>| Error::new(<span class="string">&quot;rhp/dispatcher&quot;</span>, <span class="number">1</span>, <span class="string">&quot;malformed request&quot;</span>))<span class="question-mark">?</span>;
+
+        <span class="comment">// Request, dispatch.
+        </span><span class="kw">let </span>response = <span class="self">self
+            </span>.dispatch_rpc(request, RpcKind::InsecureQuery, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>state)
+            .<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span>response = cbor::to_vec(response);
+
+        <span class="comment">// Note: MKVS commit is omitted, this MUST be global side-effect free.
+
+        </span><span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;RPC call dispatch complete&quot;</span>;
+            <span class="string">&quot;kind&quot; </span>=&gt; <span class="question-mark">?</span>RpcKind::InsecureQuery,
+        );
+
+        <span class="prelude-val">Ok</span>(Body::RuntimeRPCCallResponse { response })
+    }
+
+    <span class="kw">async fn </span>dispatch_local_rpc(<span class="kw-2">&amp;</span><span class="self">self</span>, state: State, request: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
         <span class="comment">// Make sure to abort the process on panic during local RPC processing as that indicates a
         // serious problem and should make sure to clean up the process.
         </span><span class="kw">let </span>_guard = AbortOnPanic;
 
-        <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Received local RPC call request&quot;</span>);
-
-        <span class="kw">let </span>req: RpcRequest = cbor::from_slice(<span class="kw-2">&amp;</span>request)
+        <span class="kw">let </span>request = cbor::from_slice(<span class="kw-2">&amp;</span>request)
             .map_err(|<span class="kw">_</span>| Error::new(<span class="string">&quot;rhp/dispatcher&quot;</span>, <span class="number">1</span>, <span class="string">&quot;malformed request&quot;</span>))<span class="question-mark">?</span>;
 
         <span class="comment">// Request, dispatch.
-        </span><span class="kw">let </span>ctx = ctx.freeze();
-        <span class="kw">let </span>protocol = protocol.clone();
-        <span class="kw">let </span>dispatcher = <span class="self">self</span>.clone();
-        <span class="kw">let </span>rpc_dispatcher = rpc_dispatcher.clone();
-        <span class="kw">let </span>consensus_verifier = consensus_verifier.clone();
+        </span><span class="kw">let </span>response = <span class="self">self
+            </span>.dispatch_rpc(request, RpcKind::LocalQuery, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>state)
+            .<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span>response = RpcMessage::Response(response);
+        <span class="kw">let </span>response = cbor::to_vec(response);
 
-        tokio::task::spawn_blocking(<span class="kw">move </span>|| {
-            <span class="kw">let </span>untrusted_local = Arc::new(ProtocolUntrustedLocalStorage::new(
-                Context::create_child(<span class="kw-2">&amp;</span>ctx),
-                protocol.clone(),
-            ));
+        <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;RPC call dispatch complete&quot;</span>;
+            <span class="string">&quot;kind&quot; </span>=&gt; <span class="question-mark">?</span>RpcKind::LocalQuery,
+        );
+
+        <span class="prelude-val">Ok</span>(Body::RuntimeLocalRPCCallResponse { response })
+    }
+
+    <span class="kw">async fn </span>dispatch_rpc(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request: RpcRequest,
+        kind: RpcKind,
+        session_info: <span class="prelude-ty">Option</span>&lt;Arc&lt;SessionInfo&gt;&gt;,
+        state: <span class="kw-2">&amp;</span>State,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;RpcResponse, Error&gt; {
+        <span class="kw">let </span>identity = <span class="self">self</span>.identity.clone();
+        <span class="kw">let </span>protocol = state.protocol.clone();
+        <span class="kw">let </span>consensus_verifier = state.consensus_verifier.clone();
+        <span class="kw">let </span>rpc_dispatcher = state.rpc_dispatcher.clone();
+        <span class="kw">let </span>is_secure = kind == RpcKind::NoiseSession;
+
+        <span class="kw">let </span>response = tokio::task::spawn_blocking(<span class="kw">move </span>|| {
+            <span class="kw">let </span>untrusted_local = Arc::new(ProtocolUntrustedLocalStorage::new(protocol.clone()));
             <span class="kw">let </span>rpc_ctx = RpcContext::new(
-                ctx.clone(),
-                dispatcher.rak.clone(),
-                <span class="prelude-val">None</span>,
+                identity,
+                is_secure,
+                session_info,
                 consensus_verifier,
                 <span class="kw-2">&amp;</span>untrusted_local,
             );
-            <span class="kw">let </span>response = rpc_dispatcher.dispatch_local(req, rpc_ctx);
-            <span class="kw">let </span>response = RpcMessage::Response(response);
 
-            <span class="comment">// Note: MKVS commit is omitted, this MUST be global side-effect free.
-
-            </span><span class="macro">debug!</span>(dispatcher.logger, <span class="string">&quot;Local RPC call dispatch complete&quot;</span>);
-
-            <span class="kw">let </span>response = cbor::to_vec(response);
-            <span class="prelude-val">Ok</span>(Body::RuntimeLocalRPCCallResponse { response })
+            rpc_dispatcher.dispatch(rpc_ctx, request, kind)
         })
-        .<span class="kw">await
-        </span>.unwrap() <span class="comment">// Propagate panics during local RPC dispatch.
-    </span>}
+        .<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="kw">fn </span>handle_km_policy_update(
+        <span class="prelude-val">Ok</span>(response)
+    }
+
+    <span class="kw">async fn </span>handle_km_status_update(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        rpc_dispatcher: <span class="kw-2">&amp;</span>RpcDispatcher,
-        _ctx: Context,
-        signed_policy_raw: Vec&lt;u8&gt;,
+        state: State,
+        status: KeyManagerStatus,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
         <span class="comment">// Make sure to abort the process on panic during policy processing as that indicates a
         // serious problem and should make sure to clean up the process.
         </span><span class="kw">let </span>_guard = AbortOnPanic;
 
-        <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Received km policy update request&quot;</span>);
-        rpc_dispatcher.handle_km_policy_update(signed_policy_raw);
-        <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;KM policy update request complete&quot;</span>);
+        <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Received km status update request&quot;</span>);
 
-        <span class="prelude-val">Ok</span>(Body::RuntimeKeyManagerPolicyUpdateResponse {})
+        <span class="comment">// Verify and decode the status.
+        </span><span class="kw">let </span>runtime_id = state.protocol.get_host_info().runtime_id;
+
+        tokio::task::spawn_blocking(<span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+            <span class="kw">let </span>key_manager = state.policy_verifier.key_manager(<span class="kw-2">&amp;</span>runtime_id)<span class="question-mark">?</span>;
+            <span class="kw">let </span>published_status = state
+                .policy_verifier
+                .verify_key_manager_status(status, key_manager)<span class="question-mark">?</span>;
+
+            <span class="comment">// Dispatch the local RPC call.
+            </span>state
+                .rpc_dispatcher
+                .handle_km_status_update(published_status);
+
+            <span class="prelude-val">Ok</span>(())
+        })
+        .<span class="kw">await</span><span class="question-mark">??</span>;
+
+        <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;KM status update request complete&quot;</span>);
+
+        <span class="prelude-val">Ok</span>(Body::RuntimeKeyManagerStatusUpdateResponse {})
+    }
+
+    <span class="kw">async fn </span>handle_km_quote_policy_update(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        state: State,
+        quote_policy: QuotePolicy,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
+        <span class="comment">// Make sure to abort the process on panic during quote policy processing as that indicates
+        // a serious problem and should make sure to clean up the process.
+        </span><span class="kw">let </span>_guard = AbortOnPanic;
+
+        <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Received km quote policy update request&quot;</span>);
+
+        <span class="comment">// Verify and decode the policy.
+        </span><span class="kw">let </span>runtime_id = state.protocol.get_host_info().runtime_id;
+
+        tokio::task::spawn_blocking(<span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+            <span class="kw">let </span>key_manager = state.policy_verifier.key_manager(<span class="kw-2">&amp;</span>runtime_id)<span class="question-mark">?</span>;
+            <span class="kw">let </span>policy =
+                state
+                    .policy_verifier
+                    .verify_quote_policy(quote_policy, <span class="kw-2">&amp;</span>key_manager, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+
+            <span class="comment">// Dispatch the local RPC call.
+            </span>state.rpc_dispatcher.handle_km_quote_policy_update(policy);
+
+            <span class="prelude-val">Ok</span>(())
+        })
+        .<span class="kw">await</span><span class="question-mark">??</span>;
+
+        <span class="macro">debug!</span>(<span class="self">self</span>.logger, <span class="string">&quot;KM quote policy update request complete&quot;</span>);
+
+        <span class="prelude-val">Ok</span>(Body::RuntimeKeyManagerQuotePolicyUpdateResponse {})
     }
 }
 </code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["seal","unseal"]};
+window.SIDEBAR_ITEMS = {"fn":["new_deoxysii","seal","unseal"]};

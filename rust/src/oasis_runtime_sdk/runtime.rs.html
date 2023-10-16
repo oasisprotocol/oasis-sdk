@@ -204,6 +204,7 @@
 <a href="#204" id="204">204</a>
 <a href="#205" id="205">205</a>
 <a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Runtime.
 </span><span class="kw">use </span>std::sync::Arc;
 
@@ -370,7 +371,7 @@
                     hi.runtime_id,
                     state.protocol.clone(),
                     state.consensus_verifier.clone(),
-                    state.rak.clone(),
+                    state.identity.clone(),
                     state.rpc_dispatcher,
                     <span class="number">4096</span>,
                     signers,
@@ -395,6 +396,7 @@
             schedule_control: <span class="prelude-val">Some</span>(FeatureScheduleControl {
                 initial_batch_size: <span class="self">Self</span>::SCHEDULE_CONTROL.initial_batch_size,
             }),
+            ..Default::default()
         };
 
         <span class="comment">// Start the runtime.

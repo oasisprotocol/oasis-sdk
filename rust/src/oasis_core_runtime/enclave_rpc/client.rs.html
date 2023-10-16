@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/enclave_rpc/client.rs`."><title>client.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/enclave_rpc/client.rs`."><title>client.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -560,9 +560,216 @@
 <a href="#560" id="560">560</a>
 <a href="#561" id="561">561</a>
 <a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
+<a href="#727" id="727">727</a>
+<a href="#728" id="728">728</a>
+<a href="#729" id="729">729</a>
+<a href="#730" id="730">730</a>
+<a href="#731" id="731">731</a>
+<a href="#732" id="732">732</a>
+<a href="#733" id="733">733</a>
+<a href="#734" id="734">734</a>
+<a href="#735" id="735">735</a>
+<a href="#736" id="736">736</a>
+<a href="#737" id="737">737</a>
+<a href="#738" id="738">738</a>
+<a href="#739" id="739">739</a>
+<a href="#740" id="740">740</a>
+<a href="#741" id="741">741</a>
+<a href="#742" id="742">742</a>
+<a href="#743" id="743">743</a>
+<a href="#744" id="744">744</a>
+<a href="#745" id="745">745</a>
+<a href="#746" id="746">746</a>
+<a href="#747" id="747">747</a>
+<a href="#748" id="748">748</a>
+<a href="#749" id="749">749</a>
+<a href="#750" id="750">750</a>
+<a href="#751" id="751">751</a>
+<a href="#752" id="752">752</a>
+<a href="#753" id="753">753</a>
+<a href="#754" id="754">754</a>
+<a href="#755" id="755">755</a>
+<a href="#756" id="756">756</a>
+<a href="#757" id="757">757</a>
+<a href="#758" id="758">758</a>
+<a href="#759" id="759">759</a>
+<a href="#760" id="760">760</a>
+<a href="#761" id="761">761</a>
+<a href="#762" id="762">762</a>
+<a href="#763" id="763">763</a>
+<a href="#764" id="764">764</a>
+<a href="#765" id="765">765</a>
+<a href="#766" id="766">766</a>
+<a href="#767" id="767">767</a>
+<a href="#768" id="768">768</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Enclave RPC client.
 </span><span class="kw">use </span>std::{
     collections::HashSet,
+    mem,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -570,17 +777,16 @@
 };
 
 <span class="kw">use </span>anyhow;
-<span class="kw">use </span>futures::{
-    channel::{mpsc, oneshot},
-    prelude::<span class="kw-2">*</span>,
-};
-<span class="kw">use </span>io_context::Context;
 <span class="kw">use </span>thiserror::Error;
-<span class="kw">use </span>tokio;
+<span class="kw">use </span>tokio::sync::{mpsc, oneshot};
 
 <span class="kw">use crate</span>::{
     cbor,
-    common::sgx::EnclaveIdentity,
+    common::{
+        crypto::signature,
+        namespace::Namespace,
+        sgx::{EnclaveIdentity, QuotePolicy},
+    },
     enclave_rpc::{
         session::{Builder, Session},
         types,
@@ -590,8 +796,8 @@
 
 <span class="kw">use </span><span class="kw">super</span>::transport::{RuntimeTransport, Transport};
 
-<span class="doccomment">/// Internal send queue backlog.
-</span><span class="kw">const </span>SENDQ_BACKLOG: usize = <span class="number">10</span>;
+<span class="doccomment">/// Internal command queue backlog.
+</span><span class="kw">const </span>CMDQ_BACKLOG: usize = <span class="number">32</span>;
 
 <span class="doccomment">/// RPC client error.
 </span><span class="attr">#[derive(Error, Debug)]
@@ -604,6 +810,8 @@
     </span>ExpectedCloseMessage(types::Message),
     <span class="attr">#[error(<span class="string">&quot;transport error&quot;</span>)]
     </span>Transport,
+    <span class="attr">#[error(<span class="string">&quot;unsupported RPC kind&quot;</span>)]
+    </span>UnsupportedRpcKind,
     <span class="attr">#[error(<span class="string">&quot;client dropped&quot;</span>)]
     </span>Dropped,
     <span class="attr">#[error(<span class="string">&quot;decode error: {0}&quot;</span>)]
@@ -612,12 +820,23 @@
     </span>Unknown(<span class="attr">#[from] </span>anyhow::Error),
 }
 
-<span class="kw">type </span>SendqRequest = (
-    Arc&lt;Context&gt;,
-    types::Request,
-    oneshot::Sender&lt;<span class="prelude-ty">Result</span>&lt;(u64, types::Response), RpcClientError&gt;&gt;,
-    usize,
-);
+<span class="doccomment">/// A command sent to the client controller task.
+</span><span class="attr">#[derive(Debug)]
+</span><span class="kw">enum </span>Command {
+    Call(
+        types::Request,
+        types::Kind,
+        oneshot::Sender&lt;<span class="prelude-ty">Result</span>&lt;(u64, types::Response), RpcClientError&gt;&gt;,
+        usize,
+    ),
+    PeerFeedback(u64, types::PeerFeedback),
+    UpdateEnclaves(<span class="prelude-ty">Option</span>&lt;HashSet&lt;EnclaveIdentity&gt;&gt;),
+    UpdateQuotePolicy(QuotePolicy),
+    UpdateRuntimeID(<span class="prelude-ty">Option</span>&lt;Namespace&gt;),
+    UpdateNodes(Vec&lt;signature::PublicKey&gt;),
+    <span class="attr">#[cfg(test)]
+    </span>Ping(oneshot::Sender&lt;()&gt;),
+}
 
 <span class="kw">struct </span>MultiplexedSession {
     <span class="doccomment">/// Session builder for resetting sessions.
@@ -643,54 +862,336 @@
     }
 }
 
-<span class="kw">struct </span>Inner {
-    <span class="doccomment">/// Multiplexed session.
-    </span>session: Mutex&lt;MultiplexedSession&gt;,
-    <span class="doccomment">/// Used transport.
-    </span>transport: Box&lt;<span class="kw">dyn </span>Transport&gt;,
-    <span class="doccomment">/// Internal send queue receiver, only available until the controller
-    /// is spawned (is None later).
-    </span>recvq: Mutex&lt;<span class="prelude-ty">Option</span>&lt;mpsc::Receiver&lt;SendqRequest&gt;&gt;&gt;,
-    <span class="doccomment">/// Internal send queue sender for serializing all requests.
-    </span>sendq: mpsc::Sender&lt;SendqRequest&gt;,
-    <span class="doccomment">/// Flag indicating whether the controller has been spawned.
-    </span>has_controller: AtomicBool,
+<span class="kw">struct </span>Controller {
     <span class="doccomment">/// Maximum number of call retries.
     </span>max_retries: usize,
+    <span class="doccomment">/// Allowed nodes.
+    </span>nodes: Vec&lt;signature::PublicKey&gt;,
+    <span class="doccomment">/// Multiplexed session.
+    </span>session: MultiplexedSession,
+    <span class="doccomment">/// Used transport.
+    </span>transport: Box&lt;<span class="kw">dyn </span>Transport&gt;,
+    <span class="doccomment">/// Internal command queue (receiver part).
+    </span>cmdq: mpsc::Receiver&lt;Command&gt;,
+    <span class="doccomment">/// Internal command queue (sender part for retries).
+    </span>cmdq_tx: mpsc::Sender&lt;Command&gt;,
+}
+
+<span class="kw">impl </span>Controller {
+    <span class="kw">async fn </span>run(<span class="kw-2">mut </span><span class="self">self</span>) {
+        <span class="kw">while let </span><span class="prelude-val">Some</span>(cmd) = <span class="self">self</span>.cmdq.recv().<span class="kw">await </span>{
+            <span class="kw">match </span>cmd {
+                Command::Call(request, kind, sender, retries) =&gt; {
+                    <span class="self">self</span>.call(request, kind, sender, retries).<span class="kw">await
+                </span>}
+                Command::PeerFeedback(pfid, peer_feedback) =&gt; {
+                    <span class="self">self</span>.transport.set_peer_feedback(pfid, <span class="prelude-val">Some</span>(peer_feedback));
+                }
+                Command::UpdateEnclaves(enclaves) =&gt; {
+                    <span class="kw">if </span><span class="self">self</span>.session.builder.get_remote_enclaves() == <span class="kw-2">&amp;</span>enclaves {
+                        <span class="kw">continue</span>;
+                    }
+
+                    <span class="self">self</span>.session.builder =
+                        mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.session.builder).remote_enclaves(enclaves);
+                    <span class="self">self</span>.session.reset();
+                }
+                Command::UpdateQuotePolicy(policy) =&gt; {
+                    <span class="kw">let </span>policy = <span class="prelude-val">Some</span>(Arc::new(policy));
+                    <span class="kw">if </span><span class="self">self</span>.session.builder.get_quote_policy() == <span class="kw-2">&amp;</span>policy {
+                        <span class="kw">continue</span>;
+                    }
+
+                    <span class="self">self</span>.session.builder =
+                        mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.session.builder).quote_policy(policy);
+                    <span class="self">self</span>.session.reset();
+                }
+                Command::UpdateRuntimeID(id) =&gt; {
+                    <span class="kw">if </span><span class="self">self</span>.session.builder.get_remote_runtime_id() == <span class="kw-2">&amp;</span>id {
+                        <span class="kw">continue</span>;
+                    }
+
+                    <span class="self">self</span>.session.builder =
+                        mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.session.builder).remote_runtime_id(id);
+                    <span class="self">self</span>.session.reset();
+                }
+                Command::UpdateNodes(nodes) =&gt; {
+                    <span class="self">self</span>.nodes = nodes;
+                }
+                <span class="attr">#[cfg(test)]
+                </span>Command::Ping(sender) =&gt; {
+                    <span class="kw">let _ </span>= sender.send(());
+                }
+            }
+        }
+
+        <span class="comment">// Close stream after the client is dropped.
+        </span><span class="kw">let _ </span>= <span class="self">self</span>.close().<span class="kw">await</span>;
+    }
+
+    <span class="kw">async fn </span>call(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: types::Request,
+        kind: types::Kind,
+        sender: oneshot::Sender&lt;<span class="prelude-ty">Result</span>&lt;(u64, types::Response), RpcClientError&gt;&gt;,
+        retries: usize,
+    ) {
+        <span class="kw">let </span>result = <span class="kw">async </span>{
+            <span class="kw">match </span>kind {
+                types::Kind::NoiseSession =&gt; {
+                    <span class="comment">// Attempt to establish a connection. This will not do anything in case the
+                    // session has already been established.
+                    </span><span class="self">self</span>.connect().<span class="kw">await</span><span class="question-mark">?</span>;
+
+                    <span class="comment">// Perform the call.
+                    </span><span class="self">self</span>.secure_call_raw(request.clone()).<span class="kw">await
+                </span>}
+                types::Kind::InsecureQuery =&gt; {
+                    <span class="comment">// Perform the call.
+                    </span><span class="self">self</span>.insecure_call_raw(request.clone()).<span class="kw">await
+                </span>}
+                <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(RpcClientError::UnsupportedRpcKind),
+            }
+        }
+        .<span class="kw">await</span>;
+
+        <span class="comment">// Update peer feedback for next request.
+        </span><span class="kw">let </span>pfid = <span class="self">self</span>.transport.get_peer_feedback_id();
+        <span class="kw">if </span>result.is_err() {
+            <span class="comment">// In case there was a transport error we need to reset the session immediately as no
+            // progress is possible.
+            </span><span class="self">self</span>.session.reset();
+            <span class="comment">// Set peer feedback immediately so retries can try new peers.
+            </span><span class="self">self</span>.transport
+                .set_peer_feedback(pfid, <span class="prelude-val">Some</span>(types::PeerFeedback::Failure));
+        }
+
+        <span class="kw">match </span>result {
+            <span class="kw-2">ref </span>r <span class="kw">if </span>r.is_ok() || retries &gt;= <span class="self">self</span>.max_retries =&gt; {
+                <span class="comment">// Request was successful or number of retries has been exceeded.
+                </span><span class="kw">let _ </span>= sender.send(result.map(|rsp| (pfid, rsp)));
+            }
+
+            <span class="kw">_ </span>=&gt; {
+                <span class="comment">// Attempt retry if number of retries is not exceeded. Retry is performed by
+                // queueing another request.
+                </span><span class="kw">let _ </span>= <span class="self">self
+                    </span>.cmdq_tx
+                    .send(Command::Call(request, kind, sender, retries + <span class="number">1</span>))
+                    .<span class="kw">await</span>;
+            }
+        }
+    }
+
+    <span class="kw">async fn </span>connect(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), RpcClientError&gt; {
+        <span class="comment">// No need to create a new session if we are connected to one of the nodes.
+        </span><span class="kw">if </span><span class="self">self</span>.session.inner.is_connected()
+            &amp;&amp; (<span class="self">self</span>.nodes.is_empty() || <span class="self">self</span>.session.inner.is_connected_to(<span class="kw-2">&amp;</span><span class="self">self</span>.nodes))
+        {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        }
+        <span class="comment">// Make sure the session is reset for a new connection.
+        </span><span class="self">self</span>.session.reset();
+
+        <span class="comment">// Handshake1 -&gt; Handshake2
+        </span><span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
+        <span class="self">self</span>.session
+            .inner
+            .process_data(<span class="macro">vec!</span>[], <span class="kw-2">&amp;mut </span>buffer)
+            .<span class="kw">await
+            </span>.expect(<span class="string">&quot;initiation must always succeed&quot;</span>);
+        <span class="kw">let </span>session_id = <span class="self">self</span>.session.id;
+
+        <span class="kw">let </span>(data, node) = <span class="self">self
+            </span>.transport
+            .write_noise_session(session_id, buffer, String::new(), <span class="self">self</span>.nodes.clone())
+            .<span class="kw">await
+            </span>.map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
+
+        <span class="comment">// Update the session with the identity of the remote node. The latter still needs to be
+        // verified using the RAK from the consensus layer.
+        </span><span class="self">self</span>.session.inner.set_remote_node(node)<span class="question-mark">?</span>;
+
+        <span class="comment">// Handshake2 -&gt; Transport
+        </span><span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
+        <span class="self">self</span>.session
+            .inner
+            .process_data(data, <span class="kw-2">&amp;mut </span>buffer)
+            .<span class="kw">await
+            </span>.map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
+
+        <span class="self">self</span>.transport
+            .write_noise_session(session_id, buffer, String::new(), <span class="macro">vec!</span>[node])
+            .<span class="kw">await
+            </span>.map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">async fn </span>secure_call_raw(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: types::Request,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;types::Response, RpcClientError&gt; {
+        <span class="kw">let </span>method = request.method.clone();
+        <span class="kw">let </span>msg = types::Message::Request(request);
+
+        <span class="comment">// Prepare the request message.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
+        <span class="self">self</span>.session
+            .inner
+            .write_message(msg, <span class="kw-2">&amp;mut </span>buffer)
+            .map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
+        <span class="kw">let </span>node = <span class="self">self</span>.session.inner.get_node()<span class="question-mark">?</span>;
+
+        <span class="comment">// Send the request and receive the response.
+        </span><span class="kw">let </span>(data, <span class="kw">_</span>) = <span class="self">self
+            </span>.transport
+            .write_noise_session(<span class="self">self</span>.session.id, buffer, method, <span class="macro">vec!</span>[node])
+            .<span class="kw">await
+            </span>.map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
+
+        <span class="comment">// Process the response.
+        </span><span class="kw">let </span>msg = <span class="self">self
+            </span>.session
+            .inner
+            .process_data(data, <span class="macro">vec!</span>[])
+            .<span class="kw">await</span><span class="question-mark">?
+            </span>.expect(<span class="string">&quot;message must be decoded if there is no error&quot;</span>);
+
+        <span class="kw">match </span>msg {
+            types::Message::Response(rsp) =&gt; <span class="prelude-val">Ok</span>(rsp),
+            msg =&gt; <span class="prelude-val">Err</span>(RpcClientError::ExpectedResponseMessage(msg)),
+        }
+    }
+
+    <span class="kw">async fn </span>insecure_call_raw(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        request: types::Request,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;types::Response, RpcClientError&gt; {
+        <span class="kw">let </span>(data, <span class="kw">_</span>) = <span class="self">self
+            </span>.transport
+            .write_insecure_query(cbor::to_vec(request), <span class="self">self</span>.nodes.clone())
+            .<span class="kw">await
+            </span>.map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
+
+        cbor::from_slice(<span class="kw-2">&amp;</span>data).map_err(RpcClientError::DecodeError)
+    }
+
+    <span class="kw">async fn </span>close(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), RpcClientError&gt; {
+        <span class="kw">if </span>!<span class="self">self</span>.session.inner.is_connected() {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+        }
+
+        <span class="comment">// Prepare the close message.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
+        <span class="self">self</span>.session
+            .inner
+            .write_message(types::Message::Close, <span class="kw-2">&amp;mut </span>buffer)
+            .map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
+        <span class="kw">let </span>node = <span class="self">self</span>.session.inner.get_node()<span class="question-mark">?</span>;
+
+        <span class="comment">// Send the message and receive the response.
+        </span><span class="kw">let </span>(data, <span class="kw">_</span>) = <span class="self">self
+            </span>.transport
+            .write_noise_session(<span class="self">self</span>.session.id, buffer, String::new(), <span class="macro">vec!</span>[node])
+            .<span class="kw">await
+            </span>.map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
+
+        <span class="comment">// Close the session and check the received message.
+        </span><span class="kw">let </span>msg = <span class="self">self
+            </span>.session
+            .inner
+            .process_data(data, <span class="macro">vec!</span>[])
+            .<span class="kw">await</span><span class="question-mark">?
+            </span>.expect(<span class="string">&quot;message must be decoded if there is no error&quot;</span>);
+        <span class="self">self</span>.session.inner.close();
+
+        <span class="kw">match </span>msg {
+            types::Message::Close =&gt; <span class="prelude-val">Ok</span>(()),
+            msg =&gt; <span class="prelude-val">Err</span>(RpcClientError::ExpectedCloseMessage(msg)),
+        }
+    }
 }
 
 <span class="doccomment">/// RPC client.
 </span><span class="kw">pub struct </span>RpcClient {
-    inner: Arc&lt;Inner&gt;,
+    <span class="doccomment">/// Internal command queue (sender part).
+    </span>cmdq: mpsc::Sender&lt;Command&gt;,
+    <span class="doccomment">/// Flag indicating whether the controller has been spawned.
+    </span>has_controller: AtomicBool,
+    <span class="doccomment">/// Initial controller. Only exists until the controller is spawned and is then moved into the
+    /// controller task.
+    </span>controller: Mutex&lt;<span class="prelude-ty">Option</span>&lt;Controller&gt;&gt;,
 }
 
 <span class="kw">impl </span>RpcClient {
-    <span class="kw">fn </span>new(transport: Box&lt;<span class="kw">dyn </span>Transport&gt;, builder: Builder) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>(tx, rx) = mpsc::channel(SENDQ_BACKLOG);
+    <span class="kw">fn </span>new(
+        transport: Box&lt;<span class="kw">dyn </span>Transport&gt;,
+        builder: Builder,
+        nodes: Vec&lt;signature::PublicKey&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="comment">// Create the command channel.
+        </span><span class="kw">let </span>(tx, rx) = mpsc::channel(CMDQ_BACKLOG);
 
         <span class="self">Self </span>{
-            inner: Arc::new(Inner {
-                session: Mutex::new(MultiplexedSession::new(builder)),
-                transport,
-                recvq: Mutex::new(<span class="prelude-val">Some</span>(rx)),
-                sendq: tx,
-                has_controller: AtomicBool::new(<span class="bool-val">false</span>),
+            cmdq: tx.clone(),
+            has_controller: AtomicBool::new(<span class="bool-val">false</span>),
+            controller: Mutex::new(<span class="prelude-val">Some</span>(Controller {
                 max_retries: <span class="number">3</span>,
-            }),
+                nodes,
+                session: MultiplexedSession::new(builder),
+                transport,
+                cmdq: rx,
+                cmdq_tx: tx,
+            })),
         }
     }
 
     <span class="doccomment">/// Construct an unconnected RPC client with runtime-internal transport.
-    </span><span class="kw">pub fn </span>new_runtime(builder: Builder, protocol: Arc&lt;Protocol&gt;, endpoint: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-        <span class="self">Self</span>::new(Box::new(RuntimeTransport::new(protocol, endpoint)), builder)
+    </span><span class="kw">pub fn </span>new_runtime(
+        builder: Builder,
+        protocol: Arc&lt;Protocol&gt;,
+        endpoint: <span class="kw-2">&amp;</span>str,
+        nodes: Vec&lt;signature::PublicKey&gt;,
+    ) -&gt; <span class="self">Self </span>{
+        <span class="self">Self</span>::new(
+            Box::new(RuntimeTransport::new(protocol, endpoint)),
+            builder,
+            nodes,
+        )
     }
 
-    <span class="doccomment">/// Call a remote method.
-    </span><span class="kw">pub async fn </span>call&lt;C, O&gt;(
+    <span class="doccomment">/// Call a remote method using an encrypted and authenticated Noise session.
+    </span><span class="kw">pub async fn </span>secure_call&lt;C, O&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context,
         method: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
         args: C,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;O, RpcClientError&gt;
+    <span class="kw">where
+        </span>C: cbor::Encode,
+        O: cbor::Decode + Send + <span class="lifetime">&#39;static</span>,
+    {
+        <span class="self">self</span>.call(method, args, types::Kind::NoiseSession).<span class="kw">await
+    </span>}
+
+    <span class="doccomment">/// Call a remote method over an insecure channel where messages are sent in plain text.
+    </span><span class="kw">pub async fn </span>insecure_call&lt;C, O&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        method: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+        args: C,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;O, RpcClientError&gt;
+    <span class="kw">where
+        </span>C: cbor::Encode,
+        O: cbor::Decode + Send + <span class="lifetime">&#39;static</span>,
+    {
+        <span class="self">self</span>.call(method, args, types::Kind::InsecureQuery).<span class="kw">await
+    </span>}
+
+    <span class="kw">async fn </span>call&lt;C, O&gt;(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        method: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+        args: C,
+        kind: types::Kind,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;O, RpcClientError&gt;
     <span class="kw">where
         </span>C: cbor::Encode,
@@ -701,7 +1202,7 @@
             args: cbor::to_value(args),
         };
 
-        <span class="kw">let </span>(pfid, response) = <span class="self">self</span>.execute_call(ctx, request).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span>(pfid, response) = <span class="self">self</span>.execute_call(request, kind).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>result = <span class="kw">match </span>response.body {
             types::Body::Success(value) =&gt; cbor::from_value(value).map_err(Into::into),
             types::Body::Error(error) =&gt; <span class="prelude-val">Err</span>(RpcClientError::CallFailed(error)),
@@ -712,219 +1213,98 @@
             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; types::PeerFeedback::Success,
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; types::PeerFeedback::Failure,
         };
-        <span class="self">self</span>.inner.transport.set_peer_feedback(pfid, <span class="prelude-val">Some</span>(pf));
+        <span class="kw">let _ </span>= <span class="self">self</span>.cmdq.send(Command::PeerFeedback(pfid, pf)).<span class="kw">await</span>;
 
         result
     }
 
     <span class="kw">async fn </span>execute_call(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context,
         request: types::Request,
+        kind: types::Kind,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(u64, types::Response), RpcClientError&gt; {
         <span class="comment">// Spawn a new controller if we haven&#39;t spawned one yet.
         </span><span class="kw">if </span><span class="self">self
-            </span>.inner
-            .has_controller
+            </span>.has_controller
             .compare_exchange(<span class="bool-val">false</span>, <span class="bool-val">true</span>, Ordering::SeqCst, Ordering::SeqCst)
             .is_ok()
         {
-            <span class="kw">let </span><span class="kw-2">mut </span>rx = <span class="self">self
-                </span>.inner
-                .recvq
+            <span class="kw">let </span>controller = <span class="self">self
+                </span>.controller
                 .lock()
                 .unwrap()
                 .take()
                 .expect(<span class="string">&quot;has_controller was false&quot;</span>);
-            <span class="kw">let </span>inner = <span class="self">self</span>.inner.clone();
 
-            tokio::spawn(<span class="kw">async move </span>{
-                <span class="kw">while let </span><span class="prelude-val">Some</span>((ctx, request, rsp_tx, retries)) = rx.next().<span class="kw">await </span>{
-                    <span class="kw">let </span>result = <span class="kw">async </span>{
-                        <span class="comment">// Attempt to establish a connection. This will not do anything in case the
-                        // session has already been established.
-                        </span><span class="self">Self</span>::connect(inner.clone(), Context::create_child(<span class="kw-2">&amp;</span>ctx)).<span class="kw">await</span><span class="question-mark">?</span>;
-
-                        <span class="comment">// Perform the call.
-                        </span><span class="self">Self</span>::call_raw(inner.clone(), Context::create_child(<span class="kw-2">&amp;</span>ctx), request.clone())
-                            .<span class="kw">await
-                    </span>}
-                    .<span class="kw">await</span>;
-
-                    <span class="comment">// Update peer feedback for next request.
-                    </span><span class="kw">let </span>pfid = inner.transport.get_peer_feedback_id();
-                    <span class="kw">if </span>result.is_err() {
-                        <span class="comment">// In case there was a transport error we need to reset the session
-                        // immediately as no progress is possible.
-                        </span><span class="kw">let </span><span class="kw-2">mut </span>session = inner.session.lock().unwrap();
-                        session.reset();
-                        <span class="comment">// Set peer feedback immediately so retries can try new peers.
-                        </span>inner
-                            .transport
-                            .set_peer_feedback(pfid, <span class="prelude-val">Some</span>(types::PeerFeedback::Failure));
-                    }
-
-                    <span class="kw">match </span>result {
-                        <span class="kw-2">ref </span>r <span class="kw">if </span>r.is_ok() || retries &gt;= inner.max_retries =&gt; {
-                            <span class="comment">// Request was successful or number of retries has been exceeded.
-                            </span><span class="kw">let _ </span>= rsp_tx.send(result.map(|rsp| (pfid, rsp)));
-                        }
-
-                        <span class="kw">_ </span>=&gt; {
-                            <span class="comment">// Attempt retry if number of retries is not exceeded. Retry is
-                            // performed by queueing another request.
-                            </span><span class="kw">let _ </span>= inner
-                                .sendq
-                                .clone()
-                                .send((ctx, request, rsp_tx, retries + <span class="number">1</span>))
-                                .<span class="kw">await</span>;
-                        }
-                    }
-                }
-
-                <span class="comment">// Close stream after the client is dropped.
-                </span><span class="kw">let _ </span>= <span class="self">Self</span>::close(inner).<span class="kw">await</span>;
-            });
+            tokio::spawn(controller.run());
         }
 
-        <span class="comment">// Send request to controller.
-        </span><span class="kw">let </span>(rsp_tx, rsp_rx) = oneshot::channel();
-        <span class="self">self</span>.inner
-            .sendq
-            .clone()
-            .send((ctx.freeze(), request, rsp_tx, <span class="number">0</span>))
+        <span class="comment">// Send request to controller and wait for the response.
+        </span><span class="kw">let </span>(tx, rx) = oneshot::channel();
+        <span class="self">self</span>.cmdq
+            .send(Command::Call(request, kind, tx, <span class="number">0</span>))
             .<span class="kw">await
             </span>.map_err(|<span class="kw">_</span>| RpcClientError::Dropped)<span class="question-mark">?</span>;
 
-        rsp_rx.<span class="kw">await</span>.map_err(|<span class="kw">_</span>| RpcClientError::Dropped)<span class="question-mark">?
+        rx.<span class="kw">await</span>.map_err(|<span class="kw">_</span>| RpcClientError::Dropped)<span class="question-mark">?
     </span>}
 
-    <span class="kw">async fn </span>connect(inner: Arc&lt;Inner&gt;, ctx: Context) -&gt; <span class="prelude-ty">Result</span>&lt;(), RpcClientError&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
-        <span class="kw">let </span>session_id;
-        {
-            <span class="kw">let </span><span class="kw-2">mut </span>session = inner.session.lock().unwrap();
-            <span class="kw">if </span>session.inner.is_connected() {
-                <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-            }
-            <span class="comment">// Make sure the session is reset for a new connection.
-            </span>session.reset();
-
-            <span class="comment">// Handshake1 -&gt; Handshake2
-            </span>session
-                .inner
-                .process_data(<span class="macro">vec!</span>[], <span class="kw-2">&amp;mut </span>buffer)
-                .expect(<span class="string">&quot;initiation must always succeed&quot;</span>);
-            session_id = session.id;
-        }
-
-        <span class="kw">let </span>fctx = ctx.freeze();
-        <span class="kw">let </span>ctx = Context::create_child(<span class="kw-2">&amp;</span>fctx);
-
-        <span class="kw">let </span>data = inner
-            .transport
-            .write_message(ctx, session_id, buffer, String::new())
-            .<span class="kw">await
-            </span>.map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
-
-        <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
-        {
-            <span class="kw">let </span><span class="kw-2">mut </span>session = inner.session.lock().unwrap();
-            <span class="comment">// Handshake2 -&gt; Transport
-            </span>session
-                .inner
-                .process_data(data, <span class="kw-2">&amp;mut </span>buffer)
-                .map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
-        }
-
-        <span class="kw">let </span>ctx = Context::create_child(<span class="kw-2">&amp;</span>fctx);
-        inner
-            .transport
-            .write_message(ctx, session_id, buffer, String::new())
-            .<span class="kw">await
-            </span>.map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
-
-        <span class="prelude-val">Ok</span>(())
-    }
-
-    <span class="kw">async fn </span>close(inner: Arc&lt;Inner&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), RpcClientError&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
-        <span class="kw">let </span>session_id;
-        {
-            <span class="kw">let </span><span class="kw-2">mut </span>session = inner.session.lock().unwrap();
-            session
-                .inner
-                .write_message(types::Message::Close, <span class="kw-2">&amp;mut </span>buffer)
-                .map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
-            session_id = session.id;
-        }
-
-        <span class="kw">let </span>ctx = Context::background();
-        <span class="kw">let </span>data = inner
-            .transport
-            .write_message(ctx, session_id, buffer, String::new())
-            .<span class="kw">await
-            </span>.map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
-
-        <span class="comment">// Verify that session is closed.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>session = inner.session.lock().unwrap();
-        <span class="kw">let </span>msg = session
-            .inner
-            .process_data(data, <span class="macro">vec!</span>[])<span class="question-mark">?
-            </span>.expect(<span class="string">&quot;message must be decoded if there is no error&quot;</span>);
-
-        <span class="kw">match </span>msg {
-            types::Message::Close =&gt; {
-                session.inner.close();
-                <span class="prelude-val">Ok</span>(())
-            }
-            msg =&gt; <span class="prelude-val">Err</span>(RpcClientError::ExpectedCloseMessage(msg)),
-        }
-    }
-
-    <span class="kw">async fn </span>call_raw(
-        inner: Arc&lt;Inner&gt;,
-        ctx: Context,
-        request: types::Request,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;types::Response, RpcClientError&gt; {
-        <span class="kw">let </span>method = request.method.clone();
-        <span class="kw">let </span>msg = types::Message::Request(request);
-        <span class="kw">let </span>session_id;
-        <span class="kw">let </span><span class="kw-2">mut </span>buffer = <span class="macro">vec!</span>[];
-        {
-            <span class="kw">let </span><span class="kw-2">mut </span>session = inner.session.lock().unwrap();
-            session
-                .inner
-                .write_message(msg, <span class="kw-2">&amp;mut </span>buffer)
-                .map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
-            session_id = session.id;
-        }
-
-        <span class="kw">let </span>data = inner
-            .transport
-            .write_message(ctx, session_id, buffer, method)
-            .<span class="kw">await
-            </span>.map_err(|<span class="kw">_</span>| RpcClientError::Transport)<span class="question-mark">?</span>;
-
-        <span class="kw">let </span><span class="kw-2">mut </span>session = inner.session.lock().unwrap();
-        <span class="kw">let </span>msg = session
-            .inner
-            .process_data(data, <span class="macro">vec!</span>[])<span class="question-mark">?
-            </span>.expect(<span class="string">&quot;message must be decoded if there is no error&quot;</span>);
-
-        <span class="kw">match </span>msg {
-            types::Message::Response(rsp) =&gt; <span class="prelude-val">Ok</span>(rsp),
-            msg =&gt; <span class="prelude-val">Err</span>(RpcClientError::ExpectedResponseMessage(msg)),
-        }
-    }
-
-    <span class="doccomment">/// Update session enclaves if changed.
+    <span class="doccomment">/// Update allowed remote enclave identities.
+    ///
+    /// Useful if the key manager&#39;s policy has changed.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if called within an asynchronous execution context.
     </span><span class="kw">pub fn </span>update_enclaves(<span class="kw-2">&amp;</span><span class="self">self</span>, enclaves: <span class="prelude-ty">Option</span>&lt;HashSet&lt;EnclaveIdentity&gt;&gt;) {
-        <span class="kw">let </span><span class="kw-2">mut </span>session = <span class="self">self</span>.inner.session.lock().unwrap();
-        <span class="kw">if </span>session.builder.get_remote_enclaves() != <span class="kw-2">&amp;</span>enclaves {
-            session.builder = session.builder.clone().remote_enclaves(enclaves);
-            session.reset();
-        }
+        <span class="self">self</span>.cmdq
+            .blocking_send(Command::UpdateEnclaves(enclaves))
+            .unwrap();
+    }
+
+    <span class="doccomment">/// Update key manager&#39;s quote policy.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if called within an asynchronous execution context.
+    </span><span class="kw">pub fn </span>update_quote_policy(<span class="kw-2">&amp;</span><span class="self">self</span>, policy: QuotePolicy) {
+        <span class="self">self</span>.cmdq
+            .blocking_send(Command::UpdateQuotePolicy(policy))
+            .unwrap();
+    }
+
+    <span class="doccomment">/// Update remote runtime id.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if called within an asynchronous execution context.
+    </span><span class="kw">pub fn </span>update_runtime_id(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="prelude-ty">Option</span>&lt;Namespace&gt;) {
+        <span class="self">self</span>.cmdq
+            .blocking_send(Command::UpdateRuntimeID(id))
+            .unwrap();
+    }
+
+    <span class="doccomment">/// Update allowed nodes.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if called within an asynchronous execution context.
+    </span><span class="kw">pub fn </span>update_nodes(<span class="kw-2">&amp;</span><span class="self">self</span>, nodes: Vec&lt;signature::PublicKey&gt;) {
+        <span class="self">self</span>.cmdq
+            .blocking_send(Command::UpdateNodes(nodes))
+            .unwrap();
+    }
+
+    <span class="doccomment">/// Wait for the controller to process all queued messages.
+    </span><span class="attr">#[cfg(test)]
+    </span><span class="kw">async fn </span>flush_cmd_queue(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), RpcClientError&gt; {
+        <span class="kw">let </span>(tx, rx) = oneshot::channel();
+        <span class="self">self</span>.cmdq
+            .send(Command::Ping(tx))
+            .<span class="kw">await
+            </span>.map_err(|<span class="kw">_</span>| RpcClientError::Dropped)<span class="question-mark">?</span>;
+
+        rx.<span class="kw">await</span>.map_err(|<span class="kw">_</span>| RpcClientError::Dropped)
     }
 }
 
@@ -936,20 +1316,19 @@
     };
 
     <span class="kw">use </span>anyhow::anyhow;
-    <span class="kw">use </span>futures::future::{<span class="self">self</span>, BoxFuture};
-    <span class="kw">use </span>io_context::Context;
+    <span class="kw">use </span>async_trait::async_trait;
 
     <span class="kw">use crate</span>::{
+        common::crypto::signature,
         enclave_rpc::{demux::Demux, session, types},
-        rak::RAK,
+        identity::Identity,
     };
 
     <span class="kw">use super</span>::{<span class="kw">super</span>::transport::Transport, RpcClient};
 
     <span class="attr">#[derive(Clone)]
     </span><span class="kw">struct </span>MockTransport {
-        rak: Arc&lt;RAK&gt;,
-        demux: Arc&lt;Mutex&lt;Demux&gt;&gt;,
+        demux: Arc&lt;Demux&gt;,
         next_error: Arc&lt;AtomicBool&gt;,
         peer_feedback: Arc&lt;Mutex&lt;(u64, <span class="prelude-ty">Option</span>&lt;types::PeerFeedback&gt;)&gt;&gt;,
         peer_feedback_history: Arc&lt;Mutex&lt;Vec&lt;(u64, <span class="prelude-ty">Option</span>&lt;types::PeerFeedback&gt;)&gt;&gt;&gt;,
@@ -957,11 +1336,8 @@
 
     <span class="kw">impl </span>MockTransport {
         <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
-            <span class="kw">let </span>rak = Arc::new(RAK::default());
-
             <span class="self">Self </span>{
-                rak: rak.clone(),
-                demux: Arc::new(Mutex::new(Demux::new(rak))),
+                demux: Arc::new(Demux::new(Arc::new(Identity::new()))),
                 next_error: Arc::new(AtomicBool::new(<span class="bool-val">false</span>)),
                 peer_feedback: Arc::new(Mutex::new((<span class="number">0</span>, <span class="prelude-val">None</span>))),
                 peer_feedback_history: Arc::new(Mutex::new(Vec::new())),
@@ -969,8 +1345,7 @@
         }
 
         <span class="kw">fn </span>reset(<span class="kw-2">&amp;</span><span class="self">self</span>) {
-            <span class="kw">let </span><span class="kw-2">mut </span>demux = <span class="self">self</span>.demux.lock().unwrap();
-            <span class="kw-2">*</span>demux = Demux::new(<span class="self">self</span>.rak.clone());
+            <span class="self">self</span>.demux.reset();
         }
 
         <span class="kw">fn </span>induce_transport_error(<span class="kw-2">&amp;</span><span class="self">self</span>) {
@@ -989,12 +1364,14 @@
         }
     }
 
-    <span class="kw">impl </span>Transport <span class="kw">for </span>MockTransport {
-        <span class="kw">fn </span>write_message_impl(
+    <span class="attr">#[async_trait]
+    </span><span class="kw">impl </span>Transport <span class="kw">for </span>MockTransport {
+        <span class="kw">async fn </span>write_message_impl(
             <span class="kw-2">&amp;</span><span class="self">self</span>,
-            _ctx: Context,
-            data: Vec&lt;u8&gt;,
-        ) -&gt; BoxFuture&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, anyhow::Error&gt;&gt; {
+            request: Vec&lt;u8&gt;,
+            kind: types::Kind,
+            _nodes: Vec&lt;signature::PublicKey&gt;,
+        ) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, signature::PublicKey), anyhow::Error&gt; {
             <span class="kw">let </span>pf = {
                 <span class="kw">let </span><span class="kw-2">mut </span>pf = <span class="self">self</span>.peer_feedback.lock().unwrap();
                 <span class="kw">let </span>peer_feedback = pf.<span class="number">1</span>.take();
@@ -1013,35 +1390,48 @@
                 .compare_exchange(<span class="bool-val">true</span>, <span class="bool-val">false</span>, Ordering::SeqCst, Ordering::SeqCst)
                 .is_ok()
             {
-                <span class="kw">return </span>Box::pin(future::err(<span class="macro">anyhow!</span>(<span class="string">&quot;transport error&quot;</span>)));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;transport error&quot;</span>));
             }
 
-            <span class="kw">let </span><span class="kw-2">mut </span>demux = <span class="self">self</span>.demux.lock().unwrap();
+            <span class="kw">match </span>kind {
+                types::Kind::NoiseSession =&gt; {
+                    <span class="comment">// Deliver directly to the multiplexer.
+                    </span><span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::new();
+                    <span class="kw">let </span>(<span class="kw-2">mut </span>session, message) =
+                        <span class="self">self</span>.demux.process_frame(request, <span class="kw-2">&amp;mut </span>buffer).<span class="kw">await</span><span class="question-mark">?</span>;
 
-            <span class="comment">// Deliver directly to the multiplexer.
-            </span><span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::new();
-            <span class="kw">match </span>demux.process_frame(data, <span class="kw-2">&amp;mut </span>buffer) {
-                <span class="prelude-val">Err</span>(err) =&gt; Box::pin(future::err(err)),
-                <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>((session_id, _session_info, message, _untrusted_plaintext))) =&gt; {
-                    <span class="comment">// Message, process and write reply.
-                    </span><span class="kw">let </span>body = <span class="kw">match </span>message {
-                        types::Message::Request(rq) =&gt; {
-                            <span class="comment">// Just echo back what was given.
-                            </span>types::Body::Success(rq.args)
+                    <span class="kw">match </span>message {
+                        <span class="prelude-val">Some</span>(message) =&gt; {
+                            <span class="comment">// Message, process and write reply.
+                            </span><span class="kw">let </span>body = <span class="kw">match </span>message {
+                                types::Message::Request(rq) =&gt; {
+                                    <span class="comment">// Just echo back what was given.
+                                    </span>types::Body::Success(rq.args)
+                                }
+                                <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;unhandled message type&quot;</span>),
+                            };
+                            <span class="kw">let </span>response = types::Message::Response(types::Response { body });
+
+                            <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::new();
+                            <span class="prelude-val">Ok</span>(session
+                                .write_message(response, <span class="kw-2">&amp;mut </span>buffer)
+                                .map(|<span class="kw">_</span>| (buffer, Default::default()))<span class="question-mark">?</span>)
                         }
-                        <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;unhandled message type&quot;</span>),
-                    };
-                    <span class="kw">let </span>response = types::Message::Response(types::Response { body });
-
-                    <span class="kw">let </span><span class="kw-2">mut </span>buffer = Vec::new();
-                    <span class="kw">match </span>demux.write_message(session_id, response, <span class="kw-2">&amp;mut </span>buffer) {
-                        <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; Box::pin(future::ok(buffer)),
-                        <span class="prelude-val">Err</span>(error) =&gt; Box::pin(future::err(error)),
+                        <span class="prelude-val">None </span>=&gt; {
+                            <span class="comment">// Handshake.
+                            </span><span class="prelude-val">Ok</span>((buffer, Default::default()))
+                        }
                     }
                 }
-                <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
-                    <span class="comment">// Handshake.
-                    </span>Box::pin(future::ok(buffer))
+                types::Kind::InsecureQuery =&gt; {
+                    <span class="comment">// Just echo back what was given.
+                    </span><span class="kw">let </span>rq: types::Request = cbor::from_slice(<span class="kw-2">&amp;</span>request).unwrap();
+                    <span class="kw">let </span>body = types::Body::Success(rq.args);
+                    <span class="kw">let </span>response = types::Response { body };
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>((cbor::to_vec(response), Default::default()));
+                }
+                types::Kind::LocalQuery =&gt; {
+                    <span class="macro">panic!</span>(<span class="string">&quot;unhandled RPC kind&quot;</span>)
                 }
             }
         }
@@ -1062,18 +1452,15 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_rpc_client() {
-        <span class="kw">let </span>rt = tokio::runtime::Builder::new_current_thread()
-            .build()
-            .unwrap();
+        <span class="kw">let </span>rt = tokio::runtime::Runtime::new().unwrap();
         <span class="kw">let </span>transport = MockTransport::new();
         <span class="kw">let </span>builder = session::Builder::default();
-        <span class="kw">let </span>client = RpcClient::new(Box::new(transport.clone()), builder);
+        <span class="kw">let </span>client = RpcClient::new(Box::new(transport.clone()), builder, <span class="macro">vec!</span>[]);
 
-        <span class="comment">// Basic call.
-        </span><span class="kw">let </span>result: u64 = rt
-            .block_on(client.call(Context::background(), <span class="string">&quot;test&quot;</span>, <span class="number">42</span>))
-            .unwrap();
-        <span class="macro">assert_eq!</span>(result, <span class="number">42</span>, <span class="string">&quot;call should work&quot;</span>);
+        <span class="comment">// Basic secure call.
+        </span><span class="kw">let </span>result: u64 = rt.block_on(client.secure_call(<span class="string">&quot;test&quot;</span>, <span class="number">42</span>)).unwrap();
+        rt.block_on(client.flush_cmd_queue()).unwrap(); <span class="comment">// Flush cmd queue to get peer feedback.
+        </span><span class="macro">assert_eq!</span>(result, <span class="number">42</span>, <span class="string">&quot;secure call should work&quot;</span>);
         <span class="macro">assert_eq!</span>(
             transport.take_peer_feedback_history(),
             <span class="macro">vec!</span>[
@@ -1087,10 +1474,9 @@
         <span class="comment">// Reset all sessions on the server and make sure that we can still get a response.
         </span>transport.reset();
 
-        <span class="kw">let </span>result: u64 = rt
-            .block_on(client.call(Context::background(), <span class="string">&quot;test&quot;</span>, <span class="number">43</span>))
-            .unwrap();
-        <span class="macro">assert_eq!</span>(result, <span class="number">43</span>, <span class="string">&quot;call should work&quot;</span>);
+        <span class="kw">let </span>result: u64 = rt.block_on(client.secure_call(<span class="string">&quot;test&quot;</span>, <span class="number">43</span>)).unwrap();
+        rt.block_on(client.flush_cmd_queue()).unwrap(); <span class="comment">// Flush cmd queue to get peer feedback.
+        </span><span class="macro">assert_eq!</span>(result, <span class="number">43</span>, <span class="string">&quot;secure call should work&quot;</span>);
         <span class="macro">assert_eq!</span>(
             transport.take_peer_feedback_history(),
             <span class="macro">vec!</span>[
@@ -1106,10 +1492,9 @@
         // can still get a response.
         </span>transport.induce_transport_error();
 
-        <span class="kw">let </span>result: u64 = rt
-            .block_on(client.call(Context::background(), <span class="string">&quot;test&quot;</span>, <span class="number">44</span>))
-            .unwrap();
-        <span class="macro">assert_eq!</span>(result, <span class="number">44</span>, <span class="string">&quot;call should work&quot;</span>);
+        <span class="kw">let </span>result: u64 = rt.block_on(client.secure_call(<span class="string">&quot;test&quot;</span>, <span class="number">44</span>)).unwrap();
+        rt.block_on(client.flush_cmd_queue()).unwrap(); <span class="comment">// Flush cmd queue to get peer feedback.
+        </span><span class="macro">assert_eq!</span>(result, <span class="number">44</span>, <span class="string">&quot;secure call should work&quot;</span>);
         <span class="macro">assert_eq!</span>(
             transport.take_peer_feedback_history(),
             <span class="macro">vec!</span>[
@@ -1118,6 +1503,33 @@
                 </span>(<span class="number">2</span>, <span class="prelude-val">None</span>),                               <span class="comment">// New handshake.
                 </span>(<span class="number">2</span>, <span class="prelude-val">None</span>),                               <span class="comment">// New handshake.
                 </span>(<span class="number">2</span>, <span class="prelude-val">Some</span>(types::PeerFeedback::Success)), <span class="comment">// Handled call.
+            </span>]
+        );
+
+        <span class="comment">// Basic insecure call.
+        </span><span class="kw">let </span>result: u64 = rt.block_on(client.insecure_call(<span class="string">&quot;test&quot;</span>, <span class="number">45</span>)).unwrap();
+        rt.block_on(client.flush_cmd_queue()).unwrap(); <span class="comment">// Flush cmd queue to get peer feedback.
+        </span><span class="macro">assert_eq!</span>(result, <span class="number">45</span>, <span class="string">&quot;insecure call should work&quot;</span>);
+        <span class="macro">assert_eq!</span>(
+            transport.take_peer_feedback_history(),
+            <span class="macro">vec!</span>[
+                (<span class="number">2</span>, <span class="prelude-val">Some</span>(types::PeerFeedback::Success)), <span class="comment">// Previous handled call.
+                </span>(<span class="number">2</span>, <span class="prelude-val">Some</span>(types::PeerFeedback::Success)), <span class="comment">// Handled call.
+            </span>]
+        );
+
+        <span class="comment">// Induce a single transport error and make sure we can still get a response.
+        </span>transport.induce_transport_error();
+
+        <span class="kw">let </span>result: u64 = rt.block_on(client.insecure_call(<span class="string">&quot;test&quot;</span>, <span class="number">46</span>)).unwrap();
+        rt.block_on(client.flush_cmd_queue()).unwrap(); <span class="comment">// Flush cmd queue to get peer feedback.
+        </span><span class="macro">assert_eq!</span>(result, <span class="number">46</span>, <span class="string">&quot;insecure call should work&quot;</span>);
+        <span class="macro">assert_eq!</span>(
+            transport.take_peer_feedback_history(),
+            <span class="macro">vec!</span>[
+                (<span class="number">2</span>, <span class="prelude-val">Some</span>(types::PeerFeedback::Success)), <span class="comment">// Previous handled call.
+                </span>(<span class="number">3</span>, <span class="prelude-val">Some</span>(types::PeerFeedback::Failure)), <span class="comment">// Failed call due to induced error.
+                </span>(<span class="number">3</span>, <span class="prelude-val">Some</span>(types::PeerFeedback::Success)), <span class="comment">// Handled call.
             </span>]
         );
     }

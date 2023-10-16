@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["CommitteeKind","Role"]};
+window.SIDEBAR_ITEMS = {"enum":["CommitteeKind","Role"],"struct":["Committee","CommitteeNode"]};

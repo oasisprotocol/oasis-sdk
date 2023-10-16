@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/common/sgx/pcs.rs`."><title>pcs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/common/sgx/pcs.rs`."><title>pcs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -949,6 +949,36 @@
 <a href="#949" id="949">949</a>
 <a href="#950" id="950">950</a>
 <a href="#951" id="951">951</a>
+<a href="#952" id="952">952</a>
+<a href="#953" id="953">953</a>
+<a href="#954" id="954">954</a>
+<a href="#955" id="955">955</a>
+<a href="#956" id="956">956</a>
+<a href="#957" id="957">957</a>
+<a href="#958" id="958">958</a>
+<a href="#959" id="959">959</a>
+<a href="#960" id="960">960</a>
+<a href="#961" id="961">961</a>
+<a href="#962" id="962">962</a>
+<a href="#963" id="963">963</a>
+<a href="#964" id="964">964</a>
+<a href="#965" id="965">965</a>
+<a href="#966" id="966">966</a>
+<a href="#967" id="967">967</a>
+<a href="#968" id="968">968</a>
+<a href="#969" id="969">969</a>
+<a href="#970" id="970">970</a>
+<a href="#971" id="971">971</a>
+<a href="#972" id="972">972</a>
+<a href="#973" id="973">973</a>
+<a href="#974" id="974">974</a>
+<a href="#975" id="975">975</a>
+<a href="#976" id="976">976</a>
+<a href="#977" id="977">977</a>
+<a href="#978" id="978">978</a>
+<a href="#979" id="979">979</a>
+<a href="#980" id="980">980</a>
+<a href="#981" id="981">981</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Intel Provisioning Certification Services (PCS) quote handling.
 </span><span class="kw">use </span>std::ffi::CString;
 
@@ -966,7 +996,8 @@
 <span class="kw">use super</span>::{EnclaveIdentity, MrEnclave, MrSigner, VerifiedQuote};
 
 <span class="comment">// Required values of various TCB fields.
-</span><span class="kw">const </span>REQUIRED_TCB_INFO_VERSION: u32 = <span class="number">2</span>;
+</span><span class="kw">const </span>REQUIRED_TCB_INFO_ID: <span class="kw-2">&amp;</span>str = <span class="string">&quot;SGX&quot;</span>;
+<span class="kw">const </span>REQUIRED_TCB_INFO_VERSION: u32 = <span class="number">3</span>;
 <span class="kw">const </span>REQUIRED_QE_ID: <span class="kw-2">&amp;</span>str = <span class="string">&quot;QE&quot;</span>;
 <span class="kw">const </span>REQUIRED_QE_IDENTITY_VERSION: u32 = <span class="number">2</span>;
 <span class="kw">const </span>DEFAULT_MIN_TCB_EVALUATION_DATA_NUMBER: u32 = <span class="number">12</span>; <span class="comment">// As of 2022-08-01.
@@ -1033,6 +1064,8 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
     </span>TCBMismatch,
     <span class="attr">#[error(<span class="string">&quot;TCB evaluation data number is invalid&quot;</span>)]
     </span>TCBEvaluationDataNumberInvalid,
+    <span class="attr">#[error(<span class="string">&quot;FMSPC is blacklisted&quot;</span>)]
+    </span>BlacklistedFMSPC,
     <span class="attr">#[error(<span class="string">&quot;QE report is malformed&quot;</span>)]
     </span>MalformedQEReport,
     <span class="attr">#[error(<span class="string">&quot;report is malformed&quot;</span>)]
@@ -1046,7 +1079,7 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
 }
 
 <span class="doccomment">/// Quote validity policy.
-</span><span class="attr">#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>QuotePolicy {
     <span class="doccomment">/// Whether PCS quotes are disabled and will always be rejected.
     </span><span class="attr">#[cbor(optional)]
@@ -1058,6 +1091,11 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
     <span class="doccomment">/// Minimum TCB evaluation data number that is considered to be valid. TCB bundles containing
     /// smaller values will be invalid.
     </span><span class="kw">pub </span>min_tcb_evaluation_data_number: u32,
+
+    <span class="doccomment">/// A list of hexadecimal encoded FMSPCs specifying which processor packages and platform
+    /// instances are blocked.
+    </span><span class="attr">#[cbor(optional)]
+    </span><span class="kw">pub </span>fmspc_blacklist: Vec&lt;String&gt;,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>QuotePolicy {
@@ -1066,6 +1104,7 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
             disabled: <span class="bool-val">false</span>,
             tcb_validity_period: <span class="number">30</span>,
             min_tcb_evaluation_data_number: DEFAULT_MIN_TCB_EVALUATION_DATA_NUMBER,
+            fmspc_blacklist: Vec::new(),
         }
     }
 }
@@ -1193,9 +1232,9 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
 }
 
 <span class="kw">impl </span>quote::Quote3SignatureEcdsaP256Verifier <span class="kw">for </span>Verifier {
-    <span class="kw">fn </span>verify_certification_data&lt;<span class="lifetime">&#39;a</span>&gt;(
+    <span class="kw">fn </span>verify_certification_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        quote3signature: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>quote::Quote3SignatureEcdsaP256,
+        quote3signature: <span class="kw-2">&amp;</span>quote::Quote3SignatureEcdsaP256,
     ) -&gt; quote::Result&lt;Vec&lt;u8&gt;&gt; {
         <span class="comment">// Only PCK certificate chain is supported as certification data.
         </span><span class="kw">let </span>certs = quote3signature
@@ -1414,6 +1453,9 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
 <span class="doccomment">/// TCB info body.
 </span><span class="attr">#[derive(Clone, Debug, Default, serde::Deserialize)]
 </span><span class="kw">pub struct </span>TCBInfo {
+    <span class="attr">#[serde(rename = <span class="string">&quot;id&quot;</span>)]
+    </span><span class="kw">pub </span>id: String,
+
     <span class="attr">#[serde(rename = <span class="string">&quot;version&quot;</span>)]
     </span><span class="kw">pub </span>version: u32,
 
@@ -1435,12 +1477,21 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
     <span class="attr">#[serde(rename = <span class="string">&quot;tcbEvaluationDataNumber&quot;</span>)]
     </span><span class="kw">pub </span>tcb_evaluation_data_number: u32,
 
+    <span class="attr">#[serde(default, rename = <span class="string">&quot;tdxModule&quot;</span>)]
+    </span><span class="kw">pub </span>tdx_module: TDXModule,
+
     <span class="attr">#[serde(rename = <span class="string">&quot;tcbLevels&quot;</span>)]
     </span><span class="kw">pub </span>tcb_levels: Vec&lt;TCBLevel&gt;,
 }
 
 <span class="kw">impl </span>TCBInfo {
     <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>, ts: DateTime&lt;Utc&gt;, policy: <span class="kw-2">&amp;</span>QuotePolicy) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">if </span><span class="self">self</span>.id != REQUIRED_TCB_INFO_ID {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBParseError(<span class="macro">anyhow::anyhow!</span>(
+                <span class="string">&quot;unexpected TCB info identifier&quot;
+            </span>)));
+        }
+
         <span class="kw">if </span><span class="self">self</span>.version != REQUIRED_TCB_INFO_VERSION {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBParseError(<span class="macro">anyhow::anyhow!</span>(
                 <span class="string">&quot;unexpected TCB info version&quot;
@@ -1463,6 +1514,15 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
 
         <span class="kw">if </span><span class="self">self</span>.tcb_evaluation_data_number &lt; policy.min_tcb_evaluation_data_number {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBEvaluationDataNumberInvalid);
+        }
+
+        <span class="comment">// Validate FMSPC not blacklisted.
+        </span><span class="kw">let </span>blocked = policy
+            .fmspc_blacklist
+            .iter()
+            .any(|blocked| blocked == <span class="kw-2">&amp;</span><span class="self">self</span>.fmspc);
+        <span class="kw">if </span>blocked {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::BlacklistedFMSPC);
         }
 
         <span class="prelude-val">Ok</span>(())
@@ -1495,6 +1555,19 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
     }
 }
 
+<span class="doccomment">/// A representation of the properties of Intel’s TDX SEAM module.
+</span><span class="attr">#[derive(Clone, Debug, Default, serde::Deserialize)]
+</span><span class="kw">pub struct </span>TDXModule {
+    <span class="attr">#[serde(rename = <span class="string">&quot;mrsigner&quot;</span>)]
+    </span><span class="kw">pub </span>mr_signer: String,
+
+    <span class="attr">#[serde(rename = <span class="string">&quot;attributes&quot;</span>)]
+    </span><span class="kw">pub </span>attributes: [u8; <span class="number">8</span>],
+
+    <span class="attr">#[serde(rename = <span class="string">&quot;attributesMask&quot;</span>)]
+    </span><span class="kw">pub </span>attributes_mask: [u8; <span class="number">8</span>],
+}
+
 <span class="doccomment">/// A platform TCB level.
 </span><span class="attr">#[derive(Clone, Debug, Default, serde::Deserialize)]
 </span><span class="kw">pub struct </span>TCBLevel {
@@ -1517,29 +1590,9 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
         //    16) with the corresponding values in the TCB Level. If all SGX TCB Comp SVNs in the
         //    certificate are greater or equal to the corresponding values in TCB Level, go to b,
         //    otherwise move to the next item on TCB Levels list.
-        </span><span class="kw">for </span>(i, svn) <span class="kw">in </span>[
-            <span class="self">self</span>.tcb.comp01svn,
-            <span class="self">self</span>.tcb.comp02svn,
-            <span class="self">self</span>.tcb.comp03svn,
-            <span class="self">self</span>.tcb.comp04svn,
-            <span class="self">self</span>.tcb.comp05svn,
-            <span class="self">self</span>.tcb.comp06svn,
-            <span class="self">self</span>.tcb.comp07svn,
-            <span class="self">self</span>.tcb.comp08svn,
-            <span class="self">self</span>.tcb.comp09svn,
-            <span class="self">self</span>.tcb.comp10svn,
-            <span class="self">self</span>.tcb.comp11svn,
-            <span class="self">self</span>.tcb.comp12svn,
-            <span class="self">self</span>.tcb.comp13svn,
-            <span class="self">self</span>.tcb.comp14svn,
-            <span class="self">self</span>.tcb.comp15svn,
-            <span class="self">self</span>.tcb.comp16svn,
-        ]
-        .iter()
-        .enumerate()
-        {
+        </span><span class="kw">for </span>(i, comp) <span class="kw">in </span><span class="self">self</span>.tcb.sgx_components.iter().enumerate() {
             <span class="comment">// At least one SVN is lower, no match.
-            </span><span class="kw">if </span>tcb_comp_svn[i] &lt; <span class="kw-2">*</span>svn {
+            </span><span class="kw">if </span>tcb_comp_svn[i] &lt; comp.svn {
                 <span class="kw">return </span><span class="bool-val">false</span>;
             }
         }
@@ -1562,38 +1615,24 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
     <span class="attr">#[serde(rename = <span class="string">&quot;pcesvn&quot;</span>)]
     </span><span class="kw">pub </span>pcesvn: u32,
 
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp01svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp01svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp02svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp02svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp03svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp03svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp04svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp04svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp05svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp05svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp06svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp06svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp07svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp07svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp08svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp08svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp09svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp09svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp10svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp10svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp11svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp11svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp12svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp12svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp13svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp13svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp14svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp14svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp15svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp15svn: u32,
-    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomp16svn&quot;</span>)]
-    </span><span class="kw">pub </span>comp16svn: u32,
+    <span class="attr">#[serde(rename = <span class="string">&quot;sgxtcbcomponents&quot;</span>)]
+    </span><span class="kw">pub </span>sgx_components: [TCBComponent; <span class="number">16</span>],
+
+    <span class="attr">#[serde(default, rename = <span class="string">&quot;tdxtcbcomponents&quot;</span>)]
+    </span><span class="kw">pub </span>tdx_components: [TCBComponent; <span class="number">16</span>],
+}
+
+<span class="doccomment">/// A TCB component.
+</span><span class="attr">#[derive(Clone, Debug, Default, serde::Deserialize)]
+</span><span class="kw">pub struct </span>TCBComponent {
+    <span class="attr">#[serde(rename = <span class="string">&quot;svn&quot;</span>)]
+    </span><span class="kw">pub </span>svn: u32,
+
+    <span class="attr">#[serde(default, rename = <span class="string">&quot;category&quot;</span>)]
+    </span><span class="kw">pub </span>category: String,
+
+    <span class="attr">#[serde(default, rename = <span class="string">&quot;type&quot;</span>)]
+    </span><span class="kw">pub </span>tcb_comp_type: String,
 }
 
 <span class="doccomment">/// TCB status.
@@ -1693,6 +1732,9 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
 
     <span class="attr">#[serde(rename = <span class="string">&quot;tcbLevels&quot;</span>)]
     </span><span class="kw">pub </span>tcb_levels: Vec&lt;EnclaveTCBLevel&gt;,
+
+    <span class="attr">#[serde(default, rename = <span class="string">&quot;advisoryIDs&quot;</span>)]
+    </span><span class="kw">pub </span>advisory_ids: Vec&lt;String&gt;,
 }
 
 <span class="kw">impl </span>QEIdentity {
@@ -1852,11 +1894,12 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_quote_ecdsa_p256_pck_certificatechain() {
         <span class="kw">const </span>RAW_QUOTE: <span class="kw-2">&amp;</span>[u8] =
-            <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/quotev3_ecdsa_p256_pck_chain.bin&quot;</span>);
-        <span class="kw">const </span>RAW_TCB_INFO: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/tcb_fmspc_00606A000000.json&quot;</span>); <span class="comment">// From PCS response.
+            <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/quote_v3_ecdsa_p256_pck_chain.bin&quot;</span>);
+        <span class="kw">const </span>RAW_TCB_INFO: <span class="kw-2">&amp;</span>[u8] =
+            <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/tcb_info_v3_fmspc_00606A000000.json&quot;</span>); <span class="comment">// From PCS V4 response.
         </span><span class="kw">const </span>RAW_CERTS: <span class="kw-2">&amp;</span>[u8] =
-            <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/tcb_fmspc_00606A000000_certs.pem&quot;</span>); <span class="comment">// From SGX-TCB-Info-Issuer-Chain header.
-        </span><span class="kw">const </span>RAW_QE_IDENTITY: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/qe_identity.json&quot;</span>); <span class="comment">// From PCS response.
+            <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/tcb_info_v3_fmspc_00606A000000_certs.pem&quot;</span>); <span class="comment">// From PCS V4 response (TCB-Info-Issuer-Chain header).
+        </span><span class="kw">const </span>RAW_QE_IDENTITY: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/qe_identity_v2.json&quot;</span>); <span class="comment">// From PCS V4 response.
 
         </span><span class="kw">let </span>qb = QuoteBundle {
             quote: RAW_QUOTE.to_owned(),
@@ -1867,16 +1910,16 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
             },
         };
 
-        <span class="kw">let </span>now = Utc.timestamp_opt(<span class="number">1652701082</span>, <span class="number">0</span>).unwrap();
+        <span class="kw">let </span>now = Utc.timestamp_opt(<span class="number">1671497404</span>, <span class="number">0</span>).unwrap();
 
         <span class="kw">let </span>verified_quote = qb.verify(<span class="kw-2">&amp;</span>QuotePolicy::default(), now).unwrap();
         <span class="macro">assert_eq!</span>(
             verified_quote.identity.mr_signer,
-            <span class="string">&quot;4025dab7ebda1fbecc4e3637606e021214d0f41c6d0422fd378b2a8b88818459&quot;</span>.into()
+            <span class="string">&quot;9affcfae47b848ec2caf1c49b4b283531e1cc425f93582b36806e52a43d78d1a&quot;</span>.into()
         );
         <span class="macro">assert_eq!</span>(
             verified_quote.identity.mr_enclave,
-            <span class="string">&quot;9479d8eddfd7b1b700319419551dc340f688c2ef519a5e18657ecf32981dbd9e&quot;</span>.into()
+            <span class="string">&quot;68823bc62f409ee33a32ea270cfe45d4b19a6fb3c8570d7bc186cbe062398e8f&quot;</span>.into()
         );
     }
 
@@ -1887,17 +1930,34 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
 
         <span class="kw">let </span>qb: QuoteBundle = cbor::from_slice(RAW_QUOTE_BUNDLE).unwrap();
 
-        <span class="kw">let </span>now = Utc.timestamp_opt(<span class="number">1652701082</span>, <span class="number">0</span>).unwrap();
+        <span class="kw">let </span>now = Utc.timestamp_opt(<span class="number">1671497404</span>, <span class="number">0</span>).unwrap();
 
         <span class="kw">let </span>verified_quote = qb.verify(<span class="kw-2">&amp;</span>QuotePolicy::default(), now).unwrap();
         <span class="macro">assert_eq!</span>(
             verified_quote.identity.mr_signer,
-            <span class="string">&quot;4025dab7ebda1fbecc4e3637606e021214d0f41c6d0422fd378b2a8b88818459&quot;</span>.into()
+            <span class="string">&quot;9affcfae47b848ec2caf1c49b4b283531e1cc425f93582b36806e52a43d78d1a&quot;</span>.into()
         );
         <span class="macro">assert_eq!</span>(
             verified_quote.identity.mr_enclave,
-            <span class="string">&quot;9479d8eddfd7b1b700319419551dc340f688c2ef519a5e18657ecf32981dbd9e&quot;</span>.into()
+            <span class="string">&quot;68823bc62f409ee33a32ea270cfe45d4b19a6fb3c8570d7bc186cbe062398e8f&quot;</span>.into()
         );
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_quote_blacklisted_fmscp() {
+        <span class="comment">// From Go implementation.
+        </span><span class="kw">const </span>RAW_QUOTE_BUNDLE: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/pcs_quote_bundle.cbor&quot;</span>);
+
+        <span class="kw">let </span>qb: QuoteBundle = cbor::from_slice(RAW_QUOTE_BUNDLE).unwrap();
+
+        <span class="kw">let </span>now = Utc.timestamp_opt(<span class="number">1671497404</span>, <span class="number">0</span>).unwrap();
+        <span class="kw">let </span>policy = <span class="kw-2">&amp;</span>QuotePolicy {
+            fmspc_blacklist: <span class="macro">vec!</span>[<span class="string">&quot;00606A000000&quot;</span>.to_string()],
+            ..Default::default()
+        };
+
+        qb.verify(policy, now)
+            .expect_err(<span class="string">&quot;quote verification should fail for blacklisted FMSPCs&quot;</span>);
     }
 }
 </code></pre></div></section></main></body></html>

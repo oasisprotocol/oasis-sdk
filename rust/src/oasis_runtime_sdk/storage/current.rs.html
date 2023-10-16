@@ -510,8 +510,6 @@
 <a href="#510" id="510">510</a>
 <a href="#511" id="511">511</a>
 <a href="#512" id="512">512</a>
-<a href="#513" id="513">513</a>
-<a href="#514" id="514">514</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! A store attached to the current thread.
 </span><span class="kw">use </span>std::cell::RefCell;
 
@@ -608,7 +606,7 @@
                         .with_root_type(mkvs::RootType::State)
                         .build(Box::new(mkvs::sync::NoopReadSyncer)),
                 );
-                <span class="kw">let </span>root = MKVSStore::new(io_context::Context::background().into(), root);
+                <span class="kw">let </span>root = MKVSStore::new(root);
 
                 RefCell::new(root)
             };
@@ -786,8 +784,6 @@
 </span><span class="kw">mod </span>test {
     <span class="kw">use </span>oasis_core_runtime::storage::mkvs;
 
-    <span class="kw">use </span>io_context::Context <span class="kw">as </span>IoContext;
-
     <span class="kw">use super</span>::{CurrentStore, TransactionResult};
     <span class="kw">use </span><span class="kw">crate</span>::storage::{MKVSStore, Store};
 
@@ -833,7 +829,7 @@
                 .with_root_type(mkvs::RootType::State)
                 .build(Box::new(mkvs::sync::NoopReadSyncer)),
         );
-        <span class="kw">let </span><span class="kw-2">mut </span>unrelated = MKVSStore::new(IoContext::background().into(), unrelated);
+        <span class="kw">let </span><span class="kw-2">mut </span>unrelated = MKVSStore::new(unrelated);
 
         CurrentStore::enter(<span class="kw-2">&amp;mut </span>unrelated, || {
             CurrentStore::start_transaction();
@@ -859,7 +855,7 @@
                 .with_root_type(mkvs::RootType::State)
                 .build(Box::new(mkvs::sync::NoopReadSyncer)),
         );
-        <span class="kw">let </span><span class="kw-2">mut </span>root = MKVSStore::new(IoContext::background().into(), root);
+        <span class="kw">let </span><span class="kw-2">mut </span>root = MKVSStore::new(root);
 
         CurrentStore::enter(<span class="kw-2">&amp;mut </span>root, || {
             test_store_basic();
@@ -889,7 +885,7 @@
                 .with_root_type(mkvs::RootType::State)
                 .build(Box::new(mkvs::sync::NoopReadSyncer)),
         );
-        <span class="kw">let </span><span class="kw-2">mut </span>root = MKVSStore::new(IoContext::background().into(), root);
+        <span class="kw">let </span><span class="kw-2">mut </span>root = MKVSStore::new(root);
 
         CurrentStore::enter(<span class="kw-2">&amp;mut </span>root, || {
             CurrentStore::with(|store| {
@@ -970,7 +966,7 @@
                     .with_root_type(mkvs::RootType::State)
                     .build(Box::new(mkvs::sync::NoopReadSyncer)),
             );
-            <span class="kw">let </span><span class="kw-2">mut </span>unrelated = MKVSStore::new(IoContext::background().into(), unrelated);
+            <span class="kw">let </span><span class="kw-2">mut </span>unrelated = MKVSStore::new(unrelated);
 
             CurrentStore::enter(<span class="kw-2">&amp;mut </span>unrelated, || {
                 <span class="comment">// Should panic.
@@ -986,7 +982,7 @@
                 .with_root_type(mkvs::RootType::State)
                 .build(Box::new(mkvs::sync::NoopReadSyncer)),
         );
-        <span class="kw">let </span><span class="kw-2">mut </span>root = MKVSStore::new(IoContext::background().into(), root);
+        <span class="kw">let </span><span class="kw-2">mut </span>root = MKVSStore::new(root);
 
         CurrentStore::enter(<span class="kw-2">&amp;mut </span>root, || {
             CurrentStore::with(|<span class="kw">_</span>| {
@@ -1003,7 +999,7 @@
                 .with_root_type(mkvs::RootType::State)
                 .build(Box::new(mkvs::sync::NoopReadSyncer)),
         );
-        <span class="kw">let </span><span class="kw-2">mut </span>root = MKVSStore::new(IoContext::background().into(), root);
+        <span class="kw">let </span><span class="kw-2">mut </span>root = MKVSStore::new(root);
 
         CurrentStore::enter(<span class="kw-2">&amp;mut </span>root, || {
             CurrentStore::init_local_fallback(); <span class="comment">// Should panic.

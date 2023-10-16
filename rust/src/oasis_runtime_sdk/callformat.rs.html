@@ -354,7 +354,7 @@
 
 <span class="kw">use crate</span>::{
     context::Context,
-    core::common::crypto::mrae::deoxysii,
+    core::common::crypto::{mrae::deoxysii, x25519},
     crypto::signature::context::get_chain_context_for,
     keymanager, module,
     modules::core::Error,
@@ -375,9 +375,9 @@
     Empty,
     EncryptedX25519DeoxysII {
         <span class="doccomment">/// Caller&#39;s ephemeral public key used for X25519.
-        </span>pk: [u8; <span class="number">32</span>],
+        </span>pk: x25519::PublicKey,
         <span class="doccomment">/// Secret key.
-        </span>sk: keymanager::PrivateKey,
+        </span>sk: x25519::PrivateKey,
         <span class="doccomment">/// Transaction index within the batch.
         </span>index: usize,
     },
@@ -470,7 +470,7 @@
                 <span class="kw">let </span>keypair = key_manager
                     .get_or_create_ephemeral_keys(get_key_pair_id(epoch), epoch)
                     .map_err(|err| <span class="kw">match </span>err {
-                        keymanager::KeyManagerError::InvalidEpoch =&gt; {
+                        keymanager::KeyManagerError::InvalidEpoch(..) =&gt; {
                             Error::InvalidCallFormat(<span class="macro">anyhow!</span>(<span class="string">&quot;invalid epoch&quot;</span>))
                         }
                         <span class="kw">_ </span>=&gt; Error::Abort(err.into()),
@@ -481,7 +481,7 @@
                     <span class="kw-2">&amp;</span>envelope.nonce,
                     envelope.data.clone(),
                     <span class="macro">vec!</span>[],
-                    <span class="kw-2">&amp;</span>envelope.pk,
+                    <span class="kw-2">&amp;</span>envelope.pk.<span class="number">0</span>,
                     <span class="kw-2">&amp;</span>sk.<span class="number">0</span>,
                 )
                 .map(|data| (data, sk))
@@ -522,7 +522,7 @@
 </span><span class="kw">pub fn </span>encode_call&lt;C: Context&gt;(
     ctx: <span class="kw-2">&amp;</span>C,
     <span class="kw-2">mut </span>call: Call,
-    client_keypair: <span class="kw-2">&amp;</span>([u8; <span class="number">32</span>], [u8; <span class="number">32</span>]),
+    client_keypair: <span class="kw-2">&amp;</span>(x25519_dalek::PublicKey, x25519_dalek::StaticSecret),
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Call, Error&gt; {
     <span class="kw">match </span>call.format {
         <span class="comment">// In case of the plain-text data format, we simply pass on the call unchanged.
@@ -544,7 +544,7 @@
                 format: call.format,
                 method: std::mem::take(<span class="kw-2">&amp;mut </span>call.method),
                 body: cbor::to_value(types::callformat::CallEnvelopeX25519DeoxysII {
-                    pk: client_keypair.<span class="number">0</span>,
+                    pk: client_keypair.<span class="number">0</span>.into(),
                     nonce,
                     epoch,
                     data: deoxysii::box_seal(
@@ -608,8 +608,8 @@
 </span><span class="kw">pub fn </span>encrypt_result_x25519_deoxysii&lt;C: Context&gt;(
     ctx: <span class="kw-2">&amp;</span>C,
     result: types::transaction::CallResult,
-    pk: [u8; <span class="number">32</span>],
-    sk: oasis_core_keymanager::crypto::PrivateKey,
+    pk: x25519::PublicKey,
+    sk: x25519::PrivateKey,
     index: usize,
 ) -&gt; cbor::Value {
     <span class="comment">// Generate nonce for the output as Round (8 bytes) || Index (4 bytes) || 00 00 00.
@@ -627,7 +627,7 @@
     }
     <span class="kw">let </span>nonce = nonce.try_into().unwrap();
     <span class="kw">let </span>result = cbor::to_vec(result);
-    <span class="kw">let </span>data = deoxysii::box_seal(<span class="kw-2">&amp;</span>nonce, result, <span class="macro">vec!</span>[], <span class="kw-2">&amp;</span>pk, <span class="kw-2">&amp;</span>sk.<span class="number">0</span>).unwrap();
+    <span class="kw">let </span>data = deoxysii::box_seal(<span class="kw-2">&amp;</span>nonce, result, <span class="macro">vec!</span>[], <span class="kw-2">&amp;</span>pk.<span class="number">0</span>, <span class="kw-2">&amp;</span>sk.<span class="number">0</span>).unwrap();
 
     <span class="comment">// Return an envelope.
     </span>cbor::to_value(types::callformat::ResultEnvelopeX25519DeoxysII { nonce, data })
@@ -638,7 +638,7 @@
     ctx: <span class="kw-2">&amp;</span>C,
     format: CallFormat,
     result: CallResult,
-    client_keypair: <span class="kw-2">&amp;</span>([u8; <span class="number">32</span>], [u8; <span class="number">32</span>]),
+    client_keypair: <span class="kw-2">&amp;</span>(x25519_dalek::PublicKey, x25519_dalek::StaticSecret),
 ) -&gt; <span class="prelude-ty">Result</span>&lt;module::CallResult, Error&gt; {
     <span class="kw">if </span><span class="macro">matches!</span>(format, CallFormat::Plain) {
         <span class="kw">return </span><span class="prelude-val">Ok</span>(result.into_call_result().expect(<span class="string">&quot;CallResult was Unknown&quot;</span>));

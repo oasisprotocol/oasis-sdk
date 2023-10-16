@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/attestation.rs`."><title>attestation.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/attestation.rs`."><title>attestation.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -133,48 +133,34 @@
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
-<a href="#136" id="136">136</a>
-<a href="#137" id="137">137</a>
-<a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Functionality related to the enclave attestation flow.
 </span><span class="kw">use </span>std::sync::Arc;
 
 <span class="attr">#[cfg(target_env = <span class="string">&quot;sgx&quot;</span>)]
-</span><span class="kw">use </span>anyhow::{anyhow, bail, <span class="prelude-ty">Result</span>};
-<span class="attr">#[cfg(target_env = <span class="string">&quot;sgx&quot;</span>)]
-</span><span class="kw">use </span>io_context::Context;
+</span><span class="kw">use </span>anyhow::{bail, <span class="prelude-ty">Result</span>};
 <span class="attr">#[cfg(target_env = <span class="string">&quot;sgx&quot;</span>)]
 </span><span class="kw">use </span>slog::info;
 <span class="kw">use </span>slog::Logger;
 
 <span class="attr">#[cfg(target_env = <span class="string">&quot;sgx&quot;</span>)]
 </span><span class="kw">use crate</span>::{
-    common::crypto::signature::Signer,
-    common::sgx::Quote,
-    consensus::registry::{
-        SGXAttestation, SGXConstraints, TEEHardware, ATTESTATION_SIGNATURE_CONTEXT,
-    },
-    consensus::state::registry::ImmutableState <span class="kw">as </span>RegistryState,
+    common::{crypto::signature::Signer, sgx::Quote},
+    consensus::registry::{SGXAttestation, ATTESTATION_SIGNATURE_CONTEXT},
+    policy::PolicyVerifier,
     types::Body,
 };
 <span class="kw">use crate</span>::{
     common::{logger::get_logger, namespace::Namespace, version::Version},
     consensus::verifier::Verifier,
     host::Host,
-    rak::RAK,
+    identity::Identity,
 };
 
 <span class="doccomment">/// Attestation flow handler.
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Handler {
     <span class="attr">#[cfg_attr(not(target_env = <span class="string">&quot;sgx&quot;</span>), allow(unused))]
-    </span>rak: Arc&lt;RAK&gt;,
+    </span>identity: Arc&lt;Identity&gt;,
     <span class="attr">#[cfg_attr(not(target_env = <span class="string">&quot;sgx&quot;</span>), allow(unused))]
     </span>host: Arc&lt;<span class="kw">dyn </span>Host&gt;,
     <span class="attr">#[cfg_attr(not(target_env = <span class="string">&quot;sgx&quot;</span>), allow(unused))]
@@ -190,14 +176,14 @@
 <span class="kw">impl </span>Handler {
     <span class="doccomment">/// Create a new instance of the attestation flow handler.
     </span><span class="kw">pub fn </span>new(
-        rak: Arc&lt;RAK&gt;,
+        identity: Arc&lt;Identity&gt;,
         host: Arc&lt;<span class="kw">dyn </span>Host&gt;,
         consensus_verifier: Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
         runtime_id: Namespace,
         version: Version,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            rak,
+            identity,
             host,
             consensus_verifier,
             runtime_id,
@@ -210,78 +196,74 @@
 <span class="attr">#[cfg(target_env = <span class="string">&quot;sgx&quot;</span>)]
 </span><span class="kw">impl </span>Handler {
     <span class="doccomment">/// Handle an attestation flow request.
-    </span><span class="kw">pub fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context, request: Body) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
+    </span><span class="kw">pub async fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, request: Body) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
         <span class="kw">match </span>request {
-            Body::RuntimeCapabilityTEERakInitRequest { target_info } =&gt; <span class="self">self</span>.rak_init(target_info),
+            Body::RuntimeCapabilityTEERakInitRequest { target_info } =&gt; {
+                <span class="self">self</span>.target_info_init(target_info)
+            }
             Body::RuntimeCapabilityTEERakReportRequest {} =&gt; <span class="self">self</span>.report_init(),
             Body::RuntimeCapabilityTEERakAvrRequest { avr } =&gt; {
                 <span class="comment">// TODO: Remove this once we want to break the runtime host protocol.
-                </span><span class="self">self</span>.set_quote(ctx, Quote::Ias(avr))
-            }
-            Body::RuntimeCapabilityTEERakQuoteRequest { quote } =&gt; <span class="self">self</span>.set_quote(ctx, quote),
+                </span><span class="self">self</span>.set_quote(Quote::Ias(avr)).<span class="kw">await
+            </span>}
+            Body::RuntimeCapabilityTEERakQuoteRequest { quote } =&gt; <span class="self">self</span>.set_quote(quote).<span class="kw">await</span>,
 
             <span class="kw">_ </span>=&gt; <span class="macro">bail!</span>(<span class="string">&quot;unsupported attestation request&quot;</span>),
         }
     }
 
-    <span class="kw">fn </span>rak_init(<span class="kw-2">&amp;</span><span class="self">self</span>, target_info: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
-        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Initializing the runtime attestation key&quot;</span>);
-        <span class="self">self</span>.rak.init_rak(target_info)<span class="question-mark">?</span>;
+    <span class="kw">fn </span>target_info_init(<span class="kw-2">&amp;</span><span class="self">self</span>, target_info: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
+        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Initializing the runtime target info&quot;</span>);
+        <span class="self">self</span>.identity.init_target_info(target_info)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(Body::RuntimeCapabilityTEERakInitResponse {})
     }
 
     <span class="kw">fn </span>report_init(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
-        <span class="macro">info!</span>(
-            <span class="self">self</span>.logger,
-            <span class="string">&quot;Initializing the runtime attestation key report&quot;
-        </span>);
-        <span class="kw">let </span>(rak_pub, report, nonce) = <span class="self">self</span>.rak.init_report();
+        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Initializing the runtime key report&quot;</span>);
+        <span class="kw">let </span>(rak_pub, rek_pub, report, nonce) = <span class="self">self</span>.identity.init_report();
 
         <span class="kw">let </span>report: <span class="kw-2">&amp;</span>[u8] = report.as_ref();
         <span class="kw">let </span>report = report.to_vec();
 
         <span class="prelude-val">Ok</span>(Body::RuntimeCapabilityTEERakReportResponse {
             rak_pub,
+            rek_pub,
             report,
             nonce,
         })
     }
 
-    <span class="kw">fn </span>set_quote(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context, quote: Quote) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
+    <span class="kw">async fn </span>set_quote(<span class="kw-2">&amp;</span><span class="self">self</span>, quote: Quote) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
+        <span class="kw">if </span><span class="self">self</span>.identity.quote_policy().is_none() {
+            <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Configuring quote policy&quot;</span>);
+
+            <span class="comment">// TODO: Make async.
+            </span><span class="kw">let </span>consensus_verifier = <span class="self">self</span>.consensus_verifier.clone();
+            <span class="kw">let </span>version = <span class="prelude-val">Some</span>(<span class="self">self</span>.version);
+            <span class="kw">let </span>runtime_id = <span class="self">self</span>.runtime_id;
+            <span class="kw">let </span>policy = tokio::task::block_in_place(<span class="kw">move </span>|| {
+                <span class="comment">// Obtain current quote policy from (verified) consensus state.
+                </span>PolicyVerifier::new(consensus_verifier).quote_policy(<span class="kw-2">&amp;</span>runtime_id, version)
+            })<span class="question-mark">?</span>;
+
+            <span class="self">self</span>.identity.set_quote_policy(policy)<span class="question-mark">?</span>;
+        }
+
         <span class="macro">info!</span>(
             <span class="self">self</span>.logger,
             <span class="string">&quot;Configuring quote for the runtime attestation key binding&quot;
         </span>);
 
-        <span class="comment">// Obtain current quote policy from (verified) consensus state.
-        </span><span class="kw">let </span>ctx = ctx.freeze();
-        <span class="kw">let </span>consensus_state = <span class="self">self</span>.consensus_verifier.latest_state()<span class="question-mark">?</span>;
-        <span class="kw">let </span>registry_state = RegistryState::new(<span class="kw-2">&amp;</span>consensus_state);
-        <span class="kw">let </span>runtime = registry_state
-            .runtime(Context::create_child(<span class="kw-2">&amp;</span>ctx), <span class="kw-2">&amp;</span><span class="self">self</span>.runtime_id)<span class="question-mark">?
-            </span>.ok_or(<span class="macro">anyhow!</span>(<span class="string">&quot;missing runtime descriptor&quot;</span>))<span class="question-mark">?</span>;
-        <span class="kw">let </span>ad = runtime
-            .deployment_for_version(<span class="self">self</span>.version)
-            .ok_or(<span class="macro">anyhow!</span>(<span class="string">&quot;no corresponding runtime deployment&quot;</span>))<span class="question-mark">?</span>;
+        <span class="comment">// Configure the quote and policy on the identity.
+        </span><span class="kw">let </span>verified_quote = <span class="self">self</span>.identity.set_quote(quote)<span class="question-mark">?</span>;
 
-        <span class="kw">let </span>policy = <span class="kw">match </span>runtime.tee_hardware {
-            TEEHardware::TEEHardwareIntelSGX =&gt; {
-                <span class="kw">let </span>sc: SGXConstraints = ad
-                    .try_decode_tee()
-                    .map_err(|<span class="kw">_</span>| <span class="macro">anyhow!</span>(<span class="string">&quot;bad TEE constraints&quot;</span>))<span class="question-mark">?</span>;
-                sc.policy()
-            }
-            <span class="kw">_ </span>=&gt; <span class="macro">bail!</span>(<span class="string">&quot;configured runtime hardware mismatch&quot;</span>),
-        };
-
-        <span class="comment">// Configure the quote and policy on the RAK.
-        </span><span class="kw">let </span>verified_quote = <span class="self">self</span>.rak.set_quote(quote, policy)<span class="question-mark">?</span>;
-
-        <span class="comment">// Sign the report data, latest verified consensus height and host node ID.
-        </span><span class="kw">let </span>height = consensus_state.height();
-        <span class="kw">let </span>node_id = <span class="self">self</span>.host.identity()<span class="question-mark">?</span>;
-        <span class="kw">let </span>h = SGXAttestation::hash(<span class="kw-2">&amp;</span>verified_quote.report_data, node_id, height);
-        <span class="kw">let </span>signature = <span class="self">self</span>.rak.sign(ATTESTATION_SIGNATURE_CONTEXT, <span class="kw-2">&amp;</span>h)<span class="question-mark">?</span>;
+        <span class="comment">// Sign the report data, latest verified consensus height, REK and host node ID.
+        </span><span class="kw">let </span>consensus_state = <span class="self">self</span>.consensus_verifier.latest_state().<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span>height = consensus_state.height();
+        <span class="kw">let </span>node_id = <span class="self">self</span>.host.identity().<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span>rek = <span class="self">self</span>.identity.public_rek();
+        <span class="kw">let </span>h = SGXAttestation::hash(<span class="kw-2">&amp;</span>verified_quote.report_data, node_id, height, rek);
+        <span class="kw">let </span>signature = <span class="self">self</span>.identity.sign(ATTESTATION_SIGNATURE_CONTEXT, <span class="kw-2">&amp;</span>h)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(Body::RuntimeCapabilityTEERakQuoteResponse { height, signature })
     }

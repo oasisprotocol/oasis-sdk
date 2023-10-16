@@ -32,9 +32,6 @@
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
 <a href="#34" id="34">34</a>
-<a href="#35" id="35">35</a>
-<a href="#36" id="36">36</a>
-<a href="#37" id="37">37</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Types related to schedule control.
 </span><span class="kw">use </span>oasis_core_runtime::{
     common::crypto::hash::Hash, transaction::types::TxnBatch, types::Body, Protocol,
@@ -63,10 +60,7 @@
 
 <span class="kw">impl </span>ScheduleControlHost <span class="kw">for </span>Protocol {
     <span class="kw">fn </span>fetch_tx_batch(<span class="kw-2">&amp;</span><span class="self">self</span>, offset: <span class="prelude-ty">Option</span>&lt;Hash&gt;, limit: u32) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;TxnBatch&gt;, Error&gt; {
-        <span class="kw">match </span><span class="self">self</span>.call_host(
-            io_context::Context::background(),
-            Body::HostFetchTxBatchRequest { offset, limit },
-        ) {
+        <span class="kw">match </span><span class="self">self</span>.call_host(Body::HostFetchTxBatchRequest { offset, limit }) {
             <span class="prelude-val">Ok</span>(Body::HostFetchTxBatchResponse { batch }) =&gt; <span class="prelude-val">Ok</span>(batch),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::FailedToFetchBatch),
         }

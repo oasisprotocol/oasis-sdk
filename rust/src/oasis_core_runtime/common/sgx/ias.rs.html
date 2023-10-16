@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/common/sgx/ias.rs`."><title>ias.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/common/sgx/ias.rs`."><title>ias.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -519,6 +519,191 @@
 <a href="#519" id="519">519</a>
 <a href="#520" id="520">520</a>
 <a href="#521" id="521">521</a>
+<a href="#522" id="522">522</a>
+<a href="#523" id="523">523</a>
+<a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
+<a href="#533" id="533">533</a>
+<a href="#534" id="534">534</a>
+<a href="#535" id="535">535</a>
+<a href="#536" id="536">536</a>
+<a href="#537" id="537">537</a>
+<a href="#538" id="538">538</a>
+<a href="#539" id="539">539</a>
+<a href="#540" id="540">540</a>
+<a href="#541" id="541">541</a>
+<a href="#542" id="542">542</a>
+<a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
+<a href="#600" id="600">600</a>
+<a href="#601" id="601">601</a>
+<a href="#602" id="602">602</a>
+<a href="#603" id="603">603</a>
+<a href="#604" id="604">604</a>
+<a href="#605" id="605">605</a>
+<a href="#606" id="606">606</a>
+<a href="#607" id="607">607</a>
+<a href="#608" id="608">608</a>
+<a href="#609" id="609">609</a>
+<a href="#610" id="610">610</a>
+<a href="#611" id="611">611</a>
+<a href="#612" id="612">612</a>
+<a href="#613" id="613">613</a>
+<a href="#614" id="614">614</a>
+<a href="#615" id="615">615</a>
+<a href="#616" id="616">616</a>
+<a href="#617" id="617">617</a>
+<a href="#618" id="618">618</a>
+<a href="#619" id="619">619</a>
+<a href="#620" id="620">620</a>
+<a href="#621" id="621">621</a>
+<a href="#622" id="622">622</a>
+<a href="#623" id="623">623</a>
+<a href="#624" id="624">624</a>
+<a href="#625" id="625">625</a>
+<a href="#626" id="626">626</a>
+<a href="#627" id="627">627</a>
+<a href="#628" id="628">628</a>
+<a href="#629" id="629">629</a>
+<a href="#630" id="630">630</a>
+<a href="#631" id="631">631</a>
+<a href="#632" id="632">632</a>
+<a href="#633" id="633">633</a>
+<a href="#634" id="634">634</a>
+<a href="#635" id="635">635</a>
+<a href="#636" id="636">636</a>
+<a href="#637" id="637">637</a>
+<a href="#638" id="638">638</a>
+<a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
+<a href="#650" id="650">650</a>
+<a href="#651" id="651">651</a>
+<a href="#652" id="652">652</a>
+<a href="#653" id="653">653</a>
+<a href="#654" id="654">654</a>
+<a href="#655" id="655">655</a>
+<a href="#656" id="656">656</a>
+<a href="#657" id="657">657</a>
+<a href="#658" id="658">658</a>
+<a href="#659" id="659">659</a>
+<a href="#660" id="660">660</a>
+<a href="#661" id="661">661</a>
+<a href="#662" id="662">662</a>
+<a href="#663" id="663">663</a>
+<a href="#664" id="664">664</a>
+<a href="#665" id="665">665</a>
+<a href="#666" id="666">666</a>
+<a href="#667" id="667">667</a>
+<a href="#668" id="668">668</a>
+<a href="#669" id="669">669</a>
+<a href="#670" id="670">670</a>
+<a href="#671" id="671">671</a>
+<a href="#672" id="672">672</a>
+<a href="#673" id="673">673</a>
+<a href="#674" id="674">674</a>
+<a href="#675" id="675">675</a>
+<a href="#676" id="676">676</a>
+<a href="#677" id="677">677</a>
+<a href="#678" id="678">678</a>
+<a href="#679" id="679">679</a>
+<a href="#680" id="680">680</a>
+<a href="#681" id="681">681</a>
+<a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Intel Attestation Service (IAS) attestation verification report handling.
 </span><span class="kw">use </span>std::io::{Cursor, Read, Seek, SeekFrom};
 
@@ -529,10 +714,10 @@
 <span class="kw">use </span>lazy_static::lazy_static;
 <span class="kw">use </span>oid_registry::{OID_PKCS1_RSAENCRYPTION, OID_PKCS1_SHA256WITHRSA};
 <span class="kw">use </span>percent_encoding;
-<span class="kw">use </span>rsa::{padding::PaddingScheme, pkcs1::DecodeRsaPublicKey, Hash, PublicKey, RsaPublicKey};
+<span class="kw">use </span>rsa::{pkcs1::DecodeRsaPublicKey, pkcs1v15::Pkcs1v15Sign, RsaPublicKey};
 <span class="kw">use </span>serde_json;
 <span class="kw">use </span>sgx_isa::{AttributesFlags, Report};
-<span class="kw">use </span>sha2::{Digest, Sha256};
+<span class="kw">use </span>sha2::{digest::Update <span class="kw">as _</span>, Digest, Sha256};
 <span class="kw">use </span>thiserror::Error;
 <span class="kw">use </span>x509_parser::prelude::<span class="kw-2">*</span>;
 
@@ -576,6 +761,10 @@
     </span>InvalidSignature,
     <span class="attr">#[error(<span class="string">&quot;IAS quotes are disabled by policy&quot;</span>)]
     </span>Disabled,
+    <span class="attr">#[error(<span class="string">&quot;blacklisted IAS quote GID&quot;</span>)]
+    </span>BlacklistedGID,
+    <span class="attr">#[error(<span class="string">&quot;TCB evaluation data number is invalid&quot;</span>)]
+    </span>TCBEvaluationDataNumberInvalid,
 }
 
 <span class="kw">pub const </span>QUOTE_CONTEXT_LEN: usize = <span class="number">8</span>;
@@ -637,7 +826,7 @@ DaVzWh5aiEx+idkSGMnX
 }
 
 <span class="doccomment">/// Quote validity policy.
-</span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+</span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>QuotePolicy {
     <span class="doccomment">/// Whether IAS quotes are disabled and will always be rejected.
     </span><span class="attr">#[cbor(optional)]
@@ -649,7 +838,15 @@ DaVzWh5aiEx+idkSGMnX
     /// specified.
     </span><span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>allowed_quote_statuses: Vec&lt;i64&gt;, <span class="comment">// TODO: Define ISVEnclaveQuoteStatus type.
-</span>}
+
+    </span><span class="doccomment">/// List of blocked platform EPID group IDs.
+    </span><span class="attr">#[cbor(optional)]
+    </span><span class="kw">pub </span>gid_blacklist: Vec&lt;u32&gt;,
+
+    <span class="doccomment">/// The minimum TCB evaluation data number that should be accepted.
+    </span><span class="attr">#[cbor(optional)]
+    </span><span class="kw">pub </span>min_tcb_evaluation_data_number: u32,
+}
 
 <span class="doccomment">/// Decoded quote body.
 </span><span class="attr">#[derive(Default, Debug)]
@@ -730,6 +927,16 @@ DaVzWh5aiEx+idkSGMnX
         }
     }
 
+    <span class="kw">fn </span>tcb_evaluation_data_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32&gt; {
+        <span class="kw">match </span><span class="self">self</span>.body[<span class="string">&quot;tcbEvaluationDataNumber&quot;</span>].as_u64() {
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="number">0</span>),
+            <span class="prelude-val">Some</span>(eval_num) <span class="kw">if </span>eval_num &gt; u32::MAX.into() =&gt; {
+                <span class="prelude-val">Err</span>(AVRError::TCBEvaluationDataNumberInvalid.into())
+            }
+            <span class="prelude-val">Some</span>(eval_num) =&gt; <span class="prelude-val">Ok</span>(eval_num <span class="kw">as </span>u32),
+        }
+    }
+
     <span class="kw">fn </span>timestamp(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;i64&gt; {
         <span class="kw">let </span>timestamp = <span class="kw">match </span><span class="self">self</span>.body[<span class="string">&quot;timestamp&quot;</span>].as_str() {
             <span class="prelude-val">Some</span>(timestamp) =&gt; timestamp,
@@ -792,7 +999,7 @@ DaVzWh5aiEx+idkSGMnX
     };
 
     <span class="kw">let </span>quote_body = avr_body.isv_enclave_quote_body()<span class="question-mark">?</span>;
-    <span class="kw">let </span>quote_body = <span class="kw">match </span>base64::decode(<span class="kw-2">&amp;</span>quote_body) {
+    <span class="kw">let </span>quote_body = <span class="kw">match </span>base64::decode(quote_body) {
         <span class="prelude-val">Ok</span>(quote_body) =&gt; quote_body,
         <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::MalformedQuote.into()),
     };
@@ -800,6 +1007,15 @@ DaVzWh5aiEx+idkSGMnX
         <span class="prelude-val">Ok</span>(quote_body) =&gt; quote_body,
         <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::MalformedQuote.into()),
     };
+
+    <span class="comment">// Verify EPID GID not blacklisted.
+    </span><span class="kw">if </span>policy
+        .gid_blacklist
+        .iter()
+        .any(|gid| gid == <span class="kw-2">&amp;</span>quote_body.gid)
+    {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::BlacklistedGID.into());
+    }
 
     <span class="comment">// Disallow debug enclaves, if we are in production environment and disallow production enclaves,
     // if we are in debug environment.
@@ -813,6 +1029,12 @@ DaVzWh5aiEx+idkSGMnX
         <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::DebugEnclave.into());
     } <span class="kw">else if </span>!is_debug &amp;&amp; allow_debug {
         <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::ProductionEnclave.into());
+    }
+
+    <span class="comment">// If the minimum TCB evaluation data number is present in the policy,
+    // then the report&#39;s shouldn&#39;t be too low.
+    </span><span class="kw">if </span>avr_body.tcb_evaluation_data_number()<span class="question-mark">? </span>&lt; policy.min_tcb_evaluation_data_number {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::TCBEvaluationDataNumberInvalid.into());
     }
 
     <span class="comment">// Force-ratchet the clock forward, to at least the time in the AVR.
@@ -959,11 +1181,11 @@ DaVzWh5aiEx+idkSGMnX
 
     <span class="comment">// Validate the actual signature.
     </span><span class="kw">let </span>leaf_pk = extract_certificate_rsa_public_key(<span class="kw-2">&amp;</span>leaf)<span class="question-mark">?</span>;
-    <span class="kw">let </span>padding = PaddingScheme::new_pkcs1v15_sign(<span class="prelude-val">Some</span>(Hash::SHA2_256));
+    <span class="kw">let </span>scheme = Pkcs1v15Sign::new::&lt;sha2::Sha256&gt;();
     <span class="kw">let </span>digest = Sha256::new().chain(message).finalize();
     <span class="kw">let </span>signature = base64::decode(signature)<span class="question-mark">?</span>;
     leaf_pk
-        .verify(padding, <span class="kw-2">&amp;</span>digest, <span class="kw-2">&amp;</span>signature)
+        .verify(scheme, <span class="kw-2">&amp;</span>digest, <span class="kw-2">&amp;</span>signature)
         .map_err(|<span class="kw">_</span>| AVRError::InvalidSignature)<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(())
 }
@@ -984,13 +1206,13 @@ DaVzWh5aiEx+idkSGMnX
     <span class="kw">if </span>cert.signature_algorithm.algorithm != OID_PKCS1_SHA256WITHRSA {
         <span class="kw">return </span><span class="bool-val">false</span>;
     }
-    <span class="kw">let </span>padding = PaddingScheme::new_pkcs1v15_sign(<span class="prelude-val">Some</span>(Hash::SHA2_256));
+    <span class="kw">let </span>scheme = Pkcs1v15Sign::new::&lt;sha2::Sha256&gt;();
     <span class="kw">let </span>digest = Sha256::new()
         .chain(cert.tbs_certificate.as_ref())
         .finalize();
 
     public_key
-        .verify(padding, <span class="kw-2">&amp;</span>digest, <span class="kw-2">&amp;</span>cert.signature_value.data)
+        .verify(scheme, <span class="kw-2">&amp;</span>digest, <span class="kw-2">&amp;</span>cert.signature_value.data)
         .is_ok()
 }
 
@@ -1038,6 +1260,154 @@ DaVzWh5aiEx+idkSGMnX
         <span class="comment">// Test timestamp validation while we&#39;re at it.
         </span><span class="kw">let </span>timestamp = parse_avr_timestamp(<span class="string">&quot;2018-03-30T22:02:26.123456&quot;</span>).unwrap();
         <span class="macro">assert_eq!</span>(timestamp, SIG_AT <span class="kw">as </span>i64);
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_decode_avr_v4() {
+        <span class="kw">const </span>AVR: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(
+            <span class="string">&quot;../../../../go/common/sgx/ias/testdata/avr_v4_body_sw_hardening_needed.json&quot;
+        </span>);
+        <span class="kw">const </span>SIG: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(
+            <span class="string">&quot;../../../../go/common/sgx/ias/testdata/avr_v4_body_sw_hardening_needed.sig&quot;
+        </span>);
+        <span class="kw">const </span>SIG_AT: u64 = <span class="number">1589188875</span>; <span class="comment">// 2020-05-11T09:21:15
+        </span><span class="kw">const </span>ID: <span class="kw-2">&amp;</span>str = <span class="string">&quot;323119119247496566074708526703373820736&quot;</span>;
+        <span class="kw">const </span>NONCE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;biNMqBAuTPF2hp/0fXa4P3splRkLHJf0&quot;</span>;
+        <span class="kw">const </span>EPID_PSEUDONYM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;uAFRLXADu90LsPq9Btgx8MWUPOzmDHE51pwLlUlU3hzFUk2EmvWpF6fZsyokOVkQUJ0UwZk0nCF8XPaCcSmLwqXAzLa+n/K7TdwlxKofEyTgG8da8mmrShNoFw3BSD74wSA4aAc753IfrbnnmuYk00lkmSUOTzqsqHlAORcweqg=&quot;</span>;
+
+        <span class="kw">let </span>result = validate_avr_signature(IAS_CERT_CHAIN, AVR, SIG, SIG_AT);
+        <span class="macro">assert!</span>(result.is_ok());
+
+        <span class="kw">let </span>raw_avr = AVR {
+            body: AVR.to_vec(),
+            signature: SIG.to_vec(),
+            certificate_chain: IAS_CERT_CHAIN.to_vec(),
+        };
+        <span class="kw">let </span>avr = ParsedAVR::new(<span class="kw-2">&amp;</span>raw_avr).expect(<span class="string">&quot;parsing raw AVR should succeed&quot;</span>);
+        <span class="macro">assert_eq!</span>(avr.body[<span class="string">&quot;id&quot;</span>].as_str().expect(<span class="string">&quot;id should be present&quot;</span>), ID);
+        <span class="macro">assert_eq!</span>(
+            avr.timestamp().expect(<span class="string">&quot;timestamp should exist&quot;</span>),
+            SIG_AT <span class="kw">as </span>i64
+        );
+        <span class="macro">assert_eq!</span>(
+            avr.body[<span class="string">&quot;version&quot;</span>].as_u64().expect(<span class="string">&quot;version should exist&quot;</span>),
+            <span class="number">4
+        </span>);
+        <span class="macro">assert_eq!</span>(
+            avr.isv_enclave_quote_status()
+                .expect(<span class="string">&quot;isv enclave quote status should exist&quot;</span>),
+            <span class="string">&quot;SW_HARDENING_NEEDED&quot;
+        </span>);
+
+        <span class="kw">let </span>isv_enclave_quote_body = base64::decode(
+            avr.isv_enclave_quote_body()
+                .expect(<span class="string">&quot;isv enclave quote body should exist&quot;</span>),
+        )
+        .expect(<span class="string">&quot;decoding isv enclave quote body should succeed&quot;</span>);
+        <span class="macro">assert_eq!</span>(isv_enclave_quote_body.len(), <span class="number">432</span>);
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;revocationReason&quot;</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;pseManifestStatus&quot;</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;pseManifestHash&quot;</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;platformInfoBlob&quot;</span>).is_none());
+        <span class="macro">assert_eq!</span>(
+            avr.body[<span class="string">&quot;nonce&quot;</span>].as_str().expect(<span class="string">&quot;nonce should exist&quot;</span>),
+            NONCE
+        );
+        <span class="macro">assert_eq!</span>(
+            avr.body[<span class="string">&quot;epidPseudonym&quot;</span>]
+                .as_str()
+                .expect(<span class="string">&quot;epid pseudonym should exist&quot;</span>),
+            EPID_PSEUDONYM
+        );
+        <span class="macro">assert_eq!</span>(
+            avr.body[<span class="string">&quot;advisoryURL&quot;</span>]
+                .as_str()
+                .expect(<span class="string">&quot;advisory URL should exist&quot;</span>),
+            <span class="string">&quot;https://security-center.intel.com&quot;
+        </span>);
+        <span class="kw">for </span>(avr_id, known_id) <span class="kw">in </span>avr.body[<span class="string">&quot;advisoryIDs&quot;</span>]
+            .as_array()
+            .expect(<span class="string">&quot;advisory ID array should exist&quot;</span>)
+            .iter()
+            .zip([<span class="string">&quot;INTEL-SA-00334&quot;</span>])
+        {
+            <span class="macro">assert_eq!</span>(
+                avr_id.as_str().expect(<span class="string">&quot;advisory ID should be a string&quot;</span>),
+                known_id
+            );
+        }
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_decode_avr_v5() {
+        <span class="kw">const </span>AVR: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(
+            <span class="string">&quot;../../../../go/common/sgx/ias/testdata/avr_v5_body_sw_hardening_needed.json&quot;
+        </span>);
+        <span class="kw">const </span>SIG: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(
+            <span class="string">&quot;../../../../go/common/sgx/ias/testdata/avr_v5_body_sw_hardening_needed.sig&quot;
+        </span>);
+        <span class="kw">const </span>SIG_AT: u64 = <span class="number">1695829918</span>; <span class="comment">// 2023-09-27T15:51:58
+        </span><span class="kw">const </span>ID: <span class="kw-2">&amp;</span>str = <span class="string">&quot;325753020347524304899139732345489823748&quot;</span>;
+        <span class="kw">const </span>EPID_PSEUDONYM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;twLvZuBD1sOHsNPsHGbZOVlGh9rXw9XzVQTVKUuvsqypw0iWcFKwR7aNoHmDSoeFc/+pH6LLCI2bQBKx/ygwXphePD4GTTRwBi9EIBFRlURTk4p4NosbA7xcCG4hRuCDaEKPtAX6XHjNKEvWA+4f1aAfD7jwOtGAzHeaqBldaD8=&quot;</span>;
+
+        <span class="kw">let </span>result = validate_avr_signature(IAS_CERT_CHAIN, AVR, SIG, SIG_AT);
+        <span class="macro">assert!</span>(result.is_ok());
+
+        <span class="kw">let </span>raw_avr = AVR {
+            body: AVR.to_vec(),
+            signature: SIG.to_vec(),
+            certificate_chain: IAS_CERT_CHAIN.to_vec(),
+        };
+        <span class="kw">let </span>avr = ParsedAVR::new(<span class="kw-2">&amp;</span>raw_avr).expect(<span class="string">&quot;parsing raw AVR should succeed&quot;</span>);
+        <span class="macro">assert_eq!</span>(avr.body[<span class="string">&quot;id&quot;</span>].as_str().expect(<span class="string">&quot;id should be present&quot;</span>), ID);
+        <span class="macro">assert_eq!</span>(
+            avr.timestamp().expect(<span class="string">&quot;timestamp should exist&quot;</span>),
+            SIG_AT <span class="kw">as </span>i64
+        );
+        <span class="macro">assert_eq!</span>(
+            avr.body[<span class="string">&quot;version&quot;</span>].as_u64().expect(<span class="string">&quot;version should exist&quot;</span>),
+            <span class="number">5
+        </span>);
+        <span class="macro">assert_eq!</span>(
+            avr.isv_enclave_quote_status()
+                .expect(<span class="string">&quot;isv enclave quote status should exist&quot;</span>),
+            <span class="string">&quot;SW_HARDENING_NEEDED&quot;
+        </span>);
+
+        <span class="kw">let </span>isv_enclave_quote_body = base64::decode(
+            avr.isv_enclave_quote_body()
+                .expect(<span class="string">&quot;isv enclave quote body should exist&quot;</span>),
+        )
+        .expect(<span class="string">&quot;decoding isv enclave quote body should succeed&quot;</span>);
+        <span class="macro">assert_eq!</span>(isv_enclave_quote_body.len(), <span class="number">432</span>);
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;revocationReason&quot;</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;pseManifestStatus&quot;</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;pseManifestHash&quot;</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;platformInfoBlob&quot;</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;nonce&quot;</span>).is_none());
+        <span class="macro">assert_eq!</span>(
+            avr.body[<span class="string">&quot;epidPseudonym&quot;</span>]
+                .as_str()
+                .expect(<span class="string">&quot;epid pseudonym should exist&quot;</span>),
+            EPID_PSEUDONYM
+        );
+        <span class="macro">assert_eq!</span>(
+            avr.body[<span class="string">&quot;advisoryURL&quot;</span>]
+                .as_str()
+                .expect(<span class="string">&quot;advisory URL should exist&quot;</span>),
+            <span class="string">&quot;https://security-center.intel.com&quot;
+        </span>);
+        <span class="kw">for </span>(avr_id, known_id) <span class="kw">in </span>avr.body[<span class="string">&quot;advisoryIDs&quot;</span>]
+            .as_array()
+            .expect(<span class="string">&quot;advisory ID array should exist&quot;</span>)
+            .iter()
+            .zip([<span class="string">&quot;INTEL-SA-00334&quot;</span>, <span class="string">&quot;INTEL-SA-00615&quot;</span>])
+        {
+            <span class="macro">assert_eq!</span>(
+                avr_id.as_str().expect(<span class="string">&quot;advisory ID should be a string&quot;</span>),
+                known_id
+            );
+        }
     }
 }
 </code></pre></div></section></main></body></html>

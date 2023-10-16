@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/consensus/state/staking.rs`."><title>staking.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/consensus/state/staking.rs`."><title>staking.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -492,27 +492,10 @@
 <a href="#492" id="492">492</a>
 <a href="#493" id="493">493</a>
 <a href="#494" id="494">494</a>
-<a href="#495" id="495">495</a>
-<a href="#496" id="496">496</a>
-<a href="#497" id="497">497</a>
-<a href="#498" id="498">498</a>
-<a href="#499" id="499">499</a>
-<a href="#500" id="500">500</a>
-<a href="#501" id="501">501</a>
-<a href="#502" id="502">502</a>
-<a href="#503" id="503">503</a>
-<a href="#504" id="504">504</a>
-<a href="#505" id="505">505</a>
-<a href="#506" id="506">506</a>
-<a href="#507" id="507">507</a>
-<a href="#508" id="508">508</a>
-<a href="#509" id="509">509</a>
-<a href="#510" id="510">510</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Staking state in the consensus layer.
 </span><span class="kw">use </span>std::collections::BTreeMap;
 
 <span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>io_context::Context;
 
 <span class="kw">use crate</span>::{
     common::{
@@ -558,8 +541,8 @@
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="doccomment">/// Returns the staking account for the given account address.
-    </span><span class="kw">pub fn </span>account(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context, address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;Account, StateError&gt; {
-        <span class="kw">match </span><span class="self">self</span>.mkvs.get(ctx, <span class="kw-2">&amp;</span>AccountsKeyFmt(address).encode()) {
+    </span><span class="kw">pub fn </span>account(<span class="kw-2">&amp;</span><span class="self">self</span>, address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;Account, StateError&gt; {
+        <span class="kw">match </span><span class="self">self</span>.mkvs.get(<span class="kw-2">&amp;</span>AccountsKeyFmt(address).encode()) {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(b)) =&gt; {
                 cbor::from_slice(<span class="kw-2">&amp;</span>b).map_err(|err| StateError::Unavailable(<span class="macro">anyhow!</span>(err)))
             }
@@ -568,12 +551,8 @@
         }
     }
 
-    <span class="kw">fn </span>load_stored_balance&lt;K: KeyFormat&gt;(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context,
-        key_format: K,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;Quantity, StateError&gt; {
-        <span class="kw">match </span><span class="self">self</span>.mkvs.get(ctx, <span class="kw-2">&amp;</span>key_format.encode()) {
+    <span class="kw">fn </span>load_stored_balance&lt;K: KeyFormat&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, key_format: K) -&gt; <span class="prelude-ty">Result</span>&lt;Quantity, StateError&gt; {
+        <span class="kw">match </span><span class="self">self</span>.mkvs.get(<span class="kw-2">&amp;</span>key_format.encode()) {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(b)) =&gt; {
                 cbor::from_slice(<span class="kw-2">&amp;</span>b).map_err(|err| StateError::Unavailable(<span class="macro">anyhow!</span>(err)))
             }
@@ -583,28 +562,28 @@
     }
 
     <span class="doccomment">/// Returns the total supply.
-    </span><span class="kw">pub fn </span>total_supply(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context) -&gt; <span class="prelude-ty">Result</span>&lt;Quantity, StateError&gt; {
-        <span class="self">self</span>.load_stored_balance(ctx, TotalSupplyKeyFmt(()))
+    </span><span class="kw">pub fn </span>total_supply(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Quantity, StateError&gt; {
+        <span class="self">self</span>.load_stored_balance(TotalSupplyKeyFmt(()))
     }
 
     <span class="doccomment">/// Returns the balance of the global common pool.
-    </span><span class="kw">pub fn </span>common_pool(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context) -&gt; <span class="prelude-ty">Result</span>&lt;Quantity, StateError&gt; {
-        <span class="self">self</span>.load_stored_balance(ctx, CommonPoolKeyFmt(()))
+    </span><span class="kw">pub fn </span>common_pool(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Quantity, StateError&gt; {
+        <span class="self">self</span>.load_stored_balance(CommonPoolKeyFmt(()))
     }
 
     <span class="doccomment">/// Returns the last block fees balance.
-    </span><span class="kw">pub fn </span>last_block_fees(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context) -&gt; <span class="prelude-ty">Result</span>&lt;Quantity, StateError&gt; {
-        <span class="self">self</span>.load_stored_balance(ctx, LastBlockFees(()))
+    </span><span class="kw">pub fn </span>last_block_fees(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Quantity, StateError&gt; {
+        <span class="self">self</span>.load_stored_balance(LastBlockFees(()))
     }
 
     <span class="doccomment">/// Returns the governance deposits balance.
-    </span><span class="kw">pub fn </span>governance_deposits(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context) -&gt; <span class="prelude-ty">Result</span>&lt;Quantity, StateError&gt; {
-        <span class="self">self</span>.load_stored_balance(ctx, GovernanceDepositsKeyFmt(()))
+    </span><span class="kw">pub fn </span>governance_deposits(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Quantity, StateError&gt; {
+        <span class="self">self</span>.load_stored_balance(GovernanceDepositsKeyFmt(()))
     }
 
     <span class="doccomment">/// Returns the non-empty addresses from the staking ledger.
-    </span><span class="kw">pub fn </span>addresses(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Address&gt;, StateError&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>it = <span class="self">self</span>.mkvs.iter(ctx);
+    </span><span class="kw">pub fn </span>addresses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Address&gt;, StateError&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>it = <span class="self">self</span>.mkvs.iter();
         it.seek(<span class="kw-2">&amp;</span>AccountsKeyFmt::default().encode_partial(<span class="number">0</span>));
 
         <span class="prelude-val">Ok</span>(it
@@ -616,14 +595,13 @@
     <span class="doccomment">/// Returns the delegation.
     </span><span class="kw">pub fn </span>delegation(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context,
         delegator_addr: Address,
         escrow_addr: Address,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Delegation, StateError&gt; {
-        <span class="kw">match </span><span class="self">self</span>.mkvs.get(
-            ctx,
-            <span class="kw-2">&amp;</span>DelegationKeyFmt((escrow_addr, delegator_addr)).encode(),
-        ) {
+        <span class="kw">match </span><span class="self">self
+            </span>.mkvs
+            .get(<span class="kw-2">&amp;</span>DelegationKeyFmt((escrow_addr, delegator_addr)).encode())
+        {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(b)) =&gt; {
                 cbor::from_slice(<span class="kw-2">&amp;</span>b).map_err(|err| StateError::Unavailable(<span class="macro">anyhow!</span>(err)))
             }
@@ -635,9 +613,8 @@
     <span class="doccomment">/// Returns all active delegations.
     </span><span class="kw">pub fn </span>delegations(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;BTreeMap&lt;Address, BTreeMap&lt;Address, Delegation&gt;&gt;, StateError&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>it = <span class="self">self</span>.mkvs.iter(ctx);
+        <span class="kw">let </span><span class="kw-2">mut </span>it = <span class="self">self</span>.mkvs.iter();
         it.seek(<span class="kw-2">&amp;</span>DelegationKeyFmt::default().encode_partial(<span class="number">0</span>));
 
         <span class="kw">let </span><span class="kw-2">mut </span>result: BTreeMap&lt;Address, BTreeMap&lt;Address, Delegation&gt;&gt; = BTreeMap::new();
@@ -663,15 +640,14 @@
     <span class="doccomment">/// Returns the debonding delegation.
     </span><span class="kw">pub fn </span>debonding_delegation(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context,
         delegator_addr: Address,
         escrow_addr: Address,
         epoch: EpochTime,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;DebondingDelegation, StateError&gt; {
-        <span class="kw">match </span><span class="self">self</span>.mkvs.get(
-            ctx,
-            <span class="kw-2">&amp;</span>DebondingDelegationKeyFmt((delegator_addr, escrow_addr, epoch)).encode(),
-        ) {
+        <span class="kw">match </span><span class="self">self
+            </span>.mkvs
+            .get(<span class="kw-2">&amp;</span>DebondingDelegationKeyFmt((delegator_addr, escrow_addr, epoch)).encode())
+        {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(b)) =&gt; {
                 cbor::from_slice(<span class="kw-2">&amp;</span>b).map_err(|err| StateError::Unavailable(<span class="macro">anyhow!</span>(err)))
             }
@@ -683,9 +659,8 @@
     <span class="doccomment">/// Returns all debonding delegations.
     </span><span class="kw">pub fn </span>debonding_delegations(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;BTreeMap&lt;Address, BTreeMap&lt;Address, Vec&lt;DebondingDelegation&gt;&gt;&gt;, StateError&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>it = <span class="self">self</span>.mkvs.iter(ctx);
+        <span class="kw">let </span><span class="kw-2">mut </span>it = <span class="self">self</span>.mkvs.iter();
         it.seek(<span class="kw-2">&amp;</span>DebondingDelegationKeyFmt::default().encode_partial(<span class="number">0</span>));
 
         <span class="kw">let </span><span class="kw-2">mut </span>result: BTreeMap&lt;Address, BTreeMap&lt;Address, Vec&lt;DebondingDelegation&gt;&gt;&gt; =
@@ -716,8 +691,6 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>test {
-    <span class="kw">use </span>std::sync::Arc;
-
     <span class="kw">use crate</span>::{
         common::crypto::{hash::Hash, signature::PublicKey},
         consensus::staking::{EscrowAccount, GeneralAccount, SharePool},
@@ -731,16 +704,18 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_staking_state_interop() {
-        <span class="comment">// Keep in sync with go/consensus/tendermint/apps/staking/state/interop/interop.go.
+        <span class="comment">// Keep in sync with go/consensus/cometbft/apps/staking/state/interop/interop.go.
         // If mock consensus state changes, update the root hash bellow.
         // See protocol server stdout for hash.
+        // To make the hash show up during tests, run &quot;cargo test&quot; as
+        // &quot;cargo test -- --nocapture&quot;.
 
         // Setup protocol server with initialized mock consensus state.
         </span><span class="kw">let </span>server = ProtocolServer::new(Fixture::ConsensusMock.into());
         <span class="kw">let </span>mock_consensus_root = Root {
             version: <span class="number">1</span>,
             root_type: RootType::State,
-            hash: Hash::from(<span class="string">&quot;f62f1f313de3833830a48b742f144fba542412e7ec65705d83f71a5e6e99bb2b&quot;</span>),
+            hash: Hash::from(<span class="string">&quot;123d46d530ebb004f6de9da7e1f41f7acde10b824e79ca8e718651dab2047c23&quot;</span>),
             ..Default::default()
         };
         <span class="kw">let </span>mkvs = Tree::builder()
@@ -748,8 +723,6 @@
             .with_root(mock_consensus_root)
             .build(server.read_sync());
         <span class="kw">let </span>staking_state = ImmutableState::new(<span class="kw-2">&amp;</span>mkvs);
-
-        <span class="kw">let </span>ctx = Arc::new(Context::background());
 
         <span class="kw">let </span>pk =
             PublicKey::from(<span class="string">&quot;7e57baaad01fffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>);
@@ -765,14 +738,14 @@
 
         <span class="comment">// Test all addresses and accounts.
         </span><span class="kw">let </span>addrs = staking_state
-            .addresses(Context::create_child(<span class="kw-2">&amp;</span>ctx))
+            .addresses()
             .expect(<span class="string">&quot;addresses query should work&quot;</span>);
         <span class="macro">assert_eq!</span>(expected_addrs, addrs, <span class="string">&quot;expected addresses should match&quot;</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>accounts = Vec::new();
         <span class="kw">for </span>addr <span class="kw">in </span><span class="kw-2">&amp;</span>addrs {
             <span class="kw">let </span>acc = staking_state
-                .account(Context::create_child(<span class="kw-2">&amp;</span>ctx), addr.clone())
+                .account(addr.clone())
                 .expect(<span class="string">&quot;accounts query should work&quot;</span>);
             accounts.push(acc);
         }
@@ -835,16 +808,12 @@
 
         <span class="comment">// Test all delegations.
         </span><span class="kw">let </span>delegations = staking_state
-            .delegations(Context::create_child(<span class="kw-2">&amp;</span>ctx))
+            .delegations()
             .expect(<span class="string">&quot;delegations query should work&quot;</span>);
         <span class="kw">for </span>(escrow_addr, dels) <span class="kw">in </span><span class="kw-2">&amp;</span>delegations {
             <span class="kw">for </span>(delegator_addr, del) <span class="kw">in </span>dels.clone() {
                 <span class="kw">let </span>d = staking_state
-                    .delegation(
-                        Context::create_child(<span class="kw-2">&amp;</span>ctx),
-                        delegator_addr,
-                        escrow_addr.clone(),
-                    )
+                    .delegation(delegator_addr, escrow_addr.clone())
                     .expect(<span class="string">&quot;delegation query should work&quot;</span>);
                 <span class="macro">assert_eq!</span>(del, d, <span class="string">&quot;delegation should match&quot;</span>)
             }
@@ -920,14 +889,13 @@
 
         <span class="comment">// Test all debonding delegations.
         </span><span class="kw">let </span>debonding_delegations = staking_state
-            .debonding_delegations(Context::create_child(<span class="kw-2">&amp;</span>ctx))
+            .debonding_delegations()
             .expect(<span class="string">&quot;debonding delegations query should work&quot;</span>);
         <span class="kw">for </span>(escrow_addr, debss) <span class="kw">in </span><span class="kw-2">&amp;</span>debonding_delegations {
             <span class="kw">for </span>(delegator_addr, debs) <span class="kw">in </span>debss {
                 <span class="kw">for </span>deb <span class="kw">in </span>debs {
                     <span class="kw">let </span>d = staking_state
                         .debonding_delegation(
-                            Context::create_child(<span class="kw-2">&amp;</span>ctx),
                             delegator_addr.clone(),
                             escrow_addr.clone(),
                             deb.debond_end_time,
@@ -982,7 +950,7 @@
 
         <span class="comment">// Test all stored balances.
         </span><span class="kw">let </span>total_supply = staking_state
-            .total_supply(Context::create_child(<span class="kw-2">&amp;</span>ctx))
+            .total_supply()
             .expect(<span class="string">&quot;total supply query should work&quot;</span>);
         <span class="macro">assert_eq!</span>(
             Quantity::from(<span class="number">10000u32</span>),
@@ -991,7 +959,7 @@
         </span>);
 
         <span class="kw">let </span>common_pool = staking_state
-            .common_pool(Context::create_child(<span class="kw-2">&amp;</span>ctx))
+            .common_pool()
             .expect(<span class="string">&quot;common pool query should work&quot;</span>);
         <span class="macro">assert_eq!</span>(
             Quantity::from(<span class="number">1000u32</span>),
@@ -1000,7 +968,7 @@
         </span>);
 
         <span class="kw">let </span>last_block_fees = staking_state
-            .last_block_fees(Context::create_child(<span class="kw-2">&amp;</span>ctx))
+            .last_block_fees()
             .expect(<span class="string">&quot;last block fees query should work&quot;</span>);
         <span class="macro">assert_eq!</span>(
             Quantity::from(<span class="number">33u32</span>),
@@ -1009,7 +977,7 @@
         </span>);
 
         <span class="kw">let </span>governance_deposits = staking_state
-            .governance_deposits(Context::create_child(<span class="kw-2">&amp;</span>ctx))
+            .governance_deposits()
             .expect(<span class="string">&quot;governance deposits query should work&quot;</span>);
         <span class="macro">assert_eq!</span>(
             Quantity::from(<span class="number">12u32</span>),

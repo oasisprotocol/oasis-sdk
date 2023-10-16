@@ -51,62 +51,40 @@
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
 <a href="#53" id="53">53</a>
-<a href="#54" id="54">54</a>
-<a href="#55" id="55">55</a>
-<a href="#56" id="56">56</a>
-<a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
-<a href="#61" id="61">61</a>
-<a href="#62" id="62">62</a>
-<a href="#63" id="63">63</a>
-<a href="#64" id="64">64</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
-
-<span class="kw">use </span>io_context::Context;
-
-<span class="kw">use </span>oasis_core_runtime::storage::mkvs;
+</pre></div><pre class="rust"><code><span class="kw">use </span>oasis_core_runtime::storage::mkvs;
 
 <span class="kw">use super</span>::{NestedStore, Store};
 
 <span class="doccomment">/// A key-value store backed by MKVS.
 </span><span class="kw">pub struct </span>MKVSStore&lt;M: mkvs::MKVS&gt; {
-    ctx: Arc&lt;Context&gt;,
     parent: M,
 }
 
 <span class="kw">impl</span>&lt;M: mkvs::MKVS&gt; MKVSStore&lt;M&gt; {
-    <span class="kw">pub fn </span>new(ctx: Arc&lt;Context&gt;, parent: M) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{ ctx, parent }
-    }
-
-    <span class="attr">#[inline]
-    </span><span class="kw">fn </span>create_ctx(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Context {
-        Context::create_child(<span class="kw-2">&amp;</span><span class="self">self</span>.ctx)
+    <span class="kw">pub fn </span>new(parent: M) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ parent }
     }
 }
 
 <span class="kw">impl</span>&lt;M: mkvs::MKVS&gt; Store <span class="kw">for </span>MKVSStore&lt;M&gt; {
     <span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-        <span class="self">self</span>.parent.get(<span class="self">self</span>.create_ctx(), key)
+        <span class="self">self</span>.parent.get(key)
     }
 
     <span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8], value: <span class="kw-2">&amp;</span>[u8]) {
-        <span class="self">self</span>.parent.insert(<span class="self">self</span>.create_ctx(), key, value);
+        <span class="self">self</span>.parent.insert(key, value);
     }
 
     <span class="kw">fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) {
-        <span class="self">self</span>.parent.remove(<span class="self">self</span>.create_ctx(), key);
+        <span class="self">self</span>.parent.remove(key);
     }
 
     <span class="kw">fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>mkvs::Iterator + <span class="lifetime">&#39;_</span>&gt; {
-        <span class="self">self</span>.parent.iter(<span class="self">self</span>.create_ctx())
+        <span class="self">self</span>.parent.iter()
     }
 
     <span class="kw">fn </span>prefetch_prefixes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, prefixes: Vec&lt;mkvs::Prefix&gt;, limit: u16) {
-        <span class="self">self</span>.parent
-            .prefetch_prefixes(<span class="self">self</span>.create_ctx(), <span class="kw-2">&amp;</span>prefixes, limit);
+        <span class="self">self</span>.parent.prefetch_prefixes(<span class="kw-2">&amp;</span>prefixes, limit);
     }
 }
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/enclave_rpc/transport.rs`."><title>transport.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/enclave_rpc/transport.rs`."><title>transport.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -113,25 +113,37 @@
 <a href="#113" id="113">113</a>
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::{Arc, Mutex};
 
 <span class="kw">use </span>anyhow::{anyhow, Error <span class="kw">as </span>AnyError};
-<span class="kw">use </span>futures::future::{<span class="self">self</span>, BoxFuture};
-<span class="kw">use </span>io_context::Context;
+<span class="kw">use </span>async_trait::async_trait;
 
-<span class="kw">use crate</span>::{types::Body, Protocol};
+<span class="kw">use crate</span>::{common::crypto::signature, types::Body, Protocol};
 
 <span class="kw">use </span><span class="kw">super</span>::types;
 
 <span class="doccomment">/// An EnclaveRPC transport.
+</span><span class="attr">#[async_trait]
 </span><span class="kw">pub trait </span>Transport: Send + Sync {
-    <span class="kw">fn </span>write_message(
+    <span class="kw">async fn </span>write_noise_session(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context,
         session_id: types::SessionID,
         data: Vec&lt;u8&gt;,
         untrusted_plaintext: String,
-    ) -&gt; BoxFuture&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, AnyError&gt;&gt; {
+        nodes: Vec&lt;signature::PublicKey&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, signature::PublicKey), AnyError&gt; {
         <span class="comment">// Frame message.
         </span><span class="kw">let </span>frame = types::Frame {
             session: session_id,
@@ -139,14 +151,25 @@
             payload: data,
         };
 
-        <span class="self">self</span>.write_message_impl(ctx, cbor::to_vec(frame))
-    }
+        <span class="self">self</span>.write_message_impl(cbor::to_vec(frame), types::Kind::NoiseSession, nodes)
+            .<span class="kw">await
+    </span>}
 
-    <span class="kw">fn </span>write_message_impl(
+    <span class="kw">async fn </span>write_insecure_query(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context,
         data: Vec&lt;u8&gt;,
-    ) -&gt; BoxFuture&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, AnyError&gt;&gt;;
+        nodes: Vec&lt;signature::PublicKey&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, signature::PublicKey), AnyError&gt; {
+        <span class="self">self</span>.write_message_impl(data, types::Kind::InsecureQuery, nodes)
+            .<span class="kw">await
+    </span>}
+
+    <span class="kw">async fn </span>write_message_impl(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        data: Vec&lt;u8&gt;,
+        kind: types::Kind,
+        nodes: Vec&lt;signature::PublicKey&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, signature::PublicKey), AnyError&gt;;
 
     <span class="kw">fn </span>set_peer_feedback(<span class="kw-2">&amp;</span><span class="self">self</span>, _pfid: u64, _peer_feedback: <span class="prelude-ty">Option</span>&lt;types::PeerFeedback&gt;) {
         <span class="comment">// Default implementation doesn&#39;t do anything.
@@ -177,12 +200,14 @@
     }
 }
 
-<span class="kw">impl </span>Transport <span class="kw">for </span>RuntimeTransport {
-    <span class="kw">fn </span>write_message_impl(
+<span class="attr">#[async_trait]
+</span><span class="kw">impl </span>Transport <span class="kw">for </span>RuntimeTransport {
+    <span class="kw">async fn </span>write_message_impl(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        ctx: Context,
         data: Vec&lt;u8&gt;,
-    ) -&gt; BoxFuture&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, AnyError&gt;&gt; {
+        kind: types::Kind,
+        nodes: Vec&lt;signature::PublicKey&gt;,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, signature::PublicKey), AnyError&gt; {
         <span class="kw">let </span>peer_feedback = {
             <span class="kw">let </span><span class="kw-2">mut </span>pf = <span class="self">self</span>.peer_feedback.lock().unwrap();
             <span class="kw">let </span>peer_feedback = pf.<span class="number">1</span>.take();
@@ -197,21 +222,20 @@
             peer_feedback
         };
 
-        <span class="comment">// NOTE: This is not actually async in SGX, but futures should be
-        //       dispatched on the current thread anyway.
-        </span><span class="kw">let </span>rsp = <span class="self">self</span>.protocol.call_host(
-            ctx,
-            Body::HostRPCCallRequest {
+        <span class="kw">let </span>rsp = <span class="self">self
+            </span>.protocol
+            .call_host_async(Body::HostRPCCallRequest {
                 endpoint: <span class="self">self</span>.endpoint.clone(),
                 request: data,
+                kind,
+                nodes,
                 peer_feedback,
-            },
-        );
+            })
+            .<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="kw">match </span>rsp {
-            <span class="prelude-val">Err</span>(err) =&gt; Box::pin(future::err(err.into())),
-            <span class="prelude-val">Ok</span>(Body::HostRPCCallResponse { response }) =&gt; Box::pin(future::ok(response)),
-            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; Box::pin(future::err(<span class="macro">anyhow!</span>(<span class="string">&quot;bad response type&quot;</span>))),
+            Body::HostRPCCallResponse { response, node } =&gt; <span class="prelude-val">Ok</span>((response, node)),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;bad response type&quot;</span>)),
         }
     }
 

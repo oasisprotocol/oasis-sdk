@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["PROTOCOL_VERSION"],"struct":["Version"]};
+window.SIDEBAR_ITEMS = {"constant":["PROTOCOL_VERSION"],"struct":["ProtocolVersions","Version"]};

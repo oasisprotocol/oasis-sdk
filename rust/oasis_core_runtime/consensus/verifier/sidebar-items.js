@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error"],"fn":["verify_state_freshness"],"struct":["TrustRoot","TrustedState"],"trait":["Verifier"]};
+window.SIDEBAR_ITEMS = {"enum":["Error"],"fn":["verify_state_freshness"],"struct":["TrustRoot"],"trait":["Verifier"]};

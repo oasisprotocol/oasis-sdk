@@ -1482,31 +1482,6 @@
 <a href="#1482" id="1482">1482</a>
 <a href="#1483" id="1483">1483</a>
 <a href="#1484" id="1484">1484</a>
-<a href="#1485" id="1485">1485</a>
-<a href="#1486" id="1486">1486</a>
-<a href="#1487" id="1487">1487</a>
-<a href="#1488" id="1488">1488</a>
-<a href="#1489" id="1489">1489</a>
-<a href="#1490" id="1490">1490</a>
-<a href="#1491" id="1491">1491</a>
-<a href="#1492" id="1492">1492</a>
-<a href="#1493" id="1493">1493</a>
-<a href="#1494" id="1494">1494</a>
-<a href="#1495" id="1495">1495</a>
-<a href="#1496" id="1496">1496</a>
-<a href="#1497" id="1497">1497</a>
-<a href="#1498" id="1498">1498</a>
-<a href="#1499" id="1499">1499</a>
-<a href="#1500" id="1500">1500</a>
-<a href="#1501" id="1501">1501</a>
-<a href="#1502" id="1502">1502</a>
-<a href="#1503" id="1503">1503</a>
-<a href="#1504" id="1504">1504</a>
-<a href="#1505" id="1505">1505</a>
-<a href="#1506" id="1506">1506</a>
-<a href="#1507" id="1507">1507</a>
-<a href="#1508" id="1508">1508</a>
-<a href="#1509" id="1509">1509</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Execution context.
 </span><span class="kw">use </span>std::{
     any::Any,
@@ -1514,10 +1489,8 @@
     fmt,
     marker::PhantomData,
     ops::{Deref, DerefMut},
-    sync::Arc,
 };
 
-<span class="kw">use </span>io_context::Context <span class="kw">as </span>IoContext;
 <span class="kw">use </span>slog::{<span class="self">self</span>, o};
 
 <span class="kw">use </span>oasis_core_runtime::{
@@ -1766,9 +1739,6 @@
     <span class="doccomment">/// Emits event tags.
     </span><span class="kw">fn </span>emit_etags(<span class="kw-2">&amp;mut </span><span class="self">self</span>, etags: EventTags);
 
-    <span class="doccomment">/// Returns a child io_ctx.
-    </span><span class="kw">fn </span>io_ctx(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IoContext;
-
     <span class="doccomment">/// Return any emitted tags and runtime messages. It consumes the transaction context.
     ///
     /// # Storage
@@ -1877,10 +1847,6 @@
 
     <span class="kw">fn </span>emit_etags(<span class="kw-2">&amp;mut </span><span class="self">self</span>, etags: EventTags) {
         <span class="self">self</span>.deref_mut().emit_etags(etags);
-    }
-
-    <span class="kw">fn </span>io_ctx(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IoContext {
-        <span class="self">self</span>.deref().io_ctx()
     }
 
     <span class="kw">fn </span>commit(<span class="self">self</span>) -&gt; State {
@@ -2072,7 +2038,6 @@
     </span>consensus_state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>consensus::state::ConsensusState,
     history: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>history::HistoryHost,
     epoch: consensus::beacon::EpochTime,
-    io_ctx: Arc&lt;IoContext&gt;,
     logger: slog::Logger,
 
     <span class="doccomment">/// Whether this context is part of an existing transaction (e.g. a subcall).
@@ -2109,7 +2074,6 @@
         history: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>history::HistoryHost,
         epoch: consensus::beacon::EpochTime,
         rng: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>RootRng,
-        io_ctx: Arc&lt;IoContext&gt;,
         max_messages: u32,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
@@ -2120,7 +2084,6 @@
             consensus_state,
             history,
             epoch,
-            io_ctx,
             key_manager,
             logger: get_logger(<span class="string">&quot;runtime-sdk&quot;</span>)
                 .new(<span class="macro">o!</span>(<span class="string">&quot;ctx&quot; </span>=&gt; <span class="string">&quot;dispatch&quot;</span>, <span class="string">&quot;mode&quot; </span>=&gt; Into::&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;::into(<span class="kw-2">&amp;</span>mode))),
@@ -2163,7 +2126,6 @@
             consensus_state: <span class="self">self</span>.consensus_state,
             history: <span class="self">self</span>.history,
             epoch: <span class="self">self</span>.epoch,
-            io_ctx: <span class="self">self</span>.io_ctx.clone(),
             logger: <span class="self">self</span>.logger.clone(),
             internal: <span class="self">self</span>.internal,
             block_etags: EventTags::new(),
@@ -2234,10 +2196,6 @@
         }
     }
 
-    <span class="kw">fn </span>io_ctx(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IoContext {
-        IoContext::create_child(<span class="kw-2">&amp;</span><span class="self">self</span>.io_ctx)
-    }
-
     <span class="kw">fn </span>commit(<span class="self">self</span>) -&gt; State {
         State {
             events: <span class="self">self</span>.block_etags,
@@ -2282,7 +2240,6 @@
             consensus_state: <span class="self">self</span>.consensus_state,
             history: <span class="self">self</span>.history,
             epoch: <span class="self">self</span>.epoch,
-            io_ctx: <span class="self">self</span>.io_ctx.clone(),
             logger: <span class="self">self
                 </span>.logger
                 .new(<span class="macro">o!</span>(<span class="string">&quot;ctx&quot; </span>=&gt; <span class="string">&quot;dispatch&quot;</span>, <span class="string">&quot;mode&quot; </span>=&gt; Into::&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;::into(<span class="kw-2">&amp;</span>mode))),
@@ -2322,7 +2279,6 @@
             consensus_state: <span class="self">self</span>.consensus_state,
             history: <span class="self">self</span>.history,
             epoch: <span class="self">self</span>.epoch,
-            io_ctx: <span class="self">self</span>.io_ctx.clone(),
             logger: <span class="self">self
                 </span>.logger
                 .new(<span class="macro">o!</span>(<span class="string">&quot;ctx&quot; </span>=&gt; <span class="string">&quot;transaction&quot;</span>, <span class="string">&quot;mode&quot; </span>=&gt; Into::&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;::into(<span class="kw-2">&amp;</span><span class="self">self</span>.mode))),
@@ -2370,8 +2326,7 @@
     history: <span class="kw-2">&amp;</span><span class="lifetime">&#39;round </span><span class="kw">dyn </span>history::HistoryHost,
     epoch: consensus::beacon::EpochTime,
     <span class="comment">// TODO: linked consensus layer block
-    </span>io_ctx: Arc&lt;IoContext&gt;,
-    logger: slog::Logger,
+    </span>logger: slog::Logger,
 
     <span class="doccomment">/// The index of the transaction in the block.
     </span>tx_index: usize,
@@ -2466,10 +2421,6 @@
         }
     }
 
-    <span class="kw">fn </span>io_ctx(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; IoContext {
-        IoContext::create_child(<span class="kw-2">&amp;</span><span class="self">self</span>.io_ctx)
-    }
-
     <span class="kw">fn </span>commit(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; State {
         <span class="comment">// Merge unconditional events into regular events on success.
         </span><span class="kw">for </span>(key, val) <span class="kw">in </span><span class="self">self</span>.etags_unconditional {
@@ -2520,7 +2471,6 @@
             consensus_state: <span class="self">self</span>.consensus_state,
             history: <span class="self">self</span>.history,
             epoch: <span class="self">self</span>.epoch,
-            io_ctx: <span class="self">self</span>.io_ctx.clone(),
             logger: <span class="self">self
                 </span>.logger
                 .new(<span class="macro">o!</span>(<span class="string">&quot;ctx&quot; </span>=&gt; <span class="string">&quot;dispatch&quot;</span>, <span class="string">&quot;mode&quot; </span>=&gt; Into::&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;::into(<span class="kw-2">&amp;</span>mode))),

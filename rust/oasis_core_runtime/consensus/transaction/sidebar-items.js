@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["SIGNATURE_CONTEXT"],"struct":["Fee","Proof","Transaction"],"type":["Gas","MethodName","SignedTransaction"]};
+window.SIDEBAR_ITEMS = {"constant":["SIGNATURE_CONTEXT"],"struct":["Fee","Proof","SignedTransactionWithProof","Transaction"],"type":["Gas","MethodName","SignedTransaction"]};

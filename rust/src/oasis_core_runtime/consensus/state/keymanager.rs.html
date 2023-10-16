@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/consensus/state/keymanager.rs`."><title>keymanager.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/consensus/state/keymanager.rs`."><title>keymanager.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -227,9 +227,94 @@
 <a href="#227" id="227">227</a>
 <a href="#228" id="228">228</a>
 <a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Key manager state in the consensus layer.
 </span><span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>io_context::Context;
 
 <span class="kw">use crate</span>::{
     common::{
@@ -237,7 +322,13 @@
         key_format::{KeyFormat, KeyFormatAtom},
         namespace::Namespace,
     },
-    consensus::{keymanager::SignedPolicySGX, state::StateError},
+    consensus::{
+        beacon::EpochTime,
+        keymanager::{
+            SignedEncryptedEphemeralSecret, SignedEncryptedMasterSecret, SignedPolicySGX,
+        },
+        state::StateError,
+    },
     key_format,
     storage::mkvs::ImmutableMKVS,
 };
@@ -255,6 +346,8 @@
 }
 
 <span class="macro">key_format!</span>(StatusKeyFmt, <span class="number">0x70</span>, Hash);
+<span class="macro">key_format!</span>(MasterSecretKeyFmt, <span class="number">0x72</span>, Hash);
+<span class="macro">key_format!</span>(EphemeralSecretKeyFmt, <span class="number">0x73</span>, Hash);
 
 <span class="doccomment">/// Current key manager status.
 </span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, cbor::Decode, cbor::Encode)]
@@ -265,19 +358,25 @@
     </span><span class="kw">pub </span>is_initialized: bool,
     <span class="doccomment">/// True iff the key manager is secure.
     </span><span class="kw">pub </span>is_secure: bool,
+    <span class="doccomment">/// Generation of the latest master secret.
+    </span><span class="kw">pub </span>generation: u64,
+    <span class="doccomment">/// Epoch of the last master secret rotation.
+    </span><span class="kw">pub </span>rotation_epoch: EpochTime,
     <span class="doccomment">/// Key manager master secret verification checksum.
     </span><span class="kw">pub </span>checksum: Vec&lt;u8&gt;,
     <span class="doccomment">/// List of currently active key manager node IDs.
     </span><span class="kw">pub </span>nodes: Vec&lt;PublicKey&gt;,
     <span class="doccomment">/// Key manager policy.
     </span><span class="kw">pub </span>policy: <span class="prelude-ty">Option</span>&lt;SignedPolicySGX&gt;,
+    <span class="doccomment">/// Runtime signing key of the key manager.
+    </span><span class="kw">pub </span>rsk: <span class="prelude-ty">Option</span>&lt;PublicKey&gt;,
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="doccomment">/// Looks up a specific key manager status by its namespace identifier.
-    </span><span class="kw">pub fn </span>status(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context, id: Namespace) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Status&gt;, StateError&gt; {
+    </span><span class="kw">pub fn </span>status(<span class="kw-2">&amp;</span><span class="self">self</span>, id: Namespace) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Status&gt;, StateError&gt; {
         <span class="kw">let </span>h = Hash::digest_bytes(id.as_ref());
-        <span class="kw">match </span><span class="self">self</span>.mkvs.get(ctx, <span class="kw-2">&amp;</span>StatusKeyFmt(h).encode()) {
+        <span class="kw">match </span><span class="self">self</span>.mkvs.get(<span class="kw-2">&amp;</span>StatusKeyFmt(h).encode()) {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(b)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.decode_status(<span class="kw-2">&amp;</span>b)<span class="question-mark">?</span>)),
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
             <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(StateError::Unavailable(<span class="macro">anyhow!</span>(err))),
@@ -285,8 +384,8 @@
     }
 
     <span class="doccomment">/// Returns the list of all key manager statuses.
-    </span><span class="kw">pub fn </span>statuses(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Status&gt;, StateError&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>it = <span class="self">self</span>.mkvs.iter(ctx);
+    </span><span class="kw">pub fn </span>statuses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Status&gt;, StateError&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>it = <span class="self">self</span>.mkvs.iter();
         it.seek(<span class="kw-2">&amp;</span>StatusKeyFmt::default().encode_partial(<span class="number">0</span>));
 
         <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;Status&gt; = Vec::new();
@@ -301,16 +400,52 @@
         <span class="prelude-val">Ok</span>(result)
     }
 
+    <span class="doccomment">/// Looks up a specific key manager master secret by its namespace identifier.
+    </span><span class="kw">pub fn </span>master_secret(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        id: Namespace,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedEncryptedMasterSecret&gt;, StateError&gt; {
+        <span class="kw">let </span>h = Hash::digest_bytes(id.as_ref());
+        <span class="kw">match </span><span class="self">self</span>.mkvs.get(<span class="kw-2">&amp;</span>MasterSecretKeyFmt(h).encode()) {
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(b)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.decode_master_secret(<span class="kw-2">&amp;</span>b)<span class="question-mark">?</span>)),
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+            <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(StateError::Unavailable(<span class="macro">anyhow!</span>(err))),
+        }
+    }
+
+    <span class="doccomment">/// Looks up a specific key manager ephemeral secret by its namespace identifier and epoch.
+    </span><span class="kw">pub fn </span>ephemeral_secret(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        id: Namespace,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedEncryptedEphemeralSecret&gt;, StateError&gt; {
+        <span class="kw">let </span>h = Hash::digest_bytes(id.as_ref());
+        <span class="kw">match </span><span class="self">self</span>.mkvs.get(<span class="kw-2">&amp;</span>EphemeralSecretKeyFmt(h).encode()) {
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(b)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.decode_ephemeral_secret(<span class="kw-2">&amp;</span>b)<span class="question-mark">?</span>)),
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+            <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(StateError::Unavailable(<span class="macro">anyhow!</span>(err))),
+        }
+    }
+
     <span class="kw">fn </span>decode_status(<span class="kw-2">&amp;</span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Status, StateError&gt; {
+        cbor::from_slice(data).map_err(|err| StateError::Unavailable(<span class="macro">anyhow!</span>(err)))
+    }
+
+    <span class="kw">fn </span>decode_master_secret(<span class="kw-2">&amp;</span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;SignedEncryptedMasterSecret, StateError&gt; {
+        cbor::from_slice(data).map_err(|err| StateError::Unavailable(<span class="macro">anyhow!</span>(err)))
+    }
+
+    <span class="kw">fn </span>decode_ephemeral_secret(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        data: <span class="kw-2">&amp;</span>[u8],
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SignedEncryptedEphemeralSecret, StateError&gt; {
         cbor::from_slice(data).map_err(|err| StateError::Unavailable(<span class="macro">anyhow!</span>(err)))
     }
 }
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>test {
-    <span class="kw">use </span>std::{collections::HashMap, default::Default, sync::Arc, vec};
+    <span class="kw">use </span>std::{collections::HashMap, default::Default, vec};
 
-    <span class="kw">use </span>io_context::Context;
     <span class="kw">use </span>rustc_hex::FromHex;
 
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -319,11 +454,14 @@
             crypto::{
                 hash::Hash,
                 signature::{Signature, SignatureBundle},
+                x25519,
             },
             namespace::Namespace,
             sgx::{EnclaveIdentity, MrEnclave, MrSigner},
         },
-        consensus::keymanager::{EnclavePolicySGX, PolicySGX},
+        consensus::keymanager::{
+            EnclavePolicySGX, EncryptedEphemeralSecret, EncryptedSecret, PolicySGX,
+        },
         storage::mkvs::{
             interop::{Fixture, ProtocolServer},
             Root, RootType, Tree,
@@ -332,16 +470,18 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_keymanager_state_interop() {
-        <span class="comment">// Keep in sync with go/consensus/tendermint/apps/keymanager/state/interop/interop.go.
+        <span class="comment">// Keep in sync with go/consensus/cometbft/apps/keymanager/state/interop/interop.go.
         // If mock consensus state changes, update the root hash bellow.
         // See protocol server stdout for hash.
+        // To make the hash show up during tests, run &quot;cargo test&quot; as
+        // &quot;cargo test -- --nocapture&quot;.
 
         // Setup protocol server with initialized mock consensus state.
         </span><span class="kw">let </span>server = ProtocolServer::new(Fixture::ConsensusMock.into());
         <span class="kw">let </span>mock_consensus_root = Root {
             version: <span class="number">1</span>,
             root_type: RootType::State,
-            hash: Hash::from(<span class="string">&quot;f62f1f313de3833830a48b742f144fba542412e7ec65705d83f71a5e6e99bb2b&quot;</span>),
+            hash: Hash::from(<span class="string">&quot;123d46d530ebb004f6de9da7e1f41f7acde10b824e79ca8e718651dab2047c23&quot;</span>),
             ..Default::default()
         };
         <span class="kw">let </span>mkvs = Tree::builder()
@@ -349,8 +489,6 @@
             .with_root(mock_consensus_root)
             .build(server.read_sync());
         <span class="kw">let </span>keymanager_state = ImmutableState::new(<span class="kw-2">&amp;</span>mkvs);
-
-        <span class="kw">let </span>ctx = Arc::new(Context::background());
 
         <span class="comment">// Prepare expected results.
         </span><span class="kw">let </span>runtime =
@@ -387,8 +525,8 @@
             PublicKey::from(<span class="string">&quot;96533c123a6f4d33c68357109c2eb7c6e6a0f947be3ae1e320d153f561523ff2&quot;</span>);
         <span class="kw">let </span>signer2 =
             PublicKey::from(<span class="string">&quot;4b97bfd95e829d5838131492b5c133e66ac6ef0db414c0be6207ec78c12d2b17&quot;</span>);
-        <span class="kw">let </span>sig1 = Signature::from(<span class="string">&quot;37d04567456cab63004d54acacc60afb9d2315d5890401080d60b059cdd9088af5441974d0f53c2fca628877f0721780d8b79b66e92440ad120b44a5fce7be05&quot;</span>);
-        <span class="kw">let </span>sig2 = Signature::from(<span class="string">&quot;7d76c6d0914f32f3abd33db51d95ca13c03c9313f4eb84bbecc4c5571ff51373d65b774bafae3e82677a6d4dd35f30b1d6751db0b3acc5e1b2c7811b67bf9801&quot;</span>);
+        <span class="kw">let </span>sig1 = Signature::from(<span class="string">&quot;eda666cff6e4030200737e0c7707ad4a378aab4cc0455306992c13da2155b97c91b0fde0325a7a6818f2cbf92813cc587723c8c205a7cb5389ca7b21a038b60a&quot;</span>);
+        <span class="kw">let </span>sig2 = Signature::from(<span class="string">&quot;db90d354272e025aa9a5856f32ea4f5d6becb0ff6340f3cb7f9104ac04ef29ed4f9b5c21b7ea82924800b30f94724b40c376414f80780ff8b7b60a34edea9f02&quot;</span>);
         <span class="kw">let </span>checksum = <span class="string">&quot;1bff211fae98c88ba82388ae954b88a71d3bbe327e162e9fa711fe7a1b759c3e&quot;
             </span>.from_hex()
             .unwrap();
@@ -398,14 +536,19 @@
                 id: keymanager1,
                 is_initialized: <span class="bool-val">false</span>,
                 is_secure: <span class="bool-val">false</span>,
+                generation: <span class="number">0</span>,
+                rotation_epoch: <span class="number">0</span>,
                 checksum: <span class="macro">vec!</span>[],
                 nodes: <span class="macro">vec!</span>[],
                 policy: <span class="prelude-val">None</span>,
+                rsk: <span class="prelude-val">None</span>,
             },
             Status {
                 id: keymanager2,
                 is_initialized: <span class="bool-val">true</span>,
                 is_secure: <span class="bool-val">true</span>,
+                generation: <span class="number">0</span>,
+                rotation_epoch: <span class="number">0</span>,
                 checksum: checksum,
                 nodes: <span class="macro">vec!</span>[signer1, signer2],
                 policy: <span class="prelude-val">Some</span>(SignedPolicySGX {
@@ -419,6 +562,8 @@
                                 may_replicate: <span class="macro">vec!</span>[keymanager_enclave2],
                             },
                         )]),
+                        master_secret_rotation_interval: <span class="number">0</span>,
+                        max_ephemeral_secret_age: <span class="number">10</span>,
                     },
                     signatures: <span class="macro">vec!</span>[
                         SignatureBundle {
@@ -431,19 +576,39 @@
                         },
                     ],
                 }),
+                rsk: <span class="prelude-val">None</span>,
             },
         ];
 
+        <span class="kw">let </span>rek1 = x25519::PrivateKey::from_test_seed(<span class="string">&quot;first rek&quot;</span>.to_string());
+        <span class="kw">let </span>rek2 = x25519::PrivateKey::from_test_seed(<span class="string">&quot;second rek&quot;</span>.to_string());
+
+        <span class="kw">let </span>expected_secret = SignedEncryptedEphemeralSecret {
+            secret: EncryptedEphemeralSecret {
+                runtime_id: keymanager1,
+                epoch: <span class="number">1</span>,
+                secret: EncryptedSecret{
+                    checksum: <span class="macro">vec!</span>[<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>,<span class="number">5</span>],
+                    pub_key: rek1.public_key(),
+                    ciphertexts: HashMap::from([
+                        (rek1.public_key(), <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]),
+                        (rek2.public_key(), <span class="macro">vec!</span>[<span class="number">4</span>, <span class="number">5</span>, <span class="number">6</span>]),
+                    ]),
+                },
+            },
+            signature: Signature::from(<span class="string">&quot;4a2d098e02411fdc14d6a36f91bb362fd4f4dbaadb4cbf70e20e038fe1740bc7dde0b20afd25657d6abc916be2b9ed0054d586aedb2b7951c99aab3206b24b02&quot;</span>),
+        };
+
         <span class="comment">// Test statuses.
         </span><span class="kw">let </span><span class="kw-2">mut </span>statuses = keymanager_state
-            .statuses(Context::create_child(<span class="kw-2">&amp;</span>ctx))
+            .statuses()
             .expect(<span class="string">&quot;statuses query should work&quot;</span>);
         statuses.sort_by(|a, b| a.id.partial_cmp(<span class="kw-2">&amp;</span>b.id).unwrap());
         <span class="macro">assert_eq!</span>(statuses, expected_statuses, <span class="string">&quot;invalid statuses&quot;</span>);
 
         <span class="comment">// Test status.
         </span><span class="kw">let </span>status = keymanager_state
-            .status(Context::create_child(<span class="kw-2">&amp;</span>ctx), expected_statuses[<span class="number">1</span>].id)
+            .status(expected_statuses[<span class="number">1</span>].id)
             .expect(<span class="string">&quot;status query should work&quot;</span>)
             .expect(<span class="string">&quot;status query should return a result&quot;</span>);
         <span class="macro">assert_eq!</span>(status, expected_statuses[<span class="number">1</span>], <span class="string">&quot;invalid status&quot;</span>);
@@ -451,9 +616,16 @@
         <span class="kw">let </span>id =
             Namespace::from(<span class="string">&quot;ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>);
         <span class="kw">let </span>status = keymanager_state
-            .status(Context::create_child(<span class="kw-2">&amp;</span>ctx), id)
+            .status(id)
             .expect(<span class="string">&quot;status query should work&quot;</span>);
         <span class="macro">assert_eq!</span>(status, <span class="prelude-val">None</span>, <span class="string">&quot;invalid status&quot;</span>);
+
+        <span class="comment">// Test ephemeral secret (happy path, invalid epoch, invalid runtime).
+        </span><span class="kw">let </span>secret = keymanager_state
+            .ephemeral_secret(keymanager1)
+            .expect(<span class="string">&quot;ephemeral secret query should work&quot;</span>)
+            .expect(<span class="string">&quot;ephemeral secret query should return a result&quot;</span>);
+        <span class="macro">assert_eq!</span>(secret, expected_secret, <span class="string">&quot;invalid ephemeral secret&quot;</span>);
     }
 }
 </code></pre></div></section></main></body></html>

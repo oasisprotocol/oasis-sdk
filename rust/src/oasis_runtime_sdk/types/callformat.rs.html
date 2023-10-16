@@ -27,7 +27,7 @@
 <a href="#27" id="27">27</a>
 <a href="#28" id="28">28</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Types related to call formats.
-</span><span class="kw">use </span><span class="kw">crate</span>::core::common::crypto::mrae::deoxysii;
+</span><span class="kw">use </span><span class="kw">crate</span>::core::common::crypto::{mrae::deoxysii, x25519};
 
 <span class="doccomment">/// Call data key pair ID domain separation context base.
 </span><span class="kw">pub const </span>CALL_DATA_KEY_PAIR_ID_CONTEXT_BASE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;oasis-runtime-sdk/private: tx&quot;</span>;
@@ -36,7 +36,7 @@
 </span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>CallEnvelopeX25519DeoxysII {
     <span class="doccomment">/// Caller&#39;s ephemeral public key used for X25519.
-    </span><span class="kw">pub </span>pk: [u8; <span class="number">32</span>],
+    </span><span class="kw">pub </span>pk: x25519::PublicKey,
     <span class="doccomment">/// Nonce.
     </span><span class="kw">pub </span>nonce: [u8; deoxysii::NONCE_SIZE],
     <span class="doccomment">/// Epoch of the ephemeral runtime key.

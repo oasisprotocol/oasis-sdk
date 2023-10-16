@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["KEY_SIZE","NONCE_SIZE","TAG_SIZE"],"fn":["box_open","box_seal","generate_key_pair"],"struct":["DeoxysII"]};
+window.SIDEBAR_ITEMS = {"constant":["KEY_SIZE","NONCE_SIZE","TAG_SIZE"],"fn":["box_open","box_seal","generate_key_pair"],"struct":["DeoxysII"],"trait":["Opener"]};

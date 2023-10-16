@@ -768,7 +768,7 @@
     <span class="kw">fn </span>account&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, addr: Address) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusAccount, Error&gt; {
         <span class="kw">let </span>state = StakingImmutableState::new(ctx.consensus_state());
         state
-            .account(ctx.io_ctx(), addr.into())
+            .account(addr.into())
             .map_err(Error::InternalStateError)
     }
 
@@ -779,7 +779,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusDelegation, Error&gt; {
         <span class="kw">let </span>state = StakingImmutableState::new(ctx.consensus_state());
         state
-            .delegation(ctx.io_ctx(), delegator_addr.into(), escrow_addr.into())
+            .delegation(delegator_addr.into(), escrow_addr.into())
             .map_err(Error::InternalStateError)
     }
 
@@ -824,10 +824,10 @@
 
             <span class="kw">let </span>beacon = BeaconImmutableState::new(<span class="kw-2">&amp;</span>state);
 
-            <span class="kw">let </span><span class="kw-2">mut </span>epoch_state = beacon.future_epoch_state(ctx.io_ctx())<span class="question-mark">?</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>epoch_state = beacon.future_epoch_state()<span class="question-mark">?</span>;
             <span class="kw">if </span>epoch_state.height &gt; state.height().try_into().unwrap() {
                 <span class="comment">// Use current epoch if future epoch is in the future.
-                </span>epoch_state = beacon.epoch_state(ctx.io_ctx()).unwrap();
+                </span>epoch_state = beacon.epoch_state().unwrap();
             }
             height = epoch_state.height.try_into().unwrap();
 

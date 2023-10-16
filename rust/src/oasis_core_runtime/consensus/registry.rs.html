@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/consensus/registry.rs`."><title>registry.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/consensus/registry.rs`."><title>registry.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1042,6 +1042,193 @@
 <a href="#1042" id="1042">1042</a>
 <a href="#1043" id="1043">1043</a>
 <a href="#1044" id="1044">1044</a>
+<a href="#1045" id="1045">1045</a>
+<a href="#1046" id="1046">1046</a>
+<a href="#1047" id="1047">1047</a>
+<a href="#1048" id="1048">1048</a>
+<a href="#1049" id="1049">1049</a>
+<a href="#1050" id="1050">1050</a>
+<a href="#1051" id="1051">1051</a>
+<a href="#1052" id="1052">1052</a>
+<a href="#1053" id="1053">1053</a>
+<a href="#1054" id="1054">1054</a>
+<a href="#1055" id="1055">1055</a>
+<a href="#1056" id="1056">1056</a>
+<a href="#1057" id="1057">1057</a>
+<a href="#1058" id="1058">1058</a>
+<a href="#1059" id="1059">1059</a>
+<a href="#1060" id="1060">1060</a>
+<a href="#1061" id="1061">1061</a>
+<a href="#1062" id="1062">1062</a>
+<a href="#1063" id="1063">1063</a>
+<a href="#1064" id="1064">1064</a>
+<a href="#1065" id="1065">1065</a>
+<a href="#1066" id="1066">1066</a>
+<a href="#1067" id="1067">1067</a>
+<a href="#1068" id="1068">1068</a>
+<a href="#1069" id="1069">1069</a>
+<a href="#1070" id="1070">1070</a>
+<a href="#1071" id="1071">1071</a>
+<a href="#1072" id="1072">1072</a>
+<a href="#1073" id="1073">1073</a>
+<a href="#1074" id="1074">1074</a>
+<a href="#1075" id="1075">1075</a>
+<a href="#1076" id="1076">1076</a>
+<a href="#1077" id="1077">1077</a>
+<a href="#1078" id="1078">1078</a>
+<a href="#1079" id="1079">1079</a>
+<a href="#1080" id="1080">1080</a>
+<a href="#1081" id="1081">1081</a>
+<a href="#1082" id="1082">1082</a>
+<a href="#1083" id="1083">1083</a>
+<a href="#1084" id="1084">1084</a>
+<a href="#1085" id="1085">1085</a>
+<a href="#1086" id="1086">1086</a>
+<a href="#1087" id="1087">1087</a>
+<a href="#1088" id="1088">1088</a>
+<a href="#1089" id="1089">1089</a>
+<a href="#1090" id="1090">1090</a>
+<a href="#1091" id="1091">1091</a>
+<a href="#1092" id="1092">1092</a>
+<a href="#1093" id="1093">1093</a>
+<a href="#1094" id="1094">1094</a>
+<a href="#1095" id="1095">1095</a>
+<a href="#1096" id="1096">1096</a>
+<a href="#1097" id="1097">1097</a>
+<a href="#1098" id="1098">1098</a>
+<a href="#1099" id="1099">1099</a>
+<a href="#1100" id="1100">1100</a>
+<a href="#1101" id="1101">1101</a>
+<a href="#1102" id="1102">1102</a>
+<a href="#1103" id="1103">1103</a>
+<a href="#1104" id="1104">1104</a>
+<a href="#1105" id="1105">1105</a>
+<a href="#1106" id="1106">1106</a>
+<a href="#1107" id="1107">1107</a>
+<a href="#1108" id="1108">1108</a>
+<a href="#1109" id="1109">1109</a>
+<a href="#1110" id="1110">1110</a>
+<a href="#1111" id="1111">1111</a>
+<a href="#1112" id="1112">1112</a>
+<a href="#1113" id="1113">1113</a>
+<a href="#1114" id="1114">1114</a>
+<a href="#1115" id="1115">1115</a>
+<a href="#1116" id="1116">1116</a>
+<a href="#1117" id="1117">1117</a>
+<a href="#1118" id="1118">1118</a>
+<a href="#1119" id="1119">1119</a>
+<a href="#1120" id="1120">1120</a>
+<a href="#1121" id="1121">1121</a>
+<a href="#1122" id="1122">1122</a>
+<a href="#1123" id="1123">1123</a>
+<a href="#1124" id="1124">1124</a>
+<a href="#1125" id="1125">1125</a>
+<a href="#1126" id="1126">1126</a>
+<a href="#1127" id="1127">1127</a>
+<a href="#1128" id="1128">1128</a>
+<a href="#1129" id="1129">1129</a>
+<a href="#1130" id="1130">1130</a>
+<a href="#1131" id="1131">1131</a>
+<a href="#1132" id="1132">1132</a>
+<a href="#1133" id="1133">1133</a>
+<a href="#1134" id="1134">1134</a>
+<a href="#1135" id="1135">1135</a>
+<a href="#1136" id="1136">1136</a>
+<a href="#1137" id="1137">1137</a>
+<a href="#1138" id="1138">1138</a>
+<a href="#1139" id="1139">1139</a>
+<a href="#1140" id="1140">1140</a>
+<a href="#1141" id="1141">1141</a>
+<a href="#1142" id="1142">1142</a>
+<a href="#1143" id="1143">1143</a>
+<a href="#1144" id="1144">1144</a>
+<a href="#1145" id="1145">1145</a>
+<a href="#1146" id="1146">1146</a>
+<a href="#1147" id="1147">1147</a>
+<a href="#1148" id="1148">1148</a>
+<a href="#1149" id="1149">1149</a>
+<a href="#1150" id="1150">1150</a>
+<a href="#1151" id="1151">1151</a>
+<a href="#1152" id="1152">1152</a>
+<a href="#1153" id="1153">1153</a>
+<a href="#1154" id="1154">1154</a>
+<a href="#1155" id="1155">1155</a>
+<a href="#1156" id="1156">1156</a>
+<a href="#1157" id="1157">1157</a>
+<a href="#1158" id="1158">1158</a>
+<a href="#1159" id="1159">1159</a>
+<a href="#1160" id="1160">1160</a>
+<a href="#1161" id="1161">1161</a>
+<a href="#1162" id="1162">1162</a>
+<a href="#1163" id="1163">1163</a>
+<a href="#1164" id="1164">1164</a>
+<a href="#1165" id="1165">1165</a>
+<a href="#1166" id="1166">1166</a>
+<a href="#1167" id="1167">1167</a>
+<a href="#1168" id="1168">1168</a>
+<a href="#1169" id="1169">1169</a>
+<a href="#1170" id="1170">1170</a>
+<a href="#1171" id="1171">1171</a>
+<a href="#1172" id="1172">1172</a>
+<a href="#1173" id="1173">1173</a>
+<a href="#1174" id="1174">1174</a>
+<a href="#1175" id="1175">1175</a>
+<a href="#1176" id="1176">1176</a>
+<a href="#1177" id="1177">1177</a>
+<a href="#1178" id="1178">1178</a>
+<a href="#1179" id="1179">1179</a>
+<a href="#1180" id="1180">1180</a>
+<a href="#1181" id="1181">1181</a>
+<a href="#1182" id="1182">1182</a>
+<a href="#1183" id="1183">1183</a>
+<a href="#1184" id="1184">1184</a>
+<a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
+<a href="#1190" id="1190">1190</a>
+<a href="#1191" id="1191">1191</a>
+<a href="#1192" id="1192">1192</a>
+<a href="#1193" id="1193">1193</a>
+<a href="#1194" id="1194">1194</a>
+<a href="#1195" id="1195">1195</a>
+<a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
+<a href="#1201" id="1201">1201</a>
+<a href="#1202" id="1202">1202</a>
+<a href="#1203" id="1203">1203</a>
+<a href="#1204" id="1204">1204</a>
+<a href="#1205" id="1205">1205</a>
+<a href="#1206" id="1206">1206</a>
+<a href="#1207" id="1207">1207</a>
+<a href="#1208" id="1208">1208</a>
+<a href="#1209" id="1209">1209</a>
+<a href="#1210" id="1210">1210</a>
+<a href="#1211" id="1211">1211</a>
+<a href="#1212" id="1212">1212</a>
+<a href="#1213" id="1213">1213</a>
+<a href="#1214" id="1214">1214</a>
+<a href="#1215" id="1215">1215</a>
+<a href="#1216" id="1216">1216</a>
+<a href="#1217" id="1217">1217</a>
+<a href="#1218" id="1218">1218</a>
+<a href="#1219" id="1219">1219</a>
+<a href="#1220" id="1220">1220</a>
+<a href="#1221" id="1221">1221</a>
+<a href="#1222" id="1222">1222</a>
+<a href="#1223" id="1223">1223</a>
+<a href="#1224" id="1224">1224</a>
+<a href="#1225" id="1225">1225</a>
+<a href="#1226" id="1226">1226</a>
+<a href="#1227" id="1227">1227</a>
+<a href="#1228" id="1228">1228</a>
+<a href="#1229" id="1229">1229</a>
+<a href="#1230" id="1230">1230</a>
+<a href="#1231" id="1231">1231</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Registry structures.
 //!
 //! # Note
@@ -1057,15 +1244,22 @@
     common::{
         crypto::{
             hash::Hash,
-            signature::{PublicKey, Signature},
+            signature::{<span class="self">self</span>, Signature},
+            x25519,
         },
         namespace::Namespace,
         quantity, sgx,
         version::Version,
     },
     consensus::{beacon::EpochTime, scheduler, staking},
-    rak::RAK,
+    identity::Identity,
 };
+
+<span class="doccomment">/// A unique module name for the registry module.
+</span><span class="kw">pub const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;registry&quot;</span>;
+
+<span class="doccomment">/// The method name for freshness proofs.
+</span><span class="kw">pub const </span>METHOD_PROVE_FRESHNESS: <span class="kw-2">&amp;</span>str = <span class="string">&quot;registry.ProveFreshness&quot;</span>;
 
 <span class="doccomment">/// Attestation signature context.
 </span><span class="kw">pub const </span>ATTESTATION_SIGNATURE_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;oasis-core/node: TEE attestation signature&quot;</span>;
@@ -1088,7 +1282,7 @@
 </span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>TLSAddress {
     <span class="doccomment">/// Public key used for establishing TLS connections.
-    </span><span class="kw">pub </span>pub_key: PublicKey,
+    </span><span class="kw">pub </span>pub_key: signature::PublicKey,
 
     <span class="doccomment">/// Address at which the node can be reached.
     </span><span class="kw">pub </span>address: TCPAddress,
@@ -1098,20 +1292,20 @@
 </span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>TLSInfo {
     <span class="doccomment">/// Public key used for establishing TLS connections.
-    </span><span class="kw">pub </span>pub_key: PublicKey,
+    </span><span class="kw">pub </span>pub_key: signature::PublicKey,
 
-    <span class="doccomment">/// Public key that will be used for establishing connections after certificate rotation (if enabled).
-    </span><span class="kw">pub </span>next_pub_key: PublicKey,
+    <span class="attr">#[cbor(rename = <span class="string">&quot;next_pub_key&quot;</span>, optional)]
+    </span><span class="kw">pub </span>_deprecated_next_pub_key: <span class="prelude-ty">Option</span>&lt;signature::PublicKey&gt;,
 
-    <span class="doccomment">/// List of addresses at which the node can be reached.
-    </span><span class="kw">pub </span>addresses: <span class="prelude-ty">Option</span>&lt;Vec&lt;TLSAddress&gt;&gt;,
+    <span class="attr">#[cbor(rename = <span class="string">&quot;addresses&quot;</span>, optional)]
+    </span><span class="kw">pub </span>_deprecated_addresses: <span class="prelude-ty">Option</span>&lt;Vec&lt;TLSAddress&gt;&gt;,
 }
 
 <span class="doccomment">/// Node&#39;s P2P information.
 </span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>P2PInfo {
     <span class="doccomment">/// Unique identifier of the node on the P2P transport.
-    </span><span class="kw">pub </span>id: PublicKey,
+    </span><span class="kw">pub </span>id: signature::PublicKey,
 
     <span class="doccomment">/// List of addresses at which the node can be reached.
     </span><span class="kw">pub </span>addresses: <span class="prelude-ty">Option</span>&lt;Vec&lt;TCPAddress&gt;&gt;,
@@ -1124,7 +1318,7 @@
 </span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>ConsensusAddress {
     <span class="doccomment">/// Public key identifying the node.
-    </span><span class="kw">pub </span>id: PublicKey,
+    </span><span class="kw">pub </span>id: signature::PublicKey,
 
     <span class="doccomment">/// Address at which the node can be reached.
     </span><span class="kw">pub </span>address: TCPAddress,
@@ -1134,7 +1328,7 @@
 </span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>ConsensusInfo {
     <span class="doccomment">/// Unique identifier of the node as a consensus member.
-    </span><span class="kw">pub </span>id: PublicKey,
+    </span><span class="kw">pub </span>id: signature::PublicKey,
 
     <span class="doccomment">/// List of addresses at which the node can be reached.
     </span><span class="kw">pub </span>addresses: <span class="prelude-ty">Option</span>&lt;Vec&lt;ConsensusAddress&gt;&gt;,
@@ -1144,7 +1338,7 @@
 </span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>VRFInfo {
     <span class="doccomment">/// Unique identifier of the node used to generate VRF proofs.
-    </span><span class="kw">pub </span>id: PublicKey,
+    </span><span class="kw">pub </span>id: signature::PublicKey,
 }
 
 <span class="doccomment">/// Represents the node&#39;s TEE capability.
@@ -1154,11 +1348,11 @@
     </span><span class="kw">pub </span>hardware: TEEHardware,
 
     <span class="doccomment">/// Runtime attestation key.
-    </span><span class="kw">pub </span>rak: PublicKey,
+    </span><span class="kw">pub </span>rak: signature::PublicKey,
 
     <span class="doccomment">/// Runtime encryption key.
     </span><span class="attr">#[cbor(optional)]
-    </span><span class="kw">pub </span>rek: <span class="prelude-ty">Option</span>&lt;[u8; <span class="number">32</span>]&gt;,
+    </span><span class="kw">pub </span>rek: <span class="prelude-ty">Option</span>&lt;x25519::PublicKey&gt;,
 
     <span class="doccomment">/// Attestation.
     </span><span class="kw">pub </span>attestation: Vec&lt;u8&gt;,
@@ -1174,13 +1368,13 @@
     }
 
     <span class="doccomment">/// Checks whether the TEE capability matches the given TEE identity.
-    </span><span class="kw">pub fn </span>matches(<span class="kw-2">&amp;</span><span class="self">self</span>, rak: <span class="kw-2">&amp;</span>RAK) -&gt; bool {
+    </span><span class="kw">pub fn </span>matches(<span class="kw-2">&amp;</span><span class="self">self</span>, identity: <span class="kw-2">&amp;</span>Identity) -&gt; bool {
         <span class="kw">match </span><span class="self">self</span>.hardware {
             TEEHardware::TEEHardwareInvalid =&gt; <span class="bool-val">false</span>,
             TEEHardware::TEEHardwareIntelSGX =&gt; {
                 <span class="comment">// Decode SGX attestation and check quote equality.
                 </span><span class="kw">let </span>attestation: SGXAttestation = <span class="self">self</span>.try_decode_attestation().unwrap();
-                rak.matches(<span class="kw-2">&amp;</span><span class="self">self</span>.rak, <span class="kw-2">&amp;</span>attestation.quote())
+                identity.rak_matches(<span class="kw-2">&amp;</span><span class="self">self</span>.rak, <span class="kw-2">&amp;</span>attestation.quote())
             }
         }
     }
@@ -1223,20 +1417,20 @@
     </span><span class="kw">pub const </span>ROLE_EMPTY: RolesMask = RolesMask(<span class="number">0</span>);
     <span class="doccomment">/// Compute worker role.
     </span><span class="kw">pub const </span>ROLE_COMPUTE_WORKER: RolesMask = RolesMask(<span class="number">1 </span>&lt;&lt; <span class="number">0</span>);
-    <span class="doccomment">/// Reserved role (storage role in v1 descriptors).
-    </span><span class="kw">pub const </span>ROLE_RESERVED_2: RolesMask = RolesMask(<span class="number">1 </span>&lt;&lt; <span class="number">1</span>);
+    <span class="doccomment">/// Observer role.
+    </span><span class="kw">pub const </span>ROLE_OBSERVER: RolesMask = RolesMask(<span class="number">1 </span>&lt;&lt; <span class="number">1</span>);
     <span class="doccomment">/// Key manager role.
     </span><span class="kw">pub const </span>ROLE_KEY_MANAGER: RolesMask = RolesMask(<span class="number">1 </span>&lt;&lt; <span class="number">2</span>);
     <span class="doccomment">/// Validator role.
     </span><span class="kw">pub const </span>ROLE_VALIDATOR: RolesMask = RolesMask(<span class="number">1 </span>&lt;&lt; <span class="number">3</span>);
     <span class="doccomment">/// Public consensus RPC services worker role.
-    </span><span class="kw">pub const </span>ROLE_CONSENSUS_RPC: RolesMask = RolesMask(<span class="number">1 </span>&lt;&lt; <span class="number">4</span>);
+    </span><span class="kw">pub const </span>ROLE_RESERVED_3: RolesMask = RolesMask(<span class="number">1 </span>&lt;&lt; <span class="number">4</span>);
     <span class="doccomment">/// Public storage RPC services worker role.
     </span><span class="kw">pub const </span>ROLE_STORAGE_RPC: RolesMask = RolesMask(<span class="number">1 </span>&lt;&lt; <span class="number">5</span>);
 
     <span class="comment">// Bits of the Oasis node roles bitmask that are reserved and must not be used.
     </span><span class="kw">pub const </span>ROLES_RESERVED: RolesMask =
-        RolesMask(u32::MAX &amp; !((<span class="self">Self</span>::ROLE_STORAGE_RPC.<span class="number">0 </span>&lt;&lt; <span class="number">1</span>) - <span class="number">1</span>) | <span class="self">Self</span>::ROLE_RESERVED_2.<span class="number">0</span>);
+        RolesMask(u32::MAX &amp; !((<span class="self">Self</span>::ROLE_STORAGE_RPC.<span class="number">0 </span>&lt;&lt; <span class="number">1</span>) - <span class="number">1</span>) | <span class="self">Self</span>::ROLE_RESERVED_3.<span class="number">0</span>);
 }
 
 <span class="kw">impl </span>PartialOrd <span class="kw">for </span>RolesMask {
@@ -1264,10 +1458,10 @@
     </span><span class="kw">pub </span>v: u16,
 
     <span class="doccomment">/// Public key identifying the node.
-    </span><span class="kw">pub </span>id: PublicKey,
+    </span><span class="kw">pub </span>id: signature::PublicKey,
 
     <span class="doccomment">/// Public key identifying the Entity controlling the node.
-    </span><span class="kw">pub </span>entity_id: PublicKey,
+    </span><span class="kw">pub </span>entity_id: signature::PublicKey,
 
     <span class="doccomment">/// Epoch in which the node&#39;s commitment expires.
     </span><span class="kw">pub </span>expiration: u64,
@@ -1282,13 +1476,7 @@
     </span><span class="kw">pub </span>consensus: ConsensusInfo,
 
     <span class="doccomment">/// Information for this node&#39;s participation in VRF based elections.
-    </span><span class="attr">#[cbor(optional)]
-    </span><span class="kw">pub </span>vrf: <span class="prelude-ty">Option</span>&lt;VRFInfo&gt;,
-
-    <span class="doccomment">/// Information for this node&#39;s participation in the old PVSS based random beacon protocol.
-    /// Deprecated.
-    </span><span class="attr">#[cbor(optional)]
-    </span><span class="kw">pub </span>beacon: <span class="prelude-ty">Option</span>&lt;cbor::Value&gt;,
+    </span><span class="kw">pub </span>vrf: VRFInfo,
 
     <span class="doccomment">/// Node&#39;s runtimes.
     </span><span class="kw">pub </span>runtimes: <span class="prelude-ty">Option</span>&lt;Vec&lt;NodeRuntime&gt;&gt;,
@@ -1303,7 +1491,7 @@
 
 <span class="kw">impl </span>Node {
     <span class="doccomment">/// Checks whether the node has the provided TEE identity configured.
-    </span><span class="kw">pub fn </span>has_tee(<span class="kw-2">&amp;</span><span class="self">self</span>, rak: <span class="kw-2">&amp;</span>RAK, runtime_id: <span class="kw-2">&amp;</span>Namespace, version: <span class="kw-2">&amp;</span>Version) -&gt; bool {
+    </span><span class="kw">pub fn </span>has_tee(<span class="kw-2">&amp;</span><span class="self">self</span>, identity: <span class="kw-2">&amp;</span>Identity, runtime_id: <span class="kw-2">&amp;</span>Namespace, version: <span class="kw-2">&amp;</span>Version) -&gt; bool {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(rts) = <span class="kw-2">&amp;</span><span class="self">self</span>.runtimes {
             <span class="kw">for </span>rt <span class="kw">in </span>rts {
                 <span class="kw">if </span>runtime_id != <span class="kw-2">&amp;</span>rt.id {
@@ -1313,7 +1501,7 @@
                     <span class="kw">continue</span>;
                 }
                 <span class="kw">if let </span><span class="prelude-val">Some</span>(tee) = <span class="kw-2">&amp;</span>rt.capabilities.tee {
-                    <span class="kw">if </span>tee.matches(rak) {
+                    <span class="kw">if </span>tee.matches(identity) {
                         <span class="kw">return </span><span class="bool-val">true</span>;
                     }
                 }
@@ -1321,24 +1509,36 @@
         }
         <span class="bool-val">false
     </span>}
+
+    <span class="doccomment">/// Searches for an existing supported runtime descriptor
+    /// in runtimes with the specified version and returns it.
+    </span><span class="kw">pub fn </span>get_runtime(<span class="kw-2">&amp;</span><span class="self">self</span>, runtime_id: <span class="kw-2">&amp;</span>Namespace, version: <span class="kw-2">&amp;</span>Version) -&gt; <span class="prelude-ty">Option</span>&lt;NodeRuntime&gt; {
+        <span class="kw">if let </span><span class="prelude-val">Some</span>(rts) = <span class="kw-2">&amp;</span><span class="self">self</span>.runtimes {
+            <span class="kw">for </span>rt <span class="kw">in </span>rts {
+                <span class="kw">if </span>runtime_id != <span class="kw-2">&amp;</span>rt.id {
+                    <span class="kw">continue</span>;
+                }
+                <span class="kw">if </span>version != <span class="kw-2">&amp;</span>rt.version {
+                    <span class="kw">continue</span>;
+                }
+                <span class="kw">return </span><span class="prelude-val">Some</span>(rt.clone());
+            }
+        }
+        <span class="prelude-val">None
+    </span>}
 }
 
 <span class="doccomment">/// Runtime kind.
-</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
+</span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 #[repr(u32)]
 </span><span class="kw">pub enum </span>RuntimeKind {
     <span class="doccomment">/// Invalid runtime that should never be explicitly set.
+    </span><span class="attr">#[default]
     </span>KindInvalid = <span class="number">0</span>,
     <span class="doccomment">/// Generic compute runtime.
     </span>KindCompute = <span class="number">1</span>,
     <span class="doccomment">/// Key manager runtime.
     </span>KindKeyManager = <span class="number">2</span>,
-}
-
-<span class="kw">impl </span>Default <span class="kw">for </span>RuntimeKind {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        RuntimeKind::KindInvalid
-    }
 }
 
 <span class="doccomment">/// Parameters for the executor committee.
@@ -1359,6 +1559,11 @@
     /// to be considered live. Nodes not satisfying this may be penalized.
     </span><span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>min_live_rounds_percent: u8,
+    <span class="doccomment">/// Maximum percentage of proposed rounds in an epoch that can fail for a node
+    /// to be considered live. Nodes not satisfying this may be penalized. Zero means
+    /// that all proposed rounds can fail.
+    </span><span class="attr">#[cbor(optional)]
+    </span><span class="kw">pub </span>max_missed_proposals_percent: u8,
     <span class="doccomment">/// Minimum number of live rounds in an epoch for the liveness calculations to be considered for
     /// evaluation.
     </span><span class="attr">#[cbor(optional)]
@@ -1374,15 +1579,19 @@
 </span><span class="kw">pub struct </span>TxnSchedulerParameters {
     <span class="doccomment">/// How long to wait for a scheduled batch in nanoseconds (when using the
     /// &quot;simple&quot; scheduling algorithm).
+    </span><span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>batch_flush_timeout: i64,
     <span class="doccomment">/// Maximum size of a scheduled batch.
+    </span><span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>max_batch_size: u64,
     <span class="doccomment">/// Maximum size of a scheduled batch in bytes.
+    </span><span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>max_batch_size_bytes: u64,
     <span class="doccomment">/// Maximum size of the incoming message queue.
     </span><span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>max_in_messages: u32,
-    <span class="doccomment">/// Timeout (in consensus blocks) for the scheduler to propose a batch.
+    <span class="doccomment">/// How long to wait before accepting proposal from the next backup scheduler in nanoseconds.
+    </span><span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>propose_batch_timeout: i64,
 }
 
@@ -1465,7 +1674,7 @@
 </span><span class="kw">pub struct </span>EntityWhitelistRuntimeAdmissionPolicy {
     <span class="doccomment">/// Entity whitelist configuration for each whitelisted entity.
     </span><span class="attr">#[cbor(optional)]
-    </span><span class="kw">pub </span>entities: BTreeMap&lt;PublicKey, EntityWhitelistConfig&gt;,
+    </span><span class="kw">pub </span>entities: BTreeMap&lt;signature::PublicKey, EntityWhitelistConfig&gt;,
 }
 
 <span class="doccomment">/// Entity whitelist configuration.
@@ -1499,10 +1708,11 @@
 }
 
 <span class="doccomment">/// Runtime governance model.
-</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
+</span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 #[repr(u8)]
 </span><span class="kw">pub enum </span>RuntimeGovernanceModel {
     <span class="doccomment">/// Invalid model that should never be explicitly set.
+    </span><span class="attr">#[default]
     </span>GovernanceInvalid = <span class="number">0</span>,
     <span class="doccomment">/// Entity governance model.
     </span>GovernanceEntity = <span class="number">1</span>,
@@ -1510,12 +1720,6 @@
     </span>GovernanceRuntime = <span class="number">2</span>,
     <span class="doccomment">/// Consensus governance model.
     </span>GovernanceConsensus = <span class="number">3</span>,
-}
-
-<span class="kw">impl </span>Default <span class="kw">for </span>RuntimeGovernanceModel {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        RuntimeGovernanceModel::GovernanceInvalid
-    }
 }
 
 <span class="doccomment">/// Per-runtime version information.
@@ -1528,6 +1732,9 @@
     <span class="doccomment">/// Enclave version information, in an enclave provided specific format (if any).
     </span><span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>tee: Vec&lt;u8&gt;,
+    <span class="doccomment">/// The SHA256 hash of the runtime bundle (optional).
+    </span><span class="attr">#[cbor(optional)]
+    </span><span class="kw">pub </span>bundle_checksum: Vec&lt;u8&gt;,
 }
 
 <span class="kw">impl </span>VersionInfo {
@@ -1593,6 +1800,8 @@
                 ias: <span class="prelude-val">Some</span>(sgx::ias::QuotePolicy {
                     disabled: <span class="bool-val">false</span>,
                     allowed_quote_statuses: allowed_quote_statuses.clone(),
+                    gid_blacklist: Vec::new(),
+                    min_tcb_evaluation_data_number: <span class="number">0</span>,
                 }),
                 ..Default::default()
             },
@@ -1631,11 +1840,17 @@
     }
 
     <span class="doccomment">/// Hashes the required data that needs to be signed by RAK producing the attestation signature.
-    </span><span class="kw">pub fn </span>hash(report_data: <span class="kw-2">&amp;</span>[u8], node_id: PublicKey, height: u64) -&gt; [u8; <span class="number">32</span>] {
+    </span><span class="kw">pub fn </span>hash(
+        report_data: <span class="kw-2">&amp;</span>[u8],
+        node_id: signature::PublicKey,
+        height: u64,
+        rek: x25519::PublicKey,
+    ) -&gt; [u8; <span class="number">32</span>] {
         <span class="kw">let </span><span class="kw-2">mut </span>h = TupleHash::v256(ATTESTATION_SIGNATURE_CONTEXT);
         h.update(report_data);
         h.update(node_id.as_ref());
         h.update(<span class="kw-2">&amp;</span>height.to_le_bytes());
+        h.update(rek.<span class="number">0</span>.as_bytes());
         <span class="kw">let </span><span class="kw-2">mut </span>result = [<span class="number">0u8</span>; <span class="number">32</span>];
         h.finalize(<span class="kw-2">&amp;mut </span>result);
         result
@@ -1643,19 +1858,14 @@
 }
 
 <span class="doccomment">/// TEE hardware implementation.
-</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
+</span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 #[repr(u8)]
 </span><span class="kw">pub enum </span>TEEHardware {
     <span class="doccomment">/// Non-TEE implementation.
+    </span><span class="attr">#[default]
     </span>TEEHardwareInvalid = <span class="number">0</span>,
     <span class="doccomment">/// Intel SGX TEE implementation.
     </span>TEEHardwareIntelSGX = <span class="number">1</span>,
-}
-
-<span class="kw">impl </span>Default <span class="kw">for </span>TEEHardware {
-    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-        TEEHardware::TEEHardwareInvalid
-    }
 }
 
 <span class="doccomment">/// The latest entity descriptor version that should be used for all new descriptors. Using earlier
@@ -1670,7 +1880,7 @@
     <span class="doccomment">/// Globally unique long term identifier of the runtime.
     </span><span class="kw">pub </span>id: Namespace,
     <span class="doccomment">/// Public key identifying the Entity controlling the runtime.
-    </span><span class="kw">pub </span>entity_id: PublicKey,
+    </span><span class="kw">pub </span>entity_id: signature::PublicKey,
     <span class="doccomment">/// Runtime genesis information.
     </span><span class="kw">pub </span>genesis: RuntimeGenesis,
     <span class="doccomment">/// Type of runtime.
@@ -1748,9 +1958,9 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
-    <span class="kw">use </span>std::net::Ipv4Addr;
+    <span class="kw">use </span>std::{convert::TryInto, net::Ipv4Addr};
 
-    <span class="kw">use </span>rustc_hex::ToHex;
+    <span class="kw">use </span>rustc_hex::{FromHex, ToHex};
 
     <span class="kw">use </span><span class="kw">crate</span>::common::quantity::Quantity;
 
@@ -1773,110 +1983,127 @@
     </span><span class="kw">fn </span>test_consistent_runtime() {
         <span class="comment">// NOTE: These tests MUST be synced with go/registry/api/runtime.go.
         </span><span class="kw">let </span>tcs = <span class="macro">vec!</span>[
-            (<span class="string">&quot;q2F2AGJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABka2luZABnZ2VuZXNpc6Jlcm91bmQAanN0YXRlX3Jvb3RYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ3N0b3JhZ2Wjc2NoZWNrcG9pbnRfaW50ZXJ2YWwAc2NoZWNrcG9pbnRfbnVtX2tlcHQAdWNoZWNrcG9pbnRfY2h1bmtfc2l6ZQBoZXhlY3V0b3Klamdyb3VwX3NpemUAbG1heF9tZXNzYWdlcwBtcm91bmRfdGltZW91dABxZ3JvdXBfYmFja3VwX3NpemUAcmFsbG93ZWRfc3RyYWdnbGVycwBpZW50aXR5X2lkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGx0ZWVfaGFyZHdhcmUAbXR4bl9zY2hlZHVsZXKkbm1heF9iYXRjaF9zaXplAHNiYXRjaF9mbHVzaF90aW1lb3V0AHRtYXhfYmF0Y2hfc2l6ZV9ieXRlcwB1cHJvcG9zZV9iYXRjaF90aW1lb3V0AHBhZG1pc3Npb25fcG9saWN5oWhhbnlfbm9kZaBwZ292ZXJuYW5jZV9tb2RlbAA=&quot;</span>, Runtime::default()),
-            (<span class="string">&quot;q2F2AGJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABka2luZABnZ2VuZXNpc6Jlcm91bmQAanN0YXRlX3Jvb3RYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ3N0b3JhZ2Wjc2NoZWNrcG9pbnRfaW50ZXJ2YWwAc2NoZWNrcG9pbnRfbnVtX2tlcHQAdWNoZWNrcG9pbnRfY2h1bmtfc2l6ZQBoZXhlY3V0b3Klamdyb3VwX3NpemUAbG1heF9tZXNzYWdlcwBtcm91bmRfdGltZW91dABxZ3JvdXBfYmFja3VwX3NpemUAcmFsbG93ZWRfc3RyYWdnbGVycwBpZW50aXR5X2lkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGx0ZWVfaGFyZHdhcmUAbXR4bl9zY2hlZHVsZXKkbm1heF9iYXRjaF9zaXplAHNiYXRjaF9mbHVzaF90aW1lb3V0AHRtYXhfYmF0Y2hfc2l6ZV9ieXRlcwB1cHJvcG9zZV9iYXRjaF90aW1lb3V0AHBhZG1pc3Npb25fcG9saWN5oWhhbnlfbm9kZaBwZ292ZXJuYW5jZV9tb2RlbAA=&quot;</span>,
+            <span class="comment">// FIXME: Change to &quot;qmF2AGJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABka2luZABnZ2VuZXNpc6Jlcm91bmQAanN0YXRlX3Jvb3RYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ3N0b3JhZ2Wjc2NoZWNrcG9pbnRfaW50ZXJ2YWwAc2NoZWNrcG9pbnRfbnVtX2tlcHQAdWNoZWNrcG9pbnRfY2h1bmtfc2l6ZQBoZXhlY3V0b3Klamdyb3VwX3NpemUAbG1heF9tZXNzYWdlcwBtcm91bmRfdGltZW91dABxZ3JvdXBfYmFja3VwX3NpemUAcmFsbG93ZWRfc3RyYWdnbGVycwBpZW50aXR5X2lkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGx0ZWVfaGFyZHdhcmUAcGFkbWlzc2lvbl9wb2xpY3mhaGFueV9ub2RloHBnb3Zlcm5hbmNlX21vZGVsAA==&quot; once cbor is fixed.
+            </span>(<span class="string">&quot;q2F2AGJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABka2luZABnZ2VuZXNpc6Jlcm91bmQAanN0YXRlX3Jvb3RYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ3N0b3JhZ2Wjc2NoZWNrcG9pbnRfaW50ZXJ2YWwAc2NoZWNrcG9pbnRfbnVtX2tlcHQAdWNoZWNrcG9pbnRfY2h1bmtfc2l6ZQBoZXhlY3V0b3Klamdyb3VwX3NpemUAbG1heF9tZXNzYWdlcwBtcm91bmRfdGltZW91dABxZ3JvdXBfYmFja3VwX3NpemUAcmFsbG93ZWRfc3RyYWdnbGVycwBpZW50aXR5X2lkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGx0ZWVfaGFyZHdhcmUAbXR4bl9zY2hlZHVsZXKgcGFkbWlzc2lvbl9wb2xpY3mhaGFueV9ub2RloHBnb3Zlcm5hbmNlX21vZGVsAA==&quot;</span>, Runtime::default()),
+            <span class="comment">// FIXME: Change to &quot;qmF2AGJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABka2luZABnZ2VuZXNpc6Jlcm91bmQAanN0YXRlX3Jvb3RYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ3N0b3JhZ2Wjc2NoZWNrcG9pbnRfaW50ZXJ2YWwAc2NoZWNrcG9pbnRfbnVtX2tlcHQAdWNoZWNrcG9pbnRfY2h1bmtfc2l6ZQBoZXhlY3V0b3Klamdyb3VwX3NpemUAbG1heF9tZXNzYWdlcwBtcm91bmRfdGltZW91dABxZ3JvdXBfYmFja3VwX3NpemUAcmFsbG93ZWRfc3RyYWdnbGVycwBpZW50aXR5X2lkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGx0ZWVfaGFyZHdhcmUAcGFkbWlzc2lvbl9wb2xpY3mhaGFueV9ub2RloHBnb3Zlcm5hbmNlX21vZGVsAA==&quot; once cbor is fixed.
+            </span>(
+                <span class="string">&quot;q2F2AGJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABka2luZABnZ2VuZXNpc6Jlcm91bmQAanN0YXRlX3Jvb3RYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ3N0b3JhZ2Wjc2NoZWNrcG9pbnRfaW50ZXJ2YWwAc2NoZWNrcG9pbnRfbnVtX2tlcHQAdWNoZWNrcG9pbnRfY2h1bmtfc2l6ZQBoZXhlY3V0b3Klamdyb3VwX3NpemUAbG1heF9tZXNzYWdlcwBtcm91bmRfdGltZW91dABxZ3JvdXBfYmFja3VwX3NpemUAcmFsbG93ZWRfc3RyYWdnbGVycwBpZW50aXR5X2lkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGx0ZWVfaGFyZHdhcmUAbXR4bl9zY2hlZHVsZXKgcGFkbWlzc2lvbl9wb2xpY3mhaGFueV9ub2RloHBnb3Zlcm5hbmNlX21vZGVsAA==&quot;</span>,
                 Runtime {
                     staking: RuntimeStakingParameters {
-                        thresholds:          BTreeMap::new(),
-                        slashing:            BTreeMap::new(),
+                        thresholds: BTreeMap::new(),
+                        slashing: BTreeMap::new(),
                         reward_equivocation: <span class="number">0</span>,
-                        reward_bad_results:  <span class="number">0</span>,
-                        min_in_message_fee:  Quantity::from(<span class="number">0u32</span>),
+                        reward_bad_results: <span class="number">0</span>,
+                        min_in_message_fee: Quantity::from(<span class="number">0u32</span>),
                     },
                     ..Default::default()
-                }),
-            (<span class="string">&quot;rGF2AGJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABka2luZABnZ2VuZXNpc6Jlcm91bmQAanN0YXRlX3Jvb3RYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ3N0YWtpbmehcnJld2FyZF9iYWRfcmVzdWx0cwpnc3RvcmFnZaNzY2hlY2twb2ludF9pbnRlcnZhbABzY2hlY2twb2ludF9udW1fa2VwdAB1Y2hlY2twb2ludF9jaHVua19zaXplAGhleGVjdXRvcqVqZ3JvdXBfc2l6ZQBsbWF4X21lc3NhZ2VzAG1yb3VuZF90aW1lb3V0AHFncm91cF9iYWNrdXBfc2l6ZQByYWxsb3dlZF9zdHJhZ2dsZXJzAGllbnRpdHlfaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbHRlZV9oYXJkd2FyZQBtdHhuX3NjaGVkdWxlcqRubWF4X2JhdGNoX3NpemUAc2JhdGNoX2ZsdXNoX3RpbWVvdXQAdG1heF9iYXRjaF9zaXplX2J5dGVzAHVwcm9wb3NlX2JhdGNoX3RpbWVvdXQAcGFkbWlzc2lvbl9wb2xpY3mhaGFueV9ub2RloHBnb3Zlcm5hbmNlX21vZGVsAA==&quot;</span>,
+                },
+            ),
+            <span class="comment">// FIXME: Change to &quot;q2F2AGJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABka2luZABnZ2VuZXNpc6Jlcm91bmQAanN0YXRlX3Jvb3RYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ3N0YWtpbmehcnJld2FyZF9iYWRfcmVzdWx0cwpnc3RvcmFnZaNzY2hlY2twb2ludF9pbnRlcnZhbABzY2hlY2twb2ludF9udW1fa2VwdAB1Y2hlY2twb2ludF9jaHVua19zaXplAGhleGVjdXRvcqVqZ3JvdXBfc2l6ZQBsbWF4X21lc3NhZ2VzAG1yb3VuZF90aW1lb3V0AHFncm91cF9iYWNrdXBfc2l6ZQByYWxsb3dlZF9zdHJhZ2dsZXJzAGllbnRpdHlfaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbHRlZV9oYXJkd2FyZQBwYWRtaXNzaW9uX3BvbGljeaFoYW55X25vZGWgcGdvdmVybmFuY2VfbW9kZWwA&quot; once cbor is fixed.
+            </span>(
+                <span class="string">&quot;rGF2AGJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABka2luZABnZ2VuZXNpc6Jlcm91bmQAanN0YXRlX3Jvb3RYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZ3N0YWtpbmehcnJld2FyZF9iYWRfcmVzdWx0cwpnc3RvcmFnZaNzY2hlY2twb2ludF9pbnRlcnZhbABzY2hlY2twb2ludF9udW1fa2VwdAB1Y2hlY2twb2ludF9jaHVua19zaXplAGhleGVjdXRvcqVqZ3JvdXBfc2l6ZQBsbWF4X21lc3NhZ2VzAG1yb3VuZF90aW1lb3V0AHFncm91cF9iYWNrdXBfc2l6ZQByYWxsb3dlZF9zdHJhZ2dsZXJzAGllbnRpdHlfaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAbHRlZV9oYXJkd2FyZQBtdHhuX3NjaGVkdWxlcqBwYWRtaXNzaW9uX3BvbGljeaFoYW55X25vZGWgcGdvdmVybmFuY2VfbW9kZWwA&quot;</span>,
                 Runtime {
                     staking: RuntimeStakingParameters {
-                        thresholds:          BTreeMap::new(),
-                        slashing:            BTreeMap::new(),
+                        thresholds: BTreeMap::new(),
+                        slashing: BTreeMap::new(),
                         reward_equivocation: <span class="number">0</span>,
-                        reward_bad_results:  <span class="number">10</span>,
-                        min_in_message_fee:  Quantity::from(<span class="number">0u32</span>),
+                        reward_bad_results: <span class="number">10</span>,
+                        min_in_message_fee: Quantity::from(<span class="number">0u32</span>),
                     },
                     ..Default::default()
-                }),
-		    (<span class="string">&quot;r2F2GCpiaWRYIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZGtpbmQCZ2dlbmVzaXOiZXJvdW5kGCtqc3RhdGVfcm9vdFggseUhAZ+3vd413IH+55BlYQy937jvXCXihJg2aBkqbQ1nc3Rha2luZ6FycmV3YXJkX2JhZF9yZXN1bHRzCmdzdG9yYWdlo3NjaGVja3BvaW50X2ludGVydmFsGCFzY2hlY2twb2ludF9udW1fa2VwdAZ1Y2hlY2twb2ludF9jaHVua19zaXplGGVoZXhlY3V0b3Koamdyb3VwX3NpemUJbG1heF9tZXNzYWdlcwVtcm91bmRfdGltZW91dAZxZ3JvdXBfYmFja3VwX3NpemUIcmFsbG93ZWRfc3RyYWdnbGVycwdybWF4X2xpdmVuZXNzX2ZhaWxzAnRtaW5fbGl2ZV9yb3VuZHNfZXZhbAN3bWluX2xpdmVfcm91bmRzX3BlcmNlbnQEaWVudGl0eV9pZFggEjRWeJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABrY29uc3RyYWludHOhAaEBo2ltYXhfbm9kZXOhZWxpbWl0Cm1taW5fcG9vbF9zaXploWVsaW1pdAVtdmFsaWRhdG9yX3NldKBrZGVwbG95bWVudHOBo2N0ZWVLdmVyc2lvbiB0ZWVndmVyc2lvbqJlbWFqb3IYLGVwYXRjaAFqdmFsaWRfZnJvbQBra2V5X21hbmFnZXJYIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABbHRlZV9oYXJkd2FyZQFtdHhuX3NjaGVkdWxlcqVubWF4X2JhdGNoX3NpemUZJxBvbWF4X2luX21lc3NhZ2VzGCBzYmF0Y2hfZmx1c2hfdGltZW91dBo7msoAdG1heF9iYXRjaF9zaXplX2J5dGVzGgCYloB1cHJvcG9zZV9iYXRjaF90aW1lb3V0AXBhZG1pc3Npb25fcG9saWN5oXBlbnRpdHlfd2hpdGVsaXN0oWhlbnRpdGllc6FYIBI0VniQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoWltYXhfbm9kZXOiAQMEAXBnb3Zlcm5hbmNlX21vZGVsAw==&quot;</span>,
+                },
+            ),
+            (
+                <span class="string">&quot;r2F2GCpiaWRYIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZGtpbmQCZ2dlbmVzaXOiZXJvdW5kGCtqc3RhdGVfcm9vdFggseUhAZ+3vd413IH+55BlYQy937jvXCXihJg2aBkqbQ1nc3Rha2luZ6FycmV3YXJkX2JhZF9yZXN1bHRzCmdzdG9yYWdlo3NjaGVja3BvaW50X2ludGVydmFsGCFzY2hlY2twb2ludF9udW1fa2VwdAZ1Y2hlY2twb2ludF9jaHVua19zaXplGGVoZXhlY3V0b3Kpamdyb3VwX3NpemUJbG1heF9tZXNzYWdlcwVtcm91bmRfdGltZW91dAZxZ3JvdXBfYmFja3VwX3NpemUIcmFsbG93ZWRfc3RyYWdnbGVycwdybWF4X2xpdmVuZXNzX2ZhaWxzAXRtaW5fbGl2ZV9yb3VuZHNfZXZhbAJ3bWluX2xpdmVfcm91bmRzX3BlcmNlbnQEeBxtYXhfbWlzc2VkX3Byb3Bvc2Fsc19wZXJjZW50A2llbnRpdHlfaWRYIBI0VniQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa2NvbnN0cmFpbnRzoQGhAaNpbWF4X25vZGVzoWVsaW1pdAptbWluX3Bvb2xfc2l6ZaFlbGltaXQFbXZhbGlkYXRvcl9zZXSga2RlcGxveW1lbnRzgaRjdGVlS3ZlcnNpb24gdGVlZ3ZlcnNpb26iZW1ham9yGCxlcGF0Y2gBanZhbGlkX2Zyb20Ab2J1bmRsZV9jaGVja3N1bVggAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQFra2V5X21hbmFnZXJYIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABbHRlZV9oYXJkd2FyZQFtdHhuX3NjaGVkdWxlcqVubWF4X2JhdGNoX3NpemUZJxBvbWF4X2luX21lc3NhZ2VzGCBzYmF0Y2hfZmx1c2hfdGltZW91dBo7msoAdG1heF9iYXRjaF9zaXplX2J5dGVzGgCYloB1cHJvcG9zZV9iYXRjaF90aW1lb3V0Gnc1lABwYWRtaXNzaW9uX3BvbGljeaFwZW50aXR5X3doaXRlbGlzdKFoZW50aXRpZXOhWCASNFZ4kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAKFpbWF4X25vZGVzogEDBAFwZ292ZXJuYW5jZV9tb2RlbAM=&quot;</span>,
                 Runtime {
                     v: <span class="number">42</span>,
-                    id: Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000000&quot;</span>),
-                    entity_id: PublicKey::from(<span class="string">&quot;1234567890000000000000000000000000000000000000000000000000000000&quot;</span>),
-                    genesis: RuntimeGenesis{
+                    id: Namespace::from(
+                        <span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000000&quot;</span>,
+                    ),
+                    entity_id: signature::PublicKey::from(
+                        <span class="string">&quot;1234567890000000000000000000000000000000000000000000000000000000&quot;</span>,
+                    ),
+                    genesis: RuntimeGenesis {
                         round: <span class="number">43</span>,
                         state_root: Hash::digest_bytes(<span class="string">b&quot;stateroot hash&quot;</span>),
                     },
                     kind: RuntimeKind::KindKeyManager,
                     tee_hardware: TEEHardware::TEEHardwareIntelSGX,
-                    deployments: <span class="macro">vec!</span>[
-                        VersionInfo{
-                            version: Version { major: <span class="number">44</span>, minor: <span class="number">0</span>, patch: <span class="number">1 </span>},
-                            valid_from: <span class="number">0</span>,
-                            tee: <span class="string">b&quot;version tee&quot;</span>.to_vec(),
+                    deployments: <span class="macro">vec!</span>[VersionInfo {
+                        version: Version {
+                            major: <span class="number">44</span>,
+                            minor: <span class="number">0</span>,
+                            patch: <span class="number">1</span>,
                         },
-                    ],
-                    key_manager: <span class="prelude-val">Some</span>(
-                        Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000001&quot;</span>)
-                    ),
-                    executor: ExecutorParameters{
+                        valid_from: <span class="number">0</span>,
+                        tee: <span class="string">b&quot;version tee&quot;</span>.to_vec(),
+                        bundle_checksum: <span class="macro">vec!</span>[<span class="number">0x1</span>; <span class="number">32</span>],
+                    }],
+                    key_manager: <span class="prelude-val">Some</span>(Namespace::from(
+                        <span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000001&quot;</span>,
+                    )),
+                    executor: ExecutorParameters {
                         group_size: <span class="number">9</span>,
                         group_backup_size: <span class="number">8</span>,
                         allowed_stragglers: <span class="number">7</span>,
                         round_timeout: <span class="number">6</span>,
                         max_messages: <span class="number">5</span>,
                         min_live_rounds_percent: <span class="number">4</span>,
-                        min_live_rounds_eval: <span class="number">3</span>,
-                        max_liveness_fails: <span class="number">2</span>,
+                        max_missed_proposals_percent: <span class="number">3</span>,
+                        min_live_rounds_eval: <span class="number">2</span>,
+                        max_liveness_fails: <span class="number">1</span>,
                     },
-                    txn_scheduler: TxnSchedulerParameters{
-                        batch_flush_timeout: <span class="number">1_000_000_000</span>,
-                        max_batch_size: <span class="number">10_000</span>,
+                    txn_scheduler: TxnSchedulerParameters {
+                        batch_flush_timeout: <span class="number">1_000_000_000</span>, <span class="comment">// 1 second.
+                        </span>max_batch_size: <span class="number">10_000</span>,
                         max_batch_size_bytes: <span class="number">10_000_000</span>,
                         max_in_messages: <span class="number">32</span>,
-                        propose_batch_timeout: <span class="number">1</span>,
-                    },
+                        propose_batch_timeout: <span class="number">2_000_000_000</span>, <span class="comment">// 2 seconds.
+                    </span>},
                     storage: StorageParameters {
                         checkpoint_interval: <span class="number">33</span>,
                         checkpoint_num_kept: <span class="number">6</span>,
                         checkpoint_chunk_size: <span class="number">101</span>,
                     },
-                    admission_policy: RuntimeAdmissionPolicy::EntityWhitelist(EntityWhitelistRuntimeAdmissionPolicy{
-                        entities:
-                            <span class="macro">btreemap! </span>{
-                                PublicKey::from(<span class="string">&quot;1234567890000000000000000000000000000000000000000000000000000000&quot;</span>) =&gt; EntityWhitelistConfig {
+                    admission_policy: RuntimeAdmissionPolicy::EntityWhitelist(
+                        EntityWhitelistRuntimeAdmissionPolicy {
+                            entities: <span class="macro">btreemap! </span>{
+                                signature::PublicKey::from(<span class="string">&quot;1234567890000000000000000000000000000000000000000000000000000000&quot;</span>) =&gt; EntityWhitelistConfig {
                                      max_nodes: <span class="macro">btreemap! </span>{
                                          RolesMask::ROLE_COMPUTE_WORKER =&gt; <span class="number">3</span>,
                                          RolesMask::ROLE_KEY_MANAGER =&gt; <span class="number">1</span>,
                                     }
                                 }
-                            }
-                    }),
-                    constraints:
-                        <span class="macro">btreemap! </span>{
-                            scheduler::CommitteeKind::ComputeExecutor =&gt; <span class="macro">btreemap! </span>{
-                                scheduler::Role::Worker =&gt; SchedulingConstraints{
-                                    max_nodes: <span class="prelude-val">Some</span>(
-                                        MaxNodesConstraint{
-                                            limit: <span class="number">10</span>,
-                                        }
-                                    ),
-                                    min_pool_size: <span class="prelude-val">Some</span>(
-                                        MinPoolSizeConstraint {
-                                            limit: <span class="number">5</span>,
-                                        }
-                                    ),
-                                    validator_set: <span class="prelude-val">Some</span>(ValidatorSetConstraint{}),
-                                },
-                            }
+                            },
                         },
+                    ),
+                    constraints: <span class="macro">btreemap! </span>{
+                        scheduler::CommitteeKind::ComputeExecutor =&gt; <span class="macro">btreemap! </span>{
+                            scheduler::Role::Worker =&gt; SchedulingConstraints{
+                                max_nodes: <span class="prelude-val">Some</span>(
+                                    MaxNodesConstraint{
+                                        limit: <span class="number">10</span>,
+                                    }
+                                ),
+                                min_pool_size: <span class="prelude-val">Some</span>(
+                                    MinPoolSizeConstraint {
+                                        limit: <span class="number">5</span>,
+                                    }
+                                ),
+                                validator_set: <span class="prelude-val">Some</span>(ValidatorSetConstraint{}),
+                            },
+                        }
+                    },
                     staking: RuntimeStakingParameters {
-                        thresholds:          BTreeMap::new(),
-                        slashing:            BTreeMap::new(),
+                        thresholds: BTreeMap::new(),
+                        slashing: BTreeMap::new(),
                         reward_equivocation: <span class="number">0</span>,
-                        reward_bad_results:  <span class="number">10</span>,
-                        min_in_message_fee:  Quantity::from(<span class="number">0u32</span>),
+                        reward_bad_results: <span class="number">10</span>,
+                        min_in_message_fee: Quantity::from(<span class="number">0u32</span>),
                     },
                     governance_model: RuntimeGovernanceModel::GovernanceConsensus,
-                }),
+                },
+            ),
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: Runtime = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
@@ -1892,42 +2119,32 @@
         <span class="comment">// NOTE: These tests MUST be synced with go/common/node/node_test.go.
         </span><span class="kw">let </span>tcs = <span class="macro">vec!</span>[
             (
-                <span class="string">&quot;qWF2AmJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjcDJwomJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWRkcmVzc2Vz9mN0bHOjZ3B1Yl9rZXlYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaWFkZHJlc3Nlc/ZsbmV4dF9wdWJfa2V5WCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVyb2xlcwBocnVudGltZXP2aWNvbnNlbnN1c6JiaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaWFkZHJlc3Nlc/ZpZW50aXR5X2lkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGpleHBpcmF0aW9uAA==&quot;</span>,
-                Node{v: <span class="number">2</span>, ..Default::default()},
+                <span class="string">&quot;qmF2A2JpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjcDJwomJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWRkcmVzc2Vz9mN0bHOhZ3B1Yl9rZXlYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY3ZyZqFiaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZXJvbGVzAGhydW50aW1lc/ZpY29uc2Vuc3VzomJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWRkcmVzc2Vz9mllbnRpdHlfaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAamV4cGlyYXRpb24A&quot;</span>,
+                Node{v: <span class="number">3</span>, ..Default::default()},
                 <span class="bool-val">true</span>,
             ),
 			(
-                <span class="string">&quot;qmF2AmJpZFgg//////////////////////////////////////////BjcDJwomJpZFgg//////////////////////////////////////////VpYWRkcmVzc2Vz9mN0bHOjZ3B1Yl9rZXlYIP/////////////////////////////////////////yaWFkZHJlc3Nlc4GiZ2FkZHJlc3OjYklQUAAAAAAAAAAAAAD//38AAAFkUG9ydBkEV2Rab25lYGdwdWJfa2V5WCD/////////////////////////////////////////9GxuZXh0X3B1Yl9rZXlYIP/////////////////////////////////////////zY3ZyZqFiaWRYIP/////////////////////////////////////////3ZXJvbGVzAGhydW50aW1lc4KkYmlkWCCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEGd2ZXJzaW9uoWVwYXRjaBkBQWpleHRyYV9pbmZv9mxjYXBhYmlsaXRpZXOgpGJpZFgggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABFndmVyc2lvbqFlcGF0Y2gYe2pleHRyYV9pbmZvRAUDAgFsY2FwYWJpbGl0aWVzoWN0ZWWjY3Jha1gg//////////////////////////////////////////hoaGFyZHdhcmUBa2F0dGVzdGF0aW9uRgABAgMEBWljb25zZW5zdXOiYmlkWCD/////////////////////////////////////////9mlhZGRyZXNzZXOAaWVudGl0eV9pZFgg//////////////////////////////////////////FqZXhwaXJhdGlvbhgg&quot;</span>,
+                <span class="string">&quot;qmF2A2JpZFgg//////////////////////////////////////////BjcDJwomJpZFgg//////////////////////////////////////////VpYWRkcmVzc2Vz9mN0bHOhZ3B1Yl9rZXlYIP/////////////////////////////////////////yY3ZyZqFiaWRYIP/////////////////////////////////////////3ZXJvbGVzAGhydW50aW1lc4KkYmlkWCCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEGd2ZXJzaW9uoWVwYXRjaBkBQWpleHRyYV9pbmZv9mxjYXBhYmlsaXRpZXOgpGJpZFgggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABFndmVyc2lvbqFlcGF0Y2gYe2pleHRyYV9pbmZvRAUDAgFsY2FwYWJpbGl0aWVzoWN0ZWWjY3Jha1gg//////////////////////////////////////////hoaGFyZHdhcmUBa2F0dGVzdGF0aW9uRgABAgMEBWljb25zZW5zdXOiYmlkWCD/////////////////////////////////////////9mlhZGRyZXNzZXOAaWVudGl0eV9pZFgg//////////////////////////////////////////FqZXhwaXJhdGlvbhgg&quot;</span>,
                 Node{
-                    v: <span class="number">2</span>,
-                    id: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0&quot;</span>),
-                    entity_id: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1&quot;</span>),
+                    v: <span class="number">3</span>,
+                    id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0&quot;</span>),
+                    entity_id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1&quot;</span>),
                     expiration: <span class="number">32</span>,
                     tls: TLSInfo{
-                        pub_key: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2&quot;</span>),
-                        next_pub_key: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3&quot;</span>),
-                        addresses: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
-                            TLSAddress{
-                                pub_key: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4&quot;</span>),
-                                address: TCPAddress{
-                                    ip: Ipv4Addr::new(<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>).to_ipv6_mapped().octets().to_vec(),
-                                    port: <span class="number">1111</span>,
-                                    ..Default::default()
-                                },
-                            },
-                        ]),
+                        pub_key: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2&quot;</span>),
+                        ..Default::default()
                     },
                     p2p: P2PInfo{
-                        id: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5&quot;</span>),
+                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5&quot;</span>),
                         ..Default::default()
                     },
                     consensus: ConsensusInfo{
-                        id: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6&quot;</span>),
+                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6&quot;</span>),
                         addresses: <span class="prelude-val">Some</span>(Vec::new()),
                     },
-                    vrf: <span class="prelude-val">Some</span>(VRFInfo{
-                        id: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7&quot;</span>),
-                    }),
+                    vrf: VRFInfo{
+                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7&quot;</span>),
+                    },
                     runtimes: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
                         NodeRuntime{
                             id: Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000010&quot;</span>),
@@ -1940,7 +2157,7 @@
                             capabilities: Capabilities{
                                tee: <span class="prelude-val">Some</span>(CapabilityTEE{
                                    hardware: TEEHardware::TEEHardwareIntelSGX,
-                                    rak: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8&quot;</span>),
+                                    rak: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8&quot;</span>),
                                     attestation: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>,<span class="number">5</span>],
                                     ..Default::default()
                                }),
@@ -1953,14 +2170,9 @@
                 <span class="bool-val">true</span>,
             ),
             (
-                <span class="string">&quot;qmF2AmJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjcDJwomJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWRkcmVzc2Vz9mN0bHOjZ3B1Yl9rZXlYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaWFkZHJlc3Nlc/ZsbmV4dF9wdWJfa2V5WCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVyb2xlcwBocnVudGltZXP2aWNvbnNlbnN1c6JiaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaWFkZHJlc3Nlc/ZpZW50aXR5X2lkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGpleHBpcmF0aW9uAHBzb2Z0d2FyZV92ZXJzaW9u9g==&quot;</span>,
-                Node{v: <span class="number">2</span>, ..Default::default()},
-                <span class="bool-val">false</span>,
-            ),
-            (
-                <span class="string">&quot;qWF2AmJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjcDJwomJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWRkcmVzc2Vz9mN0bHOjZ3B1Yl9rZXlYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaWFkZHJlc3Nlc/ZsbmV4dF9wdWJfa2V5WCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVyb2xlcwBocnVudGltZXOBomJpZFgggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBndmVyc2lvbvZpY29uc2Vuc3VzomJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWRkcmVzc2Vz9mllbnRpdHlfaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAamV4cGlyYXRpb24A&quot;</span>,
+                <span class="string">&quot;qWF2A2JpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjcDJwomJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWRkcmVzc2Vz9mN0bHOhZ3B1Yl9rZXlYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZXJvbGVzAGhydW50aW1lc4GkYmlkWCCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEGd2ZXJzaW9uoGpleHRyYV9pbmZv9mxjYXBhYmlsaXRpZXOgaWNvbnNlbnN1c6JiaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaWFkZHJlc3Nlc/ZpZW50aXR5X2lkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGpleHBpcmF0aW9uAA==&quot;</span>,
                 Node{
-                    v: <span class="number">2</span>,
+                    v: <span class="number">3</span>,
                     runtimes: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
                         NodeRuntime{
                             id: Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000010&quot;</span>),
@@ -1983,6 +2195,159 @@
                 <span class="kw">let </span>ser = base64::encode(cbor::to_vec(dec));
                 <span class="macro">assert_eq!</span>(ser, encoded_base64, <span class="string">&quot;node should serialize correctly&quot;</span>);
             }
+        }
+    }
+
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_deserialize_node_v2() {
+        <span class="comment">// NOTE: These tests MUST be synced with go/common/node/node_test.go.
+        </span><span class="kw">let </span>tcs = <span class="macro">vec!</span>[
+            (
+                <span class="string">&quot;qWF2AmJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjcDJwomJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWRkcmVzc2Vz9mN0bHOiZ3B1Yl9rZXlYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaWFkZHJlc3Nlc/Zlcm9sZXMAaHJ1bnRpbWVz9mljb25zZW5zdXOiYmlkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGlhZGRyZXNzZXP2aWVudGl0eV9pZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABqZXhwaXJhdGlvbgA=&quot;</span>,
+                Node{v: <span class="number">2</span>, ..Default::default()},
+            ),
+            (
+                <span class="string">&quot;qmF2AmJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjcDJwomJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWRkcmVzc2Vz9mN0bHOjZ3B1Yl9rZXlYIP/////////////////////////////////////////yaWFkZHJlc3Nlc4BsbmV4dF9wdWJfa2V5WCD/////////////////////////////////////////82N2cmahYmlkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGVyb2xlcwBocnVudGltZXP2aWNvbnNlbnN1c6JiaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaWFkZHJlc3Nlc/ZpZW50aXR5X2lkWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGpleHBpcmF0aW9uAA==&quot;</span>,
+                Node{
+                    v: <span class="number">2</span>,
+                    tls: TLSInfo{
+                        pub_key: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2&quot;</span>),
+                        _deprecated_next_pub_key: <span class="prelude-val">Some</span>(signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3&quot;</span>)),
+                        _deprecated_addresses: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[]),
+                    },
+                    ..Default::default()
+                },
+            ),
+            (
+                <span class="string">&quot;qmF2AmJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABjcDJwomJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWRkcmVzc2Vz9mN0bHOjZ3B1Yl9rZXlYIP/////////////////////////////////////////yaWFkZHJlc3Nlc4OiZ2FkZHJlc3OjYklQUAAAAAAAAAAAAAD//38AAAFkUG9ydBh7ZFpvbmVgZ3B1Yl9rZXlYIP/////////////////////////////////////////0omdhZGRyZXNzo2JJUFAAAAAAAAAAAAAA///AqAEBZFBvcnQZD6BkWm9uZWBncHViX2tleVgg/////////////////////////////////////////8SiZ2FkZHJlc3OjYklQUAAAAAAAAAAAAAD//+pkY1hkUG9ydBkfQGRab25lYGdwdWJfa2V5WCD/////////////////////////////////////////1GxuZXh0X3B1Yl9rZXlYIP/////////////////////////////////////////zY3ZyZqFiaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZXJvbGVzAGhydW50aW1lc/ZpY29uc2Vuc3VzomJpZFggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWRkcmVzc2Vz9mllbnRpdHlfaWRYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAamV4cGlyYXRpb24A&quot;</span>,
+                Node{
+                    v: <span class="number">2</span>,
+                    tls: TLSInfo{
+                        pub_key: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2&quot;</span>),
+                        _deprecated_next_pub_key: <span class="prelude-val">Some</span>(signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3&quot;</span>)),
+                        _deprecated_addresses: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
+                            TLSAddress{
+                                pub_key: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4&quot;</span>),
+                                address: TCPAddress { ip: Ipv4Addr::new(<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>).to_ipv6_mapped().octets().to_vec(), port: <span class="number">123</span>, ..Default::default() }
+                            },
+                            TLSAddress{
+                                pub_key: signature::PublicKey::from(<span class="string">&quot;ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc4&quot;</span>),
+                                address: TCPAddress { ip: Ipv4Addr::new(<span class="number">192</span>, <span class="number">168</span>, <span class="number">1</span>, <span class="number">1</span>).to_ipv6_mapped().octets().to_vec(), port: <span class="number">4000</span>, ..Default::default() }
+                            },
+                            TLSAddress{
+                                pub_key: signature::PublicKey::from(<span class="string">&quot;ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd4&quot;</span>),
+                                address: TCPAddress { ip: Ipv4Addr::new(<span class="number">234</span>, <span class="number">100</span>, <span class="number">99</span>, <span class="number">88</span>).to_ipv6_mapped().octets().to_vec(), port: <span class="number">8000</span>, ..Default::default() }
+                            },
+
+                            ])
+                    },
+                    ..Default::default()
+                },
+            ),
+            (
+                <span class="string">&quot;qmF2AmJpZFgg//////////////////////////////////////////BjcDJwomJpZFgg//////////////////////////////////////////VpYWRkcmVzc2Vz9mN0bHOjZ3B1Yl9rZXlYIP/////////////////////////////////////////yaWFkZHJlc3Nlc4GiZ2FkZHJlc3OjYklQUAAAAAAAAAAAAAD//38AAAFkUG9ydBh7ZFpvbmVgZ3B1Yl9rZXlYIP/////////////////////////////////////////0bG5leHRfcHViX2tleVgg//////////////////////////////////////////NjdnJmoWJpZFgg//////////////////////////////////////////dlcm9sZXMAaHJ1bnRpbWVzgqRiaWRYIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQZ3ZlcnNpb26hZXBhdGNoGQFBamV4dHJhX2luZm/2bGNhcGFiaWxpdGllc6CkYmlkWCCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEWd2ZXJzaW9uoWVwYXRjaBh7amV4dHJhX2luZm9EBQMCAWxjYXBhYmlsaXRpZXOhY3RlZaNjcmFrWCD/////////////////////////////////////////+GhoYXJkd2FyZQFrYXR0ZXN0YXRpb25GAAECAwQFaWNvbnNlbnN1c6JiaWRYIP/////////////////////////////////////////2aWFkZHJlc3Nlc4BpZW50aXR5X2lkWCD/////////////////////////////////////////8WpleHBpcmF0aW9uGCA=&quot;</span>,
+                Node{
+                    v: <span class="number">2</span>,
+                    id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0&quot;</span>),
+                    entity_id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1&quot;</span>),
+                    expiration: <span class="number">32</span>,
+                    tls: TLSInfo{
+                        pub_key: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2&quot;</span>),
+                        _deprecated_next_pub_key: <span class="prelude-val">Some</span>(signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3&quot;</span>)),
+                        _deprecated_addresses: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[TLSAddress{
+                                pub_key: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4&quot;</span>),
+                                address: TCPAddress { ip: Ipv4Addr::new(<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>).to_ipv6_mapped().octets().to_vec(), port: <span class="number">123</span>, ..Default::default() }
+                            }])
+                    },
+                    p2p: P2PInfo{
+                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5&quot;</span>),
+                        ..Default::default()
+                    },
+                    consensus: ConsensusInfo{
+                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6&quot;</span>),
+                        addresses: <span class="prelude-val">Some</span>(Vec::new()),
+                    },
+                    vrf: VRFInfo{
+                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7&quot;</span>),
+                    },
+                    runtimes: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
+                        NodeRuntime{
+                            id: Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000010&quot;</span>),
+                            version: Version::from(<span class="number">321u64</span>),
+                            ..Default::default()
+                        },
+                        NodeRuntime{
+                            id: Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000011&quot;</span>),
+                            version: Version::from(<span class="number">123</span>),
+                            capabilities: Capabilities{
+                                tee: <span class="prelude-val">Some</span>(CapabilityTEE{
+                                    hardware: TEEHardware::TEEHardwareIntelSGX,
+                                    rak: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8&quot;</span>),
+                                    attestation: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>,<span class="number">5</span>],
+                                    ..Default::default()
+                                }),
+                            },
+                            extra_info: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">5</span>,<span class="number">3</span>,<span class="number">2</span>,<span class="number">1</span>]),
+                        },
+                    ]),
+                    ..Default::default()
+                },
+            ),
+            (
+                <span class="string">&quot;qmF2AmJpZFgg//////////////////////////////////////////BjcDJwomJpZFgg//////////////////////////////////////////VpYWRkcmVzc2Vz9mN0bHOjZ3B1Yl9rZXlYIP/////////////////////////////////////////yaWFkZHJlc3Nlc4GiZ2FkZHJlc3OjYklQUAAAAAAAAAAAAAD//38AAAFkUG9ydBh7ZFpvbmVgZ3B1Yl9rZXlYIP/////////////////////////////////////////0bG5leHRfcHViX2tleVgg//////////////////////////////////////////NjdnJmoWJpZFgg//////////////////////////////////////////dlcm9sZXMAaHJ1bnRpbWVzgqRiaWRYIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQZ3ZlcnNpb26hZXBhdGNoGQFBamV4dHJhX2luZm/2bGNhcGFiaWxpdGllc6CkYmlkWCCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEWd2ZXJzaW9uoWVwYXRjaBh7amV4dHJhX2luZm9EBQMCAWxjYXBhYmlsaXRpZXOhY3RlZaRjcmFrWCD/////////////////////////////////////////+GNyZWtYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAaGhhcmR3YXJlAWthdHRlc3RhdGlvbkYAAQIDBAVpY29uc2Vuc3VzomJpZFgg//////////////////////////////////////////ZpYWRkcmVzc2VzgGllbnRpdHlfaWRYIP/////////////////////////////////////////xamV4cGlyYXRpb24YIA==&quot;</span>,
+                Node{
+                    v: <span class="number">2</span>,
+                    id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0&quot;</span>),
+                    entity_id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1&quot;</span>),
+                    expiration: <span class="number">32</span>,
+                    tls: TLSInfo{
+                        pub_key: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2&quot;</span>),
+                        _deprecated_next_pub_key: <span class="prelude-val">Some</span>(signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3&quot;</span>)),
+                        _deprecated_addresses: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[TLSAddress{
+                                pub_key: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4&quot;</span>),
+                                address: TCPAddress { ip: Ipv4Addr::new(<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>).to_ipv6_mapped().octets().to_vec(), port: <span class="number">123</span>, ..Default::default() }
+                            }])
+                    },
+                    p2p: P2PInfo{
+                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5&quot;</span>),
+                        ..Default::default()
+                    },
+                    consensus: ConsensusInfo{
+                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6&quot;</span>),
+                        addresses: <span class="prelude-val">Some</span>(Vec::new()),
+                    },
+                    vrf: VRFInfo{
+                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7&quot;</span>),
+                    },
+                    runtimes: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
+                        NodeRuntime{
+                            id: Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000010&quot;</span>),
+                            version: Version::from(<span class="number">321u64</span>),
+                            ..Default::default()
+                        },
+                        NodeRuntime{
+                            id: Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000011&quot;</span>),
+                            version: Version::from(<span class="number">123</span>),
+                            capabilities: Capabilities{
+                                tee: <span class="prelude-val">Some</span>(CapabilityTEE{
+                                    hardware: TEEHardware::TEEHardwareIntelSGX,
+                                    rak: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8&quot;</span>),
+                                    rek: <span class="prelude-val">Some</span>(x25519::PublicKey::from([<span class="number">0</span>;<span class="number">32</span>])),
+                                    attestation: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>,<span class="number">5</span>],
+                                }),
+                            },
+                            extra_info: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="number">5</span>,<span class="number">3</span>,<span class="number">2</span>,<span class="number">1</span>]),
+                        },
+                    ]),
+                    ..Default::default()
+                },
+            ),
+        ];
+        <span class="kw">for </span>(encoded_base64, node) <span class="kw">in </span>tcs {
+            <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, node);
+            <span class="kw">let </span>dec: Node = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
+                .expect(<span class="string">&quot;node should deserialize correctly&quot;</span>);
+            <span class="macro">assert_eq!</span>(dec, node, <span class="string">&quot;decoded node should match the expected value&quot;</span>);
         }
     }
 
@@ -2075,14 +2440,23 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_hash_attestation() {
-        <span class="kw">let </span>h = SGXAttestation::hash(
-            <span class="string">b&quot;foo bar&quot;</span>,
-            PublicKey::from(<span class="string">&quot;47aadd91516ac548decdb436fde957992610facc09ba2f850da0fe1b2be96119&quot;</span>),
-            <span class="number">42</span>,
+        <span class="kw">let </span>report_data = <span class="string">b&quot;foo bar&quot;</span>;
+        <span class="kw">let </span>node_id = signature::PublicKey::from(
+            <span class="string">&quot;47aadd91516ac548decdb436fde957992610facc09ba2f850da0fe1b2be96119&quot;</span>,
         );
+        <span class="kw">let </span>height = <span class="number">42</span>;
+        <span class="kw">let </span>rek: [u8; x25519::PUBLIC_KEY_LENGTH] =
+            <span class="string">&quot;7992610facc09ba2f850da0fe1b2be9611947aadd91516ac548decdb436fde95&quot;
+                </span>.from_hex::&lt;Vec&lt;u8&gt;&gt;()
+                .unwrap()
+                .try_into()
+                .unwrap();
+        <span class="kw">let </span>rek = x25519::PublicKey::from(rek);
+
+        <span class="kw">let </span>h = SGXAttestation::hash(report_data, node_id, height, rek);
         <span class="macro">assert_eq!</span>(
             h.to_hex::&lt;String&gt;(),
-            <span class="string">&quot;0f01a5084bbf432427873cbce5f8c3bff76bc22b9d1e0674b852e43698abb195&quot;
+            <span class="string">&quot;9a288bd33ba7a4c2eefdee68e4c08c1a34c369302ef8176a3bfdb4fedcec333e&quot;
         </span>);
     }
 }

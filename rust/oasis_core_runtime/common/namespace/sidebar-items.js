@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Namespace"]};
+window.SIDEBAR_ITEMS = {"constant":["NAMESPACE_SIZE"],"struct":["Namespace"]};

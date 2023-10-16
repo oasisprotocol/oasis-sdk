@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/consensus/tendermint/verifier/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/consensus/tendermint/verifier/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -916,79 +916,62 @@
 <a href="#916" id="916">916</a>
 <a href="#917" id="917">917</a>
 <a href="#918" id="918">918</a>
-<a href="#919" id="919">919</a>
-<a href="#920" id="920">920</a>
-<a href="#921" id="921">921</a>
-<a href="#922" id="922">922</a>
-<a href="#923" id="923">923</a>
-<a href="#924" id="924">924</a>
-<a href="#925" id="925">925</a>
-<a href="#926" id="926">926</a>
-<a href="#927" id="927">927</a>
-<a href="#928" id="928">928</a>
-<a href="#929" id="929">929</a>
-<a href="#930" id="930">930</a>
-<a href="#931" id="931">931</a>
-<a href="#932" id="932">932</a>
-<a href="#933" id="933">933</a>
-<a href="#934" id="934">934</a>
-<a href="#935" id="935">935</a>
-<a href="#936" id="936">936</a>
-<a href="#937" id="937">937</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Tendermint consensus layer verification logic.
 </span><span class="kw">use </span>std::{convert::TryInto, str::FromStr, sync::Arc, time::Duration};
 
 <span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>crossbeam::channel;
-<span class="kw">use </span>io_context::Context;
 <span class="kw">use </span>rand::{rngs::OsRng, Rng};
 <span class="kw">use </span>sha2::{Digest, Sha256};
-<span class="kw">use </span>slog::{error, info};
+<span class="kw">use </span>slog::{debug, error, info};
 <span class="kw">use </span>tendermint::merkle::HASH_SIZE;
 <span class="kw">use </span>tendermint_light_client::{
     builder::LightClientBuilder,
     components::{<span class="self">self</span>, io::AtHeight, verifier::PredicateVerifier},
     light_client,
-    operations::{ProdCommitValidator, ProdHasher},
+    operations::{ProdCommitValidator, ProvidedVotingPowerCalculator},
+    store::LightStore,
     supervisor::Instance,
     types::{
-        Hash <span class="kw">as </span>TMHash, LightBlock <span class="kw">as </span>TMLightBlock, PeerId, Time, TrustThreshold, TrustedBlockState,
+        Hash <span class="kw">as </span>TMHash, LightBlock <span class="kw">as </span>TMLightBlock, PeerId, Status, Time, TrustThreshold,
+        TrustedBlockState,
     },
     verifier::{predicates::ProdPredicates, Verdict, Verifier <span class="kw">as </span>TMVerifier},
 };
 
 <span class="kw">use crate</span>::{
-    common::{
-        crypto::signature::PublicKey, logger::get_logger, namespace::Namespace, process, time,
-        version::Version,
-    },
+    common::{logger::get_logger, namespace::Namespace, process, time, version::Version},
     consensus::{
         beacon::EpochTime,
-        roothash::{ComputeResultsHeader, Header, HeaderType::EpochTransition},
-        state::{
-            beacon::ImmutableState <span class="kw">as </span>BeaconState, roothash::ImmutableState <span class="kw">as </span>RoothashState,
-            ConsensusState,
-        },
+        registry::METHOD_PROVE_FRESHNESS,
+        roothash::Header,
+        state::ConsensusState,
         tendermint::{
-            decode_light_block, state_root_from_header,
+            chain_id, decode_light_block, merkle, state_root_from_header,
             verifier::{
                 clock::InsecureClock,
                 io::Io,
                 store::LruStore,
                 types::{Command, Nonce, NONCE_SIZE},
-                voting::DomSepVotingPowerCalculator,
             },
             LightBlockMeta,
         },
-        transaction::{Transaction, SIGNATURE_CONTEXT},
-        verifier::{<span class="self">self</span>, verify_state_freshness, Error, TrustRoot, TrustedState},
-        Event, LightBlock, HEIGHT_LATEST,
+        transaction::{Proof, SignedTransaction, Transaction},
+        verifier::{<span class="self">self</span>, verify_state_freshness, Error, TrustRoot},
+        BlockMetadata, Event, LightBlock, HEIGHT_LATEST, METHOD_META,
     },
+    future::block_on,
+    host::Host,
     protocol::Protocol,
+    storage::mkvs::{Root, RootType},
     types::{Body, EventKind, HostFetchConsensusEventsRequest, HostFetchConsensusEventsResponse},
 };
 
-<span class="kw">use </span><span class="self">self</span>::{cache::Cache, handle::Handle, store::TrustedStateStore};
+<span class="kw">use </span><span class="self">self</span>::{
+    cache::Cache,
+    handle::Handle,
+    store::{TrustedState, TrustedStateStore},
+};
 
 <span class="comment">// Modules.
 </span><span class="kw">mod </span>cache;
@@ -996,9 +979,10 @@
 <span class="kw">mod </span>handle;
 <span class="kw">mod </span>io;
 <span class="kw">mod </span>noop;
+<span class="kw">mod </span>predicates;
+<span class="kw">mod </span>signature;
 <span class="kw">mod </span>store;
 <span class="kw">mod </span>types;
-<span class="kw">mod </span>voting;
 
 <span class="comment">// Re-exports.
 </span><span class="kw">pub use </span>noop::NopVerifier;
@@ -1013,6 +997,7 @@
 </span><span class="kw">pub struct </span>Verifier {
     logger: slog::Logger,
     protocol: Arc&lt;Protocol&gt;,
+    tokio_runtime: tokio::runtime::Handle,
     runtime_version: Version,
     runtime_id: Namespace,
     chain_context: String,
@@ -1026,11 +1011,12 @@
     <span class="doccomment">/// Create a new Tendermint consensus layer verifier.
     </span><span class="kw">pub fn </span>new(
         protocol: Arc&lt;Protocol&gt;,
+        tokio_runtime: tokio::runtime::Handle,
         trust_root: TrustRoot,
         runtime_id: Namespace,
         chain_context: String,
     ) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>logger = get_logger(<span class="string">&quot;consensus/tendermint/verifier&quot;</span>);
+        <span class="kw">let </span>logger = get_logger(<span class="string">&quot;consensus/cometbft/verifier&quot;</span>);
         <span class="kw">let </span>(command_sender, command_receiver) = channel::unbounded();
         <span class="kw">let </span>runtime_version = protocol.get_config().version;
         <span class="kw">let </span>trusted_state_store =
@@ -1044,6 +1030,7 @@
         <span class="self">Self </span>{
             logger,
             protocol,
+            tokio_runtime,
             runtime_version,
             runtime_id,
             chain_context,
@@ -1100,8 +1087,15 @@
         cache: <span class="kw-2">&amp;mut </span>Cache,
         instance: <span class="kw-2">&amp;mut </span>Instance,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
-        <span class="kw">let </span>height = <span class="self">self</span>.latest_consensus_height(cache)<span class="question-mark">?</span>;
-        <span class="self">self</span>.consensus_state_at(cache, instance, height)
+        <span class="comment">// When latest state is requested we always perform same-block execution verification.
+        </span><span class="kw">let </span>height = <span class="self">self</span>.latest_consensus_height(cache)<span class="question-mark">?</span>;
+        <span class="kw">let </span>state_root = <span class="self">self</span>.state_root_from_metadata(cache, instance, height)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(ConsensusState::from_protocol(
+            <span class="self">self</span>.protocol.clone(),
+            state_root.version,
+            state_root,
+        ))
     }
 
     <span class="kw">fn </span>latest_consensus_height(<span class="kw-2">&amp;</span><span class="self">self</span>, cache: <span class="kw-2">&amp;</span>Cache) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
@@ -1115,8 +1109,12 @@
         instance: <span class="kw-2">&amp;mut </span>Instance,
         height: u64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
-        <span class="kw">let </span>verified_block = <span class="self">self</span>.verify_to_target(height, cache, instance)<span class="question-mark">?</span>;
-        <span class="kw">let </span>state_root = state_root_from_header(<span class="kw-2">&amp;</span>verified_block.signed_header);
+        <span class="comment">// Obtain an authoritative state root, either from the current block if it is already
+        // finalized or from the metadata transaction of the previous block.
+        </span><span class="kw">let </span>state_root = <span class="kw">match </span><span class="self">self</span>.verify_to_target(height, cache, instance) {
+            <span class="prelude-val">Ok</span>(verified_block) =&gt; state_root_from_header(<span class="kw-2">&amp;</span>verified_block.signed_header),
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="self">self</span>.state_root_from_metadata(cache, instance, height - <span class="number">1</span>)<span class="question-mark">?</span>,
+        };
 
         <span class="prelude-val">Ok</span>(ConsensusState::from_protocol(
             <span class="self">self</span>.protocol.clone(),
@@ -1125,21 +1123,15 @@
         ))
     }
 
-    <span class="kw">fn </span>verify_consensus_only(
+    <span class="kw">fn </span>verify_consensus_block(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         cache: <span class="kw-2">&amp;mut </span>Cache,
         instance: <span class="kw-2">&amp;mut </span>Instance,
         consensus_block: LightBlock,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;LightBlockMeta, Error&gt; {
-        <span class="kw">if </span>consensus_block.height &lt; cache.last_verified_height {
-            <span class="comment">// Ignore requests for earlier heights.
-            </span><span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;height seems to have moved backwards&quot;
-            </span>)));
-        }
-
         <span class="comment">// Decode passed block as a Tendermint block.
-        </span><span class="kw">let </span>untrusted_block =
+        </span><span class="kw">let </span>lb_height = consensus_block.height;
+        <span class="kw">let </span>untrusted_block =
             decode_light_block(consensus_block).map_err(Error::VerificationFailed)<span class="question-mark">?</span>;
         <span class="kw">let </span>untrusted_header = untrusted_block
             .signed_header
@@ -1149,14 +1141,17 @@
         <span class="comment">// Verify up to the block at current height.
         // Only does forward verification and fails if height is lower than the last trust height.
         </span><span class="kw">let </span>height = untrusted_header.header().height.value();
+        <span class="kw">if </span>height != lb_height {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
+                <span class="string">&quot;inconsistent light block/header height&quot;
+            </span>)));
+        }
         <span class="kw">let </span>verified_block = <span class="self">self</span>.verify_to_target(height, cache, instance)<span class="question-mark">?</span>;
 
         <span class="comment">// Validate passed consensus block.
         </span><span class="kw">if </span>untrusted_header.header() != verified_block.signed_header.header() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;header mismatch&quot;</span>)));
         }
-
-        cache.last_verified_height = height;
 
         <span class="prelude-val">Ok</span>(untrusted_block)
     }
@@ -1165,15 +1160,21 @@
     </span><span class="kw">fn </span>verify_freshness_with_rak(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         state: <span class="kw-2">&amp;</span>ConsensusState,
-        node_id: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;PublicKey&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;PublicKey&gt;, Error&gt; {
-        <span class="kw">let </span>rak = <span class="kw">if let </span><span class="prelude-val">Some</span>(rak) = <span class="self">self</span>.protocol.get_rak() {
-            rak
+        cache: <span class="kw-2">&amp;</span>Cache,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">let </span>identity = <span class="kw">if let </span><span class="prelude-val">Some</span>(identity) = <span class="self">self</span>.protocol.get_identity() {
+            identity
         } <span class="kw">else </span>{
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         };
 
-        verify_state_freshness(state, rak, <span class="kw-2">&amp;</span><span class="self">self</span>.runtime_id, <span class="kw-2">&amp;</span><span class="self">self</span>.runtime_version, node_id)
+        verify_state_freshness(
+            state,
+            identity,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.runtime_id,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.runtime_version,
+            <span class="kw-2">&amp;</span>cache.host_node_id,
+        )
     }
 
     <span class="doccomment">/// Verify state freshness using prove freshness transaction.
@@ -1201,22 +1202,20 @@
 
         <span class="comment">// Ask host for freshness proof.
         </span><span class="kw">let </span>io = Io::new(<span class="kw-2">&amp;</span><span class="self">self</span>.protocol);
-        <span class="kw">let </span>(signed_tx, height, merkle_proof) =
-            io.fetch_freshness_proof(<span class="kw-2">&amp;</span>nonce).map_err(|err| {
-                Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;failed to fetch freshness proof: {}&quot;</span>,
-                    err
-                ))
-            })<span class="question-mark">?</span>;
-
-        <span class="comment">// Peek into the transaction to verify the nonce and the signature. No need to verify
-        // the name of the method though.
-        </span><span class="kw">let </span>tx: Transaction = cbor::from_slice(signed_tx.blob.as_slice()).map_err(|err| {
-            Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;failed to decode prove freshness transaction: {}&quot;</span>,
-                err
-            ))
+        <span class="kw">let </span>stwp = io.fetch_freshness_proof(<span class="kw-2">&amp;</span>nonce).map_err(|err| {
+            Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to fetch freshness proof: {}&quot;</span>, err))
         })<span class="question-mark">?</span>;
+
+        <span class="comment">// Verify the transaction and the proof.
+        </span><span class="kw">let </span>tx = <span class="self">self</span>.verify_transaction(cache, instance, <span class="kw-2">&amp;</span>stwp.signed_tx, <span class="kw-2">&amp;</span>stwp.proof)<span class="question-mark">?</span>;
+
+        <span class="comment">// Verify the method name and the nonce.
+        </span><span class="kw">if </span>tx.method != METHOD_PROVE_FRESHNESS {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(
+                <span class="string">&quot;invalid method name&quot;
+            </span>)));
+        }
+
         <span class="kw">let </span>tx_nonce: Nonce = cbor::from_value(tx.body).map_err(|err| {
             Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to decode nonce: {}&quot;</span>, err))
         })<span class="question-mark">?</span>;
@@ -1225,50 +1224,114 @@
             <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;invalid nonce&quot;</span>))),
         }
 
-        <span class="kw">let </span><span class="kw-2">mut </span>context = SIGNATURE_CONTEXT.to_vec();
-        context.extend(<span class="self">self</span>.chain_context.as_bytes());
-        <span class="kw">if </span>!signed_tx.signature.verify(<span class="kw-2">&amp;</span>context, <span class="kw-2">&amp;</span>signed_tx.blob) {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(
+        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;State freshness successfully verified&quot;</span>);
+
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">fn </span>verify_transaction(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        cache: <span class="kw-2">&amp;mut </span>Cache,
+        instance: <span class="kw-2">&amp;mut </span>Instance,
+        signed_tx: <span class="kw-2">&amp;</span>SignedTransaction,
+        proof: <span class="kw-2">&amp;</span>Proof,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Transaction, Error&gt; {
+        <span class="comment">// Verify the signature.
+        </span><span class="kw">if </span>!signed_tx.verify(<span class="kw-2">&amp;</span><span class="self">self</span>.chain_context) {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(
                 <span class="string">&quot;failed to verify the signature&quot;
             </span>)));
         }
 
-        <span class="comment">// Fetch the block in which the transaction was published.
+        <span class="comment">// Fetch the root hash of a block in which the transaction was published.
         </span><span class="kw">let </span>verified_block = <span class="self">self
-            </span>.verify_to_target(height, cache, instance)
+            </span>.verify_to_target(proof.height, cache, instance)
             .map_err(|err| {
-                Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to fetch the block: {}&quot;</span>, err))
+                Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to fetch the block: {}&quot;</span>, err))
             })<span class="question-mark">?</span>;
 
         <span class="kw">let </span>header = verified_block.signed_header.header;
-        <span class="kw">if </span>header.height.value() != height {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;invalid block&quot;</span>)));
+        <span class="kw">if </span>header.height.value() != proof.height {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(
+                <span class="string">&quot;invalid block&quot;
+            </span>)));
         }
-
-        <span class="comment">// Compute hash of the transaction and verify the proof.
-        </span><span class="kw">let </span>digest = Sha256::digest(<span class="kw-2">&amp;</span>cbor::to_vec(signed_tx));
-        <span class="kw">let </span><span class="kw-2">mut </span>tx_hash = [<span class="number">0u8</span>; HASH_SIZE];
-        tx_hash.copy_from_slice(<span class="kw-2">&amp;</span>digest);
 
         <span class="kw">let </span>root_hash = header
             .data_hash
-            .ok_or_else(|| Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;root hash not found&quot;</span>)))<span class="question-mark">?</span>;
+            .ok_or_else(|| Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;root hash not found&quot;</span>)))<span class="question-mark">?</span>;
         <span class="kw">let </span>root_hash = <span class="kw">match </span>root_hash {
             TMHash::Sha256(hash) =&gt; hash,
             TMHash::None =&gt; {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(
+                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(
                     <span class="string">&quot;root hash not found&quot;
                 </span>)));
             }
         };
 
-        merkle_proof.verify(root_hash, tx_hash).map_err(|err| {
-            Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to verify the proof: {}&quot;</span>, err))
+        <span class="comment">// Compute hash of the transaction.
+        </span><span class="kw">let </span>digest = Sha256::digest(cbor::to_vec(signed_tx.clone()));
+        <span class="kw">let </span><span class="kw-2">mut </span>tx_hash = [<span class="number">0u8</span>; HASH_SIZE];
+        tx_hash.copy_from_slice(<span class="kw-2">&amp;</span>digest);
+
+        <span class="comment">// Decode raw proof as a CometBFT Merkle proof of inclusion.
+        </span><span class="kw">let </span>merkle_proof: merkle::Proof = cbor::from_slice(<span class="kw-2">&amp;</span>proof.raw_proof).map_err(|err| {
+            Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to decode Merkle proof: {}&quot;</span>, err))
         })<span class="question-mark">?</span>;
 
-        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;State freshness successfully verified&quot;</span>);
+        merkle_proof.verify(root_hash, tx_hash).map_err(|err| {
+            Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to verify Merkle proof: {}&quot;</span>, err))
+        })<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(())
+        <span class="comment">// Decode transaction.
+        </span><span class="kw">let </span>tx: Transaction = cbor::from_slice(signed_tx.blob.as_slice()).map_err(|err| {
+            Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to decode transaction: {}&quot;</span>, err))
+        })<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(tx)
+    }
+
+    <span class="doccomment">/// Fetch state root from block metadata transaction.
+    </span><span class="kw">fn </span>state_root_from_metadata(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        cache: <span class="kw-2">&amp;mut </span>Cache,
+        instance: <span class="kw-2">&amp;mut </span>Instance,
+        height: u64,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;Root, Error&gt; {
+        <span class="macro">debug!</span>(
+            <span class="self">self</span>.logger,
+            <span class="string">&quot;Fetching state root from block metadata transaction&quot;
+        </span>);
+
+        <span class="comment">// Ask the host for block metadata transaction.
+        </span><span class="kw">let </span>io = Io::new(<span class="kw-2">&amp;</span><span class="self">self</span>.protocol);
+        <span class="kw">let </span>stwp = io.fetch_block_metadata(height).map_err(|err| {
+            Error::StateRoot(<span class="macro">anyhow!</span>(
+                <span class="string">&quot;failed to fetch block metadata transaction: {}&quot;</span>,
+                err
+            ))
+        })<span class="question-mark">?</span>;
+
+        <span class="comment">// Verify the transaction and the proof.
+        </span><span class="kw">let </span>tx = <span class="self">self</span>.verify_transaction(cache, instance, <span class="kw-2">&amp;</span>stwp.signed_tx, <span class="kw-2">&amp;</span>stwp.proof)<span class="question-mark">?</span>;
+
+        <span class="kw">if </span>tx.method != METHOD_META {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::StateRoot(<span class="macro">anyhow!</span>(<span class="string">&quot;invalid method name&quot;</span>)));
+        }
+
+        <span class="kw">let </span>meta: BlockMetadata = cbor::from_value(tx.body).map_err(|err| {
+            Error::StateRoot(<span class="macro">anyhow!</span>(
+                <span class="string">&quot;failed to decode block metadata transaction: {}&quot;</span>,
+                err
+            ))
+        })<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(Root {
+            namespace: Namespace::default(),
+            version: height,
+            root_type: RootType::State,
+            hash: meta.state_root,
+        })
     }
 
     <span class="kw">fn </span>verify(
@@ -1279,122 +1342,63 @@
         runtime_header: Header,
         epoch: EpochTime,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
-        <span class="comment">// Verify runtime ID matches.
-        </span><span class="kw">if </span>runtime_header.namespace != <span class="self">self</span>.runtime_id {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;header namespace does not match trusted runtime id&quot;
-            </span>)));
-        }
+        <span class="comment">// Perform basic verifications.
+        </span>predicates::verify_namespace(<span class="self">self</span>.runtime_id, <span class="kw-2">&amp;</span>runtime_header)<span class="question-mark">?</span>;
+        predicates::verify_round_advance(cache, <span class="kw-2">&amp;</span>runtime_header, <span class="kw-2">&amp;</span>consensus_block, epoch)<span class="question-mark">?</span>;
+        predicates::verify_consensus_advance(cache, <span class="kw-2">&amp;</span>consensus_block)<span class="question-mark">?</span>;
 
-        <span class="kw">if </span>runtime_header.round &lt; cache.last_verified_round {
-            <span class="comment">// Ignore requests for earlier rounds.
-            </span><span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;round seems to have moved backwards&quot;
-            </span>)));
-        }
-        <span class="kw">if </span>epoch &lt; cache.last_verified_epoch {
-            <span class="comment">// Ignore requests for earlier epochs.
-            </span><span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;epoch seems to have moved backwards&quot;
-            </span>)));
-        }
+        <span class="comment">// Verify the consensus layer block.
+        </span><span class="kw">let </span>height = consensus_block.height;
+        <span class="kw">let </span>consensus_block = <span class="self">self</span>.verify_consensus_block(cache, instance, consensus_block)<span class="question-mark">?</span>;
 
-        <span class="comment">// If round has advanced make sure that consensus height has also advanced as a round can
-        // only be finalized in a subsequent consensus block. This is to avoid a situation where
-        // one would keep feeding the same consensus block for subsequent rounds.
-        //
-        // NOTE: This needs to happen before the call to verify_consensus_only which updates the
-        //       cache.last_verified_height field.
-        </span><span class="kw">if </span>runtime_header.round &gt; cache.last_verified_round
-            &amp;&amp; consensus_block.height &lt;= cache.last_verified_height
-        {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;consensus height did not advance but runtime round did&quot;
-            </span>)));
-        }
+        <span class="comment">// Perform basic verifications.
+        </span>predicates::verify_time(<span class="kw-2">&amp;</span>runtime_header, <span class="kw-2">&amp;</span>consensus_block)<span class="question-mark">?</span>;
 
-        <span class="comment">// Verify the consensus layer block first to obtain an authoritative state root.
-        </span><span class="kw">let </span>consensus_block = <span class="self">self</span>.verify_consensus_only(cache, instance, consensus_block)<span class="question-mark">?</span>;
-        <span class="kw">let </span>state_root = consensus_block.get_state_root();
-        <span class="kw">let </span>state = ConsensusState::from_protocol(
-            <span class="self">self</span>.protocol.clone(),
-            state_root.version + <span class="number">1</span>,
-            state_root,
-        );
+        <span class="comment">// Obtain an authoritative state root.
+        </span><span class="kw">let </span>state = <span class="self">self</span>.consensus_state_at(cache, instance, height)<span class="question-mark">?</span>;
 
         <span class="comment">// Check if we have already verified this runtime header to avoid re-verification.
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(state_root) = cache.verified_state_roots.get(<span class="kw-2">&amp;</span>runtime_header.round) {
-            <span class="kw">if </span>state_root == <span class="kw-2">&amp;</span>runtime_header.state_root &amp;&amp; epoch == cache.last_verified_epoch {
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>((state_root, state_epoch)) =
+            cache.verified_state_roots.get(<span class="kw-2">&amp;</span>runtime_header.round)
+        {
+            <span class="kw">if </span>state_root == <span class="kw-2">&amp;</span>runtime_header.state_root
+                &amp;&amp; state_epoch == <span class="kw-2">&amp;</span>epoch
+                &amp;&amp; epoch == cache.last_verified_epoch
+            {
                 <span class="comment">// Header and epoch matches, no need to perform re-verification.
-                </span><span class="kw">return </span><span class="prelude-val">Ok</span>(state);
+
+                // Cache last verified fields.
+                </span>cache.last_verified_height = height;
+                cache.last_verified_round = runtime_header.round;
+
+                <span class="kw">return </span><span class="prelude-val">Ok</span>(state);
             }
 
             <span class="comment">// Force full verification in case of cache mismatch.
         </span>}
 
-        <span class="comment">// Verify that the state root matches.
-        </span><span class="kw">let </span>roothash_state = RoothashState::new(<span class="kw-2">&amp;</span>state);
-        <span class="kw">let </span>state_root = roothash_state
-            .state_root(Context::background(), <span class="self">self</span>.runtime_id)
-            .map_err(|err| {
-                Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to retrieve trusted state root: {}&quot;</span>, err))
-            })<span class="question-mark">?</span>;
-        <span class="kw">if </span>runtime_header.state_root != state_root {
-            <span class="comment">// It could happen that the runtime did not process any previous rounds (e.g. due to
-            // being a backup node or recently restarting). In this case the state could be out of
-            // date (due to Tendermint&#39;s state finalization delay) so we should try to use the
-            // latest state for verification.
-            </span><span class="kw">let </span>latest_state = <span class="self">self</span>.latest_consensus_state(cache, instance)<span class="question-mark">?</span>;
-            <span class="kw">let </span>latest_roothash_state = RoothashState::new(<span class="kw-2">&amp;</span>latest_state);
-            <span class="kw">let </span>latest_state_root = latest_roothash_state
-                .state_root(Context::background(), <span class="self">self</span>.runtime_id)
-                .map_err(|err| {
-                    Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                        <span class="string">&quot;failed to retrieve trusted state root: {}&quot;</span>,
-                        err
-                    ))
-                })<span class="question-mark">?</span>;
-            <span class="kw">if </span>runtime_header.state_root != latest_state_root {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;state root mismatch (expected: {} got: {})&quot;</span>,
-                    latest_state_root,
-                    runtime_header.state_root
-                )));
-            }
-        }
+        <span class="comment">// Obtain an authoritative state root for full verification.
+        // Note that we cannot return the state at height+1 as the block might not have been
+        // finalized yet, and we won&#39;t be able to query block results such as events.
+        </span><span class="kw">let </span>next_state = <span class="self">self</span>.consensus_state_at(cache, instance, height + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Verify that the epoch matches.
-        </span><span class="kw">let </span>beacon_state = BeaconState::new(<span class="kw-2">&amp;</span>state);
-        <span class="kw">let </span>current_epoch = <span class="kw">match </span>runtime_header.header_type {
-            <span class="comment">// Query future epoch as the epoch just changed in the epoch transition block.
-            </span>EpochTransition =&gt; beacon_state
-                .future_epoch(Context::background())
-                .map_err(|err| {
-                    Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to retrieve future epoch: {}&quot;</span>, err))
-                }),
-            <span class="kw">_ </span>=&gt; beacon_state.epoch(Context::background()).map_err(|err| {
-                Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to retrieve epoch: {}&quot;</span>, err))
-            }),
-        }<span class="question-mark">?</span>;
-
-        <span class="kw">if </span>current_epoch != epoch {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;epoch number mismatch (expected: {} got: {})&quot;</span>,
-                current_epoch,
-                epoch,
-            )));
-        }
+        <span class="comment">// Perform full verification.
+        </span>predicates::verify_state_root(<span class="kw-2">&amp;</span>next_state, <span class="kw-2">&amp;</span>runtime_header)<span class="question-mark">?</span>;
+        predicates::verify_epoch(<span class="kw-2">&amp;</span>next_state, epoch)<span class="question-mark">?</span>;
 
         <span class="comment">// Verify our own RAK is published in registry once per epoch.
         // This ensures consensus state is recent enough.
         </span><span class="kw">if </span>cache.last_verified_epoch != epoch {
-            cache.node_id = <span class="self">self</span>.verify_freshness_with_rak(<span class="kw-2">&amp;</span>state, <span class="kw-2">&amp;</span>cache.node_id)<span class="question-mark">?</span>;
+            <span class="self">self</span>.verify_freshness_with_rak(<span class="kw-2">&amp;</span>next_state, cache)<span class="question-mark">?</span>;
         }
 
-        <span class="comment">// Cache verified runtime header.
+        <span class="comment">// Cache verified state root and epoch.
         </span>cache
             .verified_state_roots
-            .put(runtime_header.round, state_root);
+            .put(runtime_header.round, (runtime_header.state_root, epoch));
+
+        <span class="comment">// Cache last verified fields.
+        </span>cache.last_verified_height = height;
         cache.last_verified_round = runtime_header.round;
         cache.last_verified_epoch = epoch;
 
@@ -1409,42 +1413,22 @@
         runtime_header: Header,
         epoch: EpochTime,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
-        <span class="comment">// Verify runtime ID matches.
-        </span><span class="kw">if </span>runtime_header.namespace != <span class="self">self</span>.runtime_id {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;header namespace does not match trusted runtime id&quot;
-            </span>)));
-        }
+        <span class="comment">// Perform basic verifications.
+        </span>predicates::verify_namespace(<span class="self">self</span>.runtime_id, <span class="kw-2">&amp;</span>runtime_header)<span class="question-mark">?</span>;
 
-        <span class="comment">// Verify the consensus layer block first to obtain an authoritative state root.
-        </span><span class="kw">let </span>untrusted_block =
-            decode_light_block(consensus_block).map_err(Error::VerificationFailed)<span class="question-mark">?</span>;
-        <span class="kw">let </span>untrusted_header = untrusted_block
-            .signed_header
-            .as_ref()
-            .ok_or_else(|| Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;missing signed header&quot;</span>)))<span class="question-mark">?</span>;
+        <span class="comment">// Verify the consensus layer block.
+        </span><span class="kw">let </span>height = consensus_block.height;
+        <span class="kw">let </span>consensus_block = <span class="self">self</span>.verify_consensus_block(cache, instance, consensus_block)<span class="question-mark">?</span>;
 
-        <span class="comment">// Verify up to the block at current height.
-        // Only does forward verification and fails if height is lower than the last trust height.
-        </span><span class="kw">let </span>height = untrusted_header.header().height.value();
-        <span class="kw">let </span>verified_block = <span class="self">self</span>.verify_to_target(height, cache, instance)<span class="question-mark">?</span>;
+        <span class="comment">// Perform basic verifications.
+        </span>predicates::verify_time(<span class="kw-2">&amp;</span>runtime_header, <span class="kw-2">&amp;</span>consensus_block)<span class="question-mark">?</span>;
 
-        <span class="comment">// Validate passed consensus block.
-        </span><span class="kw">if </span>untrusted_header.header() != verified_block.signed_header.header() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;header mismatch&quot;</span>)));
-        }
-
-        <span class="kw">let </span>state_root = untrusted_block.get_state_root();
-        <span class="kw">let </span>state = ConsensusState::from_protocol(
-            <span class="self">self</span>.protocol.clone(),
-            state_root.version + <span class="number">1</span>,
-            state_root,
-        );
+        <span class="comment">// Obtain an authoritative state root.
+        </span><span class="kw">let </span>state = <span class="self">self</span>.consensus_state_at(cache, instance, height)<span class="question-mark">?</span>;
 
         <span class="comment">// Check if we have already verified this runtime header to avoid re-verification.
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>((state_root, state_epoch)) = cache
-            .verified_state_roots_queries
-            .get(<span class="kw-2">&amp;</span>runtime_header.round)
+        </span><span class="kw">if let </span><span class="prelude-val">Some</span>((state_root, state_epoch)) =
+            cache.verified_state_roots.get(<span class="kw-2">&amp;</span>runtime_header.round)
         {
             <span class="kw">if </span>state_root == <span class="kw-2">&amp;</span>runtime_header.state_root &amp;&amp; state_epoch == <span class="kw-2">&amp;</span>epoch {
                 <span class="comment">// Header and epoch matches, no need to perform re-verification.
@@ -1454,48 +1438,19 @@
             <span class="comment">// Force full verification in case of cache mismatch.
         </span>}
 
-        <span class="comment">// Verify that the state root matches.
-        </span><span class="kw">let </span>roothash_state = RoothashState::new(<span class="kw-2">&amp;</span>state);
-        <span class="kw">let </span>state_root = roothash_state
-            .state_root(Context::background(), <span class="self">self</span>.runtime_id)
-            .map_err(|err| {
-                Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to retrieve trusted state root: {}&quot;</span>, err))
-            })<span class="question-mark">?</span>;
+        <span class="comment">// Obtain an authoritative state root for full verification.
+        // Note that we cannot return the state at height+1 as the block might not have been
+        // finalized yet, and we won&#39;t be able to query block results such as events.
+        </span><span class="kw">let </span>next_state = <span class="self">self</span>.consensus_state_at(cache, instance, height + <span class="number">1</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">if </span>runtime_header.state_root != state_root {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;state root mismatch (expected: {} got: {})&quot;</span>,
-                state_root,
-                runtime_header.state_root
-            )));
-        }
+        <span class="comment">// Perform full verification.
+        </span>predicates::verify_state_root(<span class="kw-2">&amp;</span>next_state, <span class="kw-2">&amp;</span>runtime_header)<span class="question-mark">?</span>;
+        predicates::verify_epoch(<span class="kw-2">&amp;</span>next_state, epoch)<span class="question-mark">?</span>;
 
-        <span class="comment">// Verify that the epoch matches.
-        </span><span class="kw">let </span>beacon_state = BeaconState::new(<span class="kw-2">&amp;</span>state);
-        <span class="kw">let </span>state_epoch = <span class="kw">match </span>runtime_header.header_type {
-            <span class="comment">// Query future epoch as the epoch just changed in the epoch transition block.
-            </span>EpochTransition =&gt; beacon_state
-                .future_epoch(Context::background())
-                .map_err(|err| {
-                    Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to retrieve future epoch: {}&quot;</span>, err))
-                }),
-            <span class="kw">_ </span>=&gt; beacon_state.epoch(Context::background()).map_err(|err| {
-                Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to retrieve epoch: {}&quot;</span>, err))
-            }),
-        }<span class="question-mark">?</span>;
-
-        <span class="kw">if </span>state_epoch != epoch {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;epoch number mismatch (expected: {} got: {})&quot;</span>,
-                state_epoch,
-                epoch,
-            )));
-        }
-
-        <span class="comment">// Cache verified runtime header.
+        <span class="comment">// Cache verified state root and epoch.
         </span>cache
-            .verified_state_roots_queries
-            .put(runtime_header.round, (state_root, state_epoch));
+            .verified_state_roots
+            .put(runtime_header.round, (runtime_header.state_root, epoch));
 
         <span class="prelude-val">Ok</span>(state)
     }
@@ -1503,13 +1458,9 @@
     <span class="kw">fn </span>events_at(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64, kind: EventKind) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Event&gt;, Error&gt; {
         <span class="kw">let </span>result = <span class="self">self
             </span>.protocol
-            .call_host(
-                Context::background(),
-                Body::HostFetchConsensusEventsRequest(HostFetchConsensusEventsRequest {
-                    height,
-                    kind,
-                }),
-            )
+            .call_host(Body::HostFetchConsensusEventsRequest(
+                HostFetchConsensusEventsRequest { height, kind },
+            ))
             .map_err(|err| Error::VerificationFailed(err.into()))<span class="question-mark">?</span>;
         <span class="comment">// TODO: Perform event verification once this becomes possible.
 
@@ -1538,19 +1489,12 @@
         );
     }
 
-    <span class="kw">fn </span>trust(<span class="kw-2">&amp;</span><span class="self">self</span>, cache: <span class="kw-2">&amp;mut </span>Cache, header: ComputeResultsHeader) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(state_root) = header.state_root {
-            cache.verified_state_roots.put(header.round, state_root);
-            cache.last_verified_round = header.round;
-        }
-
-        <span class="prelude-val">Ok</span>(())
-    }
-
     <span class="doccomment">/// Start the verifier in a separate thread.
     </span><span class="kw">pub fn </span>start(<span class="self">self</span>) {
         std::thread::spawn(<span class="kw">move </span>|| {
-            <span class="kw">let </span>logger = get_logger(<span class="string">&quot;consensus/tendermint/verifier&quot;</span>);
+            <span class="kw">let </span>_guard = <span class="self">self</span>.tokio_runtime.enter(); <span class="comment">// Ensure Tokio runtime is available.
+
+            </span><span class="kw">let </span>logger = get_logger(<span class="string">&quot;consensus/cometbft/verifier&quot;</span>);
             <span class="macro">info!</span>(logger, <span class="string">&quot;Starting consensus verifier&quot;</span>);
 
             <span class="comment">// Try to initialize a couple of times as initially it may be the case that we have
@@ -1612,33 +1556,43 @@
         <span class="kw">let </span>clock = Box::new(InsecureClock);
         <span class="kw">let </span>verifier = Box::new(PredicateVerifier::new(
             ProdPredicates::default(),
-            DomSepVotingPowerCalculator,
+            ProvidedVotingPowerCalculator::&lt;signature::DomSepVerifier&gt;::default(),
             ProdCommitValidator::default(),
-            ProdHasher::default(),
         ));
         <span class="kw">let </span>io = Box::new(Io::new(<span class="kw-2">&amp;</span><span class="self">self</span>.protocol));
 
         <span class="comment">// Build a light client using the embedded trust root or trust root
         // stored in the local store.
         </span><span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Loading trusted state&quot;</span>);
-        <span class="kw">let </span>trusted_state: TrustedState = <span class="self">self</span>.trusted_state_store.load(<span class="kw-2">&amp;</span><span class="self">self</span>.trust_root)<span class="question-mark">?</span>;
+        <span class="kw">let </span>trusted_state: TrustedState = <span class="self">self
+            </span>.trusted_state_store
+            .load(<span class="self">self</span>.runtime_version, <span class="kw-2">&amp;</span><span class="self">self</span>.trust_root)<span class="question-mark">?</span>;
 
         <span class="comment">// Verify if we can trust light blocks from a new chain if the consensus
         // chain context changes.
         </span><span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Checking chain context change&quot;</span>);
-        <span class="kw">let </span>trust_root = <span class="self">self</span>.handle_chain_context_change(
+        <span class="kw">let </span>trusted_state = <span class="self">self</span>.handle_chain_context_change(
             trusted_state,
             verifier.as_ref(),
             clock.as_ref(),
             io.as_ref(),
         )<span class="question-mark">?</span>;
 
+        <span class="comment">// Insert all of the trusted blocks into the light store as trusted.
+        </span><span class="kw">let </span><span class="kw-2">mut </span>store = Box::new(LruStore::new(
+            <span class="number">512</span>,
+            trusted_state.trust_root.height.try_into().unwrap(),
+        ));
+        <span class="kw">for </span>lb <span class="kw">in </span>trusted_state.trusted_blocks {
+            store.insert(lb.into(), Status::Trusted);
+        }
+        <span class="kw">let </span>trust_root = trusted_state.trust_root;
+
         <span class="kw">let </span>builder = LightClientBuilder::custom(
             peer_id,
             options,
-            Box::new(LruStore::new(<span class="number">512</span>, trust_root.height.try_into().unwrap())),
+            store,
             io,
-            Box::new(ProdHasher),
             clock,
             verifier,
             Box::new(components::scheduler::basic_bisecting_schedule),
@@ -1660,13 +1614,17 @@
             <span class="string">&quot;trust_root_chain_context&quot; </span>=&gt; <span class="question-mark">?</span>trust_root.chain_context,
         );
 
-        <span class="kw">let </span><span class="kw-2">mut </span>cache = Cache::default();
+        <span class="kw">let </span>host_node_id =
+            block_on(<span class="self">self</span>.protocol.identity()).expect(<span class="string">&quot;host should provide a node identity&quot;</span>);
+
+        <span class="kw">let </span><span class="kw-2">mut </span>cache = Cache::new(host_node_id);
 
         <span class="comment">// Sync the verifier up to the latest block to make sure we are up to date before
         // processing any requests.
         </span><span class="kw">let </span>verified_block = <span class="self">self</span>.verify_to_target(HEIGHT_LATEST, <span class="kw-2">&amp;mut </span>cache, <span class="kw-2">&amp;mut </span>instance)<span class="question-mark">?</span>;
 
-        <span class="self">self</span>.trusted_state_store.save(<span class="kw-2">&amp;</span>verified_block);
+        <span class="self">self</span>.trusted_state_store
+            .save(<span class="self">self</span>.runtime_version, <span class="kw-2">&amp;</span>instance.state.light_store);
 
         <span class="kw">let </span><span class="kw-2">mut </span>last_saved_verified_block_height =
             verified_block.signed_header.header.height.value();
@@ -1714,11 +1672,6 @@
                         ))
                         .map_err(|<span class="kw">_</span>| Error::Internal)<span class="question-mark">?</span>;
                 }
-                Command::Trust(header, sender) =&gt; {
-                    sender
-                        .send(<span class="self">self</span>.trust(<span class="kw-2">&amp;mut </span>cache, header))
-                        .map_err(|<span class="kw">_</span>| Error::Internal)<span class="question-mark">?</span>;
-                }
                 Command::LatestState(sender) =&gt; {
                     sender
                         .send(<span class="self">self</span>.latest_consensus_state(<span class="kw-2">&amp;mut </span>cache, <span class="kw-2">&amp;mut </span>instance))
@@ -1745,7 +1698,8 @@
             </span><span class="kw">if let </span><span class="prelude-val">Some</span>(last_verified_block) = cache.last_verified_block.as_ref() {
                 <span class="kw">let </span>last_height = last_verified_block.signed_header.header.height.into();
                 <span class="kw">if </span>last_height - last_saved_verified_block_height &gt; TRUSTED_STATE_SAVE_INTERVAL {
-                    <span class="self">self</span>.trusted_state_store.save(last_verified_block);
+                    <span class="self">self</span>.trusted_state_store
+                        .save(<span class="self">self</span>.runtime_version, <span class="kw-2">&amp;</span>instance.state.light_store);
                     last_saved_verified_block_height = last_height;
                 }
             }
@@ -1754,28 +1708,32 @@
 
     <span class="kw">fn </span>handle_chain_context_change(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        trusted_state: TrustedState,
+        <span class="kw-2">mut </span>trusted_state: TrustedState,
         verifier: <span class="kw-2">&amp;</span><span class="kw">impl </span>TMVerifier,
         clock: <span class="kw-2">&amp;</span><span class="kw">impl </span>components::clock::Clock,
         io: <span class="kw-2">&amp;</span>Io,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;TrustRoot, Error&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;TrustedState, Error&gt; {
         <span class="kw">let </span>host_info = <span class="self">self</span>.protocol.get_host_info();
 
         <span class="comment">// Nothing to handle.
         </span><span class="kw">if </span>trusted_state.trust_root.chain_context == host_info.consensus_chain_context {
             <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Consensus chain context hasn&#39;t changed&quot;</span>);
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(trusted_state.trust_root);
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(trusted_state);
         }
         <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Consensus chain context has changed&quot;</span>);
 
         <span class="comment">// Chain context transition cannot be done directly from the embedded
         // trust root as we don&#39;t have access to the matching trusted light
         // block which validator set we need to verify blocks from the new chain.
-        </span><span class="kw">let </span>trusted_block = trusted_state.trusted_block.ok_or_else(|| {
-            Error::ChainContextTransitionFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;cannot transition from embedded trust root&quot;
-            </span>))
-        })<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>trusted_block: TMLightBlock = trusted_state
+            .trusted_blocks
+            .pop()
+            .ok_or_else(|| {
+                Error::ChainContextTransitionFailed(<span class="macro">anyhow!</span>(
+                    <span class="string">&quot;cannot transition from embedded trust root&quot;
+                </span>))
+            })<span class="question-mark">?
+            </span>.into();
 
         <span class="comment">// Fetch genesis block from the host and prepare untrusted state for
         // verification. Since host cannot be trusted we need to verify if
@@ -1802,8 +1760,7 @@
         // Keeping heights at minimum distance of 2 will make sure that the
         // verifier will check if there is enough overlap between the validator
         // sets.
-        </span><span class="kw">let </span>lbm = decode_light_block(trusted_block).map_err(Error::ChainContextTransitionFailed)<span class="question-mark">?</span>;
-        <span class="kw">let </span>header = lbm.signed_header.unwrap().header;
+        </span><span class="kw">let </span>header = trusted_block.signed_header.header;
         <span class="kw">let </span>height = header.height;
         <span class="kw">let </span>height = <span class="kw">if </span>height.increment() != untrusted.height() {
             height
@@ -1819,8 +1776,10 @@
         <span class="kw">let </span>trusted = TrustedBlockState {
             header_time: header.time,
             height,
-            next_validators: <span class="kw-2">&amp;</span>lbm.validators,
+            next_validators: <span class="kw-2">&amp;</span>trusted_block.validators,
             next_validators_hash: header.validators_hash,
+            <span class="comment">// We need to use the target chain ID as we know it has changed.
+            </span>chain_id: <span class="kw-2">&amp;</span>chain_id(<span class="kw-2">&amp;</span>host_info.consensus_chain_context),
         };
 
         <span class="comment">// Verify the new block using +2/3 trust threshold rule.
@@ -1839,7 +1798,7 @@
                 <span class="macro">info!</span>(
                     <span class="self">self</span>.logger,
                     <span class="string">&quot;Not enough trust to accept new chain context&quot;</span>;
-                    <span class="string">&quot;log_event&quot; </span>=&gt; <span class="string">&quot;consensus/tendermint/verifier/chain_context/no_trust&quot;</span>,
+                    <span class="string">&quot;log_event&quot; </span>=&gt; <span class="string">&quot;consensus/cometbft/verifier/chain_context/no_trust&quot;</span>,
                     <span class="string">&quot;tally&quot; </span>=&gt; <span class="question-mark">?</span>tally,
                 );
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::ChainContextTransitionFailed(<span class="macro">anyhow!</span>(
@@ -1850,7 +1809,7 @@
                 <span class="macro">info!</span>(
                     <span class="self">self</span>.logger,
                     <span class="string">&quot;Failed to accept new chain context&quot;</span>;
-                    <span class="string">&quot;log_event&quot; </span>=&gt; <span class="string">&quot;consensus/tendermint/verifier/chain_context/failed&quot;</span>,
+                    <span class="string">&quot;log_event&quot; </span>=&gt; <span class="string">&quot;consensus/cometbft/verifier/chain_context/failed&quot;</span>,
                     <span class="string">&quot;error&quot; </span>=&gt; <span class="question-mark">?</span>e,
                 );
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::ChainContextTransitionFailed(<span class="macro">anyhow!</span>(
@@ -1861,7 +1820,7 @@
 
         <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Consensus chain context transition done&quot;</span>);
 
-        <span class="kw">let </span>header = untrusted_block.signed_header.header;
+        <span class="kw">let </span>header = <span class="kw-2">&amp;</span>untrusted_block.signed_header.header;
         <span class="kw">let </span>trust_root = TrustRoot {
             height: header.height.into(),
             hash: header.hash().to_string(),
@@ -1869,7 +1828,10 @@
             chain_context: host_info.consensus_chain_context,
         };
 
-        <span class="prelude-val">Ok</span>(trust_root)
+        <span class="prelude-val">Ok</span>(TrustedState {
+            trust_root,
+            trusted_blocks: <span class="macro">vec!</span>[untrusted_block.into()],
+        })
     }
 }
 </code></pre></div></section></main></body></html>

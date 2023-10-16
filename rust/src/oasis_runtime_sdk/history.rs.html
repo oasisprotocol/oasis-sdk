@@ -51,6 +51,7 @@
 </pre></div><pre class="rust"><code><span class="doccomment">//! Historic state access.
 </span><span class="kw">use </span>oasis_core_runtime::{
     consensus::{state::ConsensusState, verifier::Verifier, Event},
+    future::block_on,
     types::EventKind,
 };
 
@@ -90,12 +91,11 @@
 
 <span class="kw">impl</span>&lt;V: Verifier&gt; HistoryHost <span class="kw">for </span>V {
     <span class="kw">fn </span>consensus_state_at(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
-        <span class="self">self</span>.state_at(height).map_err(|<span class="kw">_</span>| Error::FailedToFetchBlock)
+        block_on(<span class="self">self</span>.state_at(height)).map_err(|<span class="kw">_</span>| Error::FailedToFetchBlock)
     }
 
     <span class="kw">fn </span>consensus_events_at(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64, kind: EventKind) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Event&gt;, Error&gt; {
-        <span class="self">self</span>.events_at(height, kind)
-            .map_err(|<span class="kw">_</span>| Error::FailedToFetchEvents)
+        block_on(<span class="self">self</span>.events_at(height, kind)).map_err(|<span class="kw">_</span>| Error::FailedToFetchEvents)
     }
 }
 </code></pre></div></section></main></body></html>

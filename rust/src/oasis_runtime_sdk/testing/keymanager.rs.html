@@ -79,17 +79,12 @@
 <a href="#79" id="79">79</a>
 <a href="#80" id="80">80</a>
 <a href="#81" id="81">81</a>
-<a href="#82" id="82">82</a>
-<a href="#83" id="83">83</a>
-<a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Mock key manager implementation.
 
 </span><span class="kw">use </span>std::{collections::HashMap, sync::Mutex};
 
 <span class="kw">pub use </span><span class="kw">crate</span>::keymanager::{
-    KeyManagerError, KeyPair, KeyPairId, PrivateKey, PublicKey, SignedPublicKey, StateKey,
-    TrustedPolicySigners,
+    KeyManagerError, KeyPair, KeyPairId, SignedPublicKey, StateKey, TrustedPolicySigners,
 };
 <span class="kw">use crate</span>::{core::consensus::beacon::EpochTime, keymanager::KeyManager};
 
@@ -133,10 +128,7 @@
             .clone())
     }
 
-    <span class="kw">fn </span>get_public_key(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        _key_pair_id: KeyPairId,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedPublicKey&gt;, KeyManagerError&gt; {
+    <span class="kw">fn </span>get_public_key(<span class="kw-2">&amp;</span><span class="self">self</span>, _key_pair_id: KeyPairId) -&gt; <span class="prelude-ty">Result</span>&lt;SignedPublicKey, KeyManagerError&gt; {
         <span class="prelude-val">Err</span>(KeyManagerError::NotInitialized)
     }
 
@@ -160,7 +152,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         _key_pair_id: KeyPairId,
         _epoch: EpochTime,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;SignedPublicKey&gt;, KeyManagerError&gt; {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;SignedPublicKey, KeyManagerError&gt; {
         <span class="prelude-val">Err</span>(KeyManagerError::NotInitialized)
     }
 

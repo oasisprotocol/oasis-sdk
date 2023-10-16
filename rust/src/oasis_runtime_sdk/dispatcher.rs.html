@@ -1171,11 +1171,6 @@
 <a href="#1171" id="1171">1171</a>
 <a href="#1172" id="1172">1172</a>
 <a href="#1173" id="1173">1173</a>
-<a href="#1174" id="1174">1174</a>
-<a href="#1175" id="1175">1175</a>
-<a href="#1176" id="1176">1176</a>
-<a href="#1177" id="1177">1177</a>
-<a href="#1178" id="1178">1178</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Transaction dispatcher.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
@@ -1192,6 +1187,7 @@
     <span class="self">self</span>,
     common::crypto::hash::Hash,
     consensus::{roothash, verifier::Verifier},
+    future::block_on,
     protocol::HostInfo,
     transaction::{
         <span class="self">self</span>,
@@ -1733,11 +1729,11 @@
             </span>.key_manager
             .as_ref()
             <span class="comment">// NOTE: We are explicitly allowing private key operations during execution.
-            </span>.map(|mgr| mgr.with_private_context(rt_ctx.io_ctx.clone()));
+            </span>.map(|mgr| mgr.with_private_context());
         <span class="kw">let </span>history = <span class="self">self</span>.consensus_verifier.clone();
         <span class="kw">let </span>rng = RootRng::new();
 
-        <span class="kw">let </span>root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), <span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
+        <span class="kw">let </span>root = storage::MKVSStore::new(<span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
             Mode::ExecuteTx,
             <span class="kw-2">&amp;</span><span class="self">self</span>.host_info,
@@ -1748,7 +1744,6 @@
             <span class="kw-2">&amp;</span>history,
             rt_ctx.epoch,
             <span class="kw-2">&amp;</span>rng,
-            rt_ctx.io_ctx.clone(),
             rt_ctx.max_messages,
         );
 
@@ -1981,14 +1976,11 @@
         </span><span class="kw">let </span>prefetch_enabled = R::PREFETCH_LIMIT &gt; <span class="number">0</span>;
 
         <span class="comment">// Prepare dispatch context.
-        </span><span class="kw">let </span>key_manager = <span class="self">self
-            </span>.key_manager
-            .as_ref()
-            .map(|mgr| mgr.with_context(rt_ctx.io_ctx.clone()));
+        </span><span class="kw">let </span>key_manager = <span class="self">self</span>.key_manager.as_ref().map(|mgr| mgr.with_context());
         <span class="kw">let </span>history = <span class="self">self</span>.consensus_verifier.clone();
         <span class="kw">let </span>rng = RootRng::new();
 
-        <span class="kw">let </span>root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), <span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
+        <span class="kw">let </span>root = storage::MKVSStore::new(<span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
             Mode::CheckTx,
             <span class="kw-2">&amp;</span><span class="self">self</span>.host_info,
@@ -1999,7 +1991,6 @@
             <span class="kw-2">&amp;</span>history,
             rt_ctx.epoch,
             <span class="kw-2">&amp;</span>rng,
-            rt_ctx.io_ctx.clone(),
             rt_ctx.max_messages,
         );
 
@@ -2065,19 +2056,19 @@
         <span class="kw">if </span>is_confidential_allowed {
             <span class="comment">// Perform consensus layer state integrity verification for any queries that allow
             // access to confidential state.
-            </span><span class="self">self</span>.consensus_verifier.verify_for_query(
+            </span>block_on(<span class="self">self</span>.consensus_verifier.verify_for_query(
                 rt_ctx.consensus_block.clone(),
                 rt_ctx.header.clone(),
                 rt_ctx.epoch,
-            )<span class="question-mark">?</span>;
+            ))<span class="question-mark">?</span>;
             <span class="comment">// Ensure the runtime is still ready to process requests.
             </span>rt_ctx.protocol.ensure_initialized()<span class="question-mark">?</span>;
         }
         <span class="kw">let </span>key_manager = <span class="self">self</span>.key_manager.as_ref().map(|mgr| {
             <span class="kw">if </span>is_confidential_allowed {
-                mgr.with_private_context(rt_ctx.io_ctx.clone())
+                mgr.with_private_context()
             } <span class="kw">else </span>{
-                mgr.with_context(rt_ctx.io_ctx.clone())
+                mgr.with_context()
             }
         });
 
@@ -2089,7 +2080,7 @@
         <span class="comment">// Prepare dispatch context.
         </span><span class="kw">let </span>history = <span class="self">self</span>.consensus_verifier.clone();
 
-        <span class="kw">let </span>root = storage::MKVSStore::new(rt_ctx.io_ctx.clone(), <span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
+        <span class="kw">let </span>root = storage::MKVSStore::new(<span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
             Mode::CheckTx,
             <span class="kw-2">&amp;</span><span class="self">self</span>.host_info,
@@ -2100,7 +2091,6 @@
             <span class="kw-2">&amp;</span>history,
             rt_ctx.epoch,
             <span class="kw-2">&amp;</span>rng,
-            rt_ctx.io_ctx.clone(),
             rt_ctx.max_messages,
         );
 

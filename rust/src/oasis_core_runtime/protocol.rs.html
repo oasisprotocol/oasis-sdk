@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/protocol.rs`."><title>protocol.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/protocol.rs`."><title>protocol.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -527,6 +527,9 @@
 <a href="#527" id="527">527</a>
 <a href="#528" id="528">528</a>
 <a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
+<a href="#532" id="532">532</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Runtime side of the worker-host protocol.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, HashMap},
@@ -539,16 +542,17 @@
 
 <span class="kw">use </span>byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 <span class="kw">use </span>crossbeam::channel;
-<span class="kw">use </span>io_context::Context;
 <span class="kw">use </span>slog::{debug, error, info, warn, Logger};
 <span class="kw">use </span>thiserror::Error;
+<span class="kw">use </span>tokio::sync::oneshot;
 
 <span class="kw">use crate</span>::{
     common::{logger::get_logger, namespace::Namespace, version::Version},
     config::Config,
     consensus::{tendermint, verifier::Verifier},
     dispatcher::Dispatcher,
-    rak::RAK,
+    future::block_on,
+    identity::Identity,
     storage::KeyValue,
     types::{Body, Error, Message, MessageType, RuntimeInfoRequest, RuntimeInfoResponse},
     BUILD_INFO,
@@ -617,9 +621,9 @@
 </span><span class="kw">pub struct </span>Protocol {
     <span class="doccomment">/// Logger.
     </span>logger: Logger,
-    <span class="doccomment">/// Runtime attestation key.
+    <span class="doccomment">/// Runtime identity.
     </span><span class="attr">#[cfg_attr(not(target_env = <span class="string">&quot;sgx&quot;</span>), allow(unused))]
-    </span>rak: Arc&lt;RAK&gt;,
+    </span>identity: Arc&lt;Identity&gt;,
     <span class="doccomment">/// Incoming request dispatcher.
     </span>dispatcher: Arc&lt;Dispatcher&gt;,
     <span class="doccomment">/// Channel for sending outgoing messages.
@@ -631,18 +635,21 @@
     <span class="doccomment">/// Outgoing request identifier generator.
     </span>last_request_id: AtomicUsize,
     <span class="doccomment">/// Pending outgoing requests.
-    </span>pending_out_requests: Mutex&lt;HashMap&lt;u64, channel::Sender&lt;Body&gt;&gt;&gt;,
+    </span>pending_out_requests: Mutex&lt;HashMap&lt;u64, oneshot::Sender&lt;Body&gt;&gt;&gt;,
     <span class="doccomment">/// Runtime configuration.
     </span>config: Config,
     <span class="doccomment">/// Host environment information.
     </span>host_info: Mutex&lt;<span class="prelude-ty">Option</span>&lt;HostInfo&gt;&gt;,
+    <span class="doccomment">/// Tokio runtime handle.
+    </span>tokio_runtime: tokio::runtime::Handle,
 }
 
 <span class="kw">impl </span>Protocol {
     <span class="doccomment">/// Create a new protocol handler instance.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>new(
+        tokio_runtime: tokio::runtime::Handle,
         stream: Stream,
-        rak: Arc&lt;RAK&gt;,
+        identity: Arc&lt;Identity&gt;,
         dispatcher: Arc&lt;Dispatcher&gt;,
         config: Config,
     ) -&gt; <span class="self">Self </span>{
@@ -652,7 +659,7 @@
 
         <span class="self">Self </span>{
             logger,
-            rak,
+            identity,
             dispatcher,
             outgoing_tx,
             outgoing_rx,
@@ -661,6 +668,7 @@
             pending_out_requests: Mutex::new(HashMap::new()),
             config,
             host_info: Mutex::new(<span class="prelude-val">None</span>),
+            tokio_runtime,
         }
     }
 
@@ -669,13 +677,10 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.config
     }
 
-    <span class="doccomment">/// The runtime attestation key.
-    </span><span class="kw">pub fn </span>get_rak(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Arc&lt;RAK&gt;&gt; {
-        <span class="kw">if </span><span class="self">self</span>.rak.public_key().is_none() || <span class="self">self</span>.rak.quote().is_none() {
-            <span class="kw">return </span><span class="prelude-val">None</span>;
-        }
-
-        <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.rak)
+    <span class="doccomment">/// The runtime identity.
+    </span><span class="kw">pub fn </span>get_identity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Arc&lt;Identity&gt;&gt; {
+        <span class="self">self</span>.identity.quote()<span class="question-mark">?</span>;
+        <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.identity)
     }
 
     <span class="doccomment">/// The runtime identifier for this instance.
@@ -743,7 +748,18 @@
     }
 
     <span class="doccomment">/// Make a new request to the runtime host and wait for the response.
-    </span><span class="kw">pub fn </span>call_host(<span class="kw-2">&amp;</span><span class="self">self</span>, _ctx: Context, body: Body) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
+    ///
+    /// This is a blocking variant of `call_host_async`.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if called within an asynchronous execution context.
+    </span><span class="kw">pub fn </span>call_host(<span class="kw-2">&amp;</span><span class="self">self</span>, body: Body) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
+        block_on(<span class="self">self</span>.call_host_async(body))
+    }
+
+    <span class="doccomment">/// Make a new request to the runtime host and wait for the response.
+    </span><span class="kw">pub async fn </span>call_host_async(<span class="kw-2">&amp;</span><span class="self">self</span>, body: Body) -&gt; <span class="prelude-ty">Result</span>&lt;Body, Error&gt; {
         <span class="kw">let </span>id = <span class="self">self</span>.last_request_id.fetch_add(<span class="number">1</span>, Ordering::SeqCst) <span class="kw">as </span>u64;
         <span class="kw">let </span>message = Message {
             id,
@@ -752,7 +768,7 @@
         };
 
         <span class="comment">// Create a response channel and register an outstanding pending request.
-        </span><span class="kw">let </span>(tx, rx) = channel::bounded(<span class="number">1</span>);
+        </span><span class="kw">let </span>(tx, rx) = oneshot::channel();
         {
             <span class="kw">let </span><span class="kw-2">mut </span>pending_requests = <span class="self">self</span>.pending_out_requests.lock().unwrap();
             pending_requests.insert(id, tx);
@@ -762,8 +778,8 @@
         </span><span class="self">self</span>.send_message(message).map_err(Error::from)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>result = rx
-            .recv()
-            .map_err(|<span class="kw">_</span>| Error::from(ProtocolError::ChannelClosed))<span class="question-mark">?</span>;
+            .<span class="kw">await
+            </span>.map_err(|<span class="kw">_</span>| Error::from(ProtocolError::ChannelClosed))<span class="question-mark">?</span>;
         <span class="kw">match </span>result {
             Body::Error(err) =&gt; <span class="prelude-val">Err</span>(err),
             body =&gt; <span class="prelude-val">Ok</span>(body),
@@ -824,18 +840,15 @@
             MessageType::Request =&gt; {
                 <span class="comment">// Incoming request.
                 </span><span class="kw">let </span>id = message.id;
-                <span class="kw">let </span>ctx = Context::background();
 
-                <span class="kw">let </span>body = <span class="kw">match </span><span class="self">self</span>.handle_request(ctx, id, message.body) {
+                <span class="kw">let </span>body = <span class="kw">match </span><span class="self">self</span>.handle_request(id, message.body) {
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(result)) =&gt; result,
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
                         <span class="comment">// A message will be sent later by another thread so there
                         // is no need to do anything more.
                         </span><span class="kw">return </span><span class="prelude-val">Ok</span>(());
                     }
-                    <span class="prelude-val">Err</span>(error) =&gt; {
-                        Body::Error(Error::new(<span class="string">&quot;rhp/dispatcher&quot;</span>, <span class="number">1</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{}&quot;</span>, error)))
-                    }
+                    <span class="prelude-val">Err</span>(error) =&gt; Body::Error(Error::new(<span class="string">&quot;rhp/dispatcher&quot;</span>, <span class="number">1</span>, <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{error}&quot;</span>))),
                 };
 
                 <span class="comment">// Send response back.
@@ -854,8 +867,8 @@
 
                 <span class="kw">match </span>response_sender {
                     <span class="prelude-val">Some</span>(response_sender) =&gt; {
-                        <span class="kw">if let </span><span class="prelude-val">Err</span>(error) = response_sender.try_send(message.body) {
-                            <span class="macro">warn!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Unable to deliver response to local handler&quot;</span>; <span class="string">&quot;err&quot; </span>=&gt; %error);
+                        <span class="kw">if </span>response_sender.send(message.body).is_err() {
+                            <span class="macro">warn!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Unable to deliver response to local handler&quot;</span>);
                         }
                     }
                     <span class="prelude-val">None </span>=&gt; {
@@ -871,7 +884,6 @@
 
     <span class="kw">fn </span>handle_request(
         <span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;Protocol&gt;,
-        ctx: Context,
         id: u64,
         request: Body,
     ) -&gt; anyhow::Result&lt;<span class="prelude-ty">Option</span>&lt;Body&gt;&gt; {
@@ -899,7 +911,7 @@
             | Body::RuntimeCapabilityTEERakReportRequest {}
             | Body::RuntimeCapabilityTEERakAvrRequest { .. }
             | Body::RuntimeCapabilityTEERakQuoteRequest { .. } =&gt; {
-                <span class="self">self</span>.dispatcher.queue_request(ctx, id, request)<span class="question-mark">?</span>;
+                <span class="self">self</span>.dispatcher.queue_request(id, request)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
             }
 
@@ -908,16 +920,17 @@
             | Body::RuntimeLocalRPCCallRequest { .. }
             | Body::RuntimeCheckTxBatchRequest { .. }
             | Body::RuntimeExecuteTxBatchRequest { .. }
-            | Body::RuntimeKeyManagerPolicyUpdateRequest { .. }
+            | Body::RuntimeKeyManagerStatusUpdateRequest { .. }
+            | Body::RuntimeKeyManagerQuotePolicyUpdateRequest { .. }
             | Body::RuntimeQueryRequest { .. }
             | Body::RuntimeConsensusSyncRequest { .. } =&gt; {
                 <span class="self">self</span>.ensure_initialized()<span class="question-mark">?</span>;
-                <span class="self">self</span>.dispatcher.queue_request(ctx, id, request)<span class="question-mark">?</span>;
+                <span class="self">self</span>.dispatcher.queue_request(id, request)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
             }
 
             <span class="kw">_ </span>=&gt; {
-                <span class="macro">warn!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Received unsupported request&quot;</span>; <span class="string">&quot;req&quot; </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;{:?}&quot;</span>, request));
+                <span class="macro">warn!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Received unsupported request&quot;</span>; <span class="string">&quot;req&quot; </span>=&gt; <span class="macro">format!</span>(<span class="string">&quot;{request:?}&quot;</span>));
                 <span class="prelude-val">Err</span>(ProtocolError::MethodNotSupported.into())
             }
         }
@@ -958,6 +971,7 @@
                 <span class="comment">// Create the Tendermint consensus layer verifier and spawn it in a separate thread.
                 </span><span class="kw">let </span>verifier = tendermint::verifier::Verifier::new(
                     <span class="self">self</span>.clone(),
+                    <span class="self">self</span>.tokio_runtime.clone(),
                     trust_root.clone(),
                     host_info.runtime_id,
                     host_info.consensus_chain_context.clone(),
@@ -995,16 +1009,16 @@
 
     <span class="doccomment">/// Ensure that the runtime is ready to process requests and fail otherwise.
     </span><span class="kw">pub fn </span>ensure_initialized(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;()&gt; {
-        <span class="kw">if </span><span class="self">self</span>.host_info.lock().unwrap().is_none() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(ProtocolError::HostInfoNotConfigured.into());
-        }
+        <span class="self">self</span>.host_info
+            .lock()
+            .unwrap()
+            .as_ref()
+            .ok_or(ProtocolError::HostInfoNotConfigured)<span class="question-mark">?</span>;
 
         <span class="attr">#[cfg(target_env = <span class="string">&quot;sgx&quot;</span>)]
-        </span>{
-            <span class="kw">if </span><span class="self">self</span>.rak.quote().is_none() {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(ProtocolError::AttestationRequired.into());
-            }
-        }
+        </span><span class="self">self</span>.identity
+            .quote()
+            .ok_or(ProtocolError::AttestationRequired)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -1018,26 +1032,20 @@
 /// hiding data, tampering with keys/values, ignoring writes, replaying
 /// past values, etc.
 </span><span class="kw">pub struct </span>ProtocolUntrustedLocalStorage {
-    ctx: Arc&lt;Context&gt;,
     protocol: Arc&lt;Protocol&gt;,
 }
 
 <span class="kw">impl </span>ProtocolUntrustedLocalStorage {
-    <span class="kw">pub fn </span>new(ctx: Context, protocol: Arc&lt;Protocol&gt;) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
-            ctx: ctx.freeze(),
-            protocol,
-        }
+    <span class="kw">pub fn </span>new(protocol: Arc&lt;Protocol&gt;) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ protocol }
     }
 }
 
 <span class="kw">impl </span>KeyValue <span class="kw">for </span>ProtocolUntrustedLocalStorage {
     <span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
-        <span class="kw">let </span>ctx = Context::create_child(<span class="kw-2">&amp;</span><span class="self">self</span>.ctx);
-
         <span class="kw">match </span><span class="self">self
             </span>.protocol
-            .call_host(ctx, Body::HostLocalStorageGetRequest { key })<span class="question-mark">?
+            .call_host(Body::HostLocalStorageGetRequest { key })<span class="question-mark">?
         </span>{
             Body::HostLocalStorageGetResponse { value } =&gt; <span class="prelude-val">Ok</span>(value),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(ProtocolError::InvalidResponse.into()),
@@ -1045,11 +1053,9 @@
     }
 
     <span class="kw">fn </span>insert(<span class="kw-2">&amp;</span><span class="self">self</span>, key: Vec&lt;u8&gt;, value: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="kw">let </span>ctx = Context::create_child(<span class="kw-2">&amp;</span><span class="self">self</span>.ctx);
-
         <span class="kw">match </span><span class="self">self
             </span>.protocol
-            .call_host(ctx, Body::HostLocalStorageSetRequest { key, value })<span class="question-mark">?
+            .call_host(Body::HostLocalStorageSetRequest { key, value })<span class="question-mark">?
         </span>{
             Body::HostLocalStorageSetResponse {} =&gt; <span class="prelude-val">Ok</span>(()),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(ProtocolError::InvalidResponse.into()),

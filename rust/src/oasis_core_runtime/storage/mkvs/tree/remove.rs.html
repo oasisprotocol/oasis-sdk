@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/storage/mkvs/tree/remove.rs`."><title>remove.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/storage/mkvs/tree/remove.rs`."><title>remove.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -182,18 +182,7 @@
 <a href="#182" id="182">182</a>
 <a href="#183" id="183">183</a>
 <a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
-<a href="#191" id="191">191</a>
-<a href="#192" id="192">192</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
-
-<span class="kw">use </span>anyhow::Result;
-<span class="kw">use </span>io_context::Context;
+</pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
 
 <span class="kw">use </span><span class="kw">crate</span>::storage::mkvs::{cache::<span class="kw-2">*</span>, tree::<span class="kw-2">*</span>};
 
@@ -202,15 +191,14 @@
 <span class="kw">impl </span>Tree {
     <span class="doccomment">/// Remove entry with given key, returning the value at the key if the key was previously
     /// in the database.
-    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: Context, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
-        <span class="kw">let </span>ctx = ctx.freeze();
+    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
         <span class="kw">let </span>boxed_key = key.to_vec();
         <span class="kw">let </span>pending_root = <span class="self">self</span>.cache.borrow().get_pending_root();
 
         <span class="comment">// Remember where the path from root to target node ends (will end).
         </span><span class="self">self</span>.cache.borrow_mut().mark_position();
 
-        <span class="kw">let </span>(new_root, <span class="kw">_</span>, old_val) = <span class="self">self</span>._remove(<span class="kw-2">&amp;</span>ctx, pending_root, <span class="number">0</span>, <span class="kw-2">&amp;</span>boxed_key)<span class="question-mark">?</span>;
+        <span class="kw">let </span>(new_root, <span class="kw">_</span>, old_val) = <span class="self">self</span>._remove(pending_root, <span class="number">0</span>, <span class="kw-2">&amp;</span>boxed_key)<span class="question-mark">?</span>;
         <span class="self">self</span>.cache.borrow_mut().set_pending_root(new_root);
 
         <span class="prelude-val">Ok</span>(old_val)
@@ -218,16 +206,14 @@
 
     <span class="kw">fn </span>_remove(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        ctx: <span class="kw-2">&amp;</span>Arc&lt;Context&gt;,
         ptr: NodePtrRef,
         bit_depth: Depth,
         key: <span class="kw-2">&amp;</span>Key,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(NodePtrRef, bool, <span class="prelude-ty">Option</span>&lt;Value&gt;)&gt; {
-        <span class="kw">let </span>node_ref = <span class="self">self</span>.cache.borrow_mut().deref_node_ptr(
-            ctx,
-            ptr.clone(),
-            <span class="prelude-val">Some</span>(FetcherSyncGet::new(key, <span class="bool-val">true</span>)),
-        )<span class="question-mark">?</span>;
+        <span class="kw">let </span>node_ref = <span class="self">self
+            </span>.cache
+            .borrow_mut()
+            .deref_node_ptr(ptr.clone(), <span class="prelude-val">Some</span>(FetcherSyncGet::new(key, <span class="bool-val">true</span>)))<span class="question-mark">?</span>;
 
         <span class="kw">match </span><span class="macro">classify_noderef!</span>(<span class="question-mark">?</span>node_ref) {
             NodeKind::None =&gt; {
@@ -254,11 +240,11 @@
                     }
 
                     <span class="kw">let </span>(new_child, c, o) = <span class="kw">if </span>key.bit_length() == bit_length {
-                        <span class="self">self</span>._remove(ctx, n.leaf_node.clone(), bit_depth, key)<span class="question-mark">?
+                        <span class="self">self</span>._remove(n.leaf_node.clone(), bit_depth, key)<span class="question-mark">?
                     </span>} <span class="kw">else if </span>key.get_bit(bit_length) {
-                        <span class="self">self</span>._remove(ctx, n.right.clone(), bit_length, key)<span class="question-mark">?
+                        <span class="self">self</span>._remove(n.right.clone(), bit_length, key)<span class="question-mark">?
                     </span>} <span class="kw">else </span>{
-                        <span class="self">self</span>._remove(ctx, n.left.clone(), bit_length, key)<span class="question-mark">?
+                        <span class="self">self</span>._remove(n.left.clone(), bit_length, key)<span class="question-mark">?
                     </span>};
 
                     changed = c;
@@ -275,16 +261,14 @@
                     <span class="comment">// Fetch and check the remaining children.
                     // NOTE: The leaf node is always included with the internal node.
                     </span>remaining_leaf = n.leaf_node.borrow().node.clone();
-                    remaining_left = <span class="self">self</span>.cache.borrow_mut().deref_node_ptr(
-                        ctx,
-                        n.left.clone(),
-                        <span class="prelude-val">Some</span>(FetcherSyncGet::new(key, <span class="bool-val">true</span>)),
-                    )<span class="question-mark">?</span>;
-                    remaining_right = <span class="self">self</span>.cache.borrow_mut().deref_node_ptr(
-                        ctx,
-                        n.right.clone(),
-                        <span class="prelude-val">Some</span>(FetcherSyncGet::new(key, <span class="bool-val">true</span>)),
-                    )<span class="question-mark">?</span>;
+                    remaining_left = <span class="self">self
+                        </span>.cache
+                        .borrow_mut()
+                        .deref_node_ptr(n.left.clone(), <span class="prelude-val">Some</span>(FetcherSyncGet::new(key, <span class="bool-val">true</span>)))<span class="question-mark">?</span>;
+                    remaining_right = <span class="self">self
+                        </span>.cache
+                        .borrow_mut()
+                        .deref_node_ptr(n.right.clone(), <span class="prelude-val">Some</span>(FetcherSyncGet::new(key, <span class="bool-val">true</span>)))<span class="question-mark">?</span>;
                 } <span class="kw">else </span>{
                     <span class="macro">unreachable!</span>(<span class="string">&quot;node kind is Internal&quot;</span>);
                 }

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/storage/mkvs/tree/overlay.rs`."><title>overlay.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/storage/mkvs/tree/overlay.rs`."><title>overlay.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -422,28 +422,12 @@
 <a href="#422" id="422">422</a>
 <a href="#423" id="423">423</a>
 <a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a>
-<a href="#435" id="435">435</a>
-<a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
-<a href="#439" id="439">439</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     collections::{btree_map, BTreeMap, HashSet},
     iter::{Iterator, Peekable},
 };
 
 <span class="kw">use </span>anyhow::{Error, <span class="prelude-ty">Result</span>};
-<span class="kw">use </span>io_context::Context;
 
 <span class="kw">use crate</span>::{
     common::{crypto::hash::Hash, namespace::Namespace},
@@ -472,19 +456,19 @@
     }
 
     <span class="doccomment">/// Get an existing key.
-    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
+    </span><span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
         <span class="comment">// For dirty values, check the overlay.
         </span><span class="kw">if </span><span class="self">self</span>.dirty.contains(key) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.overlay.get(key).cloned());
         }
 
         <span class="comment">// Otherwise fetch from inner tree.
-        </span><span class="self">self</span>.inner.get(ctx, key)
+        </span><span class="self">self</span>.inner.get(key)
     }
 
     <span class="doccomment">/// Insert a key/value pair into the tree.
-    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: Context, key: <span class="kw-2">&amp;</span>[u8], value: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
-        <span class="kw">let </span>previous = <span class="self">self</span>.get(ctx, key)<span class="question-mark">?</span>;
+    </span><span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8], value: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
+        <span class="kw">let </span>previous = <span class="self">self</span>.get(key)<span class="question-mark">?</span>;
 
         <span class="self">self</span>.overlay.insert(key.to_owned(), value.to_owned());
         <span class="self">self</span>.dirty.insert(key.to_owned());
@@ -494,13 +478,13 @@
 
     <span class="doccomment">/// Remove entry with given key, returning the value at the key if the key was previously
     /// in the database.
-    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: Context, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
+    </span><span class="kw">pub fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;&gt; {
         <span class="comment">// For dirty values, remove from the overlay.
         </span><span class="kw">if </span><span class="self">self</span>.dirty.contains(key) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="self">self</span>.overlay.remove(key));
         }
 
-        <span class="kw">let </span>value = <span class="self">self</span>.inner.get(ctx, key)<span class="question-mark">?</span>;
+        <span class="kw">let </span>value = <span class="self">self</span>.inner.get(key)<span class="question-mark">?</span>;
 
         <span class="comment">// Do not treat a value as dirty if it was not dirty before and did not exist in the inner tree.
         </span><span class="kw">if </span>value.is_some() {
@@ -510,18 +494,17 @@
     }
 
     <span class="doccomment">/// Return an iterator over the tree.
-    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context) -&gt; OverlayTreeIterator&lt;T&gt; {
-        OverlayTreeIterator::new(ctx, <span class="self">self</span>)
+    </span><span class="kw">pub fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; OverlayTreeIterator&lt;T&gt; {
+        OverlayTreeIterator::new(<span class="self">self</span>)
     }
 
     <span class="doccomment">/// Commit any modifications to the underlying tree.
-    </span><span class="kw">pub fn </span>commit(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: Context) -&gt; <span class="prelude-ty">Result</span>&lt;mkvs::WriteLog&gt; {
-        <span class="kw">let </span>ctx = ctx.freeze();
+    </span><span class="kw">pub fn </span>commit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;mkvs::WriteLog&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>log: mkvs::WriteLog = Vec::new();
 
         <span class="comment">// Insert all items present in the overlay.
         </span><span class="kw">for </span>(key, value) <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.overlay {
-            <span class="self">self</span>.inner.insert(Context::create_child(<span class="kw-2">&amp;</span>ctx), key, value)<span class="question-mark">?</span>;
+            <span class="self">self</span>.inner.insert(key, value)<span class="question-mark">?</span>;
             <span class="self">self</span>.dirty.remove(key);
 
             log.push(mkvs::LogEntry {
@@ -533,7 +516,7 @@
 
         <span class="comment">// Any remaining dirty items must have been removed.
         </span><span class="kw">for </span>key <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.dirty {
-            <span class="self">self</span>.inner.remove(Context::create_child(<span class="kw-2">&amp;</span>ctx), key)<span class="question-mark">?</span>;
+            <span class="self">self</span>.inner.remove(key)<span class="question-mark">?</span>;
 
             log.push(mkvs::LogEntry {
                 key: key.clone(),
@@ -549,17 +532,13 @@
     /// tree, returning the new root hash.
     </span><span class="kw">pub fn </span>commit_both(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        ctx: Context,
         namespace: Namespace,
         version: u64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(mkvs::WriteLog, Hash)&gt; {
-        <span class="kw">let </span>ctx = ctx.freeze();
         <span class="comment">// First commit modifications to the underlying tree.
-        </span><span class="kw">let </span>write_log = <span class="self">self</span>.commit(Context::create_child(<span class="kw-2">&amp;</span>ctx))<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>write_log = <span class="self">self</span>.commit()<span class="question-mark">?</span>;
         <span class="comment">// Then commit the underlying tree.
-        </span><span class="kw">let </span>root_hash = <span class="self">self
-            </span>.inner
-            .commit(Context::create_child(<span class="kw-2">&amp;</span>ctx), namespace, version)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>root_hash = <span class="self">self</span>.inner.commit(namespace, version)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>((write_log, root_hash))
     }
@@ -578,10 +557,10 @@
 }
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;tree</span>, T: mkvs::FallibleMKVS&gt; OverlayTreeIterator&lt;<span class="lifetime">&#39;tree</span>, T&gt; {
-    <span class="kw">fn </span>new(ctx: Context, tree: <span class="kw-2">&amp;</span><span class="lifetime">&#39;tree </span>OverlayTree&lt;T&gt;) -&gt; <span class="self">Self </span>{
+    <span class="kw">fn </span>new(tree: <span class="kw-2">&amp;</span><span class="lifetime">&#39;tree </span>OverlayTree&lt;T&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             tree,
-            inner: tree.inner.iter(ctx),
+            inner: tree.inner.iter(),
             overlay: tree.overlay.range(<span class="macro">vec!</span>[]..).peekable(),
             overlay_valid: <span class="bool-val">true</span>,
             key: <span class="prelude-val">None</span>,
@@ -700,41 +679,36 @@
 }
 
 <span class="kw">impl</span>&lt;T: mkvs::FallibleMKVS&gt; mkvs::MKVS <span class="kw">for </span>OverlayTree&lt;T&gt; {
-    <span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-        <span class="self">self</span>.get(ctx, key).unwrap()
+    <span class="kw">fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+        <span class="self">self</span>.get(key).unwrap()
     }
 
-    <span class="kw">fn </span>cache_contains_key(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context, key: <span class="kw-2">&amp;</span>[u8]) -&gt; bool {
+    <span class="kw">fn </span>cache_contains_key(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; bool {
         <span class="comment">// For dirty values, check the overlay.
         </span><span class="kw">if </span><span class="self">self</span>.dirty.contains(key) {
             <span class="kw">return </span><span class="self">self</span>.overlay.contains_key(key);
         }
-        <span class="self">self</span>.inner.cache_contains_key(ctx, key)
+        <span class="self">self</span>.inner.cache_contains_key(key)
     }
 
-    <span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: Context, key: <span class="kw-2">&amp;</span>[u8], value: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-        <span class="self">self</span>.insert(ctx, key, value).unwrap()
+    <span class="kw">fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8], value: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+        <span class="self">self</span>.insert(key, value).unwrap()
     }
 
-    <span class="kw">fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: Context, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
-        <span class="self">self</span>.remove(ctx, key).unwrap()
+    <span class="kw">fn </span>remove(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt; {
+        <span class="self">self</span>.remove(key).unwrap()
     }
 
-    <span class="kw">fn </span>prefetch_prefixes(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context, prefixes: <span class="kw-2">&amp;</span>[mkvs::Prefix], limit: u16) {
-        <span class="self">self</span>.inner.prefetch_prefixes(ctx, prefixes, limit).unwrap()
+    <span class="kw">fn </span>prefetch_prefixes(<span class="kw-2">&amp;</span><span class="self">self</span>, prefixes: <span class="kw-2">&amp;</span>[mkvs::Prefix], limit: u16) {
+        <span class="self">self</span>.inner.prefetch_prefixes(prefixes, limit).unwrap()
     }
 
-    <span class="kw">fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context) -&gt; Box&lt;<span class="kw">dyn </span>mkvs::Iterator + <span class="lifetime">&#39;_</span>&gt; {
-        Box::new(<span class="self">self</span>.iter(ctx))
+    <span class="kw">fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>mkvs::Iterator + <span class="lifetime">&#39;_</span>&gt; {
+        Box::new(<span class="self">self</span>.iter())
     }
 
-    <span class="kw">fn </span>commit(
-        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        ctx: Context,
-        namespace: Namespace,
-        version: u64,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(mkvs::WriteLog, Hash)&gt; {
-        <span class="self">self</span>.commit_both(ctx, namespace, version)
+    <span class="kw">fn </span>commit(<span class="kw-2">&amp;mut </span><span class="self">self</span>, namespace: Namespace, version: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(mkvs::WriteLog, Hash)&gt; {
+        <span class="self">self</span>.commit_both(namespace, version)
     }
 }
 
@@ -775,16 +749,16 @@
         <span class="comment">// Create an overlay over an empty tree and insert some items into the overlay.
         </span><span class="kw">let </span><span class="kw-2">mut </span>overlay = OverlayTree::new(<span class="kw-2">&amp;mut </span>tree);
         <span class="kw">for </span>(key, value) <span class="kw">in </span>items.iter() {
-            overlay.insert(Context::background(), key, value).unwrap();
+            overlay.insert(key, value).unwrap();
         }
 
         <span class="comment">// Test that an overlay-only iterator works correctly.
-        </span><span class="kw">let </span>it = overlay.iter(Context::background());
+        </span><span class="kw">let </span>it = overlay.iter();
         test_iterator_with(<span class="kw-2">&amp;</span>items, it, <span class="kw-2">&amp;</span>tests);
 
         <span class="comment">// Insert some items into the underlying tree.
         </span><span class="kw">for </span>(key, value) <span class="kw">in </span>items.iter() {
-            tree.insert(Context::background(), key, value).unwrap();
+            tree.insert(key, value).unwrap();
         }
 
         <span class="comment">// Create a tree pointer so we can unsafely peek into the tree later.
@@ -795,37 +769,33 @@
 
         <span class="comment">// Test that all keys can be fetched from an empty overlay.
         </span><span class="kw">for </span>(k, expected_v) <span class="kw">in </span><span class="kw-2">&amp;</span>items {
-            <span class="kw">let </span>v = overlay.get(Context::background(), <span class="kw-2">&amp;</span>k).unwrap();
+            <span class="kw">let </span>v = overlay.get(<span class="kw-2">&amp;</span>k).unwrap();
             <span class="macro">assert_eq!</span>(v.as_ref(), <span class="prelude-val">Some</span>(expected_v));
         }
 
         <span class="comment">// Test that merged iterator works correctly on an empty overlay (it should behave exactly
         // the same as for the inner tree).
-        </span><span class="kw">let </span>it = overlay.iter(Context::background());
+        </span><span class="kw">let </span>it = overlay.iter();
         test_iterator_with(<span class="kw-2">&amp;</span>items, it, <span class="kw-2">&amp;</span>tests);
 
         <span class="comment">// Add some updates to the overlay.
-        </span>overlay.remove(Context::background(), <span class="string">b&quot;key 2&quot;</span>).unwrap();
-        overlay
-            .insert(Context::background(), <span class="string">b&quot;key 7&quot;</span>, <span class="string">b&quot;seven&quot;</span>)
-            .unwrap();
-        overlay.remove(Context::background(), <span class="string">b&quot;key 5&quot;</span>).unwrap();
-        overlay
-            .insert(Context::background(), <span class="string">b&quot;key 5&quot;</span>, <span class="string">b&quot;fivey&quot;</span>)
-            .unwrap();
+        </span>overlay.remove(<span class="string">b&quot;key 2&quot;</span>).unwrap();
+        overlay.insert(<span class="string">b&quot;key 7&quot;</span>, <span class="string">b&quot;seven&quot;</span>).unwrap();
+        overlay.remove(<span class="string">b&quot;key 5&quot;</span>).unwrap();
+        overlay.insert(<span class="string">b&quot;key 5&quot;</span>, <span class="string">b&quot;fivey&quot;</span>).unwrap();
 
         <span class="comment">// Make sure updates did not propagate to the inner tree.
         // NOTE: This is unsafe as we are otherwise not allowed to reference the inner tree.
         </span><span class="kw">unsafe </span>{
             <span class="kw">let </span>tree_ref = <span class="kw-2">&amp;*</span>tree_ref;
 
-            <span class="kw">let </span>value = tree_ref.get(Context::background(), <span class="string">b&quot;key 2&quot;</span>).unwrap();
+            <span class="kw">let </span>value = tree_ref.get(<span class="string">b&quot;key 2&quot;</span>).unwrap();
             <span class="macro">assert_eq!</span>(
                 value,
                 <span class="prelude-val">Some</span>(<span class="string">b&quot;two&quot;</span>.to_vec()),
                 <span class="string">&quot;value in inner tree should be unchanged&quot;
             </span>);
-            <span class="kw">let </span>value = tree_ref.get(Context::background(), <span class="string">b&quot;key 7&quot;</span>).unwrap();
+            <span class="kw">let </span>value = tree_ref.get(<span class="string">b&quot;key 7&quot;</span>).unwrap();
             <span class="macro">assert_eq!</span>(value, <span class="prelude-val">None</span>, <span class="string">&quot;value should not exist in inner tree&quot;</span>);
         }
 
@@ -854,25 +824,25 @@
 
         <span class="comment">// Test that all keys can be fetched from an updated overlay.
         </span><span class="kw">for </span>(k, expected_v) <span class="kw">in </span><span class="kw-2">&amp;</span>items {
-            <span class="kw">let </span>v = overlay.get(Context::background(), <span class="kw-2">&amp;</span>k).unwrap();
+            <span class="kw">let </span>v = overlay.get(<span class="kw-2">&amp;</span>k).unwrap();
             <span class="macro">assert_eq!</span>(v.as_ref(), <span class="prelude-val">Some</span>(expected_v));
         }
 
         <span class="comment">// Make sure that merged overlay iterator works.
-        </span><span class="kw">let </span>it = overlay.iter(Context::background());
+        </span><span class="kw">let </span>it = overlay.iter();
         test_iterator_with(<span class="kw-2">&amp;</span>items, it, <span class="kw-2">&amp;</span>tests);
 
         <span class="comment">// Commit the overlay.
-        </span>overlay.commit(Context::background()).unwrap();
+        </span>overlay.commit().unwrap();
 
         <span class="comment">// Test that all keys can be fetched from an updated tree.
         </span><span class="kw">for </span>(k, expected_v) <span class="kw">in </span><span class="kw-2">&amp;</span>items {
-            <span class="kw">let </span>v = tree.get(Context::background(), <span class="kw-2">&amp;</span>k).unwrap();
+            <span class="kw">let </span>v = tree.get(<span class="kw-2">&amp;</span>k).unwrap();
             <span class="macro">assert_eq!</span>(v.as_ref(), <span class="prelude-val">Some</span>(expected_v));
         }
 
         <span class="comment">// Make sure that the updated tree is correct.
-        </span><span class="kw">let </span>it = tree.iter(Context::background());
+        </span><span class="kw">let </span>it = tree.iter();
         test_iterator_with(<span class="kw-2">&amp;</span>items, it, <span class="kw-2">&amp;</span>tests);
     }
 }

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/consensus/verifier.rs`."><title>verifier.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/consensus/verifier.rs`."><title>verifier.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -220,64 +220,22 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
-<a href="#223" id="223">223</a>
-<a href="#224" id="224">224</a>
-<a href="#225" id="225">225</a>
-<a href="#226" id="226">226</a>
-<a href="#227" id="227">227</a>
-<a href="#228" id="228">228</a>
-<a href="#229" id="229">229</a>
-<a href="#230" id="230">230</a>
-<a href="#231" id="231">231</a>
-<a href="#232" id="232">232</a>
-<a href="#233" id="233">233</a>
-<a href="#234" id="234">234</a>
-<a href="#235" id="235">235</a>
-<a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
-<a href="#238" id="238">238</a>
-<a href="#239" id="239">239</a>
-<a href="#240" id="240">240</a>
-<a href="#241" id="241">241</a>
-<a href="#242" id="242">242</a>
-<a href="#243" id="243">243</a>
-<a href="#244" id="244">244</a>
-<a href="#245" id="245">245</a>
-<a href="#246" id="246">246</a>
-<a href="#247" id="247">247</a>
-<a href="#248" id="248">248</a>
-<a href="#249" id="249">249</a>
-<a href="#250" id="250">250</a>
-<a href="#251" id="251">251</a>
-<a href="#252" id="252">252</a>
-<a href="#253" id="253">253</a>
-<a href="#254" id="254">254</a>
-<a href="#255" id="255">255</a>
-<a href="#256" id="256">256</a>
-<a href="#257" id="257">257</a>
-<a href="#258" id="258">258</a>
-<a href="#259" id="259">259</a>
-<a href="#260" id="260">260</a>
-<a href="#261" id="261">261</a>
-<a href="#262" id="262">262</a>
-<a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Trait for consensus layer verification.
 </span><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>io_context::Context;
+<span class="kw">use </span>async_trait::async_trait;
 <span class="kw">use </span>thiserror::Error;
 
 <span class="kw">use super</span>::{
     beacon::EpochTime,
-    roothash::{ComputeResultsHeader, Header},
+    roothash::Header,
     state::{registry::ImmutableState <span class="kw">as </span>RegistryState, ConsensusState},
     Event, LightBlock,
 };
 <span class="kw">use crate</span>::{
     common::{crypto::signature::PublicKey, namespace::Namespace, version::Version},
-    rak::RAK,
+    identity::Identity,
     types::{<span class="self">self</span>, EventKind},
 };
 
@@ -298,6 +256,12 @@
     <span class="attr">#[error(<span class="string">&quot;freshness verification: {0}&quot;</span>)]
     </span>FreshnessVerificationFailed(<span class="attr">#[source] </span>anyhow::Error),
 
+    <span class="attr">#[error(<span class="string">&quot;transaction verification: {0}&quot;</span>)]
+    </span>TransactionVerificationFailed(<span class="attr">#[source] </span>anyhow::Error),
+
+    <span class="attr">#[error(<span class="string">&quot;state root: {0}&quot;</span>)]
+    </span>StateRoot(<span class="attr">#[source] </span>anyhow::Error),
+
     <span class="attr">#[error(<span class="string">&quot;internal consensus verifier error&quot;</span>)]
     </span>Internal,
 }
@@ -310,7 +274,9 @@
             Error::TrustedStateLoadingFailed =&gt; <span class="number">3</span>,
             Error::ChainContextTransitionFailed(<span class="kw">_</span>) =&gt; <span class="number">4</span>,
             Error::FreshnessVerificationFailed(<span class="kw">_</span>) =&gt; <span class="number">5</span>,
-            Error::Internal =&gt; <span class="number">6</span>,
+            Error::TransactionVerificationFailed(<span class="kw">_</span>) =&gt; <span class="number">6</span>,
+            Error::StateRoot(<span class="kw">_</span>) =&gt; <span class="number">7</span>,
+            Error::Internal =&gt; <span class="number">8</span>,
         }
     }
 }
@@ -326,15 +292,16 @@
 }
 
 <span class="doccomment">/// Verifier is the consensus layer state verifier trait.
+</span><span class="attr">#[async_trait]
 </span><span class="kw">pub trait </span>Verifier: Send + Sync {
     <span class="doccomment">/// Synchronize the verifier state up to including the passed consensus height.
-    </span><span class="kw">fn </span>sync(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
+    </span><span class="kw">async fn </span>sync(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Verify that the given runtime header is valid at the given consensus layer block and return
     /// the consensus layer state accessor for that block.
     ///
     /// This also verifies that the state is fresh.
-    </span><span class="kw">fn </span>verify(
+    </span><span class="kw">async fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         consensus_block: LightBlock,
         runtime_header: Header,
@@ -346,7 +313,7 @@
     ///
     /// This is a relaxed version of the `verify` function that should be used for verifying state
     /// in queries.
-    </span><span class="kw">fn </span>verify_for_query(
+    </span><span class="kw">async fn </span>verify_for_query(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         consensus_block: LightBlock,
         runtime_header: Header,
@@ -356,7 +323,7 @@
     <span class="doccomment">/// Return the consensus layer state accessor for the given consensus layer block WITHOUT
     /// performing any verification. This method should only be used for operations that do not
     /// require integrity guarantees.
-    </span><span class="kw">fn </span>unverified_state(<span class="kw-2">&amp;</span><span class="self">self</span>, consensus_block: LightBlock) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt;;
+    </span><span class="kw">async fn </span>unverified_state(<span class="kw-2">&amp;</span><span class="self">self</span>, consensus_block: LightBlock) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt;;
 
     <span class="doccomment">/// Return the latest verified consensus layer state.
     ///
@@ -364,7 +331,7 @@
     ///
     /// The state is not verified to be fresh. Use `verify_state_freshness` to perform this
     /// verification manually if needed.
-    </span><span class="kw">fn </span>latest_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt;;
+    </span><span class="kw">async fn </span>latest_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt;;
 
     <span class="doccomment">/// Return the verified consensus layer state for a given height.
     ///
@@ -372,7 +339,7 @@
     ///
     /// The state is not verified to be fresh. Use `verify_state_freshness` to perform this
     /// verification manually if needed.
-    </span><span class="kw">fn </span>state_at(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt;;
+    </span><span class="kw">async fn </span>state_at(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt;;
 
     <span class="doccomment">/// Return the consensus layer events at the given height.
     ///
@@ -380,61 +347,55 @@
     ///
     /// Event integrity is currently not verified and it thus relies on replicated computation even
     /// when using a TEE-enabled runtime.
-    </span><span class="kw">fn </span>events_at(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64, kind: EventKind) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Event&gt;, Error&gt;;
+    </span><span class="kw">async fn </span>events_at(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64, kind: EventKind) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Event&gt;, Error&gt;;
 
     <span class="doccomment">/// Return the latest known consensus layer height.
-    </span><span class="kw">fn </span>latest_height(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt;;
-
-    <span class="doccomment">/// Record the given (locally computed and thus verified) results header as trusted.
-    </span><span class="kw">fn </span>trust(<span class="kw-2">&amp;</span><span class="self">self</span>, header: <span class="kw-2">&amp;</span>ComputeResultsHeader) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
+    </span><span class="kw">async fn </span>latest_height(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt;;
 }
 
-<span class="kw">impl</span>&lt;T: <span class="question-mark">?</span>Sized + Verifier&gt; Verifier <span class="kw">for </span>Arc&lt;T&gt; {
-    <span class="kw">fn </span>sync(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        Verifier::sync(<span class="kw-2">&amp;**</span><span class="self">self</span>, height)
-    }
+<span class="attr">#[async_trait]
+</span><span class="kw">impl</span>&lt;T: <span class="question-mark">?</span>Sized + Verifier&gt; Verifier <span class="kw">for </span>Arc&lt;T&gt; {
+    <span class="kw">async fn </span>sync(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        Verifier::sync(<span class="kw-2">&amp;**</span><span class="self">self</span>, height).<span class="kw">await
+    </span>}
 
-    <span class="kw">fn </span>verify(
+    <span class="kw">async fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         consensus_block: LightBlock,
         runtime_header: Header,
         epoch: EpochTime,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
-        Verifier::verify(<span class="kw-2">&amp;**</span><span class="self">self</span>, consensus_block, runtime_header, epoch)
-    }
+        Verifier::verify(<span class="kw-2">&amp;**</span><span class="self">self</span>, consensus_block, runtime_header, epoch).<span class="kw">await
+    </span>}
 
-    <span class="kw">fn </span>verify_for_query(
+    <span class="kw">async fn </span>verify_for_query(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         consensus_block: LightBlock,
         runtime_header: Header,
         epoch: EpochTime,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
-        Verifier::verify_for_query(<span class="kw-2">&amp;**</span><span class="self">self</span>, consensus_block, runtime_header, epoch)
-    }
+        Verifier::verify_for_query(<span class="kw-2">&amp;**</span><span class="self">self</span>, consensus_block, runtime_header, epoch).<span class="kw">await
+    </span>}
 
-    <span class="kw">fn </span>unverified_state(<span class="kw-2">&amp;</span><span class="self">self</span>, consensus_block: LightBlock) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
-        Verifier::unverified_state(<span class="kw-2">&amp;**</span><span class="self">self</span>, consensus_block)
-    }
+    <span class="kw">async fn </span>unverified_state(<span class="kw-2">&amp;</span><span class="self">self</span>, consensus_block: LightBlock) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
+        Verifier::unverified_state(<span class="kw-2">&amp;**</span><span class="self">self</span>, consensus_block).<span class="kw">await
+    </span>}
 
-    <span class="kw">fn </span>latest_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
-        Verifier::latest_state(<span class="kw-2">&amp;**</span><span class="self">self</span>)
-    }
+    <span class="kw">async fn </span>latest_state(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
+        Verifier::latest_state(<span class="kw-2">&amp;**</span><span class="self">self</span>).<span class="kw">await
+    </span>}
 
-    <span class="kw">fn </span>state_at(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
-        Verifier::state_at(<span class="kw-2">&amp;**</span><span class="self">self</span>, height)
-    }
+    <span class="kw">async fn </span>state_at(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusState, Error&gt; {
+        Verifier::state_at(<span class="kw-2">&amp;**</span><span class="self">self</span>, height).<span class="kw">await
+    </span>}
 
-    <span class="kw">fn </span>events_at(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64, kind: EventKind) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Event&gt;, Error&gt; {
-        Verifier::events_at(<span class="kw-2">&amp;**</span><span class="self">self</span>, height, kind)
-    }
+    <span class="kw">async fn </span>events_at(<span class="kw-2">&amp;</span><span class="self">self</span>, height: u64, kind: EventKind) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Event&gt;, Error&gt; {
+        Verifier::events_at(<span class="kw-2">&amp;**</span><span class="self">self</span>, height, kind).<span class="kw">await
+    </span>}
 
-    <span class="kw">fn </span>latest_height(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
-        Verifier::latest_height(<span class="kw-2">&amp;**</span><span class="self">self</span>)
-    }
-
-    <span class="kw">fn </span>trust(<span class="kw-2">&amp;</span><span class="self">self</span>, header: <span class="kw-2">&amp;</span>ComputeResultsHeader) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        Verifier::trust(<span class="kw-2">&amp;**</span><span class="self">self</span>, header)
-    }
+    <span class="kw">async fn </span>latest_height(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
+        Verifier::latest_height(<span class="kw-2">&amp;**</span><span class="self">self</span>).<span class="kw">await
+    </span>}
 }
 
 <span class="doccomment">/// Consensus layer trust root.
@@ -450,80 +411,35 @@
     </span><span class="kw">pub </span>chain_context: String,
 }
 
-<span class="doccomment">/// Trusted state containing trust root and trusted light block.
-</span><span class="attr">#[derive(Debug, Clone, Default, cbor::Encode, cbor::Decode)]
-</span><span class="kw">pub struct </span>TrustedState {
-    <span class="doccomment">/// Trust root.
-    </span><span class="kw">pub </span>trust_root: TrustRoot,
-    <span class="doccomment">/// Trusted light block.
-    ///
-    /// Optional as we don&#39;t want to force trusted state for embedded trust
-    /// root to have a matching trusted light block.
-    </span><span class="kw">pub </span>trusted_block: <span class="prelude-ty">Option</span>&lt;LightBlock&gt;,
-}
-
 <span class="doccomment">/// Verify consensus layer state freshness based on our internal state.
-///
-/// Returns the node ID of the node where this runtime is executing on. The same node ID may be
-/// passed in order to optimize discovery for subsequent runs.
 </span><span class="kw">pub fn </span>verify_state_freshness(
     state: <span class="kw-2">&amp;</span>ConsensusState,
-    rak: <span class="kw-2">&amp;</span>RAK,
+    identity: <span class="kw-2">&amp;</span>Identity,
     runtime_id: <span class="kw-2">&amp;</span>Namespace,
     version: <span class="kw-2">&amp;</span>Version,
-    node_id: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;PublicKey&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;PublicKey&gt;, Error&gt; {
+    host_node_id: <span class="kw-2">&amp;</span>PublicKey,
+) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
     <span class="kw">let </span>registry_state = RegistryState::new(<span class="kw-2">&amp;</span>state);
 
-    <span class="kw">match </span>node_id {
-        <span class="comment">// Node ID is cached, query the node and check for matching RAK.
-        </span><span class="prelude-val">Some</span>(node_id) =&gt; {
-            <span class="kw">let </span>node = registry_state
-                .node(Context::background(), node_id)
-                .map_err(|err| {
-                    Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                        <span class="string">&quot;failed to retrieve node from the registry: {}&quot;</span>,
-                        err
-                    ))
-                })<span class="question-mark">?</span>;
-            <span class="kw">let </span>node = node.ok_or_else(|| {
-                Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;own node ID &#39;{}&#39; not found in registry state&quot;</span>,
-                    node_id,
-                ))
-            })<span class="question-mark">?</span>;
-            <span class="kw">if </span>!node.has_tee(rak, runtime_id, version) {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;own RAK not found in registry state&quot;
-                </span>)));
-            }
+    <span class="kw">let </span>node = registry_state.node(host_node_id).map_err(|err| {
+        Error::VerificationFailed(<span class="macro">anyhow!</span>(
+            <span class="string">&quot;failed to retrieve node from the registry: {}&quot;</span>,
+            err
+        ))
+    })<span class="question-mark">?</span>;
+    <span class="kw">let </span>node = node.ok_or_else(|| {
+        Error::VerificationFailed(<span class="macro">anyhow!</span>(
+            <span class="string">&quot;own node ID &#39;{}&#39; not found in registry state&quot;</span>,
+            host_node_id,
+        ))
+    })<span class="question-mark">?</span>;
 
-            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw-2">*</span>node_id))
-        }
-        <span class="comment">// Node ID not cached, need to scan all registry nodes.
-        </span><span class="prelude-val">None </span>=&gt; {
-            <span class="kw">let </span>nodes = registry_state.nodes(Context::background()).map_err(|err| {
-                Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;failed to retrieve nodes from the registry: {}&quot;</span>,
-                    err
-                ))
-            })<span class="question-mark">?</span>;
-            <span class="kw">let </span><span class="kw-2">mut </span>found_node: <span class="prelude-ty">Option</span>&lt;PublicKey&gt; = <span class="prelude-val">None</span>;
-            <span class="kw">for </span>node <span class="kw">in </span>nodes {
-                <span class="kw">if </span>node.has_tee(rak, runtime_id, version) {
-                    found_node = <span class="prelude-val">Some</span>(node.id);
-                    <span class="kw">break</span>;
-                }
-            }
-            <span class="kw">if </span>found_node.is_none() {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;own RAK not found in registry state&quot;</span>,
-                )));
-            }
-
-            <span class="comment">// Cache node ID to avoid re-scanning.
-            </span><span class="prelude-val">Ok</span>(found_node)
-        }
+    <span class="kw">if </span>!node.has_tee(identity, runtime_id, version) {
+        <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
+            <span class="string">&quot;own identity not found in registry state&quot;
+        </span>)));
     }
+
+    <span class="prelude-val">Ok</span>(())
 }
 </code></pre></div></section></main></body></html>

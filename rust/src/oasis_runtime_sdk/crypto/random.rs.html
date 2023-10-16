@@ -370,7 +370,6 @@
 <a href="#370" id="370">370</a>
 <a href="#371" id="371">371</a>
 <a href="#372" id="372">372</a>
-<a href="#373" id="373">373</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Random number generator based on root VRF key and Merlin transcripts.
 </span><span class="kw">use </span>std::cell::RefCell;
 
@@ -436,14 +435,13 @@
             <span class="kw-2">&amp;</span>[ctx.mode() <span class="kw">as </span>u8],
             round_header_hash.as_ref(),
         ]);
-        <span class="comment">// Use previous epoch&#39;s ephemeral key to ensure it is available.
-        </span><span class="kw">let </span>km_kp = km
-            .get_or_create_ephemeral_keys(key_id, ctx.epoch().saturating_sub(<span class="number">1</span>))
+        <span class="kw">let </span>km_kp = km
+            .get_or_create_ephemeral_keys(key_id, ctx.epoch())
             .map_err(|err| Error::Abort(dispatcher::Error::KeyManagerFailure(err)))<span class="question-mark">?
             </span>.input_keypair;
         <span class="comment">// The KM returns an ed25519 key, but it needs to be in &quot;expanded&quot; form to use with
         // schnorrkel. Please refer to [`schnorrkel::keys::MiniSecretKey`] for further details.
-        </span><span class="kw">let </span>kp = MiniSecretKey::from_bytes(<span class="kw-2">&amp;</span>km_kp.sk.<span class="number">0</span>)
+        </span><span class="kw">let </span>kp = MiniSecretKey::from_bytes(km_kp.sk.<span class="number">0</span>.as_ref())
             .map_err(|err| {
                 Error::Abort(dispatcher::Error::KeyManagerFailure(
                     KeyManagerError::Other(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;{}&quot;</span>, err)),

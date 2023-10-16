@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/1e23ff7/runtime/src/consensus/state/registry.rs`."><title>registry.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/2f17c41/runtime/src/consensus/state/registry.rs`."><title>registry.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -274,35 +274,8 @@
 <a href="#274" id="274">274</a>
 <a href="#275" id="275">275</a>
 <a href="#276" id="276">276</a>
-<a href="#277" id="277">277</a>
-<a href="#278" id="278">278</a>
-<a href="#279" id="279">279</a>
-<a href="#280" id="280">280</a>
-<a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-<a href="#283" id="283">283</a>
-<a href="#284" id="284">284</a>
-<a href="#285" id="285">285</a>
-<a href="#286" id="286">286</a>
-<a href="#287" id="287">287</a>
-<a href="#288" id="288">288</a>
-<a href="#289" id="289">289</a>
-<a href="#290" id="290">290</a>
-<a href="#291" id="291">291</a>
-<a href="#292" id="292">292</a>
-<a href="#293" id="293">293</a>
-<a href="#294" id="294">294</a>
-<a href="#295" id="295">295</a>
-<a href="#296" id="296">296</a>
-<a href="#297" id="297">297</a>
-<a href="#298" id="298">298</a>
-<a href="#299" id="299">299</a>
-<a href="#300" id="300">300</a>
-<a href="#301" id="301">301</a>
-<a href="#302" id="302">302</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Registry state in the consensus layer.
 </span><span class="kw">use </span>anyhow::anyhow;
-<span class="kw">use </span>io_context::Context;
 
 <span class="kw">use crate</span>::{
     common::{
@@ -347,9 +320,9 @@
     }
 
     <span class="doccomment">/// Looks up a specific node by its identifier.
-    </span><span class="kw">pub fn </span>node(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context, id: <span class="kw-2">&amp;</span>PublicKey) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;, StateError&gt; {
+    </span><span class="kw">pub fn </span>node(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>PublicKey) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;, StateError&gt; {
         <span class="kw">let </span>h = Hash::digest_bytes(id.as_ref());
-        <span class="kw">match </span><span class="self">self</span>.mkvs.get(ctx, <span class="kw-2">&amp;</span>SignedNodeKeyFmt(h).encode()) {
+        <span class="kw">match </span><span class="self">self</span>.mkvs.get(<span class="kw-2">&amp;</span>SignedNodeKeyFmt(h).encode()) {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(b)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.decode_node(<span class="kw-2">&amp;</span>b)<span class="question-mark">?</span>)),
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
             <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(StateError::Unavailable(<span class="macro">anyhow!</span>(err))),
@@ -357,8 +330,8 @@
     }
 
     <span class="doccomment">/// Returns the list of all registered nodes.
-    </span><span class="kw">pub fn </span>nodes(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;, StateError&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>it = <span class="self">self</span>.mkvs.iter(ctx);
+    </span><span class="kw">pub fn </span>nodes(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Node&gt;, StateError&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>it = <span class="self">self</span>.mkvs.iter();
         it.seek(<span class="kw-2">&amp;</span>SignedNodeKeyFmt::default().encode_partial(<span class="number">0</span>));
 
         <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;Node&gt; = Vec::new();
@@ -382,22 +355,15 @@
     /// # Note
     ///
     /// This includes both non-suspended and suspended runtimes.
-    </span><span class="kw">pub fn </span>runtime(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: Context, id: <span class="kw-2">&amp;</span>Namespace) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Runtime&gt;, StateError&gt; {
-        <span class="kw">let </span>ctx = ctx.freeze();
+    </span><span class="kw">pub fn </span>runtime(<span class="kw-2">&amp;</span><span class="self">self</span>, id: <span class="kw-2">&amp;</span>Namespace) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Runtime&gt;, StateError&gt; {
         <span class="kw">let </span>h = Hash::digest_bytes(id.as_ref());
 
         <span class="comment">// Try non-suspended first.
-        </span><span class="kw">match </span><span class="self">self
-            </span>.mkvs
-            .get(Context::create_child(<span class="kw-2">&amp;</span>ctx), <span class="kw-2">&amp;</span>RuntimeKeyFmt(h).encode())
-        {
+        </span><span class="kw">match </span><span class="self">self</span>.mkvs.get(<span class="kw-2">&amp;</span>RuntimeKeyFmt(h).encode()) {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(b)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.decode_runtime(<span class="kw-2">&amp;</span>b)<span class="question-mark">?</span>)),
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
                 <span class="comment">// Also try suspended.
-                </span><span class="kw">match </span><span class="self">self</span>.mkvs.get(
-                    Context::create_child(<span class="kw-2">&amp;</span>ctx),
-                    <span class="kw-2">&amp;</span>SuspendedRuntimeKeyFmt(h).encode(),
-                ) {
+                </span><span class="kw">match </span><span class="self">self</span>.mkvs.get(<span class="kw-2">&amp;</span>SuspendedRuntimeKeyFmt(h).encode()) {
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(b)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="self">self</span>.decode_runtime(<span class="kw-2">&amp;</span>b)<span class="question-mark">?</span>)),
                     <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
                     <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(StateError::Unavailable(<span class="macro">anyhow!</span>(err))),
@@ -410,16 +376,14 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>test {
-    <span class="kw">use </span>std::{net::Ipv4Addr, sync::Arc};
-
     <span class="kw">use crate</span>::{
         common::{
-            crypto::{hash::Hash, signature::PublicKey},
+            crypto::{hash::Hash, signature},
             namespace::Namespace,
         },
         consensus::registry::{
             Capabilities, CapabilityTEE, ConsensusInfo, Node, NodeRuntime, P2PInfo, RuntimeKind,
-            TCPAddress, TEEHardware, TLSAddress, TLSInfo, VRFInfo, VersionInfo,
+            TEEHardware, TLSInfo, VRFInfo, VersionInfo,
         },
         storage::mkvs::{
             interop::{Fixture, ProtocolServer},
@@ -432,16 +396,18 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_registry_state_interop() {
-        <span class="comment">// Keep in sync with go/consensus/tendermint/apps/registry/state/interop/interop.go.
+        <span class="comment">// Keep in sync with go/consensus/cometbft/apps/registry/state/interop/interop.go.
         // If mock consensus state changes, update the root hash bellow.
         // See protocol server stdout for hash.
+        // To make the hash show up during tests, run &quot;cargo test&quot; as
+        // &quot;cargo test -- --nocapture&quot;.
 
         // Setup protocol server with initialized mock consensus state.
         </span><span class="kw">let </span>server = ProtocolServer::new(Fixture::ConsensusMock.into());
         <span class="kw">let </span>mock_consensus_root = Root {
             version: <span class="number">1</span>,
             root_type: RootType::State,
-            hash: Hash::from(<span class="string">&quot;f62f1f313de3833830a48b742f144fba542412e7ec65705d83f71a5e6e99bb2b&quot;</span>),
+            hash: Hash::from(<span class="string">&quot;123d46d530ebb004f6de9da7e1f41f7acde10b824e79ca8e718651dab2047c23&quot;</span>),
             ..Default::default()
         };
         <span class="kw">let </span>mkvs = Tree::builder()
@@ -450,12 +416,8 @@
             .build(server.read_sync());
         <span class="kw">let </span>registry_state = ImmutableState::new(<span class="kw-2">&amp;</span>mkvs);
 
-        <span class="kw">let </span>ctx = Arc::new(Context::background());
-
         <span class="comment">// Test get nodes.
-        </span><span class="kw">let </span>nodes = registry_state
-            .nodes(Context::create_child(<span class="kw-2">&amp;</span>ctx))
-            .expect(<span class="string">&quot;nodes query should work&quot;</span>);
+        </span><span class="kw">let </span>nodes = registry_state.nodes().expect(<span class="string">&quot;nodes query should work&quot;</span>);
         <span class="macro">assert_eq!</span>(
             nodes.len(),
             <span class="number">2</span>,
@@ -464,42 +426,32 @@
 
         <span class="kw">let </span>expected_nodes = <span class="macro">vec!</span>[
                 Node{
-                    v: <span class="number">2</span>,
-                    id: PublicKey::from(<span class="string">&quot;43e5aaee54c768867718837ef4f6a6161e0615da0fcf8da394e5c8b7a0d54c18&quot;</span>),
-                    entity_id: PublicKey::from(<span class="string">&quot;761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531&quot;</span>),
+                    v: <span class="number">3</span>,
+                    id: signature::PublicKey::from(<span class="string">&quot;43e5aaee54c768867718837ef4f6a6161e0615da0fcf8da394e5c8b7a0d54c18&quot;</span>),
+                    entity_id: signature::PublicKey::from(<span class="string">&quot;761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531&quot;</span>),
                     expiration: <span class="number">32</span>,
                     ..Default::default()
                 },
                 Node{
-                    v: <span class="number">2</span>,
-                    id: PublicKey::from(<span class="string">&quot;f43c3559658f76b85d0630f56dc75d603807ac60be0ca3aada66799289066758&quot;</span>),
-                    entity_id: PublicKey::from(<span class="string">&quot;761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531&quot;</span>),
+                    v: <span class="number">3</span>,
+                    id: signature::PublicKey::from(<span class="string">&quot;f43c3559658f76b85d0630f56dc75d603807ac60be0ca3aada66799289066758&quot;</span>),
+                    entity_id: signature::PublicKey::from(<span class="string">&quot;761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531&quot;</span>),
                     expiration: <span class="number">32</span>,
                     tls: TLSInfo{
-                        pub_key: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0&quot;</span>),
-                        next_pub_key: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff1&quot;</span>),
-                        addresses: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
-                            TLSAddress{
-                                pub_key: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2&quot;</span>),
-                                address: TCPAddress{
-                                    ip: Ipv4Addr::new(<span class="number">127</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">1</span>).to_ipv6_mapped().octets().to_vec(),
-                                    port: <span class="number">1111</span>,
-                                    ..Default::default()
-                                },
-                            },
-                        ]),
+                        pub_key: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0&quot;</span>),
+                        ..Default::default()
                     },
                     p2p: P2PInfo{
-                        id: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3&quot;</span>),
+                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3&quot;</span>),
                         addresses: <span class="prelude-val">Some</span>(Vec::new()),
                     },
                     consensus: ConsensusInfo{
-                        id: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4&quot;</span>),
+                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4&quot;</span>),
                         addresses: <span class="prelude-val">Some</span>(Vec::new()),
                     },
-                    vrf: <span class="prelude-val">Some</span>(VRFInfo{
+                    vrf: VRFInfo{
                         id: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5&quot;</span>),
-                    }),
+                    },
                     runtimes: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
                         NodeRuntime{
                             id: Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000010&quot;</span>),
@@ -512,7 +464,7 @@
                             capabilities: Capabilities{
                                tee: <span class="prelude-val">Some</span>(CapabilityTEE{
                                    hardware: TEEHardware::TEEHardwareIntelSGX,
-                                    rak: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8&quot;</span>),
+                                    rak: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8&quot;</span>),
                                     attestation: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>,<span class="number">5</span>],
                                     ..Default::default()
                                }),
@@ -526,20 +478,14 @@
         <span class="macro">assert_eq!</span>(nodes, expected_nodes,);
 
         <span class="kw">let </span>node = registry_state
-            .node(
-                Context::create_child(<span class="kw-2">&amp;</span>ctx),
-                <span class="kw-2">&amp;</span>expected_nodes.get(<span class="number">1</span>).unwrap().id,
-            )
+            .node(<span class="kw-2">&amp;</span>expected_nodes.get(<span class="number">1</span>).unwrap().id)
             .expect(<span class="string">&quot;node query should work&quot;</span>);
         <span class="macro">assert_eq!</span>(node, <span class="prelude-val">Some</span>(expected_nodes.get(<span class="number">1</span>).unwrap().clone()));
 
         <span class="kw">let </span>node = registry_state
-            .node(
-                Context::create_child(<span class="kw-2">&amp;</span>ctx),
-                <span class="kw-2">&amp;</span>PublicKey::from(
-                    <span class="string">&quot;ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
-                ),
-            )
+            .node(<span class="kw-2">&amp;</span>signature::PublicKey::from(
+                <span class="string">&quot;ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+            ))
             .expect(<span class="string">&quot;node query should work&quot;</span>);
         <span class="macro">assert_eq!</span>(node, <span class="prelude-val">None</span>);
 
@@ -549,7 +495,7 @@
                 id: Namespace::from(
                     <span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000010&quot;</span>,
                 ),
-                entity_id: PublicKey::from(
+                entity_id: signature::PublicKey::from(
                     <span class="string">&quot;761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531&quot;</span>,
                 ),
                 kind: RuntimeKind::KindCompute,
@@ -573,7 +519,7 @@
                 id: Namespace::from(
                     <span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000011&quot;</span>,
                 ),
-                entity_id: PublicKey::from(
+                entity_id: signature::PublicKey::from(
                     <span class="string">&quot;761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531&quot;</span>,
                 ),
                 kind: RuntimeKind::KindCompute,
@@ -583,11 +529,13 @@
                         version: Version::from(<span class="number">123</span>),
                         valid_from: <span class="number">42</span>,
                         tee: <span class="macro">vec!</span>[<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>],
+                        bundle_checksum: <span class="macro">vec!</span>[<span class="number">0x5</span>; <span class="number">32</span>],
                     },
                     VersionInfo {
                         version: Version::from(<span class="number">120</span>),
                         valid_from: <span class="number">10</span>,
                         tee: <span class="macro">vec!</span>[<span class="number">5</span>, <span class="number">4</span>, <span class="number">3</span>, <span class="number">2</span>, <span class="number">1</span>],
+                        ..Default::default()
                     },
                 ],
                 ..Default::default()
@@ -596,7 +544,7 @@
 
         <span class="kw">for </span>rt <span class="kw">in </span>expected_runtimes {
             <span class="kw">let </span>ext_rt = registry_state
-                .runtime(Context::create_child(<span class="kw-2">&amp;</span>ctx), <span class="kw-2">&amp;</span>rt.id)
+                .runtime(<span class="kw-2">&amp;</span>rt.id)
                 .expect(<span class="string">&quot;runtime query should work&quot;</span>);
             <span class="macro">assert_eq!</span>(ext_rt, <span class="prelude-val">Some</span>(rt));
         }

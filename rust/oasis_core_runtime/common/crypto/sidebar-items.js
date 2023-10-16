@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["hash","mrae","signature"]};
+window.SIDEBAR_ITEMS = {"mod":["hash","mrae","signature","x25519"]};
