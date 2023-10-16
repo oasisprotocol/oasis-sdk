@@ -1,0 +1,87 @@
+# NOTE: This name appears in GitHub's Checks API and in workflow's status badge.
+name: ci-dependabot-fixup
+
+# Trigger the workflow when:
+on:
+  # When a pull request event occurs for a pull request against one of the
+  # matched branches.
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+
+# Cancel in-progress jobs on same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-dependabot:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check Dependebot author
+      run: |
+        if [ "${{ github.event.pull_request.user.login }}" = "dependabot[bot]" ]; then
+          echo "This PR was created by Dependabot. Proceeding with the next steps."
+        else
+          echo "This PR was not created by Dependabot. No further action is being taken."
+          exit 78; # This exits the job with a 'neutral' status.
+        fi
+
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+        fetch-depth: "0"
+
+    - name: Ensure only Dependabot commits
+      run: |
+        git fetch --no-tags origin +refs/heads/${BASE_BRANCH}:refs/remotes/origin/${BASE_BRANCH}
+        authors=$(git log origin/${BASE_BRANCH}..HEAD --pretty=format:'%an')
+        if git log origin/${BASE_BRANCH}..HEAD --pretty=format:'%an' | grep -v '^dependabot\[bot\]$' | grep -q .
+        then
+            echo "This PR has commits not by Dependabot."
+            exit 78; # This exits the job with a 'neutral' status.
+        else
+            echo "All commits are by Dependabot."
+        fi
+      env:
+          BASE_BRANCH: ${{ github.base_ref }}
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: "1.21.x"
+
+    - name: Build gomod updater
+      working-directory: tools/gomod-updater
+      run: go build
+
+    # Dependabot titles are:
+    #      <prefix>: bump <dependancy name> from <frmo_version> to <to_version> in <path>
+    # e.g. client-sdk/go: bump github.com/ethereum/go-ethereum from 1.12.1 to 1.13.3 in /client-sdk/go
+    # as long as the (configurable) <prefix> is without whitespace, the bellow parsing should work.
+    - name: Try extracting package name and version
+      id: extract
+      run: |
+        title="${{ github.event.pull_request.title }}"
+        repo=$(echo $title | awk '{print $3}')
+        version=$(echo $title | awk '{print $7}')
+
+        # Set the output variables for subsequent steps
+        echo "::set-output name=repo::$repo"
+        echo "::set-output name=version::$version"
+
+    - name: Run gomod updater
+      run: |
+        tools/gomod-updater/gomod-updater ${{ steps.extract.outputs.repo }} ${{ steps.extract.outputs.version }}
+
+    - name: Commit and push all changed files
+      env:
+        CI_COMMIT_MESSAGE: Dependabot dependencies fixup 👷
+        CI_COMMIT_AUTHOR: Dependabot Fixer
+      run: |
+        git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+        git config --global user.email "ptrus@users.noreply.github.com"
+        git commit -a -m "${{ env.CI_COMMIT_MESSAGE }}"
+        git push
