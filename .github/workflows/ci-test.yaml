@@ -126,6 +126,10 @@ jobs:
         working-directory: tools/gen_runtime_vectors
         run: go build
 
+      - name: Test build gomod updater
+        working-directory: tools/gomod-updater
+        run: go build
+
   typecheck:
     # NOTE: This name appears in GitHub's Checks API.
     name: typecheck
