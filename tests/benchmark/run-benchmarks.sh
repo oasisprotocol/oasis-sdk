@@ -60,4 +60,4 @@ sleep 2
     --address "${CLIENT_SOCK}" \
     --runtime.id "8000000000000000000000000000000000000000000000000000000000000000" \
     --benchmarks accounts_transfers \
-    --benchmarks.concurrency 2000
+    --benchmarks.concurrency 10 # XXX: Until P2P configuration can be updated.

@@ -100,7 +100,7 @@ func Connect(ctx context.Context, net *config.Network) (Connection, error) {
 
 // ConnectNoVerify establishes a connection with the target network,
 // omitting the chain context check.
-func ConnectNoVerify(ctx context.Context, net *config.Network) (Connection, error) {
+func ConnectNoVerify(_ context.Context, net *config.Network) (Connection, error) {
 	var dialOpts []grpc.DialOption
 	switch net.IsLocalRPC() {
 	case true:

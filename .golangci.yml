@@ -36,7 +36,6 @@ linters:
     - nakedret
     - nestif
     - noctx
-    - nolintlint
     - prealloc
     - rowserrcheck
     - staticcheck
@@ -56,3 +55,25 @@ linters-settings:
   govet:
     # Enabled checking for shadowed variables.
     check-shadowing: true
+  goimports:
+    # Put local imports after 3rd-party packages.
+    local-prefixes: github.com/oasisprotocol/
+  gosec:
+    excludes:
+      # https://github.com/securego/gosec#available-rules
+      - G402
+      - G404
+  depguard:
+    rules:
+      main:
+        files:
+          - $all
+        allow:
+          - $gostd
+          - github.com/oasisprotocol
+          - github.com/btcsuite/btcd/btcec
+          - google.golang.org/grpc
+          - github.com/ethereum/go-ethereum
+          - github.com/shopspring/decimal
+          - github.com/golang/snappy
+          - github.com/stretchr/testify

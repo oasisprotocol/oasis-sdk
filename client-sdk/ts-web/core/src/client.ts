@@ -244,6 +244,10 @@ const methodDescriptorRegistryWatchEntities = createMethodDescriptorServerStream
     void,
     types.RegistryEntityEvent
 >('Registry', 'WatchEntities');
+const methodDescriptorRegistryWatchEvents = createMethodDescriptorServerStreaming<
+    void,
+    types.RegistryEvent
+>('Registry', 'WatchEvents');
 const methodDescriptorRegistryWatchNodeList = createMethodDescriptorServerStreaming<
     void,
     types.RegistryNodeList
@@ -269,6 +273,10 @@ const methodDescriptorStakingAllowance = createMethodDescriptorUnary<
     types.StakingAllowanceQuery,
     Uint8Array
 >('Staking', 'Allowance');
+const methodDescriptorStakingCommissionScheduleAddresses = createMethodDescriptorUnary<
+    types.longnum,
+    Uint8Array[]
+>('Staking', 'CommissionScheduleAddresses');
 const methodDescriptorStakingCommonPool = createMethodDescriptorUnary<types.longnum, Uint8Array>(
     'Staking',
     'CommonPool',
@@ -338,6 +346,14 @@ const methodDescriptorStakingWatchEvents = createMethodDescriptorServerStreaming
     types.StakingEvent
 >('Staking', 'WatchEvents');
 
+const methodDescriptorKeyManagerGetEphemeralSecret = createMethodDescriptorUnary<
+    types.RegistryNamespaceQuery,
+    types.KeyManagerSignedEncryptedEphemeralSecret
+>('KeyManager', 'GetEphemeralSecret');
+const methodDescriptorKeyManagerGetMasterSecret = createMethodDescriptorUnary<
+    types.RegistryNamespaceQuery,
+    types.KeyManagerSignedEncryptedMasterSecret
+>('KeyManager', 'GetMasterSecret');
 const methodDescriptorKeyManagerGetStatus = createMethodDescriptorUnary<
     types.RegistryNamespaceQuery,
     types.KeyManagerStatus
@@ -350,6 +366,14 @@ const methodDescriptorKeyManagerStateToGenesis = createMethodDescriptorUnary<
     types.longnum,
     types.KeyManagerGenesis
 >('KeyManager', 'StateToGenesis');
+const methodDescriptorKeyManagerWatchEphemeralSecrets = createMethodDescriptorServerStreaming<
+    void,
+    types.KeyManagerSignedEncryptedEphemeralSecret
+>('KeyManager', 'WatchEphemeralSecrets');
+const methodDescriptorKeyManagerWatchMasterSecrets = createMethodDescriptorServerStreaming<
+    void,
+    types.KeyManagerSignedEncryptedMasterSecret
+>('KeyManager', 'WatchMasterSecrets');
 const methodDescriptorKeyManagerWatchStatuses = createMethodDescriptorServerStreaming<
     void,
     types.KeyManagerStatus
@@ -399,6 +423,10 @@ const methodDescriptorRootHashWatchEvents = createMethodDescriptorServerStreamin
     Uint8Array,
     types.RootHashEvent
 >('RootHash', 'WatchEvents');
+const methodDescriptorRootHashWatchExecutorCommitments = createMethodDescriptorServerStreaming<
+    void,
+    types.RootHashExecutorCommitment
+>('RootHash', 'WatchExecutorCommitments');
 
 const methodDescriptorGovernanceActiveProposals = createMethodDescriptorUnary<
     types.longnum,
@@ -536,10 +564,22 @@ const methodDescriptorConsensusGetGenesisDocument = createMethodDescriptorUnary<
     void,
     types.GenesisDocument
 >('Consensus', 'GetGenesisDocument');
+const methodDescriptorConsensusGetLightBlock = createMethodDescriptorUnary<
+    types.longnum,
+    types.ConsensusLightBlock
+>('Consensus', 'GetLightBlock');
+const methodDescriptorConsensusGetLightBlockForState = createMethodDescriptorUnary<
+    types.longnum,
+    types.ConsensusLightBlock
+>('Consensus', 'GetLightBlockForState');
 const methodDescriptorConsensusGetNextBlockState = createMethodDescriptorUnary<
     void,
     types.ConsensusNextBlockState
 >('Consensus', 'GetNextBlockState');
+const methodDescriptorConsensusGetParameters = createMethodDescriptorUnary<
+    types.longnum,
+    types.ConsensusLightParameters
+>('Consensus', 'GetParameters');
 const methodDescriptorConsensusGetSignerNonce = createMethodDescriptorUnary<
     types.ConsensusGetSignerNonceRequest,
     types.longnum
@@ -552,6 +592,10 @@ const methodDescriptorConsensusGetTransactions = createMethodDescriptorUnary<
     types.longnum,
     Uint8Array[]
 >('Consensus', 'GetTransactions');
+const methodDescriptorConsensusGetTransactionsWithProofs = createMethodDescriptorUnary<
+    types.longnum,
+    types.ConsensusTransactionsWithProofs
+>('Consensus', 'GetTransactionsWithProofs');
 const methodDescriptorConsensusGetTransactionsWithResults = createMethodDescriptorUnary<
     types.longnum,
     types.ConsensusTransactionsWithResults
@@ -564,10 +608,18 @@ const methodDescriptorConsensusStateToGenesis = createMethodDescriptorUnary<
     types.longnum,
     types.GenesisDocument
 >('Consensus', 'StateToGenesis');
+const methodDescriptorConsensusSubmitEvidence = createMethodDescriptorUnary<
+    types.ConsensusEvidence,
+    void
+>('Consensus', 'SubmitEvidence');
 const methodDescriptorConsensusSubmitTx = createMethodDescriptorUnary<types.SignatureSigned, void>(
     'Consensus',
     'SubmitTx',
 );
+const methodDescriptorConsensusSubmitTxNoWait = createMethodDescriptorUnary<
+    types.SignatureSigned,
+    void
+>('Consensus', 'SubmitTxNoWait');
 const methodDescriptorConsensusSubmitTxWithProof = createMethodDescriptorUnary<
     types.SignatureSigned,
     types.ConsensusProof
@@ -577,39 +629,18 @@ const methodDescriptorConsensusWatchBlocks = createMethodDescriptorServerStreami
     types.ConsensusBlock
 >('Consensus', 'WatchBlocks');
 
-const methodDescriptorConsensusLightGetLightBlock = createMethodDescriptorUnary<
-    types.longnum,
-    types.ConsensusLightBlock
->('ConsensusLight', 'GetLightBlock');
-const methodDescriptorConsensusLightGetLightBlockForState = createMethodDescriptorUnary<
-    types.longnum,
-    types.ConsensusLightBlock
->('ConsensusLight', 'GetLightBlockForState');
-const methodDescriptorConsensusLightGetParameters = createMethodDescriptorUnary<
-    types.longnum,
-    types.ConsensusLightParameters
->('ConsensusLight', 'GetParameters');
-const methodDescriptorConsensusLightSubmitEvidence = createMethodDescriptorUnary<
-    types.ConsensusEvidence,
-    void
->('ConsensusLight', 'SubmitEvidence');
-const methodDescriptorConsensusLightSubmitTxNoWait = createMethodDescriptorUnary<
-    types.SignatureSigned,
-    void
->('ConsensusLight', 'SubmitTxNoWait');
-
-const methodDescriptorConsensusLightStateSyncGet = createMethodDescriptorUnary<
+const methodDescriptorConsensusStateSyncGet = createMethodDescriptorUnary<
     types.StorageGetRequest,
     types.StorageProofResponse
->('ConsensusLight', 'StateSyncGet');
-const methodDescriptorConsensusLightStateSyncGetPrefixes = createMethodDescriptorUnary<
+>('Consensus', 'StateSyncGet');
+const methodDescriptorConsensusStateSyncGetPrefixes = createMethodDescriptorUnary<
     types.StorageGetPrefixesRequest,
     types.StorageProofResponse
->('ConsensusLight', 'StateSyncGetPrefixes');
-const methodDescriptorConsensusLightStateSyncIterate = createMethodDescriptorUnary<
+>('Consensus', 'StateSyncGetPrefixes');
+const methodDescriptorConsensusStateSyncIterate = createMethodDescriptorUnary<
     types.StorageIterateRequest,
     types.StorageProofResponse
->('ConsensusLight', 'StateSyncIterate');
+>('Consensus', 'StateSyncIterate');
 
 const methodDescriptorNodeControllerCancelUpgrade = createMethodDescriptorUnary<
     types.UpgradeDescriptor,
@@ -882,6 +913,13 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * WatchEvents returns a channel that produces a stream of Events.
+     */
+    registryWatchEvents() {
+        return this.callServerStreaming(methodDescriptorRegistryWatchEvents, undefined);
+    }
+
+    /**
      * WatchNodeList returns a channel that produces a stream of NodeList.
      * Upon subscription, the node list for the current epoch will be sent
      * immediately.
@@ -929,6 +967,14 @@ export class NodeInternal extends GRPCWrapper {
      */
     stakingAllowance(query: types.StakingAllowanceQuery) {
         return this.callUnary(methodDescriptorStakingAllowance, query);
+    }
+
+    /**
+     * CommissionScheduleAddresses returns the addresses of all accounts with
+     * non-empty commission schedule.
+     */
+    stakingCommissionScheduleAddresses(height: types.longnum) {
+        return this.callUnary(methodDescriptorStakingCommissionScheduleAddresses, height);
     }
 
     /**
@@ -1058,6 +1104,20 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * GetEphemeralSecret returns the key manager ephemeral secret.
+     */
+    keyManagerGetEphemeralSecret(query: types.RegistryNamespaceQuery) {
+        return this.callUnary(methodDescriptorKeyManagerGetEphemeralSecret, query);
+    }
+
+    /**
+     * GetMasterSecret returns the key manager master secret.
+     */
+    keyManagerGetMasterSecret(query: types.RegistryNamespaceQuery) {
+        return this.callUnary(methodDescriptorKeyManagerGetMasterSecret, query);
+    }
+
+    /**
      * GetStatus returns a key manager status by key manager ID.
      */
     keyManagerGetStatus(query: types.RegistryNamespaceQuery) {
@@ -1076,6 +1136,20 @@ export class NodeInternal extends GRPCWrapper {
      */
     keyManagerStateToGenesis(height: types.longnum) {
         return this.callUnary(methodDescriptorKeyManagerStateToGenesis, height);
+    }
+
+    /**
+     * WatchEphemeralSecrets returns a channel that produces a stream of ephemeral secrets.
+     */
+    keyManagerWatchEphemeralSecrets() {
+        return this.callServerStreaming(methodDescriptorKeyManagerWatchEphemeralSecrets, undefined);
+    }
+
+    /**
+     * WatchMasterSecrets returns a channel that produces a stream of master secrets.
+     */
+    keyManagerWatchMasterSecrets() {
+        return this.callServerStreaming(methodDescriptorKeyManagerWatchMasterSecrets, undefined);
     }
 
     /**
@@ -1171,6 +1245,20 @@ export class NodeInternal extends GRPCWrapper {
      */
     rootHashWatchEvents(runtimeID: Uint8Array) {
         return this.callServerStreaming(methodDescriptorRootHashWatchEvents, runtimeID);
+    }
+
+    /**
+     * WatchExecutorCommitments returns a channel that produces a stream of executor commitments
+     * observed in the consensus layer P2P network.
+     *
+     * Note that these commitments may not have been processed by consensus, commitments may be
+     * received in any order and duplicates are possible.
+     */
+    rootHashWatchExecutorCommitments() {
+        return this.callServerStreaming(
+            methodDescriptorRootHashWatchExecutorCommitments,
+            undefined,
+        );
     }
 
     /**
@@ -1415,10 +1503,36 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * GetLightBlock returns a light version of the consensus layer block that can be used for light
+     * client verification.
+     */
+    consensusGetLightBlock(height: types.longnum) {
+        return this.callUnary(methodDescriptorConsensusGetLightBlock, height);
+    }
+
+    /**
+     * GetLightBlockForState returns a light block for the state as of executing the consensus layer
+     * block at the specified height. Note that the height of the returned block may differ
+     * depending on consensus layer implementation details.
+     *
+     * In case light block for the given height is not yet available, it returns ErrVersionNotFound.
+     */
+    consensusGetLightBlockForState(height: types.longnum) {
+        return this.callUnary(methodDescriptorConsensusGetLightBlockForState, height);
+    }
+
+    /**
      * GetNextBlockState returns the state of the next block being voted on by validators.
      */
     consensusGetNextBlockState() {
         return this.callUnary(methodDescriptorConsensusGetNextBlockState, undefined);
+    }
+
+    /**
+     * GetParameters returns the consensus parameters for a specific height.
+     */
+    consensusGetParameters(height: types.longnum) {
+        return this.callUnary(methodDescriptorConsensusGetParameters, height);
     }
 
     /**
@@ -1447,6 +1561,14 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * GetTransactionsWithProofs returns a list of all transactions and their proofs of inclusion
+     * contained within a consensus block at a specific height.
+     */
+    consensusGetTransactionsWithProofs(height: types.longnum) {
+        return this.callUnary(methodDescriptorConsensusGetTransactionsWithProofs, height);
+    }
+
+    /**
      * GetTransactionsWithResults returns a list of transactions and their
      * execution results, contained within a consensus block at a specific
      * height.
@@ -1471,11 +1593,26 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * SubmitEvidence submits evidence of misbehavior.
+     */
+    consensusSubmitEvidence(evidence: types.ConsensusEvidence) {
+        return this.callUnary(methodDescriptorConsensusSubmitEvidence, evidence);
+    }
+
+    /**
      * SubmitTx submits a signed consensus transaction and waits for the transaction to be included
      * in a block. Use SubmitTxNoWait if you only need to broadcast the transaction.
      */
     consensusSubmitTx(tx: types.SignatureSigned) {
         return this.callUnary(methodDescriptorConsensusSubmitTx, tx);
+    }
+
+    /**
+     * SubmitTxNoWait submits a signed consensus transaction, but does not wait for the transaction
+     * to be included in a block. Use SubmitTx if you need to wait for execution.
+     */
+    consensusSubmitTxNoWait(tx: types.SignatureSigned) {
+        return this.callUnary(methodDescriptorConsensusSubmitTxNoWait, tx);
     }
 
     /**
@@ -1495,67 +1632,26 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * GetLightBlock returns a light version of the consensus layer block that can be used for light
-     * client verification.
-     */
-    consensusLightGetLightBlock(height: types.longnum) {
-        return this.callUnary(methodDescriptorConsensusLightGetLightBlock, height);
-    }
-
-    /**
-     * GetLightBlockForState returns a light block for the state as of executing the consensus layer
-     * block at the specified height. Note that the height of the returned block may differ
-     * depending on consensus layer implementation details.
-     *
-     * In case light block for the given height is not yet available, it returns ErrVersionNotFound.
-     */
-    consensusLightGetLightBlockForState(height: types.longnum) {
-        return this.callUnary(methodDescriptorConsensusLightGetLightBlockForState, height);
-    }
-
-    /**
-     * GetParameters returns the consensus parameters for a specific height.
-     */
-    consensusLightGetParameters(height: types.longnum) {
-        return this.callUnary(methodDescriptorConsensusLightGetParameters, height);
-    }
-
-    /**
-     * SubmitEvidence submits evidence of misbehavior.
-     */
-    consensusLightSubmitEvidence(evidence: types.ConsensusEvidence) {
-        return this.callUnary(methodDescriptorConsensusLightSubmitEvidence, evidence);
-    }
-
-    /**
-     * SubmitTxNoWait submits a signed consensus transaction, but does not wait for the transaction
-     * to be included in a block. Use SubmitTx if you need to wait for execution.
-     */
-    consensusLightSubmitTxNoWait(tx: types.SignatureSigned) {
-        return this.callUnary(methodDescriptorConsensusLightSubmitTxNoWait, tx);
-    }
-
-    /**
      * SyncGet fetches a single key and returns the corresponding proof.
      */
-    consensusLightStateSyncGet(request: types.StorageGetRequest) {
-        return this.callUnary(methodDescriptorConsensusLightStateSyncGet, request);
+    consensusStateSyncGet(request: types.StorageGetRequest) {
+        return this.callUnary(methodDescriptorConsensusStateSyncGet, request);
     }
 
     /**
      * SyncGetPrefixes fetches all keys under the given prefixes and returns
      * the corresponding proofs.
      */
-    consensusLightStateSyncGetPrefixes(request: types.StorageGetPrefixesRequest) {
-        return this.callUnary(methodDescriptorConsensusLightStateSyncGetPrefixes, request);
+    consensusStateSyncGetPrefixes(request: types.StorageGetPrefixesRequest) {
+        return this.callUnary(methodDescriptorConsensusStateSyncGetPrefixes, request);
     }
 
     /**
      * SyncIterate seeks to a given key and then fetches the specified
      * number of following items based on key iteration order.
      */
-    consensusLightStateSyncIterate(request: types.StorageIterateRequest) {
-        return this.callUnary(methodDescriptorConsensusLightStateSyncIterate, request);
+    consensusStateSyncIterate(request: types.StorageIterateRequest) {
+        return this.callUnary(methodDescriptorConsensusStateSyncIterate, request);
     }
 
     /**

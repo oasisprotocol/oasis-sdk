@@ -63,7 +63,7 @@ if [ -n "$BUILD_NUMBER" ]; then
     if [ "$HAVE_RELEASE_PACKAGE" != 1 -a ! -x "$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER/oasis-node" ]; then
         (
             cd "$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER"
-            NODE_JOB_ID=$(jq <"$BUILD_NUMBER.json" -r '.jobs[] | select(.name == "Build Go node") | .id')
+            NODE_JOB_ID=$(jq <"$BUILD_NUMBER.json" -r '.jobs[] | select(.name == "Build Go") | .id')
             NODE_ARTIFACTS_JSON=$(curl -sf "https://buildkite.com/organizations/$ORGANIZATION/pipelines/$PIPELINE/builds/$BUILD_NUMBER/jobs/$NODE_JOB_ID/artifacts")
             OASIS_NODE_URL=$(printf '%s' "$NODE_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "oasis-node") | .url')
             OASIS_NET_RUNNER_URL=$(printf '%s' "$NODE_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "oasis-net-runner") | .url')

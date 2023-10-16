@@ -366,7 +366,7 @@ func (rc *runtimeClient) GetEventsRaw(ctx context.Context, round uint64) ([]*typ
 	evs := make([]*types.Event, len(rawEvs))
 	for i, rawEv := range rawEvs {
 		var ev types.Event
-		if err := ev.UnmarshalRaw(rawEv.Key, rawEv.Value, &rawEv.TxHash); err != nil {
+		if err := ev.UnmarshalRaw(rawEv.Key, rawEv.Value, &rawEv.TxHash); err != nil { //nolint: gosec
 			return nil, fmt.Errorf("failed to unmarshal event '%v': %w", rawEv, err)
 		}
 		evs[i] = &ev
@@ -389,7 +389,7 @@ func (rc *runtimeClient) GetEvents(ctx context.Context, round uint64, decoders [
 OUTER:
 	for _, rawEv := range rawEvs {
 		var ev types.Event
-		if err := ev.UnmarshalRaw(rawEv.Key, rawEv.Value, &rawEv.TxHash); err != nil {
+		if err := ev.UnmarshalRaw(rawEv.Key, rawEv.Value, &rawEv.TxHash); err != nil { //nolint: gosec
 			return nil, fmt.Errorf("failed to unmarshal event '%v': %w", rawEv, err)
 		}
 		for _, decoder := range decoders {

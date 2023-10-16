@@ -17,7 +17,6 @@ import (
 	cmdCommon "github.com/oasisprotocol/oasis-core/go/oasis-node/cmd/common"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
-	"github.com/oasisprotocol/oasis-core/go/worker/common/p2p"
 )
 
 var fixtureFlags = flag.NewFlagSet("", flag.ContinueOnError)
@@ -35,24 +34,9 @@ func fixture() *oasis.NetworkFixture {
 	if err := runtimeID.UnmarshalHex(rtID); err != nil {
 		cmdCommon.EarlyLogAndExit(fmt.Errorf("invalid runtime ID: %s: %w", rtID, err))
 	}
-	computeExtraArgs := []oasis.Argument{
-		{
-			Name:   p2p.CfgP2PPeerOutboundQueueSize,
-			Values: []string{"100_000"},
-		},
-		{
-			Name:   p2p.CfgP2PValidateQueueSize,
-			Values: []string{"100_000"},
-		},
-		{
-			Name:   p2p.CfgP2PValidateConcurrency,
-			Values: []string{"100_000"},
-		},
-		{
-			Name:   p2p.CfgP2PValidateThrottle,
-			Values: []string{"100_000"},
-		},
-	}
+
+	// TODO: Add back P2P configuration for benchmarking once config overrides are supported.
+	computeExtraArgs := []oasis.Argument{}
 
 	fixture := &oasis.NetworkFixture{
 		Network: oasis.NetworkCfg{
@@ -109,7 +93,7 @@ func fixture() *oasis.NetworkFixture {
 					MaxBatchSize:      10_000,
 					MaxBatchSizeBytes: 10 * 16 * 1024 * 1024, // 160 MiB
 					BatchFlushTimeout: 1 * time.Second,
-					ProposerTimeout:   5,
+					ProposerTimeout:   5 * time.Second,
 				},
 				AdmissionPolicy: registry.RuntimeAdmissionPolicy{
 					AnyNode: &registry.AnyNodeRuntimeAdmissionPolicy{},

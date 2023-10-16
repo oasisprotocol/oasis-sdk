@@ -24,10 +24,6 @@ export const PROPOSAL_SIGNATURE_CONTEXT = 'oasis-core/roothash: proposal';
  */
 export const METHOD_EXECUTOR_COMMIT = 'roothash.ExecutorCommit';
 /**
- * MethodExecutorProposerTimeout is the method name for executor.
- */
-export const METHOD_EXECUTOR_PROPOSER_TIMEOUT = 'roothash.ExecutorProposerTimeout';
-/**
  * MethodEvidence is the method name for submitting evidence of node misbehavior.
  */
 export const METHOD_EVIDENCE = 'roothash.Evidence';
@@ -265,12 +261,6 @@ export async function signProposal(
 
 export function executorCommitWrapper() {
     return new consensus.TransactionWrapper<types.RootHashExecutorCommit>(METHOD_EXECUTOR_COMMIT);
-}
-
-export function executorProposerTimeoutWrapper() {
-    return new consensus.TransactionWrapper<types.RootHashExecutorProposerTimeoutRequest>(
-        METHOD_EXECUTOR_PROPOSER_TIMEOUT,
-    );
 }
 
 export function evidenceWrapper() {

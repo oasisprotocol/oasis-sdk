@@ -4,9 +4,9 @@ import (
 	"crypto/rand"
 	"fmt"
 
+	"github.com/oasisprotocol/curve25519-voi/primitives/x25519"
 	"github.com/oasisprotocol/deoxysii"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
-	mrae "github.com/oasisprotocol/oasis-core/go/common/crypto/mrae/api"
 	mraeDeoxysii "github.com/oasisprotocol/oasis-core/go/common/crypto/mrae/deoxysii"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -22,9 +22,9 @@ type EncodeConfig struct {
 
 type metaEncryptedX25519DeoxysII struct {
 	// sk is the ephemeral secret key for X25519.
-	sk *[32]byte
+	sk *x25519.PrivateKey
 	// pk is the current calldata X25519 public key.
-	pk *[32]byte
+	pk *x25519.PublicKey
 }
 
 // EncodeCall encodes a call based on its configured call format.
@@ -42,7 +42,7 @@ func EncodeCall(call *types.Call, cf types.CallFormat, cfg *EncodeConfig) (*type
 		}
 
 		// Generate ephemeral X25519 key pair.
-		pk, sk, err := mrae.GenerateKeyPair(rand.Reader)
+		pk, sk, err := x25519.GenerateKey(rand.Reader)
 		if err != nil {
 			return nil, nil, fmt.Errorf("callformat: failed to generate ephemeral X25519 key pair: %w", err)
 		}

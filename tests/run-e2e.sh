@@ -91,7 +91,7 @@ cd "${TEST_BASE_DIR}"
 . "${TESTS_DIR}/paths.sh"
 
 printf "${CYAN}### Running end-to-end tests...${OFF}\n"
-./e2e --log.level=INFO \
+./e2e --log.level=debug \
 	--log.format json \
 	--basedir.no_cleanup \
 	--e2e.node.binary="${TEST_NODE_BINARY}" \

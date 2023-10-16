@@ -52,7 +52,7 @@ func (v *voiEd25519Signer) Public() sdkSignature.PublicKey {
 	return ed25519.PublicKey(pk)
 }
 
-func (v *voiEd25519Signer) ContextSign(context sdkSignature.Context, message []byte) ([]byte, error) {
+func (v *voiEd25519Signer) ContextSign(_ sdkSignature.Context, _ []byte) ([]byte, error) {
 	return nil, fmt.Errorf("test signer only for raw signing")
 }
 
@@ -77,7 +77,7 @@ func newEd25519Signer(seed string) *voiEd25519Signer {
 }
 
 // ContractsTest does a simple upload/instantiate/call contract test.
-func ContractsTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
+func ContractsTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
 	ctx := context.Background()
 
 	counter := uint64(24)
@@ -750,7 +750,7 @@ OUTER:
 }
 
 // ContractsParametersTest tests the parameters methods.
-func ContractsParametersTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func ContractsParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ct := contracts.NewV1(rtc)
 

@@ -341,7 +341,7 @@ impl API for Module {
     fn account<C: Context>(ctx: &C, addr: Address) -> Result<ConsensusAccount, Error> {
         let state = StakingImmutableState::new(ctx.consensus_state());
         state
-            .account(ctx.io_ctx(), addr.into())
+            .account(addr.into())
             .map_err(Error::InternalStateError)
     }
 
@@ -352,7 +352,7 @@ impl API for Module {
     ) -> Result<ConsensusDelegation, Error> {
         let state = StakingImmutableState::new(ctx.consensus_state());
         state
-            .delegation(ctx.io_ctx(), delegator_addr.into(), escrow_addr.into())
+            .delegation(delegator_addr.into(), escrow_addr.into())
             .map_err(Error::InternalStateError)
     }
 
@@ -397,10 +397,10 @@ impl API for Module {
 
             let beacon = BeaconImmutableState::new(&state);
 
-            let mut epoch_state = beacon.future_epoch_state(ctx.io_ctx())?;
+            let mut epoch_state = beacon.future_epoch_state()?;
             if epoch_state.height > state.height().try_into().unwrap() {
                 // Use current epoch if future epoch is in the future.
-                epoch_state = beacon.epoch_state(ctx.io_ctx()).unwrap();
+                epoch_state = beacon.epoch_state().unwrap();
             }
             height = epoch_state.height.try_into().unwrap();
 

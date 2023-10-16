@@ -57,7 +57,7 @@ func GenTransfer(
 }
 
 // GenNonce just queries the account's nonce.
-func GenNonce(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acct signature.Signer, accts []signature.Signer) (*types.Transaction, error) {
+func GenNonce(ctx context.Context, rtc client.RuntimeClient, _ *rand.Rand, acct signature.Signer, _ []signature.Signer) (*types.Transaction, error) {
 	// We already have a helper for this, but do it manually here just to
 	// illustrate the concept.
 	var nonce uint64

@@ -133,6 +133,23 @@ export interface ConsensusBlock {
 }
 
 /**
+ * BlockMetadata contains additional metadata related to the executing block.
+ *
+ * The metadata is included in the form of a special transaction where this structure is the
+ * transaction body.
+ */
+export interface ConsensusBlockMetadata {
+    /**
+     * StateRoot is the state root after executing all logic in the block.
+     */
+    state_root: Uint8Array;
+    /**
+     * EventsRoot is the provable events root.
+     */
+    events_root: Uint8Array;
+}
+
+/**
  * Error is a transaction execution error.
  */
 export interface ConsensusError {
@@ -216,6 +233,40 @@ export interface ConsensusLightBlock {
 }
 
 /**
+ * LightClientStatus is the current light client status overview.
+ */
+export interface ConsensusLightClientStatus {
+    /**
+     * LatestHeight is the height of the latest block.
+     */
+    latest_height: longnum;
+    /**
+     * LatestHash is the hash of the latest block.
+     */
+    latest_hash: Uint8Array;
+    /**
+     * LatestTime is the timestamp of the latest block.
+     */
+    latest_time: longnum;
+    /**
+     * OldestHeight is the height of the oldest block.
+     */
+    oldest_height: longnum;
+    /**
+     * LatestHash is the hash of the oldest block.
+     */
+    oldest_hash: Uint8Array;
+    /**
+     * OldestTime is the timestamp of the oldest block.
+     */
+    oldest_time: longnum;
+    /**
+     * PeersIDs are the light client provider peer identifiers.
+     */
+    peer_ids: string[];
+}
+
+/**
  * Parameters are the consensus backend parameters.
  */
 export interface ConsensusLightParameters {
@@ -242,6 +293,28 @@ export interface ConsensusNextBlockState {
     voting_power: longnum;
     prevotes: ConsensusVotes;
     precommits: ConsensusVotes;
+}
+
+/**
+ * P2PStatus is the P2P status of a node.
+ */
+export interface ConsensusP2PStatus {
+    /**
+     * PubKey is the public key used for consensus P2P communication.
+     */
+    pub_key: Uint8Array;
+    /**
+     * PeerID is the peer ID derived by hashing peer's public key.
+     */
+    peer_id: string;
+    /**
+     * Addresses is a list of configured P2P addresses used when registering the node.
+     */
+    addresses: NodeConsensusAddress[];
+    /**
+     * Peers is a list of node's peers.
+     */
+    peers: string[];
 }
 
 /**
@@ -316,17 +389,9 @@ export interface ConsensusStatus {
      */
     backend: string;
     /**
-     * Mode is the consensus mode identifier.
-     */
-    mode: string;
-    /**
      * Features are the indicated consensus backend features.
      */
     features: number;
-    /**
-     * NodePeers is a list of node's peers.
-     */
-    node_peers: string[];
     /**
      * LatestHeight is the height of the latest block.
      */
@@ -371,6 +436,10 @@ export interface ConsensusStatus {
      * IsValidator returns whether the current node is part of the validator set.
      */
     is_validator: boolean;
+    /**
+     * P2P is the P2P status of the node.
+     */
+    p2p?: ConsensusP2PStatus;
 }
 
 /**
@@ -394,6 +463,16 @@ export interface ConsensusTransaction {
      * Body is the method call body.
      */
     body?: unknown;
+}
+
+/**
+ * TransactionsWithProofs is GetTransactionsWithProofs response.
+ *
+ * Proofs[i] is a proof of block inclusion for Transactions[i].
+ */
+export interface ConsensusTransactionsWithProofs {
+    transactions: Uint8Array[];
+    proofs: Uint8Array[];
 }
 
 /**
@@ -452,23 +531,34 @@ export interface ControlIdentityStatus {
      */
     node: Uint8Array;
     /**
-     * P2P is the public key used for p2p communication.
-     */
-    p2p: Uint8Array;
-    /**
      * Consensus is the consensus public key.
      */
     consensus: Uint8Array;
     /**
-     * TLS are the public keys used for TLS connections.
+     * TLS is the public key used for TLS connections.
      */
-    tls: Uint8Array[];
+    tls: Uint8Array;
 }
 
 /**
  * RegistrationStatus is the node registration status.
  */
 export interface ControlRegistrationStatus {
+    /**
+     * LastAttemptSuccessful is true if the last registration attempt has been
+     * successful.
+     */
+    last_attempt_successful: boolean;
+    /**
+     * LastAttemptErrorMessage contains the error message if the last
+     * registration attempt has not been successful.
+     */
+    last_attempt_error_message?: string;
+    /**
+     * LastAttempt is the time of the last registration attempt.
+     * In case the node did not successfully register yet, it will be the zero timestamp.
+     */
+    last_attempt: longnum;
     /**
      * LastRegistration is the time of the last successful registration with the consensus registry
      * service. In case the node did not successfully register yet, it will be the zero timestamp.
@@ -538,6 +628,28 @@ export interface ControlRuntimeStatus {
      * Storage contains the storage worker status in case this node is a storage node.
      */
     storage?: WorkerStorageStatus;
+    /**
+     * Provisioner is the name of the runtime provisioner.
+     */
+    provisioner?: string;
+}
+
+/**
+ * SeedStatus is the status of the seed node.
+ */
+export interface ControlSeedStatus {
+    /**
+     * ChainContext is the chain domain separation context.
+     */
+    chain_context: string;
+    /**
+     * Addresses is a list of seed node's addresses.
+     */
+    addresses: string[];
+    /**
+     * NodePeers is a list of peers that are connected to the node.
+     */
+    node_peers: string[];
 }
 
 /**
@@ -559,7 +671,11 @@ export interface ControlStatus {
     /**
      * Consensus is the status overview of the consensus layer.
      */
-    consensus: ConsensusStatus;
+    consensus?: ConsensusStatus;
+    /**
+     * LightClient is the status overview of the light client service.
+     */
+    light_client?: ConsensusLightClientStatus;
     /**
      * Runtimes is the status overview for each runtime supported by the node.
      */
@@ -567,15 +683,23 @@ export interface ControlStatus {
     /**
      * Registration is the node's registration status.
      */
-    registration: ControlRegistrationStatus;
+    registration?: ControlRegistrationStatus;
     /**
-     * Keymanager is the node's key manager worker status in case this node is a key manager node.
+     * Keymanager is the node's key manager worker status if the node is a key manager node.
      */
     keymanager?: WorkerKeyManagerStatus;
     /**
      * PendingUpgrades are the node's pending upgrades.
      */
     pending_upgrades?: UpgradePendingUpgrade[];
+    /**
+     * P2P is the P2P status of the node.
+     */
+    p2p?: P2PStatus;
+    /**
+     * Seed is the seed node status if the node is a seed node.
+     */
+    seed?: ControlSeedStatus;
 }
 
 /**
@@ -643,11 +767,6 @@ export interface GenesisDocument {
      * Consensus is the consensus genesis state.
      */
     consensus: ConsensusGenesis;
-    /**
-     * HaltEpoch is the epoch height at which the network will stop processing
-     * any transactions and will halt.
-     */
-    halt_epoch: longnum;
     /**
      * Extra data is arbitrary extra data that is part of the
      * genesis block but is otherwise ignored by the protocol.
@@ -893,6 +1012,13 @@ export interface GovernanceVoteEvent {
 }
 
 /**
+ * ConsensusParameters are the key manager consensus parameters.
+ */
+export interface KeyManagerConsensusParameters {
+    gas_costs?: {[op: string]: longnum};
+}
+
+/**
  * EnclavePolicySGX is the per-SGX key manager enclave ID access control policy.
  */
 export interface KeyManagerEnclavePolicySGX {
@@ -913,9 +1039,71 @@ export interface KeyManagerEnclavePolicySGX {
 }
 
 /**
+ * EncryptedEphemeralSecret is an encrypted ephemeral secret.
+ */
+export interface KeyManagerEncryptedEphemeralSecret {
+    /**
+     * ID is the runtime ID of the key manager.
+     */
+    runtime_id: Uint8Array;
+    /**
+     * Epoch is the epoch to which the secret belongs.
+     */
+    epoch: longnum;
+    /**
+     * Secret is the encrypted secret.
+     */
+    secret: KeyManagerEncryptedSecret;
+}
+
+/**
+ * EncryptedMasterSecret is an encrypted master secret.
+ */
+export interface KeyManagerEncryptedMasterSecret {
+    /**
+     * ID is the runtime ID of the key manager.
+     */
+    runtime_id: Uint8Array;
+    /**
+     * Generation is the generation of the secret.
+     */
+    generation: longnum;
+    /**
+     * Epoch is the epoch in which the secret was created.
+     */
+    epoch: longnum;
+    /**
+     * Secret is the encrypted secret.
+     */
+    secret: KeyManagerEncryptedSecret;
+}
+
+/**
+ * EncryptedSecret is a secret encrypted with Deoxys-II MRAE algorithm.
+ */
+export interface KeyManagerEncryptedSecret {
+    /**
+     * Checksum is the secret verification checksum.
+     */
+    checksum: Uint8Array;
+    /**
+     * PubKey is the public key used to derive the symmetric key for decryption.
+     */
+    pub_key: Uint8Array;
+    /**
+     * Ciphertexts is the map of REK encrypted secrets.
+     */
+    ciphertexts: Map<Uint8Array, Uint8Array>;
+}
+
+/**
  * Genesis is the key manager management genesis state.
  */
 export interface KeyManagerGenesis {
+    /**
+     * Parameters are the key manager consensus parameters.
+     */
+    params: KeyManagerConsensusParameters;
     statuses?: KeyManagerStatus[];
 }
 
@@ -936,6 +1124,43 @@ export interface KeyManagerPolicySGX {
      * Enclaves is the per-key manager enclave ID access control policy.
      */
     enclaves: Map<SGXEnclaveIdentity, KeyManagerEnclavePolicySGX>;
+    /**
+     * MasterSecretRotationInterval is the time interval in epochs between master secret rotations.
+     * Zero disables rotations.
+     */
+    master_secret_rotation_interval?: longnum;
+    /**
+     * MaxEphemeralSecretAge is the maximum age of an ephemeral secret in the number of epochs.
+     */
+    max_ephemeral_secret_age?: longnum;
+}
+
+/**
+ * SignedEncryptedEphemeralSecret is a RAK signed encrypted ephemeral secret.
+ */
+export interface KeyManagerSignedEncryptedEphemeralSecret {
+    /**
+     * Secret is the encrypted ephemeral secret.
+     */
+    secret: KeyManagerEncryptedEphemeralSecret;
+    /**
+     * Signature is a signature of the ephemeral secret.
+     */
+    signature: Uint8Array;
+}
+
+/**
+ * SignedEncryptedMasterSecret is a RAK signed encrypted master secret.
+ */
+export interface KeyManagerSignedEncryptedMasterSecret {
+    /**
+     * Secret is the encrypted master secret.
+     */
+    secret: KeyManagerEncryptedMasterSecret;
+    /**
+     * Signature is a signature of the master secret.
+     */
+    signature: Uint8Array;
 }
 
 /**
@@ -963,6 +1188,14 @@ export interface KeyManagerStatus {
      */
     is_secure: boolean;
     /**
+     * Generation is the generation of the latest master secret.
+     */
+    generation?: longnum;
+    /**
+     * RotationEpoch is the epoch of the last master secret rotation.
+     */
+    rotation_epoch?: longnum;
+    /**
      * Checksum is the key manager master secret verification checksum.
      */
     checksum: Uint8Array;
@@ -974,6 +1207,10 @@ export interface KeyManagerStatus {
      * Policy is the key manager policy.
      */
     policy: KeyManagerSignedPolicySGX;
+    /**
+     * RSK is the runtime signing key of the key manager.
+     */
+    rsk?: Uint8Array;
 }
 
 /**
@@ -1010,12 +1247,7 @@ export interface Node extends CBORVersioned {
      * VRF contains information for this node's participation in VRF
      * based elections.
      */
-    vrf?: NodeVRFInfo;
-    /**
-     * DeprecatedBeacon contains information for this node's
-     * participation in the old PVSS based random beacon protocol.
-     */
-    beacon?: unknown;
+    vrf: NodeVRFInfo;
     /**
      * Runtimes are the node's runtimes.
      */
@@ -1062,13 +1294,17 @@ export interface NodeCapabilityTEE {
      */
     rak: Uint8Array;
     /**
+     * Runtime encryption key.
+     */
+    rek?: Uint8Array;
+    /**
      * Attestation.
      */
     attestation: Uint8Array;
 }
 
 /**
- * ConsensusAddress represents a Tendermint consensus address that includes an
+ * ConsensusAddress represents a CometBFT consensus address that includes an
  * ID and a TCP address.
  * NOTE: The consensus address ID could be different from the consensus ID
  * to allow using a sentry node's ID and address instead of the validator's.
@@ -1194,24 +1430,6 @@ export interface NodeTEEFeaturesSGX {
 }
 
 /**
- * TLSAddress represents an Oasis committee address that includes a TLS public key and a TCP
- * address.
- *
- * NOTE: The address TLS public key can be different from the actual node TLS public key to allow
- * using a sentry node's addresses.
- */
-export interface NodeTLSAddress {
-    /**
-     * PubKey is the public key used for establishing TLS connections.
-     */
-    pub_key: Uint8Array;
-    /**
-     * Address is the address at which the node can be reached.
-     */
-    address: NodeAddress;
-}
-
-/**
  * TLSInfo contains information for connecting to this node via TLS.
  */
 export interface NodeTLSInfo {
@@ -1219,15 +1437,6 @@ export interface NodeTLSInfo {
      * PubKey is the public key used for establishing TLS connections.
      */
     pub_key: Uint8Array;
-    /**
-     * NextPubKey is the public key that will be used for establishing TLS connections after
-     * certificate rotation (if enabled).
-     */
-    next_pub_key?: Uint8Array;
-    /**
-     * Addresses is the list of addresses at which the node can be reached.
-     */
-    addresses: NodeTLSAddress[];
 }
 
 /**
@@ -1239,6 +1448,40 @@ export interface NodeVRFInfo {
      * ID is the unique identifier of the node used to generate VRF proofs.
      */
     id: Uint8Array;
+}
+
+/**
+ * Status is the P2P status of a node.
+ */
+export interface P2PStatus {
+    /**
+     * PubKey is the public key used for P2P communication.
+     */
+    pub_key: Uint8Array;
+    /**
+     * PeerID is the peer ID derived by hashing peer's public key.
+     */
+    peer_id: string;
+    /**
+     * Addresses is a list of configured P2P addresses used when registering the node.
+     */
+    addresses: NodeAddress[];
+    /**
+     * NumPeers is the number of connected peers.
+     */
+    num_peers: number;
+    /**
+     * NumConnections is the number of peer connections.
+     */
+    num_connections: number;
+    /**
+     * Protocols is a set of registered protocols together with the number of connected peers.
+     */
+    protocols: {[key: string]: number};
+    /**
+     * Topics is a set of registered topics together with the number of connected peers.
+     */
+    topics: {[key: string]: number};
 }
 
 /**
@@ -1327,6 +1570,9 @@ export interface RegistryEntityEvent {
     is_registration: boolean;
 }
 
+/**
+ * EntityWhitelistConfig is a per-entity whitelist configuration.
+ */
 export interface RegistryEntityWhitelistConfig {
     /**
      * MaxNodes is the maximum number of nodes that an entity can register under
@@ -1336,6 +1582,20 @@ export interface RegistryEntityWhitelistConfig {
      * means no nodes allowed), any missing roles imply zero nodes.
      */
     max_nodes?: Map<number, number>;
+}
+
+/**
+ * EntityWhitelistRoleAdmissionPolicy is a per-role entity whitelist policy.
+ */
+export interface RegistryEntityWhitelistRoleAdmissionPolicy {
+    entities: Map<Uint8Array, RegistryEntityWhitelistRoleConfig>;
+}
+
+/**
+ * EntityWhitelistRoleConfig is a per-entity whitelist configuration for a given role.
+ */
+export interface RegistryEntityWhitelistRoleConfig {
+    max_nodes?: number;
 }
 
 /**
@@ -1351,7 +1611,8 @@ export interface RegistryEntityWhitelistRuntimeAdmissionPolicy {
 export interface RegistryEvent {
     height?: longnum;
     tx_hash?: Uint8Array;
-    runtime?: RegistryRuntimeEvent;
+    runtime_started?: RegistryRuntimeStartedEvent;
+    runtime_suspended?: RegistryRuntimeSuspendedEvent;
     entity?: RegistryEntityEvent;
     node?: RegistryNodeEvent;
     node_unfrozen?: RegistryNodeUnfrozenEvent;
@@ -1388,6 +1649,12 @@ export interface RegistryExecutorParameters {
      * penalized.
      */
     min_live_rounds_percent?: number;
+    /**
+     * MaxMissedProposalsPercent is the maximum percentage of proposed rounds in an epoch that
+     * can fail for a node to be considered live. Nodes not satisfying this may be penalized.
+     * Zero means that all proposed rounds can fail.
+     */
+    max_missed_proposals_percent?: number;
     /**
      * MinLiveRoundsForEvaluation is the minimum number of live rounds in an epoch for the liveness
      * calculations to be considered for evaluation.
@@ -1549,6 +1816,13 @@ export interface RegistryNodeUnfrozenEvent {
 }
 
 /**
+ * PerRoleAdmissionPolicy is a per-role admission policy.
+ */
+export interface RegistryPerRoleAdmissionPolicy {
+    entity_whitelist?: RegistryEntityWhitelistRoleAdmissionPolicy;
+}
+
+/**
  * Runtime represents a runtime.
  */
 export interface RegistryRuntime extends CBORVersioned {
@@ -1619,13 +1893,11 @@ export interface RegistryRuntime extends CBORVersioned {
 export interface RegistryRuntimeAdmissionPolicy {
     any_node?: RegistryAnyNodeRuntimeAdmissionPolicy;
     entity_whitelist?: RegistryEntityWhitelistRuntimeAdmissionPolicy;
-}
-
-/**
- * RuntimeEvent signifies new runtime registration.
- */
-export interface RegistryRuntimeEvent {
-    runtime: RegistryRuntime;
+    /**
+     * PerRole is a per-role admission policy that must be satisfied in addition to the global
+     * admission policy for a specific role.
+     */
+    per_role?: Map<number, RegistryPerRoleAdmissionPolicy>;
 }
 
 /**
@@ -1679,6 +1951,22 @@ export interface RegistryRuntimeStakingParameters {
 }
 
 /**
+ * RuntimeStartedEvent signifies a runtime started event.
+ *
+ * Emitted when a new runtime is started or a previously suspended runtime is resumed.
+ */
+export interface RegistryRuntimeStartedEvent {
+    runtime: RegistryRuntime;
+}
+
+/**
+ * RuntimeSuspendedEvent signifies a runtime was suspended.
+ */
+export interface RegistryRuntimeSuspendedEvent {
+    runtime_id: Uint8Array;
+}
+
+/**
  * SchedulingConstraints are the node scheduling constraints.
  *
  * Multiple fields may be set in which case the ALL the constraints must be satisfied.
@@ -1715,24 +2003,24 @@ export interface RegistryTxnSchedulerParameters {
      * BatchFlushTimeout denotes, if using the "simple" algorithm, how long to
      * wait for a scheduled batch.
      */
-    batch_flush_timeout: longnum;
+    batch_flush_timeout?: longnum;
     /**
      * MaxBatchSize denotes what is the max size of a scheduled batch.
      */
-    max_batch_size: longnum;
+    max_batch_size?: longnum;
     /**
      * MaxBatchSizeBytes denote what is the max size of a scheduled batch in bytes.
      */
-    max_batch_size_bytes: longnum;
+    max_batch_size_bytes?: longnum;
     /**
      * MaxInMessages specifies the maximum size of the incoming message queue.
      */
     max_in_messages?: number;
     /**
-     * ProposerTimeout denotes the timeout (in consensus blocks) for scheduler
-     * to propose a batch.
+     * ProposerTimeout denotes how long to wait before accepting proposal from
+     * the next backup scheduler.
      */
-    propose_batch_timeout: longnum;
+    propose_batch_timeout?: longnum;
 }
 
 /**
@@ -1765,6 +2053,10 @@ export interface RegistryVersionInfo {
      * format if any.
      */
     tee?: Uint8Array;
+    /**
+     * BundleChecksum is the SHA256 hash of the runtime bundle (optional).
+     */
+    bundle_checksum?: Uint8Array;
 }
 
 /**
@@ -1785,7 +2077,7 @@ export interface RootHashAnnotatedBlock {
 /**
  * Block is an Oasis block.
  *
- * Keep this in sync with /runtime/src/common/roothash.rs.
+ * Keep this in sync with /runtime/src/consensus/roothash/block.rs.
  */
 export interface RootHashBlock {
     /**
@@ -1805,13 +2097,28 @@ export interface RootHashBlock {
  * Keep the roothash RAK validation in sync with changes to this structure.
  */
 export interface RootHashComputeResultsHeader {
+    /**
+     * Round is the round number.
+     */
     round: longnum;
+    /**
+     * PreviousHash is the hash of the previous block header this batch was computed against.
+     */
     previous_hash: Uint8Array;
+    /**
+     * IORoot is the I/O merkle root.
+     */
     io_root?: Uint8Array;
+    /**
+     * StateRoot is the root hash of the state after computing this batch.
+     */
     state_root?: Uint8Array;
+    /**
+     * MessagesHash is the hash of messages sent from this batch.
+     */
     messages_hash?: Uint8Array;
     /**
-     * InMessagesHash is the hash of processed incoming messages.
+     * InMessagesHash is hash of processed incoming messages.
      */
     in_msgs_hash?: Uint8Array;
     /**
@@ -1851,6 +2158,11 @@ export interface RootHashConsensusParameters {
      * MaxEvidenceAge is the maximum age of submitted evidence in the number of rounds.
      */
     max_evidence_age: longnum;
+    /**
+     * MaxPastRootsStored is the maximum number of past runtime state and I/O
+     * roots that are stored in the consensus state.
+     */
+    max_past_roots_stored?: longnum;
 }
 
 /**
@@ -1896,6 +2208,10 @@ export interface RootHashEvidence {
  */
 export interface RootHashExecutionDiscrepancyDetectedEvent {
     /**
+     * Rank is the rank of the transaction scheduler.
+     */
+    rank: longnum;
+    /**
      * Timeout signals whether the discrepancy was due to a timeout.
      */
     timeout: boolean;
@@ -1937,7 +2253,19 @@ export interface RootHashExecutorCommitment {
 /**
  * ExecutorCommitmentHeader is the header of an executor commitment.
  */
-export interface RootHashExecutorCommitmentHeader extends RootHashComputeResultsHeader {
+export interface RootHashExecutorCommitmentHeader {
+    /**
+     * SchedulerID is the public key of the node that scheduled transactions
+     * and prepared the proposal.
+     */
+    scheduler_id: Uint8Array;
+    /**
+     * Header is the compute results header.
+     */
+    header: RootHashComputeResultsHeader;
+    /**
+     * Failure is the executor commitment failure reason.
+     */
     failure?: number;
     rak_sig?: Uint8Array;
 }
@@ -1950,14 +2278,6 @@ export interface RootHashExecutorCommittedEvent {
      * Commit is the executor commitment.
      */
     commit: RootHashExecutorCommitment;
-}
-
-/**
- * ExecutorProposerTimeoutRequest is an executor proposer timeout request.
- */
-export interface RootHashExecutorProposerTimeoutRequest {
-    id: Uint8Array;
-    round: longnum;
 }
 
 /**
@@ -1995,9 +2315,17 @@ export interface RootHashGenesisRuntimeState extends RegistryRuntimeGenesis {
 }
 
 /**
+ * GovernanceMessage is a governance message that allows a runtime to perform governance operations.
+ */
+export interface RootHashGovernanceMessage extends CBORVersioned {
+    cast_vote?: GovernanceProposalVote;
+    submit_proposal?: GovernanceProposalContent;
+}
+
+/**
  * Header is a block header.
  *
- * Keep this in sync with /runtime/src/common/roothash.rs.
+ * Keep this in sync with /runtime/src/consensus/roothash/block.rs.
  */
 export interface RootHashHeader {
     /**
@@ -2138,6 +2466,22 @@ export interface RootHashLivenessStatistics {
      * the value for node i in the committee).
      */
     good_rounds: longnum[];
+    /**
+     * FinalizedProposals is a list that records the number of finalized rounds when a node
+     * acted as a proposer.
+     *
+     * The list is ordered according to the committee arrangement (i.e., the counter at index i
+     * holds the value for the node at index i in the committee).
+     */
+    finalized_proposals: longnum[];
+    /**
+     * MissedProposals is a list that records the number of failed rounds when a node
+     * acted as a proposer.
+     *
+     * The list is ordered according to the committee arrangement (i.e., the counter at index i
+     * holds the value for the node at index i in the committee).
+     */
+    missed_proposals: longnum[];
 }
 
 /**
@@ -2146,6 +2490,7 @@ export interface RootHashLivenessStatistics {
 export interface RootHashMessage {
     staking?: RootHashStakingMessage;
     registry?: RootHashRegistryMessage;
+    governance?: RootHashGovernanceMessage;
 }
 
 /**
@@ -2162,39 +2507,27 @@ export interface RootHashMessageEvent {
 }
 
 /**
- * Pool is a serializable pool of commitments that can be used to perform
- * discrepancy detection.
+ * Pool is a serializable pool of scheduler commitments that can be used to perform discrepancy
+ * detection and resolution.
  *
  * The pool is not safe for concurrent use.
  */
 export interface RootHashPool {
     /**
-     * Runtime is the runtime descriptor this pool is collecting the
-     * commitments for.
+     * HighestRank is the rank of the highest-ranked scheduler among those who have submitted
+     * a commitment for their own proposal. The maximum value indicates that no scheduler
+     * has submitted a commitment.
      */
-    runtime: RegistryRuntime;
+    highest_rank?: longnum;
     /**
-     * Committee is the committee this pool is collecting the commitments for.
+     * SchedulerCommitments is a map that groups scheduler commitments and worker votes
+     * by the scheduler's rank.
      */
-    committee: SchedulerCommittee;
-    /**
-     * Round is the current protocol round.
-     */
-    round: longnum;
-    /**
-     * ExecuteCommitments are the commitments in the pool iff Committee.Kind
-     * is scheduler.KindComputeExecutor.
-     */
-    execute_commitments?: Map<Uint8Array, RootHashExecutorCommitment>;
+    scheduler_commitments?: Map<longnum, RootHashSchedulerCommitment>;
     /**
      * Discrepancy is a flag signalling that a discrepancy has been detected.
      */
-    discrepancy: boolean;
-    /**
-     * NextTimeout is the time when the next call to TryFinalize(true) should
-     * be scheduled to be executed. Zero means that no timeout is to be scheduled.
-     */
-    next_timeout: longnum;
+    discrepancy?: boolean;
 }
 
 /**
@@ -2278,11 +2611,26 @@ export interface RootHashRuntimeRequest {
  * RuntimeState is the per-runtime state.
  */
 export interface RootHashRuntimeState {
+    /**
+     * Runtime is the latest per-epoch runtime descriptor.
+     */
     runtime: RegistryRuntime;
+    /**
+     * Suspended is a flag indicating whether the runtime is currently suspended.
+     */
     suspended?: boolean;
+    /**
+     * GenesisBlock is the runtime's first block.
+     */
     genesis_block: RootHashBlock;
-    current_block: RootHashBlock;
-    current_block_height: longnum;
+    /**
+     * LastBlock is the runtime's most recently generated block.
+     */
+    last_block: RootHashBlock;
+    /**
+     * LastBlockHeight is the height at which the runtime's most recent block was generated.
+     */
+    last_block_height: longnum;
     /**
      * LastNormalRound is the runtime round which was normally processed by the runtime. This is
      * also the round that contains the message results for the last processed runtime messages.
@@ -2293,13 +2641,37 @@ export interface RootHashRuntimeState {
      */
     last_normal_height: longnum;
     /**
-     * ExecutorPool contains the executor commitment pool.
+     * Committee is the committee the executor pool is collecting commitments for.
      */
-    executor_pool: RootHashPool;
+    committee?: SchedulerCommittee;
+    /**
+     * CommitmentPool collects the executor commitments.
+     */
+    commitment_pool?: RootHashPool;
+    /**
+     * NextTimeout is the time at which the round is scheduled for forced finalization.
+     */
+    timeout?: longnum;
     /**
      * LivenessStatistics contains the liveness statistics for the current epoch.
      */
-    liveness_stats: RootHashLivenessStatistics;
+    liveness_stats?: RootHashLivenessStatistics;
+}
+
+/**
+ * SchedulerCommitment is a structure for storing scheduler commitment and its votes.
+ */
+export interface RootHashSchedulerCommitment {
+    /**
+     * Commitment is a verified scheduler's Commitment for which votes are being collected.
+     */
+    commitment?: RootHashExecutorCommitment;
+    /**
+     * Votes is a map that collects Votes from nodes in the form of commitment hashes.
+     *
+     * A nil vote indicates a failure.
+     */
+    votes?: Map<Uint8Array, Uint8Array>;
 }
 
 /**
@@ -2469,7 +2841,9 @@ export interface SchedulerCommittee {
      */
     kind: number;
     /**
-     * Members is the committee members.
+     * Members is a collection of committee members.
+     *
+     * The order of committee members is consistent, with workers always preceding backup workers.
      */
     members: SchedulerCommitteeNode[];
     /**
@@ -2536,6 +2910,10 @@ export interface SchedulerConsensusParameters {
      * generated by an alpha value considered weak.
      */
     debug_allow_weak_alpha?: boolean;
+    /**
+     * VotingPowerDistribution is the voting power distribution.
+     */
+    voting_power_distribution?: number;
 }
 
 /**
@@ -2546,15 +2924,16 @@ export interface SchedulerForceElectCommitteeRole {
     /**
      * Kind is the kind of committee to force-elect the node into.
      */
-    kind: number;
+    kind?: number;
     /**
      * Roles are the roles that the given node is force elected as.
      */
-    roles: Uint8Array;
+    roles?: Uint8Array;
     /**
-     * IsScheduler is true iff the node should be set as the scheduler.
+     * Index is the position of the given node in the committee's worker group if it has
+     * the worker role.
      */
-    is_scheduler?: boolean;
+    index?: longnum;
 }
 
 /**
@@ -2584,6 +2963,10 @@ export interface SchedulerValidator {
      */
     id: Uint8Array;
     /**
+     * EntityID is the validator entity identifier.
+     */
+    entity_id: Uint8Array;
+    /**
      * VotingPower is the validator's consensus voting power.
      */
     voting_power: longnum;
@@ -2611,6 +2994,15 @@ export interface SGXIasQuotePolicy {
      * Note: QuoteOK and QuoteSwHardeningNeeded are ALWAYS allowed, and do not need to be specified.
      */
     allowed_quote_statuses?: number[];
+    /**
+     * GIDBlackList is a list of blocked platform EPID group IDs.
+     */
+    gid_blacklist?: number[];
+    /**
+     * MinTCBEvaluationDataNumber is the minimum acceptable TCB Evaluation Data number,
+     * as used in the attestation verification report structure.
+     */
+    min_tcb_evaluation_data_number?: number;
 }
 
 /**
@@ -2630,6 +3022,11 @@ export interface SGXPcsQuotePolicy {
      * valid. TCB bundles containing smaller values will be invalid.
      */
     min_tcb_evaluation_data_number: number;
+    /**
+     * FMSPCBlacklist is a list of hexadecimal encoded FMSPCs specifying which processor
+     * packages and platform instances are blocked.
+     */
+    fmspc_blacklist?: string[];
 }
 
 /**
@@ -2825,6 +3222,11 @@ export interface StakingCommissionScheduleRules {
      * Maximum number of commission rate bound steps a commission schedule can specify.
      */
     max_bound_steps?: number;
+    /**
+     * MinCommissionRate is the minimum commission rate an account can configure.
+     * The rate is obtained by dividing this value with the `CommissionRateDenominator`.
+     */
+    min_commission_rate: Uint8Array;
 }
 
 /**
@@ -3114,7 +3516,14 @@ export interface StakingStakeThreshold {
  */
 export interface StakingTakeEscrowEvent {
     owner: Uint8Array;
+    /**
+     * The sum of amounts slashed from active and debonding escrow balances.
+     */
     amount: Uint8Array;
+    /**
+     * The amount slashed from debonding escrow balances.
+     */
+    debonding_amount: Uint8Array;
 }
 
 /**
@@ -3406,9 +3815,10 @@ export interface WorkerCommonStatus {
      */
     executor_roles: Uint8Array;
     /**
-     * IsTransactionScheduler indicates whether the node is a transaction scheduler in this round.
+     * SchedulerRank is the position (index) of the node in the committee's scheduling order
+     * for the next round.
      */
-    is_txn_scheduler: boolean;
+    scheduler_rank: longnum;
     /**
      * Liveness is the node's liveness status for the current epoch.
      */
@@ -3434,6 +3844,50 @@ export interface WorkerComputeStatus {
 }
 
 /**
+ * EphemeralSecretStats are the ephemeral secret generation and replication stats.
+ */
+export interface WorkerKeyManagerEphemeralSecretStats {
+    /**
+     * NumLoaded is the number of loaded secrets.
+     */
+    num_loaded: number;
+    /**
+     * LastLoaded is the epoch of the last loaded secret.
+     */
+    last_loaded_epoch: longnum;
+    /**
+     * NumGenerated is the number of generated secrets.
+     */
+    num_generated: number;
+    /**
+     * LastGenerated is the epoch of the last generated secret.
+     */
+    last_generated_epoch: longnum;
+}
+
+/**
+ * MasterSecretStats are the master secret generation and replication stats.
+ */
+export interface WorkerKeyManagerMasterSecretStats {
+    /**
+     * NumLoaded is the number of loaded secrets.
+     */
+    num_loaded: number;
+    /**
+     * LastLoaded is the generation of the last loaded secret.
+     */
+    last_loaded_generation: longnum;
+    /**
+     * NumGenerated is the number of generated secrets.
+     */
+    num_generated: number;
+    /**
+     * LastGenerated is the generation of the last generated secret.
+     */
+    last_generated_generation: longnum;
+}
+
+/**
  * RuntimeAccessList is an access control lists for a runtime.
  */
 export interface WorkerKeyManagerRuntimeAccessList {
@@ -3448,13 +3902,31 @@ export interface WorkerKeyManagerRuntimeAccessList {
 }
 
 /**
- * Status is the key manager worker status.
+ * Status is the key manager global and worker status.
  */
 export interface WorkerKeyManagerStatus {
+    /**
+     * GlobalStatus is the global key manager committee status.
+     */
+    global: KeyManagerStatus;
+    /**
+     * WorkerStatus is the key manager worker status.
+     */
+    worker: WorkerKeyManagerWorkerStatus;
+}
+
+/**
+ * WorkerStatus is the key manager worker status.
+ */
+export interface WorkerKeyManagerWorkerStatus {
     /**
      * Status is a concise status of the key manager worker.
      */
     status: number;
+    /**
+     * ActiveVersion is the currently active version.
+     */
+    active_version: Version;
     /**
      * MayGenerate returns whether the enclave can generate a master secret.
      */
@@ -3475,6 +3947,22 @@ export interface WorkerKeyManagerStatus {
      * PrivatePeers is a list of peers that are always allowed to call protected methods.
      */
     private_peers: string[];
+    /**
+     * Policy is the key manager policy.
+     */
+    policy: KeyManagerSignedPolicySGX;
+    /**
+     * PolicyChecksum is the checksum of the key manager policy.
+     */
+    policy_checksum: Uint8Array;
+    /**
+     * MasterSecrets are the master secret generation and replication stats.
+     */
+    master_secrets: WorkerKeyManagerMasterSecretStats;
+    /**
+     * EphemeralSecrets are the ephemeral secret generation and replication stats.
+     */
+    ephemeral_secrets: WorkerKeyManagerEphemeralSecretStats;
 }
 
 /**
@@ -3505,6 +3993,10 @@ export interface WorkerStoragePauseCheckpointerRequest {
  * Status is the storage worker status.
  */
 export interface WorkerStorageStatus {
+    /**
+     * Status is the current status of the storage worker.
+     */
+    status: string;
     /**
      * LastFinalizedRound is the last synced and finalized round.
      */
