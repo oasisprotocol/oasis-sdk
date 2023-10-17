@@ -1,18 +1,26 @@
+# This workflow runs on Dependabot PRs that update Go dependencies. The workflow
+# runs the gomod-updater tool to propagate the dependency updates to all Go projets
+# in the repository. This is needed due to a Dependabot limitation which
+# does not support updating multiple go projects in a single PR.
+# https://github.com/dependabot/dependabot-core/issues/7547
+
 # NOTE: This name appears in GitHub's Checks API and in workflow's status badge.
 name: ci-dependabot-fixup
 
 # Trigger the workflow when:
 on:
-  # When a pull request event occurs for a pull request against one of the
-  # matched branches.
-  pull_request:
+  # We need pull_request_target hook since Dependabot PR's are treated as though they are from a forked repository.
+  # This means that the CI configuration will be taken from the base branch (main) and not the PR branch,
+  # which makes it safe(r) to give it access to secrets.
+  # https://docs.github.com/en/actions/reference/events-that-trigger-workflows#pull_request_target
+  pull_request_target:
     types: [opened, synchronize, reopened]
     branches:
       - main
 
 # Cancel in-progress jobs on same branch.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,15 +32,21 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.head.ref }}
         fetch-depth: "0"
+        # We use a Personal Access Token (PAT) to checkout and later push the commit instead of
+        # the default $GITHUB_TOKEN. This is because events triggered by $GITHUB_TOKEN will not
+        # trigger new workflow runs, but we want to re-run the CI after pushing the updated commit.
+        # https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
+        token: ${{ secrets.BOT_GITHUB_TOKEN }}
 
-    - name: Ensure Dependebot author
+    - name: Ensure Dependebot author and Go mod updates
       id: check
       run: |
         # Ensure Dependabot author.
-        if [ "${{ github.event.pull_request.user.login }}" != "dependabot[bot]" ]; then
-          echo "This PR was not created by Dependabot. No further action is being taken."
-          echo "::set-output name=skip::true"
-          exit 0;
+        if [ "${{ github.event.pull_request.user.login }}" != "dependabot[bot]" ]
+        then
+            echo "This PR was not created by Dependabot. No further action is being taken."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0;
         fi
 
         # Ensure only Dependabot commits.
@@ -40,11 +54,19 @@ jobs:
         if git log origin/${BASE_BRANCH}..HEAD --pretty=format:'%an' | grep -v '^dependabot\[bot\]$' | grep -q .
         then
             echo "This PR has commits not by Dependabot."
-            echo "::set-output name=skip::true"
+            echo "skip=true" >> $GITHUB_OUTPUT
             exit 0;
         fi
 
-        echo "All commits are by Dependabot."
+        # Ensure Go dependency updates.
+        if ! git diff --name-only origin/${BASE_BRANCH}..HEAD | grep -q 'go\.mod$'
+        then
+          echo "This PR does not update any Go dependencies."
+          echo "skip=true" >> $GITHUB_OUTPUT
+          exit 0;
+        fi
+
+        echo "All commits are by Dependabot and update Go modules."
       env:
           BASE_BRANCH: ${{ github.base_ref }}
 
@@ -72,22 +94,25 @@ jobs:
         version=$(echo $title | awk '{print $7}')
 
         # Set the output variables for subsequent steps
-        echo "::set-output name=repo::$repo"
-        echo "::set-output name=version::$version"
+        echo "repo=$repo" >> $GITHUB_OUTPUT
+        echo "version=$version" >> $GITHUB_OUTPUT
 
     - name: Run gomod updater
       if: steps.check.outputs.skip != 'true'
       run: |
-        file_list=$(find . -type f -name 'go.mod' | awk -vORS=, '{ print $1 }' | sed 's/,$/\n/')
+        # Ensure client-sdk is updated first, as some other packages depend on it.
+        client_sdk="./client-sdk/go/go.mod"
+        file_list=$(echo $client_sdk | awk -vORS=, '{ print $1 }')
+        file_list+=$(find . -type f -name 'go.mod' ! -path "$client_sdk" | awk -vORS=, '{ print $1 }' | sed 's/,$/\n/')
         tools/gomod-updater/gomod-updater ${{ steps.extract.outputs.repo }} ${{ steps.extract.outputs.version }} --packages "$file_list"
 
     - name: Commit and push all changed files
       if: steps.check.outputs.skip != 'true'
       env:
         CI_COMMIT_MESSAGE: Dependabot dependencies fixup 👷
-        CI_COMMIT_AUTHOR: Dependabot Corrector
+        CI_COMMIT_AUTHOR: oasisprotocol-bot
       run: |
         git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
-        git config --global user.email "ptrus@users.noreply.github.com"
-        git commit -a -m "${{ env.CI_COMMIT_MESSAGE }}"
+        git config --global user.email "oasisprotocol-bot@users.noreply.github.com"
+        git commit -a -m "${{ env.CI_COMMIT_MESSAGE }}" || echo "No changes."
         git push
