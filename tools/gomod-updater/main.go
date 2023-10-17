@@ -39,23 +39,23 @@ var (
 						break
 					}
 				}
-				if !requiresPkg {
-					// Nothing to do.
-					continue
-				}
-				fmt.Println("Updating", path)
 
-				// Update the dependency.
-				cmd := exec.Command("go", "get", "-u", pkg+"@v"+version)
-				cmd.Dir = filepath.Dir(path)
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				err = cmd.Run()
-				if err != nil {
-					cobra.CheckErr(fmt.Errorf("failed to update dependency: %w", err))
+				fmt.Println("Updating", path)
+				if requiresPkg {
+					// Update the dependency.
+					cmd := exec.Command("go", "get", "-u", pkg+"@v"+version)
+					cmd.Dir = filepath.Dir(path)
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+					err = cmd.Run()
+					if err != nil {
+						cobra.CheckErr(fmt.Errorf("failed to update dependency: %w", err))
+					}
 				}
-				// Tidy.
-				cmd = exec.Command("go", "mod", "tidy")
+
+				// Tidy all projects since a dependency could have been updated
+				// in a dependent project (some projects depend on client-sdk).
+				cmd := exec.Command("go", "mod", "tidy")
 				cmd.Dir = filepath.Dir(path)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
