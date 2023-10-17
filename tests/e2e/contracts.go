@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"google.golang.org/grpc"
 
 	voiEd "github.com/oasisprotocol/curve25519-voi/primitives/ed25519"
@@ -458,7 +458,7 @@ OUTER:
 	ed25519Signer := newEd25519Signer("this has 32 bytes  on the  whole")
 	ed25519PkBytes, _ := ed25519Signer.Public().(ed25519.PublicKey).MarshalBinary()
 
-	pk, err := btcec.NewPrivateKey(btcec.S256())
+	pk, err := btcec.NewPrivateKey()
 	if err != nil {
 		return err
 	}

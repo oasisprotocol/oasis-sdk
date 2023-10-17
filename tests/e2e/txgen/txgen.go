@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -143,7 +143,7 @@ func CreateAndFundAccount(ctx context.Context, rtc client.RuntimeClient, funder 
 		cs := coreMemSig.NewTestSigner(fmt.Sprintf("test account %d", id))
 		sig = ed25519.WrapSigner(cs)
 	case AccountSecp256k1:
-		pk, err := btcec.NewPrivateKey(btcec.S256())
+		pk, err := btcec.NewPrivateKey()
 		if err != nil {
 			return nil, err
 		}
