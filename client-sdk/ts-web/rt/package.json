@@ -31,7 +31,7 @@
         "tweetnacl": "^1.0.3"
     },
     "devDependencies": {
-        "@types/elliptic": "^6.4.14",
+        "@types/elliptic": "^6.4.16",
         "@types/jest": "^29.5.4",
         "@types/randombytes": "^2.0.0",
         "buffer": "^6.0.3",
