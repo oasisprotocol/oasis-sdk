@@ -1318,7 +1318,7 @@ func SubcallDelegationTest(_ *RuntimeScenario, log *logging.Logger, conn *grpc.C
 	if err = ensureStakingEvent(log, ch, makeAddEscrowCheck(runtimeAddr, staking.Address(testing.Alice.Address), consensusAmount)); err != nil {
 		return fmt.Errorf("ensuring runtime->alice add escrow consensus event: %w", err)
 	}
-	if err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(contractSdkAddress, 0, testing.Alice.Address, amount)); err != nil {
+	if _, err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(contractSdkAddress, 0, testing.Alice.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring contract delegate runtime event: %w", err)
 	}
 
@@ -1388,7 +1388,7 @@ func DelegationReceiptsTest(_ *RuntimeScenario, log *logging.Logger, conn *grpc.
 	if err = ensureStakingEvent(log, ch, makeAddEscrowCheck(runtimeAddr, staking.Address(testing.Alice.Address), consensusAmount)); err != nil {
 		return fmt.Errorf("ensuring runtime->alice add escrow consensus event: %w", err)
 	}
-	if err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(contractSdkAddress, receiptID, testing.Alice.Address, sdkAmount)); err != nil {
+	if _, err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(contractSdkAddress, receiptID, testing.Alice.Address, sdkAmount)); err != nil {
 		return fmt.Errorf("ensuring contract->alice delegate runtime event: %w", err)
 	}
 
@@ -1439,7 +1439,7 @@ func DelegationReceiptsTest(_ *RuntimeScenario, log *logging.Logger, conn *grpc.
 	receiptID = results[0].(uint64)
 
 	// Verify that undelegation started.
-	if err = ensureRuntimeEvent(log, acCh, makeUndelegateStartCheck(testing.Alice.Address, receiptID, contractSdkAddress, consensusShares)); err != nil {
+	if _, err = ensureRuntimeEvent(log, acCh, makeUndelegateStartCheck(testing.Alice.Address, receiptID, contractSdkAddress, consensusShares)); err != nil {
 		return fmt.Errorf("ensuring alice->contract undelegate start runtime event: %w", err)
 	}
 
@@ -1460,7 +1460,7 @@ func DelegationReceiptsTest(_ *RuntimeScenario, log *logging.Logger, conn *grpc.
 		return fmt.Errorf("ensuring alice->runtime reclaim escrow consensus event: %w", err)
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeUndelegateDoneCheck(testing.Alice.Address, contractSdkAddress, consensusShares, sdkAmount)); err != nil {
+	if _, err = ensureRuntimeEvent(log, acCh, makeUndelegateDoneCheck(testing.Alice.Address, contractSdkAddress, consensusShares, sdkAmount)); err != nil {
 		return fmt.Errorf("ensuring alice->contract undelegate done runtime event: %w", err)
 	}
 

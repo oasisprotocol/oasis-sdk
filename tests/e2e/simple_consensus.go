@@ -87,22 +87,22 @@ func makeReclaimEscrowCheck(from, to staking.Address, amount *quantity.Quantity)
 	}
 }
 
-func ensureRuntimeEvent(log *logging.Logger, ch <-chan *client.BlockEvents, check func(event client.DecodedEvent) bool) error {
+func ensureRuntimeEvent(log *logging.Logger, ch <-chan *client.BlockEvents, check func(event client.DecodedEvent) bool) (uint64, error) {
 	log.Info("waiting for expected runtime event...")
 	for {
 		select {
 		case bev, ok := <-ch:
 			if !ok {
-				return fmt.Errorf("channel closed")
+				return 0, fmt.Errorf("channel closed")
 			}
 			log.Debug("received event", "block_event", bev)
 			for _, ev := range bev.Events {
 				if check(ev) {
-					return nil
+					return bev.Round, nil
 				}
 			}
 		case <-time.After(timeout):
-			return fmt.Errorf("timeout waiting for event")
+			return 0, fmt.Errorf("timeout waiting for event")
 		}
 	}
 }
@@ -306,7 +306,7 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 		return fmt.Errorf("ensuring alice deposit consensus event: %w", err)
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeDepositCheck(testing.Alice.Address, 0, testing.Bob.Address, amount)); err != nil {
+	if _, err = ensureRuntimeEvent(log, acCh, makeDepositCheck(testing.Alice.Address, 0, testing.Bob.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring alice deposit runtime event: %w", err)
 	}
 
@@ -338,7 +338,7 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 		return fmt.Errorf("ensuring bob deposit consensus event: %w", err)
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeDepositCheck(testing.Bob.Address, 0, testing.Alice.Address, amount)); err != nil {
+	if _, err = ensureRuntimeEvent(log, acCh, makeDepositCheck(testing.Bob.Address, 0, testing.Alice.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring bob deposit runtime event: %w", err)
 	}
 
@@ -369,7 +369,7 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 	if err = ensureStakingEvent(log, ch, makeTransferCheck(runtimeAddr, staking.Address(testing.Bob.Address), consensusAmount)); err != nil {
 		return fmt.Errorf("ensuring alice withdraw consensus event: %w", err)
 	}
-	if err = ensureRuntimeEvent(log, acCh, makeWithdrawCheck(testing.Alice.Address, 1, testing.Bob.Address, amount)); err != nil {
+	if _, err = ensureRuntimeEvent(log, acCh, makeWithdrawCheck(testing.Alice.Address, 1, testing.Bob.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring alice withdraw runtime event: %w", err)
 	}
 
@@ -461,7 +461,7 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 	return nil
 }
 
-func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -507,7 +507,7 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 		return fmt.Errorf("ensuring runtime->bob add escrow consensus event: %w", err)
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(testing.Alice.Address, nonce, testing.Bob.Address, amount)); err != nil {
+	if _, err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(testing.Alice.Address, nonce, testing.Bob.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring alice delegate runtime event: %w", err)
 	}
 
@@ -573,7 +573,7 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 		return fmt.Errorf("ensuring runtime->alice add escrow consensus event: %w", err)
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(testing.Alice.Address, nonce+1, testing.Alice.Address, amount)); err != nil {
+	if _, err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(testing.Alice.Address, nonce+1, testing.Alice.Address, amount)); err != nil {
 		return fmt.Errorf("ensuring alice delegate runtime event: %w", err)
 	}
 
@@ -604,22 +604,26 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 		return err
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeUndelegateStartCheck(testing.Bob.Address, nonce+2, testing.Alice.Address, consensusAmountB)); err != nil {
+	// Remember rounds for undelegations query below.
+	undelegateRoundB, err := ensureRuntimeEvent(log, acCh, makeUndelegateStartCheck(testing.Bob.Address, nonce+2, testing.Alice.Address, consensusAmountB))
+	if err != nil {
 		return fmt.Errorf("ensuring bob->alice undelegate start runtime event: %w", err)
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeUndelegateStartCheck(testing.Alice.Address, nonce+3, testing.Alice.Address, consensusAmountA)); err != nil {
+	undelegateRoundA, err := ensureRuntimeEvent(log, acCh, makeUndelegateStartCheck(testing.Alice.Address, nonce+3, testing.Alice.Address, consensusAmountA))
+	if err != nil {
 		return fmt.Errorf("ensuring alice->alice undelegate start runtime event: %w", err)
 	}
 
 	// Test Undelegations query.
 	log.Info("testing Undelegations query")
-	udis, err := consAccounts.Undelegations(ctx, client.RoundLatest, &consensusAccounts.UndelegationsQuery{
+	udis, err := consAccounts.Undelegations(ctx, undelegateRoundB, &consensusAccounts.UndelegationsQuery{
 		To: testing.Alice.Address,
 	})
 	if err != nil {
 		return err
 	}
+	// Should have at least one delegation (bob's).
 	if len(udis) < 1 {
 		return fmt.Errorf("expected at least one undelegation, got %d", len(udis))
 	}
@@ -634,7 +638,26 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 		return fmt.Errorf("ensuring bob->runtime reclaim escrow consensus event: %w", err)
 	}
 
-	if err = ensureRuntimeEvent(log, acCh, makeUndelegateDoneCheck(testing.Bob.Address, testing.Alice.Address, consensusAmountB, amountB)); err != nil {
+	udis, err = consAccounts.Undelegations(ctx, undelegateRoundA, &consensusAccounts.UndelegationsQuery{
+		To: testing.Alice.Address,
+	})
+	if err != nil {
+		return err
+	}
+	// Should have at least one delegation (alice's, bob's could have expired).
+	if len(udis) < 1 {
+		return fmt.Errorf("expected at least one undelegation, got %d", len(udis))
+	}
+	// Alice's delegation should be after bob's.
+	udi := udis[len(udis)-1]
+	if udi.From != testing.Alice.Address {
+		return fmt.Errorf("expected undelegation source to be %s, got %s", testing.Alice.Address, udi.From)
+	}
+	if udi.Shares.Cmp(sharesA) != 0 {
+		return fmt.Errorf("expected undelegation shares to be %s, got %s", sharesA, udi.Shares)
+	}
+
+	if _, err = ensureRuntimeEvent(log, acCh, makeUndelegateDoneCheck(testing.Bob.Address, testing.Alice.Address, consensusAmountB, amountB)); err != nil {
 		return fmt.Errorf("ensuring bob->alice undelegate done runtime event: %w", err)
 	}
 
