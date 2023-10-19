@@ -200,6 +200,7 @@ pub trait Runtime {
                 trust_root: Self::consensus_trust_root(),
                 features: Some(features),
                 persist_check_tx_state: false,
+                freshness_proofs: true,
                 ..Default::default()
             },
         );
