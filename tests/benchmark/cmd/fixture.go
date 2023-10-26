@@ -17,6 +17,7 @@ import (
 	cmdCommon "github.com/oasisprotocol/oasis-core/go/oasis-node/cmd/common"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
+	"github.com/oasisprotocol/oasis-core/go/runtime/config"
 )
 
 var fixtureFlags = flag.NewFlagSet("", flag.ContinueOnError)
@@ -68,13 +69,14 @@ func fixture() *oasis.NetworkFixture {
 						"allowed_queries":                      []map[string]bool{{"all_expensive": true}},
 					},
 				},
-				Runtimes: []int{0},
+				Runtimes:           []int{0},
+				RuntimeProvisioner: config.RuntimeProvisionerUnconfined,
 			},
 		},
 		ComputeWorkers: []oasis.ComputeWorkerFixture{
-			{NodeFixture: oasis.NodeFixture{Name: "compute-1", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
-			{NodeFixture: oasis.NodeFixture{Name: "compute-2", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
-			{NodeFixture: oasis.NodeFixture{Name: "compute-3", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-1", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}, RuntimeProvisioner: config.RuntimeProvisionerUnconfined},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-2", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}, RuntimeProvisioner: config.RuntimeProvisionerUnconfined},
+			{NodeFixture: oasis.NodeFixture{Name: "compute-3", ExtraArgs: computeExtraArgs}, Entity: 1, Runtimes: []int{0}, RuntimeProvisioner: config.RuntimeProvisionerUnconfined},
 		},
 		Seeds: []oasis.SeedFixture{{}},
 		Runtimes: []oasis.RuntimeFixture{
