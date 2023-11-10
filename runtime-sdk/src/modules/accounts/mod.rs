@@ -1056,6 +1056,10 @@ impl module::BlockHandler for Module {
 
         // Transfer remainder to a common pool account.
         for (denom, remainder) in previous_fees.into_iter() {
+            if remainder.is_zero() {
+                continue;
+            }
+
             let amount = token::BaseUnits::new(remainder, denom);
             Self::add_amount(*ADDRESS_COMMON_POOL, &amount)
                 .expect("add_amount must succeed for transfer to common pool");
