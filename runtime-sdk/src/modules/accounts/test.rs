@@ -1457,3 +1457,16 @@ fn test_fee_refund_subcall() {
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].amount, 11_000);
 }
+
+#[test]
+fn test_pool_addresses() {
+    assert_eq!(
+        ADDRESS_COMMON_POOL.to_bech32(),
+        "oasis1qz78phkdan64g040cvqvqpwkplfqf6tj6uwcsh30"
+    );
+
+    assert_eq!(
+        ADDRESS_FEE_ACCUMULATOR.to_bech32(),
+        "oasis1qp3r8hgsnphajmfzfuaa8fhjag7e0yt35cjxq0u4"
+    );
+}
