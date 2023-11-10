@@ -1142,6 +1142,10 @@
 <a href="#1142" id="1142">1142</a>
 <a href="#1143" id="1143">1143</a>
 <a href="#1144" id="1144">1144</a>
+<a href="#1145" id="1145">1145</a>
+<a href="#1146" id="1146">1146</a>
+<a href="#1147" id="1147">1147</a>
+<a href="#1148" id="1148">1148</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Accounts module.
 </span><span class="kw">use </span>std::{
     cmp::Ordering,
@@ -2200,6 +2204,10 @@
 
         <span class="comment">// Transfer remainder to a common pool account.
         </span><span class="kw">for </span>(denom, remainder) <span class="kw">in </span>previous_fees.into_iter() {
+            <span class="kw">if </span>remainder.is_zero() {
+                <span class="kw">continue</span>;
+            }
+
             <span class="kw">let </span>amount = token::BaseUnits::new(remainder, denom);
             <span class="self">Self</span>::add_amount(<span class="kw-2">*</span>ADDRESS_COMMON_POOL, <span class="kw-2">&amp;</span>amount)
                 .expect(<span class="string">&quot;add_amount must succeed for transfer to common pool&quot;</span>);
