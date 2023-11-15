@@ -117,7 +117,7 @@ func NewRuntimeScenario(runtimeName string, tests []RunTestFunction, opts ...Sce
 
 func (sc *RuntimeScenario) Clone() scenario.Scenario {
 	return &RuntimeScenario{
-		Scenario:        sc.Scenario.Clone(),
+		Scenario:        *sc.Scenario.Clone().(*e2e.Scenario),
 		RuntimeName:     sc.RuntimeName,
 		RunTest:         append(make([]RunTestFunction, 0, len(sc.RunTest)), sc.RunTest...),
 		fixtureModifier: sc.fixtureModifier,
