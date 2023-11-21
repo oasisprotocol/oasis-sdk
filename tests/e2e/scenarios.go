@@ -53,6 +53,7 @@ var (
 		SubcallDelegationTest,
 		DelegationReceiptsTest,
 		EVMParametersTest,
+		SubcallRoundRootTest,
 	}, WithCustomFixture(EVMRuntimeFixture))
 
 	// C10lEVMRuntime is the c10l-evm runtime test.

@@ -465,6 +465,7 @@ fn test_query_parameters() {
     let mut ctx = mock.create_ctx();
 
     let params = Parameters {
+        gas_costs: Default::default(),
         consensus_denomination: Denomination::NATIVE,
         consensus_scaling_factor: 1_000,
         min_delegate_amount: 10,
@@ -480,6 +481,7 @@ fn test_query_parameters() {
 fn test_init_bad_scaling_factor_1() {
     Consensus::init(Genesis {
         parameters: Parameters {
+            gas_costs: Default::default(),
             consensus_denomination: Denomination::NATIVE,
             // Zero scaling factor is invalid.
             consensus_scaling_factor: 0,
@@ -493,6 +495,7 @@ fn test_init_bad_scaling_factor_1() {
 fn test_init_bad_scaling_factor_2() {
     Consensus::init(Genesis {
         parameters: Parameters {
+            gas_costs: Default::default(),
             consensus_denomination: Denomination::NATIVE,
             // Scaling factor that is not a power of 10 is invalid.
             consensus_scaling_factor: 1230,
