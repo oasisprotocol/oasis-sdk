@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error","Event","ParameterValidationError"],"struct":["Genesis","Module","Parameters"],"trait":["API"]};
+window.SIDEBAR_ITEMS = {"enum":["Error","Event","ParameterValidationError"],"mod":["types"],"struct":["GasCosts","Genesis","Module","Parameters"],"trait":["API"]};

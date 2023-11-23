@@ -425,23 +425,76 @@
 <a href="#425" id="425">425</a>
 <a href="#426" id="426">426</a>
 <a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Consensus module.
 //!
 //! Low level consensus module for communicating with the consensus layer.
 </span><span class="kw">use </span>std::{convert::TryInto, num::NonZeroUsize, str::FromStr, sync::Mutex};
 
+<span class="kw">use </span>oasis_runtime_sdk_macros::handler;
 <span class="kw">use </span>once_cell::sync::Lazy;
 <span class="kw">use </span>thiserror::Error;
 
 <span class="kw">use </span>oasis_core_runtime::{
-    common::versioned::Versioned,
+    common::{namespace::Namespace, versioned::Versioned},
     consensus::{
         beacon::EpochTime,
-        roothash::{Message, StakingMessage},
+        roothash::{Message, RoundRoots, StakingMessage},
         staking,
         staking::{Account <span class="kw">as </span>ConsensusAccount, Delegation <span class="kw">as </span>ConsensusDelegation},
         state::{
             beacon::ImmutableState <span class="kw">as </span>BeaconImmutableState,
+            roothash::ImmutableState <span class="kw">as </span>RoothashImmutableState,
             staking::ImmutableState <span class="kw">as </span>StakingImmutableState, StateError,
         },
         HEIGHT_LATEST,
@@ -450,26 +503,40 @@
 
 <span class="kw">use crate</span>::{
     context::{Context, TxContext},
+    core::common::crypto::hash::Hash,
     history, migration, module,
     module::{Module <span class="kw">as _</span>, Parameters <span class="kw">as _</span>},
-    modules, sdk_derive,
+    modules,
+    modules::core::API <span class="kw">as _</span>,
+    sdk_derive,
     types::{
         address::{Address, SignatureAddressSpec},
         message::MessageEventHookInvocation,
         token,
         transaction::AddressSpec,
     },
+    Runtime,
 };
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>test;
+<span class="kw">pub mod </span>types;
 
 <span class="doccomment">/// Unique module name.
 </span><span class="kw">const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;consensus&quot;</span>;
 
+<span class="doccomment">/// Gas costs.
+</span><span class="attr">#[derive(Clone, Debug, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
+</span><span class="kw">pub struct </span>GasCosts {
+    <span class="doccomment">/// Cost of the internal round_root call.
+    </span><span class="kw">pub </span>round_root: u64,
+}
+
 <span class="doccomment">/// Parameters for the consensus module.
 </span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>Parameters {
+    <span class="kw">pub </span>gas_costs: GasCosts,
+
     <span class="kw">pub </span>consensus_denomination: token::Denomination,
     <span class="kw">pub </span>consensus_scaling_factor: u64,
 
@@ -483,6 +550,7 @@
 <span class="kw">impl </span>Default <span class="kw">for </span>Parameters {
     <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
+            gas_costs: Default::default(),
             consensus_denomination: token::Denomination::from_str(<span class="string">&quot;TEST&quot;</span>).unwrap(),
             consensus_scaling_factor: <span class="number">1</span>,
             min_delegate_amount: <span class="number">0</span>,
@@ -621,6 +689,13 @@
     <span class="doccomment">/// Determine consensus height corresponding to the given epoch transition. This query may be
     /// expensive in case the epoch is far back.
     </span><span class="kw">fn </span>height_for_epoch&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, epoch: EpochTime) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt;;
+
+    <span class="doccomment">/// Round roots return the round roots for the given runtime ID and round.
+    </span><span class="kw">fn </span>round_roots&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
+        runtime_id: Namespace,
+        round: u64,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RoundRoots&gt;, Error&gt;;
 }
 
 <span class="kw">pub struct </span>Module;
@@ -657,6 +732,22 @@
 
         <span class="comment">// Set genesis parameters.
         </span><span class="self">Self</span>::set_params(genesis.parameters);
+    }
+
+    <span class="attr">#[handler(call = <span class="string">&quot;consensus.RoundRoot&quot;</span>, internal)]
+    </span><span class="kw">fn </span>internal_round_root&lt;C: TxContext&gt;(
+        ctx: <span class="kw-2">&amp;mut </span>C,
+        body: types::RoundRootBody,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Hash&gt;, Error&gt; {
+        <span class="kw">let </span>params = <span class="self">Self</span>::params();
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.round_root)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(
+            <span class="self">Self</span>::round_roots(ctx, body.runtime_id, body.round)<span class="question-mark">?</span>.map(|rr| <span class="kw">match </span>body.kind {
+                types::RootKind::IO =&gt; rr.io_root,
+                types::RootKind::State =&gt; rr.state_root,
+            }),
+        )
     }
 }
 
@@ -844,6 +935,17 @@
             <span class="comment">// Go one height before epoch transition.
             </span>height -= <span class="number">1</span>;
         }
+    }
+
+    <span class="kw">fn </span>round_roots&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
+        runtime_id: Namespace,
+        round: u64,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RoundRoots&gt;, Error&gt; {
+        <span class="kw">let </span>roothash = RoothashImmutableState::new(ctx.consensus_state());
+        roothash
+            .round_roots(runtime_id, round)
+            .map_err(Error::InternalStateError)
     }
 }
 
