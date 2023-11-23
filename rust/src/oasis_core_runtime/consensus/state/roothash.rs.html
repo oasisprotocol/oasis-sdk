@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/5e8cb35/runtime/src/consensus/state/roothash.rs`."><title>roothash.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/16f853c/runtime/src/consensus/state/roothash.rs`."><title>roothash.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -61,8 +61,140 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Roothash state in the consensus layer.
-</span><span class="kw">use </span>std::convert::TryInto;
+</span><span class="kw">use </span>std::{collections::BTreeMap, convert::TryInto};
 
 <span class="kw">use </span>anyhow::anyhow;
 
@@ -73,7 +205,7 @@
         namespace::Namespace,
     },
     consensus::{
-        roothash::{Error, RoundResults},
+        roothash::{Error, RoundResults, RoundRoots},
         state::StateError,
     },
     key_format,
@@ -94,6 +226,7 @@
 
 <span class="macro">key_format!</span>(StateRootKeyFmt, <span class="number">0x25</span>, Hash);
 <span class="macro">key_format!</span>(LastRoundResultsKeyFmt, <span class="number">0x27</span>, Hash);
+<span class="macro">key_format!</span>(PastRootsKeyFmt, <span class="number">0x2a</span>, (Hash, u64));
 
 <span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
     <span class="doccomment">/// Returns the state root for a specific runtime.
@@ -122,6 +255,137 @@
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Err</span>(Error::InvalidRuntime(id)),
             <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(StateError::Unavailable(<span class="macro">anyhow!</span>(err)).into()),
         }
+    }
+
+    <span class="comment">// Returns the state and I/O roots for the given runtime and round.
+    </span><span class="kw">pub fn </span>round_roots(<span class="kw-2">&amp;</span><span class="self">self</span>, id: Namespace, round: u64) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RoundRoots&gt;, StateError&gt; {
+        <span class="kw">match </span><span class="self">self
+            </span>.mkvs
+            .get(<span class="kw-2">&amp;</span>PastRootsKeyFmt((Hash::digest_bytes(id.as_ref()), round)).encode())
+        {
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(b)) =&gt; {
+                cbor::from_slice(<span class="kw-2">&amp;</span>b).map_err(|err| StateError::Unavailable(<span class="macro">anyhow!</span>(err)))
+            }
+            <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+            <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(StateError::Unavailable(<span class="macro">anyhow!</span>(err))),
+        }
+    }
+
+    <span class="comment">// Returns all past round roots for the given runtime.
+    </span><span class="kw">pub fn </span>past_round_roots(<span class="kw-2">&amp;</span><span class="self">self</span>, id: Namespace) -&gt; <span class="prelude-ty">Result</span>&lt;BTreeMap&lt;u64, RoundRoots&gt;, StateError&gt; {
+        <span class="kw">let </span>h = Hash::digest_bytes(id.as_ref());
+        <span class="kw">let </span><span class="kw-2">mut </span>it = <span class="self">self</span>.mkvs.iter();
+        it.seek(<span class="kw-2">&amp;</span>PastRootsKeyFmt((h, Default::default())).encode_partial(<span class="number">1</span>));
+
+        <span class="kw">let </span><span class="kw-2">mut </span>result: BTreeMap&lt;u64, RoundRoots&gt; = BTreeMap::new();
+
+        <span class="kw">for </span>(round, value) <span class="kw">in </span>it.map_while(|(key, value)| {
+            PastRootsKeyFmt::decode(<span class="kw-2">&amp;</span>key)
+                .filter(|PastRootsKeyFmt((ns, <span class="kw">_</span>))| ns == <span class="kw-2">&amp;</span>h)
+                .map(|PastRootsKeyFmt((<span class="kw">_</span>, round))| (round, value))
+        }) {
+            result.insert(
+                round,
+                cbor::from_slice(<span class="kw-2">&amp;</span>value).map_err(|err| StateError::Unavailable(<span class="macro">anyhow!</span>(err)))<span class="question-mark">?</span>,
+            );
+        }
+
+        <span class="prelude-val">Ok</span>(result)
+    }
+}
+
+<span class="attr">#[cfg(test)]
+</span><span class="kw">mod </span>test {
+    <span class="kw">use crate</span>::{
+        common::crypto::hash::Hash,
+        storage::mkvs::{
+            interop::{Fixture, ProtocolServer},
+            Root, RootType, Tree,
+        },
+    };
+
+    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_roothash_state_interop() {
+        <span class="comment">// Keep in sync with go/consensus/cometbft/apps/roothash/state/interop/interop.go.
+        // If mock consensus state changes, update the root hash bellow.
+        // See protocol server stdout for hash.
+        // To make the hash show up during tests, run &quot;cargo test&quot; as
+        // &quot;cargo test -- --nocapture&quot;.
+
+        // Setup protocol server with initialized mock consensus state.
+        </span><span class="kw">let </span>server = ProtocolServer::new(Fixture::ConsensusMock.into());
+        <span class="kw">let </span>mock_consensus_root = Root {
+            version: <span class="number">1</span>,
+            root_type: RootType::State,
+            hash: Hash::from(<span class="string">&quot;f637a80b24e3ffaaf3de0da96f1dfd94d0a135348f40006d578d557d70d5fa42&quot;</span>),
+            ..Default::default()
+        };
+        <span class="kw">let </span>mkvs = Tree::builder()
+            .with_capacity(<span class="number">100_000</span>, <span class="number">10_000_000</span>)
+            .with_root(mock_consensus_root)
+            .build(server.read_sync());
+        <span class="kw">let </span>state = ImmutableState::new(<span class="kw-2">&amp;</span>mkvs);
+
+        <span class="kw">let </span>runtime_id =
+            Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000010&quot;</span>);
+
+        <span class="comment">// Test fetching past round roots.
+        </span><span class="kw">let </span>past_round_roots = state
+            .past_round_roots(runtime_id)
+            .expect(<span class="string">&quot;past round roots query should work&quot;</span>);
+        <span class="macro">assert_eq!</span>(
+            <span class="number">10</span>,
+            past_round_roots.len(),
+            <span class="string">&quot;expected number of roots should match&quot;
+        </span>);
+        past_round_roots.iter().for_each(|(round, roots)| {
+            <span class="macro">assert_eq!</span>(
+                RoundRoots {
+                    state_root: Hash::digest_bytes(<span class="macro">format!</span>(<span class="string">&quot;state {}&quot;</span>, round).as_bytes()),
+                    io_root: Hash::digest_bytes(<span class="macro">format!</span>(<span class="string">&quot;io {}&quot;</span>, round).as_bytes())
+                },
+                <span class="kw-2">*</span>roots,
+                <span class="string">&quot;expected roots should match&quot;
+            </span>);
+        });
+
+        <span class="comment">// Test fetching latest round roots.
+        </span><span class="kw">let </span>round_roots = state
+            .round_roots(runtime_id, <span class="number">100</span>)
+            .expect(<span class="string">&quot;round roots query should work&quot;</span>);
+        <span class="macro">assert_eq!</span>(<span class="prelude-val">None</span>, round_roots, <span class="string">&quot;round root should be missing&quot;</span>);
+
+        <span class="kw">let </span>round_roots = state
+            .round_roots(runtime_id, <span class="number">10</span>)
+            .expect(<span class="string">&quot;round roots query should work&quot;</span>);
+        <span class="macro">assert_eq!</span>(
+            <span class="prelude-val">Some</span>(RoundRoots {
+                state_root: Hash::digest_bytes(<span class="macro">format!</span>(<span class="string">&quot;state {}&quot;</span>, <span class="number">10</span>).as_bytes()),
+                io_root: Hash::digest_bytes(<span class="macro">format!</span>(<span class="string">&quot;io {}&quot;</span>, <span class="number">10</span>).as_bytes())
+            }),
+            round_roots,
+            <span class="string">&quot;round root should be missing&quot;
+        </span>);
+
+        <span class="comment">// Test non-existing runtime.
+        </span><span class="kw">let </span>runtime_id =
+            Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000000&quot;</span>);
+        <span class="kw">let </span>past_round_roots = state
+            .past_round_roots(runtime_id)
+            .expect(<span class="string">&quot;past round roots query should work&quot;</span>);
+        <span class="macro">assert_eq!</span>(
+            <span class="number">0</span>,
+            past_round_roots.len(),
+            <span class="string">&quot;there should be no roots for non-existing runtime&quot;
+        </span>);
+        <span class="kw">let </span>round_roots = state
+            .round_roots(runtime_id, <span class="number">10</span>)
+            .expect(<span class="string">&quot;round roots query should work&quot;</span>);
+        <span class="macro">assert_eq!</span>(
+            <span class="prelude-val">None</span>, round_roots,
+            <span class="string">&quot;round root should be missing for non-existing runtime&quot;
+        </span>)
     }
 }
 </code></pre></div></section></main></body></html>
