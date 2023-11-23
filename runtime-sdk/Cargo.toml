@@ -1,14 +1,14 @@
 [package]
 name = "oasis-runtime-sdk"
-version = "0.8.0"
+version = "0.8.3"
 authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
 cbor = { version = "0.5.1", package = "oasis-cbor" }
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v23.0.4" }
-oasis-core-keymanager = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v23.0.4" }
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v23.0.5" }
+oasis-core-keymanager = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v23.0.5" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
