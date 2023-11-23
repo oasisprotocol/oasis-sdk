@@ -264,15 +264,10 @@ impl Module {
         let params = Self::params();
         <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.round_root)?;
 
-        if !body.kind.is_valid() {
-            return Err(Error::InvalidArgument);
-        }
-
         Ok(
             Self::round_roots(ctx, body.runtime_id, body.round)?.map(|rr| match body.kind {
                 types::RootKind::IO => rr.io_root,
                 types::RootKind::State => rr.state_root,
-                _ => panic!("invalid root kind"), //  Covered by the is_valid check above.
             }),
         )
     }
