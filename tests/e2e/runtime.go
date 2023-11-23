@@ -25,6 +25,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/scenario"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/scenario/e2e"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
+	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	runtimeCfg "github.com/oasisprotocol/oasis-core/go/runtime/config"
 	scheduler "github.com/oasisprotocol/oasis-core/go/scheduler/api"
 	"github.com/oasisprotocol/oasis-core/go/staking/api"
@@ -187,6 +188,9 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 						},
 					},
 				},
+			},
+			RoothashParameters: &roothash.ConsensusParameters{
+				MaxPastRootsStored: 1_000,
 			},
 		},
 		Entities: []oasis.EntityCfg{

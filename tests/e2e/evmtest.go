@@ -1492,6 +1492,54 @@ func DelegationReceiptsTest(_ *RuntimeScenario, log *logging.Logger, conn *grpc.
 	return nil
 }
 
+// SubcallRoundRootTest performs a runtime round root query from the EVM by using the subcall precompile.
+func SubcallRoundRootTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx := context.Background()
+	ev := evm.NewV1(rtc)
+	gasPrice := uint64(2)
+
+	// Deploy the contract.
+	value := big.NewInt(0).Bytes() // Don't send any tokens.
+	contractAddr, err := evmCreate(ctx, rtc, ev, testing.Dave.Signer, value, contractSubcall.Compiled, gasPrice, nonc10l)
+	if err != nil {
+		return fmt.Errorf("failed to deploy contract: %w", err)
+	}
+
+	// Call the method.
+	data, err := contractSubcall.ABI.Pack("test_consensus_round_root")
+	if err != nil {
+		return fmt.Errorf("failed to pack arguments: %w", err)
+	}
+	result, err := evmCall(ctx, rtc, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, nonc10l)
+	if err != nil {
+		return fmt.Errorf("failed to call test_consensus_round_root: %w", err)
+	}
+	// Decode the result hash.
+	results, err := contractSubcall.ABI.Unpack("test_consensus_round_root", result)
+	if err != nil {
+		return fmt.Errorf("failed to unpack test_consensus_round_root result: %w", err)
+	}
+	stateHash := results[0].([]byte)
+	if len(stateHash) != 34 { // 2 bytes CBOR header + 32 bytes hash.
+		return fmt.Errorf("invalid test_consensus_round_root response, expected state hash, got: %v", stateHash)
+	}
+
+	/*
+		// Round Roots not exposed in the go roothash client at the moment :(
+		// Query the consensus layer for the round root.
+		cons := consensus.NewConsensusClient(conn)
+		st, err := cons.RootHash().GetRoundRoots(ctx, &roothash.RuntimeRequest{
+			RuntimeID: runtimeID,
+			Height:    consensus.HeightLatest,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to fetch consensus runtime state: %w", err)
+		}
+	*/
+
+	return nil
+}
+
 // EVMParametersTest tests parameters methods.
 func EVMParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()

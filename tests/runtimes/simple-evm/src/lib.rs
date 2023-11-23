@@ -80,6 +80,7 @@ impl sdk::Runtime for Runtime {
             },
             modules::consensus::Genesis {
                 parameters: modules::consensus::Parameters {
+                    gas_costs: Default::default(),
                     consensus_denomination: Denomination::NATIVE,
                     // Test scaling consensus base units when transferring them into the runtime.
                     consensus_scaling_factor: 1000,

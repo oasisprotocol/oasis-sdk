@@ -82,6 +82,7 @@ impl sdk::Runtime for Runtime {
             },
             modules::consensus::Genesis {
                 parameters: modules::consensus::Parameters {
+                    gas_costs: Default::default(),
                     // Consensus layer denomination is the native denomination of this runtime.
                     consensus_denomination: Denomination::NATIVE,
                     // Scale to 18 decimal places as this is what is expected in the EVM ecosystem.

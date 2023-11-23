@@ -3,18 +3,20 @@
 //! Low level consensus module for communicating with the consensus layer.
 use std::{convert::TryInto, num::NonZeroUsize, str::FromStr, sync::Mutex};
 
+use oasis_runtime_sdk_macros::handler;
 use once_cell::sync::Lazy;
 use thiserror::Error;
 
 use oasis_core_runtime::{
-    common::versioned::Versioned,
+    common::{namespace::Namespace, versioned::Versioned},
     consensus::{
         beacon::EpochTime,
-        roothash::{Message, StakingMessage},
+        roothash::{Message, RoundRoots, StakingMessage},
         staking,
         staking::{Account as ConsensusAccount, Delegation as ConsensusDelegation},
         state::{
             beacon::ImmutableState as BeaconImmutableState,
+            roothash::ImmutableState as RoothashImmutableState,
             staking::ImmutableState as StakingImmutableState, StateError,
         },
         HEIGHT_LATEST,
@@ -23,26 +25,40 @@ use oasis_core_runtime::{
 
 use crate::{
     context::{Context, TxContext},
+    core::common::crypto::hash::Hash,
     history, migration, module,
     module::{Module as _, Parameters as _},
-    modules, sdk_derive,
+    modules,
+    modules::core::API as _,
+    sdk_derive,
     types::{
         address::{Address, SignatureAddressSpec},
         message::MessageEventHookInvocation,
         token,
         transaction::AddressSpec,
     },
+    Runtime,
 };
 
 #[cfg(test)]
 mod test;
+pub mod types;
 
 /// Unique module name.
 const MODULE_NAME: &str = "consensus";
 
+/// Gas costs.
+#[derive(Clone, Debug, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
+pub struct GasCosts {
+    /// Cost of the internal round_root call.
+    pub round_root: u64,
+}
+
 /// Parameters for the consensus module.
 #[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 pub struct Parameters {
+    pub gas_costs: GasCosts,
+
     pub consensus_denomination: token::Denomination,
     pub consensus_scaling_factor: u64,
 
@@ -56,6 +72,7 @@ pub struct Parameters {
 impl Default for Parameters {
     fn default() -> Self {
         Self {
+            gas_costs: Default::default(),
             consensus_denomination: token::Denomination::from_str("TEST").unwrap(),
             consensus_scaling_factor: 1,
             min_delegate_amount: 0,
@@ -194,6 +211,13 @@ pub trait API {
     /// Determine consensus height corresponding to the given epoch transition. This query may be
     /// expensive in case the epoch is far back.
     fn height_for_epoch<C: Context>(ctx: &C, epoch: EpochTime) -> Result<u64, Error>;
+
+    /// Round roots return the round roots for the given runtime ID and round.
+    fn round_roots<C: Context>(
+        ctx: &C,
+        runtime_id: Namespace,
+        round: u64,
+    ) -> Result<Option<RoundRoots>, Error>;
 }
 
 pub struct Module;
@@ -230,6 +254,22 @@ impl Module {
 
         // Set genesis parameters.
         Self::set_params(genesis.parameters);
+    }
+
+    #[handler(call = "consensus.RoundRoot", internal)]
+    fn internal_round_root<C: TxContext>(
+        ctx: &mut C,
+        body: types::RoundRootBody,
+    ) -> Result<Option<Hash>, Error> {
+        let params = Self::params();
+        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.round_root)?;
+
+        Ok(
+            Self::round_roots(ctx, body.runtime_id, body.round)?.map(|rr| match body.kind {
+                types::RootKind::IO => rr.io_root,
+                types::RootKind::State => rr.state_root,
+            }),
+        )
     }
 }
 
@@ -417,6 +457,17 @@ impl API for Module {
             // Go one height before epoch transition.
             height -= 1;
         }
+    }
+
+    fn round_roots<C: Context>(
+        ctx: &C,
+        runtime_id: Namespace,
+        round: u64,
+    ) -> Result<Option<RoundRoots>, Error> {
+        let roothash = RoothashImmutableState::new(ctx.consensus_state());
+        roothash
+            .round_roots(runtime_id, round)
+            .map_err(Error::InternalStateError)
     }
 }
 
