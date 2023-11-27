@@ -137,8 +137,6 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Secp384r1 signatures.
 </span><span class="kw">use </span>digest::{consts::U48, core_api::BlockSizeUser, Digest, FixedOutput, FixedOutputReset};
 <span class="kw">use </span>p384::{
@@ -163,11 +161,9 @@
 
     <span class="doccomment">/// Construct a public key from a slice of bytes.
     </span><span class="kw">pub fn </span>from_bytes(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
-        <span class="kw">let </span>ep = p384::EncodedPoint::from_bytes(bytes).map_err(|<span class="kw">_</span>| Error::MalformedPublicKey)<span class="question-mark">?</span>;
-        <span class="kw">if </span>!ep.is_compressed() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::MalformedPublicKey);
-        }
-        <span class="prelude-val">Ok</span>(PublicKey(ep))
+        p384::EncodedPoint::from_bytes(bytes)
+            .map_err(|<span class="kw">_</span>| Error::MalformedPublicKey)
+            .map(PublicKey)
     }
 
     <span class="doccomment">/// Verify a signature.

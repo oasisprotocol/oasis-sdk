@@ -152,8 +152,6 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Secp256k1 signatures.
 </span><span class="kw">use </span>digest::{consts::U32, Digest, FixedOutput};
 <span class="kw">use </span>k256::{
@@ -192,11 +190,9 @@
 
     <span class="doccomment">/// Construct a public key from a slice of bytes.
     </span><span class="kw">pub fn </span>from_bytes(bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
-        <span class="kw">let </span>ep = k256::EncodedPoint::from_bytes(bytes).map_err(|<span class="kw">_</span>| Error::MalformedPublicKey)<span class="question-mark">?</span>;
-        <span class="kw">if </span>!ep.is_compressed() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::MalformedPublicKey);
-        }
-        <span class="prelude-val">Ok</span>(PublicKey(ep))
+        k256::EncodedPoint::from_bytes(bytes)
+            .map_err(|<span class="kw">_</span>| Error::MalformedPublicKey)
+            .map(PublicKey)
     }
 
     <span class="doccomment">/// Verify a signature.
