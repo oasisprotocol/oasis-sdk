@@ -21,6 +21,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
+	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/callformat"
@@ -1493,7 +1494,7 @@ func DelegationReceiptsTest(_ *RuntimeScenario, log *logging.Logger, conn *grpc.
 }
 
 // SubcallRoundRootTest performs a runtime round root query from the EVM by using the subcall precompile.
-func SubcallRoundRootTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SubcallRoundRootTest(_ *RuntimeScenario, _ *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ctx := context.Background()
 	ev := evm.NewV1(rtc)
 	gasPrice := uint64(2)
@@ -1524,18 +1525,19 @@ func SubcallRoundRootTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientC
 		return fmt.Errorf("invalid test_consensus_round_root response, expected state hash, got: %v", stateHash)
 	}
 
-	/*
-		// Round Roots not exposed in the go roothash client at the moment :(
-		// Query the consensus layer for the round root.
-		cons := consensus.NewConsensusClient(conn)
-		st, err := cons.RootHash().GetRoundRoots(ctx, &roothash.RuntimeRequest{
-			RuntimeID: runtimeID,
-			Height:    consensus.HeightLatest,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to fetch consensus runtime state: %w", err)
-		}
-	*/
+	// Query the consensus layer for the round root.
+	cons := consensus.NewConsensusClient(conn)
+	st, err := cons.RootHash().GetRoundRoots(ctx, &roothash.RoundRootsRequest{
+		RuntimeID: runtimeID,
+		Height:    consensus.HeightLatest,
+		Round:     2, // The height used in the test contract.
+	})
+	if err != nil {
+		return fmt.Errorf("failed to fetch consensus runtime state: %w", err)
+	}
+	if !bytes.Equal(st.StateRoot[:], stateHash[2:]) {
+		return fmt.Errorf("test_consensus_round_root returned invalid state hash, expected: %v, got: %v", st.StateRoot, stateHash[2:])
+	}
 
 	return nil
 }
