@@ -22,11 +22,9 @@ impl PublicKey {
 
     /// Construct a public key from a slice of bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        let ep = p384::EncodedPoint::from_bytes(bytes).map_err(|_| Error::MalformedPublicKey)?;
-        if !ep.is_compressed() {
-            return Err(Error::MalformedPublicKey);
-        }
-        Ok(PublicKey(ep))
+        p384::EncodedPoint::from_bytes(bytes)
+            .map_err(|_| Error::MalformedPublicKey)
+            .map(PublicKey)
     }
 
     /// Verify a signature.
