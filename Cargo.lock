@@ -2393,7 +2393,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-keymanager"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v23.0.5#16f853c6e15201ff5151f9a071408511ad3a7738"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v23.0.6#d0ff0594b8ae19d516a2d87218befd030e9bd40d"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2417,7 +2417,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-runtime"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v23.0.5#16f853c6e15201ff5151f9a071408511ad3a7738"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v23.0.6#d0ff0594b8ae19d516a2d87218befd030e9bd40d"
 dependencies = [
  "anyhow",
  "arbitrary",
