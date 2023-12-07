@@ -17,7 +17,7 @@ export async function fromSigspec(spec: types.SignatureAddressSpec) {
     } else if (spec.secp256k1eth) {
         // Use a scheme such that we can compute Secp256k1 addresses from Ethereum
         // addresses as this makes things more interoperable.
-        const untaggedPk = SECP256K1.keyFromPublic(Array.from(spec.secp256k1eth))
+        const untaggedPk = SECP256K1.keyFromPublic(spec.secp256k1eth)
             .getPublic(false, 'array')
             .slice(1);
         const hash = new Keccak(256);

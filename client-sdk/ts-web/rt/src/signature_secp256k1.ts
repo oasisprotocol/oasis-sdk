@@ -20,11 +20,9 @@ export async function verify(
     publicKey: Uint8Array,
 ) {
     const signerMessage = await oasis.signature.prepareSignerMessage(context, message);
-    const signerMessageA = Array.from(signerMessage);
-    const signatureA = Array.from(signature);
     const publicKeyA = Array.from(publicKey);
-    // @ts-expect-error acceptance of array-like types is not modeled
-    return SECP256K1.verify(signerMessageA, signatureA, publicKeyA);
+    // @ts-expect-error acceptance of array-like encoded public key is not modeled
+    return SECP256K1.verify(signerMessage, signature, publicKeyA);
 }
 
 export class BlindContextSigner implements ContextSigner {
@@ -57,7 +55,7 @@ export class EllipticSigner implements Signer {
     }
 
     static fromPrivate(priv: Uint8Array, note: string) {
-        return new EllipticSigner(SECP256K1.keyFromPrivate(Array.from(priv)), note);
+        return new EllipticSigner(SECP256K1.keyFromPrivate(priv), note);
     }
 
     public(): Uint8Array {
@@ -65,7 +63,7 @@ export class EllipticSigner implements Signer {
     }
 
     async sign(message: Uint8Array): Promise<Uint8Array> {
-        const sig = this.key.sign(Array.from(message), {canonical: true});
+        const sig = this.key.sign(message, {canonical: true});
         return new Uint8Array(sig.toDER());
     }
 }
