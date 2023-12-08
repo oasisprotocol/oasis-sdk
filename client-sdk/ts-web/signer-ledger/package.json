@@ -30,7 +30,7 @@
         "prettier": "^3.1.0",
         "process": "^0.11.10",
         "stream-browserify": "^3.0.0",
-        "typedoc": "^0.25.1",
+        "typedoc": "^0.25.4",
         "typescript": "^5.3.3",
         "webpack": "^5.88.2",
         "webpack-cli": "^5.1.4",
