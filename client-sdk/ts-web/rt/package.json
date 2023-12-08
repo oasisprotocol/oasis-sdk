@@ -22,7 +22,7 @@
         "test-e2e-cy": "cypress run"
     },
     "dependencies": {
-        "@oasisprotocol/client": "^0.1.1-alpha.2",
+        "@oasisprotocol/client": "^1.0.0",
         "@oasisprotocol/deoxysii": "^0.0.5",
         "elliptic": "^6.5.3",
         "js-sha512": "^0.8.0",

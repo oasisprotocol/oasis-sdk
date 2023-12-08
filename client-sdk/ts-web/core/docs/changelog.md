@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased changes
+## v1.0.0
+
+Spotlight change:
+
+- Bumped protobufjs to 7.2.x.
+  Due to the versioning scheme they use, this is a "major" version, so
+  downstream packages can now upgrade to that too.
 
 Little things:
 
@@ -8,8 +14,14 @@ Little things:
   return falsy values (e.g. 0) instead of `undefined`.
   Our thanks to the grpc-web team that helped us add support for this in their
   library!
-- Compatibility with oasis-core is updated to 22.2.2.
-  They told me to keep pressing 2 until it auto completed a Git tag.
+- Compatibility with oasis-core is updated to 23.0.
+  How neat was that, that nobody complained about incompatibility for so long?
+
+Extra note:
+
+- Happy v1!
+  We'll be publishing this to the `latest` tag on npm, so you won't need to
+  specify the `@alpha` tag anymore.
 
 ## v0.1.1-alpha.2
 
