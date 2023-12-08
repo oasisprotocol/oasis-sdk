@@ -12,9 +12,9 @@
         "src/**/*"
     ],
     "typedocOptions": {
-      "entryPoints": ["src/index.ts"],
-      "out": "docs/api",
-      "excludeInternal": true,
-      "excludePrivate": true
+        "entryPoints": ["src/index.ts"],
+        "out": "docs/api",
+        "excludeInternal": true,
+        "excludePrivate": true
     }
 }
