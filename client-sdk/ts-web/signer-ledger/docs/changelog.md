@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.0
+
+Spotlight change:
+
+- Our dependency on `@oasisprotocol/client` is bumped to v1.0.0.
+  Happy v1!
+
 ## v0.1.1-alpha.1
 
 Spotlight change:

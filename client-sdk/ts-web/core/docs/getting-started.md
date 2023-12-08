@@ -8,16 +8,8 @@
 ## Getting this SDK and building
 
 ```sh
-npm install @oasisprotocol/client@alpha
+npm install @oasisprotocol/client
 ```
-
-Install this package [from
-npm](https://www.npmjs.com/package/@oasisprotocol/client?activeTab=versions).
-The `@alpha` is needed because we are publishing to the `alpha` tag.
-Due to technical limitations, npm has also created a `latest` tag which is
-stuck at a very old alpha verison.
-
-**TODO: Update this command when this library gets out of alpha.**
 
 You'll need a bundler.
 We have [a sample that uses webpack](../playground/webpack.config.js).
