@@ -35,6 +35,8 @@ use crate::{
 /// Test contract code.
 static TEST_CONTRACT_CODE_HEX: &str =
     include_str!("../../../../tests/e2e/contracts/evm_erc20_test_compiled.hex");
+static FAUCET_CONTRACT_CODE_HEX: &str =
+    include_str!("../../../../tests/e2e/contracts/faucet/faucet.hex");
 
 pub(crate) struct EVMConfig;
 
@@ -993,6 +995,92 @@ fn test_fee_refunds() {
     let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].amount, 24_585);
+}
+
+#[test]
+fn test_transfer_event() {
+    let mut mock = mock::Mock::default();
+    let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
+    let mut signer = EvmSigner::new(0, keys::dave::sigspec());
+
+    EVMRuntime::<EVMConfig>::migrate(&mut ctx);
+
+    // Create contract.
+    let dispatch_result = signer.call(
+        &mut ctx,
+        "evm.Create",
+        types::Create {
+            value: 0.into(),
+            init_code: load_contract_bytecode(FAUCET_CONTRACT_CODE_HEX),
+        },
+    );
+    let result = dispatch_result.result.unwrap();
+    let result: Vec<u8> = cbor::from_value(result).unwrap();
+    let contract_address = H160::from_slice(&result);
+    let contract_address_native = EVMConfig::map_address(contract_address.into());
+
+    // Give the faucet some tokens.
+    Accounts::mint(
+        contract_address_native,
+        &token::BaseUnits(1_000_000_000_000, Denomination::NATIVE),
+    )
+    .unwrap();
+
+    // Call the `withdraw` method on the contract; this initiates a native token transfer from within EVM.
+    let dispatch_result = signer.call_evm_opts(
+        &mut ctx,
+        contract_address,
+        "withdraw",
+        &[ParamType::Uint(256)],
+        &[Token::Uint(1_000_000_000.into())],
+        CallOptions {
+            fee: Fee {
+                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                gas: 100_000,
+                ..Default::default()
+            },
+        },
+    );
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Make sure two events were emitted and are properly formatted.
+    let tags = &dispatch_result.tags;
+    assert_eq!(tags.len(), 2, "two events should have been emitted");
+    assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) events
+    assert_eq!(tags[1].key, b"core\x00\x00\x00\x01"); // core.GasUsed (code = 1) event
+
+    #[derive(Debug, Default, cbor::Decode)]
+    struct TransferEvent {
+        from: Address,
+        to: Address,
+        amount: token::BaseUnits,
+    }
+
+    let events: Vec<TransferEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 2); // One event for fee payment, one for the withdrawal.
+    let event = &events[0];
+    assert_eq!(event.from, contract_address_native);
+    assert_eq!(event.to, keys::dave::address());
+    assert_eq!(
+        event.amount,
+        token::BaseUnits::new(1_000_000_000, Denomination::NATIVE)
+    );
+    let event = &events[1];
+    assert_eq!(event.from, keys::dave::address());
+    assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
+    assert_eq!(
+        event.amount,
+        token::BaseUnits::new(283_430, Denomination::NATIVE)
+    );
+
+    #[derive(Debug, Default, cbor::Decode)]
+    struct GasUsedEvent {
+        amount: u64,
+    }
+
+    let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].amount, 28_343);
 }
 
 #[test]
