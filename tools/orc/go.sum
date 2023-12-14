@@ -160,8 +160,8 @@ github.com/mitchellh/mapstructure v1.5.0 h1:jeMsZIYE/09sWLaz43PL7Gy6RuMjD2eJVyua
 github.com/mitchellh/mapstructure v1.5.0/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/oasisprotocol/cometbft v0.37.2-oasis1 h1:7yr/5f0vV1bQLKoZHFhs3mcHay3nLKT9m8bVIJAgdMU=
 github.com/oasisprotocol/cometbft v0.37.2-oasis1/go.mod h1:w7GZmT0jJ/i9Uz9ZWtzE3chuNZ3phUboSrFzPZIoYts=
-github.com/oasisprotocol/oasis-core/go v0.2300.6 h1:LveIyqsIof+WhLVIAQRTMNlhuiQGqZaztVeu/gBCyE0=
-github.com/oasisprotocol/oasis-core/go v0.2300.6/go.mod h1:3ub+3LT8GEjuzeAXrve9pZEDkM/goL1HKBXVp4queNM=
+github.com/oasisprotocol/oasis-core/go v0.2300.9 h1:4Og8s40BRZzeZbyfm+GcXA2kJmLnsR1Kw9jj1JZOplk=
+github.com/oasisprotocol/oasis-core/go v0.2300.9/go.mod h1:3ub+3LT8GEjuzeAXrve9pZEDkM/goL1HKBXVp4queNM=
 github.com/pelletier/go-toml/v2 v2.0.6 h1:nrzqCb7j9cDFj2coyLNLaZuJTLjWjlaz6nvTvIwycIU=
 github.com/pelletier/go-toml/v2 v2.0.6/go.mod h1:eumQOmlWiOPt5WriQQqoM5y18pDHwha2N+QD+EUNTek=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
