@@ -6,7 +6,7 @@ use sha3::Digest as _;
 use uint::hex::FromHex;
 
 use oasis_runtime_sdk::{
-    callformat, context,
+    callformat,
     crypto::{self, signature::secp256k1},
     error::Error as _,
     module::{self, InvariantHandler as _, TransactionHandler as _},
@@ -14,7 +14,7 @@ use oasis_runtime_sdk::{
         accounts::{self, Module as Accounts, ADDRESS_FEE_ACCUMULATOR, API as _},
         core::{self, Module as Core},
     },
-    storage::{current::TransactionResult, CurrentStore},
+    state::{self, CurrentState, Mode, Options, TransactionResult},
     testing::{keys, mock, mock::CallOptions},
     types::{
         address::{Address, SignatureAddressSpec},
@@ -22,7 +22,7 @@ use oasis_runtime_sdk::{
         transaction,
         transaction::Fee,
     },
-    BatchContext, Context, Runtime, Version,
+    Runtime, Version,
 };
 
 use crate::{
@@ -108,7 +108,7 @@ fn test_evm_caller_addr_derivation() {
 
 fn do_test_evm_calls<C: Config>(force_plain: bool) {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(true);
     let client_keypair =
         oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::generate_key_pair();
 
@@ -215,16 +215,18 @@ fn do_test_evm_calls<C: Config>(force_plain: bool) {
         },
     };
     // Run authentication handler to simulate nonce increments.
-    Accounts::authenticate_tx(&mut ctx, &create_tx).unwrap();
+    Accounts::authenticate_tx(&ctx, &create_tx).unwrap();
 
-    let erc20_addr = ctx.with_tx(create_tx.into(), |mut tx_ctx, call| {
-        let addr = H160::from_slice(
-            &EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap()).unwrap(),
-        );
-        EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
-        tx_ctx.commit();
-        addr
-    });
+    let call = create_tx.call.clone();
+    let erc20_addr =
+        CurrentState::with_transaction_opts(Options::new().with_tx(create_tx.into()), || {
+            let addr = H160::from_slice(
+                &EVMModule::<C>::tx_create(&ctx, cbor::from_value(call.body).unwrap()).unwrap(),
+            );
+            EVMModule::<C>::check_invariants(&ctx).expect("invariants should hold");
+
+            TransactionResult::Commit(addr)
+        });
 
     // Test the Call transaction.
     let name_method: Vec<u8> = Vec::from_hex("06fdde03".to_owned() + &"0".repeat(64 - 8)).unwrap();
@@ -254,24 +256,24 @@ fn do_test_evm_calls<C: Config>(force_plain: bool) {
         },
     };
     // Run authentication handler to simulate nonce increments.
-    Accounts::authenticate_tx(&mut ctx, &call_name_tx).unwrap();
+    Accounts::authenticate_tx(&ctx, &call_name_tx).unwrap();
 
-    let erc20_name = ctx.with_tx(call_name_tx.into(), |mut tx_ctx, call| {
-        let name: Vec<u8> = cbor::from_value(
-            decode_result!(
-                tx_ctx,
-                EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = call_name_tx.call.clone();
+    let erc20_name =
+        CurrentState::with_transaction_opts(Options::new().with_tx(call_name_tx.into()), || {
+            let name: Vec<u8> = cbor::from_value(
+                decode_result!(
+                    ctx,
+                    EVMModule::<C>::tx_call(&ctx, cbor::from_value(call.body).unwrap())
+                )
+                .unwrap(),
             )
-            .unwrap(),
-        )
-        .unwrap();
+            .unwrap();
 
-        EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
+            EVMModule::<C>::check_invariants(&ctx).expect("invariants should hold");
 
-        tx_ctx.commit();
-
-        name
-    });
+            TransactionResult::Commit(name)
+        });
     assert_eq!(erc20_name.len(), 96);
     assert_eq!(erc20_name[63], 0x04); // Name is 4 bytes long.
     assert_eq!(erc20_name[64..68], vec![0x54, 0x65, 0x73, 0x74]); // "Test".
@@ -298,7 +300,7 @@ fn test_c10l_evm_calls_plain() {
 fn test_c10l_evm_balance_transfer() {
     crypto::signature::context::set_chain_context(Default::default(), "test");
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
     Core::<CoreConfig>::init(core::Genesis {
         parameters: core::Parameters {
@@ -347,21 +349,17 @@ fn test_c10l_evm_balance_transfer() {
         },
     };
     // Run authentication handler to simulate nonce increments.
-    Accounts::authenticate_tx(&mut ctx, &transfer_tx).unwrap();
+    Accounts::authenticate_tx(&ctx, &transfer_tx).unwrap();
 
-    ctx.with_tx(transfer_tx.into(), |mut tx_ctx, call| {
-        EVMModule::<ConfidentialEVMConfig>::tx_call(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .unwrap();
-        EVMModule::<ConfidentialEVMConfig>::check_invariants(&mut tx_ctx)
-            .expect("invariants should hold");
-        tx_ctx.commit();
+    let call = transfer_tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(transfer_tx.into()), || {
+        EVMModule::<ConfidentialEVMConfig>::tx_call(&ctx, cbor::from_value(call.body).unwrap())
+            .unwrap();
+        EVMModule::<ConfidentialEVMConfig>::check_invariants(&ctx).expect("invariants should hold");
     });
 
     let recipient_balance = EVMModule::<ConfidentialEVMConfig>::query_balance(
-        &mut ctx,
+        &ctx,
         types::BalanceQuery {
             address: recipient.into(),
         },
@@ -375,10 +373,7 @@ fn test_c10l_enc_call_identity_decoded() {
     // Calls sent using the Oasis encrypted envelope format (not inner-enveloped)
     // should not be decoded:
     let mut mock = mock::Mock::default();
-    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(
-        context::Mode::ExecuteTx,
-        true,
-    );
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(true);
     let data = vec![1, 2, 3, 4, 5];
     let (decoded_data, metadata) = EVMModule::<ConfidentialEVMConfig>::decode_call_data(
         &ctx,
@@ -443,7 +438,7 @@ impl<C: Config> Runtime for EVMRuntime<C> {
 
 fn do_test_evm_runtime<C: Config>() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime<C>>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<C>>(true);
     let client_keypair =
         oasis_runtime_sdk::core::common::crypto::mrae::deoxysii::generate_key_pair();
 
@@ -493,7 +488,7 @@ fn do_test_evm_runtime<C: Config>() {
         };
     }
 
-    EVMRuntime::<C>::migrate(&mut ctx);
+    EVMRuntime::<C>::migrate(&ctx);
 
     let erc20 = load_erc20();
 
@@ -523,16 +518,18 @@ fn do_test_evm_runtime<C: Config>() {
         },
     };
     // Run authentication handler to simulate nonce increments.
-    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &create_tx).unwrap();
+    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&ctx, &create_tx).unwrap();
 
-    let erc20_addr = ctx.with_tx(create_tx.into(), |mut tx_ctx, call| {
-        let addr = H160::from_slice(
-            &EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap()).unwrap(),
-        );
-        EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
-        tx_ctx.commit();
-        addr
-    });
+    let call = create_tx.call.clone();
+    let erc20_addr =
+        CurrentState::with_transaction_opts(Options::new().with_tx(create_tx.into()), || {
+            let addr = H160::from_slice(
+                &EVMModule::<C>::tx_create(&ctx, cbor::from_value(call.body).unwrap()).unwrap(),
+            );
+            EVMModule::<C>::check_invariants(&ctx).expect("invariants should hold");
+
+            TransactionResult::Commit(addr)
+        });
 
     // Make sure the derived address matches the expected value. If this fails it likely indicates
     // a problem with nonce increment semantics between the SDK and EVM.
@@ -570,20 +567,28 @@ fn do_test_evm_runtime<C: Config>() {
         },
     };
     // Run authentication handler to simulate nonce increments.
-    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_create).unwrap();
+    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&ctx, &out_of_gas_create).unwrap();
 
-    ctx.with_tx(out_of_gas_create.clone().into(), |mut tx_ctx, call| {
-        assert!(!decode_result!(
-            tx_ctx,
-            EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-        )
-        .is_success());
-    });
+    let call = out_of_gas_create.call.clone();
+    CurrentState::with_transaction_opts(
+        Options::new().with_tx(out_of_gas_create.clone().into()),
+        || {
+            assert!(!decode_result!(
+                ctx,
+                EVMModule::<C>::tx_create(&ctx, cbor::from_value(call.body).unwrap())
+            )
+            .is_success());
+        },
+    );
 
     // CheckTx should not fail.
-    ctx.with_child(context::Mode::CheckTx, |mut check_ctx| {
-        check_ctx.with_tx(out_of_gas_create.into(), |mut tx_ctx, call| {
-            let rsp = EVMModule::<C>::tx_create(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = out_of_gas_create.call.clone();
+    CurrentState::with_transaction_opts(
+        Options::new()
+            .with_mode(state::Mode::Check)
+            .with_tx(out_of_gas_create.clone().into()),
+        || {
+            let rsp = EVMModule::<C>::tx_create(&ctx, cbor::from_value(call.body).unwrap())
                 .expect("call should succeed with empty result");
 
             assert_eq!(
@@ -591,8 +596,8 @@ fn do_test_evm_runtime<C: Config>() {
                 Vec::<u8>::new(),
                 "check tx should return an empty response"
             );
-        });
-    });
+        },
+    );
 
     // Test the Call transaction.
     let name_method: Vec<u8> = Vec::from_hex("06fdde03".to_owned() + &"0".repeat(64 - 8)).unwrap();
@@ -622,51 +627,48 @@ fn do_test_evm_runtime<C: Config>() {
         },
     };
     // Run authentication handler to simulate nonce increments.
-    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &call_name_tx).unwrap();
+    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&ctx, &call_name_tx).unwrap();
 
     // Test transaction call in simulate mode.
-    CurrentStore::with_transaction(|| {
-        ctx.with_simulation(|mut sim_ctx| {
-            let erc20_name = sim_ctx.with_tx(call_name_tx.clone().into(), |mut tx_ctx, call| {
-                let name: Vec<u8> = cbor::from_value(
-                    decode_result!(
-                        tx_ctx,
-                        EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-                    )
-                    .unwrap(),
+    let call = call_name_tx.call.clone();
+    CurrentState::with_transaction_opts(
+        Options::new()
+            .with_mode(Mode::Simulate)
+            .with_tx(call_name_tx.clone().into()),
+        || {
+            let erc20_name: Vec<u8> = cbor::from_value(
+                decode_result!(
+                    ctx,
+                    EVMModule::<C>::tx_call(&ctx, cbor::from_value(call.body).unwrap())
                 )
-                .unwrap();
+                .unwrap(),
+            )
+            .unwrap();
 
-                EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
+            EVMModule::<C>::check_invariants(&ctx).expect("invariants should hold");
 
-                tx_ctx.commit();
-
-                name
-            });
             assert_eq!(erc20_name.len(), 96);
             assert_eq!(erc20_name[63], 0x04); // Name is 4 bytes long.
             assert_eq!(erc20_name[64..68], vec![0x54, 0x65, 0x73, 0x74]); // "Test".
-        });
+        },
+    );
 
-        TransactionResult::Rollback(()) // Ignore simulation results.
-    });
-
-    let erc20_name = ctx.with_tx(call_name_tx.clone().into(), |mut tx_ctx, call| {
-        let name: Vec<u8> = cbor::from_value(
-            decode_result!(
-                tx_ctx,
-                EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = call_name_tx.call.clone();
+    let erc20_name =
+        CurrentState::with_transaction_opts(Options::new().with_tx(call_name_tx.into()), || {
+            let name: Vec<u8> = cbor::from_value(
+                decode_result!(
+                    ctx,
+                    EVMModule::<C>::tx_call(&ctx, cbor::from_value(call.body).unwrap())
+                )
+                .unwrap(),
             )
-            .unwrap(),
-        )
-        .unwrap();
+            .unwrap();
 
-        EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
+            EVMModule::<C>::check_invariants(&ctx).expect("invariants should hold");
 
-        tx_ctx.commit();
-
-        name
-    });
+            TransactionResult::Commit(name)
+        });
     assert_eq!(erc20_name.len(), 96);
     assert_eq!(erc20_name[63], 0x04); // Name is 4 bytes long.
     assert_eq!(erc20_name[64..68], vec![0x54, 0x65, 0x73, 0x74]); // "Test".
@@ -707,24 +709,26 @@ fn do_test_evm_runtime<C: Config>() {
         },
     };
     // Run authentication handler to simulate nonce increments.
-    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &call_transfer_tx).unwrap();
+    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&ctx, &call_transfer_tx).unwrap();
 
-    let transfer_ret = ctx.with_tx(call_transfer_tx.clone().into(), |mut tx_ctx, call| {
-        let ret: Vec<u8> = cbor::from_value(
-            decode_result!(
-                tx_ctx,
-                EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = call_transfer_tx.call.clone();
+    let transfer_ret = CurrentState::with_transaction_opts(
+        Options::new().with_tx(call_transfer_tx.into()),
+        || {
+            let ret: Vec<u8> = cbor::from_value(
+                decode_result!(
+                    ctx,
+                    EVMModule::<C>::tx_call(&ctx, cbor::from_value(call.body).unwrap())
+                )
+                .unwrap(),
             )
-            .unwrap(),
-        )
-        .unwrap();
+            .unwrap();
 
-        EVMModule::<C>::check_invariants(&mut tx_ctx).expect("invariants should hold");
+            EVMModule::<C>::check_invariants(&ctx).expect("invariants should hold");
 
-        tx_ctx.commit();
-
-        ret
-    });
+            TransactionResult::Commit(ret)
+        },
+    );
     assert_eq!(
         transfer_ret,
         Vec::<u8>::from_hex("0".repeat(64 - 1) + &"1".to_owned()).unwrap()
@@ -756,29 +760,37 @@ fn do_test_evm_runtime<C: Config>() {
             ..Default::default()
         },
     };
-    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&mut ctx, &out_of_gas_tx).unwrap();
+    <EVMRuntime<C> as Runtime>::Modules::authenticate_tx(&ctx, &out_of_gas_tx).unwrap();
 
-    ctx.with_tx(out_of_gas_tx.clone().into(), |mut tx_ctx, call| {
-        assert!(!decode_result!(
-            tx_ctx,
-            EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-        )
-        .is_success());
-    });
+    let call = out_of_gas_tx.call.clone();
+    CurrentState::with_transaction_opts(
+        Options::new().with_tx(out_of_gas_tx.clone().into()),
+        || {
+            assert!(!decode_result!(
+                ctx,
+                EVMModule::<C>::tx_call(&ctx, cbor::from_value(call.body).unwrap())
+            )
+            .is_success());
+        },
+    );
 
     // CheckTx should not fail.
-    ctx.with_child(context::Mode::CheckTx, |mut check_ctx| {
-        check_ctx.with_tx(out_of_gas_tx.into(), |mut tx_ctx, call| {
-            let rsp = EVMModule::<C>::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = out_of_gas_tx.call.clone();
+    CurrentState::with_transaction_opts(
+        Options::new()
+            .with_mode(state::Mode::Check)
+            .with_tx(out_of_gas_tx.clone().into()),
+        || {
+            let rsp = EVMModule::<C>::tx_call(&ctx, cbor::from_value(call.body).unwrap())
                 .expect("call should succeed with empty result");
 
             assert_eq!(
                 rsp,
                 Vec::<u8>::new(),
                 "check tx should return an empty response"
-            )
-        });
-    });
+            );
+        },
+    );
 }
 
 #[test]
@@ -795,20 +807,17 @@ fn test_c10l_evm_runtime() {
 #[test]
 fn test_c10l_queries() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(
-        context::Mode::ExecuteTx,
-        true,
-    );
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(true);
     let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
-    EVMRuntime::<ConfidentialEVMConfig>::migrate(&mut ctx);
+    EVMRuntime::<ConfidentialEVMConfig>::migrate(&ctx);
 
     static QUERY_CONTRACT_CODE_HEX: &str =
         include_str!("../../../../tests/e2e/contracts/query/query.hex");
 
     // Create contract.
     let dispatch_result = signer.call(
-        &mut ctx,
+        &ctx,
         "evm.Create",
         types::Create {
             value: 0.into(),
@@ -819,12 +828,11 @@ fn test_c10l_queries() {
     let result: Vec<u8> = cbor::from_value(result).unwrap();
     let contract_address = H160::from_slice(&result);
 
-    let mut ctx = mock
-        .create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(context::Mode::CheckTx, true);
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(true);
 
     // Call the `test` method on the contract via a query.
     let result = signer
-        .query_evm(&mut ctx, contract_address, "test", &[], &[])
+        .query_evm(&ctx, contract_address, "test", &[], &[])
         .expect("query should succeed");
 
     let mut result =
@@ -836,7 +844,7 @@ fn test_c10l_queries() {
     // Test call with confidential envelope.
     let result = signer
         .query_evm_opts(
-            &mut ctx,
+            &ctx,
             contract_address,
             "test",
             &[],
@@ -858,15 +866,13 @@ fn test_c10l_queries() {
 #[test]
 fn test_fee_refunds() {
     let mut mock = mock::Mock::default();
-    let mut ctx =
-        mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
     let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
-    EVMRuntime::<EVMConfig>::migrate(&mut ctx);
+    EVMRuntime::<EVMConfig>::migrate(&ctx);
 
     // Give Dave some tokens.
     Accounts::mint(
-        &mut ctx,
         keys::dave::address(),
         &token::BaseUnits(1_000_000_000, Denomination::NATIVE),
     )
@@ -874,7 +880,7 @@ fn test_fee_refunds() {
 
     // Create contract.
     let dispatch_result = signer.call(
-        &mut ctx,
+        &ctx,
         "evm.Create",
         types::Create {
             value: 0.into(),
@@ -887,7 +893,7 @@ fn test_fee_refunds() {
 
     // Call the `name` method on the contract.
     let dispatch_result = signer.call_evm_opts(
-        &mut ctx,
+        &ctx,
         contract_address,
         "name",
         &[],
@@ -936,7 +942,7 @@ fn test_fee_refunds() {
 
     // Call the `transfer` method on the contract with invalid parameters so it reverts.
     let dispatch_result = signer.call_evm_opts(
-        &mut ctx,
+        &ctx,
         contract_address,
         "transfer",
         &[ParamType::Address, ParamType::Uint(256)],
@@ -992,15 +998,13 @@ fn test_fee_refunds() {
 #[test]
 fn test_return_value_limits() {
     let mut mock = mock::Mock::default();
-    let mut ctx =
-        mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
     let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
-    EVMRuntime::<EVMConfig>::migrate(&mut ctx);
+    EVMRuntime::<EVMConfig>::migrate(&ctx);
 
     // Give Dave some tokens.
     Accounts::mint(
-        &mut ctx,
         keys::dave::address(),
         &token::BaseUnits(1_000_000_000, Denomination::NATIVE),
     )
@@ -1011,7 +1015,7 @@ fn test_return_value_limits() {
 
     // Create contract.
     let dispatch_result = signer.call(
-        &mut ctx,
+        &ctx,
         "evm.Create",
         types::Create {
             value: 0.into(),
@@ -1024,7 +1028,7 @@ fn test_return_value_limits() {
 
     // Call the `testSuccess` method on the contract.
     let dispatch_result = signer.call_evm_opts(
-        &mut ctx,
+        &ctx,
         contract_address,
         "testSuccess",
         &[],
@@ -1045,7 +1049,7 @@ fn test_return_value_limits() {
 
     // Call the `testRevert` method on the contract.
     let dispatch_result = signer.call_evm_opts(
-        &mut ctx,
+        &ctx,
         contract_address,
         "testRevert",
         &[],
@@ -1075,12 +1079,11 @@ fn test_return_value_limits() {
     }
 
     // Make sure that in query context, the return value is not trimmed.
-    let mut ctx =
-        mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(context::Mode::CheckTx, true);
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
 
     let result = signer
         .query_evm_opts(
-            &mut ctx,
+            &ctx,
             contract_address,
             "testSuccess",
             &[],

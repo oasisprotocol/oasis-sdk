@@ -3,7 +3,7 @@ use std::convert::TryInto;
 
 use oasis_contract_sdk_crypto as crypto;
 use oasis_contract_sdk_types::crypto::SignatureKind;
-use oasis_runtime_sdk::{context::Context, crypto::signature};
+use oasis_runtime_sdk::{context::Context, crypto::signature, state::CurrentState};
 
 use super::{memory::Region, OasisV1};
 use crate::{
@@ -145,10 +145,12 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     let pers = Region::from_arg((pers_ptr, pers_len))
                         .as_slice(&memory)
                         .map_err(|_| wasm3::Trap::Abort)?;
-                    let mut rng = ec.tx_context.rng(pers).map_err(|e| {
-                        ec.aborted = Some(e.into());
-                        wasm3::Trap::Abort
-                    })?;
+                    let mut rng = CurrentState::with(|state| state.rng().fork(ec.tx_context, pers))
+                        .map_err(|e| {
+                            ec.aborted = Some(Error::ExecutionFailed(e.into()));
+                            wasm3::Trap::Abort
+                        })?;
+
                     let output = Region::from_arg((dst_ptr, num_bytes))
                         .as_slice_mut(&mut memory)
                         .map_err(|_| wasm3::Trap::Abort)?;

@@ -146,7 +146,7 @@ impl sdk::Runtime for Runtime {
         )
     }
 
-    fn migrate_state<C: sdk::Context>(_ctx: &mut C) {
+    fn migrate_state<C: sdk::Context>(_ctx: &C) {
         // Fetch current parameters.
         type Rewards = modules::rewards::Module<modules::accounts::Module>;
         let mut params = Rewards::params();

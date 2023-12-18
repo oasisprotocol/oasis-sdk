@@ -10,7 +10,7 @@ use once_cell::sync::Lazy;
 use thiserror::Error;
 
 use crate::{
-    context::{Context, TxContext},
+    context::Context,
     core::common::quantity::Quantity,
     handler, migration, module,
     module::{Module as _, Parameters as _},
@@ -19,8 +19,9 @@ use crate::{
     runtime::Runtime,
     sdk_derive,
     sender::SenderMeta,
+    state::CurrentState,
     storage,
-    storage::{CurrentStore, Prefix},
+    storage::Prefix,
     types::{
         address::{Address, SignatureAddressSpec},
         token,
@@ -141,22 +142,16 @@ pub struct Genesis {
 /// Interface that can be called from other modules.
 pub trait API {
     /// Transfer an amount from one account to the other.
-    fn transfer<C: Context>(
-        ctx: &mut C,
-        from: Address,
-        to: Address,
-        amount: &token::BaseUnits,
-    ) -> Result<(), Error>;
+    fn transfer(from: Address, to: Address, amount: &token::BaseUnits) -> Result<(), Error>;
 
     /// Transfer an amount from one account to the other without emitting an event.
     fn transfer_silent(from: Address, to: Address, amount: &token::BaseUnits) -> Result<(), Error>;
 
     /// Mint new tokens, increasing the total supply.
-    fn mint<C: Context>(ctx: &mut C, to: Address, amount: &token::BaseUnits) -> Result<(), Error>;
+    fn mint(to: Address, amount: &token::BaseUnits) -> Result<(), Error>;
 
     /// Burn existing tokens, decreasing the total supply.
-    fn burn<C: Context>(ctx: &mut C, from: Address, amount: &token::BaseUnits)
-        -> Result<(), Error>;
+    fn burn(from: Address, amount: &token::BaseUnits) -> Result<(), Error>;
 
     /// Sets an account's nonce.
     fn set_nonce(address: Address, nonce: u64);
@@ -209,32 +204,28 @@ pub trait API {
     ) -> Result<types::DenominationInfo, Error>;
 
     /// Moves the amount into the per-transaction fee accumulator.
-    fn charge_tx_fee<C: Context>(
-        ctx: &mut C,
-        from: Address,
-        amount: &token::BaseUnits,
-    ) -> Result<(), modules::core::Error>;
+    fn charge_tx_fee(from: Address, amount: &token::BaseUnits) -> Result<(), modules::core::Error>;
 
     /// Indicates that the unused portion of the transaction fee should be refunded after the
     /// transaction completes (even in case it fails).
-    fn set_refund_unused_tx_fee<C: Context>(ctx: &mut C, refund: bool);
+    fn set_refund_unused_tx_fee(refund: bool);
 
     /// Take the flag indicating that the unused portion of the transaction fee should be refunded
     /// after the transaction completes is set.
     ///
     /// After calling this method the flag is reset to `false`.
-    fn take_refund_unused_tx_fee<C: Context>(ctx: &mut C) -> bool;
+    fn take_refund_unused_tx_fee() -> bool;
 
     /// Check transaction signer account nonces.
     /// Return payer address.
     fn check_signer_nonces<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         tx_auth_info: &AuthInfo,
     ) -> Result<Address, modules::core::Error>;
 
     /// Update transaction signer account nonces.
     fn update_signer_nonces<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         tx_auth_info: &AuthInfo,
     ) -> Result<(), modules::core::Error>;
 }
@@ -290,7 +281,7 @@ impl Module {
             return Ok(());
         }
 
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let balances = storage::PrefixStore::new(store, &state::BALANCES);
             let mut account = storage::TypedStore::new(storage::PrefixStore::new(balances, &addr));
@@ -310,7 +301,7 @@ impl Module {
             return Ok(());
         }
 
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let balances = storage::PrefixStore::new(store, &state::BALANCES);
             let mut account = storage::TypedStore::new(storage::PrefixStore::new(balances, &addr));
@@ -330,7 +321,7 @@ impl Module {
             return Ok(());
         }
 
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut total_supplies =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
@@ -352,7 +343,7 @@ impl Module {
             return Ok(());
         }
 
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut total_supplies =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
@@ -370,7 +361,7 @@ impl Module {
 
     /// Get all balances.
     fn get_all_balances() -> Result<BTreeMap<Address, BTreeMap<token::Denomination, u128>>, Error> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let balances =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::BALANCES));
@@ -408,23 +399,20 @@ const CONTEXT_KEY_TX_FEE_REFUND_UNUSED: &str = "accounts.TxRefundUnusedFee";
 const CONTEXT_KEY_FEE_MANAGER: &str = "accounts.FeeManager";
 
 impl API for Module {
-    fn transfer<C: Context>(
-        ctx: &mut C,
-        from: Address,
-        to: Address,
-        amount: &token::BaseUnits,
-    ) -> Result<(), Error> {
-        if ctx.is_check_only() || amount.amount() == 0 {
+    fn transfer(from: Address, to: Address, amount: &token::BaseUnits) -> Result<(), Error> {
+        if CurrentState::with_env(|env| env.is_check_only()) || amount.amount() == 0 {
             return Ok(());
         }
 
         Self::transfer_silent(from, to, amount)?;
 
         // Emit a transfer event.
-        ctx.emit_event(Event::Transfer {
-            from,
-            to,
-            amount: amount.clone(),
+        CurrentState::with(|state| {
+            state.emit_event(Event::Transfer {
+                from,
+                to,
+                amount: amount.clone(),
+            })
         });
 
         Ok(())
@@ -439,8 +427,8 @@ impl API for Module {
         Ok(())
     }
 
-    fn mint<C: Context>(ctx: &mut C, to: Address, amount: &token::BaseUnits) -> Result<(), Error> {
-        if ctx.is_check_only() || amount.amount() == 0 {
+    fn mint(to: Address, amount: &token::BaseUnits) -> Result<(), Error> {
+        if CurrentState::with_env(|env| env.is_check_only()) || amount.amount() == 0 {
             return Ok(());
         }
 
@@ -451,20 +439,18 @@ impl API for Module {
         Self::inc_total_supply(amount)?;
 
         // Emit a mint event.
-        ctx.emit_event(Event::Mint {
-            owner: to,
-            amount: amount.clone(),
+        CurrentState::with(|state| {
+            state.emit_event(Event::Mint {
+                owner: to,
+                amount: amount.clone(),
+            });
         });
 
         Ok(())
     }
 
-    fn burn<C: Context>(
-        ctx: &mut C,
-        from: Address,
-        amount: &token::BaseUnits,
-    ) -> Result<(), Error> {
-        if ctx.is_check_only() || amount.amount() == 0 {
+    fn burn(from: Address, amount: &token::BaseUnits) -> Result<(), Error> {
+        if CurrentState::with_env(|env| env.is_check_only()) || amount.amount() == 0 {
             return Ok(());
         }
 
@@ -476,16 +462,18 @@ impl API for Module {
             .expect("target account had enough balance so total supply should not underflow");
 
         // Emit a burn event.
-        ctx.emit_event(Event::Burn {
-            owner: from,
-            amount: amount.clone(),
+        CurrentState::with(|state| {
+            state.emit_event(Event::Burn {
+                owner: from,
+                amount: amount.clone(),
+            });
         });
 
         Ok(())
     }
 
     fn set_nonce(address: Address, nonce: u64) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut accounts =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
@@ -496,7 +484,7 @@ impl API for Module {
     }
 
     fn get_nonce(address: Address) -> Result<u64, Error> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let accounts =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
@@ -506,7 +494,7 @@ impl API for Module {
     }
 
     fn inc_nonce(address: Address) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut accounts =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::ACCOUNTS));
@@ -517,7 +505,7 @@ impl API for Module {
     }
 
     fn set_balance(address: Address, amount: &token::BaseUnits) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let balances = storage::PrefixStore::new(store, &state::BALANCES);
             let mut account =
@@ -527,7 +515,7 @@ impl API for Module {
     }
 
     fn get_balance(address: Address, denomination: token::Denomination) -> Result<u128, Error> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let balances = storage::PrefixStore::new(store, &state::BALANCES);
             let account = storage::TypedStore::new(storage::PrefixStore::new(balances, &address));
@@ -537,7 +525,7 @@ impl API for Module {
     }
 
     fn get_balances(address: Address) -> Result<types::AccountBalances, Error> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let balances = storage::PrefixStore::new(store, &state::BALANCES);
             let account = storage::TypedStore::new(storage::PrefixStore::new(balances, &address));
@@ -549,7 +537,7 @@ impl API for Module {
     }
 
     fn get_addresses(denomination: token::Denomination) -> Result<Vec<Address>, Error> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let balances: BTreeMap<AddressWithDenomination, Quantity> =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::BALANCES))
@@ -565,7 +553,7 @@ impl API for Module {
     }
 
     fn get_total_supplies() -> Result<BTreeMap<token::Denomination, u128>, Error> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let ts =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
@@ -575,7 +563,7 @@ impl API for Module {
     }
 
     fn set_total_supply(amount: &token::BaseUnits) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut total_supplies =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
@@ -593,53 +581,59 @@ impl API for Module {
             .ok_or(Error::NotFound)
     }
 
-    fn charge_tx_fee<C: Context>(
-        ctx: &mut C,
-        from: Address,
-        amount: &token::BaseUnits,
-    ) -> Result<(), modules::core::Error> {
-        if ctx.is_simulation() {
+    fn charge_tx_fee(from: Address, amount: &token::BaseUnits) -> Result<(), modules::core::Error> {
+        if CurrentState::with_env(|env| env.is_simulation()) {
             return Ok(());
         }
 
         Self::sub_amount(from, amount).map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
 
-        ctx.value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
-            .or_default()
-            .record_fee(from, amount);
+        CurrentState::with(|state| {
+            state
+                .block_value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
+                .or_default()
+                .record_fee(from, amount);
+        });
 
         Ok(())
     }
 
-    fn set_refund_unused_tx_fee<C: Context>(ctx: &mut C, refund: bool) {
-        if ctx.is_simulation() {
-            return;
-        }
+    fn set_refund_unused_tx_fee(refund: bool) {
+        CurrentState::with(|state| {
+            if state.env().is_simulation() {
+                return;
+            }
 
-        ctx.value(CONTEXT_KEY_TX_FEE_REFUND_UNUSED).set(refund);
+            state
+                .block_value(CONTEXT_KEY_TX_FEE_REFUND_UNUSED)
+                .set(refund);
+        });
     }
 
-    fn take_refund_unused_tx_fee<C: Context>(ctx: &mut C) -> bool {
-        if ctx.is_simulation() {
-            return false;
-        }
+    fn take_refund_unused_tx_fee() -> bool {
+        CurrentState::with(|state| {
+            if state.env().is_simulation() {
+                return false;
+            }
 
-        ctx.value(CONTEXT_KEY_TX_FEE_REFUND_UNUSED)
-            .take()
-            .unwrap_or(false)
+            state
+                .block_value(CONTEXT_KEY_TX_FEE_REFUND_UNUSED)
+                .take()
+                .unwrap_or(false)
+        })
     }
 
     fn check_signer_nonces<C: Context>(
-        ctx: &mut C,
+        _ctx: &C,
         auth_info: &AuthInfo,
     ) -> Result<Address, modules::core::Error> {
-        let is_pre_schedule = ctx.is_pre_schedule();
-        let is_check_only = ctx.is_check_only();
+        let is_pre_schedule = CurrentState::with_env(|env| env.is_pre_schedule());
+        let is_check_only = CurrentState::with_env(|env| env.is_check_only());
 
         // TODO: Optimize the check/update pair so that the accounts are
         // fetched only once.
         let params = Self::params();
-        let sender = CurrentStore::with(|store| {
+        let sender = CurrentState::with_store(|store| {
             // Fetch information about each signer.
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let accounts =
@@ -699,17 +693,17 @@ impl API for Module {
         let sender = sender.expect("at least one signer is always present");
         let sender_address = sender.address;
         if is_check_only {
-            <C::Runtime as Runtime>::Core::set_sender_meta(ctx, sender);
+            <C::Runtime as Runtime>::Core::set_sender_meta(sender);
         }
 
         Ok(sender_address)
     }
 
     fn update_signer_nonces<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         auth_info: &AuthInfo,
     ) -> Result<(), modules::core::Error> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             // Fetch information about each signer.
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut accounts =
@@ -740,7 +734,7 @@ impl Module {
 
     #[migration(init)]
     pub fn init(genesis: Genesis) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             // Create accounts.
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut accounts =
@@ -825,7 +819,7 @@ impl Module {
     }
 
     #[handler(call = "accounts.Transfer")]
-    fn tx_transfer<C: TxContext>(ctx: &mut C, body: types::Transfer) -> Result<(), Error> {
+    fn tx_transfer<C: Context>(_ctx: &C, body: types::Transfer) -> Result<(), Error> {
         let params = Self::params();
 
         // Reject transfers when they are disabled.
@@ -833,21 +827,22 @@ impl Module {
             return Err(Error::Forbidden);
         }
 
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_transfer)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.tx_transfer)?;
 
-        Self::transfer(ctx, ctx.tx_caller_address(), body.to, &body.amount)?;
+        let tx_caller_address = CurrentState::with_env(|env| env.tx_caller_address());
+        Self::transfer(tx_caller_address, body.to, &body.amount)?;
 
         Ok(())
     }
 
     #[handler(query = "accounts.Nonce")]
-    fn query_nonce<C: Context>(_ctx: &mut C, args: types::NonceQuery) -> Result<u64, Error> {
+    fn query_nonce<C: Context>(_ctx: &C, args: types::NonceQuery) -> Result<u64, Error> {
         Self::get_nonce(args.address)
     }
 
     #[handler(query = "accounts.Addresses", expensive)]
     fn query_addresses<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         args: types::AddressesQuery,
     ) -> Result<Vec<Address>, Error> {
         Self::get_addresses(args.denomination)
@@ -855,7 +850,7 @@ impl Module {
 
     #[handler(query = "accounts.Balances")]
     fn query_balances<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         args: types::BalancesQuery,
     ) -> Result<types::AccountBalances, Error> {
         Self::get_balances(args.address)
@@ -863,7 +858,7 @@ impl Module {
 
     #[handler(query = "accounts.DenominationInfo")]
     fn query_denomination_info<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         args: types::DenominationInfoQuery,
     ) -> Result<types::DenominationInfo, Error> {
         Self::get_denomination_info(&args.denomination)
@@ -871,10 +866,7 @@ impl Module {
 }
 
 impl module::TransactionHandler for Module {
-    fn authenticate_tx<C: Context>(
-        ctx: &mut C,
-        tx: &Transaction,
-    ) -> Result<(), modules::core::Error> {
+    fn authenticate_tx<C: Context>(ctx: &C, tx: &Transaction) -> Result<(), modules::core::Error> {
         // Check whether the transaction is currently valid.
         let round = ctx.runtime_header().round;
         if let Some(not_before) = tx.auth_info.not_before {
@@ -895,7 +887,7 @@ impl module::TransactionHandler for Module {
 
         // Charge the specified amount of fees.
         if !tx.auth_info.fee.amount.amount().is_zero() {
-            if ctx.is_check_only() {
+            if CurrentState::with_env(|env| env.is_check_only()) {
                 // Do not update balances during transaction checks. In case of checks, only do it
                 // after all the other checks have already passed as otherwise retrying the
                 // transaction will not be possible.
@@ -903,76 +895,77 @@ impl module::TransactionHandler for Module {
                     .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
             } else {
                 // Actually perform the move.
-                Self::charge_tx_fee(ctx, payer, &tx.auth_info.fee.amount)?;
+                Self::charge_tx_fee(payer, &tx.auth_info.fee.amount)?;
             }
 
             let gas_price = tx.auth_info.fee.gas_price();
             // Set transaction priority.
-            <C::Runtime as Runtime>::Core::set_priority(
-                ctx,
-                gas_price.try_into().unwrap_or(u64::MAX),
-            );
+            <C::Runtime as Runtime>::Core::set_priority(gas_price.try_into().unwrap_or(u64::MAX));
         }
 
         // Do not update nonces early during transaction checks. In case of checks, only do it after
         // all the other checks have already passed as otherwise retrying the transaction will not
         // be possible.
-        if !ctx.is_check_only() {
+        if !CurrentState::with_env(|env| env.is_check_only()) {
             Self::update_signer_nonces(ctx, &tx.auth_info)?;
         }
 
         Ok(())
     }
 
-    fn after_handle_call<C: TxContext>(
-        ctx: &mut C,
+    fn after_handle_call<C: Context>(
+        _ctx: &C,
         result: module::CallResult,
     ) -> Result<module::CallResult, modules::core::Error> {
         // Check whether unused part of the fee should be refunded.
-        let refund_fee = if Self::take_refund_unused_tx_fee(ctx) {
-            let remaining_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
-            let gas_price = ctx.tx_auth_info().fee.gas_price();
+        let refund_fee = if Self::take_refund_unused_tx_fee() {
+            let remaining_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas();
+            let gas_price = CurrentState::with_env(|env| env.tx_auth_info().fee.gas_price());
 
             gas_price.saturating_mul(remaining_gas.into())
         } else {
             0
         };
 
-        let mgr = ctx
-            .value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
-            .or_default();
+        CurrentState::with(|state| {
+            let mgr = state
+                .block_value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
+                .or_default();
 
-        // Update the per-tx fee accumulator. State must be updated in `after_dispatch_tx` as
-        // otherwise any state updates may be reverted in case call result is a failure.
-        mgr.record_refund(refund_fee);
+            // Update the per-tx fee accumulator. State must be updated in `after_dispatch_tx` as
+            // otherwise any state updates may be reverted in case call result is a failure.
+            mgr.record_refund(refund_fee);
 
-        // Emit event for paid fee.
-        let tx_fee = mgr.tx_fee().cloned().unwrap_or_default();
-        if tx_fee.amount() > 0 {
-            ctx.emit_unconditional_event(Event::Transfer {
-                from: tx_fee.payer(),
-                to: *ADDRESS_FEE_ACCUMULATOR,
-                amount: token::BaseUnits::new(tx_fee.amount(), tx_fee.denomination()),
-            });
-        }
+            // Emit event for paid fee.
+            let tx_fee = mgr.tx_fee().cloned().unwrap_or_default();
+            if tx_fee.amount() > 0 {
+                state.emit_unconditional_event(Event::Transfer {
+                    from: tx_fee.payer(),
+                    to: *ADDRESS_FEE_ACCUMULATOR,
+                    amount: token::BaseUnits::new(tx_fee.amount(), tx_fee.denomination()),
+                });
+            }
+        });
 
         Ok(result)
     }
 
     fn after_dispatch_tx<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         tx_auth_info: &AuthInfo,
         result: &module::CallResult,
     ) {
         // Move transaction fees into the per-block fee accumulator.
-        let mgr = ctx
-            .value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
-            .or_default();
-        let fee_updates = mgr.commit_tx();
+        let fee_updates = CurrentState::with(|state| {
+            let mgr = state
+                .block_value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
+                .or_default();
+            mgr.commit_tx()
+        });
         // Refund any fees. This needs to happen after tx dispatch to ensure state is updated.
         Self::add_amount(fee_updates.payer, &fee_updates.refund).unwrap();
 
-        if !ctx.is_check_only() {
+        if !CurrentState::with_env(|env| env.is_check_only()) {
             // Do nothing further outside transaction checks.
             return;
         }
@@ -992,7 +985,7 @@ impl module::TransactionHandler for Module {
 }
 
 impl module::BlockHandler for Module {
-    fn end_block<C: Context>(ctx: &mut C) {
+    fn end_block<C: Context>(ctx: &C) {
         // Determine the fees that are available for disbursement from the last block.
         let mut previous_fees = Self::get_balances(*ADDRESS_FEE_ACCUMULATOR)
             .expect("get_balances must succeed")
@@ -1045,10 +1038,12 @@ impl module::BlockHandler for Module {
                         .expect("add_amount must succeed for fee disbursement");
 
                     // Emit transfer event for fee disbursement.
-                    ctx.emit_event(Event::Transfer {
-                        from: *ADDRESS_FEE_ACCUMULATOR,
-                        to: address,
-                        amount: amount.clone(),
+                    CurrentState::with(|state| {
+                        state.emit_event(Event::Transfer {
+                            from: *ADDRESS_FEE_ACCUMULATOR,
+                            to: address,
+                            amount: amount.clone(),
+                        });
                     });
                 }
             }
@@ -1065,19 +1060,25 @@ impl module::BlockHandler for Module {
                 .expect("add_amount must succeed for transfer to common pool");
 
             // Emit transfer event for fee disbursement.
-            ctx.emit_event(Event::Transfer {
-                from: *ADDRESS_FEE_ACCUMULATOR,
-                to: *ADDRESS_COMMON_POOL,
-                amount,
-            })
+            CurrentState::with(|state| {
+                state.emit_event(Event::Transfer {
+                    from: *ADDRESS_FEE_ACCUMULATOR,
+                    to: *ADDRESS_COMMON_POOL,
+                    amount,
+                })
+            });
         }
 
         // Fees for the active block should be transferred to the fee accumulator address.
-        let mgr = ctx
-            .value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
-            .take()
-            .unwrap_or_default();
-        for (denom, amount) in mgr.commit_block().into_iter() {
+        let block_fees = CurrentState::with(|state| {
+            let mgr = state
+                .block_value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
+                .take()
+                .unwrap_or_default();
+            mgr.commit_block().into_iter()
+        });
+
+        for (denom, amount) in block_fees {
             Self::add_amount(
                 *ADDRESS_FEE_ACCUMULATOR,
                 &token::BaseUnits::new(amount, denom),
@@ -1089,7 +1090,7 @@ impl module::BlockHandler for Module {
 
 impl module::InvariantHandler for Module {
     /// Check invariants.
-    fn check_invariants<C: Context>(_ctx: &mut C) -> Result<(), CoreError> {
+    fn check_invariants<C: Context>(_ctx: &C) -> Result<(), CoreError> {
         // All account balances should sum up to the total supply for their
         // corresponding denominations.
 

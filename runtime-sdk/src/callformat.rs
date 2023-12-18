@@ -12,6 +12,7 @@ use crate::{
     crypto::signature::context::get_chain_context_for,
     keymanager, module,
     modules::core::Error,
+    state::CurrentState,
     types::{
         self,
         transaction::{Call, CallFormat, CallResult},
@@ -116,7 +117,7 @@ pub fn decode_call_ex<C: Context>(
 
             // If we are only doing checks, this is the most that we can do as in this case we may
             // be unable to access the key manager.
-            if !assume_km_reachable && (ctx.is_check_only() || ctx.is_simulation()) {
+            if !assume_km_reachable && CurrentState::with_env(|env| !env.is_execute()) {
                 return Ok(None);
             }
 
@@ -266,18 +267,20 @@ pub fn encrypt_result_x25519_deoxysii<C: Context>(
     sk: x25519::PrivateKey,
     index: usize,
 ) -> cbor::Value {
-    // Generate nonce for the output as Round (8 bytes) || Index (4 bytes) || 00 00 00.
     let mut nonce = Vec::with_capacity(deoxysii::NONCE_SIZE);
-    nonce
-        .write_u64::<BigEndian>(ctx.runtime_header().round)
-        .unwrap();
-    nonce
-        .write_u32::<BigEndian>(index.try_into().unwrap())
-        .unwrap();
-    nonce.extend(&[0, 0, 0]);
-    if ctx.is_simulation() {
-        // Randomize the lower-order bytes of the nonce to facilitate private queries.
-        OsRng.fill_bytes(&mut nonce[deoxysii::NONCE_SIZE - 3..]);
+    if CurrentState::with_env(|env| env.is_execute()) {
+        // In execution mode generate nonce for the output as Round (8 bytes) || Index (4 bytes) || 00 00 00.
+        nonce
+            .write_u64::<BigEndian>(ctx.runtime_header().round)
+            .unwrap();
+        nonce
+            .write_u32::<BigEndian>(index.try_into().unwrap())
+            .unwrap();
+        nonce.extend(&[0, 0, 0]);
+    } else {
+        // In non-execution mode randomize the nonce to facilitate private queries.
+        nonce.resize(deoxysii::NONCE_SIZE, 0);
+        OsRng.fill_bytes(&mut nonce);
     }
     let nonce = nonce.try_into().unwrap();
     let result = cbor::to_vec(result);

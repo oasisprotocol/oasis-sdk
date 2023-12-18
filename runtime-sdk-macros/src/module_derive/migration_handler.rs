@@ -101,7 +101,7 @@ impl super::Deriver for DeriveMigrationHandler {
                 #genesis_ty
 
                 fn init_or_migrate<C: Context>(
-                    _ctx: &mut C,
+                    _ctx: &C,
                     meta: &mut sdk::modules::core::types::Metadata,
                     genesis: Self::Genesis,
                 ) -> bool {

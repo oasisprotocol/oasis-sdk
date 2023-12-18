@@ -9,7 +9,7 @@ use oasis_runtime_sdk::{
     module,
     testing::mock::{CallOptions, Signer},
     types::{address::SignatureAddressSpec, transaction},
-    BatchContext,
+    Context,
 };
 
 use crate::{
@@ -29,14 +29,14 @@ impl EvmSigner {
     /// Dispatch a call to the given EVM contract method.
     pub fn call_evm<C>(
         &mut self,
-        ctx: &mut C,
+        ctx: &C,
         address: H160,
         name: &str,
         param_types: &[ethabi::ParamType],
         params: &[ethabi::Token],
     ) -> dispatcher::DispatchResult
     where
-        C: BatchContext,
+        C: Context,
     {
         self.call_evm_opts(ctx, address, name, param_types, params, Default::default())
     }
@@ -44,7 +44,7 @@ impl EvmSigner {
     /// Dispatch a call to the given EVM contract method with the given options.
     pub fn call_evm_opts<C>(
         &mut self,
-        ctx: &mut C,
+        ctx: &C,
         address: H160,
         name: &str,
         param_types: &[ethabi::ParamType],
@@ -52,7 +52,7 @@ impl EvmSigner {
         opts: CallOptions,
     ) -> dispatcher::DispatchResult
     where
-        C: BatchContext,
+        C: Context,
     {
         let data = [
             ethabi::short_signature(name, param_types).to_vec(),
@@ -80,14 +80,14 @@ impl EvmSigner {
     /// Dispatch a query to the given EVM contract method.
     pub fn query_evm<C>(
         &self,
-        ctx: &mut C,
+        ctx: &C,
         address: H160,
         name: &str,
         param_types: &[ethabi::ParamType],
         params: &[ethabi::Token],
     ) -> Result<Vec<u8>, RuntimeError>
     where
-        C: BatchContext,
+        C: Context,
     {
         self.query_evm_opts(ctx, address, name, param_types, params, Default::default())
     }
@@ -95,7 +95,7 @@ impl EvmSigner {
     /// Dispatch a query to the given EVM contract method.
     pub fn query_evm_opts<C>(
         &self,
-        ctx: &mut C,
+        ctx: &C,
         address: H160,
         name: &str,
         param_types: &[ethabi::ParamType],
@@ -103,7 +103,7 @@ impl EvmSigner {
         opts: QueryOptions,
     ) -> Result<Vec<u8>, RuntimeError>
     where
-        C: BatchContext,
+        C: Context,
     {
         let mut data = [
             ethabi::short_signature(name, param_types).to_vec(),

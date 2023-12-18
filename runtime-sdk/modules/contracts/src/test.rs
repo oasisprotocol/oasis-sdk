@@ -2,7 +2,6 @@
 use std::{collections::BTreeMap, io::Write};
 
 use oasis_runtime_sdk::{
-    context,
     error::Error,
     event::IntoTags,
     module,
@@ -10,12 +9,13 @@ use oasis_runtime_sdk::{
         accounts::{self, Module as Accounts, API as _},
         core::{self, Module as Core},
     },
+    state::{self, CurrentState, Options, TransactionResult},
     testing::{keys, mock},
     types::{
         token::{BaseUnits, Denomination},
         transaction,
     },
-    BatchContext, Context, Runtime, Version,
+    Context, Runtime, Version,
 };
 
 use crate::{types, types::StoreKind, Config, Genesis};
@@ -33,7 +33,7 @@ impl Config for ContractsConfig {
 
 type Contracts = crate::Module<ContractsConfig>;
 
-fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
+fn upload_hello_contract<C: Context>(ctx: &C) -> types::CodeId {
     // Compress contract code.
     let mut code = Vec::with_capacity(HELLO_CONTRACT_CODE.len() << 3);
     let mut encoder = snap::write::FrameEncoder::new(&mut code);
@@ -65,21 +65,17 @@ fn upload_hello_contract<C: BatchContext>(ctx: &mut C) -> types::CodeId {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let code_id = Contracts::tx_upload(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let code_id = Contracts::tx_upload(ctx, cbor::from_value(call.body).unwrap())
             .expect("upload should succeed")
             .id;
 
-        tx_ctx.commit();
-
-        code_id
+        TransactionResult::Commit(code_id)
     })
 }
 
-fn deploy_hello_contract<C: BatchContext>(
-    ctx: &mut C,
-    tokens: Vec<BaseUnits>,
-) -> types::InstanceId {
+fn deploy_hello_contract<C: Context>(ctx: &C, tokens: Vec<BaseUnits>) -> types::InstanceId {
     // Upload the contract.
     upload_hello_contract(ctx);
 
@@ -115,22 +111,20 @@ fn deploy_hello_contract<C: BatchContext>(
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let instance_id =
-            Contracts::tx_instantiate(&mut tx_ctx, cbor::from_value(call.body).unwrap())
-                .expect("instantiate should succeed")
-                .id;
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let instance_id = Contracts::tx_instantiate(ctx, cbor::from_value(call.body).unwrap())
+            .expect("instantiate should succeed")
+            .id;
 
-        tx_ctx.commit();
-
-        instance_id
+        TransactionResult::Commit(instance_id)
     })
 }
 
 #[test]
 fn test_hello_contract_call() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<ContractRuntime>(true);
 
     Core::<CoreConfig>::init(core::Genesis {
         parameters: core::Parameters {
@@ -163,7 +157,7 @@ fn test_hello_contract_call() {
     });
 
     let instance_id =
-        deploy_hello_contract(&mut ctx, vec![BaseUnits::new(1_000, Denomination::NATIVE)]);
+        deploy_hello_contract(&ctx, vec![BaseUnits::new(1_000, Denomination::NATIVE)]);
 
     // Check caller account balances.
     let bals = Accounts::get_balances(keys::alice::address()).expect("get_balances should succeed");
@@ -223,8 +217,9 @@ fn test_hello_contract_call() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result = Contracts::tx_call(&ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
         let result: cbor::Value =
@@ -266,13 +261,10 @@ fn test_hello_contract_call() {
             "there should only be one denomination"
         );
 
-        let state = tx_ctx.commit();
-        let tags = state.events.into_tags();
+        let tags = CurrentState::with(|state| state.take_events().into_tags());
+        let messages = CurrentState::with(|state| state.take_messages());
         // Make sure no runtime messages got emitted.
-        assert!(
-            state.messages.is_empty(),
-            "no runtime messages should be emitted"
-        );
+        assert!(messages.is_empty(), "no runtime messages should be emitted");
         // Make sure a contract event was emitted and is properly formatted.
         assert_eq!(tags.len(), 2, "two events should have been emitted");
         assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
@@ -320,8 +312,9 @@ fn test_hello_contract_call() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result = Contracts::tx_call(&ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
         let result: cbor::Value =
@@ -362,38 +355,36 @@ fn test_hello_contract_call() {
             1,
             "there should only be one denomination"
         );
-
-        tx_ctx.commit();
     });
 
     // Test instance query.
-    let result = Contracts::query_instance(&mut ctx, types::InstanceQuery { id: instance_id })
+    let result = Contracts::query_instance(&ctx, types::InstanceQuery { id: instance_id })
         .expect("instance query should succeed");
     assert_eq!(result.id, instance_id);
     assert_eq!(result.code_id, 0.into());
     assert_eq!(result.creator, keys::alice::address());
 
     // Test code query.
-    let result = Contracts::query_code(&mut ctx, types::CodeQuery { id: result.code_id })
+    let result = Contracts::query_code(&ctx, types::CodeQuery { id: result.code_id })
         .expect("code query should succeed");
     assert_eq!(result.id, 0.into());
     assert_eq!(result.abi, types::ABI::OasisV1);
 
     // Test code storage query.
-    let result = Contracts::query_code_storage(&mut ctx, types::CodeStorageQuery { id: 0.into() })
+    let result = Contracts::query_code_storage(&ctx, types::CodeStorageQuery { id: 0.into() })
         .expect("code storage query should succeed");
     // Stored code is the original code plus some injected gas billing calls.
     assert!(result.code.len() >= HELLO_CONTRACT_CODE.len());
 
     // Invalid code queries should fail.
-    Contracts::query_code(&mut ctx, types::CodeQuery { id: 9999.into() })
+    Contracts::query_code(&ctx, types::CodeQuery { id: 9999.into() })
         .expect_err("invalid code query should fail");
-    Contracts::query_code_storage(&mut ctx, types::CodeStorageQuery { id: 9999.into() })
+    Contracts::query_code_storage(&ctx, types::CodeStorageQuery { id: 9999.into() })
         .expect_err("invalid code storage query should fail");
 
     // Test storage query for the counter key.
     let result = Contracts::query_instance_storage(
-        &mut ctx,
+        &ctx,
         types::InstanceStorageQuery {
             id: instance_id,
             key: b"counter".to_vec(),
@@ -407,7 +398,7 @@ fn test_hello_contract_call() {
 
     // Test raw public storage query.
     let result = Contracts::query_instance_raw_storage(
-        &mut ctx,
+        &ctx,
         types::InstanceRawStorageQuery {
             id: instance_id,
             store_kind: StoreKind::Public,
@@ -473,14 +464,14 @@ fn test_hello_contract_call() {
                 ..Default::default()
             },
         };
-        ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-            let _result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+        let call = tx.call.clone();
+        CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+            Contracts::tx_call(&ctx, cbor::from_value(call.body).unwrap())
                 .expect("call should succeed");
-            tx_ctx.commit();
         });
     }
     let result = Contracts::query_instance_raw_storage(
-        &mut ctx,
+        &ctx,
         types::InstanceRawStorageQuery {
             id: instance_id,
             store_kind: StoreKind::Public,
@@ -512,7 +503,7 @@ fn test_hello_contract_call() {
         );
     }
     let result = Contracts::query_instance_raw_storage(
-        &mut ctx,
+        &ctx,
         types::InstanceRawStorageQuery {
             id: instance_id,
             store_kind: StoreKind::Confidential,
@@ -560,14 +551,14 @@ fn test_hello_contract_call() {
                 ..Default::default()
             },
         };
-        ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-            let _result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+        let call = tx.call.clone();
+        CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+            Contracts::tx_call(&ctx, cbor::from_value(call.body).unwrap())
                 .expect("call should succeed");
-            tx_ctx.commit();
         });
     }
     let result = Contracts::query_instance_raw_storage(
-        &mut ctx,
+        &ctx,
         types::InstanceRawStorageQuery {
             id: instance_id,
             store_kind: StoreKind::Public,
@@ -582,7 +573,7 @@ fn test_hello_contract_call() {
         "raw storage query should be limited by default limit 100"
     );
     let result = Contracts::query_instance_raw_storage(
-        &mut ctx,
+        &ctx,
         types::InstanceRawStorageQuery {
             id: instance_id,
             store_kind: StoreKind::Public,
@@ -597,7 +588,7 @@ fn test_hello_contract_call() {
         "raw storage query should be limited by default limit 100, even if requested limit is higher"
     );
     let result = Contracts::query_instance_raw_storage(
-        &mut ctx,
+        &ctx,
         types::InstanceRawStorageQuery {
             id: instance_id,
             store_kind: StoreKind::Public,
@@ -612,7 +603,7 @@ fn test_hello_contract_call() {
         "raw storage should contain 10 elements"
     );
     let result = Contracts::query_instance_raw_storage(
-        &mut ctx,
+        &ctx,
         types::InstanceRawStorageQuery {
             id: instance_id,
             store_kind: StoreKind::Public,
@@ -658,17 +649,22 @@ fn test_hello_contract_call() {
             ..Default::default()
         },
     };
-    ctx.with_tx(invalid_tx.clone().into(), |mut tx_ctx, call| {
-        Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = invalid_tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(invalid_tx.clone().into()), || {
+        Contracts::tx_call(&ctx, cbor::from_value(call.body).unwrap())
             .expect_err("invalid call should fail");
     });
 
-    ctx.with_child(context::Mode::CheckTx, |mut check_ctx| {
-        check_ctx.with_tx(invalid_tx.into(), |mut tx_ctx, call| {
-            Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = invalid_tx.call.clone();
+    CurrentState::with_transaction_opts(
+        Options::new()
+            .with_mode(state::Mode::Check)
+            .with_tx(invalid_tx.clone().into()),
+        || {
+            Contracts::tx_call(&ctx, cbor::from_value(call.body).unwrap())
                 .expect("invalid call should succeed check-tx");
-        });
-    })
+        },
+    );
 }
 
 struct CoreConfig;
@@ -724,11 +720,11 @@ fn test_hello_contract_subcalls_overflow() {
     use cbor::cbor_map;
 
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<ContractRuntime>(true);
 
-    ContractRuntime::migrate(&mut ctx);
+    ContractRuntime::migrate(&ctx);
 
-    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
+    let instance_id = deploy_hello_contract(&ctx, vec![]);
 
     // And finally call a method.
     let tx = transaction::Transaction {
@@ -760,8 +756,9 @@ fn test_hello_contract_subcalls_overflow() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result = Contracts::tx_call(&ctx, cbor::from_value(call.body).unwrap())
             .expect_err("call should fail");
 
         assert_eq!(result.module_name(), "contracts.0");
@@ -778,11 +775,11 @@ fn test_hello_contract_subcalls() {
     use cbor::cbor_map;
 
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<ContractRuntime>(true);
 
-    ContractRuntime::migrate(&mut ctx);
+    ContractRuntime::migrate(&ctx);
 
-    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
+    let instance_id = deploy_hello_contract(&ctx, vec![]);
 
     // And finally call a method.
     let tx = transaction::Transaction {
@@ -814,8 +811,9 @@ fn test_hello_contract_subcalls() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, call| {
-        let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+        let result = Contracts::tx_call(&ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
         let result: cbor::Value =
@@ -831,13 +829,12 @@ fn test_hello_contract_subcalls() {
     });
 
     // Gas estimation should work.
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::CheckTx, true);
     let args = core::types::EstimateGasQuery {
         caller: None,
         tx,
         propagate_failures: true,
     };
-    <ContractRuntime as Runtime>::Core::query_estimate_gas(&mut ctx, args)
+    <ContractRuntime as Runtime>::Core::query_estimate_gas(&ctx, args)
         .expect("query_estimate_gas should succeed");
 }
 
@@ -850,11 +847,11 @@ fn test_hello_contract_query() {
     mock.runtime_header.timestamp = 1629117379;
     mock.epoch = 42;
 
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<ContractRuntime>(true);
 
-    ContractRuntime::migrate(&mut ctx);
+    ContractRuntime::migrate(&ctx);
 
-    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
+    let instance_id = deploy_hello_contract(&ctx, vec![]);
 
     // Call the query_block_info method.
     let tx = transaction::Transaction {
@@ -882,8 +879,9 @@ fn test_hello_contract_query() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result = Contracts::tx_call(&ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
         let result: cbor::Value =
@@ -924,8 +922,9 @@ fn test_hello_contract_query() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result = Contracts::tx_call(&ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
         let result: cbor::Value =
@@ -966,8 +965,9 @@ fn test_hello_contract_query() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Contracts::tx_call(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result = Contracts::tx_call(&ctx, cbor::from_value(call.body).unwrap())
             .expect("call should succeed");
 
         let result: cbor::Value =
@@ -986,12 +986,12 @@ fn test_hello_contract_query() {
 #[test]
 fn test_hello_contract_upgrade() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<ContractRuntime>(true);
 
-    ContractRuntime::migrate(&mut ctx);
+    ContractRuntime::migrate(&ctx);
 
-    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
-    let code_2 = upload_hello_contract(&mut ctx);
+    let instance_id = deploy_hello_contract(&ctx, vec![]);
+    let code_2 = upload_hello_contract(&ctx);
 
     // Call the upgrade method.
     let tx = transaction::Transaction {
@@ -1020,23 +1020,22 @@ fn test_hello_contract_upgrade() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        Contracts::tx_upgrade(&ctx, cbor::from_value(call.body).unwrap())
             .expect("upgrade should succeed");
-
-        tx_ctx.commit();
     });
 }
 
 #[test]
 fn test_hello_contract_upgrade_fail_policy() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<ContractRuntime>(true);
 
-    ContractRuntime::migrate(&mut ctx);
+    ContractRuntime::migrate(&ctx);
 
-    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
-    let code_2 = upload_hello_contract(&mut ctx);
+    let instance_id = deploy_hello_contract(&ctx, vec![]);
+    let code_2 = upload_hello_contract(&ctx);
 
     // Make Bob call the upgrade method which should fail as he is not authorized.
     let tx = transaction::Transaction {
@@ -1065,8 +1064,9 @@ fn test_hello_contract_upgrade_fail_policy() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result = Contracts::tx_upgrade(&ctx, cbor::from_value(call.body).unwrap())
             .expect_err("upgrade should fail");
 
         assert_eq!(result.module_name(), "contracts");
@@ -1078,12 +1078,12 @@ fn test_hello_contract_upgrade_fail_policy() {
 #[test]
 fn test_hello_contract_upgrade_fail_pre() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<ContractRuntime>(true);
 
-    ContractRuntime::migrate(&mut ctx);
+    ContractRuntime::migrate(&ctx);
 
-    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
-    let code_2 = upload_hello_contract(&mut ctx);
+    let instance_id = deploy_hello_contract(&ctx, vec![]);
+    let code_2 = upload_hello_contract(&ctx);
 
     // Call the upgrade handler with a request that should cause a failure in pre-upgrade.
     let tx = transaction::Transaction {
@@ -1112,8 +1112,9 @@ fn test_hello_contract_upgrade_fail_pre() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result = Contracts::tx_upgrade(&ctx, cbor::from_value(call.body).unwrap())
             .expect_err("upgrade should fail");
 
         assert_eq!(result.module_name(), "contracts.0");
@@ -1128,12 +1129,12 @@ fn test_hello_contract_upgrade_fail_pre() {
 #[test]
 fn test_hello_contract_upgrade_fail_post() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<ContractRuntime>(true);
 
-    ContractRuntime::migrate(&mut ctx);
+    ContractRuntime::migrate(&ctx);
 
-    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
-    let code_2 = upload_hello_contract(&mut ctx);
+    let instance_id = deploy_hello_contract(&ctx, vec![]);
+    let code_2 = upload_hello_contract(&ctx);
 
     // Call the upgrade handler with a request that should cause a failure in post-upgrade.
     let tx = transaction::Transaction {
@@ -1162,8 +1163,9 @@ fn test_hello_contract_upgrade_fail_post() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Contracts::tx_upgrade(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result = Contracts::tx_upgrade(&ctx, cbor::from_value(call.body).unwrap())
             .expect_err("upgrade should fail");
 
         assert_eq!(result.module_name(), "contracts.1"); // Note the new code id.
@@ -1178,11 +1180,11 @@ fn test_hello_contract_upgrade_fail_post() {
 #[test]
 fn test_hello_contract_change_upgrade_policy() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<ContractRuntime>(true);
 
-    ContractRuntime::migrate(&mut ctx);
+    ContractRuntime::migrate(&ctx);
 
-    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
+    let instance_id = deploy_hello_contract(&ctx, vec![]);
 
     // Call the upgrade method.
     let tx = transaction::Transaction {
@@ -1209,22 +1211,21 @@ fn test_hello_contract_change_upgrade_policy() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        Contracts::tx_change_upgrade_policy(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        Contracts::tx_change_upgrade_policy(&ctx, cbor::from_value(call.body).unwrap())
             .expect("upgrade should succeed");
-
-        tx_ctx.commit();
     });
 }
 
 #[test]
 fn test_hello_contract_change_upgrade_policy_fail() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<ContractRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<ContractRuntime>(true);
 
-    ContractRuntime::migrate(&mut ctx);
+    ContractRuntime::migrate(&ctx);
 
-    let instance_id = deploy_hello_contract(&mut ctx, vec![]);
+    let instance_id = deploy_hello_contract(&ctx, vec![]);
 
     // Make Bob call the change upgrade policy method which should fail as he is not authorized.
     let tx = transaction::Transaction {
@@ -1251,9 +1252,10 @@ fn test_hello_contract_change_upgrade_policy_fail() {
             ..Default::default()
         },
     };
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
         let result =
-            Contracts::tx_change_upgrade_policy(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+            Contracts::tx_change_upgrade_policy(&ctx, cbor::from_value(call.body).unwrap())
                 .expect_err("change upgrade policy should fail");
 
         assert_eq!(result.module_name(), "contracts");

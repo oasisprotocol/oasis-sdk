@@ -16,16 +16,15 @@ pub mod modules;
 pub mod runtime;
 pub mod schedule_control;
 pub mod sender;
+pub mod state;
 pub mod storage;
 pub mod subcall;
 pub mod testing;
 pub mod types;
 
 pub use crate::{
-    context::{BatchContext, Context, TxContext},
-    core::common::version::Version,
-    module::Module,
-    runtime::Runtime,
+    context::Context, core::common::version::Version, module::Module, runtime::Runtime,
+    state::CurrentState,
 };
 
 // Re-export the appropriate version of the oasis-core-runtime library.

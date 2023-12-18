@@ -11,7 +11,7 @@ use thiserror::Error;
 
 use crate::{
     callformat,
-    context::{BatchContext, Context, TransactionWithMeta, TxContext},
+    context::Context,
     core::consensus::beacon::EpochTime,
     dispatcher,
     error::Error as SDKError,
@@ -21,7 +21,8 @@ use crate::{
         ModuleInfoHandler as _,
     },
     sender::SenderMeta,
-    storage::{self, current::TransactionResult, CurrentStore},
+    state::{CurrentState, Mode, Options, TransactionWithMeta},
+    storage::{self},
     types::{
         token::{self, Denomination},
         transaction::{
@@ -302,49 +303,49 @@ pub trait API {
     /// Attempt to use gas. If the gas specified would cause either total used to exceed
     /// its limit, fails with Error::OutOfGas or Error::BatchOutOfGas, and neither gas usage is
     /// increased.
-    fn use_batch_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error>;
+    fn use_batch_gas(gas: u64) -> Result<(), Error>;
 
     /// Attempt to use gas. If the gas specified would cause either total used to exceed
     /// its limit, fails with Error::OutOfGas or Error::BatchOutOfGas, and neither gas usage is
     /// increased.
-    fn use_tx_gas<C: TxContext>(ctx: &mut C, gas: u64) -> Result<(), Error>;
+    fn use_tx_gas(gas: u64) -> Result<(), Error>;
 
     /// Returns the remaining batch-wide gas.
-    fn remaining_batch_gas<C: Context>(ctx: &mut C) -> u64;
+    fn remaining_batch_gas() -> u64;
 
     /// Returns the total batch-wide gas used.
-    fn used_batch_gas<C: Context>(ctx: &mut C) -> u64;
+    fn used_batch_gas() -> u64;
 
     /// Return the remaining tx-wide gas.
-    fn remaining_tx_gas<C: TxContext>(ctx: &mut C) -> u64;
+    fn remaining_tx_gas() -> u64;
 
     /// Return the used tx-wide gas.
-    fn used_tx_gas<C: TxContext>(ctx: &mut C) -> u64;
+    fn used_tx_gas() -> u64;
 
     /// Configured maximum amount of gas that can be used in a batch.
-    fn max_batch_gas<C: Context>(ctx: &mut C) -> u64;
+    fn max_batch_gas() -> u64;
 
     /// Configured minimum gas price.
     fn min_gas_price<C: Context>(ctx: &C, denom: &token::Denomination) -> Option<u128>;
 
     /// Sets the transaction priority to the provided amount.
-    fn set_priority<C: Context>(ctx: &mut C, priority: u64);
+    fn set_priority(priority: u64);
 
     /// Takes and returns the stored transaction priority.
-    fn take_priority<C: Context>(ctx: &mut C) -> u64;
+    fn take_priority() -> u64;
 
     /// Set transaction sender metadata.
-    fn set_sender_meta<C: Context>(ctx: &mut C, meta: SenderMeta);
+    fn set_sender_meta(meta: SenderMeta);
 
     /// Takes and returns the stored transaction sender metadata.
-    fn take_sender_meta<C: Context>(ctx: &mut C) -> SenderMeta;
+    fn take_sender_meta() -> SenderMeta;
 
     /// Returns the configured max iterations in the binary search for the estimate
     /// gas.
     fn estimate_gas_search_max_iters<C: Context>(ctx: &C) -> u64;
 
     /// Check whether the epoch has changed since last processed block.
-    fn has_epoch_changed<C: Context>(ctx: &mut C) -> bool;
+    fn has_epoch_changed() -> bool;
 }
 
 /// Genesis state for the accounts module.
@@ -432,13 +433,13 @@ const CONTEXT_KEY_EPOCH_CHANGED: &str = "core.EpochChanged";
 impl<Cfg: Config> API for Module<Cfg> {
     type Config = Cfg;
 
-    fn use_batch_gas<C: Context>(ctx: &mut C, gas: u64) -> Result<(), Error> {
-        // Do not enforce batch limits for check-tx.
-        if ctx.is_check_only() {
+    fn use_batch_gas(gas: u64) -> Result<(), Error> {
+        // Do not enforce batch limits for checks.
+        if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(());
         }
         let batch_gas_limit = Self::params().max_batch_gas;
-        let batch_gas_used = Self::used_batch_gas(ctx);
+        let batch_gas_used = Self::used_batch_gas();
         // NOTE: Going over the batch limit should trigger an abort as the scheduler should never
         //       allow scheduling past the batch limit but a malicious proposer might include too
         //       many transactions. Make sure to vote for failure in this case.
@@ -449,15 +450,22 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Err(Error::Abort(dispatcher::Error::BatchOutOfGas));
         }
 
-        ctx.value::<u64>(CONTEXT_KEY_GAS_USED)
-            .set(batch_new_gas_used);
+        CurrentState::with(|state| {
+            state
+                .block_value::<u64>(CONTEXT_KEY_GAS_USED)
+                .set(batch_new_gas_used);
+        });
 
         Ok(())
     }
 
-    fn use_tx_gas<C: TxContext>(ctx: &mut C, gas: u64) -> Result<(), Error> {
-        let gas_limit = ctx.tx_auth_info().fee.gas;
-        let gas_used = ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
+    fn use_tx_gas(gas: u64) -> Result<(), Error> {
+        let (gas_limit, gas_used) = CurrentState::with(|state| {
+            (
+                state.env().tx_auth_info().fee.gas,
+                *state.local_value::<u64>(CONTEXT_KEY_GAS_USED).or_default(),
+            )
+        });
         let new_gas_used = {
             let sum = gas_used.checked_add(gas).ok_or(Error::GasOverflow)?;
             if sum > gas_limit {
@@ -466,39 +474,48 @@ impl<Cfg: Config> API for Module<Cfg> {
             sum
         };
 
-        Self::use_batch_gas(ctx, gas)?;
+        Self::use_batch_gas(gas)?;
 
-        *ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default() = new_gas_used;
+        CurrentState::with(|state| {
+            *state.local_value::<u64>(CONTEXT_KEY_GAS_USED).or_default() = new_gas_used;
+        });
 
         Ok(())
     }
 
-    fn remaining_batch_gas<C: Context>(ctx: &mut C) -> u64 {
+    fn remaining_batch_gas() -> u64 {
         let batch_gas_limit = Self::params().max_batch_gas;
-        batch_gas_limit.saturating_sub(Self::used_batch_gas(ctx))
+        batch_gas_limit.saturating_sub(Self::used_batch_gas())
     }
 
-    fn used_batch_gas<C: Context>(ctx: &mut C) -> u64 {
-        ctx.value::<u64>(CONTEXT_KEY_GAS_USED)
-            .get()
-            .cloned()
-            .unwrap_or_default()
+    fn used_batch_gas() -> u64 {
+        CurrentState::with(|state| {
+            state
+                .block_value::<u64>(CONTEXT_KEY_GAS_USED)
+                .get()
+                .cloned()
+                .unwrap_or_default()
+        })
     }
 
-    fn remaining_tx_gas<C: TxContext>(ctx: &mut C) -> u64 {
-        let gas_limit = ctx.tx_auth_info().fee.gas;
-        let gas_used = ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
-        let remaining_tx = gas_limit.saturating_sub(*gas_used);
+    fn remaining_tx_gas() -> u64 {
+        let (gas_limit, gas_used) = CurrentState::with(|state| {
+            (
+                state.env().tx_auth_info().fee.gas,
+                *state.local_value::<u64>(CONTEXT_KEY_GAS_USED).or_default(),
+            )
+        });
+        let remaining_tx = gas_limit.saturating_sub(gas_used);
         // Also check remaining batch gas limit and return the minimum of the two.
-        let remaining_batch = Self::remaining_batch_gas(ctx);
+        let remaining_batch = Self::remaining_batch_gas();
         std::cmp::min(remaining_tx, remaining_batch)
     }
 
-    fn used_tx_gas<C: TxContext>(ctx: &mut C) -> u64 {
-        *ctx.tx_value::<u64>(CONTEXT_KEY_GAS_USED).or_default()
+    fn used_tx_gas() -> u64 {
+        CurrentState::with(|state| *state.local_value::<u64>(CONTEXT_KEY_GAS_USED).or_default())
     }
 
-    fn max_batch_gas<C: Context>(_ctx: &mut C) -> u64 {
+    fn max_batch_gas() -> u64 {
         Self::params().max_batch_gas
     }
 
@@ -506,24 +523,36 @@ impl<Cfg: Config> API for Module<Cfg> {
         Self::min_gas_prices(ctx).get(denom).copied()
     }
 
-    fn set_priority<C: Context>(ctx: &mut C, priority: u64) {
-        ctx.value::<u64>(CONTEXT_KEY_PRIORITY).set(priority);
+    fn set_priority(priority: u64) {
+        CurrentState::with(|state| {
+            state.block_value::<u64>(CONTEXT_KEY_PRIORITY).set(priority);
+        })
     }
 
-    fn take_priority<C: Context>(ctx: &mut C) -> u64 {
-        ctx.value::<u64>(CONTEXT_KEY_PRIORITY)
-            .take()
-            .unwrap_or_default()
+    fn take_priority() -> u64 {
+        CurrentState::with(|state| {
+            state
+                .block_value::<u64>(CONTEXT_KEY_PRIORITY)
+                .take()
+                .unwrap_or_default()
+        })
     }
 
-    fn set_sender_meta<C: Context>(ctx: &mut C, meta: SenderMeta) {
-        ctx.value::<SenderMeta>(CONTEXT_KEY_SENDER_META).set(meta);
+    fn set_sender_meta(meta: SenderMeta) {
+        CurrentState::with(|state| {
+            state
+                .block_value::<SenderMeta>(CONTEXT_KEY_SENDER_META)
+                .set(meta);
+        });
     }
 
-    fn take_sender_meta<C: Context>(ctx: &mut C) -> SenderMeta {
-        ctx.value::<SenderMeta>(CONTEXT_KEY_SENDER_META)
-            .take()
-            .unwrap_or_default()
+    fn take_sender_meta() -> SenderMeta {
+        CurrentState::with(|state| {
+            state
+                .block_value::<SenderMeta>(CONTEXT_KEY_SENDER_META)
+                .take()
+                .unwrap_or_default()
+        })
     }
 
     fn estimate_gas_search_max_iters<C: Context>(ctx: &C) -> u64 {
@@ -533,8 +562,13 @@ impl<Cfg: Config> API for Module<Cfg> {
             .unwrap_or(Cfg::DEFAULT_LOCAL_ESTIMATE_GAS_SEARCH_MAX_ITERS)
     }
 
-    fn has_epoch_changed<C: Context>(ctx: &mut C) -> bool {
-        *ctx.value(CONTEXT_KEY_EPOCH_CHANGED).get().unwrap_or(&false)
+    fn has_epoch_changed() -> bool {
+        CurrentState::with(|state| {
+            *state
+                .block_value(CONTEXT_KEY_EPOCH_CHANGED)
+                .get()
+                .unwrap_or(&false)
+        })
     }
 }
 
@@ -558,7 +592,7 @@ impl<Cfg: Config> Module<Cfg> {
     /// succeed.
     #[handler(query = "core.EstimateGas", allow_private_km)]
     pub fn query_estimate_gas<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         mut args: types::EstimateGasQuery,
     ) -> Result<u64, Error> {
         let mut extra_gas = 0;
@@ -590,7 +624,7 @@ impl<Cfg: Config> Module<Cfg> {
         };
         args.tx.auth_info.fee.amount =
             token::BaseUnits::new(u64::MAX.into(), token::Denomination::NATIVE);
-        args.tx.auth_info.fee.consensus_messages = ctx.remaining_messages();
+        args.tx.auth_info.fee.consensus_messages = ctx.max_messages();
         // Estimate transaction size. Since the transaction given to us is not signed, we need to
         // estimate how large each of the auth proofs would be.
         let auth_proofs: Result<_, Error> = args
@@ -652,45 +686,41 @@ impl<Cfg: Config> Module<Cfg> {
             .unwrap_or(&0);
 
         // Simulates transaction with a specific gas limit.
-        let mut simulate = |tx: &transaction::Transaction, gas: u64, report_failure: bool| {
+        let simulate = |tx: &transaction::Transaction, gas: u64, report_failure: bool| {
             let mut tx = tx.clone();
             tx.auth_info.fee.gas = gas;
+            let call = tx.call.clone(); // TODO: Avoid clone.
 
-            CurrentStore::with_transaction(|| {
-                let result = ctx.with_simulation(|mut sim_ctx| {
-                    sim_ctx.with_tx(
-                        TransactionWithMeta {
-                            tx,
-                            tx_size,
-                            tx_index: 0,
-                            tx_hash: Default::default(),
-                        },
-                        |mut tx_ctx, call| {
-                            let (result, _) =
-                                dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
-                                    &mut tx_ctx,
-                                    call,
-                                    &Default::default(),
-                                );
-                            if !result.is_success() && report_failure {
-                                // Report failure.
-                                let err: TxSimulationFailure = result.try_into().unwrap(); // Guaranteed to be a Failed CallResult.
-                                return Err(Error::TxSimulationFailed(err));
-                            }
-                            // Don't report success or failure. If the call fails, we still report
-                            // how much gas it uses while it fails.
-                            let gas_used = *tx_ctx.value::<u64>(CONTEXT_KEY_GAS_USED).or_default();
-                            if result.is_success() {
-                                Ok(gas_used)
-                            } else {
-                                Ok(gas_used.saturating_add(extra_gas_fail).clamp(0, gas))
-                            }
-                        },
-                    )
-                });
-
-                TransactionResult::Rollback(result) // Always rollback storage changes.
-            })
+            CurrentState::with_transaction_opts(
+                Options::new()
+                    .with_mode(Mode::Simulate)
+                    .with_tx(TransactionWithMeta {
+                        data: tx,
+                        size: tx_size,
+                        index: 0,
+                        hash: Default::default(),
+                    }),
+                || {
+                    let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
+                        ctx,
+                        call,
+                        &Default::default(),
+                    );
+                    if !result.is_success() && report_failure {
+                        // Report failure.
+                        let err: TxSimulationFailure = result.try_into().unwrap(); // Guaranteed to be a Failed CallResult.
+                        return Err(Error::TxSimulationFailed(err));
+                    }
+                    // Don't report success or failure. If the call fails, we still report
+                    // how much gas it uses while it fails.
+                    let gas_used = Self::used_batch_gas();
+                    if result.is_success() {
+                        Ok(gas_used)
+                    } else {
+                        Ok(gas_used.saturating_add(extra_gas_fail).clamp(0, gas))
+                    }
+                },
+            )
         };
 
         // Do a binary search for exact gas limit.
@@ -798,14 +828,14 @@ impl<Cfg: Config> Module<Cfg> {
 
     /// Check invariants of all modules in the runtime.
     #[handler(query = "core.CheckInvariants", expensive)]
-    fn query_check_invariants<C: Context>(ctx: &mut C, _args: ()) -> Result<(), Error> {
+    fn query_check_invariants<C: Context>(ctx: &C, _args: ()) -> Result<(), Error> {
         <C::Runtime as Runtime>::Modules::check_invariants(ctx)
     }
 
     /// Retrieve the public key for encrypting call data.
     #[handler(query = "core.CallDataPublicKey")]
     fn query_calldata_public_key<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         _args: (),
     ) -> Result<types::CallDataPublicKeyQueryResponse, Error> {
         let key_manager = ctx
@@ -827,7 +857,7 @@ impl<Cfg: Config> Module<Cfg> {
     /// Query the minimum gas price.
     #[handler(query = "core.MinGasPrice")]
     fn query_min_gas_price<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         _args: (),
     ) -> Result<BTreeMap<token::Denomination, u128>, Error> {
         let mut mgp = Self::min_gas_prices(ctx);
@@ -845,10 +875,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     /// Return basic information about the module and the containing runtime.
     #[handler(query = "core.RuntimeInfo")]
-    fn query_runtime_info<C: Context>(
-        ctx: &mut C,
-        _args: (),
-    ) -> Result<RuntimeInfoResponse, Error> {
+    fn query_runtime_info<C: Context>(ctx: &C, _args: ()) -> Result<RuntimeInfoResponse, Error> {
         Ok(RuntimeInfoResponse {
             runtime_version: <C::Runtime as Runtime>::VERSION,
             state_version: <C::Runtime as Runtime>::STATE_VERSION,
@@ -863,14 +890,14 @@ impl<Cfg: Config> Module<Cfg> {
     /// This query is allowed access to private key manager state.
     #[handler(query = "core.ExecuteReadOnlyTx", expensive, allow_private_km)]
     fn query_execute_read_only_tx<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         args: types::ExecuteReadOnlyTxQuery,
     ) -> Result<types::ExecuteReadOnlyTxResponse, Error> {
         if !Cfg::ALLOW_INTERACTIVE_READ_ONLY_TRANSACTIONS {
             return Err(Error::Forbidden);
         }
 
-        ctx.with_simulation(|mut sim_ctx| {
+        CurrentState::with_transaction_opts(Options::new().with_mode(Mode::Simulate), || {
             // TODO: Use separate batch gas limit for query execution.
 
             // Decode transaction and verify signature.
@@ -879,7 +906,7 @@ impl<Cfg: Config> Module<Cfg> {
                 .len()
                 .try_into()
                 .map_err(|_| Error::OversizedTransaction)?;
-            let tx = dispatcher::Dispatcher::<C::Runtime>::decode_tx(&mut sim_ctx, &args.tx)?;
+            let tx = dispatcher::Dispatcher::<C::Runtime>::decode_tx(ctx, &args.tx)?;
 
             // Only read-only transactions are allowed in interactive queries.
             if !tx.call.read_only {
@@ -896,7 +923,7 @@ impl<Cfg: Config> Module<Cfg> {
 
             // Execute transaction.
             let (result, _) = dispatcher::Dispatcher::<C::Runtime>::execute_tx_opts(
-                &mut sim_ctx,
+                ctx,
                 tx,
                 &dispatcher::DispatchOptions {
                     tx_size,
@@ -920,7 +947,7 @@ impl<Cfg: Config> Module<Cfg> {
     fn min_gas_prices<C: Context>(_ctx: &C) -> BTreeMap<Denomination, u128> {
         let params = Self::params();
         if params.dynamic_min_gas_price.enabled {
-            CurrentStore::with(|store| {
+            CurrentState::with_store(|store| {
                 let store =
                     storage::TypedStore::new(storage::PrefixStore::new(store, &MODULE_NAME));
                 store
@@ -949,14 +976,14 @@ impl<Cfg: Config> Module<Cfg> {
             .unwrap_or_default()
     }
 
-    fn enforce_min_gas_price<C: TxContext>(ctx: &C, call: &Call) -> Result<(), Error> {
+    fn enforce_min_gas_price<C: Context>(ctx: &C, call: &Call) -> Result<(), Error> {
         // If the method is exempt from min gas price requirements, checks always pass.
         #[allow(clippy::borrow_interior_mutable_const)]
         if Cfg::MIN_GAS_PRICE_EXEMPT_METHODS.contains(call.method.as_str()) {
             return Ok(());
         }
 
-        let fee = ctx.tx_auth_info().fee.clone();
+        let fee = CurrentState::with_env(|env| env.tx_auth_info().fee.clone());
         let denom = fee.amount.denomination();
 
         match Self::min_gas_price(ctx, denom) {
@@ -965,7 +992,7 @@ impl<Cfg: Config> Module<Cfg> {
 
             // Otherwise, allow overrides during local checks.
             Some(min_gas_price) => {
-                if ctx.is_check_only() {
+                if CurrentState::with_env(|env| env.is_check_only()) {
                     let local_mgp = Self::get_local_min_gas_price(ctx, denom);
 
                     // Reject during local checks.
@@ -985,7 +1012,7 @@ impl<Cfg: Config> Module<Cfg> {
 }
 
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
-    fn approve_raw_tx<C: Context>(_ctx: &mut C, tx: &[u8]) -> Result<(), Error> {
+    fn approve_raw_tx<C: Context>(_ctx: &C, tx: &[u8]) -> Result<(), Error> {
         let params = Self::params();
         if tx.len() > params.max_tx_size.try_into().unwrap() {
             return Err(Error::OversizedTransaction);
@@ -994,7 +1021,7 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
     }
 
     fn approve_unverified_tx<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         utx: &UnverifiedTransaction,
     ) -> Result<(), Error> {
         let params = Self::params();
@@ -1011,20 +1038,19 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
         Ok(())
     }
 
-    fn before_handle_call<C: TxContext>(ctx: &mut C, call: &Call) -> Result<(), Error> {
+    fn before_handle_call<C: Context>(ctx: &C, call: &Call) -> Result<(), Error> {
         // Ensure that specified gas limit is not greater than batch gas limit.
         let params = Self::params();
-        let gas = ctx.tx_auth_info().fee.gas;
-        if gas > params.max_batch_gas {
+        let fee = CurrentState::with_env(|env| env.tx_auth_info().fee.clone());
+        if fee.gas > params.max_batch_gas {
             return Err(Error::GasOverflow);
         }
-
-        // Attempt to limit the maximum number of consensus messages.
-        let consensus_messages = ctx.tx_auth_info().fee.consensus_messages;
-        ctx.limit_max_messages(consensus_messages)?;
+        if fee.consensus_messages > ctx.max_messages() {
+            return Err(Error::OutOfMessageSlots);
+        }
 
         // Skip additional checks/gas payment for internally generated transactions.
-        if ctx.is_internal() {
+        if CurrentState::with_env(|env| env.is_internal()) {
             return Ok(());
         }
 
@@ -1032,60 +1058,62 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
         Self::enforce_min_gas_price(ctx, call)?;
 
         // Charge gas for transaction size.
+        let tx_size = CurrentState::with_env(|env| env.tx_size());
         Self::use_tx_gas(
-            ctx,
             params
                 .gas_costs
                 .tx_byte
-                .checked_mul(ctx.tx_size().into())
+                .checked_mul(tx_size.into())
                 .ok_or(Error::GasOverflow)?,
         )?;
 
         // Charge gas for signature verification.
-        let mut num_signature: u64 = 0;
-        let mut num_multisig_signer: u64 = 0;
-        for si in &ctx.tx_auth_info().signer_info {
-            match &si.address_spec {
-                AddressSpec::Signature(_) => {
-                    num_signature = num_signature.checked_add(1).ok_or(Error::GasOverflow)?;
+        let total = CurrentState::with_env(|env| {
+            let mut num_signature: u64 = 0;
+            let mut num_multisig_signer: u64 = 0;
+            for si in &env.tx_auth_info().signer_info {
+                match &si.address_spec {
+                    AddressSpec::Signature(_) => {
+                        num_signature = num_signature.checked_add(1)?;
+                    }
+                    AddressSpec::Multisig(config) => {
+                        num_multisig_signer =
+                            num_multisig_signer.checked_add(config.signers.len() as u64)?;
+                    }
+                    AddressSpec::Internal(_) => {}
                 }
-                AddressSpec::Multisig(config) => {
-                    num_multisig_signer = num_multisig_signer
-                        .checked_add(config.signers.len() as u64)
-                        .ok_or(Error::GasOverflow)?;
-                }
-                AddressSpec::Internal(_) => {}
             }
-        }
-        let total = (|| {
+
             let signature_cost = num_signature.checked_mul(params.gas_costs.auth_signature)?;
             let multisig_signer_cost =
                 num_multisig_signer.checked_mul(params.gas_costs.auth_multisig_signer)?;
             let sum = signature_cost.checked_add(multisig_signer_cost)?;
             Some(sum)
-        })()
+        })
         .ok_or(Error::GasOverflow)?;
-        Self::use_tx_gas(ctx, total)?;
+        Self::use_tx_gas(total)?;
 
         // Charge gas for callformat.
         match call.format {
             CallFormat::Plain => {} // No additional gas required.
             CallFormat::EncryptedX25519DeoxysII => {
-                Self::use_tx_gas(ctx, params.gas_costs.callformat_x25519_deoxysii)?
+                Self::use_tx_gas(params.gas_costs.callformat_x25519_deoxysii)?
             }
         }
 
         Ok(())
     }
 
-    fn after_handle_call<C: TxContext>(
-        ctx: &mut C,
+    fn after_handle_call<C: Context>(
+        _ctx: &C,
         result: module::CallResult,
     ) -> Result<module::CallResult, Error> {
         // Emit gas used event (if this is not an internally generated call).
-        if Cfg::EMIT_GAS_USED_EVENTS && !ctx.is_internal() {
-            let used_gas = Self::used_tx_gas(ctx);
-            ctx.emit_unconditional_event(Event::GasUsed { amount: used_gas });
+        if Cfg::EMIT_GAS_USED_EVENTS && !CurrentState::with_env(|env| env.is_internal()) {
+            let used_gas = Self::used_tx_gas();
+            CurrentState::with(|state| {
+                state.emit_unconditional_event(Event::GasUsed { amount: used_gas });
+            });
         }
 
         Ok(result)
@@ -1127,12 +1155,12 @@ fn min_gas_price_update(
 }
 
 impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
-    fn begin_block<C: Context>(ctx: &mut C) {
-        CurrentStore::with(|store| {
+    fn begin_block<C: Context>(ctx: &C) {
+        CurrentState::with(|state| {
             let epoch = ctx.epoch();
 
             // Load previous epoch.
-            let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let mut store = storage::PrefixStore::new(state.store(), &MODULE_NAME);
             let mut tstore = storage::TypedStore::new(&mut store);
             let previous_epoch: EpochTime = tstore.get(state::LAST_EPOCH).unwrap_or_default();
             if epoch != previous_epoch {
@@ -1140,12 +1168,13 @@ impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
             }
 
             // Set the epoch changed key as needed.
-            ctx.value(CONTEXT_KEY_EPOCH_CHANGED)
+            state
+                .block_value(CONTEXT_KEY_EPOCH_CHANGED)
                 .set(epoch != previous_epoch);
         });
     }
 
-    fn end_block<C: Context>(ctx: &mut C) {
+    fn end_block<C: Context>(ctx: &C) {
         let params = Self::params();
         if !params.dynamic_min_gas_price.enabled {
             return;
@@ -1155,8 +1184,8 @@ impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
         //
         // Adjust the min gas price for each block based on the gas used in the previous block and the desired target
         // gas usage set by `target_block_gas_usage_percentage`.
-        let gas_used = Self::used_batch_gas(ctx) as u128;
-        let max_batch_gas = Self::max_batch_gas(ctx) as u128;
+        let gas_used = Self::used_batch_gas() as u128;
+        let max_batch_gas = Self::max_batch_gas() as u128;
         let target_gas_used = max_batch_gas.saturating_mul(
             params
                 .dynamic_min_gas_price
@@ -1185,7 +1214,7 @@ impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
         });
 
         // Update min prices.
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut tstore = storage::TypedStore::new(&mut store);
             tstore.insert(state::DYNAMIC_MIN_GAS_PRICE, mgp);

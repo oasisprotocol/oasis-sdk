@@ -20,7 +20,8 @@ use crate::{
         TransactionHandler,
     },
     modules,
-    storage::{self, CurrentStore},
+    state::CurrentState,
+    storage::{self},
 };
 
 /// A runtime.
@@ -64,7 +65,7 @@ pub trait Runtime {
 
     /// Perform runtime-specific state migration. This method is only called when the recorded
     /// state version does not match `STATE_VERSION`.
-    fn migrate_state<C: Context>(_ctx: &mut C) {
+    fn migrate_state<C: Context>(_ctx: &C) {
         // Default implementation doesn't perform any migration.
     }
 
@@ -90,8 +91,8 @@ pub trait Runtime {
     }
 
     /// Perform state migrations if required.
-    fn migrate<C: Context>(ctx: &mut C) {
-        let mut metadata = CurrentStore::with(|store| {
+    fn migrate<C: Context>(ctx: &C) {
+        let mut metadata = CurrentState::with_store(|store| {
             let store = storage::TypedStore::new(storage::PrefixStore::new(
                 store,
                 &modules::core::MODULE_NAME,
@@ -113,7 +114,9 @@ pub trait Runtime {
             .get(modules::core::types::VERSION_GLOBAL_KEY)
             .copied()
             .unwrap_or_default();
-        if global_version != Self::STATE_VERSION && !ctx.is_check_only() {
+        if global_version != Self::STATE_VERSION
+            && !CurrentState::with_env(|env| env.is_check_only())
+        {
             assert!(
                 // There should either be no state, or it should be the previous version.
                 global_version == 0 || global_version == Self::STATE_VERSION - 1,
@@ -134,7 +137,7 @@ pub trait Runtime {
 
         // If there are any changes, update metadata.
         if has_changes {
-            CurrentStore::with(|store| {
+            CurrentState::with_store(|store| {
                 let mut store = storage::TypedStore::new(storage::PrefixStore::new(
                     store,
                     &modules::core::MODULE_NAME,

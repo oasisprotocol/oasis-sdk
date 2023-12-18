@@ -120,7 +120,7 @@ mod tests {
                         #[automatically_derived]
                         impl<C: Cfg> sdk::module::MethodHandler for MyModule<C> {
                             fn dispatch_query<C: Context>(
-                                ctx: &mut C,
+                                ctx: &C,
                                 method: &str,
                                 args: cbor::Value,
                             ) -> DispatchResult<cbor::Value, Result<cbor::Value, sdk::error::RuntimeError>>
@@ -135,7 +135,7 @@ mod tests {
                         }
                         #[automatically_derived]
                         impl<C: Cfg> MyModule<C> {
-                            fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                            fn query_parameters<C: Context>(_ctx: &C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
                                 Ok(Self::params())
                             }
                         }
@@ -190,8 +190,8 @@ mod tests {
                                     _ => module::DispatchResult::Unhandled(body),
                                 }
                             }
-                            fn dispatch_call<C: TxContext>(
-                                ctx: &mut C,
+                            fn dispatch_call<C: Context>(
+                                ctx: &C,
                                 method: &str,
                                 body: cbor::Value,
                             ) -> DispatchResult<cbor::Value, CallResult> {
@@ -201,7 +201,7 @@ mod tests {
                                         module::dispatch_call(ctx, body, Self::my_other_call)
                                     }
                                     "my_module.MyInternalCall" => module::dispatch_call(ctx, body, |ctx, body| {
-                                        if !ctx.is_internal() {
+                                        if !sdk::state::CurrentState::with_env(|env| env.is_internal()) {
                                             return Err(sdk::modules::core::Error::Forbidden.into());
                                         }
                                         Self::my_internal_call(ctx, body)
@@ -210,7 +210,7 @@ mod tests {
                                 }
                             }
                             fn dispatch_query<C: Context>(
-                                ctx: &mut C,
+                                ctx: &C,
                                 method: &str,
                                 args: cbor::Value,
                             ) -> DispatchResult<cbor::Value, Result<cbor::Value, sdk::error::RuntimeError>>
@@ -241,7 +241,7 @@ mod tests {
                         }
                         #[automatically_derived]
                         impl<C: Cfg> MyModule<C> {
-                            fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                            fn query_parameters<C: Context>(_ctx: &C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
                                 Ok(Self::params())
                             }
                             #[handler(prefetch = "my_module.MyCall")]
@@ -281,7 +281,7 @@ mod tests {
                         #[automatically_derived]
                         impl<C: Cfg> sdk::module::MethodHandler for MyModule<C> {
                             fn dispatch_query<C: Context>(
-                                ctx: &mut C,
+                                ctx: &C,
                                 method: &str,
                                 args: cbor::Value,
                             ) -> DispatchResult<cbor::Value, Result<cbor::Value, sdk::error::RuntimeError>>
@@ -322,7 +322,7 @@ mod tests {
                         #[automatically_derived]
                         impl<C: Cfg> MyModule<C> {
                             fn query_parameters<C: Context>(
-                                _ctx: &mut C,
+                                _ctx: &C,
                                 _args: (),
                             ) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error>
                             {
@@ -359,7 +359,7 @@ mod tests {
                         #[automatically_derived]
                         impl<C: Cfg> sdk::module::MethodHandler for MyModule<C> {
                             fn dispatch_query<C: Context>(
-                                ctx: &mut C,
+                                ctx: &C,
                                 method: &str,
                                 args: cbor::Value,
                             ) -> DispatchResult<cbor::Value, Result<cbor::Value, sdk::error::RuntimeError>>
@@ -381,7 +381,7 @@ mod tests {
                         }
                         #[automatically_derived]
                         impl<C: Cfg> MyModule<C> {
-                            fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                            fn query_parameters<C: Context>(_ctx: &C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
                                 Ok(Self::params())
                             }
                             #[handler(query = "my_module.MyMC")]
@@ -438,7 +438,7 @@ mod tests {
                         impl<C: Cfg> sdk::module::MigrationHandler for MyModule<C> {
                             type Genesis = Genesis;
                             fn init_or_migrate<C: Context>(
-                                _ctx: &mut C,
+                                _ctx: &C,
                                 meta: &mut sdk::modules::core::types::Metadata,
                                 genesis: Self::Genesis,
                             ) -> bool {
@@ -482,7 +482,7 @@ mod tests {
                         #[automatically_derived]
                         impl<C: Cfg> sdk::module::MethodHandler for MyModule<C> {
                             fn dispatch_query<C: Context>(
-                                ctx: &mut C,
+                                ctx: &C,
                                 method: &str,
                                 args: cbor::Value,
                             ) -> DispatchResult<cbor::Value, Result<cbor::Value, sdk::error::RuntimeError>>
@@ -504,7 +504,7 @@ mod tests {
                         }
                         #[automatically_derived]
                         impl<C: Cfg> MyModule<C> {
-                            fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                            fn query_parameters<C: Context>(_ctx: &C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
                                 Ok(Self::params())
                             }
                             #[handler(query = "my_module.MyMC")]

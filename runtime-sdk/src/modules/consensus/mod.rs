@@ -24,13 +24,14 @@ use oasis_core_runtime::{
 };
 
 use crate::{
-    context::{Context, TxContext},
+    context::Context,
     core::common::crypto::hash::Hash,
     history, migration, module,
     module::{Module as _, Parameters as _},
     modules,
     modules::core::API as _,
     sdk_derive,
+    state::CurrentState,
     types::{
         address::{Address, SignatureAddressSpec},
         message::MessageEventHookInvocation,
@@ -155,42 +156,42 @@ pub enum Error {
 /// Interface that can be called from other modules.
 pub trait API {
     /// Transfer an amount from the runtime account.
-    fn transfer<C: TxContext>(
-        ctx: &mut C,
+    fn transfer<C: Context>(
+        ctx: &C,
         to: Address,
         amount: &token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error>;
 
     /// Withdraw an amount into the runtime account.
-    fn withdraw<C: TxContext>(
-        ctx: &mut C,
+    fn withdraw<C: Context>(
+        ctx: &C,
         from: Address,
         amount: &token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error>;
 
     /// Escrow an amount of the runtime account funds.
-    fn escrow<C: TxContext>(
-        ctx: &mut C,
+    fn escrow<C: Context>(
+        ctx: &C,
         to: Address,
         amount: &token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error>;
 
     /// Reclaim an amount of runtime staked shares.
-    fn reclaim_escrow<C: TxContext>(
-        ctx: &mut C,
+    fn reclaim_escrow<C: Context>(
+        ctx: &C,
         from: Address,
         amount: u128,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error>;
 
     /// Returns consensus token denomination.
-    fn consensus_denomination<C: Context>(ctx: &mut C) -> Result<token::Denomination, Error>;
+    fn consensus_denomination() -> Result<token::Denomination, Error>;
 
     /// Ensures transaction signer is consensus compatible.
-    fn ensure_compatible_tx_signer<C: TxContext>(ctx: &C) -> Result<(), Error>;
+    fn ensure_compatible_tx_signer() -> Result<(), Error>;
 
     /// Query consensus account info.
     fn account<C: Context>(ctx: &C, addr: Address) -> Result<ConsensusAccount, Error>;
@@ -203,10 +204,10 @@ pub trait API {
     ) -> Result<ConsensusDelegation, Error>;
 
     /// Convert runtime amount to consensus amount, scaling as needed.
-    fn amount_from_consensus<C: Context>(ctx: &mut C, amount: u128) -> Result<u128, Error>;
+    fn amount_from_consensus<C: Context>(ctx: &C, amount: u128) -> Result<u128, Error>;
 
     /// Convert consensus amount to runtime amount, scaling as needed.
-    fn amount_to_consensus<C: Context>(ctx: &mut C, amount: u128) -> Result<u128, Error>;
+    fn amount_to_consensus<C: Context>(ctx: &C, amount: u128) -> Result<u128, Error>;
 
     /// Determine consensus height corresponding to the given epoch transition. This query may be
     /// expensive in case the epoch is far back.
@@ -223,11 +224,8 @@ pub trait API {
 pub struct Module;
 
 impl Module {
-    fn ensure_consensus_denomination<C: Context>(
-        ctx: &mut C,
-        denomination: &token::Denomination,
-    ) -> Result<(), Error> {
-        if denomination != &Self::consensus_denomination(ctx)? {
+    fn ensure_consensus_denomination(denomination: &token::Denomination) -> Result<(), Error> {
+        if denomination != &Self::consensus_denomination()? {
             return Err(Error::InvalidDenomination);
         }
 
@@ -257,12 +255,12 @@ impl Module {
     }
 
     #[handler(call = "consensus.RoundRoot", internal)]
-    fn internal_round_root<C: TxContext>(
-        ctx: &mut C,
+    fn internal_round_root<C: Context>(
+        ctx: &C,
         body: types::RoundRootBody,
     ) -> Result<Option<Hash>, Error> {
         let params = Self::params();
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.round_root)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.round_root)?;
 
         Ok(
             Self::round_roots(ctx, body.runtime_id, body.round)?.map(|rr| match body.kind {
@@ -274,108 +272,120 @@ impl Module {
 }
 
 impl API for Module {
-    fn transfer<C: TxContext>(
-        ctx: &mut C,
+    fn transfer<C: Context>(
+        ctx: &C,
         to: Address,
         amount: &token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
-        Self::ensure_consensus_denomination(ctx, amount.denomination())?;
+        Self::ensure_consensus_denomination(amount.denomination())?;
         let amount = Self::amount_to_consensus(ctx, amount.amount())?;
 
-        ctx.emit_message(
-            Message::Staking(Versioned::new(
-                0,
-                StakingMessage::Transfer(staking::Transfer {
-                    to: to.into(),
-                    amount: amount.into(),
-                }),
-            )),
-            hook,
-        )?;
+        CurrentState::with(|state| {
+            state.emit_message(
+                ctx,
+                Message::Staking(Versioned::new(
+                    0,
+                    StakingMessage::Transfer(staking::Transfer {
+                        to: to.into(),
+                        amount: amount.into(),
+                    }),
+                )),
+                hook,
+            )
+        })?;
 
         Ok(())
     }
 
-    fn withdraw<C: TxContext>(
-        ctx: &mut C,
+    fn withdraw<C: Context>(
+        ctx: &C,
         from: Address,
         amount: &token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
-        Self::ensure_consensus_denomination(ctx, amount.denomination())?;
+        Self::ensure_consensus_denomination(amount.denomination())?;
         let amount = Self::amount_to_consensus(ctx, amount.amount())?;
 
-        ctx.emit_message(
-            Message::Staking(Versioned::new(
-                0,
-                StakingMessage::Withdraw(staking::Withdraw {
-                    from: from.into(),
-                    amount: amount.into(),
-                }),
-            )),
-            hook,
-        )?;
+        CurrentState::with(|state| {
+            state.emit_message(
+                ctx,
+                Message::Staking(Versioned::new(
+                    0,
+                    StakingMessage::Withdraw(staking::Withdraw {
+                        from: from.into(),
+                        amount: amount.into(),
+                    }),
+                )),
+                hook,
+            )
+        })?;
 
         Ok(())
     }
 
-    fn escrow<C: TxContext>(
-        ctx: &mut C,
+    fn escrow<C: Context>(
+        ctx: &C,
         to: Address,
         amount: &token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
-        Self::ensure_consensus_denomination(ctx, amount.denomination())?;
+        Self::ensure_consensus_denomination(amount.denomination())?;
         let amount = Self::amount_to_consensus(ctx, amount.amount())?;
 
         if amount < Self::params().min_delegate_amount {
             return Err(Error::UnderMinDelegationAmount);
         }
 
-        ctx.emit_message(
-            Message::Staking(Versioned::new(
-                0,
-                StakingMessage::AddEscrow(staking::Escrow {
-                    account: to.into(),
-                    amount: amount.into(),
-                }),
-            )),
-            hook,
-        )?;
+        CurrentState::with(|state| {
+            state.emit_message(
+                ctx,
+                Message::Staking(Versioned::new(
+                    0,
+                    StakingMessage::AddEscrow(staking::Escrow {
+                        account: to.into(),
+                        amount: amount.into(),
+                    }),
+                )),
+                hook,
+            )
+        })?;
 
         Ok(())
     }
 
-    fn reclaim_escrow<C: TxContext>(
-        ctx: &mut C,
+    fn reclaim_escrow<C: Context>(
+        ctx: &C,
         from: Address,
         shares: u128,
         hook: MessageEventHookInvocation,
     ) -> Result<(), Error> {
-        ctx.emit_message(
-            Message::Staking(Versioned::new(
-                0,
-                StakingMessage::ReclaimEscrow(staking::ReclaimEscrow {
-                    account: from.into(),
-                    shares: shares.into(),
-                }),
-            )),
-            hook,
-        )?;
+        CurrentState::with(|state| {
+            state.emit_message(
+                ctx,
+                Message::Staking(Versioned::new(
+                    0,
+                    StakingMessage::ReclaimEscrow(staking::ReclaimEscrow {
+                        account: from.into(),
+                        shares: shares.into(),
+                    }),
+                )),
+                hook,
+            )
+        })?;
 
         Ok(())
     }
 
-    fn consensus_denomination<C: Context>(_ctx: &mut C) -> Result<token::Denomination, Error> {
+    fn consensus_denomination() -> Result<token::Denomination, Error> {
         Ok(Self::params().consensus_denomination)
     }
 
-    fn ensure_compatible_tx_signer<C: TxContext>(ctx: &C) -> Result<(), Error> {
-        match ctx.tx_auth_info().signer_info[0].address_spec {
+    fn ensure_compatible_tx_signer() -> Result<(), Error> {
+        CurrentState::with_env(|env| match env.tx_auth_info().signer_info[0].address_spec {
             AddressSpec::Signature(SignatureAddressSpec::Ed25519(_)) => Ok(()),
             _ => Err(Error::ConsensusIncompatibleSigner),
-        }
+        })
     }
 
     fn account<C: Context>(ctx: &C, addr: Address) -> Result<ConsensusAccount, Error> {
@@ -396,14 +406,14 @@ impl API for Module {
             .map_err(Error::InternalStateError)
     }
 
-    fn amount_from_consensus<C: Context>(_ctx: &mut C, amount: u128) -> Result<u128, Error> {
+    fn amount_from_consensus<C: Context>(_ctx: &C, amount: u128) -> Result<u128, Error> {
         let scaling_factor = Self::params().consensus_scaling_factor;
         amount
             .checked_mul(scaling_factor.into())
             .ok_or(Error::AmountNotRepresentable)
     }
 
-    fn amount_to_consensus<C: Context>(_ctx: &mut C, amount: u128) -> Result<u128, Error> {
+    fn amount_to_consensus<C: Context>(_ctx: &C, amount: u128) -> Result<u128, Error> {
         let scaling_factor = Self::params().consensus_scaling_factor;
         let scaled = amount
             .checked_div(scaling_factor.into())

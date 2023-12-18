@@ -64,7 +64,6 @@ mod test {
     };
     use ethabi::{ParamType, Token};
     use oasis_runtime_sdk::{
-        context,
         modules::core::Event,
         testing::{keys, mock::Mock},
     };
@@ -97,18 +96,17 @@ mod test {
 
         // Test use gas in contract.
         let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+        let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
         let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
         // Create contract.
-        let contract_address =
-            init_and_deploy_contract(&mut ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
+        let contract_address = init_and_deploy_contract(&ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
         let expected_gas_used = 22_659;
 
         // Call into the test contract.
         let dispatch_result =
-            signer.call_evm(&mut ctx, contract_address.into(), "test_gas_used", &[], &[]);
+            signer.call_evm(&ctx, contract_address.into(), "test_gas_used", &[], &[]);
         assert!(
             dispatch_result.result.is_success(),
             "test gas used should succeed"
@@ -161,18 +159,17 @@ mod test {
 
         // Test gas padding.
         let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+        let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
         let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
         // Create contract.
-        let contract_address =
-            init_and_deploy_contract(&mut ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
+        let contract_address = init_and_deploy_contract(&ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
         let expected_gas = 41_359;
 
         // Call into the test contract path for `if param > 10`.
         let dispatch_result = signer.call_evm(
-            &mut ctx,
+            &ctx,
             contract_address.into(),
             "test_pad_gas",
             &[ParamType::Uint(128)],
@@ -194,7 +191,7 @@ mod test {
 
         // Call into the test contract path `if param < 10`.
         let dispatch_result = signer.call_evm(
-            &mut ctx,
+            &ctx,
             contract_address.into(),
             "test_pad_gas",
             &[ParamType::Uint(128)],

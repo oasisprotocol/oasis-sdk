@@ -7,7 +7,8 @@ use std::{
 use oasis_core_runtime::consensus::beacon::EpochTime;
 
 use crate::{
-    storage::{self, CurrentStore, Store},
+    state::CurrentState,
+    storage::{self, Store},
     types::address::Address,
 };
 
@@ -27,7 +28,7 @@ pub const RECEIPTS: &[u8] = &[0x04];
 /// The given shares are added to any existing delegation that may exist for the same (from, to)
 /// address pair. If no delegation exists a new one is created.
 pub fn add_delegation(from: Address, to: Address, shares: u128) -> Result<(), Error> {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let delegations = storage::PrefixStore::new(store, &DELEGATIONS);
         let mut account = storage::TypedStore::new(storage::PrefixStore::new(delegations, &from));
@@ -46,7 +47,7 @@ pub fn add_delegation(from: Address, to: Address, shares: u128) -> Result<(), Er
 
 /// Subtract delegation from a given (from, to) pair.
 pub fn sub_delegation(from: Address, to: Address, shares: u128) -> Result<(), Error> {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let delegations = storage::PrefixStore::new(store, &DELEGATIONS);
         let mut account = storage::TypedStore::new(storage::PrefixStore::new(delegations, &from));
@@ -72,7 +73,7 @@ pub fn sub_delegation(from: Address, to: Address, shares: u128) -> Result<(), Er
 /// In case no delegation exists for the given (from, to) address pair, an all-zero delegation
 /// metadata are returned.
 pub fn get_delegation(from: Address, to: Address) -> Result<types::DelegationInfo, Error> {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let delegations = storage::PrefixStore::new(store, &DELEGATIONS);
         let account = storage::TypedStore::new(storage::PrefixStore::new(delegations, &from));
@@ -82,7 +83,7 @@ pub fn get_delegation(from: Address, to: Address) -> Result<types::DelegationInf
 
 /// Retrieve all delegation metadata originating from a given address.
 pub fn get_delegations(from: Address) -> Result<Vec<types::ExtendedDelegationInfo>, Error> {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let delegations = storage::PrefixStore::new(store, &DELEGATIONS);
         let account = storage::TypedStore::new(storage::PrefixStore::new(delegations, &from));
@@ -125,7 +126,7 @@ impl TryFrom<&[u8]> for AddressPair {
 
 /// Return the number of delegated shares for each destination escrow account.
 pub fn get_delegations_by_destination() -> Result<BTreeMap<Address, u128>, Error> {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let delegations = storage::TypedStore::new(storage::PrefixStore::new(store, &DELEGATIONS));
 
@@ -153,7 +154,7 @@ pub fn add_undelegation(
     shares: u128,
     receipt: u64,
 ) -> Result<u64, Error> {
-    CurrentStore::with(|mut root_store| {
+    CurrentState::with_store(|mut root_store| {
         let store = storage::PrefixStore::new(&mut root_store, &MODULE_NAME);
         let undelegations = storage::PrefixStore::new(store, &UNDELEGATIONS);
         let account = storage::PrefixStore::new(undelegations, &to);
@@ -192,7 +193,7 @@ fn queue_entry_key(from: Address, to: Address, epoch: EpochTime) -> Vec<u8> {
 ///
 /// In case the undelegation doesn't exist, returns a default-constructed DelegationInfo.
 pub fn take_undelegation(ud: &Undelegation) -> Result<types::DelegationInfo, Error> {
-    CurrentStore::with(|mut root_store| {
+    CurrentState::with_store(|mut root_store| {
         // Get and remove undelegation metadata.
         let store = storage::PrefixStore::new(&mut root_store, &MODULE_NAME);
         let undelegations = storage::PrefixStore::new(store, &UNDELEGATIONS);
@@ -232,7 +233,7 @@ impl TryFrom<&[u8]> for AddressWithEpoch {
 
 /// Retrieve all undelegation metadata to a given address.
 pub fn get_undelegations(to: Address) -> Result<Vec<types::UndelegationInfo>, Error> {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let undelegations = storage::PrefixStore::new(store, &UNDELEGATIONS);
         let account = storage::TypedStore::new(storage::PrefixStore::new(undelegations, &to));
@@ -278,7 +279,7 @@ impl<'a> TryFrom<&'a [u8]> for Undelegation {
 
 /// Retrieve all queued undelegations for epochs earlier than or equal to the passed epoch.
 pub fn get_queued_undelegations(epoch: EpochTime) -> Result<Vec<Undelegation>, Error> {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let queue = storage::TypedStore::new(storage::PrefixStore::new(store, &UNDELEGATION_QUEUE));
 
@@ -292,7 +293,7 @@ pub fn get_queued_undelegations(epoch: EpochTime) -> Result<Vec<Undelegation>, E
 
 /// Store the given receipt.
 pub fn set_receipt(owner: Address, kind: types::ReceiptKind, id: u64, receipt: types::Receipt) {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let receipts = storage::PrefixStore::new(store, &RECEIPTS);
         let of_owner = storage::PrefixStore::new(receipts, &owner);
@@ -305,7 +306,7 @@ pub fn set_receipt(owner: Address, kind: types::ReceiptKind, id: u64, receipt: t
 
 /// Remove the given receipt from storage if it exists and return it, otherwise return `None`.
 pub fn take_receipt(owner: Address, kind: types::ReceiptKind, id: u64) -> Option<types::Receipt> {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let receipts = storage::PrefixStore::new(store, &RECEIPTS);
         let of_owner = storage::PrefixStore::new(receipts, &owner);

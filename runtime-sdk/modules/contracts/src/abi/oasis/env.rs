@@ -102,7 +102,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
 }
 
 /// Perform environment query dispatch.
-fn dispatch_query<Cfg: Config, C: Context>(ctx: &mut C, query: QueryRequest) -> QueryResponse {
+fn dispatch_query<Cfg: Config, C: Context>(ctx: &C, query: QueryRequest) -> QueryResponse {
     match query {
         // Information about the current runtime block.
         QueryRequest::BlockInfo => QueryResponse::BlockInfo {
@@ -124,7 +124,7 @@ fn dispatch_query<Cfg: Config, C: Context>(ctx: &mut C, query: QueryRequest) -> 
 
 /// Perform accounts API query dispatch.
 fn dispatch_accounts_query<Cfg: Config, C: Context>(
-    _ctx: &mut C,
+    _ctx: &C,
     query: AccountsQuery,
 ) -> QueryResponse {
     match query {

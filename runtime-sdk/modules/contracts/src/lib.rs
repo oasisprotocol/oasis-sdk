@@ -13,15 +13,17 @@ use thiserror::Error;
 use oasis_contract_sdk_types::storage::StoreKind;
 use oasis_runtime_sdk::{
     self as sdk,
-    context::{Context, TxContext},
+    context::Context,
     core::common::crypto::hash::Hash,
     handler, migration, module,
     module::Module as _,
     modules,
     modules::{accounts::API as _, core::API as _},
     runtime::Runtime,
-    sdk_derive, storage,
-    storage::{CurrentStore, Store},
+    sdk_derive,
+    state::CurrentState,
+    storage,
+    storage::Store,
     types::transaction::CallFormat,
 };
 
@@ -364,7 +366,7 @@ pub struct Module<Cfg: Config> {
 impl<Cfg: Config> Module<Cfg> {
     /// Loads code information for the specified code identifier.
     fn load_code_info(code_id: types::CodeId) -> Result<types::Code, Error> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let code_info_store =
                 storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::CODE_INFO));
@@ -378,7 +380,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     /// Stores specified code information.
     fn store_code_info(code_info: types::Code) -> Result<(), Error> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut code_info_store =
                 storage::TypedStore::new(storage::PrefixStore::new(&mut store, &state::CODE_INFO));
@@ -390,7 +392,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     /// Loads specified instance information.
     fn load_instance_info(instance_id: types::InstanceId) -> Result<types::Instance, Error> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let instance_info_store = storage::TypedStore::new(storage::PrefixStore::new(
                 &mut store,
@@ -406,7 +408,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     /// Stores specified instance information.
     fn store_instance_info(instance_info: types::Instance) -> Result<(), Error> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut instance_info_store = storage::TypedStore::new(storage::PrefixStore::new(
                 &mut store,
@@ -434,12 +436,12 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(call = "contracts.Upload")]
-    pub fn tx_upload<C: TxContext>(
-        ctx: &mut C,
+    pub fn tx_upload<C: Context>(
+        ctx: &C,
         body: types::Upload,
     ) -> Result<types::UploadResult, Error> {
         let params = Self::params();
-        let uploader = ctx.tx_caller_address();
+        let uploader = CurrentState::with_env(|env| env.tx_caller_address());
 
         // Validate code size.
         let code_size: u32 = body
@@ -452,9 +454,8 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Account for base gas.
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_upload)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.tx_upload)?;
         <C::Runtime as Runtime>::Core::use_tx_gas(
-            ctx,
             params
                 .gas_costs
                 .tx_upload_per_byte
@@ -472,7 +473,6 @@ impl<Cfg: Config> Module<Cfg> {
         // Account for extra gas needed after decompression.
         let plain_code_size: u32 = code.len().try_into().unwrap();
         <C::Runtime as Runtime>::Core::use_tx_gas(
-            ctx,
             params
                 .gas_costs
                 .tx_upload_per_byte
@@ -498,7 +498,6 @@ impl<Cfg: Config> Module<Cfg> {
             return Err(Error::CodeTooLarge(inst_code_size, params.max_code_size));
         }
         <C::Runtime as Runtime>::Core::use_tx_gas(
-            ctx,
             params
                 .gas_costs
                 .tx_upload_per_byte
@@ -506,7 +505,7 @@ impl<Cfg: Config> Module<Cfg> {
         )?;
 
         // Assign next identifier.
-        let id = CurrentStore::with(|store| {
+        let id = CurrentState::with_store(|store| {
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut tstore = storage::TypedStore::new(&mut store);
             let id: types::CodeId = tstore.get(state::NEXT_CODE_IDENTIFIER).unwrap_or_default();
@@ -530,14 +529,14 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(call = "contracts.Instantiate")]
-    pub fn tx_instantiate<C: TxContext>(
-        ctx: &mut C,
+    pub fn tx_instantiate<C: Context>(
+        ctx: &C,
         body: types::Instantiate,
     ) -> Result<types::InstantiateResult, Error> {
         let params = Self::params();
-        let creator = ctx.tx_caller_address();
+        let creator = CurrentState::with_env(|env| env.tx_caller_address());
 
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_instantiate)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.tx_instantiate)?;
 
         if !ctx.should_execute_contracts() {
             // Only fast checks are allowed.
@@ -546,11 +545,11 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Load code information, enforce instantiation policy and load the code.
         let code_info = Self::load_code_info(body.code_id)?;
-        code_info.instantiate_policy.enforce(ctx)?;
+        code_info.instantiate_policy.enforce(&creator)?;
         let code = Self::load_code(&code_info)?;
 
         // Assign next identifier.
-        let id = CurrentStore::with(|store| {
+        let id = CurrentState::with_store(|store| {
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut tstore = storage::TypedStore::new(&mut store);
             let id: types::InstanceId = tstore
@@ -571,7 +570,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Transfer any attached tokens.
         for tokens in &body.tokens {
-            Cfg::Accounts::transfer(ctx, creator, instance_info.address(), tokens)
+            Cfg::Accounts::transfer(creator, instance_info.address(), tokens)
                 .map_err(|_| Error::InsufficientCallerBalance)?
         }
         // Run instantiation function.
@@ -584,10 +583,10 @@ impl<Cfg: Config> Module<Cfg> {
             &params,
             &code_info,
             &instance_info,
-            <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
-            ctx.tx_caller_address(),
-            ctx.is_read_only(),
-            ctx.tx_call_format(),
+            <C::Runtime as Runtime>::Core::remaining_tx_gas(),
+            creator,
+            CurrentState::with_env(|env| env.is_read_only()),
+            CurrentState::with_env(|env| env.tx_call_format()),
             ctx,
         );
         let result = wasm::instantiate::<Cfg, C>(&mut exec_ctx, &contract, &body);
@@ -598,14 +597,11 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(call = "contracts.Call", allow_interactive)]
-    pub fn tx_call<C: TxContext>(
-        ctx: &mut C,
-        body: types::Call,
-    ) -> Result<types::CallResult, Error> {
+    pub fn tx_call<C: Context>(ctx: &C, body: types::Call) -> Result<types::CallResult, Error> {
         let params = Self::params();
-        let caller = ctx.tx_caller_address();
+        let caller = CurrentState::with_env(|env| env.tx_caller_address());
 
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_call)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.tx_call)?;
 
         if !ctx.should_execute_contracts() {
             // Only fast checks are allowed.
@@ -619,7 +615,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Transfer any attached tokens.
         for tokens in &body.tokens {
-            Cfg::Accounts::transfer(ctx, caller, instance_info.address(), tokens)
+            Cfg::Accounts::transfer(caller, instance_info.address(), tokens)
                 .map_err(|_| Error::InsufficientCallerBalance)?
         }
         // Run call function.
@@ -632,10 +628,10 @@ impl<Cfg: Config> Module<Cfg> {
             &params,
             &code_info,
             &instance_info,
-            <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
-            ctx.tx_caller_address(),
-            ctx.is_read_only(),
-            ctx.tx_call_format(),
+            <C::Runtime as Runtime>::Core::remaining_tx_gas(),
+            caller,
+            CurrentState::with_env(|env| env.is_read_only()),
+            CurrentState::with_env(|env| env.tx_call_format()),
             ctx,
         );
         let result = wasm::call::<Cfg, C>(&mut exec_ctx, &contract, &body);
@@ -646,21 +642,22 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(call = "contracts.ChangeUpgradePolicy")]
-    pub fn tx_change_upgrade_policy<C: TxContext>(
-        ctx: &mut C,
+    pub fn tx_change_upgrade_policy<C: Context>(
+        ctx: &C,
         body: types::ChangeUpgradePolicy,
     ) -> Result<(), Error> {
         let params = Self::params();
+        let caller = CurrentState::with_env(|env| env.tx_caller_address());
 
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_change_upgrade_policy)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.tx_change_upgrade_policy)?;
 
-        if ctx.is_check_only() {
+        if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(());
         }
 
         // Load instance information.
         let mut instance_info = Self::load_instance_info(body.id)?;
-        instance_info.upgrades_policy.enforce(ctx)?;
+        instance_info.upgrades_policy.enforce(&caller)?;
 
         // Change upgrade policy.
         instance_info.upgrades_policy = body.upgrades_policy;
@@ -670,11 +667,11 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(call = "contracts.Upgrade")]
-    pub fn tx_upgrade<C: TxContext>(ctx: &mut C, body: types::Upgrade) -> Result<(), Error> {
+    pub fn tx_upgrade<C: Context>(ctx: &C, body: types::Upgrade) -> Result<(), Error> {
         let params = Self::params();
-        let caller = ctx.tx_caller_address();
+        let caller = CurrentState::with_env(|env| env.tx_caller_address());
 
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_upgrade)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.tx_upgrade)?;
 
         if !ctx.should_execute_contracts() {
             // Only fast checks are allowed.
@@ -683,7 +680,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Load instance information and code.
         let mut instance_info = Self::load_instance_info(body.id)?;
-        instance_info.upgrades_policy.enforce(ctx)?;
+        instance_info.upgrades_policy.enforce(&caller)?;
         if instance_info.code_id == body.code_id {
             return Err(Error::CodeAlreadyUpgraded(body.code_id.as_u64()));
         }
@@ -692,7 +689,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Transfer any attached tokens.
         for tokens in &body.tokens {
-            Cfg::Accounts::transfer(ctx, caller, instance_info.address(), tokens)
+            Cfg::Accounts::transfer(caller, instance_info.address(), tokens)
                 .map_err(|_| Error::InsufficientCallerBalance)?
         }
         // Run pre-upgrade function on the previous contract.
@@ -705,10 +702,10 @@ impl<Cfg: Config> Module<Cfg> {
             &params,
             &code_info,
             &instance_info,
-            <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
-            ctx.tx_caller_address(),
-            ctx.is_read_only(),
-            ctx.tx_call_format(),
+            <C::Runtime as Runtime>::Core::remaining_tx_gas(),
+            caller,
+            CurrentState::with_env(|env| env.is_read_only()),
+            CurrentState::with_env(|env| env.tx_call_format()),
             ctx,
         );
         // Pre-upgrade invocation must succeed for the upgrade to proceed.
@@ -731,10 +728,10 @@ impl<Cfg: Config> Module<Cfg> {
             &params,
             &code_info,
             &instance_info,
-            <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
-            ctx.tx_caller_address(),
-            ctx.is_read_only(),
-            ctx.tx_call_format(),
+            <C::Runtime as Runtime>::Core::remaining_tx_gas(),
+            caller,
+            CurrentState::with_env(|env| env.is_read_only()),
+            CurrentState::with_env(|env| env.tx_call_format()),
             ctx,
         );
 
@@ -745,16 +742,13 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(query = "contracts.Code")]
-    pub fn query_code<C: Context>(
-        _ctx: &mut C,
-        args: types::CodeQuery,
-    ) -> Result<types::Code, Error> {
+    pub fn query_code<C: Context>(_ctx: &C, args: types::CodeQuery) -> Result<types::Code, Error> {
         Self::load_code_info(args.id)
     }
 
     #[handler(query = "contracts.CodeStorage")]
     pub fn query_code_storage<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         args: types::CodeStorageQuery,
     ) -> Result<types::CodeStorageQueryResult, Error> {
         let code_info = Self::load_code_info(args.id)?;
@@ -765,7 +759,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     #[handler(query = "contracts.Instance")]
     pub fn query_instance<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         args: types::InstanceQuery,
     ) -> Result<types::Instance, Error> {
         Self::load_instance_info(args.id)
@@ -773,7 +767,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     #[handler(query = "contracts.InstanceStorage")]
     pub fn query_instance_storage<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         args: types::InstanceStorageQuery,
     ) -> Result<types::InstanceStorageQueryResult, Error> {
         let instance_info = Self::load_instance_info(args.id)?;
@@ -787,7 +781,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     #[handler(query = "contracts.InstanceRawStorage", expensive)]
     pub fn query_instance_raw_storage<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         args: types::InstanceRawStorageQuery,
     ) -> Result<types::InstanceRawStorageQueryResult, Error> {
         let cfg: LocalConfig = ctx.local_config(MODULE_NAME).unwrap_or_default();
@@ -825,7 +819,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     #[handler(query = "contracts.PublicKey")]
     pub fn query_public_key<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         _args: types::PublicKeyQuery,
     ) -> Result<types::PublicKeyQueryResult, Error> {
         Err(Error::Unsupported)
@@ -833,7 +827,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     #[handler(query = "contracts.Custom", expensive)]
     pub fn query_custom<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         args: types::CustomQuery,
     ) -> Result<types::CustomQueryResult, Error> {
         let params = Self::params();

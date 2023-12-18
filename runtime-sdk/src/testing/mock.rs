@@ -10,8 +10,7 @@ use oasis_core_runtime::{
 };
 
 use crate::{
-    context::{BatchContext, Mode, RuntimeBatchContext},
-    crypto::random::RootRng,
+    context::{Context, RuntimeBatchContext},
     dispatcher,
     error::RuntimeError,
     history,
@@ -19,7 +18,8 @@ use crate::{
     module::MigrationHandler,
     modules,
     runtime::Runtime,
-    storage::{CurrentStore, MKVSStore},
+    state::{self, CurrentState, TransactionResult},
+    storage::MKVSStore,
     testing::{configmap, keymanager::MockKeyManagerClient},
     types::{address::SignatureAddressSpec, transaction},
 };
@@ -67,7 +67,6 @@ pub struct Mock {
     pub consensus_state: ConsensusState,
     pub history: Box<dyn history::HistoryHost>,
     pub epoch: beacon::EpochTime,
-    pub rng: RootRng,
 
     pub max_messages: u32,
 }
@@ -75,21 +74,15 @@ pub struct Mock {
 impl Mock {
     /// Create a new mock dispatch context.
     pub fn create_ctx(&mut self) -> RuntimeBatchContext<'_, EmptyRuntime> {
-        self.create_ctx_for_runtime(Mode::ExecuteTx, false)
-    }
-
-    pub fn create_check_ctx(&mut self) -> RuntimeBatchContext<'_, EmptyRuntime> {
-        self.create_ctx_for_runtime(Mode::CheckTx, false)
+        self.create_ctx_for_runtime(false)
     }
 
     /// Create a new mock dispatch context.
     pub fn create_ctx_for_runtime<R: Runtime>(
         &mut self,
-        mode: Mode,
         confidential: bool,
     ) -> RuntimeBatchContext<'_, R> {
         RuntimeBatchContext::new(
-            mode,
             &self.host_info,
             if confidential {
                 Some(Box::new(MockKeyManagerClient::new()) as Box<dyn KeyManager>)
@@ -101,16 +94,15 @@ impl Mock {
             &self.consensus_state,
             &self.history,
             self.epoch,
-            &self.rng,
             self.max_messages,
         )
     }
 
     /// Create an instance with the given local configuration.
     pub fn with_local_config(local_config: BTreeMap<String, cbor::Value>) -> Self {
-        // Ensure a current store is always available during tests. Note that one can always use a
-        // different store by calling CurrentStore::enter explicitly.
-        CurrentStore::init_local_fallback();
+        // Ensure a current state is always available during tests. Note that one can always use a
+        // different store by calling `CurrentState::enter` explicitly.
+        CurrentState::init_local_fallback();
 
         let consensus_tree = mkvs::Tree::builder()
             .with_root_type(mkvs::RootType::State)
@@ -129,7 +121,6 @@ impl Mock {
             consensus_state: ConsensusState::new(1, consensus_tree),
             history: Box::new(EmptyHistory),
             epoch: 1,
-            rng: RootRng::new(),
             max_messages: 32,
         }
     }
@@ -217,9 +208,9 @@ impl Signer {
     }
 
     /// Dispatch a call to the given method.
-    pub fn call<C, B>(&mut self, ctx: &mut C, method: &str, body: B) -> dispatcher::DispatchResult
+    pub fn call<C, B>(&mut self, ctx: &C, method: &str, body: B) -> dispatcher::DispatchResult
     where
-        C: BatchContext,
+        C: Context,
         B: cbor::Encode,
     {
         self.call_opts(ctx, method, body, Default::default())
@@ -228,13 +219,13 @@ impl Signer {
     /// Dispatch a call to the given method with the given options.
     pub fn call_opts<C, B>(
         &mut self,
-        ctx: &mut C,
+        ctx: &C,
         method: &str,
         body: B,
         opts: CallOptions,
     ) -> dispatcher::DispatchResult
     where
-        C: BatchContext,
+        C: Context,
         B: cbor::Encode,
     {
         let tx = transaction::Transaction {
@@ -265,14 +256,24 @@ impl Signer {
     }
 
     /// Dispatch a query to the given method.
-    pub fn query<C, A, R>(&self, ctx: &mut C, method: &str, args: A) -> Result<R, RuntimeError>
+    pub fn query<C, A, R>(&self, ctx: &C, method: &str, args: A) -> Result<R, RuntimeError>
     where
-        C: BatchContext,
+        C: Context,
         A: cbor::Encode,
         R: cbor::Decode,
     {
-        let result =
-            dispatcher::Dispatcher::<C::Runtime>::dispatch_query(ctx, method, cbor::to_vec(args))?;
+        let result = CurrentState::with_transaction_opts(
+            state::Options::new().with_mode(state::Mode::Check),
+            || {
+                let result = dispatcher::Dispatcher::<C::Runtime>::dispatch_query(
+                    ctx,
+                    method,
+                    cbor::to_vec(args),
+                );
+
+                TransactionResult::Rollback(result)
+            },
+        )?;
         Ok(cbor::from_slice(&result).expect("result should decode correctly"))
     }
 }

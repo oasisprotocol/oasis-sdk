@@ -1,12 +1,13 @@
 //! Tests for Oasis ABIs.
 use oasis_runtime_sdk::{
-    context::{self, BatchContext, TxContext},
+    context::Context,
     core::common::crypto::hash::Hash,
     error::Error as _,
     modules,
     modules::core,
+    state::CurrentState,
     testing::mock,
-    types::address::Address,
+    types::{address::Address, transaction::CallFormat},
 };
 
 use crate::{abi, types, wasm, Config, Error, Parameters};
@@ -28,7 +29,7 @@ impl core::Config for CoreConfig {}
 
 #[test]
 fn test_validate_and_transform() {
-    fn test<Cfg: Config, C: TxContext>(_ctx: C, params: &Parameters) {
+    fn test<Cfg: Config, C: Context>(_ctx: C, params: &Parameters) {
         // Non-WASM code.
         let code = Vec::new();
         let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
@@ -301,11 +302,8 @@ fn test_validate_and_transform() {
     }
 
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    let params = Parameters::default();
-    ctx.with_tx(mock::transaction().into(), |ctx, _| {
-        test::<ContractsConfig, _>(ctx, &params);
-    });
+    let ctx = mock.create_ctx();
+    test::<ContractsConfig, _>(ctx, &Parameters::default());
 }
 
 fn run_contract_with_defaults(
@@ -315,7 +313,7 @@ fn run_contract_with_defaults(
     call_data: cbor::Value,
 ) -> Result<cbor::Value, Error> {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(context::Mode::ExecuteTx, true);
+    let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(true);
     let params = Parameters::default();
 
     core::Module::<CoreConfig>::init(core::Genesis {
@@ -328,68 +326,62 @@ fn run_contract_with_defaults(
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = gas_limit;
 
-    ctx.with_tx(tx.into(), |mut ctx, _| -> Result<cbor::Value, Error> {
-        fn transform<C: TxContext>(
-            _ctx: &mut C,
-            code: &[u8],
-            params: &Parameters,
-        ) -> (Vec<u8>, abi::Info) {
-            wasm::validate_and_transform::<ContractsConfig, C>(code, types::ABI::OasisV1, params)
-                .unwrap()
-        }
-        let (code, abi_info) = transform(&mut ctx, code, &params);
+    fn transform<C: Context>(_ctx: &C, code: &[u8], params: &Parameters) -> (Vec<u8>, abi::Info) {
+        wasm::validate_and_transform::<ContractsConfig, C>(code, types::ABI::OasisV1, params)
+            .unwrap()
+    }
+    let (code, abi_info) = transform(&ctx, code, &params);
 
-        let code_info = types::Code {
-            id: 1.into(),
-            hash: Hash::empty_hash(),
-            abi: types::ABI::OasisV1,
-            abi_sv: abi_info.abi_sv,
-            uploader: Address::default(),
-            instantiate_policy: types::Policy::Everyone,
-        };
-        let call = types::Instantiate {
-            code_id: code_info.id,
-            upgrades_policy: types::Policy::Everyone,
-            data: cbor::to_vec(instantiate_data),
-            tokens: vec![],
-        };
-        let instance_info = types::Instance {
-            id: 1.into(),
-            code_id: 1.into(),
-            creator: Address::default(),
-            upgrades_policy: call.upgrades_policy,
-        };
+    let code_info = types::Code {
+        id: 1.into(),
+        hash: Hash::empty_hash(),
+        abi: types::ABI::OasisV1,
+        abi_sv: abi_info.abi_sv,
+        uploader: Address::default(),
+        instantiate_policy: types::Policy::Everyone,
+    };
+    let call = types::Instantiate {
+        code_id: code_info.id,
+        upgrades_policy: types::Policy::Everyone,
+        data: cbor::to_vec(instantiate_data),
+        tokens: vec![],
+    };
+    let instance_info = types::Instance {
+        id: 1.into(),
+        code_id: 1.into(),
+        creator: Address::default(),
+        upgrades_policy: call.upgrades_policy,
+    };
 
-        // Instantiate the contract.
-        let contract = wasm::Contract {
-            code_info: &code_info,
-            code: &code,
-            instance_info: &instance_info,
-        };
-        let mut exec_ctx = abi::ExecutionContext::new(
-            &params,
-            &code_info,
-            &instance_info,
-            gas_limit,
-            Default::default(),
-            ctx.is_read_only(),
-            ctx.tx_call_format(),
-            &mut ctx,
-        );
-        wasm::instantiate::<ContractsConfig, _>(&mut exec_ctx, &contract, &call).inner?;
+    // Instantiate the contract.
+    let contract = wasm::Contract {
+        code_info: &code_info,
+        code: &code,
+        instance_info: &instance_info,
+    };
+    let mut exec_ctx = abi::ExecutionContext::new(
+        &params,
+        &code_info,
+        &instance_info,
+        gas_limit,
+        Default::default(),
+        false,
+        CallFormat::Plain,
+        &ctx,
+    );
+    wasm::instantiate::<ContractsConfig, _>(&mut exec_ctx, &contract, &call).inner?;
 
-        // Call the contract.
-        let call = types::Call {
-            id: 1.into(),
-            data: cbor::to_vec(call_data),
-            tokens: vec![],
-        };
-        let result = wasm::call::<ContractsConfig, _>(&mut exec_ctx, &contract, &call).inner?;
-        let result: cbor::Value =
-            cbor::from_slice(&result.data).map_err(|err| Error::ExecutionFailed(err.into()))?;
+    // Call the contract.
+    let call = types::Call {
+        id: 1.into(),
+        data: cbor::to_vec(call_data),
+        tokens: vec![],
+    };
+    let result = wasm::call::<ContractsConfig, _>(&mut exec_ctx, &contract, &call).inner?;
+    let result: cbor::Value =
+        cbor::from_slice(&result.data).map_err(|err| Error::ExecutionFailed(err.into()))?;
 
-        Ok(result)
-    })
+    Ok(result)
 }
 
 #[test]

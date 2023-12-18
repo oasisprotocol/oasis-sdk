@@ -21,7 +21,7 @@ use thiserror::Error;
 
 use oasis_runtime_sdk::{
     callformat,
-    context::{BatchContext, Context, TransactionWithMeta, TxContext},
+    context::Context,
     handler, migration,
     module::{self, Module as _},
     modules::{
@@ -31,7 +31,7 @@ use oasis_runtime_sdk::{
     },
     runtime::Runtime,
     sdk_derive,
-    storage::CurrentStore,
+    state::{CurrentState, Mode, Options, TransactionResult, TransactionWithMeta},
     types::{
         address::{self, Address},
         token, transaction,
@@ -265,12 +265,11 @@ pub enum Event {
 pub trait API {
     /// Perform an Ethereum CREATE transaction.
     /// Returns 160-bit address of created contract.
-    fn create<C: TxContext>(ctx: &mut C, value: U256, init_code: Vec<u8>)
-        -> Result<Vec<u8>, Error>;
+    fn create<C: Context>(ctx: &C, value: U256, init_code: Vec<u8>) -> Result<Vec<u8>, Error>;
 
     /// Perform an Ethereum CALL transaction.
-    fn call<C: TxContext>(
-        ctx: &mut C,
+    fn call<C: Context>(
+        ctx: &C,
         address: H160,
         value: U256,
         data: Vec<u8>,
@@ -279,44 +278,42 @@ pub trait API {
     /// Peek into EVM storage.
     /// Returns 256-bit value stored at given contract address and index (slot)
     /// in the storage.
-    fn get_storage<C: Context>(ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error>;
+    fn get_storage<C: Context>(ctx: &C, address: H160, index: H256) -> Result<Vec<u8>, Error>;
 
     /// Peek into EVM code storage.
     /// Returns EVM bytecode of contract at given address.
-    fn get_code<C: Context>(ctx: &mut C, address: H160) -> Result<Vec<u8>, Error>;
+    fn get_code<C: Context>(ctx: &C, address: H160) -> Result<Vec<u8>, Error>;
 
     /// Get EVM account balance.
-    fn get_balance<C: Context>(ctx: &mut C, address: H160) -> Result<u128, Error>;
+    fn get_balance<C: Context>(ctx: &C, address: H160) -> Result<u128, Error>;
 
     /// Simulate an Ethereum CALL.
     ///
     /// If the EVM is confidential, it may accept _signed queries_, which are formatted as
     /// an either a [`sdk::types::transaction::Call`] or [`types::SignedCallDataPack`] encoded
     /// and packed into the `data` field of the [`types::SimulateCallQuery`].
-    fn simulate_call<C: Context>(
-        ctx: &mut C,
-        call: types::SimulateCallQuery,
-    ) -> Result<Vec<u8>, Error>;
+    fn simulate_call<C: Context>(ctx: &C, call: types::SimulateCallQuery)
+        -> Result<Vec<u8>, Error>;
 }
 
 impl<Cfg: Config> API for Module<Cfg> {
-    fn create<C: TxContext>(
-        ctx: &mut C,
-        value: U256,
-        init_code: Vec<u8>,
-    ) -> Result<Vec<u8>, Error> {
-        let caller = Self::derive_caller(ctx)?;
+    fn create<C: Context>(ctx: &C, value: U256, init_code: Vec<u8>) -> Result<Vec<u8>, Error> {
+        let caller = Self::derive_caller()?;
 
         if !ctx.should_execute_contracts() {
             // Only fast checks are allowed.
             return Ok(vec![]);
         }
 
+        let (tx_call_format, tx_index, is_simulation) = CurrentState::with_env(|env| {
+            (env.tx_call_format(), env.tx_index(), env.is_simulation())
+        });
+
         // Create output (the contract address) does not need to be encrypted because it's
         // trivially computable by anyone who can observe the create tx and receipt status.
         // Therefore, we don't need the `tx_metadata` or to encode the result.
         let (init_code, _tx_metadata) =
-            Self::decode_call_data(ctx, init_code, ctx.tx_call_format(), ctx.tx_index(), true)?
+            Self::decode_call_data(ctx, init_code, tx_call_format, tx_index, true)?
                 .expect("processing always proceeds");
 
         Self::do_evm(
@@ -338,26 +335,29 @@ impl<Cfg: Config> API for Module<Cfg> {
             },
             // If in simulation, this must be EstimateGas query.
             // Use estimate mode if not doing binary search for exact gas costs.
-            ctx.is_simulation()
-                && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
+            is_simulation && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
         )
     }
 
-    fn call<C: TxContext>(
-        ctx: &mut C,
+    fn call<C: Context>(
+        ctx: &C,
         address: H160,
         value: U256,
         data: Vec<u8>,
     ) -> Result<Vec<u8>, Error> {
-        let caller = Self::derive_caller(ctx)?;
+        let caller = Self::derive_caller()?;
 
         if !ctx.should_execute_contracts() {
             // Only fast checks are allowed.
             return Ok(vec![]);
         }
 
+        let (tx_call_format, tx_index, is_simulation) = CurrentState::with_env(|env| {
+            (env.tx_call_format(), env.tx_index(), env.is_simulation())
+        });
+
         let (data, tx_metadata) =
-            Self::decode_call_data(ctx, data, ctx.tx_call_format(), ctx.tx_index(), true)?
+            Self::decode_call_data(ctx, data, tx_call_format, tx_index, true)?
                 .expect("processing always proceeds");
 
         let evm_result = Self::do_evm(
@@ -375,33 +375,32 @@ impl<Cfg: Config> API for Module<Cfg> {
             },
             // If in simulation, this must be EstimateGas query.
             // Use estimate mode if not doing binary search for exact gas costs.
-            ctx.is_simulation()
-                && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
+            is_simulation && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
         );
         Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 
-    fn get_storage<C: Context>(_ctx: &mut C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
+    fn get_storage<C: Context>(_ctx: &C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
         state::with_public_storage(&address, |store| {
             let result: H256 = store.get(index).unwrap_or_default();
             Ok(result.as_bytes().to_vec())
         })
     }
 
-    fn get_code<C: Context>(_ctx: &mut C, address: H160) -> Result<Vec<u8>, Error> {
-        CurrentStore::with(|store| {
+    fn get_code<C: Context>(_ctx: &C, address: H160) -> Result<Vec<u8>, Error> {
+        CurrentState::with_store(|store| {
             let codes = state::codes(store);
             Ok(codes.get(address).unwrap_or_default())
         })
     }
 
-    fn get_balance<C: Context>(_ctx: &mut C, address: H160) -> Result<u128, Error> {
+    fn get_balance<C: Context>(_ctx: &C, address: H160) -> Result<u128, Error> {
         let address = Cfg::map_address(address.into());
         Ok(Cfg::Accounts::get_balance(address, Cfg::TOKEN_DENOMINATION).unwrap_or_default())
     }
 
     fn simulate_call<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         call: types::SimulateCallQuery,
     ) -> Result<Vec<u8>, Error> {
         let (
@@ -416,63 +415,65 @@ impl<Cfg: Config> API for Module<Cfg> {
             tx_metadata,
         ) = Self::decode_simulate_call_query(ctx, call)?;
 
-        let evm_result = ctx.with_simulation(|mut sctx| {
-            let call_tx = transaction::Transaction {
-                version: 1,
-                call: transaction::Call {
-                    format: transaction::CallFormat::Plain,
-                    method: "evm.Call".to_owned(),
-                    body: cbor::to_value(types::Call {
-                        address,
-                        value,
-                        data: data.clone(),
-                    }),
-                    ..Default::default()
+        let call_tx = transaction::Transaction {
+            version: 1,
+            call: transaction::Call {
+                format: transaction::CallFormat::Plain,
+                method: "evm.Call".to_owned(),
+                body: cbor::to_value(types::Call {
+                    address,
+                    value,
+                    data: data.clone(),
+                }),
+                ..Default::default()
+            },
+            auth_info: transaction::AuthInfo {
+                signer_info: vec![],
+                fee: transaction::Fee {
+                    amount: token::BaseUnits::new(
+                        gas_price
+                            .checked_mul(U256::from(gas_limit))
+                            .ok_or(Error::FeeOverflow)?
+                            .as_u128(),
+                        Cfg::TOKEN_DENOMINATION,
+                    ),
+                    gas: gas_limit,
+                    consensus_messages: 0,
                 },
-                auth_info: transaction::AuthInfo {
-                    signer_info: vec![],
-                    fee: transaction::Fee {
-                        amount: token::BaseUnits::new(
-                            gas_price
-                                .checked_mul(U256::from(gas_limit))
-                                .ok_or(Error::FeeOverflow)?
-                                .as_u128(),
-                            Cfg::TOKEN_DENOMINATION,
-                        ),
-                        gas: gas_limit,
-                        consensus_messages: 0,
+                ..Default::default()
+            },
+        };
+        let evm_result = CurrentState::with_transaction_opts(
+            Options::new()
+                .with_tx(TransactionWithMeta::internal(call_tx))
+                .with_mode(Mode::Simulate),
+            || {
+                let result = Self::do_evm(
+                    caller,
+                    ctx,
+                    |exec, gas_limit| {
+                        exec.transact_call(
+                            caller.into(),
+                            address.into(),
+                            value.into(),
+                            data,
+                            gas_limit,
+                            vec![],
+                        )
                     },
-                    ..Default::default()
-                },
-            };
-            sctx.with_tx(
-                TransactionWithMeta::internal(call_tx),
-                |mut txctx, _call| {
-                    Self::do_evm(
-                        caller,
-                        &mut txctx,
-                        |exec, gas_limit| {
-                            exec.transact_call(
-                                caller.into(),
-                                address.into(),
-                                value.into(),
-                                data,
-                                gas_limit,
-                                vec![],
-                            )
-                        },
-                        // Simulate call is never called from EstimateGas.
-                        false,
-                    )
-                },
-            )
-        });
+                    // Simulate call is never called from EstimateGas.
+                    false,
+                );
+
+                TransactionResult::Rollback(result)
+            },
+        );
         Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 }
 
 impl<Cfg: Config> Module<Cfg> {
-    fn do_evm<C, F>(source: H160, ctx: &mut C, f: F, estimate_gas: bool) -> Result<Vec<u8>, Error>
+    fn do_evm<C, F>(source: H160, ctx: &C, f: F, estimate_gas: bool) -> Result<Vec<u8>, Error>
     where
         F: FnOnce(
             &mut StackExecutor<
@@ -483,12 +484,13 @@ impl<Cfg: Config> Module<Cfg> {
             >,
             u64,
         ) -> (evm::ExitReason, Vec<u8>),
-        C: TxContext,
+        C: Context,
     {
-        let is_query = ctx.is_check_only() || ctx.is_simulation();
+        let is_query = CurrentState::with_env(|env| !env.is_execute());
         let cfg = Cfg::evm_config(estimate_gas);
-        let gas_limit: u64 = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
-        let gas_price: primitive_types::U256 = ctx.tx_auth_info().fee.gas_price().into();
+        let gas_limit: u64 = <C::Runtime as Runtime>::Core::remaining_tx_gas();
+        let gas_price: primitive_types::U256 =
+            CurrentState::with_env(|env| env.tx_auth_info().fee.gas_price().into());
 
         let vicinity = backend::Vicinity {
             gas_price,
@@ -522,29 +524,26 @@ impl<Cfg: Config> Module<Cfg> {
                     _ => unreachable!("already handled above"),
                 };
 
-                <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
-                Cfg::Accounts::set_refund_unused_tx_fee(ctx, Cfg::REFUND_UNUSED_FEE);
+                <C::Runtime as Runtime>::Core::use_tx_gas(gas_used)?;
+                Cfg::Accounts::set_refund_unused_tx_fee(Cfg::REFUND_UNUSED_FEE);
                 return Err(err);
             }
         };
 
         // Apply can fail in case of unsupported actions.
         if let Err(err) = executor.into_state().apply() {
-            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
+            <C::Runtime as Runtime>::Core::use_tx_gas(gas_used)?;
             return Err(err); // Do not refund unused fee.
         };
 
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, gas_used)?;
-        Cfg::Accounts::set_refund_unused_tx_fee(ctx, Cfg::REFUND_UNUSED_FEE);
+        <C::Runtime as Runtime>::Core::use_tx_gas(gas_used)?;
+        Cfg::Accounts::set_refund_unused_tx_fee(Cfg::REFUND_UNUSED_FEE);
 
         Ok(exit_value)
     }
 
-    fn derive_caller<C>(ctx: &C) -> Result<H160, Error>
-    where
-        C: TxContext,
-    {
-        derive_caller::from_tx_auth_info(ctx.tx_auth_info())
+    fn derive_caller() -> Result<H160, Error> {
+        CurrentState::with_env(|env| derive_caller::from_tx_auth_info(env.tx_auth_info()))
     }
 
     /// Returns the decrypted call data or `None` if this transaction is simulated in
@@ -674,33 +673,33 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(call = "evm.Create")]
-    fn tx_create<C: TxContext>(ctx: &mut C, body: types::Create) -> Result<Vec<u8>, Error> {
+    fn tx_create<C: Context>(ctx: &C, body: types::Create) -> Result<Vec<u8>, Error> {
         Self::create(ctx, body.value, body.init_code)
     }
 
     #[handler(call = "evm.Call")]
-    fn tx_call<C: TxContext>(ctx: &mut C, body: types::Call) -> Result<Vec<u8>, Error> {
+    fn tx_call<C: Context>(ctx: &C, body: types::Call) -> Result<Vec<u8>, Error> {
         Self::call(ctx, body.address, body.value, body.data)
     }
 
     #[handler(query = "evm.Storage")]
-    fn query_storage<C: Context>(ctx: &mut C, body: types::StorageQuery) -> Result<Vec<u8>, Error> {
+    fn query_storage<C: Context>(ctx: &C, body: types::StorageQuery) -> Result<Vec<u8>, Error> {
         Self::get_storage(ctx, body.address, body.index)
     }
 
     #[handler(query = "evm.Code")]
-    fn query_code<C: Context>(ctx: &mut C, body: types::CodeQuery) -> Result<Vec<u8>, Error> {
+    fn query_code<C: Context>(ctx: &C, body: types::CodeQuery) -> Result<Vec<u8>, Error> {
         Self::get_code(ctx, body.address)
     }
 
     #[handler(query = "evm.Balance")]
-    fn query_balance<C: Context>(ctx: &mut C, body: types::BalanceQuery) -> Result<u128, Error> {
+    fn query_balance<C: Context>(ctx: &C, body: types::BalanceQuery) -> Result<u128, Error> {
         Self::get_balance(ctx, body.address)
     }
 
     #[handler(query = "evm.SimulateCall", expensive, allow_private_km)]
     fn query_simulate_call<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         body: types::SimulateCallQuery,
     ) -> Result<Vec<u8>, Error> {
         let cfg: LocalConfig = ctx.local_config(MODULE_NAME).unwrap_or_default();
@@ -715,7 +714,7 @@ impl<Cfg: Config> Module<Cfg> {
 
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
     fn decode_tx<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         scheme: &str,
         body: &[u8],
     ) -> Result<Option<Transaction>, CoreError> {
@@ -730,8 +729,8 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
 }
 
 impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
-    fn end_block<C: Context>(ctx: &mut C) {
-        CurrentStore::with(|store| {
+    fn end_block<C: Context>(ctx: &C) {
+        CurrentState::with_store(|store| {
             // Update the list of historic block hashes.
             let block_number = ctx.runtime_header().round;
             let block_hash = ctx.runtime_header().encoded_hash();

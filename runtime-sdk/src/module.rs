@@ -8,13 +8,14 @@ use cbor::Encode as _;
 use impl_trait_for_tuples::impl_for_tuples;
 
 use crate::{
-    context::{Context, TxContext},
+    context::Context,
     dispatcher, error,
     error::Error as _,
     event, modules,
     modules::core::types::{MethodHandlerInfo, ModuleInfo},
+    state::CurrentState,
     storage,
-    storage::{CurrentStore, Prefix},
+    storage::Prefix,
     types::{
         message::MessageResult,
         transaction::{self, AuthInfo, Call, Transaction, UnverifiedTransaction},
@@ -111,16 +112,16 @@ impl From<CallResult> for transaction::CallResult {
 
 /// A convenience function for dispatching method calls.
 pub fn dispatch_call<C, B, R, E, F>(
-    ctx: &mut C,
+    ctx: &C,
     body: cbor::Value,
     f: F,
 ) -> DispatchResult<cbor::Value, CallResult>
 where
-    C: TxContext,
+    C: Context,
     B: cbor::Decode,
     R: cbor::Encode,
     E: error::Error,
-    F: FnOnce(&mut C, B) -> Result<R, E>,
+    F: FnOnce(&C, B) -> Result<R, E>,
 {
     DispatchResult::Handled((|| {
         let args = match cbor::from_value(body)
@@ -139,7 +140,7 @@ where
 
 /// A convenience function for dispatching queries.
 pub fn dispatch_query<C, B, R, E, F>(
-    ctx: &mut C,
+    ctx: &C,
     body: cbor::Value,
     f: F,
 ) -> DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>>
@@ -149,7 +150,7 @@ where
     R: cbor::Encode,
     E: error::Error,
     error::RuntimeError: From<E>,
-    F: FnOnce(&mut C, B) -> Result<R, E>,
+    F: FnOnce(&C, B) -> Result<R, E>,
 {
     DispatchResult::Handled((|| {
         let args = cbor::from_value(body).map_err(|err| -> error::RuntimeError {
@@ -173,8 +174,8 @@ pub trait MethodHandler {
     }
 
     /// Dispatch a call.
-    fn dispatch_call<C: TxContext>(
-        _ctx: &mut C,
+    fn dispatch_call<C: Context>(
+        _ctx: &C,
         _method: &str,
         body: cbor::Value,
     ) -> DispatchResult<cbor::Value, CallResult> {
@@ -184,7 +185,7 @@ pub trait MethodHandler {
 
     /// Dispatch a query.
     fn dispatch_query<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         _method: &str,
         args: cbor::Value,
     ) -> DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
@@ -194,7 +195,7 @@ pub trait MethodHandler {
 
     /// Dispatch a message result.
     fn dispatch_message_result<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         _handler_name: &str,
         result: MessageResult,
     ) -> DispatchResult<MessageResult, ()> {
@@ -245,8 +246,8 @@ impl MethodHandler for Tuple {
         DispatchResult::Unhandled(body)
     }
 
-    fn dispatch_call<C: TxContext>(
-        ctx: &mut C,
+    fn dispatch_call<C: Context>(
+        ctx: &C,
         method: &str,
         body: cbor::Value,
     ) -> DispatchResult<cbor::Value, CallResult> {
@@ -262,7 +263,7 @@ impl MethodHandler for Tuple {
     }
 
     fn dispatch_query<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         method: &str,
         args: cbor::Value,
     ) -> DispatchResult<cbor::Value, Result<cbor::Value, error::RuntimeError>> {
@@ -278,7 +279,7 @@ impl MethodHandler for Tuple {
     }
 
     fn dispatch_message_result<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         handler_name: &str,
         result: MessageResult,
     ) -> DispatchResult<MessageResult, ()> {
@@ -325,7 +326,7 @@ impl MethodHandler for Tuple {
 pub trait TransactionHandler {
     /// Judge if a raw transaction is good enough to undergo decoding.
     /// This takes place before even decoding the transaction.
-    fn approve_raw_tx<C: Context>(_ctx: &mut C, _tx: &[u8]) -> Result<(), modules::core::Error> {
+    fn approve_raw_tx<C: Context>(_ctx: &C, _tx: &[u8]) -> Result<(), modules::core::Error> {
         // Default implementation doesn't do any checks.
         Ok(())
     }
@@ -333,7 +334,7 @@ pub trait TransactionHandler {
     /// Judge if an unverified transaction is good enough to undergo verification.
     /// This takes place before even verifying signatures.
     fn approve_unverified_tx<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         _utx: &UnverifiedTransaction,
     ) -> Result<(), modules::core::Error> {
         // Default implementation doesn't do any checks.
@@ -348,7 +349,7 @@ pub trait TransactionHandler {
     /// Returns Ok(Some(_)) if the module is in charge of the encoding scheme identified by _scheme
     /// or Ok(None) otherwise.
     fn decode_tx<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         _scheme: &str,
         _body: &[u8],
     ) -> Result<Option<Transaction>, modules::core::Error> {
@@ -360,7 +361,7 @@ pub trait TransactionHandler {
     ///
     /// Note that any signatures have already been verified.
     fn authenticate_tx<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         _tx: &Transaction,
     ) -> Result<(), modules::core::Error> {
         // Default implementation accepts all transactions.
@@ -371,10 +372,7 @@ pub trait TransactionHandler {
     ///
     /// At this point call format has not yet been decoded so peeking into the call may not be
     /// possible in case the call is encrypted.
-    fn before_handle_call<C: TxContext>(
-        _ctx: &mut C,
-        _call: &Call,
-    ) -> Result<(), modules::core::Error> {
+    fn before_handle_call<C: Context>(_ctx: &C, _call: &Call) -> Result<(), modules::core::Error> {
         // Default implementation doesn't do anything.
         Ok(())
     }
@@ -382,8 +380,8 @@ pub trait TransactionHandler {
     /// Perform any action after call, within the transaction context.
     ///
     /// If an error is returned the transaction call fails and updates are rolled back.
-    fn after_handle_call<C: TxContext>(
-        _ctx: &mut C,
+    fn after_handle_call<C: Context>(
+        _ctx: &C,
         result: CallResult,
     ) -> Result<CallResult, modules::core::Error> {
         // Default implementation doesn't do anything.
@@ -391,20 +389,20 @@ pub trait TransactionHandler {
     }
 
     /// Perform any action after dispatching the transaction, in batch context.
-    fn after_dispatch_tx<C: Context>(_ctx: &mut C, _tx_auth_info: &AuthInfo, _result: &CallResult) {
+    fn after_dispatch_tx<C: Context>(_ctx: &C, _tx_auth_info: &AuthInfo, _result: &CallResult) {
         // Default implementation doesn't do anything.
     }
 }
 
 #[impl_for_tuples(30)]
 impl TransactionHandler for Tuple {
-    fn approve_raw_tx<C: Context>(ctx: &mut C, tx: &[u8]) -> Result<(), modules::core::Error> {
+    fn approve_raw_tx<C: Context>(ctx: &C, tx: &[u8]) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::approve_raw_tx(ctx, tx)?; )* );
         Ok(())
     }
 
     fn approve_unverified_tx<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         utx: &UnverifiedTransaction,
     ) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::approve_unverified_tx(ctx, utx)?; )* );
@@ -412,7 +410,7 @@ impl TransactionHandler for Tuple {
     }
 
     fn decode_tx<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         scheme: &str,
         body: &[u8],
     ) -> Result<Option<Transaction>, modules::core::Error> {
@@ -425,24 +423,18 @@ impl TransactionHandler for Tuple {
         Ok(None)
     }
 
-    fn authenticate_tx<C: Context>(
-        ctx: &mut C,
-        tx: &Transaction,
-    ) -> Result<(), modules::core::Error> {
+    fn authenticate_tx<C: Context>(ctx: &C, tx: &Transaction) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::authenticate_tx(ctx, tx)?; )* );
         Ok(())
     }
 
-    fn before_handle_call<C: TxContext>(
-        ctx: &mut C,
-        call: &Call,
-    ) -> Result<(), modules::core::Error> {
+    fn before_handle_call<C: Context>(ctx: &C, call: &Call) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::before_handle_call(ctx, call)?; )* );
         Ok(())
     }
 
-    fn after_handle_call<C: TxContext>(
-        ctx: &mut C,
+    fn after_handle_call<C: Context>(
+        ctx: &C,
         mut result: CallResult,
     ) -> Result<CallResult, modules::core::Error> {
         for_tuples!( #(
@@ -451,7 +443,7 @@ impl TransactionHandler for Tuple {
         Ok(result)
     }
 
-    fn after_dispatch_tx<C: Context>(ctx: &mut C, tx_auth_info: &AuthInfo, result: &CallResult) {
+    fn after_dispatch_tx<C: Context>(ctx: &C, tx_auth_info: &AuthInfo, result: &CallResult) {
         for_tuples!( #( Tuple::after_dispatch_tx(ctx, tx_auth_info, result); )* );
     }
 }
@@ -468,7 +460,7 @@ pub trait MigrationHandler {
     ///
     /// Should return true in case metadata has been changed.
     fn init_or_migrate<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         _meta: &mut modules::core::types::Metadata,
         _genesis: Self::Genesis,
     ) -> bool {
@@ -483,7 +475,7 @@ impl MigrationHandler for Tuple {
     for_tuples!( type Genesis = ( #( Tuple::Genesis ),* ); );
 
     fn init_or_migrate<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         meta: &mut modules::core::types::Metadata,
         genesis: Self::Genesis,
     ) -> bool {
@@ -497,24 +489,24 @@ impl MigrationHandler for Tuple {
 pub trait BlockHandler {
     /// Perform any common actions at the start of the block (before any transactions have been
     /// executed).
-    fn begin_block<C: Context>(_ctx: &mut C) {
+    fn begin_block<C: Context>(_ctx: &C) {
         // Default implementation doesn't do anything.
     }
 
     /// Perform any common actions at the end of the block (after all transactions have been
     /// executed).
-    fn end_block<C: Context>(_ctx: &mut C) {
+    fn end_block<C: Context>(_ctx: &C) {
         // Default implementation doesn't do anything.
     }
 }
 
 #[impl_for_tuples(30)]
 impl BlockHandler for Tuple {
-    fn begin_block<C: Context>(ctx: &mut C) {
+    fn begin_block<C: Context>(ctx: &C) {
         for_tuples!( #( Tuple::begin_block(ctx); )* );
     }
 
-    fn end_block<C: Context>(ctx: &mut C) {
+    fn end_block<C: Context>(ctx: &C) {
         for_tuples!( #( Tuple::end_block(ctx); )* );
     }
 }
@@ -522,7 +514,7 @@ impl BlockHandler for Tuple {
 /// Invariant handler.
 pub trait InvariantHandler {
     /// Check invariants.
-    fn check_invariants<C: Context>(_ctx: &mut C) -> Result<(), modules::core::Error> {
+    fn check_invariants<C: Context>(_ctx: &C) -> Result<(), modules::core::Error> {
         // Default implementation doesn't do anything.
         Ok(())
     }
@@ -531,7 +523,7 @@ pub trait InvariantHandler {
 #[impl_for_tuples(30)]
 impl InvariantHandler for Tuple {
     /// Check the invariants in all modules in the tuple.
-    fn check_invariants<C: Context>(ctx: &mut C) -> Result<(), modules::core::Error> {
+    fn check_invariants<C: Context>(ctx: &C) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::check_invariants(ctx)?; )* );
         Ok(())
     }
@@ -540,11 +532,11 @@ impl InvariantHandler for Tuple {
 /// Info handler.
 pub trait ModuleInfoHandler {
     /// Reports info about the module (or modules, if `Self` is a tuple).
-    fn module_info<C: Context>(_ctx: &mut C) -> BTreeMap<String, ModuleInfo>;
+    fn module_info<C: Context>(_ctx: &C) -> BTreeMap<String, ModuleInfo>;
 }
 
 impl<M: Module + MethodHandler> ModuleInfoHandler for M {
-    fn module_info<C: Context>(_ctx: &mut C) -> BTreeMap<String, ModuleInfo> {
+    fn module_info<C: Context>(_ctx: &C) -> BTreeMap<String, ModuleInfo> {
         let mut info = BTreeMap::new();
         info.insert(
             Self::NAME.to_string(),
@@ -561,7 +553,7 @@ impl<M: Module + MethodHandler> ModuleInfoHandler for M {
 #[impl_for_tuples(30)]
 impl ModuleInfoHandler for Tuple {
     #[allow(clippy::let_and_return)]
-    fn module_info<C: Context>(ctx: &mut C) -> BTreeMap<String, ModuleInfo> {
+    fn module_info<C: Context>(ctx: &C) -> BTreeMap<String, ModuleInfo> {
         let mut merged = BTreeMap::new();
         for_tuples!( #(
             merged.extend(Tuple::module_info(ctx));
@@ -589,7 +581,7 @@ pub trait Module {
 
     /// Return the module's parameters.
     fn params() -> Self::Parameters {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &Self::NAME);
             let store = storage::TypedStore::new(store);
             store.get(Self::Parameters::STORE_KEY).unwrap_or_default()
@@ -598,7 +590,7 @@ pub trait Module {
 
     /// Set the module's parameters.
     fn set_params(params: Self::Parameters) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &Self::NAME);
             let mut store = storage::TypedStore::new(store);
             store.insert(Self::Parameters::STORE_KEY, params);

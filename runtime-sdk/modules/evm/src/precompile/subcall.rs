@@ -120,7 +120,6 @@ mod test {
     use ethabi::{ParamType, Token};
 
     use oasis_runtime_sdk::{
-        context,
         module::{self, Module as _},
         modules::accounts,
         testing::{
@@ -151,16 +150,15 @@ mod test {
     #[test]
     fn test_subcall_dispatch() {
         let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+        let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
         let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
         // Create contract.
-        let contract_address =
-            init_and_deploy_contract(&mut ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
+        let contract_address = init_and_deploy_contract(&ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
         // Call into the test contract.
         let dispatch_result = signer.call_evm(
-            &mut ctx,
+            &ctx,
             contract_address.into(),
             "test",
             &[
@@ -182,7 +180,7 @@ mod test {
 
         // Transfer some tokens to the contract.
         let dispatch_result = signer.call(
-            &mut ctx,
+            &ctx,
             "accounts.Transfer",
             accounts::types::Transfer {
                 to: TestConfig::map_address(contract_address.into()),
@@ -196,7 +194,7 @@ mod test {
 
         // Call into test contract again.
         let dispatch_result = signer.call_evm_opts(
-            &mut ctx,
+            &ctx,
             contract_address.into(),
             "test",
             &[
@@ -258,16 +256,15 @@ mod test {
     #[test]
     fn test_require_regular_call() {
         let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+        let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
         let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
         // Create contract.
-        let contract_address =
-            init_and_deploy_contract(&mut ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
+        let contract_address = init_and_deploy_contract(&ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
         // Call into the test contract.
         let dispatch_result = signer.call_evm(
-            &mut ctx,
+            &ctx,
             contract_address.into(),
             "test_delegatecall",
             &[
@@ -299,16 +296,15 @@ mod test {
     #[test]
     fn test_no_reentrance() {
         let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+        let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
         let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
         // Create contract.
-        let contract_address =
-            init_and_deploy_contract(&mut ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
+        let contract_address = init_and_deploy_contract(&ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
         // Call into the test contract.
         let dispatch_result = signer.call_evm(
-            &mut ctx,
+            &ctx,
             contract_address.into(),
             "test",
             &[
@@ -352,12 +348,11 @@ mod test {
     #[test]
     fn test_gas_accounting() {
         let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+        let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
         let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
         // Create contract.
-        let contract_address =
-            init_and_deploy_contract(&mut ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
+        let contract_address = init_and_deploy_contract(&ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
         // Make transfers more expensive so we can test an out-of-gas condition.
         accounts::Module::set_params(accounts::Parameters {
@@ -369,7 +364,7 @@ mod test {
 
         // First try a call with enough gas.
         let dispatch_result = signer.call_evm_opts(
-            &mut ctx,
+            &ctx,
             contract_address.into(),
             "test",
             &[
@@ -398,7 +393,7 @@ mod test {
         // Then lower the amount such that the inner call would fail, but the rest of execution
         // can still continue (e.g. to trigger the revert).
         let dispatch_result = signer.call_evm_opts(
-            &mut ctx,
+            &ctx,
             contract_address.into(),
             "test",
             &[
@@ -449,7 +444,7 @@ mod test {
         // Then raise the amount such that the inner call would succeed but the rest of the
         // execution would fail.
         let dispatch_result = signer.call_evm_opts(
-            &mut ctx,
+            &ctx,
             contract_address.into(),
             "test_spin", // Version that spins, wasting gas, after the subcall.
             &[

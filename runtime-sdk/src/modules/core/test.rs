@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use once_cell::unsync::Lazy;
 
 use crate::{
-    context::{BatchContext, Context, Mode, TxContext},
+    context::Context,
     core::common::version::Version,
     crypto::multisig,
     error::Error,
@@ -14,6 +14,7 @@ use crate::{
     runtime::Runtime,
     sdk_derive,
     sender::SenderMeta,
+    state::{self, CurrentState, Options},
     testing::{configmap, keys, mock},
     types::{address::Address, token, transaction, transaction::CallerAddress},
 };
@@ -26,8 +27,8 @@ type Core = super::Module<Config>;
 fn test_use_gas() {
     const MAX_GAS: u64 = 1000;
     const BLOCK_MAX_GAS: u64 = 3 * MAX_GAS + 2;
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
+
     Core::set_params(Parameters {
         max_batch_gas: BLOCK_MAX_GAS,
         max_tx_size: 32 * 1024,
@@ -42,89 +43,84 @@ fn test_use_gas() {
         dynamic_min_gas_price: Default::default(),
     });
 
-    assert_eq!(Core::max_batch_gas(&mut ctx), BLOCK_MAX_GAS);
+    assert_eq!(Core::max_batch_gas(), BLOCK_MAX_GAS);
 
-    Core::use_batch_gas(&mut ctx, 1).expect("using batch gas under limit should succeed");
-    assert_eq!(Core::remaining_batch_gas(&mut ctx), BLOCK_MAX_GAS - 1);
+    Core::use_batch_gas(1).expect("using batch gas under limit should succeed");
+    assert_eq!(Core::remaining_batch_gas(), BLOCK_MAX_GAS - 1);
 
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = MAX_GAS;
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, _call| {
-        Core::use_tx_gas(&mut tx_ctx, MAX_GAS).expect("using gas under limit should succeed");
-        assert_eq!(
-            Core::remaining_batch_gas(&mut tx_ctx),
-            BLOCK_MAX_GAS - 1 - MAX_GAS
-        );
-        assert_eq!(Core::remaining_tx_gas(&mut tx_ctx), 0);
-        assert_eq!(Core::used_tx_gas(&mut tx_ctx), MAX_GAS);
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+        Core::use_tx_gas(MAX_GAS).expect("using gas under limit should succeed");
+        assert_eq!(Core::remaining_batch_gas(), BLOCK_MAX_GAS - 1 - MAX_GAS);
+        assert_eq!(Core::remaining_tx_gas(), 0);
+        assert_eq!(Core::used_tx_gas(), MAX_GAS);
     });
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, _call| {
-        Core::use_tx_gas(&mut tx_ctx, MAX_GAS)
-            .expect("gas across separate transactions shouldn't accumulate");
-        assert_eq!(
-            Core::remaining_batch_gas(&mut tx_ctx),
-            BLOCK_MAX_GAS - 1 - 2 * MAX_GAS
-        );
-        assert_eq!(Core::remaining_tx_gas(&mut tx_ctx), 0);
-        assert_eq!(Core::used_tx_gas(&mut tx_ctx), MAX_GAS);
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+        Core::use_tx_gas(MAX_GAS).expect("gas across separate transactions shouldn't accumulate");
+        assert_eq!(Core::remaining_batch_gas(), BLOCK_MAX_GAS - 1 - 2 * MAX_GAS);
+        assert_eq!(Core::remaining_tx_gas(), 0);
+        assert_eq!(Core::used_tx_gas(), MAX_GAS);
     });
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, _call| {
-        Core::use_tx_gas(&mut tx_ctx, MAX_GAS).unwrap();
-        Core::use_tx_gas(&mut tx_ctx, 1).expect_err("gas in same transaction should accumulate");
-        assert_eq!(Core::remaining_tx_gas(&mut tx_ctx), 0);
-        assert_eq!(Core::used_tx_gas(&mut tx_ctx), MAX_GAS);
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+        Core::use_tx_gas(MAX_GAS).unwrap();
+        Core::use_tx_gas(1).expect_err("gas in same transaction should accumulate");
+        assert_eq!(Core::remaining_tx_gas(), 0);
+        assert_eq!(Core::used_tx_gas(), MAX_GAS);
     });
 
-    assert_eq!(
-        Core::remaining_batch_gas(&mut ctx),
-        BLOCK_MAX_GAS - 1 - 3 * MAX_GAS
-    );
-    assert_eq!(Core::max_batch_gas(&mut ctx), BLOCK_MAX_GAS);
+    assert_eq!(Core::remaining_batch_gas(), BLOCK_MAX_GAS - 1 - 3 * MAX_GAS);
+    assert_eq!(Core::max_batch_gas(), BLOCK_MAX_GAS);
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, _call| {
-        Core::use_tx_gas(&mut tx_ctx, 1).unwrap();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+        Core::use_tx_gas(1).unwrap();
         assert_eq!(
-            Core::remaining_batch_gas(&mut tx_ctx),
+            Core::remaining_batch_gas(),
             BLOCK_MAX_GAS - 1 - 3 * MAX_GAS - 1
         );
         assert_eq!(
-            Core::remaining_tx_gas(&mut tx_ctx),
+            Core::remaining_tx_gas(),
             0,
             "remaining tx gas should take batch limit into account"
         );
-        assert_eq!(Core::used_tx_gas(&mut tx_ctx), 1);
-        Core::use_tx_gas(&mut tx_ctx, u64::MAX).expect_err("overflow should cause error");
-        assert_eq!(Core::used_tx_gas(&mut tx_ctx), 1);
+        assert_eq!(Core::used_tx_gas(), 1);
+        Core::use_tx_gas(u64::MAX).expect_err("overflow should cause error");
+        assert_eq!(Core::used_tx_gas(), 1);
     });
 
     let mut big_tx = tx.clone();
     big_tx.auth_info.fee.gas = u64::MAX;
-    ctx.with_tx(big_tx.into(), |mut tx_ctx, _call| {
-        Core::use_tx_gas(&mut tx_ctx, u64::MAX).expect_err("batch overflow should cause error");
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+        Core::use_tx_gas(u64::MAX).expect_err("batch overflow should cause error");
     });
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, _call| {
-        Core::use_tx_gas(&mut tx_ctx, 1).expect_err("batch gas should accumulate");
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+        Core::use_tx_gas(1).expect_err("batch gas should accumulate");
     });
 
-    Core::use_batch_gas(&mut ctx, 1).expect_err("batch gas should accumulate outside tx");
+    Core::use_batch_gas(1).expect_err("batch gas should accumulate outside tx");
 
-    let mut ctx = mock.create_check_ctx();
     let mut big_tx = tx;
     big_tx.auth_info.fee.gas = u64::MAX;
-    ctx.with_tx(big_tx.into(), |mut tx_ctx, _call| {
-        Core::use_tx_gas(&mut tx_ctx, u64::MAX)
-            .expect("batch overflow should not happen in check-tx");
-    });
+
+    CurrentState::with_transaction_opts(
+        state::Options::new()
+            .with_mode(state::Mode::Check)
+            .with_tx(big_tx.into()),
+        || {
+            Core::use_tx_gas(u64::MAX).expect("batch overflow should not happen in check-tx");
+        },
+    );
 }
 
 #[test]
 fn test_query_min_gas_price() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
+
     Core::set_params(Parameters {
         max_batch_gas: 10000,
         max_tx_size: 32 * 1024,
@@ -141,15 +137,15 @@ fn test_query_min_gas_price() {
     });
 
     assert_eq!(
-        Core::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
+        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
         Some(123)
     );
     assert_eq!(
-        Core::min_gas_price(&mut ctx, &"SMALLER".parse().unwrap()),
+        Core::min_gas_price(&ctx, &"SMALLER".parse().unwrap()),
         Some(1000)
     );
 
-    let mgp = Core::query_min_gas_price(&mut ctx, ()).expect("query_min_gas_price should succeed");
+    let mgp = Core::query_min_gas_price(&ctx, ()).expect("query_min_gas_price should succeed");
     assert!(mgp.len() == 2);
     assert!(mgp.contains_key(&token::Denomination::NATIVE));
     assert!(*mgp.get(&token::Denomination::NATIVE).unwrap() == 123);
@@ -172,15 +168,15 @@ fn test_query_min_gas_price() {
     }
 
     assert_eq!(
-        super::Module::<MinGasPriceOverride>::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
+        super::Module::<MinGasPriceOverride>::min_gas_price(&ctx, &token::Denomination::NATIVE),
         Some(123)
     );
     assert_eq!(
-        super::Module::<MinGasPriceOverride>::min_gas_price(&mut ctx, &"SMALLER".parse().unwrap()),
+        super::Module::<MinGasPriceOverride>::min_gas_price(&ctx, &"SMALLER".parse().unwrap()),
         Some(1000)
     );
 
-    let mgp = super::Module::<MinGasPriceOverride>::query_min_gas_price(&mut ctx, ())
+    let mgp = super::Module::<MinGasPriceOverride>::query_min_gas_price(&ctx, ())
         .expect("query_min_gas_price should succeed");
     assert!(mgp.len() == 2);
     assert!(mgp.contains_key(&token::Denomination::NATIVE));
@@ -220,65 +216,67 @@ impl GasWasterModule {
     type Genesis = ();
 
     #[handler(call = Self::METHOD_WASTE_GAS)]
-    fn waste_gas<C: TxContext>(
-        ctx: &mut C,
+    fn waste_gas<C: Context>(
+        _ctx: &C,
         _args: (),
     ) -> Result<(), <GasWasterModule as module::Module>::Error> {
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(Self::CALL_GAS)?;
         Ok(())
     }
 
     #[handler(call = Self::METHOD_WASTE_GAS_AND_FAIL)]
-    fn fail<C: TxContext>(
-        ctx: &mut C,
+    fn fail<C: Context>(
+        _ctx: &C,
         _args: (),
     ) -> Result<(), <GasWasterModule as module::Module>::Error> {
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(Self::CALL_GAS)?;
         Err(<GasWasterModule as module::Module>::Error::Forbidden)
     }
 
     #[handler(call = Self::METHOD_WASTE_GAS_AND_FAIL_EXTRA)]
-    fn fail_extra<C: TxContext>(
-        ctx: &mut C,
+    fn fail_extra<C: Context>(
+        _ctx: &C,
         _args: (),
     ) -> Result<(), <GasWasterModule as module::Module>::Error> {
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(Self::CALL_GAS)?;
         Err(<GasWasterModule as module::Module>::Error::Forbidden)
     }
 
     #[handler(call = Self::METHOD_WASTE_GAS_HUGE)]
-    fn waste_gas_huge<C: TxContext>(
-        ctx: &mut C,
+    fn waste_gas_huge<C: Context>(
+        _ctx: &C,
         _args: (),
     ) -> Result<(), <GasWasterModule as module::Module>::Error> {
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS_HUGE)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(Self::CALL_GAS_HUGE)?;
         Ok(())
     }
 
     #[handler(call = Self::METHOD_WASTE_GAS_CALLER)]
-    fn waste_gas_caller<C: TxContext>(
-        ctx: &mut C,
+    fn waste_gas_caller<C: Context>(
+        _ctx: &C,
         _args: (),
     ) -> Result<(), <GasWasterModule as module::Module>::Error> {
         // Uses a different amount of gas based on the caller.
+        let caller = CurrentState::with_env(|env| env.tx_caller_address());
         let addr_zero = Address::default();
         let addr_ethzero = CallerAddress::EthAddress([0u8; 20]).address();
 
-        if ctx.tx_caller_address() == addr_zero {
-            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS_CALLER_ADDR_ZERO)?;
-        } else if ctx.tx_caller_address() == addr_ethzero {
-            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, Self::CALL_GAS_CALLER_ADDR_ETHZERO)?;
+        if caller == addr_zero {
+            <C::Runtime as Runtime>::Core::use_tx_gas(Self::CALL_GAS_CALLER_ADDR_ZERO)?;
+        } else if caller == addr_ethzero {
+            <C::Runtime as Runtime>::Core::use_tx_gas(Self::CALL_GAS_CALLER_ADDR_ETHZERO)?;
         }
         Ok(())
     }
 
     #[handler(call = Self::METHOD_SPECIFIC_GAS_REQUIRED)]
-    fn specific_gas_required<C: TxContext>(
-        ctx: &mut C,
+    fn specific_gas_required<C: Context>(
+        ctx: &C,
         _args: (),
     ) -> Result<(), <GasWasterModule as module::Module>::Error> {
         // Fails with an error if less than X gas was specified. (doesn't fail with out-of-gas).
-        if ctx.tx_auth_info().fee.gas < Self::CALL_GAS_SPECIFIC {
+        let gas_limit = CurrentState::with_env(|env| env.tx_auth_info().fee.gas);
+        if gas_limit < Self::CALL_GAS_SPECIFIC {
             Err(<GasWasterModule as module::Module>::Error::Forbidden)
         } else {
             Ok(())
@@ -286,12 +284,13 @@ impl GasWasterModule {
     }
 
     #[handler(call = Self::METHOD_SPECIFIC_GAS_REQUIRED_HUGE)]
-    fn specific_gas_required_huge<C: TxContext>(
-        ctx: &mut C,
+    fn specific_gas_required_huge<C: Context>(
+        ctx: &C,
         _args: (),
     ) -> Result<(), <GasWasterModule as module::Module>::Error> {
         // Fails with an error if less than X gas was specified. (doesn't fail with out-of-gas).
-        if ctx.tx_auth_info().fee.gas < Self::CALL_GAS_SPECIFIC_HUGE {
+        let gas_limit = CurrentState::with_env(|env| env.tx_auth_info().fee.gas);
+        if gas_limit < Self::CALL_GAS_SPECIFIC_HUGE {
             Err(<GasWasterModule as module::Module>::Error::Forbidden)
         } else {
             Ok(())
@@ -362,9 +361,9 @@ fn test_reject_txs() {
     // The gas waster runtime doesn't implement any authenticate_tx handler,
     // so it should accept all transactions.
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
+    let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
 
-    GasWasterRuntime::migrate(&mut ctx);
+    GasWasterRuntime::migrate(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -396,7 +395,7 @@ fn test_reject_txs() {
         },
     };
 
-    Core::authenticate_tx(&mut ctx, &tx).expect("authenticate should pass if all modules accept");
+    Core::authenticate_tx(&ctx, &tx).expect("authenticate should pass if all modules accept");
 }
 
 #[test]
@@ -465,316 +464,321 @@ fn test_query_estimate_gas() {
     let tx_caller_gas_addr_ethzero =
         GasWasterRuntime::AUTH_SIGNATURE_GAS + GasWasterModule::CALL_GAS_CALLER_ADDR_ETHZERO;
 
-    // Test happy-path execution with default settings.
-    {
-        let mut mock = mock::Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
-        GasWasterRuntime::migrate(&mut ctx);
+    CurrentState::init_local_fallback();
 
-        // Test estimation with caller derived from the transaction.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx.clone(),
-            propagate_failures: false,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
+    CurrentState::with_transaction_opts(Options::new().with_mode(state::Mode::Check), || {
+        // Test happy-path execution with default settings.
+        {
+            let mut mock = mock::Mock::default();
+            let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
+            GasWasterRuntime::migrate(&ctx);
 
-        // Test estimation with specified caller.
-        let args = types::EstimateGasQuery {
-            caller: Some(CallerAddress::Address(keys::alice::address())),
-            tx: tx.clone(),
-            propagate_failures: false,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est, tx_nomultisig_reference_gas,
-            "estimated gas should be correct"
-        );
-    }
+            // Test estimation with caller derived from the transaction.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx.clone(),
+                propagate_failures: false,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
 
-    // Test extra gas estimation.
-    {
-        let mut mock = mock::Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
-        GasWasterRuntime::migrate(&mut ctx);
+            // Test estimation with specified caller.
+            let args = types::EstimateGasQuery {
+                caller: Some(CallerAddress::Address(keys::alice::address())),
+                tx: tx.clone(),
+                propagate_failures: false,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(
+                est, tx_nomultisig_reference_gas,
+                "estimated gas should be correct"
+            );
+        }
 
-        // Test estimation on failure.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_fail_extra.clone(),
-            propagate_failures: false,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est,
-            tx_reference_gas + GasWasterModule::CALL_GAS_EXTRA,
-            "estimated gas should be correct"
-        );
-    }
+        // Test extra gas estimation.
+        {
+            let mut mock = mock::Mock::default();
+            let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
+            GasWasterRuntime::migrate(&ctx);
 
-    // Test expensive estimates.
-    {
-        let max_estimated_gas = tx_reference_gas - 1;
-        let local_config = configmap! {
-            "core" => configmap! {
-                "max_estimated_gas" => max_estimated_gas,
-            },
-        };
-        let mut mock = mock::Mock::with_local_config(local_config);
-        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
-        GasWasterRuntime::migrate(&mut ctx);
+            // Test estimation on failure.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_fail_extra.clone(),
+                propagate_failures: false,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(
+                est,
+                tx_reference_gas + GasWasterModule::CALL_GAS_EXTRA,
+                "estimated gas should be correct"
+            );
+        }
 
-        // Test with limited max_estimated_gas.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx.clone(),
-            propagate_failures: false,
-        };
-        let est = Core::query_estimate_gas(&mut ctx, args)
-            .expect("query_estimate_gas should succeed even with limited max_estimated_gas");
-        assert!(
-            est <= max_estimated_gas,
-            "estimated gas should be at most max_estimated_gas={}, was {}",
-            max_estimated_gas,
-            est
-        );
+        // Test expensive estimates.
+        {
+            let max_estimated_gas = tx_reference_gas - 1;
+            let local_config = configmap! {
+                "core" => configmap! {
+                    "max_estimated_gas" => max_estimated_gas,
+                },
+            };
+            let mut mock = mock::Mock::with_local_config(local_config);
+            let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
+            GasWasterRuntime::migrate(&ctx);
 
-        // Test with limited max_estimated_gas and propagate failures enabled.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx.clone(),
-            propagate_failures: true,
-        };
-        let result = Core::query_estimate_gas(&mut ctx, args).expect_err(
+            // Test with limited max_estimated_gas.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx.clone(),
+                propagate_failures: false,
+            };
+            let est = Core::query_estimate_gas(&ctx, args)
+                .expect("query_estimate_gas should succeed even with limited max_estimated_gas");
+            assert!(
+                est <= max_estimated_gas,
+                "estimated gas should be at most max_estimated_gas={}, was {}",
+                max_estimated_gas,
+                est
+            );
+
+            // Test with limited max_estimated_gas and propagate failures enabled.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx.clone(),
+                propagate_failures: true,
+            };
+            let result = Core::query_estimate_gas(&ctx, args).expect_err(
             "query_estimate_gas should fail with limited max_estimated_gas and propagate failures enabled",
         );
-        assert_eq!(result.module_name(), "core");
-        assert_eq!(result.code(), 12);
-        assert_eq!(
-            result.to_string(),
-            format!(
-                "out of gas (limit: {} wanted: {})",
-                max_estimated_gas, tx_reference_gas
-            )
-        );
-    }
+            assert_eq!(result.module_name(), "core");
+            assert_eq!(result.code(), 12);
+            assert_eq!(
+                result.to_string(),
+                format!(
+                    "out of gas (limit: {} wanted: {})",
+                    max_estimated_gas, tx_reference_gas
+                )
+            );
+        }
 
-    // Test transactions that fail.
-    {
-        let mut mock = mock::Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
-        GasWasterRuntime::migrate(&mut ctx);
+        // Test transactions that fail.
+        {
+            let mut mock = mock::Mock::default();
+            let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
+            GasWasterRuntime::migrate(&ctx);
 
-        // Test with propagate failures disabled.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_fail.clone(),
-            propagate_failures: false,
-        };
-        let est = Core::query_estimate_gas(&mut ctx, args)
-            .expect("query_estimate_gas should succeed even with a transaction that fails");
-        assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
+            // Test with propagate failures disabled.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_fail.clone(),
+                propagate_failures: false,
+            };
+            let est = Core::query_estimate_gas(&ctx, args)
+                .expect("query_estimate_gas should succeed even with a transaction that fails");
+            assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
 
-        // Test with propagate failures enabled.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_fail.clone(),
-            propagate_failures: true,
-        };
-        let result = Core::query_estimate_gas(&mut ctx, args)
+            // Test with propagate failures enabled.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_fail.clone(),
+                propagate_failures: true,
+            };
+            let result = Core::query_estimate_gas(&ctx, args)
             .expect_err("query_estimate_gas should fail with a transaction that fails and propagate failures enabled");
-        assert_eq!(result.module_name(), "core");
-        assert_eq!(result.code(), 22);
-        assert_eq!(result.to_string(), "forbidden by node policy",);
-    }
+            assert_eq!(result.module_name(), "core");
+            assert_eq!(result.code(), 22);
+            assert_eq!(result.to_string(), "forbidden by node policy",);
+        }
 
-    // Test binary search of expensive transactions.
-    {
-        let local_config = configmap! {
-            "core" => configmap! {
-                "estimate_gas_search_max_iters" => 64,
-            },
-        };
-        let mut mock = mock::Mock::with_local_config(local_config);
-        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
-        GasWasterRuntime::migrate(&mut ctx);
+        // Test binary search of expensive transactions.
+        {
+            let local_config = configmap! {
+                "core" => configmap! {
+                    "estimate_gas_search_max_iters" => 64,
+                },
+            };
+            let mut mock = mock::Mock::with_local_config(local_config);
+            let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
+            GasWasterRuntime::migrate(&ctx);
 
-        // Test tx estimation.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx.clone(),
-            propagate_failures: false,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
+            // Test tx estimation.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx.clone(),
+                propagate_failures: false,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
 
-        // Test tx estimation with propagate failures enabled.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx,
-            propagate_failures: true,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
+            // Test tx estimation with propagate failures enabled.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx,
+                propagate_failures: true,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
 
-        // Test a failing transaction with propagate failures disabled.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_fail.clone(),
-            propagate_failures: false,
-        };
-        let est = Core::query_estimate_gas(&mut ctx, args)
-            .expect("query_estimate_gas should succeed even with a transaction that fails");
-        assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
+            // Test a failing transaction with propagate failures disabled.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_fail.clone(),
+                propagate_failures: false,
+            };
+            let est = Core::query_estimate_gas(&ctx, args)
+                .expect("query_estimate_gas should succeed even with a transaction that fails");
+            assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
 
-        // Test a failing transaction with propagate failures enabled.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_fail,
-            propagate_failures: true,
-        };
-        let result = Core::query_estimate_gas(&mut ctx, args)
+            // Test a failing transaction with propagate failures enabled.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_fail,
+                propagate_failures: true,
+            };
+            let result = Core::query_estimate_gas(&ctx, args)
             .expect_err("query_estimate_gas should fail with a transaction that fails and propagate failures enabled");
-        assert_eq!(result.module_name(), "core");
-        assert_eq!(result.code(), 22);
-        assert_eq!(result.to_string(), "forbidden by node policy",);
+            assert_eq!(result.module_name(), "core");
+            assert_eq!(result.code(), 22);
+            assert_eq!(result.to_string(), "forbidden by node policy",);
 
-        // Test huge tx estimation.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_huge.clone(),
-            propagate_failures: false,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est, tx_huge_reference_gas,
-            "estimated gas should be correct"
-        );
+            // Test huge tx estimation.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_huge.clone(),
+                propagate_failures: false,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(
+                est, tx_huge_reference_gas,
+                "estimated gas should be correct"
+            );
 
-        // Test huge tx estimation with propagate failures enabled.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_huge,
-            propagate_failures: true,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est, tx_huge_reference_gas,
-            "estimated gas should be correct"
-        );
+            // Test huge tx estimation with propagate failures enabled.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_huge,
+                propagate_failures: true,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(
+                est, tx_huge_reference_gas,
+                "estimated gas should be correct"
+            );
 
-        // Test a transaction that requires specific amount of gas, but doesn't fail with out-of-gas.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_specific_gas.clone(),
-            propagate_failures: false,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est, tx_specific_gas_reference_gas,
-            "estimated gas should be correct"
-        );
+            // Test a transaction that requires specific amount of gas, but doesn't fail with out-of-gas.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_specific_gas.clone(),
+                propagate_failures: false,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(
+                est, tx_specific_gas_reference_gas,
+                "estimated gas should be correct"
+            );
 
-        // Test a transaction that requires specific amount of gas, with propagate failures enabled.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_specific_gas,
-            propagate_failures: true,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est, tx_specific_gas_reference_gas,
-            "estimated gas should be correct"
-        );
+            // Test a transaction that requires specific amount of gas, with propagate failures enabled.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_specific_gas,
+                propagate_failures: true,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(
+                est, tx_specific_gas_reference_gas,
+                "estimated gas should be correct"
+            );
 
-        // Test a transaction that requires specific huge amount of gas, but doesn't fail with out-of-gas.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_specific_gas_huge.clone(),
-            propagate_failures: false,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est, tx_specific_gas_huge_reference_gas,
-            "estimated gas should be correct"
-        );
+            // Test a transaction that requires specific huge amount of gas, but doesn't fail with out-of-gas.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_specific_gas_huge.clone(),
+                propagate_failures: false,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(
+                est, tx_specific_gas_huge_reference_gas,
+                "estimated gas should be correct"
+            );
 
-        // Test a transaction that requires specific amount of gas, with propagate failures enabled.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_specific_gas_huge,
-            propagate_failures: true,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est, tx_specific_gas_huge_reference_gas,
-            "estimated gas should be correct"
-        );
-    }
+            // Test a transaction that requires specific amount of gas, with propagate failures enabled.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_specific_gas_huge,
+                propagate_failures: true,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(
+                est, tx_specific_gas_huge_reference_gas,
+                "estimated gas should be correct"
+            );
+        }
 
-    // Test confidential estimation that should zeroize the caller.
-    {
-        let mut mock = mock::Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, true);
-        GasWasterRuntime::migrate(&mut ctx);
+        // Test confidential estimation that should zeroize the caller.
+        {
+            let mut mock = mock::Mock::default();
+            let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(true);
+            GasWasterRuntime::migrate(&ctx);
 
-        // Test estimation with caller derived from the transaction.
-        let args = types::EstimateGasQuery {
-            caller: None,
-            tx: tx_caller_specific.clone(),
-            propagate_failures: false,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est, tx_caller_gas_addr_zero,
-            "estimated gas should be correct"
-        );
+            // Test estimation with caller derived from the transaction.
+            let args = types::EstimateGasQuery {
+                caller: None,
+                tx: tx_caller_specific.clone(),
+                propagate_failures: false,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(
+                est, tx_caller_gas_addr_zero,
+                "estimated gas should be correct"
+            );
 
-        // Test estimation with specified caller.
-        let args = types::EstimateGasQuery {
-            caller: Some(CallerAddress::Address(keys::alice::address())),
-            tx: tx_caller_specific.clone(),
-            propagate_failures: false,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est, tx_caller_gas_addr_zero,
-            "estimated gas should be correct"
-        );
+            // Test estimation with specified caller.
+            let args = types::EstimateGasQuery {
+                caller: Some(CallerAddress::Address(keys::alice::address())),
+                tx: tx_caller_specific.clone(),
+                propagate_failures: false,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(
+                est, tx_caller_gas_addr_zero,
+                "estimated gas should be correct"
+            );
 
-        // Test estimation with specified caller (eth address).
-        let args = types::EstimateGasQuery {
-            caller: Some(CallerAddress::EthAddress([42u8; 20])),
-            tx: tx_caller_specific.clone(),
-            propagate_failures: false,
-        };
-        let est =
-            Core::query_estimate_gas(&mut ctx, args).expect("query_estimate_gas should succeed");
-        assert_eq!(
-            est, tx_caller_gas_addr_ethzero,
-            "estimated gas should be correct"
-        );
-    }
+            // Test estimation with specified caller (eth address).
+            let args = types::EstimateGasQuery {
+                caller: Some(CallerAddress::EthAddress([42u8; 20])),
+                tx: tx_caller_specific.clone(),
+                propagate_failures: false,
+            };
+            let est =
+                Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
+            assert_eq!(
+                est, tx_caller_gas_addr_ethzero,
+                "estimated gas should be correct"
+            );
+        }
+    });
 }
 
 #[test]
 fn test_approve_unverified_tx() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
+
     Core::set_params(Parameters {
         max_batch_gas: u64::MAX,
         max_tx_size: 32 * 1024,
@@ -788,9 +792,10 @@ fn test_approve_unverified_tx() {
         },
         dynamic_min_gas_price: Default::default(),
     });
+
     let dummy_bytes = b"you look, you die".to_vec();
     Core::approve_unverified_tx(
-        &mut ctx,
+        &ctx,
         &transaction::UnverifiedTransaction(
             dummy_bytes.clone(),
             vec![
@@ -800,8 +805,9 @@ fn test_approve_unverified_tx() {
         ),
     )
     .expect("at max");
+
     Core::approve_unverified_tx(
-        &mut ctx,
+        &ctx,
         &transaction::UnverifiedTransaction(
             dummy_bytes.clone(),
             vec![
@@ -812,8 +818,9 @@ fn test_approve_unverified_tx() {
         ),
     )
     .expect_err("too many authentication slots");
+
     Core::approve_unverified_tx(
-        &mut ctx,
+        &ctx,
         &transaction::UnverifiedTransaction(
             dummy_bytes.clone(),
             vec![
@@ -827,43 +834,32 @@ fn test_approve_unverified_tx() {
 
 #[test]
 fn test_set_priority() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
-    assert_eq!(
-        0,
-        Core::take_priority(&mut ctx),
-        "default priority should be 0"
-    );
+    assert_eq!(0, Core::take_priority(), "default priority should be 0");
 
-    Core::set_priority(&mut ctx, 1);
-    Core::set_priority(&mut ctx, 11);
+    Core::set_priority(1);
+    Core::set_priority(11);
 
-    let tx = mock::transaction();
-    ctx.with_tx(tx.into(), |mut tx_ctx, _call| {
-        Core::set_priority(&mut tx_ctx, 10);
+    CurrentState::with_transaction(|| {
+        Core::set_priority(10);
     });
 
-    assert_eq!(
-        10,
-        Core::take_priority(&mut ctx),
-        "setting priority should work"
-    );
+    assert_eq!(10, Core::take_priority(), "setting priority should work");
 }
 
 #[test]
 fn test_set_sender_meta() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
     let sender_meta = SenderMeta {
         address: keys::alice::address(),
         tx_nonce: 42,
         state_nonce: 43,
     };
-    Core::set_sender_meta(&mut ctx, sender_meta.clone());
+    Core::set_sender_meta(sender_meta.clone());
 
-    let taken_sender_meta = Core::take_sender_meta(&mut ctx);
+    let taken_sender_meta = Core::take_sender_meta();
     assert_eq!(
         taken_sender_meta, sender_meta,
         "setting sender metadata should work"
@@ -873,7 +869,7 @@ fn test_set_sender_meta() {
 #[test]
 fn test_min_gas_price() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
+    let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
 
     Core::set_params(Parameters {
         max_batch_gas: u64::MAX,
@@ -924,15 +920,16 @@ fn test_min_gas_price() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, call| {
-        Core::before_handle_call(&mut tx_ctx, &call).expect_err("gas price should be too low");
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+        Core::before_handle_call(&ctx, &call).expect_err("gas price should be too low");
     });
 
     tx.auth_info.fee.amount = token::BaseUnits::new(100000, token::Denomination::NATIVE);
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, call| {
-        Core::before_handle_call(&mut tx_ctx, &call).expect("gas price should be ok");
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+        Core::before_handle_call(&ctx, &call).expect("gas price should be ok");
     });
 
     // Test local override.
@@ -952,108 +949,60 @@ fn test_min_gas_price() {
             once_cell::unsync::Lazy::new(|| BTreeSet::from(["exempt.Method"]));
     }
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, call| {
-        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
-            .expect_err("gas price should be too low");
-    });
+    CurrentState::with_transaction_opts(
+        state::Options::new().with_mode(state::Mode::Check),
+        || {
+            CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+                super::Module::<MinGasPriceOverride>::before_handle_call(&ctx, &call)
+                    .expect_err("gas price should be too low");
+            });
 
-    tx.auth_info.fee.amount = token::BaseUnits::new(1_000_000, token::Denomination::NATIVE);
+            tx.auth_info.fee.amount = token::BaseUnits::new(1_000_000, token::Denomination::NATIVE);
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, call| {
-        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
-            .expect("gas price should be ok");
-    });
+            CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+                super::Module::<MinGasPriceOverride>::before_handle_call(&ctx, &call)
+                    .expect("gas price should be ok");
+            });
 
-    tx.auth_info.fee.amount = token::BaseUnits::new(1_000, "SMALLER".parse().unwrap());
+            tx.auth_info.fee.amount = token::BaseUnits::new(1_000, "SMALLER".parse().unwrap());
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, call| {
-        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
-            .expect_err("gas price should be too low");
-    });
+            CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+                super::Module::<MinGasPriceOverride>::before_handle_call(&ctx, &call)
+                    .expect_err("gas price should be too low");
+            });
 
-    tx.auth_info.fee.amount = token::BaseUnits::new(10_000, "SMALLER".parse().unwrap());
+            tx.auth_info.fee.amount = token::BaseUnits::new(10_000, "SMALLER".parse().unwrap());
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, call| {
-        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
-            .expect("gas price should be ok");
-    });
+            CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+                super::Module::<MinGasPriceOverride>::before_handle_call(&ctx, &call)
+                    .expect("gas price should be ok");
+            });
 
-    // Test exempt methods.
-    tx.call.method = "exempt.Method".into();
-    tx.auth_info.fee.amount = token::BaseUnits::new(100_000, token::Denomination::NATIVE);
+            // Test exempt methods.
+            tx.call.method = "exempt.Method".into();
+            tx.auth_info.fee.amount = token::BaseUnits::new(100_000, token::Denomination::NATIVE);
+            let call = tx.call.clone();
 
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, call| {
-        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
-            .expect("method should be gas price exempt");
-    });
+            CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+                super::Module::<MinGasPriceOverride>::before_handle_call(&ctx, &call)
+                    .expect("method should be gas price exempt");
+            });
 
-    tx.auth_info.fee.amount = token::BaseUnits::new(0, token::Denomination::NATIVE);
+            tx.auth_info.fee.amount = token::BaseUnits::new(0, token::Denomination::NATIVE);
 
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        super::Module::<MinGasPriceOverride>::before_handle_call(&mut tx_ctx, &call)
-            .expect("method should be gas price exempt");
-    });
-}
-
-#[test]
-fn test_emit_events() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-
-    #[derive(Debug, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
-    struct TestEvent {
-        i: u64,
-    }
-
-    impl crate::event::Event for TestEvent {
-        fn module_name() -> &'static str {
-            "testevent"
-        }
-        fn code(&self) -> u32 {
-            0
-        }
-    }
-
-    ctx.emit_event(TestEvent { i: 42 });
-    let etags = ctx.with_tx(mock::transaction().into(), |mut ctx, _| {
-        ctx.emit_event(TestEvent { i: 2 });
-        ctx.emit_event(TestEvent { i: 3 });
-        ctx.emit_event(TestEvent { i: 1 });
-
-        let state = ctx.commit();
-        let tags = state.events.clone().into_tags();
-        assert_eq!(tags.len(), 1, "1 emitted tag expected");
-
-        let events: Vec<TestEvent> = cbor::from_slice(&tags[0].value).unwrap();
-        assert_eq!(events.len(), 3, "3 emitted events expected");
-        assert_eq!(TestEvent { i: 2 }, events[0], "expected events emitted");
-        assert_eq!(TestEvent { i: 3 }, events[1], "expected events emitted");
-        assert_eq!(TestEvent { i: 1 }, events[2], "expected events emitted");
-
-        state.events
-    });
-    // Forward tx emitted etags.
-    ctx.emit_etags(etags);
-    // Emit one more event.
-    ctx.emit_event(TestEvent { i: 0 });
-
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
-    assert_eq!(tags.len(), 1, "1 emitted tag expected");
-
-    let events: Vec<TestEvent> = cbor::from_slice(&tags[0].value).unwrap();
-    assert_eq!(events.len(), 5, "5 emitted events expected");
-    assert_eq!(TestEvent { i: 42 }, events[0], "expected events emitted");
-    assert_eq!(TestEvent { i: 2 }, events[1], "expected events emitted");
-    assert_eq!(TestEvent { i: 3 }, events[2], "expected events emitted");
-    assert_eq!(TestEvent { i: 1 }, events[3], "expected events emitted");
-    assert_eq!(TestEvent { i: 0 }, events[4], "expected events emitted");
+            CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
+                super::Module::<MinGasPriceOverride>::before_handle_call(&ctx, &call)
+                    .expect("method should be gas price exempt");
+            });
+        },
+    );
 }
 
 #[test]
 fn test_gas_used_events() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
+
     Core::set_params(Parameters {
         max_batch_gas: 1_000_000,
         max_tx_size: 32 * 1024,
@@ -1071,33 +1020,21 @@ fn test_gas_used_events() {
     let mut tx = mock::transaction();
     tx.auth_info.fee.gas = 100_000;
 
-    let etags = ctx.with_tx(tx.into(), |mut tx_ctx, _call| {
-        Core::use_tx_gas(&mut tx_ctx, 10).expect("using gas under limit should succeed");
-        assert_eq!(Core::used_tx_gas(&mut tx_ctx), 10);
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        Core::use_tx_gas(10).expect("using gas under limit should succeed");
+        assert_eq!(Core::used_tx_gas(), 10);
         Core::after_handle_call(
-            &mut tx_ctx,
+            &ctx,
             module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
         )
         .expect("after_handle_call should succeed");
 
-        let state = tx_ctx.commit();
-        let tags = state.events.clone().into_tags();
+        let tags = CurrentState::with(|state| state.take_all_events().into_tags());
         assert_eq!(tags.len(), 1, "1 emitted tag expected");
 
         let expected = cbor::to_vec(vec![Event::GasUsed { amount: 10 }]);
         assert_eq!(tags[0].value, expected, "expected events emitted");
-
-        state.events
     });
-    // Forward tx emitted etags.
-    ctx.emit_etags(etags);
-
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
-    assert_eq!(tags.len(), 1, "1 emitted tags expected");
-
-    let expected = cbor::to_vec(vec![Event::GasUsed { amount: 10 }]);
-    assert_eq!(tags[0].value, expected, "expected events emitted");
 }
 
 /// Constructs a BTreeMap using a `btreemap! { key => value, ... }` syntax.
@@ -1119,7 +1056,7 @@ fn test_module_info() {
     use types::{MethodHandlerInfo, MethodHandlerKind};
 
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
+    let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
 
     // Set bogus params on the core module; we want to see them reflected in response to the `runtime_info()` query.
     let core_params = Parameters {
@@ -1130,7 +1067,7 @@ fn test_module_info() {
     };
     Core::set_params(core_params.clone());
 
-    let info = Core::query_runtime_info(&mut ctx, ()).unwrap();
+    let info = Core::query_runtime_info(&ctx, ()).unwrap();
     assert_eq!(
         info,
         types::RuntimeInfoResponse {
@@ -1209,7 +1146,7 @@ fn test_min_gas_price_update() {
 #[test]
 fn test_dynamic_min_gas_price() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(Mode::CheckTx, false);
+    let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
 
     let denom: token::Denomination = "SMALLER".parse().unwrap();
     Core::set_params(Parameters {
@@ -1265,49 +1202,58 @@ fn test_dynamic_min_gas_price() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
     assert_eq!(
-        Core::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
+        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
         Some(1000)
     );
-    assert_eq!(Core::min_gas_price(&mut ctx, &denom), Some(100));
+    assert_eq!(Core::min_gas_price(&ctx, &denom), Some(100));
 
     // Simulate some full blocks (with max gas usage).
     for round in 0..=10 {
         mock.runtime_header.round = round;
 
-        let mut ctx = mock.create_ctx();
-        Core::begin_block(&mut ctx);
+        let ctx = mock.create_ctx();
+        CurrentState::with_transaction(|| {
+            // Simulate a new block starting by starting with fresh per-block values.
+            CurrentState::with(|state| state.hide_block_values());
 
-        for _ in 0..909 {
-            // Each tx uses 11 gas, this makes it 9999/10_000 block gas used.
-            ctx.with_tx(tx.clone().into(), |mut tx_ctx, call| {
-                Core::before_handle_call(&mut tx_ctx, &call).expect("gas price should be ok");
-            });
-        }
+            Core::begin_block(&ctx);
 
-        Core::end_block(&mut ctx);
+            for _ in 0..909 {
+                // Each tx uses 11 gas, this makes it 9999/10_000 block gas used.
+                CurrentState::with_transaction_opts(
+                    Options::new().with_tx(tx.clone().into()),
+                    || {
+                        Core::before_handle_call(&ctx, &call).expect("gas price should be ok");
+                    },
+                );
+            }
+
+            Core::end_block(&ctx);
+        });
     }
 
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
     assert_eq!(
-        Core::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
+        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
         Some(3598) // Gas price should increase.
     );
-    assert_eq!(Core::min_gas_price(&mut ctx, &denom), Some(350));
+    assert_eq!(Core::min_gas_price(&ctx, &denom), Some(350));
 
     // Simulate some empty blocks.
     for round in 10..=100 {
         mock.runtime_header.round = round;
 
-        let mut ctx = mock.create_ctx();
-        Core::begin_block(&mut ctx);
-        Core::end_block(&mut ctx);
+        let ctx = mock.create_ctx();
+        Core::begin_block(&ctx);
+        Core::end_block(&ctx);
     }
 
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
     assert_eq!(
-        Core::min_gas_price(&mut ctx, &token::Denomination::NATIVE),
+        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
         Some(1000) // Gas price should decrease to the configured min gas price.
     );
-    assert_eq!(Core::min_gas_price(&mut ctx, &denom), Some(100));
+    assert_eq!(Core::min_gas_price(&ctx, &denom), Some(100));
 }

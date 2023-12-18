@@ -5,12 +5,13 @@ use evm::{
 pub use primitive_types::{H160, H256};
 
 use oasis_runtime_sdk::{
+    context,
     module::{self},
     modules::{accounts, accounts::Module, core, core::Error},
     subcall,
     testing::keys,
     types::token::{self, Denomination},
-    BatchContext, Runtime, Version,
+    Runtime, Version,
 };
 
 use crate::{
@@ -240,8 +241,8 @@ impl Runtime for TestRuntime {
 }
 
 #[cfg(any(test, feature = "test"))]
-pub fn init_and_deploy_contract<C: BatchContext>(
-    ctx: &mut C,
+pub fn init_and_deploy_contract<C: context::Context>(
+    ctx: &C,
     signer: &mut EvmSigner,
     bytecode: &str,
 ) -> H160 {

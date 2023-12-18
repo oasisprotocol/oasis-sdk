@@ -18,12 +18,13 @@ use oasis_core_runtime::{
 use oasis_runtime_sdk_macros::{handler, sdk_derive};
 
 use crate::{
-    context::{Context, TxContext},
+    context::Context,
     error, migration, module,
     module::Module as _,
     modules,
     modules::core::{Error as CoreError, API as _},
     runtime::Runtime,
+    state::CurrentState,
     storage::Prefix,
     types::{
         address::Address,
@@ -169,8 +170,8 @@ pub trait API {
     ///
     /// * `nonce`: A caller-provided sequence number that will help identify the success/fail events.
     ///   When called from a deposit transaction, we use the signer nonce.
-    fn deposit<C: TxContext>(
-        ctx: &mut C,
+    fn deposit<C: Context>(
+        ctx: &C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -183,8 +184,8 @@ pub trait API {
     ///
     /// * `nonce`: A caller-provided sequence number that will help identify the success/fail events.
     ///   When called from a withdraw transaction, we use the signer nonce.
-    fn withdraw<C: TxContext>(
-        ctx: &mut C,
+    fn withdraw<C: Context>(
+        ctx: &C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -197,8 +198,8 @@ pub trait API {
     ///
     /// * `nonce`: A caller-provided sequence number that will help identify the success/fail events.
     ///   When called from a delegate transaction, we use the signer nonce.
-    fn delegate<C: TxContext>(
-        ctx: &mut C,
+    fn delegate<C: Context>(
+        ctx: &C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -213,8 +214,8 @@ pub trait API {
     ///
     /// * `nonce`: A caller-provided sequence number that will help identify the success/fail events.
     ///   When called from an undelegate transaction, we use the signer nonce.
-    fn undelegate<C: TxContext>(
-        ctx: &mut C,
+    fn undelegate<C: Context>(
+        ctx: &C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -244,8 +245,8 @@ const CONSENSUS_UNDELEGATE_HANDLER: &str = "consensus.Undelegate";
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
     for Module<Accounts, Consensus>
 {
-    fn deposit<C: TxContext>(
-        ctx: &mut C,
+    fn deposit<C: Context>(
+        ctx: &C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -275,8 +276,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
         Ok(())
     }
 
-    fn withdraw<C: TxContext>(
-        ctx: &mut C,
+    fn withdraw<C: Context>(
+        ctx: &C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -298,20 +299,20 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
             ),
         )?;
 
-        if ctx.is_check_only() {
+        if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(());
         }
 
         // Transfer the given amount to the module's withdrawal account to make sure the tokens
         // remain available until actually withdrawn.
-        Accounts::transfer(ctx, from, *ADDRESS_PENDING_WITHDRAWAL, &amount)
+        Accounts::transfer(from, *ADDRESS_PENDING_WITHDRAWAL, &amount)
             .map_err(|_| Error::InsufficientBalance)?;
 
         Ok(())
     }
 
-    fn delegate<C: TxContext>(
-        ctx: &mut C,
+    fn delegate<C: Context>(
+        ctx: &C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -334,20 +335,20 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
             ),
         )?;
 
-        if ctx.is_check_only() {
+        if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(());
         }
 
         // Transfer the given amount to the module's delegation account to make sure the tokens
         // remain available until actually delegated.
-        Accounts::transfer(ctx, from, *ADDRESS_PENDING_DELEGATION, &amount)
+        Accounts::transfer(from, *ADDRESS_PENDING_DELEGATION, &amount)
             .map_err(|_| Error::InsufficientBalance)?;
 
         Ok(())
     }
 
-    fn undelegate<C: TxContext>(
-        ctx: &mut C,
+    fn undelegate<C: Context>(
+        ctx: &C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -396,17 +397,17 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     /// Deposit in the runtime.
     #[handler(call = "consensus.Deposit")]
-    fn tx_deposit<C: TxContext>(ctx: &mut C, body: types::Deposit) -> Result<(), Error> {
+    fn tx_deposit<C: Context>(ctx: &C, body: types::Deposit) -> Result<(), Error> {
         let params = Self::params();
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_deposit)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.tx_deposit)?;
 
         // Check whether deposit is allowed.
         if params.disable_deposit {
             return Err(Error::Forbidden);
         }
 
-        let signer = &ctx.tx_auth_info().signer_info[0];
-        Consensus::ensure_compatible_tx_signer(ctx)?;
+        let signer = CurrentState::with_env(|env| env.tx_auth_info().signer_info[0].clone());
+        Consensus::ensure_compatible_tx_signer()?;
 
         let address = signer.address_spec.address();
         let nonce = signer.nonce;
@@ -434,9 +435,9 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     }
 
     #[handler(call = "consensus.Withdraw")]
-    fn tx_withdraw<C: TxContext>(ctx: &mut C, body: types::Withdraw) -> Result<(), Error> {
+    fn tx_withdraw<C: Context>(ctx: &C, body: types::Withdraw) -> Result<(), Error> {
         let params = Self::params();
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_withdraw)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.tx_withdraw)?;
 
         // Check whether withdraw is allowed.
         if params.disable_withdraw {
@@ -444,26 +445,26 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         }
 
         // Signer.
-        let signer = &ctx.tx_auth_info().signer_info[0];
         if body.to.is_none() {
             // If no `to` field is specified, i.e. withdrawing to the transaction sender's account,
             // only allow the consensus-compatible single-Ed25519-key signer type. Otherwise, the
             // tokens would get stuck in an account that you can't sign for on the consensus layer.
-            Consensus::ensure_compatible_tx_signer(ctx)?;
+            Consensus::ensure_compatible_tx_signer()?;
         }
 
+        let signer = CurrentState::with_env(|env| env.tx_auth_info().signer_info[0].clone());
         let address = signer.address_spec.address();
         let nonce = signer.nonce;
         Self::withdraw(ctx, address, nonce, body.to.unwrap_or(address), body.amount)
     }
 
     #[handler(call = "consensus.Delegate")]
-    fn tx_delegate<C: TxContext>(ctx: &mut C, body: types::Delegate) -> Result<(), Error> {
+    fn tx_delegate<C: Context>(ctx: &C, body: types::Delegate) -> Result<(), Error> {
         let params = Self::params();
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_delegate)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.tx_delegate)?;
         let store_receipt = body.receipt > 0;
         if store_receipt {
-            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.store_receipt)?;
+            <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.store_receipt)?;
         }
 
         // Check whether delegate is allowed.
@@ -471,12 +472,12 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
             return Err(Error::Forbidden);
         }
         // Make sure receipts can only be requested internally (e.g. via subcalls).
-        if store_receipt && !ctx.is_internal() {
+        if store_receipt && !CurrentState::with_env(|env| env.is_internal()) {
             return Err(Error::InvalidArgument);
         }
 
         // Signer.
-        let signer = &ctx.tx_auth_info().signer_info[0];
+        let signer = CurrentState::with_env(|env| env.tx_auth_info().signer_info[0].clone());
         let from = signer.address_spec.address();
         let nonce = if store_receipt {
             body.receipt // Use receipt identifier as the nonce.
@@ -487,12 +488,12 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     }
 
     #[handler(call = "consensus.Undelegate")]
-    fn tx_undelegate<C: TxContext>(ctx: &mut C, body: types::Undelegate) -> Result<(), Error> {
+    fn tx_undelegate<C: Context>(ctx: &C, body: types::Undelegate) -> Result<(), Error> {
         let params = Self::params();
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.tx_undelegate)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.tx_undelegate)?;
         let store_receipt = body.receipt > 0;
         if store_receipt {
-            <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.store_receipt)?;
+            <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.store_receipt)?;
         }
 
         // Check whether undelegate is allowed.
@@ -500,12 +501,12 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
             return Err(Error::Forbidden);
         }
         // Make sure receipts can only be requested internally (e.g. via subcalls).
-        if store_receipt && !ctx.is_internal() {
+        if store_receipt && !CurrentState::with_env(|env| env.is_internal()) {
             return Err(Error::InvalidArgument);
         }
 
         // Signer.
-        let signer = &ctx.tx_auth_info().signer_info[0];
+        let signer = CurrentState::with_env(|env| env.tx_auth_info().signer_info[0].clone());
         let to = signer.address_spec.address();
         let nonce = if store_receipt {
             body.receipt // Use receipt identifer as the nonce.
@@ -516,19 +517,19 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     }
 
     #[handler(call = "consensus.TakeReceipt", internal)]
-    fn internal_take_receipt<C: TxContext>(
-        ctx: &mut C,
+    fn internal_take_receipt<C: Context>(
+        _ctx: &C,
         body: types::TakeReceipt,
     ) -> Result<Option<types::Receipt>, Error> {
         let params = Self::params();
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, params.gas_costs.take_receipt)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.take_receipt)?;
 
         if !body.kind.is_valid() {
             return Err(Error::InvalidArgument);
         }
 
         Ok(state::take_receipt(
-            ctx.tx_caller_address(),
+            CurrentState::with_env(|env| env.tx_caller_address()),
             body.kind,
             body.id,
         ))
@@ -536,10 +537,10 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     #[handler(query = "consensus.Balance")]
     fn query_balance<C: Context>(
-        ctx: &mut C,
+        _ctx: &C,
         args: types::BalanceQuery,
     ) -> Result<types::AccountBalance, Error> {
-        let denomination = Consensus::consensus_denomination(ctx)?;
+        let denomination = Consensus::consensus_denomination()?;
         let balances = Accounts::get_balances(args.address).map_err(|_| Error::InvalidArgument)?;
         let balance = balances
             .balances
@@ -551,7 +552,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     #[handler(query = "consensus.Account")]
     fn query_consensus_account<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         args: types::ConsensusAccountQuery,
     ) -> Result<ConsensusAccount, Error> {
         Consensus::account(ctx, args.address).map_err(|_| Error::InvalidArgument)
@@ -559,7 +560,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     #[handler(query = "consensus.Delegation")]
     fn query_delegation<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         args: types::DelegationQuery,
     ) -> Result<types::DelegationInfo, Error> {
         state::get_delegation(args.from, args.to)
@@ -567,7 +568,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     #[handler(query = "consensus.Delegations")]
     fn query_delegations<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         args: types::DelegationsQuery,
     ) -> Result<Vec<types::ExtendedDelegationInfo>, Error> {
         state::get_delegations(args.from)
@@ -575,7 +576,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     #[handler(query = "consensus.Undelegations")]
     fn query_undelegations<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         args: types::UndelegationsQuery,
     ) -> Result<Vec<types::UndelegationInfo>, Error> {
         state::get_undelegations(args.to)
@@ -583,14 +584,13 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 
     #[handler(message_result = CONSENSUS_TRANSFER_HANDLER)]
     fn message_result_transfer<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         me: MessageEvent,
         context: types::ConsensusTransferContext,
     ) {
         if !me.is_success() {
             // Transfer out failed, refund the balance.
             Accounts::transfer(
-                ctx,
                 *ADDRESS_PENDING_WITHDRAWAL,
                 context.address,
                 &context.amount,
@@ -598,76 +598,79 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
             .expect("should have enough balance");
 
             // Emit withdraw failed event.
-            ctx.emit_event(Event::Withdraw {
-                from: context.address,
-                nonce: context.nonce,
-                to: context.to,
-                amount: context.amount.clone(),
-                error: Some(me.into()),
+            CurrentState::with(|state| {
+                state.emit_event(Event::Withdraw {
+                    from: context.address,
+                    nonce: context.nonce,
+                    to: context.to,
+                    amount: context.amount.clone(),
+                    error: Some(me.into()),
+                });
             });
             return;
         }
 
         // Burn the withdrawn tokens.
-        Accounts::burn(ctx, *ADDRESS_PENDING_WITHDRAWAL, &context.amount)
+        Accounts::burn(*ADDRESS_PENDING_WITHDRAWAL, &context.amount)
             .expect("should have enough balance");
 
         // Emit withdraw successful event.
-        ctx.emit_event(Event::Withdraw {
-            from: context.address,
-            nonce: context.nonce,
-            to: context.to,
-            amount: context.amount.clone(),
-            error: None,
+        CurrentState::with(|state| {
+            state.emit_event(Event::Withdraw {
+                from: context.address,
+                nonce: context.nonce,
+                to: context.to,
+                amount: context.amount.clone(),
+                error: None,
+            });
         });
     }
 
     #[handler(message_result = CONSENSUS_WITHDRAW_HANDLER)]
     fn message_result_withdraw<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         me: MessageEvent,
         context: types::ConsensusWithdrawContext,
     ) {
         if !me.is_success() {
             // Transfer in failed, emit deposit failed event.
-            ctx.emit_event(Event::Deposit {
-                from: context.from,
-                nonce: context.nonce,
-                to: context.address,
-                amount: context.amount.clone(),
-                error: Some(me.into()),
+            CurrentState::with(|state| {
+                state.emit_event(Event::Deposit {
+                    from: context.from,
+                    nonce: context.nonce,
+                    to: context.address,
+                    amount: context.amount.clone(),
+                    error: Some(me.into()),
+                });
             });
             return;
         }
 
         // Update runtime state.
-        Accounts::mint(ctx, context.address, &context.amount).unwrap();
+        Accounts::mint(context.address, &context.amount).unwrap();
 
         // Emit deposit successful event.
-        ctx.emit_event(Event::Deposit {
-            from: context.from,
-            nonce: context.nonce,
-            to: context.address,
-            amount: context.amount.clone(),
-            error: None,
+        CurrentState::with(|state| {
+            state.emit_event(Event::Deposit {
+                from: context.from,
+                nonce: context.nonce,
+                to: context.address,
+                amount: context.amount.clone(),
+                error: None,
+            });
         });
     }
 
     #[handler(message_result = CONSENSUS_DELEGATE_HANDLER)]
     fn message_result_delegate<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         me: MessageEvent,
         context: types::ConsensusDelegateContext,
     ) {
         if !me.is_success() {
             // Delegation failed, refund the balance.
-            Accounts::transfer(
-                ctx,
-                *ADDRESS_PENDING_DELEGATION,
-                context.from,
-                &context.amount,
-            )
-            .expect("should have enough balance");
+            Accounts::transfer(*ADDRESS_PENDING_DELEGATION, context.from, &context.amount)
+                .expect("should have enough balance");
 
             // Store receipt if requested.
             if context.receipt {
@@ -683,18 +686,20 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
             }
 
             // Emit delegation failed event.
-            ctx.emit_event(Event::Delegate {
-                from: context.from,
-                nonce: context.nonce,
-                to: context.to,
-                amount: context.amount,
-                error: Some(me.into()),
+            CurrentState::with(|state| {
+                state.emit_event(Event::Delegate {
+                    from: context.from,
+                    nonce: context.nonce,
+                    to: context.to,
+                    amount: context.amount,
+                    error: Some(me.into()),
+                });
             });
             return;
         }
 
         // Burn the delegated tokens.
-        Accounts::burn(ctx, *ADDRESS_PENDING_DELEGATION, &context.amount)
+        Accounts::burn(*ADDRESS_PENDING_DELEGATION, &context.amount)
             .expect("should have enough balance");
 
         // Record delegation.
@@ -720,18 +725,20 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         }
 
         // Emit delegation successful event.
-        ctx.emit_event(Event::Delegate {
-            from: context.from,
-            nonce: context.nonce,
-            to: context.to,
-            amount: context.amount,
-            error: None,
+        CurrentState::with(|state| {
+            state.emit_event(Event::Delegate {
+                from: context.from,
+                nonce: context.nonce,
+                to: context.to,
+                amount: context.amount,
+                error: None,
+            });
         });
     }
 
     #[handler(message_result = CONSENSUS_UNDELEGATE_HANDLER)]
     fn message_result_undelegate<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         me: MessageEvent,
         context: types::ConsensusUndelegateContext,
     ) {
@@ -753,13 +760,15 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
             }
 
             // Emit undelegation failed event.
-            ctx.emit_event(Event::UndelegateStart {
-                from: context.from,
-                nonce: context.nonce,
-                to: context.to,
-                shares: context.shares,
-                debond_end_time: EPOCH_INVALID,
-                error: Some(me.into()),
+            CurrentState::with(|state| {
+                state.emit_event(Event::UndelegateStart {
+                    from: context.from,
+                    nonce: context.nonce,
+                    to: context.to,
+                    shares: context.shares,
+                    debond_end_time: EPOCH_INVALID,
+                    error: Some(me.into()),
+                });
             });
             return;
         }
@@ -802,13 +811,15 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         }
 
         // Emit undelegation started event.
-        ctx.emit_event(Event::UndelegateStart {
-            from: context.from,
-            nonce: context.nonce,
-            to: context.to,
-            shares: context.shares,
-            debond_end_time: result.debond_end_time,
-            error: None,
+        CurrentState::with(|state| {
+            state.emit_event(Event::UndelegateStart {
+                from: context.from,
+                nonce: context.nonce,
+                to: context.to,
+                shares: context.shares,
+                debond_end_time: result.debond_end_time,
+                error: None,
+            });
         });
     }
 }
@@ -821,9 +832,9 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
 impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::BlockHandler
     for Module<Accounts, Consensus>
 {
-    fn end_block<C: Context>(ctx: &mut C) {
+    fn end_block<C: Context>(ctx: &C) {
         // Only do work in case the epoch has changed since the last processed block.
-        if !<C::Runtime as Runtime>::Core::has_epoch_changed(ctx) {
+        if !<C::Runtime as Runtime>::Core::has_epoch_changed() {
             return;
         }
 
@@ -836,7 +847,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
             lru::LruCache::new(NonZeroUsize::new(128).unwrap());
 
         let own_address = Address::from_runtime_id(ctx.runtime_id());
-        let denomination = Consensus::consensus_denomination(ctx).unwrap();
+        let denomination = Consensus::consensus_denomination().unwrap();
         let qd = state::get_queued_undelegations(ctx.epoch()).unwrap();
         for ud in qd {
             let udi = state::take_undelegation(&ud).unwrap();
@@ -899,7 +910,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
             let amount = token::BaseUnits::new(raw_amount, denomination.clone());
 
             // Mint the given number of tokens.
-            Accounts::mint(ctx, ud.to, &amount).unwrap();
+            Accounts::mint(ud.to, &amount).unwrap();
 
             // Store receipt if requested.
             if udi.receipt > 0 {
@@ -915,11 +926,13 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
             }
 
             // Emit undelegation done event.
-            ctx.emit_event(Event::UndelegateDone {
-                from: ud.from,
-                to: ud.to,
-                shares: udi.shares,
-                amount,
+            CurrentState::with(|state| {
+                state.emit_event(Event::UndelegateDone {
+                    from: ud.from,
+                    to: ud.to,
+                    shares: udi.shares,
+                    amount,
+                });
             });
         }
     }
@@ -929,12 +942,12 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
     for Module<Accounts, Consensus>
 {
     /// Check invariants.
-    fn check_invariants<C: Context>(ctx: &mut C) -> Result<(), CoreError> {
+    fn check_invariants<C: Context>(ctx: &C) -> Result<(), CoreError> {
         // Total supply of the designated consensus layer token denomination
         // should be less than or equal to the balance of the runtime's general
         // account in the consensus layer.
 
-        let den = Consensus::consensus_denomination(ctx).unwrap();
+        let den = Consensus::consensus_denomination().unwrap();
         #[allow(clippy::or_fun_call)]
         let ts = Accounts::get_total_supplies().or(Err(CoreError::InvariantViolation(
             "unable to get total supplies".to_string(),

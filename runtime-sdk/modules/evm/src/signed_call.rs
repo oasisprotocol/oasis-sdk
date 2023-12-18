@@ -6,7 +6,7 @@ use sha3::{Digest as _, Keccak256};
 
 use oasis_runtime_sdk::{
     context::Context, core::common::crypto::hash::Hash, modules::accounts::API as _,
-    storage::CurrentStore,
+    state::CurrentState,
 };
 
 use crate::{
@@ -49,7 +49,7 @@ pub(crate) fn verify<C: Context, Cfg: Config>(
         return Err(Error::InvalidSignedSimulateCall("stale nonce"));
     }
 
-    let base_block_hash = CurrentStore::with(|store| {
+    let base_block_hash = CurrentState::with_store(|store| {
         let block_hashes = state::block_hashes(store);
         match block_hashes.get::<_, Hash>(&leash.block_number.to_be_bytes()) {
             Some(hash) => Ok(hash),
@@ -201,7 +201,7 @@ mod test {
     }
 
     fn setup_block(leash: &Leash) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let mut block_hashes = state::block_hashes(store);
             block_hashes.insert::<_, Hash>(
                 &leash.block_number.to_be_bytes(),

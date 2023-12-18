@@ -1,5 +1,4 @@
 use std::{
-    cell::RefCell,
     collections::{btree_map::Entry, BTreeMap, BTreeSet},
     marker::PhantomData,
     mem,
@@ -13,13 +12,13 @@ use evm::{
 use primitive_types::{H160, H256, U256};
 
 use oasis_runtime_sdk::{
-    context::{self, TxContext},
+    context::Context,
     core::common::crypto::hash::Hash,
     modules::{
         accounts::API as _,
         core::{self, API as _},
     },
-    storage::CurrentStore,
+    state::CurrentState,
     subcall,
     types::token,
     Runtime,
@@ -44,19 +43,17 @@ pub struct Vicinity {
 }
 
 /// Backend for the evm crate that enables the use of our storage.
-pub struct OasisBackend<'ctx, C: TxContext, Cfg: Config> {
+pub struct OasisBackend<'ctx, C: Context, Cfg: Config> {
     vicinity: Vicinity,
-    ctx: RefCell<&'ctx mut C>,
-    pending_state: RefCell<context::State>,
+    ctx: &'ctx C,
     _cfg: PhantomData<Cfg>,
 }
 
-impl<'ctx, C: TxContext, Cfg: Config> OasisBackend<'ctx, C, Cfg> {
-    pub fn new(ctx: &'ctx mut C, vicinity: Vicinity) -> Self {
+impl<'ctx, C: Context, Cfg: Config> OasisBackend<'ctx, C, Cfg> {
+    pub fn new(ctx: &'ctx C, vicinity: Vicinity) -> Self {
         Self {
             vicinity,
-            ctx: RefCell::new(ctx),
-            pending_state: RefCell::new(context::State::default()),
+            ctx,
             _cfg: PhantomData,
         }
     }
@@ -69,9 +66,6 @@ pub(crate) trait EVMBackendExt {
     fn random_bytes(&self, num_bytes: u64, pers: &[u8]) -> Vec<u8>;
 
     /// Perform a subcall.
-    ///
-    /// Note that `state` from the resulting `SubcallResult` is replaced with a default value as
-    /// it needs to be stored in substate.
     fn subcall<V: subcall::Validator + 'static>(
         &self,
         info: subcall::SubcallInfo,
@@ -93,16 +87,22 @@ impl<T: EVMBackendExt> EVMBackendExt for &T {
     }
 }
 
-impl<'ctx, C: TxContext, Cfg: Config> EVMBackendExt for OasisBackend<'ctx, C, Cfg> {
+impl<'ctx, C: Context, Cfg: Config> EVMBackendExt for OasisBackend<'ctx, C, Cfg> {
     fn random_bytes(&self, num_bytes: u64, pers: &[u8]) -> Vec<u8> {
         // Refuse to generate more than 1 KiB in one go.
         // EVM memory gas is checked only before and after calls, so we won't
         // see the quadratic memory cost until after this call uses its time.
         let num_bytes = num_bytes.min(RNG_MAX_BYTES) as usize;
-        let mut ctx = self.ctx.borrow_mut();
-        let mut rng = ctx.rng(pers).expect("unable to access RNG");
         let mut rand_bytes = vec![0u8; num_bytes];
-        rand_core::RngCore::try_fill_bytes(&mut rng, &mut rand_bytes).expect("RNG is inoperable");
+        CurrentState::with(|state| {
+            let mut rng = state
+                .rng()
+                .fork(self.ctx, pers)
+                .expect("unable to access RNG");
+            rand_core::RngCore::try_fill_bytes(&mut rng, &mut rand_bytes)
+                .expect("RNG is inoperable");
+        });
+
         rand_bytes
     }
 
@@ -111,23 +111,14 @@ impl<'ctx, C: TxContext, Cfg: Config> EVMBackendExt for OasisBackend<'ctx, C, Cf
         info: subcall::SubcallInfo,
         validator: V,
     ) -> Result<subcall::SubcallResult, core::Error> {
-        let mut ctx = self.ctx.borrow_mut();
-
-        // Execute the subcall.
-        let mut result = subcall::call(&mut ctx, info, validator)?;
-        // Store state after subcall execution for substate handling.
-        self.pending_state
-            .borrow_mut()
-            .merge_from(mem::take(&mut result.state));
-
-        Ok(result)
+        subcall::call(self.ctx, info, validator)
     }
 }
 
 /// Oasis-specific substate implementation for the EVM stack executor.
 ///
 /// The substate is used to track nested transactional state that can be either be committed or
-/// reverted. This is similar to `Context` in the SDK.
+/// reverted. This is similar to `State` in the SDK.
 ///
 /// See the `evm` crate for details.
 struct OasisStackSubstate<'config> {
@@ -135,7 +126,6 @@ struct OasisStackSubstate<'config> {
     parent: Option<Box<OasisStackSubstate<'config>>>,
     logs: Vec<Log>,
     deletes: BTreeSet<H160>,
-    state: context::State,
     origin_nonce_incremented: bool,
 }
 
@@ -146,7 +136,6 @@ impl<'config> OasisStackSubstate<'config> {
             parent: None,
             logs: Vec::new(),
             deletes: BTreeSet::new(),
-            state: context::State::default(),
             origin_nonce_incremented: false,
         }
     }
@@ -165,7 +154,6 @@ impl<'config> OasisStackSubstate<'config> {
             parent: None,
             logs: Vec::new(),
             deletes: BTreeSet::new(),
-            state: context::State::default(),
             origin_nonce_incremented: false,
         };
         mem::swap(&mut entering, self);
@@ -180,7 +168,6 @@ impl<'config> OasisStackSubstate<'config> {
         self.metadata.swallow_commit(exited.metadata)?;
         self.logs.append(&mut exited.logs);
         self.deletes.append(&mut exited.deletes);
-        self.state.merge_from(exited.state);
         self.origin_nonce_incremented |= exited.origin_nonce_incremented;
 
         Ok(())
@@ -243,13 +230,13 @@ impl<'config> OasisStackSubstate<'config> {
 /// and exposes it through accessors to the EVM stack executor.
 ///
 /// See the `evm` crate for details.
-pub struct OasisStackState<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> {
+pub struct OasisStackState<'ctx, 'backend, 'config, C: Context, Cfg: Config> {
     backend: &'backend OasisBackend<'ctx, C, Cfg>,
     substate: OasisStackSubstate<'config>,
     original_storage: BTreeMap<(types::H160, types::H256), types::H256>,
 }
 
-impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config>
+impl<'ctx, 'backend, 'config, C: Context, Cfg: Config>
     OasisStackState<'ctx, 'backend, 'config, C, Cfg>
 {
     /// Create a new Oasis-specific state for the EVM stack executor.
@@ -267,7 +254,7 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config>
     /// Applies any final state by emitting SDK events/messages.
     ///
     /// Note that storage has already been committed to the top-level current store.
-    pub fn apply(mut self) -> Result<(), crate::Error> {
+    pub fn apply(self) -> Result<(), crate::Error> {
         // Abort if SELFDESTRUCT was used.
         if !self.substate.deletes.is_empty() {
             return Err(crate::Error::ExecutionFailed(
@@ -275,35 +262,22 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config>
             ));
         }
 
-        // Merge from top-level pending state.
-        self.substate
-            .state
-            .merge_from(mem::take(&mut self.backend.pending_state.borrow_mut()));
-
-        let mut ctx = self.backend.ctx.borrow_mut();
-
-        // Forward SDK events.
-        ctx.emit_etags(self.substate.state.events);
-
-        // Forward any emitted runtime messages.
-        for (msg, hook) in self.substate.state.messages {
-            ctx.emit_message(msg, hook)?;
-        }
-
         // Emit logs as events.
-        for log in self.substate.logs {
-            ctx.emit_event(crate::Event::Log {
-                address: log.address.into(),
-                topics: log.topics.iter().map(|&topic| topic.into()).collect(),
-                data: log.data,
-            });
-        }
+        CurrentState::with(|state| {
+            for log in self.substate.logs {
+                state.emit_event(crate::Event::Log {
+                    address: log.address.into(),
+                    topics: log.topics.iter().map(|&topic| topic.into()).collect(),
+                    data: log.data,
+                });
+            }
+        });
 
         Ok(())
     }
 }
 
-impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
+impl<'ctx, 'backend, 'config, C: Context, Cfg: Config> Backend
     for OasisStackState<'ctx, 'backend, 'config, C, Cfg>
 {
     fn gas_price(&self) -> U256 {
@@ -315,7 +289,7 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
     }
 
     fn block_hash(&self, number: U256) -> H256 {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let block_hashes = state::block_hashes(store);
 
             if let Some(hash) = block_hashes.get::<_, Hash>(&number.low_u64().to_be_bytes()) {
@@ -327,7 +301,7 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
     }
 
     fn block_number(&self) -> U256 {
-        self.backend.ctx.borrow().runtime_header().round.into()
+        self.backend.ctx.runtime_header().round.into()
     }
 
     fn block_coinbase(&self) -> H160 {
@@ -336,7 +310,7 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
     }
 
     fn block_timestamp(&self) -> U256 {
-        self.backend.ctx.borrow().runtime_header().timestamp.into()
+        self.backend.ctx.runtime_header().timestamp.into()
     }
 
     fn block_difficulty(&self) -> U256 {
@@ -349,16 +323,13 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
     }
 
     fn block_gas_limit(&self) -> U256 {
-        <C::Runtime as Runtime>::Core::max_batch_gas(&mut self.backend.ctx.borrow_mut()).into()
+        <C::Runtime as Runtime>::Core::max_batch_gas().into()
     }
 
     fn block_base_fee_per_gas(&self) -> U256 {
-        <C::Runtime as Runtime>::Core::min_gas_price(
-            &self.backend.ctx.borrow_mut(),
-            &Cfg::TOKEN_DENOMINATION,
-        )
-        .unwrap_or_default()
-        .into()
+        <C::Runtime as Runtime>::Core::min_gas_price(self.backend.ctx, &Cfg::TOKEN_DENOMINATION)
+            .unwrap_or_default()
+            .into()
     }
 
     fn chain_id(&self) -> U256 {
@@ -381,10 +352,9 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
         // If this is the caller's address, the caller nonce has not yet been incremented based on
         // the EVM semantics and this is not a simulation context, return the nonce decremented by
         // one to cancel out the SDK nonce changes.
-        let ctx = self.backend.ctx.borrow_mut();
         if address == self.origin()
             && !self.substate.origin_nonce_incremented
-            && !ctx.is_simulation()
+            && !CurrentState::with_env(|env| env.is_simulation())
         {
             nonce = nonce.saturating_sub(1);
         }
@@ -396,7 +366,7 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
     }
 
     fn code(&self, address: H160) -> Vec<u8> {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = state::codes(store);
             store.get(address).unwrap_or_default()
         })
@@ -406,10 +376,10 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
         let address: types::H160 = address.into();
         let key: types::H256 = key.into();
 
-        let mut ctx = self.backend.ctx.borrow_mut();
-        let res: types::H256 = state::with_storage::<Cfg, _, _, _>(*ctx, &address, |store| {
-            store.get(key).unwrap_or_default()
-        });
+        let res: types::H256 =
+            state::with_storage::<Cfg, _, _, _>(self.backend.ctx, &address, |store| {
+                store.get(key).unwrap_or_default()
+            });
         res.into()
     }
 
@@ -424,7 +394,7 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> Backend
     }
 }
 
-impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> StackState<'config>
+impl<'ctx, 'backend, 'config, C: Context, Cfg: Config> StackState<'config>
     for OasisStackState<'ctx, 'backend, 'config, C, Cfg>
 {
     fn metadata(&self) -> &StackSubstateMetadata<'config> {
@@ -436,16 +406,15 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> StackState<'config>
     }
 
     fn enter(&mut self, gas_limit: u64, is_static: bool) {
-        self.substate.state = mem::take(&mut self.backend.pending_state.borrow_mut());
         self.substate.enter(gas_limit, is_static);
 
-        CurrentStore::start_transaction();
+        CurrentState::start_transaction();
     }
 
     fn exit_commit(&mut self) -> Result<(), ExitError> {
         self.substate.exit_commit()?;
 
-        CurrentStore::commit_transaction();
+        CurrentState::commit_transaction();
 
         Ok(())
     }
@@ -453,7 +422,7 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> StackState<'config>
     fn exit_revert(&mut self) -> Result<(), ExitError> {
         self.substate.exit_revert()?;
 
-        CurrentStore::rollback_transaction();
+        CurrentState::rollback_transaction();
 
         Ok(())
     }
@@ -461,7 +430,7 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> StackState<'config>
     fn exit_discard(&mut self) -> Result<(), ExitError> {
         self.substate.exit_discard()?;
 
-        CurrentStore::rollback_transaction();
+        CurrentState::rollback_transaction();
 
         Ok(())
     }
@@ -487,12 +456,10 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> StackState<'config>
     }
 
     fn inc_nonce(&mut self, address: H160) -> Result<(), ExitError> {
-        let ctx = self.backend.ctx.borrow_mut();
-
         // Do not increment the origin nonce as that has already been handled by the SDK. But do
         // record that the nonce should be incremented based on EVM semantics so we can adjust any
         // results from the `basic` method.
-        if address == self.origin() && !ctx.is_simulation() {
+        if address == self.origin() && !CurrentState::with_env(|env| env.is_simulation()) {
             self.substate.origin_nonce_incremented = true;
             return Ok(());
         }
@@ -503,17 +470,16 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> StackState<'config>
     }
 
     fn set_storage(&mut self, address: H160, key: H256, value: H256) {
-        let mut ctx = self.backend.ctx.borrow_mut();
-
         let address: types::H160 = address.into();
         let key: types::H256 = key.into();
         let value: types::H256 = value.into();
 
         // We cache the current value if this is the first time we modify it in the transaction.
         if let Entry::Vacant(e) = self.original_storage.entry((address, key)) {
-            let original = state::with_storage::<Cfg, _, _, _>(*ctx, &address, |store| {
-                store.get(key).unwrap_or_default()
-            });
+            let original =
+                state::with_storage::<Cfg, _, _, _>(self.backend.ctx, &address, |store| {
+                    store.get(key).unwrap_or_default()
+                });
             // No need to cache if same value.
             if original != value {
                 e.insert(original);
@@ -521,11 +487,11 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> StackState<'config>
         }
 
         if value == types::H256::default() {
-            state::with_storage::<Cfg, _, _, _>(*ctx, &address, |store| {
+            state::with_storage::<Cfg, _, _, _>(self.backend.ctx, &address, |store| {
                 store.remove(key);
             });
         } else {
-            state::with_storage::<Cfg, _, _, _>(*ctx, &address, |store| {
+            state::with_storage::<Cfg, _, _, _>(self.backend.ctx, &address, |store| {
                 store.insert(key, value);
             });
         }
@@ -547,7 +513,7 @@ impl<'ctx, 'backend, 'config, C: TxContext, Cfg: Config> StackState<'config>
     }
 
     fn set_code(&mut self, address: H160, code: Vec<u8>) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let mut store = state::codes(store);
             store.insert(address, code);
         });

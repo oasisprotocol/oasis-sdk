@@ -2,12 +2,12 @@
 use std::cell::RefCell;
 
 use crate::{
-    context::{BatchContext, Context, State, TransactionWithMeta, TxContext},
+    context::Context,
     dispatcher,
     module::CallResult,
     modules::core::{Error, API as _},
     runtime::Runtime,
-    storage::{current::TransactionResult, CurrentStore},
+    state::{CurrentState, Options, TransactionResult, TransactionWithMeta},
     types::{token, transaction, transaction::CallerAddress},
 };
 
@@ -49,8 +49,6 @@ pub struct SubcallInfo {
 /// Result of dispatching a subcall.
 #[derive(Debug)]
 pub struct SubcallResult {
-    /// State after applying the subcall context.
-    pub state: State,
     /// Result of the subcall.
     pub call_result: CallResult,
     /// Gas used by the subcall.
@@ -101,13 +99,13 @@ impl Drop for SubcallStackGuard {
 }
 
 /// The current subcall depth.
-pub fn get_current_subcall_depth<C: Context>(_ctx: &mut C) -> u16 {
+pub fn get_current_subcall_depth<C: Context>(_ctx: &C) -> u16 {
     SUBCALL_STACK.with(|ss| ss.borrow().depth())
 }
 
 /// Perform a subcall.
-pub fn call<C: TxContext, V: Validator + 'static>(
-    ctx: &mut C,
+pub fn call<C: Context, V: Validator + 'static>(
+    ctx: &C,
     info: SubcallInfo,
     validator: V,
 ) -> Result<SubcallResult, Error> {
@@ -135,73 +133,63 @@ pub fn call<C: TxContext, V: Validator + 'static>(
     })?;
     let _guard = SubcallStackGuard; // Ensure subcall is popped from stack.
 
-    // Calculate how many consensus messages the child call can emit.
-    let remaining_messages = ctx.remaining_messages();
+    // Generate an internal transaction.
+    let tx = transaction::Transaction {
+        version: transaction::LATEST_TRANSACTION_VERSION,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: info.method,
+            body: info.body,
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo {
+                // The call is being performed on the caller's behalf.
+                address_spec: transaction::AddressSpec::Internal(info.caller),
+                nonce: 0,
+            }],
+            fee: transaction::Fee {
+                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                // Limit gas usage inside the child context to the allocated maximum.
+                gas: info.max_gas,
+                // Propagate consensus message limit.
+                consensus_messages: CurrentState::with(|state| state.emitted_messages_max(ctx)),
+            },
+            ..Default::default()
+        },
+    };
+    let call = tx.call.clone(); // TODO: Avoid clone.
 
     // Execute a transaction in a child context.
-    let (call_result, gas, state) = ctx.with_child(ctx.mode(), |mut ctx| {
-        // Generate an internal transaction.
-        let tx = transaction::Transaction {
-            version: transaction::LATEST_TRANSACTION_VERSION,
-            call: transaction::Call {
-                format: transaction::CallFormat::Plain,
-                method: info.method,
-                body: info.body,
-                ..Default::default()
-            },
-            auth_info: transaction::AuthInfo {
-                signer_info: vec![transaction::SignerInfo {
-                    // The call is being performed on the caller's behalf.
-                    address_spec: transaction::AddressSpec::Internal(info.caller),
-                    nonce: 0,
-                }],
-                fee: transaction::Fee {
-                    amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
-                    // Limit gas usage inside the child context to the allocated maximum.
-                    gas: info.max_gas,
-                    consensus_messages: remaining_messages,
-                },
-                ..Default::default()
-            },
-        };
+    let (call_result, gas) = CurrentState::with_transaction_opts(
+        Options::new()
+            .with_internal(true)
+            .with_tx(TransactionWithMeta::internal(tx)),
+        || {
+            // Dispatch the call.
+            let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
+                &ctx.clone(), // Must clone to avoid infinite type.
+                call,
+                &Default::default(),
+            );
+            // Retrieve remaining gas.
+            let gas = <C::Runtime as Runtime>::Core::remaining_tx_gas();
 
-        let result = CurrentStore::with_transaction(|| {
-            ctx.with_tx(TransactionWithMeta::internal(tx), |ctx, call| {
-                // Mark this sub-context as internal as it belongs to an existing transaction.
-                let mut ctx = ctx.internal();
-
-                // Dispatch the call.
-                let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
-                    &mut ctx,
-                    call,
-                    &Default::default(),
-                );
-                // Retrieve remaining gas.
-                let gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(&mut ctx);
-
-                // Commit store and return emitted tags and messages on successful dispatch,
-                // otherwise revert state and ignore any emitted events/messages.
-                if result.is_success() {
-                    let state = ctx.commit();
-                    TransactionResult::Commit((result, gas, state))
-                } else {
-                    // Ignore tags/messages on failure.
-                    TransactionResult::Rollback((result, gas, Default::default()))
-                }
-            })
-        });
-
-        // Commit. Note that if child context didn't commit, this is basically a no-op.
-        ctx.commit();
-
-        result
-    });
+            // Commit store and return emitted tags and messages on successful dispatch,
+            // otherwise revert state and ignore any emitted events/messages.
+            if result.is_success() {
+                TransactionResult::Commit((result, gas))
+            } else {
+                // Ignore tags/messages on failure.
+                TransactionResult::Rollback((result, gas))
+            }
+        },
+    );
 
     // Compute the amount of gas used.
     let gas_used = info.max_gas.saturating_sub(gas);
 
     Ok(SubcallResult {
-        state,
         call_result,
         gas_used,
     })
