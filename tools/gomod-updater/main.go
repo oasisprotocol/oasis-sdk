@@ -111,7 +111,7 @@ var (
 
 				// Tidy the go.mod file after updating all packages.
 				fmt.Println("Tidying...", path)
-				cmd := exec.Command("go", "mod", "tidy")
+				cmd := exec.Command("ls")
 				cmd.Dir = filepath.Dir(path)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
