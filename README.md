@@ -31,3 +31,11 @@
 [`runtime-sdk/modules`]: runtime-sdk/modules/
 [`contract-sdk`]: contract-sdk/
 [`contracts`]: runtime-sdk/modules/contracts/
+
+## License
+
+All Oasis SDK software components are licensed under [Apache 2.0](./LICENSE).
+
+The content of the documentation (the `/docs` folder in any of the components)
+including the media (e.g. images and diagrams) is licensed under [Creative
+Commons Attribution 4.0 International](./LICENSE-docs).
