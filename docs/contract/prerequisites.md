@@ -10,7 +10,9 @@ described steps you will be able to start building your first smart contract
 on Oasis!
 
 If you already have everything set up, feel free to skip to the [next
-chapter](hello-world.md).
+chapter].
+
+[next chapter]: hello-world.md
 
 ## Environment Setup
 
