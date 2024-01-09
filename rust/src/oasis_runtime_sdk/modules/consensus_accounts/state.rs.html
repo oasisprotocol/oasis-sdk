@@ -462,6 +462,7 @@
 <a href="#462" id="462">462</a>
 <a href="#463" id="463">463</a>
 <a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! State schema.
 </span><span class="kw">use </span>std::{
     collections::BTreeMap,
@@ -471,7 +472,8 @@
 <span class="kw">use </span>oasis_core_runtime::consensus::beacon::EpochTime;
 
 <span class="kw">use crate</span>::{
-    storage::{<span class="self">self</span>, CurrentStore, Store},
+    state::CurrentState,
+    storage::{<span class="self">self</span>, Store},
     types::address::Address,
 };
 
@@ -491,7 +493,7 @@
 /// The given shares are added to any existing delegation that may exist for the same (from, to)
 /// address pair. If no delegation exists a new one is created.
 </span><span class="kw">pub fn </span>add_delegation(from: Address, to: Address, shares: u128) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>delegations = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>DELEGATIONS);
         <span class="kw">let </span><span class="kw-2">mut </span>account = storage::TypedStore::new(storage::PrefixStore::new(delegations, <span class="kw-2">&amp;</span>from));
@@ -510,7 +512,7 @@
 
 <span class="doccomment">/// Subtract delegation from a given (from, to) pair.
 </span><span class="kw">pub fn </span>sub_delegation(from: Address, to: Address, shares: u128) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>delegations = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>DELEGATIONS);
         <span class="kw">let </span><span class="kw-2">mut </span>account = storage::TypedStore::new(storage::PrefixStore::new(delegations, <span class="kw-2">&amp;</span>from));
@@ -536,7 +538,7 @@
 /// In case no delegation exists for the given (from, to) address pair, an all-zero delegation
 /// metadata are returned.
 </span><span class="kw">pub fn </span>get_delegation(from: Address, to: Address) -&gt; <span class="prelude-ty">Result</span>&lt;types::DelegationInfo, Error&gt; {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>delegations = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>DELEGATIONS);
         <span class="kw">let </span>account = storage::TypedStore::new(storage::PrefixStore::new(delegations, <span class="kw-2">&amp;</span>from));
@@ -546,7 +548,7 @@
 
 <span class="doccomment">/// Retrieve all delegation metadata originating from a given address.
 </span><span class="kw">pub fn </span>get_delegations(from: Address) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;types::ExtendedDelegationInfo&gt;, Error&gt; {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>delegations = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>DELEGATIONS);
         <span class="kw">let </span>account = storage::TypedStore::new(storage::PrefixStore::new(delegations, <span class="kw-2">&amp;</span>from));
@@ -589,7 +591,7 @@
 
 <span class="doccomment">/// Return the number of delegated shares for each destination escrow account.
 </span><span class="kw">pub fn </span>get_delegations_by_destination() -&gt; <span class="prelude-ty">Result</span>&lt;BTreeMap&lt;Address, u128&gt;, Error&gt; {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>delegations = storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>DELEGATIONS));
 
@@ -617,7 +619,7 @@
     shares: u128,
     receipt: u64,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
-    CurrentStore::with(|<span class="kw-2">mut </span>root_store| {
+    CurrentState::with_store(|<span class="kw-2">mut </span>root_store| {
         <span class="kw">let </span>store = storage::PrefixStore::new(<span class="kw-2">&amp;mut </span>root_store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>undelegations = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>UNDELEGATIONS);
         <span class="kw">let </span>account = storage::PrefixStore::new(undelegations, <span class="kw-2">&amp;</span>to);
@@ -656,7 +658,7 @@
 ///
 /// In case the undelegation doesn&#39;t exist, returns a default-constructed DelegationInfo.
 </span><span class="kw">pub fn </span>take_undelegation(ud: <span class="kw-2">&amp;</span>Undelegation) -&gt; <span class="prelude-ty">Result</span>&lt;types::DelegationInfo, Error&gt; {
-    CurrentStore::with(|<span class="kw-2">mut </span>root_store| {
+    CurrentState::with_store(|<span class="kw-2">mut </span>root_store| {
         <span class="comment">// Get and remove undelegation metadata.
         </span><span class="kw">let </span>store = storage::PrefixStore::new(<span class="kw-2">&amp;mut </span>root_store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>undelegations = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>UNDELEGATIONS);
@@ -696,7 +698,7 @@
 
 <span class="doccomment">/// Retrieve all undelegation metadata to a given address.
 </span><span class="kw">pub fn </span>get_undelegations(to: Address) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;types::UndelegationInfo&gt;, Error&gt; {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>undelegations = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>UNDELEGATIONS);
         <span class="kw">let </span>account = storage::TypedStore::new(storage::PrefixStore::new(undelegations, <span class="kw-2">&amp;</span>to));
@@ -742,7 +744,7 @@
 
 <span class="doccomment">/// Retrieve all queued undelegations for epochs earlier than or equal to the passed epoch.
 </span><span class="kw">pub fn </span>get_queued_undelegations(epoch: EpochTime) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Undelegation&gt;, Error&gt; {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>queue = storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>UNDELEGATION_QUEUE));
 
@@ -756,7 +758,7 @@
 
 <span class="doccomment">/// Store the given receipt.
 </span><span class="kw">pub fn </span>set_receipt(owner: Address, kind: types::ReceiptKind, id: u64, receipt: types::Receipt) {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>receipts = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>RECEIPTS);
         <span class="kw">let </span>of_owner = storage::PrefixStore::new(receipts, <span class="kw-2">&amp;</span>owner);
@@ -769,7 +771,7 @@
 
 <span class="doccomment">/// Remove the given receipt from storage if it exists and return it, otherwise return `None`.
 </span><span class="kw">pub fn </span>take_receipt(owner: Address, kind: types::ReceiptKind, id: u64) -&gt; <span class="prelude-ty">Option</span>&lt;types::Receipt&gt; {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>receipts = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>RECEIPTS);
         <span class="kw">let </span>of_owner = storage::PrefixStore::new(receipts, <span class="kw-2">&amp;</span>owner);

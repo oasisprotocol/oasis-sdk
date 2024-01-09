@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["confidential","current"],"struct":["HashedStore","MKVSStore","OverlayStore","Prefix","PrefixStore","TypedStore"],"trait":["NestedStore","Store"]};
+window.SIDEBAR_ITEMS = {"mod":["confidential"],"struct":["HashedStore","MKVSStore","OverlayStore","Prefix","PrefixStore","TypedStore"],"trait":["NestedStore","Store"]};

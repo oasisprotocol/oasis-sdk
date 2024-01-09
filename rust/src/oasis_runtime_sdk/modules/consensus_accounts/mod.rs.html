@@ -984,6 +984,19 @@
 <a href="#984" id="984">984</a>
 <a href="#985" id="985">985</a>
 <a href="#986" id="986">986</a>
+<a href="#987" id="987">987</a>
+<a href="#988" id="988">988</a>
+<a href="#989" id="989">989</a>
+<a href="#990" id="990">990</a>
+<a href="#991" id="991">991</a>
+<a href="#992" id="992">992</a>
+<a href="#993" id="993">993</a>
+<a href="#994" id="994">994</a>
+<a href="#995" id="995">995</a>
+<a href="#996" id="996">996</a>
+<a href="#997" id="997">997</a>
+<a href="#998" id="998">998</a>
+<a href="#999" id="999">999</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Consensus accounts module.
 //!
 //! This module allows consensus transfers in and out of the runtime account,
@@ -1004,12 +1017,13 @@
 <span class="kw">use </span>oasis_runtime_sdk_macros::{handler, sdk_derive};
 
 <span class="kw">use crate</span>::{
-    context::{Context, TxContext},
+    context::Context,
     error, migration, module,
     module::Module <span class="kw">as _</span>,
     modules,
     modules::core::{Error <span class="kw">as </span>CoreError, API <span class="kw">as _</span>},
     runtime::Runtime,
+    state::CurrentState,
     storage::Prefix,
     types::{
         address::Address,
@@ -1155,8 +1169,8 @@
     ///
     /// * `nonce`: A caller-provided sequence number that will help identify the success/fail events.
     ///   When called from a deposit transaction, we use the signer nonce.
-    </span><span class="kw">fn </span>deposit&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>deposit&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -1169,8 +1183,8 @@
     ///
     /// * `nonce`: A caller-provided sequence number that will help identify the success/fail events.
     ///   When called from a withdraw transaction, we use the signer nonce.
-    </span><span class="kw">fn </span>withdraw&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>withdraw&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -1183,8 +1197,8 @@
     ///
     /// * `nonce`: A caller-provided sequence number that will help identify the success/fail events.
     ///   When called from a delegate transaction, we use the signer nonce.
-    </span><span class="kw">fn </span>delegate&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>delegate&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -1199,8 +1213,8 @@
     ///
     /// * `nonce`: A caller-provided sequence number that will help identify the success/fail events.
     ///   When called from an undelegate transaction, we use the signer nonce.
-    </span><span class="kw">fn </span>undelegate&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>undelegate&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -1230,8 +1244,8 @@
 <span class="kw">impl</span>&lt;Accounts: modules::accounts::API, Consensus: modules::consensus::API&gt; API
     <span class="kw">for </span>Module&lt;Accounts, Consensus&gt;
 {
-    <span class="kw">fn </span>deposit&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>deposit&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -1261,8 +1275,8 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>withdraw&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>withdraw&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -1284,20 +1298,20 @@
             ),
         )<span class="question-mark">?</span>;
 
-        <span class="kw">if </span>ctx.is_check_only() {
+        <span class="kw">if </span>CurrentState::with_env(|env| env.is_check_only()) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
         <span class="comment">// Transfer the given amount to the module&#39;s withdrawal account to make sure the tokens
         // remain available until actually withdrawn.
-        </span>Accounts::transfer(ctx, from, <span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL, <span class="kw-2">&amp;</span>amount)
+        </span>Accounts::transfer(from, <span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL, <span class="kw-2">&amp;</span>amount)
             .map_err(|<span class="kw">_</span>| Error::InsufficientBalance)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>delegate&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>delegate&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -1320,20 +1334,20 @@
             ),
         )<span class="question-mark">?</span>;
 
-        <span class="kw">if </span>ctx.is_check_only() {
+        <span class="kw">if </span>CurrentState::with_env(|env| env.is_check_only()) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
         <span class="comment">// Transfer the given amount to the module&#39;s delegation account to make sure the tokens
         // remain available until actually delegated.
-        </span>Accounts::transfer(ctx, from, <span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, <span class="kw-2">&amp;</span>amount)
+        </span>Accounts::transfer(from, <span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, <span class="kw-2">&amp;</span>amount)
             .map_err(|<span class="kw">_</span>| Error::InsufficientBalance)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>undelegate&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>undelegate&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         nonce: u64,
         to: Address,
@@ -1382,17 +1396,17 @@
 
     <span class="doccomment">/// Deposit in the runtime.
     </span><span class="attr">#[handler(call = <span class="string">&quot;consensus.Deposit&quot;</span>)]
-    </span><span class="kw">fn </span>tx_deposit&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C, body: types::Deposit) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    </span><span class="kw">fn </span>tx_deposit&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Deposit) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
-        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.tx_deposit)<span class="question-mark">?</span>;
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_deposit)<span class="question-mark">?</span>;
 
         <span class="comment">// Check whether deposit is allowed.
         </span><span class="kw">if </span>params.disable_deposit {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::Forbidden);
         }
 
-        <span class="kw">let </span>signer = <span class="kw-2">&amp;</span>ctx.tx_auth_info().signer_info[<span class="number">0</span>];
-        Consensus::ensure_compatible_tx_signer(ctx)<span class="question-mark">?</span>;
+        <span class="kw">let </span>signer = CurrentState::with_env(|env| env.tx_auth_info().signer_info[<span class="number">0</span>].clone());
+        Consensus::ensure_compatible_tx_signer()<span class="question-mark">?</span>;
 
         <span class="kw">let </span>address = signer.address_spec.address();
         <span class="kw">let </span>nonce = signer.nonce;
@@ -1420,9 +1434,9 @@
     }
 
     <span class="attr">#[handler(call = <span class="string">&quot;consensus.Withdraw&quot;</span>)]
-    </span><span class="kw">fn </span>tx_withdraw&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C, body: types::Withdraw) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    </span><span class="kw">fn </span>tx_withdraw&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Withdraw) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
-        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.tx_withdraw)<span class="question-mark">?</span>;
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_withdraw)<span class="question-mark">?</span>;
 
         <span class="comment">// Check whether withdraw is allowed.
         </span><span class="kw">if </span>params.disable_withdraw {
@@ -1430,26 +1444,26 @@
         }
 
         <span class="comment">// Signer.
-        </span><span class="kw">let </span>signer = <span class="kw-2">&amp;</span>ctx.tx_auth_info().signer_info[<span class="number">0</span>];
-        <span class="kw">if </span>body.to.is_none() {
+        </span><span class="kw">if </span>body.to.is_none() {
             <span class="comment">// If no `to` field is specified, i.e. withdrawing to the transaction sender&#39;s account,
             // only allow the consensus-compatible single-Ed25519-key signer type. Otherwise, the
             // tokens would get stuck in an account that you can&#39;t sign for on the consensus layer.
-            </span>Consensus::ensure_compatible_tx_signer(ctx)<span class="question-mark">?</span>;
+            </span>Consensus::ensure_compatible_tx_signer()<span class="question-mark">?</span>;
         }
 
+        <span class="kw">let </span>signer = CurrentState::with_env(|env| env.tx_auth_info().signer_info[<span class="number">0</span>].clone());
         <span class="kw">let </span>address = signer.address_spec.address();
         <span class="kw">let </span>nonce = signer.nonce;
         <span class="self">Self</span>::withdraw(ctx, address, nonce, body.to.unwrap_or(address), body.amount)
     }
 
     <span class="attr">#[handler(call = <span class="string">&quot;consensus.Delegate&quot;</span>)]
-    </span><span class="kw">fn </span>tx_delegate&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C, body: types::Delegate) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    </span><span class="kw">fn </span>tx_delegate&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Delegate) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
-        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.tx_delegate)<span class="question-mark">?</span>;
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_delegate)<span class="question-mark">?</span>;
         <span class="kw">let </span>store_receipt = body.receipt &gt; <span class="number">0</span>;
         <span class="kw">if </span>store_receipt {
-            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.store_receipt)<span class="question-mark">?</span>;
+            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.store_receipt)<span class="question-mark">?</span>;
         }
 
         <span class="comment">// Check whether delegate is allowed.
@@ -1457,12 +1471,12 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::Forbidden);
         }
         <span class="comment">// Make sure receipts can only be requested internally (e.g. via subcalls).
-        </span><span class="kw">if </span>store_receipt &amp;&amp; !ctx.is_internal() {
+        </span><span class="kw">if </span>store_receipt &amp;&amp; !CurrentState::with_env(|env| env.is_internal()) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
         }
 
         <span class="comment">// Signer.
-        </span><span class="kw">let </span>signer = <span class="kw-2">&amp;</span>ctx.tx_auth_info().signer_info[<span class="number">0</span>];
+        </span><span class="kw">let </span>signer = CurrentState::with_env(|env| env.tx_auth_info().signer_info[<span class="number">0</span>].clone());
         <span class="kw">let </span>from = signer.address_spec.address();
         <span class="kw">let </span>nonce = <span class="kw">if </span>store_receipt {
             body.receipt <span class="comment">// Use receipt identifier as the nonce.
@@ -1473,12 +1487,12 @@
     }
 
     <span class="attr">#[handler(call = <span class="string">&quot;consensus.Undelegate&quot;</span>)]
-    </span><span class="kw">fn </span>tx_undelegate&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C, body: types::Undelegate) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    </span><span class="kw">fn </span>tx_undelegate&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Undelegate) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
-        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.tx_undelegate)<span class="question-mark">?</span>;
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_undelegate)<span class="question-mark">?</span>;
         <span class="kw">let </span>store_receipt = body.receipt &gt; <span class="number">0</span>;
         <span class="kw">if </span>store_receipt {
-            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.store_receipt)<span class="question-mark">?</span>;
+            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.store_receipt)<span class="question-mark">?</span>;
         }
 
         <span class="comment">// Check whether undelegate is allowed.
@@ -1486,12 +1500,12 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::Forbidden);
         }
         <span class="comment">// Make sure receipts can only be requested internally (e.g. via subcalls).
-        </span><span class="kw">if </span>store_receipt &amp;&amp; !ctx.is_internal() {
+        </span><span class="kw">if </span>store_receipt &amp;&amp; !CurrentState::with_env(|env| env.is_internal()) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
         }
 
         <span class="comment">// Signer.
-        </span><span class="kw">let </span>signer = <span class="kw-2">&amp;</span>ctx.tx_auth_info().signer_info[<span class="number">0</span>];
+        </span><span class="kw">let </span>signer = CurrentState::with_env(|env| env.tx_auth_info().signer_info[<span class="number">0</span>].clone());
         <span class="kw">let </span>to = signer.address_spec.address();
         <span class="kw">let </span>nonce = <span class="kw">if </span>store_receipt {
             body.receipt <span class="comment">// Use receipt identifer as the nonce.
@@ -1502,19 +1516,19 @@
     }
 
     <span class="attr">#[handler(call = <span class="string">&quot;consensus.TakeReceipt&quot;</span>, internal)]
-    </span><span class="kw">fn </span>internal_take_receipt&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>internal_take_receipt&lt;C: Context&gt;(
+        _ctx: <span class="kw-2">&amp;</span>C,
         body: types::TakeReceipt,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;types::Receipt&gt;, Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
-        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.take_receipt)<span class="question-mark">?</span>;
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.take_receipt)<span class="question-mark">?</span>;
 
         <span class="kw">if </span>!body.kind.is_valid() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument);
         }
 
         <span class="prelude-val">Ok</span>(state::take_receipt(
-            ctx.tx_caller_address(),
+            CurrentState::with_env(|env| env.tx_caller_address()),
             body.kind,
             body.id,
         ))
@@ -1522,10 +1536,10 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;consensus.Balance&quot;</span>)]
     </span><span class="kw">fn </span>query_balance&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         args: types::BalanceQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::AccountBalance, Error&gt; {
-        <span class="kw">let </span>denomination = Consensus::consensus_denomination(ctx)<span class="question-mark">?</span>;
+        <span class="kw">let </span>denomination = Consensus::consensus_denomination()<span class="question-mark">?</span>;
         <span class="kw">let </span>balances = Accounts::get_balances(args.address).map_err(|<span class="kw">_</span>| Error::InvalidArgument)<span class="question-mark">?</span>;
         <span class="kw">let </span>balance = balances
             .balances
@@ -1537,7 +1551,7 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;consensus.Account&quot;</span>)]
     </span><span class="kw">fn </span>query_consensus_account&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         args: types::ConsensusAccountQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusAccount, Error&gt; {
         Consensus::account(ctx, args.address).map_err(|<span class="kw">_</span>| Error::InvalidArgument)
@@ -1545,7 +1559,7 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;consensus.Delegation&quot;</span>)]
     </span><span class="kw">fn </span>query_delegation&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         args: types::DelegationQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::DelegationInfo, Error&gt; {
         state::get_delegation(args.from, args.to)
@@ -1553,7 +1567,7 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;consensus.Delegations&quot;</span>)]
     </span><span class="kw">fn </span>query_delegations&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         args: types::DelegationsQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;types::ExtendedDelegationInfo&gt;, Error&gt; {
         state::get_delegations(args.from)
@@ -1561,7 +1575,7 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;consensus.Undelegations&quot;</span>)]
     </span><span class="kw">fn </span>query_undelegations&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         args: types::UndelegationsQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;types::UndelegationInfo&gt;, Error&gt; {
         state::get_undelegations(args.to)
@@ -1569,14 +1583,13 @@
 
     <span class="attr">#[handler(message_result = CONSENSUS_TRANSFER_HANDLER)]
     </span><span class="kw">fn </span>message_result_transfer&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         me: MessageEvent,
         context: types::ConsensusTransferContext,
     ) {
         <span class="kw">if </span>!me.is_success() {
             <span class="comment">// Transfer out failed, refund the balance.
             </span>Accounts::transfer(
-                ctx,
                 <span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL,
                 context.address,
                 <span class="kw-2">&amp;</span>context.amount,
@@ -1584,76 +1597,79 @@
             .expect(<span class="string">&quot;should have enough balance&quot;</span>);
 
             <span class="comment">// Emit withdraw failed event.
-            </span>ctx.emit_event(Event::Withdraw {
-                from: context.address,
-                nonce: context.nonce,
-                to: context.to,
-                amount: context.amount.clone(),
-                error: <span class="prelude-val">Some</span>(me.into()),
+            </span>CurrentState::with(|state| {
+                state.emit_event(Event::Withdraw {
+                    from: context.address,
+                    nonce: context.nonce,
+                    to: context.to,
+                    amount: context.amount.clone(),
+                    error: <span class="prelude-val">Some</span>(me.into()),
+                });
             });
             <span class="kw">return</span>;
         }
 
         <span class="comment">// Burn the withdrawn tokens.
-        </span>Accounts::burn(ctx, <span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL, <span class="kw-2">&amp;</span>context.amount)
+        </span>Accounts::burn(<span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL, <span class="kw-2">&amp;</span>context.amount)
             .expect(<span class="string">&quot;should have enough balance&quot;</span>);
 
         <span class="comment">// Emit withdraw successful event.
-        </span>ctx.emit_event(Event::Withdraw {
-            from: context.address,
-            nonce: context.nonce,
-            to: context.to,
-            amount: context.amount.clone(),
-            error: <span class="prelude-val">None</span>,
+        </span>CurrentState::with(|state| {
+            state.emit_event(Event::Withdraw {
+                from: context.address,
+                nonce: context.nonce,
+                to: context.to,
+                amount: context.amount.clone(),
+                error: <span class="prelude-val">None</span>,
+            });
         });
     }
 
     <span class="attr">#[handler(message_result = CONSENSUS_WITHDRAW_HANDLER)]
     </span><span class="kw">fn </span>message_result_withdraw&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         me: MessageEvent,
         context: types::ConsensusWithdrawContext,
     ) {
         <span class="kw">if </span>!me.is_success() {
             <span class="comment">// Transfer in failed, emit deposit failed event.
-            </span>ctx.emit_event(Event::Deposit {
-                from: context.from,
-                nonce: context.nonce,
-                to: context.address,
-                amount: context.amount.clone(),
-                error: <span class="prelude-val">Some</span>(me.into()),
+            </span>CurrentState::with(|state| {
+                state.emit_event(Event::Deposit {
+                    from: context.from,
+                    nonce: context.nonce,
+                    to: context.address,
+                    amount: context.amount.clone(),
+                    error: <span class="prelude-val">Some</span>(me.into()),
+                });
             });
             <span class="kw">return</span>;
         }
 
         <span class="comment">// Update runtime state.
-        </span>Accounts::mint(ctx, context.address, <span class="kw-2">&amp;</span>context.amount).unwrap();
+        </span>Accounts::mint(context.address, <span class="kw-2">&amp;</span>context.amount).unwrap();
 
         <span class="comment">// Emit deposit successful event.
-        </span>ctx.emit_event(Event::Deposit {
-            from: context.from,
-            nonce: context.nonce,
-            to: context.address,
-            amount: context.amount.clone(),
-            error: <span class="prelude-val">None</span>,
+        </span>CurrentState::with(|state| {
+            state.emit_event(Event::Deposit {
+                from: context.from,
+                nonce: context.nonce,
+                to: context.address,
+                amount: context.amount.clone(),
+                error: <span class="prelude-val">None</span>,
+            });
         });
     }
 
     <span class="attr">#[handler(message_result = CONSENSUS_DELEGATE_HANDLER)]
     </span><span class="kw">fn </span>message_result_delegate&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         me: MessageEvent,
         context: types::ConsensusDelegateContext,
     ) {
         <span class="kw">if </span>!me.is_success() {
             <span class="comment">// Delegation failed, refund the balance.
-            </span>Accounts::transfer(
-                ctx,
-                <span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION,
-                context.from,
-                <span class="kw-2">&amp;</span>context.amount,
-            )
-            .expect(<span class="string">&quot;should have enough balance&quot;</span>);
+            </span>Accounts::transfer(<span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, context.from, <span class="kw-2">&amp;</span>context.amount)
+                .expect(<span class="string">&quot;should have enough balance&quot;</span>);
 
             <span class="comment">// Store receipt if requested.
             </span><span class="kw">if </span>context.receipt {
@@ -1669,18 +1685,20 @@
             }
 
             <span class="comment">// Emit delegation failed event.
-            </span>ctx.emit_event(Event::Delegate {
-                from: context.from,
-                nonce: context.nonce,
-                to: context.to,
-                amount: context.amount,
-                error: <span class="prelude-val">Some</span>(me.into()),
+            </span>CurrentState::with(|state| {
+                state.emit_event(Event::Delegate {
+                    from: context.from,
+                    nonce: context.nonce,
+                    to: context.to,
+                    amount: context.amount,
+                    error: <span class="prelude-val">Some</span>(me.into()),
+                });
             });
             <span class="kw">return</span>;
         }
 
         <span class="comment">// Burn the delegated tokens.
-        </span>Accounts::burn(ctx, <span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, <span class="kw-2">&amp;</span>context.amount)
+        </span>Accounts::burn(<span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, <span class="kw-2">&amp;</span>context.amount)
             .expect(<span class="string">&quot;should have enough balance&quot;</span>);
 
         <span class="comment">// Record delegation.
@@ -1706,18 +1724,20 @@
         }
 
         <span class="comment">// Emit delegation successful event.
-        </span>ctx.emit_event(Event::Delegate {
-            from: context.from,
-            nonce: context.nonce,
-            to: context.to,
-            amount: context.amount,
-            error: <span class="prelude-val">None</span>,
+        </span>CurrentState::with(|state| {
+            state.emit_event(Event::Delegate {
+                from: context.from,
+                nonce: context.nonce,
+                to: context.to,
+                amount: context.amount,
+                error: <span class="prelude-val">None</span>,
+            });
         });
     }
 
     <span class="attr">#[handler(message_result = CONSENSUS_UNDELEGATE_HANDLER)]
     </span><span class="kw">fn </span>message_result_undelegate&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         me: MessageEvent,
         context: types::ConsensusUndelegateContext,
     ) {
@@ -1739,13 +1759,15 @@
             }
 
             <span class="comment">// Emit undelegation failed event.
-            </span>ctx.emit_event(Event::UndelegateStart {
-                from: context.from,
-                nonce: context.nonce,
-                to: context.to,
-                shares: context.shares,
-                debond_end_time: EPOCH_INVALID,
-                error: <span class="prelude-val">Some</span>(me.into()),
+            </span>CurrentState::with(|state| {
+                state.emit_event(Event::UndelegateStart {
+                    from: context.from,
+                    nonce: context.nonce,
+                    to: context.to,
+                    shares: context.shares,
+                    debond_end_time: EPOCH_INVALID,
+                    error: <span class="prelude-val">Some</span>(me.into()),
+                });
             });
             <span class="kw">return</span>;
         }
@@ -1788,13 +1810,15 @@
         }
 
         <span class="comment">// Emit undelegation started event.
-        </span>ctx.emit_event(Event::UndelegateStart {
-            from: context.from,
-            nonce: context.nonce,
-            to: context.to,
-            shares: context.shares,
-            debond_end_time: result.debond_end_time,
-            error: <span class="prelude-val">None</span>,
+        </span>CurrentState::with(|state| {
+            state.emit_event(Event::UndelegateStart {
+                from: context.from,
+                nonce: context.nonce,
+                to: context.to,
+                shares: context.shares,
+                debond_end_time: result.debond_end_time,
+                error: <span class="prelude-val">None</span>,
+            });
         });
     }
 }
@@ -1807,9 +1831,9 @@
 <span class="kw">impl</span>&lt;Accounts: modules::accounts::API, Consensus: modules::consensus::API&gt; module::BlockHandler
     <span class="kw">for </span>Module&lt;Accounts, Consensus&gt;
 {
-    <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) {
+    <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) {
         <span class="comment">// Only do work in case the epoch has changed since the last processed block.
-        </span><span class="kw">if </span>!&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::has_epoch_changed(ctx) {
+        </span><span class="kw">if </span>!&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::has_epoch_changed() {
             <span class="kw">return</span>;
         }
 
@@ -1822,7 +1846,7 @@
             lru::LruCache::new(NonZeroUsize::new(<span class="number">128</span>).unwrap());
 
         <span class="kw">let </span>own_address = Address::from_runtime_id(ctx.runtime_id());
-        <span class="kw">let </span>denomination = Consensus::consensus_denomination(ctx).unwrap();
+        <span class="kw">let </span>denomination = Consensus::consensus_denomination().unwrap();
         <span class="kw">let </span>qd = state::get_queued_undelegations(ctx.epoch()).unwrap();
         <span class="kw">for </span>ud <span class="kw">in </span>qd {
             <span class="kw">let </span>udi = state::take_undelegation(<span class="kw-2">&amp;</span>ud).unwrap();
@@ -1885,7 +1909,7 @@
             <span class="kw">let </span>amount = token::BaseUnits::new(raw_amount, denomination.clone());
 
             <span class="comment">// Mint the given number of tokens.
-            </span>Accounts::mint(ctx, ud.to, <span class="kw-2">&amp;</span>amount).unwrap();
+            </span>Accounts::mint(ud.to, <span class="kw-2">&amp;</span>amount).unwrap();
 
             <span class="comment">// Store receipt if requested.
             </span><span class="kw">if </span>udi.receipt &gt; <span class="number">0 </span>{
@@ -1901,11 +1925,13 @@
             }
 
             <span class="comment">// Emit undelegation done event.
-            </span>ctx.emit_event(Event::UndelegateDone {
-                from: ud.from,
-                to: ud.to,
-                shares: udi.shares,
-                amount,
+            </span>CurrentState::with(|state| {
+                state.emit_event(Event::UndelegateDone {
+                    from: ud.from,
+                    to: ud.to,
+                    shares: udi.shares,
+                    amount,
+                });
             });
         }
     }
@@ -1915,12 +1941,12 @@
     <span class="kw">for </span>Module&lt;Accounts, Consensus&gt;
 {
     <span class="doccomment">/// Check invariants.
-    </span><span class="kw">fn </span>check_invariants&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), CoreError&gt; {
+    </span><span class="kw">fn </span>check_invariants&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), CoreError&gt; {
         <span class="comment">// Total supply of the designated consensus layer token denomination
         // should be less than or equal to the balance of the runtime&#39;s general
         // account in the consensus layer.
 
-        </span><span class="kw">let </span>den = Consensus::consensus_denomination(ctx).unwrap();
+        </span><span class="kw">let </span>den = Consensus::consensus_denomination().unwrap();
         <span class="attr">#[allow(clippy::or_fun_call)]
         </span><span class="kw">let </span>ts = Accounts::get_total_supplies().or(<span class="prelude-val">Err</span>(CoreError::InvariantViolation(
             <span class="string">&quot;unable to get total supplies&quot;</span>.to_string(),

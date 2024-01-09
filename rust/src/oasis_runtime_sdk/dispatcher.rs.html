@@ -1161,16 +1161,6 @@
 <a href="#1161" id="1161">1161</a>
 <a href="#1162" id="1162">1162</a>
 <a href="#1163" id="1163">1163</a>
-<a href="#1164" id="1164">1164</a>
-<a href="#1165" id="1165">1165</a>
-<a href="#1166" id="1166">1166</a>
-<a href="#1167" id="1167">1167</a>
-<a href="#1168" id="1168">1168</a>
-<a href="#1169" id="1169">1169</a>
-<a href="#1170" id="1170">1170</a>
-<a href="#1171" id="1171">1171</a>
-<a href="#1172" id="1172">1172</a>
-<a href="#1173" id="1173">1173</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Transaction dispatcher.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
@@ -1200,8 +1190,7 @@
 
 <span class="kw">use crate</span>::{
     callformat,
-    context::{BatchContext, Context, Mode, RuntimeBatchContext, TransactionWithMeta, TxContext},
-    crypto::random::RootRng,
+    context::{Context, RuntimeBatchContext},
     error::{Error <span class="kw">as _</span>, RuntimeError},
     event::IntoTags,
     keymanager::{KeyManagerClient, KeyManagerError},
@@ -1211,7 +1200,8 @@
     runtime::Runtime,
     schedule_control::ScheduleControlHost,
     sender::SenderMeta,
-    storage::{<span class="self">self</span>, current::TransactionResult, CurrentStore, Prefix},
+    state::{<span class="self">self</span>, CurrentState, Mode, TransactionResult, TransactionWithMeta},
+    storage::{<span class="self">self</span>, Prefix},
     types,
     types::transaction::{AuthProof, Transaction},
 };
@@ -1328,7 +1318,7 @@
 
     <span class="doccomment">/// Decode a runtime transaction.
     </span><span class="kw">pub fn </span>decode_tx&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         tx: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::transaction::Transaction, modules::core::Error&gt; {
         <span class="comment">// Perform any checks before decoding.
@@ -1359,8 +1349,8 @@
     <span class="doccomment">/// Run the dispatch steps inside a transaction context. This includes the before call hooks,
     /// the call itself and after call hooks. The after call hooks are called regardless if the call
     /// succeeds or not.
-    </span><span class="kw">pub fn </span>dispatch_tx_call&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">pub fn </span>dispatch_tx_call&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         call: types::transaction::Call,
         opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">&#39;_</span>&gt;,
     ) -&gt; (module::CallResult, callformat::Metadata) {
@@ -1379,7 +1369,7 @@
         };
 
         <span class="comment">// Make sure that a read-only call did not result in any modifications.
-        </span><span class="kw">if </span>read_only &amp;&amp; CurrentStore::has_pending_updates() {
+        </span><span class="kw">if </span>read_only &amp;&amp; CurrentState::with(|state| state.has_pending_store_updates()) {
             <span class="kw">return </span>(
                 modules::core::Error::ReadOnlyTransaction.into_call_result(),
                 metadata,
@@ -1389,8 +1379,8 @@
         (result, metadata)
     }
 
-    <span class="kw">fn </span>_dispatch_tx_call&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>_dispatch_tx_call&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         call: types::transaction::Call,
         opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">&#39;_</span>&gt;,
     ) -&gt; (module::CallResult, callformat::Metadata) {
@@ -1399,8 +1389,7 @@
         }
 
         <span class="comment">// Decode call based on specified call format.
-        </span><span class="kw">let </span>(call, call_format_metadata) = <span class="kw">match </span>callformat::decode_call(ctx, call, ctx.tx_index())
-        {
+        </span><span class="kw">let </span>(call, call_format_metadata) = <span class="kw">match </span>callformat::decode_call(ctx, call, opts.tx_index) {
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(result)) =&gt; result,
             <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; {
                 <span class="kw">return </span>(
@@ -1432,8 +1421,8 @@
     }
 
     <span class="doccomment">/// Dispatch a runtime transaction in the given context with the provided options.
-    </span><span class="kw">pub fn </span>dispatch_tx_opts&lt;C: BatchContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">pub fn </span>dispatch_tx_opts&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         tx: types::transaction::Transaction,
         opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">&#39;_</span>&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;DispatchResult, Error&gt; {
@@ -1445,64 +1434,55 @@
         }
         <span class="kw">let </span>tx_auth_info = tx.auth_info.clone();
         <span class="kw">let </span>is_read_only = tx.call.read_only;
+        <span class="kw">let </span>call = tx.call.clone(); <span class="comment">// TODO: Avoid clone.
 
-        <span class="kw">let </span>(result, messages) = CurrentStore::with_transaction(|| {
-            ctx.with_tx(
-                TransactionWithMeta {
-                    tx,
-                    tx_size: opts.tx_size,
-                    tx_index: opts.tx_index,
-                    tx_hash: opts.tx_hash,
-                },
-                |<span class="kw-2">mut </span>ctx, call| {
-                    <span class="kw">let </span>(result, call_format_metadata) =
-                        <span class="self">Self</span>::dispatch_tx_call(<span class="kw-2">&amp;mut </span>ctx, call, opts);
-                    <span class="kw">if </span>!result.is_success() || is_read_only {
-                        <span class="comment">// Retrieve unconditional events by doing an explicit rollback.
-                        </span><span class="kw">let </span>etags = ctx.rollback();
+        </span><span class="kw">let </span>result = CurrentState::with_transaction_opts(
+            state::Options::new().with_tx(TransactionWithMeta {
+                data: tx,
+                size: opts.tx_size,
+                index: opts.tx_index,
+                hash: opts.tx_hash,
+            }),
+            || {
+                <span class="kw">let </span>(result, call_format_metadata) = <span class="self">Self</span>::dispatch_tx_call(ctx, call, opts);
+                <span class="kw">if </span>!result.is_success() || is_read_only {
+                    <span class="comment">// Retrieve unconditional events.
+                    </span><span class="kw">let </span>events = CurrentState::with(|state| state.take_unconditional_events());
 
-                        <span class="kw">return </span>TransactionResult::Rollback((
-                            DispatchResult::new(result, etags.into_tags(), call_format_metadata),
-                            Vec::new(),
-                        ));
-                    }
+                    <span class="kw">return </span>TransactionResult::Rollback(DispatchResult::new(
+                        result,
+                        events.into_tags(),
+                        call_format_metadata,
+                    ));
+                }
 
-                    <span class="comment">// Load priority.
-                    </span><span class="kw">let </span>priority = R::Core::take_priority(<span class="kw-2">&amp;mut </span>ctx);
-                    <span class="comment">// Load sender metadata.
-                    </span><span class="kw">let </span>sender_metadata = R::Core::take_sender_meta(<span class="kw-2">&amp;mut </span>ctx);
+                <span class="comment">// Load priority.
+                </span><span class="kw">let </span>priority = R::Core::take_priority();
+                <span class="comment">// Load sender metadata.
+                </span><span class="kw">let </span>sender_metadata = R::Core::take_sender_meta();
 
-                    <span class="kw">if </span>ctx.is_check_only() {
-                        <span class="comment">// Rollback state during checks.
-                        </span>ctx.rollback();
+                <span class="kw">if </span>CurrentState::with_env(|env| env.is_check_only()) {
+                    TransactionResult::Rollback(DispatchResult {
+                        result,
+                        tags: Vec::new(),
+                        priority,
+                        sender_metadata,
+                        call_format_metadata,
+                    })
+                } <span class="kw">else </span>{
+                    <span class="comment">// Merge normal and unconditional events.
+                    </span><span class="kw">let </span>tags = CurrentState::with(|state| state.take_all_events().into_tags());
 
-                        TransactionResult::Rollback((
-                            DispatchResult {
-                                result,
-                                tags: Vec::new(),
-                                priority,
-                                sender_metadata,
-                                call_format_metadata,
-                            },
-                            Vec::new(),
-                        ))
-                    } <span class="kw">else </span>{
-                        <span class="comment">// Commit store and return emitted tags and messages.
-                        </span><span class="kw">let </span>state = ctx.commit();
-                        TransactionResult::Commit((
-                            DispatchResult {
-                                result,
-                                tags: state.events.into_tags(),
-                                priority,
-                                sender_metadata,
-                                call_format_metadata,
-                            },
-                            state.messages,
-                        ))
-                    }
-                },
-            )
-        });
+                    TransactionResult::Commit(DispatchResult {
+                        result,
+                        tags,
+                        priority,
+                        sender_metadata,
+                        call_format_metadata,
+                    })
+                }
+            },
+        );
 
         <span class="comment">// Run after dispatch hooks.
         </span>R::Modules::after_dispatch_tx(ctx, <span class="kw-2">&amp;</span>tx_auth_info, <span class="kw-2">&amp;</span>result.result);
@@ -1512,18 +1492,12 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(err);
         }
 
-        <span class="comment">// Forward any emitted messages if we are not in check tx context.
-        </span><span class="kw">if </span>!ctx.is_check_only() {
-            ctx.emit_messages(messages)
-                .expect(<span class="string">&quot;per-tx context has already enforced the limits&quot;</span>);
-        }
-
         <span class="prelude-val">Ok</span>(result)
     }
 
     <span class="doccomment">/// Dispatch a runtime transaction in the given context.
-    </span><span class="kw">pub fn </span>dispatch_tx&lt;C: BatchContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">pub fn </span>dispatch_tx&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         tx_size: u32,
         tx: types::transaction::Transaction,
         tx_index: usize,
@@ -1540,14 +1514,12 @@
     }
 
     <span class="doccomment">/// Check whether the given transaction is valid.
-    </span><span class="kw">pub fn </span>check_tx&lt;C: BatchContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">pub fn </span>check_tx&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         tx_size: u32,
         tx: Transaction,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;CheckTxResult, Error&gt; {
-        <span class="kw">let </span>dispatch = ctx.with_child(Mode::CheckTx, |<span class="kw-2">mut </span>ctx| {
-            <span class="self">Self</span>::dispatch_tx(<span class="kw-2">&amp;mut </span>ctx, tx_size, tx, usize::MAX)
-        })<span class="question-mark">?</span>;
+        <span class="kw">let </span>dispatch = <span class="self">Self</span>::dispatch_tx(ctx, tx_size, tx, usize::MAX)<span class="question-mark">?</span>;
         <span class="kw">match </span>dispatch.result {
             module::CallResult::Ok(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(CheckTxResult {
                 error: Default::default(),
@@ -1577,8 +1549,8 @@
     }
 
     <span class="doccomment">/// Execute the given transaction, returning unserialized results.
-    </span><span class="kw">pub fn </span>execute_tx_opts&lt;C: BatchContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">pub fn </span>execute_tx_opts&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         tx: Transaction,
         opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">&#39;_</span>&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(types::transaction::CallResult, Tags), Error&gt; {
@@ -1593,8 +1565,8 @@
     }
 
     <span class="doccomment">/// Execute the given transaction.
-    </span><span class="kw">pub fn </span>execute_tx&lt;C: BatchContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">pub fn </span>execute_tx&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         tx_size: u32,
         tx_hash: Hash,
         tx: Transaction,
@@ -1628,10 +1600,10 @@
         </span>}
     }
 
-    <span class="kw">fn </span>handle_last_round_messages&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
+    <span class="kw">fn </span>handle_last_round_messages&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="kw">let </span>message_events = ctx.runtime_round_results().messages.clone();
 
-        <span class="kw">let </span><span class="kw-2">mut </span>handlers = CurrentStore::with(|store| {
+        <span class="kw">let </span><span class="kw-2">mut </span>handlers = CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::TypedStore::new(storage::PrefixStore::new(
                 store,
                 <span class="kw-2">&amp;</span>modules::core::MODULE_NAME,
@@ -1675,7 +1647,7 @@
             .map(|(idx, h)| (idx <span class="kw">as </span>u32, h))
             .collect();
 
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span><span class="kw-2">mut </span>store = storage::TypedStore::new(storage::PrefixStore::new(
                 store,
                 <span class="kw-2">&amp;</span>modules::core::MODULE_NAME,
@@ -1685,15 +1657,15 @@
     }
 
     <span class="doccomment">/// Process the given runtime query.
-    </span><span class="kw">pub fn </span>dispatch_query&lt;C: BatchContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">pub fn </span>dispatch_query&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         method: <span class="kw-2">&amp;</span>str,
         args: Vec&lt;u8&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, RuntimeError&gt; {
         <span class="kw">let </span>args = cbor::from_slice(<span class="kw-2">&amp;</span>args)
             .map_err(|err| modules::core::Error::InvalidArgument(err.into()))<span class="question-mark">?</span>;
 
-        CurrentStore::with_transaction(|| {
+        CurrentState::with_transaction(|| {
             <span class="comment">// Catch any panics that occur during query dispatch.
             </span><span class="kw">let </span>result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 <span class="comment">// Perform state migrations if required.
@@ -1722,7 +1694,7 @@
         f: F,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ExecuteBatchResult, RuntimeError&gt;
     <span class="kw">where
-        </span>F: FnOnce(<span class="kw-2">&amp;mut </span>RuntimeBatchContext&lt;<span class="lifetime">&#39;_</span>, R&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ExecuteTxResult&gt;, RuntimeError&gt;,
+        </span>F: FnOnce(<span class="kw-2">&amp;</span>RuntimeBatchContext&lt;<span class="lifetime">&#39;_</span>, R&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ExecuteTxResult&gt;, RuntimeError&gt;,
     {
         <span class="comment">// Prepare dispatch context.
         </span><span class="kw">let </span>key_manager = <span class="self">self
@@ -1731,11 +1703,9 @@
             <span class="comment">// NOTE: We are explicitly allowing private key operations during execution.
             </span>.map(|mgr| mgr.with_private_context());
         <span class="kw">let </span>history = <span class="self">self</span>.consensus_verifier.clone();
-        <span class="kw">let </span>rng = RootRng::new();
 
         <span class="kw">let </span>root = storage::MKVSStore::new(<span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
-            Mode::ExecuteTx,
+        <span class="kw">let </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
             <span class="kw-2">&amp;</span><span class="self">self</span>.host_info,
             key_manager,
             rt_ctx.header,
@@ -1743,34 +1713,37 @@
             <span class="kw-2">&amp;</span>rt_ctx.consensus_state,
             <span class="kw-2">&amp;</span>history,
             rt_ctx.epoch,
-            <span class="kw-2">&amp;</span>rng,
             rt_ctx.max_messages,
         );
 
-        CurrentStore::enter(root, || {
+        CurrentState::enter_opts(state::Options::new().with_mode(Mode::Execute), root, || {
             <span class="comment">// Perform state migrations if required.
-            </span>R::migrate(<span class="kw-2">&amp;mut </span>ctx);
+            </span>R::migrate(<span class="kw-2">&amp;</span>ctx);
 
             <span class="comment">// Handle last round message results.
-            </span><span class="self">Self</span>::handle_last_round_messages(<span class="kw-2">&amp;mut </span>ctx)<span class="question-mark">?</span>;
+            </span><span class="self">Self</span>::handle_last_round_messages(<span class="kw-2">&amp;</span>ctx)<span class="question-mark">?</span>;
 
             <span class="comment">// Run begin block hooks.
-            </span>R::Modules::begin_block(<span class="kw-2">&amp;mut </span>ctx);
+            </span>R::Modules::begin_block(<span class="kw-2">&amp;</span>ctx);
 
-            <span class="kw">let </span>results = f(<span class="kw-2">&amp;mut </span>ctx)<span class="question-mark">?</span>;
+            <span class="kw">let </span>results = f(<span class="kw-2">&amp;</span>ctx)<span class="question-mark">?</span>;
 
             <span class="comment">// Run end block hooks.
-            </span>R::Modules::end_block(<span class="kw-2">&amp;mut </span>ctx);
+            </span>R::Modules::end_block(<span class="kw-2">&amp;</span>ctx);
 
-            <span class="comment">// Commit the context and retrieve the emitted messages.
-            </span><span class="kw">let </span>state = ctx.commit();
-            <span class="kw">let </span>(messages, handlers) = state.messages.into_iter().unzip();
+            <span class="comment">// Process any emitted messages and block-level events.
+            </span><span class="kw">let </span>(messages, handlers, block_tags) = CurrentState::with(|state| {
+                <span class="kw">let </span>(messages, handlers) = state.take_messages().into_iter().unzip();
+                <span class="kw">let </span>block_tags = state.take_all_events().into_tags();
+
+                (messages, handlers, block_tags)
+            });
             <span class="self">Self</span>::save_emitted_message_handlers(handlers);
 
             <span class="prelude-val">Ok</span>(ExecuteBatchResult {
                 results,
                 messages,
-                block_tags: state.events.into_tags(),
+                block_tags,
                 tx_reject_hashes: <span class="macro">vec!</span>[],
                 in_msgs_count: <span class="number">0</span>, <span class="comment">// TODO: Support processing incoming messages.
             </span>})
@@ -1812,7 +1785,7 @@
                     }
                 }
                 <span class="kw">if </span>prefetch_enabled {
-                    CurrentStore::with(|store| {
+                    CurrentState::with_store(|store| {
                         store.prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
                     })
                 }
@@ -1855,7 +1828,7 @@
                     <span class="kw">for </span>raw_tx <span class="kw">in </span>batch.drain(..) {
                         <span class="comment">// If we don&#39;t have enough gas for processing even the cheapest transaction
                         // we are done. Same if we reached the runtime-imposed maximum tx count.
-                        </span><span class="kw">let </span>remaining_gas = R::Core::remaining_batch_gas(ctx);
+                        </span><span class="kw">let </span>remaining_gas = R::Core::remaining_batch_gas();
                         <span class="kw">if </span>remaining_gas &lt; cfg.min_remaining_gas
                             || new_batch.len() &gt;= cfg.max_tx_count
                         {
@@ -1881,7 +1854,11 @@
                             <span class="kw">continue</span>;
                         }
                         <span class="comment">// Same if we don&#39;t have enough consensus message slots.
-                        </span><span class="kw">if </span>tx.auth_info.fee.consensus_messages &gt; ctx.remaining_messages() {
+                        </span><span class="kw">let </span>remaining_messages = CurrentState::with(|state| {
+                            ctx.max_messages()
+                                .saturating_sub(state.emitted_messages_count() <span class="kw">as </span>u32)
+                        });
+                        <span class="kw">if </span>tx.auth_info.fee.consensus_messages &gt; remaining_messages {
                             <span class="kw">continue</span>;
                         }
 
@@ -1890,10 +1867,11 @@
 
                         <span class="comment">// First run the transaction in check tx mode in a separate subcontext. If
                         // that fails, skip and (sometimes) reject transaction.
-                        </span><span class="kw">let </span>skip = CurrentStore::with_transaction(|| {
-                            <span class="kw">let </span>result = ctx.with_pre_schedule(|<span class="kw-2">mut </span>ctx| -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, Error&gt; {
+                        </span><span class="kw">let </span>skip = CurrentState::with_transaction_opts(
+                            state::Options::new().with_mode(Mode::PreSchedule),
+                            || -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, Error&gt; {
                                 <span class="comment">// First authenticate the transaction to get any nonce related errors.
-                                </span><span class="kw">match </span>R::Modules::authenticate_tx(<span class="kw-2">&amp;mut </span>ctx, <span class="kw-2">&amp;</span>tx) {
+                                </span><span class="kw">match </span>R::Modules::authenticate_tx(ctx, <span class="kw-2">&amp;</span>tx) {
                                     <span class="prelude-val">Err</span>(modules::core::Error::FutureNonce) =&gt; {
                                         <span class="comment">// Only skip transaction as it may become valid in the future.
                                         </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">true</span>);
@@ -1904,7 +1882,7 @@
                                     <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {
                                         <span class="comment">// Run additional checks on the transaction.
                                         </span><span class="kw">let </span>check_result = <span class="self">Self</span>::dispatch_tx_opts(
-                                            <span class="kw-2">&amp;mut </span>ctx,
+                                            ctx,
                                             tx.clone(),
                                             <span class="kw-2">&amp;</span>DispatchOptions {
                                                 tx_size,
@@ -1924,10 +1902,8 @@
                                 <span class="comment">// Skip and reject the transaction.
                                 </span>tx_reject_hashes.push(tx_hash);
                                 <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
-                            });
-
-                            TransactionResult::Rollback(result) <span class="comment">// Always rollback storage changes.
-                        </span>})<span class="question-mark">?</span>;
+                            },
+                        )<span class="question-mark">?</span>;
                         <span class="kw">if </span>skip {
                             <span class="kw">continue</span>;
                         }
@@ -1978,11 +1954,9 @@
         <span class="comment">// Prepare dispatch context.
         </span><span class="kw">let </span>key_manager = <span class="self">self</span>.key_manager.as_ref().map(|mgr| mgr.with_context());
         <span class="kw">let </span>history = <span class="self">self</span>.consensus_verifier.clone();
-        <span class="kw">let </span>rng = RootRng::new();
 
         <span class="kw">let </span>root = storage::MKVSStore::new(<span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
-            Mode::CheckTx,
+        <span class="kw">let </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
             <span class="kw-2">&amp;</span><span class="self">self</span>.host_info,
             key_manager,
             rt_ctx.header,
@@ -1990,53 +1964,56 @@
             <span class="kw-2">&amp;</span>rt_ctx.consensus_state,
             <span class="kw-2">&amp;</span>history,
             rt_ctx.epoch,
-            <span class="kw-2">&amp;</span>rng,
             rt_ctx.max_messages,
         );
 
-        CurrentStore::enter(root, || {
-            <span class="comment">// Perform state migrations if required.
-            </span>R::migrate(<span class="kw-2">&amp;mut </span>ctx);
+        CurrentState::enter_opts(
+            state::Options::new().with_mode(state::Mode::Check),
+            root,
+            || {
+                <span class="comment">// Perform state migrations if required.
+                </span>R::migrate(<span class="kw-2">&amp;</span>ctx);
 
-            <span class="comment">// Prefetch.
-            </span><span class="kw">let </span><span class="kw-2">mut </span>txs: Vec&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, RuntimeError&gt;&gt; = Vec::with_capacity(batch.len());
-            <span class="kw">let </span><span class="kw-2">mut </span>prefixes: BTreeSet&lt;Prefix&gt; = BTreeSet::new();
-            <span class="kw">for </span>tx <span class="kw">in </span>batch.iter() {
-                <span class="kw">let </span>tx_size = tx.len().try_into().map_err(|<span class="kw">_</span>| {
-                    Error::MalformedTransactionInBatch(<span class="macro">anyhow!</span>(<span class="string">&quot;transaction too large&quot;</span>))
-                })<span class="question-mark">?</span>;
-                <span class="kw">let </span>res = <span class="kw">match </span><span class="self">Self</span>::decode_tx(<span class="kw-2">&amp;mut </span>ctx, tx) {
-                    <span class="prelude-val">Ok</span>(tx) =&gt; {
-                        <span class="kw">if </span>prefetch_enabled {
-                            <span class="self">Self</span>::prefetch_tx(<span class="kw-2">&amp;mut </span>prefixes, tx.clone()).map(|<span class="kw">_</span>| (tx_size, tx))
-                        } <span class="kw">else </span>{
-                            <span class="prelude-val">Ok</span>((tx_size, tx))
+                <span class="comment">// Prefetch.
+                </span><span class="kw">let </span><span class="kw-2">mut </span>txs: Vec&lt;<span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, RuntimeError&gt;&gt; = Vec::with_capacity(batch.len());
+                <span class="kw">let </span><span class="kw-2">mut </span>prefixes: BTreeSet&lt;Prefix&gt; = BTreeSet::new();
+                <span class="kw">for </span>tx <span class="kw">in </span>batch.iter() {
+                    <span class="kw">let </span>tx_size = tx.len().try_into().map_err(|<span class="kw">_</span>| {
+                        Error::MalformedTransactionInBatch(<span class="macro">anyhow!</span>(<span class="string">&quot;transaction too large&quot;</span>))
+                    })<span class="question-mark">?</span>;
+                    <span class="kw">let </span>res = <span class="kw">match </span><span class="self">Self</span>::decode_tx(<span class="kw-2">&amp;</span>ctx, tx) {
+                        <span class="prelude-val">Ok</span>(tx) =&gt; {
+                            <span class="kw">if </span>prefetch_enabled {
+                                <span class="self">Self</span>::prefetch_tx(<span class="kw-2">&amp;mut </span>prefixes, tx.clone()).map(|<span class="kw">_</span>| (tx_size, tx))
+                            } <span class="kw">else </span>{
+                                <span class="prelude-val">Ok</span>((tx_size, tx))
+                            }
                         }
-                    }
-                    <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(err.into()),
-                };
-                txs.push(res);
-            }
-            <span class="kw">if </span>prefetch_enabled {
-                CurrentStore::with(|store| {
-                    store.prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
-                });
-            }
-
-            <span class="comment">// Check the batch.
-            </span><span class="kw">let </span><span class="kw-2">mut </span>results = Vec::with_capacity(batch.len());
-            <span class="kw">for </span>tx <span class="kw">in </span>txs.into_iter() {
-                <span class="kw">match </span>tx {
-                    <span class="prelude-val">Ok</span>((tx_size, tx)) =&gt; results.push(<span class="self">Self</span>::check_tx(<span class="kw-2">&amp;mut </span>ctx, tx_size, tx)<span class="question-mark">?</span>),
-                    <span class="prelude-val">Err</span>(err) =&gt; results.push(CheckTxResult {
-                        error: err,
-                        meta: <span class="prelude-val">None</span>,
-                    }),
+                        <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(err.into()),
+                    };
+                    txs.push(res);
                 }
-            }
+                <span class="kw">if </span>prefetch_enabled {
+                    CurrentState::with_store(|store| {
+                        store.prefetch_prefixes(prefixes.into_iter().collect(), R::PREFETCH_LIMIT);
+                    });
+                }
 
-            <span class="prelude-val">Ok</span>(results)
-        })
+                <span class="comment">// Check the batch.
+                </span><span class="kw">let </span><span class="kw-2">mut </span>results = Vec::with_capacity(batch.len());
+                <span class="kw">for </span>tx <span class="kw">in </span>txs.into_iter() {
+                    <span class="kw">match </span>tx {
+                        <span class="prelude-val">Ok</span>((tx_size, tx)) =&gt; results.push(<span class="self">Self</span>::check_tx(<span class="kw-2">&amp;</span>ctx, tx_size, tx)<span class="question-mark">?</span>),
+                        <span class="prelude-val">Err</span>(err) =&gt; results.push(CheckTxResult {
+                            error: err,
+                            meta: <span class="prelude-val">None</span>,
+                        }),
+                    }
+                }
+
+                <span class="prelude-val">Ok</span>(results)
+            },
+        )
     }
 
     <span class="kw">fn </span>set_abort_batch_flag(<span class="kw-2">&amp;mut </span><span class="self">self</span>, _abort_batch: Arc&lt;AtomicBool&gt;) {
@@ -2072,17 +2049,11 @@
             }
         });
 
-        <span class="comment">// Initialize the root RNG. For queries which don&#39;t need to be deterministic as they are
-        // node-local we mix in local (private) entropy.
-        </span><span class="kw">let </span>rng = RootRng::new();
-        rng.append_local_entropy();
-
         <span class="comment">// Prepare dispatch context.
         </span><span class="kw">let </span>history = <span class="self">self</span>.consensus_verifier.clone();
 
         <span class="kw">let </span>root = storage::MKVSStore::new(<span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
-            Mode::CheckTx,
+        <span class="kw">let </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
             <span class="kw-2">&amp;</span><span class="self">self</span>.host_info,
             key_manager,
             rt_ctx.header,
@@ -2090,11 +2061,16 @@
             <span class="kw-2">&amp;</span>rt_ctx.consensus_state,
             <span class="kw-2">&amp;</span>history,
             rt_ctx.epoch,
-            <span class="kw-2">&amp;</span>rng,
             rt_ctx.max_messages,
         );
 
-        CurrentStore::enter(root, || <span class="self">Self</span>::dispatch_query(<span class="kw-2">&amp;mut </span>ctx, method, args))
+        CurrentState::enter_opts(
+            state::Options::new()
+                .with_mode(state::Mode::Check)
+                .with_rng_local_entropy(), <span class="comment">// Mix in local (private) entropy for queries.
+            </span>root,
+            || <span class="self">Self</span>::dispatch_query(<span class="kw-2">&amp;</span>ctx, method, args),
+        )
     }
 }
 
@@ -2106,7 +2082,8 @@
         module::Module,
         modules::core,
         sdk_derive,
-        storage::{CurrentStore, Store},
+        state::{CurrentState, Options},
+        storage::Store,
         testing::{configmap, keys, mock::Mock},
         types::{token, transaction},
         Version,
@@ -2137,34 +2114,34 @@
         <span class="kw">type </span>Genesis = ();
 
         <span class="attr">#[handler(call = <span class="string">&quot;alphabet.ReadOnly&quot;</span>)]
-        </span><span class="kw">fn </span>read_only&lt;C: TxContext&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;u64, AlphabetError&gt; {
-            CurrentStore::with(|store| {
+        </span><span class="kw">fn </span>read_only&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;u64, AlphabetError&gt; {
+            CurrentState::with_store(|store| {
                 <span class="kw">let _ </span>= store.get(<span class="string">b&quot;key&quot;</span>); <span class="comment">// Read something and ignore result.
             </span>});
             <span class="prelude-val">Ok</span>(<span class="number">42</span>)
         }
 
         <span class="attr">#[handler(call = <span class="string">&quot;alphabet.NotReadOnly&quot;</span>)]
-        </span><span class="kw">fn </span>not_read_only&lt;C: TxContext&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;u64, AlphabetError&gt; {
-            CurrentStore::with(|store| {
+        </span><span class="kw">fn </span>not_read_only&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;u64, AlphabetError&gt; {
+            CurrentState::with_store(|store| {
                 store.insert(<span class="string">b&quot;key&quot;</span>, <span class="string">b&quot;value&quot;</span>);
             });
             <span class="prelude-val">Ok</span>(<span class="number">10</span>)
         }
 
         <span class="attr">#[handler(call = <span class="string">&quot;alphabet.Aborting&quot;</span>)]
-        </span><span class="kw">fn </span>aborting&lt;C: TxContext&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), AlphabetError&gt; {
+        </span><span class="kw">fn </span>aborting&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), AlphabetError&gt; {
             <span class="comment">// Use a deeply nested abort to make sure this is handled correctly.
             </span><span class="prelude-val">Err</span>(AlphabetError::Core(core::Error::Abort(Error::Aborted)))
         }
 
         <span class="attr">#[handler(query = <span class="string">&quot;alphabet.Alpha&quot;</span>)]
-        </span><span class="kw">fn </span>alpha&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), AlphabetError&gt; {
+        </span><span class="kw">fn </span>alpha&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), AlphabetError&gt; {
             <span class="prelude-val">Ok</span>(())
         }
 
         <span class="attr">#[handler(query = <span class="string">&quot;alphabet.Omega&quot;</span>, expensive)]
-        </span><span class="kw">fn </span>expensive&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), AlphabetError&gt; {
+        </span><span class="kw">fn </span>expensive&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), AlphabetError&gt; {
             <span class="comment">// Nothing actually expensive here. We&#39;re just pretending for testing purposes.
             </span><span class="prelude-val">Ok</span>(())
         }
@@ -2207,7 +2184,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_allowed_queries_defaults() {
         <span class="kw">let </span><span class="kw-2">mut </span>mock = Mock::with_local_config(BTreeMap::new());
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx_for_runtime::&lt;AlphabetRuntime&gt;(Mode::CheckTx, <span class="bool-val">false</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx_for_runtime::&lt;AlphabetRuntime&gt;(<span class="bool-val">false</span>);
 
         Dispatcher::&lt;AlphabetRuntime&gt;::dispatch_query(
             <span class="kw-2">&amp;mut </span>ctx,
@@ -2236,28 +2213,31 @@
             </span>],
         };
         <span class="kw">let </span><span class="kw-2">mut </span>mock = Mock::with_local_config(local_config);
-        <span class="comment">// For queries, oasis-core always generates a `CheckTx` context; test with that.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx_for_runtime::&lt;AlphabetRuntime&gt;(Mode::CheckTx, <span class="bool-val">false</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx_for_runtime::&lt;AlphabetRuntime&gt;(<span class="bool-val">false</span>);
 
-        Dispatcher::&lt;AlphabetRuntime&gt;::dispatch_query(
-            <span class="kw-2">&amp;mut </span>ctx,
-            <span class="string">&quot;alphabet.Alpha&quot;</span>,
-            cbor::to_vec(().into_cbor_value()),
-        )
-        .expect_err(<span class="string">&quot;alphabet.Alpha is a disallowed query&quot;</span>);
+        CurrentState::with_transaction_opts(Options::new().with_mode(state::Mode::Check), || {
+            Dispatcher::&lt;AlphabetRuntime&gt;::dispatch_query(
+                <span class="kw-2">&amp;mut </span>ctx,
+                <span class="string">&quot;alphabet.Alpha&quot;</span>,
+                cbor::to_vec(().into_cbor_value()),
+            )
+            .expect_err(<span class="string">&quot;alphabet.Alpha is a disallowed query&quot;</span>);
 
-        Dispatcher::&lt;AlphabetRuntime&gt;::dispatch_query(
-            <span class="kw-2">&amp;mut </span>ctx,
-            <span class="string">&quot;alphabet.Omega&quot;</span>,
-            cbor::to_vec(().into_cbor_value()),
-        )
-        .expect(<span class="string">&quot;alphabet.Omega is an expensive query and expensive queries are allowed&quot;</span>);
+            Dispatcher::&lt;AlphabetRuntime&gt;::dispatch_query(
+                <span class="kw-2">&amp;mut </span>ctx,
+                <span class="string">&quot;alphabet.Omega&quot;</span>,
+                cbor::to_vec(().into_cbor_value()),
+            )
+            .expect(<span class="string">&quot;alphabet.Omega is an expensive query and expensive queries are allowed&quot;</span>);
+
+            TransactionResult::Rollback(())
+        });
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_dispatch_read_only_call() {
         <span class="kw">let </span><span class="kw-2">mut </span>mock = Mock::default();
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx_for_runtime::&lt;AlphabetRuntime&gt;(Mode::ExecuteTx, <span class="bool-val">false</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx_for_runtime::&lt;AlphabetRuntime&gt;(<span class="bool-val">false</span>);
 
         AlphabetRuntime::migrate(<span class="kw-2">&amp;mut </span>ctx);
 
@@ -2313,7 +2293,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_dispatch_abort_forwarding() {
         <span class="kw">let </span><span class="kw-2">mut </span>mock = Mock::default();
-        <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx_for_runtime::&lt;AlphabetRuntime&gt;(Mode::ExecuteTx, <span class="bool-val">false</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx_for_runtime::&lt;AlphabetRuntime&gt;(<span class="bool-val">false</span>);
 
         AlphabetRuntime::migrate(<span class="kw-2">&amp;mut </span>ctx);
 

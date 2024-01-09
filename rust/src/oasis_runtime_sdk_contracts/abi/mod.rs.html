@@ -246,7 +246,7 @@
 <span class="doccomment">/// Execution context.
 </span><span class="kw">pub struct </span>ExecutionContext&lt;<span class="lifetime">&#39;ctx</span>, C: Context&gt; {
     <span class="doccomment">/// Transaction context.
-    </span><span class="kw">pub </span>tx_context: <span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span><span class="kw-2">mut </span>C,
+    </span><span class="kw">pub </span>tx_context: <span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span>C,
     <span class="doccomment">/// Contracts module parameters.
     </span><span class="kw">pub </span>params: <span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span>Parameters,
 
@@ -280,7 +280,7 @@
         caller_address: Address,
         read_only: bool,
         call_format: CallFormat,
-        tx_context: <span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span><span class="kw-2">mut </span>C,
+        tx_context: <span class="kw-2">&amp;</span><span class="lifetime">&#39;ctx </span>C,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             tx_context,

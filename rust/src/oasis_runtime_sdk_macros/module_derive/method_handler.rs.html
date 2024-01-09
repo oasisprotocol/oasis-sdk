@@ -572,7 +572,7 @@
                         <span class="kw">if </span>h.attrs.is_internal {
                             <span class="macro">quote! </span>{
                                 |ctx, body| {
-                                    <span class="kw">if </span>!ctx.is_internal() {
+                                    <span class="kw">if </span>!sdk::state::CurrentState::with_env(|env| env.is_internal()) {
                                         <span class="kw">return </span><span class="prelude-val">Err</span>(sdk::modules::core::Error::Forbidden.into());
                                     }
                                     <span class="self">Self</span>::#ident(ctx, body)
@@ -589,8 +589,8 @@
                 <span class="macro">quote! </span>{}
             } <span class="kw">else </span>{
                 <span class="macro">quote! </span>{
-                    <span class="kw">fn </span>dispatch_call&lt;C: TxContext&gt;(
-                        ctx: <span class="kw-2">&amp;mut </span>C,
+                    <span class="kw">fn </span>dispatch_call&lt;C: Context&gt;(
+                        ctx: <span class="kw-2">&amp;</span>C,
                         method: <span class="kw-2">&amp;</span>str,
                         body: cbor::Value,
                     ) -&gt; DispatchResult&lt;cbor::Value, CallResult&gt; {
@@ -607,7 +607,7 @@
 
         <span class="kw">let </span>query_parameters_impl = {
             <span class="macro">quote! </span>{
-                <span class="kw">fn </span>query_parameters&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Parameters, &lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Error&gt; {
+                <span class="kw">fn </span>query_parameters&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Parameters, &lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Error&gt; {
                     <span class="prelude-val">Ok</span>(<span class="self">Self</span>::params())
                 }
             }
@@ -619,7 +619,7 @@
             <span class="kw">if </span>handler_names.is_empty() {
                 <span class="macro">quote! </span>{
                     <span class="kw">fn </span>dispatch_query&lt;C: Context&gt;(
-                        ctx: <span class="kw-2">&amp;mut </span>C,
+                        ctx: <span class="kw-2">&amp;</span>C,
                         method: <span class="kw-2">&amp;</span>str,
                         args: cbor::Value,
                     ) -&gt; DispatchResult&lt;cbor::Value, <span class="prelude-ty">Result</span>&lt;cbor::Value, sdk::error::RuntimeError&gt;&gt; {
@@ -632,7 +632,7 @@
             } <span class="kw">else </span>{
                 <span class="macro">quote! </span>{
                     <span class="kw">fn </span>dispatch_query&lt;C: Context&gt;(
-                        ctx: <span class="kw-2">&amp;mut </span>C,
+                        ctx: <span class="kw-2">&amp;</span>C,
                         method: <span class="kw-2">&amp;</span>str,
                         args: cbor::Value,
                     ) -&gt; DispatchResult&lt;cbor::Value, <span class="prelude-ty">Result</span>&lt;cbor::Value, sdk::error::RuntimeError&gt;&gt; {
@@ -657,7 +657,7 @@
             } <span class="kw">else </span>{
                 <span class="macro">quote! </span>{
                     <span class="kw">fn </span>dispatch_message_result&lt;C: Context&gt;(
-                        ctx: <span class="kw-2">&amp;mut </span>C,
+                        ctx: <span class="kw-2">&amp;</span>C,
                         handler_name: <span class="kw-2">&amp;</span>str,
                         result: MessageResult,
                     ) -&gt; DispatchResult&lt;MessageResult, ()&gt; {

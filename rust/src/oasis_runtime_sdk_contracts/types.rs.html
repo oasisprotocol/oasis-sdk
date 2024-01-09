@@ -358,12 +358,9 @@
 <a href="#358" id="358">358</a>
 <a href="#359" id="359">359</a>
 <a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Contracts module types.
 </span><span class="kw">pub use </span>oasis_contract_sdk_types::{CodeId, InstanceId};
 <span class="kw">use </span>oasis_runtime_sdk::{
-    context::TxContext,
     core::common::crypto::hash::Hash,
     types::{address::Address, token},
 };
@@ -384,14 +381,13 @@
 }
 
 <span class="kw">impl </span>Policy {
-    <span class="doccomment">/// Enforce the given policy by returning an error if the policy is not satisfied by the passed
-    /// transaction context.
-    </span><span class="kw">pub fn </span>enforce&lt;C: TxContext&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    <span class="doccomment">/// Enforce the given policy by returning an error if the policy is not satisfied.
+    </span><span class="kw">pub fn </span>enforce(<span class="kw-2">&amp;</span><span class="self">self</span>, caller: <span class="kw-2">&amp;</span>Address) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="comment">// Nobody is allowed to perform the action.
             </span>Policy::Nobody =&gt; <span class="prelude-val">Err</span>(Error::Forbidden),
             <span class="comment">// Only the given caller is allowed to perform the action.
-            </span>Policy::Address(address) <span class="kw">if </span>address == <span class="kw-2">&amp;</span>ctx.tx_caller_address() =&gt; <span class="prelude-val">Ok</span>(()),
+            </span>Policy::Address(address) <span class="kw">if </span>address == caller =&gt; <span class="prelude-val">Ok</span>(()),
             Policy::Address(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(Error::Forbidden),
             <span class="comment">// Anyone is allowed to perform the action.
             </span>Policy::Everyone =&gt; <span class="prelude-val">Ok</span>(()),

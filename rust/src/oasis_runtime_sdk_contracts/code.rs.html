@@ -69,6 +69,7 @@
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Code caching and storage.
 </span><span class="kw">use </span>std::{
     io::{Read, Write},
@@ -80,7 +81,8 @@
 
 <span class="kw">use </span>oasis_runtime_sdk::{
     core::common::crypto::hash::Hash,
-    storage::{<span class="self">self</span>, CurrentStore, Store},
+    state::CurrentState,
+    storage::{<span class="self">self</span>, Store},
 };
 
 <span class="kw">use crate</span>::{state, types, Config, Error, Module, MODULE_NAME};
@@ -98,7 +100,7 @@
         }
 
         <span class="comment">// TODO: Support local untrusted cache to avoid storage queries.
-        </span><span class="kw">let </span>code = CurrentStore::with(|store| {
+        </span><span class="kw">let </span>code = CurrentState::with_store(|store| {
             <span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>code_store = storage::PrefixStore::new(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>state::CODE);
             code_store
@@ -131,7 +133,7 @@
         encoder.write_all(code).unwrap();
         drop(encoder); <span class="comment">// Make sure data is flushed.
 
-        </span>CurrentStore::with(|store| {
+        </span>CurrentState::with_store(|store| {
             <span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>code_store = storage::PrefixStore::new(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>state::CODE);
             code_store.insert(<span class="kw-2">&amp;</span>code_info.id.to_storage_key(), <span class="kw-2">&amp;</span>output);

@@ -344,6 +344,9 @@
 <a href="#344" id="344">344</a>
 <a href="#345" id="345">345</a>
 <a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
+<a href="#348" id="348">348</a>
+<a href="#349" id="349">349</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Handling of different call formats.
 </span><span class="kw">use </span>std::convert::TryInto;
 
@@ -358,6 +361,7 @@
     crypto::signature::context::get_chain_context_for,
     keymanager, module,
     modules::core::Error,
+    state::CurrentState,
     types::{
         <span class="self">self</span>,
         transaction::{Call, CallFormat, CallResult},
@@ -462,7 +466,7 @@
 
             <span class="comment">// If we are only doing checks, this is the most that we can do as in this case we may
             // be unable to access the key manager.
-            </span><span class="kw">if </span>!assume_km_reachable &amp;&amp; (ctx.is_check_only() || ctx.is_simulation()) {
+            </span><span class="kw">if </span>!assume_km_reachable &amp;&amp; CurrentState::with_env(|env| !env.is_execute()) {
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
             }
 
@@ -612,18 +616,20 @@
     sk: x25519::PrivateKey,
     index: usize,
 ) -&gt; cbor::Value {
-    <span class="comment">// Generate nonce for the output as Round (8 bytes) || Index (4 bytes) || 00 00 00.
-    </span><span class="kw">let </span><span class="kw-2">mut </span>nonce = Vec::with_capacity(deoxysii::NONCE_SIZE);
-    nonce
-        .write_u64::&lt;BigEndian&gt;(ctx.runtime_header().round)
-        .unwrap();
-    nonce
-        .write_u32::&lt;BigEndian&gt;(index.try_into().unwrap())
-        .unwrap();
-    nonce.extend(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
-    <span class="kw">if </span>ctx.is_simulation() {
-        <span class="comment">// Randomize the lower-order bytes of the nonce to facilitate private queries.
-        </span>OsRng.fill_bytes(<span class="kw-2">&amp;mut </span>nonce[deoxysii::NONCE_SIZE - <span class="number">3</span>..]);
+    <span class="kw">let </span><span class="kw-2">mut </span>nonce = Vec::with_capacity(deoxysii::NONCE_SIZE);
+    <span class="kw">if </span>CurrentState::with_env(|env| env.is_execute()) {
+        <span class="comment">// In execution mode generate nonce for the output as Round (8 bytes) || Index (4 bytes) || 00 00 00.
+        </span>nonce
+            .write_u64::&lt;BigEndian&gt;(ctx.runtime_header().round)
+            .unwrap();
+        nonce
+            .write_u32::&lt;BigEndian&gt;(index.try_into().unwrap())
+            .unwrap();
+        nonce.extend(<span class="kw-2">&amp;</span>[<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+    } <span class="kw">else </span>{
+        <span class="comment">// In non-execution mode randomize the nonce to facilitate private queries.
+        </span>nonce.resize(deoxysii::NONCE_SIZE, <span class="number">0</span>);
+        OsRng.fill_bytes(<span class="kw-2">&amp;mut </span>nonce);
     }
     <span class="kw">let </span>nonce = nonce.try_into().unwrap();
     <span class="kw">let </span>result = cbor::to_vec(result);

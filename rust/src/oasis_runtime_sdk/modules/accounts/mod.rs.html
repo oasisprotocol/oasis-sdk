@@ -1146,6 +1146,7 @@
 <a href="#1146" id="1146">1146</a>
 <a href="#1147" id="1147">1147</a>
 <a href="#1148" id="1148">1148</a>
+<a href="#1149" id="1149">1149</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Accounts module.
 </span><span class="kw">use </span>std::{
     cmp::Ordering,
@@ -1158,7 +1159,7 @@
 <span class="kw">use </span>thiserror::Error;
 
 <span class="kw">use crate</span>::{
-    context::{Context, TxContext},
+    context::Context,
     core::common::quantity::Quantity,
     handler, migration, module,
     module::{Module <span class="kw">as _</span>, Parameters <span class="kw">as _</span>},
@@ -1167,8 +1168,9 @@
     runtime::Runtime,
     sdk_derive,
     sender::SenderMeta,
+    state::CurrentState,
     storage,
-    storage::{CurrentStore, Prefix},
+    storage::Prefix,
     types::{
         address::{Address, SignatureAddressSpec},
         token,
@@ -1289,22 +1291,16 @@
 <span class="doccomment">/// Interface that can be called from other modules.
 </span><span class="kw">pub trait </span>API {
     <span class="doccomment">/// Transfer an amount from one account to the other.
-    </span><span class="kw">fn </span>transfer&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
-        from: Address,
-        to: Address,
-        amount: <span class="kw-2">&amp;</span>token::BaseUnits,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
+    </span><span class="kw">fn </span>transfer(from: Address, to: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Transfer an amount from one account to the other without emitting an event.
     </span><span class="kw">fn </span>transfer_silent(from: Address, to: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Mint new tokens, increasing the total supply.
-    </span><span class="kw">fn </span>mint&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, to: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
+    </span><span class="kw">fn </span>mint(to: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Burn existing tokens, decreasing the total supply.
-    </span><span class="kw">fn </span>burn&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, from: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits)
-        -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
+    </span><span class="kw">fn </span>burn(from: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Sets an account&#39;s nonce.
     </span><span class="kw">fn </span>set_nonce(address: Address, nonce: u64);
@@ -1357,32 +1353,28 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::DenominationInfo, Error&gt;;
 
     <span class="doccomment">/// Moves the amount into the per-transaction fee accumulator.
-    </span><span class="kw">fn </span>charge_tx_fee&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
-        from: Address,
-        amount: <span class="kw-2">&amp;</span>token::BaseUnits,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt;;
+    </span><span class="kw">fn </span>charge_tx_fee(from: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt;;
 
     <span class="doccomment">/// Indicates that the unused portion of the transaction fee should be refunded after the
     /// transaction completes (even in case it fails).
-    </span><span class="kw">fn </span>set_refund_unused_tx_fee&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, refund: bool);
+    </span><span class="kw">fn </span>set_refund_unused_tx_fee(refund: bool);
 
     <span class="doccomment">/// Take the flag indicating that the unused portion of the transaction fee should be refunded
     /// after the transaction completes is set.
     ///
     /// After calling this method the flag is reset to `false`.
-    </span><span class="kw">fn </span>take_refund_unused_tx_fee&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; bool;
+    </span><span class="kw">fn </span>take_refund_unused_tx_fee() -&gt; bool;
 
     <span class="doccomment">/// Check transaction signer account nonces.
     /// Return payer address.
     </span><span class="kw">fn </span>check_signer_nonces&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         tx_auth_info: <span class="kw-2">&amp;</span>AuthInfo,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Address, modules::core::Error&gt;;
 
     <span class="doccomment">/// Update transaction signer account nonces.
     </span><span class="kw">fn </span>update_signer_nonces&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         tx_auth_info: <span class="kw-2">&amp;</span>AuthInfo,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt;;
 }
@@ -1438,7 +1430,7 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>balances = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::BALANCES);
             <span class="kw">let </span><span class="kw-2">mut </span>account = storage::TypedStore::new(storage::PrefixStore::new(balances, <span class="kw-2">&amp;</span>addr));
@@ -1458,7 +1450,7 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>balances = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::BALANCES);
             <span class="kw">let </span><span class="kw-2">mut </span>account = storage::TypedStore::new(storage::PrefixStore::new(balances, <span class="kw-2">&amp;</span>addr));
@@ -1478,7 +1470,7 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>total_supplies =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::TOTAL_SUPPLY));
@@ -1500,7 +1492,7 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>total_supplies =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::TOTAL_SUPPLY));
@@ -1518,7 +1510,7 @@
 
     <span class="doccomment">/// Get all balances.
     </span><span class="kw">fn </span>get_all_balances() -&gt; <span class="prelude-ty">Result</span>&lt;BTreeMap&lt;Address, BTreeMap&lt;token::Denomination, u128&gt;&gt;, Error&gt; {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>balances =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::BALANCES));
@@ -1556,23 +1548,20 @@
 </span><span class="kw">const </span>CONTEXT_KEY_FEE_MANAGER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;accounts.FeeManager&quot;</span>;
 
 <span class="kw">impl </span>API <span class="kw">for </span>Module {
-    <span class="kw">fn </span>transfer&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
-        from: Address,
-        to: Address,
-        amount: <span class="kw-2">&amp;</span>token::BaseUnits,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="kw">if </span>ctx.is_check_only() || amount.amount() == <span class="number">0 </span>{
+    <span class="kw">fn </span>transfer(from: Address, to: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">if </span>CurrentState::with_env(|env| env.is_check_only()) || amount.amount() == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
         <span class="self">Self</span>::transfer_silent(from, to, amount)<span class="question-mark">?</span>;
 
         <span class="comment">// Emit a transfer event.
-        </span>ctx.emit_event(Event::Transfer {
-            from,
-            to,
-            amount: amount.clone(),
+        </span>CurrentState::with(|state| {
+            state.emit_event(Event::Transfer {
+                from,
+                to,
+                amount: amount.clone(),
+            })
         });
 
         <span class="prelude-val">Ok</span>(())
@@ -1587,8 +1576,8 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>mint&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, to: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="kw">if </span>ctx.is_check_only() || amount.amount() == <span class="number">0 </span>{
+    <span class="kw">fn </span>mint(to: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">if </span>CurrentState::with_env(|env| env.is_check_only()) || amount.amount() == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
@@ -1599,20 +1588,18 @@
         </span><span class="self">Self</span>::inc_total_supply(amount)<span class="question-mark">?</span>;
 
         <span class="comment">// Emit a mint event.
-        </span>ctx.emit_event(Event::Mint {
-            owner: to,
-            amount: amount.clone(),
+        </span>CurrentState::with(|state| {
+            state.emit_event(Event::Mint {
+                owner: to,
+                amount: amount.clone(),
+            });
         });
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>burn&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
-        from: Address,
-        amount: <span class="kw-2">&amp;</span>token::BaseUnits,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="kw">if </span>ctx.is_check_only() || amount.amount() == <span class="number">0 </span>{
+    <span class="kw">fn </span>burn(from: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">if </span>CurrentState::with_env(|env| env.is_check_only()) || amount.amount() == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
@@ -1624,16 +1611,18 @@
             .expect(<span class="string">&quot;target account had enough balance so total supply should not underflow&quot;</span>);
 
         <span class="comment">// Emit a burn event.
-        </span>ctx.emit_event(Event::Burn {
-            owner: from,
-            amount: amount.clone(),
+        </span>CurrentState::with(|state| {
+            state.emit_event(Event::Burn {
+                owner: from,
+                amount: amount.clone(),
+            });
         });
 
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn </span>set_nonce(address: Address, nonce: u64) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>accounts =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::ACCOUNTS));
@@ -1644,7 +1633,7 @@
     }
 
     <span class="kw">fn </span>get_nonce(address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>accounts =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::ACCOUNTS));
@@ -1654,7 +1643,7 @@
     }
 
     <span class="kw">fn </span>inc_nonce(address: Address) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>accounts =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::ACCOUNTS));
@@ -1665,7 +1654,7 @@
     }
 
     <span class="kw">fn </span>set_balance(address: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>balances = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::BALANCES);
             <span class="kw">let </span><span class="kw-2">mut </span>account =
@@ -1675,7 +1664,7 @@
     }
 
     <span class="kw">fn </span>get_balance(address: Address, denomination: token::Denomination) -&gt; <span class="prelude-ty">Result</span>&lt;u128, Error&gt; {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>balances = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::BALANCES);
             <span class="kw">let </span>account = storage::TypedStore::new(storage::PrefixStore::new(balances, <span class="kw-2">&amp;</span>address));
@@ -1685,7 +1674,7 @@
     }
 
     <span class="kw">fn </span>get_balances(address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;types::AccountBalances, Error&gt; {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>balances = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::BALANCES);
             <span class="kw">let </span>account = storage::TypedStore::new(storage::PrefixStore::new(balances, <span class="kw-2">&amp;</span>address));
@@ -1697,7 +1686,7 @@
     }
 
     <span class="kw">fn </span>get_addresses(denomination: token::Denomination) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Address&gt;, Error&gt; {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>balances: BTreeMap&lt;AddressWithDenomination, Quantity&gt; =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::BALANCES))
@@ -1713,7 +1702,7 @@
     }
 
     <span class="kw">fn </span>get_total_supplies() -&gt; <span class="prelude-ty">Result</span>&lt;BTreeMap&lt;token::Denomination, u128&gt;, Error&gt; {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>ts =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::TOTAL_SUPPLY));
@@ -1723,7 +1712,7 @@
     }
 
     <span class="kw">fn </span>set_total_supply(amount: <span class="kw-2">&amp;</span>token::BaseUnits) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>total_supplies =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::TOTAL_SUPPLY));
@@ -1741,53 +1730,59 @@
             .ok_or(Error::NotFound)
     }
 
-    <span class="kw">fn </span>charge_tx_fee&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
-        from: Address,
-        amount: <span class="kw-2">&amp;</span>token::BaseUnits,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
-        <span class="kw">if </span>ctx.is_simulation() {
+    <span class="kw">fn </span>charge_tx_fee(from: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
+        <span class="kw">if </span>CurrentState::with_env(|env| env.is_simulation()) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
         <span class="self">Self</span>::sub_amount(from, amount).map_err(|<span class="kw">_</span>| modules::core::Error::InsufficientFeeBalance)<span class="question-mark">?</span>;
 
-        ctx.value::&lt;fee::FeeManager&gt;(CONTEXT_KEY_FEE_MANAGER)
-            .or_default()
-            .record_fee(from, amount);
+        CurrentState::with(|state| {
+            state
+                .block_value::&lt;fee::FeeManager&gt;(CONTEXT_KEY_FEE_MANAGER)
+                .or_default()
+                .record_fee(from, amount);
+        });
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>set_refund_unused_tx_fee&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, refund: bool) {
-        <span class="kw">if </span>ctx.is_simulation() {
-            <span class="kw">return</span>;
-        }
+    <span class="kw">fn </span>set_refund_unused_tx_fee(refund: bool) {
+        CurrentState::with(|state| {
+            <span class="kw">if </span>state.env().is_simulation() {
+                <span class="kw">return</span>;
+            }
 
-        ctx.value(CONTEXT_KEY_TX_FEE_REFUND_UNUSED).set(refund);
+            state
+                .block_value(CONTEXT_KEY_TX_FEE_REFUND_UNUSED)
+                .set(refund);
+        });
     }
 
-    <span class="kw">fn </span>take_refund_unused_tx_fee&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; bool {
-        <span class="kw">if </span>ctx.is_simulation() {
-            <span class="kw">return </span><span class="bool-val">false</span>;
-        }
+    <span class="kw">fn </span>take_refund_unused_tx_fee() -&gt; bool {
+        CurrentState::with(|state| {
+            <span class="kw">if </span>state.env().is_simulation() {
+                <span class="kw">return </span><span class="bool-val">false</span>;
+            }
 
-        ctx.value(CONTEXT_KEY_TX_FEE_REFUND_UNUSED)
-            .take()
-            .unwrap_or(<span class="bool-val">false</span>)
+            state
+                .block_value(CONTEXT_KEY_TX_FEE_REFUND_UNUSED)
+                .take()
+                .unwrap_or(<span class="bool-val">false</span>)
+        })
     }
 
     <span class="kw">fn </span>check_signer_nonces&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         auth_info: <span class="kw-2">&amp;</span>AuthInfo,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Address, modules::core::Error&gt; {
-        <span class="kw">let </span>is_pre_schedule = ctx.is_pre_schedule();
-        <span class="kw">let </span>is_check_only = ctx.is_check_only();
+        <span class="kw">let </span>is_pre_schedule = CurrentState::with_env(|env| env.is_pre_schedule());
+        <span class="kw">let </span>is_check_only = CurrentState::with_env(|env| env.is_check_only());
 
         <span class="comment">// TODO: Optimize the check/update pair so that the accounts are
         // fetched only once.
         </span><span class="kw">let </span>params = <span class="self">Self</span>::params();
-        <span class="kw">let </span>sender = CurrentStore::with(|store| {
+        <span class="kw">let </span>sender = CurrentState::with_store(|store| {
             <span class="comment">// Fetch information about each signer.
             </span><span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>accounts =
@@ -1847,17 +1842,17 @@
         </span><span class="kw">let </span>sender = sender.expect(<span class="string">&quot;at least one signer is always present&quot;</span>);
         <span class="kw">let </span>sender_address = sender.address;
         <span class="kw">if </span>is_check_only {
-            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::set_sender_meta(ctx, sender);
+            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::set_sender_meta(sender);
         }
 
         <span class="prelude-val">Ok</span>(sender_address)
     }
 
     <span class="kw">fn </span>update_signer_nonces&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         auth_info: <span class="kw-2">&amp;</span>AuthInfo,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="comment">// Fetch information about each signer.
             </span><span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>accounts =
@@ -1888,7 +1883,7 @@
 
     <span class="attr">#[migration(init)]
     </span><span class="kw">pub fn </span>init(genesis: Genesis) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="comment">// Create accounts.
             </span><span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>accounts =
@@ -1973,7 +1968,7 @@
     }
 
     <span class="attr">#[handler(call = <span class="string">&quot;accounts.Transfer&quot;</span>)]
-    </span><span class="kw">fn </span>tx_transfer&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C, body: types::Transfer) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    </span><span class="kw">fn </span>tx_transfer&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, body: types::Transfer) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
 
         <span class="comment">// Reject transfers when they are disabled.
@@ -1981,21 +1976,22 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::Forbidden);
         }
 
-        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.tx_transfer)<span class="question-mark">?</span>;
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_transfer)<span class="question-mark">?</span>;
 
-        <span class="self">Self</span>::transfer(ctx, ctx.tx_caller_address(), body.to, <span class="kw-2">&amp;</span>body.amount)<span class="question-mark">?</span>;
+        <span class="kw">let </span>tx_caller_address = CurrentState::with_env(|env| env.tx_caller_address());
+        <span class="self">Self</span>::transfer(tx_caller_address, body.to, <span class="kw-2">&amp;</span>body.amount)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="attr">#[handler(query = <span class="string">&quot;accounts.Nonce&quot;</span>)]
-    </span><span class="kw">fn </span>query_nonce&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, args: types::NonceQuery) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
+    </span><span class="kw">fn </span>query_nonce&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, args: types::NonceQuery) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
         <span class="self">Self</span>::get_nonce(args.address)
     }
 
     <span class="attr">#[handler(query = <span class="string">&quot;accounts.Addresses&quot;</span>, expensive)]
     </span><span class="kw">fn </span>query_addresses&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         args: types::AddressesQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Address&gt;, Error&gt; {
         <span class="self">Self</span>::get_addresses(args.denomination)
@@ -2003,7 +1999,7 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;accounts.Balances&quot;</span>)]
     </span><span class="kw">fn </span>query_balances&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         args: types::BalancesQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::AccountBalances, Error&gt; {
         <span class="self">Self</span>::get_balances(args.address)
@@ -2011,7 +2007,7 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;accounts.DenominationInfo&quot;</span>)]
     </span><span class="kw">fn </span>query_denomination_info&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         args: types::DenominationInfoQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::DenominationInfo, Error&gt; {
         <span class="self">Self</span>::get_denomination_info(<span class="kw-2">&amp;</span>args.denomination)
@@ -2019,10 +2015,7 @@
 }
 
 <span class="kw">impl </span>module::TransactionHandler <span class="kw">for </span>Module {
-    <span class="kw">fn </span>authenticate_tx&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
-        tx: <span class="kw-2">&amp;</span>Transaction,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
+    <span class="kw">fn </span>authenticate_tx&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, tx: <span class="kw-2">&amp;</span>Transaction) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="comment">// Check whether the transaction is currently valid.
         </span><span class="kw">let </span>round = ctx.runtime_header().round;
         <span class="kw">if let </span><span class="prelude-val">Some</span>(not_before) = tx.auth_info.not_before {
@@ -2043,7 +2036,7 @@
 
         <span class="comment">// Charge the specified amount of fees.
         </span><span class="kw">if </span>!tx.auth_info.fee.amount.amount().is_zero() {
-            <span class="kw">if </span>ctx.is_check_only() {
+            <span class="kw">if </span>CurrentState::with_env(|env| env.is_check_only()) {
                 <span class="comment">// Do not update balances during transaction checks. In case of checks, only do it
                 // after all the other checks have already passed as otherwise retrying the
                 // transaction will not be possible.
@@ -2051,76 +2044,77 @@
                     .map_err(|<span class="kw">_</span>| modules::core::Error::InsufficientFeeBalance)<span class="question-mark">?</span>;
             } <span class="kw">else </span>{
                 <span class="comment">// Actually perform the move.
-                </span><span class="self">Self</span>::charge_tx_fee(ctx, payer, <span class="kw-2">&amp;</span>tx.auth_info.fee.amount)<span class="question-mark">?</span>;
+                </span><span class="self">Self</span>::charge_tx_fee(payer, <span class="kw-2">&amp;</span>tx.auth_info.fee.amount)<span class="question-mark">?</span>;
             }
 
             <span class="kw">let </span>gas_price = tx.auth_info.fee.gas_price();
             <span class="comment">// Set transaction priority.
-            </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::set_priority(
-                ctx,
-                gas_price.try_into().unwrap_or(u64::MAX),
-            );
+            </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::set_priority(gas_price.try_into().unwrap_or(u64::MAX));
         }
 
         <span class="comment">// Do not update nonces early during transaction checks. In case of checks, only do it after
         // all the other checks have already passed as otherwise retrying the transaction will not
         // be possible.
-        </span><span class="kw">if </span>!ctx.is_check_only() {
+        </span><span class="kw">if </span>!CurrentState::with_env(|env| env.is_check_only()) {
             <span class="self">Self</span>::update_signer_nonces(ctx, <span class="kw-2">&amp;</span>tx.auth_info)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>after_handle_call&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>after_handle_call&lt;C: Context&gt;(
+        _ctx: <span class="kw-2">&amp;</span>C,
         result: module::CallResult,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;module::CallResult, modules::core::Error&gt; {
         <span class="comment">// Check whether unused part of the fee should be refunded.
-        </span><span class="kw">let </span>refund_fee = <span class="kw">if </span><span class="self">Self</span>::take_refund_unused_tx_fee(ctx) {
-            <span class="kw">let </span>remaining_gas = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(ctx);
-            <span class="kw">let </span>gas_price = ctx.tx_auth_info().fee.gas_price();
+        </span><span class="kw">let </span>refund_fee = <span class="kw">if </span><span class="self">Self</span>::take_refund_unused_tx_fee() {
+            <span class="kw">let </span>remaining_gas = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas();
+            <span class="kw">let </span>gas_price = CurrentState::with_env(|env| env.tx_auth_info().fee.gas_price());
 
             gas_price.saturating_mul(remaining_gas.into())
         } <span class="kw">else </span>{
             <span class="number">0
         </span>};
 
-        <span class="kw">let </span>mgr = ctx
-            .value::&lt;fee::FeeManager&gt;(CONTEXT_KEY_FEE_MANAGER)
-            .or_default();
+        CurrentState::with(|state| {
+            <span class="kw">let </span>mgr = state
+                .block_value::&lt;fee::FeeManager&gt;(CONTEXT_KEY_FEE_MANAGER)
+                .or_default();
 
-        <span class="comment">// Update the per-tx fee accumulator. State must be updated in `after_dispatch_tx` as
-        // otherwise any state updates may be reverted in case call result is a failure.
-        </span>mgr.record_refund(refund_fee);
+            <span class="comment">// Update the per-tx fee accumulator. State must be updated in `after_dispatch_tx` as
+            // otherwise any state updates may be reverted in case call result is a failure.
+            </span>mgr.record_refund(refund_fee);
 
-        <span class="comment">// Emit event for paid fee.
-        </span><span class="kw">let </span>tx_fee = mgr.tx_fee().cloned().unwrap_or_default();
-        <span class="kw">if </span>tx_fee.amount() &gt; <span class="number">0 </span>{
-            ctx.emit_unconditional_event(Event::Transfer {
-                from: tx_fee.payer(),
-                to: <span class="kw-2">*</span>ADDRESS_FEE_ACCUMULATOR,
-                amount: token::BaseUnits::new(tx_fee.amount(), tx_fee.denomination()),
-            });
-        }
+            <span class="comment">// Emit event for paid fee.
+            </span><span class="kw">let </span>tx_fee = mgr.tx_fee().cloned().unwrap_or_default();
+            <span class="kw">if </span>tx_fee.amount() &gt; <span class="number">0 </span>{
+                state.emit_unconditional_event(Event::Transfer {
+                    from: tx_fee.payer(),
+                    to: <span class="kw-2">*</span>ADDRESS_FEE_ACCUMULATOR,
+                    amount: token::BaseUnits::new(tx_fee.amount(), tx_fee.denomination()),
+                });
+            }
+        });
 
         <span class="prelude-val">Ok</span>(result)
     }
 
     <span class="kw">fn </span>after_dispatch_tx&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         tx_auth_info: <span class="kw-2">&amp;</span>AuthInfo,
         result: <span class="kw-2">&amp;</span>module::CallResult,
     ) {
         <span class="comment">// Move transaction fees into the per-block fee accumulator.
-        </span><span class="kw">let </span>mgr = ctx
-            .value::&lt;fee::FeeManager&gt;(CONTEXT_KEY_FEE_MANAGER)
-            .or_default();
-        <span class="kw">let </span>fee_updates = mgr.commit_tx();
+        </span><span class="kw">let </span>fee_updates = CurrentState::with(|state| {
+            <span class="kw">let </span>mgr = state
+                .block_value::&lt;fee::FeeManager&gt;(CONTEXT_KEY_FEE_MANAGER)
+                .or_default();
+            mgr.commit_tx()
+        });
         <span class="comment">// Refund any fees. This needs to happen after tx dispatch to ensure state is updated.
         </span><span class="self">Self</span>::add_amount(fee_updates.payer, <span class="kw-2">&amp;</span>fee_updates.refund).unwrap();
 
-        <span class="kw">if </span>!ctx.is_check_only() {
+        <span class="kw">if </span>!CurrentState::with_env(|env| env.is_check_only()) {
             <span class="comment">// Do nothing further outside transaction checks.
             </span><span class="kw">return</span>;
         }
@@ -2140,7 +2134,7 @@
 }
 
 <span class="kw">impl </span>module::BlockHandler <span class="kw">for </span>Module {
-    <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) {
+    <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) {
         <span class="comment">// Determine the fees that are available for disbursement from the last block.
         </span><span class="kw">let </span><span class="kw-2">mut </span>previous_fees = <span class="self">Self</span>::get_balances(<span class="kw-2">*</span>ADDRESS_FEE_ACCUMULATOR)
             .expect(<span class="string">&quot;get_balances must succeed&quot;</span>)
@@ -2193,10 +2187,12 @@
                         .expect(<span class="string">&quot;add_amount must succeed for fee disbursement&quot;</span>);
 
                     <span class="comment">// Emit transfer event for fee disbursement.
-                    </span>ctx.emit_event(Event::Transfer {
-                        from: <span class="kw-2">*</span>ADDRESS_FEE_ACCUMULATOR,
-                        to: address,
-                        amount: amount.clone(),
+                    </span>CurrentState::with(|state| {
+                        state.emit_event(Event::Transfer {
+                            from: <span class="kw-2">*</span>ADDRESS_FEE_ACCUMULATOR,
+                            to: address,
+                            amount: amount.clone(),
+                        });
                     });
                 }
             }
@@ -2213,19 +2209,25 @@
                 .expect(<span class="string">&quot;add_amount must succeed for transfer to common pool&quot;</span>);
 
             <span class="comment">// Emit transfer event for fee disbursement.
-            </span>ctx.emit_event(Event::Transfer {
-                from: <span class="kw-2">*</span>ADDRESS_FEE_ACCUMULATOR,
-                to: <span class="kw-2">*</span>ADDRESS_COMMON_POOL,
-                amount,
-            })
+            </span>CurrentState::with(|state| {
+                state.emit_event(Event::Transfer {
+                    from: <span class="kw-2">*</span>ADDRESS_FEE_ACCUMULATOR,
+                    to: <span class="kw-2">*</span>ADDRESS_COMMON_POOL,
+                    amount,
+                })
+            });
         }
 
         <span class="comment">// Fees for the active block should be transferred to the fee accumulator address.
-        </span><span class="kw">let </span>mgr = ctx
-            .value::&lt;fee::FeeManager&gt;(CONTEXT_KEY_FEE_MANAGER)
-            .take()
-            .unwrap_or_default();
-        <span class="kw">for </span>(denom, amount) <span class="kw">in </span>mgr.commit_block().into_iter() {
+        </span><span class="kw">let </span>block_fees = CurrentState::with(|state| {
+            <span class="kw">let </span>mgr = state
+                .block_value::&lt;fee::FeeManager&gt;(CONTEXT_KEY_FEE_MANAGER)
+                .take()
+                .unwrap_or_default();
+            mgr.commit_block().into_iter()
+        });
+
+        <span class="kw">for </span>(denom, amount) <span class="kw">in </span>block_fees {
             <span class="self">Self</span>::add_amount(
                 <span class="kw-2">*</span>ADDRESS_FEE_ACCUMULATOR,
                 <span class="kw-2">&amp;</span>token::BaseUnits::new(amount, denom),
@@ -2237,7 +2239,7 @@
 
 <span class="kw">impl </span>module::InvariantHandler <span class="kw">for </span>Module {
     <span class="doccomment">/// Check invariants.
-    </span><span class="kw">fn </span>check_invariants&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), CoreError&gt; {
+    </span><span class="kw">fn </span>check_invariants&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), CoreError&gt; {
         <span class="comment">// All account balances should sum up to the total supply for their
         // corresponding denominations.
 

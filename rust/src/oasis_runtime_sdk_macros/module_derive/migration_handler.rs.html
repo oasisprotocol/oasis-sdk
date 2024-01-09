@@ -272,7 +272,7 @@
                 #genesis_ty
 
                 <span class="kw">fn </span>init_or_migrate&lt;C: Context&gt;(
-                    _ctx: <span class="kw-2">&amp;mut </span>C,
+                    _ctx: <span class="kw-2">&amp;</span>C,
                     meta: <span class="kw-2">&amp;mut </span>sdk::modules::core::types::Metadata,
                     genesis: <span class="self">Self</span>::Genesis,
                 ) -&gt; bool {

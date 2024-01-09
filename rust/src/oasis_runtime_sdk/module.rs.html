@@ -615,14 +615,6 @@
 <a href="#615" id="615">615</a>
 <a href="#616" id="616">616</a>
 <a href="#617" id="617">617</a>
-<a href="#618" id="618">618</a>
-<a href="#619" id="619">619</a>
-<a href="#620" id="620">620</a>
-<a href="#621" id="621">621</a>
-<a href="#622" id="622">622</a>
-<a href="#623" id="623">623</a>
-<a href="#624" id="624">624</a>
-<a href="#625" id="625">625</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Runtime modules.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
@@ -633,13 +625,14 @@
 <span class="kw">use </span>impl_trait_for_tuples::impl_for_tuples;
 
 <span class="kw">use crate</span>::{
-    context::{Context, TxContext},
+    context::Context,
     dispatcher, error,
     error::Error <span class="kw">as _</span>,
     event, modules,
     modules::core::types::{MethodHandlerInfo, ModuleInfo},
+    state::CurrentState,
     storage,
-    storage::{CurrentStore, Prefix},
+    storage::Prefix,
     types::{
         message::MessageResult,
         transaction::{<span class="self">self</span>, AuthInfo, Call, Transaction, UnverifiedTransaction},
@@ -736,16 +729,16 @@
 
 <span class="doccomment">/// A convenience function for dispatching method calls.
 </span><span class="kw">pub fn </span>dispatch_call&lt;C, B, R, E, F&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>C,
+    ctx: <span class="kw-2">&amp;</span>C,
     body: cbor::Value,
     f: F,
 ) -&gt; DispatchResult&lt;cbor::Value, CallResult&gt;
 <span class="kw">where
-    </span>C: TxContext,
+    </span>C: Context,
     B: cbor::Decode,
     R: cbor::Encode,
     E: error::Error,
-    F: FnOnce(<span class="kw-2">&amp;mut </span>C, B) -&gt; <span class="prelude-ty">Result</span>&lt;R, E&gt;,
+    F: FnOnce(<span class="kw-2">&amp;</span>C, B) -&gt; <span class="prelude-ty">Result</span>&lt;R, E&gt;,
 {
     DispatchResult::Handled((|| {
         <span class="kw">let </span>args = <span class="kw">match </span>cbor::from_value(body)
@@ -764,7 +757,7 @@
 
 <span class="doccomment">/// A convenience function for dispatching queries.
 </span><span class="kw">pub fn </span>dispatch_query&lt;C, B, R, E, F&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>C,
+    ctx: <span class="kw-2">&amp;</span>C,
     body: cbor::Value,
     f: F,
 ) -&gt; DispatchResult&lt;cbor::Value, <span class="prelude-ty">Result</span>&lt;cbor::Value, error::RuntimeError&gt;&gt;
@@ -774,7 +767,7 @@
     R: cbor::Encode,
     E: error::Error,
     error::RuntimeError: From&lt;E&gt;,
-    F: FnOnce(<span class="kw-2">&amp;mut </span>C, B) -&gt; <span class="prelude-ty">Result</span>&lt;R, E&gt;,
+    F: FnOnce(<span class="kw-2">&amp;</span>C, B) -&gt; <span class="prelude-ty">Result</span>&lt;R, E&gt;,
 {
     DispatchResult::Handled((|| {
         <span class="kw">let </span>args = cbor::from_value(body).map_err(|err| -&gt; error::RuntimeError {
@@ -798,8 +791,8 @@
     }
 
     <span class="doccomment">/// Dispatch a call.
-    </span><span class="kw">fn </span>dispatch_call&lt;C: TxContext&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>dispatch_call&lt;C: Context&gt;(
+        _ctx: <span class="kw-2">&amp;</span>C,
         _method: <span class="kw-2">&amp;</span>str,
         body: cbor::Value,
     ) -&gt; DispatchResult&lt;cbor::Value, CallResult&gt; {
@@ -809,7 +802,7 @@
 
     <span class="doccomment">/// Dispatch a query.
     </span><span class="kw">fn </span>dispatch_query&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         _method: <span class="kw-2">&amp;</span>str,
         args: cbor::Value,
     ) -&gt; DispatchResult&lt;cbor::Value, <span class="prelude-ty">Result</span>&lt;cbor::Value, error::RuntimeError&gt;&gt; {
@@ -819,7 +812,7 @@
 
     <span class="doccomment">/// Dispatch a message result.
     </span><span class="kw">fn </span>dispatch_message_result&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         _handler_name: <span class="kw-2">&amp;</span>str,
         result: MessageResult,
     ) -&gt; DispatchResult&lt;MessageResult, ()&gt; {
@@ -870,8 +863,8 @@
         DispatchResult::Unhandled(body)
     }
 
-    <span class="kw">fn </span>dispatch_call&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>dispatch_call&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         method: <span class="kw-2">&amp;</span>str,
         body: cbor::Value,
     ) -&gt; DispatchResult&lt;cbor::Value, CallResult&gt; {
@@ -887,7 +880,7 @@
     }
 
     <span class="kw">fn </span>dispatch_query&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         method: <span class="kw-2">&amp;</span>str,
         args: cbor::Value,
     ) -&gt; DispatchResult&lt;cbor::Value, <span class="prelude-ty">Result</span>&lt;cbor::Value, error::RuntimeError&gt;&gt; {
@@ -903,7 +896,7 @@
     }
 
     <span class="kw">fn </span>dispatch_message_result&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         handler_name: <span class="kw-2">&amp;</span>str,
         result: MessageResult,
     ) -&gt; DispatchResult&lt;MessageResult, ()&gt; {
@@ -950,7 +943,7 @@
 </span><span class="kw">pub trait </span>TransactionHandler {
     <span class="doccomment">/// Judge if a raw transaction is good enough to undergo decoding.
     /// This takes place before even decoding the transaction.
-    </span><span class="kw">fn </span>approve_raw_tx&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _tx: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
+    </span><span class="kw">fn </span>approve_raw_tx&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _tx: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="comment">// Default implementation doesn&#39;t do any checks.
         </span><span class="prelude-val">Ok</span>(())
     }
@@ -958,7 +951,7 @@
     <span class="doccomment">/// Judge if an unverified transaction is good enough to undergo verification.
     /// This takes place before even verifying signatures.
     </span><span class="kw">fn </span>approve_unverified_tx&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         _utx: <span class="kw-2">&amp;</span>UnverifiedTransaction,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="comment">// Default implementation doesn&#39;t do any checks.
@@ -973,7 +966,7 @@
     /// Returns Ok(Some(_)) if the module is in charge of the encoding scheme identified by _scheme
     /// or Ok(None) otherwise.
     </span><span class="kw">fn </span>decode_tx&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         _scheme: <span class="kw-2">&amp;</span>str,
         _body: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Transaction&gt;, modules::core::Error&gt; {
@@ -985,7 +978,7 @@
     ///
     /// Note that any signatures have already been verified.
     </span><span class="kw">fn </span>authenticate_tx&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         _tx: <span class="kw-2">&amp;</span>Transaction,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="comment">// Default implementation accepts all transactions.
@@ -996,10 +989,7 @@
     ///
     /// At this point call format has not yet been decoded so peeking into the call may not be
     /// possible in case the call is encrypted.
-    </span><span class="kw">fn </span>before_handle_call&lt;C: TxContext&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
-        _call: <span class="kw-2">&amp;</span>Call,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
+    </span><span class="kw">fn </span>before_handle_call&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _call: <span class="kw-2">&amp;</span>Call) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="comment">// Default implementation doesn&#39;t do anything.
         </span><span class="prelude-val">Ok</span>(())
     }
@@ -1007,8 +997,8 @@
     <span class="doccomment">/// Perform any action after call, within the transaction context.
     ///
     /// If an error is returned the transaction call fails and updates are rolled back.
-    </span><span class="kw">fn </span>after_handle_call&lt;C: TxContext&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>after_handle_call&lt;C: Context&gt;(
+        _ctx: <span class="kw-2">&amp;</span>C,
         result: CallResult,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;CallResult, modules::core::Error&gt; {
         <span class="comment">// Default implementation doesn&#39;t do anything.
@@ -1016,20 +1006,20 @@
     }
 
     <span class="doccomment">/// Perform any action after dispatching the transaction, in batch context.
-    </span><span class="kw">fn </span>after_dispatch_tx&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _tx_auth_info: <span class="kw-2">&amp;</span>AuthInfo, _result: <span class="kw-2">&amp;</span>CallResult) {
+    </span><span class="kw">fn </span>after_dispatch_tx&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _tx_auth_info: <span class="kw-2">&amp;</span>AuthInfo, _result: <span class="kw-2">&amp;</span>CallResult) {
         <span class="comment">// Default implementation doesn&#39;t do anything.
     </span>}
 }
 
 <span class="attr">#[impl_for_tuples(<span class="number">30</span>)]
 </span><span class="kw">impl </span>TransactionHandler <span class="kw">for </span>Tuple {
-    <span class="kw">fn </span>approve_raw_tx&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, tx: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
+    <span class="kw">fn </span>approve_raw_tx&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, tx: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="macro">for_tuples!</span>( #( Tuple::approve_raw_tx(ctx, tx)<span class="question-mark">?</span>; )* );
         <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">fn </span>approve_unverified_tx&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         utx: <span class="kw-2">&amp;</span>UnverifiedTransaction,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="macro">for_tuples!</span>( #( Tuple::approve_unverified_tx(ctx, utx)<span class="question-mark">?</span>; )* );
@@ -1037,7 +1027,7 @@
     }
 
     <span class="kw">fn </span>decode_tx&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         scheme: <span class="kw-2">&amp;</span>str,
         body: <span class="kw-2">&amp;</span>[u8],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Transaction&gt;, modules::core::Error&gt; {
@@ -1050,24 +1040,18 @@
         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
 
-    <span class="kw">fn </span>authenticate_tx&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
-        tx: <span class="kw-2">&amp;</span>Transaction,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
+    <span class="kw">fn </span>authenticate_tx&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, tx: <span class="kw-2">&amp;</span>Transaction) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="macro">for_tuples!</span>( #( Tuple::authenticate_tx(ctx, tx)<span class="question-mark">?</span>; )* );
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>before_handle_call&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
-        call: <span class="kw-2">&amp;</span>Call,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
+    <span class="kw">fn </span>before_handle_call&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, call: <span class="kw-2">&amp;</span>Call) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="macro">for_tuples!</span>( #( Tuple::before_handle_call(ctx, call)<span class="question-mark">?</span>; )* );
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>after_handle_call&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>after_handle_call&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         <span class="kw-2">mut </span>result: CallResult,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;CallResult, modules::core::Error&gt; {
         <span class="macro">for_tuples!</span>( #(
@@ -1076,7 +1060,7 @@
         <span class="prelude-val">Ok</span>(result)
     }
 
-    <span class="kw">fn </span>after_dispatch_tx&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, tx_auth_info: <span class="kw-2">&amp;</span>AuthInfo, result: <span class="kw-2">&amp;</span>CallResult) {
+    <span class="kw">fn </span>after_dispatch_tx&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, tx_auth_info: <span class="kw-2">&amp;</span>AuthInfo, result: <span class="kw-2">&amp;</span>CallResult) {
         <span class="macro">for_tuples!</span>( #( Tuple::after_dispatch_tx(ctx, tx_auth_info, result); )* );
     }
 }
@@ -1093,7 +1077,7 @@
     ///
     /// Should return true in case metadata has been changed.
     </span><span class="kw">fn </span>init_or_migrate&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         _meta: <span class="kw-2">&amp;mut </span>modules::core::types::Metadata,
         _genesis: <span class="self">Self</span>::Genesis,
     ) -&gt; bool {
@@ -1108,7 +1092,7 @@
     <span class="macro">for_tuples!</span>( <span class="kw">type </span>Genesis = ( #( Tuple::Genesis ),* ); );
 
     <span class="kw">fn </span>init_or_migrate&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         meta: <span class="kw-2">&amp;mut </span>modules::core::types::Metadata,
         genesis: <span class="self">Self</span>::Genesis,
     ) -&gt; bool {
@@ -1122,24 +1106,24 @@
 </span><span class="kw">pub trait </span>BlockHandler {
     <span class="doccomment">/// Perform any common actions at the start of the block (before any transactions have been
     /// executed).
-    </span><span class="kw">fn </span>begin_block&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C) {
+    </span><span class="kw">fn </span>begin_block&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) {
         <span class="comment">// Default implementation doesn&#39;t do anything.
     </span>}
 
     <span class="doccomment">/// Perform any common actions at the end of the block (after all transactions have been
     /// executed).
-    </span><span class="kw">fn </span>end_block&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C) {
+    </span><span class="kw">fn </span>end_block&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) {
         <span class="comment">// Default implementation doesn&#39;t do anything.
     </span>}
 }
 
 <span class="attr">#[impl_for_tuples(<span class="number">30</span>)]
 </span><span class="kw">impl </span>BlockHandler <span class="kw">for </span>Tuple {
-    <span class="kw">fn </span>begin_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) {
+    <span class="kw">fn </span>begin_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) {
         <span class="macro">for_tuples!</span>( #( Tuple::begin_block(ctx); )* );
     }
 
-    <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) {
+    <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) {
         <span class="macro">for_tuples!</span>( #( Tuple::end_block(ctx); )* );
     }
 }
@@ -1147,7 +1131,7 @@
 <span class="doccomment">/// Invariant handler.
 </span><span class="kw">pub trait </span>InvariantHandler {
     <span class="doccomment">/// Check invariants.
-    </span><span class="kw">fn </span>check_invariants&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
+    </span><span class="kw">fn </span>check_invariants&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="comment">// Default implementation doesn&#39;t do anything.
         </span><span class="prelude-val">Ok</span>(())
     }
@@ -1156,7 +1140,7 @@
 <span class="attr">#[impl_for_tuples(<span class="number">30</span>)]
 </span><span class="kw">impl </span>InvariantHandler <span class="kw">for </span>Tuple {
     <span class="doccomment">/// Check the invariants in all modules in the tuple.
-    </span><span class="kw">fn </span>check_invariants&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
+    </span><span class="kw">fn </span>check_invariants&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
         <span class="macro">for_tuples!</span>( #( Tuple::check_invariants(ctx)<span class="question-mark">?</span>; )* );
         <span class="prelude-val">Ok</span>(())
     }
@@ -1165,11 +1149,11 @@
 <span class="doccomment">/// Info handler.
 </span><span class="kw">pub trait </span>ModuleInfoHandler {
     <span class="doccomment">/// Reports info about the module (or modules, if `Self` is a tuple).
-    </span><span class="kw">fn </span>module_info&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C) -&gt; BTreeMap&lt;String, ModuleInfo&gt;;
+    </span><span class="kw">fn </span>module_info&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) -&gt; BTreeMap&lt;String, ModuleInfo&gt;;
 }
 
 <span class="kw">impl</span>&lt;M: Module + MethodHandler&gt; ModuleInfoHandler <span class="kw">for </span>M {
-    <span class="kw">fn </span>module_info&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C) -&gt; BTreeMap&lt;String, ModuleInfo&gt; {
+    <span class="kw">fn </span>module_info&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) -&gt; BTreeMap&lt;String, ModuleInfo&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>info = BTreeMap::new();
         info.insert(
             <span class="self">Self</span>::NAME.to_string(),
@@ -1186,7 +1170,7 @@
 <span class="attr">#[impl_for_tuples(<span class="number">30</span>)]
 </span><span class="kw">impl </span>ModuleInfoHandler <span class="kw">for </span>Tuple {
     <span class="attr">#[allow(clippy::let_and_return)]
-    </span><span class="kw">fn </span>module_info&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; BTreeMap&lt;String, ModuleInfo&gt; {
+    </span><span class="kw">fn </span>module_info&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) -&gt; BTreeMap&lt;String, ModuleInfo&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>merged = BTreeMap::new();
         <span class="macro">for_tuples!</span>( #(
             merged.extend(Tuple::module_info(ctx));
@@ -1214,7 +1198,7 @@
 
     <span class="doccomment">/// Return the module&#39;s parameters.
     </span><span class="kw">fn </span>params() -&gt; <span class="self">Self</span>::Parameters {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span><span class="self">Self</span>::NAME);
             <span class="kw">let </span>store = storage::TypedStore::new(store);
             store.get(<span class="self">Self</span>::Parameters::STORE_KEY).unwrap_or_default()
@@ -1223,7 +1207,7 @@
 
     <span class="doccomment">/// Set the module&#39;s parameters.
     </span><span class="kw">fn </span>set_params(params: <span class="self">Self</span>::Parameters) {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span><span class="self">Self</span>::NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>store = storage::TypedStore::new(store);
             store.insert(<span class="self">Self</span>::Parameters::STORE_KEY, params);

@@ -276,6 +276,7 @@
 <a href="#276" id="276">276</a>
 <a href="#277" id="277">277</a>
 <a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Mock dispatch context for use in tests.
 </span><span class="kw">use </span>std::collections::BTreeMap;
 
@@ -288,8 +289,7 @@
 };
 
 <span class="kw">use crate</span>::{
-    context::{BatchContext, Mode, RuntimeBatchContext},
-    crypto::random::RootRng,
+    context::{Context, RuntimeBatchContext},
     dispatcher,
     error::RuntimeError,
     history,
@@ -297,7 +297,8 @@
     module::MigrationHandler,
     modules,
     runtime::Runtime,
-    storage::{CurrentStore, MKVSStore},
+    state::{<span class="self">self</span>, CurrentState, TransactionResult},
+    storage::MKVSStore,
     testing::{configmap, keymanager::MockKeyManagerClient},
     types::{address::SignatureAddressSpec, transaction},
 };
@@ -345,7 +346,6 @@
     <span class="kw">pub </span>consensus_state: ConsensusState,
     <span class="kw">pub </span>history: Box&lt;<span class="kw">dyn </span>history::HistoryHost&gt;,
     <span class="kw">pub </span>epoch: beacon::EpochTime,
-    <span class="kw">pub </span>rng: RootRng,
 
     <span class="kw">pub </span>max_messages: u32,
 }
@@ -353,21 +353,15 @@
 <span class="kw">impl </span>Mock {
     <span class="doccomment">/// Create a new mock dispatch context.
     </span><span class="kw">pub fn </span>create_ctx(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RuntimeBatchContext&lt;<span class="lifetime">&#39;_</span>, EmptyRuntime&gt; {
-        <span class="self">self</span>.create_ctx_for_runtime(Mode::ExecuteTx, <span class="bool-val">false</span>)
-    }
-
-    <span class="kw">pub fn </span>create_check_ctx(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; RuntimeBatchContext&lt;<span class="lifetime">&#39;_</span>, EmptyRuntime&gt; {
-        <span class="self">self</span>.create_ctx_for_runtime(Mode::CheckTx, <span class="bool-val">false</span>)
+        <span class="self">self</span>.create_ctx_for_runtime(<span class="bool-val">false</span>)
     }
 
     <span class="doccomment">/// Create a new mock dispatch context.
     </span><span class="kw">pub fn </span>create_ctx_for_runtime&lt;R: Runtime&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        mode: Mode,
         confidential: bool,
     ) -&gt; RuntimeBatchContext&lt;<span class="lifetime">&#39;_</span>, R&gt; {
         RuntimeBatchContext::new(
-            mode,
             <span class="kw-2">&amp;</span><span class="self">self</span>.host_info,
             <span class="kw">if </span>confidential {
                 <span class="prelude-val">Some</span>(Box::new(MockKeyManagerClient::new()) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>KeyManager&gt;)
@@ -379,16 +373,15 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>.consensus_state,
             <span class="kw-2">&amp;</span><span class="self">self</span>.history,
             <span class="self">self</span>.epoch,
-            <span class="kw-2">&amp;</span><span class="self">self</span>.rng,
             <span class="self">self</span>.max_messages,
         )
     }
 
     <span class="doccomment">/// Create an instance with the given local configuration.
     </span><span class="kw">pub fn </span>with_local_config(local_config: BTreeMap&lt;String, cbor::Value&gt;) -&gt; <span class="self">Self </span>{
-        <span class="comment">// Ensure a current store is always available during tests. Note that one can always use a
-        // different store by calling CurrentStore::enter explicitly.
-        </span>CurrentStore::init_local_fallback();
+        <span class="comment">// Ensure a current state is always available during tests. Note that one can always use a
+        // different store by calling `CurrentState::enter` explicitly.
+        </span>CurrentState::init_local_fallback();
 
         <span class="kw">let </span>consensus_tree = mkvs::Tree::builder()
             .with_root_type(mkvs::RootType::State)
@@ -407,7 +400,6 @@
             consensus_state: ConsensusState::new(<span class="number">1</span>, consensus_tree),
             history: Box::new(EmptyHistory),
             epoch: <span class="number">1</span>,
-            rng: RootRng::new(),
             max_messages: <span class="number">32</span>,
         }
     }
@@ -495,9 +487,9 @@
     }
 
     <span class="doccomment">/// Dispatch a call to the given method.
-    </span><span class="kw">pub fn </span>call&lt;C, B&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>C, method: <span class="kw-2">&amp;</span>str, body: B) -&gt; dispatcher::DispatchResult
+    </span><span class="kw">pub fn </span>call&lt;C, B&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>C, method: <span class="kw-2">&amp;</span>str, body: B) -&gt; dispatcher::DispatchResult
     <span class="kw">where
-        </span>C: BatchContext,
+        </span>C: Context,
         B: cbor::Encode,
     {
         <span class="self">self</span>.call_opts(ctx, method, body, Default::default())
@@ -506,13 +498,13 @@
     <span class="doccomment">/// Dispatch a call to the given method with the given options.
     </span><span class="kw">pub fn </span>call_opts&lt;C, B&gt;(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         method: <span class="kw-2">&amp;</span>str,
         body: B,
         opts: CallOptions,
     ) -&gt; dispatcher::DispatchResult
     <span class="kw">where
-        </span>C: BatchContext,
+        </span>C: Context,
         B: cbor::Encode,
     {
         <span class="kw">let </span>tx = transaction::Transaction {
@@ -543,14 +535,24 @@
     }
 
     <span class="doccomment">/// Dispatch a query to the given method.
-    </span><span class="kw">pub fn </span>query&lt;C, A, R&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;mut </span>C, method: <span class="kw-2">&amp;</span>str, args: A) -&gt; <span class="prelude-ty">Result</span>&lt;R, RuntimeError&gt;
+    </span><span class="kw">pub fn </span>query&lt;C, A, R&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, ctx: <span class="kw-2">&amp;</span>C, method: <span class="kw-2">&amp;</span>str, args: A) -&gt; <span class="prelude-ty">Result</span>&lt;R, RuntimeError&gt;
     <span class="kw">where
-        </span>C: BatchContext,
+        </span>C: Context,
         A: cbor::Encode,
         R: cbor::Decode,
     {
-        <span class="kw">let </span>result =
-            dispatcher::Dispatcher::&lt;C::Runtime&gt;::dispatch_query(ctx, method, cbor::to_vec(args))<span class="question-mark">?</span>;
+        <span class="kw">let </span>result = CurrentState::with_transaction_opts(
+            state::Options::new().with_mode(state::Mode::Check),
+            || {
+                <span class="kw">let </span>result = dispatcher::Dispatcher::&lt;C::Runtime&gt;::dispatch_query(
+                    ctx,
+                    method,
+                    cbor::to_vec(args),
+                );
+
+                TransactionResult::Rollback(result)
+            },
+        )<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(cbor::from_slice(<span class="kw-2">&amp;</span>result).expect(<span class="string">&quot;result should decode correctly&quot;</span>))
     }
 }

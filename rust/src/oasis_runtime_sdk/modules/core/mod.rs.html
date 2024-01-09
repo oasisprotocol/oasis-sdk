@@ -1194,6 +1194,35 @@
 <a href="#1194" id="1194">1194</a>
 <a href="#1195" id="1195">1195</a>
 <a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
+<a href="#1201" id="1201">1201</a>
+<a href="#1202" id="1202">1202</a>
+<a href="#1203" id="1203">1203</a>
+<a href="#1204" id="1204">1204</a>
+<a href="#1205" id="1205">1205</a>
+<a href="#1206" id="1206">1206</a>
+<a href="#1207" id="1207">1207</a>
+<a href="#1208" id="1208">1208</a>
+<a href="#1209" id="1209">1209</a>
+<a href="#1210" id="1210">1210</a>
+<a href="#1211" id="1211">1211</a>
+<a href="#1212" id="1212">1212</a>
+<a href="#1213" id="1213">1213</a>
+<a href="#1214" id="1214">1214</a>
+<a href="#1215" id="1215">1215</a>
+<a href="#1216" id="1216">1216</a>
+<a href="#1217" id="1217">1217</a>
+<a href="#1218" id="1218">1218</a>
+<a href="#1219" id="1219">1219</a>
+<a href="#1220" id="1220">1220</a>
+<a href="#1221" id="1221">1221</a>
+<a href="#1222" id="1222">1222</a>
+<a href="#1223" id="1223">1223</a>
+<a href="#1224" id="1224">1224</a>
+<a href="#1225" id="1225">1225</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Core definitions module.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
@@ -1207,7 +1236,7 @@
 
 <span class="kw">use crate</span>::{
     callformat,
-    context::{BatchContext, Context, TransactionWithMeta, TxContext},
+    context::Context,
     core::consensus::beacon::EpochTime,
     dispatcher,
     error::Error <span class="kw">as </span>SDKError,
@@ -1217,7 +1246,8 @@
         ModuleInfoHandler <span class="kw">as _</span>,
     },
     sender::SenderMeta,
-    storage::{<span class="self">self</span>, current::TransactionResult, CurrentStore},
+    state::{CurrentState, Mode, Options, TransactionWithMeta},
+    storage::{<span class="self">self</span>},
     types::{
         token::{<span class="self">self</span>, Denomination},
         transaction::{
@@ -1498,49 +1528,49 @@
     <span class="doccomment">/// Attempt to use gas. If the gas specified would cause either total used to exceed
     /// its limit, fails with Error::OutOfGas or Error::BatchOutOfGas, and neither gas usage is
     /// increased.
-    </span><span class="kw">fn </span>use_batch_gas&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, gas: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
+    </span><span class="kw">fn </span>use_batch_gas(gas: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Attempt to use gas. If the gas specified would cause either total used to exceed
     /// its limit, fails with Error::OutOfGas or Error::BatchOutOfGas, and neither gas usage is
     /// increased.
-    </span><span class="kw">fn </span>use_tx_gas&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C, gas: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
+    </span><span class="kw">fn </span>use_tx_gas(gas: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Returns the remaining batch-wide gas.
-    </span><span class="kw">fn </span>remaining_batch_gas&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64;
+    </span><span class="kw">fn </span>remaining_batch_gas() -&gt; u64;
 
     <span class="doccomment">/// Returns the total batch-wide gas used.
-    </span><span class="kw">fn </span>used_batch_gas&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64;
+    </span><span class="kw">fn </span>used_batch_gas() -&gt; u64;
 
     <span class="doccomment">/// Return the remaining tx-wide gas.
-    </span><span class="kw">fn </span>remaining_tx_gas&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64;
+    </span><span class="kw">fn </span>remaining_tx_gas() -&gt; u64;
 
     <span class="doccomment">/// Return the used tx-wide gas.
-    </span><span class="kw">fn </span>used_tx_gas&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64;
+    </span><span class="kw">fn </span>used_tx_gas() -&gt; u64;
 
     <span class="doccomment">/// Configured maximum amount of gas that can be used in a batch.
-    </span><span class="kw">fn </span>max_batch_gas&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64;
+    </span><span class="kw">fn </span>max_batch_gas() -&gt; u64;
 
     <span class="doccomment">/// Configured minimum gas price.
     </span><span class="kw">fn </span>min_gas_price&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, denom: <span class="kw-2">&amp;</span>token::Denomination) -&gt; <span class="prelude-ty">Option</span>&lt;u128&gt;;
 
     <span class="doccomment">/// Sets the transaction priority to the provided amount.
-    </span><span class="kw">fn </span>set_priority&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, priority: u64);
+    </span><span class="kw">fn </span>set_priority(priority: u64);
 
     <span class="doccomment">/// Takes and returns the stored transaction priority.
-    </span><span class="kw">fn </span>take_priority&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64;
+    </span><span class="kw">fn </span>take_priority() -&gt; u64;
 
     <span class="doccomment">/// Set transaction sender metadata.
-    </span><span class="kw">fn </span>set_sender_meta&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, meta: SenderMeta);
+    </span><span class="kw">fn </span>set_sender_meta(meta: SenderMeta);
 
     <span class="doccomment">/// Takes and returns the stored transaction sender metadata.
-    </span><span class="kw">fn </span>take_sender_meta&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; SenderMeta;
+    </span><span class="kw">fn </span>take_sender_meta() -&gt; SenderMeta;
 
     <span class="doccomment">/// Returns the configured max iterations in the binary search for the estimate
     /// gas.
     </span><span class="kw">fn </span>estimate_gas_search_max_iters&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) -&gt; u64;
 
     <span class="doccomment">/// Check whether the epoch has changed since last processed block.
-    </span><span class="kw">fn </span>has_epoch_changed&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; bool;
+    </span><span class="kw">fn </span>has_epoch_changed() -&gt; bool;
 }
 
 <span class="doccomment">/// Genesis state for the accounts module.
@@ -1628,13 +1658,13 @@
 <span class="kw">impl</span>&lt;Cfg: Config&gt; API <span class="kw">for </span>Module&lt;Cfg&gt; {
     <span class="kw">type </span>Config = Cfg;
 
-    <span class="kw">fn </span>use_batch_gas&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, gas: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="comment">// Do not enforce batch limits for check-tx.
-        </span><span class="kw">if </span>ctx.is_check_only() {
+    <span class="kw">fn </span>use_batch_gas(gas: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="comment">// Do not enforce batch limits for checks.
+        </span><span class="kw">if </span>CurrentState::with_env(|env| env.is_check_only()) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
         <span class="kw">let </span>batch_gas_limit = <span class="self">Self</span>::params().max_batch_gas;
-        <span class="kw">let </span>batch_gas_used = <span class="self">Self</span>::used_batch_gas(ctx);
+        <span class="kw">let </span>batch_gas_used = <span class="self">Self</span>::used_batch_gas();
         <span class="comment">// NOTE: Going over the batch limit should trigger an abort as the scheduler should never
         //       allow scheduling past the batch limit but a malicious proposer might include too
         //       many transactions. Make sure to vote for failure in this case.
@@ -1645,15 +1675,22 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::Abort(dispatcher::Error::BatchOutOfGas));
         }
 
-        ctx.value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED)
-            .set(batch_new_gas_used);
+        CurrentState::with(|state| {
+            state
+                .block_value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED)
+                .set(batch_new_gas_used);
+        });
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>use_tx_gas&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C, gas: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="kw">let </span>gas_limit = ctx.tx_auth_info().fee.gas;
-        <span class="kw">let </span>gas_used = ctx.tx_value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED).or_default();
+    <span class="kw">fn </span>use_tx_gas(gas: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">let </span>(gas_limit, gas_used) = CurrentState::with(|state| {
+            (
+                state.env().tx_auth_info().fee.gas,
+                <span class="kw-2">*</span>state.local_value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED).or_default(),
+            )
+        });
         <span class="kw">let </span>new_gas_used = {
             <span class="kw">let </span>sum = gas_used.checked_add(gas).ok_or(Error::GasOverflow)<span class="question-mark">?</span>;
             <span class="kw">if </span>sum &gt; gas_limit {
@@ -1662,39 +1699,48 @@
             sum
         };
 
-        <span class="self">Self</span>::use_batch_gas(ctx, gas)<span class="question-mark">?</span>;
+        <span class="self">Self</span>::use_batch_gas(gas)<span class="question-mark">?</span>;
 
-        <span class="kw-2">*</span>ctx.tx_value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED).or_default() = new_gas_used;
+        CurrentState::with(|state| {
+            <span class="kw-2">*</span>state.local_value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED).or_default() = new_gas_used;
+        });
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>remaining_batch_gas&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64 {
+    <span class="kw">fn </span>remaining_batch_gas() -&gt; u64 {
         <span class="kw">let </span>batch_gas_limit = <span class="self">Self</span>::params().max_batch_gas;
-        batch_gas_limit.saturating_sub(<span class="self">Self</span>::used_batch_gas(ctx))
+        batch_gas_limit.saturating_sub(<span class="self">Self</span>::used_batch_gas())
     }
 
-    <span class="kw">fn </span>used_batch_gas&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64 {
-        ctx.value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED)
-            .get()
-            .cloned()
-            .unwrap_or_default()
+    <span class="kw">fn </span>used_batch_gas() -&gt; u64 {
+        CurrentState::with(|state| {
+            state
+                .block_value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED)
+                .get()
+                .cloned()
+                .unwrap_or_default()
+        })
     }
 
-    <span class="kw">fn </span>remaining_tx_gas&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64 {
-        <span class="kw">let </span>gas_limit = ctx.tx_auth_info().fee.gas;
-        <span class="kw">let </span>gas_used = ctx.tx_value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED).or_default();
-        <span class="kw">let </span>remaining_tx = gas_limit.saturating_sub(<span class="kw-2">*</span>gas_used);
+    <span class="kw">fn </span>remaining_tx_gas() -&gt; u64 {
+        <span class="kw">let </span>(gas_limit, gas_used) = CurrentState::with(|state| {
+            (
+                state.env().tx_auth_info().fee.gas,
+                <span class="kw-2">*</span>state.local_value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED).or_default(),
+            )
+        });
+        <span class="kw">let </span>remaining_tx = gas_limit.saturating_sub(gas_used);
         <span class="comment">// Also check remaining batch gas limit and return the minimum of the two.
-        </span><span class="kw">let </span>remaining_batch = <span class="self">Self</span>::remaining_batch_gas(ctx);
+        </span><span class="kw">let </span>remaining_batch = <span class="self">Self</span>::remaining_batch_gas();
         std::cmp::min(remaining_tx, remaining_batch)
     }
 
-    <span class="kw">fn </span>used_tx_gas&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64 {
-        <span class="kw-2">*</span>ctx.tx_value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED).or_default()
+    <span class="kw">fn </span>used_tx_gas() -&gt; u64 {
+        CurrentState::with(|state| <span class="kw-2">*</span>state.local_value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED).or_default())
     }
 
-    <span class="kw">fn </span>max_batch_gas&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64 {
+    <span class="kw">fn </span>max_batch_gas() -&gt; u64 {
         <span class="self">Self</span>::params().max_batch_gas
     }
 
@@ -1702,24 +1748,36 @@
         <span class="self">Self</span>::min_gas_prices(ctx).get(denom).copied()
     }
 
-    <span class="kw">fn </span>set_priority&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, priority: u64) {
-        ctx.value::&lt;u64&gt;(CONTEXT_KEY_PRIORITY).set(priority);
+    <span class="kw">fn </span>set_priority(priority: u64) {
+        CurrentState::with(|state| {
+            state.block_value::&lt;u64&gt;(CONTEXT_KEY_PRIORITY).set(priority);
+        })
     }
 
-    <span class="kw">fn </span>take_priority&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u64 {
-        ctx.value::&lt;u64&gt;(CONTEXT_KEY_PRIORITY)
-            .take()
-            .unwrap_or_default()
+    <span class="kw">fn </span>take_priority() -&gt; u64 {
+        CurrentState::with(|state| {
+            state
+                .block_value::&lt;u64&gt;(CONTEXT_KEY_PRIORITY)
+                .take()
+                .unwrap_or_default()
+        })
     }
 
-    <span class="kw">fn </span>set_sender_meta&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, meta: SenderMeta) {
-        ctx.value::&lt;SenderMeta&gt;(CONTEXT_KEY_SENDER_META).set(meta);
+    <span class="kw">fn </span>set_sender_meta(meta: SenderMeta) {
+        CurrentState::with(|state| {
+            state
+                .block_value::&lt;SenderMeta&gt;(CONTEXT_KEY_SENDER_META)
+                .set(meta);
+        });
     }
 
-    <span class="kw">fn </span>take_sender_meta&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; SenderMeta {
-        ctx.value::&lt;SenderMeta&gt;(CONTEXT_KEY_SENDER_META)
-            .take()
-            .unwrap_or_default()
+    <span class="kw">fn </span>take_sender_meta() -&gt; SenderMeta {
+        CurrentState::with(|state| {
+            state
+                .block_value::&lt;SenderMeta&gt;(CONTEXT_KEY_SENDER_META)
+                .take()
+                .unwrap_or_default()
+        })
     }
 
     <span class="kw">fn </span>estimate_gas_search_max_iters&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) -&gt; u64 {
@@ -1729,8 +1787,13 @@
             .unwrap_or(Cfg::DEFAULT_LOCAL_ESTIMATE_GAS_SEARCH_MAX_ITERS)
     }
 
-    <span class="kw">fn </span>has_epoch_changed&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; bool {
-        <span class="kw-2">*</span>ctx.value(CONTEXT_KEY_EPOCH_CHANGED).get().unwrap_or(<span class="kw-2">&amp;</span><span class="bool-val">false</span>)
+    <span class="kw">fn </span>has_epoch_changed() -&gt; bool {
+        CurrentState::with(|state| {
+            <span class="kw-2">*</span>state
+                .block_value(CONTEXT_KEY_EPOCH_CHANGED)
+                .get()
+                .unwrap_or(<span class="kw-2">&amp;</span><span class="bool-val">false</span>)
+        })
     }
 }
 
@@ -1754,7 +1817,7 @@
     /// succeed.
     </span><span class="attr">#[handler(query = <span class="string">&quot;core.EstimateGas&quot;</span>, allow_private_km)]
     </span><span class="kw">pub fn </span>query_estimate_gas&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         <span class="kw-2">mut </span>args: types::EstimateGasQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>extra_gas = <span class="number">0</span>;
@@ -1786,7 +1849,7 @@
         };
         args.tx.auth_info.fee.amount =
             token::BaseUnits::new(u64::MAX.into(), token::Denomination::NATIVE);
-        args.tx.auth_info.fee.consensus_messages = ctx.remaining_messages();
+        args.tx.auth_info.fee.consensus_messages = ctx.max_messages();
         <span class="comment">// Estimate transaction size. Since the transaction given to us is not signed, we need to
         // estimate how large each of the auth proofs would be.
         </span><span class="kw">let </span>auth_proofs: <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>, Error&gt; = args
@@ -1848,45 +1911,41 @@
             .unwrap_or(<span class="kw-2">&amp;</span><span class="number">0</span>);
 
         <span class="comment">// Simulates transaction with a specific gas limit.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>simulate = |tx: <span class="kw-2">&amp;</span>transaction::Transaction, gas: u64, report_failure: bool| {
+        </span><span class="kw">let </span>simulate = |tx: <span class="kw-2">&amp;</span>transaction::Transaction, gas: u64, report_failure: bool| {
             <span class="kw">let </span><span class="kw-2">mut </span>tx = tx.clone();
             tx.auth_info.fee.gas = gas;
+            <span class="kw">let </span>call = tx.call.clone(); <span class="comment">// TODO: Avoid clone.
 
-            CurrentStore::with_transaction(|| {
-                <span class="kw">let </span>result = ctx.with_simulation(|<span class="kw-2">mut </span>sim_ctx| {
-                    sim_ctx.with_tx(
-                        TransactionWithMeta {
-                            tx,
-                            tx_size,
-                            tx_index: <span class="number">0</span>,
-                            tx_hash: Default::default(),
-                        },
-                        |<span class="kw-2">mut </span>tx_ctx, call| {
-                            <span class="kw">let </span>(result, <span class="kw">_</span>) =
-                                dispatcher::Dispatcher::&lt;C::Runtime&gt;::dispatch_tx_call(
-                                    <span class="kw-2">&amp;mut </span>tx_ctx,
-                                    call,
-                                    <span class="kw-2">&amp;</span>Default::default(),
-                                );
-                            <span class="kw">if </span>!result.is_success() &amp;&amp; report_failure {
-                                <span class="comment">// Report failure.
-                                </span><span class="kw">let </span>err: TxSimulationFailure = result.try_into().unwrap(); <span class="comment">// Guaranteed to be a Failed CallResult.
-                                </span><span class="kw">return </span><span class="prelude-val">Err</span>(Error::TxSimulationFailed(err));
-                            }
-                            <span class="comment">// Don&#39;t report success or failure. If the call fails, we still report
-                            // how much gas it uses while it fails.
-                            </span><span class="kw">let </span>gas_used = <span class="kw-2">*</span>tx_ctx.value::&lt;u64&gt;(CONTEXT_KEY_GAS_USED).or_default();
-                            <span class="kw">if </span>result.is_success() {
-                                <span class="prelude-val">Ok</span>(gas_used)
-                            } <span class="kw">else </span>{
-                                <span class="prelude-val">Ok</span>(gas_used.saturating_add(extra_gas_fail).clamp(<span class="number">0</span>, gas))
-                            }
-                        },
-                    )
-                });
-
-                TransactionResult::Rollback(result) <span class="comment">// Always rollback storage changes.
-            </span>})
+            </span>CurrentState::with_transaction_opts(
+                Options::new()
+                    .with_mode(Mode::Simulate)
+                    .with_tx(TransactionWithMeta {
+                        data: tx,
+                        size: tx_size,
+                        index: <span class="number">0</span>,
+                        hash: Default::default(),
+                    }),
+                || {
+                    <span class="kw">let </span>(result, <span class="kw">_</span>) = dispatcher::Dispatcher::&lt;C::Runtime&gt;::dispatch_tx_call(
+                        ctx,
+                        call,
+                        <span class="kw-2">&amp;</span>Default::default(),
+                    );
+                    <span class="kw">if </span>!result.is_success() &amp;&amp; report_failure {
+                        <span class="comment">// Report failure.
+                        </span><span class="kw">let </span>err: TxSimulationFailure = result.try_into().unwrap(); <span class="comment">// Guaranteed to be a Failed CallResult.
+                        </span><span class="kw">return </span><span class="prelude-val">Err</span>(Error::TxSimulationFailed(err));
+                    }
+                    <span class="comment">// Don&#39;t report success or failure. If the call fails, we still report
+                    // how much gas it uses while it fails.
+                    </span><span class="kw">let </span>gas_used = <span class="self">Self</span>::used_batch_gas();
+                    <span class="kw">if </span>result.is_success() {
+                        <span class="prelude-val">Ok</span>(gas_used)
+                    } <span class="kw">else </span>{
+                        <span class="prelude-val">Ok</span>(gas_used.saturating_add(extra_gas_fail).clamp(<span class="number">0</span>, gas))
+                    }
+                },
+            )
         };
 
         <span class="comment">// Do a binary search for exact gas limit.
@@ -1994,14 +2053,14 @@
 
     <span class="doccomment">/// Check invariants of all modules in the runtime.
     </span><span class="attr">#[handler(query = <span class="string">&quot;core.CheckInvariants&quot;</span>, expensive)]
-    </span><span class="kw">fn </span>query_check_invariants&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    </span><span class="kw">fn </span>query_check_invariants&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Modules::check_invariants(ctx)
     }
 
     <span class="doccomment">/// Retrieve the public key for encrypting call data.
     </span><span class="attr">#[handler(query = <span class="string">&quot;core.CallDataPublicKey&quot;</span>)]
     </span><span class="kw">fn </span>query_calldata_public_key&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         _args: (),
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::CallDataPublicKeyQueryResponse, Error&gt; {
         <span class="kw">let </span>key_manager = ctx
@@ -2023,7 +2082,7 @@
     <span class="doccomment">/// Query the minimum gas price.
     </span><span class="attr">#[handler(query = <span class="string">&quot;core.MinGasPrice&quot;</span>)]
     </span><span class="kw">fn </span>query_min_gas_price&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         _args: (),
     ) -&gt; <span class="prelude-ty">Result</span>&lt;BTreeMap&lt;token::Denomination, u128&gt;, Error&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>mgp = <span class="self">Self</span>::min_gas_prices(ctx);
@@ -2041,10 +2100,7 @@
 
     <span class="doccomment">/// Return basic information about the module and the containing runtime.
     </span><span class="attr">#[handler(query = <span class="string">&quot;core.RuntimeInfo&quot;</span>)]
-    </span><span class="kw">fn </span>query_runtime_info&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
-        _args: (),
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;RuntimeInfoResponse, Error&gt; {
+    </span><span class="kw">fn </span>query_runtime_info&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;RuntimeInfoResponse, Error&gt; {
         <span class="prelude-val">Ok</span>(RuntimeInfoResponse {
             runtime_version: &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::VERSION,
             state_version: &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::STATE_VERSION,
@@ -2059,14 +2115,14 @@
     /// This query is allowed access to private key manager state.
     </span><span class="attr">#[handler(query = <span class="string">&quot;core.ExecuteReadOnlyTx&quot;</span>, expensive, allow_private_km)]
     </span><span class="kw">fn </span>query_execute_read_only_tx&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         args: types::ExecuteReadOnlyTxQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::ExecuteReadOnlyTxResponse, Error&gt; {
         <span class="kw">if </span>!Cfg::ALLOW_INTERACTIVE_READ_ONLY_TRANSACTIONS {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::Forbidden);
         }
 
-        ctx.with_simulation(|<span class="kw-2">mut </span>sim_ctx| {
+        CurrentState::with_transaction_opts(Options::new().with_mode(Mode::Simulate), || {
             <span class="comment">// TODO: Use separate batch gas limit for query execution.
 
             // Decode transaction and verify signature.
@@ -2075,7 +2131,7 @@
                 .len()
                 .try_into()
                 .map_err(|<span class="kw">_</span>| Error::OversizedTransaction)<span class="question-mark">?</span>;
-            <span class="kw">let </span>tx = dispatcher::Dispatcher::&lt;C::Runtime&gt;::decode_tx(<span class="kw-2">&amp;mut </span>sim_ctx, <span class="kw-2">&amp;</span>args.tx)<span class="question-mark">?</span>;
+            <span class="kw">let </span>tx = dispatcher::Dispatcher::&lt;C::Runtime&gt;::decode_tx(ctx, <span class="kw-2">&amp;</span>args.tx)<span class="question-mark">?</span>;
 
             <span class="comment">// Only read-only transactions are allowed in interactive queries.
             </span><span class="kw">if </span>!tx.call.read_only {
@@ -2092,7 +2148,7 @@
 
             <span class="comment">// Execute transaction.
             </span><span class="kw">let </span>(result, <span class="kw">_</span>) = dispatcher::Dispatcher::&lt;C::Runtime&gt;::execute_tx_opts(
-                <span class="kw-2">&amp;mut </span>sim_ctx,
+                ctx,
                 tx,
                 <span class="kw-2">&amp;</span>dispatcher::DispatchOptions {
                     tx_size,
@@ -2116,7 +2172,7 @@
     <span class="kw">fn </span>min_gas_prices&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) -&gt; BTreeMap&lt;Denomination, u128&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
         <span class="kw">if </span>params.dynamic_min_gas_price.enabled {
-            CurrentStore::with(|store| {
+            CurrentState::with_store(|store| {
                 <span class="kw">let </span>store =
                     storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME));
                 store
@@ -2145,14 +2201,14 @@
             .unwrap_or_default()
     }
 
-    <span class="kw">fn </span>enforce_min_gas_price&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;</span>C, call: <span class="kw-2">&amp;</span>Call) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    <span class="kw">fn </span>enforce_min_gas_price&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, call: <span class="kw-2">&amp;</span>Call) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="comment">// If the method is exempt from min gas price requirements, checks always pass.
         </span><span class="attr">#[allow(clippy::borrow_interior_mutable_const)]
         </span><span class="kw">if </span>Cfg::MIN_GAS_PRICE_EXEMPT_METHODS.contains(call.method.as_str()) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
-        <span class="kw">let </span>fee = ctx.tx_auth_info().fee.clone();
+        <span class="kw">let </span>fee = CurrentState::with_env(|env| env.tx_auth_info().fee.clone());
         <span class="kw">let </span>denom = fee.amount.denomination();
 
         <span class="kw">match </span><span class="self">Self</span>::min_gas_price(ctx, denom) {
@@ -2161,7 +2217,7 @@
 
             <span class="comment">// Otherwise, allow overrides during local checks.
             </span><span class="prelude-val">Some</span>(min_gas_price) =&gt; {
-                <span class="kw">if </span>ctx.is_check_only() {
+                <span class="kw">if </span>CurrentState::with_env(|env| env.is_check_only()) {
                     <span class="kw">let </span>local_mgp = <span class="self">Self</span>::get_local_min_gas_price(ctx, denom);
 
                     <span class="comment">// Reject during local checks.
@@ -2181,7 +2237,7 @@
 }
 
 <span class="kw">impl</span>&lt;Cfg: Config&gt; module::TransactionHandler <span class="kw">for </span>Module&lt;Cfg&gt; {
-    <span class="kw">fn </span>approve_raw_tx&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, tx: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    <span class="kw">fn </span>approve_raw_tx&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, tx: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
         <span class="kw">if </span>tx.len() &gt; params.max_tx_size.try_into().unwrap() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OversizedTransaction);
@@ -2190,7 +2246,7 @@
     }
 
     <span class="kw">fn </span>approve_unverified_tx&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         utx: <span class="kw-2">&amp;</span>UnverifiedTransaction,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
@@ -2207,20 +2263,19 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>before_handle_call&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C, call: <span class="kw-2">&amp;</span>Call) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    <span class="kw">fn </span>before_handle_call&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, call: <span class="kw-2">&amp;</span>Call) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="comment">// Ensure that specified gas limit is not greater than batch gas limit.
         </span><span class="kw">let </span>params = <span class="self">Self</span>::params();
-        <span class="kw">let </span>gas = ctx.tx_auth_info().fee.gas;
-        <span class="kw">if </span>gas &gt; params.max_batch_gas {
+        <span class="kw">let </span>fee = CurrentState::with_env(|env| env.tx_auth_info().fee.clone());
+        <span class="kw">if </span>fee.gas &gt; params.max_batch_gas {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::GasOverflow);
         }
-
-        <span class="comment">// Attempt to limit the maximum number of consensus messages.
-        </span><span class="kw">let </span>consensus_messages = ctx.tx_auth_info().fee.consensus_messages;
-        ctx.limit_max_messages(consensus_messages)<span class="question-mark">?</span>;
+        <span class="kw">if </span>fee.consensus_messages &gt; ctx.max_messages() {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OutOfMessageSlots);
+        }
 
         <span class="comment">// Skip additional checks/gas payment for internally generated transactions.
-        </span><span class="kw">if </span>ctx.is_internal() {
+        </span><span class="kw">if </span>CurrentState::with_env(|env| env.is_internal()) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
@@ -2228,60 +2283,62 @@
         </span><span class="self">Self</span>::enforce_min_gas_price(ctx, call)<span class="question-mark">?</span>;
 
         <span class="comment">// Charge gas for transaction size.
-        </span><span class="self">Self</span>::use_tx_gas(
-            ctx,
+        </span><span class="kw">let </span>tx_size = CurrentState::with_env(|env| env.tx_size());
+        <span class="self">Self</span>::use_tx_gas(
             params
                 .gas_costs
                 .tx_byte
-                .checked_mul(ctx.tx_size().into())
+                .checked_mul(tx_size.into())
                 .ok_or(Error::GasOverflow)<span class="question-mark">?</span>,
         )<span class="question-mark">?</span>;
 
         <span class="comment">// Charge gas for signature verification.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>num_signature: u64 = <span class="number">0</span>;
-        <span class="kw">let </span><span class="kw-2">mut </span>num_multisig_signer: u64 = <span class="number">0</span>;
-        <span class="kw">for </span>si <span class="kw">in </span><span class="kw-2">&amp;</span>ctx.tx_auth_info().signer_info {
-            <span class="kw">match </span><span class="kw-2">&amp;</span>si.address_spec {
-                AddressSpec::Signature(<span class="kw">_</span>) =&gt; {
-                    num_signature = num_signature.checked_add(<span class="number">1</span>).ok_or(Error::GasOverflow)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>total = CurrentState::with_env(|env| {
+            <span class="kw">let </span><span class="kw-2">mut </span>num_signature: u64 = <span class="number">0</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>num_multisig_signer: u64 = <span class="number">0</span>;
+            <span class="kw">for </span>si <span class="kw">in </span><span class="kw-2">&amp;</span>env.tx_auth_info().signer_info {
+                <span class="kw">match </span><span class="kw-2">&amp;</span>si.address_spec {
+                    AddressSpec::Signature(<span class="kw">_</span>) =&gt; {
+                        num_signature = num_signature.checked_add(<span class="number">1</span>)<span class="question-mark">?</span>;
+                    }
+                    AddressSpec::Multisig(config) =&gt; {
+                        num_multisig_signer =
+                            num_multisig_signer.checked_add(config.signers.len() <span class="kw">as </span>u64)<span class="question-mark">?</span>;
+                    }
+                    AddressSpec::Internal(<span class="kw">_</span>) =&gt; {}
                 }
-                AddressSpec::Multisig(config) =&gt; {
-                    num_multisig_signer = num_multisig_signer
-                        .checked_add(config.signers.len() <span class="kw">as </span>u64)
-                        .ok_or(Error::GasOverflow)<span class="question-mark">?</span>;
-                }
-                AddressSpec::Internal(<span class="kw">_</span>) =&gt; {}
             }
-        }
-        <span class="kw">let </span>total = (|| {
+
             <span class="kw">let </span>signature_cost = num_signature.checked_mul(params.gas_costs.auth_signature)<span class="question-mark">?</span>;
             <span class="kw">let </span>multisig_signer_cost =
                 num_multisig_signer.checked_mul(params.gas_costs.auth_multisig_signer)<span class="question-mark">?</span>;
             <span class="kw">let </span>sum = signature_cost.checked_add(multisig_signer_cost)<span class="question-mark">?</span>;
             <span class="prelude-val">Some</span>(sum)
-        })()
+        })
         .ok_or(Error::GasOverflow)<span class="question-mark">?</span>;
-        <span class="self">Self</span>::use_tx_gas(ctx, total)<span class="question-mark">?</span>;
+        <span class="self">Self</span>::use_tx_gas(total)<span class="question-mark">?</span>;
 
         <span class="comment">// Charge gas for callformat.
         </span><span class="kw">match </span>call.format {
             CallFormat::Plain =&gt; {} <span class="comment">// No additional gas required.
             </span>CallFormat::EncryptedX25519DeoxysII =&gt; {
-                <span class="self">Self</span>::use_tx_gas(ctx, params.gas_costs.callformat_x25519_deoxysii)<span class="question-mark">?
+                <span class="self">Self</span>::use_tx_gas(params.gas_costs.callformat_x25519_deoxysii)<span class="question-mark">?
             </span>}
         }
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>after_handle_call&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>after_handle_call&lt;C: Context&gt;(
+        _ctx: <span class="kw-2">&amp;</span>C,
         result: module::CallResult,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;module::CallResult, Error&gt; {
         <span class="comment">// Emit gas used event (if this is not an internally generated call).
-        </span><span class="kw">if </span>Cfg::EMIT_GAS_USED_EVENTS &amp;&amp; !ctx.is_internal() {
-            <span class="kw">let </span>used_gas = <span class="self">Self</span>::used_tx_gas(ctx);
-            ctx.emit_unconditional_event(Event::GasUsed { amount: used_gas });
+        </span><span class="kw">if </span>Cfg::EMIT_GAS_USED_EVENTS &amp;&amp; !CurrentState::with_env(|env| env.is_internal()) {
+            <span class="kw">let </span>used_gas = <span class="self">Self</span>::used_tx_gas();
+            CurrentState::with(|state| {
+                state.emit_unconditional_event(Event::GasUsed { amount: used_gas });
+            });
         }
 
         <span class="prelude-val">Ok</span>(result)
@@ -2323,12 +2380,12 @@
 }
 
 <span class="kw">impl</span>&lt;Cfg: Config&gt; module::BlockHandler <span class="kw">for </span>Module&lt;Cfg&gt; {
-    <span class="kw">fn </span>begin_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) {
-        CurrentStore::with(|store| {
+    <span class="kw">fn </span>begin_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) {
+        CurrentState::with(|state| {
             <span class="kw">let </span>epoch = ctx.epoch();
 
             <span class="comment">// Load previous epoch.
-            </span><span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
+            </span><span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(state.store(), <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>tstore = storage::TypedStore::new(<span class="kw-2">&amp;mut </span>store);
             <span class="kw">let </span>previous_epoch: EpochTime = tstore.get(state::LAST_EPOCH).unwrap_or_default();
             <span class="kw">if </span>epoch != previous_epoch {
@@ -2336,12 +2393,13 @@
             }
 
             <span class="comment">// Set the epoch changed key as needed.
-            </span>ctx.value(CONTEXT_KEY_EPOCH_CHANGED)
+            </span>state
+                .block_value(CONTEXT_KEY_EPOCH_CHANGED)
                 .set(epoch != previous_epoch);
         });
     }
 
-    <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) {
+    <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
         <span class="kw">if </span>!params.dynamic_min_gas_price.enabled {
             <span class="kw">return</span>;
@@ -2351,8 +2409,8 @@
         //
         // Adjust the min gas price for each block based on the gas used in the previous block and the desired target
         // gas usage set by `target_block_gas_usage_percentage`.
-        </span><span class="kw">let </span>gas_used = <span class="self">Self</span>::used_batch_gas(ctx) <span class="kw">as </span>u128;
-        <span class="kw">let </span>max_batch_gas = <span class="self">Self</span>::max_batch_gas(ctx) <span class="kw">as </span>u128;
+        </span><span class="kw">let </span>gas_used = <span class="self">Self</span>::used_batch_gas() <span class="kw">as </span>u128;
+        <span class="kw">let </span>max_batch_gas = <span class="self">Self</span>::max_batch_gas() <span class="kw">as </span>u128;
         <span class="kw">let </span>target_gas_used = max_batch_gas.saturating_mul(
             params
                 .dynamic_min_gas_price
@@ -2381,7 +2439,7 @@
         });
 
         <span class="comment">// Update min prices.
-        </span>CurrentStore::with(|store| {
+        </span>CurrentState::with_store(|store| {
             <span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>tstore = storage::TypedStore::new(<span class="kw-2">&amp;mut </span>store);
             tstore.insert(state::DYNAMIC_MIN_GAS_PRICE, mgp);

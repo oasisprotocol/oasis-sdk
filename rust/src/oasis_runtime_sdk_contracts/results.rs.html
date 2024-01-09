@@ -194,17 +194,6 @@
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Processing of execution results.
 </span><span class="kw">use </span>std::convert::TryInto;
 
@@ -214,10 +203,11 @@
     ExecutionOk,
 };
 <span class="kw">use </span>oasis_runtime_sdk::{
-    context::TxContext,
+    context::Context,
     event::etag_for_event,
     modules::core::API <span class="kw">as _</span>,
     runtime::Runtime,
+    state::CurrentState,
     subcall::{<span class="self">self</span>, SubcallInfo},
     types::transaction::CallerAddress,
 };
@@ -229,62 +219,60 @@
 };
 
 <span class="doccomment">/// Process an execution result by performing gas accounting and returning the inner result.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_execution_result&lt;C: TxContext&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>C,
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_execution_result&lt;C: Context&gt;(
+    _ctx: <span class="kw-2">&amp;</span>C,
     result: ExecutionResult,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;ExecutionOk, Error&gt; {
     <span class="comment">// The following call should never fail as we accounted for all the gas in advance.
-    </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, result.gas_used)<span class="question-mark">?</span>;
+    </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(result.gas_used)<span class="question-mark">?</span>;
 
     result.inner
 }
 
 <span class="doccomment">/// Process a successful execution result.
-</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_execution_success&lt;Cfg: Config, C: TxContext&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>C,
+</span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>process_execution_success&lt;Cfg: Config, C: Context&gt;(
+    ctx: <span class="kw-2">&amp;</span>C,
     params: <span class="kw-2">&amp;</span>Parameters,
     contract: <span class="kw-2">&amp;</span>wasm::Contract&lt;<span class="lifetime">&#39;_</span>&gt;,
     result: ExecutionOk,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, Error&gt; {
     <span class="comment">// Process events.
-    </span>process_events(ctx, contract, result.events)<span class="question-mark">?</span>;
+    </span>process_events(contract, result.events)<span class="question-mark">?</span>;
     <span class="comment">// Process subcalls.
     </span><span class="kw">let </span>result = process_subcalls::&lt;Cfg, C&gt;(ctx, params, contract, result.messages, result.data)<span class="question-mark">?</span>;
 
     <span class="prelude-val">Ok</span>(result)
 }
 
-<span class="kw">fn </span>process_events&lt;C: TxContext&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>C,
-    contract: <span class="kw-2">&amp;</span>wasm::Contract&lt;<span class="lifetime">&#39;_</span>&gt;,
-    events: Vec&lt;Event&gt;,
-) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+<span class="kw">fn </span>process_events(contract: <span class="kw-2">&amp;</span>wasm::Contract&lt;<span class="lifetime">&#39;_</span>&gt;, events: Vec&lt;Event&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
     <span class="comment">// Transform contract events into tags using the SDK scheme.
-    </span><span class="kw">for </span>event <span class="kw">in </span>events {
-        ctx.emit_etag(etag_for_event(
-            <span class="kw-2">&amp;</span><span class="kw">if </span>event.module.is_empty() {
-                <span class="macro">format!</span>(<span class="string">&quot;{}.{}&quot;</span>, MODULE_NAME, contract.code_info.id.as_u64())
-            } <span class="kw">else </span>{
-                <span class="macro">format!</span>(
-                    <span class="string">&quot;{}.{}.{}&quot;</span>,
-                    MODULE_NAME,
-                    contract.code_info.id.as_u64(),
-                    event.module,
-                )
-            },
-            event.code,
-            cbor::to_value(ContractEvent {
-                id: contract.instance_info.id,
-                data: event.data,
-            }),
-        ));
-    }
+    </span>CurrentState::with(|state| {
+        <span class="kw">for </span>event <span class="kw">in </span>events {
+            state.emit_event_raw(etag_for_event(
+                <span class="kw-2">&amp;</span><span class="kw">if </span>event.module.is_empty() {
+                    <span class="macro">format!</span>(<span class="string">&quot;{}.{}&quot;</span>, MODULE_NAME, contract.code_info.id.as_u64())
+                } <span class="kw">else </span>{
+                    <span class="macro">format!</span>(
+                        <span class="string">&quot;{}.{}.{}&quot;</span>,
+                        MODULE_NAME,
+                        contract.code_info.id.as_u64(),
+                        event.module,
+                    )
+                },
+                event.code,
+                cbor::to_value(ContractEvent {
+                    id: contract.instance_info.id,
+                    data: event.data,
+                }),
+            ));
+        }
+    });
 
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn </span>process_subcalls&lt;Cfg: Config, C: TxContext&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>C,
+<span class="kw">fn </span>process_subcalls&lt;Cfg: Config, C: Context&gt;(
+    ctx: <span class="kw-2">&amp;</span>C,
     params: <span class="kw-2">&amp;</span>Parameters,
     contract: <span class="kw-2">&amp;</span>wasm::Contract&lt;<span class="lifetime">&#39;_</span>&gt;,
     messages: Vec&lt;Message&gt;,
@@ -296,7 +284,6 @@
 
     <span class="comment">// Charge gas for each emitted message.
     </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(
-        ctx,
         params
             .gas_costs
             .subcall_dispatch
@@ -316,8 +303,8 @@
     }
 
     <span class="comment">// Properly propagate original call format and read-only flag.
-    </span><span class="kw">let </span>orig_call_format = ctx.tx_call_format();
-    <span class="kw">let </span>orig_read_only = ctx.is_read_only();
+    </span><span class="kw">let </span>(orig_call_format, orig_read_only) =
+        CurrentState::with_env(|env| (env.tx_call_format(), env.is_read_only()));
 
     <span class="comment">// Process emitted messages recursively.
     </span><span class="kw">for </span>msg <span class="kw">in </span>messages {
@@ -331,7 +318,7 @@
                 max_gas,
             } =&gt; {
                 <span class="comment">// Compute the amount of gas that can be used.
-                </span><span class="kw">let </span>remaining_gas = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(ctx);
+                </span><span class="kw">let </span>remaining_gas = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas();
                 <span class="kw">let </span>max_gas = max_gas.unwrap_or(remaining_gas);
                 <span class="kw">let </span>max_gas = <span class="kw">if </span>max_gas &gt; remaining_gas {
                     remaining_gas
@@ -353,16 +340,7 @@
 
                 <span class="comment">// Use any gas that was used inside the child context. This should never fail as we
                 // preconfigured the amount of available gas.
-                </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, result.gas_used)<span class="question-mark">?</span>;
-
-                <span class="comment">// Forward any emitted event tags.
-                </span>ctx.emit_etags(result.state.events);
-
-                <span class="comment">// Forward any emitted runtime messages.
-                </span><span class="kw">for </span>(msg, hook) <span class="kw">in </span>result.state.messages {
-                    <span class="comment">// This should never fail as child context has the right limits configured.
-                    </span>ctx.emit_message(msg, hook)<span class="question-mark">?</span>;
-                }
+                </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(result.gas_used)<span class="question-mark">?</span>;
 
                 <span class="comment">// Process replies based on filtering criteria.
                 </span><span class="kw">let </span>result = result.call_result;
@@ -380,8 +358,8 @@
                             params,
                             contract.code_info,
                             contract.instance_info,
-                            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(ctx),
-                            ctx.tx_caller_address(),
+                            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(),
+                            CurrentState::with_env(|env| env.tx_caller_address()),
                             orig_read_only,
                             orig_call_format,
                             ctx,

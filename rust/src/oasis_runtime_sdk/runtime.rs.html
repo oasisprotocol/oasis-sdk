@@ -206,6 +206,9 @@
 <a href="#206" id="206">206</a>
 <a href="#207" id="207">207</a>
 <a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Runtime.
 </span><span class="kw">use </span>std::sync::Arc;
 
@@ -228,7 +231,8 @@
         TransactionHandler,
     },
     modules,
-    storage::{<span class="self">self</span>, CurrentStore},
+    state::CurrentState,
+    storage::{<span class="self">self</span>},
 };
 
 <span class="doccomment">/// A runtime.
@@ -272,7 +276,7 @@
 
     <span class="doccomment">/// Perform runtime-specific state migration. This method is only called when the recorded
     /// state version does not match `STATE_VERSION`.
-    </span><span class="kw">fn </span>migrate_state&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C) {
+    </span><span class="kw">fn </span>migrate_state&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) {
         <span class="comment">// Default implementation doesn&#39;t perform any migration.
     </span>}
 
@@ -298,8 +302,8 @@
     </span>}
 
     <span class="doccomment">/// Perform state migrations if required.
-    </span><span class="kw">fn </span>migrate&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) {
-        <span class="kw">let </span><span class="kw-2">mut </span>metadata = CurrentStore::with(|store| {
+    </span><span class="kw">fn </span>migrate&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) {
+        <span class="kw">let </span><span class="kw-2">mut </span>metadata = CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::TypedStore::new(storage::PrefixStore::new(
                 store,
                 <span class="kw-2">&amp;</span>modules::core::MODULE_NAME,
@@ -321,7 +325,9 @@
             .get(modules::core::types::VERSION_GLOBAL_KEY)
             .copied()
             .unwrap_or_default();
-        <span class="kw">if </span>global_version != <span class="self">Self</span>::STATE_VERSION &amp;&amp; !ctx.is_check_only() {
+        <span class="kw">if </span>global_version != <span class="self">Self</span>::STATE_VERSION
+            &amp;&amp; !CurrentState::with_env(|env| env.is_check_only())
+        {
             <span class="macro">assert!</span>(
                 <span class="comment">// There should either be no state, or it should be the previous version.
                 </span>global_version == <span class="number">0 </span>|| global_version == <span class="self">Self</span>::STATE_VERSION - <span class="number">1</span>,
@@ -342,7 +348,7 @@
 
         <span class="comment">// If there are any changes, update metadata.
         </span><span class="kw">if </span>has_changes {
-            CurrentStore::with(|store| {
+            CurrentState::with_store(|store| {
                 <span class="kw">let </span><span class="kw-2">mut </span>store = storage::TypedStore::new(storage::PrefixStore::new(
                     store,
                     <span class="kw-2">&amp;</span>modules::core::MODULE_NAME,

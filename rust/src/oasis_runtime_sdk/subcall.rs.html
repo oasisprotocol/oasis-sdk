@@ -194,28 +194,16 @@
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
-<a href="#197" id="197">197</a>
-<a href="#198" id="198">198</a>
-<a href="#199" id="199">199</a>
-<a href="#200" id="200">200</a>
-<a href="#201" id="201">201</a>
-<a href="#202" id="202">202</a>
-<a href="#203" id="203">203</a>
-<a href="#204" id="204">204</a>
-<a href="#205" id="205">205</a>
-<a href="#206" id="206">206</a>
-<a href="#207" id="207">207</a>
-<a href="#208" id="208">208</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Subcall dispatch.
 </span><span class="kw">use </span>std::cell::RefCell;
 
 <span class="kw">use crate</span>::{
-    context::{BatchContext, Context, State, TransactionWithMeta, TxContext},
+    context::Context,
     dispatcher,
     module::CallResult,
     modules::core::{Error, API <span class="kw">as _</span>},
     runtime::Runtime,
-    storage::{current::TransactionResult, CurrentStore},
+    state::{CurrentState, Options, TransactionResult, TransactionWithMeta},
     types::{token, transaction, transaction::CallerAddress},
 };
 
@@ -257,8 +245,6 @@
 <span class="doccomment">/// Result of dispatching a subcall.
 </span><span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>SubcallResult {
-    <span class="doccomment">/// State after applying the subcall context.
-    </span><span class="kw">pub </span>state: State,
     <span class="doccomment">/// Result of the subcall.
     </span><span class="kw">pub </span>call_result: CallResult,
     <span class="doccomment">/// Gas used by the subcall.
@@ -309,13 +295,13 @@
 }
 
 <span class="doccomment">/// The current subcall depth.
-</span><span class="kw">pub fn </span>get_current_subcall_depth&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C) -&gt; u16 {
+</span><span class="kw">pub fn </span>get_current_subcall_depth&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) -&gt; u16 {
     SUBCALL_STACK.with(|ss| ss.borrow().depth())
 }
 
 <span class="doccomment">/// Perform a subcall.
-</span><span class="kw">pub fn </span>call&lt;C: TxContext, V: Validator + <span class="lifetime">&#39;static</span>&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>C,
+</span><span class="kw">pub fn </span>call&lt;C: Context, V: Validator + <span class="lifetime">&#39;static</span>&gt;(
+    ctx: <span class="kw-2">&amp;</span>C,
     info: SubcallInfo,
     validator: V,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;SubcallResult, Error&gt; {
@@ -343,73 +329,63 @@
     })<span class="question-mark">?</span>;
     <span class="kw">let </span>_guard = SubcallStackGuard; <span class="comment">// Ensure subcall is popped from stack.
 
-    // Calculate how many consensus messages the child call can emit.
-    </span><span class="kw">let </span>remaining_messages = ctx.remaining_messages();
-
-    <span class="comment">// Execute a transaction in a child context.
-    </span><span class="kw">let </span>(call_result, gas, state) = ctx.with_child(ctx.mode(), |<span class="kw-2">mut </span>ctx| {
-        <span class="comment">// Generate an internal transaction.
-        </span><span class="kw">let </span>tx = transaction::Transaction {
-            version: transaction::LATEST_TRANSACTION_VERSION,
-            call: transaction::Call {
-                format: transaction::CallFormat::Plain,
-                method: info.method,
-                body: info.body,
-                ..Default::default()
+    // Generate an internal transaction.
+    </span><span class="kw">let </span>tx = transaction::Transaction {
+        version: transaction::LATEST_TRANSACTION_VERSION,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: info.method,
+            body: info.body,
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: <span class="macro">vec!</span>[transaction::SignerInfo {
+                <span class="comment">// The call is being performed on the caller&#39;s behalf.
+                </span>address_spec: transaction::AddressSpec::Internal(info.caller),
+                nonce: <span class="number">0</span>,
+            }],
+            fee: transaction::Fee {
+                amount: token::BaseUnits::new(<span class="number">0</span>, token::Denomination::NATIVE),
+                <span class="comment">// Limit gas usage inside the child context to the allocated maximum.
+                </span>gas: info.max_gas,
+                <span class="comment">// Propagate consensus message limit.
+                </span>consensus_messages: CurrentState::with(|state| state.emitted_messages_max(ctx)),
             },
-            auth_info: transaction::AuthInfo {
-                signer_info: <span class="macro">vec!</span>[transaction::SignerInfo {
-                    <span class="comment">// The call is being performed on the caller&#39;s behalf.
-                    </span>address_spec: transaction::AddressSpec::Internal(info.caller),
-                    nonce: <span class="number">0</span>,
-                }],
-                fee: transaction::Fee {
-                    amount: token::BaseUnits::new(<span class="number">0</span>, token::Denomination::NATIVE),
-                    <span class="comment">// Limit gas usage inside the child context to the allocated maximum.
-                    </span>gas: info.max_gas,
-                    consensus_messages: remaining_messages,
-                },
-                ..Default::default()
-            },
-        };
+            ..Default::default()
+        },
+    };
+    <span class="kw">let </span>call = tx.call.clone(); <span class="comment">// TODO: Avoid clone.
 
-        <span class="kw">let </span>result = CurrentStore::with_transaction(|| {
-            ctx.with_tx(TransactionWithMeta::internal(tx), |ctx, call| {
-                <span class="comment">// Mark this sub-context as internal as it belongs to an existing transaction.
-                </span><span class="kw">let </span><span class="kw-2">mut </span>ctx = ctx.internal();
+    // Execute a transaction in a child context.
+    </span><span class="kw">let </span>(call_result, gas) = CurrentState::with_transaction_opts(
+        Options::new()
+            .with_internal(<span class="bool-val">true</span>)
+            .with_tx(TransactionWithMeta::internal(tx)),
+        || {
+            <span class="comment">// Dispatch the call.
+            </span><span class="kw">let </span>(result, <span class="kw">_</span>) = dispatcher::Dispatcher::&lt;C::Runtime&gt;::dispatch_tx_call(
+                <span class="kw-2">&amp;</span>ctx.clone(), <span class="comment">// Must clone to avoid infinite type.
+                </span>call,
+                <span class="kw-2">&amp;</span>Default::default(),
+            );
+            <span class="comment">// Retrieve remaining gas.
+            </span><span class="kw">let </span>gas = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas();
 
-                <span class="comment">// Dispatch the call.
-                </span><span class="kw">let </span>(result, <span class="kw">_</span>) = dispatcher::Dispatcher::&lt;C::Runtime&gt;::dispatch_tx_call(
-                    <span class="kw-2">&amp;mut </span>ctx,
-                    call,
-                    <span class="kw-2">&amp;</span>Default::default(),
-                );
-                <span class="comment">// Retrieve remaining gas.
-                </span><span class="kw">let </span>gas = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(<span class="kw-2">&amp;mut </span>ctx);
-
-                <span class="comment">// Commit store and return emitted tags and messages on successful dispatch,
-                // otherwise revert state and ignore any emitted events/messages.
-                </span><span class="kw">if </span>result.is_success() {
-                    <span class="kw">let </span>state = ctx.commit();
-                    TransactionResult::Commit((result, gas, state))
-                } <span class="kw">else </span>{
-                    <span class="comment">// Ignore tags/messages on failure.
-                    </span>TransactionResult::Rollback((result, gas, Default::default()))
-                }
-            })
-        });
-
-        <span class="comment">// Commit. Note that if child context didn&#39;t commit, this is basically a no-op.
-        </span>ctx.commit();
-
-        result
-    });
+            <span class="comment">// Commit store and return emitted tags and messages on successful dispatch,
+            // otherwise revert state and ignore any emitted events/messages.
+            </span><span class="kw">if </span>result.is_success() {
+                TransactionResult::Commit((result, gas))
+            } <span class="kw">else </span>{
+                <span class="comment">// Ignore tags/messages on failure.
+                </span>TransactionResult::Rollback((result, gas))
+            }
+        },
+    );
 
     <span class="comment">// Compute the amount of gas used.
     </span><span class="kw">let </span>gas_used = info.max_gas.saturating_sub(gas);
 
     <span class="prelude-val">Ok</span>(SubcallResult {
-        state,
         call_result,
         gas_used,
     })

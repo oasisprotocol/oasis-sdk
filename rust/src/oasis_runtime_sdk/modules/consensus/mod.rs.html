@@ -476,6 +476,16 @@
 <a href="#476" id="476">476</a>
 <a href="#477" id="477">477</a>
 <a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
+<a href="#482" id="482">482</a>
+<a href="#483" id="483">483</a>
+<a href="#484" id="484">484</a>
+<a href="#485" id="485">485</a>
+<a href="#486" id="486">486</a>
+<a href="#487" id="487">487</a>
+<a href="#488" id="488">488</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Consensus module.
 //!
 //! Low level consensus module for communicating with the consensus layer.
@@ -502,13 +512,14 @@
 };
 
 <span class="kw">use crate</span>::{
-    context::{Context, TxContext},
+    context::Context,
     core::common::crypto::hash::Hash,
     history, migration, module,
     module::{Module <span class="kw">as _</span>, Parameters <span class="kw">as _</span>},
     modules,
     modules::core::API <span class="kw">as _</span>,
     sdk_derive,
+    state::CurrentState,
     types::{
         address::{Address, SignatureAddressSpec},
         message::MessageEventHookInvocation,
@@ -633,42 +644,42 @@
 <span class="doccomment">/// Interface that can be called from other modules.
 </span><span class="kw">pub trait </span>API {
     <span class="doccomment">/// Transfer an amount from the runtime account.
-    </span><span class="kw">fn </span>transfer&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>transfer&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         to: Address,
         amount: <span class="kw-2">&amp;</span>token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Withdraw an amount into the runtime account.
-    </span><span class="kw">fn </span>withdraw&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>withdraw&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         amount: <span class="kw-2">&amp;</span>token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Escrow an amount of the runtime account funds.
-    </span><span class="kw">fn </span>escrow&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>escrow&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         to: Address,
         amount: <span class="kw-2">&amp;</span>token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Reclaim an amount of runtime staked shares.
-    </span><span class="kw">fn </span>reclaim_escrow&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>reclaim_escrow&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         amount: u128,
         hook: MessageEventHookInvocation,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Returns consensus token denomination.
-    </span><span class="kw">fn </span>consensus_denomination&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;token::Denomination, Error&gt;;
+    </span><span class="kw">fn </span>consensus_denomination() -&gt; <span class="prelude-ty">Result</span>&lt;token::Denomination, Error&gt;;
 
     <span class="doccomment">/// Ensures transaction signer is consensus compatible.
-    </span><span class="kw">fn </span>ensure_compatible_tx_signer&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;</span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
+    </span><span class="kw">fn </span>ensure_compatible_tx_signer() -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
     <span class="doccomment">/// Query consensus account info.
     </span><span class="kw">fn </span>account&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, addr: Address) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusAccount, Error&gt;;
@@ -681,10 +692,10 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusDelegation, Error&gt;;
 
     <span class="doccomment">/// Convert runtime amount to consensus amount, scaling as needed.
-    </span><span class="kw">fn </span>amount_from_consensus&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, amount: u128) -&gt; <span class="prelude-ty">Result</span>&lt;u128, Error&gt;;
+    </span><span class="kw">fn </span>amount_from_consensus&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, amount: u128) -&gt; <span class="prelude-ty">Result</span>&lt;u128, Error&gt;;
 
     <span class="doccomment">/// Convert consensus amount to runtime amount, scaling as needed.
-    </span><span class="kw">fn </span>amount_to_consensus&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C, amount: u128) -&gt; <span class="prelude-ty">Result</span>&lt;u128, Error&gt;;
+    </span><span class="kw">fn </span>amount_to_consensus&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, amount: u128) -&gt; <span class="prelude-ty">Result</span>&lt;u128, Error&gt;;
 
     <span class="doccomment">/// Determine consensus height corresponding to the given epoch transition. This query may be
     /// expensive in case the epoch is far back.
@@ -701,11 +712,8 @@
 <span class="kw">pub struct </span>Module;
 
 <span class="kw">impl </span>Module {
-    <span class="kw">fn </span>ensure_consensus_denomination&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
-        denomination: <span class="kw-2">&amp;</span>token::Denomination,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="kw">if </span>denomination != <span class="kw-2">&amp;</span><span class="self">Self</span>::consensus_denomination(ctx)<span class="question-mark">? </span>{
+    <span class="kw">fn </span>ensure_consensus_denomination(denomination: <span class="kw-2">&amp;</span>token::Denomination) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        <span class="kw">if </span>denomination != <span class="kw-2">&amp;</span><span class="self">Self</span>::consensus_denomination()<span class="question-mark">? </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidDenomination);
         }
 
@@ -735,12 +743,12 @@
     }
 
     <span class="attr">#[handler(call = <span class="string">&quot;consensus.RoundRoot&quot;</span>, internal)]
-    </span><span class="kw">fn </span>internal_round_root&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">fn </span>internal_round_root&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         body: types::RoundRootBody,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Hash&gt;, Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
-        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.round_root)<span class="question-mark">?</span>;
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.round_root)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(
             <span class="self">Self</span>::round_roots(ctx, body.runtime_id, body.round)<span class="question-mark">?</span>.map(|rr| <span class="kw">match </span>body.kind {
@@ -752,108 +760,120 @@
 }
 
 <span class="kw">impl </span>API <span class="kw">for </span>Module {
-    <span class="kw">fn </span>transfer&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>transfer&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         to: Address,
         amount: <span class="kw-2">&amp;</span>token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="self">Self</span>::ensure_consensus_denomination(ctx, amount.denomination())<span class="question-mark">?</span>;
+        <span class="self">Self</span>::ensure_consensus_denomination(amount.denomination())<span class="question-mark">?</span>;
         <span class="kw">let </span>amount = <span class="self">Self</span>::amount_to_consensus(ctx, amount.amount())<span class="question-mark">?</span>;
 
-        ctx.emit_message(
-            Message::Staking(Versioned::new(
-                <span class="number">0</span>,
-                StakingMessage::Transfer(staking::Transfer {
-                    to: to.into(),
-                    amount: amount.into(),
-                }),
-            )),
-            hook,
-        )<span class="question-mark">?</span>;
+        CurrentState::with(|state| {
+            state.emit_message(
+                ctx,
+                Message::Staking(Versioned::new(
+                    <span class="number">0</span>,
+                    StakingMessage::Transfer(staking::Transfer {
+                        to: to.into(),
+                        amount: amount.into(),
+                    }),
+                )),
+                hook,
+            )
+        })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>withdraw&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>withdraw&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         amount: <span class="kw-2">&amp;</span>token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="self">Self</span>::ensure_consensus_denomination(ctx, amount.denomination())<span class="question-mark">?</span>;
+        <span class="self">Self</span>::ensure_consensus_denomination(amount.denomination())<span class="question-mark">?</span>;
         <span class="kw">let </span>amount = <span class="self">Self</span>::amount_to_consensus(ctx, amount.amount())<span class="question-mark">?</span>;
 
-        ctx.emit_message(
-            Message::Staking(Versioned::new(
-                <span class="number">0</span>,
-                StakingMessage::Withdraw(staking::Withdraw {
-                    from: from.into(),
-                    amount: amount.into(),
-                }),
-            )),
-            hook,
-        )<span class="question-mark">?</span>;
+        CurrentState::with(|state| {
+            state.emit_message(
+                ctx,
+                Message::Staking(Versioned::new(
+                    <span class="number">0</span>,
+                    StakingMessage::Withdraw(staking::Withdraw {
+                        from: from.into(),
+                        amount: amount.into(),
+                    }),
+                )),
+                hook,
+            )
+        })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>escrow&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>escrow&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         to: Address,
         amount: <span class="kw-2">&amp;</span>token::BaseUnits,
         hook: MessageEventHookInvocation,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="self">Self</span>::ensure_consensus_denomination(ctx, amount.denomination())<span class="question-mark">?</span>;
+        <span class="self">Self</span>::ensure_consensus_denomination(amount.denomination())<span class="question-mark">?</span>;
         <span class="kw">let </span>amount = <span class="self">Self</span>::amount_to_consensus(ctx, amount.amount())<span class="question-mark">?</span>;
 
         <span class="kw">if </span>amount &lt; <span class="self">Self</span>::params().min_delegate_amount {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::UnderMinDelegationAmount);
         }
 
-        ctx.emit_message(
-            Message::Staking(Versioned::new(
-                <span class="number">0</span>,
-                StakingMessage::AddEscrow(staking::Escrow {
-                    account: to.into(),
-                    amount: amount.into(),
-                }),
-            )),
-            hook,
-        )<span class="question-mark">?</span>;
+        CurrentState::with(|state| {
+            state.emit_message(
+                ctx,
+                Message::Staking(Versioned::new(
+                    <span class="number">0</span>,
+                    StakingMessage::AddEscrow(staking::Escrow {
+                        account: to.into(),
+                        amount: amount.into(),
+                    }),
+                )),
+                hook,
+            )
+        })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>reclaim_escrow&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    <span class="kw">fn </span>reclaim_escrow&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
         shares: u128,
         hook: MessageEventHookInvocation,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        ctx.emit_message(
-            Message::Staking(Versioned::new(
-                <span class="number">0</span>,
-                StakingMessage::ReclaimEscrow(staking::ReclaimEscrow {
-                    account: from.into(),
-                    shares: shares.into(),
-                }),
-            )),
-            hook,
-        )<span class="question-mark">?</span>;
+        CurrentState::with(|state| {
+            state.emit_message(
+                ctx,
+                Message::Staking(Versioned::new(
+                    <span class="number">0</span>,
+                    StakingMessage::ReclaimEscrow(staking::ReclaimEscrow {
+                        account: from.into(),
+                        shares: shares.into(),
+                    }),
+                )),
+                hook,
+            )
+        })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>consensus_denomination&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C) -&gt; <span class="prelude-ty">Result</span>&lt;token::Denomination, Error&gt; {
+    <span class="kw">fn </span>consensus_denomination() -&gt; <span class="prelude-ty">Result</span>&lt;token::Denomination, Error&gt; {
         <span class="prelude-val">Ok</span>(<span class="self">Self</span>::params().consensus_denomination)
     }
 
-    <span class="kw">fn </span>ensure_compatible_tx_signer&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;</span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        <span class="kw">match </span>ctx.tx_auth_info().signer_info[<span class="number">0</span>].address_spec {
+    <span class="kw">fn </span>ensure_compatible_tx_signer() -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+        CurrentState::with_env(|env| <span class="kw">match </span>env.tx_auth_info().signer_info[<span class="number">0</span>].address_spec {
             AddressSpec::Signature(SignatureAddressSpec::Ed25519(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(()),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::ConsensusIncompatibleSigner),
-        }
+        })
     }
 
     <span class="kw">fn </span>account&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, addr: Address) -&gt; <span class="prelude-ty">Result</span>&lt;ConsensusAccount, Error&gt; {
@@ -874,14 +894,14 @@
             .map_err(Error::InternalStateError)
     }
 
-    <span class="kw">fn </span>amount_from_consensus&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, amount: u128) -&gt; <span class="prelude-ty">Result</span>&lt;u128, Error&gt; {
+    <span class="kw">fn </span>amount_from_consensus&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, amount: u128) -&gt; <span class="prelude-ty">Result</span>&lt;u128, Error&gt; {
         <span class="kw">let </span>scaling_factor = <span class="self">Self</span>::params().consensus_scaling_factor;
         amount
             .checked_mul(scaling_factor.into())
             .ok_or(Error::AmountNotRepresentable)
     }
 
-    <span class="kw">fn </span>amount_to_consensus&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, amount: u128) -&gt; <span class="prelude-ty">Result</span>&lt;u128, Error&gt; {
+    <span class="kw">fn </span>amount_to_consensus&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, amount: u128) -&gt; <span class="prelude-ty">Result</span>&lt;u128, Error&gt; {
         <span class="kw">let </span>scaling_factor = <span class="self">Self</span>::params().consensus_scaling_factor;
         <span class="kw">let </span>scaled = amount
             .checked_div(scaling_factor.into())

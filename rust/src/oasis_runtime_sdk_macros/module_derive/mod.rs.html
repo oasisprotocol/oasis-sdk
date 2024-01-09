@@ -698,7 +698,7 @@
                         <span class="attr">#[automatically_derived]
                         </span><span class="kw">impl</span>&lt;C: Cfg&gt; sdk::module::MethodHandler <span class="kw">for </span>MyModule&lt;C&gt; {
                             <span class="kw">fn </span>dispatch_query&lt;C: Context&gt;(
-                                ctx: <span class="kw-2">&amp;mut </span>C,
+                                ctx: <span class="kw-2">&amp;</span>C,
                                 method: <span class="kw-2">&amp;</span>str,
                                 args: cbor::Value,
                             ) -&gt; DispatchResult&lt;cbor::Value, <span class="prelude-ty">Result</span>&lt;cbor::Value, sdk::error::RuntimeError&gt;&gt;
@@ -713,7 +713,7 @@
                         }
                         <span class="attr">#[automatically_derived]
                         </span><span class="kw">impl</span>&lt;C: Cfg&gt; MyModule&lt;C&gt; {
-                            <span class="kw">fn </span>query_parameters&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Parameters, &lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Error&gt; {
+                            <span class="kw">fn </span>query_parameters&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Parameters, &lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Error&gt; {
                                 <span class="prelude-val">Ok</span>(<span class="self">Self</span>::params())
                             }
                         }
@@ -768,8 +768,8 @@
                                     <span class="kw">_ </span>=&gt; module::DispatchResult::Unhandled(body),
                                 }
                             }
-                            <span class="kw">fn </span>dispatch_call&lt;C: TxContext&gt;(
-                                ctx: <span class="kw-2">&amp;mut </span>C,
+                            <span class="kw">fn </span>dispatch_call&lt;C: Context&gt;(
+                                ctx: <span class="kw-2">&amp;</span>C,
                                 method: <span class="kw-2">&amp;</span>str,
                                 body: cbor::Value,
                             ) -&gt; DispatchResult&lt;cbor::Value, CallResult&gt; {
@@ -779,7 +779,7 @@
                                         module::dispatch_call(ctx, body, <span class="self">Self</span>::my_other_call)
                                     }
                                     <span class="string">&quot;my_module.MyInternalCall&quot; </span>=&gt; module::dispatch_call(ctx, body, |ctx, body| {
-                                        <span class="kw">if </span>!ctx.is_internal() {
+                                        <span class="kw">if </span>!sdk::state::CurrentState::with_env(|env| env.is_internal()) {
                                             <span class="kw">return </span><span class="prelude-val">Err</span>(sdk::modules::core::Error::Forbidden.into());
                                         }
                                         <span class="self">Self</span>::my_internal_call(ctx, body)
@@ -788,7 +788,7 @@
                                 }
                             }
                             <span class="kw">fn </span>dispatch_query&lt;C: Context&gt;(
-                                ctx: <span class="kw-2">&amp;mut </span>C,
+                                ctx: <span class="kw-2">&amp;</span>C,
                                 method: <span class="kw-2">&amp;</span>str,
                                 args: cbor::Value,
                             ) -&gt; DispatchResult&lt;cbor::Value, <span class="prelude-ty">Result</span>&lt;cbor::Value, sdk::error::RuntimeError&gt;&gt;
@@ -819,7 +819,7 @@
                         }
                         <span class="attr">#[automatically_derived]
                         </span><span class="kw">impl</span>&lt;C: Cfg&gt; MyModule&lt;C&gt; {
-                            <span class="kw">fn </span>query_parameters&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Parameters, &lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Error&gt; {
+                            <span class="kw">fn </span>query_parameters&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Parameters, &lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Error&gt; {
                                 <span class="prelude-val">Ok</span>(<span class="self">Self</span>::params())
                             }
                             <span class="attr">#[handler(prefetch = <span class="string">&quot;my_module.MyCall&quot;</span>)]
@@ -859,7 +859,7 @@
                         <span class="attr">#[automatically_derived]
                         </span><span class="kw">impl</span>&lt;C: Cfg&gt; sdk::module::MethodHandler <span class="kw">for </span>MyModule&lt;C&gt; {
                             <span class="kw">fn </span>dispatch_query&lt;C: Context&gt;(
-                                ctx: <span class="kw-2">&amp;mut </span>C,
+                                ctx: <span class="kw-2">&amp;</span>C,
                                 method: <span class="kw-2">&amp;</span>str,
                                 args: cbor::Value,
                             ) -&gt; DispatchResult&lt;cbor::Value, <span class="prelude-ty">Result</span>&lt;cbor::Value, sdk::error::RuntimeError&gt;&gt;
@@ -900,7 +900,7 @@
                         <span class="attr">#[automatically_derived]
                         </span><span class="kw">impl</span>&lt;C: Cfg&gt; MyModule&lt;C&gt; {
                             <span class="kw">fn </span>query_parameters&lt;C: Context&gt;(
-                                _ctx: <span class="kw-2">&amp;mut </span>C,
+                                _ctx: <span class="kw-2">&amp;</span>C,
                                 _args: (),
                             ) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Parameters, &lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Error&gt;
                             {
@@ -937,7 +937,7 @@
                         <span class="attr">#[automatically_derived]
                         </span><span class="kw">impl</span>&lt;C: Cfg&gt; sdk::module::MethodHandler <span class="kw">for </span>MyModule&lt;C&gt; {
                             <span class="kw">fn </span>dispatch_query&lt;C: Context&gt;(
-                                ctx: <span class="kw-2">&amp;mut </span>C,
+                                ctx: <span class="kw-2">&amp;</span>C,
                                 method: <span class="kw-2">&amp;</span>str,
                                 args: cbor::Value,
                             ) -&gt; DispatchResult&lt;cbor::Value, <span class="prelude-ty">Result</span>&lt;cbor::Value, sdk::error::RuntimeError&gt;&gt;
@@ -959,7 +959,7 @@
                         }
                         <span class="attr">#[automatically_derived]
                         </span><span class="kw">impl</span>&lt;C: Cfg&gt; MyModule&lt;C&gt; {
-                            <span class="kw">fn </span>query_parameters&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Parameters, &lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Error&gt; {
+                            <span class="kw">fn </span>query_parameters&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Parameters, &lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Error&gt; {
                                 <span class="prelude-val">Ok</span>(<span class="self">Self</span>::params())
                             }
                             <span class="attr">#[handler(query = <span class="string">&quot;my_module.MyMC&quot;</span>)]
@@ -1016,7 +1016,7 @@
                         </span><span class="kw">impl</span>&lt;C: Cfg&gt; sdk::module::MigrationHandler <span class="kw">for </span>MyModule&lt;C&gt; {
                             <span class="kw">type </span>Genesis = Genesis;
                             <span class="kw">fn </span>init_or_migrate&lt;C: Context&gt;(
-                                _ctx: <span class="kw-2">&amp;mut </span>C,
+                                _ctx: <span class="kw-2">&amp;</span>C,
                                 meta: <span class="kw-2">&amp;mut </span>sdk::modules::core::types::Metadata,
                                 genesis: <span class="self">Self</span>::Genesis,
                             ) -&gt; bool {
@@ -1060,7 +1060,7 @@
                         <span class="attr">#[automatically_derived]
                         </span><span class="kw">impl</span>&lt;C: Cfg&gt; sdk::module::MethodHandler <span class="kw">for </span>MyModule&lt;C&gt; {
                             <span class="kw">fn </span>dispatch_query&lt;C: Context&gt;(
-                                ctx: <span class="kw-2">&amp;mut </span>C,
+                                ctx: <span class="kw-2">&amp;</span>C,
                                 method: <span class="kw-2">&amp;</span>str,
                                 args: cbor::Value,
                             ) -&gt; DispatchResult&lt;cbor::Value, <span class="prelude-ty">Result</span>&lt;cbor::Value, sdk::error::RuntimeError&gt;&gt;
@@ -1082,7 +1082,7 @@
                         }
                         <span class="attr">#[automatically_derived]
                         </span><span class="kw">impl</span>&lt;C: Cfg&gt; MyModule&lt;C&gt; {
-                            <span class="kw">fn </span>query_parameters&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;mut </span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Parameters, &lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Error&gt; {
+                            <span class="kw">fn </span>query_parameters&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;&lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Parameters, &lt;<span class="self">Self </span><span class="kw">as </span>module::Module&gt;::Error&gt; {
                                 <span class="prelude-val">Ok</span>(<span class="self">Self</span>::params())
                             }
                             <span class="attr">#[handler(query = <span class="string">&quot;my_module.MyMC&quot;</span>)]

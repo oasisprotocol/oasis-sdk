@@ -865,12 +865,6 @@
 <a href="#865" id="865">865</a>
 <a href="#866" id="866">866</a>
 <a href="#867" id="867">867</a>
-<a href="#868" id="868">868</a>
-<a href="#869" id="869">869</a>
-<a href="#870" id="870">870</a>
-<a href="#871" id="871">871</a>
-<a href="#872" id="872">872</a>
-<a href="#873" id="873">873</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Smart contracts module.
 </span><span class="attr">#![deny(rust_2018_idioms)]
 #![forbid(unsafe_code)]
@@ -886,15 +880,17 @@
 <span class="kw">use </span>oasis_contract_sdk_types::storage::StoreKind;
 <span class="kw">use </span>oasis_runtime_sdk::{
     <span class="self">self </span><span class="kw">as </span>sdk,
-    context::{Context, TxContext},
+    context::Context,
     core::common::crypto::hash::Hash,
     handler, migration, module,
     module::Module <span class="kw">as _</span>,
     modules,
     modules::{accounts::API <span class="kw">as _</span>, core::API <span class="kw">as _</span>},
     runtime::Runtime,
-    sdk_derive, storage,
-    storage::{CurrentStore, Store},
+    sdk_derive,
+    state::CurrentState,
+    storage,
+    storage::Store,
     types::transaction::CallFormat,
 };
 
@@ -1237,7 +1233,7 @@
 <span class="kw">impl</span>&lt;Cfg: Config&gt; Module&lt;Cfg&gt; {
     <span class="doccomment">/// Loads code information for the specified code identifier.
     </span><span class="kw">fn </span>load_code_info(code_id: types::CodeId) -&gt; <span class="prelude-ty">Result</span>&lt;types::Code, Error&gt; {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>code_info_store =
                 storage::TypedStore::new(storage::PrefixStore::new(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>state::CODE_INFO));
@@ -1251,7 +1247,7 @@
 
     <span class="doccomment">/// Stores specified code information.
     </span><span class="kw">fn </span>store_code_info(code_info: types::Code) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>code_info_store =
                 storage::TypedStore::new(storage::PrefixStore::new(<span class="kw-2">&amp;mut </span>store, <span class="kw-2">&amp;</span>state::CODE_INFO));
@@ -1263,7 +1259,7 @@
 
     <span class="doccomment">/// Loads specified instance information.
     </span><span class="kw">fn </span>load_instance_info(instance_id: types::InstanceId) -&gt; <span class="prelude-ty">Result</span>&lt;types::Instance, Error&gt; {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>instance_info_store = storage::TypedStore::new(storage::PrefixStore::new(
                 <span class="kw-2">&amp;mut </span>store,
@@ -1279,7 +1275,7 @@
 
     <span class="doccomment">/// Stores specified instance information.
     </span><span class="kw">fn </span>store_instance_info(instance_info: types::Instance) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>instance_info_store = storage::TypedStore::new(storage::PrefixStore::new(
                 <span class="kw-2">&amp;mut </span>store,
@@ -1307,12 +1303,12 @@
     }
 
     <span class="attr">#[handler(call = <span class="string">&quot;contracts.Upload&quot;</span>)]
-    </span><span class="kw">pub fn </span>tx_upload&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">pub fn </span>tx_upload&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         body: types::Upload,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::UploadResult, Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
-        <span class="kw">let </span>uploader = ctx.tx_caller_address();
+        <span class="kw">let </span>uploader = CurrentState::with_env(|env| env.tx_caller_address());
 
         <span class="comment">// Validate code size.
         </span><span class="kw">let </span>code_size: u32 = body
@@ -1325,9 +1321,8 @@
         }
 
         <span class="comment">// Account for base gas.
-        </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.tx_upload)<span class="question-mark">?</span>;
+        </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_upload)<span class="question-mark">?</span>;
         &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(
-            ctx,
             params
                 .gas_costs
                 .tx_upload_per_byte
@@ -1345,7 +1340,6 @@
         <span class="comment">// Account for extra gas needed after decompression.
         </span><span class="kw">let </span>plain_code_size: u32 = code.len().try_into().unwrap();
         &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(
-            ctx,
             params
                 .gas_costs
                 .tx_upload_per_byte
@@ -1371,7 +1365,6 @@
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::CodeTooLarge(inst_code_size, params.max_code_size));
         }
         &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(
-            ctx,
             params
                 .gas_costs
                 .tx_upload_per_byte
@@ -1379,7 +1372,7 @@
         )<span class="question-mark">?</span>;
 
         <span class="comment">// Assign next identifier.
-        </span><span class="kw">let </span>id = CurrentStore::with(|store| {
+        </span><span class="kw">let </span>id = CurrentState::with_store(|store| {
             <span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>tstore = storage::TypedStore::new(<span class="kw-2">&amp;mut </span>store);
             <span class="kw">let </span>id: types::CodeId = tstore.get(state::NEXT_CODE_IDENTIFIER).unwrap_or_default();
@@ -1403,14 +1396,14 @@
     }
 
     <span class="attr">#[handler(call = <span class="string">&quot;contracts.Instantiate&quot;</span>)]
-    </span><span class="kw">pub fn </span>tx_instantiate&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">pub fn </span>tx_instantiate&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         body: types::Instantiate,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::InstantiateResult, Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
-        <span class="kw">let </span>creator = ctx.tx_caller_address();
+        <span class="kw">let </span>creator = CurrentState::with_env(|env| env.tx_caller_address());
 
-        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.tx_instantiate)<span class="question-mark">?</span>;
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_instantiate)<span class="question-mark">?</span>;
 
         <span class="kw">if </span>!ctx.should_execute_contracts() {
             <span class="comment">// Only fast checks are allowed.
@@ -1419,11 +1412,11 @@
 
         <span class="comment">// Load code information, enforce instantiation policy and load the code.
         </span><span class="kw">let </span>code_info = <span class="self">Self</span>::load_code_info(body.code_id)<span class="question-mark">?</span>;
-        code_info.instantiate_policy.enforce(ctx)<span class="question-mark">?</span>;
+        code_info.instantiate_policy.enforce(<span class="kw-2">&amp;</span>creator)<span class="question-mark">?</span>;
         <span class="kw">let </span>code = <span class="self">Self</span>::load_code(<span class="kw-2">&amp;</span>code_info)<span class="question-mark">?</span>;
 
         <span class="comment">// Assign next identifier.
-        </span><span class="kw">let </span>id = CurrentStore::with(|store| {
+        </span><span class="kw">let </span>id = CurrentState::with_store(|store| {
             <span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>tstore = storage::TypedStore::new(<span class="kw-2">&amp;mut </span>store);
             <span class="kw">let </span>id: types::InstanceId = tstore
@@ -1444,7 +1437,7 @@
 
         <span class="comment">// Transfer any attached tokens.
         </span><span class="kw">for </span>tokens <span class="kw">in </span><span class="kw-2">&amp;</span>body.tokens {
-            Cfg::Accounts::transfer(ctx, creator, instance_info.address(), tokens)
+            Cfg::Accounts::transfer(creator, instance_info.address(), tokens)
                 .map_err(|<span class="kw">_</span>| Error::InsufficientCallerBalance)<span class="question-mark">?
         </span>}
         <span class="comment">// Run instantiation function.
@@ -1457,10 +1450,10 @@
             <span class="kw-2">&amp;</span>params,
             <span class="kw-2">&amp;</span>code_info,
             <span class="kw-2">&amp;</span>instance_info,
-            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(ctx),
-            ctx.tx_caller_address(),
-            ctx.is_read_only(),
-            ctx.tx_call_format(),
+            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(),
+            creator,
+            CurrentState::with_env(|env| env.is_read_only()),
+            CurrentState::with_env(|env| env.tx_call_format()),
             ctx,
         );
         <span class="kw">let </span>result = wasm::instantiate::&lt;Cfg, C&gt;(<span class="kw-2">&amp;mut </span>exec_ctx, <span class="kw-2">&amp;</span>contract, <span class="kw-2">&amp;</span>body);
@@ -1471,14 +1464,11 @@
     }
 
     <span class="attr">#[handler(call = <span class="string">&quot;contracts.Call&quot;</span>, allow_interactive)]
-    </span><span class="kw">pub fn </span>tx_call&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
-        body: types::Call,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;types::CallResult, Error&gt; {
+    </span><span class="kw">pub fn </span>tx_call&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Call) -&gt; <span class="prelude-ty">Result</span>&lt;types::CallResult, Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
-        <span class="kw">let </span>caller = ctx.tx_caller_address();
+        <span class="kw">let </span>caller = CurrentState::with_env(|env| env.tx_caller_address());
 
-        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.tx_call)<span class="question-mark">?</span>;
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_call)<span class="question-mark">?</span>;
 
         <span class="kw">if </span>!ctx.should_execute_contracts() {
             <span class="comment">// Only fast checks are allowed.
@@ -1492,7 +1482,7 @@
 
         <span class="comment">// Transfer any attached tokens.
         </span><span class="kw">for </span>tokens <span class="kw">in </span><span class="kw-2">&amp;</span>body.tokens {
-            Cfg::Accounts::transfer(ctx, caller, instance_info.address(), tokens)
+            Cfg::Accounts::transfer(caller, instance_info.address(), tokens)
                 .map_err(|<span class="kw">_</span>| Error::InsufficientCallerBalance)<span class="question-mark">?
         </span>}
         <span class="comment">// Run call function.
@@ -1505,10 +1495,10 @@
             <span class="kw-2">&amp;</span>params,
             <span class="kw-2">&amp;</span>code_info,
             <span class="kw-2">&amp;</span>instance_info,
-            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(ctx),
-            ctx.tx_caller_address(),
-            ctx.is_read_only(),
-            ctx.tx_call_format(),
+            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(),
+            caller,
+            CurrentState::with_env(|env| env.is_read_only()),
+            CurrentState::with_env(|env| env.tx_call_format()),
             ctx,
         );
         <span class="kw">let </span>result = wasm::call::&lt;Cfg, C&gt;(<span class="kw-2">&amp;mut </span>exec_ctx, <span class="kw-2">&amp;</span>contract, <span class="kw-2">&amp;</span>body);
@@ -1519,21 +1509,22 @@
     }
 
     <span class="attr">#[handler(call = <span class="string">&quot;contracts.ChangeUpgradePolicy&quot;</span>)]
-    </span><span class="kw">pub fn </span>tx_change_upgrade_policy&lt;C: TxContext&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+    </span><span class="kw">pub fn </span>tx_change_upgrade_policy&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
         body: types::ChangeUpgradePolicy,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
+        <span class="kw">let </span>caller = CurrentState::with_env(|env| env.tx_caller_address());
 
-        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.tx_change_upgrade_policy)<span class="question-mark">?</span>;
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_change_upgrade_policy)<span class="question-mark">?</span>;
 
-        <span class="kw">if </span>ctx.is_check_only() {
+        <span class="kw">if </span>CurrentState::with_env(|env| env.is_check_only()) {
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
         <span class="comment">// Load instance information.
         </span><span class="kw">let </span><span class="kw-2">mut </span>instance_info = <span class="self">Self</span>::load_instance_info(body.id)<span class="question-mark">?</span>;
-        instance_info.upgrades_policy.enforce(ctx)<span class="question-mark">?</span>;
+        instance_info.upgrades_policy.enforce(<span class="kw-2">&amp;</span>caller)<span class="question-mark">?</span>;
 
         <span class="comment">// Change upgrade policy.
         </span>instance_info.upgrades_policy = body.upgrades_policy;
@@ -1543,11 +1534,11 @@
     }
 
     <span class="attr">#[handler(call = <span class="string">&quot;contracts.Upgrade&quot;</span>)]
-    </span><span class="kw">pub fn </span>tx_upgrade&lt;C: TxContext&gt;(ctx: <span class="kw-2">&amp;mut </span>C, body: types::Upgrade) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    </span><span class="kw">pub fn </span>tx_upgrade&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Upgrade) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
-        <span class="kw">let </span>caller = ctx.tx_caller_address();
+        <span class="kw">let </span>caller = CurrentState::with_env(|env| env.tx_caller_address());
 
-        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(ctx, params.gas_costs.tx_upgrade)<span class="question-mark">?</span>;
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_upgrade)<span class="question-mark">?</span>;
 
         <span class="kw">if </span>!ctx.should_execute_contracts() {
             <span class="comment">// Only fast checks are allowed.
@@ -1556,7 +1547,7 @@
 
         <span class="comment">// Load instance information and code.
         </span><span class="kw">let </span><span class="kw-2">mut </span>instance_info = <span class="self">Self</span>::load_instance_info(body.id)<span class="question-mark">?</span>;
-        instance_info.upgrades_policy.enforce(ctx)<span class="question-mark">?</span>;
+        instance_info.upgrades_policy.enforce(<span class="kw-2">&amp;</span>caller)<span class="question-mark">?</span>;
         <span class="kw">if </span>instance_info.code_id == body.code_id {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::CodeAlreadyUpgraded(body.code_id.as_u64()));
         }
@@ -1565,7 +1556,7 @@
 
         <span class="comment">// Transfer any attached tokens.
         </span><span class="kw">for </span>tokens <span class="kw">in </span><span class="kw-2">&amp;</span>body.tokens {
-            Cfg::Accounts::transfer(ctx, caller, instance_info.address(), tokens)
+            Cfg::Accounts::transfer(caller, instance_info.address(), tokens)
                 .map_err(|<span class="kw">_</span>| Error::InsufficientCallerBalance)<span class="question-mark">?
         </span>}
         <span class="comment">// Run pre-upgrade function on the previous contract.
@@ -1578,10 +1569,10 @@
             <span class="kw-2">&amp;</span>params,
             <span class="kw-2">&amp;</span>code_info,
             <span class="kw-2">&amp;</span>instance_info,
-            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(ctx),
-            ctx.tx_caller_address(),
-            ctx.is_read_only(),
-            ctx.tx_call_format(),
+            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(),
+            caller,
+            CurrentState::with_env(|env| env.is_read_only()),
+            CurrentState::with_env(|env| env.tx_call_format()),
             ctx,
         );
         <span class="comment">// Pre-upgrade invocation must succeed for the upgrade to proceed.
@@ -1604,10 +1595,10 @@
             <span class="kw-2">&amp;</span>params,
             <span class="kw-2">&amp;</span>code_info,
             <span class="kw-2">&amp;</span>instance_info,
-            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(ctx),
-            ctx.tx_caller_address(),
-            ctx.is_read_only(),
-            ctx.tx_call_format(),
+            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas(),
+            caller,
+            CurrentState::with_env(|env| env.is_read_only()),
+            CurrentState::with_env(|env| env.tx_call_format()),
             ctx,
         );
 
@@ -1618,16 +1609,13 @@
     }
 
     <span class="attr">#[handler(query = <span class="string">&quot;contracts.Code&quot;</span>)]
-    </span><span class="kw">pub fn </span>query_code&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
-        args: types::CodeQuery,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;types::Code, Error&gt; {
+    </span><span class="kw">pub fn </span>query_code&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, args: types::CodeQuery) -&gt; <span class="prelude-ty">Result</span>&lt;types::Code, Error&gt; {
         <span class="self">Self</span>::load_code_info(args.id)
     }
 
     <span class="attr">#[handler(query = <span class="string">&quot;contracts.CodeStorage&quot;</span>)]
     </span><span class="kw">pub fn </span>query_code_storage&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         args: types::CodeStorageQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::CodeStorageQueryResult, Error&gt; {
         <span class="kw">let </span>code_info = <span class="self">Self</span>::load_code_info(args.id)<span class="question-mark">?</span>;
@@ -1638,7 +1626,7 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;contracts.Instance&quot;</span>)]
     </span><span class="kw">pub fn </span>query_instance&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         args: types::InstanceQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::Instance, Error&gt; {
         <span class="self">Self</span>::load_instance_info(args.id)
@@ -1646,7 +1634,7 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;contracts.InstanceStorage&quot;</span>)]
     </span><span class="kw">pub fn </span>query_instance_storage&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         args: types::InstanceStorageQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::InstanceStorageQueryResult, Error&gt; {
         <span class="kw">let </span>instance_info = <span class="self">Self</span>::load_instance_info(args.id)<span class="question-mark">?</span>;
@@ -1660,7 +1648,7 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;contracts.InstanceRawStorage&quot;</span>, expensive)]
     </span><span class="kw">pub fn </span>query_instance_raw_storage&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         args: types::InstanceRawStorageQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::InstanceRawStorageQueryResult, Error&gt; {
         <span class="kw">let </span>cfg: LocalConfig = ctx.local_config(MODULE_NAME).unwrap_or_default();
@@ -1698,7 +1686,7 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;contracts.PublicKey&quot;</span>)]
     </span><span class="kw">pub fn </span>query_public_key&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;mut </span>C,
+        _ctx: <span class="kw-2">&amp;</span>C,
         _args: types::PublicKeyQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::PublicKeyQueryResult, Error&gt; {
         <span class="prelude-val">Err</span>(Error::Unsupported)
@@ -1706,7 +1694,7 @@
 
     <span class="attr">#[handler(query = <span class="string">&quot;contracts.Custom&quot;</span>, expensive)]
     </span><span class="kw">pub fn </span>query_custom&lt;C: Context&gt;(
-        ctx: <span class="kw-2">&amp;mut </span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         args: types::CustomQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::CustomQueryResult, Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();

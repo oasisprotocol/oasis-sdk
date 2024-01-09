@@ -109,13 +109,18 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Contract storage.
 </span><span class="kw">use </span>oasis_contract_sdk_types::storage::StoreKind;
 <span class="kw">use </span>oasis_runtime_sdk::{
     context::Context,
     dispatcher,
     keymanager::{<span class="self">self</span>, StateKey},
-    storage::{<span class="self">self</span>, CurrentStore, Store},
+    state::CurrentState,
+    storage::{<span class="self">self</span>, Store},
     subcall,
 };
 
@@ -133,7 +138,7 @@
 /// manager are available. In others, an error will be returned describing the
 /// particular key manager failure.
 </span><span class="kw">pub fn </span>with_instance_store&lt;C, F, R&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>C,
+    ctx: <span class="kw-2">&amp;</span>C,
     instance_info: <span class="kw-2">&amp;</span>types::Instance,
     store_kind: StoreKind,
     f: F,
@@ -152,12 +157,15 @@
         <span class="number">0
     </span>};
     <span class="kw">let </span>instance_count: <span class="prelude-ty">Option</span>&lt;usize&gt; = <span class="kw">if let </span>StoreKind::Confidential = store_kind {
-        <span class="kw">let </span>cnt = <span class="kw-2">*</span>ctx
-            .value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
-            .or_default();
-        ctx.value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
-            .set(cnt + <span class="number">1</span>);
-        <span class="prelude-val">Some</span>(cnt)
+        CurrentState::with(|state| {
+            <span class="kw">let </span>cnt = <span class="kw-2">*</span>state
+                .block_value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
+                .or_default();
+            state
+                .block_value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
+                .set(cnt + <span class="number">1</span>);
+            <span class="prelude-val">Some</span>(cnt)
+        })
     } <span class="kw">else </span>{
         <span class="prelude-val">None
     </span>};
@@ -208,7 +216,7 @@
 <span class="kw">where
     </span>F: FnOnce(<span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Store) -&gt; R,
 {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
         <span class="kw">let </span>instance_prefix = instance_info.id.to_storage_key();
         <span class="kw">let </span>contract_state = storage::PrefixStore::new(

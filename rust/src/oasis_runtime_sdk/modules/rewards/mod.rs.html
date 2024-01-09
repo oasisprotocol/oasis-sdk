@@ -228,6 +228,7 @@
 <a href="#228" id="228">228</a>
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Rewards module.
 </span><span class="kw">use </span>std::convert::{TryFrom, TryInto};
 
@@ -243,7 +244,8 @@
     modules::{<span class="self">self</span>, core::API <span class="kw">as _</span>},
     runtime::Runtime,
     sdk_derive,
-    storage::{<span class="self">self</span>, CurrentStore, Store},
+    state::CurrentState,
+    storage::{<span class="self">self</span>, Store},
     types::address::{Address, SignatureAddressSpec},
 };
 
@@ -342,7 +344,7 @@
 
     <span class="attr">#[migration(from = <span class="number">1</span>)]
     </span><span class="kw">fn </span>migrate_v1_to_v2() {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             <span class="comment">// Version 2 removes the LAST_EPOCH storage state which was at 0x01.
             </span><span class="kw">let </span><span class="kw-2">mut </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             store.remove(<span class="kw-2">&amp;</span>[<span class="number">0x01</span>]);
@@ -353,11 +355,11 @@
 <span class="kw">impl</span>&lt;Accounts: modules::accounts::API&gt; module::TransactionHandler <span class="kw">for </span>Module&lt;Accounts&gt; {}
 
 <span class="kw">impl</span>&lt;Accounts: modules::accounts::API&gt; module::BlockHandler <span class="kw">for </span>Module&lt;Accounts&gt; {
-    <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;mut </span>C) {
+    <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) {
         <span class="kw">let </span>epoch = ctx.epoch();
 
         <span class="comment">// Load rewards accumulator for the current epoch.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>rewards: types::EpochRewards = CurrentStore::with(|store| {
+        </span><span class="kw">let </span><span class="kw-2">mut </span>rewards: types::EpochRewards = CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span>epochs =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::REWARDS));
@@ -377,8 +379,8 @@
         }
 
         <span class="comment">// Disburse any rewards for previous epochs when the epoch changes.
-        </span><span class="kw">if </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::has_epoch_changed(ctx) {
-            <span class="kw">let </span>epoch_rewards = CurrentStore::with(|store| {
+        </span><span class="kw">if </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::has_epoch_changed() {
+            <span class="kw">let </span>epoch_rewards = CurrentState::with_store(|store| {
                 <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
                 <span class="kw">let </span><span class="kw-2">mut </span>epochs =
                     storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::REWARDS));
@@ -409,7 +411,7 @@
                     params.participation_threshold_numerator,
                     params.participation_threshold_denominator,
                 ) {
-                    <span class="kw">match </span>Accounts::transfer(ctx, <span class="kw-2">*</span>ADDRESS_REWARD_POOL, address, <span class="kw-2">&amp;</span>reward) {
+                    <span class="kw">match </span>Accounts::transfer(<span class="kw-2">*</span>ADDRESS_REWARD_POOL, address, <span class="kw-2">&amp;</span>reward) {
                         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {}
                         <span class="prelude-val">Err</span>(modules::accounts::Error::InsufficientBalance) =&gt; {
                             <span class="comment">// Since rewards are the same for the whole epoch, if there is not
@@ -424,7 +426,7 @@
         }
 
         <span class="comment">// Update rewards for current epoch.
-        </span>CurrentStore::with(|store| {
+        </span>CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
             <span class="kw">let </span><span class="kw-2">mut </span>epochs =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::REWARDS));
