@@ -22,14 +22,16 @@ Since the Runtime SDK requires a nightly version of the Rust toolchain, you need
 to specify a version to use by creating a special file called
 `rust-toolchain.toml` containing the following information:
 
-![code](../../examples/runtime-sdk/minimal-runtime/rust-toolchain.toml)
+<!-- markdownlint-disable line-length -->
+![code toml](../../examples/runtime-sdk/minimal-runtime/rust-toolchain.toml "rust-toolchain.toml")
+<!-- markdownlint-enable line-length -->
 
 Additionally, due to the requirements of some upstream dependencies, you need to
 configure Cargo to always build with specific target CPU platform features
 (namely AES-NI and SSE3) by creating a `.cargo/config` file with the following
 content:
 
-```toml
+```toml title=".cargo/config"
 [build]
 rustflags = ["-C", "target-feature=+aes,+ssse3"]
 rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
@@ -199,7 +201,7 @@ Now, let's see, if the local network was correctly initialized and the runtime
 is ready:
 
 ```bash
-oasis inspect node-status --network localhost
+oasis network status --network localhost
 ```
 
 If everything is working correctly, you should see the `"status": "ready"`
@@ -229,8 +231,11 @@ Now, let's add `minimal` runtime to the wallet. By default, `oasis-net-runner`
 assigns ID `8000000000000000000000000000000000000000000000000000000000000000`
 to the first provided runtime.
 
-```bash
+```shell
 oasis paratime add localhost minimal 8000000000000000000000000000000000000000000000000000000000000000
+```
+
+```
 ? Description: minimal
 ? Denomination symbol: TEST
 ? Denomination decimal places: 9
@@ -242,8 +247,11 @@ other test users (check the [oasis-sdk testing source] for a complete list).
 You can access the accounts by prepending `test:` literal in front of the test
 user's name, for example `test:alice`.
 
-```bash
-oasis accounts show test:alice --network localhost
+```shell
+oasis account show test:alice --network localhost
+```
+
+```
 Address: oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve
 Nonce: 0
 
@@ -261,8 +269,11 @@ Balances for all denominations:
 Sending some TEST in your runtime should also work. Let's send 0.1 TEST to
 Bob's address.
 
-```bash
-oasis accounts transfer 0.1 test:bob --network localhost --account test:alice 
+```shell
+oasis account transfer 0.1 test:bob --network localhost --account test:alice 
+```
+
+```
 Unlock your account.
 ? Passphrase: 
 You are about to sign the following transaction:
@@ -321,7 +332,7 @@ to submit some transactions and perform queries.
 
 First, create a `tests` directory and move into it, creating a Go module:
 
-```bash
+```shell
 go mod init example.com/oasisprotocol/minimal-runtime-client
 go mod tidy
 ```
@@ -334,13 +345,13 @@ Then create a `test.go` file with the following content:
 
 Fetch the dependencies:
 
-```bash
+```shell
 go get
 ```
 
 And build it:
 
-```bash
+```shell
 go build
 ```
 
@@ -352,7 +363,7 @@ end it will again query and display the final balances of both accounts.
 
 To run the built client do:
 
-```bash
+```shell
 ./minimal-runtime-client
 ```
 
