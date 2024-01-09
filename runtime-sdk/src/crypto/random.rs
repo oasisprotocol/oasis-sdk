@@ -8,7 +8,9 @@ use schnorrkel::keys::{ExpansionMode, Keypair, MiniSecretKey};
 
 use oasis_core_runtime::common::crypto::hash::Hash;
 
-use crate::{context::Context, dispatcher, keymanager::KeyManagerError, modules::core::Error};
+use crate::{
+    context::Context, dispatcher, keymanager::KeyManagerError, modules::core::Error, state::Mode,
+};
 
 /// RNG domain separation context.
 const RNG_CONTEXT: &[u8] = b"oasis-runtime-sdk/crypto: rng v1";
@@ -18,6 +20,7 @@ const VRF_KEY_CONTEXT: &[u8] = b"oasis-runtime-sdk/crypto: root vrf key v1";
 /// A root RNG that can be used to derive domain-separated leaf RNGs.
 pub struct RootRng {
     inner: RefCell<Inner>,
+    mode: Mode,
     valid: bool,
 }
 
@@ -30,12 +33,13 @@ struct Inner {
 
 impl RootRng {
     /// Create a new root RNG.
-    pub fn new() -> Self {
+    pub fn new(mode: Mode) -> Self {
         Self {
             inner: RefCell::new(Inner {
                 transcript: Transcript::new(RNG_CONTEXT),
                 rng: None,
             }),
+            mode,
             valid: true,
         }
     }
@@ -47,11 +51,12 @@ impl RootRng {
                 transcript: Transcript::new(&[]),
                 rng: None,
             }),
+            mode: Mode::Simulate, // Use a "safe" mode even though it will never be used.
             valid: false,
         }
     }
 
-    fn derive_root_vrf_key<C: Context + ?Sized>(ctx: &C) -> Result<Keypair, Error> {
+    fn derive_root_vrf_key<C: Context + ?Sized>(ctx: &C, mode: Mode) -> Result<Keypair, Error> {
         let km = ctx
             .key_manager()
             .ok_or(Error::Abort(dispatcher::Error::KeyManagerFailure(
@@ -60,7 +65,7 @@ impl RootRng {
         let round_header_hash = ctx.runtime_header().encoded_hash();
         let key_id = crate::keymanager::get_key_pair_id([
             VRF_KEY_CONTEXT,
-            &[ctx.mode() as u8],
+            &[mode as u8],
             round_header_hash.as_ref(),
         ]);
         let km_kp = km
@@ -128,7 +133,7 @@ impl RootRng {
         // Ensure the RNG is initialized and initialize it if not.
         if inner.rng.is_none() {
             // Derive the root VRF key for the current block.
-            let root_vrf_key = Self::derive_root_vrf_key(ctx)?;
+            let root_vrf_key = Self::derive_root_vrf_key(ctx, self.mode)?;
 
             // Initialize the root RNG.
             let rng = root_vrf_key
@@ -145,12 +150,6 @@ impl RootRng {
         let rng = rng_builder.finalize(parent_rng);
 
         Ok(LeafRng(rng))
-    }
-}
-
-impl Default for RootRng {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -181,15 +180,15 @@ impl CryptoRng for LeafRng {}
 mod test {
     use super::*;
 
-    use crate::{context::Mode, testing::mock};
+    use crate::{state::Mode, testing::mock};
 
     #[test]
     fn test_rng_basic() {
         let mut mock = mock::Mock::default();
-        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(Mode::ExecuteTx, true);
+        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(true);
 
         // Create first root RNG.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes1 = [0u8; 32];
@@ -202,7 +201,7 @@ mod test {
         assert_ne!(bytes1, bytes1_1, "rng should apply domain separation");
 
         // Create second root RNG using the same context so the ephemeral key is shared.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes2 = [0u8; 32];
@@ -218,7 +217,7 @@ mod test {
         assert_eq!(bytes1_1, bytes2_1, "rng should be deterministic");
 
         // Create third root RNG using the same context, but with different personalization.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
 
         let mut leaf_rng = root_rng
             .fork(&ctx, b"domsep")
@@ -229,7 +228,7 @@ mod test {
         assert_ne!(bytes2, bytes3, "rng should apply domain separation");
 
         // Create another root RNG using the same context, but with different history.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
         root_rng
             .append_tx("0000000000000000000000000000000000000000000000000000000000000001".into());
 
@@ -240,7 +239,7 @@ mod test {
         assert_ne!(bytes2, bytes4, "rng should apply domain separation");
 
         // Create another root RNG using the same context, but with different history.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
         root_rng
             .append_tx("0000000000000000000000000000000000000000000000000000000000000002".into());
 
@@ -251,7 +250,7 @@ mod test {
         assert_ne!(bytes4, bytes5, "rng should apply domain separation");
 
         // Create another root RNG using the same context, but with same history as four.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
         root_rng
             .append_tx("0000000000000000000000000000000000000000000000000000000000000001".into());
 
@@ -262,7 +261,7 @@ mod test {
         assert_eq!(bytes4, bytes6, "rng should be deterministic");
 
         // Create another root RNG using the same context, but with different history.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
         root_rng
             .append_tx("0000000000000000000000000000000000000000000000000000000000000001".into());
         root_rng
@@ -275,7 +274,7 @@ mod test {
         assert_ne!(bytes4, bytes7, "rng should apply domain separation");
 
         // Create another root RNG using the same context, but with different init point.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
         root_rng
             .append_tx("0000000000000000000000000000000000000000000000000000000000000001".into());
         let _ = root_rng.fork(&ctx, &[]).expect("rng fork should work"); // Force init.
@@ -293,9 +292,9 @@ mod test {
     #[test]
     fn test_rng_fail_nonconfidential() {
         let mut mock = mock::Mock::default();
-        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(Mode::ExecuteTx, false);
+        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(false);
 
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
         assert!(
             root_rng.fork(&ctx, &[]).is_err(),
             "rng fork should fail on non-confidential runtimes"
@@ -305,17 +304,17 @@ mod test {
     #[test]
     fn test_rng_local_entropy() {
         let mut mock = mock::Mock::default();
-        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(Mode::ExecuteTx, true);
+        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(true);
 
         // Create first root RNG.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes1 = [0u8; 32];
         leaf_rng.fill_bytes(&mut bytes1);
 
         // Create second root RNG using the same context, but mix in local entropy.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
         root_rng.append_local_entropy();
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
@@ -328,10 +327,10 @@ mod test {
     #[test]
     fn test_rng_parent_fork_propagation() {
         let mut mock = mock::Mock::default();
-        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(Mode::ExecuteTx, true);
+        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(true);
 
         // Create first root RNG.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
 
         let mut leaf_rng = root_rng.fork(&ctx, b"a").expect("rng fork should work");
         let mut bytes1 = [0u8; 32];
@@ -342,7 +341,7 @@ mod test {
         leaf_rng.fill_bytes(&mut bytes1_1);
 
         // Create second root RNG.
-        let root_rng = RootRng::new();
+        let root_rng = RootRng::new(Mode::Execute);
 
         let mut leaf_rng = root_rng.fork(&ctx, b"b").expect("rng fork should work");
         let mut bytes2 = [0u8; 32];
@@ -361,7 +360,7 @@ mod test {
     #[test]
     fn test_rng_invalid() {
         let mut mock = mock::Mock::default();
-        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(Mode::ExecuteTx, true);
+        let ctx = mock.create_ctx_for_runtime::<mock::EmptyRuntime>(true);
 
         let root_rng = RootRng::invalid();
         assert!(

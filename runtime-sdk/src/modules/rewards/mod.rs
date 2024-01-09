@@ -13,7 +13,8 @@ use crate::{
     modules::{self, core::API as _},
     runtime::Runtime,
     sdk_derive,
-    storage::{self, CurrentStore, Store},
+    state::CurrentState,
+    storage::{self, Store},
     types::address::{Address, SignatureAddressSpec},
 };
 
@@ -112,7 +113,7 @@ impl<Accounts: modules::accounts::API> Module<Accounts> {
 
     #[migration(from = 1)]
     fn migrate_v1_to_v2() {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             // Version 2 removes the LAST_EPOCH storage state which was at 0x01.
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             store.remove(&[0x01]);
@@ -123,11 +124,11 @@ impl<Accounts: modules::accounts::API> Module<Accounts> {
 impl<Accounts: modules::accounts::API> module::TransactionHandler for Module<Accounts> {}
 
 impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts> {
-    fn end_block<C: Context>(ctx: &mut C) {
+    fn end_block<C: Context>(ctx: &C) {
         let epoch = ctx.epoch();
 
         // Load rewards accumulator for the current epoch.
-        let mut rewards: types::EpochRewards = CurrentStore::with(|store| {
+        let mut rewards: types::EpochRewards = CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let epochs =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::REWARDS));
@@ -147,8 +148,8 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
         }
 
         // Disburse any rewards for previous epochs when the epoch changes.
-        if <C::Runtime as Runtime>::Core::has_epoch_changed(ctx) {
-            let epoch_rewards = CurrentStore::with(|store| {
+        if <C::Runtime as Runtime>::Core::has_epoch_changed() {
+            let epoch_rewards = CurrentState::with_store(|store| {
                 let store = storage::PrefixStore::new(store, &MODULE_NAME);
                 let mut epochs =
                     storage::TypedStore::new(storage::PrefixStore::new(store, &state::REWARDS));
@@ -179,7 +180,7 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
                     params.participation_threshold_numerator,
                     params.participation_threshold_denominator,
                 ) {
-                    match Accounts::transfer(ctx, *ADDRESS_REWARD_POOL, address, &reward) {
+                    match Accounts::transfer(*ADDRESS_REWARD_POOL, address, &reward) {
                         Ok(_) => {}
                         Err(modules::accounts::Error::InsufficientBalance) => {
                             // Since rewards are the same for the whole epoch, if there is not
@@ -194,7 +195,7 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
         }
 
         // Update rewards for current epoch.
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut epochs =
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::REWARDS));

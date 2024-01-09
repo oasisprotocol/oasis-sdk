@@ -1,7 +1,6 @@
 //! Contracts module types.
 pub use oasis_contract_sdk_types::{CodeId, InstanceId};
 use oasis_runtime_sdk::{
-    context::TxContext,
     core::common::crypto::hash::Hash,
     types::{address::Address, token},
 };
@@ -22,14 +21,13 @@ pub enum Policy {
 }
 
 impl Policy {
-    /// Enforce the given policy by returning an error if the policy is not satisfied by the passed
-    /// transaction context.
-    pub fn enforce<C: TxContext>(&self, ctx: &C) -> Result<(), Error> {
+    /// Enforce the given policy by returning an error if the policy is not satisfied.
+    pub fn enforce(&self, caller: &Address) -> Result<(), Error> {
         match self {
             // Nobody is allowed to perform the action.
             Policy::Nobody => Err(Error::Forbidden),
             // Only the given caller is allowed to perform the action.
-            Policy::Address(address) if address == &ctx.tx_caller_address() => Ok(()),
+            Policy::Address(address) if address == caller => Ok(()),
             Policy::Address(_) => Err(Error::Forbidden),
             // Anyone is allowed to perform the action.
             Policy::Everyone => Ok(()),

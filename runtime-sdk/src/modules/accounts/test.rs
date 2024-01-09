@@ -7,14 +7,16 @@ use std::{
 use anyhow::anyhow;
 
 use crate::{
-    context::{self, BatchContext, Context, TxContext},
+    context::Context,
     handler,
     module::{self, BlockHandler, InvariantHandler, MethodHandler, Module, TransactionHandler},
     modules::{
         core,
         core::{Error as CoreError, Module as Core, API as _},
     },
-    sdk_derive, subcall,
+    sdk_derive,
+    state::{self, CurrentState, Options},
+    subcall,
     testing::{keys, mock},
     types::{
         address::Address,
@@ -81,11 +83,11 @@ impl TestModule {
     type Genesis = ();
 
     #[handler(call = "test.RefundFee")]
-    fn refund_fee<C: TxContext>(ctx: &mut C, fail: bool) -> Result<(), CoreError> {
+    fn refund_fee<C: Context>(_ctx: &C, fail: bool) -> Result<(), CoreError> {
         // Use some gas.
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, 10_000)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(10_000)?;
         // Ask the runtime to refund the rest (even on failures).
-        Accounts::set_refund_unused_tx_fee(ctx, true);
+        Accounts::set_refund_unused_tx_fee(true);
 
         if fail {
             Err(CoreError::Forbidden)
@@ -95,11 +97,11 @@ impl TestModule {
     }
 
     #[handler(call = "test.Subcall")]
-    fn subcall<C: TxContext>(ctx: &mut C, _args: ()) -> Result<(), CoreError> {
+    fn subcall<C: Context>(ctx: &C, _args: ()) -> Result<(), CoreError> {
         // Use some gas.
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, 1_000)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(1_000)?;
 
-        let max_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
+        let max_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas();
         let result = subcall::call(
             ctx,
             subcall::SubcallInfo {
@@ -113,7 +115,7 @@ impl TestModule {
         )?;
 
         // Propagate gas use.
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, result.gas_used)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(result.gas_used)?;
 
         Ok(())
     }
@@ -260,7 +262,7 @@ fn test_init_2() {
 #[test]
 fn test_api_tx_transfer_disabled() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
     Accounts::init(Genesis {
         balances: {
@@ -310,12 +312,13 @@ fn test_api_tx_transfer_disabled() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
     // Try to transfer.
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
         assert!(
             matches!(
-                Accounts::tx_transfer(&mut tx_ctx, cbor::from_value(call.body).unwrap()),
+                Accounts::tx_transfer(&ctx, cbor::from_value(call.body).unwrap()),
                 Err(Error::Forbidden),
             ),
             "transfers are forbidden",
@@ -325,8 +328,7 @@ fn test_api_tx_transfer_disabled() {
 
 #[test]
 fn test_prefetch() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
     let auth_info = transaction::AuthInfo {
         signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -354,8 +356,10 @@ fn test_prefetch() {
         },
         auth_info: auth_info.clone(),
     };
+    let call = tx.call.clone();
+
     // Transfer tokens from one account to the other and check balances.
-    ctx.with_tx(tx.into(), |mut _tx_ctx, call| {
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
         let mut prefixes = BTreeSet::new();
         let result = Accounts::prefetch(&mut prefixes, &call.method, call.body, &auth_info)
             .ok_or(anyhow!("dispatch failure"))
@@ -370,7 +374,7 @@ fn test_prefetch() {
     });
 }
 
-pub(crate) fn init_accounts<C: Context>(_ctx: &mut C) {
+pub(crate) fn init_accounts<C: Context>(_ctx: &C) {
     Accounts::init(Genesis {
         balances: {
             let mut balances = BTreeMap::new();
@@ -402,14 +406,13 @@ pub(crate) fn init_accounts<C: Context>(_ctx: &mut C) {
 #[test]
 fn test_api_transfer() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     // Transfer tokens from one account to the other and check balances.
-    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
+    CurrentState::with_transaction_opts(Options::new().with_tx(mock::transaction().into()), || {
         Accounts::transfer(
-            &mut tx_ctx,
             keys::alice::address(),
             keys::bob::address(),
             &BaseUnits::new(1_000, Denomination::NATIVE),
@@ -417,7 +420,6 @@ fn test_api_transfer() {
         .expect("transfer should succeed");
 
         let result = Accounts::transfer(
-            &mut tx_ctx,
             keys::alice::address(),
             keys::bob::address(),
             &BaseUnits::new(1_000_000, Denomination::NATIVE),
@@ -465,9 +467,9 @@ fn test_api_transfer() {
 #[test]
 fn test_authenticate_tx() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     let mut tx = transaction::Transaction {
         version: 1,
@@ -495,7 +497,7 @@ fn test_authenticate_tx() {
     };
 
     // Should succeed with enough funds to pay for fees.
-    Accounts::authenticate_tx(&mut ctx, &tx).expect("transaction authentication should succeed");
+    Accounts::authenticate_tx(&ctx, &tx).expect("transaction authentication should succeed");
     // Check source account balances.
     let bals = Accounts::get_balances(keys::alice::address()).expect("get_balances should succeed");
     assert_eq!(
@@ -512,26 +514,26 @@ fn test_authenticate_tx() {
     let nonce = Accounts::get_nonce(keys::alice::address()).expect("get_nonce should succeed");
     assert_eq!(nonce, 1, "nonce should be incremented");
     // Check priority.
-    let priority = core::Module::<mock::Config>::take_priority(&mut ctx);
+    let priority = core::Module::<mock::Config>::take_priority();
     assert_eq!(priority, 1, "priority should be equal to gas price");
 
     // Should fail with an invalid nonce.
-    let result = Accounts::authenticate_tx(&mut ctx, &tx);
+    let result = Accounts::authenticate_tx(&ctx, &tx);
     assert!(matches!(result, Err(core::Error::InvalidNonce)));
 
     // Should fail when there's not enough balance to pay fees.
     tx.auth_info.signer_info[0].nonce = nonce;
     tx.auth_info.fee.amount = BaseUnits::new(1_100_000, Denomination::NATIVE);
-    let result = Accounts::authenticate_tx(&mut ctx, &tx);
+    let result = Accounts::authenticate_tx(&ctx, &tx);
     assert!(matches!(result, Err(core::Error::InsufficientFeeBalance)));
 }
 
 #[test]
 fn test_tx_transfer() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -557,10 +559,11 @@ fn test_tx_transfer() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
     // Transfer tokens from one account to the other and check balances.
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        Accounts::tx_transfer(&mut tx_ctx, cbor::from_value(call.body).unwrap())
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        Accounts::tx_transfer(&ctx, cbor::from_value(call.body).unwrap())
             .expect("transfer should succeed");
 
         // Check source account balances.
@@ -603,9 +606,9 @@ fn test_fee_disbursement() {
         keys::charlie::pk_ed25519().into(),
     ];
 
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -634,25 +637,24 @@ fn test_fee_disbursement() {
     };
 
     // Authenticate transaction, fees should be moved to accumulator.
-    Accounts::authenticate_tx(&mut ctx, &tx).expect("transaction authentication should succeed");
-    ctx.with_tx(tx.clone().into(), |mut tx_ctx, _call| {
+    Accounts::authenticate_tx(&ctx, &tx).expect("transaction authentication should succeed");
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
         // Run after call tx handler.
         Accounts::after_handle_call(
-            &mut tx_ctx,
+            &ctx,
             module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
         )
         .expect("after_handle_call should succeed");
-        tx_ctx.commit()
     });
 
     // Run after dispatch hooks.
     Accounts::after_dispatch_tx(
-        &mut ctx,
+        &ctx,
         &tx.auth_info,
         &module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
     );
     // Run end block handler.
-    Accounts::end_block(&mut ctx);
+    Accounts::end_block(&ctx);
 
     // Check source account balances.
     let bals = Accounts::get_balances(keys::alice::address()).expect("get_balances should succeed");
@@ -679,7 +681,7 @@ fn test_fee_disbursement() {
     );
 
     // Simulate another block happening.
-    Accounts::end_block(&mut ctx);
+    Accounts::end_block(&ctx);
 
     // Fees should be removed from the fee accumulator address.
     let bals =
@@ -718,13 +720,13 @@ fn test_fee_disbursement() {
 #[test]
 fn test_query_addresses() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
     let dn = Denomination::NATIVE;
     let d1: Denomination = "den1".parse().unwrap();
 
     let accs = Accounts::query_addresses(
-        &mut ctx,
+        &ctx,
         AddressesQuery {
             denomination: dn.clone(),
         },
@@ -761,25 +763,23 @@ fn test_query_addresses() {
 
     Accounts::init(gen);
 
-    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
-        let accs = Accounts::query_addresses(&mut tx_ctx, AddressesQuery { denomination: d1 })
-            .expect("query accounts should succeed");
-        assert_eq!(accs.len(), 2, "there should be two addresses");
-        assert_eq!(
-            accs,
-            Vec::from_iter([keys::bob::address(), keys::alice::address()]),
-            "addresses should be correct"
-        );
+    let accs = Accounts::query_addresses(&ctx, AddressesQuery { denomination: d1 })
+        .expect("query accounts should succeed");
+    assert_eq!(accs.len(), 2, "there should be two addresses");
+    assert_eq!(
+        accs,
+        Vec::from_iter([keys::bob::address(), keys::alice::address()]),
+        "addresses should be correct"
+    );
 
-        let accs = Accounts::query_addresses(&mut tx_ctx, AddressesQuery { denomination: dn })
-            .expect("query accounts should succeed");
-        assert_eq!(accs.len(), 1, "there should be one address");
-        assert_eq!(
-            accs,
-            Vec::from_iter([keys::alice::address()]),
-            "addresses should be correct"
-        );
-    });
+    let accs = Accounts::query_addresses(&ctx, AddressesQuery { denomination: dn })
+        .expect("query accounts should succeed");
+    assert_eq!(accs.len(), 1, "there should be one address");
+    assert_eq!(
+        accs,
+        Vec::from_iter([keys::alice::address()]),
+        "addresses should be correct"
+    );
 }
 
 #[test]
@@ -952,12 +952,12 @@ fn test_get_all_balances_and_total_supplies_more() {
 #[test]
 fn test_check_invariants_basic() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     assert!(
-        Accounts::check_invariants(&mut ctx).is_ok(),
+        Accounts::check_invariants(&ctx).is_ok(),
         "invariants check should succeed"
     );
 }
@@ -965,7 +965,7 @@ fn test_check_invariants_basic() {
 #[test]
 fn test_check_invariants_more() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
     let dn = Denomination::NATIVE;
     let d1: Denomination = "den1".parse().unwrap();
@@ -1009,7 +1009,7 @@ fn test_check_invariants_more() {
 
     Accounts::init(gen);
     assert!(
-        Accounts::check_invariants(&mut ctx).is_ok(),
+        Accounts::check_invariants(&ctx).is_ok(),
         "initial inv chk should succeed"
     );
 
@@ -1018,7 +1018,7 @@ fn test_check_invariants_more() {
         "giving Charlie money should succeed"
     );
     assert!(
-        Accounts::check_invariants(&mut ctx).is_err(),
+        Accounts::check_invariants(&ctx).is_err(),
         "inv chk 1 should fail"
     );
 
@@ -1027,7 +1027,7 @@ fn test_check_invariants_more() {
         "increasing total supply should succeed"
     );
     assert!(
-        Accounts::check_invariants(&mut ctx).is_ok(),
+        Accounts::check_invariants(&ctx).is_ok(),
         "inv chk 2 should succeed"
     );
 
@@ -1038,7 +1038,7 @@ fn test_check_invariants_more() {
         "giving Charlie more money should succeed"
     );
     assert!(
-        Accounts::check_invariants(&mut ctx).is_err(),
+        Accounts::check_invariants(&ctx).is_err(),
         "inv chk 3 should fail"
     );
 
@@ -1047,7 +1047,7 @@ fn test_check_invariants_more() {
         "increasing total supply should succeed"
     );
     assert!(
-        Accounts::check_invariants(&mut ctx).is_ok(),
+        Accounts::check_invariants(&ctx).is_ok(),
         "inv chk 4 should succeed"
     );
 
@@ -1058,7 +1058,7 @@ fn test_check_invariants_more() {
         "increasing total supply should succeed"
     );
     assert!(
-        Accounts::check_invariants(&mut ctx).is_err(),
+        Accounts::check_invariants(&ctx).is_err(),
         "inv chk 5 should fail"
     );
 
@@ -1067,7 +1067,7 @@ fn test_check_invariants_more() {
         "giving Charlie more money should succeed"
     );
     assert!(
-        Accounts::check_invariants(&mut ctx).is_ok(),
+        Accounts::check_invariants(&ctx).is_ok(),
         "inv chk 6 should succeed"
     );
 }
@@ -1075,44 +1075,43 @@ fn test_check_invariants_more() {
 #[test]
 fn test_fee_manager_normal() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     // Check that Accounts::charge_tx_fee works.
-    ctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
-        Accounts::charge_tx_fee(
-            &mut tx_ctx,
-            keys::alice::address(),
-            &BaseUnits::new(1_000, Denomination::NATIVE),
-        )
-        .expect("charge tx fee should succeed");
+    Accounts::charge_tx_fee(
+        keys::alice::address(),
+        &BaseUnits::new(1_000, Denomination::NATIVE),
+    )
+    .expect("charge tx fee should succeed");
 
-        let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
-            .expect("get_balance should succeed");
-        assert_eq!(ab, 999_000, "balance in source account should be correct");
+    let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
+        .expect("get_balance should succeed");
+    assert_eq!(ab, 999_000, "balance in source account should be correct");
 
-        // Setting the refund request should have no effect.
-        Accounts::set_refund_unused_tx_fee(&mut tx_ctx, true);
+    // Setting the refund request should have no effect.
+    Accounts::set_refund_unused_tx_fee(true);
 
-        let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
-            .expect("get_balance should succeed");
-        assert_eq!(ab, 999_000, "balance in source account should be correct");
-    });
+    let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
+        .expect("get_balance should succeed");
+    assert_eq!(ab, 999_000, "balance in source account should be correct");
 }
 
 #[test]
 fn test_fee_manager_sim() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     // Check that Accounts::charge_tx_fee doesn't do anything in simulation mode.
-    ctx.with_simulation(|mut sctx| {
-        sctx.with_tx(mock::transaction().into(), |mut tx_ctx, _call| {
+    CurrentState::with_transaction_opts(
+        state::Options::new()
+            .with_mode(state::Mode::Simulate)
+            .with_tx(mock::transaction().into()),
+        || {
             Accounts::charge_tx_fee(
-                &mut tx_ctx,
                 keys::alice::address(),
                 &BaseUnits::new(1_000, Denomination::NATIVE),
             )
@@ -1121,16 +1120,16 @@ fn test_fee_manager_sim() {
             let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
                 .expect("get_balance should succeed");
             assert_eq!(ab, 1_000_000, "balance in source account should be correct");
-        });
-    });
+        },
+    );
 }
 
 #[test]
 fn test_get_set_nonce() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     let nonce = Accounts::get_nonce(keys::alice::address()).unwrap();
     assert_eq!(nonce, 0);
@@ -1144,9 +1143,9 @@ fn test_get_set_nonce() {
 #[test]
 fn test_get_set_balance() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     let balance = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE).unwrap();
     assert_eq!(balance, 1_000_000);
@@ -1163,9 +1162,9 @@ fn test_get_set_balance() {
 #[test]
 fn test_get_set_total_supply() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     let ts = Accounts::get_total_supplies().expect("get_total_supplies should succeed");
     assert_eq!(
@@ -1206,12 +1205,12 @@ fn test_get_set_total_supply() {
 #[test]
 fn test_query_denomination_info() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     let di = Accounts::query_denomination_info(
-        &mut ctx,
+        &ctx,
         DenominationInfoQuery {
             denomination: Denomination::NATIVE,
         },
@@ -1221,7 +1220,7 @@ fn test_query_denomination_info() {
 
     // Query for missing info should fail.
     Accounts::query_denomination_info(
-        &mut ctx,
+        &ctx,
         DenominationInfoQuery {
             denomination: "MISSING".parse().unwrap(),
         },
@@ -1232,9 +1231,9 @@ fn test_query_denomination_info() {
 #[test]
 fn test_transaction_expiry() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
-    init_accounts(&mut ctx);
+    init_accounts(&ctx);
 
     let mut tx = transaction::Transaction {
         version: 1,
@@ -1264,37 +1263,37 @@ fn test_transaction_expiry() {
     };
 
     // Authenticate transaction, should be expired.
-    let err = Accounts::authenticate_tx(&mut ctx, &tx).expect_err("tx should be expired (early)");
+    let err = Accounts::authenticate_tx(&ctx, &tx).expect_err("tx should be expired (early)");
     assert!(matches!(err, core::Error::ExpiredTransaction));
 
     // Move the round forward.
     mock.runtime_header.round = 15;
 
     // Authenticate transaction, should succeed.
-    let mut ctx = mock.create_ctx();
-    Accounts::authenticate_tx(&mut ctx, &tx).expect("tx should be valid");
+    let ctx = mock.create_ctx();
+    Accounts::authenticate_tx(&ctx, &tx).expect("tx should be valid");
 
     // Move the round forward and also update the transaction nonce.
     mock.runtime_header.round = 50;
     tx.auth_info.signer_info[0].nonce = 1;
 
     // Authenticate transaction, should be expired.
-    let mut ctx = mock.create_ctx();
-    let err = Accounts::authenticate_tx(&mut ctx, &tx).expect_err("tx should be expired");
+    let ctx = mock.create_ctx();
+    let err = Accounts::authenticate_tx(&ctx, &tx).expect_err("tx should be expired");
     assert!(matches!(err, core::Error::ExpiredTransaction));
 }
 
 #[test]
 fn test_fee_disbursement_2() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
     let mut signer = mock::Signer::new(0, keys::alice::sigspec());
 
-    TestRuntime::migrate(&mut ctx);
+    TestRuntime::migrate(&ctx);
 
     // Do a simple transfer.
     let dispatch_result = signer.call_opts(
-        &mut ctx,
+        &ctx,
         "accounts.Transfer",
         Transfer {
             to: keys::bob::address(),
@@ -1348,15 +1347,15 @@ fn test_fee_disbursement_2() {
 #[test]
 fn test_fee_refund() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
     let mut signer = mock::Signer::new(0, keys::alice::sigspec());
 
-    TestRuntime::migrate(&mut ctx);
+    TestRuntime::migrate(&ctx);
 
     // Test refund on success and failure.
     for fail in [false, true] {
         let dispatch_result = signer.call_opts(
-            &mut ctx,
+            &ctx,
             "test.RefundFee",
             fail,
             mock::CallOptions {
@@ -1404,14 +1403,14 @@ fn test_fee_refund() {
 #[test]
 fn test_fee_refund_subcall() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<TestRuntime>(context::Mode::ExecuteTx, false);
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
     let mut signer = mock::Signer::new(0, keys::alice::sigspec());
 
-    TestRuntime::migrate(&mut ctx);
+    TestRuntime::migrate(&ctx);
 
     // Make sure that having a subcall that refunds fees does not affect the transaction.
     let dispatch_result = signer.call_opts(
-        &mut ctx,
+        &ctx,
         "test.Subcall",
         (),
         mock::CallOptions {

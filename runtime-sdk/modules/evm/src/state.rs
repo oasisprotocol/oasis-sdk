@@ -1,6 +1,7 @@
 use oasis_runtime_sdk::{
     context::Context,
-    storage::{ConfidentialStore, CurrentStore, HashedStore, PrefixStore, Store, TypedStore},
+    state::CurrentState,
+    storage::{ConfidentialStore, HashedStore, PrefixStore, Store, TypedStore},
 };
 
 use crate::{types::H160, Config};
@@ -24,7 +25,7 @@ pub const BLOCK_HASH_WINDOW_SIZE: u64 = 256;
 
 /// Run closure with the store of the provided contract address. Based on configuration this will
 /// be either confidential or public storage.
-pub fn with_storage<Cfg, C, F, R>(ctx: &mut C, address: &H160, f: F) -> R
+pub fn with_storage<Cfg, C, F, R>(ctx: &C, address: &H160, f: F) -> R
 where
     Cfg: Config,
     C: Context,
@@ -42,7 +43,7 @@ pub fn with_public_storage<F, R>(address: &H160, f: F) -> R
 where
     F: FnOnce(&mut TypedStore<&mut dyn Store>) -> R,
 {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         let mut store =
             HashedStore::<_, blake3::Hasher>::new(contract_storage(store, STORAGES, address));
         let mut store = TypedStore::new(&mut store as &mut dyn Store);
@@ -51,7 +52,7 @@ where
 }
 
 /// Run closure with the confidential store of the provided contract address.
-pub fn with_confidential_storage<'a, C, F, R>(ctx: &'a mut C, address: &'a H160, f: F) -> R
+pub fn with_confidential_storage<'a, C, F, R>(ctx: &'a C, address: &'a H160, f: F) -> R
 where
     C: Context,
     F: FnOnce(&mut TypedStore<&mut dyn Store>) -> R,
@@ -70,26 +71,27 @@ where
 
     // These values are used to derive the confidential store nonce:
     let round = ctx.runtime_header().round;
-    let instance_count: usize = {
-        // One Context is used per tx batch, so the instance count will monotonically increase.
-        let cnt = *ctx
-            .value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
+    let instance_count: usize = CurrentState::with(|state| {
+        // One state is used per tx batch, so the instance count will monotonically increase.
+        let cnt = *state
+            .block_value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
             .or_default();
-        ctx.value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
+        state
+            .block_value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
             .set(cnt + 1);
         cnt
-    };
-    let mode = ctx.mode();
+    });
 
-    CurrentStore::with(|store| {
-        let contract_storages = contract_storage(store, CONFIDENTIAL_STORAGES, address);
+    CurrentState::with(|state| {
+        let mode = state.env().mode() as u8;
+        let contract_storages = contract_storage(state.store(), CONFIDENTIAL_STORAGES, address);
         let mut confidential_storages = ConfidentialStore::new_with_key(
             contract_storages,
             confidential_key.0,
             &[
                 round.to_le_bytes().as_slice(),
                 instance_count.to_le_bytes().as_slice(),
-                &[mode as u8],
+                &[mode],
             ],
         );
         let mut store = TypedStore::new(&mut confidential_storages as &mut dyn Store);

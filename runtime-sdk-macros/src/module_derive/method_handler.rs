@@ -111,7 +111,7 @@ impl super::Deriver for DeriveMethodHandler {
                         if h.attrs.is_internal {
                             quote! {
                                 |ctx, body| {
-                                    if !ctx.is_internal() {
+                                    if !sdk::state::CurrentState::with_env(|env| env.is_internal()) {
                                         return Err(sdk::modules::core::Error::Forbidden.into());
                                     }
                                     Self::#ident(ctx, body)
@@ -128,8 +128,8 @@ impl super::Deriver for DeriveMethodHandler {
                 quote! {}
             } else {
                 quote! {
-                    fn dispatch_call<C: TxContext>(
-                        ctx: &mut C,
+                    fn dispatch_call<C: Context>(
+                        ctx: &C,
                         method: &str,
                         body: cbor::Value,
                     ) -> DispatchResult<cbor::Value, CallResult> {
@@ -146,7 +146,7 @@ impl super::Deriver for DeriveMethodHandler {
 
         let query_parameters_impl = {
             quote! {
-                fn query_parameters<C: Context>(_ctx: &mut C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
+                fn query_parameters<C: Context>(_ctx: &C, _args: ()) -> Result<<Self as module::Module>::Parameters, <Self as module::Module>::Error> {
                     Ok(Self::params())
                 }
             }
@@ -158,7 +158,7 @@ impl super::Deriver for DeriveMethodHandler {
             if handler_names.is_empty() {
                 quote! {
                     fn dispatch_query<C: Context>(
-                        ctx: &mut C,
+                        ctx: &C,
                         method: &str,
                         args: cbor::Value,
                     ) -> DispatchResult<cbor::Value, Result<cbor::Value, sdk::error::RuntimeError>> {
@@ -171,7 +171,7 @@ impl super::Deriver for DeriveMethodHandler {
             } else {
                 quote! {
                     fn dispatch_query<C: Context>(
-                        ctx: &mut C,
+                        ctx: &C,
                         method: &str,
                         args: cbor::Value,
                     ) -> DispatchResult<cbor::Value, Result<cbor::Value, sdk::error::RuntimeError>> {
@@ -196,7 +196,7 @@ impl super::Deriver for DeriveMethodHandler {
             } else {
                 quote! {
                     fn dispatch_message_result<C: Context>(
-                        ctx: &mut C,
+                        ctx: &C,
                         handler_name: &str,
                         result: MessageResult,
                     ) -> DispatchResult<MessageResult, ()> {

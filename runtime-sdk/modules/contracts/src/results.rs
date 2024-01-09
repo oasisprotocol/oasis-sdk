@@ -7,10 +7,11 @@ use oasis_contract_sdk_types::{
     ExecutionOk,
 };
 use oasis_runtime_sdk::{
-    context::TxContext,
+    context::Context,
     event::etag_for_event,
     modules::core::API as _,
     runtime::Runtime,
+    state::CurrentState,
     subcall::{self, SubcallInfo},
     types::transaction::CallerAddress,
 };
@@ -22,62 +23,60 @@ use crate::{
 };
 
 /// Process an execution result by performing gas accounting and returning the inner result.
-pub(crate) fn process_execution_result<C: TxContext>(
-    ctx: &mut C,
+pub(crate) fn process_execution_result<C: Context>(
+    _ctx: &C,
     result: ExecutionResult,
 ) -> Result<ExecutionOk, Error> {
     // The following call should never fail as we accounted for all the gas in advance.
-    <C::Runtime as Runtime>::Core::use_tx_gas(ctx, result.gas_used)?;
+    <C::Runtime as Runtime>::Core::use_tx_gas(result.gas_used)?;
 
     result.inner
 }
 
 /// Process a successful execution result.
-pub(crate) fn process_execution_success<Cfg: Config, C: TxContext>(
-    ctx: &mut C,
+pub(crate) fn process_execution_success<Cfg: Config, C: Context>(
+    ctx: &C,
     params: &Parameters,
     contract: &wasm::Contract<'_>,
     result: ExecutionOk,
 ) -> Result<Vec<u8>, Error> {
     // Process events.
-    process_events(ctx, contract, result.events)?;
+    process_events(contract, result.events)?;
     // Process subcalls.
     let result = process_subcalls::<Cfg, C>(ctx, params, contract, result.messages, result.data)?;
 
     Ok(result)
 }
 
-fn process_events<C: TxContext>(
-    ctx: &mut C,
-    contract: &wasm::Contract<'_>,
-    events: Vec<Event>,
-) -> Result<(), Error> {
+fn process_events(contract: &wasm::Contract<'_>, events: Vec<Event>) -> Result<(), Error> {
     // Transform contract events into tags using the SDK scheme.
-    for event in events {
-        ctx.emit_etag(etag_for_event(
-            &if event.module.is_empty() {
-                format!("{}.{}", MODULE_NAME, contract.code_info.id.as_u64())
-            } else {
-                format!(
-                    "{}.{}.{}",
-                    MODULE_NAME,
-                    contract.code_info.id.as_u64(),
-                    event.module,
-                )
-            },
-            event.code,
-            cbor::to_value(ContractEvent {
-                id: contract.instance_info.id,
-                data: event.data,
-            }),
-        ));
-    }
+    CurrentState::with(|state| {
+        for event in events {
+            state.emit_event_raw(etag_for_event(
+                &if event.module.is_empty() {
+                    format!("{}.{}", MODULE_NAME, contract.code_info.id.as_u64())
+                } else {
+                    format!(
+                        "{}.{}.{}",
+                        MODULE_NAME,
+                        contract.code_info.id.as_u64(),
+                        event.module,
+                    )
+                },
+                event.code,
+                cbor::to_value(ContractEvent {
+                    id: contract.instance_info.id,
+                    data: event.data,
+                }),
+            ));
+        }
+    });
 
     Ok(())
 }
 
-fn process_subcalls<Cfg: Config, C: TxContext>(
-    ctx: &mut C,
+fn process_subcalls<Cfg: Config, C: Context>(
+    ctx: &C,
     params: &Parameters,
     contract: &wasm::Contract<'_>,
     messages: Vec<Message>,
@@ -89,7 +88,6 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
 
     // Charge gas for each emitted message.
     <C::Runtime as Runtime>::Core::use_tx_gas(
-        ctx,
         params
             .gas_costs
             .subcall_dispatch
@@ -109,8 +107,8 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
     }
 
     // Properly propagate original call format and read-only flag.
-    let orig_call_format = ctx.tx_call_format();
-    let orig_read_only = ctx.is_read_only();
+    let (orig_call_format, orig_read_only) =
+        CurrentState::with_env(|env| (env.tx_call_format(), env.is_read_only()));
 
     // Process emitted messages recursively.
     for msg in messages {
@@ -124,7 +122,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                 max_gas,
             } => {
                 // Compute the amount of gas that can be used.
-                let remaining_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx);
+                let remaining_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas();
                 let max_gas = max_gas.unwrap_or(remaining_gas);
                 let max_gas = if max_gas > remaining_gas {
                     remaining_gas
@@ -146,16 +144,7 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
 
                 // Use any gas that was used inside the child context. This should never fail as we
                 // preconfigured the amount of available gas.
-                <C::Runtime as Runtime>::Core::use_tx_gas(ctx, result.gas_used)?;
-
-                // Forward any emitted event tags.
-                ctx.emit_etags(result.state.events);
-
-                // Forward any emitted runtime messages.
-                for (msg, hook) in result.state.messages {
-                    // This should never fail as child context has the right limits configured.
-                    ctx.emit_message(msg, hook)?;
-                }
+                <C::Runtime as Runtime>::Core::use_tx_gas(result.gas_used)?;
 
                 // Process replies based on filtering criteria.
                 let result = result.call_result;
@@ -173,8 +162,8 @@ fn process_subcalls<Cfg: Config, C: TxContext>(
                             params,
                             contract.code_info,
                             contract.instance_info,
-                            <C::Runtime as Runtime>::Core::remaining_tx_gas(ctx),
-                            ctx.tx_caller_address(),
+                            <C::Runtime as Runtime>::Core::remaining_tx_gas(),
+                            CurrentState::with_env(|env| env.tx_caller_address()),
                             orig_read_only,
                             orig_call_format,
                             ctx,

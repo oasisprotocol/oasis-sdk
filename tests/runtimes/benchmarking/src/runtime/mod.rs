@@ -4,11 +4,12 @@ use thiserror::Error;
 
 use oasis_runtime_sdk::{
     self as sdk,
-    context::{Context, TxContext},
+    context::Context,
     error, module,
     module::{CallResult, Module as _},
     modules,
     modules::{accounts, core},
+    state::CurrentState,
     storage::Prefix,
     types::transaction::AuthInfo,
 };
@@ -58,23 +59,25 @@ pub struct Module<Accounts: modules::accounts::API> {
 
 // Impls.
 impl<Accounts: modules::accounts::API> Module<Accounts> {
-    fn tx_accounts_mint<C: TxContext>(ctx: &mut C, body: types::AccountsMint) -> Result<(), Error> {
+    fn tx_accounts_mint<C: Context>(_ctx: &C, body: types::AccountsMint) -> Result<(), Error> {
         // XXX: no gas costs atm.
 
-        Accounts::mint(ctx, ctx.tx_caller_address(), &body.amount)?;
+        let caller = CurrentState::with_env(|env| env.tx_caller_address());
+        Accounts::mint(caller, &body.amount)?;
 
         Ok(())
     }
 }
 
 impl<Accounts: modules::accounts::API> Module<Accounts> {
-    fn tx_accounts_transfer<C: TxContext>(
-        ctx: &mut C,
+    fn tx_accounts_transfer<C: Context>(
+        _ctx: &C,
         body: types::AccountsTransfer,
     ) -> Result<(), Error> {
         // XXX: no gas costs atm.
 
-        Accounts::transfer(ctx, ctx.tx_caller_address(), body.to, &body.amount)?;
+        let caller = CurrentState::with_env(|env| env.tx_caller_address());
+        Accounts::transfer(caller, body.to, &body.amount)?;
 
         Ok(())
     }
@@ -166,8 +169,8 @@ impl<Accounts: modules::accounts::API> module::MethodHandler for Module<Accounts
         }
     }
 
-    fn dispatch_call<C: TxContext>(
-        ctx: &mut C,
+    fn dispatch_call<C: Context>(
+        ctx: &C,
         method: &str,
         body: cbor::Value,
     ) -> module::DispatchResult<cbor::Value, CallResult> {
@@ -185,7 +188,7 @@ impl<Accounts: modules::accounts::API> module::MigrationHandler for Module<Accou
     type Genesis = Genesis;
 
     fn init_or_migrate<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         meta: &mut modules::core::types::Metadata,
         genesis: Self::Genesis,
     ) -> bool {

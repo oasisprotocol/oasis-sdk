@@ -4,7 +4,8 @@ use oasis_runtime_sdk::{
     context::Context,
     dispatcher,
     keymanager::{self, StateKey},
-    storage::{self, CurrentStore, Store},
+    state::CurrentState,
+    storage::{self, Store},
     subcall,
 };
 
@@ -22,7 +23,7 @@ const CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT: &str = "contracts.Confident
 /// manager are available. In others, an error will be returned describing the
 /// particular key manager failure.
 pub fn with_instance_store<C, F, R>(
-    ctx: &mut C,
+    ctx: &C,
     instance_info: &types::Instance,
     store_kind: StoreKind,
     f: F,
@@ -41,12 +42,15 @@ where
         0
     };
     let instance_count: Option<usize> = if let StoreKind::Confidential = store_kind {
-        let cnt = *ctx
-            .value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
-            .or_default();
-        ctx.value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
-            .set(cnt + 1);
-        Some(cnt)
+        CurrentState::with(|state| {
+            let cnt = *state
+                .block_value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
+                .or_default();
+            state
+                .block_value(CONTEXT_KEY_CONFIDENTIAL_STORE_INSTANCE_COUNT)
+                .set(cnt + 1);
+            Some(cnt)
+        })
     } else {
         None
     };
@@ -97,7 +101,7 @@ pub fn with_instance_raw_store<F, R>(
 where
     F: FnOnce(&mut dyn Store) -> R,
 {
-    CurrentStore::with(|store| {
+    CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let instance_prefix = instance_info.id.to_storage_key();
         let contract_state = storage::PrefixStore::new(

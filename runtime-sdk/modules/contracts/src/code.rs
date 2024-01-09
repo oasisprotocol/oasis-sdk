@@ -9,7 +9,8 @@ use once_cell::sync::Lazy;
 
 use oasis_runtime_sdk::{
     core::common::crypto::hash::Hash,
-    storage::{self, CurrentStore, Store},
+    state::CurrentState,
+    storage::{self, Store},
 };
 
 use crate::{state, types, Config, Error, Module, MODULE_NAME};
@@ -27,7 +28,7 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // TODO: Support local untrusted cache to avoid storage queries.
-        let code = CurrentStore::with(|store| {
+        let code = CurrentState::with_store(|store| {
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let code_store = storage::PrefixStore::new(&mut store, &state::CODE);
             code_store
@@ -60,7 +61,7 @@ impl<Cfg: Config> Module<Cfg> {
         encoder.write_all(code).unwrap();
         drop(encoder); // Make sure data is flushed.
 
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let mut store = storage::PrefixStore::new(store, &MODULE_NAME);
             let mut code_store = storage::PrefixStore::new(&mut store, &state::CODE);
             code_store.insert(&code_info.id.to_storage_key(), &output);

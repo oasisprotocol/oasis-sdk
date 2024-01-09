@@ -16,7 +16,7 @@ use oasis_core_runtime::{
 };
 
 use crate::{
-    context::BatchContext,
+    context::Context,
     event::IntoTags,
     history,
     module::{BlockHandler, MethodHandler, MigrationHandler},
@@ -24,6 +24,7 @@ use crate::{
         accounts::{Genesis as AccountsGenesis, Module as Accounts, API},
         consensus::{Error as ConsensusError, Module as Consensus},
     },
+    state::{CurrentState, Options, TransactionResult},
     testing::{
         keys,
         mock::{self, EmptyRuntime},
@@ -40,7 +41,7 @@ use super::{
     Module, *,
 };
 
-fn init_accounts_ex<C: BatchContext>(ctx: &mut C, address: Address) {
+fn init_accounts_ex<C: Context>(ctx: &C, address: Address) {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut meta = Default::default();
     let genesis = Default::default();
@@ -70,22 +71,22 @@ fn init_accounts_ex<C: BatchContext>(ctx: &mut C, address: Address) {
     Module::<Accounts, Consensus>::init_or_migrate(ctx, &mut meta, genesis);
 }
 
-fn init_accounts<C: BatchContext>(ctx: &mut C) {
+fn init_accounts<C: Context>(ctx: &C) {
     init_accounts_ex(ctx, keys::alice::address());
 }
 
 #[test]
 fn test_init() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 }
 
 #[test]
 fn test_api_deposit_invalid_denomination() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -114,12 +115,11 @@ fn test_api_deposit_invalid_denomination() {
         },
     };
 
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Module::<Accounts, Consensus>::tx_deposit(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .unwrap_err();
+    let call = tx.call.clone();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result =
+            Module::<Accounts, Consensus>::tx_deposit(&ctx, cbor::from_value(call.body).unwrap())
+                .unwrap_err();
         assert!(matches!(
             result,
             Error::Consensus(ConsensusError::InvalidDenomination)
@@ -130,8 +130,8 @@ fn test_api_deposit_invalid_denomination() {
 #[test]
 fn test_api_deposit_incompatible_signer() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -159,13 +159,12 @@ fn test_api_deposit_incompatible_signer() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Module::<Accounts, Consensus>::tx_deposit(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .unwrap_err();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result =
+            Module::<Accounts, Consensus>::tx_deposit(&ctx, cbor::from_value(call.body).unwrap())
+                .unwrap_err();
         assert!(matches!(
             result,
             Error::Consensus(ConsensusError::ConsensusIncompatibleSigner)
@@ -177,8 +176,8 @@ fn test_api_deposit_incompatible_signer() {
 fn test_api_deposit() {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     let nonce = 123;
     let tx = transaction::Transaction {
@@ -207,17 +206,15 @@ fn test_api_deposit() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    let hook = ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        Module::<Accounts, Consensus>::tx_deposit(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .expect("deposit tx should succeed");
+    let hook = CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        Module::<Accounts, Consensus>::tx_deposit(&ctx, cbor::from_value(call.body).unwrap())
+            .expect("deposit tx should succeed");
 
-        let mut state = tx_ctx.commit();
-        assert_eq!(1, state.messages.len(), "one message should be emitted");
-        let (msg, hook) = state.messages.pop().unwrap();
+        let mut messages = CurrentState::with(|state| state.take_messages());
+        assert_eq!(1, messages.len(), "one message should be emitted");
+        let (msg, hook) = messages.pop().unwrap();
 
         assert_eq!(
             Message::Staking(Versioned::new(
@@ -237,13 +234,13 @@ fn test_api_deposit() {
             "emitted hook should match"
         );
 
-        hook
+        TransactionResult::Commit(hook)
     });
 
     // Simulate the message being processed and make sure withdrawal is successfully completed.
     let me = Default::default();
     Module::<Accounts, Consensus>::message_result_withdraw(
-        &mut ctx,
+        &ctx,
         me,
         cbor::from_value(hook.payload).unwrap(),
     );
@@ -259,8 +256,7 @@ fn test_api_deposit() {
     );
 
     // Make sure events were emitted.
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
+    let tags = CurrentState::with(|state| state.take_events().into_tags());
     assert_eq!(tags.len(), 2, "deposit and mint events should be emitted");
     assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x03"); // accounts.Mint (code = 3) event
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x01"); // consensus_accounts.Deposit (code = 1) event
@@ -290,8 +286,8 @@ fn test_api_deposit() {
 #[test]
 fn test_api_withdraw_invalid_denomination() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -319,13 +315,12 @@ fn test_api_withdraw_invalid_denomination() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Module::<Accounts, Consensus>::tx_withdraw(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .unwrap_err();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result =
+            Module::<Accounts, Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
+                .unwrap_err();
         assert!(matches!(
             result,
             Error::Consensus(ConsensusError::InvalidDenomination)
@@ -336,8 +331,8 @@ fn test_api_withdraw_invalid_denomination() {
 #[test]
 fn test_api_withdraw_insufficient_balance() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -365,13 +360,12 @@ fn test_api_withdraw_insufficient_balance() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Module::<Accounts, Consensus>::tx_withdraw(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .unwrap_err();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result =
+            Module::<Accounts, Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
+                .unwrap_err();
         assert!(matches!(result, Error::InsufficientBalance));
     });
 }
@@ -379,8 +373,8 @@ fn test_api_withdraw_insufficient_balance() {
 #[test]
 fn test_api_withdraw_incompatible_signer() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -406,13 +400,12 @@ fn test_api_withdraw_incompatible_signer() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Module::<Accounts, Consensus>::tx_withdraw(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .unwrap_err();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result =
+            Module::<Accounts, Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
+                .unwrap_err();
         assert!(matches!(
             result,
             Error::Consensus(ConsensusError::ConsensusIncompatibleSigner)
@@ -425,8 +418,8 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
 
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts_ex(&mut ctx, signer_address);
+    let ctx = mock.create_ctx();
+    init_accounts_ex(&ctx, signer_address);
 
     let nonce = 123;
     let tx = transaction::Transaction {
@@ -452,17 +445,16 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    let hook = ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        Module::<Accounts, Consensus>::tx_withdraw(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .expect("withdraw tx should succeed");
+    let hook = CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        Module::<Accounts, Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
+            .expect("withdraw tx should succeed");
 
-        let mut state = tx_ctx.commit();
-        assert_eq!(1, state.messages.len(), "one message should be emitted");
-        let (msg, hook) = state.messages.pop().unwrap();
+        CurrentState::with(|state| state.take_all_events()); // Clear events.
+        let mut messages = CurrentState::with(|state| state.take_messages());
+        assert_eq!(1, messages.len(), "one message should be emitted");
+        let (msg, hook) = messages.pop().unwrap();
 
         assert_eq!(
             Message::Staking(Versioned::new(
@@ -482,7 +474,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
             "emitted hook should match"
         );
 
-        hook
+        TransactionResult::Commit(hook)
     });
 
     // Make sure that withdrawn balance is in the module's pending withdrawal account.
@@ -495,7 +487,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
     // Simulate the message being processed and make sure withdrawal is successfully completed.
     let me = Default::default();
     Module::<Accounts, Consensus>::message_result_transfer(
-        &mut ctx,
+        &ctx,
         me,
         cbor::from_value(hook.payload).unwrap(),
     );
@@ -513,8 +505,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
     );
 
     // Make sure events were emitted.
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
+    let tags = CurrentState::with(|state| state.take_events().into_tags());
     assert_eq!(tags.len(), 2, "withdraw and burn events should be emitted");
     assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x02"); // accounts.Burn (code = 2) event
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x02"); // consensus_accounts.Withdraw (code = 2) event
@@ -554,8 +545,8 @@ fn test_api_withdraw_secp256k1() {
 fn test_api_withdraw_handler_failure() {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     let nonce = 123;
     let tx = transaction::Transaction {
@@ -584,17 +575,15 @@ fn test_api_withdraw_handler_failure() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    let hook = ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        Module::<Accounts, Consensus>::tx_withdraw(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .expect("withdraw tx should succeed");
+    let hook = CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        Module::<Accounts, Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
+            .expect("withdraw tx should succeed");
 
-        let mut state = tx_ctx.commit();
-        assert_eq!(1, state.messages.len(), "one message should be emitted");
-        let (msg, hook) = state.messages.pop().unwrap();
+        let mut messages = CurrentState::with(|state| state.take_messages());
+        assert_eq!(1, messages.len(), "one message should be emitted");
+        let (msg, hook) = messages.pop().unwrap();
 
         assert_eq!(
             Message::Staking(Versioned::new(
@@ -614,7 +603,7 @@ fn test_api_withdraw_handler_failure() {
             "emitted hook should match"
         );
 
-        hook
+        TransactionResult::Commit(hook)
     });
 
     // Make sure that withdrawn balance is in the module's pending withdrawal account.
@@ -632,7 +621,7 @@ fn test_api_withdraw_handler_failure() {
         result: None,
     };
     Module::<Accounts, Consensus>::message_result_transfer(
-        &mut ctx,
+        &ctx,
         me,
         cbor::from_value(hook.payload).unwrap(),
     );
@@ -650,8 +639,7 @@ fn test_api_withdraw_handler_failure() {
     );
 
     // Make sure events were emitted.
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
+    let tags = CurrentState::with(|state| state.take_events().into_tags());
     assert_eq!(
         tags.len(),
         2,
@@ -691,8 +679,8 @@ fn test_api_withdraw_handler_failure() {
 fn test_consensus_withdraw_handler() {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     // Simulate successful event.
     let me = Default::default();
@@ -702,14 +690,14 @@ fn test_consensus_withdraw_handler() {
         address: keys::alice::address(),
         amount: BaseUnits::new(1, denom.clone()),
     };
-    Module::<Accounts, Consensus>::message_result_withdraw(&mut ctx, me, h_ctx);
+    Module::<Accounts, Consensus>::message_result_withdraw(&ctx, me, h_ctx);
 
     // Ensure runtime balance is updated.
     let bals = Accounts::get_balances(keys::alice::address()).unwrap();
     assert_eq!(bals.balances[&denom], 1_001, "alice balance deposited in")
 }
 
-fn perform_delegation<C: BatchContext>(ctx: &mut C, success: bool) -> u64 {
+fn perform_delegation<C: Context>(ctx: &C, success: bool) -> u64 {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let nonce = 123;
     let tx = transaction::Transaction {
@@ -737,17 +725,16 @@ fn perform_delegation<C: BatchContext>(ctx: &mut C, success: bool) -> u64 {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    let hook = ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        Module::<Accounts, Consensus>::tx_delegate(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .expect("delegate tx should succeed");
+    let hook = CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        Module::<Accounts, Consensus>::tx_delegate(ctx, cbor::from_value(call.body).unwrap())
+            .expect("delegate tx should succeed");
 
-        let mut state = tx_ctx.commit();
-        assert_eq!(1, state.messages.len(), "one message should be emitted");
-        let (msg, hook) = state.messages.pop().unwrap();
+        CurrentState::with(|state| state.take_all_events()); // Clear events.
+        let mut messages = CurrentState::with(|state| state.take_messages());
+        assert_eq!(1, messages.len(), "one message should be emitted");
+        let (msg, hook) = messages.pop().unwrap();
 
         assert_eq!(
             Message::Staking(Versioned::new(
@@ -767,7 +754,7 @@ fn perform_delegation<C: BatchContext>(ctx: &mut C, success: bool) -> u64 {
             "emitted hook should match"
         );
 
-        hook
+        TransactionResult::Commit(hook)
     });
 
     // Make sure that delegated balance is in the module's pending delegations account.
@@ -811,10 +798,10 @@ fn perform_delegation<C: BatchContext>(ctx: &mut C, success: bool) -> u64 {
 fn test_api_delegate() {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
-    let nonce = perform_delegation(&mut ctx, true);
+    let nonce = perform_delegation(&ctx, true);
 
     // Ensure runtime balance is updated.
     let balance = Accounts::get_balance(*ADDRESS_PENDING_DELEGATION, denom.clone()).unwrap();
@@ -829,8 +816,7 @@ fn test_api_delegate() {
     );
 
     // Make sure events were emitted.
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
+    let tags = CurrentState::with(|state| state.take_events().into_tags());
     assert_eq!(tags.len(), 2, "delegate and burn events should be emitted");
     assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x02"); // accounts.Burn (code = 2) event
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x03"); // consensus_accounts.Delegate (code = 3) event
@@ -856,9 +842,9 @@ fn test_api_delegate() {
     assert_eq!(event.error, None);
 
     // Test delegation queries.
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
     let di = Module::<Accounts, Consensus>::query_delegation(
-        &mut ctx,
+        &ctx,
         types::DelegationQuery {
             from: keys::alice::address(),
             to: keys::bob::address(),
@@ -868,7 +854,7 @@ fn test_api_delegate() {
     assert_eq!(di.shares, 1_000);
 
     let dis = Module::<Accounts, Consensus>::query_delegations(
-        &mut ctx,
+        &ctx,
         types::DelegationsQuery {
             from: keys::alice::address(),
         },
@@ -882,8 +868,8 @@ fn test_api_delegate() {
 fn test_api_delegate_insufficient_balance() {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -910,13 +896,12 @@ fn test_api_delegate_insufficient_balance() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Module::<Accounts, Consensus>::tx_delegate(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .unwrap_err();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result =
+            Module::<Accounts, Consensus>::tx_delegate(&ctx, cbor::from_value(call.body).unwrap())
+                .unwrap_err();
         assert!(matches!(result, Error::InsufficientBalance));
     });
 }
@@ -925,10 +910,10 @@ fn test_api_delegate_insufficient_balance() {
 fn test_api_delegate_fail() {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
-    perform_delegation(&mut ctx, false);
+    perform_delegation(&ctx, false);
 
     // Ensure runtime balance is updated.
     let balance = Accounts::get_balance(*ADDRESS_PENDING_DELEGATION, denom.clone()).unwrap();
@@ -949,8 +934,7 @@ fn test_api_delegate_fail() {
     );
 
     // Make sure events were emitted.
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
+    let tags = CurrentState::with(|state| state.take_events().into_tags());
     assert_eq!(tags.len(), 2, "delegate and burn events should be emitted");
     assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
     assert_eq!(tags[1].key, b"consensus_accounts\x00\x00\x00\x03"); // consensus_accounts.Delegate (code = 3) event
@@ -960,8 +944,8 @@ fn test_api_delegate_fail() {
 fn test_api_delegate_receipt_not_internal() {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -988,21 +972,17 @@ fn test_api_delegate_receipt_not_internal() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        let result = Module::<Accounts, Consensus>::tx_delegate(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .unwrap_err();
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        let result =
+            Module::<Accounts, Consensus>::tx_delegate(&ctx, cbor::from_value(call.body).unwrap())
+                .unwrap_err();
         assert!(matches!(result, Error::InvalidArgument));
     });
 }
 
-fn perform_undelegation<C: BatchContext>(
-    ctx: &mut C,
-    success: Option<bool>,
-) -> (u64, Option<cbor::Value>) {
+fn perform_undelegation<C: Context>(ctx: &C, success: Option<bool>) -> (u64, Option<cbor::Value>) {
     let rt_address = Address::from_runtime_id(ctx.runtime_id());
     let nonce = 123;
     let tx = transaction::Transaction {
@@ -1030,17 +1010,16 @@ fn perform_undelegation<C: BatchContext>(
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    let hook = ctx.with_tx(tx.into(), |mut tx_ctx, call| {
-        Module::<Accounts, Consensus>::tx_undelegate(
-            &mut tx_ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .expect("undelegate tx should succeed");
+    let hook = CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+        Module::<Accounts, Consensus>::tx_undelegate(ctx, cbor::from_value(call.body).unwrap())
+            .expect("undelegate tx should succeed");
 
-        let mut state = tx_ctx.commit();
-        assert_eq!(1, state.messages.len(), "one message should be emitted");
-        let (msg, hook) = state.messages.pop().unwrap();
+        CurrentState::with(|state| state.take_all_events()); // Clear events.
+        let mut messages = CurrentState::with(|state| state.take_messages());
+        assert_eq!(1, messages.len(), "one message should be emitted");
+        let (msg, hook) = messages.pop().unwrap();
 
         assert_eq!(
             Message::Staking(Versioned::new(
@@ -1060,7 +1039,7 @@ fn perform_undelegation<C: BatchContext>(
             "emitted hook should match"
         );
 
-        hook
+        TransactionResult::Commit(hook)
     });
 
     // Make sure the delegation was updated to remove shares.
@@ -1184,20 +1163,17 @@ struct UndelegateDoneEvent {
 fn test_api_undelegate() {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
-    perform_delegation(&mut ctx, true);
+    perform_delegation(&ctx, true);
+    CurrentState::with(|state| state.take_all_events()); // Clear events.
 
-    ctx.commit();
-    let mut ctx = mock.create_ctx();
-
-    let (nonce, _) = perform_undelegation(&mut ctx, Some(true));
+    let (nonce, _) = perform_undelegation(&ctx, Some(true));
     let rt_address = Address::from_runtime_id(ctx.runtime_id());
 
     // Make sure events were emitted.
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
+    let tags = CurrentState::with(|state| state.take_events().into_tags());
     assert_eq!(tags.len(), 1, "undelegate start event should be emitted");
     assert_eq!(tags[0].key, b"consensus_accounts\x00\x00\x00\x04"); // consensus_accounts.UndelegateStart (code = 4) event
 
@@ -1216,13 +1192,12 @@ fn test_api_undelegate() {
     for epoch in 1..=13 {
         mock.epoch = epoch;
 
-        let mut ctx = mock.create_ctx();
-        <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
-        Module::<Accounts, Consensus>::end_block(&mut ctx);
+        let ctx = mock.create_ctx();
+        <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
+        Module::<Accounts, Consensus>::end_block(&ctx);
 
         // Make sure nothing changes.
-        let state = ctx.commit();
-        let tags = state.events.into_tags();
+        let tags = CurrentState::with(|state| state.take_events().into_tags());
         assert_eq!(tags.len(), 0, "no events should be emitted");
     }
 
@@ -1240,13 +1215,12 @@ fn test_api_undelegate() {
         })],
     });
 
-    let mut ctx = mock.create_ctx();
-    <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
-    Module::<Accounts, Consensus>::end_block(&mut ctx);
+    let ctx = mock.create_ctx();
+    <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
+    Module::<Accounts, Consensus>::end_block(&ctx);
 
     // Make sure events were emitted.
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
+    let tags = CurrentState::with(|state| state.take_events().into_tags());
     assert_eq!(
         tags.len(),
         2,
@@ -1279,8 +1253,8 @@ fn test_api_undelegate() {
 #[test]
 fn test_api_undelegate_insufficient_balance() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -1307,10 +1281,11 @@ fn test_api_undelegate_insufficient_balance() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
         let result = Module::<Accounts, Consensus>::tx_undelegate(
-            &mut tx_ctx,
+            &ctx,
             cbor::from_value(call.body).unwrap(),
         )
         .unwrap_err();
@@ -1321,19 +1296,16 @@ fn test_api_undelegate_insufficient_balance() {
 #[test]
 fn test_api_undelegate_fail() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
-    perform_delegation(&mut ctx, true);
+    perform_delegation(&ctx, true);
+    CurrentState::with(|state| state.take_all_events()); // Clear events.
 
-    ctx.commit();
-    let mut ctx = mock.create_ctx();
-
-    let (nonce, _) = perform_undelegation(&mut ctx, Some(false));
+    let (nonce, _) = perform_undelegation(&ctx, Some(false));
 
     // Make sure events were emitted.
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
+    let tags = CurrentState::with(|state| state.take_events().into_tags());
     assert_eq!(tags.len(), 1, "undelegate start event should be emitted");
     assert_eq!(tags[0].key, b"consensus_accounts\x00\x00\x00\x04"); // consensus_accounts.UndelegateStart (code = 4) event
 
@@ -1352,8 +1324,8 @@ fn test_api_undelegate_fail() {
 #[test]
 fn test_api_undelegate_receipt_not_internal() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
     let tx = transaction::Transaction {
         version: 1,
@@ -1380,10 +1352,11 @@ fn test_api_undelegate_receipt_not_internal() {
             ..Default::default()
         },
     };
+    let call = tx.call.clone();
 
-    ctx.with_tx(tx.into(), |mut tx_ctx, call| {
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
         let result = Module::<Accounts, Consensus>::tx_undelegate(
-            &mut tx_ctx,
+            &ctx,
             cbor::from_value(call.body).unwrap(),
         )
         .unwrap_err();
@@ -1395,13 +1368,11 @@ fn test_api_undelegate_receipt_not_internal() {
 fn test_api_undelegate_suspension() {
     let denom: Denomination = Denomination::from_str("TEST").unwrap();
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
-    init_accounts(&mut ctx);
+    let ctx = mock.create_ctx();
+    init_accounts(&ctx);
 
-    perform_delegation(&mut ctx, true);
-
-    ctx.commit();
-    let mut ctx = mock.create_ctx();
+    perform_delegation(&ctx, true);
+    CurrentState::with(|state| state.take_all_events()); // Clear events.
 
     // Simulate the following scenario:
     //
@@ -1412,12 +1383,11 @@ fn test_api_undelegate_suspension() {
     //   * Runtime resumes, undelegate results processed.
     //
 
-    let (nonce, hook_payload) = perform_undelegation(&mut ctx, None); // Do not process undelegation results.
+    let (nonce, hook_payload) = perform_undelegation(&ctx, None); // Do not process undelegation results.
     let rt_address = Address::from_runtime_id(ctx.runtime_id());
 
     // Make sure no events were emitted.
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
+    let tags = CurrentState::with(|state| state.take_events().into_tags());
     assert!(tags.is_empty(), "no events should be emitted");
 
     // Simulate the runtime resuming and processing both undelegate results and the debonding period
@@ -1436,7 +1406,7 @@ fn test_api_undelegate_suspension() {
         })],
     });
 
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
     // Process undelegation message result.
     let me = MessageEvent {
@@ -1453,18 +1423,17 @@ fn test_api_undelegate_suspension() {
         })),
     };
     Module::<Accounts, Consensus>::message_result_undelegate(
-        &mut ctx,
+        &ctx,
         me,
         cbor::from_value(hook_payload.unwrap()).unwrap(),
     );
 
     // Process block.
-    <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
-    Module::<Accounts, Consensus>::end_block(&mut ctx);
+    <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
+    Module::<Accounts, Consensus>::end_block(&ctx);
 
     // Make sure events were emitted.
-    let state = ctx.commit();
-    let tags = state.events.into_tags();
+    let tags = CurrentState::with(|state| state.take_events().into_tags());
     assert_eq!(
         tags.len(),
         3,
@@ -1508,8 +1477,7 @@ fn test_api_undelegate_suspension() {
 
 #[test]
 fn test_prefetch() {
-    let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let _mock = mock::Mock::default();
 
     let auth_info = transaction::AuthInfo {
         signer_info: vec![transaction::SignerInfo::new_sigspec(
@@ -1540,8 +1508,9 @@ fn test_prefetch() {
         },
         auth_info: auth_info.clone(),
     };
+    let call = tx.call.clone();
     // Withdraw should result in one prefix getting prefetched.
-    ctx.with_tx(tx.into(), |mut _tx_ctx, call| {
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
         let mut prefixes = BTreeSet::new();
         let result = Module::<Accounts, Consensus>::prefetch(
             &mut prefixes,
@@ -1572,8 +1541,9 @@ fn test_prefetch() {
         },
         auth_info: auth_info.clone(),
     };
+    let call = tx.call.clone();
     // Deposit should result in zero prefixes.
-    ctx.with_tx(tx.into(), |mut _tx_ctx, call| {
+    CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
         let mut prefixes = BTreeSet::new();
         let result = Module::<Accounts, Consensus>::prefetch(
             &mut prefixes,

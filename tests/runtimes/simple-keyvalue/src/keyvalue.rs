@@ -6,7 +6,7 @@ use anyhow::{self, Context as _};
 
 use oasis_runtime_sdk::{
     self as sdk,
-    context::{Context, TxContext},
+    context::Context,
     core::common::crypto::hash::Hash,
     error::RuntimeError,
     keymanager::{get_key_pair_id, KeyPair, KeyPairId},
@@ -16,7 +16,8 @@ use oasis_runtime_sdk::{
         core::{Error as CoreError, API as _},
     },
     runtime::Runtime,
-    storage::{ConfidentialStore, CurrentStore, PrefixStore, Store, TypedStore},
+    state::CurrentState,
+    storage::{ConfidentialStore, PrefixStore, Store, TypedStore},
     types::{address, transaction},
 };
 
@@ -102,7 +103,7 @@ impl sdk::module::Module for Module {
 
 impl sdk::module::TransactionHandler for Module {
     fn decode_tx<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         scheme: &str,
         body: &[u8],
     ) -> Result<Option<transaction::Transaction>, CoreError> {
@@ -160,8 +161,8 @@ impl sdk::module::BlockHandler for Module {}
 impl sdk::module::InvariantHandler for Module {}
 
 impl sdk::module::MethodHandler for Module {
-    fn dispatch_call<C: TxContext>(
-        ctx: &mut C,
+    fn dispatch_call<C: Context>(
+        ctx: &C,
         method: &str,
         body: cbor::Value,
     ) -> sdk::module::DispatchResult<cbor::Value, CallResult> {
@@ -183,7 +184,7 @@ impl sdk::module::MethodHandler for Module {
     }
 
     fn dispatch_query<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         method: &str,
         args: cbor::Value,
     ) -> sdk::module::DispatchResult<cbor::Value, Result<cbor::Value, RuntimeError>> {
@@ -197,21 +198,18 @@ impl sdk::module::MethodHandler for Module {
 // Actual implementation of this runtime's externally-callable methods.
 impl Module {
     /// Insert given keyvalue into storage.
-    fn tx_insert<C: TxContext>(ctx: &mut C, body: types::KeyValue) -> Result<(), Error> {
+    fn tx_insert<C: Context>(_ctx: &C, body: types::KeyValue) -> Result<(), Error> {
         let params = Self::params();
 
-        if ctx.is_simulation() {
-            <C::Runtime as Runtime>::Core::use_tx_gas(
-                ctx,
-                max(
-                    params.gas_costs.insert_absent,
-                    params.gas_costs.insert_existing,
-                ),
-            )?;
+        if CurrentState::with_env(|env| env.is_simulation()) {
+            <C::Runtime as Runtime>::Core::use_tx_gas(max(
+                params.gas_costs.insert_absent,
+                params.gas_costs.insert_existing,
+            ))?;
             return Ok(());
         }
 
-        let cost = CurrentStore::with(|store| {
+        let cost = CurrentState::with_store(|store| {
             let mut store = sdk::storage::PrefixStore::new(store, &MODULE_NAME);
             let ts = sdk::storage::TypedStore::new(&mut store);
             match ts.get::<_, Vec<u8>>(body.key.as_slice()) {
@@ -219,39 +217,37 @@ impl Module {
                 Some(_) => params.gas_costs.insert_existing,
             }
         });
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, cost)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(cost)?;
 
-        if ctx.is_check_only() {
+        if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(());
         }
 
         let bc = body.clone();
-        CurrentStore::with(|store| {
-            let mut store = sdk::storage::PrefixStore::new(store, &MODULE_NAME);
+        CurrentState::with(|state| {
+            let mut store = sdk::storage::PrefixStore::new(state.store(), &MODULE_NAME);
             let mut ts = sdk::storage::TypedStore::new(&mut store);
             ts.insert(&body.key, body.value);
+
+            state.emit_event(Event::Insert { kv: bc });
         });
 
-        ctx.emit_event(Event::Insert { kv: bc });
         Ok(())
     }
 
     /// Remove keyvalue from storage using given key.
-    fn tx_remove<C: TxContext>(ctx: &mut C, body: types::Key) -> Result<(), Error> {
+    fn tx_remove<C: Context>(_ctx: &C, body: types::Key) -> Result<(), Error> {
         let params = Self::params();
 
-        if ctx.is_simulation() {
-            <C::Runtime as Runtime>::Core::use_tx_gas(
-                ctx,
-                max(
-                    params.gas_costs.remove_absent,
-                    params.gas_costs.remove_existing,
-                ),
-            )?;
+        if CurrentState::with_env(|env| env.is_simulation()) {
+            <C::Runtime as Runtime>::Core::use_tx_gas(max(
+                params.gas_costs.remove_absent,
+                params.gas_costs.remove_existing,
+            ))?;
             return Ok(());
         }
 
-        let cost = CurrentStore::with(|store| {
+        let cost = CurrentState::with_store(|store| {
             let mut store = sdk::storage::PrefixStore::new(store, &MODULE_NAME);
             let ts = sdk::storage::TypedStore::new(&mut store);
             match ts.get::<_, Vec<u8>>(body.key.as_slice()) {
@@ -259,24 +255,26 @@ impl Module {
                 Some(_) => params.gas_costs.remove_existing,
             }
         });
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, cost)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(cost)?;
 
-        if ctx.is_check_only() {
+        if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(());
         }
 
         let bc = body.clone();
-        CurrentStore::with(|store| {
-            let mut store = sdk::storage::PrefixStore::new(store, &MODULE_NAME);
+        CurrentState::with(|state| {
+            let mut store = sdk::storage::PrefixStore::new(state.store(), &MODULE_NAME);
             let mut ts = sdk::storage::TypedStore::new(&mut store);
             ts.remove(&body.key);
+
+            state.emit_event(Event::Remove { key: bc });
         });
-        ctx.emit_event(Event::Remove { key: bc });
+
         Ok(())
     }
 
-    fn tx_getcreatekey<C: TxContext>(ctx: &mut C, body: types::Key) -> Result<(), Error> {
-        if ctx.is_check_only() || ctx.is_simulation() {
+    fn tx_getcreatekey<C: Context>(ctx: &C, body: types::Key) -> Result<(), Error> {
+        if CurrentState::with_env(|env| !env.is_execute()) {
             return Ok(());
         }
 
@@ -303,7 +301,7 @@ impl Module {
     where
         F: FnOnce(&mut TypedStore<ConfidentialStore<PrefixStore<&mut dyn Store, &&str>>>) -> R,
     {
-        CurrentStore::with(|store| {
+        CurrentState::with_store(|store| {
             let inner_store = PrefixStore::new(store, &MODULE_NAME);
             let confidential_store = ConfidentialStore::new_with_key(
                 inner_store,
@@ -318,10 +316,10 @@ impl Module {
 
     /// Fetch keyvalue from confidential storage using given key.
     fn tx_confidential_get<C: Context>(
-        ctx: &mut C,
+        ctx: &C,
         body: types::ConfidentialKey,
     ) -> Result<types::KeyValue, Error> {
-        if ctx.is_check_only() || ctx.is_simulation() {
+        if CurrentState::with_env(|env| !env.is_execute()) {
             return Ok(types::KeyValue {
                 key: Vec::new(),
                 value: Vec::new(),
@@ -340,24 +338,21 @@ impl Module {
     }
 
     /// Insert given keyvalue into confidential storage.
-    fn tx_confidential_insert<C: TxContext>(
-        ctx: &mut C,
+    fn tx_confidential_insert<C: Context>(
+        ctx: &C,
         body: types::ConfidentialKeyValue,
     ) -> Result<(), Error> {
-        if ctx.is_check_only() {
+        if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(());
         }
 
         let params = Self::params();
 
-        if ctx.is_simulation() {
-            <C::Runtime as Runtime>::Core::use_tx_gas(
-                ctx,
-                max(
-                    params.gas_costs.confidential_insert_absent,
-                    params.gas_costs.confidential_insert_existing,
-                ),
-            )?;
+        if CurrentState::with_env(|env| env.is_simulation()) {
+            <C::Runtime as Runtime>::Core::use_tx_gas(max(
+                params.gas_costs.confidential_insert_absent,
+                params.gas_costs.confidential_insert_existing,
+            ))?;
             return Ok(());
         }
 
@@ -368,41 +363,41 @@ impl Module {
                 Some(_) => params.gas_costs.confidential_insert_existing,
             }
         });
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, cost)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(cost)?;
 
         // Recreate store and ts after we get ctx back
         Self::with_confidential_store(key_pair, |ts| {
             ts.insert(&body.key, body.value.clone());
         });
 
-        ctx.emit_event(Event::Insert {
-            kv: types::KeyValue {
-                key: body.key,
-                value: body.value,
-            },
+        CurrentState::with(|state| {
+            state.emit_event(Event::Insert {
+                kv: types::KeyValue {
+                    key: body.key,
+                    value: body.value,
+                },
+            });
         });
+
         Ok(())
     }
 
     /// Remove keyvalue from confidential storage using given key.
-    fn tx_confidential_remove<C: TxContext>(
-        ctx: &mut C,
+    fn tx_confidential_remove<C: Context>(
+        ctx: &C,
         body: types::ConfidentialKey,
     ) -> Result<(), Error> {
-        if ctx.is_check_only() {
+        if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(());
         }
 
         let params = Self::params();
 
-        if ctx.is_simulation() {
-            <C::Runtime as Runtime>::Core::use_tx_gas(
-                ctx,
-                max(
-                    params.gas_costs.confidential_remove_absent,
-                    params.gas_costs.confidential_remove_existing,
-                ),
-            )?;
+        if CurrentState::with_env(|env| env.is_simulation()) {
+            <C::Runtime as Runtime>::Core::use_tx_gas(max(
+                params.gas_costs.confidential_remove_absent,
+                params.gas_costs.confidential_remove_existing,
+            ))?;
             return Ok(());
         }
 
@@ -413,24 +408,27 @@ impl Module {
                 Some(_) => params.gas_costs.confidential_remove_existing,
             }
         });
-        <C::Runtime as Runtime>::Core::use_tx_gas(ctx, cost)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(cost)?;
 
         // Recreate store and ts after we get ctx back
         Self::with_confidential_store(key_pair, |ts| {
             ts.remove(&body.key);
         });
 
-        ctx.emit_event(Event::Remove {
-            key: types::Key {
-                key: body.key.clone(),
-            },
+        CurrentState::with(|state| {
+            state.emit_event(Event::Remove {
+                key: types::Key {
+                    key: body.key.clone(),
+                },
+            });
         });
+
         Ok(())
     }
 
     /// Fetch keyvalue from storage using given key.
-    fn query_get<C: Context>(_ctx: &mut C, body: types::Key) -> Result<types::KeyValue, Error> {
-        let v: Vec<u8> = CurrentStore::with(|store| {
+    fn query_get<C: Context>(_ctx: &C, body: types::Key) -> Result<types::KeyValue, Error> {
+        let v: Vec<u8> = CurrentState::with_store(|store| {
             let mut store = sdk::storage::PrefixStore::new(store, &MODULE_NAME);
             let ts = sdk::storage::TypedStore::new(&mut store);
             ts.get(body.key.clone()).ok_or(Error::InvalidArgument)
@@ -447,7 +445,7 @@ impl sdk::module::MigrationHandler for Module {
     type Genesis = Genesis;
 
     fn init_or_migrate<C: Context>(
-        _ctx: &mut C,
+        _ctx: &C,
         meta: &mut sdk::modules::core::types::Metadata,
         genesis: Self::Genesis,
     ) -> bool {

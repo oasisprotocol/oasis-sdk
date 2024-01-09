@@ -93,7 +93,7 @@ pub struct Info {
 /// Execution context.
 pub struct ExecutionContext<'ctx, C: Context> {
     /// Transaction context.
-    pub tx_context: &'ctx mut C,
+    pub tx_context: &'ctx C,
     /// Contracts module parameters.
     pub params: &'ctx Parameters,
 
@@ -127,7 +127,7 @@ impl<'ctx, C: Context> ExecutionContext<'ctx, C> {
         caller_address: Address,
         read_only: bool,
         call_format: CallFormat,
-        tx_context: &'ctx mut C,
+        tx_context: &'ctx C,
     ) -> Self {
         Self {
             tx_context,
