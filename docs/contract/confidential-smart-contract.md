@@ -74,7 +74,7 @@ Since the smart contracts store is public, uploading the Wasm code is
 the same as for the non-confidential ones:
 
 ```shell
-oasis contracts upload hello_world.wasm
+oasis contract upload hello_world.wasm
 ```
 
 <!-- markdownlint-disable line-length -->
@@ -86,7 +86,7 @@ oasis contracts upload hello_world.wasm
 
 ## Confidential Instantiation and Calling
 
-To generate an encrypted transaction, the `oasis contracts` subcommand
+To generate an encrypted transaction, the `oasis contract` subcommand
 expects a `--encrypted` flag. The client (`oasis` command in our case) will
 generate and use an ephemeral keypair for encryption. If the original
 transaction was encrypted, the returned transaction result will also be
@@ -122,7 +122,7 @@ instantiate our smart contract above with a single write to the contract state,
 we need to raise the gas limit to `60000`:
 
 ```shell
-oasis contracts instantiate CODEID '{instantiate: {initial_counter: 42}}' --encrypted --gas-limit 60000
+oasis contract instantiate CODEID '{instantiate: {initial_counter: 42}}' --encrypted --gas-limit 400000
 ```
 
 :::danger
@@ -146,7 +146,7 @@ calls - in this case `300,000`.
 Finally, we make a confidential call:
 
 ```shell
-oasis contracts call INSTANCEID '{say_hello: {who: "me"}}' --encrypted --gas-limit 60000
+oasis contract call INSTANCEID '{say_hello: {who: "me"}}' --encrypted --gas-limit 400000
 ```
 
 :::tip Call Format

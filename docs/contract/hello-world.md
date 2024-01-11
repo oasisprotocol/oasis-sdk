@@ -133,7 +133,7 @@ The first deployment step that needs to be performed only once for the given
 binary is uploading the Wasm binary.
 
 ```
-oasis contracts upload hello_world.wasm
+oasis contract upload hello_world.wasm
 ```
 
 After successful execution it will show the code ID that you need to use for any
@@ -143,7 +143,7 @@ arguments. Note that the arguments depend on the contract that is being deployed
 and in our hello world case we are simply taking the initial counter value.
 
 ```
-oasis contracts instantiate CODEID '{instantiate: {initial_counter: 42}}'
+oasis contract instantiate CODEID '{instantiate: {initial_counter: 42}}'
 ```
 
 <!-- TODO: Mention how to send tokens and change the upgrade policy. -->
@@ -152,7 +152,7 @@ After successful execution it shows the instance ID that you need for calling
 the instantiated contract. Next, you can test calling the contract.
 
 ```
-oasis contracts call INSTANCEID '{say_hello: {who: "me"}}'
+oasis contract call INSTANCEID '{say_hello: {who: "me"}}'
 ```
 
 :::info Example
