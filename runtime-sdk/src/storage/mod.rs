@@ -41,6 +41,9 @@ pub trait NestedStore: Store {
 
     /// Whether there are any store updates pending to be committed.
     fn has_pending_updates(&self) -> bool;
+
+    /// Size (in bytes) of any pending updates.
+    fn pending_update_byte_size(&self) -> usize;
 }
 
 impl<S: Store + ?Sized> Store for &mut S {

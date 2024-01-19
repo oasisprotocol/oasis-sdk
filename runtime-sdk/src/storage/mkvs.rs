@@ -50,4 +50,8 @@ impl<M: mkvs::MKVS> NestedStore for MKVSStore<M> {
     fn has_pending_updates(&self) -> bool {
         true
     }
+
+    fn pending_update_byte_size(&self) -> usize {
+        0
+    }
 }

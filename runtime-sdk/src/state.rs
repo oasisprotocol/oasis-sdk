@@ -584,6 +584,14 @@ impl State {
             .unwrap_or_default()
     }
 
+    /// Size (in bytes) of any pending updates in the associated store.
+    pub fn pending_store_update_byte_size(&self) -> usize {
+        self.store
+            .as_ref()
+            .map(|store| store.pending_update_byte_size())
+            .unwrap_or_default()
+    }
+
     /// Random number generator.
     pub fn rng(&mut self) -> &mut RootRng {
         self.rng.as_mut().unwrap()

@@ -5,7 +5,6 @@ use oasis_runtime_sdk::{
     error::Error as _,
     modules,
     modules::core,
-    state::CurrentState,
     testing::mock,
     types::{address::Address, transaction::CallFormat},
 };

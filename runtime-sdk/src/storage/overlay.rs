@@ -50,6 +50,25 @@ impl<S: Store> NestedStore for OverlayStore<S> {
     fn has_pending_updates(&self) -> bool {
         !self.dirty.is_empty()
     }
+
+    fn pending_update_byte_size(&self) -> usize {
+        let updated_size = self
+            .overlay
+            .iter()
+            .map(|(key, value)| key.len() + value.len())
+            .reduce(|acc, bytes| acc + bytes)
+            .unwrap_or_default();
+
+        let removed_size = self
+            .dirty
+            .iter()
+            .filter(|key| !self.overlay.contains_key(key.as_slice()))
+            .map(|key| key.len())
+            .reduce(|acc, bytes| acc + bytes)
+            .unwrap_or_default();
+
+        updated_size.saturating_add(removed_size)
+    }
 }
 
 impl<S: Store> Store for OverlayStore<S> {
