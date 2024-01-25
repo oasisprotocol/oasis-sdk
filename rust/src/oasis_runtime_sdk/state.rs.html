@@ -1588,6 +1588,14 @@
 <a href="#1588" id="1588">1588</a>
 <a href="#1589" id="1589">1589</a>
 <a href="#1590" id="1590">1590</a>
+<a href="#1591" id="1591">1591</a>
+<a href="#1592" id="1592">1592</a>
+<a href="#1593" id="1593">1593</a>
+<a href="#1594" id="1594">1594</a>
+<a href="#1595" id="1595">1595</a>
+<a href="#1596" id="1596">1596</a>
+<a href="#1597" id="1597">1597</a>
+<a href="#1598" id="1598">1598</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     any::Any,
     cell::RefCell,
@@ -2171,6 +2179,14 @@
         <span class="self">self</span>.store
             .as_ref()
             .map(|store| store.has_pending_updates())
+            .unwrap_or_default()
+    }
+
+    <span class="doccomment">/// Size (in bytes) of any pending updates in the associated store.
+    </span><span class="kw">pub fn </span>pending_store_update_byte_size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+        <span class="self">self</span>.store
+            .as_ref()
+            .map(|store| store.pending_update_byte_size())
             .unwrap_or_default()
     }
 

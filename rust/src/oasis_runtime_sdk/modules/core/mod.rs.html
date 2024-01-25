@@ -1223,6 +1223,28 @@
 <a href="#1223" id="1223">1223</a>
 <a href="#1224" id="1224">1224</a>
 <a href="#1225" id="1225">1225</a>
+<a href="#1226" id="1226">1226</a>
+<a href="#1227" id="1227">1227</a>
+<a href="#1228" id="1228">1228</a>
+<a href="#1229" id="1229">1229</a>
+<a href="#1230" id="1230">1230</a>
+<a href="#1231" id="1231">1231</a>
+<a href="#1232" id="1232">1232</a>
+<a href="#1233" id="1233">1233</a>
+<a href="#1234" id="1234">1234</a>
+<a href="#1235" id="1235">1235</a>
+<a href="#1236" id="1236">1236</a>
+<a href="#1237" id="1237">1237</a>
+<a href="#1238" id="1238">1238</a>
+<a href="#1239" id="1239">1239</a>
+<a href="#1240" id="1240">1240</a>
+<a href="#1241" id="1241">1241</a>
+<a href="#1242" id="1242">1242</a>
+<a href="#1243" id="1243">1243</a>
+<a href="#1244" id="1244">1244</a>
+<a href="#1245" id="1245">1245</a>
+<a href="#1246" id="1246">1246</a>
+<a href="#1247" id="1247">1247</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Core definitions module.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
@@ -1449,6 +1471,7 @@
 </span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>GasCosts {
     <span class="kw">pub </span>tx_byte: u64,
+    <span class="kw">pub </span>storage_byte: u64,
 
     <span class="kw">pub </span>auth_signature: u64,
     <span class="kw">pub </span>auth_multisig_signer: u64,
@@ -2333,8 +2356,29 @@
         _ctx: <span class="kw-2">&amp;</span>C,
         result: module::CallResult,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;module::CallResult, Error&gt; {
+        <span class="comment">// Skip handling for internally generated calls.
+        </span><span class="kw">if </span>CurrentState::with_env(|env| env.is_internal()) {
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(result);
+        }
+
+        <span class="comment">// Charge storage update gas cost if this would be greater than the gas use.
+        </span><span class="kw">let </span>params = <span class="self">Self</span>::params();
+        <span class="kw">if </span>params.gas_costs.storage_byte &gt; <span class="number">0 </span>{
+            <span class="kw">let </span>storage_update_bytes =
+                CurrentState::with(|state| state.pending_store_update_byte_size());
+            <span class="kw">let </span>storage_gas = params
+                .gas_costs
+                .storage_byte
+                .saturating_mul(storage_update_bytes <span class="kw">as </span>u64);
+            <span class="kw">let </span>used_gas = <span class="self">Self</span>::used_tx_gas();
+
+            <span class="kw">if </span>storage_gas &gt; used_gas {
+                <span class="self">Self</span>::use_tx_gas(storage_gas - used_gas)<span class="question-mark">?</span>;
+            }
+        }
+
         <span class="comment">// Emit gas used event (if this is not an internally generated call).
-        </span><span class="kw">if </span>Cfg::EMIT_GAS_USED_EVENTS &amp;&amp; !CurrentState::with_env(|env| env.is_internal()) {
+        </span><span class="kw">if </span>Cfg::EMIT_GAS_USED_EVENTS {
             <span class="kw">let </span>used_gas = <span class="self">Self</span>::used_tx_gas();
             CurrentState::with(|state| {
                 state.emit_unconditional_event(Event::GasUsed { amount: used_gas });
