@@ -6,77 +6,10 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
+	sdkTesting "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
-
-func TestResolveAddress(t *testing.T) {
-	require := require.New(t)
-
-	net := config.Network{
-		ParaTimes: config.ParaTimes{
-			All: map[string]*config.ParaTime{
-				"pt1": {
-					ID: "0000000000000000000000000000000000000000000000000000000000000000",
-				},
-			},
-		},
-	}
-
-	for _, tc := range []struct {
-		address         string
-		expectedAddr    string
-		expectedEthAddr string
-	}{
-		{"", "", ""},
-		{"oasis1", "", ""},
-		{"oasis1blah", "", ""},
-		{"oasis1qqzh32kr72v7x55cjnjp2me0pdn579u6as38kacz", "oasis1qqzh32kr72v7x55cjnjp2me0pdn579u6as38kacz", ""},
-		{"0x", "", ""},
-		{"0xblah", "", ""},
-		{"0x60a6321eA71d37102Dbf923AAe2E08d005C4e403", "oasis1qpaqumrpewltmh9mr73hteycfzveus2rvvn8w5sp", "0x60a6321eA71d37102Dbf923AAe2E08d005C4e403"},
-		{"paratime:", "", ""},
-		{"paratime:invalid", "", ""},
-		{"paratime:pt1", "oasis1qqdn25n5a2jtet2s5amc7gmchsqqgs4j0qcg5k0t", ""},
-		{"pool:", "", ""},
-		{"pool:invalid", "", ""},
-		{"pool:rewards", "oasis1qp7x0q9qahahhjas0xde8w0v04ctp4pqzu5mhjav", ""},
-		{"test:alice", "oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve", ""},
-		{"test:dave", "oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt", "0xDce075E1C39b1ae0b75D554558b6451A226ffe00"},
-		{"test:frank", "oasis1qqnf0s9p8z79zfutszt0hwlh7w7jjrfqnq997mlw", ""},
-		{"test:invalid", "", ""},
-		{"invalid:", "", ""},
-	} {
-		addr, ethAddr, err := ResolveAddress(&net, tc.address)
-		if len(tc.expectedAddr) > 0 {
-			require.NoError(err, tc.address)
-			require.EqualValues(tc.expectedAddr, addr.String(), tc.address)
-			if len(tc.expectedEthAddr) > 0 {
-				require.EqualValues(tc.expectedEthAddr, ethAddr.String())
-			}
-		} else {
-			require.Error(err, tc.address)
-		}
-	}
-}
-
-func TestParseTestAccountAddress(t *testing.T) {
-	require := require.New(t)
-
-	for _, tc := range []struct {
-		address  string
-		expected string
-	}{
-		{"test:abc", "abc"},
-		{"testabc", ""},
-		{"testing:abc", ""},
-		{"oasis1qqzh32kr72v7x55cjnjp2me0pdn579u6as38kacz", ""},
-		{"", ""},
-	} {
-		testName := ParseTestAccountAddress(tc.address)
-		require.EqualValues(tc.expected, testName, tc.address)
-	}
-}
 
 func TestEthAddressFromPubKey(t *testing.T) {
 	for _, pk := range []struct {
@@ -90,5 +23,21 @@ func TestEthAddressFromPubKey(t *testing.T) {
 		pubkey := secp256k1.PublicKey{}
 		_ = pubkey.UnmarshalText([]byte(pk.pubkey))
 		require.Equal(t, ethCommon.HexToAddress(pk.address), EthAddressFromPubKey(pubkey))
+	}
+}
+
+func TestResolveEthOrOasisAddress(t *testing.T) {
+	for _, a := range []struct {
+		address       string
+		nativeAddress *types.Address
+		ethAddress    *ethCommon.Address
+	}{
+		{address: "oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve", nativeAddress: &sdkTesting.Alice.Address, ethAddress: nil},
+		{address: "0xDce075E1C39b1ae0b75D554558b6451A226ffe00", nativeAddress: &sdkTesting.Dave.Address, ethAddress: sdkTesting.Dave.EthAddress},
+	} {
+		native, eth, err := ResolveEthOrOasisAddress(a.address)
+		require.NoError(t, err, "ResolveEthOrAddress error")
+		require.Equal(t, native, a.nativeAddress, "ResolveEthOrAddress nativeAddress")
+		require.Equal(t, eth, a.ethAddress, "ResolveEthOrAddress ethAddress")
 	}
 }
