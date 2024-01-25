@@ -1003,12 +1003,7 @@ mod test {
                         max_tx_size: 32 * 1024,
                         max_tx_signers: 1,
                         max_multisig_signers: 8,
-                        gas_costs: core::GasCosts {
-                            tx_byte: 0,
-                            auth_signature: 0,
-                            auth_multisig_signer: 0,
-                            callformat_x25519_deoxysii: 0,
-                        },
+                        gas_costs: Default::default(),
                         min_gas_price: BTreeMap::from([(token::Denomination::NATIVE, 0)]),
                         dynamic_min_gas_price: Default::default(),
                     },

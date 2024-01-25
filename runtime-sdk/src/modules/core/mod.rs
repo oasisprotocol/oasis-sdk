@@ -224,6 +224,7 @@ pub enum Event {
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct GasCosts {
     pub tx_byte: u64,
+    pub storage_byte: u64,
 
     pub auth_signature: u64,
     pub auth_multisig_signer: u64,
@@ -1108,8 +1109,29 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
         _ctx: &C,
         result: module::CallResult,
     ) -> Result<module::CallResult, Error> {
+        // Skip handling for internally generated calls.
+        if CurrentState::with_env(|env| env.is_internal()) {
+            return Ok(result);
+        }
+
+        // Charge storage update gas cost if this would be greater than the gas use.
+        let params = Self::params();
+        if params.gas_costs.storage_byte > 0 {
+            let storage_update_bytes =
+                CurrentState::with(|state| state.pending_store_update_byte_size());
+            let storage_gas = params
+                .gas_costs
+                .storage_byte
+                .saturating_mul(storage_update_bytes as u64);
+            let used_gas = Self::used_tx_gas();
+
+            if storage_gas > used_gas {
+                Self::use_tx_gas(storage_gas - used_gas)?;
+            }
+        }
+
         // Emit gas used event (if this is not an internally generated call).
-        if Cfg::EMIT_GAS_USED_EVENTS && !CurrentState::with_env(|env| env.is_internal()) {
+        if Cfg::EMIT_GAS_USED_EVENTS {
             let used_gas = Self::used_tx_gas();
             CurrentState::with(|state| {
                 state.emit_unconditional_event(Event::GasUsed { amount: used_gas });

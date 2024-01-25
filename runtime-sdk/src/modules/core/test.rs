@@ -204,6 +204,8 @@ impl GasWasterModule {
     const METHOD_WASTE_GAS_CALLER: &'static str = "test.WasteGasCaller";
     const METHOD_SPECIFIC_GAS_REQUIRED: &'static str = "test.SpecificGasRequired";
     const METHOD_SPECIFIC_GAS_REQUIRED_HUGE: &'static str = "test.SpecificGasRequiredHuge";
+    const METHOD_STORAGE_UPDATE: &'static str = "test.StorageUpdate";
+    const METHOD_STORAGE_REMOVE: &'static str = "test.StorageRemove";
 }
 
 #[sdk_derive(Module)]
@@ -296,6 +298,26 @@ impl GasWasterModule {
             Ok(())
         }
     }
+
+    #[handler(call = Self::METHOD_STORAGE_UPDATE)]
+    fn storage_update<C: Context>(
+        _ctx: &C,
+        args: (Vec<u8>, Vec<u8>, u64),
+    ) -> Result<(), <GasWasterModule as module::Module>::Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(args.2)?;
+        CurrentState::with_store(|store| store.insert(&args.0, &args.1));
+        Ok(())
+    }
+
+    #[handler(call = Self::METHOD_STORAGE_REMOVE)]
+    fn storage_remove<C: Context>(
+        _ctx: &C,
+        args: Vec<u8>,
+    ) -> Result<(), <GasWasterModule as module::Module>::Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(2)?;
+        CurrentState::with_store(|store| store.remove(&args));
+        Ok(())
+    }
 }
 
 impl module::BlockHandler for GasWasterModule {}
@@ -339,6 +361,7 @@ impl Runtime for GasWasterRuntime {
                     max_multisig_signers: 8,
                     gas_costs: super::GasCosts {
                         tx_byte: 0,
+                        storage_byte: 0,
                         auth_signature: Self::AUTH_SIGNATURE_GAS,
                         auth_multisig_signer: Self::AUTH_MULTISIG_GAS,
                         callformat_x25519_deoxysii: 0,
@@ -878,6 +901,7 @@ fn test_min_gas_price() {
         max_multisig_signers: 8,
         gas_costs: super::GasCosts {
             tx_byte: 0,
+            storage_byte: 0,
             auth_signature: GasWasterRuntime::AUTH_SIGNATURE_GAS,
             auth_multisig_signer: GasWasterRuntime::AUTH_MULTISIG_GAS,
             callformat_x25519_deoxysii: 0,
@@ -1099,6 +1123,8 @@ fn test_module_info() {
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.WasteGasCaller".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.SpecificGasRequired".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.SpecificGasRequiredHuge".to_string() },
+                            MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.StorageUpdate".to_string() },
+                            MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.StorageRemove".to_string() },
                         ],
                     },
             }
@@ -1156,6 +1182,7 @@ fn test_dynamic_min_gas_price() {
         max_multisig_signers: 8,
         gas_costs: super::GasCosts {
             tx_byte: 0,
+            storage_byte: 0,
             auth_signature: GasWasterRuntime::AUTH_SIGNATURE_GAS,
             auth_multisig_signer: GasWasterRuntime::AUTH_MULTISIG_GAS,
             callformat_x25519_deoxysii: 0,
@@ -1256,4 +1283,96 @@ fn test_dynamic_min_gas_price() {
         Some(1000) // Gas price should decrease to the configured min gas price.
     );
     assert_eq!(Core::min_gas_price(&ctx, &denom), Some(100));
+}
+
+#[test]
+fn test_storage_gas() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
+
+    GasWasterRuntime::migrate(&ctx);
+
+    let storage_byte_cost = 1;
+    Core::set_params(Parameters {
+        max_batch_gas: 10_000,
+        gas_costs: super::GasCosts {
+            tx_byte: 0,
+            storage_byte: storage_byte_cost,
+            ..Default::default()
+        },
+        ..Core::params()
+    });
+
+    let mut signer = mock::Signer::new(0, keys::alice::sigspec());
+
+    let key = b"foo".to_vec();
+    let value = b"bar".to_vec();
+
+    // Insert (non-storage gas smaller than storage gas).
+    let expected_gas_use = (key.len() + value.len()) as u64 * storage_byte_cost;
+    let dispatch_result = signer.call_opts(
+        &ctx,
+        GasWasterModule::METHOD_STORAGE_UPDATE,
+        (key.clone(), value.clone(), 2), // Use 2 extra gas, make sure it is not charged.
+        mock::CallOptions {
+            fee: transaction::Fee {
+                gas: 10_000,
+                ..Default::default()
+            },
+        },
+    );
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    let tags = &dispatch_result.tags;
+    assert_eq!(tags.len(), 1, "one event should have been emitted");
+    assert_eq!(tags[0].key, b"core\x00\x00\x00\x01"); // core.GasUsed (code = 1) event
+
+    #[derive(Debug, Default, cbor::Decode)]
+    struct GasUsedEvent {
+        amount: u64,
+    }
+
+    let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 1); // Just one gas used event.
+    assert_eq!(events[0].amount, expected_gas_use);
+
+    // Insert (non-storage gas larger than storage gas)
+    let expected_gas_use = 42; // No storage gas should be charged.
+    let dispatch_result = signer.call_opts(
+        &ctx,
+        GasWasterModule::METHOD_STORAGE_UPDATE,
+        (key.clone(), value.clone(), 42), // Use 42 extra gas, it should be charged.
+        mock::CallOptions {
+            fee: transaction::Fee {
+                gas: 10_000,
+                ..Default::default()
+            },
+        },
+    );
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    let tags = &dispatch_result.tags;
+    let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 1); // Just one gas used event.
+    assert_eq!(events[0].amount, expected_gas_use);
+
+    // Remove.
+    let expected_gas_use = key.len() as u64 * storage_byte_cost;
+    let dispatch_result = signer.call_opts(
+        &ctx,
+        GasWasterModule::METHOD_STORAGE_REMOVE,
+        key,
+        mock::CallOptions {
+            fee: transaction::Fee {
+                gas: 10_000,
+                ..Default::default()
+            },
+        },
+    );
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    let tags = &dispatch_result.tags;
+    let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 1); // Just one gas used event.
+    assert_eq!(events[0].amount, expected_gas_use);
 }
