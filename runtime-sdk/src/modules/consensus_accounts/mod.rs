@@ -230,10 +230,14 @@ pub struct Module<Accounts: modules::accounts::API, Consensus: modules::consensu
 }
 
 /// Module's address that has the tokens pending withdrawal.
+///
+/// oasis1qr677rv0dcnh7ys4yanlynysvnjtk9gnsyhvm6ln
 pub static ADDRESS_PENDING_WITHDRAWAL: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "pending-withdrawal"));
 
 /// Module's address that has the tokens pending delegation.
+///
+/// oasis1qzcdegtf7aunxr5n5pw7n5xs3u7cmzlz9gwmq49r
 pub static ADDRESS_PENDING_DELEGATION: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "pending-delegation"));
 

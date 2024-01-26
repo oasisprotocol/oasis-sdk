@@ -7,7 +7,7 @@ import (
 )
 
 // RewardPoolAddress is the address of the reward pool.
-var RewardPoolAddress = types.NewAddressForModule("rewards", []byte("reward-pool"))
+var RewardPoolAddress = types.NewAddressForModule(ModuleName, []byte("reward-pool"))
 
 // RewardStep is one of the time periods in the reward schedule.
 type RewardStep struct {
@@ -27,3 +27,6 @@ type Parameters struct {
 	ParticipationThresholdNumerator   uint64 `json:"participation_threshold_numerator"`
 	ParticipationThresholdDenominator uint64 `json:"participation_threshold_denominator"`
 }
+
+// ModuleName is the rewards module name.
+const ModuleName = "rewards"

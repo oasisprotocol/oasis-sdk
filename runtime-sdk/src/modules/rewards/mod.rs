@@ -88,6 +88,8 @@ pub struct Module<Accounts: modules::accounts::API> {
 }
 
 /// Module's address that has the reward pool.
+///
+/// oasis1qp7x0q9qahahhjas0xde8w0v04ctp4pqzu5mhjav
 pub static ADDRESS_REWARD_POOL: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "reward-pool"));
 

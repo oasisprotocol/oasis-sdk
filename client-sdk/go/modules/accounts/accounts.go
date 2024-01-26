@@ -12,9 +12,9 @@ import (
 
 var (
 	// CommonPoolAddress is the address of the internal common pool account in the accounts module.
-	CommonPoolAddress = types.NewAddressForModule("accounts", []byte("common-pool"))
+	CommonPoolAddress = types.NewAddressForModule(ModuleName, []byte("common-pool"))
 	// FeeAccumulatorAddress is the address of the internal fee accumulator account in the accounts module.
-	FeeAccumulatorAddress = types.NewAddressForModule("accounts", []byte("fee-accumulator"))
+	FeeAccumulatorAddress = types.NewAddressForModule(ModuleName, []byte("fee-accumulator"))
 )
 
 var (
