@@ -229,6 +229,8 @@
 <a href="#229" id="229">229</a>
 <a href="#230" id="230">230</a>
 <a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Rewards module.
 </span><span class="kw">use </span>std::convert::{TryFrom, TryInto};
 
@@ -319,6 +321,8 @@
 }
 
 <span class="doccomment">/// Module&#39;s address that has the reward pool.
+///
+/// oasis1qp7x0q9qahahhjas0xde8w0v04ctp4pqzu5mhjav
 </span><span class="kw">pub static </span>ADDRESS_REWARD_POOL: Lazy&lt;Address&gt; =
     Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">&quot;reward-pool&quot;</span>));
 

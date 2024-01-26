@@ -1147,6 +1147,10 @@
 <a href="#1147" id="1147">1147</a>
 <a href="#1148" id="1148">1148</a>
 <a href="#1149" id="1149">1149</a>
+<a href="#1150" id="1150">1150</a>
+<a href="#1151" id="1151">1151</a>
+<a href="#1152" id="1152">1152</a>
+<a href="#1153" id="1153">1153</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Accounts module.
 </span><span class="kw">use </span>std::{
     cmp::Ordering,
@@ -1392,9 +1396,13 @@
 <span class="kw">pub struct </span>Module;
 
 <span class="doccomment">/// Module&#39;s address that has the common pool.
+///
+/// oasis1qz78phkdan64g040cvqvqpwkplfqf6tj6uwcsh30
 </span><span class="kw">pub static </span>ADDRESS_COMMON_POOL: Lazy&lt;Address&gt; =
     Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">&quot;common-pool&quot;</span>));
 <span class="doccomment">/// Module&#39;s address that has the fee accumulator.
+///
+/// oasis1qp3r8hgsnphajmfzfuaa8fhjag7e0yt35cjxq0u4
 </span><span class="kw">pub static </span>ADDRESS_FEE_ACCUMULATOR: Lazy&lt;Address&gt; =
     Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">&quot;fee-accumulator&quot;</span>));
 
