@@ -86,7 +86,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
 
       - name: Prune old ghcr.io/oasisprotocol/oasis-sdk-benchmark images
-        uses: vlaurin/action-ghcr-prune@v0.5.0
+        uses: vlaurin/action-ghcr-prune@v0.6.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           organization: oasisprotocol
