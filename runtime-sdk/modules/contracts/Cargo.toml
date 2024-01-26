@@ -1,7 +1,7 @@
 [package]
 name = "oasis-runtime-sdk-contracts"
 description = "Smart contracts module for the Oasis Runtime SDK."
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
 edition = "2021"
 license = "Apache-2.0"
@@ -13,7 +13,7 @@ oasis-contract-sdk-types = { path = "../../../contract-sdk/types", features = ["
 oasis-runtime-sdk = { path = "../.." }
 
 # Internal Wasm3 bindings.
-wasm3 = { git = "https://github.com/oasisprotocol/wasm3-rs", tag = "v0.3.1" }
+wasm3 = { git = "https://github.com/oasisprotocol/wasm3-rs", tag = "v0.3.2" }
 
 # Third party.
 anyhow = "1.0"
