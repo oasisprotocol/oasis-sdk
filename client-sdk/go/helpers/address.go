@@ -7,68 +7,14 @@ import (
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"golang.org/x/crypto/sha3"
 
-	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/secp256k1"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
-	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 const (
 	addressPrefixOasis = "oasis1"
 	addressPrefixEth   = "0x"
-
-	addressExplicitSeparator = ":"
-	addressExplicitParaTime  = "paratime"
-	addressExplicitPool      = "pool"
-	addressExplicitTest      = "test"
-
-	poolRewards = "rewards"
 )
-
-// ResolveAddress resolves a string address into the corresponding account address.
-func ResolveAddress(net *config.Network, address string) (*types.Address, *ethCommon.Address, error) {
-	if addr, ethAddr, _ := ResolveEthOrOasisAddress(address); addr != nil {
-		return addr, ethAddr, nil
-	}
-
-	switch {
-	case strings.Contains(address, addressExplicitSeparator):
-		subs := strings.SplitN(address, addressExplicitSeparator, 2)
-		switch kind, data := subs[0], subs[1]; kind {
-		case addressExplicitParaTime:
-			// ParaTime.
-			pt := net.ParaTimes.All[data]
-			if pt == nil {
-				return nil, nil, fmt.Errorf("paratime '%s' does not exist", data)
-			}
-
-			addr := types.NewAddressFromConsensus(staking.NewRuntimeAddress(pt.Namespace()))
-			return &addr, nil, nil
-		case addressExplicitPool:
-			// Pool.
-			switch data {
-			case poolRewards:
-				// Reward pool address.
-				return &rewards.RewardPoolAddress, nil, nil
-			default:
-				return nil, nil, fmt.Errorf("unsupported pool kind: %s", data)
-			}
-		case addressExplicitTest:
-			// Test key.
-			if testKey, ok := testing.TestAccounts[data]; ok {
-				return &testKey.Address, testKey.EthAddress, nil
-			}
-			return nil, nil, fmt.Errorf("unsupported test account: %s", data)
-		default:
-			// Unsupported kind.
-			return nil, nil, fmt.Errorf("unsupported explicit address kind: %s", kind)
-		}
-	default:
-		return nil, nil, fmt.Errorf("unsupported address format")
-	}
-}
 
 // ResolveEthOrOasisAddress decodes the given oasis bech32-encoded or ethereum hex-encoded
 // address and returns the corresponding ethereum address object and/or account address.
@@ -92,19 +38,6 @@ func ResolveEthOrOasisAddress(address string) (*types.Address, *ethCommon.Addres
 		return &addr, &ethAddr, nil
 	}
 	return nil, nil, nil
-}
-
-// ParseTestAccountAddress extracts test account name from "test:some_test_account" format or
-// returns an empty string, if the format doesn't match.
-func ParseTestAccountAddress(name string) string {
-	if strings.Contains(name, addressExplicitSeparator) {
-		subs := strings.SplitN(name, addressExplicitSeparator, 2)
-		if subs[0] == addressExplicitTest {
-			return subs[1]
-		}
-	}
-
-	return ""
 }
 
 // EthAddressFromPubKey takes public key, extracts the ethereum address and returns it.

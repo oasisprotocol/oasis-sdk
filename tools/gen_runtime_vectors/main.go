@@ -105,7 +105,7 @@ func main() {
 						// Invalid Deposit: chain_context invalid
 						{testing.Dave.EthAddress.String(), testing.Dave.EthAddress, invalidChainContext, false},
 					} {
-						to, ethTo, _ := helpers.ResolveAddress(nil, t.to)
+						to, ethTo, _ := helpers.ResolveEthOrOasisAddress(t.to)
 						txBody := &consensusaccounts.Deposit{
 							To:     to,
 							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
@@ -139,7 +139,7 @@ func main() {
 						// Valid Withdraw: Frank -> Alice on consensus
 						{testing.Alice.Address.String(), testing.Frank, true},
 					} {
-						to, _, _ := helpers.ResolveAddress(nil, t.to)
+						to, _, _ := helpers.ResolveEthOrOasisAddress(t.to)
 						txBody := &consensusaccounts.Withdraw{
 							To:     to,
 							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
@@ -179,7 +179,7 @@ func main() {
 						// Invalid Transfer: orig_to doesn't match transaction's to
 						{testing.Dave.EthAddress.String(), &unknownEthAddr, testing.Alice, false},
 					} {
-						to, ethTo, _ := helpers.ResolveAddress(nil, t.to)
+						to, ethTo, _ := helpers.ResolveEthOrOasisAddress(t.to)
 						txBody := &accounts.Transfer{
 							To:     *to,
 							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
@@ -207,7 +207,7 @@ func main() {
 						// Invalid Delegate: chain_context invalid
 						{testing.Dave.EthAddress.String(), invalidChainContext, false},
 					} {
-						to, _, _ := helpers.ResolveAddress(nil, t.to)
+						to, _, _ := helpers.ResolveEthOrOasisAddress(t.to)
 						txBody := &consensusaccounts.Delegate{
 							To:     *to,
 							Amount: types.NewBaseUnits(*quantity.NewFromUint64(amt), types.NativeDenomination),
@@ -234,7 +234,7 @@ func main() {
 						// Invalid Undelegate: chain_context invalid
 						{testing.Dave.EthAddress.String(), invalidChainContext, false},
 					} {
-						from, _, _ := helpers.ResolveAddress(nil, t.from)
+						from, _, _ := helpers.ResolveEthOrOasisAddress(t.from)
 						txBody := &consensusaccounts.Undelegate{
 							From:   *from,
 							Shares: *quantity.NewFromUint64(amt),
