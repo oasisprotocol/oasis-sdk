@@ -74,7 +74,7 @@ impl Default for Parameters {
     fn default() -> Self {
         Self {
             gas_costs: Default::default(),
-            consensus_denomination: token::Denomination::from_str("TEST").unwrap(),
+            consensus_denomination: "TEST".parse().unwrap(),
             consensus_scaling_factor: 1,
             min_delegate_amount: 0,
         }

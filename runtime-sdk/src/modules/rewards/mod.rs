@@ -104,11 +104,6 @@ impl<Accounts: modules::accounts::API> Module<Accounts> {
 
     #[migration(init)]
     fn init(genesis: Genesis) {
-        genesis
-            .parameters
-            .validate_basic()
-            .expect("invalid genesis parameters");
-
         // Set genesis parameters.
         Self::set_params(genesis.parameters);
     }

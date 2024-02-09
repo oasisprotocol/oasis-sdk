@@ -69,3 +69,68 @@ impl From<&'static str> for PublicKey {
         PublicKey::from_bytes(&base64::decode(s).unwrap()).unwrap()
     }
 }
+
+/// A memory-backed signer for Sr25519.
+pub struct MemorySigner {
+    kp: schnorrkel::Keypair,
+}
+
+impl MemorySigner {
+    /// Creates a new signer from a seed.
+    pub fn new_from_seed(seed: &[u8]) -> Result<Self, Error> {
+        let sk =
+            schnorrkel::MiniSecretKey::from_bytes(&seed).map_err(|_| Error::InvalidArgument)?;
+        let kp = sk.expand_to_keypair(schnorrkel::keys::ExpansionMode::Ed25519);
+        Ok(Self { kp })
+    }
+
+    /// Generates a new signer deterministically from a test key name string.
+    pub fn new_test(name: &str) -> Self {
+        let mut digest = Sha512Trunc256::new();
+        digest.update(name.as_bytes());
+        let seed = digest.finalize();
+
+        Self::new_from_seed(&seed).unwrap()
+    }
+
+    /// Public key corresponding to the signer.
+    pub fn public(&self) -> PublicKey {
+        PublicKey::from_bytes(&self.kp.public.to_bytes()).unwrap()
+    }
+
+    /// Generates a signature with the private key over the context and message.
+    pub fn context_sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
+        // Convert the context to a Sr25519 SigningContext.
+        let context = schnorrkel::context::SigningContext::new(context);
+
+        // Generate a SigningTranscript from the context, and a pre-hash
+        // of the message.
+        //
+        // Note: This requires using Sha512Trunc256 instead of our hash,
+        // due to the need for FixedOutput.
+        let mut digest = Sha512Trunc256::new();
+        digest.update(message);
+        let transcript = context.hash256(digest);
+
+        let signature = self.kp.sign(transcript);
+
+        Ok(signature.to_bytes().to_vec().into())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_memory_signer() {
+        let signer = MemorySigner::new_test("memory signer test");
+        let ctx = b"oasis-core/test: context";
+        let message = b"this is a message";
+        let signature = signer.context_sign(ctx, message).unwrap();
+        let pk = signer.public();
+
+        pk.verify(ctx, message, &signature)
+            .expect("signature should verify");
+    }
+}

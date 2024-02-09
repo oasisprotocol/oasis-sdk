@@ -31,7 +31,7 @@ use crate::{
     error::{Error as _, RuntimeError},
     event::IntoTags,
     keymanager::{KeyManagerClient, KeyManagerError},
-    module::{self, BlockHandler, MethodHandler, TransactionHandler},
+    module::{self, BlockHandler, InMsgHandler, InMsgResult, MethodHandler, TransactionHandler},
     modules,
     modules::core::API as _,
     runtime::Runtime,
@@ -582,7 +582,7 @@ impl<R: Runtime> Dispatcher<R> {
                 messages,
                 block_tags,
                 tx_reject_hashes: vec![],
-                in_msgs_count: 0, // TODO: Support processing incoming messages.
+                in_msgs_count: 0,
             })
         })
     }
@@ -593,17 +593,63 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
         &self,
         rt_ctx: transaction::Context<'_>,
         batch: &TxnBatch,
-        _in_msgs: &[roothash::IncomingMessage],
+        in_msgs: &[roothash::IncomingMessage],
     ) -> Result<ExecuteBatchResult, RuntimeError> {
-        self.execute_batch_common(
+        let mut in_msgs_count = 0;
+
+        let mut result = self.execute_batch_common(
             rt_ctx,
             |ctx| -> Result<Vec<ExecuteTxResult>, RuntimeError> {
                 // If prefetch limit is set enable prefetch.
                 let prefetch_enabled = R::PREFETCH_LIMIT > 0;
+                let mut results = Vec::with_capacity(batch.len());
 
+                // Process incoming messages first.
+                let mut batch_it = batch.iter();
+                'inmsg: for in_msg in in_msgs {
+                    match R::IncomingMessagesHandler::process_in_msg(ctx, &in_msg) {
+                        InMsgResult::Skip => {
+                            // Skip, but treat as processed.
+                            in_msgs_count += 1;
+                        }
+                        InMsgResult::Execute(raw_tx, tx) => {
+                            // Verify that the transaction has been included in the batch.
+                            match batch_it.next() {
+                                None => {
+                                    // Nothing in the batch when there should be an incoming message.
+                                    return Err(Error::MalformedTransactionInBatch(anyhow!(
+                                        "missing incoming message"
+                                    ))
+                                    .into());
+                                }
+                                Some(batch_tx) if batch_tx != raw_tx => {
+                                    // Incoming message does not match what is in the batch.
+                                    return Err(Error::MalformedTransactionInBatch(anyhow!(
+                                        "mismatched incoming message"
+                                    ))
+                                    .into());
+                                }
+                                _ => {
+                                    // Everything is ok.
+                                }
+                            }
+
+                            // Further execute the inner transaction. The transaction has already
+                            // passed checks so it is ok to include in a block.
+                            let tx_size = raw_tx.len().try_into().unwrap();
+                            let index = results.len();
+                            results.push(Self::execute_tx(ctx, tx_size, tx, index)?);
+
+                            in_msgs_count += 1;
+                        }
+                        InMsgResult::Stop => break 'inmsg,
+                    }
+                }
+
+                let inmsg_txs = results.len();
                 let mut txs = Vec::with_capacity(batch.len());
                 let mut prefixes: BTreeSet<Prefix> = BTreeSet::new();
-                for tx in batch.iter() {
+                for tx in batch.iter().skip(inmsg_txs) {
                     let tx_size = tx.len().try_into().map_err(|_| {
                         Error::MalformedTransactionInBatch(anyhow!("transaction too large"))
                     })?;
@@ -629,23 +675,29 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
 
                 // Execute the batch.
                 let mut results = Vec::with_capacity(batch.len());
-                for (index, (tx_size, tx_hash, tx)) in txs.into_iter().enumerate() {
+                for (index, (tx_size, tx_hash, tx)) in txs.into_iter().skip(inmsg_txs).enumerate() {
                     results.push(Self::execute_tx(ctx, tx_size, tx_hash, tx, index)?);
                 }
 
                 Ok(results)
             },
-        )
+        )?;
+
+        // Include number of processed incoming messages in the final result.
+        result.in_msgs_count = in_msgs_count;
+
+        Ok(result)
     }
 
     fn schedule_and_execute_batch(
         &self,
         rt_ctx: transaction::Context<'_>,
         batch: &mut TxnBatch,
-        _in_msgs: &[roothash::IncomingMessage],
+        in_msgs: &[roothash::IncomingMessage],
     ) -> Result<ExecuteBatchResult, RuntimeError> {
         let cfg = R::SCHEDULE_CONTROL;
         let mut tx_reject_hashes = Vec::new();
+        let mut in_msgs_count = 0;
 
         let mut result = self.execute_batch_common(
             rt_ctx,
@@ -655,13 +707,35 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                 // The idea is to keep scheduling transactions as long as we have some space
                 // available in the block as determined by gas use.
                 let mut new_batch = Vec::new();
-                let mut results = Vec::with_capacity(batch.len());
+                let mut results = Vec::with_capacity(in_msgs.len() + batch.len());
                 let mut requested_batch_len = cfg.initial_batch_size;
+
+                // Process incoming messages first.
+                'inmsg: for in_msg in in_msgs {
+                    match R::IncomingMessagesHandler::process_in_msg(ctx, &in_msg) {
+                        InMsgResult::Skip => {
+                            // Skip, but treat as processed.
+                            in_msgs_count += 1;
+                        }
+                        InMsgResult::Execute(raw_tx, tx) => {
+                            // Further execute the inner transaction. The transaction has already
+                            // passed checks so it is ok to include in a block.
+                            let tx_size = raw_tx.len().try_into().unwrap();
+                            let index = new_batch.len();
+                            new_batch.push(raw_tx.to_owned());
+                            results.push(Self::execute_tx(ctx, tx_size, tx, index)?);
+
+                            in_msgs_count += 1;
+                        }
+                        InMsgResult::Stop => break 'inmsg,
+                    }
+                }
+
+                // Process regular transactions.
                 'batch: loop {
                     // Remember length of last batch.
                     let last_batch_len = batch.len();
                     let last_batch_tx_hash = batch.last().map(|raw_tx| Hash::digest_bytes(raw_tx));
-
                     for raw_tx in batch.drain(..) {
                         // If we don't have enough gas for processing even the cheapest transaction
                         // we are done. Same if we reached the runtime-imposed maximum tx count.
@@ -774,8 +848,10 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
             },
         )?;
 
-        // Include rejected transaction hashes in the final result.
+        // Include rejected transaction hashes and number of processed incoming messages in the
+        // final result.
         result.tx_reject_hashes = tx_reject_hashes;
+        result.in_msgs_count = in_msgs_count;
 
         Ok(result)
     }
@@ -1000,6 +1076,7 @@ mod test {
                 core::Genesis {
                     parameters: core::Parameters {
                         max_batch_gas: u64::MAX,
+                        max_inmsg_gas: 0,
                         max_tx_size: 32 * 1024,
                         max_tx_signers: 1,
                         max_multisig_signers: 8,

@@ -9,6 +9,7 @@ use impl_trait_for_tuples::impl_for_tuples;
 
 use crate::{
     context::Context,
+    core::consensus::roothash,
     dispatcher, error,
     error::Error as _,
     event, modules,
@@ -562,6 +563,39 @@ impl ModuleInfoHandler for Tuple {
     }
 }
 
+/// Incoming message handler.
+pub trait InMsgHandler {
+    /// Process an incoming message.
+    fn process_in_msg<'a, C: Context>(
+        ctx: &mut C,
+        in_msg: &'a roothash::IncomingMessage,
+    ) -> InMsgResult<'a>;
+}
+
+/// Result of processing an incoming message.
+#[derive(Debug)]
+pub enum InMsgResult<'a> {
+    /// Skip to next incoming message, but count as processed.
+    Skip,
+    /// Add to batch/verify inclusion and execute.
+    Execute(&'a [u8], Transaction),
+    /// Stop processing incoming messages.
+    Stop,
+}
+
+/// An incoming message handler which discards all incoming messages.
+pub struct InMsgDiscard;
+
+impl InMsgHandler for InMsgDiscard {
+    fn process_in_msg<'a, C: Context>(
+        _ctx: &mut C,
+        _in_msg: &'a roothash::IncomingMessage,
+    ) -> InMsgResult<'a> {
+        // Just skip all messages without doing anything.
+        InMsgResult::Skip
+    }
+}
+
 /// A runtime module.
 pub trait Module {
     /// Module name.
@@ -590,6 +624,11 @@ pub trait Module {
 
     /// Set the module's parameters.
     fn set_params(params: Self::Parameters) {
+        params
+            .validate_basic()
+            .map_err(|_| ())
+            .expect("module parameters are invalid");
+        
         CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &Self::NAME);
             let mut store = storage::TypedStore::new(store);

@@ -7,9 +7,12 @@ import (
 
 	"google.golang.org/grpc"
 
+	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
+	"github.com/oasisprotocol/oasis-core/go/consensus/api/transaction"
+	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
@@ -238,6 +241,28 @@ func makeUndelegateDoneCheck(from, to types.Address, shares *types.Quantity, amo
 			return false
 		}
 		if ae.UndelegateDone.Amount.Denomination != amount.Denomination {
+			return false
+		}
+		return true
+	}
+}
+
+func makeMintCheck(owner types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
+	return func(e client.DecodedEvent) bool {
+		ae, ok := e.(*accounts.Event)
+		if !ok {
+			return false
+		}
+		if ae.Mint == nil {
+			return false
+		}
+		if !ae.Mint.Owner.Equal(owner) {
+			return false
+		}
+		if ae.Mint.Amount.Amount.Cmp(&amount.Amount) != 0 {
+			return false
+		}
+		if ae.Mint.Amount.Denomination != amount.Denomination {
 			return false
 		}
 		return true
@@ -676,6 +701,59 @@ func ConsensusAccountsParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *g
 	if gc := params.GasCosts.TxWithdraw; gc != 0 {
 		return fmt.Errorf("unexpected GasCosts.TxWithdraw: expected: %v, got: %v", 0, gc)
 	}
+
+	return nil
+}
+
+// ConsensusIncomingMessageBasicTest tests handling of basic incoming messages.
+func ConsensusIncomingMessageBasicTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	cons := consensus.NewConsensusClient(conn)
+	consDenomination := types.Denomination("TEST")
+
+	accounts := accounts.NewV1(rtc)
+	acCh, err := rtc.WatchEvents(ctx, []client.EventDecoder{accounts}, false)
+	if err != nil {
+		return err
+	}
+
+	chainContext, err := cons.GetChainContext(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get chain context: %w", err)
+	}
+
+	coreSignature.UnsafeResetChainContext()
+	coreSignature.SetChainContext(chainContext)
+
+	// Generate a simple SubmitMsg transaction without any data.
+	tx := roothash.NewSubmitMsgTx(0, &transaction.Fee{Gas: 10_000}, &roothash.SubmitMsg{
+		ID:     runtimeID,
+		Fee:    *quantity.NewFromUint64(10),
+		Tokens: *quantity.NewFromUint64(50),
+	})
+	signer := testing.Alice.Signer.(interface{ Unwrap() coreSignature.Signer }).Unwrap()
+	sigTx, err := transaction.Sign(signer, tx)
+	if err != nil {
+		return fmt.Errorf("failed to sign SubmitMsg transaction: %w", err)
+	}
+
+	err = cons.SubmitTx(ctx, sigTx)
+	if err != nil {
+		return fmt.Errorf("failed to execute SubmitMsg transaction: %w", err)
+	}
+
+	// Wait for the message to be processed.
+	// NOTE: The test runtime uses a scaling factor of 1000 so all balances in the runtime are
+	//       1000x larger than in the consensus layer.
+	amount := types.NewBaseUnits(*quantity.NewFromUint64(60_000), consDenomination)
+	if err = ensureRuntimeEvent(log, acCh, makeMintCheck(testing.Alice.Address, amount)); err != nil {
+		return fmt.Errorf("ensuring alice mint runtime event: %w", err)
+	}
+
+	// TODO: Test with transaction.
+	// TODO: Test with duplicate transactions (e.g. two different incoming msgs containing same transaction in same round).
 
 	return nil
 }

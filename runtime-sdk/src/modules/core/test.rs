@@ -31,6 +31,7 @@ fn test_use_gas() {
 
     Core::set_params(Parameters {
         max_batch_gas: BLOCK_MAX_GAS,
+        max_inmsg_gas: 0,
         max_tx_size: 32 * 1024,
         max_tx_signers: 8,
         max_multisig_signers: 8,
@@ -123,6 +124,7 @@ fn test_query_min_gas_price() {
 
     Core::set_params(Parameters {
         max_batch_gas: 10000,
+        max_inmsg_gas: 0,
         max_tx_size: 32 * 1024,
         max_tx_signers: 8,
         max_multisig_signers: 8,
@@ -356,6 +358,7 @@ impl Runtime for GasWasterRuntime {
             super::Genesis {
                 parameters: Parameters {
                     max_batch_gas: u64::MAX,
+                    max_inmsg_gas: 0,
                     max_tx_size: 32 * 1024,
                     max_tx_signers: 8,
                     max_multisig_signers: 8,
@@ -365,6 +368,7 @@ impl Runtime for GasWasterRuntime {
                         auth_signature: Self::AUTH_SIGNATURE_GAS,
                         auth_multisig_signer: Self::AUTH_MULTISIG_GAS,
                         callformat_x25519_deoxysii: 0,
+                        inmsg_base: 0,
                     },
                     min_gas_price: {
                         let mut mgp = BTreeMap::new();
@@ -804,6 +808,7 @@ fn test_approve_unverified_tx() {
 
     Core::set_params(Parameters {
         max_batch_gas: u64::MAX,
+        max_inmsg_gas: 0,
         max_tx_size: 32 * 1024,
         max_tx_signers: 2,
         max_multisig_signers: 2,
@@ -896,6 +901,7 @@ fn test_min_gas_price() {
 
     Core::set_params(Parameters {
         max_batch_gas: u64::MAX,
+        max_inmsg_gas: 0,
         max_tx_size: 32 * 1024,
         max_tx_signers: 8,
         max_multisig_signers: 8,
@@ -905,6 +911,7 @@ fn test_min_gas_price() {
             auth_signature: GasWasterRuntime::AUTH_SIGNATURE_GAS,
             auth_multisig_signer: GasWasterRuntime::AUTH_MULTISIG_GAS,
             callformat_x25519_deoxysii: 0,
+            inmsg_base: 0,
         },
         min_gas_price: {
             let mut mgp = BTreeMap::new();
@@ -1029,6 +1036,7 @@ fn test_gas_used_events() {
 
     Core::set_params(Parameters {
         max_batch_gas: 1_000_000,
+        max_inmsg_gas: 0,
         max_tx_size: 32 * 1024,
         max_tx_signers: 8,
         max_multisig_signers: 8,

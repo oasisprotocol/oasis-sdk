@@ -25,6 +25,11 @@ type GasCosts struct {
 	AuthSignature            uint64 `json:"auth_signature"`
 	AuthMultisigSigner       uint64 `json:"auth_multisig_signer"`
 	CallformatX25519Deoxysii uint64 `json:"callformat_x25519_deoxysii"`
+
+	// Fields below have omitempty set for backwards compatibility. Once there are no deployed
+	// runtimes using an old version of the SDK, this should be removed.
+
+	InMsgBase uint64 `json:"inmsg_base,omitempty"`
 }
 
 // Parameters are the parameters for the consensus accounts module.
@@ -38,7 +43,8 @@ type Parameters struct {
 	// Fields below have omitempty set for backwards compatibility. Once there are no deployed
 	// runtimes using an old version of the SDK, this should be removed.
 
-	MaxTxSize uint32 `json:"max_tx_size,omitempty"`
+	MaxTxSize   uint32 `json:"max_tx_size,omitempty"`
+	MaxInMsgGas uint32 `json:"max_inmsg_gas,omitempty"`
 }
 
 // ModuleName is the core module name.

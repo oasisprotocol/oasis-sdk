@@ -169,11 +169,11 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 					MaxAllowances:       10,
 					AllowEscrowMessages: true,
 				},
-				TotalSupply: *quantity.NewFromUint64(200),
+				TotalSupply: *quantity.NewFromUint64(300),
 				Ledger: map[api.Address]*api.Account{
 					api.Address(testing.Alice.Address): {
 						General: api.GeneralAccount{
-							Balance: *quantity.NewFromUint64(100),
+							Balance: *quantity.NewFromUint64(200),
 							Allowances: map[api.Address]quantity.Quantity{
 								api.NewRuntimeAddress(runtimeID): *quantity.NewFromUint64(100),
 							},
@@ -231,6 +231,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				TxnScheduler: registry.TxnSchedulerParameters{
 					MaxBatchSize:      1000,
 					MaxBatchSizeBytes: 16 * 1024 * 1024, // 16 MB.
+					MaxInMessages:     128,
 					BatchFlushTimeout: 1 * time.Second,
 					ProposerTimeout:   5 * time.Second,
 				},

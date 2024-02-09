@@ -15,6 +15,7 @@ fn test_impl_for_tuple() {
 
     <super::Runtime as oasis_runtime_sdk::Runtime>::Core::set_params(core::Parameters {
         max_batch_gas: u64::MAX,
+        max_inmsg_gas: 0,
         max_tx_size: 32 * 1024,
         max_tx_signers: 1,
         max_multisig_signers: 1,
