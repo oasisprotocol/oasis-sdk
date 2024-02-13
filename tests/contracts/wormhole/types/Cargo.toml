@@ -1,0 +1,22 @@
+[package]
+name = "oasis-wormhole-types"
+version = "0.1.0"
+description = "Wormhole helpers and type definitions"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+cbor = { version = "0.2.0", package = "oasis-cbor" }
+oasis-contract-sdk = { path = "../../../../contract-sdk" }
+oasis-contract-sdk-storage = { path = "../../../../contract-sdk/storage" }
+oasis-contract-sdk-types = { path = "../../../../contract-sdk/types" }
+
+# Third party.
+anyhow = "1.0"
+byteorder = "1.4.3"
+sha3 = { version = "0.9.1", default-features = false }
+thiserror = "1.0.28"
+
+[dev-dependencies]
+hex = "0.4.3"

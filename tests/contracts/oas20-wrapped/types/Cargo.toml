@@ -1,0 +1,20 @@
+[package]
+name = "oasis-oas20-wrapped-types"
+version = "0.1.0"
+description = "Wormhole wrapped OAS20 tokens types and helpers"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2018"
+license = "Apache-2.0"
+
+[dependencies]
+cbor = { version = "0.2.0", package = "oasis-cbor" }
+oasis-contract-sdk = { path = "../../../../contract-sdk" }
+oasis-contract-sdk-storage = { path = "../../../../contract-sdk/storage" }
+oasis-contract-sdk-types = { path = "../../../../contract-sdk/types" }
+oasis-contract-sdk-oas20-types = { path = "../../../../contract-sdk/specs/oas20/types" }
+oasis-wormhole-types = { path = "../../wormhole/types" }
+
+# Third party.
+thiserror = "1.0.28"
+anyhow = "1.0"
+sha3 = { version = "0.9.1", default-features = false }
