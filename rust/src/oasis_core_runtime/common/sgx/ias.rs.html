@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/common/sgx/ias.rs`."><title>ias.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/common/sgx/ias.rs`."><title>ias.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -729,41 +731,41 @@
 <span class="doccomment">/// AVR verification error.
 </span><span class="attr">#[derive(Error, Debug)]
 </span><span class="kw">enum </span>AVRError {
-    <span class="attr">#[error(<span class="string">&quot;failed to parse report body&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"failed to parse report body"</span>)]
     </span>MalformedReportBody,
-    <span class="attr">#[error(<span class="string">&quot;report body did not contain timestamp&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"report body did not contain timestamp"</span>)]
     </span>MissingTimestamp,
-    <span class="attr">#[error(<span class="string">&quot;failed to parse timestamp&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"failed to parse timestamp"</span>)]
     </span>MalformedTimestamp,
-    <span class="attr">#[error(<span class="string">&quot;timestamp differs by more than 1 day&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"timestamp differs by more than 1 day"</span>)]
     </span>TimestampOutOfRange,
-    <span class="attr">#[error(<span class="string">&quot;rejecting quote status ({status:?})&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"rejecting quote status ({status:?})"</span>)]
     </span>QuoteStatusInvalid { status: String },
-    <span class="attr">#[error(<span class="string">&quot;debug enclaves not allowed&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"debug enclaves not allowed"</span>)]
     </span>DebugEnclave,
-    <span class="attr">#[error(<span class="string">&quot;production enclaves not allowed&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"production enclaves not allowed"</span>)]
     </span>ProductionEnclave,
-    <span class="attr">#[error(<span class="string">&quot;AVR did not contain quote status&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"AVR did not contain quote status"</span>)]
     </span>MissingQuoteStatus,
-    <span class="attr">#[error(<span class="string">&quot;AVR did not contain quote body&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"AVR did not contain quote body"</span>)]
     </span>MissingQuoteBody,
-    <span class="attr">#[error(<span class="string">&quot;failed to parse quote&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"failed to parse quote"</span>)]
     </span>MalformedQuote,
-    <span class="attr">#[error(<span class="string">&quot;unable to find exactly 2 certificates&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"unable to find exactly 2 certificates"</span>)]
     </span>ChainNotTwoCertificates,
-    <span class="attr">#[error(<span class="string">&quot;malformed certificate PEM&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"malformed certificate PEM"</span>)]
     </span>MalformedCertificatePEM,
-    <span class="attr">#[error(<span class="string">&quot;malformed certificate DER&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"malformed certificate DER"</span>)]
     </span>MalformedCertificateDER,
-    <span class="attr">#[error(<span class="string">&quot;expired certificate&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"expired certificate"</span>)]
     </span>ExpiredCertificate,
-    <span class="attr">#[error(<span class="string">&quot;invalid signature&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid signature"</span>)]
     </span>InvalidSignature,
-    <span class="attr">#[error(<span class="string">&quot;IAS quotes are disabled by policy&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"IAS quotes are disabled by policy"</span>)]
     </span>Disabled,
-    <span class="attr">#[error(<span class="string">&quot;blacklisted IAS quote GID&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"blacklisted IAS quote GID"</span>)]
     </span>BlacklistedGID,
-    <span class="attr">#[error(<span class="string">&quot;TCB evaluation data number is invalid&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"TCB evaluation data number is invalid"</span>)]
     </span>TCBEvaluationDataNumberInvalid,
 }
 
@@ -773,7 +775,7 @@
 </span><span class="kw">pub type </span>QuoteContext = [u8; QUOTE_CONTEXT_LEN];
 
 <span class="comment">// AVR signature validation constants.
-</span><span class="kw">const </span>IAS_TRUST_ANCHOR_PEM: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;-----BEGIN CERTIFICATE-----
+</span><span class="kw">const </span>IAS_TRUST_ANCHOR_PEM: <span class="kw-2">&amp;</span>str = <span class="string">r#"-----BEGIN CERTIFICATE-----
 MIIFSzCCA7OgAwIBAgIJANEHdl0yo7CUMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV
 BAYTAlVTMQswCQYDVQQIDAJDQTEUMBIGA1UEBwwLU2FudGEgQ2xhcmExGjAYBgNV
 BAoMEUludGVsIENvcnBvcmF0aW9uMTAwLgYDVQQDDCdJbnRlbCBTR1ggQXR0ZXN0
@@ -803,22 +805,22 @@ Ud4APK0wZTGtfPXU7w+IBdG5Ez0kE1qzxGQaL4gINJ1zMyleDnbuS8UicjJijvqA
 3op5KBG3RjbF6RRSzwzuWfL7QErNC8WEy5yDVARzTA5+xmBc388v9Dm21HGfcC8O
 DD+gT9sSpssq0ascmvH49MOgjt1yoysLtdCtJW/9FZpoOypaHx0R+mJTLwPXVMrv
 DaVzWh5aiEx+idkSGMnX
------END CERTIFICATE-----&quot;#</span>;
-<span class="kw">const </span>PEM_CERTIFICATE_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;CERTIFICATE&quot;</span>;
-<span class="kw">const </span>IAS_TS_FMT: <span class="kw-2">&amp;</span>str = <span class="string">&quot;%FT%T%.6f&quot;</span>;
+-----END CERTIFICATE-----"#</span>;
+<span class="kw">const </span>PEM_CERTIFICATE_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">"CERTIFICATE"</span>;
+<span class="kw">const </span>IAS_TS_FMT: <span class="kw-2">&amp;</span>str = <span class="string">"%FT%T%.6f"</span>;
 <span class="macro">lazy_static! </span>{
     <span class="kw">static </span><span class="kw-2">ref </span>IAS_TRUST_ANCHOR: Vec&lt;u8&gt; = {
         <span class="kw">let </span>pem = <span class="kw">match </span>parse_x509_pem(IAS_TRUST_ANCHOR_PEM.as_bytes()) {
             <span class="prelude-val">Ok</span>((rem, pem)) =&gt; {
-                <span class="macro">assert!</span>(rem.is_empty(), <span class="string">&quot;anchor PEM has trailing garbage&quot;</span>);
+                <span class="macro">assert!</span>(rem.is_empty(), <span class="string">"anchor PEM has trailing garbage"</span>);
                 <span class="macro">assert!</span>(
                     pem.label == PEM_CERTIFICATE_LABEL,
-                    <span class="string">&quot;PEM does not contain a certificate: &#39;{:?}&#39;&quot;</span>,
+                    <span class="string">"PEM does not contain a certificate: '{:?}'"</span>,
                     pem.label
                 );
                 pem
             }
-            err =&gt; <span class="macro">panic!</span>(<span class="string">&quot;failed to decode anchor PEM: {:?}&quot;</span>, err),
+            err =&gt; <span class="macro">panic!</span>(<span class="string">"failed to decode anchor PEM: {:?}"</span>, err),
         };
 
         pem.contents.to_vec()
@@ -914,21 +916,21 @@ DaVzWh5aiEx+idkSGMnX
     }
 
     <span class="kw">fn </span>isv_enclave_quote_status(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
-        <span class="kw">match </span><span class="self">self</span>.body[<span class="string">&quot;isvEnclaveQuoteStatus&quot;</span>].as_str() {
+        <span class="kw">match </span><span class="self">self</span>.body[<span class="string">"isvEnclaveQuoteStatus"</span>].as_str() {
             <span class="prelude-val">Some</span>(status) =&gt; <span class="prelude-val">Ok</span>(status.to_string()),
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(AVRError::MissingQuoteStatus.into()),
         }
     }
 
     <span class="kw">fn </span>isv_enclave_quote_body(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; {
-        <span class="kw">match </span><span class="self">self</span>.body[<span class="string">&quot;isvEnclaveQuoteBody&quot;</span>].as_str() {
+        <span class="kw">match </span><span class="self">self</span>.body[<span class="string">"isvEnclaveQuoteBody"</span>].as_str() {
             <span class="prelude-val">Some</span>(quote_body) =&gt; <span class="prelude-val">Ok</span>(quote_body.to_string()),
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Err</span>(AVRError::MissingQuoteBody.into()),
         }
     }
 
     <span class="kw">fn </span>tcb_evaluation_data_number(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;u32&gt; {
-        <span class="kw">match </span><span class="self">self</span>.body[<span class="string">&quot;tcbEvaluationDataNumber&quot;</span>].as_u64() {
+        <span class="kw">match </span><span class="self">self</span>.body[<span class="string">"tcbEvaluationDataNumber"</span>].as_u64() {
             <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="number">0</span>),
             <span class="prelude-val">Some</span>(eval_num) <span class="kw">if </span>eval_num &gt; u32::MAX.into() =&gt; {
                 <span class="prelude-val">Err</span>(AVRError::TCBEvaluationDataNumberInvalid.into())
@@ -938,7 +940,7 @@ DaVzWh5aiEx+idkSGMnX
     }
 
     <span class="kw">fn </span>timestamp(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;i64&gt; {
-        <span class="kw">let </span>timestamp = <span class="kw">match </span><span class="self">self</span>.body[<span class="string">&quot;timestamp&quot;</span>].as_str() {
+        <span class="kw">let </span>timestamp = <span class="kw">match </span><span class="self">self</span>.body[<span class="string">"timestamp"</span>].as_str() {
             <span class="prelude-val">Some</span>(timestamp) =&gt; timestamp,
             <span class="prelude-val">None </span>=&gt; {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::MissingTimestamp.into());
@@ -954,8 +956,8 @@ DaVzWh5aiEx+idkSGMnX
         <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::Disabled.into());
     }
 
-    <span class="kw">let </span>unsafe_skip_avr_verification = <span class="macro">option_env!</span>(<span class="string">&quot;OASIS_UNSAFE_SKIP_AVR_VERIFY&quot;</span>).is_some();
-    <span class="kw">let </span>unsafe_lax_avr_verification = <span class="macro">option_env!</span>(<span class="string">&quot;OASIS_UNSAFE_LAX_AVR_VERIFY&quot;</span>).is_some();
+    <span class="kw">let </span>unsafe_skip_avr_verification = <span class="macro">option_env!</span>(<span class="string">"OASIS_UNSAFE_SKIP_AVR_VERIFY"</span>).is_some();
+    <span class="kw">let </span>unsafe_lax_avr_verification = <span class="macro">option_env!</span>(<span class="string">"OASIS_UNSAFE_LAX_AVR_VERIFY"</span>).is_some();
 
     <span class="comment">// Get the time.
     </span><span class="kw">let </span>timestamp_now = insecure_posix_time();
@@ -981,8 +983,8 @@ DaVzWh5aiEx+idkSGMnX
 
     <span class="kw">let </span>quote_status = avr_body.isv_enclave_quote_status()<span class="question-mark">?</span>;
     <span class="kw">match </span>quote_status.as_str() {
-        <span class="string">&quot;OK&quot; </span>| <span class="string">&quot;SW_HARDENING_NEEDED&quot; </span>=&gt; {}
-        <span class="string">&quot;GROUP_OUT_OF_DATE&quot; </span>| <span class="string">&quot;CONFIGURATION_NEEDED&quot; </span>| <span class="string">&quot;CONFIGURATION_AND_SW_HARDENING_NEEDED&quot; </span>=&gt; {
+        <span class="string">"OK" </span>| <span class="string">"SW_HARDENING_NEEDED" </span>=&gt; {}
+        <span class="string">"GROUP_OUT_OF_DATE" </span>| <span class="string">"CONFIGURATION_NEEDED" </span>| <span class="string">"CONFIGURATION_AND_SW_HARDENING_NEEDED" </span>=&gt; {
             <span class="kw">if </span>!unsafe_lax_avr_verification {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::QuoteStatusInvalid {
                     status: quote_status.to_owned(),
@@ -1024,7 +1026,7 @@ DaVzWh5aiEx+idkSGMnX
         .attributes
         .flags
         .contains(AttributesFlags::DEBUG);
-    <span class="kw">let </span>allow_debug = <span class="macro">option_env!</span>(<span class="string">&quot;OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES&quot;</span>).is_some();
+    <span class="kw">let </span>allow_debug = <span class="macro">option_env!</span>(<span class="string">"OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES"</span>).is_some();
     <span class="kw">if </span>is_debug &amp;&amp; !allow_debug {
         <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::DebugEnclave.into());
     } <span class="kw">else if </span>!is_debug &amp;&amp; allow_debug {
@@ -1032,7 +1034,7 @@ DaVzWh5aiEx+idkSGMnX
     }
 
     <span class="comment">// If the minimum TCB evaluation data number is present in the policy,
-    // then the report&#39;s shouldn&#39;t be too low.
+    // then the report's shouldn't be too low.
     </span><span class="kw">if </span>avr_body.tcb_evaluation_data_number()<span class="question-mark">? </span>&lt; policy.min_tcb_evaluation_data_number {
         <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::TCBEvaluationDataNumberInvalid.into());
     }
@@ -1074,20 +1076,20 @@ DaVzWh5aiEx+idkSGMnX
     // following documentation:
     //
     //  * 4.2.2 Report Signature:
-    //    * &quot;The Attestation Verification Report is cryptographically
+    //    * "The Attestation Verification Report is cryptographically
     //       signed by Report Signing Key (owned by the Attestation
-    //       Service) using the RSA-SHA256 algorithm.&quot;
+    //       Service) using the RSA-SHA256 algorithm."
     //  * 4.2.3 Report Signing Certificate Chain:
-    //    * &quot;The public part of Report Key is distributed in the form
+    //    * "The public part of Report Key is distributed in the form
     //       of an x.509 digital certificate called Attestation Report
     //       Signing Certificate. It is a leaf certificate issued by
-    //       the Attestation Report Signing CA Certificate&quot;
-    //    * &quot;A PEM-encoded certificate chain consisting of Attestation
+    //       the Attestation Report Signing CA Certificate"
+    //    * "A PEM-encoded certificate chain consisting of Attestation
     //       Report Signing Certificate and Attestation Report Signing
-    //       CA Certificate is returned...&quot;
+    //       CA Certificate is returned..."
     //
-    // See: &quot;Attestation Service for Intel(R) Software Guard Extensions
-    // (Intel(R) SGX): API Documentation&quot; (Revision: 6.0)
+    // See: "Attestation Service for Intel(R) Software Guard Extensions
+    // (Intel(R) SGX): API Documentation" (Revision: 6.0)
 
     // Decode the certificate chain from percent encoded PEM to DER.
     </span><span class="kw">let </span>raw_pem = percent_encoding::percent_decode(cert_chain).decode_utf8()<span class="question-mark">?</span>;
@@ -1116,9 +1118,9 @@ DaVzWh5aiEx+idkSGMnX
     //
     // Ensure that it matches the hard-coded copy, and decode it, so
     // that the expiration can be validated and the public key can
-    // be used to verify the leaf certificate&#39;s signature.
+    // be used to verify the leaf certificate's signature.
     //
-    // This could be more paranoid and check that the cert doesn&#39;t
+    // This could be more paranoid and check that the cert doesn't
     // have trailing garbage, the usage is correct, etc, but we can
     // take it as a matter of faith that it is well-formed since
     // it is the same as the hard-coded one.
@@ -1127,7 +1129,7 @@ DaVzWh5aiEx+idkSGMnX
     // the borrow checker thwarted my attempts to initialize a tuple
     // containing a X509Certificate and Pem via lazy_static.
     </span><span class="kw">if </span>cert_ders[<span class="number">1</span>] != <span class="kw-2">*</span>IAS_TRUST_ANCHOR {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;AVR certificate chain trust anchor mismatch&quot;</span>));
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"AVR certificate chain trust anchor mismatch"</span>));
     }
     <span class="kw">let </span>anchor = <span class="kw">match </span>parse_x509_certificate(<span class="kw-2">&amp;</span>cert_ders[<span class="number">1</span>]) {
         <span class="prelude-val">Ok</span>((<span class="kw">_</span>, cert)) =&gt; cert,
@@ -1139,13 +1141,13 @@ DaVzWh5aiEx+idkSGMnX
     <span class="kw">let </span>anchor_pk = extract_certificate_rsa_public_key(<span class="kw-2">&amp;</span>anchor)<span class="question-mark">?</span>;
     <span class="kw">if </span>!check_certificate_rsa_signature(<span class="kw-2">&amp;</span>anchor, <span class="kw-2">&amp;</span>anchor_pk) {
         <span class="comment">// The hard-coded cert is self-signed.  This will need to be
-        // changed if it ever isn&#39;t.
+        // changed if it ever isn't.
         </span><span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-            <span class="string">&quot;AVR certificate chain trust anchor has invalid signature&quot;
+            <span class="string">"AVR certificate chain trust anchor has invalid signature"
         </span>));
     }
     <span class="kw">if </span>!anchor.tbs_certificate.is_ca() {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;AVR certificate trust anchor is not a CA&quot;</span>));
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"AVR certificate trust anchor is not a CA"</span>));
     }
 
     <span class="comment">// Attestation Report Signing Certificate (leaf):
@@ -1162,7 +1164,7 @@ DaVzWh5aiEx+idkSGMnX
         <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(AVRError::MalformedCertificateDER.into()),
     };
     <span class="kw">if </span>!check_certificate_rsa_signature(<span class="kw-2">&amp;</span>leaf, <span class="kw-2">&amp;</span>anchor_pk) {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;invalid leaf certificate signature&quot;</span>));
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"invalid leaf certificate signature"</span>));
     }
 
     <span class="kw">if </span>!leaf.validity().is_valid_at(time) {
@@ -1171,11 +1173,11 @@ DaVzWh5aiEx+idkSGMnX
     <span class="kw">match </span>leaf.tbs_certificate.key_usage()<span class="question-mark">? </span>{
         <span class="prelude-val">Some</span>(ku) =&gt; {
             <span class="kw">if </span>!ku.value.digital_signature() {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;leaf certificate can&#39;t sign&quot;</span>));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"leaf certificate can't sign"</span>));
             }
         }
         <span class="prelude-val">None </span>=&gt; {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;leaf cert missing key usage&quot;</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"leaf cert missing key usage"</span>));
         }
     }
 
@@ -1193,12 +1195,12 @@ DaVzWh5aiEx+idkSGMnX
 <span class="kw">fn </span>extract_certificate_rsa_public_key(cert: <span class="kw-2">&amp;</span>X509Certificate) -&gt; <span class="prelude-ty">Result</span>&lt;RsaPublicKey&gt; {
     <span class="kw">let </span>cert_spki = <span class="kw-2">&amp;</span>cert.tbs_certificate.subject_pki;
     <span class="kw">if </span>cert_spki.algorithm.algorithm != OID_PKCS1_RSAENCRYPTION {
-        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;invalid certificate public key algorithm&quot;</span>));
+        <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"invalid certificate public key algorithm"</span>));
     }
 
     <span class="kw">match </span>RsaPublicKey::from_pkcs1_der(<span class="kw-2">&amp;</span>cert_spki.subject_public_key.data) {
         <span class="prelude-val">Ok</span>(pk) =&gt; <span class="prelude-val">Ok</span>(pk),
-        <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;invalid certificate public key: {:?}&quot;</span>, err)),
+        <span class="prelude-val">Err</span>(err) =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"invalid certificate public key: {:?}"</span>, err)),
     }
 }
 
@@ -1216,7 +1218,7 @@ DaVzWh5aiEx+idkSGMnX
         .is_ok()
 }
 
-<span class="doccomment">/// Return true iff the (POXIX) timestamp is considered &quot;fresh&quot; for the purposes
+<span class="doccomment">/// Return true iff the (POXIX) timestamp is considered "fresh" for the purposes
 /// of a cached AVR, given the current time.
 </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>timestamp_is_fresh(now: i64, timestamp: i64) -&gt; bool {
     (now - timestamp).abs() &lt; <span class="number">60 </span>* <span class="number">60 </span>* <span class="number">24
@@ -1227,12 +1229,12 @@ DaVzWh5aiEx+idkSGMnX
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
 
     <span class="kw">const </span>IAS_CERT_CHAIN: <span class="kw-2">&amp;</span>[u8] =
-        <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/avr_certificates_urlencoded.pem&quot;</span>);
+        <span class="macro">include_bytes!</span>(<span class="string">"../../../testdata/avr_certificates_urlencoded.pem"</span>);
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_validate_avr_signature() {
-        <span class="kw">const </span>MSG: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/avr_body_group_out_of_date.json&quot;</span>);
-        <span class="kw">const </span>SIG: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../testdata/avr_signature_group_out_of_date.sig&quot;</span>);
+        <span class="kw">const </span>MSG: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">"../../../testdata/avr_body_group_out_of_date.json"</span>);
+        <span class="kw">const </span>SIG: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">"../../../testdata/avr_signature_group_out_of_date.sig"</span>);
         <span class="kw">const </span>SIG_AT: u64 = <span class="number">1522447346</span>; <span class="comment">// 2018-03-30T22:02:26
 
         // Positive test.
@@ -1257,23 +1259,23 @@ DaVzWh5aiEx+idkSGMnX
         <span class="kw">let </span>result = validate_avr_signature(IAS_CERT_CHAIN, MSG, bad_sig.as_bytes(), SIG_AT);
         <span class="macro">assert!</span>(result.is_err());
 
-        <span class="comment">// Test timestamp validation while we&#39;re at it.
-        </span><span class="kw">let </span>timestamp = parse_avr_timestamp(<span class="string">&quot;2018-03-30T22:02:26.123456&quot;</span>).unwrap();
+        <span class="comment">// Test timestamp validation while we're at it.
+        </span><span class="kw">let </span>timestamp = parse_avr_timestamp(<span class="string">"2018-03-30T22:02:26.123456"</span>).unwrap();
         <span class="macro">assert_eq!</span>(timestamp, SIG_AT <span class="kw">as </span>i64);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_decode_avr_v4() {
         <span class="kw">const </span>AVR: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(
-            <span class="string">&quot;../../../../go/common/sgx/ias/testdata/avr_v4_body_sw_hardening_needed.json&quot;
+            <span class="string">"../../../../go/common/sgx/ias/testdata/avr_v4_body_sw_hardening_needed.json"
         </span>);
         <span class="kw">const </span>SIG: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(
-            <span class="string">&quot;../../../../go/common/sgx/ias/testdata/avr_v4_body_sw_hardening_needed.sig&quot;
+            <span class="string">"../../../../go/common/sgx/ias/testdata/avr_v4_body_sw_hardening_needed.sig"
         </span>);
         <span class="kw">const </span>SIG_AT: u64 = <span class="number">1589188875</span>; <span class="comment">// 2020-05-11T09:21:15
-        </span><span class="kw">const </span>ID: <span class="kw-2">&amp;</span>str = <span class="string">&quot;323119119247496566074708526703373820736&quot;</span>;
-        <span class="kw">const </span>NONCE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;biNMqBAuTPF2hp/0fXa4P3splRkLHJf0&quot;</span>;
-        <span class="kw">const </span>EPID_PSEUDONYM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;uAFRLXADu90LsPq9Btgx8MWUPOzmDHE51pwLlUlU3hzFUk2EmvWpF6fZsyokOVkQUJ0UwZk0nCF8XPaCcSmLwqXAzLa+n/K7TdwlxKofEyTgG8da8mmrShNoFw3BSD74wSA4aAc753IfrbnnmuYk00lkmSUOTzqsqHlAORcweqg=&quot;</span>;
+        </span><span class="kw">const </span>ID: <span class="kw-2">&amp;</span>str = <span class="string">"323119119247496566074708526703373820736"</span>;
+        <span class="kw">const </span>NONCE: <span class="kw-2">&amp;</span>str = <span class="string">"biNMqBAuTPF2hp/0fXa4P3splRkLHJf0"</span>;
+        <span class="kw">const </span>EPID_PSEUDONYM: <span class="kw-2">&amp;</span>str = <span class="string">"uAFRLXADu90LsPq9Btgx8MWUPOzmDHE51pwLlUlU3hzFUk2EmvWpF6fZsyokOVkQUJ0UwZk0nCF8XPaCcSmLwqXAzLa+n/K7TdwlxKofEyTgG8da8mmrShNoFw3BSD74wSA4aAc753IfrbnnmuYk00lkmSUOTzqsqHlAORcweqg="</span>;
 
         <span class="kw">let </span>result = validate_avr_signature(IAS_CERT_CHAIN, AVR, SIG, SIG_AT);
         <span class="macro">assert!</span>(result.is_ok());
@@ -1283,56 +1285,56 @@ DaVzWh5aiEx+idkSGMnX
             signature: SIG.to_vec(),
             certificate_chain: IAS_CERT_CHAIN.to_vec(),
         };
-        <span class="kw">let </span>avr = ParsedAVR::new(<span class="kw-2">&amp;</span>raw_avr).expect(<span class="string">&quot;parsing raw AVR should succeed&quot;</span>);
-        <span class="macro">assert_eq!</span>(avr.body[<span class="string">&quot;id&quot;</span>].as_str().expect(<span class="string">&quot;id should be present&quot;</span>), ID);
+        <span class="kw">let </span>avr = ParsedAVR::new(<span class="kw-2">&amp;</span>raw_avr).expect(<span class="string">"parsing raw AVR should succeed"</span>);
+        <span class="macro">assert_eq!</span>(avr.body[<span class="string">"id"</span>].as_str().expect(<span class="string">"id should be present"</span>), ID);
         <span class="macro">assert_eq!</span>(
-            avr.timestamp().expect(<span class="string">&quot;timestamp should exist&quot;</span>),
+            avr.timestamp().expect(<span class="string">"timestamp should exist"</span>),
             SIG_AT <span class="kw">as </span>i64
         );
         <span class="macro">assert_eq!</span>(
-            avr.body[<span class="string">&quot;version&quot;</span>].as_u64().expect(<span class="string">&quot;version should exist&quot;</span>),
+            avr.body[<span class="string">"version"</span>].as_u64().expect(<span class="string">"version should exist"</span>),
             <span class="number">4
         </span>);
         <span class="macro">assert_eq!</span>(
             avr.isv_enclave_quote_status()
-                .expect(<span class="string">&quot;isv enclave quote status should exist&quot;</span>),
-            <span class="string">&quot;SW_HARDENING_NEEDED&quot;
+                .expect(<span class="string">"isv enclave quote status should exist"</span>),
+            <span class="string">"SW_HARDENING_NEEDED"
         </span>);
 
         <span class="kw">let </span>isv_enclave_quote_body = base64::decode(
             avr.isv_enclave_quote_body()
-                .expect(<span class="string">&quot;isv enclave quote body should exist&quot;</span>),
+                .expect(<span class="string">"isv enclave quote body should exist"</span>),
         )
-        .expect(<span class="string">&quot;decoding isv enclave quote body should succeed&quot;</span>);
+        .expect(<span class="string">"decoding isv enclave quote body should succeed"</span>);
         <span class="macro">assert_eq!</span>(isv_enclave_quote_body.len(), <span class="number">432</span>);
-        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;revocationReason&quot;</span>).is_none());
-        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;pseManifestStatus&quot;</span>).is_none());
-        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;pseManifestHash&quot;</span>).is_none());
-        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;platformInfoBlob&quot;</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">"revocationReason"</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">"pseManifestStatus"</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">"pseManifestHash"</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">"platformInfoBlob"</span>).is_none());
         <span class="macro">assert_eq!</span>(
-            avr.body[<span class="string">&quot;nonce&quot;</span>].as_str().expect(<span class="string">&quot;nonce should exist&quot;</span>),
+            avr.body[<span class="string">"nonce"</span>].as_str().expect(<span class="string">"nonce should exist"</span>),
             NONCE
         );
         <span class="macro">assert_eq!</span>(
-            avr.body[<span class="string">&quot;epidPseudonym&quot;</span>]
+            avr.body[<span class="string">"epidPseudonym"</span>]
                 .as_str()
-                .expect(<span class="string">&quot;epid pseudonym should exist&quot;</span>),
+                .expect(<span class="string">"epid pseudonym should exist"</span>),
             EPID_PSEUDONYM
         );
         <span class="macro">assert_eq!</span>(
-            avr.body[<span class="string">&quot;advisoryURL&quot;</span>]
+            avr.body[<span class="string">"advisoryURL"</span>]
                 .as_str()
-                .expect(<span class="string">&quot;advisory URL should exist&quot;</span>),
-            <span class="string">&quot;https://security-center.intel.com&quot;
+                .expect(<span class="string">"advisory URL should exist"</span>),
+            <span class="string">"https://security-center.intel.com"
         </span>);
-        <span class="kw">for </span>(avr_id, known_id) <span class="kw">in </span>avr.body[<span class="string">&quot;advisoryIDs&quot;</span>]
+        <span class="kw">for </span>(avr_id, known_id) <span class="kw">in </span>avr.body[<span class="string">"advisoryIDs"</span>]
             .as_array()
-            .expect(<span class="string">&quot;advisory ID array should exist&quot;</span>)
+            .expect(<span class="string">"advisory ID array should exist"</span>)
             .iter()
-            .zip([<span class="string">&quot;INTEL-SA-00334&quot;</span>])
+            .zip([<span class="string">"INTEL-SA-00334"</span>])
         {
             <span class="macro">assert_eq!</span>(
-                avr_id.as_str().expect(<span class="string">&quot;advisory ID should be a string&quot;</span>),
+                avr_id.as_str().expect(<span class="string">"advisory ID should be a string"</span>),
                 known_id
             );
         }
@@ -1341,14 +1343,14 @@ DaVzWh5aiEx+idkSGMnX
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_decode_avr_v5() {
         <span class="kw">const </span>AVR: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(
-            <span class="string">&quot;../../../../go/common/sgx/ias/testdata/avr_v5_body_sw_hardening_needed.json&quot;
+            <span class="string">"../../../../go/common/sgx/ias/testdata/avr_v5_body_sw_hardening_needed.json"
         </span>);
         <span class="kw">const </span>SIG: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(
-            <span class="string">&quot;../../../../go/common/sgx/ias/testdata/avr_v5_body_sw_hardening_needed.sig&quot;
+            <span class="string">"../../../../go/common/sgx/ias/testdata/avr_v5_body_sw_hardening_needed.sig"
         </span>);
         <span class="kw">const </span>SIG_AT: u64 = <span class="number">1695829918</span>; <span class="comment">// 2023-09-27T15:51:58
-        </span><span class="kw">const </span>ID: <span class="kw-2">&amp;</span>str = <span class="string">&quot;325753020347524304899139732345489823748&quot;</span>;
-        <span class="kw">const </span>EPID_PSEUDONYM: <span class="kw-2">&amp;</span>str = <span class="string">&quot;twLvZuBD1sOHsNPsHGbZOVlGh9rXw9XzVQTVKUuvsqypw0iWcFKwR7aNoHmDSoeFc/+pH6LLCI2bQBKx/ygwXphePD4GTTRwBi9EIBFRlURTk4p4NosbA7xcCG4hRuCDaEKPtAX6XHjNKEvWA+4f1aAfD7jwOtGAzHeaqBldaD8=&quot;</span>;
+        </span><span class="kw">const </span>ID: <span class="kw-2">&amp;</span>str = <span class="string">"325753020347524304899139732345489823748"</span>;
+        <span class="kw">const </span>EPID_PSEUDONYM: <span class="kw-2">&amp;</span>str = <span class="string">"twLvZuBD1sOHsNPsHGbZOVlGh9rXw9XzVQTVKUuvsqypw0iWcFKwR7aNoHmDSoeFc/+pH6LLCI2bQBKx/ygwXphePD4GTTRwBi9EIBFRlURTk4p4NosbA7xcCG4hRuCDaEKPtAX6XHjNKEvWA+4f1aAfD7jwOtGAzHeaqBldaD8="</span>;
 
         <span class="kw">let </span>result = validate_avr_signature(IAS_CERT_CHAIN, AVR, SIG, SIG_AT);
         <span class="macro">assert!</span>(result.is_ok());
@@ -1358,53 +1360,53 @@ DaVzWh5aiEx+idkSGMnX
             signature: SIG.to_vec(),
             certificate_chain: IAS_CERT_CHAIN.to_vec(),
         };
-        <span class="kw">let </span>avr = ParsedAVR::new(<span class="kw-2">&amp;</span>raw_avr).expect(<span class="string">&quot;parsing raw AVR should succeed&quot;</span>);
-        <span class="macro">assert_eq!</span>(avr.body[<span class="string">&quot;id&quot;</span>].as_str().expect(<span class="string">&quot;id should be present&quot;</span>), ID);
+        <span class="kw">let </span>avr = ParsedAVR::new(<span class="kw-2">&amp;</span>raw_avr).expect(<span class="string">"parsing raw AVR should succeed"</span>);
+        <span class="macro">assert_eq!</span>(avr.body[<span class="string">"id"</span>].as_str().expect(<span class="string">"id should be present"</span>), ID);
         <span class="macro">assert_eq!</span>(
-            avr.timestamp().expect(<span class="string">&quot;timestamp should exist&quot;</span>),
+            avr.timestamp().expect(<span class="string">"timestamp should exist"</span>),
             SIG_AT <span class="kw">as </span>i64
         );
         <span class="macro">assert_eq!</span>(
-            avr.body[<span class="string">&quot;version&quot;</span>].as_u64().expect(<span class="string">&quot;version should exist&quot;</span>),
+            avr.body[<span class="string">"version"</span>].as_u64().expect(<span class="string">"version should exist"</span>),
             <span class="number">5
         </span>);
         <span class="macro">assert_eq!</span>(
             avr.isv_enclave_quote_status()
-                .expect(<span class="string">&quot;isv enclave quote status should exist&quot;</span>),
-            <span class="string">&quot;SW_HARDENING_NEEDED&quot;
+                .expect(<span class="string">"isv enclave quote status should exist"</span>),
+            <span class="string">"SW_HARDENING_NEEDED"
         </span>);
 
         <span class="kw">let </span>isv_enclave_quote_body = base64::decode(
             avr.isv_enclave_quote_body()
-                .expect(<span class="string">&quot;isv enclave quote body should exist&quot;</span>),
+                .expect(<span class="string">"isv enclave quote body should exist"</span>),
         )
-        .expect(<span class="string">&quot;decoding isv enclave quote body should succeed&quot;</span>);
+        .expect(<span class="string">"decoding isv enclave quote body should succeed"</span>);
         <span class="macro">assert_eq!</span>(isv_enclave_quote_body.len(), <span class="number">432</span>);
-        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;revocationReason&quot;</span>).is_none());
-        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;pseManifestStatus&quot;</span>).is_none());
-        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;pseManifestHash&quot;</span>).is_none());
-        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;platformInfoBlob&quot;</span>).is_none());
-        <span class="macro">assert!</span>(avr.body.get(<span class="string">&quot;nonce&quot;</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">"revocationReason"</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">"pseManifestStatus"</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">"pseManifestHash"</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">"platformInfoBlob"</span>).is_none());
+        <span class="macro">assert!</span>(avr.body.get(<span class="string">"nonce"</span>).is_none());
         <span class="macro">assert_eq!</span>(
-            avr.body[<span class="string">&quot;epidPseudonym&quot;</span>]
+            avr.body[<span class="string">"epidPseudonym"</span>]
                 .as_str()
-                .expect(<span class="string">&quot;epid pseudonym should exist&quot;</span>),
+                .expect(<span class="string">"epid pseudonym should exist"</span>),
             EPID_PSEUDONYM
         );
         <span class="macro">assert_eq!</span>(
-            avr.body[<span class="string">&quot;advisoryURL&quot;</span>]
+            avr.body[<span class="string">"advisoryURL"</span>]
                 .as_str()
-                .expect(<span class="string">&quot;advisory URL should exist&quot;</span>),
-            <span class="string">&quot;https://security-center.intel.com&quot;
+                .expect(<span class="string">"advisory URL should exist"</span>),
+            <span class="string">"https://security-center.intel.com"
         </span>);
-        <span class="kw">for </span>(avr_id, known_id) <span class="kw">in </span>avr.body[<span class="string">&quot;advisoryIDs&quot;</span>]
+        <span class="kw">for </span>(avr_id, known_id) <span class="kw">in </span>avr.body[<span class="string">"advisoryIDs"</span>]
             .as_array()
-            .expect(<span class="string">&quot;advisory ID array should exist&quot;</span>)
+            .expect(<span class="string">"advisory ID array should exist"</span>)
             .iter()
-            .zip([<span class="string">&quot;INTEL-SA-00334&quot;</span>, <span class="string">&quot;INTEL-SA-00615&quot;</span>])
+            .zip([<span class="string">"INTEL-SA-00334"</span>, <span class="string">"INTEL-SA-00615"</span>])
         {
             <span class="macro">assert_eq!</span>(
-                avr_id.as_str().expect(<span class="string">&quot;advisory ID should be a string&quot;</span>),
+                avr_id.as_str().expect(<span class="string">"advisory ID should be a string"</span>),
                 known_id
             );
         }

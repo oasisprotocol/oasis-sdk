@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/policy.rs`."><title>policy.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/policy.rs`."><title>policy.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -225,23 +227,23 @@
 <span class="doccomment">/// Policy verifier error.
 </span><span class="attr">#[derive(Error, Debug)]
 </span><span class="kw">pub enum </span>PolicyVerifierError {
-    <span class="attr">#[error(<span class="string">&quot;missing runtime descriptor&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"missing runtime descriptor"</span>)]
     </span>MissingRuntimeDescriptor,
-    <span class="attr">#[error(<span class="string">&quot;no corresponding runtime deployment&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"no corresponding runtime deployment"</span>)]
     </span>NoDeployment,
-    <span class="attr">#[error(<span class="string">&quot;bad TEE constraints&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"bad TEE constraints"</span>)]
     </span>BadTEEConstraints,
-    <span class="attr">#[error(<span class="string">&quot;policy mismatch&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"policy mismatch"</span>)]
     </span>PolicyMismatch,
-    <span class="attr">#[error(<span class="string">&quot;policy hasn&#39;t been published&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"policy hasn't been published"</span>)]
     </span>PolicyNotPublished,
-    <span class="attr">#[error(<span class="string">&quot;status mismatch&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"status mismatch"</span>)]
     </span>StatusMismatch,
-    <span class="attr">#[error(<span class="string">&quot;status hasn&#39;t been published&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"status hasn't been published"</span>)]
     </span>StatusNotPublished,
-    <span class="attr">#[error(<span class="string">&quot;configured runtime hardware mismatch&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"configured runtime hardware mismatch"</span>)]
     </span>HardwareMismatch,
-    <span class="attr">#[error(<span class="string">&quot;runtime doesn&#39;t use key manager&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"runtime doesn't use key manager"</span>)]
     </span>NoKeyManager,
 }
 
@@ -254,14 +256,14 @@
 <span class="kw">impl </span>PolicyVerifier {
     <span class="doccomment">/// Create a new consensus policy verifier.
     </span><span class="kw">pub fn </span>new(consensus_verifier: Arc&lt;<span class="kw">dyn </span>Verifier&gt;) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>logger = get_logger(<span class="string">&quot;runtime/policy_verifier&quot;</span>);
+        <span class="kw">let </span>logger = get_logger(<span class="string">"runtime/policy_verifier"</span>);
         <span class="self">Self </span>{
             consensus_verifier,
             logger,
         }
     }
 
-    <span class="doccomment">/// Fetch runtime&#39;s quote policy from the latest verified consensus layer state.
+    <span class="doccomment">/// Fetch runtime's quote policy from the latest verified consensus layer state.
     ///
     /// If the runtime version is not provided, the policy for the active deployment is returned.
     </span><span class="kw">pub fn </span>quote_policy(
@@ -304,7 +306,7 @@
         <span class="prelude-val">Ok</span>(policy)
     }
 
-    <span class="doccomment">/// Verify that runtime&#39;s quote policy has been published in the consensus layer.
+    <span class="doccomment">/// Verify that runtime's quote policy has been published in the consensus layer.
     </span><span class="kw">pub fn </span>verify_quote_policy(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         policy: QuotePolicy,
@@ -316,9 +318,9 @@
         <span class="kw">if </span>policy != published_policy {
             <span class="macro">debug!</span>(
                 <span class="self">self</span>.logger,
-                <span class="string">&quot;quote policy mismatch&quot;</span>;
-                <span class="string">&quot;untrusted&quot; </span>=&gt; <span class="question-mark">?</span>policy,
-                <span class="string">&quot;published&quot; </span>=&gt; <span class="question-mark">?</span>published_policy,
+                <span class="string">"quote policy mismatch"</span>;
+                <span class="string">"untrusted" </span>=&gt; <span class="question-mark">?</span>policy,
+                <span class="string">"published" </span>=&gt; <span class="question-mark">?</span>published_policy,
             );
             <span class="kw">return </span><span class="prelude-val">Err</span>(PolicyVerifierError::PolicyMismatch.into());
         }
@@ -326,7 +328,7 @@
         <span class="prelude-val">Ok</span>(published_policy)
     }
 
-    <span class="doccomment">/// Fetch key manager&#39;s status from the latest verified consensus layer state.
+    <span class="doccomment">/// Fetch key manager's status from the latest verified consensus layer state.
     </span><span class="kw">pub fn </span>key_manager_status(<span class="kw-2">&amp;</span><span class="self">self</span>, key_manager: Namespace) -&gt; <span class="prelude-ty">Result</span>&lt;Status&gt; {
         <span class="comment">// TODO: Make this async.
         </span><span class="kw">let </span>consensus_state = block_on(<span class="self">self</span>.consensus_verifier.latest_state())<span class="question-mark">?</span>;
@@ -336,7 +338,7 @@
             </span>.ok_or_else(|| PolicyVerifierError::StatusNotPublished.into())
     }
 
-    <span class="doccomment">/// Verify that key manager&#39;s status has been published in the consensus layer.
+    <span class="doccomment">/// Verify that key manager's status has been published in the consensus layer.
     </span><span class="kw">pub fn </span>verify_key_manager_status(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         status: Status,
@@ -347,9 +349,9 @@
         <span class="kw">if </span>status != published_status {
             <span class="macro">debug!</span>(
                 <span class="self">self</span>.logger,
-                <span class="string">&quot;key manager status mismatch&quot;</span>;
-                <span class="string">&quot;untrusted&quot; </span>=&gt; <span class="question-mark">?</span>status,
-                <span class="string">&quot;published&quot; </span>=&gt; <span class="question-mark">?</span>published_status,
+                <span class="string">"key manager status mismatch"</span>;
+                <span class="string">"untrusted" </span>=&gt; <span class="question-mark">?</span>status,
+                <span class="string">"published" </span>=&gt; <span class="question-mark">?</span>published_status,
             );
             <span class="kw">return </span><span class="prelude-val">Err</span>(PolicyVerifierError::StatusMismatch.into());
         }
@@ -357,14 +359,14 @@
         <span class="prelude-val">Ok</span>(published_status)
     }
 
-    <span class="doccomment">/// Fetch key manager&#39;s policy from the latest verified consensus layer state.
+    <span class="doccomment">/// Fetch key manager's policy from the latest verified consensus layer state.
     </span><span class="kw">pub fn </span>key_manager_policy(<span class="kw-2">&amp;</span><span class="self">self</span>, key_manager: Namespace) -&gt; <span class="prelude-ty">Result</span>&lt;SignedPolicySGX&gt; {
         <span class="self">self</span>.key_manager_status(key_manager)<span class="question-mark">?
             </span>.policy
             .ok_or_else(|| PolicyVerifierError::PolicyNotPublished.into())
     }
 
-    <span class="doccomment">/// Verify that key manager&#39;s policy has been published in the consensus layer.
+    <span class="doccomment">/// Verify that key manager's policy has been published in the consensus layer.
     </span><span class="kw">pub fn </span>verify_key_manager_policy(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         policy: SignedPolicySGX,
@@ -375,9 +377,9 @@
         <span class="kw">if </span>policy != published_policy {
             <span class="macro">debug!</span>(
                 <span class="self">self</span>.logger,
-                <span class="string">&quot;key manager policy mismatch&quot;</span>;
-                <span class="string">&quot;untrusted&quot; </span>=&gt; <span class="question-mark">?</span>policy,
-                <span class="string">&quot;published&quot; </span>=&gt; <span class="question-mark">?</span>published_policy,
+                <span class="string">"key manager policy mismatch"</span>;
+                <span class="string">"untrusted" </span>=&gt; <span class="question-mark">?</span>policy,
+                <span class="string">"published" </span>=&gt; <span class="question-mark">?</span>published_policy,
             );
             <span class="kw">return </span><span class="prelude-val">Err</span>(PolicyVerifierError::PolicyMismatch.into());
         }
@@ -385,7 +387,7 @@
         <span class="prelude-val">Ok</span>(published_policy)
     }
 
-    <span class="doccomment">/// Fetch runtime&#39;s key manager.
+    <span class="doccomment">/// Fetch runtime's key manager.
     </span><span class="kw">pub fn </span>key_manager(<span class="kw-2">&amp;</span><span class="self">self</span>, runtime_id: <span class="kw-2">&amp;</span>Namespace) -&gt; <span class="prelude-ty">Result</span>&lt;Namespace&gt; {
         <span class="comment">// TODO: Make this async.
         </span><span class="kw">let </span>consensus_state = block_on(<span class="self">self</span>.consensus_verifier.latest_state())<span class="question-mark">?</span>;

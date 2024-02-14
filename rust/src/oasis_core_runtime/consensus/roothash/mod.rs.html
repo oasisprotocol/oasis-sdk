@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/roothash/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/roothash/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -245,55 +247,55 @@
 <span class="doccomment">/// Errors emitted by the roothash module.
 </span><span class="attr">#[derive(Debug, Error)]
 </span><span class="kw">pub enum </span>Error {
-    <span class="attr">#[error(<span class="string">&quot;roothash: invalid runtime {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash: invalid runtime {0}"</span>)]
     </span>InvalidRuntime(Namespace),
 
     <span class="attr">#[error(transparent)]
     </span>State(<span class="attr">#[from] </span>StateError),
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: no runtime configured&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: no runtime configured"</span>)]
     </span>NoRuntime,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: no committee configured&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: no committee configured"</span>)]
     </span>NoCommittee,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: invalid committee kind&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: invalid committee kind"</span>)]
     </span>InvalidCommitteeKind,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: batch RAK signature invalid&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: batch RAK signature invalid"</span>)]
     </span>RakSigInvalid,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: node not part of committee&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: node not part of committee"</span>)]
     </span>NotInCommittee,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: node already sent commitment&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: node already sent commitment"</span>)]
     </span>AlreadyCommitted,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: submitted commitment is not based on correct block&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: submitted commitment is not based on correct block"</span>)]
     </span>NotBasedOnCorrectBlock,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: discrepancy detected&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: discrepancy detected"</span>)]
     </span>DiscrepancyDetected,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: still waiting for commits&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: still waiting for commits"</span>)]
     </span>StillWaiting,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: insufficient votes to finalize discrepancy resolution round&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: insufficient votes to finalize discrepancy resolution round"</span>)]
     </span>InsufficientVotes,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: bad executor commitment&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: bad executor commitment"</span>)]
     </span>BadExecutorCommitment,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: invalid messages&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: invalid messages"</span>)]
     </span>InvalidMessages,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: invalid round&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: invalid round"</span>)]
     </span>InvalidRound,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: no proposer commitment&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: no proposer commitment"</span>)]
     </span>NoProposerCommitment,
 
-    <span class="attr">#[error(<span class="string">&quot;roothash/commitment: bad proposer commitment&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"roothash/commitment: bad proposer commitment"</span>)]
     </span>BadProposerCommitment,
 }
 
@@ -336,11 +338,11 @@
     </span><span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>messages: Vec&lt;MessageEvent&gt;,
 
-    <span class="doccomment">/// Public keys of compute nodes&#39; controlling entities that positively contributed to the round
+    <span class="doccomment">/// Public keys of compute nodes' controlling entities that positively contributed to the round
     /// by replicating the computation correctly.
     </span><span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>good_compute_entities: Vec&lt;PublicKey&gt;,
-    <span class="doccomment">/// Public keys of compute nodes&#39; controlling entities that negatively contributed to the round
+    <span class="doccomment">/// Public keys of compute nodes' controlling entities that negatively contributed to the round
     /// by causing discrepancies.
     </span><span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>bad_compute_entities: Vec&lt;PublicKey&gt;,
@@ -361,75 +363,75 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_consistent_round_results() {
         <span class="kw">let </span>tcs = <span class="macro">vec!</span>[
-            (<span class="string">&quot;oA==&quot;</span>, RoundResults::default()),
-            (<span class="string">&quot;oWhtZXNzYWdlc4GiZGNvZGUBZm1vZHVsZWR0ZXN0&quot;</span>, RoundResults {
-                messages: <span class="macro">vec!</span>[MessageEvent{module: <span class="string">&quot;test&quot;</span>.to_owned(), code: <span class="number">1</span>, index: <span class="number">0</span>, result: <span class="prelude-val">None</span>}],
+            (<span class="string">"oA=="</span>, RoundResults::default()),
+            (<span class="string">"oWhtZXNzYWdlc4GiZGNvZGUBZm1vZHVsZWR0ZXN0"</span>, RoundResults {
+                messages: <span class="macro">vec!</span>[MessageEvent{module: <span class="string">"test"</span>.to_owned(), code: <span class="number">1</span>, index: <span class="number">0</span>, result: <span class="prelude-val">None</span>}],
                 ..Default::default()
             }),
-            (<span class="string">&quot;omhtZXNzYWdlc4GkZGNvZGUYKmVpbmRleAFmbW9kdWxlZHRlc3RmcmVzdWx0a3Rlc3QtcmVzdWx0dWdvb2RfY29tcHV0ZV9lbnRpdGllc4NYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=&quot;</span>,
+            (<span class="string">"omhtZXNzYWdlc4GkZGNvZGUYKmVpbmRleAFmbW9kdWxlZHRlc3RmcmVzdWx0a3Rlc3QtcmVzdWx0dWdvb2RfY29tcHV0ZV9lbnRpdGllc4NYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI="</span>,
                 RoundResults {
-                    messages: <span class="macro">vec!</span>[MessageEvent{module: <span class="string">&quot;test&quot;</span>.to_owned(), code: <span class="number">42</span>, index: <span class="number">1</span>, result: <span class="prelude-val">Some</span>(cbor::Value::TextString(<span class="string">&quot;test-result&quot;</span>.to_string()))}],
+                    messages: <span class="macro">vec!</span>[MessageEvent{module: <span class="string">"test"</span>.to_owned(), code: <span class="number">42</span>, index: <span class="number">1</span>, result: <span class="prelude-val">Some</span>(cbor::Value::TextString(<span class="string">"test-result"</span>.to_string()))}],
                     good_compute_entities: <span class="macro">vec!</span>[
-                        <span class="string">&quot;0000000000000000000000000000000000000000000000000000000000000000&quot;</span>.into(),
-                        <span class="string">&quot;0000000000000000000000000000000000000000000000000000000000000001&quot;</span>.into(),
-                        <span class="string">&quot;0000000000000000000000000000000000000000000000000000000000000002&quot;</span>.into(),
+                        <span class="string">"0000000000000000000000000000000000000000000000000000000000000000"</span>.into(),
+                        <span class="string">"0000000000000000000000000000000000000000000000000000000000000001"</span>.into(),
+                        <span class="string">"0000000000000000000000000000000000000000000000000000000000000002"</span>.into(),
                     ],
                     ..Default::default()
                 }),
-            (<span class="string">&quot;o2htZXNzYWdlc4GkZGNvZGUYKmVpbmRleAFmbW9kdWxlZHRlc3RmcmVzdWx0a3Rlc3QtcmVzdWx0dGJhZF9jb21wdXRlX2VudGl0aWVzgVggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF1Z29vZF9jb21wdXRlX2VudGl0aWVzglggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC&quot;</span>,
+            (<span class="string">"o2htZXNzYWdlc4GkZGNvZGUYKmVpbmRleAFmbW9kdWxlZHRlc3RmcmVzdWx0a3Rlc3QtcmVzdWx0dGJhZF9jb21wdXRlX2VudGl0aWVzgVggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAF1Z29vZF9jb21wdXRlX2VudGl0aWVzglggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC"</span>,
                 RoundResults {
-                    messages: <span class="macro">vec!</span>[MessageEvent{module: <span class="string">&quot;test&quot;</span>.to_owned(), code: <span class="number">42</span>, index: <span class="number">1</span>, result: <span class="prelude-val">Some</span>(cbor::Value::TextString(<span class="string">&quot;test-result&quot;</span>.to_string()))}],
+                    messages: <span class="macro">vec!</span>[MessageEvent{module: <span class="string">"test"</span>.to_owned(), code: <span class="number">42</span>, index: <span class="number">1</span>, result: <span class="prelude-val">Some</span>(cbor::Value::TextString(<span class="string">"test-result"</span>.to_string()))}],
                     good_compute_entities: <span class="macro">vec!</span>[
-                        <span class="string">&quot;0000000000000000000000000000000000000000000000000000000000000000&quot;</span>.into(),
-                        <span class="string">&quot;0000000000000000000000000000000000000000000000000000000000000002&quot;</span>.into(),
+                        <span class="string">"0000000000000000000000000000000000000000000000000000000000000000"</span>.into(),
+                        <span class="string">"0000000000000000000000000000000000000000000000000000000000000002"</span>.into(),
                     ],
                     bad_compute_entities: <span class="macro">vec!</span>[
-                        <span class="string">&quot;0000000000000000000000000000000000000000000000000000000000000001&quot;</span>.into(),
+                        <span class="string">"0000000000000000000000000000000000000000000000000000000000000001"</span>.into(),
                     ],
                 }),
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: RoundResults = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">&quot;round results should deserialize correctly&quot;</span>);
-            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">&quot;decoded results should match the expected value&quot;</span>);
+                .expect(<span class="string">"round results should deserialize correctly"</span>);
+            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded results should match the expected value"</span>);
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_consistent_round_roots() {
         <span class="kw">let </span>tcs = <span class="macro">vec!</span>[
-            (<span class="string">&quot;glggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&quot;</span>, RoundRoots::default()),
-            (<span class="string">&quot;glggPTf+WENeDYcyPe5KLBsznvlU3mNxbuefV0f5TZdPkT9YIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&quot;</span>, RoundRoots {
-                state_root: Hash::digest_bytes(<span class="string">b&quot;test&quot;</span>),
+            (<span class="string">"glggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"</span>, RoundRoots::default()),
+            (<span class="string">"glggPTf+WENeDYcyPe5KLBsznvlU3mNxbuefV0f5TZdPkT9YIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"</span>, RoundRoots {
+                state_root: Hash::digest_bytes(<span class="string">b"test"</span>),
                 ..Default::default()
             }),
-            (<span class="string">&quot;glggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYID03/lhDXg2HMj3uSiwbM575VN5jcW7nn1dH+U2XT5E/&quot;</span>, RoundRoots {
-                io_root: Hash::digest_bytes(<span class="string">b&quot;test&quot;</span>),
+            (<span class="string">"glggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABYID03/lhDXg2HMj3uSiwbM575VN5jcW7nn1dH+U2XT5E/"</span>, RoundRoots {
+                io_root: Hash::digest_bytes(<span class="string">b"test"</span>),
                 ..Default::default()
             }),
-            (<span class="string">&quot;glggPTf+WENeDYcyPe5KLBsznvlU3mNxbuefV0f5TZdPkT9YID03/lhDXg2HMj3uSiwbM575VN5jcW7nn1dH+U2XT5E/&quot;</span>,
+            (<span class="string">"glggPTf+WENeDYcyPe5KLBsznvlU3mNxbuefV0f5TZdPkT9YID03/lhDXg2HMj3uSiwbM575VN5jcW7nn1dH+U2XT5E/"</span>,
                 RoundRoots {
-                    state_root: Hash::digest_bytes(<span class="string">b&quot;test&quot;</span>),
-                    io_root: Hash::digest_bytes(<span class="string">b&quot;test&quot;</span>),
+                    state_root: Hash::digest_bytes(<span class="string">b"test"</span>),
+                    io_root: Hash::digest_bytes(<span class="string">b"test"</span>),
                 }),
-            (<span class="string">&quot;glggC4+lzfqNgLxCHLxwDp+Bf5PLLb0DILrUZWwF+lp6Z/NYIJ3seczGUDFDvmAEdVCeep6Xsn8XRosTKWpu9wZ3mQRq&quot;</span>,
+            (<span class="string">"glggC4+lzfqNgLxCHLxwDp+Bf5PLLb0DILrUZWwF+lp6Z/NYIJ3seczGUDFDvmAEdVCeep6Xsn8XRosTKWpu9wZ3mQRq"</span>,
                 RoundRoots {
-                    state_root: Hash::digest_bytes(<span class="string">b&quot;test1&quot;</span>),
-                    io_root: Hash::digest_bytes(<span class="string">b&quot;test2&quot;</span>),
+                    state_root: Hash::digest_bytes(<span class="string">b"test1"</span>),
+                    io_root: Hash::digest_bytes(<span class="string">b"test2"</span>),
                 }),
-            (<span class="string">&quot;glggnex5zMZQMUO+YAR1UJ56npeyfxdGixMpam73BneZBGpYIAuPpc36jYC8Qhy8cA6fgX+Tyy29AyC61GVsBfpaemfz&quot;</span>,
+            (<span class="string">"glggnex5zMZQMUO+YAR1UJ56npeyfxdGixMpam73BneZBGpYIAuPpc36jYC8Qhy8cA6fgX+Tyy29AyC61GVsBfpaemfz"</span>,
                 RoundRoots {
-                    state_root: Hash::digest_bytes(<span class="string">b&quot;test2&quot;</span>),
-                    io_root: Hash::digest_bytes(<span class="string">b&quot;test1&quot;</span>),
+                    state_root: Hash::digest_bytes(<span class="string">b"test2"</span>),
+                    io_root: Hash::digest_bytes(<span class="string">b"test1"</span>),
                 }),
         ];
 
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: RoundRoots = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">&quot;round roots should deserialize correctly&quot;</span>);
+                .expect(<span class="string">"round roots should deserialize correctly"</span>);
             <span class="macro">assert_eq!</span>(
                 dec, rr,
-                <span class="string">&quot;decoded round roots should match the expected value&quot;
+                <span class="string">"decoded round roots should match the expected value"
             </span>);
         }
     }

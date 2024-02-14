@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/modules/contracts/src/abi/oasis/storage.rs`."><title>storage.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk_contracts" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_runtime_sdk_contracts/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/modules/contracts/src/abi/oasis/storage.rs`."><title>storage.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk_contracts" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_runtime_sdk_contracts/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -622,12 +624,12 @@
 <span class="kw">impl</span>&lt;Cfg: Config&gt; OasisV1&lt;Cfg&gt; {
     <span class="doccomment">/// Link storage functions.
     </span><span class="kw">pub fn </span>link_storage&lt;C: Context&gt;(
-        instance: <span class="kw-2">&amp;mut </span>wasm3::Instance&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;&gt;,
+        instance: <span class="kw-2">&amp;mut </span>wasm3::Instance&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="comment">// storage.get(store, key) -&gt; value
         </span><span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;storage&quot;</span>,
-            <span class="string">&quot;get&quot;</span>,
+            <span class="string">"storage"</span>,
+            <span class="string">"get"</span>,
             |ctx, (store, key): (u32, (u32, u32))| -&gt; <span class="prelude-ty">Result</span>&lt;u32, wasm3::Trap&gt; {
                 <span class="comment">// Make sure function was called in valid context.
                 </span><span class="kw">let </span>ec = ctx.context.ok_or(wasm3::Trap::Abort)<span class="question-mark">?</span>;
@@ -694,8 +696,8 @@
 
         <span class="comment">// storage.insert(store, key, value)
         </span><span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;storage&quot;</span>,
-            <span class="string">&quot;insert&quot;</span>,
+            <span class="string">"storage"</span>,
+            <span class="string">"insert"</span>,
             |ctx, (store, key, value): (u32, (u32, u32), (u32, u32))| {
                 <span class="comment">// Make sure function was called in valid context.
                 </span><span class="kw">let </span>ec = ctx.context.ok_or(wasm3::Trap::Abort)<span class="question-mark">?</span>;
@@ -741,8 +743,8 @@
 
         <span class="comment">// storage.remove(store, key)
         </span><span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;storage&quot;</span>,
-            <span class="string">&quot;remove&quot;</span>,
+            <span class="string">"storage"</span>,
+            <span class="string">"remove"</span>,
             |ctx, (store, key): (u32, (u32, u32))| {
                 <span class="comment">// Make sure function was called in valid context.
                 </span><span class="kw">let </span>ec = ctx.context.ok_or(wasm3::Trap::Abort)<span class="question-mark">?</span>;
@@ -787,7 +789,7 @@
 
 <span class="doccomment">/// Run a closure with the contract instance store.
 </span><span class="kw">fn </span>with_instance_store&lt;C, F, R&gt;(
-    ec: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;,
+    ec: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;,
     store_kind: StoreKind,
     f: F,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;R, wasm3::Trap&gt;
@@ -807,7 +809,7 @@
 
 <span class="doccomment">/// Make sure that the key size is within the range specified in module parameters.
 </span><span class="kw">fn </span>ensure_key_size&lt;C: Context&gt;(
-    ec: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;,
+    ec: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;,
     size: u32,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), wasm3::Trap&gt; {
     <span class="kw">if </span>size &gt; ec.params.max_storage_key_size_bytes {
@@ -822,7 +824,7 @@
 
 <span class="doccomment">/// Make sure that the value size is within the range specified in module parameters.
 </span><span class="kw">fn </span>ensure_value_size&lt;C: Context&gt;(
-    ec: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;,
+    ec: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;,
     size: u32,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;(), wasm3::Trap&gt; {
     <span class="kw">if </span>size &gt; ec.params.max_storage_value_size_bytes {
@@ -835,7 +837,7 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="attr">#[cfg(all(feature = <span class="string">&quot;benchmarks&quot;</span>, test))]
+<span class="attr">#[cfg(all(feature = <span class="string">"benchmarks"</span>, test))]
 </span><span class="kw">mod </span>bench {
     <span class="kw">extern crate </span>test;
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -846,22 +848,22 @@
 
     <span class="comment">// cargo build --target wasm32-unknown-unknown --release
     </span><span class="kw">const </span>BENCH_CODE: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(
-        <span class="string">&quot;../../../../../../tests/contracts/bench/target/wasm32-unknown-unknown/release/bench.wasm&quot;
+        <span class="string">"../../../../../../tests/contracts/bench/target/wasm32-unknown-unknown/release/bench.wasm"
     </span>);
 
     <span class="kw">fn </span>make_items(num: usize) -&gt; Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>items = Vec::new();
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..num {
             items.push((
-                <span class="macro">format!</span>(<span class="string">&quot;key{}&quot;</span>, i).into_bytes(),
-                <span class="macro">format!</span>(<span class="string">&quot;value{}&quot;</span>, i).into_bytes(),
+                <span class="macro">format!</span>(<span class="string">"key{}"</span>, i).into_bytes(),
+                <span class="macro">format!</span>(<span class="string">"value{}"</span>, i).into_bytes(),
             ));
         }
         items
     }
 
-    <span class="kw">struct </span>StoreContext&lt;<span class="lifetime">&#39;a</span>&gt; {
-        store: Box&lt;<span class="kw">dyn </span>storage::Store + <span class="lifetime">&#39;a</span>&gt;,
+    <span class="kw">struct </span>StoreContext&lt;<span class="lifetime">'a</span>&gt; {
+        store: Box&lt;<span class="kw">dyn </span>storage::Store + <span class="lifetime">'a</span>&gt;,
     }
 
     <span class="attr">#[bench]
@@ -871,10 +873,10 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx();
         <span class="kw">let </span>inner = storage::PrefixStore::new(
             storage::PrefixStore::new(
-                storage::PrefixStore::new(ctx.runtime_state(), <span class="string">&quot;test module&quot;</span>),
-                <span class="string">&quot;instance prefix&quot;</span>,
+                storage::PrefixStore::new(ctx.runtime_state(), <span class="string">"test module"</span>),
+                <span class="string">"instance prefix"</span>,
             ),
-            <span class="string">&quot;type prefix&quot;</span>,
+            <span class="string">"type prefix"</span>,
         );
         <span class="kw">let </span><span class="kw-2">mut </span>store_ctx = StoreContext {
             store: Box::new(storage::HashedStore::&lt;<span class="kw">_</span>, blake3::Hasher&gt;::new(inner)),
@@ -888,19 +890,19 @@
 
         <span class="comment">// Set up wasm runtime.
         </span><span class="kw">let </span>env =
-            wasm3::Environment::new().expect(<span class="string">&quot;creating a new wasm3 environment should succeed&quot;</span>);
+            wasm3::Environment::new().expect(<span class="string">"creating a new wasm3 environment should succeed"</span>);
         <span class="kw">let </span>module = env
             .parse_module(BENCH_CODE)
-            .expect(<span class="string">&quot;parsing the code should succeed&quot;</span>);
-        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">&#39;_</span>, StoreContext&lt;<span class="lifetime">&#39;_</span>&gt;&gt; = env
+            .expect(<span class="string">"parsing the code should succeed"</span>);
+        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">'_</span>, StoreContext&lt;<span class="lifetime">'_</span>&gt;&gt; = env
             .new_runtime(<span class="number">1 </span>* <span class="number">1024 </span>* <span class="number">1024</span>, <span class="prelude-val">None</span>)
-            .expect(<span class="string">&quot;creating a new wasm3 runtime should succeed&quot;</span>);
+            .expect(<span class="string">"creating a new wasm3 runtime should succeed"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>instance = rt
             .load_module(module)
-            .expect(<span class="string">&quot;instance creation should succeed&quot;</span>);
+            .expect(<span class="string">"instance creation should succeed"</span>);
         <span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;bench&quot;</span>,
-            <span class="string">&quot;plain_get&quot;</span>,
+            <span class="string">"bench"</span>,
+            <span class="string">"plain_get"</span>,
             |ctx, key: (u32, u32)| -&gt; <span class="prelude-ty">Result</span>&lt;u32, wasm3::Trap&gt; {
                 <span class="kw">let </span>key = ctx.instance.runtime().try_with_memory(
                     |memory| -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, wasm3::Trap&gt; {
@@ -916,12 +918,12 @@
                     <span class="prelude-val">Some</span>(value) =&gt; {
                         <span class="kw">let </span>alloc = ctx
                             .instance
-                            .find_function::&lt;u32, u32&gt;(<span class="string">&quot;alloc&quot;</span>)
-                            .expect(<span class="string">&quot;finding alloc function should succeed&quot;</span>);
+                            .find_function::&lt;u32, u32&gt;(<span class="string">"alloc"</span>)
+                            .expect(<span class="string">"finding alloc function should succeed"</span>);
                         <span class="kw">let </span>val_len = value.len() <span class="kw">as </span>u32;
                         <span class="kw">let </span>target_offset = alloc
                             .call(val_len + std::mem::size_of::&lt;u32&gt;() <span class="kw">as </span>u32)
-                            .expect(<span class="string">&quot;alloc should succeed&quot;</span>)
+                            .expect(<span class="string">"alloc should succeed"</span>)
                             <span class="kw">as </span>usize;
 
                         ctx.instance.runtime().try_with_memory(
@@ -942,11 +944,11 @@
             },
         );
         <span class="kw">let </span>func = instance
-            .find_function::&lt;(), ()&gt;(<span class="string">&quot;bench_storage_get&quot;</span>)
-            .expect(<span class="string">&quot;finding the entrypoint function should succeed&quot;</span>);
+            .find_function::&lt;(), ()&gt;(<span class="string">"bench_storage_get"</span>)
+            .expect(<span class="string">"finding the entrypoint function should succeed"</span>);
         b.iter(|| {
             func.call_with_context(<span class="kw-2">&amp;mut </span>store_ctx, ())
-                .expect(<span class="string">&quot;function call should succeed&quot;</span>);
+                .expect(<span class="string">"function call should succeed"</span>);
         });
     }
 
@@ -957,10 +959,10 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx();
         <span class="kw">let </span>inner = storage::PrefixStore::new(
             storage::PrefixStore::new(
-                storage::PrefixStore::new(ctx.runtime_state(), <span class="string">&quot;test module&quot;</span>),
-                <span class="string">&quot;instance prefix&quot;</span>,
+                storage::PrefixStore::new(ctx.runtime_state(), <span class="string">"test module"</span>),
+                <span class="string">"instance prefix"</span>,
             ),
-            <span class="string">&quot;type prefix&quot;</span>,
+            <span class="string">"type prefix"</span>,
         );
         <span class="kw">let </span><span class="kw-2">mut </span>store_ctx = StoreContext {
             store: Box::new(storage::HashedStore::&lt;<span class="kw">_</span>, blake3::Hasher&gt;::new(inner)),
@@ -968,19 +970,19 @@
 
         <span class="comment">// Set up wasm runtime.
         </span><span class="kw">let </span>env =
-            wasm3::Environment::new().expect(<span class="string">&quot;creating a new wasm3 environment should succeed&quot;</span>);
+            wasm3::Environment::new().expect(<span class="string">"creating a new wasm3 environment should succeed"</span>);
         <span class="kw">let </span>module = env
             .parse_module(BENCH_CODE)
-            .expect(<span class="string">&quot;parsing the code should succeed&quot;</span>);
-        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">&#39;_</span>, StoreContext&lt;<span class="lifetime">&#39;_</span>&gt;&gt; = env
+            .expect(<span class="string">"parsing the code should succeed"</span>);
+        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">'_</span>, StoreContext&lt;<span class="lifetime">'_</span>&gt;&gt; = env
             .new_runtime(<span class="number">1 </span>* <span class="number">1024 </span>* <span class="number">1024</span>, <span class="prelude-val">None</span>)
-            .expect(<span class="string">&quot;creating a new wasm3 runtime should succeed&quot;</span>);
+            .expect(<span class="string">"creating a new wasm3 runtime should succeed"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>instance = rt
             .load_module(module)
-            .expect(<span class="string">&quot;instance creation should succeed&quot;</span>);
+            .expect(<span class="string">"instance creation should succeed"</span>);
         <span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;bench&quot;</span>,
-            <span class="string">&quot;plain_insert&quot;</span>,
+            <span class="string">"bench"</span>,
+            <span class="string">"plain_insert"</span>,
             |ctx, (key, value): ((u32, u32), (u32, u32))| -&gt; <span class="prelude-ty">Result</span>&lt;u32, wasm3::Trap&gt; {
                 <span class="kw">let </span>key = ctx.instance.runtime().try_with_memory(
                     |memory| -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, wasm3::Trap&gt; {
@@ -1004,13 +1006,13 @@
             },
         );
         <span class="kw">let </span>func = instance
-            .find_function::&lt;u32, u32&gt;(<span class="string">&quot;bench_storage_insert&quot;</span>)
-            .expect(<span class="string">&quot;finding the entrypoint function should succeed&quot;</span>);
+            .find_function::&lt;u32, u32&gt;(<span class="string">"bench_storage_insert"</span>)
+            .expect(<span class="string">"finding the entrypoint function should succeed"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>counter_base: u32 = <span class="number">0</span>;
         b.iter(|| {
             counter_base += func
                 .call_with_context(<span class="kw-2">&amp;mut </span>store_ctx, counter_base)
-                .expect(<span class="string">&quot;function call should succeed&quot;</span>);
+                .expect(<span class="string">"function call should succeed"</span>);
         });
     }
 
@@ -1021,10 +1023,10 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx();
         <span class="kw">let </span>inner = storage::PrefixStore::new(
             storage::PrefixStore::new(
-                storage::PrefixStore::new(ctx.runtime_state(), <span class="string">&quot;test module&quot;</span>),
-                <span class="string">&quot;instance prefix&quot;</span>,
+                storage::PrefixStore::new(ctx.runtime_state(), <span class="string">"test module"</span>),
+                <span class="string">"instance prefix"</span>,
             ),
-            <span class="string">&quot;type prefix&quot;</span>,
+            <span class="string">"type prefix"</span>,
         );
         <span class="kw">let </span><span class="kw-2">mut </span>store_ctx = StoreContext {
             store: Box::new(storage::HashedStore::&lt;<span class="kw">_</span>, blake3::Hasher&gt;::new(inner)),
@@ -1032,26 +1034,26 @@
 
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">2_000_000 </span>{
             store_ctx.store.insert(
-                <span class="macro">format!</span>(<span class="string">&quot;key{}&quot;</span>, i).as_bytes(),
-                <span class="macro">format!</span>(<span class="string">&quot;value{}&quot;</span>, i).as_bytes(),
+                <span class="macro">format!</span>(<span class="string">"key{}"</span>, i).as_bytes(),
+                <span class="macro">format!</span>(<span class="string">"value{}"</span>, i).as_bytes(),
             );
         }
 
         <span class="comment">// Set up wasm runtime.
         </span><span class="kw">let </span>env =
-            wasm3::Environment::new().expect(<span class="string">&quot;creating a new wasm3 environment should succeed&quot;</span>);
+            wasm3::Environment::new().expect(<span class="string">"creating a new wasm3 environment should succeed"</span>);
         <span class="kw">let </span>module = env
             .parse_module(BENCH_CODE)
-            .expect(<span class="string">&quot;parsing the code should succeed&quot;</span>);
-        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">&#39;_</span>, StoreContext&lt;<span class="lifetime">&#39;_</span>&gt;&gt; = env
+            .expect(<span class="string">"parsing the code should succeed"</span>);
+        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">'_</span>, StoreContext&lt;<span class="lifetime">'_</span>&gt;&gt; = env
             .new_runtime(<span class="number">1 </span>* <span class="number">1024 </span>* <span class="number">1024</span>, <span class="prelude-val">None</span>)
-            .expect(<span class="string">&quot;creating a new wasm3 runtime should succeed&quot;</span>);
+            .expect(<span class="string">"creating a new wasm3 runtime should succeed"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>instance = rt
             .load_module(module)
-            .expect(<span class="string">&quot;instance creation should succeed&quot;</span>);
+            .expect(<span class="string">"instance creation should succeed"</span>);
         <span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;bench&quot;</span>,
-            <span class="string">&quot;plain_remove&quot;</span>,
+            <span class="string">"bench"</span>,
+            <span class="string">"plain_remove"</span>,
             |ctx, key: (u32, u32)| -&gt; <span class="prelude-ty">Result</span>&lt;u32, wasm3::Trap&gt; {
                 <span class="kw">let </span>key = ctx.instance.runtime().try_with_memory(
                     |memory| -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, wasm3::Trap&gt; {
@@ -1067,13 +1069,13 @@
             },
         );
         <span class="kw">let </span>func = instance
-            .find_function::&lt;u32, u32&gt;(<span class="string">&quot;bench_storage_remove&quot;</span>)
-            .expect(<span class="string">&quot;finding the entrypoint function should succeed&quot;</span>);
+            .find_function::&lt;u32, u32&gt;(<span class="string">"bench_storage_remove"</span>)
+            .expect(<span class="string">"finding the entrypoint function should succeed"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>counter_base: u32 = <span class="number">0</span>;
         b.iter(|| {
             counter_base += func
                 .call_with_context(<span class="kw-2">&amp;mut </span>store_ctx, counter_base)
-                .expect(<span class="string">&quot;function call should succeed&quot;</span>);
+                .expect(<span class="string">"function call should succeed"</span>);
         });
     }
 
@@ -1084,10 +1086,10 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx();
         <span class="kw">let </span>inner = storage::PrefixStore::new(
             storage::PrefixStore::new(
-                storage::PrefixStore::new(ctx.runtime_state(), <span class="string">&quot;test module&quot;</span>),
-                <span class="string">&quot;instance prefix&quot;</span>,
+                storage::PrefixStore::new(ctx.runtime_state(), <span class="string">"test module"</span>),
+                <span class="string">"instance prefix"</span>,
             ),
-            <span class="string">&quot;type prefix&quot;</span>,
+            <span class="string">"type prefix"</span>,
         );
         <span class="kw">let </span><span class="kw-2">mut </span>store = Box::new(storage::HashedStore::&lt;<span class="kw">_</span>, blake3::Hasher&gt;::new(inner));
 
@@ -1098,8 +1100,8 @@
         }
         b.iter(<span class="kw">move </span>|| {
             <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..<span class="number">5_000 </span>{
-                <span class="kw">let </span>key = <span class="macro">format!</span>(<span class="string">&quot;key{}&quot;</span>, i);
-                <span class="kw">let </span>exp_value = <span class="macro">format!</span>(<span class="string">&quot;value{}&quot;</span>, i);
+                <span class="kw">let </span>key = <span class="macro">format!</span>(<span class="string">"key{}"</span>, i);
+                <span class="kw">let </span>exp_value = <span class="macro">format!</span>(<span class="string">"value{}"</span>, i);
                 <span class="kw">let </span>value = store.get(key.as_bytes()).unwrap();
                 <span class="macro">assert_eq!</span>(exp_value.as_bytes(), value.as_slice());
             }
@@ -1113,10 +1115,10 @@
         <span class="kw">let </span><span class="kw-2">mut </span>ctx = mock.create_ctx();
         <span class="kw">let </span>inner = storage::PrefixStore::new(
             storage::PrefixStore::new(
-                storage::PrefixStore::new(ctx.runtime_state(), <span class="string">&quot;test module&quot;</span>),
-                <span class="string">&quot;instance prefix&quot;</span>,
+                storage::PrefixStore::new(ctx.runtime_state(), <span class="string">"test module"</span>),
+                <span class="string">"instance prefix"</span>,
             ),
-            <span class="string">&quot;type prefix&quot;</span>,
+            <span class="string">"type prefix"</span>,
         );
         <span class="kw">let </span><span class="kw-2">mut </span>store_ctx = StoreContext {
             store: Box::new(storage::HashedStore::&lt;<span class="kw">_</span>, blake3::Hasher&gt;::new(inner)),
@@ -1133,27 +1135,27 @@
         gas::transform(<span class="kw-2">&amp;mut </span>module);
         <span class="kw">let </span>instrumented_code = module.emit_wasm();
         <span class="kw">let </span>env =
-            wasm3::Environment::new().expect(<span class="string">&quot;creating a new wasm3 environment should succeed&quot;</span>);
+            wasm3::Environment::new().expect(<span class="string">"creating a new wasm3 environment should succeed"</span>);
         <span class="kw">let </span>module = env
             .parse_module(<span class="kw-2">&amp;</span>instrumented_code)
-            .expect(<span class="string">&quot;parsing the code should succeed&quot;</span>);
-        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">&#39;_</span>, StoreContext&lt;<span class="lifetime">&#39;_</span>&gt;&gt; = env
+            .expect(<span class="string">"parsing the code should succeed"</span>);
+        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">'_</span>, StoreContext&lt;<span class="lifetime">'_</span>&gt;&gt; = env
             .new_runtime(<span class="number">1 </span>* <span class="number">1024 </span>* <span class="number">1024</span>, <span class="prelude-val">None</span>)
-            .expect(<span class="string">&quot;creating a new wasm3 runtime should succeed&quot;</span>);
+            .expect(<span class="string">"creating a new wasm3 runtime should succeed"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>instance = rt
             .load_module(module)
-            .expect(<span class="string">&quot;instance creation should succeed&quot;</span>);
+            .expect(<span class="string">"instance creation should succeed"</span>);
         <span class="kw">let </span>initial_gas: u64 = <span class="number">1_000_000_000</span>;
         instance
             .set_global(gas::EXPORT_GAS_LIMIT, initial_gas)
-            .expect(<span class="string">&quot;setting gas limit should succeed&quot;</span>);
+            .expect(<span class="string">"setting gas limit should succeed"</span>);
 
         <span class="kw">let </span>bytes_written: Rc&lt;RefCell&lt;usize&gt;&gt; = Rc::new(RefCell::new(<span class="number">0</span>));
         <span class="kw">let </span>bytes_written_cb = bytes_written.clone();
 
         <span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;bench&quot;</span>,
-            <span class="string">&quot;plain_insert&quot;</span>,
+            <span class="string">"bench"</span>,
+            <span class="string">"plain_insert"</span>,
             <span class="kw">move </span>|ctx, (key, value): ((u32, u32), (u32, u32))| -&gt; <span class="prelude-ty">Result</span>&lt;u32, wasm3::Trap&gt; {
                 <span class="kw">let </span>key = ctx.instance.runtime().try_with_memory(
                     |memory| -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, wasm3::Trap&gt; {
@@ -1198,17 +1200,17 @@
             },
         );
         <span class="kw">let </span>func = instance
-            .find_function::&lt;u32, u32&gt;(<span class="string">&quot;bench_storage_gas_consumer&quot;</span>)
-            .expect(<span class="string">&quot;finding the entrypoint function should succeed&quot;</span>);
+            .find_function::&lt;u32, u32&gt;(<span class="string">"bench_storage_gas_consumer"</span>)
+            .expect(<span class="string">"finding the entrypoint function should succeed"</span>);
         <span class="kw">let _ </span>= func.call_with_context(<span class="kw-2">&amp;mut </span>store_ctx, params.max_storage_value_size_bytes <span class="kw">as </span>u32);
         <span class="kw">let </span>gas_limit: u64 = instance
             .get_global(gas::EXPORT_GAS_LIMIT)
-            .expect(<span class="string">&quot;getting gas limit global should succeed&quot;</span>);
+            .expect(<span class="string">"getting gas limit global should succeed"</span>);
         <span class="kw">let </span>gas_limit_exhausted: u64 = instance
             .get_global(gas::EXPORT_GAS_LIMIT_EXHAUSTED)
-            .expect(<span class="string">&quot;getting gas limit exhausted global should succeed&quot;</span>);
+            .expect(<span class="string">"getting gas limit exhausted global should succeed"</span>);
         <span class="macro">println!</span>(
-            <span class="string">&quot;  storage waster: gas remaining {} [used: {}, exhausted flag: {}], value bytes written: {}&quot;</span>,
+            <span class="string">"  storage waster: gas remaining {} [used: {}, exhausted flag: {}], value bytes written: {}"</span>,
             gas_limit,
             initial_gas - gas_limit,
             gas_limit_exhausted,

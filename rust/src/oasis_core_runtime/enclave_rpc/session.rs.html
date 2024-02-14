@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/enclave_rpc/session.rs`."><title>session.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/enclave_rpc/session.rs`."><title>session.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -560,32 +562,32 @@
 };
 
 <span class="doccomment">/// Noise protocol pattern.
-</span><span class="kw">const </span>NOISE_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">&quot;Noise_XX_25519_ChaChaPoly_SHA256&quot;</span>;
+</span><span class="kw">const </span>NOISE_PATTERN: <span class="kw-2">&amp;</span>str = <span class="string">"Noise_XX_25519_ChaChaPoly_SHA256"</span>;
 <span class="doccomment">/// RAK signature session binding context.
-</span><span class="kw">const </span>RAK_SESSION_BINDING_CONTEXT: [u8; <span class="number">8</span>] = <span class="kw-2">*</span><span class="string">b&quot;EkRakRpc&quot;</span>;
+</span><span class="kw">const </span>RAK_SESSION_BINDING_CONTEXT: [u8; <span class="number">8</span>] = <span class="kw-2">*</span><span class="string">b"EkRakRpc"</span>;
 
 <span class="doccomment">/// Session-related error.
 </span><span class="attr">#[derive(Error, Debug)]
 </span><span class="kw">enum </span>SessionError {
-    <span class="attr">#[error(<span class="string">&quot;invalid input&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid input"</span>)]
     </span>InvalidInput,
-    <span class="attr">#[error(<span class="string">&quot;invalid state&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid state"</span>)]
     </span>InvalidState,
-    <span class="attr">#[error(<span class="string">&quot;session closed&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"session closed"</span>)]
     </span>Closed,
-    <span class="attr">#[error(<span class="string">&quot;mismatched enclave identity&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"mismatched enclave identity"</span>)]
     </span>MismatchedEnclaveIdentity,
-    <span class="attr">#[error(<span class="string">&quot;missing quote policy&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"missing quote policy"</span>)]
     </span>MissingQuotePolicy,
-    <span class="attr">#[error(<span class="string">&quot;remote node not set&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"remote node not set"</span>)]
     </span>NodeNotSet,
-    <span class="attr">#[error(<span class="string">&quot;remote node already set&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"remote node already set"</span>)]
     </span>NodeAlreadySet,
-    <span class="attr">#[error(<span class="string">&quot;remote node not registered&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"remote node not registered"</span>)]
     </span>NodeNotRegistered,
-    <span class="attr">#[error(<span class="string">&quot;RAK not published in the consensus layer&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"RAK not published in the consensus layer"</span>)]
     </span>RAKNotFound,
-    <span class="attr">#[error(<span class="string">&quot;runtime id not set&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"runtime id not set"</span>)]
     </span>RuntimeNotSet,
 }
 
@@ -680,7 +682,7 @@
                     </span><span class="kw">let </span>len = state.read_message(<span class="kw-2">&amp;</span>data, <span class="kw-2">&amp;mut </span><span class="self">self</span>.buf)<span class="question-mark">?</span>;
                     <span class="kw">let </span>remote_static = state
                         .get_remote_static()
-                        .expect(<span class="string">&quot;dh exchange just happened&quot;</span>);
+                        .expect(<span class="string">"dh exchange just happened"</span>);
                     <span class="self">self</span>.info = <span class="self">self
                         </span>.verify_rak_binding(<span class="kw-2">&amp;</span><span class="self">self</span>.buf[..len], remote_static)
                         .<span class="kw">await</span><span class="question-mark">?</span>;
@@ -693,7 +695,7 @@
                     </span><span class="kw">let </span>len = state.read_message(<span class="kw-2">&amp;</span>data, <span class="kw-2">&amp;mut </span><span class="self">self</span>.buf)<span class="question-mark">?</span>;
                     <span class="kw">let </span>remote_static = state
                         .get_remote_static()
-                        .expect(<span class="string">&quot;dh exchange just happened&quot;</span>);
+                        .expect(<span class="string">"dh exchange just happened"</span>);
                     <span class="self">self</span>.info = <span class="self">self
                         </span>.verify_rak_binding(<span class="kw-2">&amp;</span><span class="self">self</span>.buf[..len], remote_static)
                         .<span class="kw">await</span><span class="question-mark">?</span>;
@@ -750,7 +752,7 @@
                 }
 
                 <span class="kw">let </span>rak_pub = identity.public_rak();
-                <span class="kw">let </span>quote = identity.quote().expect(<span class="string">&quot;quote is configured&quot;</span>);
+                <span class="kw">let </span>quote = identity.quote().expect(<span class="string">"quote is configured"</span>);
                 <span class="kw">let </span>binding = identity
                     .sign(<span class="kw-2">&amp;</span>RAK_SESSION_BINDING_CONTEXT, <span class="kw-2">&amp;</span><span class="self">self</span>.local_static_pub)
                     .unwrap();
@@ -851,7 +853,7 @@
         <span class="kw">let </span>consensus_verifier = <span class="self">self
             </span>.consensus_verifier
             .as_ref()
-            .expect(<span class="string">&quot;consensus verifier should be set&quot;</span>);
+            .expect(<span class="string">"consensus verifier should be set"</span>);
         <span class="kw">let </span>runtime_id = <span class="self">self</span>.remote_runtime_id.ok_or(SessionError::RuntimeNotSet)<span class="question-mark">?</span>;
         <span class="kw">let </span>node = <span class="self">self</span>.remote_node.ok_or(SessionError::NodeNotSet)<span class="question-mark">?</span>;
 
@@ -879,7 +881,7 @@
     }
 }
 
-<span class="doccomment">/// Binding of the session&#39;s static public key to a remote attestation
+<span class="doccomment">/// Binding of the session's static public key to a remote attestation
 /// verification report through the use of the remote attestation key.
 ///
 /// The signature chain is as follows:
@@ -887,10 +889,10 @@
 /// * `avr` contains the remote attestation verification report which
 ///   binds RAK to the remote attestation.
 /// * `rak_pub` contains the public part of RAK.
-/// * `binding` is signed by `rak_pub` and binds the session&#39;s static
+/// * `binding` is signed by `rak_pub` and binds the session's static
 ///   public key to RAK.
 </span><span class="attr">#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-#[cbor(tag = <span class="string">&quot;v&quot;</span>)]
+#[cbor(tag = <span class="string">"v"</span>)]
 </span><span class="kw">pub enum </span>RAKBinding {
     <span class="doccomment">/// Old V0 format that only supported IAS quotes.
     </span><span class="attr">#[cbor(rename = <span class="number">0</span>, missing)]
@@ -918,7 +920,7 @@
         }
     }
 
-    <span class="doccomment">/// Signature from RAK, binding the session&#39;s static public key to RAK.
+    <span class="doccomment">/// Signature from RAK, binding the session's static public key to RAK.
     </span><span class="kw">pub fn </span>binding(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Signature {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::V0 { binding, .. } =&gt; <span class="kw-2">*</span>binding,
@@ -1018,10 +1020,10 @@
     </span>}
 
     <span class="attr">#[allow(clippy::type_complexity)]
-    </span><span class="kw">fn </span>build&lt;<span class="lifetime">&#39;a</span>&gt;(
+    </span><span class="kw">fn </span>build&lt;<span class="lifetime">'a</span>&gt;(
         <span class="kw-2">mut </span><span class="self">self</span>,
     ) -&gt; (
-        snow::Builder&lt;<span class="lifetime">&#39;a</span>&gt;,
+        snow::Builder&lt;<span class="lifetime">'a</span>&gt;,
         snow::Keypair,
         <span class="prelude-ty">Option</span>&lt;Namespace&gt;,
         <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Verifier&gt;&gt;,

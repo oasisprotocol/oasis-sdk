@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/state/beacon.rs`."><title>beacon.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/state/beacon.rs`."><title>beacon.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -202,13 +204,13 @@
 };
 
 <span class="doccomment">/// Consensus beacon state wrapper.
-</span><span class="kw">pub struct </span>ImmutableState&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; {
-    mkvs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T,
+</span><span class="kw">pub struct </span>ImmutableState&lt;<span class="lifetime">'a</span>, T: ImmutableMKVS&gt; {
+    mkvs: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">'a</span>, T&gt; {
     <span class="doccomment">/// Constructs a new ImmutableMKVS.
-    </span><span class="kw">pub fn </span>new(mkvs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T) -&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    </span><span class="kw">pub fn </span>new(mkvs: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T) -&gt; ImmutableState&lt;<span class="lifetime">'a</span>, T&gt; {
         ImmutableState { mkvs }
     }
 }
@@ -216,7 +218,7 @@
 <span class="macro">key_format!</span>(CurrentEpochKeyFmt, <span class="number">0x40</span>, ());
 <span class="macro">key_format!</span>(FutureEpochKeyFmt, <span class="number">0x41</span>, ());
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">'a</span>, T&gt; {
     <span class="doccomment">/// Returns the current epoch number.
     </span><span class="kw">pub fn </span>epoch(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;EpochTime, StateError&gt; {
         <span class="self">self</span>.epoch_state().map(|es| es.epoch)
@@ -319,16 +321,16 @@
         <span class="comment">// Test current epoch state.
         </span><span class="kw">let </span>epoch_state = beacon_state
             .epoch_state()
-            .expect(<span class="string">&quot;epoch state query should work&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">10u64</span>, epoch_state.epoch, <span class="string">&quot;expected epoch should match&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">100i64</span>, epoch_state.height, <span class="string">&quot;expected height should match&quot;</span>);
+            .expect(<span class="string">"epoch state query should work"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">10u64</span>, epoch_state.epoch, <span class="string">"expected epoch should match"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">100i64</span>, epoch_state.height, <span class="string">"expected height should match"</span>);
 
         <span class="comment">// Test future epoch state.
         </span><span class="kw">let </span>epoch_state = beacon_state
             .future_epoch_state()
-            .expect(<span class="string">&quot;future epoch state query should work&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">11u64</span>, epoch_state.epoch, <span class="string">&quot;expected epoch should match&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">110i64</span>, epoch_state.height, <span class="string">&quot;expected height should match&quot;</span>);
+            .expect(<span class="string">"future epoch state query should work"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">11u64</span>, epoch_state.epoch, <span class="string">"expected epoch should match"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">110i64</span>, epoch_state.height, <span class="string">"expected height should match"</span>);
     }
 
     <span class="attr">#[test]
@@ -336,15 +338,15 @@
         <span class="comment">// Keep in sync with go/consensus/cometbft/apps/beacon/state/interop/interop.go.
         // If mock consensus state changes, update the root hash bellow.
         // See protocol server stdout for hash.
-        // To make the hash show up during tests, run &quot;cargo test&quot; as
-        // &quot;cargo test -- --nocapture&quot;.
+        // To make the hash show up during tests, run "cargo test" as
+        // "cargo test -- --nocapture".
 
         // Setup protocol server with initialized mock consensus state.
         </span><span class="kw">let </span>server = ProtocolServer::new(Fixture::ConsensusMock.into());
         <span class="kw">let </span>mock_consensus_root = Root {
             version: <span class="number">1</span>,
             root_type: RootType::State,
-            hash: Hash::from(<span class="string">&quot;f637a80b24e3ffaaf3de0da96f1dfd94d0a135348f40006d578d557d70d5fa42&quot;</span>),
+            hash: Hash::from(<span class="string">"f637a80b24e3ffaaf3de0da96f1dfd94d0a135348f40006d578d557d70d5fa42"</span>),
             ..Default::default()
         };
         <span class="kw">let </span>mkvs = Tree::builder()
@@ -354,28 +356,28 @@
         <span class="kw">let </span>beacon_state = ImmutableState::new(<span class="kw-2">&amp;</span>mkvs);
 
         <span class="comment">// Test current epoch number.
-        </span><span class="kw">let </span>epoch = beacon_state.epoch().expect(<span class="string">&quot;epoch query should work&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">42u64</span>, epoch, <span class="string">&quot;expected epoch should match&quot;</span>);
+        </span><span class="kw">let </span>epoch = beacon_state.epoch().expect(<span class="string">"epoch query should work"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">42u64</span>, epoch, <span class="string">"expected epoch should match"</span>);
 
         <span class="comment">// Test current epoch state.
         </span><span class="kw">let </span>epoch_state = beacon_state
             .epoch_state()
-            .expect(<span class="string">&quot;epoch state query should work&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">42u64</span>, epoch_state.epoch, <span class="string">&quot;expected epoch should match&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">13i64</span>, epoch_state.height, <span class="string">&quot;expected height should match&quot;</span>);
+            .expect(<span class="string">"epoch state query should work"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">42u64</span>, epoch_state.epoch, <span class="string">"expected epoch should match"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">13i64</span>, epoch_state.height, <span class="string">"expected height should match"</span>);
 
         <span class="comment">// Test future epoch number.
         </span><span class="kw">let </span>epoch = beacon_state
             .future_epoch()
-            .expect(<span class="string">&quot;future epoch query should work&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">43u64</span>, epoch, <span class="string">&quot;expected future epoch should match&quot;</span>);
+            .expect(<span class="string">"future epoch query should work"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">43u64</span>, epoch, <span class="string">"expected future epoch should match"</span>);
 
         <span class="comment">// Test future epoch state.
         </span><span class="kw">let </span>epoch_state = beacon_state
             .future_epoch_state()
-            .expect(<span class="string">&quot;future epoch state query should work&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">43u64</span>, epoch_state.epoch, <span class="string">&quot;expected epoch should match&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">15i64</span>, epoch_state.height, <span class="string">&quot;expected height should match&quot;</span>);
+            .expect(<span class="string">"future epoch state query should work"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">43u64</span>, epoch_state.epoch, <span class="string">"expected epoch should match"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">15i64</span>, epoch_state.height, <span class="string">"expected height should match"</span>);
     }
 }
 </code></pre></div></section></main></body></html>

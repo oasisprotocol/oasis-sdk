@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/dispatcher.rs`."><title>dispatcher.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_runtime_sdk/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/dispatcher.rs`."><title>dispatcher.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oasis_runtime_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1202,30 +1204,30 @@
 };
 
 <span class="doccomment">/// Unique module name.
-</span><span class="kw">const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;dispatcher&quot;</span>;
+</span><span class="kw">const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"dispatcher"</span>;
 
 <span class="doccomment">/// Error emitted by the dispatch process. Note that this indicates an error in the dispatch
 /// process itself and should not be used for any transaction-related errors.
 </span><span class="attr">#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
 #[sdk_error(abort_self)]
 </span><span class="kw">pub enum </span>Error {
-    <span class="attr">#[error(<span class="string">&quot;dispatch aborted&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"dispatch aborted"</span>)]
     #[sdk_error(code = <span class="number">1</span>)]
     </span>Aborted,
 
-    <span class="attr">#[error(<span class="string">&quot;malformed transaction in batch: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"malformed transaction in batch: {0}"</span>)]
     #[sdk_error(code = <span class="number">2</span>)]
     </span>MalformedTransactionInBatch(<span class="attr">#[source] </span>anyhow::Error),
 
-    <span class="attr">#[error(<span class="string">&quot;query aborted: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"query aborted: {0}"</span>)]
     #[sdk_error(code = <span class="number">3</span>)]
     </span>QueryAborted(String),
 
-    <span class="attr">#[error(<span class="string">&quot;key manager failure: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"key manager failure: {0}"</span>)]
     #[sdk_error(code = <span class="number">4</span>)]
     </span>KeyManagerFailure(<span class="attr">#[from] </span>KeyManagerError),
 
-    <span class="attr">#[error(<span class="string">&quot;batch out of gas&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"batch out of gas"</span>)]
     #[sdk_error(code = <span class="number">5</span>)]
     </span>BatchOutOfGas,
 }
@@ -1269,7 +1271,7 @@
 
 <span class="doccomment">/// Additional options for dispatch operations.
 </span><span class="attr">#[derive(Default)]
-</span><span class="kw">pub struct </span>DispatchOptions&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>DispatchOptions&lt;<span class="lifetime">'a</span>&gt; {
     <span class="doccomment">/// Transaction size.
     </span><span class="kw">pub </span>tx_size: u32,
     <span class="doccomment">/// Transaction index within the batch.
@@ -1277,7 +1279,7 @@
     <span class="doccomment">/// Transaction hash.
     </span><span class="kw">pub </span>tx_hash: Hash,
     <span class="doccomment">/// Optionally only allow methods for which the provided authorizer closure returns true.
-    </span><span class="kw">pub </span>method_authorizer: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; bool&gt;,
+    </span><span class="kw">pub </span>method_authorizer: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Fn(<span class="kw-2">&amp;</span>str) -&gt; bool&gt;,
     <span class="doccomment">/// Optionally skip authentication.
     </span><span class="kw">pub </span>skip_authentication: bool,
 }
@@ -1330,7 +1332,7 @@
             [AuthProof::Module(scheme)] =&gt; {
                 R::Modules::decode_tx(ctx, scheme, <span class="kw-2">&amp;</span>utx.<span class="number">0</span>)<span class="question-mark">?</span>.ok_or_else(|| {
                     modules::core::Error::MalformedTransaction(<span class="macro">anyhow!</span>(
-                        <span class="string">&quot;module-controlled transaction decoding scheme {} not supported&quot;</span>,
+                        <span class="string">"module-controlled transaction decoding scheme {} not supported"</span>,
                         scheme
                     ))
                 })
@@ -1347,7 +1349,7 @@
     </span><span class="kw">pub fn </span>dispatch_tx_call&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         call: types::transaction::Call,
-        opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">&#39;_</span>&gt;,
+        opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">'_</span>&gt;,
     ) -&gt; (module::CallResult, callformat::Metadata) {
         <span class="kw">let </span>read_only = call.read_only;
 
@@ -1377,7 +1379,7 @@
     <span class="kw">fn </span>_dispatch_tx_call&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         call: types::transaction::Call,
-        opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">&#39;_</span>&gt;,
+        opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">'_</span>&gt;,
     ) -&gt; (module::CallResult, callformat::Metadata) {
         <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = R::Modules::before_handle_call(ctx, <span class="kw-2">&amp;</span>call) {
             <span class="kw">return </span>(e.into_call_result(), callformat::Metadata::Empty);
@@ -1419,7 +1421,7 @@
     </span><span class="kw">pub fn </span>dispatch_tx_opts&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         tx: types::transaction::Transaction,
-        opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">&#39;_</span>&gt;,
+        opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">'_</span>&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;DispatchResult, Error&gt; {
         <span class="comment">// Run pre-processing hooks.
         </span><span class="kw">if </span>!opts.skip_authentication {
@@ -1547,7 +1549,7 @@
     </span><span class="kw">pub fn </span>execute_tx_opts&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         tx: Transaction,
-        opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">&#39;_</span>&gt;,
+        opts: <span class="kw-2">&amp;</span>DispatchOptions&lt;<span class="lifetime">'_</span>&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(types::transaction::CallResult, Tags), Error&gt; {
         <span class="kw">let </span>dispatch_result = <span class="self">Self</span>::dispatch_tx_opts(ctx, tx, opts)<span class="question-mark">?</span>;
         <span class="kw">let </span>output: types::transaction::CallResult = callformat::encode_result(
@@ -1628,7 +1630,7 @@
         }
 
         <span class="kw">if </span>!handlers.is_empty() {
-            <span class="macro">error!</span>(ctx.get_logger(<span class="string">&quot;dispatcher&quot;</span>), <span class="string">&quot;message handler not invoked&quot;</span>; <span class="string">&quot;unhandled&quot; </span>=&gt; <span class="question-mark">?</span>handlers);
+            <span class="macro">error!</span>(ctx.get_logger(<span class="string">"dispatcher"</span>), <span class="string">"message handler not invoked"</span>; <span class="string">"unhandled" </span>=&gt; <span class="question-mark">?</span>handlers);
             <span class="kw">return </span><span class="prelude-val">Err</span>(modules::core::Error::MessageHandlerNotInvoked);
         }
 
@@ -1679,17 +1681,17 @@
             // explicit to ensure this remains the case regardless of upstream changes.
             </span>TransactionResult::Rollback(result)
         })
-        .map_err(|err| -&gt; RuntimeError { Error::QueryAborted(<span class="macro">format!</span>(<span class="string">&quot;{err:?}&quot;</span>)).into() })<span class="question-mark">?
+        .map_err(|err| -&gt; RuntimeError { Error::QueryAborted(<span class="macro">format!</span>(<span class="string">"{err:?}"</span>)).into() })<span class="question-mark">?
         </span>.map(cbor::to_vec)
     }
 
     <span class="kw">fn </span>execute_batch_common&lt;F&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut </span>rt_ctx: transaction::Context&lt;<span class="lifetime">&#39;_</span>&gt;,
+        <span class="kw-2">mut </span>rt_ctx: transaction::Context&lt;<span class="lifetime">'_</span>&gt;,
         f: F,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ExecuteBatchResult, RuntimeError&gt;
     <span class="kw">where
-        </span>F: FnOnce(<span class="kw-2">&amp;</span>RuntimeBatchContext&lt;<span class="lifetime">&#39;_</span>, R&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ExecuteTxResult&gt;, RuntimeError&gt;,
+        </span>F: FnOnce(<span class="kw-2">&amp;</span>RuntimeBatchContext&lt;<span class="lifetime">'_</span>, R&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;ExecuteTxResult&gt;, RuntimeError&gt;,
     {
         <span class="comment">// Prepare dispatch context.
         </span><span class="kw">let </span>key_manager = <span class="self">self
@@ -1700,7 +1702,7 @@
         <span class="kw">let </span>history = <span class="self">self</span>.consensus_verifier.clone();
 
         <span class="kw">let </span>root = storage::MKVSStore::new(<span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
-        <span class="kw">let </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
+        <span class="kw">let </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">'_</span>, R&gt;::new(
             <span class="kw-2">&amp;</span><span class="self">self</span>.host_info,
             key_manager,
             rt_ctx.header,
@@ -1749,7 +1751,7 @@
 <span class="kw">impl</span>&lt;R: Runtime + Send + Sync&gt; transaction::dispatcher::Dispatcher <span class="kw">for </span>Dispatcher&lt;R&gt; {
     <span class="kw">fn </span>execute_batch(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        rt_ctx: transaction::Context&lt;<span class="lifetime">&#39;_</span>&gt;,
+        rt_ctx: transaction::Context&lt;<span class="lifetime">'_</span>&gt;,
         batch: <span class="kw-2">&amp;</span>TxnBatch,
         _in_msgs: <span class="kw-2">&amp;</span>[roothash::IncomingMessage],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ExecuteBatchResult, RuntimeError&gt; {
@@ -1763,7 +1765,7 @@
                 <span class="kw">let </span><span class="kw-2">mut </span>prefixes: BTreeSet&lt;Prefix&gt; = BTreeSet::new();
                 <span class="kw">for </span>tx <span class="kw">in </span>batch.iter() {
                     <span class="kw">let </span>tx_size = tx.len().try_into().map_err(|<span class="kw">_</span>| {
-                        Error::MalformedTransactionInBatch(<span class="macro">anyhow!</span>(<span class="string">&quot;transaction too large&quot;</span>))
+                        Error::MalformedTransactionInBatch(<span class="macro">anyhow!</span>(<span class="string">"transaction too large"</span>))
                     })<span class="question-mark">?</span>;
                     <span class="kw">let </span>tx_hash = Hash::digest_bytes(tx);
                     <span class="comment">// It is an error to include a malformed transaction in a batch. So instead of only
@@ -1798,7 +1800,7 @@
 
     <span class="kw">fn </span>schedule_and_execute_batch(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        rt_ctx: transaction::Context&lt;<span class="lifetime">&#39;_</span>&gt;,
+        rt_ctx: transaction::Context&lt;<span class="lifetime">'_</span>&gt;,
         batch: <span class="kw-2">&amp;mut </span>TxnBatch,
         _in_msgs: <span class="kw-2">&amp;</span>[roothash::IncomingMessage],
     ) -&gt; <span class="prelude-ty">Result</span>&lt;ExecuteBatchResult, RuntimeError&gt; {
@@ -1815,19 +1817,19 @@
                 </span><span class="kw">let </span><span class="kw-2">mut </span>new_batch = Vec::new();
                 <span class="kw">let </span><span class="kw-2">mut </span>results = Vec::with_capacity(batch.len());
                 <span class="kw">let </span><span class="kw-2">mut </span>requested_batch_len = cfg.initial_batch_size;
-                <span class="lifetime">&#39;batch</span>: <span class="kw">loop </span>{
+                <span class="lifetime">'batch</span>: <span class="kw">loop </span>{
                     <span class="comment">// Remember length of last batch.
                     </span><span class="kw">let </span>last_batch_len = batch.len();
                     <span class="kw">let </span>last_batch_tx_hash = batch.last().map(|raw_tx| Hash::digest_bytes(raw_tx));
 
                     <span class="kw">for </span>raw_tx <span class="kw">in </span>batch.drain(..) {
-                        <span class="comment">// If we don&#39;t have enough gas for processing even the cheapest transaction
+                        <span class="comment">// If we don't have enough gas for processing even the cheapest transaction
                         // we are done. Same if we reached the runtime-imposed maximum tx count.
                         </span><span class="kw">let </span>remaining_gas = R::Core::remaining_batch_gas();
                         <span class="kw">if </span>remaining_gas &lt; cfg.min_remaining_gas
                             || new_batch.len() &gt;= cfg.max_tx_count
                         {
-                            <span class="kw">break </span><span class="lifetime">&#39;batch</span>;
+                            <span class="kw">break </span><span class="lifetime">'batch</span>;
                         }
 
                         <span class="comment">// Decode transaction.
@@ -1836,19 +1838,19 @@
                             <span class="prelude-val">Ok</span>(tx) =&gt; tx,
                             <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
                                 <span class="comment">// Transaction is malformed, make sure it gets removed from the
-                                // queue and don&#39;t include it in a block.
+                                // queue and don't include it in a block.
                                 </span>tx_reject_hashes.push(tx_hash);
                                 <span class="kw">continue</span>;
                             }
                         };
                         <span class="kw">let </span>tx_size = raw_tx.len().try_into().unwrap();
 
-                        <span class="comment">// If we don&#39;t have enough gas remaining to process this transaction, just
+                        <span class="comment">// If we don't have enough gas remaining to process this transaction, just
                         // skip it.
                         </span><span class="kw">if </span>tx.auth_info.fee.gas &gt; remaining_gas {
                             <span class="kw">continue</span>;
                         }
-                        <span class="comment">// Same if we don&#39;t have enough consensus message slots.
+                        <span class="comment">// Same if we don't have enough consensus message slots.
                         </span><span class="kw">let </span>remaining_messages = CurrentState::with(|state| {
                             ctx.max_messages()
                                 .saturating_sub(state.emitted_messages_count() <span class="kw">as </span>u32)
@@ -1907,7 +1909,7 @@
                         results.push(<span class="self">Self</span>::execute_tx(ctx, tx_size, tx_hash, tx, tx_index)<span class="question-mark">?</span>);
                     }
 
-                    <span class="comment">// If there&#39;s more room in the block and we got the maximum number of
+                    <span class="comment">// If there's more room in the block and we got the maximum number of
                     // transactions, request more transactions.
                     </span><span class="kw">if </span>last_batch_tx_hash.is_some()
                         &amp;&amp; last_batch_len &gt;= requested_batch_len <span class="kw">as </span>usize
@@ -1920,7 +1922,7 @@
                             requested_batch_len = cfg.batch_size;
                             <span class="kw">continue</span>;
                         }
-                        <span class="comment">// No more transactions, let&#39;s just finish.
+                        <span class="comment">// No more transactions, let's just finish.
                     </span>}
                     <span class="kw">break</span>;
                 }
@@ -1940,7 +1942,7 @@
 
     <span class="kw">fn </span>check_batch(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut </span>rt_ctx: transaction::Context&lt;<span class="lifetime">&#39;_</span>&gt;,
+        <span class="kw-2">mut </span>rt_ctx: transaction::Context&lt;<span class="lifetime">'_</span>&gt;,
         batch: <span class="kw-2">&amp;</span>TxnBatch,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;CheckTxResult&gt;, RuntimeError&gt; {
         <span class="comment">// If prefetch limit is set enable prefetch.
@@ -1951,7 +1953,7 @@
         <span class="kw">let </span>history = <span class="self">self</span>.consensus_verifier.clone();
 
         <span class="kw">let </span>root = storage::MKVSStore::new(<span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
-        <span class="kw">let </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
+        <span class="kw">let </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">'_</span>, R&gt;::new(
             <span class="kw-2">&amp;</span><span class="self">self</span>.host_info,
             key_manager,
             rt_ctx.header,
@@ -1974,7 +1976,7 @@
                 <span class="kw">let </span><span class="kw-2">mut </span>prefixes: BTreeSet&lt;Prefix&gt; = BTreeSet::new();
                 <span class="kw">for </span>tx <span class="kw">in </span>batch.iter() {
                     <span class="kw">let </span>tx_size = tx.len().try_into().map_err(|<span class="kw">_</span>| {
-                        Error::MalformedTransactionInBatch(<span class="macro">anyhow!</span>(<span class="string">&quot;transaction too large&quot;</span>))
+                        Error::MalformedTransactionInBatch(<span class="macro">anyhow!</span>(<span class="string">"transaction too large"</span>))
                     })<span class="question-mark">?</span>;
                     <span class="kw">let </span>res = <span class="kw">match </span><span class="self">Self</span>::decode_tx(<span class="kw-2">&amp;</span>ctx, tx) {
                         <span class="prelude-val">Ok</span>(tx) =&gt; {
@@ -2017,7 +2019,7 @@
 
     <span class="kw">fn </span>query(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="kw-2">mut </span>rt_ctx: transaction::Context&lt;<span class="lifetime">&#39;_</span>&gt;,
+        <span class="kw-2">mut </span>rt_ctx: transaction::Context&lt;<span class="lifetime">'_</span>&gt;,
         method: <span class="kw-2">&amp;</span>str,
         args: Vec&lt;u8&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, RuntimeError&gt; {
@@ -2048,7 +2050,7 @@
         </span><span class="kw">let </span>history = <span class="self">self</span>.consensus_verifier.clone();
 
         <span class="kw">let </span>root = storage::MKVSStore::new(<span class="kw-2">&amp;mut </span>rt_ctx.runtime_state);
-        <span class="kw">let </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">&#39;_</span>, R&gt;::new(
+        <span class="kw">let </span>ctx = RuntimeBatchContext::&lt;<span class="lifetime">'_</span>, R&gt;::new(
             <span class="kw-2">&amp;</span><span class="self">self</span>.host_info,
             key_manager,
             rt_ctx.header,
@@ -2091,7 +2093,7 @@
 
     <span class="attr">#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
     </span><span class="kw">enum </span>AlphabetError {
-        <span class="attr">#[error(<span class="string">&quot;{0}&quot;</span>)]
+        <span class="attr">#[error(<span class="string">"{0}"</span>)]
         #[sdk_error(transparent, abort)]
         </span>Core(<span class="attr">#[source] </span>core::Error),
     }
@@ -2101,43 +2103,43 @@
 
     <span class="attr">#[sdk_derive(Module)]
     </span><span class="kw">impl </span>AlphabetModule {
-        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;alphabet&quot;</span>;
+        <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"alphabet"</span>;
         <span class="kw">const </span>VERSION: u32 = <span class="number">42</span>;
         <span class="kw">type </span>Error = AlphabetError;
         <span class="kw">type </span>Event = ();
         <span class="kw">type </span>Parameters = ();
         <span class="kw">type </span>Genesis = ();
 
-        <span class="attr">#[handler(call = <span class="string">&quot;alphabet.ReadOnly&quot;</span>)]
+        <span class="attr">#[handler(call = <span class="string">"alphabet.ReadOnly"</span>)]
         </span><span class="kw">fn </span>read_only&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;u64, AlphabetError&gt; {
             CurrentState::with_store(|store| {
-                <span class="kw">let _ </span>= store.get(<span class="string">b&quot;key&quot;</span>); <span class="comment">// Read something and ignore result.
+                <span class="kw">let _ </span>= store.get(<span class="string">b"key"</span>); <span class="comment">// Read something and ignore result.
             </span>});
             <span class="prelude-val">Ok</span>(<span class="number">42</span>)
         }
 
-        <span class="attr">#[handler(call = <span class="string">&quot;alphabet.NotReadOnly&quot;</span>)]
+        <span class="attr">#[handler(call = <span class="string">"alphabet.NotReadOnly"</span>)]
         </span><span class="kw">fn </span>not_read_only&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;u64, AlphabetError&gt; {
             CurrentState::with_store(|store| {
-                store.insert(<span class="string">b&quot;key&quot;</span>, <span class="string">b&quot;value&quot;</span>);
+                store.insert(<span class="string">b"key"</span>, <span class="string">b"value"</span>);
             });
             <span class="prelude-val">Ok</span>(<span class="number">10</span>)
         }
 
-        <span class="attr">#[handler(call = <span class="string">&quot;alphabet.Aborting&quot;</span>)]
+        <span class="attr">#[handler(call = <span class="string">"alphabet.Aborting"</span>)]
         </span><span class="kw">fn </span>aborting&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), AlphabetError&gt; {
             <span class="comment">// Use a deeply nested abort to make sure this is handled correctly.
             </span><span class="prelude-val">Err</span>(AlphabetError::Core(core::Error::Abort(Error::Aborted)))
         }
 
-        <span class="attr">#[handler(query = <span class="string">&quot;alphabet.Alpha&quot;</span>)]
+        <span class="attr">#[handler(query = <span class="string">"alphabet.Alpha"</span>)]
         </span><span class="kw">fn </span>alpha&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), AlphabetError&gt; {
             <span class="prelude-val">Ok</span>(())
         }
 
-        <span class="attr">#[handler(query = <span class="string">&quot;alphabet.Omega&quot;</span>, expensive)]
+        <span class="attr">#[handler(query = <span class="string">"alphabet.Omega"</span>, expensive)]
         </span><span class="kw">fn </span>expensive&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), AlphabetError&gt; {
-            <span class="comment">// Nothing actually expensive here. We&#39;re just pretending for testing purposes.
+            <span class="comment">// Nothing actually expensive here. We're just pretending for testing purposes.
             </span><span class="prelude-val">Ok</span>(())
         }
     }
@@ -2178,28 +2180,28 @@
 
         Dispatcher::&lt;AlphabetRuntime&gt;::dispatch_query(
             <span class="kw-2">&amp;mut </span>ctx,
-            <span class="string">&quot;alphabet.Alpha&quot;</span>,
+            <span class="string">"alphabet.Alpha"</span>,
             cbor::to_vec(().into_cbor_value()),
         )
-        .expect(<span class="string">&quot;alphabet.Alpha is an inexpensive query, allowed by default&quot;</span>);
+        .expect(<span class="string">"alphabet.Alpha is an inexpensive query, allowed by default"</span>);
 
         Dispatcher::&lt;AlphabetRuntime&gt;::dispatch_query(
             <span class="kw-2">&amp;mut </span>ctx,
-            <span class="string">&quot;alphabet.Omega&quot;</span>,
+            <span class="string">"alphabet.Omega"</span>,
             cbor::to_vec(().into_cbor_value()),
         )
-        .expect_err(<span class="string">&quot;alphabet.Omega is an expensive query, disallowed by default&quot;</span>);
+        .expect_err(<span class="string">"alphabet.Omega is an expensive query, disallowed by default"</span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_allowed_queries_custom() {
         <span class="kw">let </span>local_config = <span class="macro">configmap! </span>{
             <span class="comment">// Allow expensive gas estimation and expensive queries so they can be tested.
-            </span><span class="string">&quot;estimate_gas_by_simulating_contracts&quot; </span>=&gt; <span class="bool-val">true</span>,
-            <span class="string">&quot;allowed_queries&quot; </span>=&gt; <span class="macro">vec!</span>[
-                <span class="macro">configmap! </span>{<span class="string">&quot;alphabet.Alpha&quot; </span>=&gt; <span class="bool-val">false</span>},
-                <span class="macro">configmap! </span>{<span class="string">&quot;all_expensive&quot; </span>=&gt; <span class="bool-val">true</span>},
-                <span class="macro">configmap! </span>{<span class="string">&quot;all&quot; </span>=&gt; <span class="bool-val">true</span>}  <span class="comment">// should have no effect on Alpha
+            </span><span class="string">"estimate_gas_by_simulating_contracts" </span>=&gt; <span class="bool-val">true</span>,
+            <span class="string">"allowed_queries" </span>=&gt; <span class="macro">vec!</span>[
+                <span class="macro">configmap! </span>{<span class="string">"alphabet.Alpha" </span>=&gt; <span class="bool-val">false</span>},
+                <span class="macro">configmap! </span>{<span class="string">"all_expensive" </span>=&gt; <span class="bool-val">true</span>},
+                <span class="macro">configmap! </span>{<span class="string">"all" </span>=&gt; <span class="bool-val">true</span>}  <span class="comment">// should have no effect on Alpha
             </span>],
         };
         <span class="kw">let </span><span class="kw-2">mut </span>mock = Mock::with_local_config(local_config);
@@ -2208,17 +2210,17 @@
         CurrentState::with_transaction_opts(Options::new().with_mode(state::Mode::Check), || {
             Dispatcher::&lt;AlphabetRuntime&gt;::dispatch_query(
                 <span class="kw-2">&amp;mut </span>ctx,
-                <span class="string">&quot;alphabet.Alpha&quot;</span>,
+                <span class="string">"alphabet.Alpha"</span>,
                 cbor::to_vec(().into_cbor_value()),
             )
-            .expect_err(<span class="string">&quot;alphabet.Alpha is a disallowed query&quot;</span>);
+            .expect_err(<span class="string">"alphabet.Alpha is a disallowed query"</span>);
 
             Dispatcher::&lt;AlphabetRuntime&gt;::dispatch_query(
                 <span class="kw-2">&amp;mut </span>ctx,
-                <span class="string">&quot;alphabet.Omega&quot;</span>,
+                <span class="string">"alphabet.Omega"</span>,
                 cbor::to_vec(().into_cbor_value()),
             )
-            .expect(<span class="string">&quot;alphabet.Omega is an expensive query and expensive queries are allowed&quot;</span>);
+            .expect(<span class="string">"alphabet.Omega is an expensive query and expensive queries are allowed"</span>);
 
             TransactionResult::Rollback(())
         });
@@ -2235,7 +2237,7 @@
             version: <span class="number">1</span>,
             call: transaction::Call {
                 format: transaction::CallFormat::Plain,
-                method: <span class="string">&quot;alphabet.ReadOnly&quot;</span>.to_owned(),
+                method: <span class="string">"alphabet.ReadOnly"</span>.to_owned(),
                 read_only: <span class="bool-val">true</span>,
                 ..Default::default()
             },
@@ -2256,27 +2258,27 @@
         <span class="comment">// Dispatch read-only transaction.
         </span><span class="kw">let </span>dispatch_result =
             Dispatcher::&lt;AlphabetRuntime&gt;::dispatch_tx(<span class="kw-2">&amp;mut </span>ctx, <span class="number">1024</span>, tx.clone(), <span class="number">0</span>)
-                .expect(<span class="string">&quot;read only method dispatch should work&quot;</span>);
+                .expect(<span class="string">"read only method dispatch should work"</span>);
         <span class="kw">let </span>result = dispatch_result.result.unwrap();
         <span class="kw">let </span>result: u64 = cbor::from_value(result).unwrap();
         <span class="macro">assert_eq!</span>(result, <span class="number">42</span>);
 
         <span class="comment">// Dispatch read-only transaction of a method that writes.
-        </span>tx.call.method = <span class="string">&quot;alphabet.NotReadOnly&quot;</span>.to_owned();
+        </span>tx.call.method = <span class="string">"alphabet.NotReadOnly"</span>.to_owned();
 
         <span class="kw">let </span>dispatch_result = Dispatcher::&lt;AlphabetRuntime&gt;::dispatch_tx(<span class="kw-2">&amp;mut </span>ctx, <span class="number">1024</span>, tx, <span class="number">0</span>)
-            .expect(<span class="string">&quot;read only method dispatch should work&quot;</span>);
+            .expect(<span class="string">"read only method dispatch should work"</span>);
         <span class="kw">match </span>dispatch_result.result {
             module::CallResult::Failed {
                 module,
                 code,
                 message,
             } =&gt; {
-                <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>module, <span class="string">&quot;core&quot;</span>);
+                <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>module, <span class="string">"core"</span>);
                 <span class="macro">assert_eq!</span>(code, <span class="number">25</span>);
-                <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>message, <span class="string">&quot;read-only transaction attempted modifications&quot;</span>)
+                <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>message, <span class="string">"read-only transaction attempted modifications"</span>)
             }
-            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;not read only method execution did not fail&quot;</span>),
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"not read only method execution did not fail"</span>),
         }
     }
 
@@ -2291,7 +2293,7 @@
             version: <span class="number">1</span>,
             call: transaction::Call {
                 format: transaction::CallFormat::Plain,
-                method: <span class="string">&quot;alphabet.Aborting&quot;</span>.to_owned(),
+                method: <span class="string">"alphabet.Aborting"</span>.to_owned(),
                 ..Default::default()
             },
             auth_info: transaction::AuthInfo {

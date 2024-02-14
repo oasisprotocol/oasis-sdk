@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/context.rs`."><title>context.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_runtime_sdk/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/context.rs`."><title>context.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oasis_runtime_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -295,18 +297,18 @@
 <span class="doccomment">/// Local configuration key the value of which determines whether expensive queries should be
 /// allowed or not, and also whether smart contracts should be simulated for `core.EstimateGas`.
 /// DEPRECATED and superseded by LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS and LOCAL_CONFIG_ALLOWED_QUERIES.
-</span><span class="kw">const </span>LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES: <span class="kw-2">&amp;</span>str = <span class="string">&quot;allow_expensive_queries&quot;</span>;
+</span><span class="kw">const </span>LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES: <span class="kw-2">&amp;</span>str = <span class="string">"allow_expensive_queries"</span>;
 <span class="doccomment">/// Local configuration key the value of which determines whether smart contracts should
 /// be simulated when estimating gas in `core.EstimateGas`.
 </span><span class="kw">const </span>LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS: <span class="kw-2">&amp;</span>str =
-    <span class="string">&quot;estimate_gas_by_simulating_contracts&quot;</span>;
+    <span class="string">"estimate_gas_by_simulating_contracts"</span>;
 <span class="doccomment">/// Local configuration key the value of which determines the set of allowed queries.
-</span><span class="kw">const </span>LOCAL_CONFIG_ALLOWED_QUERIES: <span class="kw-2">&amp;</span>str = <span class="string">&quot;allowed_queries&quot;</span>;
+</span><span class="kw">const </span>LOCAL_CONFIG_ALLOWED_QUERIES: <span class="kw-2">&amp;</span>str = <span class="string">"allowed_queries"</span>;
 <span class="doccomment">/// Special key inside the `allowed_queries` list; represents the set of all queries.
-</span><span class="kw">const </span>LOCAL_CONFIG_ALLOWED_QUERIES_ALL: <span class="kw-2">&amp;</span>str = <span class="string">&quot;all&quot;</span>;
+</span><span class="kw">const </span>LOCAL_CONFIG_ALLOWED_QUERIES_ALL: <span class="kw-2">&amp;</span>str = <span class="string">"all"</span>;
 <span class="doccomment">/// Special key inside the `allowed_queries` list; represents the set of all queries
 /// that are tagged `expensive`.
-</span><span class="kw">const </span>LOCAL_CONFIG_ALLOWED_QUERIES_ALL_EXPENSIVE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;all_expensive&quot;</span>;
+</span><span class="kw">const </span>LOCAL_CONFIG_ALLOWED_QUERIES_ALL_EXPENSIVE: <span class="kw-2">&amp;</span>str = <span class="string">"all_expensive"</span>;
 
 <span class="doccomment">/// Runtime SDK context.
 </span><span class="kw">pub trait </span>Context {
@@ -317,7 +319,7 @@
     </span><span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self</span>;
 
     <span class="doccomment">/// Returns a logger.
-    </span><span class="kw">fn </span>get_logger(<span class="kw-2">&amp;</span><span class="self">self</span>, module: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; slog::Logger;
+    </span><span class="kw">fn </span>get_logger(<span class="kw-2">&amp;</span><span class="self">self</span>, module: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; slog::Logger;
 
     <span class="doccomment">/// Whether smart contracts should be executed in this context.
     </span><span class="kw">fn </span>should_execute_contracts(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
@@ -330,8 +332,8 @@
                     <span class="self">self</span>.local_config::&lt;bool&gt;(LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES)
                 {
                     <span class="macro">slog::warn!</span>(
-                        <span class="self">self</span>.get_logger(<span class="string">&quot;runtime-sdk&quot;</span>),
-                        <span class="string">&quot;The {} config option is DEPRECATED since April 2022 and will be removed in a future release. Use {} and {} instead.&quot;</span>,
+                        <span class="self">self</span>.get_logger(<span class="string">"runtime-sdk"</span>),
+                        <span class="string">"The {} config option is DEPRECATED since April 2022 and will be removed in a future release. Use {} and {} instead."</span>,
                         LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES,
                         LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS,
                         LOCAL_CONFIG_ALLOWED_QUERIES
@@ -360,8 +362,8 @@
             <span class="self">self</span>.local_config::&lt;bool&gt;(LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES)
         {
             <span class="macro">slog::warn!</span>(
-                <span class="self">self</span>.get_logger(<span class="string">&quot;runtime-sdk&quot;</span>),
-                <span class="string">&quot;The {} config option is DEPRECATED since April 2022 and will be removed in a future release. Use {} and {} instead.&quot;</span>,
+                <span class="self">self</span>.get_logger(<span class="string">"runtime-sdk"</span>),
+                <span class="string">"The {} config option is DEPRECATED since April 2022 and will be removed in a future release. Use {} and {} instead."</span>,
                 LOCAL_CONFIG_ALLOW_EXPENSIVE_QUERIES,
                 LOCAL_CONFIG_ESTIMATE_GAS_BY_SIMULATING_CONTRACTS,
                 LOCAL_CONFIG_ALLOWED_QUERIES
@@ -401,13 +403,13 @@
         <span class="self">self</span>.host_info().local_config.get(key).and_then(|v| {
             cbor::from_value(v.clone()).unwrap_or_else(|e| {
                 <span class="kw">let </span>msg = <span class="macro">format!</span>(
-                    <span class="string">&quot;Cannot interpret the value of \&quot;{}\&quot; in runtime&#39;s local config as a {}: {:?}&quot;</span>,
+                    <span class="string">"Cannot interpret the value of \"{}\" in runtime's local config as a {}: {:?}"</span>,
                     key,
                     std::any::type_name::&lt;T&gt;(),
                     e
                 );
-                <span class="macro">slog::error!</span>(<span class="self">self</span>.get_logger(<span class="string">&quot;runtime-sdk&quot;</span>), <span class="string">&quot;{}&quot;</span>, msg);
-                <span class="macro">panic!</span>(<span class="string">&quot;{}&quot;</span>, msg);
+                <span class="macro">slog::error!</span>(<span class="self">self</span>.get_logger(<span class="string">"runtime-sdk"</span>), <span class="string">"{}"</span>, msg);
+                <span class="macro">panic!</span>(<span class="string">"{}"</span>, msg);
             })
         })
     }
@@ -448,13 +450,13 @@
 }
 
 <span class="doccomment">/// Dispatch context for the whole batch.
-</span><span class="kw">pub struct </span>RuntimeBatchContext&lt;<span class="lifetime">&#39;a</span>, R: runtime::Runtime&gt; {
-    host_info: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>HostInfo,
+</span><span class="kw">pub struct </span>RuntimeBatchContext&lt;<span class="lifetime">'a</span>, R: runtime::Runtime&gt; {
+    host_info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>HostInfo,
     key_manager: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>KeyManager&gt;&gt;,
-    runtime_header: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>roothash::Header,
-    runtime_round_results: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>roothash::RoundResults,
-    consensus_state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>consensus::state::ConsensusState,
-    history: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>history::HistoryHost,
+    runtime_header: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>roothash::Header,
+    runtime_round_results: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>roothash::RoundResults,
+    consensus_state: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>consensus::state::ConsensusState,
+    history: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>history::HistoryHost,
     epoch: consensus::beacon::EpochTime,
     logger: slog::Logger,
 
@@ -464,16 +466,16 @@
     _runtime: PhantomData&lt;R&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, R: runtime::Runtime&gt; RuntimeBatchContext&lt;<span class="lifetime">&#39;a</span>, R&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, R: runtime::Runtime&gt; RuntimeBatchContext&lt;<span class="lifetime">'a</span>, R&gt; {
     <span class="doccomment">/// Create a new dispatch context.
     </span><span class="attr">#[allow(clippy::too_many_arguments)]
     </span><span class="kw">pub fn </span>new(
-        host_info: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>HostInfo,
+        host_info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>HostInfo,
         key_manager: <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>KeyManager&gt;&gt;,
-        runtime_header: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>roothash::Header,
-        runtime_round_results: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>roothash::RoundResults,
-        consensus_state: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>consensus::state::ConsensusState,
-        history: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw">dyn </span>history::HistoryHost,
+        runtime_header: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>roothash::Header,
+        runtime_round_results: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>roothash::RoundResults,
+        consensus_state: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>consensus::state::ConsensusState,
+        history: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>history::HistoryHost,
         epoch: consensus::beacon::EpochTime,
         max_messages: u32,
     ) -&gt; <span class="self">Self </span>{
@@ -485,14 +487,14 @@
             history,
             epoch,
             key_manager,
-            logger: get_logger(<span class="string">&quot;runtime-sdk&quot;</span>),
+            logger: get_logger(<span class="string">"runtime-sdk"</span>),
             max_messages,
             _runtime: PhantomData,
         }
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, R: runtime::Runtime&gt; Context <span class="kw">for </span>RuntimeBatchContext&lt;<span class="lifetime">&#39;a</span>, R&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, R: runtime::Runtime&gt; Context <span class="kw">for </span>RuntimeBatchContext&lt;<span class="lifetime">'a</span>, R&gt; {
     <span class="kw">type </span>Runtime = R;
 
     <span class="kw">fn </span>clone(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
@@ -504,14 +506,14 @@
             history: <span class="self">self</span>.history,
             epoch: <span class="self">self</span>.epoch,
             key_manager: <span class="self">self</span>.key_manager.clone(),
-            logger: get_logger(<span class="string">&quot;runtime-sdk&quot;</span>),
+            logger: get_logger(<span class="string">"runtime-sdk"</span>),
             max_messages: <span class="self">self</span>.max_messages,
             _runtime: PhantomData,
         }
     }
 
-    <span class="kw">fn </span>get_logger(<span class="kw-2">&amp;</span><span class="self">self</span>, module: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; slog::Logger {
-        <span class="self">self</span>.logger.new(<span class="macro">o!</span>(<span class="string">&quot;sdk_module&quot; </span>=&gt; module))
+    <span class="kw">fn </span>get_logger(<span class="kw-2">&amp;</span><span class="self">self</span>, module: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; slog::Logger {
+        <span class="self">self</span>.logger.new(<span class="macro">o!</span>(<span class="string">"sdk_module" </span>=&gt; module))
     }
 
     <span class="kw">fn </span>host_info(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>HostInfo {

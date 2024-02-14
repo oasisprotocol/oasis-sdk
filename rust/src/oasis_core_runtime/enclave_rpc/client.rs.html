@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/enclave_rpc/client.rs`."><title>client.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/enclave_rpc/client.rs`."><title>client.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -767,21 +769,21 @@
 <span class="doccomment">/// RPC client error.
 </span><span class="attr">#[derive(Error, Debug)]
 </span><span class="kw">pub enum </span>RpcClientError {
-    <span class="attr">#[error(<span class="string">&quot;call failed: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"call failed: {0}"</span>)]
     </span>CallFailed(String),
-    <span class="attr">#[error(<span class="string">&quot;expected response message, received: {0:?}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"expected response message, received: {0:?}"</span>)]
     </span>ExpectedResponseMessage(types::Message),
-    <span class="attr">#[error(<span class="string">&quot;expected close message, received: {0:?}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"expected close message, received: {0:?}"</span>)]
     </span>ExpectedCloseMessage(types::Message),
-    <span class="attr">#[error(<span class="string">&quot;transport error&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"transport error"</span>)]
     </span>Transport,
-    <span class="attr">#[error(<span class="string">&quot;unsupported RPC kind&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"unsupported RPC kind"</span>)]
     </span>UnsupportedRpcKind,
-    <span class="attr">#[error(<span class="string">&quot;client dropped&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"client dropped"</span>)]
     </span>Dropped,
-    <span class="attr">#[error(<span class="string">&quot;decode error: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"decode error: {0}"</span>)]
     </span>DecodeError(<span class="attr">#[from] </span>cbor::DecodeError),
-    <span class="attr">#[error(<span class="string">&quot;unknown error: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"unknown error: {0}"</span>)]
     </span>Unknown(<span class="attr">#[from] </span>anyhow::Error),
 }
 
@@ -964,7 +966,7 @@
             .inner
             .process_data(<span class="macro">vec!</span>[], <span class="kw-2">&amp;mut </span>buffer)
             .<span class="kw">await
-            </span>.expect(<span class="string">&quot;initiation must always succeed&quot;</span>);
+            </span>.expect(<span class="string">"initiation must always succeed"</span>);
         <span class="kw">let </span>session_id = <span class="self">self</span>.session.id;
 
         <span class="kw">let </span>(data, node) = <span class="self">self
@@ -1021,7 +1023,7 @@
             .inner
             .process_data(data, <span class="macro">vec!</span>[])
             .<span class="kw">await</span><span class="question-mark">?
-            </span>.expect(<span class="string">&quot;message must be decoded if there is no error&quot;</span>);
+            </span>.expect(<span class="string">"message must be decoded if there is no error"</span>);
 
         <span class="kw">match </span>msg {
             types::Message::Response(rsp) =&gt; <span class="prelude-val">Ok</span>(rsp),
@@ -1068,7 +1070,7 @@
             .inner
             .process_data(data, <span class="macro">vec!</span>[])
             .<span class="kw">await</span><span class="question-mark">?
-            </span>.expect(<span class="string">&quot;message must be decoded if there is no error&quot;</span>);
+            </span>.expect(<span class="string">"message must be decoded if there is no error"</span>);
         <span class="self">self</span>.session.inner.close();
 
         <span class="kw">match </span>msg {
@@ -1124,12 +1126,12 @@
     <span class="doccomment">/// Call a remote method using an encrypted and authenticated Noise session.
     </span><span class="kw">pub async fn </span>secure_call&lt;C, O&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        method: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+        method: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
         args: C,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;O, RpcClientError&gt;
     <span class="kw">where
         </span>C: cbor::Encode,
-        O: cbor::Decode + Send + <span class="lifetime">&#39;static</span>,
+        O: cbor::Decode + Send + <span class="lifetime">'static</span>,
     {
         <span class="self">self</span>.call(method, args, types::Kind::NoiseSession).<span class="kw">await
     </span>}
@@ -1137,25 +1139,25 @@
     <span class="doccomment">/// Call a remote method over an insecure channel where messages are sent in plain text.
     </span><span class="kw">pub async fn </span>insecure_call&lt;C, O&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        method: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+        method: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
         args: C,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;O, RpcClientError&gt;
     <span class="kw">where
         </span>C: cbor::Encode,
-        O: cbor::Decode + Send + <span class="lifetime">&#39;static</span>,
+        O: cbor::Decode + Send + <span class="lifetime">'static</span>,
     {
         <span class="self">self</span>.call(method, args, types::Kind::InsecureQuery).<span class="kw">await
     </span>}
 
     <span class="kw">async fn </span>call&lt;C, O&gt;(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        method: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str,
+        method: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
         args: C,
         kind: types::Kind,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;O, RpcClientError&gt;
     <span class="kw">where
         </span>C: cbor::Encode,
-        O: cbor::Decode + Send + <span class="lifetime">&#39;static</span>,
+        O: cbor::Decode + Send + <span class="lifetime">'static</span>,
     {
         <span class="kw">let </span>request = types::Request {
             method: method.to_owned(),
@@ -1194,7 +1196,7 @@
 
     <span class="doccomment">/// Update allowed remote enclave identities.
     ///
-    /// Useful if the key manager&#39;s policy has changed.
+    /// Useful if the key manager's policy has changed.
     ///
     /// # Panics
     ///
@@ -1205,7 +1207,7 @@
             .unwrap();
     }
 
-    <span class="doccomment">/// Update key manager&#39;s quote policy.
+    <span class="doccomment">/// Update key manager's quote policy.
     ///
     /// # Panics
     ///
@@ -1333,7 +1335,7 @@
                 .compare_exchange(<span class="bool-val">true</span>, <span class="bool-val">false</span>, Ordering::SeqCst, Ordering::SeqCst)
                 .is_ok()
             {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;transport error&quot;</span>));
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"transport error"</span>));
             }
 
             <span class="kw">match </span>kind {
@@ -1351,7 +1353,7 @@
                                     <span class="comment">// Just echo back what was given.
                                     </span>types::Body::Success(rq.args)
                                 }
-                                <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;unhandled message type&quot;</span>),
+                                <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"unhandled message type"</span>),
                             };
                             <span class="kw">let </span>response = types::Message::Response(types::Response { body });
 
@@ -1374,7 +1376,7 @@
                     <span class="kw">return </span><span class="prelude-val">Ok</span>((cbor::to_vec(response), Default::default()));
                 }
                 types::Kind::LocalQuery =&gt; {
-                    <span class="macro">panic!</span>(<span class="string">&quot;unhandled RPC kind&quot;</span>)
+                    <span class="macro">panic!</span>(<span class="string">"unhandled RPC kind"</span>)
                 }
             }
         }
@@ -1402,9 +1404,9 @@
         <span class="kw">let </span>client = RpcClient::new(Box::new(transport.clone()), builder, <span class="macro">vec!</span>[]);
 
         <span class="comment">// Basic secure call.
-        </span><span class="kw">let </span>result: u64 = rt.block_on(client.secure_call(<span class="string">&quot;test&quot;</span>, <span class="number">42</span>)).unwrap();
+        </span><span class="kw">let </span>result: u64 = rt.block_on(client.secure_call(<span class="string">"test"</span>, <span class="number">42</span>)).unwrap();
         rt.block_on(client.flush_cmd_queue()).unwrap(); <span class="comment">// Flush cmd queue to get peer feedback.
-        </span><span class="macro">assert_eq!</span>(result, <span class="number">42</span>, <span class="string">&quot;secure call should work&quot;</span>);
+        </span><span class="macro">assert_eq!</span>(result, <span class="number">42</span>, <span class="string">"secure call should work"</span>);
         <span class="macro">assert_eq!</span>(
             transport.take_peer_feedback_history(),
             <span class="macro">vec!</span>[
@@ -1418,9 +1420,9 @@
         <span class="comment">// Reset all sessions on the server and make sure that we can still get a response.
         </span>transport.reset();
 
-        <span class="kw">let </span>result: u64 = rt.block_on(client.secure_call(<span class="string">&quot;test&quot;</span>, <span class="number">43</span>)).unwrap();
+        <span class="kw">let </span>result: u64 = rt.block_on(client.secure_call(<span class="string">"test"</span>, <span class="number">43</span>)).unwrap();
         rt.block_on(client.flush_cmd_queue()).unwrap(); <span class="comment">// Flush cmd queue to get peer feedback.
-        </span><span class="macro">assert_eq!</span>(result, <span class="number">43</span>, <span class="string">&quot;secure call should work&quot;</span>);
+        </span><span class="macro">assert_eq!</span>(result, <span class="number">43</span>, <span class="string">"secure call should work"</span>);
         <span class="macro">assert_eq!</span>(
             transport.take_peer_feedback_history(),
             <span class="macro">vec!</span>[
@@ -1436,9 +1438,9 @@
         // can still get a response.
         </span>transport.induce_transport_error();
 
-        <span class="kw">let </span>result: u64 = rt.block_on(client.secure_call(<span class="string">&quot;test&quot;</span>, <span class="number">44</span>)).unwrap();
+        <span class="kw">let </span>result: u64 = rt.block_on(client.secure_call(<span class="string">"test"</span>, <span class="number">44</span>)).unwrap();
         rt.block_on(client.flush_cmd_queue()).unwrap(); <span class="comment">// Flush cmd queue to get peer feedback.
-        </span><span class="macro">assert_eq!</span>(result, <span class="number">44</span>, <span class="string">&quot;secure call should work&quot;</span>);
+        </span><span class="macro">assert_eq!</span>(result, <span class="number">44</span>, <span class="string">"secure call should work"</span>);
         <span class="macro">assert_eq!</span>(
             transport.take_peer_feedback_history(),
             <span class="macro">vec!</span>[
@@ -1451,9 +1453,9 @@
         );
 
         <span class="comment">// Basic insecure call.
-        </span><span class="kw">let </span>result: u64 = rt.block_on(client.insecure_call(<span class="string">&quot;test&quot;</span>, <span class="number">45</span>)).unwrap();
+        </span><span class="kw">let </span>result: u64 = rt.block_on(client.insecure_call(<span class="string">"test"</span>, <span class="number">45</span>)).unwrap();
         rt.block_on(client.flush_cmd_queue()).unwrap(); <span class="comment">// Flush cmd queue to get peer feedback.
-        </span><span class="macro">assert_eq!</span>(result, <span class="number">45</span>, <span class="string">&quot;insecure call should work&quot;</span>);
+        </span><span class="macro">assert_eq!</span>(result, <span class="number">45</span>, <span class="string">"insecure call should work"</span>);
         <span class="macro">assert_eq!</span>(
             transport.take_peer_feedback_history(),
             <span class="macro">vec!</span>[
@@ -1465,9 +1467,9 @@
         <span class="comment">// Induce a single transport error and make sure we can still get a response.
         </span>transport.induce_transport_error();
 
-        <span class="kw">let </span>result: u64 = rt.block_on(client.insecure_call(<span class="string">&quot;test&quot;</span>, <span class="number">46</span>)).unwrap();
+        <span class="kw">let </span>result: u64 = rt.block_on(client.insecure_call(<span class="string">"test"</span>, <span class="number">46</span>)).unwrap();
         rt.block_on(client.flush_cmd_queue()).unwrap(); <span class="comment">// Flush cmd queue to get peer feedback.
-        </span><span class="macro">assert_eq!</span>(result, <span class="number">46</span>, <span class="string">&quot;insecure call should work&quot;</span>);
+        </span><span class="macro">assert_eq!</span>(result, <span class="number">46</span>, <span class="string">"insecure call should work"</span>);
         <span class="macro">assert_eq!</span>(
             transport.take_peer_feedback_history(),
             <span class="macro">vec!</span>[

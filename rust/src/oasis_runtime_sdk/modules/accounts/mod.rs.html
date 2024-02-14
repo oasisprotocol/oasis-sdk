@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/modules/accounts/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_runtime_sdk/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/modules/accounts/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_runtime_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1188,7 +1190,7 @@
 <span class="kw">pub mod </span>types;
 
 <span class="doccomment">/// Unique module name.
-</span><span class="kw">const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;accounts&quot;</span>;
+</span><span class="kw">const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"accounts"</span>;
 
 <span class="doccomment">/// Maximum delta that the transaction nonce can be in the future from the current nonce to still
 /// be accepted during transaction checks.
@@ -1197,23 +1199,23 @@
 </span><span class="doccomment">/// Errors emitted by the accounts module.
 </span><span class="attr">#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
 </span><span class="kw">pub enum </span>Error {
-    <span class="attr">#[error(<span class="string">&quot;invalid argument&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid argument"</span>)]
     #[sdk_error(code = <span class="number">1</span>)]
     </span>InvalidArgument,
 
-    <span class="attr">#[error(<span class="string">&quot;insufficient balance&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"insufficient balance"</span>)]
     #[sdk_error(code = <span class="number">2</span>)]
     </span>InsufficientBalance,
 
-    <span class="attr">#[error(<span class="string">&quot;forbidden by policy&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"forbidden by policy"</span>)]
     #[sdk_error(code = <span class="number">3</span>)]
     </span>Forbidden,
 
-    <span class="attr">#[error(<span class="string">&quot;not found&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"not found"</span>)]
     #[sdk_error(code = <span class="number">4</span>)]
     </span>NotFound,
 
-    <span class="attr">#[error(<span class="string">&quot;core: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"core: {0}"</span>)]
     #[sdk_error(transparent)]
     </span>Core(<span class="attr">#[from] </span>modules::core::Error),
 }
@@ -1264,18 +1266,18 @@
 <span class="doccomment">/// Errors emitted during rewards parameter validation.
 </span><span class="attr">#[derive(Error, Debug)]
 </span><span class="kw">pub enum </span>ParameterValidationError {
-    <span class="attr">#[error(<span class="string">&quot;debug option used: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"debug option used: {0}"</span>)]
     </span>DebugOptionUsed(String),
 }
 
 <span class="kw">impl </span>module::Parameters <span class="kw">for </span>Parameters {
     <span class="kw">type </span>Error = ParameterValidationError;
 
-    <span class="attr">#[cfg(not(feature = <span class="string">&quot;unsafe-allow-debug&quot;</span>))]
+    <span class="attr">#[cfg(not(feature = <span class="string">"unsafe-allow-debug"</span>))]
     </span><span class="kw">fn </span>validate_basic(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="self">Self</span>::Error&gt; {
         <span class="kw">if </span><span class="self">self</span>.debug_disable_nonce_check {
             <span class="kw">return </span><span class="prelude-val">Err</span>(ParameterValidationError::DebugOptionUsed(
-                <span class="string">&quot;debug_disable_nonce_check&quot;</span>.to_string(),
+                <span class="string">"debug_disable_nonce_check"</span>.to_string(),
             ));
         }
 
@@ -1306,23 +1308,23 @@
     <span class="doccomment">/// Burn existing tokens, decreasing the total supply.
     </span><span class="kw">fn </span>burn(from: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 
-    <span class="doccomment">/// Sets an account&#39;s nonce.
+    <span class="doccomment">/// Sets an account's nonce.
     </span><span class="kw">fn </span>set_nonce(address: Address, nonce: u64);
 
-    <span class="doccomment">/// Fetch an account&#39;s current nonce.
+    <span class="doccomment">/// Fetch an account's current nonce.
     </span><span class="kw">fn </span>get_nonce(address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt;;
 
-    <span class="doccomment">/// Increments an account&#39;s nonce.
+    <span class="doccomment">/// Increments an account's nonce.
     </span><span class="kw">fn </span>inc_nonce(address: Address);
 
-    <span class="doccomment">/// Sets an account&#39;s balance of the given denomination.
+    <span class="doccomment">/// Sets an account's balance of the given denomination.
     ///
     /// # Warning
     ///
     /// This method is dangerous as it can result in invariant violations.
     </span><span class="kw">fn </span>set_balance(address: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits);
 
-    <span class="doccomment">/// Fetch an account&#39;s balance of the given denomination.
+    <span class="doccomment">/// Fetch an account's balance of the given denomination.
     </span><span class="kw">fn </span>get_balance(address: Address, denomination: token::Denomination) -&gt; <span class="prelude-ty">Result</span>&lt;u128, Error&gt;;
 
     <span class="doccomment">/// Ensures that the given account has at least the specified balance.
@@ -1335,7 +1337,7 @@
         }
     }
 
-    <span class="doccomment">/// Fetch an account&#39;s current balances.
+    <span class="doccomment">/// Fetch an account's current balances.
     </span><span class="kw">fn </span>get_balances(address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;types::AccountBalances, Error&gt;;
 
     <span class="doccomment">/// Fetch addresses.
@@ -1395,16 +1397,16 @@
 
 <span class="kw">pub struct </span>Module;
 
-<span class="doccomment">/// Module&#39;s address that has the common pool.
+<span class="doccomment">/// Module's address that has the common pool.
 ///
 /// oasis1qz78phkdan64g040cvqvqpwkplfqf6tj6uwcsh30
 </span><span class="kw">pub static </span>ADDRESS_COMMON_POOL: Lazy&lt;Address&gt; =
-    Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">&quot;common-pool&quot;</span>));
-<span class="doccomment">/// Module&#39;s address that has the fee accumulator.
+    Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">"common-pool"</span>));
+<span class="doccomment">/// Module's address that has the fee accumulator.
 ///
 /// oasis1qp3r8hgsnphajmfzfuaa8fhjag7e0yt35cjxq0u4
 </span><span class="kw">pub static </span>ADDRESS_FEE_ACCUMULATOR: Lazy&lt;Address&gt; =
-    Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">&quot;fee-accumulator&quot;</span>));
+    Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">"fee-accumulator"</span>));
 
 <span class="doccomment">/// This is needed to properly iterate over the BALANCES map.
 </span><span class="attr">#[derive(Clone, PartialEq, PartialOrd, Eq, Ord)]
@@ -1412,10 +1414,10 @@
 
 <span class="attr">#[derive(Error, Debug)]
 </span><span class="kw">enum </span>AWDError {
-    <span class="attr">#[error(<span class="string">&quot;malformed address&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"malformed address"</span>)]
     </span>MalformedAddress,
 
-    <span class="attr">#[error(<span class="string">&quot;malformed denomination&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"malformed denomination"</span>)]
     </span>MalformedDenomination,
 }
 
@@ -1432,7 +1434,7 @@
 }
 
 <span class="kw">impl </span>Module {
-    <span class="doccomment">/// Add given amount of tokens to the specified account&#39;s balance.
+    <span class="doccomment">/// Add given amount of tokens to the specified account's balance.
     </span><span class="kw">fn </span>add_amount(addr: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">if </span>amount.amount() == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
@@ -1452,7 +1454,7 @@
         })
     }
 
-    <span class="doccomment">/// Subtract given amount of tokens from the specified account&#39;s balance.
+    <span class="doccomment">/// Subtract given amount of tokens from the specified account's balance.
     </span><span class="kw">fn </span>sub_amount(addr: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">if </span>amount.amount() == <span class="number">0 </span>{
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
@@ -1523,8 +1525,8 @@
             <span class="kw">let </span>balances =
                 storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>state::BALANCES));
 
-            <span class="comment">// Unfortunately, we can&#39;t just return balances.iter().collect() here,
-            // because the stored format doesn&#39;t match -- we need this workaround
+            <span class="comment">// Unfortunately, we can't just return balances.iter().collect() here,
+            // because the stored format doesn't match -- we need this workaround
             // instead.
 
             </span><span class="kw">let </span>balmap: BTreeMap&lt;AddressWithDenomination, u128&gt; = balances.iter().collect();
@@ -1535,10 +1537,10 @@
                 <span class="kw">let </span>addr = <span class="kw-2">&amp;</span>addrden.<span class="number">0</span>;
                 <span class="kw">let </span>den = <span class="kw-2">&amp;</span>addrden.<span class="number">1</span>;
 
-                <span class="comment">// Fetch existing account&#39;s balances or insert blank ones.
+                <span class="comment">// Fetch existing account's balances or insert blank ones.
                 </span><span class="kw">let </span>addr_bals = b.entry(<span class="kw-2">*</span>addr).or_default();
 
-                <span class="comment">// Add to given denomination&#39;s balance or insert it if new.
+                <span class="comment">// Add to given denomination's balance or insert it if new.
                 </span>addr_bals
                     .entry(den.clone())
                     .and_modify(|a| <span class="kw-2">*</span>a += amt)
@@ -1551,9 +1553,9 @@
 }
 
 <span class="doccomment">/// Context key for the per-transaction unused fee refund decision.
-</span><span class="kw">const </span>CONTEXT_KEY_TX_FEE_REFUND_UNUSED: <span class="kw-2">&amp;</span>str = <span class="string">&quot;accounts.TxRefundUnusedFee&quot;</span>;
+</span><span class="kw">const </span>CONTEXT_KEY_TX_FEE_REFUND_UNUSED: <span class="kw-2">&amp;</span>str = <span class="string">"accounts.TxRefundUnusedFee"</span>;
 <span class="doccomment">/// Context key for the per block fee manager.
-</span><span class="kw">const </span>CONTEXT_KEY_FEE_MANAGER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;accounts.FeeManager&quot;</span>;
+</span><span class="kw">const </span>CONTEXT_KEY_FEE_MANAGER: <span class="kw-2">&amp;</span>str = <span class="string">"accounts.FeeManager"</span>;
 
 <span class="kw">impl </span>API <span class="kw">for </span>Module {
     <span class="kw">fn </span>transfer(from: Address, to: Address, amount: <span class="kw-2">&amp;</span>token::BaseUnits) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
@@ -1616,7 +1618,7 @@
 
         <span class="comment">// Decrease total supply.
         </span><span class="self">Self</span>::dec_total_supply(amount)
-            .expect(<span class="string">&quot;target account had enough balance so total supply should not underflow&quot;</span>);
+            .expect(<span class="string">"target account had enough balance so total supply should not underflow"</span>);
 
         <span class="comment">// Emit a burn event.
         </span>CurrentState::with(|state| {
@@ -1847,7 +1849,7 @@
         })<span class="question-mark">?</span>;
 
         <span class="comment">// Configure the sender.
-        </span><span class="kw">let </span>sender = sender.expect(<span class="string">&quot;at least one signer is always present&quot;</span>);
+        </span><span class="kw">let </span>sender = sender.expect(<span class="string">"at least one signer is always present"</span>);
         <span class="kw">let </span>sender_address = sender.address;
         <span class="kw">if </span>is_check_only {
             &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::set_sender_meta(sender);
@@ -1883,7 +1885,7 @@
 
 <span class="attr">#[sdk_derive(Module)]
 </span><span class="kw">impl </span>Module {
-    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = MODULE_NAME;
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = MODULE_NAME;
     <span class="kw">type </span>Error = Error;
     <span class="kw">type </span>Event = Event;
     <span class="kw">type </span>Parameters = Parameters;
@@ -1925,16 +1927,16 @@
             <span class="kw">for </span>(denomination, total_supply) <span class="kw">in </span>genesis.total_supplies.iter() {
                 <span class="kw">let </span>computed = computed_total_supply
                     .remove(denomination)
-                    .expect(<span class="string">&quot;unexpected total supply&quot;</span>);
+                    .expect(<span class="string">"unexpected total supply"</span>);
                 <span class="macro">assert!</span>(
                     <span class="kw-2">&amp;</span>computed == total_supply,
-                    <span class="string">&quot;unexpected total supply (expected: {total_supply} got: {computed})&quot;</span>,
+                    <span class="string">"unexpected total supply (expected: {total_supply} got: {computed})"</span>,
                 );
 
                 total_supplies.insert(denomination, total_supply);
             }
-            <span class="kw">for </span>(denomination, total_supply) <span class="kw">in </span>computed_total_supply.iter() {
-                <span class="macro">panic!</span>(<span class="string">&quot;missing expected total supply: {total_supply} {denomination}&quot;</span>,);
+            <span class="kw">if let </span><span class="prelude-val">Some</span>((denomination, total_supply)) = computed_total_supply.iter().next() {
+                <span class="macro">panic!</span>(<span class="string">"missing expected total supply: {total_supply} {denomination}"</span>,);
             }
         });
 
@@ -1942,13 +1944,13 @@
         </span>genesis
             .parameters
             .validate_basic()
-            .expect(<span class="string">&quot;invalid genesis parameters&quot;</span>);
+            .expect(<span class="string">"invalid genesis parameters"</span>);
 
         <span class="comment">// Set genesis parameters.
         </span><span class="self">Self</span>::set_params(genesis.parameters);
     }
 
-    <span class="attr">#[handler(prefetch = <span class="string">&quot;accounts.Transfer&quot;</span>)]
+    <span class="attr">#[handler(prefetch = <span class="string">"accounts.Transfer"</span>)]
     </span><span class="kw">fn </span>prefetch_transfer(
         add_prefix: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FnMut(Prefix),
         body: cbor::Value,
@@ -1957,14 +1959,14 @@
         <span class="kw">let </span>args: types::Transfer = cbor::from_value(body).map_err(|<span class="kw">_</span>| Error::InvalidArgument)<span class="question-mark">?</span>;
         <span class="kw">let </span>from = auth_info.signer_info[<span class="number">0</span>].address_spec.address();
 
-        <span class="comment">// Prefetch accounts &#39;to&#39;.
+        <span class="comment">// Prefetch accounts 'to'.
         </span>add_prefix(Prefix::from(
             [MODULE_NAME.as_bytes(), state::ACCOUNTS, args.to.as_ref()].concat(),
         ));
         add_prefix(Prefix::from(
             [MODULE_NAME.as_bytes(), state::BALANCES, args.to.as_ref()].concat(),
         ));
-        <span class="comment">// Prefetch accounts &#39;from&#39;.
+        <span class="comment">// Prefetch accounts 'from'.
         </span>add_prefix(Prefix::from(
             [MODULE_NAME.as_bytes(), state::ACCOUNTS, from.as_ref()].concat(),
         ));
@@ -1975,7 +1977,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="attr">#[handler(call = <span class="string">&quot;accounts.Transfer&quot;</span>)]
+    <span class="attr">#[handler(call = <span class="string">"accounts.Transfer"</span>)]
     </span><span class="kw">fn </span>tx_transfer&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, body: types::Transfer) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
 
@@ -1992,12 +1994,12 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;accounts.Nonce&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"accounts.Nonce"</span>)]
     </span><span class="kw">fn </span>query_nonce&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, args: types::NonceQuery) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
         <span class="self">Self</span>::get_nonce(args.address)
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;accounts.Addresses&quot;</span>, expensive)]
+    <span class="attr">#[handler(query = <span class="string">"accounts.Addresses"</span>, expensive)]
     </span><span class="kw">fn </span>query_addresses&lt;C: Context&gt;(
         _ctx: <span class="kw-2">&amp;</span>C,
         args: types::AddressesQuery,
@@ -2005,7 +2007,7 @@
         <span class="self">Self</span>::get_addresses(args.denomination)
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;accounts.Balances&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"accounts.Balances"</span>)]
     </span><span class="kw">fn </span>query_balances&lt;C: Context&gt;(
         _ctx: <span class="kw-2">&amp;</span>C,
         args: types::BalancesQuery,
@@ -2013,7 +2015,7 @@
         <span class="self">Self</span>::get_balances(args.address)
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;accounts.DenominationInfo&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"accounts.DenominationInfo"</span>)]
     </span><span class="kw">fn </span>query_denomination_info&lt;C: Context&gt;(
         _ctx: <span class="kw-2">&amp;</span>C,
         args: types::DenominationInfoQuery,
@@ -2145,7 +2147,7 @@
     <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) {
         <span class="comment">// Determine the fees that are available for disbursement from the last block.
         </span><span class="kw">let </span><span class="kw-2">mut </span>previous_fees = <span class="self">Self</span>::get_balances(<span class="kw-2">*</span>ADDRESS_FEE_ACCUMULATOR)
-            .expect(<span class="string">&quot;get_balances must succeed&quot;</span>)
+            .expect(<span class="string">"get_balances must succeed"</span>)
             .balances;
 
         <span class="comment">// Drain previous fees from the fee accumulator.
@@ -2154,7 +2156,7 @@
                 <span class="kw-2">*</span>ADDRESS_FEE_ACCUMULATOR,
                 <span class="kw-2">&amp;</span>token::BaseUnits::new(<span class="kw-2">*</span>remainder, denom.clone()),
             )
-            .expect(<span class="string">&quot;sub_amount must succeed&quot;</span>);
+            .expect(<span class="string">"sub_amount must succeed"</span>);
         }
 
         <span class="comment">// Disburse transaction fees to entities controlling all the good nodes in the committee.
@@ -2171,7 +2173,7 @@
                 .filter_map(|(denom, fee)| {
                     <span class="kw">let </span>fee = fee
                         .checked_div(addrs.len() <span class="kw">as </span>u128)
-                        .expect(<span class="string">&quot;addrs is non-empty&quot;</span>);
+                        .expect(<span class="string">"addrs is non-empty"</span>);
 
                     <span class="comment">// Filter out zero-fee entries to avoid needless operations.
                     </span><span class="kw">if </span>fee.is_zero() {
@@ -2186,13 +2188,13 @@
                 <span class="kw">for </span>amount <span class="kw">in </span><span class="kw-2">&amp;</span>amounts {
                     <span class="kw">let </span>remaining = previous_fees
                         .get_mut(amount.denomination())
-                        .expect(<span class="string">&quot;designated denomination should be there&quot;</span>);
+                        .expect(<span class="string">"designated denomination should be there"</span>);
                     <span class="kw-2">*</span>remaining = remaining
                         .checked_sub(amount.amount())
-                        .expect(<span class="string">&quot;there should be enough to disburse&quot;</span>);
+                        .expect(<span class="string">"there should be enough to disburse"</span>);
 
                     <span class="self">Self</span>::add_amount(address, amount)
-                        .expect(<span class="string">&quot;add_amount must succeed for fee disbursement&quot;</span>);
+                        .expect(<span class="string">"add_amount must succeed for fee disbursement"</span>);
 
                     <span class="comment">// Emit transfer event for fee disbursement.
                     </span>CurrentState::with(|state| {
@@ -2214,7 +2216,7 @@
 
             <span class="kw">let </span>amount = token::BaseUnits::new(remainder, denom);
             <span class="self">Self</span>::add_amount(<span class="kw-2">*</span>ADDRESS_COMMON_POOL, <span class="kw-2">&amp;</span>amount)
-                .expect(<span class="string">&quot;add_amount must succeed for transfer to common pool&quot;</span>);
+                .expect(<span class="string">"add_amount must succeed for transfer to common pool"</span>);
 
             <span class="comment">// Emit transfer event for fee disbursement.
             </span>CurrentState::with(|state| {
@@ -2240,7 +2242,7 @@
                 <span class="kw-2">*</span>ADDRESS_FEE_ACCUMULATOR,
                 <span class="kw-2">&amp;</span>token::BaseUnits::new(amount, denom),
             )
-            .expect(<span class="string">&quot;add_amount must succeed for transfer to fee accumulator&quot;</span>)
+            .expect(<span class="string">"add_amount must succeed for transfer to fee accumulator"</span>)
         }
     }
 }
@@ -2253,11 +2255,11 @@
 
         </span><span class="attr">#[allow(clippy::or_fun_call)]
         </span><span class="kw">let </span>balances = <span class="self">Self</span>::get_all_balances().or(<span class="prelude-val">Err</span>(CoreError::InvariantViolation(
-            <span class="string">&quot;unable to get balances of all accounts&quot;</span>.to_string(),
+            <span class="string">"unable to get balances of all accounts"</span>.to_string(),
         )))<span class="question-mark">?</span>;
         <span class="attr">#[allow(clippy::or_fun_call)]
         </span><span class="kw">let </span>total_supplies = <span class="self">Self</span>::get_total_supplies().or(<span class="prelude-val">Err</span>(CoreError::InvariantViolation(
-            <span class="string">&quot;unable to get total supplies&quot;</span>.to_string(),
+            <span class="string">"unable to get total supplies"</span>.to_string(),
         )))<span class="question-mark">?</span>;
 
         <span class="comment">// First, compute total supplies based on account balances.
@@ -2275,31 +2277,31 @@
         <span class="comment">// Now check if the computed and given total supplies match.
         </span><span class="kw">for </span>(den, ts) <span class="kw">in </span><span class="kw-2">&amp;</span>total_supplies {
             <span class="comment">// Return error if total supplies have a denomination that we
-            // didn&#39;t encounter when computing total supplies based on account
+            // didn't encounter when computing total supplies based on account
             // balances.
             </span><span class="attr">#[allow(clippy::or_fun_call)]
             </span><span class="kw">let </span>computed = computed_ts
                 .remove(den)
                 .ok_or(CoreError::InvariantViolation(
-                    <span class="string">&quot;unexpected denomination&quot;</span>.to_string(),
+                    <span class="string">"unexpected denomination"</span>.to_string(),
                 ))<span class="question-mark">?</span>;
 
             <span class="kw">if </span><span class="kw-2">&amp;</span>computed != ts {
-                <span class="comment">// Computed and actual total supplies don&#39;t match.
+                <span class="comment">// Computed and actual total supplies don't match.
                 </span><span class="kw">return </span><span class="prelude-val">Err</span>(CoreError::InvariantViolation(<span class="macro">format!</span>(
-                    <span class="string">&quot;computed and actual total supplies don&#39;t match (computed={computed}, actual={ts})&quot;</span>,
+                    <span class="string">"computed and actual total supplies don't match (computed={computed}, actual={ts})"</span>,
                 )));
             }
         }
 
         <span class="comment">// There should be no remaining denominations in the computed supplies,
-        // because that would mean that accounts have denominations that don&#39;t
+        // because that would mean that accounts have denominations that don't
         // appear in the total supplies table, which would obviously be wrong.
         </span><span class="kw">if </span>computed_ts.is_empty() {
             <span class="prelude-val">Ok</span>(())
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(CoreError::InvariantViolation(
-                <span class="string">&quot;encountered denomination that isn&#39;t present in total supplies table&quot;</span>.to_string(),
+                <span class="string">"encountered denomination that isn't present in total supplies table"</span>.to_string(),
             ))
         }
     }

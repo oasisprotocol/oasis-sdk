@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/state/registry.rs`."><title>registry.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/state/registry.rs`."><title>registry.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -295,13 +297,13 @@
 };
 
 <span class="doccomment">/// Consensus registry state wrapper.
-</span><span class="kw">pub struct </span>ImmutableState&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; {
-    mkvs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T,
+</span><span class="kw">pub struct </span>ImmutableState&lt;<span class="lifetime">'a</span>, T: ImmutableMKVS&gt; {
+    mkvs: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">'a</span>, T&gt; {
     <span class="doccomment">/// Constructs a new ImmutableMKVS.
-    </span><span class="kw">pub fn </span>new(mkvs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T) -&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    </span><span class="kw">pub fn </span>new(mkvs: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T) -&gt; ImmutableState&lt;<span class="lifetime">'a</span>, T&gt; {
         ImmutableState { mkvs }
     }
 }
@@ -310,7 +312,7 @@
 <span class="macro">key_format!</span>(RuntimeKeyFmt, <span class="number">0x13</span>, Hash);
 <span class="macro">key_format!</span>(SuspendedRuntimeKeyFmt, <span class="number">0x18</span>, Hash);
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">'a</span>, T&gt; {
     <span class="kw">fn </span>decode_node(<span class="kw-2">&amp;</span><span class="self">self</span>, data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Node, StateError&gt; {
         <span class="kw">let </span>signed: MultiSigned =
             cbor::from_slice(data).map_err(|err| StateError::Unavailable(<span class="macro">anyhow!</span>(err)))<span class="question-mark">?</span>;
@@ -399,15 +401,15 @@
         <span class="comment">// Keep in sync with go/consensus/cometbft/apps/registry/state/interop/interop.go.
         // If mock consensus state changes, update the root hash bellow.
         // See protocol server stdout for hash.
-        // To make the hash show up during tests, run &quot;cargo test&quot; as
-        // &quot;cargo test -- --nocapture&quot;.
+        // To make the hash show up during tests, run "cargo test" as
+        // "cargo test -- --nocapture".
 
         // Setup protocol server with initialized mock consensus state.
         </span><span class="kw">let </span>server = ProtocolServer::new(Fixture::ConsensusMock.into());
         <span class="kw">let </span>mock_consensus_root = Root {
             version: <span class="number">1</span>,
             root_type: RootType::State,
-            hash: Hash::from(<span class="string">&quot;f637a80b24e3ffaaf3de0da96f1dfd94d0a135348f40006d578d557d70d5fa42&quot;</span>),
+            hash: Hash::from(<span class="string">"f637a80b24e3ffaaf3de0da96f1dfd94d0a135348f40006d578d557d70d5fa42"</span>),
             ..Default::default()
         };
         <span class="kw">let </span>mkvs = Tree::builder()
@@ -417,54 +419,54 @@
         <span class="kw">let </span>registry_state = ImmutableState::new(<span class="kw-2">&amp;</span>mkvs);
 
         <span class="comment">// Test get nodes.
-        </span><span class="kw">let </span>nodes = registry_state.nodes().expect(<span class="string">&quot;nodes query should work&quot;</span>);
+        </span><span class="kw">let </span>nodes = registry_state.nodes().expect(<span class="string">"nodes query should work"</span>);
         <span class="macro">assert_eq!</span>(
             nodes.len(),
             <span class="number">2</span>,
-            <span class="string">&quot;expected number of nodes should be returned&quot;
+            <span class="string">"expected number of nodes should be returned"
         </span>);
 
         <span class="kw">let </span>expected_nodes = <span class="macro">vec!</span>[
                 Node{
                     v: <span class="number">3</span>,
-                    id: signature::PublicKey::from(<span class="string">&quot;43e5aaee54c768867718837ef4f6a6161e0615da0fcf8da394e5c8b7a0d54c18&quot;</span>),
-                    entity_id: signature::PublicKey::from(<span class="string">&quot;761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531&quot;</span>),
+                    id: signature::PublicKey::from(<span class="string">"43e5aaee54c768867718837ef4f6a6161e0615da0fcf8da394e5c8b7a0d54c18"</span>),
+                    entity_id: signature::PublicKey::from(<span class="string">"761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531"</span>),
                     expiration: <span class="number">32</span>,
                     ..Default::default()
                 },
                 Node{
                     v: <span class="number">3</span>,
-                    id: signature::PublicKey::from(<span class="string">&quot;f43c3559658f76b85d0630f56dc75d603807ac60be0ca3aada66799289066758&quot;</span>),
-                    entity_id: signature::PublicKey::from(<span class="string">&quot;761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531&quot;</span>),
+                    id: signature::PublicKey::from(<span class="string">"f43c3559658f76b85d0630f56dc75d603807ac60be0ca3aada66799289066758"</span>),
+                    entity_id: signature::PublicKey::from(<span class="string">"761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531"</span>),
                     expiration: <span class="number">32</span>,
                     tls: TLSInfo{
-                        pub_key: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0&quot;</span>),
+                        pub_key: signature::PublicKey::from(<span class="string">"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0"</span>),
                         ..Default::default()
                     },
                     p2p: P2PInfo{
-                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3&quot;</span>),
+                        id: signature::PublicKey::from(<span class="string">"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3"</span>),
                         addresses: <span class="prelude-val">Some</span>(Vec::new()),
                     },
                     consensus: ConsensusInfo{
-                        id: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4&quot;</span>),
+                        id: signature::PublicKey::from(<span class="string">"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4"</span>),
                         addresses: <span class="prelude-val">Some</span>(Vec::new()),
                     },
                     vrf: VRFInfo{
-                        id: PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5&quot;</span>),
+                        id: PublicKey::from(<span class="string">"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff5"</span>),
                     },
                     runtimes: <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[
                         NodeRuntime{
-                            id: Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000010&quot;</span>),
+                            id: Namespace::from(<span class="string">"8000000000000000000000000000000000000000000000000000000000000010"</span>),
                             version: Version::from(<span class="number">321</span>),
                             ..Default::default()
                         },
                         NodeRuntime{
-                            id: Namespace::from(<span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000011&quot;</span>),
+                            id: Namespace::from(<span class="string">"8000000000000000000000000000000000000000000000000000000000000011"</span>),
                             version: Version::from(<span class="number">123</span>),
                             capabilities: Capabilities{
                                tee: <span class="prelude-val">Some</span>(CapabilityTEE{
                                    hardware: TEEHardware::TEEHardwareIntelSGX,
-                                    rak: signature::PublicKey::from(<span class="string">&quot;fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8&quot;</span>),
+                                    rak: signature::PublicKey::from(<span class="string">"fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8"</span>),
                                     attestation: <span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>,<span class="number">5</span>],
                                     ..Default::default()
                                }),
@@ -479,24 +481,24 @@
 
         <span class="kw">let </span>node = registry_state
             .node(<span class="kw-2">&amp;</span>expected_nodes.get(<span class="number">1</span>).unwrap().id)
-            .expect(<span class="string">&quot;node query should work&quot;</span>);
+            .expect(<span class="string">"node query should work"</span>);
         <span class="macro">assert_eq!</span>(node, <span class="prelude-val">Some</span>(expected_nodes.get(<span class="number">1</span>).unwrap().clone()));
 
         <span class="kw">let </span>node = registry_state
             .node(<span class="kw-2">&amp;</span>signature::PublicKey::from(
-                <span class="string">&quot;ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+                <span class="string">"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
             ))
-            .expect(<span class="string">&quot;node query should work&quot;</span>);
+            .expect(<span class="string">"node query should work"</span>);
         <span class="macro">assert_eq!</span>(node, <span class="prelude-val">None</span>);
 
         <span class="kw">let </span>expected_runtimes = <span class="macro">vec!</span>[
             Runtime {
                 v: <span class="number">3</span>,
                 id: Namespace::from(
-                    <span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000010&quot;</span>,
+                    <span class="string">"8000000000000000000000000000000000000000000000000000000000000010"</span>,
                 ),
                 entity_id: signature::PublicKey::from(
-                    <span class="string">&quot;761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531&quot;</span>,
+                    <span class="string">"761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531"</span>,
                 ),
                 kind: RuntimeKind::KindCompute,
                 tee_hardware: TEEHardware::TEEHardwareInvalid,
@@ -517,10 +519,10 @@
             Runtime {
                 v: <span class="number">3</span>,
                 id: Namespace::from(
-                    <span class="string">&quot;8000000000000000000000000000000000000000000000000000000000000011&quot;</span>,
+                    <span class="string">"8000000000000000000000000000000000000000000000000000000000000011"</span>,
                 ),
                 entity_id: signature::PublicKey::from(
-                    <span class="string">&quot;761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531&quot;</span>,
+                    <span class="string">"761950dfe65936f6e9d06a0124bc930f7d5b1812ceefdfb2cae0ef5841291531"</span>,
                 ),
                 kind: RuntimeKind::KindCompute,
                 tee_hardware: TEEHardware::TEEHardwareIntelSGX,
@@ -545,7 +547,7 @@
         <span class="kw">for </span>rt <span class="kw">in </span>expected_runtimes {
             <span class="kw">let </span>ext_rt = registry_state
                 .runtime(<span class="kw-2">&amp;</span>rt.id)
-                .expect(<span class="string">&quot;runtime query should work&quot;</span>);
+                .expect(<span class="string">"runtime query should work"</span>);
             <span class="macro">assert_eq!</span>(ext_rt, <span class="prelude-val">Some</span>(rt));
         }
     }

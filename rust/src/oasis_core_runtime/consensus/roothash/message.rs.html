@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/roothash/message.rs`."><title>message.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/roothash/message.rs`."><title>message.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -353,13 +355,13 @@
 <span class="doccomment">/// A message that can be emitted by the runtime to be processed by the consensus layer.
 </span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub enum </span>Message {
-    <span class="attr">#[cbor(rename = <span class="string">&quot;staking&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"staking"</span>)]
     </span>Staking(Versioned&lt;StakingMessage&gt;),
 
-    <span class="attr">#[cbor(rename = <span class="string">&quot;registry&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"registry"</span>)]
     </span>Registry(Versioned&lt;RegistryMessage&gt;),
 
-    <span class="attr">#[cbor(rename = <span class="string">&quot;governance&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"governance"</span>)]
     </span>Governance(Versioned&lt;GovernanceMessage&gt;),
 }
 
@@ -394,16 +396,16 @@
 
 <span class="attr">#[derive(Clone, Debug, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub enum </span>StakingMessage {
-    <span class="attr">#[cbor(rename = <span class="string">&quot;transfer&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"transfer"</span>)]
     </span>Transfer(staking::Transfer),
 
-    <span class="attr">#[cbor(rename = <span class="string">&quot;withdraw&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"withdraw"</span>)]
     </span>Withdraw(staking::Withdraw),
 
-    <span class="attr">#[cbor(rename = <span class="string">&quot;add_escrow&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"add_escrow"</span>)]
     </span>AddEscrow(staking::Escrow),
 
-    <span class="attr">#[cbor(rename = <span class="string">&quot;reclaim_escrow&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"reclaim_escrow"</span>)]
     </span>ReclaimEscrow(staking::ReclaimEscrow),
 }
 
@@ -433,7 +435,7 @@
 
 <span class="attr">#[derive(Clone, Debug, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub enum </span>RegistryMessage {
-    <span class="attr">#[cbor(rename = <span class="string">&quot;update_runtime&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"update_runtime"</span>)]
     </span>UpdateRuntime(registry::Runtime),
 }
 
@@ -443,7 +445,7 @@
         <span class="kw">match </span><span class="self">self </span>{
             RegistryMessage::UpdateRuntime(<span class="kw">_</span>) =&gt; {
                 <span class="comment">// The runtime descriptor will already be validated in registerRuntime
-                // in the registry app when it processes the message, so we don&#39;t have
+                // in the registry app when it processes the message, so we don't have
                 // to do any validation here.
                 </span><span class="prelude-val">Ok</span>(())
             }
@@ -453,9 +455,9 @@
 
 <span class="attr">#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub enum </span>GovernanceMessage {
-    <span class="attr">#[cbor(rename = <span class="string">&quot;cast_vote&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"cast_vote"</span>)]
     </span>CastVote(governance::ProposalVote),
-    <span class="attr">#[cbor(rename = <span class="string">&quot;submit_proposal&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"submit_proposal"</span>)]
     </span>SubmitProposal(governance::ProposalContent),
 }
 
@@ -530,7 +532,7 @@
     </span><span class="kw">fn </span>test_consistent_messages_hash() {
         <span class="comment">// NOTE: This runtime structure must be synced with go/roothash/api/messages_test.go.
         </span><span class="kw">let </span>test_ent_id =
-            PublicKey::from(<span class="string">&quot;4ea5328f943ef6f66daaed74cb0e99c3b1c45f76307b425003dbc7cb3638ed35&quot;</span>);
+            PublicKey::from(<span class="string">"4ea5328f943ef6f66daaed74cb0e99c3b1c45f76307b425003dbc7cb3638ed35"</span>);
 
         <span class="kw">let </span>q = quantity::Quantity::from(<span class="number">1000u32</span>);
 
@@ -616,35 +618,35 @@
         </span><span class="kw">let </span>tcs = <span class="macro">vec!</span>[
             (
                 <span class="macro">vec!</span>[],
-                <span class="string">&quot;c672b8d1ef56ed28ab87c3622c5114069bdd3ad7b8f9737498d0c01ecef0967a&quot;</span>,
+                <span class="string">"c672b8d1ef56ed28ab87c3622c5114069bdd3ad7b8f9737498d0c01ecef0967a"</span>,
             ),
             (
                 <span class="macro">vec!</span>[Message::Staking(Versioned::new(
                     <span class="number">0</span>,
                     StakingMessage::Transfer(staking::Transfer::default()),
                 ))],
-                <span class="string">&quot;a6b91f974b34a9192efd12025659a768520d2f04e1dae9839677456412cdb2be&quot;</span>,
+                <span class="string">"a6b91f974b34a9192efd12025659a768520d2f04e1dae9839677456412cdb2be"</span>,
             ),
             (
                 <span class="macro">vec!</span>[Message::Staking(Versioned::new(
                     <span class="number">0</span>,
                     StakingMessage::Withdraw(staking::Withdraw::default()),
                 ))],
-                <span class="string">&quot;069b0fda76d804e3fd65d4bbd875c646f15798fb573ac613100df67f5ba4c3fd&quot;</span>,
+                <span class="string">"069b0fda76d804e3fd65d4bbd875c646f15798fb573ac613100df67f5ba4c3fd"</span>,
             ),
             (
                 <span class="macro">vec!</span>[Message::Staking(Versioned::new(
                     <span class="number">0</span>,
                     StakingMessage::AddEscrow(staking::Escrow::default()),
                 ))],
-                <span class="string">&quot;65049870b9dae657390e44065df0c78176816876e67b96dac7791ee6a1aa42e2&quot;</span>,
+                <span class="string">"65049870b9dae657390e44065df0c78176816876e67b96dac7791ee6a1aa42e2"</span>,
             ),
             (
                 <span class="macro">vec!</span>[Message::Staking(Versioned::new(
                     <span class="number">0</span>,
                     StakingMessage::ReclaimEscrow(staking::ReclaimEscrow::default()),
                 ))],
-                <span class="string">&quot;c78547eae2f104268e49827cbe624cf2b350ee59e8d693dec0673a70a4664a2e&quot;</span>,
+                <span class="string">"c78547eae2f104268e49827cbe624cf2b350ee59e8d693dec0673a70a4664a2e"</span>,
             ),
             (
                 <span class="macro">vec!</span>[Message::Registry(Versioned::new(
@@ -652,14 +654,14 @@
                     RegistryMessage::UpdateRuntime(registry::Runtime::default()),
                 ))],
                 <span class="comment">// FIXME: Change to e6e170fb771583147255e0c96dc88615d4fd2fd28488ae489df01da201affe72 once cbor is fixed.
-                </span><span class="string">&quot;baf9eeaa4860e363a9c27d99555839afc535f0cd32d23dc640f0f020677460e0&quot;</span>,
+                </span><span class="string">"baf9eeaa4860e363a9c27d99555839afc535f0cd32d23dc640f0f020677460e0"</span>,
             ),
             (
                 <span class="macro">vec!</span>[Message::Registry(Versioned::new(
                     <span class="number">0</span>,
                     RegistryMessage::UpdateRuntime(rt),
                 ))],
-                <span class="string">&quot;03e77fbeda1a2291c87c06c59335a49fe18852266d58608c1ddec8ef64209458&quot;</span>,
+                <span class="string">"03e77fbeda1a2291c87c06c59335a49fe18852266d58608c1ddec8ef64209458"</span>,
             ),
             (
                 <span class="macro">vec!</span>[Message::Governance(Versioned::new(
@@ -669,7 +671,7 @@
                         vote: governance::Vote::Yes,
                     }),
                 ))],
-                <span class="string">&quot;f45e26eb8ace807ad5bd02966cde1f012d1d978d4cbddd59e9bfd742dcf39b90&quot;</span>,
+                <span class="string">"f45e26eb8ace807ad5bd02966cde1f012d1d978d4cbddd59e9bfd742dcf39b90"</span>,
             ),
             (
                 <span class="macro">vec!</span>[Message::Governance(Versioned::new(
@@ -679,11 +681,11 @@
                         ..Default::default()
                     }),
                 ))],
-                <span class="string">&quot;03312ddb5c41a30fbd29fb91cf6bf26d58073996f89657ca4f3b3a43a98bfd0b&quot;</span>,
+                <span class="string">"03312ddb5c41a30fbd29fb91cf6bf26d58073996f89657ca4f3b3a43a98bfd0b"</span>,
             ),
         ];
         <span class="kw">for </span>(msgs, expected_hash) <span class="kw">in </span>tcs {
-            <span class="macro">println!</span>(<span class="string">&quot;{:?}&quot;</span>, cbor::to_vec(msgs.clone()));
+            <span class="macro">println!</span>(<span class="string">"{:?}"</span>, cbor::to_vec(msgs.clone()));
             <span class="macro">assert_eq!</span>(Message::messages_hash(<span class="kw-2">&amp;</span>msgs), Hash::from(expected_hash));
         }
     }

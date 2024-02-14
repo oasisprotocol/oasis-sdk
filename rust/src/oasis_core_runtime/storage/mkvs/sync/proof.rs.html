@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/storage/mkvs/sync/proof.rs`."><title>proof.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/storage/mkvs/sync/proof.rs`."><title>proof.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -344,25 +346,25 @@
         // makes no sense to verify the proof).
         </span><span class="kw">if </span>proof.untrusted_root != root {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;verifier: got proof for unexpected root (expected: {:?} got {:?})&quot;</span>,
+                <span class="string">"verifier: got proof for unexpected root (expected: {:?} got {:?})"</span>,
                 root,
                 proof.untrusted_root,
             ));
         }
         <span class="kw">if </span>proof.entries.is_empty() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;verifier: empty proof&quot;</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"verifier: empty proof"</span>));
         }
 
         <span class="kw">let </span>(idx, root_node) = <span class="self">Self</span>::_verify_proof(proof, <span class="number">0</span>)<span class="question-mark">?</span>;
         <span class="comment">// Make sure that all of the entries in the proof have been used. The returned index should
         // point to just beyond the last element.
         </span><span class="kw">if </span>idx != proof.entries.len() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;verifier: unused entries in proof&quot;</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"verifier: unused entries in proof"</span>));
         }
         <span class="kw">let </span>root_hash = root_node.borrow().hash;
         <span class="kw">if </span>root_hash != root {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;verifier: bad root (expected: {:?} got {:?})&quot;</span>,
+                <span class="string">"verifier: bad root (expected: {:?} got {:?})"</span>,
                 root,
                 root_hash,
             ));
@@ -373,14 +375,14 @@
 
     <span class="kw">fn </span>_verify_proof(proof: <span class="kw-2">&amp;</span>Proof, idx: usize) -&gt; <span class="prelude-ty">Result</span>&lt;(usize, NodePtrRef)&gt; {
         <span class="kw">if </span>idx &gt;= proof.entries.len() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;verifier: malformed proof&quot;</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"verifier: malformed proof"</span>));
         }
         <span class="kw">let </span>entry = <span class="kw">match </span><span class="kw-2">&amp;</span>proof.entries[idx] {
             <span class="prelude-val">Some</span>(entry) =&gt; entry.as_ref(),
             <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Ok</span>((idx + <span class="number">1</span>, NodePointer::null_ptr())),
         };
         <span class="kw">if </span>entry.is_empty() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;verifier: malformed proof&quot;</span>));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"verifier: malformed proof"</span>));
         }
 
         <span class="kw">match </span>entry[<span class="number">0</span>] {
@@ -411,13 +413,13 @@
                 <span class="comment">// Hash of a node.
                 </span><span class="kw">let </span>entry = <span class="kw-2">&amp;</span>entry[<span class="number">1</span>..];
                 <span class="kw">if </span>entry.len() != Hash::len() {
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;verifier: malformed hash entry&quot;</span>));
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"verifier: malformed hash entry"</span>));
                 }
 
                 <span class="prelude-val">Ok</span>((idx + <span class="number">1</span>, NodePointer::hash_ptr(entry.into())))
             }
             entry_type =&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;verifier: unexpected entry in proof ({:?})&quot;</span>,
+                <span class="string">"verifier: unexpected entry in proof ({:?})"</span>,
                 entry_type
             )),
         }
@@ -435,21 +437,21 @@
         <span class="comment">// Test vector generated by Go.
         // TODO: Provide multiple test vectors.
         </span><span class="kw">let </span>test_vector_proof = base64::decode(
-            <span class="string">&quot;omdlbnRyaWVzhUoBASQAa2V5IDACRgEBAQAAAlghAsFltYRhD4dAwHOdOmEigY1r02pJH6InhiibKlh9neYlWCECpsJnkjOnIgc4+\
+            <span class="string">"omdlbnRyaWVzhUoBASQAa2V5IDACRgEBAQAAAlghAsFltYRhD4dAwHOdOmEigY1r02pJH6InhiibKlh9neYlWCECpsJnkjOnIgc4+\
 yfvpsqCcIYHh5eld1hNMWTT7arAfHFYIQLhNTLWRbks1RBf52ulnlOTO+7D5EZNMYFzTx8U46sCnm51bnRydXN0ZWRfcm9vdFggWeZ8L9wIuOEN0Iu2\
-uO/mFPzJZey4liX5fxf4fwcQRhM=&quot;</span>,
+uO/mFPzJZey4liX5fxf4fwcQRhM="</span>,
         ).unwrap();
         <span class="kw">let </span>test_vector_root_hash =
-            <span class="string">&quot;59e67c2fdc08b8e10dd08bb6b8efe614fcc965ecb89625f97f17f87f07104613&quot;</span>;
+            <span class="string">"59e67c2fdc08b8e10dd08bb6b8efe614fcc965ecb89625f97f17f87f07104613"</span>;
 
         <span class="comment">// Proof should decode.
-        </span><span class="kw">let </span>proof: Proof = cbor::from_slice(<span class="kw-2">&amp;</span>test_vector_proof).expect(<span class="string">&quot;proof should deserialize&quot;</span>);
+        </span><span class="kw">let </span>proof: Proof = cbor::from_slice(<span class="kw-2">&amp;</span>test_vector_proof).expect(<span class="string">"proof should deserialize"</span>);
         <span class="kw">let </span>root_hash = Hash::from(test_vector_root_hash);
 
         <span class="comment">// Proof should verify.
         </span><span class="kw">let </span>pv = ProofVerifier;
         pv.verify_proof(root_hash, <span class="kw-2">&amp;</span>proof)
-            .expect(<span class="string">&quot;verify proof should not fail with a valid proof&quot;</span>);
+            .expect(<span class="string">"verify proof should not fail with a valid proof"</span>);
 
         <span class="comment">// Invalid proofs should not verify.
 
@@ -458,15 +460,15 @@ uO/mFPzJZey4liX5fxf4fwcQRhM=&quot;</span>,
         <span class="kw">let </span>result = pv.verify_proof(root_hash, <span class="kw-2">&amp;</span>empty_proof);
         <span class="macro">assert!</span>(
             result.is_err(),
-            <span class="string">&quot;verify proof should fail with an empty proof&quot;
+            <span class="string">"verify proof should fail with an empty proof"
         </span>);
 
         <span class="comment">// Different root.
-        </span><span class="kw">let </span>bogus_hash = Hash::digest_bytes(<span class="string">b&quot;i am a bogus hash&quot;</span>);
+        </span><span class="kw">let </span>bogus_hash = Hash::digest_bytes(<span class="string">b"i am a bogus hash"</span>);
         <span class="kw">let </span>result = pv.verify_proof(bogus_hash, <span class="kw-2">&amp;</span>proof);
         <span class="macro">assert!</span>(
             result.is_err(),
-            <span class="string">&quot;verify proof should fail with a proof for a different root&quot;
+            <span class="string">"verify proof should fail with a proof for a different root"
         </span>);
 
         <span class="comment">// Different hash element.
@@ -475,7 +477,7 @@ uO/mFPzJZey4liX5fxf4fwcQRhM=&quot;</span>,
         <span class="kw">let </span>result = pv.verify_proof(root_hash, <span class="kw-2">&amp;</span>corrupted);
         <span class="macro">assert!</span>(
             result.is_err(),
-            <span class="string">&quot;verify proof should fail with invalid proof&quot;
+            <span class="string">"verify proof should fail with invalid proof"
         </span>);
 
         <span class="comment">// Corrupted full node.
@@ -484,7 +486,7 @@ uO/mFPzJZey4liX5fxf4fwcQRhM=&quot;</span>,
         <span class="kw">let </span>result = pv.verify_proof(root_hash, <span class="kw-2">&amp;</span>corrupted);
         <span class="macro">assert!</span>(
             result.is_err(),
-            <span class="string">&quot;verify proof should fail with invalid proof&quot;
+            <span class="string">"verify proof should fail with invalid proof"
         </span>);
 
         <span class="comment">// Corrupted hash.
@@ -493,7 +495,7 @@ uO/mFPzJZey4liX5fxf4fwcQRhM=&quot;</span>,
         <span class="kw">let </span>result = pv.verify_proof(root_hash, <span class="kw-2">&amp;</span>corrupted);
         <span class="macro">assert!</span>(
             result.is_err(),
-            <span class="string">&quot;verify proof should fail with invalid proof&quot;
+            <span class="string">"verify proof should fail with invalid proof"
         </span>);
 
         <span class="comment">// Corrupted proof element type.
@@ -502,7 +504,7 @@ uO/mFPzJZey4liX5fxf4fwcQRhM=&quot;</span>,
         <span class="kw">let </span>result = pv.verify_proof(root_hash, <span class="kw-2">&amp;</span>corrupted);
         <span class="macro">assert!</span>(
             result.is_err(),
-            <span class="string">&quot;verify proof should fail with invalid proof&quot;
+            <span class="string">"verify proof should fail with invalid proof"
         </span>);
 
         <span class="comment">// Missing elements.
@@ -511,35 +513,35 @@ uO/mFPzJZey4liX5fxf4fwcQRhM=&quot;</span>,
         <span class="kw">let </span>result = pv.verify_proof(root_hash, <span class="kw-2">&amp;</span>corrupted);
         <span class="macro">assert!</span>(
             result.is_err(),
-            <span class="string">&quot;verify proof should fail with invalid proof&quot;
+            <span class="string">"verify proof should fail with invalid proof"
         </span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_proof_extra_nodes() {
         <span class="kw">let </span>test_vector_proof = base64::decode(
-            <span class="string">&quot;omdlbnRyaWVzhUoBASQAa2V5IDACRgEBAQAAAlghAsFltYRhD4dAwHOdOmEigY1r02pJH6InhiibKlh9neYlWCECpsJnkjOnIgc4+\
+            <span class="string">"omdlbnRyaWVzhUoBASQAa2V5IDACRgEBAQAAAlghAsFltYRhD4dAwHOdOmEigY1r02pJH6InhiibKlh9neYlWCECpsJnkjOnIgc4+\
 yfvpsqCcIYHh5eld1hNMWTT7arAfHFYIQLhNTLWRbks1RBf52ulnlOTO+7D5EZNMYFzTx8U46sCnm51bnRydXN0ZWRfcm9vdFggWeZ8L9wIuOEN0Iu2\
-uO/mFPzJZey4liX5fxf4fwcQRhM=&quot;</span>,
+uO/mFPzJZey4liX5fxf4fwcQRhM="</span>,
         ).unwrap();
         <span class="kw">let </span>test_vector_root_hash =
-            <span class="string">&quot;59e67c2fdc08b8e10dd08bb6b8efe614fcc965ecb89625f97f17f87f07104613&quot;</span>;
+            <span class="string">"59e67c2fdc08b8e10dd08bb6b8efe614fcc965ecb89625f97f17f87f07104613"</span>;
 
         <span class="comment">// Proof should decode.
         </span><span class="kw">let </span><span class="kw-2">mut </span>proof: Proof =
-            cbor::from_slice(<span class="kw-2">&amp;</span>test_vector_proof).expect(<span class="string">&quot;proof should deserialize&quot;</span>);
+            cbor::from_slice(<span class="kw-2">&amp;</span>test_vector_proof).expect(<span class="string">"proof should deserialize"</span>);
         <span class="kw">let </span>root_hash = Hash::from(test_vector_root_hash);
 
         <span class="comment">// Proof should verify.
         </span><span class="kw">let </span>pv = ProofVerifier;
         pv.verify_proof(root_hash, <span class="kw-2">&amp;</span>proof)
-            .expect(<span class="string">&quot;verify proof should not fail with a valid proof&quot;</span>);
+            .expect(<span class="string">"verify proof should not fail with a valid proof"</span>);
 
         <span class="comment">// Duplicate some nodes and add them to the end.
         </span>proof.entries.push(proof.entries[<span class="number">0</span>].clone());
 
         pv.verify_proof(root_hash, <span class="kw-2">&amp;</span>proof)
-            .expect_err(<span class="string">&quot;proof with extra data should fail to validate&quot;</span>);
+            .expect_err(<span class="string">"proof with extra data should fail to validate"</span>);
     }
 }
 </code></pre></div></section></main></body></html>

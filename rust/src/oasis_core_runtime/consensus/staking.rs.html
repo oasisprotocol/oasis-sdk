@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/staking.rs`."><title>staking.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/staking.rs`."><title>staking.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -872,7 +874,7 @@
     <span class="attr">#[cbor(optional)]
     </span><span class="kw">pub </span>global: <span class="prelude-ty">Option</span>&lt;ThresholdKind&gt;,
 
-    <span class="attr">#[cbor(optional, rename = <span class="string">&quot;const&quot;</span>)]
+    <span class="attr">#[cbor(optional, rename = <span class="string">"const"</span>)]
     </span><span class="kw">pub </span>constant: <span class="prelude-ty">Option</span>&lt;Quantity&gt;,
 }
 
@@ -887,7 +889,7 @@
 </span><span class="kw">pub struct </span>DebondingDelegation {
     <span class="kw">pub </span>shares: Quantity,
 
-    <span class="attr">#[cbor(rename = <span class="string">&quot;debond_end&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"debond_end"</span>)]
     </span><span class="kw">pub </span>debond_end_time: EpochTime,
 }
 
@@ -986,7 +988,7 @@
 </span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub enum </span>EscrowEvent {
     <span class="doccomment">/// Event emitted when stake is transferred into an escrow account.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;add&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"add"</span>)]
     </span>Add {
         owner: Address,
         escrow: Address,
@@ -995,7 +997,7 @@
     },
 
     <span class="doccomment">/// Event emitted when stake is taken from an escrow account (i.e. stake is slashed).
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;take&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"take"</span>)]
     </span>Take {
         owner: Address,
         <span class="comment">// The sum of amounts slashed from active and debonding escrow balances.
@@ -1009,7 +1011,7 @@
     ///
     /// Note that the given amount is valid at the time of debonding start and may not correspond to
     /// the final debonded amount in case any escrowed stake is subject to slashing.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;debonding_start&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"debonding_start"</span>)]
     </span>DebondingStart {
         owner: Address,
         escrow: Address,
@@ -1019,9 +1021,9 @@
         debond_end_time: EpochTime,
     },
 
-    <span class="doccomment">/// Event emitted when stake is reclaimed from an escrow account back into owner&#39;s general
+    <span class="doccomment">/// Event emitted when stake is reclaimed from an escrow account back into owner's general
     /// account.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;reclaim&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"reclaim"</span>)]
     </span>Reclaim {
         owner: Address,
         escrow: Address,
@@ -1052,9 +1054,9 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_consistent_accounts() {
         <span class="kw">let </span>tcs = <span class="macro">vec!</span>[
-        (<span class="string">&quot;oA==&quot;</span>, Account::default()),
+        (<span class="string">"oA=="</span>, Account::default()),
         (
-            <span class="string">&quot;oWdnZW5lcmFsomVub25jZRghZ2JhbGFuY2VBCg==&quot;</span>,
+            <span class="string">"oWdnZW5lcmFsomVub25jZRghZ2JhbGFuY2VBCg=="</span>,
             Account {
                 general: GeneralAccount {
                     balance: Quantity::from(<span class="number">10u32</span>),
@@ -1065,7 +1067,7 @@
             },
         ),
         (
-            <span class="string">&quot;oWdnZW5lcmFsoWphbGxvd2FuY2VzolUAdU/0RxQ6XsX0cbMPhna5TVaxV1BBIVUA98Te1iET4sKC6oZyI6VE7VXWum5BZA==&quot;</span>,
+            <span class="string">"oWdnZW5lcmFsoWphbGxvd2FuY2VzolUAdU/0RxQ6XsX0cbMPhna5TVaxV1BBIVUA98Te1iET4sKC6oZyI6VE7VXWum5BZA=="</span>,
             {
                 Account {
                     general: GeneralAccount {
@@ -1080,7 +1082,7 @@
                 },
         ),
         (
-            <span class="string">&quot;oWZlc2Nyb3ejZmFjdGl2ZaJnYmFsYW5jZUIETGx0b3RhbF9zaGFyZXNBC3FzdGFrZV9hY2N1bXVsYXRvcqFmY2xhaW1zoWZlbnRpdHmCoWVjb25zdEFNoWZnbG9iYWwCc2NvbW1pc3Npb25fc2NoZWR1bGWhZmJvdW5kc4GjZXN0YXJ0GCFocmF0ZV9tYXhCA+hocmF0ZV9taW5BCg==&quot;</span>,
+            <span class="string">"oWZlc2Nyb3ejZmFjdGl2ZaJnYmFsYW5jZUIETGx0b3RhbF9zaGFyZXNBC3FzdGFrZV9hY2N1bXVsYXRvcqFmY2xhaW1zoWZlbnRpdHmCoWVjb25zdEFNoWZnbG9iYWwCc2NvbW1pc3Npb25fc2NoZWR1bGWhZmJvdW5kc4GjZXN0YXJ0GCFocmF0ZV9tYXhCA+hocmF0ZV9taW5BCg=="</span>,
             Account {
                 escrow: EscrowAccount {
                     active: SharePool{
@@ -1099,7 +1101,7 @@
                     stake_accumulator: StakeAccumulator {
                         claims: [
                             (
-                                <span class="string">&quot;entity&quot;</span>.to_string(),
+                                <span class="string">"entity"</span>.to_string(),
                                 <span class="macro">vec!</span>[
                                     StakeThreshold{
                                         constant: <span class="prelude-val">Some</span>(Quantity::from(<span class="number">77u32</span>)),
@@ -1120,17 +1122,17 @@
     ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: Account = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">&quot;account should deserialize correctly&quot;</span>);
-            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">&quot;decoded account should match the expected value&quot;</span>);
+                .expect(<span class="string">"account should deserialize correctly"</span>);
+            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded account should match the expected value"</span>);
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_consistent_delegations() {
         <span class="kw">let </span>tcs = <span class="macro">vec!</span>[
-            (<span class="string">&quot;oWZzaGFyZXNA&quot;</span>, Delegation::default()),
+            (<span class="string">"oWZzaGFyZXNA"</span>, Delegation::default()),
             (
-                <span class="string">&quot;oWZzaGFyZXNBZA==&quot;</span>,
+                <span class="string">"oWZzaGFyZXNBZA=="</span>,
                 Delegation {
                     shares: Quantity::from(<span class="number">100u32</span>),
                 },
@@ -1138,8 +1140,8 @@
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: Delegation = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">&quot;delegation should deserialize correctly&quot;</span>);
-            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">&quot;decoded account should match the expected value&quot;</span>);
+                .expect(<span class="string">"delegation should deserialize correctly"</span>);
+            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded account should match the expected value"</span>);
         }
     }
 
@@ -1147,11 +1149,11 @@
     </span><span class="kw">fn </span>test_consistent_debonding_delegations() {
         <span class="kw">let </span>tcs = <span class="macro">vec!</span>[
             (
-                <span class="string">&quot;omZzaGFyZXNAamRlYm9uZF9lbmQA&quot;</span>,
+                <span class="string">"omZzaGFyZXNAamRlYm9uZF9lbmQA"</span>,
                 DebondingDelegation::default(),
             ),
             (
-                <span class="string">&quot;omZzaGFyZXNBZGpkZWJvbmRfZW5kFw==&quot;</span>,
+                <span class="string">"omZzaGFyZXNBZGpkZWJvbmRfZW5kFw=="</span>,
                 DebondingDelegation {
                     shares: Quantity::from(<span class="number">100u32</span>),
                     debond_end_time: <span class="number">23</span>,
@@ -1161,24 +1163,24 @@
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: DebondingDelegation =
                 cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                    .expect(<span class="string">&quot;debonding delegation should deserialize correctly&quot;</span>);
-            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">&quot;decoded account should match the expected value&quot;</span>);
+                    .expect(<span class="string">"debonding delegation should deserialize correctly"</span>);
+            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded account should match the expected value"</span>);
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_consistent_transfer_results() {
         <span class="kw">let </span>addr1 = Address::from_pk(<span class="kw-2">&amp;</span>PublicKey::from(
-            <span class="string">&quot;aaafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+            <span class="string">"aaafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
         ));
         <span class="kw">let </span>addr2 = Address::from_pk(<span class="kw-2">&amp;</span>PublicKey::from(
-            <span class="string">&quot;bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+            <span class="string">"bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
         ));
 
         <span class="kw">let </span>tcs = <span class="macro">vec!</span>[
-            (<span class="string">&quot;o2J0b1UAAAAAAAAAAAAAAAAAAAAAAAAAAABkZnJvbVUAAAAAAAAAAAAAAAAAAAAAAAAAAABmYW1vdW50QA==&quot;</span>, TransferResult::default()),
+            (<span class="string">"o2J0b1UAAAAAAAAAAAAAAAAAAAAAAAAAAABkZnJvbVUAAAAAAAAAAAAAAAAAAAAAAAAAAABmYW1vdW50QA=="</span>, TransferResult::default()),
             (
-                <span class="string">&quot;o2J0b1UAuRI5eJXmRwxR+r7MndyD9wrthqFkZnJvbVUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNmYW1vdW50QWQ=&quot;</span>,
+                <span class="string">"o2J0b1UAuRI5eJXmRwxR+r7MndyD9wrthqFkZnJvbVUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNmYW1vdW50QWQ="</span>,
                 TransferResult {
                     amount: Quantity::from(<span class="number">100u32</span>),
                     from: addr1,
@@ -1188,24 +1190,24 @@
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: TransferResult = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">&quot;transfer result should deserialize correctly&quot;</span>);
-            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">&quot;decoded result should match the expected value&quot;</span>);
+                .expect(<span class="string">"transfer result should deserialize correctly"</span>);
+            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded result should match the expected value"</span>);
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_consistent_withdraw_results() {
         <span class="kw">let </span>addr1 = Address::from_pk(<span class="kw-2">&amp;</span>PublicKey::from(
-            <span class="string">&quot;aaafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+            <span class="string">"aaafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
         ));
         <span class="kw">let </span>addr2 = Address::from_pk(<span class="kw-2">&amp;</span>PublicKey::from(
-            <span class="string">&quot;bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+            <span class="string">"bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
         ));
 
         <span class="kw">let </span>tcs = <span class="macro">vec!</span>[
-            (<span class="string">&quot;pGVvd25lclUAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWxsb3dhbmNlQGtiZW5lZmljaWFyeVUAAAAAAAAAAAAAAAAAAAAAAAAAAABtYW1vdW50X2NoYW5nZUA=&quot;</span>, WithdrawResult::default()),
+            (<span class="string">"pGVvd25lclUAAAAAAAAAAAAAAAAAAAAAAAAAAABpYWxsb3dhbmNlQGtiZW5lZmljaWFyeVUAAAAAAAAAAAAAAAAAAAAAAAAAAABtYW1vdW50X2NoYW5nZUA="</span>, WithdrawResult::default()),
             (
-                <span class="string">&quot;pGVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNpYWxsb3dhbmNlQQprYmVuZWZpY2lhcnlVALkSOXiV5kcMUfq+zJ3cg/cK7YahbWFtb3VudF9jaGFuZ2VBBQ==&quot;</span>,
+                <span class="string">"pGVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNpYWxsb3dhbmNlQQprYmVuZWZpY2lhcnlVALkSOXiV5kcMUfq+zJ3cg/cK7YahbWFtb3VudF9jaGFuZ2VBBQ=="</span>,
                 WithdrawResult {
                     owner: addr1,
                     beneficiary: addr2,
@@ -1216,24 +1218,24 @@
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: WithdrawResult = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">&quot;withdraw result should deserialize correctly&quot;</span>);
-            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">&quot;decoded result should match the expected value&quot;</span>);
+                .expect(<span class="string">"withdraw result should deserialize correctly"</span>);
+            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded result should match the expected value"</span>);
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_consistent_add_escrow_results() {
         <span class="kw">let </span>addr1 = Address::from_pk(<span class="kw-2">&amp;</span>PublicKey::from(
-            <span class="string">&quot;aaafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+            <span class="string">"aaafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
         ));
         <span class="kw">let </span>addr2 = Address::from_pk(<span class="kw-2">&amp;</span>PublicKey::from(
-            <span class="string">&quot;bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+            <span class="string">"bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
         ));
 
         <span class="kw">let </span>tcs = <span class="macro">vec!</span>[
-            (<span class="string">&quot;pGVvd25lclUAAAAAAAAAAAAAAAAAAAAAAAAAAABmYW1vdW50QGZlc2Nyb3dVAAAAAAAAAAAAAAAAAAAAAAAAAAAAam5ld19zaGFyZXNA&quot;</span>, AddEscrowResult::default()),
+            (<span class="string">"pGVvd25lclUAAAAAAAAAAAAAAAAAAAAAAAAAAABmYW1vdW50QGZlc2Nyb3dVAAAAAAAAAAAAAAAAAAAAAAAAAAAAam5ld19zaGFyZXNA"</span>, AddEscrowResult::default()),
             (
-                <span class="string">&quot;pGVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNmYW1vdW50QWRmZXNjcm93VQC5Ejl4leZHDFH6vsyd3IP3Cu2GoWpuZXdfc2hhcmVzQQU=&quot;</span>,
+                <span class="string">"pGVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNmYW1vdW50QWRmZXNjcm93VQC5Ejl4leZHDFH6vsyd3IP3Cu2GoWpuZXdfc2hhcmVzQQU="</span>,
                 AddEscrowResult {
                     owner: addr1,
                     escrow: addr2,
@@ -1244,24 +1246,24 @@
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: AddEscrowResult = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">&quot;add escrow result should deserialize correctly&quot;</span>);
-            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">&quot;decoded result should match the expected value&quot;</span>);
+                .expect(<span class="string">"add escrow result should deserialize correctly"</span>);
+            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded result should match the expected value"</span>);
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_consistent_reclaim_escrow_results() {
         <span class="kw">let </span>addr1 = Address::from_pk(<span class="kw-2">&amp;</span>PublicKey::from(
-            <span class="string">&quot;aaafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+            <span class="string">"aaafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
         ));
         <span class="kw">let </span>addr2 = Address::from_pk(<span class="kw-2">&amp;</span>PublicKey::from(
-            <span class="string">&quot;bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+            <span class="string">"bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
         ));
 
         <span class="kw">let </span>tcs = <span class="macro">vec!</span>[
-            (<span class="string">&quot;pmVvd25lclUAAAAAAAAAAAAAAAAAAAAAAAAAAABmYW1vdW50QGZlc2Nyb3dVAAAAAAAAAAAAAAAAAAAAAAAAAAAAb2RlYm9uZF9lbmRfdGltZQBwZGVib25kaW5nX3NoYXJlc0BwcmVtYWluaW5nX3NoYXJlc0A=&quot;</span>, ReclaimEscrowResult::default()),
+            (<span class="string">"pmVvd25lclUAAAAAAAAAAAAAAAAAAAAAAAAAAABmYW1vdW50QGZlc2Nyb3dVAAAAAAAAAAAAAAAAAAAAAAAAAAAAb2RlYm9uZF9lbmRfdGltZQBwZGVib25kaW5nX3NoYXJlc0BwcmVtYWluaW5nX3NoYXJlc0A="</span>, ReclaimEscrowResult::default()),
             (
-                <span class="string">&quot;pmVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNmYW1vdW50QWRmZXNjcm93VQC5Ejl4leZHDFH6vsyd3IP3Cu2GoW9kZWJvbmRfZW5kX3RpbWUYKnBkZWJvbmRpbmdfc2hhcmVzQRlwcmVtYWluaW5nX3NoYXJlc0Ey&quot;</span>,
+                <span class="string">"pmVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNmYW1vdW50QWRmZXNjcm93VQC5Ejl4leZHDFH6vsyd3IP3Cu2GoW9kZWJvbmRfZW5kX3RpbWUYKnBkZWJvbmRpbmdfc2hhcmVzQRlwcmVtYWluaW5nX3NoYXJlc0Ey"</span>,
                 ReclaimEscrowResult {
                     owner: addr1,
                     escrow: addr2,
@@ -1275,35 +1277,35 @@
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: ReclaimEscrowResult =
                 cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                    .expect(<span class="string">&quot;reclaim escrow result should deserialize correctly&quot;</span>);
-            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">&quot;decoded result should match the expected value&quot;</span>);
+                    .expect(<span class="string">"reclaim escrow result should deserialize correctly"</span>);
+            <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded result should match the expected value"</span>);
         }
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_consistent_events() {
         <span class="kw">let </span>addr1 = Address::from_pk(<span class="kw-2">&amp;</span>PublicKey::from(
-            <span class="string">&quot;aaafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+            <span class="string">"aaafffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
         ));
         <span class="kw">let </span>addr2 = Address::from_pk(<span class="kw-2">&amp;</span>PublicKey::from(
-            <span class="string">&quot;bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>,
+            <span class="string">"bbbfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>,
         ));
         <span class="kw">let </span>tx_hash = Hash::empty_hash();
 
         <span class="kw">let </span>tcs = <span class="macro">vec!</span>[
             (
-                <span class="string">&quot;oWd0eF9oYXNoWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==&quot;</span>,
+                <span class="string">"oWd0eF9oYXNoWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="</span>,
                 Event::default(),
             ),
             (
-                <span class="string">&quot;omZoZWlnaHQYKmd0eF9oYXNoWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==&quot;</span>,
+                <span class="string">"omZoZWlnaHQYKmd0eF9oYXNoWCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="</span>,
                 Event {
                     height: <span class="number">42</span>,
                     ..Default::default()
                 },
             ),
             (
-                <span class="string">&quot;omZoZWlnaHQYKmd0eF9oYXNoWCDGcrjR71btKKuHw2IsURQGm90617j5c3SY0MAezvCWeg==&quot;</span>,
+                <span class="string">"omZoZWlnaHQYKmd0eF9oYXNoWCDGcrjR71btKKuHw2IsURQGm90617j5c3SY0MAezvCWeg=="</span>,
                 Event {
                     height: <span class="number">42</span>,
                     tx_hash,
@@ -1313,7 +1315,7 @@
 
             <span class="comment">// Transfer.
             </span>(
-                <span class="string">&quot;o2ZoZWlnaHQYKmd0eF9oYXNoWCDGcrjR71btKKuHw2IsURQGm90617j5c3SY0MAezvCWemh0cmFuc2ZlcqNidG9VALkSOXiV5kcMUfq+zJ3cg/cK7YahZGZyb21VACByFDSJP2FsCYFI4s+fmePigm4TZmFtb3VudEFk&quot;</span>,
+                <span class="string">"o2ZoZWlnaHQYKmd0eF9oYXNoWCDGcrjR71btKKuHw2IsURQGm90617j5c3SY0MAezvCWemh0cmFuc2ZlcqNidG9VALkSOXiV5kcMUfq+zJ3cg/cK7YahZGZyb21VACByFDSJP2FsCYFI4s+fmePigm4TZmFtb3VudEFk"</span>,
                 Event {
                     height: <span class="number">42</span>,
                     tx_hash,
@@ -1328,7 +1330,7 @@
 
             <span class="comment">// Burn.
             </span>(
-                <span class="string">&quot;o2RidXJuomVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNmYW1vdW50QWRmaGVpZ2h0GCpndHhfaGFzaFggxnK40e9W7Sirh8NiLFEUBpvdOte4+XN0mNDAHs7wlno=&quot;</span>,
+                <span class="string">"o2RidXJuomVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNmYW1vdW50QWRmaGVpZ2h0GCpndHhfaGFzaFggxnK40e9W7Sirh8NiLFEUBpvdOte4+XN0mNDAHs7wlno="</span>,
                 Event {
                     height: <span class="number">42</span>,
                     tx_hash,
@@ -1342,7 +1344,7 @@
 
             <span class="comment">// Escrow.
             </span>(
-                <span class="string">&quot;o2Zlc2Nyb3ehY2FkZKRlb3duZXJVACByFDSJP2FsCYFI4s+fmePigm4TZmFtb3VudEFkZmVzY3Jvd1UAuRI5eJXmRwxR+r7MndyD9wrthqFqbmV3X3NoYXJlc0EyZmhlaWdodBgqZ3R4X2hhc2hYIMZyuNHvVu0oq4fDYixRFAab3TrXuPlzdJjQwB7O8JZ6&quot;</span>,
+                <span class="string">"o2Zlc2Nyb3ehY2FkZKRlb3duZXJVACByFDSJP2FsCYFI4s+fmePigm4TZmFtb3VudEFkZmVzY3Jvd1UAuRI5eJXmRwxR+r7MndyD9wrthqFqbmV3X3NoYXJlc0EyZmhlaWdodBgqZ3R4X2hhc2hYIMZyuNHvVu0oq4fDYixRFAab3TrXuPlzdJjQwB7O8JZ6"</span>,
                 Event {
                     height: <span class="number">42</span>,
                     tx_hash,
@@ -1356,7 +1358,7 @@
                 },
             ),
             (
-                <span class="string">&quot;o2Zlc2Nyb3ehZHRha2WjZW93bmVyVQAgchQ0iT9hbAmBSOLPn5nj4oJuE2ZhbW91bnRBZHBkZWJvbmRpbmdfYW1vdW50QRRmaGVpZ2h0GCpndHhfaGFzaFggxnK40e9W7Sirh8NiLFEUBpvdOte4+XN0mNDAHs7wlno=&quot;</span>,
+                <span class="string">"o2Zlc2Nyb3ehZHRha2WjZW93bmVyVQAgchQ0iT9hbAmBSOLPn5nj4oJuE2ZhbW91bnRBZHBkZWJvbmRpbmdfYW1vdW50QRRmaGVpZ2h0GCpndHhfaGFzaFggxnK40e9W7Sirh8NiLFEUBpvdOte4+XN0mNDAHs7wlno="</span>,
                 Event {
                     height: <span class="number">42</span>,
                     tx_hash,
@@ -1369,7 +1371,7 @@
                 },
             ),
             (
-                <span class="string">&quot;o2Zlc2Nyb3ehb2RlYm9uZGluZ19zdGFydKZlb3duZXJVACByFDSJP2FsCYFI4s+fmePigm4TZmFtb3VudEFkZmVzY3Jvd1UAuRI5eJXmRwxR+r7MndyD9wrthqFtYWN0aXZlX3NoYXJlc0Eyb2RlYm9uZF9lbmRfdGltZRgqcGRlYm9uZGluZ19zaGFyZXNBGWZoZWlnaHQYKmd0eF9oYXNoWCDGcrjR71btKKuHw2IsURQGm90617j5c3SY0MAezvCWeg==&quot;</span>,
+                <span class="string">"o2Zlc2Nyb3ehb2RlYm9uZGluZ19zdGFydKZlb3duZXJVACByFDSJP2FsCYFI4s+fmePigm4TZmFtb3VudEFkZmVzY3Jvd1UAuRI5eJXmRwxR+r7MndyD9wrthqFtYWN0aXZlX3NoYXJlc0Eyb2RlYm9uZF9lbmRfdGltZRgqcGRlYm9uZGluZ19zaGFyZXNBGWZoZWlnaHQYKmd0eF9oYXNoWCDGcrjR71btKKuHw2IsURQGm90617j5c3SY0MAezvCWeg=="</span>,
                 Event {
                     height: <span class="number">42</span>,
                     tx_hash,
@@ -1385,7 +1387,7 @@
                 },
             ),
             (
-                <span class="string">&quot;o2Zlc2Nyb3ehZ3JlY2xhaW2kZW93bmVyVQAgchQ0iT9hbAmBSOLPn5nj4oJuE2ZhbW91bnRBZGZlc2Nyb3dVALkSOXiV5kcMUfq+zJ3cg/cK7YahZnNoYXJlc0EZZmhlaWdodBgqZ3R4X2hhc2hYIMZyuNHvVu0oq4fDYixRFAab3TrXuPlzdJjQwB7O8JZ6&quot;</span>,
+                <span class="string">"o2Zlc2Nyb3ehZ3JlY2xhaW2kZW93bmVyVQAgchQ0iT9hbAmBSOLPn5nj4oJuE2ZhbW91bnRBZGZlc2Nyb3dVALkSOXiV5kcMUfq+zJ3cg/cK7YahZnNoYXJlc0EZZmhlaWdodBgqZ3R4X2hhc2hYIMZyuNHvVu0oq4fDYixRFAab3TrXuPlzdJjQwB7O8JZ6"</span>,
                 Event {
                     height: <span class="number">42</span>,
                     tx_hash,
@@ -1401,7 +1403,7 @@
 
             <span class="comment">// Allowance change.
             </span>(
-                <span class="string">&quot;o2ZoZWlnaHQYKmd0eF9oYXNoWCDGcrjR71btKKuHw2IsURQGm90617j5c3SY0MAezvCWenBhbGxvd2FuY2VfY2hhbmdlpGVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNpYWxsb3dhbmNlQWRrYmVuZWZpY2lhcnlVALkSOXiV5kcMUfq+zJ3cg/cK7YahbWFtb3VudF9jaGFuZ2VBMg==&quot;</span>,
+                <span class="string">"o2ZoZWlnaHQYKmd0eF9oYXNoWCDGcrjR71btKKuHw2IsURQGm90617j5c3SY0MAezvCWenBhbGxvd2FuY2VfY2hhbmdlpGVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNpYWxsb3dhbmNlQWRrYmVuZWZpY2lhcnlVALkSOXiV5kcMUfq+zJ3cg/cK7YahbWFtb3VudF9jaGFuZ2VBMg=="</span>,
                 Event {
                     height: <span class="number">42</span>,
                     tx_hash,
@@ -1416,7 +1418,7 @@
                 },
             ),
             (
-                <span class="string">&quot;o2ZoZWlnaHQYKmd0eF9oYXNoWCDGcrjR71btKKuHw2IsURQGm90617j5c3SY0MAezvCWenBhbGxvd2FuY2VfY2hhbmdlpWVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNobmVnYXRpdmX1aWFsbG93YW5jZUFka2JlbmVmaWNpYXJ5VQC5Ejl4leZHDFH6vsyd3IP3Cu2GoW1hbW91bnRfY2hhbmdlQTI=&quot;</span>,
+                <span class="string">"o2ZoZWlnaHQYKmd0eF9oYXNoWCDGcrjR71btKKuHw2IsURQGm90617j5c3SY0MAezvCWenBhbGxvd2FuY2VfY2hhbmdlpWVvd25lclUAIHIUNIk/YWwJgUjiz5+Z4+KCbhNobmVnYXRpdmX1aWFsbG93YW5jZUFka2JlbmVmaWNpYXJ5VQC5Ejl4leZHDFH6vsyd3IP3Cu2GoW1hbW91bnRfY2hhbmdlQTI="</span>,
                 Event {
                     height: <span class="number">42</span>,
                     tx_hash,
@@ -1433,8 +1435,8 @@
         ];
         <span class="kw">for </span>(encoded_base64, ev) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: Event = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">&quot;event should deserialize correctly&quot;</span>);
-            <span class="macro">assert_eq!</span>(dec, ev, <span class="string">&quot;decoded event should match the expected value&quot;</span>);
+                .expect(<span class="string">"event should deserialize correctly"</span>);
+            <span class="macro">assert_eq!</span>(dec, ev, <span class="string">"decoded event should match the expected value"</span>);
         }
     }
 }

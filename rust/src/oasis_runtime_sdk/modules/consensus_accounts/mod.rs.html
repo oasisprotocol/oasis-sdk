@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/modules/consensus_accounts/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_runtime_sdk/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/modules/consensus_accounts/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_runtime_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1043,31 +1045,31 @@
 <span class="kw">pub mod </span>types;
 
 <span class="doccomment">/// Unique module name.
-</span><span class="kw">const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;consensus_accounts&quot;</span>;
+</span><span class="kw">const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"consensus_accounts"</span>;
 
 <span class="attr">#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
 </span><span class="kw">pub enum </span>Error {
-    <span class="attr">#[error(<span class="string">&quot;invalid argument&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid argument"</span>)]
     #[sdk_error(code = <span class="number">1</span>)]
     </span>InvalidArgument,
 
-    <span class="attr">#[error(<span class="string">&quot;invalid denomination&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid denomination"</span>)]
     #[sdk_error(code = <span class="number">2</span>)]
     </span>InvalidDenomination,
 
-    <span class="attr">#[error(<span class="string">&quot;insufficient balance&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"insufficient balance"</span>)]
     #[sdk_error(code = <span class="number">3</span>)]
     </span>InsufficientBalance,
 
-    <span class="attr">#[error(<span class="string">&quot;forbidden by policy&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"forbidden by policy"</span>)]
     #[sdk_error(code = <span class="number">4</span>)]
     </span>Forbidden,
 
-    <span class="attr">#[error(<span class="string">&quot;consensus: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"consensus: {0}"</span>)]
     #[sdk_error(transparent)]
     </span>Consensus(<span class="attr">#[from] </span>modules::consensus::Error),
 
-    <span class="attr">#[error(<span class="string">&quot;core: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"core: {0}"</span>)]
     #[sdk_error(transparent)]
     </span>Core(<span class="attr">#[from] </span>modules::core::Error),
 }
@@ -1232,22 +1234,22 @@
     _consensus: std::marker::PhantomData&lt;Consensus&gt;,
 }
 
-<span class="doccomment">/// Module&#39;s address that has the tokens pending withdrawal.
+<span class="doccomment">/// Module's address that has the tokens pending withdrawal.
 ///
 /// oasis1qr677rv0dcnh7ys4yanlynysvnjtk9gnsyhvm6ln
 </span><span class="kw">pub static </span>ADDRESS_PENDING_WITHDRAWAL: Lazy&lt;Address&gt; =
-    Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">&quot;pending-withdrawal&quot;</span>));
+    Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">"pending-withdrawal"</span>));
 
-<span class="doccomment">/// Module&#39;s address that has the tokens pending delegation.
+<span class="doccomment">/// Module's address that has the tokens pending delegation.
 ///
 /// oasis1qzcdegtf7aunxr5n5pw7n5xs3u7cmzlz9gwmq49r
 </span><span class="kw">pub static </span>ADDRESS_PENDING_DELEGATION: Lazy&lt;Address&gt; =
-    Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">&quot;pending-delegation&quot;</span>));
+    Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">"pending-delegation"</span>));
 
-<span class="kw">const </span>CONSENSUS_TRANSFER_HANDLER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;consensus.TransferFromRuntime&quot;</span>;
-<span class="kw">const </span>CONSENSUS_WITHDRAW_HANDLER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;consensus.WithdrawIntoRuntime&quot;</span>;
-<span class="kw">const </span>CONSENSUS_DELEGATE_HANDLER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;consensus.Delegate&quot;</span>;
-<span class="kw">const </span>CONSENSUS_UNDELEGATE_HANDLER: <span class="kw-2">&amp;</span>str = <span class="string">&quot;consensus.Undelegate&quot;</span>;
+<span class="kw">const </span>CONSENSUS_TRANSFER_HANDLER: <span class="kw-2">&amp;</span>str = <span class="string">"consensus.TransferFromRuntime"</span>;
+<span class="kw">const </span>CONSENSUS_WITHDRAW_HANDLER: <span class="kw-2">&amp;</span>str = <span class="string">"consensus.WithdrawIntoRuntime"</span>;
+<span class="kw">const </span>CONSENSUS_DELEGATE_HANDLER: <span class="kw-2">&amp;</span>str = <span class="string">"consensus.Delegate"</span>;
+<span class="kw">const </span>CONSENSUS_UNDELEGATE_HANDLER: <span class="kw-2">&amp;</span>str = <span class="string">"consensus.Undelegate"</span>;
 
 <span class="kw">impl</span>&lt;Accounts: modules::accounts::API, Consensus: modules::consensus::API&gt; API
     <span class="kw">for </span>Module&lt;Accounts, Consensus&gt;
@@ -1310,7 +1312,7 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
-        <span class="comment">// Transfer the given amount to the module&#39;s withdrawal account to make sure the tokens
+        <span class="comment">// Transfer the given amount to the module's withdrawal account to make sure the tokens
         // remain available until actually withdrawn.
         </span>Accounts::transfer(from, <span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL, <span class="kw-2">&amp;</span>amount)
             .map_err(|<span class="kw">_</span>| Error::InsufficientBalance)<span class="question-mark">?</span>;
@@ -1346,7 +1348,7 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(());
         }
 
-        <span class="comment">// Transfer the given amount to the module&#39;s delegation account to make sure the tokens
+        <span class="comment">// Transfer the given amount to the module's delegation account to make sure the tokens
         // remain available until actually delegated.
         </span>Accounts::transfer(from, <span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, <span class="kw-2">&amp;</span>amount)
             .map_err(|<span class="kw">_</span>| Error::InsufficientBalance)<span class="question-mark">?</span>;
@@ -1389,7 +1391,7 @@
 </span><span class="kw">impl</span>&lt;Accounts: modules::accounts::API, Consensus: modules::consensus::API&gt;
     Module&lt;Accounts, Consensus&gt;
 {
-    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = MODULE_NAME;
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = MODULE_NAME;
     <span class="kw">const </span>VERSION: u32 = <span class="number">1</span>;
     <span class="kw">type </span>Error = Error;
     <span class="kw">type </span>Event = Event;
@@ -1403,7 +1405,7 @@
     }
 
     <span class="doccomment">/// Deposit in the runtime.
-    </span><span class="attr">#[handler(call = <span class="string">&quot;consensus.Deposit&quot;</span>)]
+    </span><span class="attr">#[handler(call = <span class="string">"consensus.Deposit"</span>)]
     </span><span class="kw">fn </span>tx_deposit&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Deposit) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
         &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_deposit)<span class="question-mark">?</span>;
@@ -1422,7 +1424,7 @@
     }
 
     <span class="doccomment">/// Withdraw from the runtime.
-    </span><span class="attr">#[handler(prefetch = <span class="string">&quot;consensus.Withdraw&quot;</span>)]
+    </span><span class="attr">#[handler(prefetch = <span class="string">"consensus.Withdraw"</span>)]
     </span><span class="kw">fn </span>prefetch_withdraw(
         add_prefix: <span class="kw-2">&amp;mut </span><span class="kw">dyn </span>FnMut(Prefix),
         _body: cbor::Value,
@@ -1441,7 +1443,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="attr">#[handler(call = <span class="string">&quot;consensus.Withdraw&quot;</span>)]
+    <span class="attr">#[handler(call = <span class="string">"consensus.Withdraw"</span>)]
     </span><span class="kw">fn </span>tx_withdraw&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Withdraw) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
         &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_withdraw)<span class="question-mark">?</span>;
@@ -1453,9 +1455,9 @@
 
         <span class="comment">// Signer.
         </span><span class="kw">if </span>body.to.is_none() {
-            <span class="comment">// If no `to` field is specified, i.e. withdrawing to the transaction sender&#39;s account,
+            <span class="comment">// If no `to` field is specified, i.e. withdrawing to the transaction sender's account,
             // only allow the consensus-compatible single-Ed25519-key signer type. Otherwise, the
-            // tokens would get stuck in an account that you can&#39;t sign for on the consensus layer.
+            // tokens would get stuck in an account that you can't sign for on the consensus layer.
             </span>Consensus::ensure_compatible_tx_signer()<span class="question-mark">?</span>;
         }
 
@@ -1465,7 +1467,7 @@
         <span class="self">Self</span>::withdraw(ctx, address, nonce, body.to.unwrap_or(address), body.amount)
     }
 
-    <span class="attr">#[handler(call = <span class="string">&quot;consensus.Delegate&quot;</span>)]
+    <span class="attr">#[handler(call = <span class="string">"consensus.Delegate"</span>)]
     </span><span class="kw">fn </span>tx_delegate&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Delegate) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
         &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_delegate)<span class="question-mark">?</span>;
@@ -1494,7 +1496,7 @@
         <span class="self">Self</span>::delegate(ctx, from, nonce, body.to, body.amount, store_receipt)
     }
 
-    <span class="attr">#[handler(call = <span class="string">&quot;consensus.Undelegate&quot;</span>)]
+    <span class="attr">#[handler(call = <span class="string">"consensus.Undelegate"</span>)]
     </span><span class="kw">fn </span>tx_undelegate&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Undelegate) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
         &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.tx_undelegate)<span class="question-mark">?</span>;
@@ -1523,7 +1525,7 @@
         <span class="self">Self</span>::undelegate(ctx, body.from, nonce, to, body.shares, store_receipt)
     }
 
-    <span class="attr">#[handler(call = <span class="string">&quot;consensus.TakeReceipt&quot;</span>, internal)]
+    <span class="attr">#[handler(call = <span class="string">"consensus.TakeReceipt"</span>, internal)]
     </span><span class="kw">fn </span>internal_take_receipt&lt;C: Context&gt;(
         _ctx: <span class="kw-2">&amp;</span>C,
         body: types::TakeReceipt,
@@ -1542,7 +1544,7 @@
         ))
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;consensus.Balance&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"consensus.Balance"</span>)]
     </span><span class="kw">fn </span>query_balance&lt;C: Context&gt;(
         _ctx: <span class="kw-2">&amp;</span>C,
         args: types::BalanceQuery,
@@ -1557,7 +1559,7 @@
         <span class="prelude-val">Ok</span>(types::AccountBalance { balance })
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;consensus.Account&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"consensus.Account"</span>)]
     </span><span class="kw">fn </span>query_consensus_account&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         args: types::ConsensusAccountQuery,
@@ -1565,7 +1567,7 @@
         Consensus::account(ctx, args.address).map_err(|<span class="kw">_</span>| Error::InvalidArgument)
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;consensus.Delegation&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"consensus.Delegation"</span>)]
     </span><span class="kw">fn </span>query_delegation&lt;C: Context&gt;(
         _ctx: <span class="kw-2">&amp;</span>C,
         args: types::DelegationQuery,
@@ -1573,7 +1575,7 @@
         state::get_delegation(args.from, args.to)
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;consensus.Delegations&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"consensus.Delegations"</span>)]
     </span><span class="kw">fn </span>query_delegations&lt;C: Context&gt;(
         _ctx: <span class="kw-2">&amp;</span>C,
         args: types::DelegationsQuery,
@@ -1581,7 +1583,7 @@
         state::get_delegations(args.from)
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;consensus.Undelegations&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"consensus.Undelegations"</span>)]
     </span><span class="kw">fn </span>query_undelegations&lt;C: Context&gt;(
         _ctx: <span class="kw-2">&amp;</span>C,
         args: types::UndelegationsQuery,
@@ -1602,7 +1604,7 @@
                 context.address,
                 <span class="kw-2">&amp;</span>context.amount,
             )
-            .expect(<span class="string">&quot;should have enough balance&quot;</span>);
+            .expect(<span class="string">"should have enough balance"</span>);
 
             <span class="comment">// Emit withdraw failed event.
             </span>CurrentState::with(|state| {
@@ -1619,7 +1621,7 @@
 
         <span class="comment">// Burn the withdrawn tokens.
         </span>Accounts::burn(<span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL, <span class="kw-2">&amp;</span>context.amount)
-            .expect(<span class="string">&quot;should have enough balance&quot;</span>);
+            .expect(<span class="string">"should have enough balance"</span>);
 
         <span class="comment">// Emit withdraw successful event.
         </span>CurrentState::with(|state| {
@@ -1677,7 +1679,7 @@
         <span class="kw">if </span>!me.is_success() {
             <span class="comment">// Delegation failed, refund the balance.
             </span>Accounts::transfer(<span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, context.from, <span class="kw-2">&amp;</span>context.amount)
-                .expect(<span class="string">&quot;should have enough balance&quot;</span>);
+                .expect(<span class="string">"should have enough balance"</span>);
 
             <span class="comment">// Store receipt if requested.
             </span><span class="kw">if </span>context.receipt {
@@ -1707,12 +1709,12 @@
 
         <span class="comment">// Burn the delegated tokens.
         </span>Accounts::burn(<span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, <span class="kw-2">&amp;</span>context.amount)
-            .expect(<span class="string">&quot;should have enough balance&quot;</span>);
+            .expect(<span class="string">"should have enough balance"</span>);
 
         <span class="comment">// Record delegation.
         </span><span class="kw">let </span>result = me
             .result
-            .expect(<span class="string">&quot;event from consensus should have a result&quot;</span>);
+            .expect(<span class="string">"event from consensus should have a result"</span>);
         <span class="kw">let </span>result: AddEscrowResult = cbor::from_value(result).unwrap();
         <span class="kw">let </span>shares = result.new_shares.try_into().unwrap();
 
@@ -1784,7 +1786,7 @@
         // the end block handler.
         </span><span class="kw">let </span>result = me
             .result
-            .expect(<span class="string">&quot;event from consensus should have a result&quot;</span>);
+            .expect(<span class="string">"event from consensus should have a result"</span>);
         <span class="kw">let </span>result: ReclaimEscrowResult = cbor::from_value(result).unwrap();
         <span class="kw">let </span>debonding_shares = result.debonding_shares.try_into().unwrap();
 
@@ -1845,9 +1847,9 @@
             <span class="kw">return</span>;
         }
 
-        <span class="kw">let </span>logger = ctx.get_logger(<span class="string">&quot;consensus_accounts&quot;</span>);
-        <span class="macro">slog::debug!</span>(logger, <span class="string">&quot;epoch changed, processing queued undelegations&quot;</span>;
-            <span class="string">&quot;epoch&quot; </span>=&gt; ctx.epoch(),
+        <span class="kw">let </span>logger = ctx.get_logger(<span class="string">"consensus_accounts"</span>);
+        <span class="macro">slog::debug!</span>(logger, <span class="string">"epoch changed, processing queued undelegations"</span>;
+            <span class="string">"epoch" </span>=&gt; ctx.epoch(),
         );
 
         <span class="kw">let </span><span class="kw-2">mut </span>reclaims: lru::LruCache&lt;(EpochTime, Address), (u128, u128)&gt; =
@@ -1859,8 +1861,8 @@
         <span class="kw">for </span>ud <span class="kw">in </span>qd {
             <span class="kw">let </span>udi = state::take_undelegation(<span class="kw-2">&amp;</span>ud).unwrap();
 
-            <span class="macro">slog::debug!</span>(logger, <span class="string">&quot;processing undelegation&quot;</span>;
-                <span class="string">&quot;shares&quot; </span>=&gt; udi.shares,
+            <span class="macro">slog::debug!</span>(logger, <span class="string">"processing undelegation"</span>;
+                <span class="string">"shares" </span>=&gt; udi.shares,
             );
 
             <span class="comment">// Determine total amount the runtime got during the reclaim operation.
@@ -1873,7 +1875,7 @@
                     // guaranteed to have it as it was the state after the last normal round
                     // (otherwise we would have already processed this epoch).
                     </span><span class="kw">let </span>height = Consensus::height_for_epoch(ctx, ud.epoch)
-                        .expect(<span class="string">&quot;failed to determine height for epoch&quot;</span>);
+                        .expect(<span class="string">"failed to determine height for epoch"</span>);
 
                     <span class="comment">// Find the relevant reclaim escrow event.
                     //
@@ -1883,7 +1885,7 @@
                     </span><span class="kw">let </span>totals = ctx
                         .history()
                         .consensus_events_at(height, EventKind::Staking)
-                        .expect(<span class="string">&quot;failed to fetch historic events&quot;</span>)
+                        .expect(<span class="string">"failed to fetch historic events"</span>)
                         .iter()
                         .find_map(|ev| <span class="kw">match </span>ev {
                             consensus::Event::Staking(staking::Event {
@@ -1900,7 +1902,7 @@
                             }
                             <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
                         })
-                        .expect(<span class="string">&quot;reclaim event should have been emitted&quot;</span>);
+                        .expect(<span class="string">"reclaim event should have been emitted"</span>);
 
                     reclaims.put((ud.epoch, ud.from), totals);
                     totals
@@ -1910,9 +1912,9 @@
             </span><span class="kw">let </span>amount = udi
                 .shares
                 .checked_mul(total_amount)
-                .expect(<span class="string">&quot;shares * total_amount should not overflow&quot;</span>)
+                .expect(<span class="string">"shares * total_amount should not overflow"</span>)
                 .checked_div(total_shares)
-                .expect(<span class="string">&quot;total_shares should not be zero&quot;</span>);
+                .expect(<span class="string">"total_shares should not be zero"</span>);
             <span class="kw">let </span>raw_amount = Consensus::amount_from_consensus(ctx, amount).unwrap();
             <span class="kw">let </span>amount = token::BaseUnits::new(raw_amount, denomination.clone());
 
@@ -1951,13 +1953,13 @@
     <span class="doccomment">/// Check invariants.
     </span><span class="kw">fn </span>check_invariants&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), CoreError&gt; {
         <span class="comment">// Total supply of the designated consensus layer token denomination
-        // should be less than or equal to the balance of the runtime&#39;s general
+        // should be less than or equal to the balance of the runtime's general
         // account in the consensus layer.
 
         </span><span class="kw">let </span>den = Consensus::consensus_denomination().unwrap();
         <span class="attr">#[allow(clippy::or_fun_call)]
         </span><span class="kw">let </span>ts = Accounts::get_total_supplies().or(<span class="prelude-val">Err</span>(CoreError::InvariantViolation(
-            <span class="string">&quot;unable to get total supplies&quot;</span>.to_string(),
+            <span class="string">"unable to get total supplies"</span>.to_string(),
         )))<span class="question-mark">?</span>;
 
         <span class="kw">let </span>rt_addr = Address::from_runtime_id(ctx.runtime_id());
@@ -1967,14 +1969,14 @@
 
         <span class="kw">let </span>rt_ga_balance = Consensus::amount_from_consensus(ctx, rt_ga_balance).map_err(|<span class="kw">_</span>| {
             CoreError::InvariantViolation(
-                <span class="string">&quot;runtime&#39;s consensus balance is not representable&quot;</span>.to_string(),
+                <span class="string">"runtime's consensus balance is not representable"</span>.to_string(),
             )
         })<span class="question-mark">?</span>;
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(total_supply) = ts.get(<span class="kw-2">&amp;</span>den) {
             <span class="kw">if </span>total_supply &gt; <span class="kw-2">&amp;</span>rt_ga_balance {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(CoreError::InvariantViolation(
-                    <span class="macro">format!</span>(<span class="string">&quot;total supply ({total_supply}) is greater than runtime&#39;s general account balance ({rt_ga_balance})&quot;</span>),
+                    <span class="macro">format!</span>(<span class="string">"total supply ({total_supply}) is greater than runtime's general account balance ({rt_ga_balance})"</span>),
                 ));
             }
         }
@@ -1983,20 +1985,20 @@
         // its internally tracked delegation state.
 
         </span><span class="kw">let </span>delegations = state::get_delegations_by_destination()
-            .map_err(|<span class="kw">_</span>| CoreError::InvariantViolation(<span class="string">&quot;unable to get delegations&quot;</span>.to_string()))<span class="question-mark">?</span>;
+            .map_err(|<span class="kw">_</span>| CoreError::InvariantViolation(<span class="string">"unable to get delegations"</span>.to_string()))<span class="question-mark">?</span>;
 
         <span class="kw">for </span>(to, shares) <span class="kw">in </span>delegations {
             <span class="kw">let </span>cons_shares = Consensus::delegation(ctx, rt_addr, to)
                 .map_err(|err| {
                     CoreError::InvariantViolation(<span class="macro">format!</span>(
-                        <span class="string">&quot;unable to fetch consensus delegation {rt_addr} -&gt; {to}: {err}&quot;
+                        <span class="string">"unable to fetch consensus delegation {rt_addr} -&gt; {to}: {err}"
                     </span>))
                 })<span class="question-mark">?
                 </span>.shares;
 
             <span class="kw">if </span>cons_shares &lt; shares.into() {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(CoreError::InvariantViolation(<span class="macro">format!</span>(
-                    <span class="string">&quot;runtime does not have enough shares delegated to {to} (expected: {shares} got: {cons_shares}&quot;
+                    <span class="string">"runtime does not have enough shares delegated to {to} (expected: {shares} got: {cons_shares}"
                 </span>)));
             }
         }

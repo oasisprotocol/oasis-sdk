@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/types/token.rs`."><title>token.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_runtime_sdk/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/types/token.rs`."><title>token.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oasis_runtime_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -194,11 +196,11 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Denomination {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">if </span><span class="self">self</span>.is_native() {
-            <span class="macro">write!</span>(f, <span class="string">&quot;&lt;native&gt;&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">write!</span>(f, <span class="string">"&lt;native&gt;"</span>)<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
-            <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, String::from_utf8_lossy(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>))<span class="question-mark">?</span>;
+            <span class="macro">write!</span>(f, <span class="string">"{}"</span>, String::from_utf8_lossy(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>))<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -243,7 +245,7 @@
 <span class="attr">#[derive(Debug, thiserror::Error)]
 </span><span class="kw">pub enum </span>Error {
     <span class="attr">#[error(
-        <span class="string">&quot;denomination name too long. received length {length} exceeded maximum of {}&quot;</span>,
+        <span class="string">"denomination name too long. received length {length} exceeded maximum of {}"</span>,
         Denomination::MAX_LENGTH
     )]
     </span>NameTooLong { length: usize },
@@ -271,8 +273,8 @@
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>BaseUnits {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;{} {}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>, <span class="self">self</span>.<span class="number">1</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">"{} {}"</span>, <span class="self">self</span>.<span class="number">0</span>, <span class="self">self</span>.<span class="number">1</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -285,22 +287,22 @@
     </span><span class="kw">fn </span>test_basic() {
         <span class="kw">let </span>cases = <span class="macro">vec!</span>[
             <span class="comment">// Native denomination.
-            </span>(<span class="number">0</span>, Denomination::NATIVE, <span class="string">&quot;824040&quot;</span>),
-            (<span class="number">1</span>, Denomination::NATIVE, <span class="string">&quot;82410140&quot;</span>),
-            (<span class="number">1000</span>, Denomination::NATIVE, <span class="string">&quot;824203e840&quot;</span>),
+            </span>(<span class="number">0</span>, Denomination::NATIVE, <span class="string">"824040"</span>),
+            (<span class="number">1</span>, Denomination::NATIVE, <span class="string">"82410140"</span>),
+            (<span class="number">1000</span>, Denomination::NATIVE, <span class="string">"824203e840"</span>),
             <span class="comment">// Custom denomination.
-            </span>(<span class="number">0</span>, <span class="string">&quot;test&quot;</span>.parse().unwrap(), <span class="string">&quot;82404474657374&quot;</span>),
-            (<span class="number">1</span>, <span class="string">&quot;test&quot;</span>.parse().unwrap(), <span class="string">&quot;8241014474657374&quot;</span>),
-            (<span class="number">1000</span>, <span class="string">&quot;test&quot;</span>.parse().unwrap(), <span class="string">&quot;824203e84474657374&quot;</span>),
+            </span>(<span class="number">0</span>, <span class="string">"test"</span>.parse().unwrap(), <span class="string">"82404474657374"</span>),
+            (<span class="number">1</span>, <span class="string">"test"</span>.parse().unwrap(), <span class="string">"8241014474657374"</span>),
+            (<span class="number">1000</span>, <span class="string">"test"</span>.parse().unwrap(), <span class="string">"824203e84474657374"</span>),
         ];
 
         <span class="kw">for </span>tc <span class="kw">in </span>cases {
             <span class="kw">let </span>token = BaseUnits::new(tc.<span class="number">0</span>, tc.<span class="number">1</span>);
             <span class="kw">let </span>enc = cbor::to_vec(token.clone());
-            <span class="macro">assert_eq!</span>(hex::encode(<span class="kw-2">&amp;</span>enc), tc.<span class="number">2</span>, <span class="string">&quot;serialization should match&quot;</span>);
+            <span class="macro">assert_eq!</span>(hex::encode(<span class="kw-2">&amp;</span>enc), tc.<span class="number">2</span>, <span class="string">"serialization should match"</span>);
 
-            <span class="kw">let </span>dec: BaseUnits = cbor::from_slice(<span class="kw-2">&amp;</span>enc).expect(<span class="string">&quot;deserialization should succeed&quot;</span>);
-            <span class="macro">assert_eq!</span>(dec, token, <span class="string">&quot;serialization should round-trip&quot;</span>);
+            <span class="kw">let </span>dec: BaseUnits = cbor::from_slice(<span class="kw-2">&amp;</span>enc).expect(<span class="string">"deserialization should succeed"</span>);
+            <span class="macro">assert_eq!</span>(dec, token, <span class="string">"serialization should round-trip"</span>);
         }
     }
 

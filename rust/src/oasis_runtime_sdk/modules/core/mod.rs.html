@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/modules/core/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_runtime_sdk/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/modules/core/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_runtime_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1286,112 +1288,112 @@
 <span class="kw">pub mod </span>types;
 
 <span class="doccomment">/// Unique module name.
-</span><span class="kw">pub const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;core&quot;</span>;
+</span><span class="kw">pub const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"core"</span>;
 
 <span class="doccomment">/// Errors emitted by the core module.
 </span><span class="attr">#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
 </span><span class="kw">pub enum </span>Error {
-    <span class="attr">#[error(<span class="string">&quot;malformed transaction: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"malformed transaction: {0}"</span>)]
     #[sdk_error(code = <span class="number">1</span>)]
     </span>MalformedTransaction(<span class="attr">#[source] </span>anyhow::Error),
 
-    <span class="attr">#[error(<span class="string">&quot;invalid transaction: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid transaction: {0}"</span>)]
     #[sdk_error(code = <span class="number">2</span>)]
     </span>InvalidTransaction(<span class="attr">#[from] </span>transaction::Error),
 
-    <span class="attr">#[error(<span class="string">&quot;invalid method: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid method: {0}"</span>)]
     #[sdk_error(code = <span class="number">3</span>)]
     </span>InvalidMethod(String),
 
-    <span class="attr">#[error(<span class="string">&quot;invalid nonce&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid nonce"</span>)]
     #[sdk_error(code = <span class="number">4</span>)]
     </span>InvalidNonce,
 
-    <span class="attr">#[error(<span class="string">&quot;insufficient balance to pay fees&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"insufficient balance to pay fees"</span>)]
     #[sdk_error(code = <span class="number">5</span>)]
     </span>InsufficientFeeBalance,
 
-    <span class="attr">#[error(<span class="string">&quot;out of message slots&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"out of message slots"</span>)]
     #[sdk_error(code = <span class="number">6</span>)]
     </span>OutOfMessageSlots,
 
-    <span class="attr">#[error(<span class="string">&quot;message handler not invoked&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"message handler not invoked"</span>)]
     #[sdk_error(code = <span class="number">8</span>)]
     </span>MessageHandlerNotInvoked,
 
-    <span class="attr">#[error(<span class="string">&quot;missing message handler&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"missing message handler"</span>)]
     #[sdk_error(code = <span class="number">9</span>)]
     </span>MessageHandlerMissing(u32),
 
-    <span class="attr">#[error(<span class="string">&quot;invalid argument: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid argument: {0}"</span>)]
     #[sdk_error(code = <span class="number">10</span>)]
     </span>InvalidArgument(<span class="attr">#[source] </span>anyhow::Error),
 
-    <span class="attr">#[error(<span class="string">&quot;gas overflow&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"gas overflow"</span>)]
     #[sdk_error(code = <span class="number">11</span>)]
     </span>GasOverflow,
 
-    <span class="attr">#[error(<span class="string">&quot;out of gas (limit: {0} wanted: {1})&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"out of gas (limit: {0} wanted: {1})"</span>)]
     #[sdk_error(code = <span class="number">12</span>)]
     </span>OutOfGas(u64, u64),
 
-    <span class="attr">#[error(<span class="string">&quot;too many authentication slots&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"too many authentication slots"</span>)]
     #[sdk_error(code = <span class="number">15</span>)]
     </span>TooManyAuth,
 
-    <span class="attr">#[error(<span class="string">&quot;multisig too many signers&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"multisig too many signers"</span>)]
     #[sdk_error(code = <span class="number">16</span>)]
     </span>MultisigTooManySigners,
 
-    <span class="attr">#[error(<span class="string">&quot;invariant violation: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invariant violation: {0}"</span>)]
     #[sdk_error(code = <span class="number">17</span>)]
     </span>InvariantViolation(String),
 
-    <span class="attr">#[error(<span class="string">&quot;invalid call format: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid call format: {0}"</span>)]
     #[sdk_error(code = <span class="number">18</span>)]
     </span>InvalidCallFormat(<span class="attr">#[source] </span>anyhow::Error),
 
-    <span class="attr">#[error(<span class="string">&quot;{0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"{0}"</span>)]
     #[sdk_error(transparent, abort)]
     </span>Abort(<span class="attr">#[source] </span>dispatcher::Error),
 
-    <span class="attr">#[error(<span class="string">&quot;no module could authenticate the transaction&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"no module could authenticate the transaction"</span>)]
     #[sdk_error(code = <span class="number">19</span>)]
     </span>NotAuthenticated,
 
-    <span class="attr">#[error(<span class="string">&quot;gas price too low&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"gas price too low"</span>)]
     #[sdk_error(code = <span class="number">20</span>)]
     </span>GasPriceTooLow,
 
-    <span class="attr">#[error(<span class="string">&quot;forbidden in secure build&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"forbidden in secure build"</span>)]
     #[sdk_error(code = <span class="number">21</span>)]
     </span>ForbiddenInSecureBuild,
 
-    <span class="attr">#[error(<span class="string">&quot;forbidden by node policy&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"forbidden by node policy"</span>)]
     #[sdk_error(code = <span class="number">22</span>)]
     </span>Forbidden,
 
-    <span class="attr">#[error(<span class="string">&quot;transaction is too large&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"transaction is too large"</span>)]
     #[sdk_error(code = <span class="number">23</span>)]
     </span>OversizedTransaction,
 
-    <span class="attr">#[error(<span class="string">&quot;transaction is expired or not yet valid&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"transaction is expired or not yet valid"</span>)]
     #[sdk_error(code = <span class="number">24</span>)]
     </span>ExpiredTransaction,
 
-    <span class="attr">#[error(<span class="string">&quot;read-only transaction attempted modifications&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"read-only transaction attempted modifications"</span>)]
     #[sdk_error(code = <span class="number">25</span>)]
     </span>ReadOnlyTransaction,
 
-    <span class="attr">#[error(<span class="string">&quot;future nonce&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"future nonce"</span>)]
     #[sdk_error(code = <span class="number">26</span>)]
     </span>FutureNonce,
 
-    <span class="attr">#[error(<span class="string">&quot;call depth exceeded (depth: {0} max: {1})&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"call depth exceeded (depth: {0} max: {1})"</span>)]
     #[sdk_error(code = <span class="number">27</span>)]
     </span>CallDepthExceeded(u16, u16),
 
-    <span class="attr">#[error(<span class="string">&quot;{0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"{0}"</span>)]
     #[sdk_error(transparent)]
     </span>TxSimulationFailed(<span class="attr">#[from] </span>TxSimulationFailure),
 }
@@ -1418,15 +1420,15 @@
 }
 
 <span class="kw">impl </span>TxSimulationFailure {
-    <span class="doccomment">/// Returns true if the failure is &quot;core::Error::OutOfGas&quot;.
+    <span class="doccomment">/// Returns true if the failure is "core::Error::OutOfGas".
     </span><span class="kw">pub fn </span>is_error_core_out_of_gas(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="self">self</span>.module_name == MODULE_NAME &amp;&amp; <span class="self">self</span>.code == <span class="number">12
     </span>}
 }
 
 <span class="kw">impl </span>Display <span class="kw">for </span>TxSimulationFailure {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; std::fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.message)
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>std::fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; std::fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.message)
     }
 }
 
@@ -1454,7 +1456,7 @@
                 module_name: module,
                 message,
             }),
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;CallResult not Failed&quot;</span>)),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"CallResult not Failed"</span>)),
         }
     }
 }
@@ -1505,9 +1507,9 @@
 <span class="doccomment">/// Errors emitted during core parameter validation.
 </span><span class="attr">#[derive(Error, Debug)]
 </span><span class="kw">pub enum </span>ParameterValidationError {
-    <span class="attr">#[error(<span class="string">&quot;invalid dynamic target block gas usage percentage (10-100)&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid dynamic target block gas usage percentage (10-100)"</span>)]
     </span>InvalidTargetBlockGasUsagePercentage,
-    <span class="attr">#[error(<span class="string">&quot;invalid dynamic min price max change denominator (1-50)&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid dynamic min price max change denominator (1-50)"</span>)]
     </span>InvalidMinPriceMaxChangeDenominator,
 }
 <span class="doccomment">/// Parameters for the core module.
@@ -1618,7 +1620,7 @@
 
     <span class="doccomment">/// The maximum number of iterations of the binary search to be done when simulating contracts for
     /// gas estimation in `core.EstimateGas`.
-    /// The special value of 0 means that binary search won&#39;t be performed, and the transaction will be
+    /// The special value of 0 means that binary search won't be performed, and the transaction will be
     /// simulated using maximum possible gas, which might return an overestimation in some special cases.
     /// This setting should likely be kept at 0, unless the runtime is using the EVM module.
     </span><span class="attr">#[cbor(optional)]
@@ -1639,7 +1641,7 @@
 
 <span class="doccomment">/// Module configuration.
 </span><span class="attr">#[allow(clippy::declare_interior_mutable_const)]
-</span><span class="kw">pub trait </span>Config: <span class="lifetime">&#39;static </span>{
+</span><span class="kw">pub trait </span>Config: <span class="lifetime">'static </span>{
     <span class="doccomment">/// Default local minimum gas price configuration that is used in case no overrides are set in
     /// local per-node configuration.
     </span><span class="kw">const </span>DEFAULT_LOCAL_MIN_GAS_PRICE: once_cell::unsync::Lazy&lt;
@@ -1651,11 +1653,11 @@
     </span><span class="kw">const </span>DEFAULT_LOCAL_ESTIMATE_GAS_SEARCH_MAX_ITERS: u64 = <span class="number">0</span>;
 
     <span class="doccomment">/// Estimated gas amount to be added to failed transaction simulations for selected methods.
-    </span><span class="kw">const </span>ESTIMATE_GAS_EXTRA_FAIL: once_cell::unsync::Lazy&lt;BTreeMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, u64&gt;&gt; =
+    </span><span class="kw">const </span>ESTIMATE_GAS_EXTRA_FAIL: once_cell::unsync::Lazy&lt;BTreeMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, u64&gt;&gt; =
         once_cell::unsync::Lazy::new(BTreeMap::new);
 
     <span class="doccomment">/// Methods which are exempt from minimum gas price requirements.
-    </span><span class="kw">const </span>MIN_GAS_PRICE_EXEMPT_METHODS: once_cell::unsync::Lazy&lt;BTreeSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt;&gt; =
+    </span><span class="kw">const </span>MIN_GAS_PRICE_EXEMPT_METHODS: once_cell::unsync::Lazy&lt;BTreeSet&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;&gt; =
         once_cell::unsync::Lazy::new(BTreeSet::new);
 
     <span class="doccomment">/// Whether gas used events should be emitted for every transaction.
@@ -1673,10 +1675,10 @@
     _cfg: std::marker::PhantomData&lt;Cfg&gt;,
 }
 
-<span class="kw">const </span>CONTEXT_KEY_GAS_USED: <span class="kw-2">&amp;</span>str = <span class="string">&quot;core.GasUsed&quot;</span>;
-<span class="kw">const </span>CONTEXT_KEY_PRIORITY: <span class="kw-2">&amp;</span>str = <span class="string">&quot;core.Priority&quot;</span>;
-<span class="kw">const </span>CONTEXT_KEY_SENDER_META: <span class="kw-2">&amp;</span>str = <span class="string">&quot;core.SenderMeta&quot;</span>;
-<span class="kw">const </span>CONTEXT_KEY_EPOCH_CHANGED: <span class="kw-2">&amp;</span>str = <span class="string">&quot;core.EpochChanged&quot;</span>;
+<span class="kw">const </span>CONTEXT_KEY_GAS_USED: <span class="kw-2">&amp;</span>str = <span class="string">"core.GasUsed"</span>;
+<span class="kw">const </span>CONTEXT_KEY_PRIORITY: <span class="kw-2">&amp;</span>str = <span class="string">"core.Priority"</span>;
+<span class="kw">const </span>CONTEXT_KEY_SENDER_META: <span class="kw-2">&amp;</span>str = <span class="string">"core.SenderMeta"</span>;
+<span class="kw">const </span>CONTEXT_KEY_EPOCH_CHANGED: <span class="kw-2">&amp;</span>str = <span class="string">"core.EpochChanged"</span>;
 
 <span class="kw">impl</span>&lt;Cfg: Config&gt; API <span class="kw">for </span>Module&lt;Cfg&gt; {
     <span class="kw">type </span>Config = Cfg;
@@ -1822,7 +1824,7 @@
 
 <span class="attr">#[sdk_derive(Module)]
 </span><span class="kw">impl</span>&lt;Cfg: Config&gt; Module&lt;Cfg&gt; {
-    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = MODULE_NAME;
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = MODULE_NAME;
     <span class="kw">type </span>Error = Error;
     <span class="kw">type </span>Event = Event;
     <span class="kw">type </span>Parameters = Parameters;
@@ -1835,10 +1837,10 @@
     }
 
     <span class="doccomment">/// Run a transaction in simulation and return how much gas it uses. This looks up the method
-    /// in the context&#39;s method registry. Transactions that fail still use gas, and this query will
+    /// in the context's method registry. Transactions that fail still use gas, and this query will
     /// estimate that and return successfully, so do not use this query to see if a transaction will
     /// succeed.
-    </span><span class="attr">#[handler(query = <span class="string">&quot;core.EstimateGas&quot;</span>, allow_private_km)]
+    </span><span class="attr">#[handler(query = <span class="string">"core.EstimateGas"</span>, allow_private_km)]
     </span><span class="kw">pub fn </span>query_estimate_gas&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         <span class="kw-2">mut </span>args: types::EstimateGasQuery,
@@ -1896,7 +1898,7 @@
                 }
                 <span class="comment">// Internal address specs should never appear as they are not serializable.
                 </span>transaction::AddressSpec::Internal(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(Error::MalformedTransaction(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;internal address spec used&quot;
+                    <span class="string">"internal address spec used"
                 </span>))),
             })
             .collect();
@@ -1905,7 +1907,7 @@
         <span class="kw">let </span>tx_size: u32 = cbor::to_vec(tx_envelope)
             .len()
             .try_into()
-            .map_err(|<span class="kw">_</span>| Error::InvalidArgument(<span class="macro">anyhow!</span>(<span class="string">&quot;transaction too large&quot;</span>)))<span class="question-mark">?</span>;
+            .map_err(|<span class="kw">_</span>| Error::InvalidArgument(<span class="macro">anyhow!</span>(<span class="string">"transaction too large"</span>)))<span class="question-mark">?</span>;
         <span class="kw">let </span>propagate_failures = args.propagate_failures;
         <span class="kw">let </span>bs_max_iters = <span class="self">Self</span>::estimate_gas_search_max_iters(ctx);
 
@@ -1922,7 +1924,7 @@
                     .unwrap_or_default(),
             }];
 
-            <span class="comment">// When passing an address we don&#39;t know what scheme is used for authenticating the
+            <span class="comment">// When passing an address we don't know what scheme is used for authenticating the
             // address so the estimate may be off. Assume a regular signature for now.
             </span>extra_gas += <span class="self">Self</span>::params().gas_costs.auth_signature;
         }
@@ -1959,7 +1961,7 @@
                         </span><span class="kw">let </span>err: TxSimulationFailure = result.try_into().unwrap(); <span class="comment">// Guaranteed to be a Failed CallResult.
                         </span><span class="kw">return </span><span class="prelude-val">Err</span>(Error::TxSimulationFailed(err));
                     }
-                    <span class="comment">// Don&#39;t report success or failure. If the call fails, we still report
+                    <span class="comment">// Don't report success or failure. If the call fails, we still report
                     // how much gas it uses while it fails.
                     </span><span class="kw">let </span>gas_used = <span class="self">Self</span>::used_batch_gas();
                     <span class="kw">if </span>result.is_success() {
@@ -1982,8 +1984,8 @@
         </span><span class="kw">let </span>(<span class="kw-2">mut </span>iters, <span class="kw-2">mut </span>fast_path_tried) = (<span class="number">0</span>, <span class="bool-val">false</span>);
         <span class="comment">// The following two variables are used to control the special case where a transaction fails
         // and we check if the error is due to out-of-gas by re-simulating the transaction with maximum
-        // gas limit. This is needed due to EVM transactions failing with a &quot;reverted&quot; error when
-        // not having enough gas for EIP-150 (and not with &quot;out-of-gas&quot;).
+        // gas limit. This is needed due to EVM transactions failing with a "reverted" error when
+        // not having enough gas for EIP-150 (and not with "out-of-gas").
         </span><span class="kw">let </span>(<span class="kw-2">mut </span>has_succeeded, <span class="kw-2">mut </span>tried_with_max_gas) = (<span class="bool-val">false</span>, <span class="bool-val">false</span>);
         <span class="kw">while </span>(lo + <span class="number">1 </span>&lt; hi) &amp;&amp; iters &lt; bs_max_iters {
             iters += <span class="number">1</span>;
@@ -2053,7 +2055,7 @@
                         <span class="kw">_ </span>=&gt; {
                             <span class="comment">// Estimate failed (not with out-of-gas) but caller wants to know the gas usage.
                             // Exit loop and do one final estimate without error propagation.
-                            // NOTE: don&#39;t continue the binary search for failing transactions as the convergence
+                            // NOTE: don't continue the binary search for failing transactions as the convergence
                             // for these could take somewhat long and the estimate with default max gas is likely good.
                             </span><span class="kw">break</span>;
                         }
@@ -2075,26 +2077,26 @@
     }
 
     <span class="doccomment">/// Check invariants of all modules in the runtime.
-    </span><span class="attr">#[handler(query = <span class="string">&quot;core.CheckInvariants&quot;</span>, expensive)]
+    </span><span class="attr">#[handler(query = <span class="string">"core.CheckInvariants"</span>, expensive)]
     </span><span class="kw">fn </span>query_check_invariants&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Modules::check_invariants(ctx)
     }
 
     <span class="doccomment">/// Retrieve the public key for encrypting call data.
-    </span><span class="attr">#[handler(query = <span class="string">&quot;core.CallDataPublicKey&quot;</span>)]
+    </span><span class="attr">#[handler(query = <span class="string">"core.CallDataPublicKey"</span>)]
     </span><span class="kw">fn </span>query_calldata_public_key&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         _args: (),
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::CallDataPublicKeyQueryResponse, Error&gt; {
         <span class="kw">let </span>key_manager = ctx
             .key_manager()
-            .ok_or_else(|| Error::InvalidArgument(<span class="macro">anyhow!</span>(<span class="string">&quot;key manager not available&quot;</span>)))<span class="question-mark">?</span>;
+            .ok_or_else(|| Error::InvalidArgument(<span class="macro">anyhow!</span>(<span class="string">"key manager not available"</span>)))<span class="question-mark">?</span>;
         <span class="kw">let </span>epoch = ctx.epoch();
         <span class="kw">let </span>public_key = key_manager
             .get_public_ephemeral_key(callformat::get_key_pair_id(epoch), epoch)
             .map_err(|err| <span class="kw">match </span>err {
                 keymanager::KeyManagerError::InvalidEpoch(..) =&gt; {
-                    Error::InvalidCallFormat(<span class="macro">anyhow!</span>(<span class="string">&quot;invalid epoch&quot;</span>))
+                    Error::InvalidCallFormat(<span class="macro">anyhow!</span>(<span class="string">"invalid epoch"</span>))
                 }
                 <span class="kw">_ </span>=&gt; Error::Abort(err.into()),
             })<span class="question-mark">?</span>;
@@ -2103,7 +2105,7 @@
     }
 
     <span class="doccomment">/// Query the minimum gas price.
-    </span><span class="attr">#[handler(query = <span class="string">&quot;core.MinGasPrice&quot;</span>)]
+    </span><span class="attr">#[handler(query = <span class="string">"core.MinGasPrice"</span>)]
     </span><span class="kw">fn </span>query_min_gas_price&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         _args: (),
@@ -2122,7 +2124,7 @@
     }
 
     <span class="doccomment">/// Return basic information about the module and the containing runtime.
-    </span><span class="attr">#[handler(query = <span class="string">&quot;core.RuntimeInfo&quot;</span>)]
+    </span><span class="attr">#[handler(query = <span class="string">"core.RuntimeInfo"</span>)]
     </span><span class="kw">fn </span>query_runtime_info&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;RuntimeInfoResponse, Error&gt; {
         <span class="prelude-val">Ok</span>(RuntimeInfoResponse {
             runtime_version: &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::VERSION,
@@ -2136,7 +2138,7 @@
     /// # Warning
     ///
     /// This query is allowed access to private key manager state.
-    </span><span class="attr">#[handler(query = <span class="string">&quot;core.ExecuteReadOnlyTx&quot;</span>, expensive, allow_private_km)]
+    </span><span class="attr">#[handler(query = <span class="string">"core.ExecuteReadOnlyTx"</span>, expensive, allow_private_km)]
     </span><span class="kw">fn </span>query_execute_read_only_tx&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         args: types::ExecuteReadOnlyTxQuery,
@@ -2159,13 +2161,13 @@
             <span class="comment">// Only read-only transactions are allowed in interactive queries.
             </span><span class="kw">if </span>!tx.call.read_only {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument(<span class="macro">anyhow::anyhow!</span>(
-                    <span class="string">&quot;only read-only transactions are allowed&quot;
+                    <span class="string">"only read-only transactions are allowed"
                 </span>)));
             }
             <span class="comment">// Only transactions with expiry are allowed in interactive queries.
             </span><span class="kw">if </span>tx.auth_info.not_before.is_none() || tx.auth_info.not_after.is_none() {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::InvalidArgument(<span class="macro">anyhow::anyhow!</span>(
-                    <span class="string">&quot;only read-only transactions with expiry are allowed&quot;
+                    <span class="string">"only read-only transactions with expiry are allowed"
                 </span>)));
             }
 
@@ -2402,7 +2404,7 @@
     min_price_max_change_denominator: u128,
     current_price: u128,
 ) -&gt; u128 {
-    <span class="comment">// If the target gas used is zero or the denominator is zero, don&#39;t change the price.
+    <span class="comment">// If the target gas used is zero or the denominator is zero, don't change the price.
     </span><span class="kw">if </span>target_gas_used == <span class="number">0 </span>|| min_price_max_change_denominator == <span class="number">0 </span>{
         <span class="kw">return </span>current_price;
     }

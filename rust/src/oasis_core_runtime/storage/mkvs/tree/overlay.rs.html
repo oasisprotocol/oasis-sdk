@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/storage/mkvs/tree/overlay.rs`."><title>overlay.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/storage/mkvs/tree/overlay.rs`."><title>overlay.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -545,19 +547,19 @@
 }
 
 <span class="doccomment">/// An iterator over the `OverlayTree`.
-</span><span class="kw">pub struct </span>OverlayTreeIterator&lt;<span class="lifetime">&#39;tree</span>, T: mkvs::FallibleMKVS&gt; {
-    tree: <span class="kw-2">&amp;</span><span class="lifetime">&#39;tree </span>OverlayTree&lt;T&gt;,
+</span><span class="kw">pub struct </span>OverlayTreeIterator&lt;<span class="lifetime">'tree</span>, T: mkvs::FallibleMKVS&gt; {
+    tree: <span class="kw-2">&amp;</span><span class="lifetime">'tree </span>OverlayTree&lt;T&gt;,
 
-    inner: Box&lt;<span class="kw">dyn </span>mkvs::Iterator + <span class="lifetime">&#39;tree</span>&gt;,
-    overlay: Peekable&lt;btree_map::Range&lt;<span class="lifetime">&#39;tree</span>, Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;&gt;,
+    inner: Box&lt;<span class="kw">dyn </span>mkvs::Iterator + <span class="lifetime">'tree</span>&gt;,
+    overlay: Peekable&lt;btree_map::Range&lt;<span class="lifetime">'tree</span>, Vec&lt;u8&gt;, Vec&lt;u8&gt;&gt;&gt;,
     overlay_valid: bool,
 
     key: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
     value: <span class="prelude-ty">Option</span>&lt;Vec&lt;u8&gt;&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;tree</span>, T: mkvs::FallibleMKVS&gt; OverlayTreeIterator&lt;<span class="lifetime">&#39;tree</span>, T&gt; {
-    <span class="kw">fn </span>new(tree: <span class="kw-2">&amp;</span><span class="lifetime">&#39;tree </span>OverlayTree&lt;T&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'tree</span>, T: mkvs::FallibleMKVS&gt; OverlayTreeIterator&lt;<span class="lifetime">'tree</span>, T&gt; {
+    <span class="kw">fn </span>new(tree: <span class="kw-2">&amp;</span><span class="lifetime">'tree </span>OverlayTree&lt;T&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             tree,
             inner: tree.inner.iter(),
@@ -575,7 +577,7 @@
                 || !<span class="self">self
                     </span>.tree
                     .dirty
-                    .contains(<span class="self">self</span>.inner.get_key().as_ref().expect(<span class="string">&quot;inner.is_valid&quot;</span>))
+                    .contains(<span class="self">self</span>.inner.get_key().as_ref().expect(<span class="string">"inner.is_valid"</span>))
             {
                 <span class="kw">break</span>;
             }
@@ -588,14 +590,14 @@
 
         <span class="kw">if </span><span class="self">self</span>.inner.is_valid()
             &amp;&amp; (!<span class="self">self</span>.overlay_valid
-                || i_key.as_ref().expect(<span class="string">&quot;inner.is_valid&quot;</span>) &lt; o_item.expect(<span class="string">&quot;overlay_valid&quot;</span>).<span class="number">0</span>)
+                || i_key.as_ref().expect(<span class="string">"inner.is_valid"</span>) &lt; o_item.expect(<span class="string">"overlay_valid"</span>).<span class="number">0</span>)
         {
             <span class="comment">// Key of inner iterator is smaller than the key of the overlay iterator.
             </span><span class="self">self</span>.key = i_key.clone();
             <span class="self">self</span>.value = <span class="self">self</span>.inner.get_value().clone();
         } <span class="kw">else if </span><span class="self">self</span>.overlay_valid {
             <span class="comment">// Key of overlay iterator is smaller than or equal to the key of the inner iterator.
-            </span><span class="kw">let </span>(o_key, o_value) = o_item.expect(<span class="string">&quot;overlay_valid&quot;</span>);
+            </span><span class="kw">let </span>(o_key, o_value) = o_item.expect(<span class="string">"overlay_valid"</span>);
             <span class="self">self</span>.key = <span class="prelude-val">Some</span>(o_key.to_vec());
             <span class="self">self</span>.value = <span class="prelude-val">Some</span>(o_value.to_vec());
         } <span class="kw">else </span>{
@@ -608,8 +610,8 @@
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">if </span>!<span class="self">self</span>.overlay_valid
             || (<span class="self">self</span>.inner.is_valid()
-                &amp;&amp; <span class="self">self</span>.inner.get_key().as_ref().expect(<span class="string">&quot;inner.is_valid&quot;</span>)
-                    &lt;= <span class="self">self</span>.overlay.peek().expect(<span class="string">&quot;overlay_valid&quot;</span>).<span class="number">0</span>)
+                &amp;&amp; <span class="self">self</span>.inner.get_key().as_ref().expect(<span class="string">"inner.is_valid"</span>)
+                    &lt;= <span class="self">self</span>.overlay.peek().expect(<span class="string">"overlay_valid"</span>).<span class="number">0</span>)
         {
             <span class="comment">// Key of inner iterator is smaller or equal than the key of the overlay iterator.
             </span><span class="self">self</span>.inner.next();
@@ -622,7 +624,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;tree</span>, T: mkvs::FallibleMKVS&gt; Iterator <span class="kw">for </span>OverlayTreeIterator&lt;<span class="lifetime">&#39;tree</span>, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'tree</span>, T: mkvs::FallibleMKVS&gt; Iterator <span class="kw">for </span>OverlayTreeIterator&lt;<span class="lifetime">'tree</span>, T&gt; {
     <span class="kw">type </span>Item = (Vec&lt;u8&gt;, Vec&lt;u8&gt;);
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
@@ -632,15 +634,15 @@
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
 
-        <span class="kw">let </span>key = <span class="self">self</span>.key.as_ref().expect(<span class="string">&quot;iterator is valid&quot;</span>).clone();
-        <span class="kw">let </span>value = <span class="self">self</span>.value.as_ref().expect(<span class="string">&quot;iterator is valid&quot;</span>).clone();
+        <span class="kw">let </span>key = <span class="self">self</span>.key.as_ref().expect(<span class="string">"iterator is valid"</span>).clone();
+        <span class="kw">let </span>value = <span class="self">self</span>.value.as_ref().expect(<span class="string">"iterator is valid"</span>).clone();
         OverlayTreeIterator::next(<span class="self">self</span>);
 
         <span class="prelude-val">Some</span>((key, value))
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;tree</span>, T: mkvs::FallibleMKVS&gt; mkvs::Iterator <span class="kw">for </span>OverlayTreeIterator&lt;<span class="lifetime">&#39;tree</span>, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'tree</span>, T: mkvs::FallibleMKVS&gt; mkvs::Iterator <span class="kw">for </span>OverlayTreeIterator&lt;<span class="lifetime">'tree</span>, T&gt; {
     <span class="kw">fn </span>set_prefetch(<span class="kw-2">&amp;mut </span><span class="self">self</span>, prefetch: usize) {
         <span class="self">self</span>.inner.set_prefetch(prefetch)
     }
@@ -703,7 +705,7 @@
         <span class="self">self</span>.inner.prefetch_prefixes(prefixes, limit).unwrap()
     }
 
-    <span class="kw">fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>mkvs::Iterator + <span class="lifetime">&#39;_</span>&gt; {
+    <span class="kw">fn </span>iter(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Box&lt;<span class="kw">dyn </span>mkvs::Iterator + <span class="lifetime">'_</span>&gt; {
         Box::new(<span class="self">self</span>.iter())
     }
 
@@ -725,25 +727,25 @@
 
         <span class="comment">// Generate some items.
         </span><span class="kw">let </span>items = <span class="macro">vec!</span>[
-            (<span class="string">b&quot;key&quot;</span>.to_vec(), <span class="string">b&quot;first&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 1&quot;</span>.to_vec(), <span class="string">b&quot;one&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 2&quot;</span>.to_vec(), <span class="string">b&quot;two&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 5&quot;</span>.to_vec(), <span class="string">b&quot;five&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 8&quot;</span>.to_vec(), <span class="string">b&quot;eight&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 9&quot;</span>.to_vec(), <span class="string">b&quot;nine&quot;</span>.to_vec()),
+            (<span class="string">b"key"</span>.to_vec(), <span class="string">b"first"</span>.to_vec()),
+            (<span class="string">b"key 1"</span>.to_vec(), <span class="string">b"one"</span>.to_vec()),
+            (<span class="string">b"key 2"</span>.to_vec(), <span class="string">b"two"</span>.to_vec()),
+            (<span class="string">b"key 5"</span>.to_vec(), <span class="string">b"five"</span>.to_vec()),
+            (<span class="string">b"key 8"</span>.to_vec(), <span class="string">b"eight"</span>.to_vec()),
+            (<span class="string">b"key 9"</span>.to_vec(), <span class="string">b"nine"</span>.to_vec()),
         ];
 
         <span class="kw">let </span>tests = <span class="macro">vec!</span>[
-            (<span class="string">b&quot;k&quot;</span>.to_vec(), <span class="number">0</span>),
-            (<span class="string">b&quot;key 1&quot;</span>.to_vec(), <span class="number">1</span>),
-            (<span class="string">b&quot;key 3&quot;</span>.to_vec(), <span class="number">3</span>),
-            (<span class="string">b&quot;key 4&quot;</span>.to_vec(), <span class="number">3</span>),
-            (<span class="string">b&quot;key 5&quot;</span>.to_vec(), <span class="number">3</span>),
-            (<span class="string">b&quot;key 6&quot;</span>.to_vec(), <span class="number">4</span>),
-            (<span class="string">b&quot;key 7&quot;</span>.to_vec(), <span class="number">4</span>),
-            (<span class="string">b&quot;key 8&quot;</span>.to_vec(), <span class="number">4</span>),
-            (<span class="string">b&quot;key 9&quot;</span>.to_vec(), <span class="number">5</span>),
-            (<span class="string">b&quot;key A&quot;</span>.to_vec(), -<span class="number">1</span>),
+            (<span class="string">b"k"</span>.to_vec(), <span class="number">0</span>),
+            (<span class="string">b"key 1"</span>.to_vec(), <span class="number">1</span>),
+            (<span class="string">b"key 3"</span>.to_vec(), <span class="number">3</span>),
+            (<span class="string">b"key 4"</span>.to_vec(), <span class="number">3</span>),
+            (<span class="string">b"key 5"</span>.to_vec(), <span class="number">3</span>),
+            (<span class="string">b"key 6"</span>.to_vec(), <span class="number">4</span>),
+            (<span class="string">b"key 7"</span>.to_vec(), <span class="number">4</span>),
+            (<span class="string">b"key 8"</span>.to_vec(), <span class="number">4</span>),
+            (<span class="string">b"key 9"</span>.to_vec(), <span class="number">5</span>),
+            (<span class="string">b"key A"</span>.to_vec(), -<span class="number">1</span>),
         ];
 
         <span class="comment">// Create an overlay over an empty tree and insert some items into the overlay.
@@ -779,47 +781,47 @@
         test_iterator_with(<span class="kw-2">&amp;</span>items, it, <span class="kw-2">&amp;</span>tests);
 
         <span class="comment">// Add some updates to the overlay.
-        </span>overlay.remove(<span class="string">b&quot;key 2&quot;</span>).unwrap();
-        overlay.insert(<span class="string">b&quot;key 7&quot;</span>, <span class="string">b&quot;seven&quot;</span>).unwrap();
-        overlay.remove(<span class="string">b&quot;key 5&quot;</span>).unwrap();
-        overlay.insert(<span class="string">b&quot;key 5&quot;</span>, <span class="string">b&quot;fivey&quot;</span>).unwrap();
+        </span>overlay.remove(<span class="string">b"key 2"</span>).unwrap();
+        overlay.insert(<span class="string">b"key 7"</span>, <span class="string">b"seven"</span>).unwrap();
+        overlay.remove(<span class="string">b"key 5"</span>).unwrap();
+        overlay.insert(<span class="string">b"key 5"</span>, <span class="string">b"fivey"</span>).unwrap();
 
         <span class="comment">// Make sure updates did not propagate to the inner tree.
         // NOTE: This is unsafe as we are otherwise not allowed to reference the inner tree.
         </span><span class="kw">unsafe </span>{
             <span class="kw">let </span>tree_ref = <span class="kw-2">&amp;*</span>tree_ref;
 
-            <span class="kw">let </span>value = tree_ref.get(<span class="string">b&quot;key 2&quot;</span>).unwrap();
+            <span class="kw">let </span>value = tree_ref.get(<span class="string">b"key 2"</span>).unwrap();
             <span class="macro">assert_eq!</span>(
                 value,
-                <span class="prelude-val">Some</span>(<span class="string">b&quot;two&quot;</span>.to_vec()),
-                <span class="string">&quot;value in inner tree should be unchanged&quot;
+                <span class="prelude-val">Some</span>(<span class="string">b"two"</span>.to_vec()),
+                <span class="string">"value in inner tree should be unchanged"
             </span>);
-            <span class="kw">let </span>value = tree_ref.get(<span class="string">b&quot;key 7&quot;</span>).unwrap();
-            <span class="macro">assert_eq!</span>(value, <span class="prelude-val">None</span>, <span class="string">&quot;value should not exist in inner tree&quot;</span>);
+            <span class="kw">let </span>value = tree_ref.get(<span class="string">b"key 7"</span>).unwrap();
+            <span class="macro">assert_eq!</span>(value, <span class="prelude-val">None</span>, <span class="string">"value should not exist in inner tree"</span>);
         }
 
         <span class="comment">// State of overlay after updates.
         </span><span class="kw">let </span>items = <span class="macro">vec!</span>[
-            (<span class="string">b&quot;key&quot;</span>.to_vec(), <span class="string">b&quot;first&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 1&quot;</span>.to_vec(), <span class="string">b&quot;one&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 5&quot;</span>.to_vec(), <span class="string">b&quot;fivey&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 7&quot;</span>.to_vec(), <span class="string">b&quot;seven&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 8&quot;</span>.to_vec(), <span class="string">b&quot;eight&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 9&quot;</span>.to_vec(), <span class="string">b&quot;nine&quot;</span>.to_vec()),
+            (<span class="string">b"key"</span>.to_vec(), <span class="string">b"first"</span>.to_vec()),
+            (<span class="string">b"key 1"</span>.to_vec(), <span class="string">b"one"</span>.to_vec()),
+            (<span class="string">b"key 5"</span>.to_vec(), <span class="string">b"fivey"</span>.to_vec()),
+            (<span class="string">b"key 7"</span>.to_vec(), <span class="string">b"seven"</span>.to_vec()),
+            (<span class="string">b"key 8"</span>.to_vec(), <span class="string">b"eight"</span>.to_vec()),
+            (<span class="string">b"key 9"</span>.to_vec(), <span class="string">b"nine"</span>.to_vec()),
         ];
 
         <span class="kw">let </span>tests = <span class="macro">vec!</span>[
-            (<span class="string">b&quot;k&quot;</span>.to_vec(), <span class="number">0</span>),
-            (<span class="string">b&quot;key 1&quot;</span>.to_vec(), <span class="number">1</span>),
-            (<span class="string">b&quot;key 3&quot;</span>.to_vec(), <span class="number">2</span>),
-            (<span class="string">b&quot;key 4&quot;</span>.to_vec(), <span class="number">2</span>),
-            (<span class="string">b&quot;key 5&quot;</span>.to_vec(), <span class="number">2</span>),
-            (<span class="string">b&quot;key 6&quot;</span>.to_vec(), <span class="number">3</span>),
-            (<span class="string">b&quot;key 7&quot;</span>.to_vec(), <span class="number">3</span>),
-            (<span class="string">b&quot;key 8&quot;</span>.to_vec(), <span class="number">4</span>),
-            (<span class="string">b&quot;key 9&quot;</span>.to_vec(), <span class="number">5</span>),
-            (<span class="string">b&quot;key A&quot;</span>.to_vec(), -<span class="number">1</span>),
+            (<span class="string">b"k"</span>.to_vec(), <span class="number">0</span>),
+            (<span class="string">b"key 1"</span>.to_vec(), <span class="number">1</span>),
+            (<span class="string">b"key 3"</span>.to_vec(), <span class="number">2</span>),
+            (<span class="string">b"key 4"</span>.to_vec(), <span class="number">2</span>),
+            (<span class="string">b"key 5"</span>.to_vec(), <span class="number">2</span>),
+            (<span class="string">b"key 6"</span>.to_vec(), <span class="number">3</span>),
+            (<span class="string">b"key 7"</span>.to_vec(), <span class="number">3</span>),
+            (<span class="string">b"key 8"</span>.to_vec(), <span class="number">4</span>),
+            (<span class="string">b"key 9"</span>.to_vec(), <span class="number">5</span>),
+            (<span class="string">b"key A"</span>.to_vec(), -<span class="number">1</span>),
         ];
 
         <span class="comment">// Test that all keys can be fetched from an updated overlay.

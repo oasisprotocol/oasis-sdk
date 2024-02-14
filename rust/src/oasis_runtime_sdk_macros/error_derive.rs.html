@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk-macros/src/error_derive.rs`."><title>error_derive.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk_macros" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_runtime_sdk_macros/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk-macros/src/error_derive.rs`."><title>error_derive.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk_macros" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oasis_runtime_sdk_macros/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -513,12 +515,12 @@
     <span class="doccomment">/// Whether to sequentially autonumber the error codes.
     /// This option exists as a convenience for runtimes that
     /// only append errors or release only breaking changes.
-    </span><span class="attr">#[darling(rename = <span class="string">&quot;autonumber&quot;</span>)]
+    </span><span class="attr">#[darling(rename = <span class="string">"autonumber"</span>)]
     </span>autonumber: Flag,
 
     <span class="doccomment">/// Whether the `into_abort` function should return itself. This can only be used when the type
     /// being annotated is the dispatcher error type so it is only for internal use.
-    </span><span class="attr">#[darling(rename = <span class="string">&quot;abort_self&quot;</span>)]
+    </span><span class="attr">#[darling(rename = <span class="string">"abort_self"</span>)]
     </span>abort_self: Flag,
 }
 
@@ -530,18 +532,18 @@
     fields: darling::ast::Fields&lt;ErrorField&gt;,
 
     <span class="doccomment">/// The explicit ID of the error code. Overrides any autonumber set on the error enum.
-    </span><span class="attr">#[darling(rename = <span class="string">&quot;code&quot;</span>)]
+    </span><span class="attr">#[darling(rename = <span class="string">"code"</span>)]
     </span>code: <span class="prelude-ty">Option</span>&lt;u32&gt;,
 
-    <span class="attr">#[darling(rename = <span class="string">&quot;transparent&quot;</span>)]
+    <span class="attr">#[darling(rename = <span class="string">"transparent"</span>)]
     </span>transparent: Flag,
 
-    <span class="attr">#[darling(rename = <span class="string">&quot;abort&quot;</span>)]
+    <span class="attr">#[darling(rename = <span class="string">"abort"</span>)]
     </span>abort: Flag,
 }
 
 <span class="kw">impl </span>CodedVariant <span class="kw">for </span>ErrorVariant {
-    <span class="kw">const </span>FIELD_NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = <span class="string">&quot;code&quot;</span>;
+    <span class="kw">const </span>FIELD_NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = <span class="string">"code"</span>;
 
     <span class="kw">fn </span>ident(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Ident {
         <span class="kw-2">&amp;</span><span class="self">self</span>.ident
@@ -573,7 +575,7 @@
         .unwrap_or_else(|| <span class="macro">syn::parse_quote!</span>(MODULE_NAME));
 
     <span class="kw">let </span>(module_name_body, code_body, abort_body) = convert_variants(
-        <span class="kw-2">&amp;</span><span class="macro">format_ident!</span>(<span class="string">&quot;self&quot;</span>),
+        <span class="kw-2">&amp;</span><span class="macro">format_ident!</span>(<span class="string">"self"</span>),
         module_name,
         <span class="kw-2">&amp;</span>error.data.as_ref().take_enum().unwrap(),
         error.autonumber.is_present(),
@@ -641,7 +643,7 @@
                     variant_ident
                         .span()
                         .unwrap()
-                        .error(<span class="string">&quot;multiple error sources specified for variant&quot;</span>)
+                        .error(<span class="string">"multiple error sources specified for variant"</span>)
                         .emit();
                     <span class="kw">return </span>(<span class="macro">quote!</span>(), (<span class="macro">quote!</span>(), <span class="macro">quote!</span>()));
                 }
@@ -649,7 +651,7 @@
                     variant_ident
                         .span()
                         .unwrap()
-                        .error(<span class="string">&quot;no source error specified for variant&quot;</span>)
+                        .error(<span class="string">"no source error specified for variant"</span>)
                         .emit();
                     <span class="kw">return </span>(<span class="macro">quote!</span>(), (<span class="macro">quote!</span>(), <span class="macro">quote!</span>()));
                 }
@@ -677,7 +679,7 @@
                                 span: variant_ident.span(),
                             }),
                         };
-                        <span class="kw">let </span>ident = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;__a{i}&quot;</span>), variant_ident.span());
+                        <span class="kw">let </span>ident = Ident::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"__a{i}"</span>), variant_ident.span());
                         <span class="kw">let </span>binding = <span class="macro">quote!</span>( #pat: #ident, );
 
                         binding
@@ -711,7 +713,7 @@
                             variant_ident
                                 .span()
                                 .unwrap()
-                                .error(<span class="macro">format!</span>(<span class="string">&quot;code {code} already used&quot;</span>))
+                                .error(<span class="macro">format!</span>(<span class="string">"code {code} already used"</span>))
                                 .emit();
                             <span class="kw">return </span>(<span class="macro">quote!</span>(), (<span class="macro">quote!</span>(), <span class="macro">quote!</span>()));
                         }
@@ -732,7 +734,7 @@
                         variant_ident
                             .span()
                             .unwrap()
-                            .error(<span class="string">&quot;missing `code` for variant&quot;</span>)
+                            .error(<span class="string">"missing `code` for variant"</span>)
                             .emit();
                         <span class="kw">return </span>(<span class="macro">quote!</span>(), (<span class="macro">quote!</span>(), <span class="macro">quote!</span>()));
                     }
@@ -883,7 +885,7 @@
 
         <span class="kw">let </span>input: syn::DeriveInput = <span class="macro">syn::parse_quote!</span>(
             <span class="attr">#[derive(Error)]
-            #[sdk_error(autonumber, module_name = <span class="string">&quot;THE_MODULE_NAME&quot;</span>)]
+            #[sdk_error(autonumber, module_name = <span class="string">"THE_MODULE_NAME"</span>)]
             </span><span class="kw">pub enum </span>Error {}
         );
         <span class="kw">let </span>error_derivation = <span class="kw">super</span>::derive_error(input);
@@ -928,7 +930,7 @@
 
         <span class="kw">let </span>input: syn::DeriveInput = <span class="macro">syn::parse_quote!</span>(
             <span class="attr">#[derive(Error)]
-            #[sdk_error(module_name = <span class="string">&quot;THE_MODULE_NAME&quot;</span>)]
+            #[sdk_error(module_name = <span class="string">"THE_MODULE_NAME"</span>)]
             </span><span class="kw">pub enum </span>Error {
                 <span class="attr">#[sdk_error(transparent)]
                 </span>Foo(<span class="attr">#[from] </span>AnotherError),
@@ -974,7 +976,7 @@
 
         <span class="kw">let </span>input: syn::DeriveInput = <span class="macro">syn::parse_quote!</span>(
             <span class="attr">#[derive(Error)]
-            #[sdk_error(module_name = <span class="string">&quot;THE_MODULE_NAME&quot;</span>, abort_self)]
+            #[sdk_error(module_name = <span class="string">"THE_MODULE_NAME"</span>, abort_self)]
             </span><span class="kw">pub enum </span>Error {
                 <span class="attr">#[sdk_error(code = <span class="number">1</span>)]
                 </span>Foo,

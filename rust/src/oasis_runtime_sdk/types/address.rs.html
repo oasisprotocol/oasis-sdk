@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/types/address.rs`."><title>address.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_runtime_sdk/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/types/address.rs`."><title>address.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oasis_runtime_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -432,39 +434,39 @@
 <span class="doccomment">/// V0 address version.
 </span><span class="kw">pub const </span>ADDRESS_V0_VERSION: u8 = <span class="number">0</span>;
 <span class="doccomment">/// V0 Ed25519 addres context (shared with consensus layer).
-</span><span class="kw">pub const </span>ADDRESS_V0_ED25519_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;oasis-core/address: staking&quot;</span>;
+</span><span class="kw">pub const </span>ADDRESS_V0_ED25519_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"oasis-core/address: staking"</span>;
 <span class="doccomment">/// V0 Secp256k1 address context.
-</span><span class="kw">pub const </span>ADDRESS_V0_SECP256K1ETH_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;oasis-runtime-sdk/address: secp256k1eth&quot;</span>;
+</span><span class="kw">pub const </span>ADDRESS_V0_SECP256K1ETH_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"oasis-runtime-sdk/address: secp256k1eth"</span>;
 <span class="doccomment">/// V0 Sr25519 address context.
-</span><span class="kw">pub const </span>ADDRESS_V0_SR25519_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;oasis-runtime-sdk/address: sr25519&quot;</span>;
+</span><span class="kw">pub const </span>ADDRESS_V0_SR25519_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"oasis-runtime-sdk/address: sr25519"</span>;
 
 <span class="doccomment">/// V0 module address context.
-</span><span class="kw">pub const </span>ADDRESS_V0_MODULE_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;oasis-runtime-sdk/address: module&quot;</span>;
+</span><span class="kw">pub const </span>ADDRESS_V0_MODULE_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"oasis-runtime-sdk/address: module"</span>;
 
 <span class="doccomment">/// V0 runtime address context.
-</span><span class="kw">pub const </span>ADDRESS_RUNTIME_V0_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;oasis-core/address: runtime&quot;</span>;
+</span><span class="kw">pub const </span>ADDRESS_RUNTIME_V0_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"oasis-core/address: runtime"</span>;
 <span class="doccomment">/// V0 runtime address version.
 </span><span class="kw">pub const </span>ADDRESS_RUNTIME_V0_VERSION: u8 = <span class="number">0</span>;
 
 <span class="doccomment">/// V0 multisig address context.
-</span><span class="kw">pub const </span>ADDRESS_V0_MULTISIG_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;oasis-runtime-sdk/address: multisig&quot;</span>;
+</span><span class="kw">pub const </span>ADDRESS_V0_MULTISIG_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"oasis-runtime-sdk/address: multisig"</span>;
 
 <span class="doccomment">/// Human readable part for Bech32-encoded addresses.
-</span><span class="kw">pub const </span>ADDRESS_BECH32_HRP: <span class="kw-2">&amp;</span>str = <span class="string">&quot;oasis&quot;</span>;
+</span><span class="kw">pub const </span>ADDRESS_BECH32_HRP: <span class="kw-2">&amp;</span>str = <span class="string">"oasis"</span>;
 
 <span class="doccomment">/// Information for signature-based authentication and public key-based address derivation.
 </span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub enum </span>SignatureAddressSpec {
     <span class="doccomment">/// Ed25519 address derivation compatible with the consensus layer.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;ed25519&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"ed25519"</span>)]
     </span>Ed25519(ed25519::PublicKey),
 
     <span class="doccomment">/// Ethereum-compatible address derivation from Secp256k1 public keys.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;secp256k1eth&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"secp256k1eth"</span>)]
     </span>Secp256k1Eth(secp256k1::PublicKey),
 
     <span class="doccomment">/// Sr25519 address derivation.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;sr25519&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"sr25519"</span>)]
     </span>Sr25519(sr25519::PublicKey),
 }
 
@@ -482,7 +484,7 @@
 <span class="doccomment">/// Error.
 </span><span class="attr">#[derive(Error, Debug)]
 </span><span class="kw">pub enum </span>Error {
-    <span class="attr">#[error(<span class="string">&quot;malformed address&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"malformed address"</span>)]
     </span>MalformedAddress,
 }
 
@@ -495,7 +497,7 @@
     </span><span class="kw">pub const </span>SIZE: usize = ADDRESS_SIZE;
 
     <span class="doccomment">/// Creates a new address from a context, version and data.
-    </span><span class="kw">pub fn </span>new(ctx: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[u8], version: u8, data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(ctx: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8], version: u8, data: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>h = Hash::digest_bytes_list(<span class="kw-2">&amp;</span>[ctx, <span class="kw-2">&amp;</span>[version], data]);
 
         <span class="kw">let </span><span class="kw-2">mut </span>a = [<span class="number">0</span>; ADDRESS_SIZE];
@@ -532,7 +534,7 @@
         Address::new(
             ADDRESS_V0_MODULE_CONTEXT,
             ADDRESS_V0_VERSION,
-            <span class="kw-2">&amp;</span>[module.as_bytes(), <span class="string">b&quot;.&quot;</span>, kind].concat(),
+            <span class="kw-2">&amp;</span>[module.as_bytes(), <span class="string">b"."</span>, kind].concat(),
         )
     }
 
@@ -617,31 +619,31 @@
     }
 }
 
-<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str&gt; <span class="kw">for </span>Address {
-    <span class="kw">fn </span>from(s: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; Address {
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; <span class="kw">for </span>Address {
+    <span class="kw">fn </span>from(s: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; Address {
         Address::from_bech32(s).unwrap()
     }
 }
 
 <span class="kw">impl </span>fmt::LowerHex <span class="kw">for </span>Address {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">for </span>i <span class="kw">in </span><span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>[..] {
-            <span class="macro">write!</span>(f, <span class="string">&quot;{i:02x}&quot;</span>)<span class="question-mark">?</span>;
+            <span class="macro">write!</span>(f, <span class="string">"{i:02x}"</span>)<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
 }
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Address {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.to_bech32())<span class="question-mark">?</span>;
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.to_bech32())<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Address {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
-        <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.to_bech32())<span class="question-mark">?</span>;
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
+        <span class="macro">write!</span>(f, <span class="string">"{}"</span>, <span class="self">self</span>.to_bech32())<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(())
     }
 }
@@ -681,25 +683,25 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_address_ed25519() {
         <span class="kw">let </span>spec =
-            SignatureAddressSpec::Ed25519(<span class="string">&quot;utrdHlX///////////////////////////////////8=&quot;</span>.into());
+            SignatureAddressSpec::Ed25519(<span class="string">"utrdHlX///////////////////////////////////8="</span>.into());
 
         <span class="kw">let </span>addr = Address::from_sigspec(<span class="kw-2">&amp;</span>spec);
         <span class="macro">assert_eq!</span>(
             addr.to_bech32(),
-            <span class="string">&quot;oasis1qryqqccycvckcxp453tflalujvlf78xymcdqw4vz&quot;
+            <span class="string">"oasis1qryqqccycvckcxp453tflalujvlf78xymcdqw4vz"
         </span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_address_secp256k1eth() {
         <span class="kw">let </span>spec = SignatureAddressSpec::Secp256k1Eth(
-            <span class="string">&quot;Arra3R5V////////////////////////////////////&quot;</span>.into(),
+            <span class="string">"Arra3R5V////////////////////////////////////"</span>.into(),
         );
 
         <span class="kw">let </span>addr = Address::from_sigspec(<span class="kw-2">&amp;</span>spec);
         <span class="macro">assert_eq!</span>(
             addr.to_bech32(),
-            <span class="string">&quot;oasis1qzd7akz24n6fxfhdhtk977s5857h3c6gf5583mcg&quot;
+            <span class="string">"oasis1qzd7akz24n6fxfhdhtk977s5857h3c6gf5583mcg"
         </span>);
     }
 
@@ -721,7 +723,7 @@
         <span class="kw">let </span>addr = Address::from_multisig(config);
         <span class="macro">assert_eq!</span>(
             addr,
-            Address::from_bech32(<span class="string">&quot;oasis1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux&quot;</span>).unwrap(),
+            Address::from_bech32(<span class="string">"oasis1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux"</span>).unwrap(),
         );
     }
 
@@ -741,7 +743,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_address_from_bech32_invalid_hrp() {
         <span class="macro">assert!</span>(<span class="macro">matches!</span>(
-            Address::from_bech32(<span class="string">&quot;sisoa1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux&quot;</span>).unwrap_err(),
+            Address::from_bech32(<span class="string">"sisoa1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux"</span>).unwrap_err(),
             Error::MalformedAddress,
         ));
     }
@@ -756,7 +758,7 @@
 
         <span class="macro">assert!</span>(
             Address::from_bech32(<span class="kw-2">&amp;</span>bech32_addr).is_ok(),
-            <span class="string">&quot;bech32 address should be ok&quot;
+            <span class="string">"bech32 address should be ok"
         </span>);
         <span class="macro">assert!</span>(<span class="macro">matches!</span>(
             Address::from_bech32(<span class="kw-2">&amp;</span>bech32m_addr).unwrap_err(),
@@ -767,7 +769,7 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_address_into_consensus_address() {
         <span class="kw">let </span>spec =
-            SignatureAddressSpec::Ed25519(<span class="string">&quot;utrdHlX///////////////////////////////////8=&quot;</span>.into());
+            SignatureAddressSpec::Ed25519(<span class="string">"utrdHlX///////////////////////////////////8="</span>.into());
         <span class="kw">let </span>addr = Address::from_sigspec(<span class="kw-2">&amp;</span>spec);
 
         <span class="kw">let </span>consensus_addr: ConsensusAddress = addr.into();
@@ -777,38 +779,38 @@
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_address_from_runtime_id() {
         <span class="kw">let </span>runtime_id =
-            Namespace::from(<span class="string">&quot;80000000000000002aff7f6dfb62720cfd735f2b037b81572fad1b7937d826b3&quot;</span>);
+            Namespace::from(<span class="string">"80000000000000002aff7f6dfb62720cfd735f2b037b81572fad1b7937d826b3"</span>);
         <span class="kw">let </span>addr = Address::from_runtime_id(<span class="kw-2">&amp;</span>runtime_id);
         <span class="macro">assert_eq!</span>(
             addr.to_bech32(),
-            <span class="string">&quot;oasis1qpllh99nhwzrd56px4txvl26atzgg4f3a58jzzad&quot;
+            <span class="string">"oasis1qpllh99nhwzrd56px4txvl26atzgg4f3a58jzzad"
         </span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_address_from_module() {
         <span class="kw">let </span>id: u64 = <span class="number">42</span>;
-        <span class="kw">let </span>addr = Address::from_module_raw(<span class="string">&quot;contracts&quot;</span>, <span class="kw-2">&amp;</span>id.to_be_bytes());
+        <span class="kw">let </span>addr = Address::from_module_raw(<span class="string">"contracts"</span>, <span class="kw-2">&amp;</span>id.to_be_bytes());
 
         <span class="macro">assert_eq!</span>(
             addr.to_bech32(),
-            <span class="string">&quot;oasis1qq398yyk4wt2zxhtt8c66raynelgt6ngh5yq87xg&quot;
+            <span class="string">"oasis1qq398yyk4wt2zxhtt8c66raynelgt6ngh5yq87xg"
         </span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_address_from_eth() {
-        <span class="kw">let </span>eth_address = hex::decode(<span class="string">&quot;dce075e1c39b1ae0b75d554558b6451a226ffe00&quot;</span>).unwrap();
+        <span class="kw">let </span>eth_address = hex::decode(<span class="string">"dce075e1c39b1ae0b75d554558b6451a226ffe00"</span>).unwrap();
         <span class="kw">let </span>addr = Address::from_eth(<span class="kw-2">&amp;</span>eth_address);
         <span class="macro">assert_eq!</span>(
             addr.to_bech32(),
-            <span class="string">&quot;oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt&quot;
+            <span class="string">"oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt"
         </span>);
     }
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_address_raw() {
-        <span class="kw">let </span>eth_address = hex::decode(<span class="string">&quot;dce075e1c39b1ae0b75d554558b6451a226ffe00&quot;</span>).unwrap();
+        <span class="kw">let </span>eth_address = hex::decode(<span class="string">"dce075e1c39b1ae0b75d554558b6451a226ffe00"</span>).unwrap();
         <span class="kw">let </span>addr = Address::new(
             ADDRESS_V0_SECP256K1ETH_CONTEXT,
             ADDRESS_V0_VERSION,
@@ -816,7 +818,7 @@
         );
         <span class="macro">assert_eq!</span>(
             addr.to_bech32(),
-            <span class="string">&quot;oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt&quot;
+            <span class="string">"oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt"
         </span>);
     }
 }

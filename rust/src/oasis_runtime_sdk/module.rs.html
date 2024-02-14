@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/module.rs`."><title>module.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_runtime_sdk/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/module.rs`."><title>module.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oasis_runtime_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -691,7 +693,7 @@
         <span class="macro">matches!</span>(<span class="self">self</span>, CallResult::Ok(<span class="kw">_</span>))
     }
 
-    <span class="attr">#[cfg(any(test, feature = <span class="string">&quot;test&quot;</span>))]
+    <span class="attr">#[cfg(any(test, feature = <span class="string">"test"</span>))]
     </span><span class="kw">pub fn </span>unwrap(<span class="self">self</span>) -&gt; cbor::Value {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::Ok(v) =&gt; v,
@@ -699,8 +701,8 @@
                 module,
                 code,
                 message,
-            } =&gt; <span class="macro">panic!</span>(<span class="string">&quot;{module} reported failure with code {code}: {message}&quot;</span>),
-            <span class="self">Self</span>::Aborted(e) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;tx aborted with error: {e}&quot;</span>),
+            } =&gt; <span class="macro">panic!</span>(<span class="string">"{module} reported failure with code {code}: {message}"</span>),
+            <span class="self">Self</span>::Aborted(e) =&gt; <span class="macro">panic!</span>(<span class="string">"tx aborted with error: {e}"</span>),
         }
     }
 }
@@ -944,7 +946,7 @@
     <span class="doccomment">/// Judge if a raw transaction is good enough to undergo decoding.
     /// This takes place before even decoding the transaction.
     </span><span class="kw">fn </span>approve_raw_tx&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _tx: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
-        <span class="comment">// Default implementation doesn&#39;t do any checks.
+        <span class="comment">// Default implementation doesn't do any checks.
         </span><span class="prelude-val">Ok</span>(())
     }
 
@@ -954,7 +956,7 @@
         _ctx: <span class="kw-2">&amp;</span>C,
         _utx: <span class="kw-2">&amp;</span>UnverifiedTransaction,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
-        <span class="comment">// Default implementation doesn&#39;t do any checks.
+        <span class="comment">// Default implementation doesn't do any checks.
         </span><span class="prelude-val">Ok</span>(())
     }
 
@@ -990,7 +992,7 @@
     /// At this point call format has not yet been decoded so peeking into the call may not be
     /// possible in case the call is encrypted.
     </span><span class="kw">fn </span>before_handle_call&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _call: <span class="kw-2">&amp;</span>Call) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
-        <span class="comment">// Default implementation doesn&#39;t do anything.
+        <span class="comment">// Default implementation doesn't do anything.
         </span><span class="prelude-val">Ok</span>(())
     }
 
@@ -1001,13 +1003,13 @@
         _ctx: <span class="kw-2">&amp;</span>C,
         result: CallResult,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;CallResult, modules::core::Error&gt; {
-        <span class="comment">// Default implementation doesn&#39;t do anything.
+        <span class="comment">// Default implementation doesn't do anything.
         </span><span class="prelude-val">Ok</span>(result)
     }
 
     <span class="doccomment">/// Perform any action after dispatching the transaction, in batch context.
     </span><span class="kw">fn </span>after_dispatch_tx&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, _tx_auth_info: <span class="kw-2">&amp;</span>AuthInfo, _result: <span class="kw-2">&amp;</span>CallResult) {
-        <span class="comment">// Default implementation doesn&#39;t do anything.
+        <span class="comment">// Default implementation doesn't do anything.
     </span>}
 }
 
@@ -1081,7 +1083,7 @@
         _meta: <span class="kw-2">&amp;mut </span>modules::core::types::Metadata,
         _genesis: <span class="self">Self</span>::Genesis,
     ) -&gt; bool {
-        <span class="comment">// Default implementation doesn&#39;t perform any migrations.
+        <span class="comment">// Default implementation doesn't perform any migrations.
         </span><span class="bool-val">false
     </span>}
 }
@@ -1107,13 +1109,13 @@
     <span class="doccomment">/// Perform any common actions at the start of the block (before any transactions have been
     /// executed).
     </span><span class="kw">fn </span>begin_block&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) {
-        <span class="comment">// Default implementation doesn&#39;t do anything.
+        <span class="comment">// Default implementation doesn't do anything.
     </span>}
 
     <span class="doccomment">/// Perform any common actions at the end of the block (after all transactions have been
     /// executed).
     </span><span class="kw">fn </span>end_block&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) {
-        <span class="comment">// Default implementation doesn&#39;t do anything.
+        <span class="comment">// Default implementation doesn't do anything.
     </span>}
 }
 
@@ -1132,7 +1134,7 @@
 </span><span class="kw">pub trait </span>InvariantHandler {
     <span class="doccomment">/// Check invariants.
     </span><span class="kw">fn </span>check_invariants&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
-        <span class="comment">// Default implementation doesn&#39;t do anything.
+        <span class="comment">// Default implementation doesn't do anything.
         </span><span class="prelude-val">Ok</span>(())
     }
 }
@@ -1182,21 +1184,21 @@
 <span class="doccomment">/// A runtime module.
 </span><span class="kw">pub trait </span>Module {
     <span class="doccomment">/// Module name.
-    </span><span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str;
+    </span><span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str;
 
     <span class="doccomment">/// Module version.
     </span><span class="kw">const </span>VERSION: u32 = <span class="number">1</span>;
 
     <span class="doccomment">/// Module error type.
-    </span><span class="kw">type </span>Error: error::Error + <span class="lifetime">&#39;static</span>;
+    </span><span class="kw">type </span>Error: error::Error + <span class="lifetime">'static</span>;
 
     <span class="doccomment">/// Module event type.
-    </span><span class="kw">type </span>Event: event::Event + <span class="lifetime">&#39;static</span>;
+    </span><span class="kw">type </span>Event: event::Event + <span class="lifetime">'static</span>;
 
     <span class="doccomment">/// Module parameters.
-    </span><span class="kw">type </span>Parameters: Parameters + <span class="lifetime">&#39;static</span>;
+    </span><span class="kw">type </span>Parameters: Parameters + <span class="lifetime">'static</span>;
 
-    <span class="doccomment">/// Return the module&#39;s parameters.
+    <span class="doccomment">/// Return the module's parameters.
     </span><span class="kw">fn </span>params() -&gt; <span class="self">Self</span>::Parameters {
         CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span><span class="self">Self</span>::NAME);
@@ -1205,7 +1207,7 @@
         })
     }
 
-    <span class="doccomment">/// Set the module&#39;s parameters.
+    <span class="doccomment">/// Set the module's parameters.
     </span><span class="kw">fn </span>set_params(params: <span class="self">Self</span>::Parameters) {
         CurrentState::with_store(|store| {
             <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span><span class="self">Self</span>::NAME);
@@ -1220,7 +1222,7 @@
     <span class="kw">type </span>Error;
 
     <span class="doccomment">/// Store key used for storing parameters.
-    </span><span class="kw">const </span>STORE_KEY: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x00</span>];
+    </span><span class="kw">const </span>STORE_KEY: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x00</span>];
 
     <span class="doccomment">/// Perform basic parameter validation.
     </span><span class="kw">fn </span>validate_basic(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), <span class="self">Self</span>::Error&gt; {

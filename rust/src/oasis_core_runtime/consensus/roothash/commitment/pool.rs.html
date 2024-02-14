@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/roothash/commitment/pool.rs`."><title>pool.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/roothash/commitment/pool.rs`."><title>pool.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -805,7 +807,7 @@
 
                 <span class="kw">let </span>rt = n.get_runtime(<span class="kw-2">&amp;</span><span class="self">self</span>.runtime.id, <span class="kw-2">&amp;</span>ad.version).ok_or(
                     <span class="comment">// We currently prevent this case throughout the rest of the system.
-                    // Still, it&#39;s prudent to check.
+                    // Still, it's prudent to check.
                     </span>Error::NotInCommittee,
                 )<span class="question-mark">?</span>;
 
@@ -877,14 +879,14 @@
     </span><span class="kw">pub fn </span>process_commitments(<span class="kw-2">&amp;mut </span><span class="self">self</span>, did_timeout: bool) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="kw">dyn </span>OpenCommitment&gt; {
         <span class="kw">if </span><span class="self">self</span>.committee.kind != CommitteeKind::ComputeExecutor {
             <span class="macro">panic!</span>(
-                <span class="string">&quot;roothash/commitment: unknown committee kind: {:?}&quot;</span>,
+                <span class="string">"roothash/commitment: unknown committee kind: {:?}"</span>,
                 <span class="self">self</span>.committee.kind
             );
         }
 
         <span class="attr">#[derive(Default)]
-        </span><span class="kw">struct </span>Vote&lt;<span class="lifetime">&#39;a</span>&gt; {
-            commit: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>ExecutorCommitment&gt;,
+        </span><span class="kw">struct </span>Vote&lt;<span class="lifetime">'a</span>&gt; {
+            commit: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>ExecutorCommitment&gt;,
             tally: u16,
         }
 
@@ -998,8 +1000,8 @@
                     <span class="kw">return </span><span class="prelude-val">Err</span>(Error::StillWaiting.into());
                 }
 
-                <span class="kw">let </span>proposer_commit = proposer_commit.expect(<span class="string">&quot;proposer commit should be set&quot;</span>);
-                <span class="kw">let </span>top_vote_commit = top_vote.commit.expect(<span class="string">&quot;top vote commit should be set&quot;</span>);
+                <span class="kw">let </span>proposer_commit = proposer_commit.expect(<span class="string">"proposer commit should be set"</span>);
+                <span class="kw">let </span>top_vote_commit = top_vote.commit.expect(<span class="string">"top vote commit should be set"</span>);
 
                 <span class="comment">// Make sure that the majority commitment is the same as the proposer commitment.
                 </span><span class="kw">if </span>!proposer_commit.mostly_equal(top_vote_commit) {
@@ -1009,7 +1011,7 @@
         }
 
         <span class="comment">// We must return the proposer commitment as that one contains additional data.
-        </span><span class="kw">let </span>proposer_commit = proposer_commit.expect(<span class="string">&quot;proposer commit should be set&quot;</span>);
+        </span><span class="kw">let </span>proposer_commit = proposer_commit.expect(<span class="string">"proposer commit should be set"</span>);
         <span class="prelude-val">Ok</span>(proposer_commit)
     }
 }
@@ -1060,11 +1062,11 @@
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>test_pool_single_commitment() {
-        <span class="kw">let </span>chain_context = <span class="string">&quot;test: oasis-core tests&quot;</span>.to_owned();
+        <span class="kw">let </span>chain_context = <span class="string">"test: oasis-core tests"</span>.to_owned();
 
         <span class="comment">// Generate a non-TEE runtime.
         </span><span class="kw">let </span>id =
-            Namespace::from(<span class="string">&quot;0000000000000000000000000000000000000000000000000000000000000000&quot;</span>);
+            Namespace::from(<span class="string">"0000000000000000000000000000000000000000000000000000000000000000"</span>);
 
         <span class="kw">let </span>rt = Runtime {
             id,
@@ -1108,39 +1110,39 @@
         <span class="comment">// Test invalid commitments.
         </span><span class="kw">let </span>tcs: Vec&lt;(<span class="kw-2">&amp;</span>str, <span class="kw">fn</span>(<span class="kw-2">&amp;mut </span>ExecutorCommitment), Error)&gt; = <span class="macro">vec!</span>[
             (
-                <span class="string">&quot;BlockBadRound&quot;</span>,
+                <span class="string">"BlockBadRound"</span>,
                 |ec: <span class="kw-2">&amp;mut </span>ExecutorCommitment| ec.header.header.round -= <span class="number">1</span>,
                 Error::NotBasedOnCorrectBlock,
             ),
             (
-                <span class="string">&quot;BlockBadPreviousHash&quot;</span>,
+                <span class="string">"BlockBadPreviousHash"</span>,
                 |ec: <span class="kw-2">&amp;mut </span>ExecutorCommitment| {
-                    ec.header.header.previous_hash = Hash::digest_bytes(<span class="string">b&quot;invalid&quot;</span>)
+                    ec.header.header.previous_hash = Hash::digest_bytes(<span class="string">b"invalid"</span>)
                 },
                 Error::NotBasedOnCorrectBlock,
             ),
             (
-                <span class="string">&quot;MissingIORootHash&quot;</span>,
+                <span class="string">"MissingIORootHash"</span>,
                 |ec: <span class="kw-2">&amp;mut </span>ExecutorCommitment| ec.header.header.io_root = <span class="prelude-val">None</span>,
                 Error::BadExecutorCommitment,
             ),
             (
-                <span class="string">&quot;MissingStateRootHash&quot;</span>,
+                <span class="string">"MissingStateRootHash"</span>,
                 |ec: <span class="kw-2">&amp;mut </span>ExecutorCommitment| ec.header.header.state_root = <span class="prelude-val">None</span>,
                 Error::BadExecutorCommitment,
             ),
             (
-                <span class="string">&quot;MissingMessagesHash&quot;</span>,
+                <span class="string">"MissingMessagesHash"</span>,
                 |ec: <span class="kw-2">&amp;mut </span>ExecutorCommitment| ec.header.header.messages_hash = <span class="prelude-val">None</span>,
                 Error::BadExecutorCommitment,
             ),
             (
-                <span class="string">&quot;MissingInMessagesHash&quot;</span>,
+                <span class="string">"MissingInMessagesHash"</span>,
                 |ec: <span class="kw-2">&amp;mut </span>ExecutorCommitment| ec.header.header.in_msgs_hash = <span class="prelude-val">None</span>,
                 Error::BadExecutorCommitment,
             ),
             (
-                <span class="string">&quot;BadFailureIndicating&quot;</span>,
+                <span class="string">"BadFailureIndicating"</span>,
                 |ec: <span class="kw-2">&amp;mut </span>ExecutorCommitment| {
                     ec.header.failure = ExecutorCommitmentFailure::FailureUnknown
                 },
@@ -1155,7 +1157,7 @@
 
             invalid_ec.node_id = sk.public_key();
             <span class="kw">let </span>res = invalid_ec.sign(<span class="kw-2">&amp;</span>sk, <span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>chain_context);
-            <span class="macro">assert!</span>(res.is_ok(), <span class="string">&quot;invalid_ec.sign({})&quot;</span>, name);
+            <span class="macro">assert!</span>(res.is_ok(), <span class="string">"invalid_ec.sign({})"</span>, name);
 
             <span class="kw">let </span>res = pool.add_executor_commitment(
                 <span class="kw-2">&amp;</span>child_blk,
@@ -1164,11 +1166,11 @@
                 <span class="kw-2">&amp;</span>msg_validator,
                 <span class="kw-2">&amp;</span>chain_context,
             );
-            <span class="macro">assert!</span>(res.is_err(), <span class="string">&quot;add_executor_commitment({})&quot;</span>, name);
+            <span class="macro">assert!</span>(res.is_err(), <span class="string">"add_executor_commitment({})"</span>, name);
             <span class="macro">assert_eq!</span>(
                 res.err().unwrap().to_string(),
                 expected_err.to_string(),
-                <span class="string">&quot;add_executor_commitment({})&quot;</span>,
+                <span class="string">"add_executor_commitment({})"</span>,
                 name
             );
         }
@@ -1176,21 +1178,21 @@
         <span class="comment">// Generate a valid commitment.
         </span>ec.node_id = sk.public_key();
         <span class="kw">let </span>res = ec.sign(<span class="kw-2">&amp;</span>sk, <span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>chain_context);
-        <span class="macro">assert!</span>(res.is_ok(), <span class="string">&quot;ec.sign&quot;</span>);
+        <span class="macro">assert!</span>(res.is_ok(), <span class="string">"ec.sign"</span>);
 
         <span class="comment">// There should not be enough executor commitments.
         </span><span class="kw">let </span>res = pool.process_commitments(<span class="bool-val">false</span>);
         <span class="macro">assert_eq!</span>(
             res.err().unwrap().to_string(),
             Error::StillWaiting.to_string(),
-            <span class="string">&quot;process_commitments&quot;</span>,
+            <span class="string">"process_commitments"</span>,
         );
 
         <span class="kw">let </span>res = pool.process_commitments(<span class="bool-val">true</span>);
         <span class="macro">assert_eq!</span>(
             res.err().unwrap().to_string(),
             Error::NoProposerCommitment.to_string(),
-            <span class="string">&quot;process_commitments&quot;</span>,
+            <span class="string">"process_commitments"</span>,
         );
 
         <span class="comment">// Test message validator function.
@@ -1209,9 +1211,9 @@
         ec_with_msgs.header.header.messages_hash = <span class="prelude-val">Some</span>(msg_hash);
 
         <span class="kw">let </span>res = ec_with_msgs.sign(<span class="kw-2">&amp;</span>sk, <span class="kw-2">&amp;</span>id, <span class="kw-2">&amp;</span>chain_context);
-        <span class="macro">assert!</span>(res.is_ok(), <span class="string">&quot;ec_with_msgs.sign&quot;</span>);
+        <span class="macro">assert!</span>(res.is_ok(), <span class="string">"ec_with_msgs.sign"</span>);
 
-        <span class="kw">let </span>error_msg = <span class="string">&quot;message validation error&quot;</span>;
+        <span class="kw">let </span>error_msg = <span class="string">"message validation error"</span>;
         <span class="kw">let </span>always_fail_msg_validator = |<span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="kw">_</span>| -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(error_msg)) };
         <span class="kw">let </span>res = pool.add_executor_commitment(
             <span class="kw-2">&amp;</span>child_blk,
@@ -1220,11 +1222,11 @@
             <span class="kw-2">&amp;</span>always_fail_msg_validator,
             <span class="kw-2">&amp;</span>chain_context,
         );
-        <span class="macro">assert!</span>(res.is_err(), <span class="string">&quot;add_executor_commitment&quot;</span>);
+        <span class="macro">assert!</span>(res.is_err(), <span class="string">"add_executor_commitment"</span>);
         <span class="macro">assert_eq!</span>(
             res.err().unwrap().to_string(),
             error_msg,
-            <span class="string">&quot;add_executor_commitment&quot;</span>,
+            <span class="string">"add_executor_commitment"</span>,
         );
 
         <span class="comment">// Adding a commitment should succeed.
@@ -1235,7 +1237,7 @@
             <span class="kw-2">&amp;</span>msg_validator,
             <span class="kw-2">&amp;</span>chain_context,
         );
-        <span class="macro">assert!</span>(res.is_ok(), <span class="string">&quot;add_executor_commitment&quot;</span>);
+        <span class="macro">assert!</span>(res.is_ok(), <span class="string">"add_executor_commitment"</span>);
 
         <span class="comment">// Adding a commitment twice for the same node should fail.
         </span><span class="kw">let </span>res = pool.add_executor_commitment(
@@ -1245,16 +1247,16 @@
             <span class="kw-2">&amp;</span>msg_validator,
             <span class="kw-2">&amp;</span>chain_context,
         );
-        <span class="macro">assert!</span>(res.is_err(), <span class="string">&quot;add_executor_commitment, duplicate&quot;</span>);
+        <span class="macro">assert!</span>(res.is_err(), <span class="string">"add_executor_commitment, duplicate"</span>);
 
         <span class="comment">// There should be enough executor commitments and no discrepancy.
         </span><span class="kw">let </span>res = pool.process_commitments(<span class="bool-val">false</span>);
-        <span class="macro">assert!</span>(res.is_ok(), <span class="string">&quot;process_commitments&quot;</span>);
+        <span class="macro">assert!</span>(res.is_ok(), <span class="string">"process_commitments"</span>);
         <span class="kw">let </span>dd_ec = res
             .unwrap()
             .to_dd_result()
             .downcast_ref::&lt;ExecutorCommitment&gt;();
-        <span class="macro">assert_eq!</span>(dd_ec, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>ec), <span class="string">&quot;DD should return the correct commitment&quot;</span>);
+        <span class="macro">assert_eq!</span>(dd_ec, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>ec), <span class="string">"DD should return the correct commitment"</span>);
         <span class="macro">assert_eq!</span>(<span class="bool-val">false</span>, pool.discrepancy);
     }
 

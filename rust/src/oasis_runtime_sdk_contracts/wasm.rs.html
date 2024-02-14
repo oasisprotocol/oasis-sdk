@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/modules/contracts/src/wasm.rs`."><title>wasm.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk_contracts" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_runtime_sdk_contracts/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/modules/contracts/src/wasm.rs`."><title>wasm.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk_contracts" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oasis_runtime_sdk_contracts/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -633,15 +635,15 @@
 };
 
 <span class="doccomment">/// Everything needed to run a contract.
-</span><span class="kw">pub struct </span>Contract&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub </span>code_info: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>types::Code,
-    <span class="kw">pub </span>code: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>[u8],
-    <span class="kw">pub </span>instance_info: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>types::Instance,
+</span><span class="kw">pub struct </span>Contract&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub </span>code_info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>types::Code,
+    <span class="kw">pub </span>code: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>[u8],
+    <span class="kw">pub </span>instance_info: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>types::Instance,
 }
 
 <span class="doccomment">/// Error emitted from within a contract.
 </span><span class="attr">#[derive(Debug, thiserror::Error)]
-#[error(<span class="string">&quot;{message}&quot;</span>)]
+#[error(<span class="string">"{message}"</span>)]
 </span><span class="kw">pub struct </span>ContractError {
     <span class="kw">pub </span>module: String,
     <span class="kw">pub </span>code: u32,
@@ -653,9 +655,9 @@
     </span><span class="kw">pub fn </span>new(code_id: types::CodeId, module: <span class="kw-2">&amp;</span>str, code: u32, message: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             module: <span class="kw">if </span>module.is_empty() {
-                <span class="macro">format!</span>(<span class="string">&quot;{}.{}&quot;</span>, MODULE_NAME, code_id.as_u64())
+                <span class="macro">format!</span>(<span class="string">"{}.{}"</span>, MODULE_NAME, code_id.as_u64())
             } <span class="kw">else </span>{
-                <span class="macro">format!</span>(<span class="string">&quot;{}.{}.{}&quot;</span>, MODULE_NAME, code_id.as_u64(), module)
+                <span class="macro">format!</span>(<span class="string">"{}.{}.{}"</span>, MODULE_NAME, code_id.as_u64(), module)
             },
             code,
             message: message.to_string(),
@@ -695,18 +697,18 @@
 
 <span class="doccomment">/// Create a new WASM runtime and link the required functions based on the ABI then run the
 /// provided function passing the ABI and module instance.
-</span><span class="kw">fn </span>with_runtime&lt;<span class="lifetime">&#39;ctx</span>, Cfg, C, F&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">&#39;ctx</span>, C&gt;,
-    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">&#39;_</span>&gt;,
+</span><span class="kw">fn </span>with_runtime&lt;<span class="lifetime">'ctx</span>, Cfg, C, F&gt;(
+    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">'ctx</span>, C&gt;,
+    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">'_</span>&gt;,
     f: F,
 ) -&gt; ExecutionResult
 <span class="kw">where
     </span>Cfg: Config,
     C: Context,
     F: FnOnce(
-        <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">&#39;ctx</span>, C&gt;,
+        <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">'ctx</span>, C&gt;,
         <span class="kw-2">&amp;</span>Box&lt;<span class="kw">dyn </span>Abi&lt;C&gt;&gt;,
-        <span class="kw-2">&amp;</span>wasm3::Instance&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, ExecutionContext&lt;<span class="lifetime">&#39;ctx</span>, C&gt;&gt;,
+        <span class="kw-2">&amp;</span>wasm3::Instance&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, ExecutionContext&lt;<span class="lifetime">'ctx</span>, C&gt;&gt;,
     ) -&gt; ExecutionResult,
 {
     <span class="kw">let </span>result = <span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;ExecutionResult, Error&gt; {
@@ -715,16 +717,16 @@
 
         <span class="comment">// Create the wasm3 environment, parse and instantiate the module.
         </span><span class="kw">let </span>env =
-            wasm3::Environment::new().expect(<span class="string">&quot;creating a new wasm3 environment should succeed&quot;</span>);
+            wasm3::Environment::new().expect(<span class="string">"creating a new wasm3 environment should succeed"</span>);
         <span class="kw">let </span>module = env
             .parse_module(contract.code)
             .map_err(|<span class="kw">_</span>| Error::ModuleLoadingFailed)<span class="question-mark">?</span>;
         <span class="kw">let </span>rt = env
-            .new_runtime::&lt;ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;&gt;(
+            .new_runtime::&lt;ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;&gt;(
                 ctx.params.max_stack_size,
                 <span class="prelude-val">Some</span>(ctx.params.max_memory_pages),
             )
-            .expect(<span class="string">&quot;creating a new wasm3 runtime should succeed&quot;</span>);
+            .expect(<span class="string">"creating a new wasm3 runtime should succeed"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>instance = rt
             .load_module(module)
             .map_err(|<span class="kw">_</span>| Error::ModuleLoadingFailed)<span class="question-mark">?</span>;
@@ -749,8 +751,8 @@
 
 <span class="doccomment">/// Instantiate the contract.
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>instantiate&lt;Cfg: Config, C: Context&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;,
-    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">&#39;_</span>&gt;,
+    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;,
+    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">'_</span>&gt;,
     call: <span class="kw-2">&amp;</span>types::Instantiate,
 ) -&gt; ExecutionResult {
     with_runtime::&lt;Cfg, <span class="kw">_</span>, <span class="kw">_</span>&gt;(ctx, contract, |ctx, abi, instance| {
@@ -760,8 +762,8 @@
 
 <span class="doccomment">/// Call the contract.
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>call&lt;Cfg: Config, C: Context&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;,
-    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">&#39;_</span>&gt;,
+    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;,
+    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">'_</span>&gt;,
     call: <span class="kw-2">&amp;</span>types::Call,
 ) -&gt; ExecutionResult {
     with_runtime::&lt;Cfg, <span class="kw">_</span>, <span class="kw">_</span>&gt;(ctx, contract, |ctx, abi, instance| {
@@ -769,10 +771,10 @@
     })
 }
 
-<span class="doccomment">/// Invoke the contract&#39;s reply handler.
+<span class="doccomment">/// Invoke the contract's reply handler.
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>handle_reply&lt;Cfg: Config, C: Context&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;,
-    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">&#39;_</span>&gt;,
+    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;,
+    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">'_</span>&gt;,
     reply: Reply,
 ) -&gt; ExecutionResult {
     with_runtime::&lt;Cfg, <span class="kw">_</span>, <span class="kw">_</span>&gt;(ctx, contract, <span class="kw">move </span>|ctx, abi, instance| {
@@ -780,10 +782,10 @@
     })
 }
 
-<span class="doccomment">/// Invoke the contract&#39;s pre-upgrade handler.
+<span class="doccomment">/// Invoke the contract's pre-upgrade handler.
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>pre_upgrade&lt;Cfg: Config, C: Context&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;,
-    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">&#39;_</span>&gt;,
+    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;,
+    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">'_</span>&gt;,
     upgrade: <span class="kw-2">&amp;</span>types::Upgrade,
 ) -&gt; ExecutionResult {
     with_runtime::&lt;Cfg, <span class="kw">_</span>, <span class="kw">_</span>&gt;(ctx, contract, |ctx, abi, instance| {
@@ -791,10 +793,10 @@
     })
 }
 
-<span class="doccomment">/// Invoke the contract&#39;s post-upgrade handler.
+<span class="doccomment">/// Invoke the contract's post-upgrade handler.
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>post_upgrade&lt;Cfg: Config, C: Context&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;,
-    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">&#39;_</span>&gt;,
+    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;,
+    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">'_</span>&gt;,
     upgrade: <span class="kw-2">&amp;</span>types::Upgrade,
 ) -&gt; ExecutionResult {
     with_runtime::&lt;Cfg, <span class="kw">_</span>, <span class="kw">_</span>&gt;(ctx, contract, |ctx, abi, instance| {
@@ -804,8 +806,8 @@
 
 <span class="doccomment">/// Query the contract.
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>query&lt;Cfg: Config, C: Context&gt;(
-    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;,
-    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">&#39;_</span>&gt;,
+    ctx: <span class="kw-2">&amp;mut </span>ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;,
+    contract: <span class="kw-2">&amp;</span>Contract&lt;<span class="lifetime">'_</span>&gt;,
     query: <span class="kw-2">&amp;</span>types::CustomQuery,
 ) -&gt; ExecutionResult {
     with_runtime::&lt;Cfg, <span class="kw">_</span>, <span class="kw">_</span>&gt;(ctx, contract, |ctx, abi, instance| {
@@ -820,7 +822,7 @@
     }
 }
 
-<span class="attr">#[cfg(all(feature = <span class="string">&quot;benchmarks&quot;</span>, test))]
+<span class="attr">#[cfg(all(feature = <span class="string">"benchmarks"</span>, test))]
 </span><span class="kw">mod </span>bench {
     <span class="kw">extern crate </span>test;
     <span class="kw">use </span>std::time::Instant;
@@ -830,36 +832,36 @@
 
     <span class="comment">// cargo build --target wasm32-unknown-unknown --release
     </span><span class="kw">const </span>BENCH_CODE: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(
-        <span class="string">&quot;../../../../tests/contracts/bench/target/wasm32-unknown-unknown/release/bench.wasm&quot;
+        <span class="string">"../../../../tests/contracts/bench/target/wasm32-unknown-unknown/release/bench.wasm"
     </span>);
     <span class="kw">const </span>OPCODE_SPINS: i32 = <span class="number">1_000_000</span>;
 
     <span class="kw">fn </span>bench_wat_spinner&lt;F&gt;(b: <span class="kw-2">&amp;mut </span>Bencher, param: i32, code: <span class="kw-2">&amp;</span>str, <span class="kw-2">mut </span>linkup: F)
     <span class="kw">where
-        </span>F: FnMut(<span class="kw-2">&amp;mut </span>wasm3::Instance&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, wasm3::CallContext&lt;<span class="lifetime">&#39;_</span>, ()&gt;&gt;),
+        </span>F: FnMut(<span class="kw-2">&amp;mut </span>wasm3::Instance&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, wasm3::CallContext&lt;<span class="lifetime">'_</span>, ()&gt;&gt;),
     {
-        <span class="kw">let </span>module_bin = wat::parse_str(code).expect(<span class="string">&quot;parsing module wat should succeed&quot;</span>);
+        <span class="kw">let </span>module_bin = wat::parse_str(code).expect(<span class="string">"parsing module wat should succeed"</span>);
         <span class="kw">let </span>env =
-            wasm3::Environment::new().expect(<span class="string">&quot;creating a new wasm3 environment should succeed&quot;</span>);
+            wasm3::Environment::new().expect(<span class="string">"creating a new wasm3 environment should succeed"</span>);
         <span class="kw">let </span>module = env
             .parse_module(<span class="kw-2">&amp;</span>module_bin)
-            .expect(<span class="string">&quot;parsing the code should succeed&quot;</span>);
-        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">&#39;_</span>, wasm3::CallContext&lt;<span class="lifetime">&#39;_</span>, ()&gt;&gt; = env
+            .expect(<span class="string">"parsing the code should succeed"</span>);
+        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">'_</span>, wasm3::CallContext&lt;<span class="lifetime">'_</span>, ()&gt;&gt; = env
             .new_runtime(<span class="number">1 </span>* <span class="number">1024 </span>* <span class="number">1024</span>, <span class="prelude-val">None</span>)
-            .expect(<span class="string">&quot;creating a new wasm3 runtime should succeed&quot;</span>);
+            .expect(<span class="string">"creating a new wasm3 runtime should succeed"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>instance = rt
             .load_module(module)
-            .expect(<span class="string">&quot;instance creation should succeed&quot;</span>);
+            .expect(<span class="string">"instance creation should succeed"</span>);
         linkup(<span class="kw-2">&amp;mut </span>instance);
         <span class="kw">let </span>func = instance
-            .find_function::&lt;i32, ()&gt;(<span class="string">&quot;spinner&quot;</span>)
-            .expect(<span class="string">&quot;finding the entrypoint function should succeed&quot;</span>);
+            .find_function::&lt;i32, ()&gt;(<span class="string">"spinner"</span>)
+            .expect(<span class="string">"finding the entrypoint function should succeed"</span>);
         b.iter(|| {
-            func.call(param).expect(<span class="string">&quot;function call should succeed&quot;</span>);
+            func.call(param).expect(<span class="string">"function call should succeed"</span>);
         });
     }
 
-    <span class="kw">const </span>LOOP_SKEL: <span class="kw-2">&amp;</span>str = <span class="string">r#&quot;
+    <span class="kw">const </span>LOOP_SKEL: <span class="kw-2">&amp;</span>str = <span class="string">r#"
         (module
             (global $globaldummy (mut i32) (i32.const 0))
             (func $spinner (param $lim i32) (local $dummy i32)
@@ -879,24 +881,24 @@
                     br_if $spin
                 )
             )
-            (export &quot;spinner&quot; (func $spinner))
+            (export "spinner" (func $spinner))
         )
-    &quot;#</span>;
+    "#</span>;
 
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_skel(b: <span class="kw-2">&amp;mut </span>Bencher) {
-        <span class="kw">let </span>src = LOOP_SKEL.replace(<span class="string">&quot;{}&quot;</span>, <span class="string">&quot;&quot;</span>);
+        <span class="kw">let </span>src = LOOP_SKEL.replace(<span class="string">"{}"</span>, <span class="string">""</span>);
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
 
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_const(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             i32.const 0
             drop
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -904,13 +906,13 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_block(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             (block $block
                 i32.const 0
                 drop
             )
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -918,14 +920,14 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_block_block(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             (block
                 (block
                     nop
                 )
             )
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -933,15 +935,15 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_br_table(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             (block
                 (block
                     i32.const 0
                     (br_table 1 2)
                 )
             )
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -949,13 +951,13 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_br(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             (block $block
                 i32.const 1
                 br $block
             )
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -963,13 +965,13 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_br_if(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             (block $block
                 i32.const 1
                 br_if $block
             )
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -977,8 +979,8 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_if_within_block(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             (block $block
                 i32.const 1
                 (if
@@ -987,7 +989,7 @@
                     )
                 )
             )
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -995,11 +997,11 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_local_set(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             i32.const 42
             local.set $dummy
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -1007,11 +1009,11 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_global_get(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             global.get $globaldummy
             drop
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -1019,11 +1021,11 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_global_set(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             i32.const 1
             global.set $globaldummy
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -1031,8 +1033,8 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_grow_skel(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             local.get $lim
             i32.const 100000
             i32.rem_u
@@ -1042,7 +1044,7 @@
                     nop
                 )
             )
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -1050,8 +1052,8 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_grow(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             local.get $lim
             i32.const 100000
             i32.rem_u
@@ -1061,7 +1063,7 @@
                     drop
                 )
             )
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -1069,11 +1071,11 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_add(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             i32.const 0
             i32.add
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -1081,12 +1083,12 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_add_64(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             i64.extend_i32_u
             i64.const 0
             i64.add
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -1094,11 +1096,11 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_mul(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             i32.const 1
             i32.mul
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -1106,11 +1108,11 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_div(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             i32.const 1
             i32.div_s
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -1118,11 +1120,11 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_rotr(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             i32.const 1
             i32.rotr
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
@@ -1130,19 +1132,19 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_extend(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>src = LOOP_SKEL.replace(
-            <span class="string">&quot;{}&quot;</span>,
-            <span class="string">r#&quot;
+            <span class="string">"{}"</span>,
+            <span class="string">r#"
             i32.const 3
             i64.extend_i32_u
             drop
-        &quot;#</span>,
+        "#</span>,
         );
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
 
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_call(b: <span class="kw-2">&amp;mut </span>Bencher) {
-        <span class="kw">let </span>src = <span class="string">r#&quot;
+        <span class="kw">let </span>src = <span class="string">r#"
             (module
                 (func $callee
                     return
@@ -1164,17 +1166,17 @@
                         br_if $spin
                     )
                 )
-                (export &quot;spinner&quot; (func $spinner))
+                (export "spinner" (func $spinner))
             )
-        &quot;#</span>;
+        "#</span>;
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |<span class="kw">_</span>| {});
     }
 
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_loop_call_external(b: <span class="kw-2">&amp;mut </span>Bencher) {
-        <span class="kw">let </span>src = <span class="string">r#&quot;
+        <span class="kw">let </span>src = <span class="string">r#"
             (module
-                (import &quot;bench&quot; &quot;callee&quot; (func $callee))
+                (import "bench" "callee" (func $callee))
                 (func $spinner (param $lim i32)
                     (loop $spin
                         local.get $lim
@@ -1192,12 +1194,12 @@
                         br_if $spin
                     )
                 )
-                (export &quot;spinner&quot; (func $spinner))
+                (export "spinner" (func $spinner))
             )
-        &quot;#</span>;
+        "#</span>;
         bench_wat_spinner(b, OPCODE_SPINS, <span class="kw-2">&amp;</span>src, |instance| {
             <span class="kw">let _ </span>=
-                instance.link_function(<span class="string">&quot;bench&quot;</span>, <span class="string">&quot;callee&quot;</span>, |<span class="kw">_</span>, <span class="kw">_</span>: ()| -&gt; <span class="prelude-ty">Result</span>&lt;(), wasm3::Trap&gt; {
+                instance.link_function(<span class="string">"bench"</span>, <span class="string">"callee"</span>, |<span class="kw">_</span>, <span class="kw">_</span>: ()| -&gt; <span class="prelude-ty">Result</span>&lt;(), wasm3::Trap&gt; {
                     <span class="prelude-val">Ok</span>(())
                 });
         });
@@ -1213,34 +1215,34 @@
         <span class="kw">let </span>new_code = module.emit_wasm();
 
         <span class="kw">let </span>env =
-            wasm3::Environment::new().expect(<span class="string">&quot;creating a new wasm3 environment should succeed&quot;</span>);
+            wasm3::Environment::new().expect(<span class="string">"creating a new wasm3 environment should succeed"</span>);
         <span class="kw">let </span>module = env
             .parse_module(<span class="kw-2">&amp;</span>new_code)
-            .expect(<span class="string">&quot;parsing the code should succeed&quot;</span>);
-        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">&#39;_</span>, wasm3::CallContext&lt;<span class="lifetime">&#39;_</span>, ()&gt;&gt; = env
+            .expect(<span class="string">"parsing the code should succeed"</span>);
+        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">'_</span>, wasm3::CallContext&lt;<span class="lifetime">'_</span>, ()&gt;&gt; = env
             .new_runtime(<span class="number">1 </span>* <span class="number">1024 </span>* <span class="number">1024</span>, <span class="prelude-val">None</span>)
-            .expect(<span class="string">&quot;creating a new wasm3 runtime should succeed&quot;</span>);
+            .expect(<span class="string">"creating a new wasm3 runtime should succeed"</span>);
         <span class="kw">let </span>instance = rt
             .load_module(module)
-            .expect(<span class="string">&quot;instance creation should succeed&quot;</span>);
+            .expect(<span class="string">"instance creation should succeed"</span>);
         <span class="kw">let </span>func = instance
-            .find_function::&lt;u64, u64&gt;(<span class="string">&quot;waste_time&quot;</span>)
-            .expect(<span class="string">&quot;finding the entrypoint function should succeed&quot;</span>);
+            .find_function::&lt;u64, u64&gt;(<span class="string">"waste_time"</span>)
+            .expect(<span class="string">"finding the entrypoint function should succeed"</span>);
         <span class="kw">let </span>initial_gas = <span class="number">1_000_000_000_000u64</span>;
         instance
             .set_global(gas::EXPORT_GAS_LIMIT, initial_gas)
-            .expect(<span class="string">&quot;setting gas limit should succeed&quot;</span>);
+            .expect(<span class="string">"setting gas limit should succeed"</span>);
         <span class="kw">let </span>begin = Instant::now();
-        func.call(<span class="number">41</span>).expect(<span class="string">&quot;function call should succeed&quot;</span>);
+        func.call(<span class="number">41</span>).expect(<span class="string">"function call should succeed"</span>);
         <span class="kw">let </span>gas_limit: u64 = instance
             .get_global(gas::EXPORT_GAS_LIMIT)
-            .expect(<span class="string">&quot;getting gas limit global should succeed&quot;</span>);
+            .expect(<span class="string">"getting gas limit global should succeed"</span>);
         <span class="kw">let </span>gas_limit_exhausted: u64 = instance
             .get_global(gas::EXPORT_GAS_LIMIT_EXHAUSTED)
-            .expect(<span class="string">&quot;getting gas limit exhausted global should succeed&quot;</span>);
+            .expect(<span class="string">"getting gas limit exhausted global should succeed"</span>);
         <span class="kw">let </span>delta = Instant::now().duration_since(begin).as_secs_f64();
         <span class="macro">println!</span>(
-            <span class="string">&quot;  time waster runtime: {} seconds, gas remaining {} [used: {}, exhausted flag: {}]&quot;</span>,
+            <span class="string">"  time waster runtime: {} seconds, gas remaining {} [used: {}, exhausted flag: {}]"</span>,
             delta,
             gas_limit,
             initial_gas - gas_limit,

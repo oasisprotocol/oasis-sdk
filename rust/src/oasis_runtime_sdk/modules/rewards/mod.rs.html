@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/modules/rewards/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_runtime_sdk/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/modules/rewards/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_runtime_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -256,12 +258,12 @@
 <span class="kw">pub mod </span>types;
 
 <span class="doccomment">/// Unique module name.
-</span><span class="kw">const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;rewards&quot;</span>;
+</span><span class="kw">const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"rewards"</span>;
 
 <span class="doccomment">/// Errors emitted by the rewards module.
 </span><span class="attr">#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
 </span><span class="kw">pub enum </span>Error {
-    <span class="attr">#[error(<span class="string">&quot;invalid argument&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid argument"</span>)]
     #[sdk_error(code = <span class="number">1</span>)]
     </span>InvalidArgument,
 }
@@ -278,10 +280,10 @@
 <span class="doccomment">/// Errors emitted during rewards parameter validation.
 </span><span class="attr">#[derive(Error, Debug)]
 </span><span class="kw">pub enum </span>ParameterValidationError {
-    <span class="attr">#[error(<span class="string">&quot;invalid participation threshold (numerator &gt; denominator)&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid participation threshold (numerator &gt; denominator)"</span>)]
     </span>InvalidParticipationThreshold,
 
-    <span class="attr">#[error(<span class="string">&quot;invalid schedule&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid schedule"</span>)]
     </span>InvalidSchedule(<span class="attr">#[from] </span>types::RewardScheduleError),
 }
 
@@ -320,15 +322,15 @@
     _accounts: std::marker::PhantomData&lt;Accounts&gt;,
 }
 
-<span class="doccomment">/// Module&#39;s address that has the reward pool.
+<span class="doccomment">/// Module's address that has the reward pool.
 ///
 /// oasis1qp7x0q9qahahhjas0xde8w0v04ctp4pqzu5mhjav
 </span><span class="kw">pub static </span>ADDRESS_REWARD_POOL: Lazy&lt;Address&gt; =
-    Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">&quot;reward-pool&quot;</span>));
+    Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">"reward-pool"</span>));
 
 <span class="attr">#[sdk_derive(Module)]
 </span><span class="kw">impl</span>&lt;Accounts: modules::accounts::API&gt; Module&lt;Accounts&gt; {
-    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = MODULE_NAME;
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = MODULE_NAME;
     <span class="kw">const </span>VERSION: u32 = <span class="number">2</span>;
     <span class="kw">type </span>Error = Error;
     <span class="kw">type </span>Event = ();
@@ -340,7 +342,7 @@
         genesis
             .parameters
             .validate_basic()
-            .expect(<span class="string">&quot;invalid genesis parameters&quot;</span>);
+            .expect(<span class="string">"invalid genesis parameters"</span>);
 
         <span class="comment">// Set genesis parameters.
         </span><span class="self">Self</span>::set_params(genesis.parameters);
@@ -401,7 +403,7 @@
 
             <span class="comment">// Process accumulated rewards for previous epochs.
             </span><span class="kw">let </span>params = <span class="self">Self</span>::params();
-            <span class="lifetime">&#39;epochs</span>: <span class="kw">for </span>(epoch, rewards) <span class="kw">in </span>epoch_rewards {
+            <span class="lifetime">'epochs</span>: <span class="kw">for </span>(epoch, rewards) <span class="kw">in </span>epoch_rewards {
                 <span class="kw">let </span>epoch = epoch.<span class="number">0</span>;
 
                 <span class="comment">// Fetch reward schedule for the given epoch.
@@ -421,9 +423,9 @@
                             <span class="comment">// Since rewards are the same for the whole epoch, if there is not
                             // enough in the pool, just continue with the next epoch which may
                             // specify a lower amount or a different denomination.
-                            </span><span class="kw">continue </span><span class="lifetime">&#39;epochs</span>;
+                            </span><span class="kw">continue </span><span class="lifetime">'epochs</span>;
                         }
-                        <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">panic!</span>(<span class="string">&quot;failed to disburse rewards: {err:?}&quot;</span>),
+                        <span class="prelude-val">Err</span>(err) =&gt; <span class="macro">panic!</span>(<span class="string">"failed to disburse rewards: {err:?}"</span>),
                     }
                 }
             }

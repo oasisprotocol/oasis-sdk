@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/modules/contracts/src/abi/oasis/crypto.rs`."><title>crypto.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk_contracts" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_runtime_sdk_contracts/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/modules/contracts/src/abi/oasis/crypto.rs`."><title>crypto.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_runtime_sdk_contracts" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_runtime_sdk_contracts/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -550,12 +552,12 @@
 <span class="kw">impl</span>&lt;Cfg: Config&gt; OasisV1&lt;Cfg&gt; {
     <span class="doccomment">/// Link crypto helper functions.
     </span><span class="kw">pub fn </span>link_crypto&lt;C: Context&gt;(
-        instance: <span class="kw-2">&amp;mut </span>wasm3::Instance&lt;<span class="lifetime">&#39;_</span>, <span class="lifetime">&#39;_</span>, ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;&gt;,
+        instance: <span class="kw-2">&amp;mut </span>wasm3::Instance&lt;<span class="lifetime">'_</span>, <span class="lifetime">'_</span>, ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="comment">// crypto.ecdsa_recover(input) -&gt; response
         </span><span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;crypto&quot;</span>,
-            <span class="string">&quot;ecdsa_recover&quot;</span>,
+            <span class="string">"crypto"</span>,
+            <span class="string">"ecdsa_recover"</span>,
             |ctx, request: ((u32, u32), (u32, u32))| -&gt; <span class="prelude-ty">Result</span>&lt;(), wasm3::Trap&gt; {
                 <span class="comment">// Make sure function was called in valid context.
                 </span><span class="kw">let </span>ec = ctx.context.ok_or(wasm3::Trap::Abort)<span class="question-mark">?</span>;
@@ -589,8 +591,8 @@
         <span class="comment">// crypto.signature_verify(public_key, context, message, signature) -&gt; response
         </span><span class="attr">#[allow(clippy::type_complexity)]
         </span><span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;crypto&quot;</span>,
-            <span class="string">&quot;signature_verify&quot;</span>,
+            <span class="string">"crypto"</span>,
+            <span class="string">"signature_verify"</span>,
             |ctx,
              (kind, key, context, message, signature): (
                 u32,
@@ -656,8 +658,8 @@
 
         <span class="comment">// crypto.random_bytes(dst) -&gt; bytes_written
         </span><span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;crypto&quot;</span>,
-            <span class="string">&quot;random_bytes&quot;</span>,
+            <span class="string">"crypto"</span>,
+            <span class="string">"random_bytes"</span>,
             |ctx,
              ((pers_ptr, pers_len, dst_ptr, dst_len),): ((u32, u32, u32, u32),)|
              -&gt; <span class="prelude-ty">Result</span>&lt;u32, wasm3::Trap&gt; {
@@ -702,8 +704,8 @@
         <span class="comment">// crypto.x25519_derive_symmetric(public_key, private_key) -&gt; symmetric_key
         </span><span class="attr">#[allow(clippy::type_complexity)]
         </span><span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;crypto&quot;</span>,
-            <span class="string">&quot;x25519_derive_symmetric&quot;</span>,
+            <span class="string">"crypto"</span>,
+            <span class="string">"x25519_derive_symmetric"</span>,
             |ctx,
              (public_key, private_key, output_key): ((u32, u32), (u32, u32), (u32, u32))|
              -&gt; <span class="prelude-ty">Result</span>&lt;u32, wasm3::Trap&gt; {
@@ -760,7 +762,7 @@
         <span class="attr">#[allow(clippy::type_complexity)]
         </span><span class="kw">let </span>deoxysii_factory =
             |func: <span class="kw">fn</span>(<span class="kw-2">&amp;</span>[u8], <span class="kw-2">&amp;</span>[u8], <span class="kw-2">&amp;</span>[u8], <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;u8&gt;, crypto::deoxysii::Error&gt;| {
-                <span class="kw">move </span>|ctx: wasm3::CallContext&lt;<span class="lifetime">&#39;_</span>, ExecutionContext&lt;<span class="lifetime">&#39;_</span>, C&gt;&gt;,
+                <span class="kw">move </span>|ctx: wasm3::CallContext&lt;<span class="lifetime">'_</span>, ExecutionContext&lt;<span class="lifetime">'_</span>, C&gt;&gt;,
                       (key, nonce, message, additional_data): (
                     (u32, u32),
                     (u32, u32),
@@ -823,15 +825,15 @@
 
         <span class="comment">// crypto.deoxysii_seal(key, nonce, plaintext_message, additional_data) -&gt; encrypted_message
         </span><span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;crypto&quot;</span>,
-            <span class="string">&quot;deoxysii_seal&quot;</span>,
+            <span class="string">"crypto"</span>,
+            <span class="string">"deoxysii_seal"</span>,
             deoxysii_factory(crypto::deoxysii::seal),
         );
 
         <span class="comment">// crypto.deoxysii_open(key, nonce, encrypted_message, additional_data) -&gt; plaintext_message
         </span><span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;crypto&quot;</span>,
-            <span class="string">&quot;deoxysii_open&quot;</span>,
+            <span class="string">"crypto"</span>,
+            <span class="string">"deoxysii_open"</span>,
             deoxysii_factory(crypto::deoxysii::open),
         );
 
@@ -842,7 +844,7 @@
 <span class="kw">fn </span>get_key(
     kind: SignatureKind,
     key: (u32, u32),
-    memory: <span class="kw-2">&amp;</span>wasm3::Memory&lt;<span class="lifetime">&#39;_</span>&gt;,
+    memory: <span class="kw-2">&amp;</span>wasm3::Memory&lt;<span class="lifetime">'_</span>&gt;,
 ) -&gt; <span class="prelude-ty">Result</span>&lt;signature::PublicKey, wasm3::Trap&gt; {
     <span class="kw">let </span>region = Region::from_arg(key)
         .as_slice(memory)
@@ -867,7 +869,7 @@
     }
 }
 
-<span class="attr">#[cfg(all(feature = <span class="string">&quot;benchmarks&quot;</span>, test))]
+<span class="attr">#[cfg(all(feature = <span class="string">"benchmarks"</span>, test))]
 </span><span class="kw">mod </span>test {
     <span class="kw">extern crate </span>test;
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
@@ -880,13 +882,13 @@
 
     <span class="comment">// cargo build --target wasm32-unknown-unknown --release
     </span><span class="kw">const </span>BENCH_CODE: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(
-        <span class="string">&quot;../../../../../../tests/contracts/bench/target/wasm32-unknown-unknown/release/bench.wasm&quot;
+        <span class="string">"../../../../../../tests/contracts/bench/target/wasm32-unknown-unknown/release/bench.wasm"
     </span>);
     <span class="kw">const </span>MESSAGE: <span class="kw-2">&amp;</span>[u8] =
-        <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../../../../tests/contracts/bench/data/message.txt&quot;</span>);
+        <span class="macro">include_bytes!</span>(<span class="string">"../../../../../../tests/contracts/bench/data/message.txt"</span>);
     <span class="kw">const </span>SIGNATURE: <span class="kw-2">&amp;</span>[u8] =
-        <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../../../../tests/contracts/bench/data/signature.bin&quot;</span>);
-    <span class="kw">const </span>KEY: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">&quot;../../../../../../tests/contracts/bench/data/key.bin&quot;</span>);
+        <span class="macro">include_bytes!</span>(<span class="string">"../../../../../../tests/contracts/bench/data/signature.bin"</span>);
+    <span class="kw">const </span>KEY: <span class="kw-2">&amp;</span>[u8] = <span class="macro">include_bytes!</span>(<span class="string">"../../../../../../tests/contracts/bench/data/key.bin"</span>);
 
     <span class="kw">fn </span>verify_signature(message: <span class="kw-2">&amp;</span>[u8], signature: <span class="kw-2">&amp;</span>[u8], key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), ()&gt; {
         <span class="kw">let </span>key = k256::EncodedPoint::from_bytes(key).map_err(|<span class="kw">_</span>| ())<span class="question-mark">?</span>;
@@ -905,7 +907,7 @@
 
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_crypto_nonwasm_recover(b: <span class="kw-2">&amp;mut </span>Bencher) {
-        <span class="kw">let </span>input = hex::decode(<span class="string">&quot;ce0677bb30baa8cf067c88db9811f4333d131bf8bcf12fe7065d211dce97100890f27b8b488db00b00606796d2987f6a5f59ae62ea05effe84fef5b8b0e549984a691139ad57a3f0b906637673aa2f63d1f55cb1a69199d4009eea23ceaddc9301&quot;</span>).unwrap();
+        <span class="kw">let </span>input = hex::decode(<span class="string">"ce0677bb30baa8cf067c88db9811f4333d131bf8bcf12fe7065d211dce97100890f27b8b488db00b00606796d2987f6a5f59ae62ea05effe84fef5b8b0e549984a691139ad57a3f0b906637673aa2f63d1f55cb1a69199d4009eea23ceaddc9301"</span>).unwrap();
         b.iter(|| {
             <span class="macro">assert!</span>(crypto::ecdsa::recover(<span class="kw-2">&amp;</span>input).is_ok());
         });
@@ -914,11 +916,11 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_crypto_nonwasm_x25519_derive(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>public = &lt;[u8; <span class="number">32</span>] <span class="kw">as </span>hex::FromHex&gt;::from_hex(
-            <span class="string">&quot;3046db3fa70ce605457dc47c48837ebd8bd0a26abfde5994d033e1ced68e2576&quot;</span>,
+            <span class="string">"3046db3fa70ce605457dc47c48837ebd8bd0a26abfde5994d033e1ced68e2576"</span>,
         )
         .unwrap();
         <span class="kw">let </span>private = &lt;[u8; <span class="number">32</span>] <span class="kw">as </span>hex::FromHex&gt;::from_hex(
-            <span class="string">&quot;c07b151fbc1e7a11dff926111188f8d872f62eba0396da97c0a24adb75161750&quot;</span>,
+            <span class="string">"c07b151fbc1e7a11dff926111188f8d872f62eba0396da97c0a24adb75161750"</span>,
         )
         .unwrap();
         b.iter(|| {
@@ -929,54 +931,54 @@
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_crypto_nonwasm_deoxysii_seal_tiny(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>key = &lt;[u8; <span class="number">32</span>] <span class="kw">as </span>hex::FromHex&gt;::from_hex(
-            <span class="string">&quot;e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586&quot;</span>,
+            <span class="string">"e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586"</span>,
         )
         .unwrap();
         b.iter(|| {
-            <span class="macro">assert!</span>(crypto::deoxysii::seal(<span class="kw-2">&amp;</span>key, <span class="string">b&quot;0123456789abcde&quot;</span>, <span class="string">b&quot;b&quot;</span>, <span class="string">b&quot;&quot;</span>).is_ok());
+            <span class="macro">assert!</span>(crypto::deoxysii::seal(<span class="kw-2">&amp;</span>key, <span class="string">b"0123456789abcde"</span>, <span class="string">b"b"</span>, <span class="string">b""</span>).is_ok());
         });
     }
 
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_crypto_nonwasm_deoxysii_seal_size1(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>key = &lt;[u8; <span class="number">32</span>] <span class="kw">as </span>hex::FromHex&gt;::from_hex(
-            <span class="string">&quot;e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586&quot;</span>,
+            <span class="string">"e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586"</span>,
         )
         .unwrap();
         b.iter(|| {
-            <span class="macro">assert!</span>(crypto::deoxysii::seal(<span class="kw-2">&amp;</span>key, <span class="string">b&quot;0123456789abcde&quot;</span>, MESSAGE, <span class="string">b&quot;&quot;</span>).is_ok());
+            <span class="macro">assert!</span>(crypto::deoxysii::seal(<span class="kw-2">&amp;</span>key, <span class="string">b"0123456789abcde"</span>, MESSAGE, <span class="string">b""</span>).is_ok());
         });
     }
 
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_crypto_nonwasm_deoxysii_seal_size2(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>key = &lt;[u8; <span class="number">32</span>] <span class="kw">as </span>hex::FromHex&gt;::from_hex(
-            <span class="string">&quot;e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586&quot;</span>,
+            <span class="string">"e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586"</span>,
         )
         .unwrap();
         <span class="kw">let </span><span class="kw-2">mut </span>message = MESSAGE.to_vec();
         message.extend_from_slice(MESSAGE);
         b.iter(|| {
-            <span class="macro">assert!</span>(crypto::deoxysii::seal(<span class="kw-2">&amp;</span>key, <span class="string">b&quot;0123456789abcde&quot;</span>, <span class="kw-2">&amp;</span>message, <span class="string">b&quot;&quot;</span>).is_ok());
+            <span class="macro">assert!</span>(crypto::deoxysii::seal(<span class="kw-2">&amp;</span>key, <span class="string">b"0123456789abcde"</span>, <span class="kw-2">&amp;</span>message, <span class="string">b""</span>).is_ok());
         });
     }
 
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_crypto_called_from_wasm_included(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>env =
-            wasm3::Environment::new().expect(<span class="string">&quot;creating a new wasm3 environment should succeed&quot;</span>);
+            wasm3::Environment::new().expect(<span class="string">"creating a new wasm3 environment should succeed"</span>);
         <span class="kw">let </span>module = env
             .parse_module(BENCH_CODE)
-            .expect(<span class="string">&quot;parsing the code should succeed&quot;</span>);
-        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">&#39;_</span>, wasm3::CallContext&lt;<span class="lifetime">&#39;_</span>, ()&gt;&gt; = env
+            .expect(<span class="string">"parsing the code should succeed"</span>);
+        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">'_</span>, wasm3::CallContext&lt;<span class="lifetime">'_</span>, ()&gt;&gt; = env
             .new_runtime(<span class="number">1 </span>* <span class="number">1024 </span>* <span class="number">1024</span>, <span class="prelude-val">None</span>)
-            .expect(<span class="string">&quot;creating a new wasm3 runtime should succeed&quot;</span>);
+            .expect(<span class="string">"creating a new wasm3 runtime should succeed"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>instance = rt
             .load_module(module)
-            .expect(<span class="string">&quot;instance creation should succeed&quot;</span>);
+            .expect(<span class="string">"instance creation should succeed"</span>);
         <span class="kw">let _ </span>= instance.link_function(
-            <span class="string">&quot;bench&quot;</span>,
-            <span class="string">&quot;verify_signature&quot;</span>,
+            <span class="string">"bench"</span>,
+            <span class="string">"verify_signature"</span>,
             |ctx,
              (message, signature, key): ((u32, u32), (u32, u32), (u32, u32))|
              -&gt; <span class="prelude-ty">Result</span>&lt;(), wasm3::Trap&gt; {
@@ -999,31 +1001,31 @@
             </span>},
         );
         <span class="kw">let </span>func = instance
-            .find_function::&lt;(), ()&gt;(<span class="string">&quot;call_verification_included&quot;</span>)
-            .expect(<span class="string">&quot;finding the entrypoint function should succeed&quot;</span>);
+            .find_function::&lt;(), ()&gt;(<span class="string">"call_verification_included"</span>)
+            .expect(<span class="string">"finding the entrypoint function should succeed"</span>);
         b.iter(|| {
-            func.call(()).expect(<span class="string">&quot;function call should succeed&quot;</span>);
+            func.call(()).expect(<span class="string">"function call should succeed"</span>);
         });
     }
 
     <span class="attr">#[bench]
     </span><span class="kw">fn </span>bench_crypto_computed_in_wasm(b: <span class="kw-2">&amp;mut </span>Bencher) {
         <span class="kw">let </span>env =
-            wasm3::Environment::new().expect(<span class="string">&quot;creating a new wasm3 environment should succeed&quot;</span>);
+            wasm3::Environment::new().expect(<span class="string">"creating a new wasm3 environment should succeed"</span>);
         <span class="kw">let </span>module = env
             .parse_module(BENCH_CODE)
-            .expect(<span class="string">&quot;parsing the code should succeed&quot;</span>);
-        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">&#39;_</span>, wasm3::CallContext&lt;<span class="lifetime">&#39;_</span>, ()&gt;&gt; = env
+            .expect(<span class="string">"parsing the code should succeed"</span>);
+        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">'_</span>, wasm3::CallContext&lt;<span class="lifetime">'_</span>, ()&gt;&gt; = env
             .new_runtime(<span class="number">1 </span>* <span class="number">1024 </span>* <span class="number">1024</span>, <span class="prelude-val">None</span>)
-            .expect(<span class="string">&quot;creating a new wasm3 runtime should succeed&quot;</span>);
+            .expect(<span class="string">"creating a new wasm3 runtime should succeed"</span>);
         <span class="kw">let </span>instance = rt
             .load_module(module)
-            .expect(<span class="string">&quot;instance creation should succeed&quot;</span>);
+            .expect(<span class="string">"instance creation should succeed"</span>);
         <span class="kw">let </span>func = instance
-            .find_function::&lt;(), ()&gt;(<span class="string">&quot;call_verification_internal&quot;</span>)
-            .expect(<span class="string">&quot;finding the entrypoint function should succeed&quot;</span>);
+            .find_function::&lt;(), ()&gt;(<span class="string">"call_verification_internal"</span>)
+            .expect(<span class="string">"finding the entrypoint function should succeed"</span>);
         b.iter(|| {
-            func.call(()).expect(<span class="string">&quot;function call should succeed&quot;</span>);
+            func.call(()).expect(<span class="string">"function call should succeed"</span>);
         });
     }
 
@@ -1037,33 +1039,33 @@
         <span class="kw">let </span>new_code = module.emit_wasm();
 
         <span class="kw">let </span>env =
-            wasm3::Environment::new().expect(<span class="string">&quot;creating a new wasm3 environment should succeed&quot;</span>);
+            wasm3::Environment::new().expect(<span class="string">"creating a new wasm3 environment should succeed"</span>);
         <span class="kw">let </span>module = env
             .parse_module(<span class="kw-2">&amp;</span>new_code)
-            .expect(<span class="string">&quot;parsing the code should succeed&quot;</span>);
-        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">&#39;_</span>, wasm3::CallContext&lt;<span class="lifetime">&#39;_</span>, ()&gt;&gt; = env
+            .expect(<span class="string">"parsing the code should succeed"</span>);
+        <span class="kw">let </span>rt: wasm3::Runtime&lt;<span class="lifetime">'_</span>, wasm3::CallContext&lt;<span class="lifetime">'_</span>, ()&gt;&gt; = env
             .new_runtime(<span class="number">1 </span>* <span class="number">1024 </span>* <span class="number">1024</span>, <span class="prelude-val">None</span>)
-            .expect(<span class="string">&quot;creating a new wasm3 runtime should succeed&quot;</span>);
+            .expect(<span class="string">"creating a new wasm3 runtime should succeed"</span>);
         <span class="kw">let </span>instance = rt
             .load_module(module)
-            .expect(<span class="string">&quot;instance creation should succeed&quot;</span>);
+            .expect(<span class="string">"instance creation should succeed"</span>);
         <span class="kw">let </span>initial_gas = <span class="number">1_000_000_000_000u64</span>;
         instance
             .set_global(gas::EXPORT_GAS_LIMIT, initial_gas)
-            .expect(<span class="string">&quot;setting gas limit should succeed&quot;</span>);
+            .expect(<span class="string">"setting gas limit should succeed"</span>);
         <span class="kw">let </span>func = instance
-            .find_function::&lt;(), ()&gt;(<span class="string">&quot;call_verification_internal&quot;</span>)
-            .expect(<span class="string">&quot;finding the entrypoint function should succeed&quot;</span>);
-        func.call(()).expect(<span class="string">&quot;function call should succeed&quot;</span>);
+            .find_function::&lt;(), ()&gt;(<span class="string">"call_verification_internal"</span>)
+            .expect(<span class="string">"finding the entrypoint function should succeed"</span>);
+        func.call(()).expect(<span class="string">"function call should succeed"</span>);
 
         <span class="kw">let </span>gas_limit: u64 = instance
             .get_global(gas::EXPORT_GAS_LIMIT)
-            .expect(<span class="string">&quot;getting gas limit global should succeed&quot;</span>);
+            .expect(<span class="string">"getting gas limit global should succeed"</span>);
         <span class="kw">let </span>gas_limit_exhausted: u64 = instance
             .get_global(gas::EXPORT_GAS_LIMIT_EXHAUSTED)
-            .expect(<span class="string">&quot;getting gas limit exhausted global should succeed&quot;</span>);
+            .expect(<span class="string">"getting gas limit exhausted global should succeed"</span>);
         <span class="macro">println!</span>(
-            <span class="string">&quot;  signature verification done, gas remaining {} [used: {}, exhausted flag: {}]&quot;</span>,
+            <span class="string">"  signature verification done, gas remaining {} [used: {}, exhausted flag: {}]"</span>,
             gas_limit,
             initial_gas - gas_limit,
             gas_limit_exhausted

@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/storage/mkvs/tree/node.rs`."><title>node.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/storage/mkvs/tree/node.rs`."><title>node.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -540,9 +542,9 @@
 </span><span class="kw">pub trait </span>Node {
     <span class="doccomment">/// Check whether the node is clean or not.
     </span><span class="kw">fn </span>is_clean(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool;
-    <span class="doccomment">/// Get the node&#39;s hash.
+    <span class="doccomment">/// Get the node's hash.
     </span><span class="kw">fn </span>get_hash(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Hash;
-    <span class="doccomment">/// Recompute the node&#39;s hash.
+    <span class="doccomment">/// Recompute the node's hash.
     </span><span class="kw">fn </span>update_hash(<span class="kw-2">&amp;mut </span><span class="self">self</span>);
     <span class="doccomment">/// Duplicate the node but include only hash references.
     </span><span class="kw">fn </span>extract(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NodeRef;
@@ -565,7 +567,7 @@
 </span><span class="attr">#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>Root {
     <span class="doccomment">/// Namespace under which the root is stored.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;ns&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"ns"</span>)]
     </span><span class="kw">pub </span>namespace: Namespace,
     <span class="doccomment">/// Monotonically increasing version number in which the root is stored.
     </span><span class="kw">pub </span>version: u64,
@@ -690,14 +692,14 @@
     <span class="doccomment">/// Get a reference to the node the pointer is pointing to.
     </span><span class="kw">pub fn </span>get_node(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NodeRef {
         <span class="kw">match </span><span class="kw-2">&amp;</span><span class="self">self</span>.node {
-            <span class="prelude-val">None </span>=&gt; <span class="macro">panic!</span>(<span class="string">&quot;mkvs: get_node called on pointer without a node&quot;</span>),
+            <span class="prelude-val">None </span>=&gt; <span class="macro">panic!</span>(<span class="string">"mkvs: get_node called on pointer without a node"</span>),
             <span class="prelude-val">Some</span>(node) =&gt; node.clone(),
         }
     }
 
     <span class="doccomment">/// Return a copy of this pointer containing only hash references.
     </span><span class="kw">pub fn </span>extract(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NodePtrRef {
-        <span class="macro">assert!</span>(<span class="self">self</span>.clean, <span class="string">&quot;mkvs: extract called on dirty pointer&quot;</span>);
+        <span class="macro">assert!</span>(<span class="self">self</span>.clean, <span class="string">"mkvs: extract called on dirty pointer"</span>);
 
         Rc::new(RefCell::new(NodePointer {
             clean: <span class="bool-val">true</span>,
@@ -708,13 +710,13 @@
 
     <span class="comment">// Make deep copy of the Pointer to LeafNode excluding LRU and DBInternal.
     //
-    // Panics, if it&#39;s called on non-leaf node pointer.
+    // Panics, if it's called on non-leaf node pointer.
     </span><span class="kw">fn </span>copy_leaf_ptr(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NodePtrRef {
         <span class="kw">if </span>!<span class="self">self</span>.has_node() {
             <span class="kw">return </span>NodePointer::null_ptr();
         }
 
-        <span class="macro">assert!</span>(<span class="self">self</span>.clean, <span class="string">&quot;mkvs: copy_leaf_ptr called on dirty pointer&quot;</span>);
+        <span class="macro">assert!</span>(<span class="self">self</span>.clean, <span class="string">"mkvs: copy_leaf_ptr called on dirty pointer"</span>);
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>some_node) = <span class="self">self</span>.node {
             <span class="kw">let </span>nyoo = <span class="macro">noderef_as!</span>(some_node, Leaf).copy();
@@ -725,7 +727,7 @@
                 ..Default::default()
             }))
         } <span class="kw">else </span>{
-            <span class="macro">panic!</span>(<span class="string">&quot;mkvs: copy_leaf_ptr called on a non-leaf pointer&quot;</span>);
+            <span class="macro">panic!</span>(<span class="string">"mkvs: copy_leaf_ptr called on a non-leaf pointer"</span>);
         }
     }
 }
@@ -793,7 +795,7 @@
     }
 
     <span class="kw">fn </span>extract(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NodeRef {
-        <span class="macro">assert!</span>(<span class="self">self</span>.clean, <span class="string">&quot;mkvs: extract called on dirty node&quot;</span>);
+        <span class="macro">assert!</span>(<span class="self">self</span>.clean, <span class="string">"mkvs: extract called on dirty node"</span>);
 
         Rc::new(RefCell::new(NodeBox::Internal(InternalNode {
             clean: <span class="bool-val">true</span>,
@@ -861,7 +863,7 @@
     }
 
     <span class="kw">fn </span>extract(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NodeRef {
-        <span class="macro">assert!</span>(<span class="self">self</span>.clean, <span class="string">&quot;mkvs: extract called on dirty node&quot;</span>);
+        <span class="macro">assert!</span>(<span class="self">self</span>.clean, <span class="string">"mkvs: extract called on dirty node"</span>);
         Rc::new(RefCell::new(NodeBox::Leaf(LeafNode {
             clean: <span class="bool-val">true</span>,
             hash: <span class="self">self</span>.hash,
@@ -954,7 +956,7 @@
     <span class="kw">fn </span>split(<span class="kw-2">&amp;</span><span class="self">self</span>, split_point: Depth, key_len: Depth) -&gt; (Key, Key) {
         <span class="macro">assert!</span>(
             split_point &lt;= key_len,
-            <span class="string">&quot;mkvs: split_point {} greater than key_len {}&quot;</span>,
+            <span class="string">"mkvs: split_point {} greater than key_len {}"</span>,
             split_point,
             key_len
         );
@@ -974,7 +976,7 @@
         <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..suffix_len {
             <span class="comment">// First set the left chunk of the byte
             </span>suffix[i] = <span class="self">self</span>[i + split_point <span class="kw">as </span>usize / <span class="number">8</span>] &lt;&lt; (split_point % <span class="number">8</span>);
-            <span class="comment">// ...and the right chunk, if we haven&#39;t reached the end of k yet.
+            <span class="comment">// ...and the right chunk, if we haven't reached the end of k yet.
             </span><span class="kw">if </span>split_point % <span class="number">8 </span>!= <span class="number">0 </span>&amp;&amp; i + split_point <span class="kw">as </span>usize / <span class="number">8 </span>+ <span class="number">1 </span>!= <span class="self">self</span>.len() {
                 suffix[i] |=
                     <span class="self">self</span>[i + split_point <span class="kw">as </span>usize / <span class="number">8 </span>+ <span class="number">1</span>] &gt;&gt; (<span class="number">8 </span>- split_point <span class="kw">as </span>usize % <span class="number">8</span>);
@@ -998,7 +1000,7 @@
             </span><span class="kw">if </span>key_len % <span class="number">8 </span>!= <span class="number">0 </span>&amp;&amp; key_len_bytes &gt; <span class="number">0 </span>{
                 new_key[key_len_bytes + i - <span class="number">1</span>] |= k2[i] &gt;&gt; (key_len % <span class="number">8</span>);
             }
-            <span class="comment">// ...and the next left chunk, if we haven&#39;t reached the end of newKey
+            <span class="comment">// ...and the next left chunk, if we haven't reached the end of newKey
             // yet.
             </span><span class="kw">if </span>key_len_bytes + i &lt; new_key.len() {
                 <span class="comment">// another mod 8 to prevent bit shifting for 8 bits

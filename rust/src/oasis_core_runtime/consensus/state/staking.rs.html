@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/state/staking.rs`."><title>staking.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/state/staking.rs`."><title>staking.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -513,13 +515,13 @@
 };
 
 <span class="doccomment">/// Consensus staking state wrapper.
-</span><span class="kw">pub struct </span>ImmutableState&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; {
-    mkvs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T,
+</span><span class="kw">pub struct </span>ImmutableState&lt;<span class="lifetime">'a</span>, T: ImmutableMKVS&gt; {
+    mkvs: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">'a</span>, T&gt; {
     <span class="doccomment">/// Constructs a new ImmutableMKVS.
-    </span><span class="kw">pub fn </span>new(mkvs: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>T) -&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+    </span><span class="kw">pub fn </span>new(mkvs: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>T) -&gt; ImmutableState&lt;<span class="lifetime">'a</span>, T&gt; {
         ImmutableState { mkvs }
     }
 }
@@ -539,7 +541,7 @@
 <span class="macro">key_format!</span>(EpochSigningKeyFmt, <span class="number">0x58</span>, ());
 <span class="macro">key_format!</span>(GovernanceDepositsKeyFmt, <span class="number">0x59</span>, ());
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">&#39;a</span>, T&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, T: ImmutableMKVS&gt; ImmutableState&lt;<span class="lifetime">'a</span>, T&gt; {
     <span class="doccomment">/// Returns the staking account for the given account address.
     </span><span class="kw">pub fn </span>account(<span class="kw-2">&amp;</span><span class="self">self</span>, address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;Account, StateError&gt; {
         <span class="kw">match </span><span class="self">self</span>.mkvs.get(<span class="kw-2">&amp;</span>AccountsKeyFmt(address).encode()) {
@@ -626,7 +628,7 @@
             <span class="kw">if </span>!result.contains_key(<span class="kw-2">&amp;</span>escrow_addr) {
                 result.insert(escrow_addr.clone(), BTreeMap::new());
             }
-            <span class="kw">let </span>inner = result.get_mut(<span class="kw-2">&amp;</span>escrow_addr).expect(<span class="string">&quot;inner map must exist&quot;</span>);
+            <span class="kw">let </span>inner = result.get_mut(<span class="kw-2">&amp;</span>escrow_addr).expect(<span class="string">"inner map must exist"</span>);
 
             inner.insert(
                 delegator_addr,
@@ -673,13 +675,13 @@
             <span class="kw">if </span>!result.contains_key(<span class="kw-2">&amp;</span>escrow_addr) {
                 result.insert(escrow_addr.clone(), BTreeMap::new());
             }
-            <span class="kw">let </span>inner = result.get_mut(<span class="kw-2">&amp;</span>escrow_addr).expect(<span class="string">&quot;inner map must exist&quot;</span>);
+            <span class="kw">let </span>inner = result.get_mut(<span class="kw-2">&amp;</span>escrow_addr).expect(<span class="string">"inner map must exist"</span>);
             <span class="kw">if </span>!inner.contains_key(<span class="kw-2">&amp;</span>delegator_addr) {
                 inner.insert(delegator_addr.clone(), Vec::new());
             }
             <span class="kw">let </span>in_inner = inner
                 .get_mut(<span class="kw-2">&amp;</span>delegator_addr)
-                .expect(<span class="string">&quot;inner vec in inner map must exist&quot;</span>);
+                .expect(<span class="string">"inner vec in inner map must exist"</span>);
             in_inner.push(
                 cbor::from_slice(<span class="kw-2">&amp;</span>value).map_err(|err| StateError::Unavailable(<span class="macro">anyhow!</span>(err)))<span class="question-mark">?</span>,
             );
@@ -707,15 +709,15 @@
         <span class="comment">// Keep in sync with go/consensus/cometbft/apps/staking/state/interop/interop.go.
         // If mock consensus state changes, update the root hash bellow.
         // See protocol server stdout for hash.
-        // To make the hash show up during tests, run &quot;cargo test&quot; as
-        // &quot;cargo test -- --nocapture&quot;.
+        // To make the hash show up during tests, run "cargo test" as
+        // "cargo test -- --nocapture".
 
         // Setup protocol server with initialized mock consensus state.
         </span><span class="kw">let </span>server = ProtocolServer::new(Fixture::ConsensusMock.into());
         <span class="kw">let </span>mock_consensus_root = Root {
             version: <span class="number">1</span>,
             root_type: RootType::State,
-            hash: Hash::from(<span class="string">&quot;f637a80b24e3ffaaf3de0da96f1dfd94d0a135348f40006d578d557d70d5fa42&quot;</span>),
+            hash: Hash::from(<span class="string">"f637a80b24e3ffaaf3de0da96f1dfd94d0a135348f40006d578d557d70d5fa42"</span>),
             ..Default::default()
         };
         <span class="kw">let </span>mkvs = Tree::builder()
@@ -725,11 +727,11 @@
         <span class="kw">let </span>staking_state = ImmutableState::new(<span class="kw-2">&amp;</span>mkvs);
 
         <span class="kw">let </span>pk =
-            PublicKey::from(<span class="string">&quot;7e57baaad01fffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>);
+            PublicKey::from(<span class="string">"7e57baaad01fffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>);
         <span class="kw">let </span>pk2 =
-            PublicKey::from(<span class="string">&quot;7e57baaad02fffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>);
+            PublicKey::from(<span class="string">"7e57baaad02fffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>);
         <span class="kw">let </span>pk3 =
-            PublicKey::from(<span class="string">&quot;7e57baaad03fffffffffffffffffffffffffffffffffffffffffffffffffffff&quot;</span>);
+            PublicKey::from(<span class="string">"7e57baaad03fffffffffffffffffffffffffffffffffffffffffffffffffffff"</span>);
         <span class="kw">let </span>expected_addrs = <span class="macro">vec!</span>[
             Address::from_pk(<span class="kw-2">&amp;</span>pk),
             Address::from_pk(<span class="kw-2">&amp;</span>pk2),
@@ -739,14 +741,14 @@
         <span class="comment">// Test all addresses and accounts.
         </span><span class="kw">let </span>addrs = staking_state
             .addresses()
-            .expect(<span class="string">&quot;addresses query should work&quot;</span>);
-        <span class="macro">assert_eq!</span>(expected_addrs, addrs, <span class="string">&quot;expected addresses should match&quot;</span>);
+            .expect(<span class="string">"addresses query should work"</span>);
+        <span class="macro">assert_eq!</span>(expected_addrs, addrs, <span class="string">"expected addresses should match"</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>accounts = Vec::new();
         <span class="kw">for </span>addr <span class="kw">in </span><span class="kw-2">&amp;</span>addrs {
             <span class="kw">let </span>acc = staking_state
                 .account(addr.clone())
-                .expect(<span class="string">&quot;accounts query should work&quot;</span>);
+                .expect(<span class="string">"accounts query should work"</span>);
             accounts.push(acc);
         }
 
@@ -803,19 +805,19 @@
         ];
         <span class="macro">assert_eq!</span>(
             expected_accounts, accounts,
-            <span class="string">&quot;expected addresses should match&quot;
+            <span class="string">"expected addresses should match"
         </span>);
 
         <span class="comment">// Test all delegations.
         </span><span class="kw">let </span>delegations = staking_state
             .delegations()
-            .expect(<span class="string">&quot;delegations query should work&quot;</span>);
+            .expect(<span class="string">"delegations query should work"</span>);
         <span class="kw">for </span>(escrow_addr, dels) <span class="kw">in </span><span class="kw-2">&amp;</span>delegations {
             <span class="kw">for </span>(delegator_addr, del) <span class="kw">in </span>dels.clone() {
                 <span class="kw">let </span>d = staking_state
                     .delegation(delegator_addr, escrow_addr.clone())
-                    .expect(<span class="string">&quot;delegation query should work&quot;</span>);
-                <span class="macro">assert_eq!</span>(del, d, <span class="string">&quot;delegation should match&quot;</span>)
+                    .expect(<span class="string">"delegation query should work"</span>);
+                <span class="macro">assert_eq!</span>(del, d, <span class="string">"delegation should match"</span>)
             }
         }
 
@@ -884,13 +886,13 @@
         );
         <span class="macro">assert_eq!</span>(
             expected_delegations, delegations,
-            <span class="string">&quot;expected delegations should match&quot;
+            <span class="string">"expected delegations should match"
         </span>);
 
         <span class="comment">// Test all debonding delegations.
         </span><span class="kw">let </span>debonding_delegations = staking_state
             .debonding_delegations()
-            .expect(<span class="string">&quot;debonding delegations query should work&quot;</span>);
+            .expect(<span class="string">"debonding delegations query should work"</span>);
         <span class="kw">for </span>(escrow_addr, debss) <span class="kw">in </span><span class="kw-2">&amp;</span>debonding_delegations {
             <span class="kw">for </span>(delegator_addr, debs) <span class="kw">in </span>debss {
                 <span class="kw">for </span>deb <span class="kw">in </span>debs {
@@ -900,8 +902,8 @@
                             escrow_addr.clone(),
                             deb.debond_end_time,
                         )
-                        .expect(<span class="string">&quot;debonding delegation query should work&quot;</span>);
-                    <span class="macro">assert_eq!</span>(deb.clone(), d, <span class="string">&quot;debonding delegation should match&quot;</span>)
+                        .expect(<span class="string">"debonding delegation query should work"</span>);
+                    <span class="macro">assert_eq!</span>(deb.clone(), d, <span class="string">"debonding delegation should match"</span>)
                 }
             }
         }
@@ -945,44 +947,44 @@
         );
         <span class="macro">assert_eq!</span>(
             expected_debonding, debonding_delegations,
-            <span class="string">&quot;expected debonding delegations should match&quot;
+            <span class="string">"expected debonding delegations should match"
         </span>);
 
         <span class="comment">// Test all stored balances.
         </span><span class="kw">let </span>total_supply = staking_state
             .total_supply()
-            .expect(<span class="string">&quot;total supply query should work&quot;</span>);
+            .expect(<span class="string">"total supply query should work"</span>);
         <span class="macro">assert_eq!</span>(
             Quantity::from(<span class="number">10000u32</span>),
             total_supply,
-            <span class="string">&quot;total supply should match expected&quot;
+            <span class="string">"total supply should match expected"
         </span>);
 
         <span class="kw">let </span>common_pool = staking_state
             .common_pool()
-            .expect(<span class="string">&quot;common pool query should work&quot;</span>);
+            .expect(<span class="string">"common pool query should work"</span>);
         <span class="macro">assert_eq!</span>(
             Quantity::from(<span class="number">1000u32</span>),
             common_pool,
-            <span class="string">&quot;common pool should match expected&quot;
+            <span class="string">"common pool should match expected"
         </span>);
 
         <span class="kw">let </span>last_block_fees = staking_state
             .last_block_fees()
-            .expect(<span class="string">&quot;last block fees query should work&quot;</span>);
+            .expect(<span class="string">"last block fees query should work"</span>);
         <span class="macro">assert_eq!</span>(
             Quantity::from(<span class="number">33u32</span>),
             last_block_fees,
-            <span class="string">&quot;last block fees should match expected&quot;
+            <span class="string">"last block fees should match expected"
         </span>);
 
         <span class="kw">let </span>governance_deposits = staking_state
             .governance_deposits()
-            .expect(<span class="string">&quot;governance deposits query should work&quot;</span>);
+            .expect(<span class="string">"governance deposits query should work"</span>);
         <span class="macro">assert_eq!</span>(
             Quantity::from(<span class="number">12u32</span>),
             governance_deposits,
-            <span class="string">&quot;governance deposits should match expected&quot;
+            <span class="string">"governance deposits should match expected"
         </span>);
     }
 }

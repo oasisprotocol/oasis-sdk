@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/storage/mkvs/tree/iterator.rs`."><title>iterator.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/storage/mkvs/tree/iterator.rs`."><title>iterator.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -637,18 +639,18 @@
 
 <span class="kw">use </span><span class="kw">crate</span>::storage::mkvs::{<span class="self">self</span>, cache::<span class="kw-2">*</span>, sync::<span class="kw-2">*</span>, tree::<span class="kw-2">*</span>};
 
-<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>FetcherSyncIterate&lt;<span class="lifetime">&#39;a</span>&gt; {
-    key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Key,
+<span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>FetcherSyncIterate&lt;<span class="lifetime">'a</span>&gt; {
+    key: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Key,
     prefetch: usize,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; FetcherSyncIterate&lt;<span class="lifetime">&#39;a</span>&gt; {
-    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new(key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>Key, prefetch: usize) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; FetcherSyncIterate&lt;<span class="lifetime">'a</span>&gt; {
+    <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new(key: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Key, prefetch: usize) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{ key, prefetch }
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>&gt; ReadSyncFetcher <span class="kw">for </span>FetcherSyncIterate&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>&gt; ReadSyncFetcher <span class="kw">for </span>FetcherSyncIterate&lt;<span class="lifetime">'a</span>&gt; {
     <span class="kw">fn </span>fetch(<span class="kw-2">&amp;</span><span class="self">self</span>, root: Root, ptr: NodePtrRef, rs: <span class="kw-2">&amp;mut </span>Box&lt;<span class="kw">dyn </span>ReadSync&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Proof&gt; {
         <span class="kw">let </span>rsp = rs.sync_iterate(IterateRequest {
             tree: TreeID {
@@ -682,17 +684,17 @@
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>PathAtom {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; std::result::Result&lt;(), fmt::Error&gt; {
-        f.debug_struct(<span class="string">&quot;PathAtom&quot;</span>)
-            .field(<span class="string">&quot;bit_depth&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.bit_depth)
-            .field(<span class="string">&quot;path&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.path)
-            .field(<span class="string">&quot;state&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.state)
+        f.debug_struct(<span class="string">"PathAtom"</span>)
+            .field(<span class="string">"bit_depth"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.bit_depth)
+            .field(<span class="string">"path"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.path)
+            .field(<span class="string">"state"</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.state)
             .finish()
     }
 }
 
 <span class="doccomment">/// Tree iterator.
-</span><span class="kw">pub struct </span>TreeIterator&lt;<span class="lifetime">&#39;tree</span>&gt; {
-    tree: <span class="kw-2">&amp;</span><span class="lifetime">&#39;tree </span>Tree,
+</span><span class="kw">pub struct </span>TreeIterator&lt;<span class="lifetime">'tree</span>&gt; {
+    tree: <span class="kw-2">&amp;</span><span class="lifetime">'tree </span>Tree,
     prefetch: usize,
     pos: VecDeque&lt;PathAtom&gt;,
     key: <span class="prelude-ty">Option</span>&lt;Key&gt;,
@@ -700,9 +702,9 @@
     error: <span class="prelude-ty">Option</span>&lt;Error&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;tree</span>&gt; TreeIterator&lt;<span class="lifetime">&#39;tree</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'tree</span>&gt; TreeIterator&lt;<span class="lifetime">'tree</span>&gt; {
     <span class="doccomment">/// Create a new tree iterator.
-    </span><span class="kw">fn </span>new(tree: <span class="kw-2">&amp;</span><span class="lifetime">&#39;tree </span>Tree) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">fn </span>new(tree: <span class="kw-2">&amp;</span><span class="lifetime">'tree </span>Tree) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             tree,
             prefetch: <span class="number">0</span>,
@@ -726,7 +728,7 @@
 
         <span class="kw">while </span>!<span class="self">self</span>.pos.is_empty() {
             <span class="comment">// Start where we left off.
-            </span><span class="kw">let </span>atom = <span class="self">self</span>.pos.pop_front().expect(<span class="string">&quot;not empty&quot;</span>);
+            </span><span class="kw">let </span>atom = <span class="self">self</span>.pos.pop_front().expect(<span class="string">"not empty"</span>);
             <span class="kw">let </span><span class="kw-2">mut </span>remainder = std::mem::take(<span class="kw-2">&amp;mut </span><span class="self">self</span>.pos);
 
             <span class="comment">// Remember where the path from root to target node ends (will end).
@@ -737,9 +739,9 @@
             }
             drop(cache);
 
-            <span class="comment">// Try to proceed with the current node. If we don&#39;t succeed, proceed to the
+            <span class="comment">// Try to proceed with the current node. If we don't succeed, proceed to the
             // next node.
-            </span><span class="kw">let </span>key = <span class="self">self</span>.key.take().expect(<span class="string">&quot;iterator is valid&quot;</span>);
+            </span><span class="kw">let </span>key = <span class="self">self</span>.key.take().expect(<span class="string">"iterator is valid"</span>);
             <span class="self">self</span>.reset();
             <span class="kw">if let </span><span class="prelude-val">Err</span>(error) =
                 <span class="self">self</span>._next(atom.ptr, atom.bit_depth, atom.path, key.clone(), atom.state)
@@ -878,7 +880,7 @@
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                 }
 
-                <span class="macro">unreachable!</span>(<span class="string">&quot;node kind is internal node&quot;</span>);
+                <span class="macro">unreachable!</span>(<span class="string">"node kind is internal node"</span>);
             }
             NodeKind::Leaf =&gt; {
                 <span class="comment">// Reached a leaf node.
@@ -889,7 +891,7 @@
                         <span class="self">self</span>.value = <span class="prelude-val">Some</span>(n.value.clone());
                     }
                 } <span class="kw">else </span>{
-                    <span class="macro">unreachable!</span>(<span class="string">&quot;node kind is leaf node&quot;</span>);
+                    <span class="macro">unreachable!</span>(<span class="string">"node kind is leaf node"</span>);
                 }
 
                 <span class="prelude-val">Ok</span>(())
@@ -898,7 +900,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;tree</span>&gt; Iterator <span class="kw">for </span>TreeIterator&lt;<span class="lifetime">&#39;tree</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'tree</span>&gt; Iterator <span class="kw">for </span>TreeIterator&lt;<span class="lifetime">'tree</span>&gt; {
     <span class="kw">type </span>Item = (Vec&lt;u8&gt;, Vec&lt;u8&gt;);
 
     <span class="kw">fn </span>next(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="self">Self</span>::Item&gt; {
@@ -908,15 +910,15 @@
             <span class="kw">return </span><span class="prelude-val">None</span>;
         }
 
-        <span class="kw">let </span>key = <span class="self">self</span>.key.as_ref().expect(<span class="string">&quot;iterator is valid&quot;</span>).clone();
-        <span class="kw">let </span>value = <span class="self">self</span>.value.as_ref().expect(<span class="string">&quot;iterator is valid&quot;</span>).clone();
+        <span class="kw">let </span>key = <span class="self">self</span>.key.as_ref().expect(<span class="string">"iterator is valid"</span>).clone();
+        <span class="kw">let </span>value = <span class="self">self</span>.value.as_ref().expect(<span class="string">"iterator is valid"</span>).clone();
         TreeIterator::next(<span class="self">self</span>);
 
         <span class="prelude-val">Some</span>((key, value))
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;tree</span>&gt; mkvs::Iterator <span class="kw">for </span>TreeIterator&lt;<span class="lifetime">&#39;tree</span>&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'tree</span>&gt; mkvs::Iterator <span class="kw">for </span>TreeIterator&lt;<span class="lifetime">'tree</span>&gt; {
     <span class="kw">fn </span>set_prefetch(<span class="kw-2">&amp;mut </span><span class="self">self</span>, prefetch: usize) {
         <span class="self">self</span>.prefetch = prefetch;
     }
@@ -998,42 +1000,42 @@
         it.rewind();
         <span class="macro">assert!</span>(
             !it.is_valid(),
-            <span class="string">&quot;iterator should be invalid on an empty tree&quot;
+            <span class="string">"iterator should be invalid on an empty tree"
         </span>);
 
         <span class="comment">// Test with one item.
-        </span>tree.insert(<span class="string">b&quot;key&quot;</span>, <span class="string">b&quot;first&quot;</span>).unwrap();
+        </span>tree.insert(<span class="string">b"key"</span>, <span class="string">b"first"</span>).unwrap();
         <span class="kw">let </span><span class="kw-2">mut </span>it = tree.iter();
         it.rewind();
         <span class="macro">assert!</span>(
             it.is_valid(),
-            <span class="string">&quot;iterator should be valid on a non-empty tree&quot;
+            <span class="string">"iterator should be valid on a non-empty tree"
         </span>);
 
         <span class="comment">// Insert some items.
         </span><span class="kw">let </span>items = <span class="macro">vec!</span>[
-            (<span class="string">b&quot;key&quot;</span>.to_vec(), <span class="string">b&quot;first&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 1&quot;</span>.to_vec(), <span class="string">b&quot;one&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 2&quot;</span>.to_vec(), <span class="string">b&quot;two&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 5&quot;</span>.to_vec(), <span class="string">b&quot;five&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 8&quot;</span>.to_vec(), <span class="string">b&quot;eight&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 9&quot;</span>.to_vec(), <span class="string">b&quot;nine&quot;</span>.to_vec()),
+            (<span class="string">b"key"</span>.to_vec(), <span class="string">b"first"</span>.to_vec()),
+            (<span class="string">b"key 1"</span>.to_vec(), <span class="string">b"one"</span>.to_vec()),
+            (<span class="string">b"key 2"</span>.to_vec(), <span class="string">b"two"</span>.to_vec()),
+            (<span class="string">b"key 5"</span>.to_vec(), <span class="string">b"five"</span>.to_vec()),
+            (<span class="string">b"key 8"</span>.to_vec(), <span class="string">b"eight"</span>.to_vec()),
+            (<span class="string">b"key 9"</span>.to_vec(), <span class="string">b"nine"</span>.to_vec()),
         ];
         <span class="kw">for </span>(key, value) <span class="kw">in </span>items.iter() {
             tree.insert(key, value).unwrap();
         }
 
         <span class="kw">let </span>tests = <span class="macro">vec!</span>[
-            (<span class="string">b&quot;k&quot;</span>.to_vec(), <span class="number">0</span>),
-            (<span class="string">b&quot;key 1&quot;</span>.to_vec(), <span class="number">1</span>),
-            (<span class="string">b&quot;key 3&quot;</span>.to_vec(), <span class="number">3</span>),
-            (<span class="string">b&quot;key 4&quot;</span>.to_vec(), <span class="number">3</span>),
-            (<span class="string">b&quot;key 5&quot;</span>.to_vec(), <span class="number">3</span>),
-            (<span class="string">b&quot;key 6&quot;</span>.to_vec(), <span class="number">4</span>),
-            (<span class="string">b&quot;key 7&quot;</span>.to_vec(), <span class="number">4</span>),
-            (<span class="string">b&quot;key 8&quot;</span>.to_vec(), <span class="number">4</span>),
-            (<span class="string">b&quot;key 9&quot;</span>.to_vec(), <span class="number">5</span>),
-            (<span class="string">b&quot;key A&quot;</span>.to_vec(), -<span class="number">1</span>),
+            (<span class="string">b"k"</span>.to_vec(), <span class="number">0</span>),
+            (<span class="string">b"key 1"</span>.to_vec(), <span class="number">1</span>),
+            (<span class="string">b"key 3"</span>.to_vec(), <span class="number">3</span>),
+            (<span class="string">b"key 4"</span>.to_vec(), <span class="number">3</span>),
+            (<span class="string">b"key 5"</span>.to_vec(), <span class="number">3</span>),
+            (<span class="string">b"key 6"</span>.to_vec(), <span class="number">4</span>),
+            (<span class="string">b"key 7"</span>.to_vec(), <span class="number">4</span>),
+            (<span class="string">b"key 8"</span>.to_vec(), <span class="number">4</span>),
+            (<span class="string">b"key 9"</span>.to_vec(), <span class="number">5</span>),
+            (<span class="string">b"key A"</span>.to_vec(), -<span class="number">1</span>),
         ];
 
         <span class="comment">// Direct.
@@ -1041,7 +1043,7 @@
         test_iterator_with(<span class="kw-2">&amp;</span>items, it, <span class="kw-2">&amp;</span>tests);
 
         <span class="comment">// Remote.
-        </span><span class="kw">let </span>hash = tree.commit(Default::default(), <span class="number">0</span>).expect(<span class="string">&quot;commit&quot;</span>);
+        </span><span class="kw">let </span>hash = tree.commit(Default::default(), <span class="number">0</span>).expect(<span class="string">"commit"</span>);
         <span class="kw">let </span>write_log = items
             .iter()
             .cloned()
@@ -1084,10 +1086,10 @@
             .get_read_syncer()
             .as_any()
             .downcast_ref::&lt;StatsCollector&gt;()
-            .expect(<span class="string">&quot;stats&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_count, <span class="string">&quot;sync_get_count&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_prefixes_count, <span class="string">&quot;sync_get_prefixes_count&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">1</span>, stats.sync_iterate_count, <span class="string">&quot;sync_iterate_count&quot;</span>);
+            .expect(<span class="string">"stats"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_count, <span class="string">"sync_get_count"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_prefixes_count, <span class="string">"sync_get_prefixes_count"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">1</span>, stats.sync_iterate_count, <span class="string">"sync_iterate_count"</span>);
 
         <span class="comment">// Remote with prefetch (3).
         </span><span class="kw">let </span>stats = StatsCollector::new(server.read_sync());
@@ -1109,10 +1111,10 @@
             .get_read_syncer()
             .as_any()
             .downcast_ref::&lt;StatsCollector&gt;()
-            .expect(<span class="string">&quot;stats&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_count, <span class="string">&quot;sync_get_count&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_prefixes_count, <span class="string">&quot;sync_get_prefixes_count&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">2</span>, stats.sync_iterate_count, <span class="string">&quot;sync_iterate_count&quot;</span>);
+            .expect(<span class="string">"stats"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_count, <span class="string">"sync_get_count"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_prefixes_count, <span class="string">"sync_get_prefixes_count"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">2</span>, stats.sync_iterate_count, <span class="string">"sync_iterate_count"</span>);
     }
 
     <span class="attr">#[test]
@@ -1122,14 +1124,14 @@
             .build(Box::new(NoopReadSyncer));
 
         <span class="kw">let </span>items = <span class="macro">vec!</span>[
-            (<span class="string">b&quot;key 5&quot;</span>.to_vec(), <span class="string">b&quot;fivey&quot;</span>.to_vec()),
-            (<span class="string">b&quot;key 7&quot;</span>.to_vec(), <span class="string">b&quot;seven&quot;</span>.to_vec()),
+            (<span class="string">b"key 5"</span>.to_vec(), <span class="string">b"fivey"</span>.to_vec()),
+            (<span class="string">b"key 7"</span>.to_vec(), <span class="string">b"seven"</span>.to_vec()),
         ];
         <span class="kw">for </span>(key, value) <span class="kw">in </span>items.iter() {
             tree.insert(key, value).unwrap();
         }
 
-        <span class="kw">let </span>tests = <span class="macro">vec!</span>[(<span class="string">b&quot;key 3&quot;</span>.to_vec(), <span class="number">0</span>)];
+        <span class="kw">let </span>tests = <span class="macro">vec!</span>[(<span class="string">b"key 3"</span>.to_vec(), <span class="number">0</span>)];
 
         <span class="kw">let </span>it = tree.iter();
         test_iterator_with(<span class="kw-2">&amp;</span>items, it, <span class="kw-2">&amp;</span>tests);
@@ -1143,16 +1145,16 @@
 
         <span class="kw">let </span>items: Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; = <span class="macro">vec!</span>[
             (
-                <span class="string">&quot;54dcb497eb46bc7cb1a1a29d143d5d41f1a684c97e12f2ae536eceb828c15fc34c02&quot;
+                <span class="string">"54dcb497eb46bc7cb1a1a29d143d5d41f1a684c97e12f2ae536eceb828c15fc34c02"
                     </span>.from_hex()
                     .unwrap(),
-                <span class="string">b&quot;value&quot;</span>.to_vec(),
+                <span class="string">b"value"</span>.to_vec(),
             ),
             (
-                <span class="string">&quot;54dcb497eb46bc7cb1a1a29d143d5d41f1a684c97e12f2ae536eceb828c15fc34c02&quot;
+                <span class="string">"54dcb497eb46bc7cb1a1a29d143d5d41f1a684c97e12f2ae536eceb828c15fc34c02"
                     </span>.from_hex()
                     .unwrap(),
-                <span class="string">b&quot;value&quot;</span>.to_vec(),
+                <span class="string">b"value"</span>.to_vec(),
             ),
         ];
         <span class="kw">for </span>(key, value) <span class="kw">in </span>items.iter() {
@@ -1161,16 +1163,16 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>it = tree.iter();
         <span class="kw">let </span>missing_key: Vec&lt;u8&gt; =
-            <span class="string">&quot;54da85be3251772db943cba67341d402117c87ada2a9e8aad7171d40b6b4dc9fbc&quot;
+            <span class="string">"54da85be3251772db943cba67341d402117c87ada2a9e8aad7171d40b6b4dc9fbc"
                 </span>.from_hex()
                 .unwrap();
         it.seek(<span class="kw-2">&amp;</span>missing_key);
-        <span class="macro">assert!</span>(it.is_valid(), <span class="string">&quot;iterator should be valid&quot;</span>);
+        <span class="macro">assert!</span>(it.is_valid(), <span class="string">"iterator should be valid"</span>);
         <span class="kw">let </span>item = iter::Iterator::next(<span class="kw-2">&amp;mut </span>it);
         <span class="macro">assert_eq!</span>(
-            <span class="prelude-val">Some</span>((items[<span class="number">0</span>].<span class="number">0</span>.clone(), <span class="string">b&quot;value&quot;</span>.to_vec())),
+            <span class="prelude-val">Some</span>((items[<span class="number">0</span>].<span class="number">0</span>.clone(), <span class="string">b"value"</span>.to_vec())),
             item,
-            <span class="string">&quot;value should be correct&quot;
+            <span class="string">"value should be correct"
         </span>);
     }
 
@@ -1185,13 +1187,13 @@
                 .build(Box::new(NoopReadSyncer)),
         );
 
-        <span class="kw">let </span>(keys, values) = generate_key_value_pairs_ex(<span class="string">&quot;T&quot;</span>.to_owned(), <span class="number">100</span>);
+        <span class="kw">let </span>(keys, values) = generate_key_value_pairs_ex(<span class="string">"T"</span>.to_owned(), <span class="number">100</span>);
         <span class="kw">let </span>items: Vec&lt;(Vec&lt;u8&gt;, Vec&lt;u8&gt;)&gt; = keys.into_iter().zip(values.into_iter()).collect();
         <span class="kw">for </span>(key, value) <span class="kw">in </span><span class="kw-2">&amp;</span>items {
             tree.insert(<span class="kw-2">&amp;</span>key, <span class="kw-2">&amp;</span>value).unwrap();
         }
 
-        <span class="kw">let </span>(write_log, hash) = tree.commit_both(Default::default(), <span class="number">0</span>).expect(<span class="string">&quot;commit&quot;</span>);
+        <span class="kw">let </span>(write_log, hash) = tree.commit_both(Default::default(), <span class="number">0</span>).expect(<span class="string">"commit"</span>);
         server.apply(<span class="kw-2">&amp;</span>write_log, hash, Default::default(), <span class="number">0</span>);
 
         <span class="comment">// Create a remote tree with limited cache capacity so that nodes will
@@ -1215,12 +1217,12 @@
             .get_read_syncer()
             .as_any()
             .downcast_ref::&lt;StatsCollector&gt;()
-            .expect(<span class="string">&quot;stats&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_count, <span class="string">&quot;sync_get_count&quot;</span>);
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_prefixes_count, <span class="string">&quot;sync_get_prefixes_count&quot;</span>);
+            .expect(<span class="string">"stats"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_count, <span class="string">"sync_get_count"</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, stats.sync_get_prefixes_count, <span class="string">"sync_get_prefixes_count"</span>);
         <span class="comment">// We require multiple fetches as we can only store a limited amount of
         // results per fetch due to the cache being too small.
-        </span><span class="macro">assert_eq!</span>(<span class="number">2</span>, stats.sync_iterate_count, <span class="string">&quot;sync_iterate_count&quot;</span>);
+        </span><span class="macro">assert_eq!</span>(<span class="number">2</span>, stats.sync_iterate_count, <span class="string">"sync_iterate_count"</span>);
     }
 
     <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">super</span>::<span class="kw">super</span>) <span class="kw">fn </span>test_iterator_with&lt;I: mkvs::Iterator&gt;(
@@ -1233,21 +1235,21 @@
         it.rewind();
         <span class="kw">for </span>(idx, (key, value)) <span class="kw">in </span>it.by_ref().enumerate() {
             <span class="kw">if </span>!tests.is_empty() {
-                <span class="macro">assert_eq!</span>(items[idx].<span class="number">0</span>, key, <span class="string">&quot;iterator should have the correct key&quot;</span>);
+                <span class="macro">assert_eq!</span>(items[idx].<span class="number">0</span>, key, <span class="string">"iterator should have the correct key"</span>);
                 <span class="macro">assert_eq!</span>(
                     items[idx].<span class="number">1</span>, value,
-                    <span class="string">&quot;iterator should have the correct value&quot;
+                    <span class="string">"iterator should have the correct value"
                 </span>);
             }
             iterations += <span class="number">1</span>;
         }
-        <span class="macro">assert!</span>(it.error().is_none(), <span class="string">&quot;iterator should not error&quot;</span>);
-        <span class="macro">assert_eq!</span>(iterations, items.len(), <span class="string">&quot;iterator should go over all items&quot;</span>);
+        <span class="macro">assert!</span>(it.error().is_none(), <span class="string">"iterator should not error"</span>);
+        <span class="macro">assert_eq!</span>(iterations, items.len(), <span class="string">"iterator should go over all items"</span>);
 
         <span class="kw">for </span>(seek, pos) <span class="kw">in </span>tests {
             it.seek(<span class="kw-2">&amp;</span>seek);
             <span class="kw">if </span><span class="kw-2">*</span>pos == -<span class="number">1 </span>{
-                <span class="macro">assert!</span>(!it.is_valid(), <span class="string">&quot;iterator should not be valid after seek&quot;</span>);
+                <span class="macro">assert!</span>(!it.is_valid(), <span class="string">"iterator should not be valid after seek"</span>);
                 <span class="kw">continue</span>;
             }
 
@@ -1256,7 +1258,7 @@
                 <span class="macro">assert_eq!</span>(
                     <span class="prelude-val">Some</span>(expected.clone()),
                     item,
-                    <span class="string">&quot;iterator should have the correct item&quot;
+                    <span class="string">"iterator should have the correct item"
                 </span>);
             }
         }

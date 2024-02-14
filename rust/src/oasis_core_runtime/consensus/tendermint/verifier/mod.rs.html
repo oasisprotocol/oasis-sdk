@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/tendermint/verifier/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../../../oasis_core_runtime/index.html"><img class="rust-logo" src="../../../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/689ebb4/runtime/src/consensus/tendermint/verifier/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1016,7 +1018,7 @@
         runtime_id: Namespace,
         chain_context: String,
     ) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>logger = get_logger(<span class="string">&quot;consensus/cometbft/verifier&quot;</span>);
+        <span class="kw">let </span>logger = get_logger(<span class="string">"consensus/cometbft/verifier"</span>);
         <span class="kw">let </span>(command_sender, command_receiver) = channel::unbounded();
         <span class="kw">let </span>runtime_version = protocol.get_config().version;
         <span class="kw">let </span>trusted_state_store =
@@ -1024,7 +1026,7 @@
 
         <span class="macro">assert_eq!</span>(
             trust_root.runtime_id, runtime_id,
-            <span class="string">&quot;trust root must have the same runtime id&quot;
+            <span class="string">"trust root must have the same runtime id"
         </span>);
 
         <span class="self">Self </span>{
@@ -1136,21 +1138,21 @@
         <span class="kw">let </span>untrusted_header = untrusted_block
             .signed_header
             .as_ref()
-            .ok_or_else(|| Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;missing signed header&quot;</span>)))<span class="question-mark">?</span>;
+            .ok_or_else(|| Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">"missing signed header"</span>)))<span class="question-mark">?</span>;
 
         <span class="comment">// Verify up to the block at current height.
         // Only does forward verification and fails if height is lower than the last trust height.
         </span><span class="kw">let </span>height = untrusted_header.header().height.value();
         <span class="kw">if </span>height != lb_height {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;inconsistent light block/header height&quot;
+                <span class="string">"inconsistent light block/header height"
             </span>)));
         }
         <span class="kw">let </span>verified_block = <span class="self">self</span>.verify_to_target(height, cache, instance)<span class="question-mark">?</span>;
 
         <span class="comment">// Validate passed consensus block.
         </span><span class="kw">if </span>untrusted_header.header() != verified_block.signed_header.header() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;header mismatch&quot;</span>)));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">"header mismatch"</span>)));
         }
 
         <span class="prelude-val">Ok</span>(untrusted_block)
@@ -1182,7 +1184,7 @@
     /// Verification is done in three steps. In the first one, the verifier selects a unique nonce
     /// and sends it to the host. The second step is done by the host, who prepares, signs and
     /// submits a prove freshness transaction using the received nonce. Once transaction is included
-    /// in a block, the host replies with block&#39;s height, transaction details and a Merkle proof
+    /// in a block, the host replies with block's height, transaction details and a Merkle proof
     /// that the transaction was included in the block. In the final step, the verifier verifies
     /// the proof and accepts state as fresh iff verification succeeds.
     </span><span class="kw">fn </span>verify_freshness_with_proof(
@@ -1192,7 +1194,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="macro">info!</span>(
             <span class="self">self</span>.logger,
-            <span class="string">&quot;Verifying state freshness using prove freshness transaction&quot;
+            <span class="string">"Verifying state freshness using prove freshness transaction"
         </span>);
 
         <span class="comment">// Generate a random nonce for prove freshness transaction.
@@ -1203,7 +1205,7 @@
         <span class="comment">// Ask host for freshness proof.
         </span><span class="kw">let </span>io = Io::new(<span class="kw-2">&amp;</span><span class="self">self</span>.protocol);
         <span class="kw">let </span>stwp = io.fetch_freshness_proof(<span class="kw-2">&amp;</span>nonce).map_err(|err| {
-            Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to fetch freshness proof: {}&quot;</span>, err))
+            Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">"failed to fetch freshness proof: {}"</span>, err))
         })<span class="question-mark">?</span>;
 
         <span class="comment">// Verify the transaction and the proof.
@@ -1212,19 +1214,19 @@
         <span class="comment">// Verify the method name and the nonce.
         </span><span class="kw">if </span>tx.method != METHOD_PROVE_FRESHNESS {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;invalid method name&quot;
+                <span class="string">"invalid method name"
             </span>)));
         }
 
         <span class="kw">let </span>tx_nonce: Nonce = cbor::from_value(tx.body).map_err(|err| {
-            Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to decode nonce: {}&quot;</span>, err))
+            Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">"failed to decode nonce: {}"</span>, err))
         })<span class="question-mark">?</span>;
         <span class="kw">match </span>nonce.cmp(<span class="kw-2">&amp;</span>tx_nonce) {
             std::cmp::Ordering::Equal =&gt; (),
-            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;invalid nonce&quot;</span>))),
+            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">"invalid nonce"</span>))),
         }
 
-        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;State freshness successfully verified&quot;</span>);
+        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"State freshness successfully verified"</span>);
 
         <span class="prelude-val">Ok</span>(())
     }
@@ -1239,7 +1241,7 @@
         <span class="comment">// Verify the signature.
         </span><span class="kw">if </span>!signed_tx.verify(<span class="kw-2">&amp;</span><span class="self">self</span>.chain_context) {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;failed to verify the signature&quot;
+                <span class="string">"failed to verify the signature"
             </span>)));
         }
 
@@ -1247,24 +1249,24 @@
         </span><span class="kw">let </span>verified_block = <span class="self">self
             </span>.verify_to_target(proof.height, cache, instance)
             .map_err(|err| {
-                Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to fetch the block: {}&quot;</span>, err))
+                Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">"failed to fetch the block: {}"</span>, err))
             })<span class="question-mark">?</span>;
 
         <span class="kw">let </span>header = verified_block.signed_header.header;
         <span class="kw">if </span>header.height.value() != proof.height {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;invalid block&quot;
+                <span class="string">"invalid block"
             </span>)));
         }
 
         <span class="kw">let </span>root_hash = header
             .data_hash
-            .ok_or_else(|| Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;root hash not found&quot;</span>)))<span class="question-mark">?</span>;
+            .ok_or_else(|| Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">"root hash not found"</span>)))<span class="question-mark">?</span>;
         <span class="kw">let </span>root_hash = <span class="kw">match </span>root_hash {
             TMHash::Sha256(hash) =&gt; hash,
             TMHash::None =&gt; {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;root hash not found&quot;
+                    <span class="string">"root hash not found"
                 </span>)));
             }
         };
@@ -1276,16 +1278,16 @@
 
         <span class="comment">// Decode raw proof as a CometBFT Merkle proof of inclusion.
         </span><span class="kw">let </span>merkle_proof: merkle::Proof = cbor::from_slice(<span class="kw-2">&amp;</span>proof.raw_proof).map_err(|err| {
-            Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to decode Merkle proof: {}&quot;</span>, err))
+            Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">"failed to decode Merkle proof: {}"</span>, err))
         })<span class="question-mark">?</span>;
 
         merkle_proof.verify(root_hash, tx_hash).map_err(|err| {
-            Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to verify Merkle proof: {}&quot;</span>, err))
+            Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">"failed to verify Merkle proof: {}"</span>, err))
         })<span class="question-mark">?</span>;
 
         <span class="comment">// Decode transaction.
         </span><span class="kw">let </span>tx: Transaction = cbor::from_slice(signed_tx.blob.as_slice()).map_err(|err| {
-            Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;failed to decode transaction: {}&quot;</span>, err))
+            Error::TransactionVerificationFailed(<span class="macro">anyhow!</span>(<span class="string">"failed to decode transaction: {}"</span>, err))
         })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(tx)
@@ -1300,14 +1302,14 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;Root, Error&gt; {
         <span class="macro">debug!</span>(
             <span class="self">self</span>.logger,
-            <span class="string">&quot;Fetching state root from block metadata transaction&quot;
+            <span class="string">"Fetching state root from block metadata transaction"
         </span>);
 
         <span class="comment">// Ask the host for block metadata transaction.
         </span><span class="kw">let </span>io = Io::new(<span class="kw-2">&amp;</span><span class="self">self</span>.protocol);
         <span class="kw">let </span>stwp = io.fetch_block_metadata(height).map_err(|err| {
             Error::StateRoot(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;failed to fetch block metadata transaction: {}&quot;</span>,
+                <span class="string">"failed to fetch block metadata transaction: {}"</span>,
                 err
             ))
         })<span class="question-mark">?</span>;
@@ -1316,12 +1318,12 @@
         </span><span class="kw">let </span>tx = <span class="self">self</span>.verify_transaction(cache, instance, <span class="kw-2">&amp;</span>stwp.signed_tx, <span class="kw-2">&amp;</span>stwp.proof)<span class="question-mark">?</span>;
 
         <span class="kw">if </span>tx.method != METHOD_META {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::StateRoot(<span class="macro">anyhow!</span>(<span class="string">&quot;invalid method name&quot;</span>)));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::StateRoot(<span class="macro">anyhow!</span>(<span class="string">"invalid method name"</span>)));
         }
 
         <span class="kw">let </span>meta: BlockMetadata = cbor::from_value(tx.body).map_err(|err| {
             Error::StateRoot(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;failed to decode block metadata transaction: {}&quot;</span>,
+                <span class="string">"failed to decode block metadata transaction: {}"</span>,
                 err
             ))
         })<span class="question-mark">?</span>;
@@ -1379,7 +1381,7 @@
 
         <span class="comment">// Obtain an authoritative state root for full verification.
         // Note that we cannot return the state at height+1 as the block might not have been
-        // finalized yet, and we won&#39;t be able to query block results such as events.
+        // finalized yet, and we won't be able to query block results such as events.
         </span><span class="kw">let </span>next_state = <span class="self">self</span>.consensus_state_at(cache, instance, height + <span class="number">1</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Perform full verification.
@@ -1440,7 +1442,7 @@
 
         <span class="comment">// Obtain an authoritative state root for full verification.
         // Note that we cannot return the state at height+1 as the block might not have been
-        // finalized yet, and we won&#39;t be able to query block results such as events.
+        // finalized yet, and we won't be able to query block results such as events.
         </span><span class="kw">let </span>next_state = <span class="self">self</span>.consensus_state_at(cache, instance, height + <span class="number">1</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Perform full verification.
@@ -1468,12 +1470,12 @@
             Body::HostFetchConsensusEventsResponse(HostFetchConsensusEventsResponse { events }) =&gt; {
                 <span class="prelude-val">Ok</span>(events)
             }
-            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;bad response from host&quot;</span>))),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(<span class="string">"bad response from host"</span>))),
         }
     }
 
     <span class="kw">fn </span>update_insecure_posix_time(<span class="kw-2">&amp;</span><span class="self">self</span>, verified_block: <span class="kw-2">&amp;</span>TMLightBlock) {
-        <span class="comment">// Update untrusted time if ahead. This makes sure that the enclave&#39;s sense of time is
+        <span class="comment">// Update untrusted time if ahead. This makes sure that the enclave's sense of time is
         // synced with consensus sense of time based on the fact that consensus time is harder to
         // fake than host operating system time.
         </span>time::update_insecure_posix_time(
@@ -1494,8 +1496,8 @@
         std::thread::spawn(<span class="kw">move </span>|| {
             <span class="kw">let </span>_guard = <span class="self">self</span>.tokio_runtime.enter(); <span class="comment">// Ensure Tokio runtime is available.
 
-            </span><span class="kw">let </span>logger = get_logger(<span class="string">&quot;consensus/cometbft/verifier&quot;</span>);
-            <span class="macro">info!</span>(logger, <span class="string">&quot;Starting consensus verifier&quot;</span>);
+            </span><span class="kw">let </span>logger = get_logger(<span class="string">"consensus/cometbft/verifier"</span>);
+            <span class="macro">info!</span>(logger, <span class="string">"Starting consensus verifier"</span>);
 
             <span class="comment">// Try to initialize a couple of times as initially it may be the case that we have
             // started while the Runtime Host Protocol has not been fully initialized so the host
@@ -1507,7 +1509,7 @@
                     <span class="kw">match </span>std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| <span class="self">self</span>.run())) {
                         <span class="prelude-val">Ok</span>(result) =&gt; result,
                         <span class="prelude-val">Err</span>(<span class="kw">_</span>) =&gt; {
-                            <span class="macro">error!</span>(logger, <span class="string">&quot;Consensus verifier aborted&quot;</span>);
+                            <span class="macro">error!</span>(logger, <span class="string">"Consensus verifier aborted"</span>);
                             process::abort();
                         }
                     };
@@ -1518,15 +1520,15 @@
                     <span class="prelude-val">Err</span>(err @ Error::Builder(<span class="kw">_</span>))
                     | <span class="prelude-val">Err</span>(err @ Error::TrustedStateLoadingFailed)
                     | <span class="prelude-val">Err</span>(err @ Error::ChainContextTransitionFailed(<span class="kw">_</span>)) =&gt; {
-                        <span class="macro">error!</span>(logger, <span class="string">&quot;Consensus verifier failed to initialize, retrying&quot;</span>;
-                            <span class="string">&quot;err&quot; </span>=&gt; %err,
-                            <span class="string">&quot;retry&quot; </span>=&gt; retry,
+                        <span class="macro">error!</span>(logger, <span class="string">"Consensus verifier failed to initialize, retrying"</span>;
+                            <span class="string">"err" </span>=&gt; %err,
+                            <span class="string">"retry" </span>=&gt; retry,
                         );
                     }
                     <span class="prelude-val">Err</span>(err) =&gt; {
                         <span class="comment">// All other errors are fatal.
-                        </span><span class="macro">error!</span>(logger, <span class="string">&quot;Consensus verifier terminated, aborting&quot;</span>;
-                            <span class="string">&quot;err&quot; </span>=&gt; %err,
+                        </span><span class="macro">error!</span>(logger, <span class="string">"Consensus verifier terminated, aborting"</span>;
+                            <span class="string">"err" </span>=&gt; %err,
                         );
                         process::abort();
                     }
@@ -1536,7 +1538,7 @@
                 </span>std::thread::sleep(Duration::from_secs(<span class="number">1</span>));
             }
 
-            <span class="macro">error!</span>(logger, <span class="string">&quot;Failed to start consensus verifier, aborting&quot;</span>);
+            <span class="macro">error!</span>(logger, <span class="string">"Failed to start consensus verifier, aborting"</span>);
             process::abort();
         });
     }
@@ -1563,14 +1565,14 @@
 
         <span class="comment">// Build a light client using the embedded trust root or trust root
         // stored in the local store.
-        </span><span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Loading trusted state&quot;</span>);
+        </span><span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Loading trusted state"</span>);
         <span class="kw">let </span>trusted_state: TrustedState = <span class="self">self
             </span>.trusted_state_store
             .load(<span class="self">self</span>.runtime_version, <span class="kw-2">&amp;</span><span class="self">self</span>.trust_root)<span class="question-mark">?</span>;
 
         <span class="comment">// Verify if we can trust light blocks from a new chain if the consensus
         // chain context changes.
-        </span><span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Checking chain context change&quot;</span>);
+        </span><span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Checking chain context change"</span>);
         <span class="kw">let </span>trusted_state = <span class="self">self</span>.handle_chain_context_change(
             trusted_state,
             verifier.as_ref(),
@@ -1607,15 +1609,15 @@
             .map_err(|err| Error::Builder(err.into()))<span class="question-mark">?
             </span>.build();
 
-        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Consensus verifier initialized&quot;</span>;
-            <span class="string">&quot;trust_root_height&quot; </span>=&gt; trust_root.height,
-            <span class="string">&quot;trust_root_hash&quot; </span>=&gt; <span class="question-mark">?</span>trust_root.hash,
-            <span class="string">&quot;trust_root_runtime_id&quot; </span>=&gt; <span class="question-mark">?</span>trust_root.runtime_id,
-            <span class="string">&quot;trust_root_chain_context&quot; </span>=&gt; <span class="question-mark">?</span>trust_root.chain_context,
+        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Consensus verifier initialized"</span>;
+            <span class="string">"trust_root_height" </span>=&gt; trust_root.height,
+            <span class="string">"trust_root_hash" </span>=&gt; <span class="question-mark">?</span>trust_root.hash,
+            <span class="string">"trust_root_runtime_id" </span>=&gt; <span class="question-mark">?</span>trust_root.runtime_id,
+            <span class="string">"trust_root_chain_context" </span>=&gt; <span class="question-mark">?</span>trust_root.chain_context,
         );
 
         <span class="kw">let </span>host_node_id =
-            block_on(<span class="self">self</span>.protocol.identity()).expect(<span class="string">&quot;host should provide a node identity&quot;</span>);
+            block_on(<span class="self">self</span>.protocol.identity()).expect(<span class="string">"host should provide a node identity"</span>);
 
         <span class="kw">let </span><span class="kw-2">mut </span>cache = Cache::new(host_node_id);
 
@@ -1629,8 +1631,8 @@
         <span class="kw">let </span><span class="kw-2">mut </span>last_saved_verified_block_height =
             verified_block.signed_header.header.height.value();
 
-        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Consensus verifier synced&quot;</span>;
-            <span class="string">&quot;latest_height&quot; </span>=&gt; cache.latest_known_height(),
+        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Consensus verifier synced"</span>;
+            <span class="string">"latest_height" </span>=&gt; cache.latest_known_height(),
         );
 
         <span class="comment">// Verify state freshness with freshness proof. This step is required only for clients
@@ -1717,20 +1719,20 @@
 
         <span class="comment">// Nothing to handle.
         </span><span class="kw">if </span>trusted_state.trust_root.chain_context == host_info.consensus_chain_context {
-            <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Consensus chain context hasn&#39;t changed&quot;</span>);
+            <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Consensus chain context hasn't changed"</span>);
             <span class="kw">return </span><span class="prelude-val">Ok</span>(trusted_state);
         }
-        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Consensus chain context has changed&quot;</span>);
+        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Consensus chain context has changed"</span>);
 
         <span class="comment">// Chain context transition cannot be done directly from the embedded
-        // trust root as we don&#39;t have access to the matching trusted light
+        // trust root as we don't have access to the matching trusted light
         // block which validator set we need to verify blocks from the new chain.
         </span><span class="kw">let </span>trusted_block: TMLightBlock = trusted_state
             .trusted_blocks
             .pop()
             .ok_or_else(|| {
                 Error::ChainContextTransitionFailed(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;cannot transition from embedded trust root&quot;
+                    <span class="string">"cannot transition from embedded trust root"
                 </span>))
             })<span class="question-mark">?
             </span>.into();
@@ -1747,7 +1749,7 @@
 
         <span class="kw">if </span>untrusted_block.signed_header.header.last_block_id.is_some() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::ChainContextTransitionFailed(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;invalid genesis block&quot;
+                <span class="string">"invalid genesis block"
             </span>)));
         }
 
@@ -1755,7 +1757,7 @@
 
         <span class="comment">// Prepare trusted state for verification. As we are using the verifier
         // to verify the untrusted block and state transition, we must make
-        // sure that trusted and untrusted states don&#39;t belong to consecutive
+        // sure that trusted and untrusted states don't belong to consecutive
         // blocks as otherwise validator set hash will get verified also.
         // Keeping heights at minimum distance of 2 will make sure that the
         // verifier will check if there is enough overlap between the validator
@@ -1768,7 +1770,7 @@
             height
                 .value()
                 .checked_sub(<span class="number">1</span>)
-                .ok_or_else(|| Error::ChainContextTransitionFailed(<span class="macro">anyhow!</span>(<span class="string">&quot;height underflow&quot;</span>)))<span class="question-mark">?
+                .ok_or_else(|| Error::ChainContextTransitionFailed(<span class="macro">anyhow!</span>(<span class="string">"height underflow"</span>)))<span class="question-mark">?
                 </span>.try_into()
                 .unwrap()
         };
@@ -1797,28 +1799,28 @@
             Verdict::NotEnoughTrust(tally) =&gt; {
                 <span class="macro">info!</span>(
                     <span class="self">self</span>.logger,
-                    <span class="string">&quot;Not enough trust to accept new chain context&quot;</span>;
-                    <span class="string">&quot;log_event&quot; </span>=&gt; <span class="string">&quot;consensus/cometbft/verifier/chain_context/no_trust&quot;</span>,
-                    <span class="string">&quot;tally&quot; </span>=&gt; <span class="question-mark">?</span>tally,
+                    <span class="string">"Not enough trust to accept new chain context"</span>;
+                    <span class="string">"log_event" </span>=&gt; <span class="string">"consensus/cometbft/verifier/chain_context/no_trust"</span>,
+                    <span class="string">"tally" </span>=&gt; <span class="question-mark">?</span>tally,
                 );
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::ChainContextTransitionFailed(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;not enough trust&quot;
+                    <span class="string">"not enough trust"
                 </span>)));
             }
             Verdict::Invalid(e) =&gt; {
                 <span class="macro">info!</span>(
                     <span class="self">self</span>.logger,
-                    <span class="string">&quot;Failed to accept new chain context&quot;</span>;
-                    <span class="string">&quot;log_event&quot; </span>=&gt; <span class="string">&quot;consensus/cometbft/verifier/chain_context/failed&quot;</span>,
-                    <span class="string">&quot;error&quot; </span>=&gt; <span class="question-mark">?</span>e,
+                    <span class="string">"Failed to accept new chain context"</span>;
+                    <span class="string">"log_event" </span>=&gt; <span class="string">"consensus/cometbft/verifier/chain_context/failed"</span>,
+                    <span class="string">"error" </span>=&gt; <span class="question-mark">?</span>e,
                 );
                 <span class="kw">return </span><span class="prelude-val">Err</span>(Error::ChainContextTransitionFailed(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;invalid genesis block&quot;
+                    <span class="string">"invalid genesis block"
                 </span>)));
             }
         }
 
-        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">&quot;Consensus chain context transition done&quot;</span>);
+        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Consensus chain context transition done"</span>);
 
         <span class="kw">let </span>header = <span class="kw-2">&amp;</span>untrusted_block.signed_header.header;
         <span class="kw">let </span>trust_root = TrustRoot {

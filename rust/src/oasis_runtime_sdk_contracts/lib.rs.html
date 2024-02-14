@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/modules/contracts/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk_contracts" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_runtime_sdk_contracts/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/modules/contracts/src/lib.rs`."><title>lib.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk_contracts" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oasis_runtime_sdk_contracts/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -868,7 +870,7 @@
 </pre></div><pre class="rust"><code><span class="doccomment">//! Smart contracts module.
 </span><span class="attr">#![deny(rust_2018_idioms)]
 #![forbid(unsafe_code)]
-#![cfg_attr(all(feature = <span class="string">&quot;benchmarks&quot;</span>, test), feature(test))]
+#![cfg_attr(all(feature = <span class="string">"benchmarks"</span>, test), feature(test))]
 
 #[cfg(test)]
 </span><span class="kw">extern crate </span>alloc;
@@ -906,141 +908,141 @@
 <span class="kw">mod </span>wasm;
 
 <span class="doccomment">/// Unique module name.
-</span><span class="kw">const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">&quot;contracts&quot;</span>;
+</span><span class="kw">const </span>MODULE_NAME: <span class="kw-2">&amp;</span>str = <span class="string">"contracts"</span>;
 
 <span class="doccomment">/// Errors emitted by the contracts module.
 </span><span class="attr">#[derive(Error, Debug, sdk::Error)]
 </span><span class="kw">pub enum </span>Error {
-    <span class="attr">#[error(<span class="string">&quot;invalid argument&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"invalid argument"</span>)]
     #[sdk_error(code = <span class="number">1</span>)]
     </span>InvalidArgument,
 
-    <span class="attr">#[error(<span class="string">&quot;code too large (size: {0} max: {1})&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"code too large (size: {0} max: {1})"</span>)]
     #[sdk_error(code = <span class="number">2</span>)]
     </span>CodeTooLarge(u32, u32),
 
-    <span class="attr">#[error(<span class="string">&quot;code is malformed&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"code is malformed"</span>)]
     #[sdk_error(code = <span class="number">3</span>)]
     </span>CodeMalformed,
 
-    <span class="attr">#[error(<span class="string">&quot;specified ABI is not supported&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"specified ABI is not supported"</span>)]
     #[sdk_error(code = <span class="number">4</span>)]
     </span>UnsupportedABI,
 
-    <span class="attr">#[error(<span class="string">&quot;code is missing required ABI export: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"code is missing required ABI export: {0}"</span>)]
     #[sdk_error(code = <span class="number">5</span>)]
     </span>CodeMissingRequiredExport(String),
 
-    <span class="attr">#[error(<span class="string">&quot;code declares reserved ABI export: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"code declares reserved ABI export: {0}"</span>)]
     #[sdk_error(code = <span class="number">6</span>)]
     </span>CodeDeclaresReservedExport(String),
 
-    <span class="attr">#[error(<span class="string">&quot;code declares start function&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"code declares start function"</span>)]
     #[sdk_error(code = <span class="number">7</span>)]
     </span>CodeDeclaresStartFunction,
 
-    <span class="attr">#[error(<span class="string">&quot;code declares too many memories&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"code declares too many memories"</span>)]
     #[sdk_error(code = <span class="number">8</span>)]
     </span>CodeDeclaresTooManyMemories,
 
-    <span class="attr">#[error(<span class="string">&quot;code {0} not found&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"code {0} not found"</span>)]
     #[sdk_error(code = <span class="number">9</span>)]
     </span>CodeNotFound(u64),
 
-    <span class="attr">#[error(<span class="string">&quot;instance {0} not found&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"instance {0} not found"</span>)]
     #[sdk_error(code = <span class="number">10</span>)]
     </span>InstanceNotFound(u64),
 
-    <span class="attr">#[error(<span class="string">&quot;module loading failed&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"module loading failed"</span>)]
     #[sdk_error(code = <span class="number">11</span>)]
     </span>ModuleLoadingFailed,
 
-    <span class="attr">#[error(<span class="string">&quot;execution failed: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"execution failed: {0}"</span>)]
     #[sdk_error(code = <span class="number">12</span>)]
     </span>ExecutionFailed(<span class="attr">#[source] </span>anyhow::Error),
 
-    <span class="attr">#[error(<span class="string">&quot;forbidden by policy&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"forbidden by policy"</span>)]
     #[sdk_error(code = <span class="number">13</span>)]
     </span>Forbidden,
 
-    <span class="attr">#[error(<span class="string">&quot;function not supported&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"function not supported"</span>)]
     #[sdk_error(code = <span class="number">14</span>)]
     </span>Unsupported,
 
-    <span class="attr">#[error(<span class="string">&quot;insufficient balance in caller account&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"insufficient balance in caller account"</span>)]
     #[sdk_error(code = <span class="number">15</span>)]
     </span>InsufficientCallerBalance,
 
     <span class="comment">// Error code 16 is reserved.
-    </span><span class="attr">#[error(<span class="string">&quot;result size exceeded (size: {0} max: {1})&quot;</span>)]
+    </span><span class="attr">#[error(<span class="string">"result size exceeded (size: {0} max: {1})"</span>)]
     #[sdk_error(code = <span class="number">17</span>)]
     </span>ResultTooLarge(u32, u32),
 
-    <span class="attr">#[error(<span class="string">&quot;too many subcalls (count: {0} max: {1})&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"too many subcalls (count: {0} max: {1})"</span>)]
     #[sdk_error(code = <span class="number">18</span>)]
     </span>TooManySubcalls(u16, u16),
 
-    <span class="attr">#[error(<span class="string">&quot;instance is already using code {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"instance is already using code {0}"</span>)]
     #[sdk_error(code = <span class="number">19</span>)]
     </span>CodeAlreadyUpgraded(u64),
 
-    <span class="attr">#[error(<span class="string">&quot;abort: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"abort: {0}"</span>)]
     #[sdk_error(code = <span class="number">20</span>, abort)]
     </span>Abort(<span class="attr">#[from] </span>sdk::dispatcher::Error),
 
-    <span class="attr">#[error(<span class="string">&quot;storage: key too large (size: {0} max: {1})&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"storage: key too large (size: {0} max: {1})"</span>)]
     #[sdk_error(code = <span class="number">21</span>)]
     </span>StorageKeyTooLarge(u32, u32),
 
-    <span class="attr">#[error(<span class="string">&quot;storage: value too large (size: {0} max: {1})&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"storage: value too large (size: {0} max: {1})"</span>)]
     #[sdk_error(code = <span class="number">22</span>)]
     </span>StorageValueTooLarge(u32, u32),
 
-    <span class="attr">#[error(<span class="string">&quot;crypto: msg too large (size: {0} max: {1})&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"crypto: msg too large (size: {0} max: {1})"</span>)]
     #[sdk_error(code = <span class="number">23</span>)]
     </span>CryptoMsgTooLarge(u32, u32),
 
-    <span class="attr">#[error(<span class="string">&quot;crypto: malformed public key&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"crypto: malformed public key"</span>)]
     #[sdk_error(code = <span class="number">24</span>)]
     </span>CryptoMalformedPublicKey,
 
-    <span class="attr">#[error(<span class="string">&quot;code declares multiple sub-versions&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"code declares multiple sub-versions"</span>)]
     #[sdk_error(code = <span class="number">25</span>)]
     </span>CodeDeclaresMultipleSubVersions,
 
-    <span class="attr">#[error(<span class="string">&quot;crypto: malformed private key&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"crypto: malformed private key"</span>)]
     #[sdk_error(code = <span class="number">26</span>)]
     </span>CryptoMalformedPrivateKey,
 
-    <span class="attr">#[error(<span class="string">&quot;crypto: malformed encryption key&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"crypto: malformed encryption key"</span>)]
     #[sdk_error(code = <span class="number">27</span>)]
     </span>CryptoMalformedKey,
 
-    <span class="attr">#[error(<span class="string">&quot;crypto: malformed nonce&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"crypto: malformed nonce"</span>)]
     #[sdk_error(code = <span class="number">28</span>)]
     </span>CryptoMalformedNonce,
 
-    <span class="attr">#[error(<span class="string">&quot;crypto: key derivation function failure&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"crypto: key derivation function failure"</span>)]
     #[sdk_error(code = <span class="number">29</span>)]
     </span>CryptoKeyDerivationFunctionFailure,
 
-    <span class="attr">#[error(<span class="string">&quot;module uses floating point data or operations&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"module uses floating point data or operations"</span>)]
     #[sdk_error(code = <span class="number">30</span>)]
     </span>ModuleUsesFloatingPoint,
 
-    <span class="attr">#[error(<span class="string">&quot;code declares too many functions&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"code declares too many functions"</span>)]
     #[sdk_error(code = <span class="number">31</span>)]
     </span>CodeDeclaresTooManyFunctions,
 
-    <span class="attr">#[error(<span class="string">&quot;code declares too many locals&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"code declares too many locals"</span>)]
     #[sdk_error(code = <span class="number">32</span>)]
     </span>CodeDeclaresTooManyLocals,
 
-    <span class="attr">#[error(<span class="string">&quot;core: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"core: {0}"</span>)]
     #[sdk_error(transparent)]
     </span>Core(<span class="attr">#[from] </span>modules::core::Error),
 
-    <span class="attr">#[error(<span class="string">&quot;contract error: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"contract error: {0}"</span>)]
     #[sdk_error(transparent)]
     </span>Contract(<span class="attr">#[from] </span>wasm::ContractError),
 }
@@ -1221,7 +1223,7 @@
 }
 
 <span class="doccomment">/// Module configuration.
-</span><span class="kw">pub trait </span>Config: <span class="lifetime">&#39;static </span>{
+</span><span class="kw">pub trait </span>Config: <span class="lifetime">'static </span>{
     <span class="doccomment">/// Module that is used for accessing accounts.
     </span><span class="kw">type </span>Accounts: modules::accounts::API;
 }
@@ -1290,7 +1292,7 @@
 
 <span class="attr">#[sdk_derive(Module)]
 </span><span class="kw">impl</span>&lt;Cfg: Config&gt; Module&lt;Cfg&gt; {
-    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str = MODULE_NAME;
+    <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = MODULE_NAME;
     <span class="kw">type </span>Error = Error;
     <span class="kw">type </span>Event = Event;
     <span class="kw">type </span>Parameters = Parameters;
@@ -1302,7 +1304,7 @@
         </span><span class="self">Self</span>::set_params(genesis.parameters);
     }
 
-    <span class="attr">#[handler(call = <span class="string">&quot;contracts.Upload&quot;</span>)]
+    <span class="attr">#[handler(call = <span class="string">"contracts.Upload"</span>)]
     </span><span class="kw">pub fn </span>tx_upload&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         body: types::Upload,
@@ -1395,7 +1397,7 @@
         <span class="prelude-val">Ok</span>(types::UploadResult { id })
     }
 
-    <span class="attr">#[handler(call = <span class="string">&quot;contracts.Instantiate&quot;</span>)]
+    <span class="attr">#[handler(call = <span class="string">"contracts.Instantiate"</span>)]
     </span><span class="kw">pub fn </span>tx_instantiate&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         body: types::Instantiate,
@@ -1463,7 +1465,7 @@
         <span class="prelude-val">Ok</span>(types::InstantiateResult { id })
     }
 
-    <span class="attr">#[handler(call = <span class="string">&quot;contracts.Call&quot;</span>, allow_interactive)]
+    <span class="attr">#[handler(call = <span class="string">"contracts.Call"</span>, allow_interactive)]
     </span><span class="kw">pub fn </span>tx_call&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Call) -&gt; <span class="prelude-ty">Result</span>&lt;types::CallResult, Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
         <span class="kw">let </span>caller = CurrentState::with_env(|env| env.tx_caller_address());
@@ -1508,7 +1510,7 @@
         <span class="prelude-val">Ok</span>(types::CallResult(data))
     }
 
-    <span class="attr">#[handler(call = <span class="string">&quot;contracts.ChangeUpgradePolicy&quot;</span>)]
+    <span class="attr">#[handler(call = <span class="string">"contracts.ChangeUpgradePolicy"</span>)]
     </span><span class="kw">pub fn </span>tx_change_upgrade_policy&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         body: types::ChangeUpgradePolicy,
@@ -1533,7 +1535,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="attr">#[handler(call = <span class="string">&quot;contracts.Upgrade&quot;</span>)]
+    <span class="attr">#[handler(call = <span class="string">"contracts.Upgrade"</span>)]
     </span><span class="kw">pub fn </span>tx_upgrade&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, body: types::Upgrade) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
         <span class="kw">let </span>caller = CurrentState::with_env(|env| env.tx_caller_address());
@@ -1608,12 +1610,12 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;contracts.Code&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"contracts.Code"</span>)]
     </span><span class="kw">pub fn </span>query_code&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, args: types::CodeQuery) -&gt; <span class="prelude-ty">Result</span>&lt;types::Code, Error&gt; {
         <span class="self">Self</span>::load_code_info(args.id)
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;contracts.CodeStorage&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"contracts.CodeStorage"</span>)]
     </span><span class="kw">pub fn </span>query_code_storage&lt;C: Context&gt;(
         _ctx: <span class="kw-2">&amp;</span>C,
         args: types::CodeStorageQuery,
@@ -1624,7 +1626,7 @@
         <span class="prelude-val">Ok</span>(types::CodeStorageQueryResult { code })
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;contracts.Instance&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"contracts.Instance"</span>)]
     </span><span class="kw">pub fn </span>query_instance&lt;C: Context&gt;(
         _ctx: <span class="kw-2">&amp;</span>C,
         args: types::InstanceQuery,
@@ -1632,7 +1634,7 @@
         <span class="self">Self</span>::load_instance_info(args.id)
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;contracts.InstanceStorage&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"contracts.InstanceStorage"</span>)]
     </span><span class="kw">pub fn </span>query_instance_storage&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         args: types::InstanceStorageQuery,
@@ -1646,7 +1648,7 @@
         <span class="prelude-val">Ok</span>(types::InstanceStorageQueryResult { value })
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;contracts.InstanceRawStorage&quot;</span>, expensive)]
+    <span class="attr">#[handler(query = <span class="string">"contracts.InstanceRawStorage"</span>, expensive)]
     </span><span class="kw">pub fn </span>query_instance_raw_storage&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         args: types::InstanceRawStorageQuery,
@@ -1684,7 +1686,7 @@
         <span class="prelude-val">Ok</span>(types::InstanceRawStorageQueryResult { items })
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;contracts.PublicKey&quot;</span>)]
+    <span class="attr">#[handler(query = <span class="string">"contracts.PublicKey"</span>)]
     </span><span class="kw">pub fn </span>query_public_key&lt;C: Context&gt;(
         _ctx: <span class="kw-2">&amp;</span>C,
         _args: types::PublicKeyQuery,
@@ -1692,7 +1694,7 @@
         <span class="prelude-val">Err</span>(Error::Unsupported)
     }
 
-    <span class="attr">#[handler(query = <span class="string">&quot;contracts.Custom&quot;</span>, expensive)]
+    <span class="attr">#[handler(query = <span class="string">"contracts.Custom"</span>, expensive)]
     </span><span class="kw">pub fn </span>query_custom&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         args: types::CustomQuery,

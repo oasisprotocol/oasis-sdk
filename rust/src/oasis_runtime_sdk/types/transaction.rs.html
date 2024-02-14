@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/types/transaction.rs`."><title>transaction.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../../oasis_runtime_sdk/index.html"><img class="rust-logo" src="../../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/types/transaction.rs`."><title>transaction.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oasis_runtime_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -444,16 +446,16 @@
 };
 
 <span class="doccomment">/// Transaction signature domain separation context base.
-</span><span class="kw">pub const </span>SIGNATURE_CONTEXT_BASE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b&quot;oasis-runtime-sdk/tx: v0&quot;</span>;
+</span><span class="kw">pub const </span>SIGNATURE_CONTEXT_BASE: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"oasis-runtime-sdk/tx: v0"</span>;
 <span class="doccomment">/// The latest transaction format version.
 </span><span class="kw">pub const </span>LATEST_TRANSACTION_VERSION: u16 = <span class="number">1</span>;
 
 <span class="doccomment">/// Error.
 </span><span class="attr">#[derive(Debug, Error)]
 </span><span class="kw">pub enum </span>Error {
-    <span class="attr">#[error(<span class="string">&quot;unsupported version&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"unsupported version"</span>)]
     </span>UnsupportedVersion,
-    <span class="attr">#[error(<span class="string">&quot;malformed transaction: {0}&quot;</span>)]
+    <span class="attr">#[error(<span class="string">"malformed transaction: {0}"</span>)]
     </span>MalformedTransaction(anyhow::Error),
 }
 
@@ -461,14 +463,14 @@
 </span><span class="attr">#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub enum </span>AuthProof {
     <span class="doccomment">/// For _signature_ authentication.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;signature&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"signature"</span>)]
     </span>Signature(Signature),
     <span class="doccomment">/// For _multisig_ authentication.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;multisig&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"multisig"</span>)]
     </span>Multisig(multisig::SignatureSetOwned),
     <span class="doccomment">/// A flag to use module-controlled decoding. The string is an encoding scheme name that a
     /// module must handle. The scheme name must not be empty.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;module&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"module"</span>)]
     </span>Module(String),
 }
 
@@ -488,7 +490,7 @@
         <span class="comment">// Basic structure validation.
         </span><span class="kw">if </span><span class="self">self</span>.<span class="number">1</span>.len() != body.auth_info.signer_info.len() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::MalformedTransaction(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;unexpected number of auth proofs. expected {} but found {}&quot;</span>,
+                <span class="string">"unexpected number of auth proofs. expected {} but found {}"</span>,
                 body.auth_info.signer_info.len(),
                 <span class="self">self</span>.<span class="number">1</span>.len()
             )));
@@ -514,12 +516,12 @@
 </span><span class="attr">#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 #[cbor(no_default)]
 </span><span class="kw">pub struct </span>Transaction {
-    <span class="attr">#[cbor(rename = <span class="string">&quot;v&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"v"</span>)]
     </span><span class="kw">pub </span>version: u16,
 
     <span class="kw">pub </span>call: Call,
 
-    <span class="attr">#[cbor(rename = <span class="string">&quot;ai&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"ai"</span>)]
     </span><span class="kw">pub </span>auth_info: AuthInfo,
 }
 
@@ -531,7 +533,7 @@
         }
         <span class="kw">if </span><span class="self">self</span>.auth_info.signer_info.is_empty() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::MalformedTransaction(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;transaction has no signers&quot;
+                <span class="string">"transaction has no signers"
             </span>)));
         }
         <span class="prelude-val">Ok</span>(())
@@ -565,7 +567,7 @@
     ///
     /// A read-only call cannot make any changes to runtime state. Any attempt at modifying state
     /// will result in the call failing.
-    </span><span class="attr">#[cbor(optional, rename = <span class="string">&quot;ro&quot;</span>)]
+    </span><span class="attr">#[cbor(optional, rename = <span class="string">"ro"</span>)]
     </span><span class="kw">pub </span>read_only: bool,
 }
 
@@ -584,7 +586,7 @@
 </span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>AuthInfo {
     <span class="doccomment">/// Transaction signer information.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;si&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"si"</span>)]
     </span><span class="kw">pub </span>signer_info: Vec&lt;SignerInfo&gt;,
     <span class="doccomment">/// Fee payment information.
     </span><span class="kw">pub </span>fee: Fee,
@@ -622,9 +624,9 @@
 <span class="doccomment">/// A caller address.
 </span><span class="attr">#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub enum </span>CallerAddress {
-    <span class="attr">#[cbor(rename = <span class="string">&quot;address&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"address"</span>)]
     </span>Address(Address),
-    <span class="attr">#[cbor(rename = <span class="string">&quot;eth_address&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"eth_address"</span>)]
     </span>EthAddress([u8; <span class="number">20</span>]),
 }
 
@@ -654,10 +656,10 @@
 </span><span class="attr">#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub enum </span>AddressSpec {
     <span class="doccomment">/// For _signature_ authentication.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;signature&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"signature"</span>)]
     </span>Signature(SignatureAddressSpec),
     <span class="doccomment">/// For _multisig_ authentication.
-    </span><span class="attr">#[cbor(rename = <span class="string">&quot;multisig&quot;</span>)]
+    </span><span class="attr">#[cbor(rename = <span class="string">"multisig"</span>)]
     </span>Multisig(multisig::Config),
 
     <span class="doccomment">/// For internal child calls (cannot be serialized/deserialized).
@@ -698,19 +700,19 @@
                 .map_err(|e| Error::MalformedTransaction(e.into()))<span class="question-mark">?</span>),
             (AddressSpec::Signature(<span class="kw">_</span>), AuthProof::Multisig(<span class="kw">_</span>)) =&gt; {
                 <span class="prelude-val">Err</span>(Error::MalformedTransaction(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;transaction signer used a single signature, but auth proof was multisig&quot;
+                    <span class="string">"transaction signer used a single signature, but auth proof was multisig"
                 </span>)))
             }
             (AddressSpec::Multisig(<span class="kw">_</span>), AuthProof::Signature(<span class="kw">_</span>)) =&gt; {
                 <span class="prelude-val">Err</span>(Error::MalformedTransaction(<span class="macro">anyhow!</span>(
-                    <span class="string">&quot;transaction signer used multisig, but auth proof was a single signature&quot;
+                    <span class="string">"transaction signer used multisig, but auth proof was a single signature"
                 </span>)))
             }
             (AddressSpec::Internal(<span class="kw">_</span>), <span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(Error::MalformedTransaction(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;transaction signer used internal address spec&quot;
+                <span class="string">"transaction signer used internal address spec"
             </span>))),
             (<span class="kw">_</span>, AuthProof::Module(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Err</span>(Error::MalformedTransaction(<span class="macro">anyhow!</span>(
-                <span class="string">&quot;module-controlled decoding flag in auth proof list&quot;
+                <span class="string">"module-controlled decoding flag in auth proof list"
             </span>))),
         }
     }
@@ -745,10 +747,10 @@
 <span class="doccomment">/// Call result.
 </span><span class="attr">#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub enum </span>CallResult {
-    <span class="attr">#[cbor(rename = <span class="string">&quot;ok&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"ok"</span>)]
     </span><span class="prelude-val">Ok</span>(cbor::Value),
 
-    <span class="attr">#[cbor(rename = <span class="string">&quot;fail&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"fail"</span>)]
     </span>Failed {
         module: String,
         code: u32,
@@ -757,7 +759,7 @@
         </span>message: String,
     },
 
-    <span class="attr">#[cbor(rename = <span class="string">&quot;unknown&quot;</span>)]
+    <span class="attr">#[cbor(rename = <span class="string">"unknown"</span>)]
     </span>Unknown(cbor::Value),
 }
 
@@ -774,7 +776,7 @@
     }
 }
 
-<span class="attr">#[cfg(any(test, feature = <span class="string">&quot;test&quot;</span>))]
+<span class="attr">#[cfg(any(test, feature = <span class="string">"test"</span>))]
 </span><span class="kw">impl </span>CallResult {
     <span class="kw">pub fn </span>unwrap(<span class="self">self</span>) -&gt; cbor::Value {
         <span class="kw">match </span><span class="self">self </span>{
@@ -783,7 +785,7 @@
                 module,
                 code,
                 message,
-            } =&gt; <span class="macro">panic!</span>(<span class="string">&quot;{module} reported failure with code {code}: {message}&quot;</span>),
+            } =&gt; <span class="macro">panic!</span>(<span class="string">"{module} reported failure with code {code}: {message}"</span>),
         }
     }
 
@@ -817,7 +819,7 @@
             gas: <span class="number">0</span>,
             consensus_messages: <span class="number">0</span>,
         };
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, fee.gas_price(), <span class="string">&quot;empty fee - gas price should be zero&quot;</span>,);
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, fee.gas_price(), <span class="string">"empty fee - gas price should be zero"</span>,);
 
         <span class="kw">let </span>fee = Fee {
             amount: Default::default(),
@@ -827,7 +829,7 @@
         <span class="macro">assert_eq!</span>(
             <span class="number">0</span>,
             fee.gas_price(),
-            <span class="string">&quot;empty fee amount - gas price should be zero&quot;</span>,
+            <span class="string">"empty fee amount - gas price should be zero"</span>,
         );
 
         <span class="kw">let </span>fee = Fee {
@@ -835,7 +837,7 @@
             gas: <span class="number">0</span>,
             consensus_messages: <span class="number">0</span>,
         };
-        <span class="macro">assert_eq!</span>(<span class="number">0</span>, fee.gas_price(), <span class="string">&quot;empty fee 0 - gas price should be zero&quot;</span>,);
+        <span class="macro">assert_eq!</span>(<span class="number">0</span>, fee.gas_price(), <span class="string">"empty fee 0 - gas price should be zero"</span>,);
 
         <span class="kw">let </span>fee = Fee {
             amount: BaseUnits::new(<span class="number">1_000</span>, Denomination::NATIVE),
@@ -845,7 +847,7 @@
         <span class="macro">assert_eq!</span>(
             <span class="number">0</span>,
             fee.gas_price(),
-            <span class="string">&quot;non empty fee - gas price should be zero&quot;
+            <span class="string">"non empty fee - gas price should be zero"
         </span>);
 
         <span class="kw">let </span>fee = Fee {
@@ -853,7 +855,7 @@
             gas: <span class="number">500</span>,
             consensus_messages: <span class="number">0</span>,
         };
-        <span class="macro">assert_eq!</span>(<span class="number">2</span>, fee.gas_price(), <span class="string">&quot;non empty fee - gas price should match&quot;</span>);
+        <span class="macro">assert_eq!</span>(<span class="number">2</span>, fee.gas_price(), <span class="string">"non empty fee - gas price should match"</span>);
     }
 }
 </code></pre></div></section></main></body></html>

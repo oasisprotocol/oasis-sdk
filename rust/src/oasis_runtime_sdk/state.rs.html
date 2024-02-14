@@ -1,4 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/state.rs`."><title>state.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-47e7ab555ef2818a.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.74.0-nightly (b4e54c6e3 2023-09-11)" data-channel="nightly" data-search-js="search-5d3eaacf19ebf04f.js" data-settings-js="settings-74424d7eec62a23e.js" data-settings-css="settings-8c76f75bfb6bd192.css" data-theme-light-css="light-f194925aa375ae96.css" data-theme-dark-css="dark-1dd4d1ce031e15de.css" data-theme-ayu-css="ayu-49e58d069f567085.css" ><script src="../../static.files/storage-db41da1a38ea3cb8.js"></script><script defer src="../../static.files/src-script-3280b574d94e47b4.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-8d035c8cea6edbc4.js"></script><noscript><link rel="stylesheet" media="(prefers-color-scheme:light)" href="../../static.files/light-f194925aa375ae96.css"><link rel="stylesheet" media="(prefers-color-scheme:dark)" href="../../static.files/dark-1dd4d1ce031e15de.css"><link rel="stylesheet" href="../../static.files/noscript-cffde32267a19fd6.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../oasis_runtime_sdk/index.html"><img class="rust-logo" src="../../static.files/rust-logo-151179464ae7ed46.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk/src/state.rs`."><title>state.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_runtime_sdk" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+            <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
+    <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oasis_runtime_sdk/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -1631,18 +1633,18 @@
     </span>PreSchedule,
 }
 
-<span class="kw">const </span>MODE_CHECK: <span class="kw-2">&amp;</span>str = <span class="string">&quot;check&quot;</span>;
-<span class="kw">const </span>MODE_EXECUTE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;execute&quot;</span>;
-<span class="kw">const </span>MODE_SIMULATE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;simulate&quot;</span>;
-<span class="kw">const </span>MODE_PRE_SCHEDULE: <span class="kw-2">&amp;</span>str = <span class="string">&quot;pre_schedule&quot;</span>;
+<span class="kw">const </span>MODE_CHECK: <span class="kw-2">&amp;</span>str = <span class="string">"check"</span>;
+<span class="kw">const </span>MODE_EXECUTE: <span class="kw-2">&amp;</span>str = <span class="string">"execute"</span>;
+<span class="kw">const </span>MODE_SIMULATE: <span class="kw-2">&amp;</span>str = <span class="string">"simulate"</span>;
+<span class="kw">const </span>MODE_PRE_SCHEDULE: <span class="kw-2">&amp;</span>str = <span class="string">"pre_schedule"</span>;
 
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>Mode {
-    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
+    <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">'_</span>&gt;) -&gt; fmt::Result {
         f.write_str(<span class="self">self</span>.into())
     }
 }
 
-<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>Mode&gt; <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str {
+<span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>Mode&gt; <span class="kw">for </span><span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
     <span class="kw">fn </span>from(m: <span class="kw-2">&amp;</span>Mode) -&gt; <span class="self">Self </span>{
         <span class="kw">match </span>m {
             Mode::Check =&gt; MODE_CHECK,
@@ -1692,7 +1694,7 @@
         <span class="self">self</span>.tx.is_some()
     }
 
-    <span class="doccomment">/// An active transaction&#39;s index (order) within the block.
+    <span class="doccomment">/// An active transaction's index (order) within the block.
     ///
     /// # Panics
     ///
@@ -1701,10 +1703,10 @@
         <span class="self">self</span>.tx
             .as_ref()
             .map(|tx| tx.index)
-            .expect(<span class="string">&quot;only in transaction environment&quot;</span>)
+            .expect(<span class="string">"only in transaction environment"</span>)
     }
 
-    <span class="doccomment">/// An active transaction&#39;s size in bytes.
+    <span class="doccomment">/// An active transaction's size in bytes.
     ///
     /// # Panics
     ///
@@ -1713,10 +1715,10 @@
         <span class="self">self</span>.tx
             .as_ref()
             .map(|tx| tx.size)
-            .expect(<span class="string">&quot;only in transaction environment&quot;</span>)
+            .expect(<span class="string">"only in transaction environment"</span>)
     }
 
-    <span class="doccomment">/// An active transaction&#39;s authentication information.
+    <span class="doccomment">/// An active transaction's authentication information.
     ///
     /// # Panics
     ///
@@ -1725,10 +1727,10 @@
         <span class="self">self</span>.tx
             .as_ref()
             .map(|tx| <span class="kw-2">&amp;</span>tx.data.auth_info)
-            .expect(<span class="string">&quot;only in transaction environment&quot;</span>)
+            .expect(<span class="string">"only in transaction environment"</span>)
     }
 
-    <span class="doccomment">/// An active transaction&#39;s call format.
+    <span class="doccomment">/// An active transaction's call format.
     ///
     /// # Panics
     ///
@@ -1737,10 +1739,10 @@
         <span class="self">self</span>.tx
             .as_ref()
             .map(|tx| tx.data.call.format)
-            .expect(<span class="string">&quot;only in transaction environment&quot;</span>)
+            .expect(<span class="string">"only in transaction environment"</span>)
     }
 
-    <span class="doccomment">/// An active transaction&#39;s read only flag.
+    <span class="doccomment">/// An active transaction's read only flag.
     ///
     /// # Panics
     ///
@@ -1749,7 +1751,7 @@
         <span class="self">self</span>.tx
             .as_ref()
             .map(|tx| tx.data.call.read_only)
-            .expect(<span class="string">&quot;only in transaction environment&quot;</span>)
+            .expect(<span class="string">"only in transaction environment"</span>)
     }
 
     <span class="doccomment">/// Whether the current execution environment is part of an internal subcall.
@@ -1801,7 +1803,7 @@
     }
 }
 
-<span class="attr">#[cfg(any(test, feature = <span class="string">&quot;test&quot;</span>))]
+<span class="attr">#[cfg(any(test, feature = <span class="string">"test"</span>))]
 </span><span class="kw">impl </span>From&lt;transaction::Transaction&gt; <span class="kw">for </span>TransactionWithMeta {
     <span class="kw">fn </span>from(tx: transaction::Transaction) -&gt; <span class="self">Self </span>{
         <span class="self">Self</span>::internal(tx) <span class="comment">// For use in tests.
@@ -1851,7 +1853,7 @@
     ///
     /// # Determinisim
     ///
-    /// Using this method will result in non-deterministic behavior as the node&#39;s local entropy is
+    /// Using this method will result in non-deterministic behavior as the node's local entropy is
     /// mixed into the RNG. As such, this method should only be used in cases where non-determinism
     /// is not problematic (e.g. local queries).
     </span><span class="kw">pub fn </span>with_rng_local_entropy(<span class="self">self</span>) -&gt; <span class="self">Self </span>{
@@ -1874,9 +1876,9 @@
     unconditional_events: EventTags,
     messages: Vec&lt;(roothash::Message, MessageEventHookInvocation)&gt;,
 
-    block_values: BTreeMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Box&lt;<span class="kw">dyn </span>Any&gt;&gt;,
-    hidden_block_values: <span class="prelude-ty">Option</span>&lt;BTreeMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Box&lt;<span class="kw">dyn </span>Any&gt;&gt;&gt;,
-    local_values: BTreeMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Box&lt;<span class="kw">dyn </span>Any&gt;&gt;,
+    block_values: BTreeMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Box&lt;<span class="kw">dyn </span>Any&gt;&gt;,
+    hidden_block_values: <span class="prelude-ty">Option</span>&lt;BTreeMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Box&lt;<span class="kw">dyn </span>Any&gt;&gt;&gt;,
+    local_values: BTreeMap&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Box&lt;<span class="kw">dyn </span>Any&gt;&gt;,
 
     rng: <span class="prelude-ty">Option</span>&lt;RootRng&gt;,
     hidden_rng: <span class="prelude-ty">Option</span>&lt;RootRng&gt;,
@@ -1981,7 +1983,7 @@
     }
 
     <span class="kw">fn </span>_commit(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">let </span><span class="kw-2">mut </span>child = <span class="kw-2">*</span><span class="self">self</span>.parent.take().expect(<span class="string">&quot;cannot commit on root state&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>child = <span class="kw-2">*</span><span class="self">self</span>.parent.take().expect(<span class="string">"cannot commit on root state"</span>);
         mem::swap(<span class="kw-2">&amp;mut </span>child, <span class="self">self</span>);
 
         <span class="comment">// Commit storage.
@@ -2025,7 +2027,7 @@
     ///
     /// This method will panic when attempting to rollback the root state.
     </span><span class="kw">pub fn </span>rollback(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">let </span><span class="kw-2">mut </span>child = <span class="kw-2">*</span><span class="self">self</span>.parent.take().expect(<span class="string">&quot;cannot rollback on root state&quot;</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>child = <span class="kw-2">*</span><span class="self">self</span>.parent.take().expect(<span class="string">"cannot rollback on root state"</span>);
         mem::swap(<span class="kw-2">&amp;mut </span>child, <span class="self">self</span>);
 
         <span class="comment">// Rollback storage.
@@ -2054,7 +2056,7 @@
     ///
     /// Block values live as long as the root `State` and are propagated to child states. They are
     /// not affected by state rollbacks. If you need state-scoped values, use local values.
-    </span><span class="kw">pub fn </span>block_value&lt;V: Any&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; StateValue&lt;<span class="lifetime">&#39;_</span>, V&gt; {
+    </span><span class="kw">pub fn </span>block_value&lt;V: Any&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; StateValue&lt;<span class="lifetime">'_</span>, V&gt; {
         StateValue::new(<span class="self">self</span>.block_values.entry(key))
     }
 
@@ -2063,7 +2065,7 @@
     /// Local values only live as long as the current `State`, are dropped upon exiting to parent
     /// state and child states start with an empty set. If you need longer-lived values, use block
     /// values.
-    </span><span class="kw">pub fn </span>local_value&lt;V: Any&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str) -&gt; StateValue&lt;<span class="lifetime">&#39;_</span>, V&gt; {
+    </span><span class="kw">pub fn </span>local_value&lt;V: Any&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; StateValue&lt;<span class="lifetime">'_</span>, V&gt; {
         StateValue::new(<span class="self">self</span>.local_values.entry(key))
     }
 
@@ -2072,7 +2074,7 @@
     </span><span class="kw">pub fn </span>hide_block_values(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">if </span><span class="self">self</span>.parent.is_none() {
             <span class="comment">// Allowing hiding on root state would prevent those values from ever being recovered.
-            </span><span class="macro">panic!</span>(<span class="string">&quot;cannot hide block values on root state&quot;</span>);
+            </span><span class="macro">panic!</span>(<span class="string">"cannot hide block values on root state"</span>);
         }
         <span class="kw">if </span><span class="self">self</span>.hidden_block_values.is_some() {
             <span class="kw">return</span>; <span class="comment">// Parent block values already hidden.
@@ -2199,7 +2201,7 @@
     </span><span class="kw">fn </span>disable_rng(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">if </span><span class="self">self</span>.parent.is_none() {
             <span class="comment">// Allowing hiding on root state would prevent the RNG from ever being recovered.
-            </span><span class="macro">panic!</span>(<span class="string">&quot;cannot hide the RNG on root state&quot;</span>);
+            </span><span class="macro">panic!</span>(<span class="string">"cannot hide the RNG on root state"</span>);
         }
         <span class="kw">if </span><span class="self">self</span>.hidden_rng.is_some() {
             <span class="kw">return</span>; <span class="comment">// Parent RNG already hidden.
@@ -2224,7 +2226,7 @@
 }
 
 <span class="macro">thread_local! </span>{
-    <span class="kw">static </span>CURRENT: RefCell&lt;Vec&lt;State&gt;&gt; = RefCell::new(Vec::new());
+    <span class="kw">static </span>CURRENT: RefCell&lt;Vec&lt;State&gt;&gt; = <span class="kw">const </span>{ RefCell::new(Vec::new()) };
 }
 
 <span class="kw">struct </span>CurrentStateGuard;
@@ -2232,11 +2234,11 @@
 <span class="kw">impl </span>Drop <span class="kw">for </span>CurrentStateGuard {
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         CURRENT.with(|c| {
-            <span class="kw">let </span>root = c.borrow_mut().pop().expect(<span class="string">&quot;must have current state&quot;</span>);
+            <span class="kw">let </span>root = c.borrow_mut().pop().expect(<span class="string">"must have current state"</span>);
             <span class="comment">// Commit root state as it has been wrapped in an overlay.
             </span><span class="kw">let </span>store = root
                 .store
-                .expect(<span class="string">&quot;must not have open child states after exiting root state&quot;</span>);
+                .expect(<span class="string">"must not have open child states after exiting root state"</span>);
             store.commit();
         });
     }
@@ -2248,7 +2250,7 @@
     <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">let </span>level = CurrentState::with(|state| state.level());
 
-        <span class="comment">// If transaction hasn&#39;t been either committed or reverted, rollback.
+        <span class="comment">// If transaction hasn't been either committed or reverted, rollback.
         </span><span class="kw">if </span>level == <span class="self">self</span>.<span class="number">0 </span>{
             CurrentState::rollback_transaction();
         }
@@ -2280,7 +2282,7 @@
 </span><span class="kw">pub struct </span>CurrentState;
 
 <span class="kw">impl </span>CurrentState {
-    <span class="doccomment">/// Attach a new state to the current thread and enter the state&#39;s context.
+    <span class="doccomment">/// Attach a new state to the current thread and enter the state's context.
     ///
     /// The passed store is used as the root store.
     ///
@@ -2302,7 +2304,7 @@
         )
     }
 
-    <span class="doccomment">/// Attach a new state to the current thread and enter the state&#39;s context.
+    <span class="doccomment">/// Attach a new state to the current thread and enter the state's context.
     ///
     /// The passed store is used as the root store.
     ///
@@ -2319,12 +2321,12 @@
             <span class="comment">// SAFETY: Keeping the root store is safe as it can only be accessed from the current
             // thread while we are running inside `CurrentState::enter` where we are holding a
             // mutable reference on it.
-            </span>std::mem::transmute::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;mut </span>(<span class="kw">dyn </span>Store + <span class="lifetime">&#39;static</span>)&gt;(<span class="kw-2">&amp;mut </span>root <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Store)
+            </span>std::mem::transmute::&lt;<span class="kw">_</span>, <span class="kw-2">&amp;mut </span>(<span class="kw">dyn </span>Store + <span class="lifetime">'static</span>)&gt;(<span class="kw-2">&amp;mut </span>root <span class="kw">as </span><span class="kw-2">&amp;mut </span><span class="kw">dyn </span>Store)
         };
         <span class="comment">// Initialize the root state.
         </span><span class="kw">let </span>mode = opts
             .mode
-            .expect(<span class="string">&quot;mode must be explicitly set on root state&quot;</span>);
+            .expect(<span class="string">"mode must be explicitly set on root state"</span>);
         <span class="kw">let </span><span class="kw-2">mut </span>root = State {
             parent: <span class="prelude-val">None</span>,
             store: <span class="prelude-val">Some</span>(OverlayStore::new(Box::new(root) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>Store&gt;)),
@@ -2344,7 +2346,7 @@
 
         CURRENT.with(|c| {
             c.try_borrow_mut()
-                .expect(<span class="string">&quot;must not re-enter from with block&quot;</span>)
+                .expect(<span class="string">"must not re-enter from with block"</span>)
                 .push(root)
         });
         <span class="kw">let </span>_guard = CurrentStateGuard; <span class="comment">// Ensure current state is popped once we return.
@@ -2363,7 +2365,7 @@
     </span><span class="attr">#[doc(hidden)]
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>init_local_fallback() {
         <span class="macro">thread_local! </span>{
-            <span class="kw">static </span>BASE_STATE_INIT: RefCell&lt;bool&gt; = RefCell::new(<span class="bool-val">false</span>);
+            <span class="kw">static </span>BASE_STATE_INIT: RefCell&lt;bool&gt; = <span class="kw">const </span>{ RefCell::new(<span class="bool-val">false</span>) };
         }
 
         BASE_STATE_INIT.with(|initialized| {
@@ -2399,10 +2401,10 @@
             CURRENT.with(|c| {
                 <span class="kw">let </span><span class="kw-2">mut </span>current = c
                     .try_borrow_mut()
-                    .expect(<span class="string">&quot;must not re-enter from with block&quot;</span>);
+                    .expect(<span class="string">"must not re-enter from with block"</span>);
                 <span class="macro">assert!</span>(
                     current.is_empty(),
-                    <span class="string">&quot;must have no prior states attached to local thread&quot;
+                    <span class="string">"must have no prior states attached to local thread"
                 </span>);
 
                 current.push(root);
@@ -2421,8 +2423,8 @@
         </span>F: FnOnce(<span class="kw-2">&amp;mut </span>State) -&gt; R,
     {
         CURRENT.with(|c| {
-            <span class="kw">let </span><span class="kw-2">mut </span>current_ref = c.try_borrow_mut().expect(<span class="string">&quot;must not re-enter with&quot;</span>);
-            <span class="kw">let </span>current = current_ref.last_mut().expect(<span class="string">&quot;must enter context&quot;</span>);
+            <span class="kw">let </span><span class="kw-2">mut </span>current_ref = c.try_borrow_mut().expect(<span class="string">"must not re-enter with"</span>);
+            <span class="kw">let </span>current = current_ref.last_mut().expect(<span class="string">"must enter context"</span>);
 
             f(current)
         })
@@ -2528,13 +2530,13 @@
 }
 
 <span class="doccomment">/// A per-state arbitrary value.
-</span><span class="kw">pub struct </span>StateValue&lt;<span class="lifetime">&#39;a</span>, V&gt; {
-    inner: Entry&lt;<span class="lifetime">&#39;a</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Box&lt;<span class="kw">dyn </span>Any&gt;&gt;,
+</span><span class="kw">pub struct </span>StateValue&lt;<span class="lifetime">'a</span>, V&gt; {
+    inner: Entry&lt;<span class="lifetime">'a</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Box&lt;<span class="kw">dyn </span>Any&gt;&gt;,
     _value: PhantomData&lt;V&gt;,
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, V: Any&gt; StateValue&lt;<span class="lifetime">&#39;a</span>, V&gt; {
-    <span class="kw">fn </span>new(inner: Entry&lt;<span class="lifetime">&#39;a</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static </span>str, Box&lt;<span class="kw">dyn </span>Any&gt;&gt;) -&gt; <span class="self">Self </span>{
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, V: Any&gt; StateValue&lt;<span class="lifetime">'a</span>, V&gt; {
+    <span class="kw">fn </span>new(inner: Entry&lt;<span class="lifetime">'a</span>, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, Box&lt;<span class="kw">dyn </span>Any&gt;&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             inner,
             _value: PhantomData,
@@ -2546,12 +2548,12 @@
     /// # Panics
     ///
     /// Panics if the retrieved type is not the type that was stored.
-    </span><span class="kw">pub fn </span>get(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span>V&gt; {
+    </span><span class="kw">pub fn </span>get(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>V&gt; {
         <span class="kw">match </span><span class="self">self</span>.inner {
             Entry::Occupied(oe) =&gt; <span class="prelude-val">Some</span>(
                 oe.into_mut()
                     .downcast_ref()
-                    .expect(<span class="string">&quot;type should stay the same&quot;</span>),
+                    .expect(<span class="string">"type should stay the same"</span>),
             ),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
         }
@@ -2567,7 +2569,7 @@
             Entry::Occupied(oe) =&gt; <span class="prelude-val">Some</span>(
                 oe.get_mut()
                     .downcast_mut()
-                    .expect(<span class="string">&quot;type should stay the same&quot;</span>),
+                    .expect(<span class="string">"type should stay the same"</span>),
             ),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
         }
@@ -2578,7 +2580,7 @@
     /// # Panics
     ///
     /// Panics if the retrieved type is not the type that was stored.
-    </span><span class="kw">pub fn </span>set(<span class="self">self</span>, value: V) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V {
+    </span><span class="kw">pub fn </span>set(<span class="self">self</span>, value: V) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V {
         <span class="kw">let </span>value = Box::new(value);
         <span class="kw">match </span><span class="self">self</span>.inner {
             Entry::Occupied(<span class="kw-2">mut </span>oe) =&gt; {
@@ -2588,7 +2590,7 @@
             Entry::Vacant(ve) =&gt; ve.insert(value),
         }
         .downcast_mut()
-        .expect(<span class="string">&quot;type should stay the same&quot;</span>)
+        .expect(<span class="string">"type should stay the same"</span>)
     }
 
     <span class="doccomment">/// Takes the context value, if it exists.
@@ -2599,26 +2601,26 @@
     </span><span class="kw">pub fn </span>take(<span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;V&gt; {
         <span class="kw">match </span><span class="self">self</span>.inner {
             Entry::Occupied(oe) =&gt; {
-                <span class="prelude-val">Some</span>(<span class="kw-2">*</span>oe.remove().downcast().expect(<span class="string">&quot;type should stay the same&quot;</span>))
+                <span class="prelude-val">Some</span>(<span class="kw-2">*</span>oe.remove().downcast().expect(<span class="string">"type should stay the same"</span>))
             }
             Entry::Vacant(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
         }
     }
 }
 
-<span class="kw">impl</span>&lt;<span class="lifetime">&#39;a</span>, V: Any + Default&gt; StateValue&lt;<span class="lifetime">&#39;a</span>, V&gt; {
+<span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, V: Any + Default&gt; StateValue&lt;<span class="lifetime">'a</span>, V&gt; {
     <span class="doccomment">/// Retrieves the existing value or inserts and returns the default.
     ///
     /// # Panics
     ///
     /// Panics if the retrieved type is not the type that was stored.
-    </span><span class="kw">pub fn </span>or_default(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">&#39;a </span><span class="kw-2">mut </span>V {
+    </span><span class="kw">pub fn </span>or_default(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">mut </span>V {
         <span class="kw">match </span><span class="self">self</span>.inner {
             Entry::Occupied(oe) =&gt; oe.into_mut(),
             Entry::Vacant(ve) =&gt; ve.insert(Box::&lt;V&gt;::default()),
         }
         .downcast_mut()
-        .expect(<span class="string">&quot;type should stay the same&quot;</span>)
+        .expect(<span class="string">"type should stay the same"</span>)
     }
 }
 
@@ -2643,18 +2645,18 @@
         CurrentState::init_local_fallback();
 
         CurrentState::with(|state| {
-            <span class="kw">let </span>x = state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).get();
+            <span class="kw">let </span>x = state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).get();
             <span class="macro">assert_eq!</span>(x, <span class="prelude-val">None</span>);
 
-            state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).set(<span class="number">42</span>);
+            state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).set(<span class="number">42</span>);
 
-            <span class="kw">let </span>y = state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).get();
+            <span class="kw">let </span>y = state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).get();
             <span class="macro">assert_eq!</span>(y, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">42u64</span>));
 
-            <span class="kw">let </span>z = state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).take();
+            <span class="kw">let </span>z = state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).take();
             <span class="macro">assert_eq!</span>(z, <span class="prelude-val">Some</span>(<span class="number">42u64</span>));
 
-            <span class="kw">let </span>y = state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).get();
+            <span class="kw">let </span>y = state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).get();
             <span class="macro">assert_eq!</span>(y, <span class="prelude-val">None</span>);
         });
     }
@@ -2665,8 +2667,8 @@
         CurrentState::init_local_fallback();
 
         CurrentState::with(|state| {
-            state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).or_default();
-            state.block_value::&lt;u32&gt;(<span class="string">&quot;module.TestKey&quot;</span>).get();
+            state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).or_default();
+            state.block_value::&lt;u32&gt;(<span class="string">"module.TestKey"</span>).get();
         });
     }
 
@@ -2676,8 +2678,8 @@
         CurrentState::init_local_fallback();
 
         CurrentState::with(|state| {
-            state.local_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).or_default();
-            state.local_value::&lt;u32&gt;(<span class="string">&quot;module.TestKey&quot;</span>).get();
+            state.local_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).or_default();
+            state.local_value::&lt;u32&gt;(<span class="string">"module.TestKey"</span>).get();
         });
     }
 
@@ -2686,23 +2688,23 @@
         CurrentState::init_local_fallback();
 
         CurrentState::with(|state| {
-            state.block_value(<span class="string">&quot;module.TestKey&quot;</span>).set(<span class="number">42u64</span>);
+            state.block_value(<span class="string">"module.TestKey"</span>).set(<span class="number">42u64</span>);
 
             state.open();
             state.hide_block_values();
 
-            <span class="kw">let </span>v = state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).get();
-            <span class="macro">assert!</span>(v.is_none(), <span class="string">&quot;block values should not propagate when hidden&quot;</span>);
+            <span class="kw">let </span>v = state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).get();
+            <span class="macro">assert!</span>(v.is_none(), <span class="string">"block values should not propagate when hidden"</span>);
 
-            state.block_value(<span class="string">&quot;module.TestKey&quot;</span>).set(<span class="number">48u64</span>);
+            state.block_value(<span class="string">"module.TestKey"</span>).set(<span class="number">48u64</span>);
 
             state.commit();
 
-            <span class="kw">let </span>v = state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).get();
+            <span class="kw">let </span>v = state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).get();
             <span class="macro">assert_eq!</span>(
                 v,
                 <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">42u64</span>),
-                <span class="string">&quot;block values should not propagate when hidden&quot;
+                <span class="string">"block values should not propagate when hidden"
             </span>);
         });
     }
@@ -2712,47 +2714,47 @@
         CurrentState::init_local_fallback();
 
         CurrentState::with(|state| {
-            state.block_value(<span class="string">&quot;module.TestKey&quot;</span>).set(<span class="number">42u64</span>);
+            state.block_value(<span class="string">"module.TestKey"</span>).set(<span class="number">42u64</span>);
 
             state.open();
 
-            <span class="kw">let </span><span class="kw-2">mut </span>y = state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>);
+            <span class="kw">let </span><span class="kw-2">mut </span>y = state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>);
             <span class="kw">let </span>y = y.get_mut().unwrap();
             <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>y, <span class="number">42</span>);
             <span class="kw-2">*</span>y = <span class="number">48</span>;
 
-            <span class="kw">let </span>a = state.local_value::&lt;u64&gt;(<span class="string">&quot;module.TestTxKey&quot;</span>).get();
+            <span class="kw">let </span>a = state.local_value::&lt;u64&gt;(<span class="string">"module.TestTxKey"</span>).get();
             <span class="macro">assert_eq!</span>(a, <span class="prelude-val">None</span>);
-            state.local_value::&lt;u64&gt;(<span class="string">&quot;module.TestTxKey&quot;</span>).set(<span class="number">65</span>);
+            state.local_value::&lt;u64&gt;(<span class="string">"module.TestTxKey"</span>).set(<span class="number">65</span>);
 
-            <span class="kw">let </span>b = state.local_value::&lt;u64&gt;(<span class="string">&quot;module.TestTxKey&quot;</span>).get();
+            <span class="kw">let </span>b = state.local_value::&lt;u64&gt;(<span class="string">"module.TestTxKey"</span>).get();
             <span class="macro">assert_eq!</span>(b, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">65</span>));
 
             <span class="kw">let </span>c = state
-                .local_value::&lt;u64&gt;(<span class="string">&quot;module.TestTakeTxKey&quot;</span>)
+                .local_value::&lt;u64&gt;(<span class="string">"module.TestTakeTxKey"</span>)
                 .or_default();
             <span class="kw-2">*</span>c = <span class="number">67</span>;
-            <span class="kw">let </span>d = state.local_value::&lt;u64&gt;(<span class="string">&quot;module.TestTakeTxKey&quot;</span>).take();
+            <span class="kw">let </span>d = state.local_value::&lt;u64&gt;(<span class="string">"module.TestTakeTxKey"</span>).take();
             <span class="macro">assert_eq!</span>(d, <span class="prelude-val">Some</span>(<span class="number">67</span>));
-            <span class="kw">let </span>e = state.local_value::&lt;u64&gt;(<span class="string">&quot;module.TestTakeTxKey&quot;</span>).get();
+            <span class="kw">let </span>e = state.local_value::&lt;u64&gt;(<span class="string">"module.TestTakeTxKey"</span>).get();
             <span class="macro">assert_eq!</span>(e, <span class="prelude-val">None</span>);
 
             state.rollback(); <span class="comment">// Block values are always propagated.
 
-            </span><span class="kw">let </span>x = state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).get();
+            </span><span class="kw">let </span>x = state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).get();
             <span class="macro">assert_eq!</span>(x, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="number">48</span>));
 
             state.open();
 
-            <span class="kw">let </span>z = state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).take();
+            <span class="kw">let </span>z = state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).take();
             <span class="macro">assert_eq!</span>(z, <span class="prelude-val">Some</span>(<span class="number">48</span>));
 
-            <span class="kw">let </span>a = state.local_value::&lt;u64&gt;(<span class="string">&quot;module.TestTxKey&quot;</span>).get();
-            <span class="macro">assert_eq!</span>(a, <span class="prelude-val">None</span>, <span class="string">&quot;local values should not be propagated&quot;</span>);
+            <span class="kw">let </span>a = state.local_value::&lt;u64&gt;(<span class="string">"module.TestTxKey"</span>).get();
+            <span class="macro">assert_eq!</span>(a, <span class="prelude-val">None</span>, <span class="string">"local values should not be propagated"</span>);
 
             state.rollback(); <span class="comment">// Block values are always propagated.
 
-            </span><span class="kw">let </span>y = state.block_value::&lt;u64&gt;(<span class="string">&quot;module.TestKey&quot;</span>).get();
+            </span><span class="kw">let </span>y = state.block_value::&lt;u64&gt;(<span class="string">"module.TestKey"</span>).get();
             <span class="macro">assert_eq!</span>(y, <span class="prelude-val">None</span>);
         });
     }
@@ -2773,9 +2775,9 @@
                         <span class="number">0</span>,
                         roothash::StakingMessage::Transfer(staking::Transfer::default()),
                     )),
-                    MessageEventHookInvocation::new(<span class="string">&quot;test&quot;</span>.to_string(), <span class="string">&quot;&quot;</span>),
+                    MessageEventHookInvocation::new(<span class="string">"test"</span>.to_string(), <span class="string">""</span>),
                 )
-                .expect(<span class="string">&quot;message emission should succeed&quot;</span>);
+                .expect(<span class="string">"message emission should succeed"</span>);
             <span class="macro">assert_eq!</span>(state.emitted_messages_count(), <span class="number">1</span>);
             <span class="macro">assert_eq!</span>(state.emitted_messages_max(<span class="kw-2">&amp;</span>ctx), max_messages <span class="kw">as </span>u32);
 
@@ -2788,9 +2790,9 @@
                         <span class="number">0</span>,
                         roothash::StakingMessage::Transfer(staking::Transfer::default()),
                     )),
-                    MessageEventHookInvocation::new(<span class="string">&quot;test&quot;</span>.to_string(), <span class="string">&quot;&quot;</span>),
+                    MessageEventHookInvocation::new(<span class="string">"test"</span>.to_string(), <span class="string">""</span>),
                 )
-                .expect(<span class="string">&quot;message emission should succeed&quot;</span>);
+                .expect(<span class="string">"message emission should succeed"</span>);
             <span class="macro">assert_eq!</span>(state.emitted_messages_count(), <span class="number">2</span>);
             <span class="macro">assert_eq!</span>(state.emitted_messages_max(<span class="kw-2">&amp;</span>ctx), max_messages <span class="kw">as </span>u32);
 
@@ -2799,7 +2801,7 @@
             </span><span class="macro">assert_eq!</span>(
                 state.emitted_messages_count(),
                 <span class="number">1</span>,
-                <span class="string">&quot;emitted message should have been rolled back&quot;
+                <span class="string">"emitted message should have been rolled back"
             </span>);
 
             state.open(); <span class="comment">// Start child state.
@@ -2811,9 +2813,9 @@
                         <span class="number">0</span>,
                         roothash::StakingMessage::Transfer(staking::Transfer::default()),
                     )),
-                    MessageEventHookInvocation::new(<span class="string">&quot;test&quot;</span>.to_string(), <span class="string">&quot;&quot;</span>),
+                    MessageEventHookInvocation::new(<span class="string">"test"</span>.to_string(), <span class="string">""</span>),
                 )
-                .expect(<span class="string">&quot;message emission should succeed&quot;</span>);
+                .expect(<span class="string">"message emission should succeed"</span>);
             <span class="macro">assert_eq!</span>(state.emitted_messages_count(), <span class="number">2</span>);
 
             state.commit(); <span class="comment">// Commit.
@@ -2821,7 +2823,7 @@
             </span><span class="macro">assert_eq!</span>(
                 state.emitted_messages_count(),
                 <span class="number">2</span>,
-                <span class="string">&quot;emitted message should have been committed&quot;
+                <span class="string">"emitted message should have been committed"
             </span>);
 
             <span class="comment">// Emit some more messages.
@@ -2833,9 +2835,9 @@
                             <span class="number">0</span>,
                             roothash::StakingMessage::Transfer(staking::Transfer::default()),
                         )),
-                        MessageEventHookInvocation::new(<span class="string">&quot;test&quot;</span>.to_string(), <span class="string">&quot;&quot;</span>),
+                        MessageEventHookInvocation::new(<span class="string">"test"</span>.to_string(), <span class="string">""</span>),
                     )
-                    .expect(<span class="string">&quot;message emission should succeed&quot;</span>);
+                    .expect(<span class="string">"message emission should succeed"</span>);
             }
             <span class="macro">assert_eq!</span>(state.emitted_messages_count(), max_messages);
 
@@ -2847,9 +2849,9 @@
                         <span class="number">0</span>,
                         roothash::StakingMessage::Transfer(staking::Transfer::default()),
                     )),
-                    MessageEventHookInvocation::new(<span class="string">&quot;test&quot;</span>.to_string(), <span class="string">&quot;&quot;</span>),
+                    MessageEventHookInvocation::new(<span class="string">"test"</span>.to_string(), <span class="string">""</span>),
                 )
-                .expect_err(<span class="string">&quot;message emission should fail due to out of slots&quot;</span>);
+                .expect_err(<span class="string">"message emission should fail due to out of slots"</span>);
             <span class="macro">assert_eq!</span>(state.emitted_messages_count(), max_messages);
 
             state.rollback(); <span class="comment">// Rollback.
@@ -2885,17 +2887,17 @@
             state.commit();
 
             <span class="kw">let </span>events = state.take_events();
-            <span class="macro">assert_eq!</span>(events.len(), <span class="number">1</span>, <span class="string">&quot;events should have been propagated&quot;</span>);
-            <span class="kw">let </span>event_key = <span class="string">b&quot;core\x00\x00\x00\x01&quot;</span>.to_vec();
+            <span class="macro">assert_eq!</span>(events.len(), <span class="number">1</span>, <span class="string">"events should have been propagated"</span>);
+            <span class="kw">let </span>event_key = <span class="string">b"core\x00\x00\x00\x01"</span>.to_vec();
             <span class="macro">assert_eq!</span>(events[<span class="kw-2">&amp;</span>event_key].len(), <span class="number">3</span>);
 
             <span class="kw">let </span>events = state.take_unconditional_events();
             <span class="macro">assert_eq!</span>(
                 events.len(),
                 <span class="number">1</span>,
-                <span class="string">&quot;unconditional events should have been propagated&quot;
+                <span class="string">"unconditional events should have been propagated"
             </span>);
-            <span class="kw">let </span>event_key = <span class="string">b&quot;core\x00\x00\x00\x01&quot;</span>.to_vec();
+            <span class="kw">let </span>event_key = <span class="string">b"core\x00\x00\x00\x01"</span>.to_vec();
             <span class="macro">assert_eq!</span>(events[<span class="kw-2">&amp;</span>event_key].len(), <span class="number">1</span>);
 
             state.emit_event(Event::GasUsed { amount: <span class="number">41 </span>});
@@ -2907,13 +2909,13 @@
             state.rollback();
 
             <span class="kw">let </span>events = state.take_events();
-            <span class="macro">assert_eq!</span>(events.len(), <span class="number">0</span>, <span class="string">&quot;events should not have been propagated&quot;</span>);
+            <span class="macro">assert_eq!</span>(events.len(), <span class="number">0</span>, <span class="string">"events should not have been propagated"</span>);
 
             <span class="kw">let </span>events = state.take_unconditional_events();
             <span class="macro">assert_eq!</span>(
                 events.len(),
                 <span class="number">0</span>,
-                <span class="string">&quot;unconditional events should not have been propagated&quot;
+                <span class="string">"unconditional events should not have been propagated"
             </span>);
         });
     }
@@ -2923,32 +2925,32 @@
 
         <span class="macro">assert!</span>(
             !CurrentState::with(|state| state.has_pending_store_updates()),
-            <span class="string">&quot;should not have pending updates&quot;
+            <span class="string">"should not have pending updates"
         </span>);
 
         CurrentState::with_store(|store| {
-            store.insert(<span class="string">b&quot;test&quot;</span>, <span class="string">b&quot;value&quot;</span>);
+            store.insert(<span class="string">b"test"</span>, <span class="string">b"value"</span>);
         });
 
         <span class="macro">assert!</span>(
             CurrentState::with(|state| state.has_pending_store_updates()),
-            <span class="string">&quot;should have pending updates after insert&quot;
+            <span class="string">"should have pending updates after insert"
         </span>);
 
         <span class="comment">// Transaction helper.
         </span>CurrentState::with_transaction(|| {
             <span class="macro">assert!</span>(
                 !CurrentState::with(|state| state.has_pending_store_updates()),
-                <span class="string">&quot;should not have pending updates&quot;
+                <span class="string">"should not have pending updates"
             </span>);
 
             CurrentState::with_store(|store| {
-                store.insert(<span class="string">b&quot;test&quot;</span>, <span class="string">b&quot;b0rken&quot;</span>);
+                store.insert(<span class="string">b"test"</span>, <span class="string">b"b0rken"</span>);
             });
 
             <span class="macro">assert!</span>(
                 CurrentState::with(|state| state.has_pending_store_updates()),
-                <span class="string">&quot;should have pending updates after insert&quot;
+                <span class="string">"should have pending updates after insert"
             </span>);
 
             TransactionResult::Rollback(())
@@ -2967,21 +2969,21 @@
                 }),
             || {
                 CurrentState::with_env(|env| {
-                    <span class="macro">assert!</span>(env.is_check_only(), <span class="string">&quot;environment should be updated&quot;</span>);
-                    <span class="macro">assert!</span>(env.is_internal(), <span class="string">&quot;environment should be updated&quot;</span>);
-                    <span class="macro">assert!</span>(env.is_transaction(), <span class="string">&quot;environment should be updated&quot;</span>);
-                    <span class="macro">assert_eq!</span>(env.tx_index(), <span class="number">42</span>, <span class="string">&quot;environment should be updated&quot;</span>);
-                    <span class="macro">assert_eq!</span>(env.tx_size(), <span class="number">888</span>, <span class="string">&quot;environment should be updated&quot;</span>);
+                    <span class="macro">assert!</span>(env.is_check_only(), <span class="string">"environment should be updated"</span>);
+                    <span class="macro">assert!</span>(env.is_internal(), <span class="string">"environment should be updated"</span>);
+                    <span class="macro">assert!</span>(env.is_transaction(), <span class="string">"environment should be updated"</span>);
+                    <span class="macro">assert_eq!</span>(env.tx_index(), <span class="number">42</span>, <span class="string">"environment should be updated"</span>);
+                    <span class="macro">assert_eq!</span>(env.tx_size(), <span class="number">888</span>, <span class="string">"environment should be updated"</span>);
                 });
 
                 CurrentState::with_transaction(|| {
                     <span class="comment">// Check environment propagation.
                     </span>CurrentState::with_env(|env| {
-                        <span class="macro">assert!</span>(env.is_check_only(), <span class="string">&quot;environment should propagate&quot;</span>);
-                        <span class="macro">assert!</span>(env.is_internal(), <span class="string">&quot;environment should propagate&quot;</span>);
-                        <span class="macro">assert!</span>(env.is_transaction(), <span class="string">&quot;environment should propagate&quot;</span>);
-                        <span class="macro">assert_eq!</span>(env.tx_index(), <span class="number">42</span>, <span class="string">&quot;environment should propagate&quot;</span>);
-                        <span class="macro">assert_eq!</span>(env.tx_size(), <span class="number">888</span>, <span class="string">&quot;environment should propagate&quot;</span>);
+                        <span class="macro">assert!</span>(env.is_check_only(), <span class="string">"environment should propagate"</span>);
+                        <span class="macro">assert!</span>(env.is_internal(), <span class="string">"environment should propagate"</span>);
+                        <span class="macro">assert!</span>(env.is_transaction(), <span class="string">"environment should propagate"</span>);
+                        <span class="macro">assert_eq!</span>(env.tx_index(), <span class="number">42</span>, <span class="string">"environment should propagate"</span>);
+                        <span class="macro">assert_eq!</span>(env.tx_size(), <span class="number">888</span>, <span class="string">"environment should propagate"</span>);
                     });
 
                     TransactionResult::Rollback(())
@@ -2992,7 +2994,7 @@
         );
 
         CurrentState::with_env(|env| {
-            <span class="macro">assert!</span>(!env.is_transaction(), <span class="string">&quot;environment should not leak&quot;</span>);
+            <span class="macro">assert!</span>(!env.is_transaction(), <span class="string">"environment should not leak"</span>);
         });
 
         <span class="comment">// Nested entering, but with a different store.
@@ -3007,14 +3009,14 @@
             CurrentState::start_transaction();
 
             CurrentState::with_store(|store| {
-                store.insert(<span class="string">b&quot;test&quot;</span>, <span class="string">b&quot;should not touch the original root&quot;</span>);
+                store.insert(<span class="string">b"test"</span>, <span class="string">b"should not touch the original root"</span>);
             });
 
             CurrentState::commit_transaction();
         });
 
         CurrentState::with_store(|store| {
-            store.insert(<span class="string">b&quot;another&quot;</span>, <span class="string">b&quot;value 2&quot;</span>);
+            store.insert(<span class="string">b"another"</span>, <span class="string">b"value 2"</span>);
         });
 
         CurrentState::commit_transaction();
@@ -3033,8 +3035,8 @@
             test_store_basic();
         });
 
-        <span class="kw">let </span>value = root.get(<span class="string">b&quot;test&quot;</span>).unwrap();
-        <span class="macro">assert_eq!</span>(value, <span class="string">b&quot;value&quot;</span>);
+        <span class="kw">let </span>value = root.get(<span class="string">b"test"</span>).unwrap();
+        <span class="macro">assert_eq!</span>(value, <span class="string">b"value"</span>);
     }
 
     <span class="attr">#[test]
@@ -3047,8 +3049,8 @@
         </span>test_store_basic();
 
         CurrentState::with_store(|store| {
-            <span class="kw">let </span>value = store.get(<span class="string">b&quot;test&quot;</span>).unwrap();
-            <span class="macro">assert_eq!</span>(value, <span class="string">b&quot;value&quot;</span>);
+            <span class="kw">let </span>value = store.get(<span class="string">b"test"</span>).unwrap();
+            <span class="macro">assert_eq!</span>(value, <span class="string">b"value"</span>);
         });
 
         <span class="comment">// It should be possible to override the fallback by entering explicitly.
@@ -3061,32 +3063,32 @@
 
         CurrentState::enter(<span class="kw-2">&amp;mut </span>root, || {
             CurrentState::with_store(|store| {
-                <span class="macro">assert!</span>(store.get(<span class="string">b&quot;test&quot;</span>).is_none(), <span class="string">&quot;store should be empty&quot;</span>);
-                store.insert(<span class="string">b&quot;unrelated&quot;</span>, <span class="string">b&quot;unrelated&quot;</span>);
+                <span class="macro">assert!</span>(store.get(<span class="string">b"test"</span>).is_none(), <span class="string">"store should be empty"</span>);
+                store.insert(<span class="string">b"unrelated"</span>, <span class="string">b"unrelated"</span>);
             });
 
             test_store_basic();
         });
 
-        <span class="kw">let </span>value = root.get(<span class="string">b&quot;test&quot;</span>).unwrap();
-        <span class="macro">assert_eq!</span>(value, <span class="string">b&quot;value&quot;</span>);
-        <span class="kw">let </span>value = root.get(<span class="string">b&quot;unrelated&quot;</span>).unwrap();
-        <span class="macro">assert_eq!</span>(value, <span class="string">b&quot;unrelated&quot;</span>);
+        <span class="kw">let </span>value = root.get(<span class="string">b"test"</span>).unwrap();
+        <span class="macro">assert_eq!</span>(value, <span class="string">b"value"</span>);
+        <span class="kw">let </span>value = root.get(<span class="string">b"unrelated"</span>).unwrap();
+        <span class="macro">assert_eq!</span>(value, <span class="string">b"unrelated"</span>);
 
         <span class="comment">// Changes should not leak to fallback store.
         </span>CurrentState::with_store(|store| {
-            <span class="macro">assert!</span>(store.get(<span class="string">b&quot;unrelated&quot;</span>).is_none(), <span class="string">&quot;changes should not leak&quot;</span>);
+            <span class="macro">assert!</span>(store.get(<span class="string">b"unrelated"</span>).is_none(), <span class="string">"changes should not leak"</span>);
         });
     }
 
     <span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;must enter context&quot;</span>)]
+    #[should_panic(expected = <span class="string">"must enter context"</span>)]
     </span><span class="kw">fn </span>test_fail_not_entered() {
         test_store_basic(); <span class="comment">// Should panic due to no current store being available.
     </span>}
 
     <span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;must not re-enter with&quot;</span>)]
+    #[should_panic(expected = <span class="string">"must not re-enter with"</span>)]
     </span><span class="kw">fn </span>test_fail_reenter_with() {
         CurrentState::init_local_fallback();
 
@@ -3098,7 +3100,7 @@
     }
 
     <span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;must not re-enter with&quot;</span>)]
+    #[should_panic(expected = <span class="string">"must not re-enter with"</span>)]
     </span><span class="kw">fn </span>test_fail_reenter_with_start_transaction() {
         CurrentState::init_local_fallback();
 
@@ -3108,7 +3110,7 @@
     }
 
     <span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;must not re-enter with&quot;</span>)]
+    #[should_panic(expected = <span class="string">"must not re-enter with"</span>)]
     </span><span class="kw">fn </span>test_fail_reenter_with_commit_transaction() {
         CurrentState::init_local_fallback();
 
@@ -3118,7 +3120,7 @@
     }
 
     <span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;must not re-enter with&quot;</span>)]
+    #[should_panic(expected = <span class="string">"must not re-enter with"</span>)]
     </span><span class="kw">fn </span>test_fail_reenter_with_rollback_transaction() {
         CurrentState::init_local_fallback();
 
@@ -3128,7 +3130,7 @@
     }
 
     <span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;must not re-enter from with block&quot;</span>)]
+    #[should_panic(expected = <span class="string">"must not re-enter from with block"</span>)]
     </span><span class="kw">fn </span>test_fail_reenter_with_enter() {
         CurrentState::init_local_fallback();
 
@@ -3147,7 +3149,7 @@
     }
 
     <span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;must not re-enter from with block&quot;</span>)]
+    #[should_panic(expected = <span class="string">"must not re-enter from with block"</span>)]
     </span><span class="kw">fn </span>test_fail_local_fallback_within_with() {
         <span class="kw">let </span>root = mkvs::OverlayTree::new(
             mkvs::Tree::builder()
@@ -3164,7 +3166,7 @@
     }
 
     <span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;must have no prior states attached to local thread&quot;</span>)]
+    #[should_panic(expected = <span class="string">"must have no prior states attached to local thread"</span>)]
     </span><span class="kw">fn </span>test_fail_local_fallback_within_enter() {
         <span class="kw">let </span>root = mkvs::OverlayTree::new(
             mkvs::Tree::builder()
@@ -3179,7 +3181,7 @@
     }
 
     <span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;cannot commit on root state&quot;</span>)]
+    #[should_panic(expected = <span class="string">"cannot commit on root state"</span>)]
     </span><span class="kw">fn </span>test_fail_commit_transaction_must_exist() {
         CurrentState::init_local_fallback();
 
@@ -3187,7 +3189,7 @@
     </span>}
 
     <span class="attr">#[test]
-    #[should_panic(expected = <span class="string">&quot;cannot rollback on root state&quot;</span>)]
+    #[should_panic(expected = <span class="string">"cannot rollback on root state"</span>)]
     </span><span class="kw">fn </span>test_fail_rollback_transaction_must_exist() {
         CurrentState::init_local_fallback();
 
