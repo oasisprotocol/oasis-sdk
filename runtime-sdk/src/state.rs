@@ -626,7 +626,7 @@ impl State {
 }
 
 thread_local! {
-    static CURRENT: RefCell<Vec<State>> = RefCell::new(Vec::new());
+    static CURRENT: RefCell<Vec<State>> = const { RefCell::new(Vec::new()) };
 }
 
 struct CurrentStateGuard;
@@ -765,7 +765,7 @@ impl CurrentState {
     #[doc(hidden)]
     pub(crate) fn init_local_fallback() {
         thread_local! {
-            static BASE_STATE_INIT: RefCell<bool> = RefCell::new(false);
+            static BASE_STATE_INIT: RefCell<bool> = const { RefCell::new(false) };
         }
 
         BASE_STATE_INIT.with(|initialized| {

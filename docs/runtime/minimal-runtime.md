@@ -28,10 +28,10 @@ to specify a version to use by creating a special file called
 
 Additionally, due to the requirements of some upstream dependencies, you need to
 configure Cargo to always build with specific target CPU platform features
-(namely AES-NI and SSE3) by creating a `.cargo/config` file with the following
-content:
+(namely AES-NI and SSE3) by creating a `.cargo/config.toml` file with the
+following content:
 
-```toml title=".cargo/config"
+```toml title=".cargo/config.toml"
 [build]
 rustflags = ["-C", "target-feature=+aes,+ssse3"]
 rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
@@ -47,7 +47,7 @@ as follows:
 ```
 minimal-runtime
 ├── .cargo
-│   └── config           # Cargo configuration.
+│   └── config.toml      # Cargo configuration.
 ├── Cargo.lock           # Rust dependency tree checksums.
 ├── Cargo.toml           # Rust crate defintion.
 ├── rust-toolchain.toml  # Rust toolchain version configuration.

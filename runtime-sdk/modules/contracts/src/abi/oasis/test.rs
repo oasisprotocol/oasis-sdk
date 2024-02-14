@@ -440,7 +440,7 @@ fn test_hello_contract_out_of_gas() {
     assert_eq!(result.code(), 12);
     assert_eq!(
         &result.to_string(),
-        "core: out of gas (limit: 1000 wanted: 1017)"
+        "core: out of gas (limit: 1000 wanted: 1029)"
     );
 }
 

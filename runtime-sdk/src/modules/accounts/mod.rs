@@ -780,7 +780,7 @@ impl Module {
 
                 total_supplies.insert(denomination, total_supply);
             }
-            for (denomination, total_supply) in computed_total_supply.iter() {
+            if let Some((denomination, total_supply)) = computed_total_supply.iter().next() {
                 panic!("missing expected total supply: {total_supply} {denomination}",);
             }
         });
