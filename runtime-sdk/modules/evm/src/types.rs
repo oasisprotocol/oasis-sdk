@@ -109,7 +109,7 @@ pub struct Leash {
 // Thanks to Nick for providing the fancy macros below :)
 
 // This `mod` exists solely to place an `#[allow(...)]` around the generated code.
-#[allow(clippy::assign_op_pattern, clippy::incorrect_clone_impl_on_copy_type)]
+#[allow(clippy::assign_op_pattern, clippy::non_canonical_clone_impl)]
 mod eth {
     use std::convert::TryFrom;
 
