@@ -94,7 +94,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21.x"
+          go-version: "1.22.x"
 
       # Generate go.sum needed for linting.
       - name: Generate go.sum

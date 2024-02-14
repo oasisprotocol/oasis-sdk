@@ -94,7 +94,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21.x"
+          go-version: "1.22.x"
 
       - name: Unit tests with coverage
         working-directory: client-sdk/go
@@ -116,7 +116,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21.x"
+          go-version: "1.22.x"
 
       - name: Test build orc
         working-directory: tools/orc
@@ -389,7 +389,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21.x"
+          go-version: "1.22.x"
 
       - name: Install Oasis dependencies
         run: |
@@ -468,7 +468,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21.x"
+          go-version: "1.22.x"
 
       - name: Generate
         working-directory: client-sdk/ts-web/core/reflect-go
@@ -499,7 +499,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.21.x"
+          go-version: "1.22.x"
 
       - name: Install Oasis dependencies
         run: |
