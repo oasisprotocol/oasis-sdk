@@ -95,6 +95,23 @@ var DefaultNetworks = Networks{
 							},
 						},
 					},
+
+					// Pontus-X on Testnet.
+					"pontusx": {
+						Description: "Pontus-X Testnet",
+						ID:          "0000000000000000000000000000000000000000000000004febe52eb412b421",
+						Denominations: map[string]*DenominationInfo{
+							NativeDenominationKey: {
+								Symbol:   "EUROe",
+								Decimals: 18,
+							},
+							// The consensus layer denomination when deposited into the runtime.
+							"TEST": {
+								Symbol:   "TEST",
+								Decimals: 18,
+							},
+						},
+					},
 				},
 			},
 		},
