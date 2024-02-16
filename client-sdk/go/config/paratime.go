@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/oasisprotocol/oasis-core/go/common"
 )
@@ -155,8 +156,8 @@ func (p *ParaTime) GetDenominationInfo(d string) *DenominationInfo {
 	var di *DenominationInfo
 	if len(d) == 0 {
 		di = p.Denominations[NativeDenominationKey]
-	} else {
-		di = p.Denominations[d]
+	} else if di = p.Denominations[d]; di == nil {
+		di = p.Denominations[strings.ToLower(d)]
 	}
 
 	if di != nil {
