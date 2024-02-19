@@ -109,12 +109,16 @@ func (p *ParaTimes) SetDefault(name string) error {
 	return nil
 }
 
-// ParaTime contains the configuration parameters of a network.
+// ParaTime contains the configuration parameters of a ParaTime.
 type ParaTime struct {
 	Description string `mapstructure:"description"`
 	ID          string `mapstructure:"id"`
 
+	// Denominations is a map of denominations supported by the ParaTime.
 	Denominations map[string]*DenominationInfo `mapstructure:"denominations,omitempty"`
+	// ConsensusDenomination is the denomination that represents the consensus layer denomination.
+	// If empty, it means that the ParaTime does not support consensus layer transfers.
+	ConsensusDenomination string `mapstructure:"consensus_denomination,omitempty"`
 }
 
 // Validate performs config validation.
@@ -131,6 +135,13 @@ func (p *ParaTime) Validate() error {
 
 		if err := di.Validate(); err != nil {
 			return fmt.Errorf("denomination '%s': %w", denom, err)
+		}
+	}
+
+	if p.ConsensusDenomination != "" {
+		_, exists := p.Denominations[p.ConsensusDenomination]
+		if !exists {
+			return fmt.Errorf("invalid consensus denomination '%s'", p.ConsensusDenomination)
 		}
 	}
 
@@ -153,14 +164,17 @@ func (p *ParaTime) Namespace() common.Namespace {
 //
 // In case the given denomination does not exist, it provides sane defaults.
 func (p *ParaTime) GetDenominationInfo(d string) *DenominationInfo {
-	var di *DenominationInfo
-	if len(d) == 0 {
-		di = p.Denominations[NativeDenominationKey]
-	} else if di = p.Denominations[d]; di == nil {
-		di = p.Denominations[strings.ToLower(d)]
+	var (
+		di *DenominationInfo
+		ok bool
+	)
+	if d == "" {
+		d = NativeDenominationKey
 	}
-
-	if di != nil {
+	if di, ok = p.Denominations[d]; ok {
+		return di
+	}
+	if di, ok = p.Denominations[strings.ToLower(d)]; ok {
 		return di
 	}
 
