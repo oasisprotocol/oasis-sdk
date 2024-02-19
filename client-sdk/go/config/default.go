@@ -25,6 +25,7 @@ var DefaultNetworks = Networks{
 								Decimals: 9,
 							},
 						},
+						ConsensusDenomination: NativeDenominationKey,
 					},
 
 					// Emerald on Mainnet.
@@ -36,6 +37,7 @@ var DefaultNetworks = Networks{
 								Decimals: 18,
 							},
 						},
+						ConsensusDenomination: NativeDenominationKey,
 					},
 
 					// Sapphire on Mainnet.
@@ -47,6 +49,7 @@ var DefaultNetworks = Networks{
 								Decimals: 18,
 							},
 						},
+						ConsensusDenomination: NativeDenominationKey,
 					},
 				},
 			},
@@ -72,6 +75,7 @@ var DefaultNetworks = Networks{
 								Decimals: 9,
 							},
 						},
+						ConsensusDenomination: NativeDenominationKey,
 					},
 
 					// Emerald on Testnet.
@@ -83,6 +87,7 @@ var DefaultNetworks = Networks{
 								Decimals: 18,
 							},
 						},
+						ConsensusDenomination: NativeDenominationKey,
 					},
 
 					// Sapphire on Testnet.
@@ -94,6 +99,7 @@ var DefaultNetworks = Networks{
 								Decimals: 18,
 							},
 						},
+						ConsensusDenomination: NativeDenominationKey,
 					},
 
 					// Pontus-X on Testnet.
@@ -111,6 +117,7 @@ var DefaultNetworks = Networks{
 								Decimals: 18,
 							},
 						},
+						ConsensusDenomination: "TEST",
 					},
 				},
 			},
