@@ -15,7 +15,7 @@ replace (
 
 require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
-	github.com/ethereum/go-ethereum v1.13.12
+	github.com/ethereum/go-ethereum v1.13.13
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
 	github.com/oasisprotocol/oasis-core/go v0.2300.9
@@ -55,7 +55,7 @@ require (
 	github.com/eapache/channels v1.1.0 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
-	github.com/ethereum/c-kzg-4844 v0.4.1 // indirect
+	github.com/ethereum/c-kzg-4844 v0.4.2 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect

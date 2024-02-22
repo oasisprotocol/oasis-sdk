@@ -12,7 +12,7 @@ replace (
 )
 
 require (
-	github.com/ethereum/go-ethereum v1.13.12
+	github.com/ethereum/go-ethereum v1.13.13
 	github.com/oasisprotocol/oasis-core/go v0.2300.9
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.0
 )
@@ -34,7 +34,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/eapache/channels v1.1.0 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
-	github.com/ethereum/c-kzg-4844 v0.4.1 // indirect
+	github.com/ethereum/c-kzg-4844 v0.4.2 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.4.0 // indirect
