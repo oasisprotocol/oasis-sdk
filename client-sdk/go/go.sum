@@ -142,8 +142,8 @@ github.com/envoyproxy/go-control-plane v0.9.9-0.20210217033140-668b12f5399d/go.m
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/ethereum/c-kzg-4844 v0.4.1 h1:ftiEBwhGX3Q08lJiMEfoSmqiUZPyad0exVSmGLjyPuc=
 github.com/ethereum/c-kzg-4844 v0.4.1/go.mod h1:VewdlzQmpT5QSrVhbBuGoCdFJkpaJlO1aQputP83wc0=
-github.com/ethereum/go-ethereum v1.13.12 h1:iDr9UM2JWkngBHGovRJEQn4Kor7mT4gt9rUZqB5M29Y=
-github.com/ethereum/go-ethereum v1.13.12/go.mod h1:hKL2Qcj1OvStXNSEDbucexqnEt1Wh4Cz329XsjAalZY=
+github.com/ethereum/go-ethereum v1.13.13 h1:KYn9w7pEWRI9oyZOzO94OVbctSusPByHdFDPj634jII=
+github.com/ethereum/go-ethereum v1.13.13/go.mod h1:TN8ZiHrdJwSe8Cb6x+p0hs5CxhJZPbqB7hHkaUXcmIU=
 github.com/fatih/color v1.13.0 h1:8LOYc1KYPPmyKMuN8QV2DNRWNbLo6LZ0iLs8+mlH53w=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
 github.com/flynn/noise v1.0.0 h1:DlTHqmzmvcEiKj+4RYo/imoswx/4r6iBlCMfVtrMXpQ=
