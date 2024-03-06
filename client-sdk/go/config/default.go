@@ -8,7 +8,7 @@ var DefaultNetworks = Networks{
 		// See https://docs.oasis.io/node/mainnet.
 		"mainnet": {
 			ChainContext: "bb3d748def55bdfb797a2ac53ee6ee141e54cd2ab2dc2375f4a0703a178e6e55",
-			RPC:          "grpc.oasis.dev:443",
+			RPC:          "grpc.oasis.io:443",
 			Denomination: DenominationInfo{
 				Symbol:   "ROSE",
 				Decimals: 9,
@@ -58,7 +58,7 @@ var DefaultNetworks = Networks{
 		// See https://docs.oasis.io/node/testnet.
 		"testnet": {
 			ChainContext: "0b91b8e4e44b2003a7c5e23ddadb5e14ef5345c0ebcb3ddcae07fa2f244cab76",
-			RPC:          "testnet.grpc.oasis.dev:443",
+			RPC:          "testnet.grpc.oasis.io:443",
 			Denomination: DenominationInfo{
 				Symbol:   "TEST",
 				Decimals: 9,
