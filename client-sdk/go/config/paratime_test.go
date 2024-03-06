@@ -21,6 +21,10 @@ func TestValidateParaTime(t *testing.T) {
 				Symbol:   "BARfoo",
 				Decimals: 9,
 			},
+			"foo": {
+				Symbol:   "FOO",
+				Decimals: 9,
+			},
 		},
 	}
 	err := p.Validate()
@@ -30,6 +34,9 @@ func TestValidateParaTime(t *testing.T) {
 	err = p.Validate()
 	require.NoError(err, "Validate should succeed with valid consensus denomination")
 	p.ConsensusDenomination = "BAR"
+	err = p.Validate()
+	require.NoError(err, "Validate should succeed with valid consensus denomination")
+	p.ConsensusDenomination = "FOO"
 	err = p.Validate()
 	require.NoError(err, "Validate should succeed with valid consensus denomination")
 

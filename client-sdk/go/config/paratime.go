@@ -139,8 +139,8 @@ func (p *ParaTime) Validate() error {
 	}
 
 	if p.ConsensusDenomination != "" {
-		_, exists := p.Denominations[p.ConsensusDenomination]
-		if !exists {
+		cd := p.getDenominationInfo(p.ConsensusDenomination)
+		if cd == nil {
 			return fmt.Errorf("invalid consensus denomination '%s'", p.ConsensusDenomination)
 		}
 	}
@@ -164,6 +164,19 @@ func (p *ParaTime) Namespace() common.Namespace {
 //
 // In case the given denomination does not exist, it provides sane defaults.
 func (p *ParaTime) GetDenominationInfo(d string) *DenominationInfo {
+	if di := p.getDenominationInfo(d); di != nil {
+		return di
+	}
+
+	return &DenominationInfo{
+		Decimals: 9,
+		Symbol:   d,
+	}
+}
+
+// getDenominationInfo returns the denomination information for the given denomination or nil in
+// case the denomination name cannot be resolved.
+func (p *ParaTime) getDenominationInfo(d string) *DenominationInfo {
 	var (
 		di *DenominationInfo
 		ok bool
@@ -178,8 +191,5 @@ func (p *ParaTime) GetDenominationInfo(d string) *DenominationInfo {
 		return di
 	}
 
-	return &DenominationInfo{
-		Decimals: 9,
-		Symbol:   d,
-	}
+	return nil
 }
