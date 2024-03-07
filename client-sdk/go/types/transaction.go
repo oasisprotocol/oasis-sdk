@@ -410,7 +410,7 @@ func (f *Fee) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
 
 	fmt.Fprintf(w, "%sGas limit: %d\n", prefix, f.Gas)
 	fmt.Fprintf(w, "%s(gas price: ", prefix)
-	gp := NewBaseUnits(*f.GasPrice(), NativeDenomination)
+	gp := NewBaseUnits(*f.GasPrice(), f.Amount.Denomination)
 	gp.PrettyPrint(ctx, prefix, w)
 	fmt.Fprintln(w, " per gas unit)")
 }
