@@ -19,8 +19,8 @@ We have [a sample that uses webpack](../playground/webpack.config.js).
 ```js
 import * as oasis from '@oasisprotocol/client';
 
-// Use https://testnet.grpc.oasis.dev to interact with the testnet instead.
-const nic = new oasis.client.NodeInternal('https://grpc.oasis.dev');
+// Use https://testnet.grpc.oasis.io to interact with the testnet instead.
+const nic = new oasis.client.NodeInternal('https://grpc.oasis.io');
 ```
 
 This connects to a public oasis-node instance.
