@@ -1106,7 +1106,7 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
     }
 
     fn after_handle_call<C: Context>(
-        _ctx: &C,
+        ctx: &C,
         result: module::CallResult,
     ) -> Result<module::CallResult, Error> {
         // Skip handling for internally generated calls.
@@ -1114,29 +1114,52 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
             return Ok(result);
         }
 
-        // Charge storage update gas cost if this would be greater than the gas use.
         let params = Self::params();
-        if params.gas_costs.storage_byte > 0 {
+
+        // Compute storage update gas cost.
+        let storage_gas = if params.gas_costs.storage_byte > 0 {
             let storage_update_bytes =
                 CurrentState::with(|state| state.pending_store_update_byte_size());
-            let storage_gas = params
+            params
                 .gas_costs
                 .storage_byte
-                .saturating_mul(storage_update_bytes as u64);
-            let used_gas = Self::used_tx_gas();
+                .saturating_mul(storage_update_bytes as u64)
+        } else {
+            0
+        };
 
-            if storage_gas > used_gas {
-                Self::use_tx_gas(storage_gas - used_gas)?;
-            }
-        }
+        // Compute message gas cost.
+        let message_gas = {
+            let emitted_message_count =
+                CurrentState::with(|state| state.emitted_messages_local_count());
+            // Determine how much each message emission costs based on max_batch_gas and the number
+            // of messages that can be emitted per batch.
+            let message_gas_cost = params
+                .max_batch_gas
+                .checked_div(ctx.max_messages().into())
+                .unwrap_or(u64::MAX); // If no messages are allowed, cost is infinite.
+            message_gas_cost.saturating_mul(emitted_message_count as u64)
+        };
 
-        // Emit gas used event (if this is not an internally generated call).
+        // Compute the gas amount that the transaction should pay in the end.
+        let used_gas = Self::used_tx_gas();
+        let max_gas = std::cmp::max(used_gas, std::cmp::max(storage_gas, message_gas));
+
+        // Make sure the transaction actually pays for the maximum gas. Note that failure here is
+        // fine since the extra resources (storage updates or emitted consensus messages) have not
+        // actually been spent yet (this happens at the end of the round).
+        let maybe_out_of_gas = Self::use_tx_gas(max_gas - used_gas); // Cannot overflow as max_gas >= used_gas.
+
+        // Emit gas used event.
         if Cfg::EMIT_GAS_USED_EVENTS {
             let used_gas = Self::used_tx_gas();
             CurrentState::with(|state| {
                 state.emit_unconditional_event(Event::GasUsed { amount: used_gas });
             });
         }
+
+        // Evaluate the result of the above `use_tx_gas` here to make sure we emit the event.
+        maybe_out_of_gas?;
 
         Ok(result)
     }

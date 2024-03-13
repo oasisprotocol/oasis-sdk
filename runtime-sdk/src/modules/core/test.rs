@@ -4,7 +4,10 @@ use once_cell::unsync::Lazy;
 
 use crate::{
     context::Context,
-    core::common::version::Version,
+    core::{
+        common::{version::Version, versioned::Versioned},
+        consensus::{roothash, staking},
+    },
     crypto::multisig,
     error::Error,
     event::IntoTags,
@@ -16,7 +19,10 @@ use crate::{
     sender::SenderMeta,
     state::{self, CurrentState, Options},
     testing::{configmap, keys, mock},
-    types::{address::Address, token, transaction, transaction::CallerAddress},
+    types::{
+        address::Address, message::MessageEventHookInvocation, token, transaction,
+        transaction::CallerAddress,
+    },
 };
 
 use super::{types, Event, Parameters, API as _};
@@ -206,6 +212,7 @@ impl GasWasterModule {
     const METHOD_SPECIFIC_GAS_REQUIRED_HUGE: &'static str = "test.SpecificGasRequiredHuge";
     const METHOD_STORAGE_UPDATE: &'static str = "test.StorageUpdate";
     const METHOD_STORAGE_REMOVE: &'static str = "test.StorageRemove";
+    const METHOD_EMIT_CONSENSUS_MESSAGE: &'static str = "test.EmitConsensusMessage";
 }
 
 #[sdk_derive(Module)]
@@ -317,6 +324,27 @@ impl GasWasterModule {
         <C::Runtime as Runtime>::Core::use_tx_gas(2)?;
         CurrentState::with_store(|store| store.remove(&args));
         Ok(())
+    }
+
+    #[handler(call = Self::METHOD_EMIT_CONSENSUS_MESSAGE)]
+    fn emit_consensus_message<C: Context>(
+        ctx: &C,
+        count: u64,
+    ) -> Result<(), <GasWasterModule as module::Module>::Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(2)?;
+        CurrentState::with(|state| {
+            for _ in 0..count {
+                state.emit_message(
+                    ctx,
+                    roothash::Message::Staking(Versioned::new(
+                        0,
+                        roothash::StakingMessage::Transfer(staking::Transfer::default()),
+                    )),
+                    MessageEventHookInvocation::new("test".to_string(), ""),
+                )?;
+            }
+            Ok(())
+        })
     }
 }
 
@@ -1125,6 +1153,7 @@ fn test_module_info() {
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.SpecificGasRequiredHuge".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.StorageUpdate".to_string() },
                             MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.StorageRemove".to_string() },
+                            MethodHandlerInfo { kind: types::MethodHandlerKind::Call, name: "test.EmitConsensusMessage".to_string() },
                         ],
                     },
             }
@@ -1375,4 +1404,128 @@ fn test_storage_gas() {
     let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[0].value).unwrap();
     assert_eq!(events.len(), 1); // Just one gas used event.
     assert_eq!(events[0].amount, expected_gas_use);
+}
+
+#[test]
+fn test_message_gas() {
+    let mut mock = mock::Mock::default();
+    let max_messages = 32;
+    mock.max_messages = max_messages;
+
+    let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
+
+    GasWasterRuntime::migrate(&ctx);
+
+    let max_batch_gas = 10_000;
+    Core::set_params(Parameters {
+        max_batch_gas,
+        gas_costs: super::GasCosts {
+            tx_byte: 0,
+            ..Default::default()
+        },
+        ..Core::params()
+    });
+
+    let mut signer = mock::Signer::new(0, keys::alice::sigspec());
+
+    // Emit 10 messages which is greater than the transaction compute gas cost.
+    let num_messages = 10u64;
+    let mut total_messages = num_messages;
+    let expected_gas_use = num_messages * (max_batch_gas / (max_messages as u64));
+    let dispatch_result = signer.call_opts(
+        &ctx,
+        GasWasterModule::METHOD_EMIT_CONSENSUS_MESSAGE,
+        num_messages,
+        mock::CallOptions {
+            fee: transaction::Fee {
+                gas: 10_000,
+                ..Default::default()
+            },
+        },
+    );
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Simulate multiple transactions in a batch by not taking any messages.
+
+    let tags = &dispatch_result.tags;
+    assert_eq!(tags.len(), 1, "one event should have been emitted");
+    assert_eq!(tags[0].key, b"core\x00\x00\x00\x01"); // core.GasUsed (code = 1) event
+
+    #[derive(Debug, Default, cbor::Decode)]
+    struct GasUsedEvent {
+        amount: u64,
+    }
+
+    let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 1); // Just one gas used event.
+    assert_eq!(events[0].amount, expected_gas_use);
+
+    // Emit no messages so just the compute gas cost should be charged.
+    let num_messages = 0u64;
+    total_messages += num_messages;
+    let expected_gas_use = 2; // Just compute gas cost.
+    let dispatch_result = signer.call_opts(
+        &ctx,
+        GasWasterModule::METHOD_EMIT_CONSENSUS_MESSAGE,
+        num_messages,
+        mock::CallOptions {
+            fee: transaction::Fee {
+                gas: 10_000,
+                ..Default::default()
+            },
+        },
+    );
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    let tags = &dispatch_result.tags;
+    assert_eq!(tags.len(), 1, "one event should have been emitted");
+    assert_eq!(tags[0].key, b"core\x00\x00\x00\x01"); // core.GasUsed (code = 1) event
+
+    let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 1); // Just one gas used event.
+    assert_eq!(events[0].amount, expected_gas_use);
+
+    // Take all messages emitted by the above two transactions.
+    let messages = CurrentState::with(|state| state.take_messages());
+    assert_eq!(total_messages as usize, messages.len());
+
+    // Ensure gas estimation works.
+    let num_messages = 10;
+    let expected_gas_use = num_messages * (max_batch_gas / (max_messages as u64));
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: GasWasterModule::METHOD_EMIT_CONSENSUS_MESSAGE.to_owned(),
+            body: cbor::to_value(num_messages),
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
+            fee: transaction::Fee {
+                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                gas: u64::MAX,
+                consensus_messages: 0,
+            },
+            ..Default::default()
+        },
+    };
+    let estimated_gas: u64 = signer
+        .query(
+            &ctx,
+            "core.EstimateGas",
+            types::EstimateGasQuery {
+                caller: None,
+                tx,
+                propagate_failures: false,
+            },
+        )
+        .expect("gas estimation should succeed");
+    assert_eq!(
+        estimated_gas, expected_gas_use,
+        "gas should be estimated correctly"
+    );
 }

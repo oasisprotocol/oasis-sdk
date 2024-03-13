@@ -144,7 +144,6 @@ func evmCall(ctx context.Context, rtc client.RuntimeClient, e evm.V1, signer sig
 		}
 	}
 
-	txB.SetFeeConsensusMessages(1)
 	tx := txB.SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(gasPrice * gasLimit), types.NativeDenomination)).GetTransaction()
 	result, err := txgen.SignAndSubmitTxRaw(ctx, rtc, signer, *tx, gasLimit)
 	if err != nil {

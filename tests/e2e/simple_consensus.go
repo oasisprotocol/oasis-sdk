@@ -22,6 +22,9 @@ import (
 
 const (
 	timeout = 2 * time.Minute
+
+	// oneConsensusMessageGas is enough gas to emit 1 consensus message (max_batch_gas / max_messages = 10_000 / 256).
+	oneConsensusMessageGas = 39
 )
 
 func ensureStakingEvent(log *logging.Logger, ch <-chan *staking.Event, check func(*staking.Event) bool) error {
@@ -295,7 +298,7 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 	amount := types.NewBaseUnits(*quantity.NewFromUint64(50_000), consDenomination)
 	consensusAmount := quantity.NewFromUint64(50)
 	tb := consAccounts.Deposit(&testing.Bob.Address, amount).
-		SetFeeConsensusMessages(1).
+		SetFeeGas(oneConsensusMessageGas).
 		AppendAuthSignature(testing.Alice.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -328,7 +331,7 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 	consensusAmount = quantity.NewFromUint64(40)
 	log.Info("bob depositing into runtime to alice")
 	tb = consAccounts.Deposit(&testing.Alice.Address, amount).
-		SetFeeConsensusMessages(1).
+		SetFeeGas(oneConsensusMessageGas).
 		AppendAuthSignature(testing.Bob.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Bob.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -360,7 +363,7 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 	consensusAmount = quantity.NewFromUint64(25)
 	log.Info("alice withdrawing to bob")
 	tb = consAccounts.Withdraw(&testing.Bob.Address, amount).
-		SetFeeConsensusMessages(1).
+		SetFeeGas(oneConsensusMessageGas).
 		AppendAuthSignature(testing.Alice.SigSpec, 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -380,7 +383,7 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 	amount.Amount = *quantity.NewFromUint64(50_000)
 	log.Info("charlie withdrawing")
 	tb = consAccounts.Withdraw(&testing.Charlie.Address, amount).
-		SetFeeConsensusMessages(1).
+		SetFeeGas(oneConsensusMessageGas).
 		AppendAuthSignature(testing.Charlie.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Charlie.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -395,7 +398,7 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 
 	log.Info("alice withdrawing with invalid nonce")
 	tb = consAccounts.Withdraw(&testing.Bob.Address, amount).
-		SetFeeConsensusMessages(1).
+		SetFeeGas(oneConsensusMessageGas).
 		AppendAuthSignature(testing.Alice.SigSpec, 1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -436,7 +439,7 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 	log.Info("dave depositing (secp256k1)")
 	amount.Amount = *quantity.NewFromUint64(50_000)
 	tb = consAccounts.Deposit(&testing.Dave.Address, amount).
-		SetFeeConsensusMessages(1).
+		SetFeeGas(oneConsensusMessageGas).
 		AppendAuthSignature(testing.Dave.SigSpec, 0)
 	_ = tb.AppendSign(ctx, testing.Dave.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -496,7 +499,7 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 	amount := types.NewBaseUnits(*quantity.NewFromUint64(10_000), consDenomination)
 	consensusAmount := quantity.NewFromUint64(10)
 	tb := consAccounts.Delegate(testing.Bob.Address, amount).
-		SetFeeConsensusMessages(1).
+		SetFeeGas(oneConsensusMessageGas).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -562,7 +565,7 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 	amount = types.NewBaseUnits(*quantity.NewFromUint64(3_000), consDenomination)
 	consensusAmount = quantity.NewFromUint64(3)
 	tb = consAccounts.Delegate(testing.Alice.Address, amount).
-		SetFeeConsensusMessages(1).
+		SetFeeGas(oneConsensusMessageGas).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce+1)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
@@ -590,14 +593,14 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 	sharesA := quantity.NewFromUint64(1)
 	consensusAmountA := quantity.NewFromUint64(1)
 	tb = consAccounts.Undelegate(testing.Bob.Address, *sharesB).
-		SetFeeConsensusMessages(1).
+		SetFeeGas(oneConsensusMessageGas).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce+2)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
 		return err
 	}
 	tb = consAccounts.Undelegate(testing.Alice.Address, *sharesA).
-		SetFeeConsensusMessages(1).
+		SetFeeGas(oneConsensusMessageGas).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce+3)
 	_ = tb.AppendSign(ctx, testing.Alice.Signer)
 	if err = tb.SubmitTx(ctx, nil); err != nil {
