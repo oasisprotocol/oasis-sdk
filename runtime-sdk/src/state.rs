@@ -483,7 +483,8 @@ impl State {
         self.hidden_block_values = Some(mem::take(&mut self.block_values));
     }
 
-    /// Emitted messages count returns the number of messages emitted so far.
+    /// Emitted messages count returns the number of messages emitted so far across this and all
+    /// parent states.
     pub fn emitted_messages_count(&self) -> usize {
         self.messages.len()
             + self
@@ -493,10 +494,21 @@ impl State {
                 .unwrap_or_default()
     }
 
+    /// Emitted messages count returns the number of messages emitted so far in this state, not
+    /// counting any parent states.
+    pub fn emitted_messages_local_count(&self) -> usize {
+        self.messages.len()
+    }
+
     /// Maximum number of messages that can be emitted.
     pub fn emitted_messages_max<C: Context>(&self, ctx: &C) -> u32 {
         if self.env.is_transaction() {
-            self.env.tx_auth_info().fee.consensus_messages
+            let limit = self.env.tx_auth_info().fee.consensus_messages;
+            if limit > 0 {
+                limit
+            } else {
+                ctx.max_messages() // Zero means an implicit limit by gas use.
+            }
         } else {
             ctx.max_messages()
         }
@@ -1168,6 +1180,9 @@ mod test {
         CurrentState::with(|state| {
             state.open();
 
+            assert_eq!(state.emitted_messages_count(), 0);
+            assert_eq!(state.emitted_messages_local_count(), 0);
+
             state
                 .emit_message(
                     &ctx,
@@ -1179,9 +1194,12 @@ mod test {
                 )
                 .expect("message emission should succeed");
             assert_eq!(state.emitted_messages_count(), 1);
+            assert_eq!(state.emitted_messages_local_count(), 1);
             assert_eq!(state.emitted_messages_max(&ctx), max_messages as u32);
 
             state.open(); // Start child state.
+
+            assert_eq!(state.emitted_messages_local_count(), 0);
 
             state
                 .emit_message(
@@ -1194,6 +1212,7 @@ mod test {
                 )
                 .expect("message emission should succeed");
             assert_eq!(state.emitted_messages_count(), 2);
+            assert_eq!(state.emitted_messages_local_count(), 1);
             assert_eq!(state.emitted_messages_max(&ctx), max_messages as u32);
 
             state.rollback(); // Rollback.
@@ -1203,8 +1222,11 @@ mod test {
                 1,
                 "emitted message should have been rolled back"
             );
+            assert_eq!(state.emitted_messages_local_count(), 1);
 
             state.open(); // Start child state.
+
+            assert_eq!(state.emitted_messages_local_count(), 0);
 
             state
                 .emit_message(
@@ -1217,6 +1239,7 @@ mod test {
                 )
                 .expect("message emission should succeed");
             assert_eq!(state.emitted_messages_count(), 2);
+            assert_eq!(state.emitted_messages_local_count(), 1);
 
             state.commit(); // Commit.
 
@@ -1265,6 +1288,14 @@ mod test {
         CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
             CurrentState::with(|state| {
                 assert_eq!(state.emitted_messages_max(&ctx), 1);
+            });
+        });
+
+        let mut tx = mock::transaction();
+        tx.auth_info.fee.consensus_messages = 0; // Zero means an implicit limit by gas use.
+        CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
+            CurrentState::with(|state| {
+                assert_eq!(state.emitted_messages_max(&ctx), max_messages as u32);
             });
         });
     }

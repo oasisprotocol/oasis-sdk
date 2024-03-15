@@ -175,7 +175,8 @@ pub struct Fee {
     /// Maximum amount of gas paid for.
     #[cbor(optional)]
     pub gas: u64,
-    /// Maximum amount of emitted consensus messages paid for.
+    /// Maximum amount of emitted consensus messages paid for. Zero means that up to the maximum
+    /// number of per-batch messages can be emitted.
     #[cbor(optional)]
     pub consensus_messages: u32,
 }

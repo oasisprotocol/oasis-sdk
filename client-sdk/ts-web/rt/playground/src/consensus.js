@@ -207,8 +207,7 @@ export const playground = (async function () {
             })
             .setSignerInfo([siAlice1])
             .setFeeAmount(FEE_FREE)
-            .setFeeGas(0n)
-            .setFeeConsensusMessages(1);
+            .setFeeGas(78n); // Enough to emit 1 consensus message (max_batch_gas / max_messages = 10_000 / 128).
         await twDeposit.sign([csAlice], consensusChainContext);
 
         const addrAliceBech32 = oasis.staking.addressToBech32(aliceAddr);
@@ -282,8 +281,7 @@ export const playground = (async function () {
             })
             .setSignerInfo([siDave2])
             .setFeeAmount(FEE_FREE)
-            .setFeeGas(0n)
-            .setFeeConsensusMessages(1);
+            .setFeeGas(78n); // Enough to emit 1 consensus message (max_batch_gas / max_messages = 10_000 / 128).
         await twWithdraw.sign([csDave], consensusChainContext);
 
         /** @type {oasisRT.types.ConsensusAccountsWithdrawEvent} */

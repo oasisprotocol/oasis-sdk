@@ -36,7 +36,7 @@ use crate::{
         address::{Address, SignatureAddressSpec},
         message::MessageEventHookInvocation,
         token,
-        transaction::AddressSpec,
+        transaction::{AddressSpec, CallerAddress},
     },
     Runtime,
 };
@@ -384,6 +384,15 @@ impl API for Module {
     fn ensure_compatible_tx_signer() -> Result<(), Error> {
         CurrentState::with_env(|env| match env.tx_auth_info().signer_info[0].address_spec {
             AddressSpec::Signature(SignatureAddressSpec::Ed25519(_)) => Ok(()),
+            AddressSpec::Internal(CallerAddress::Address(_)) if env.is_simulation() => {
+                // During simulations, the caller may be overriden in case of confidential runtimes
+                // which would cause this check to always fail, making gas estimation incorrect.
+                //
+                // Note that this is optimistic as a `CallerAddres::Address(_)` can still be
+                // incompatible, but as long as this is only allowed during simulations it shouldn't
+                // result in any problems.
+                Ok(())
+            }
             _ => Err(Error::ConsensusIncompatibleSigner),
         })
     }
