@@ -488,6 +488,15 @@
 <a href="#486" id="486">486</a>
 <a href="#487" id="487">487</a>
 <a href="#488" id="488">488</a>
+<a href="#489" id="489">489</a>
+<a href="#490" id="490">490</a>
+<a href="#491" id="491">491</a>
+<a href="#492" id="492">492</a>
+<a href="#493" id="493">493</a>
+<a href="#494" id="494">494</a>
+<a href="#495" id="495">495</a>
+<a href="#496" id="496">496</a>
+<a href="#497" id="497">497</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Consensus module.
 //!
 //! Low level consensus module for communicating with the consensus layer.
@@ -526,7 +535,7 @@
         address::{Address, SignatureAddressSpec},
         message::MessageEventHookInvocation,
         token,
-        transaction::AddressSpec,
+        transaction::{AddressSpec, CallerAddress},
     },
     Runtime,
 };
@@ -874,6 +883,15 @@
     <span class="kw">fn </span>ensure_compatible_tx_signer() -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         CurrentState::with_env(|env| <span class="kw">match </span>env.tx_auth_info().signer_info[<span class="number">0</span>].address_spec {
             AddressSpec::Signature(SignatureAddressSpec::Ed25519(<span class="kw">_</span>)) =&gt; <span class="prelude-val">Ok</span>(()),
+            AddressSpec::Internal(CallerAddress::Address(<span class="kw">_</span>)) <span class="kw">if </span>env.is_simulation() =&gt; {
+                <span class="comment">// During simulations, the caller may be overriden in case of confidential runtimes
+                // which would cause this check to always fail, making gas estimation incorrect.
+                //
+                // Note that this is optimistic as a `CallerAddres::Address(_)` can still be
+                // incompatible, but as long as this is only allowed during simulations it shouldn't
+                // result in any problems.
+                </span><span class="prelude-val">Ok</span>(())
+            }
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::ConsensusIncompatibleSigner),
         })
     }

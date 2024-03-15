@@ -1247,6 +1247,29 @@
 <a href="#1245" id="1245">1245</a>
 <a href="#1246" id="1246">1246</a>
 <a href="#1247" id="1247">1247</a>
+<a href="#1248" id="1248">1248</a>
+<a href="#1249" id="1249">1249</a>
+<a href="#1250" id="1250">1250</a>
+<a href="#1251" id="1251">1251</a>
+<a href="#1252" id="1252">1252</a>
+<a href="#1253" id="1253">1253</a>
+<a href="#1254" id="1254">1254</a>
+<a href="#1255" id="1255">1255</a>
+<a href="#1256" id="1256">1256</a>
+<a href="#1257" id="1257">1257</a>
+<a href="#1258" id="1258">1258</a>
+<a href="#1259" id="1259">1259</a>
+<a href="#1260" id="1260">1260</a>
+<a href="#1261" id="1261">1261</a>
+<a href="#1262" id="1262">1262</a>
+<a href="#1263" id="1263">1263</a>
+<a href="#1264" id="1264">1264</a>
+<a href="#1265" id="1265">1265</a>
+<a href="#1266" id="1266">1266</a>
+<a href="#1267" id="1267">1267</a>
+<a href="#1268" id="1268">1268</a>
+<a href="#1269" id="1269">1269</a>
+<a href="#1270" id="1270">1270</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Core definitions module.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
@@ -2355,7 +2378,7 @@
     }
 
     <span class="kw">fn </span>after_handle_call&lt;C: Context&gt;(
-        _ctx: <span class="kw-2">&amp;</span>C,
+        ctx: <span class="kw-2">&amp;</span>C,
         result: module::CallResult,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;module::CallResult, Error&gt; {
         <span class="comment">// Skip handling for internally generated calls.
@@ -2363,29 +2386,52 @@
             <span class="kw">return </span><span class="prelude-val">Ok</span>(result);
         }
 
-        <span class="comment">// Charge storage update gas cost if this would be greater than the gas use.
-        </span><span class="kw">let </span>params = <span class="self">Self</span>::params();
-        <span class="kw">if </span>params.gas_costs.storage_byte &gt; <span class="number">0 </span>{
+        <span class="kw">let </span>params = <span class="self">Self</span>::params();
+
+        <span class="comment">// Compute storage update gas cost.
+        </span><span class="kw">let </span>storage_gas = <span class="kw">if </span>params.gas_costs.storage_byte &gt; <span class="number">0 </span>{
             <span class="kw">let </span>storage_update_bytes =
                 CurrentState::with(|state| state.pending_store_update_byte_size());
-            <span class="kw">let </span>storage_gas = params
+            params
                 .gas_costs
                 .storage_byte
-                .saturating_mul(storage_update_bytes <span class="kw">as </span>u64);
-            <span class="kw">let </span>used_gas = <span class="self">Self</span>::used_tx_gas();
+                .saturating_mul(storage_update_bytes <span class="kw">as </span>u64)
+        } <span class="kw">else </span>{
+            <span class="number">0
+        </span>};
 
-            <span class="kw">if </span>storage_gas &gt; used_gas {
-                <span class="self">Self</span>::use_tx_gas(storage_gas - used_gas)<span class="question-mark">?</span>;
-            }
-        }
+        <span class="comment">// Compute message gas cost.
+        </span><span class="kw">let </span>message_gas = {
+            <span class="kw">let </span>emitted_message_count =
+                CurrentState::with(|state| state.emitted_messages_local_count());
+            <span class="comment">// Determine how much each message emission costs based on max_batch_gas and the number
+            // of messages that can be emitted per batch.
+            </span><span class="kw">let </span>message_gas_cost = params
+                .max_batch_gas
+                .checked_div(ctx.max_messages().into())
+                .unwrap_or(u64::MAX); <span class="comment">// If no messages are allowed, cost is infinite.
+            </span>message_gas_cost.saturating_mul(emitted_message_count <span class="kw">as </span>u64)
+        };
 
-        <span class="comment">// Emit gas used event (if this is not an internally generated call).
+        <span class="comment">// Compute the gas amount that the transaction should pay in the end.
+        </span><span class="kw">let </span>used_gas = <span class="self">Self</span>::used_tx_gas();
+        <span class="kw">let </span>max_gas = std::cmp::max(used_gas, std::cmp::max(storage_gas, message_gas));
+
+        <span class="comment">// Make sure the transaction actually pays for the maximum gas. Note that failure here is
+        // fine since the extra resources (storage updates or emitted consensus messages) have not
+        // actually been spent yet (this happens at the end of the round).
+        </span><span class="kw">let </span>maybe_out_of_gas = <span class="self">Self</span>::use_tx_gas(max_gas - used_gas); <span class="comment">// Cannot overflow as max_gas &gt;= used_gas.
+
+        // Emit gas used event.
         </span><span class="kw">if </span>Cfg::EMIT_GAS_USED_EVENTS {
             <span class="kw">let </span>used_gas = <span class="self">Self</span>::used_tx_gas();
             CurrentState::with(|state| {
                 state.emit_unconditional_event(Event::GasUsed { amount: used_gas });
             });
         }
+
+        <span class="comment">// Evaluate the result of the above `use_tx_gas` here to make sure we emit the event.
+        </span>maybe_out_of_gas<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(result)
     }
