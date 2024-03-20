@@ -14,7 +14,7 @@ use crate::{
     config,
     context::Context,
     crypto, dispatcher,
-    keymanager::{KeyManagerClient, TrustedPolicySigners},
+    keymanager::{KeyManagerClient, TrustedSigners},
     module::{
         BlockHandler, InvariantHandler, MethodHandler, MigrationHandler, ModuleInfoHandler,
         TransactionHandler,
@@ -48,9 +48,9 @@ pub trait Runtime {
         + InvariantHandler
         + ModuleInfoHandler;
 
-    /// Return the trusted policy signers for this runtime; if `None`, a key manager connection will
-    /// not be established on startup.
-    fn trusted_policy_signers() -> Option<TrustedPolicySigners> {
+    /// Return the trusted signers for this runtime; if `None`, a key manager connection will not be
+    /// established on startup.
+    fn trusted_signers() -> Option<TrustedSigners> {
         None
     }
 
@@ -162,7 +162,7 @@ pub trait Runtime {
             );
 
             // Cobble together a keymanager client.
-            let key_manager = Self::trusted_policy_signers().map(|signers| {
+            let key_manager = Self::trusted_signers().map(|signers| {
                 Arc::new(KeyManagerClient::new(
                     hi.runtime_id,
                     state.protocol.clone(),
@@ -184,6 +184,7 @@ pub trait Runtime {
 
             PostInitState {
                 txn_dispatcher: Some(Box::new(dispatcher)),
+                app: None,
             }
         };
 
@@ -201,9 +202,8 @@ pub trait Runtime {
             Config {
                 version: Self::VERSION,
                 trust_root: Self::consensus_trust_root(),
-                features: Some(features),
+                features,
                 persist_check_tx_state: false,
-                freshness_proofs: true,
                 ..Default::default()
             },
         );

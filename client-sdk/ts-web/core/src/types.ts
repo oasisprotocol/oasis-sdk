@@ -331,6 +331,10 @@ export interface ConsensusParameters {
     max_block_gas: longnum;
     max_evidence_size: longnum;
     /**
+     * MinGasPrice is the minimum gas price.
+     */
+    min_gas_price?: longnum;
+    /**
      * StateCheckpointInterval is the expected state checkpoint interval (in blocks).
      */
     state_checkpoint_interval: longnum;
@@ -663,6 +667,10 @@ export interface ControlStatus {
      */
     software_version: string;
     /**
+     * Mode is the node mode.
+     */
+    mode: string;
+    /**
      * Debug is the oasis-node debug status.
      */
     debug?: ControlDebugStatus;
@@ -752,7 +760,7 @@ export interface GenesisDocument {
     /**
      * KeyManager is the key manager genesis state.
      */
-    keymanager: KeyManagerGenesis;
+    keymanager: KeyManagerSecretsGenesis;
     /**
      * Scheduler is the scheduler genesis state.
      */
@@ -765,6 +773,10 @@ export interface GenesisDocument {
      * Governance is the governance genesis state.
      */
     governance: GovernanceGenesis;
+    /**
+     * Vault is the optional vault genesis state.
+     */
+    vault?: VaultGenesis;
     /**
      * Consensus is the consensus genesis state.
      */
@@ -839,6 +851,14 @@ export interface GovernanceConsensusParameters {
      * EnableChangeParametersProposal is true iff change parameters proposals are allowed.
      */
     enable_change_parameters_proposal?: boolean;
+    /**
+     * AllowVoteWithoutEntity is true iff casting votes without a registered entity is allowed.
+     */
+    allow_vote_without_entity?: boolean;
+    /**
+     * AllowProposalMetadata is true iff proposals are allowed to contain metadata.
+     */
+    allow_proposal_metadata?: boolean;
 }
 
 /**
@@ -922,6 +942,10 @@ export interface GovernanceProposal {
  * ProposalContent is a consensus layer governance proposal content.
  */
 export interface GovernanceProposalContent {
+    /**
+     * Metadata contains optional proposal metadata which is ignored during proposal execution.
+     */
+    metadata?: GovernanceProposalMetadata;
     upgrade?: UpgradeDescriptor;
     cancel_upgrade?: GovernanceCancelUpgradeProposal;
     change_parameters?: GovernanceChangeParametersProposal;
@@ -949,6 +973,20 @@ export interface GovernanceProposalFinalizedEvent {
      * State is the new proposal state.
      */
     state: number;
+}
+
+/**
+ * ProposalMetadata contains metadata about a proposal.
+ */
+export interface GovernanceProposalMetadata {
+    /**
+     * Title is the human-readable proposal title.
+     */
+    title: string;
+    /**
+     * Description is the human-readable description.
+     */
+    description?: string;
 }
 
 /**
@@ -1014,16 +1052,256 @@ export interface GovernanceVoteEvent {
 }
 
 /**
+ * Application represents a node's application to form a new committee.
+ */
+export interface KeyManagerCHURPApplication {
+    /**
+     * Checksum is the hash of the random verification matrix.
+     *
+     * In all handoffs, except in the dealer phase, the verification matrix
+     * needs to be zero-hole.
+     */
+    checksum: Uint8Array;
+    /**
+     * Reconstructed is true if and only if the node verified all matrices
+     * and successfully reconstructed its share during the handoff.
+     */
+    reconstructed: boolean;
+}
+
+/**
+ * ApplicationRequest contains node's application to form a new committee.
+ */
+export interface KeyManagerCHURPApplicationRequest extends KeyManagerCHURPIdentity {
+    /**
+     * Epoch is the epoch of the handoff for which the node would like
+     * to register.
+     */
+    epoch: longnum;
+    /**
+     * Checksum is the hash of the verification matrix.
+     */
+    checksum: Uint8Array;
+}
+
+/**
+ * ConfirmationRequest confirms that the node successfully completed
+ * the handoff.
+ */
+export interface KeyManagerCHURPConfirmationRequest extends KeyManagerCHURPIdentity {
+    /**
+     * Epoch is the epoch of the handoff for which the node reconstructed
+     * the share.
+     */
+    epoch: longnum;
+    /**
+     * Checksum is the hash of the verification matrix.
+     */
+    checksum: Uint8Array;
+}
+
+/**
+ * CreateRequest contains the initial configuration.
+ */
+export interface KeyManagerCHURPCreateRequest extends KeyManagerCHURPIdentity {
+    /**
+     * SuiteID is the identifier of a cipher suite used for verifiable secret
+     * sharing and key derivation.
+     */
+    suite_id?: number;
+    /**
+     * Threshold is the minimum number of distinct shares required
+     * to reconstruct a key.
+     */
+    threshold?: number;
+    /**
+     * ExtraShares represents the minimum number of shares that can be lost
+     * to render the secret unrecoverable.
+     */
+    extra_shares?: number;
+    /**
+     * HandoffInterval is the time interval in epochs between handoffs.
+     *
+     * A zero value disables handoffs.
+     */
+    handoff_interval?: longnum;
+    /**
+     * Policy is a signed SGX access control policy.
+     */
+    policy?: KeyManagerCHURPSignedPolicySGX;
+}
+
+/**
+ * Identity uniquely identifies a CHURP instance.
+ */
+export interface KeyManagerCHURPIdentity {
+    /**
+     * ID is a unique CHURP identifier within the key manager runtime.
+     */
+    id: number;
+    /**
+     * RuntimeID is the identifier of the key manager runtime.
+     */
+    runtime_id: Uint8Array;
+}
+
+/**
+ * PolicySGX represents an SGX access control policy used to authenticate
+ * key manager enclaves during handoffs.
+ */
+export interface KeyManagerCHURPPolicySGX extends KeyManagerCHURPIdentity {
+    /**
+     * Serial is the monotonically increasing policy serial number.
+     */
+    serial: number;
+    /**
+     * MayShare is the vector of enclave identities from which a share can be
+     * obtained during handouts.
+     */
+    may_share: SGXEnclaveIdentity[];
+    /**
+     * MayJoin is the vector of enclave identities that may form the new
+     * committee in the next handoffs.
+     */
+    may_join: SGXEnclaveIdentity[];
+}
+
+/**
+ * SignedPolicySGX represents a signed SGX access control policy.
+ *
+ * The runtime extension will accept the policy only if all signatures are
+ * valid, and a sufficient number of trusted policy signers have signed it.
+ */
+export interface KeyManagerCHURPSignedPolicySGX {
+    /**
+     * Policy is an SGX access control policy.
+     */
+    policy: KeyManagerCHURPPolicySGX;
+    /**
+     * Signatures is a vector of signatures.
+     */
+    signatures?: Signature[];
+}
+
+/**
+ * Status represents the current state of a CHURP instance.
+ */
+export interface KeyManagerCHURPStatus extends KeyManagerCHURPIdentity {
+    /**
+     * SuiteID is the identifier of a cipher suite used for verifiable secret
+     * sharing and key derivation.
+     */
+    suite_id: number;
+    /**
+     * Threshold represents the degree of the secret-sharing polynomial.
+     *
+     * In a (t,n) secret-sharing scheme, where t represents the threshold,
+     * any combination of t+1 or more shares can reconstruct the secret,
+     * while losing n-t or fewer shares still allows the secret to be
+     * recovered.
+     */
+    threshold: number;
+    /**
+     * ExtraShares represents the minimum number of shares that can be lost
+     * to render the secret unrecoverable.
+     *
+     * If t and e represent the threshold and extra shares, respectively,
+     * then the minimum size of the committee is t+e+1.
+     */
+    extra_shares: number;
+    /**
+     * HandoffInterval is the time interval in epochs between handoffs.
+     *
+     * A zero value disables handoffs.
+     */
+    handoff_interval: longnum;
+    /**
+     * Policy is a signed SGX access control policy.
+     */
+    policy: KeyManagerCHURPSignedPolicySGX;
+    /**
+     * Handoff is the epoch of the last successfully completed handoff.
+     *
+     * The zero value indicates that no handoffs have been completed so far.
+     * Note that the first handoff is special and is called the dealer phase,
+     * in which nodes do not reshare or randomize shares but instead construct
+     * the secret and shares.
+     */
+    handoff: longnum;
+    /**
+     * The hash of the verification matrix from the last successfully completed
+     * handoff.
+     */
+    checksum?: Uint8Array;
+    /**
+     * Committee is a vector of nodes holding a share of the secret
+     * in the active handoff.
+     *
+     * A client needs to obtain more than a threshold number of key shares
+     * from the nodes in this vector to construct the key.
+     */
+    committee?: Uint8Array[];
+    /**
+     * NextHandoff defines the epoch in which the next handoff will occur.
+     *
+     * If an insufficient number of applications is received, the next handoff
+     * will be delayed by one epoch.
+     */
+    next_handoff: longnum;
+    /**
+     * NextChecksum is the hash of the verification matrix from the current
+     * handoff.
+     *
+     * The first candidate to confirm share reconstruction is the source
+     * of truth for the checksum. All other candidates need to confirm
+     * with the same checksum; otherwise, the applications will be annulled,
+     * and the nodes will need to apply for the new committee again.
+     */
+    next_checksum?: Uint8Array;
+    /**
+     * Applications is a map of nodes that wish to form the new committee.
+     *
+     * Candidates are expected to generate a random bivariate polynomial,
+     * construct a verification matrix, compute its checksum, and submit
+     * an application one epoch in advance of the next scheduled handoff.
+     * Subsequently, upon the arrival of the handoff epoch, nodes must execute
+     * the handoff protocol and confirm the reconstruction of its share.
+     */
+    applications?: Map<Uint8Array, KeyManagerCHURPApplication>;
+}
+
+/**
+ * UpdateRequest contains the updated configuration.
+ */
+export interface KeyManagerCHURPUpdateRequest extends KeyManagerCHURPIdentity {
+    /**
+     * ExtraShares represents the minimum number of shares that can be lost
+     * to render the secret unrecoverable.
+     */
+    extra_shares?: number;
+    /**
+     * HandoffInterval is the time interval in epochs between handoffs.
+     *
+     * Zero value disables handoffs.
+     */
+    handoff_interval?: longnum;
+    /**
+     * Policy is a signed SGX access control policy.
+     */
+    policy?: KeyManagerCHURPSignedPolicySGX;
+}
+
+/**
  * ConsensusParameters are the key manager consensus parameters.
  */
-export interface KeyManagerConsensusParameters {
+export interface KeyManagerSecretsConsensusParameters {
     gas_costs?: {[op: string]: longnum};
 }
 
 /**
  * EnclavePolicySGX is the per-SGX key manager enclave ID access control policy.
  */
-export interface KeyManagerEnclavePolicySGX {
+export interface KeyManagerSecretsEnclavePolicySGX {
     /**
      * MayQuery is the map of runtime IDs to the vector of enclave IDs that
      * may query private key material.
@@ -1043,7 +1321,7 @@ export interface KeyManagerEnclavePolicySGX {
 /**
  * EncryptedEphemeralSecret is an encrypted ephemeral secret.
  */
-export interface KeyManagerEncryptedEphemeralSecret {
+export interface KeyManagerSecretsEncryptedEphemeralSecret {
     /**
      * ID is the runtime ID of the key manager.
      */
@@ -1055,13 +1333,13 @@ export interface KeyManagerEncryptedEphemeralSecret {
     /**
      * Secret is the encrypted secret.
      */
-    secret: KeyManagerEncryptedSecret;
+    secret: KeyManagerSecretsEncryptedSecret;
 }
 
 /**
  * EncryptedMasterSecret is an encrypted master secret.
  */
-export interface KeyManagerEncryptedMasterSecret {
+export interface KeyManagerSecretsEncryptedMasterSecret {
     /**
      * ID is the runtime ID of the key manager.
      */
@@ -1077,13 +1355,13 @@ export interface KeyManagerEncryptedMasterSecret {
     /**
      * Secret is the encrypted secret.
      */
-    secret: KeyManagerEncryptedSecret;
+    secret: KeyManagerSecretsEncryptedSecret;
 }
 
 /**
  * EncryptedSecret is a secret encrypted with Deoxys-II MRAE algorithm.
  */
-export interface KeyManagerEncryptedSecret {
+export interface KeyManagerSecretsEncryptedSecret {
     /**
      * Checksum is the secret verification checksum.
      */
@@ -1101,19 +1379,19 @@ export interface KeyManagerEncryptedSecret {
 /**
  * Genesis is the key manager management genesis state.
  */
-export interface KeyManagerGenesis {
+export interface KeyManagerSecretsGenesis {
     /**
      * Parameters are the key manager consensus parameters.
      */
-    params: KeyManagerConsensusParameters;
-    statuses?: KeyManagerStatus[];
+    params: KeyManagerSecretsConsensusParameters;
+    statuses?: KeyManagerSecretsStatus[];
 }
 
 /**
  * PolicySGX is a key manager access control policy for the replicated
  * SGX key manager.
  */
-export interface KeyManagerPolicySGX {
+export interface KeyManagerSecretsPolicySGX {
     /**
      * Serial is the monotonically increasing policy serial number.
      */
@@ -1125,7 +1403,7 @@ export interface KeyManagerPolicySGX {
     /**
      * Enclaves is the per-key manager enclave ID access control policy.
      */
-    enclaves: Map<SGXEnclaveIdentity, KeyManagerEnclavePolicySGX>;
+    enclaves: Map<SGXEnclaveIdentity, KeyManagerSecretsEnclavePolicySGX>;
     /**
      * MasterSecretRotationInterval is the time interval in epochs between master secret rotations.
      * Zero disables rotations.
@@ -1140,11 +1418,11 @@ export interface KeyManagerPolicySGX {
 /**
  * SignedEncryptedEphemeralSecret is a RAK signed encrypted ephemeral secret.
  */
-export interface KeyManagerSignedEncryptedEphemeralSecret {
+export interface KeyManagerSecretsSignedEncryptedEphemeralSecret {
     /**
      * Secret is the encrypted ephemeral secret.
      */
-    secret: KeyManagerEncryptedEphemeralSecret;
+    secret: KeyManagerSecretsEncryptedEphemeralSecret;
     /**
      * Signature is a signature of the ephemeral secret.
      */
@@ -1154,11 +1432,11 @@ export interface KeyManagerSignedEncryptedEphemeralSecret {
 /**
  * SignedEncryptedMasterSecret is a RAK signed encrypted master secret.
  */
-export interface KeyManagerSignedEncryptedMasterSecret {
+export interface KeyManagerSecretsSignedEncryptedMasterSecret {
     /**
      * Secret is the encrypted master secret.
      */
-    secret: KeyManagerEncryptedMasterSecret;
+    secret: KeyManagerSecretsEncryptedMasterSecret;
     /**
      * Signature is a signature of the master secret.
      */
@@ -1168,15 +1446,15 @@ export interface KeyManagerSignedEncryptedMasterSecret {
 /**
  * SignedPolicySGX is a signed SGX key manager access control policy.
  */
-export interface KeyManagerSignedPolicySGX {
-    policy: KeyManagerPolicySGX;
+export interface KeyManagerSecretsSignedPolicySGX {
+    policy: KeyManagerSecretsPolicySGX;
     signatures: Signature[];
 }
 
 /**
  * Status is the current key manager status.
  */
-export interface KeyManagerStatus {
+export interface KeyManagerSecretsStatus {
     /**
      * ID is the runtime ID of the key manager.
      */
@@ -1208,7 +1486,7 @@ export interface KeyManagerStatus {
     /**
      * Policy is the key manager policy.
      */
-    policy: KeyManagerSignedPolicySGX;
+    policy: KeyManagerSecretsSignedPolicySGX;
     /**
      * RSK is the runtime signing key of the key manager.
      */
@@ -1516,11 +1794,6 @@ export interface RegistryConsensusParameters {
      */
     debug_allow_test_runtimes?: boolean;
     /**
-     * DebugBypassStake is true iff the registry should bypass all of the staking
-     * related checks and operations.
-     */
-    debug_bypass_stake?: boolean;
-    /**
      * DebugDeployImmediately is true iff runtime registrations should
      * allow immediate deployment.
      */
@@ -1535,6 +1808,10 @@ export interface RegistryConsensusParameters {
      * disabled outside of the genesis block.
      */
     disable_km_runtime_registration?: boolean;
+    /**
+     * EnableKeyManagerCHURP is true iff the CHURP extension for the key manager is enabled.
+     */
+    enable_km_churp?: boolean;
     /**
      * GasCosts are the registry transaction gas costs.
      */
@@ -1751,14 +2028,6 @@ export interface RegistryMaxNodesConstraint {
  */
 export interface RegistryMinPoolSizeConstraint {
     limit: number;
-}
-
-/**
- * NamespaceQuery is a registry query by namespace (Runtime ID).
- */
-export interface RegistryNamespaceQuery {
-    height: longnum;
-    id: Uint8Array;
 }
 
 /**
@@ -2735,6 +3004,20 @@ export interface RootHashSubmitMsg {
 }
 
 /**
+ * ID is a unique component identifier.
+ */
+export interface RuntimeBundleID {
+    /**
+     * Kind is the component kind.
+     */
+    kind: string;
+    /**
+     * Name is an optional component name.
+     */
+    name?: string;
+}
+
+/**
  * CheckTxRequest is a CheckTx request.
  */
 export interface RuntimeClientCheckTxRequest {
@@ -2793,6 +3076,7 @@ export interface RuntimeClientPlainEvent {
  */
 export interface RuntimeClientQueryRequest {
     runtime_id: Uint8Array;
+    component?: RuntimeBundleID;
     round: longnum;
     method: string;
     args: Uint8Array;
@@ -3254,6 +3538,16 @@ export interface StakingCommissionScheduleRules {
  * ConsensusParameters are the staking consensus parameters.
  */
 export interface StakingConsensusParameters {
+    /**
+     * TokenSymbol is the token's ticker symbol.
+     * Only upper case A-Z characters are allowed.
+     */
+    token_symbol?: string;
+    /**
+     * TokenValueExponent is the token's value base-10 exponent, i.e.
+     * 1 token = 10**TokenValueExponent base units.
+     */
+    token_value_exponent?: number;
     thresholds?: Map<number, Uint8Array>;
     debonding_interval?: longnum;
     reward_schedule?: StakingRewardStep[];
@@ -3299,6 +3593,11 @@ export interface StakingConsensusParameters {
      * to the entity that proposed the block.
      */
     reward_factor_block_proposed: Uint8Array;
+    /**
+     * DebugBypassStake is true iff all of the staking-related checks and
+     * operations should be bypassed.
+     */
+    debug_bypass_stake?: boolean;
 }
 
 /**
@@ -3401,7 +3700,15 @@ export interface StakingEvent {
 export interface StakingGeneralAccount {
     balance?: Uint8Array;
     nonce?: longnum;
+    /**
+     * Allowances is the set of per-beneficiary allowances.
+     */
     allowances?: Map<Uint8Array, Uint8Array>;
+    /**
+     * Hooks is the set of hooks that should be invoked when specific actions happen to override
+     * common behavior.
+     */
+    hooks?: Map<number, StakingHookDestination>;
 }
 
 /**
@@ -3452,6 +3759,16 @@ export interface StakingGenesis {
      * DEBONDING-DELEGATEE-ACCOUNT-ADDRESS: DEBONDING-DELEGATOR-ACCOUNT-ADDRESS: list of DEBONDING-DELEGATIONs.
      */
     debonding_delegations?: Map<Uint8Array, Map<Uint8Array, StakingDebondingDelegation[]>>;
+}
+
+/**
+ * HookDestination describes a hook destination.
+ */
+export interface StakingHookDestination {
+    /**
+     * Module is the identifier of a module that should handle the hook.
+     */
+    module: string;
 }
 
 /**
@@ -3620,6 +3937,11 @@ export interface StorageGetPrefixesRequest {
     tree: StorageTreeID;
     prefixes: Uint8Array[];
     limit: number;
+    /**
+     * ProofVersion specifies the proof version to use. If not specified,
+     * the default (0) version is used for backwards compatibility.
+     */
+    proof_version?: number;
 }
 
 /**
@@ -3629,6 +3951,11 @@ export interface StorageGetRequest {
     tree: StorageTreeID;
     key: Uint8Array;
     include_siblings?: boolean;
+    /**
+     * ProofVersion specifies the proof version to use. If not specified,
+     * the default (0) version is used for backwards compatibility.
+     */
+    proof_version?: number;
 }
 
 /**
@@ -3638,6 +3965,11 @@ export interface StorageIterateRequest {
     tree: StorageTreeID;
     key: Uint8Array;
     prefetch: number;
+    /**
+     * ProofVersion specifies the proof version to use. If not specified,
+     * the default (0) version is used for backwards compatibility.
+     */
+    proof_version?: number;
 }
 
 /**
@@ -3658,6 +3990,23 @@ export interface StorageMetadata {
  * Proof is a Merkle proof for a subtree.
  */
 export interface StorageProof {
+    /**
+     * V is the proof version.
+     *
+     * Similar to `cbor.Versioned` but the version is omitted if it is 0.
+     * We don't use `cbor.Versioned` since we want version 0 proofs to be
+     * backwards compatible with the old structure which was not versioned.
+     *
+     * Version 0:
+     * Initial format.
+     *
+     * Version 1 change:
+     * Leaf nodes are included separately, as children. In version 0 the leaf node was
+     * serialized within the internal node.  The rationale behind this change is to eliminate
+     * the need to serialize all leaf nodes on the path when proving the existence of a
+     * specific value.
+     */
+    v?: number;
     /**
      * UntrustedRoot is the root hash this proof is for. This should only be
      * used as a quick sanity check and proof verification MUST use an
@@ -3769,6 +4118,266 @@ export interface UpgradePendingUpgrade extends CBORVersioned {
 }
 
 /**
+ * Vault contains metadata about a vault.
+ */
+export interface Vault {
+    /**
+     * Creator is the address of the vault creator.
+     */
+    creator: Uint8Array;
+    /**
+     * ID is the unique per-creator identifier of the vault.
+     */
+    id: longnum;
+    /**
+     * State is the vault state.
+     */
+    state: number;
+    /**
+     * Nonce is the nonce to use for the next action.
+     */
+    nonce?: longnum;
+    /**
+     * AdminAuthority specifies the vault's admin authority.
+     */
+    admin_authority: VaultAuthority;
+    /**
+     * SuspendAuthority specifies the vault's suspend authority.
+     */
+    suspend_authority: VaultAuthority;
+}
+
+/**
+ * Action is a vault action.
+ */
+export interface VaultAction {
+    /**
+     * Suspend is the suspend action.
+     */
+    suspend?: VaultActionSuspend;
+    /**
+     * Resume is the resume action.
+     */
+    resume?: VaultActionResume;
+    /**
+     * ExecuteMessage is the execute message action.
+     */
+    execute_msg?: VaultActionExecuteMessage;
+    /**
+     * UpdateWithdrawPolicy is the withdraw policy update action.
+     */
+    update_withdraw_policy?: VaultActionUpdateWithdrawPolicy;
+    /**
+     * UpdateAuthority is the authority update action.
+     */
+    update_authority?: VaultActionUpdateAuthority;
+}
+
+/**
+ * ActionExecuteMessage is the action to execute a message on behalf of the vault. The message is
+ * dispatched as if the vault originated a transaction.
+ */
+export interface VaultActionExecuteMessage {
+    /**
+     * Method is the method that should be called.
+     */
+    method: string;
+    /**
+     * Body is the method call body.
+     */
+    body?: unknown;
+}
+
+/**
+ * ActionResume is the action to suspend the vault.
+ */
+export type VaultActionResume = Map<never, never>;
+
+/**
+ * ActionSuspend is the action to suspend the vault.
+ */
+export type VaultActionSuspend = Map<never, never>;
+
+/**
+ * ActionUpdateAuthority is the action to update one of the vault authorities.
+ */
+export interface VaultActionUpdateAuthority {
+    /**
+     * AdminAuthority is the new admin authority. If the field is nil no update should be done.
+     */
+    admin_authority?: VaultAuthority;
+    /**
+     * SuspendAuthority is the new suspend authority. If the field is nil no update should be done.
+     */
+    suspend_authority?: VaultAuthority;
+}
+
+/**
+ * ActionUpdateWithdrawPolicy is the action to update the withdraw policy for a given address.
+ */
+export interface VaultActionUpdateWithdrawPolicy {
+    /**
+     * Address is the address the policy update is for.
+     */
+    address: Uint8Array;
+    /**
+     * Policy is the new withdraw policy.
+     */
+    policy: VaultWithdrawPolicy;
+}
+
+/**
+ * AddressState is the state stored for the given address.
+ */
+export interface VaultAddressState {
+    /**
+     * WithdrawPolicy is the active withdraw policy.
+     */
+    withdraw_policy: VaultWithdrawPolicy;
+    /**
+     * CurrentBucket specifies the interval we are currently doing accounting for.
+     */
+    bucket: longnum;
+    /**
+     * CurrentAmount specifies the amount already withdrawn in the current interval.
+     */
+    amount: Uint8Array;
+}
+
+/**
+ * Authority is the vault multisig authority.
+ */
+export interface VaultAuthority {
+    /**
+     * Addresses are the addresses that can authorize an action.
+     */
+    addresses: Uint8Array[];
+    /**
+     * Threshold is the minimum number of addresses that must authorize an action.
+     */
+    threshold: number;
+}
+
+/**
+ * AuthorizeAction is an action authorization call body.
+ */
+export interface VaultAuthorizeAction {
+    /**
+     * Vault is the address of the target vault.
+     */
+    vault: Uint8Array;
+    /**
+     * Nonce is the action nonce.
+     */
+    nonce: longnum;
+    /**
+     * Action is the action that should be authorized.
+     */
+    action: VaultAction;
+}
+
+/**
+ * CancelAction is an action cancelation call body.
+ */
+export interface VaultCancelAction {
+    /**
+     * Vault is the address of the target vault.
+     */
+    vault: Uint8Array;
+    /**
+     * Nonce is the action nonce.
+     */
+    nonce: longnum;
+}
+
+/**
+ * ConsensusParameters are the vault consensus parameters.
+ */
+export interface VaultConsensusParameters {
+    /**
+     * Enabled specifies whether the vault service is enabled.
+     */
+    enabled?: boolean;
+    /**
+     * MaxAuthorityAddresses is the maximum number of addresses that can be configured for each
+     * authority.
+     */
+    max_authority_addresses?: number;
+    /**
+     * GasCosts are the vault transaction gas costs.
+     */
+    gas_costs?: {[op: string]: longnum};
+}
+
+/**
+ * Create is a create call body.
+ */
+export interface VaultCreate {
+    /**
+     * AdminAuthority specifies the vault's admin authority.
+     */
+    admin_authority: VaultAuthority;
+    /**
+     * SuspendAuthority specifies the vault's suspend authority.
+     */
+    suspend_authority: VaultAuthority;
+}
+
+/**
+ * Genesis is the initial vault state for use in the genesis block.
+ */
+export interface VaultGenesis {
+    /**
+     * Parameters are the genesis consensus parameters.
+     */
+    params: VaultConsensusParameters;
+    /**
+     * Vaults are the vaults.
+     */
+    vaults?: Vault[];
+    /**
+     * States are the per vault per-address states.
+     */
+    states?: Map<Uint8Array, Map<Uint8Array, VaultAddressState>>;
+    /**
+     * PendingActions are the per-vault pending actions.
+     */
+    pending_actions?: Map<Uint8Array, VaultPendingAction[]>;
+}
+
+/**
+ * PendingAction is an action waiting for authorizations in order to be executed.
+ */
+export interface VaultPendingAction {
+    /**
+     * Nonce is the action nonce.
+     */
+    nonce: longnum;
+    /**
+     * AuthorizedBy contains the addresses that have authorized the action.
+     */
+    authorized_by: Uint8Array[];
+    /**
+     * Action is the pending action itself.
+     */
+    action: VaultAction;
+}
+
+/**
+ * WithdrawPolicy is the per-address withdraw policy.
+ */
+export interface VaultWithdrawPolicy {
+    /**
+     * LimitAmount is the maximum amount of tokens that may be withdrawn in the given interval.
+     */
+    limit_amount: Uint8Array;
+    /**
+     * LimitInterval is the interval (in blocks) when the limit amount resets.
+     */
+    limit_interval: longnum;
+}
+
+/**
  * Version is a protocol version.
  */
 export interface Version {
@@ -3875,6 +4484,26 @@ export interface WorkerComputeStatus {
 }
 
 /**
+ * ChurpSchemeStatus represents the status of a CHURP scheme.
+ */
+export interface WorkerKeyManagerChurpSchemeStatus {
+    /**
+     * Status is the consensus status of the CHURP scheme.
+     */
+    status?: KeyManagerCHURPStatus;
+}
+
+/**
+ * ChurpStatus represents the status of the key manager CHURP extension.
+ */
+export interface WorkerKeyManagerChurpStatus {
+    /**
+     * Schemes is a list of CHURP scheme configurations.
+     */
+    schemes?: Map<number, WorkerKeyManagerChurpSchemeStatus>;
+}
+
+/**
  * EphemeralSecretStats are the ephemeral secret generation and replication stats.
  */
 export interface WorkerKeyManagerEphemeralSecretStats {
@@ -3933,23 +4562,58 @@ export interface WorkerKeyManagerRuntimeAccessList {
 }
 
 /**
- * Status is the key manager global and worker status.
+ * SecretsStatus is the key manager master and ephemeral secrets status.
  */
-export interface WorkerKeyManagerStatus {
+export interface WorkerKeyManagerSecretsStatus {
     /**
-     * GlobalStatus is the global key manager committee status.
+     * Status is the global key manager committee status.
      */
-    global: KeyManagerStatus;
+    status: KeyManagerSecretsStatus;
     /**
-     * WorkerStatus is the key manager worker status.
+     * Worker is the key manager master and ephemeral secrets worker status.
      */
-    worker: WorkerKeyManagerWorkerStatus;
+    worker: WorkerKeyManagerSecretsWorkerStatus;
 }
 
 /**
- * WorkerStatus is the key manager worker status.
+ * SecretsWorkerStatus is the key manager master and ephemeral secrets worker status.
  */
-export interface WorkerKeyManagerWorkerStatus {
+export interface WorkerKeyManagerSecretsWorkerStatus {
+    /**
+     * Status is a concise status of the worker.
+     */
+    status: number;
+    /**
+     * LastRegistration is the time of the last successful registration with the consensus registry
+     * service. In case the worker did not successfully register yet, it will be the zero timestamp.
+     */
+    last_registration: longnum;
+    /**
+     * Policy is the master and ephemeral secrets access control policy.
+     */
+    policy: KeyManagerSecretsSignedPolicySGX;
+    /**
+     * PolicyChecksum is the checksum of the policy.
+     */
+    policy_checksum: Uint8Array;
+    /**
+     * MasterSecrets are the master secret generation and replication stats.
+     */
+    master_secrets: WorkerKeyManagerMasterSecretStats;
+    /**
+     * EphemeralSecrets are the ephemeral secret generation and replication stats.
+     */
+    ephemeral_secrets: WorkerKeyManagerEphemeralSecretStats;
+    /**
+     * PrivatePeers is a list of peers that are always allowed to call protected methods.
+     */
+    private_peers: string[];
+}
+
+/**
+ * Status is the key manager worker status.
+ */
+export interface WorkerKeyManagerStatus {
     /**
      * Status is a concise status of the key manager worker.
      */
@@ -3958,10 +4622,6 @@ export interface WorkerKeyManagerWorkerStatus {
      * ActiveVersion is the currently active version.
      */
     active_version: Version;
-    /**
-     * MayGenerate returns whether the enclave can generate a master secret.
-     */
-    may_generate: boolean;
     /**
      * RuntimeID is the runtime ID of the key manager.
      */
@@ -3975,25 +4635,13 @@ export interface WorkerKeyManagerWorkerStatus {
      */
     access_list: WorkerKeyManagerRuntimeAccessList[];
     /**
-     * PrivatePeers is a list of peers that are always allowed to call protected methods.
+     * Secrets is the master and ephemeral secrets status.
      */
-    private_peers: string[];
+    secrets: WorkerKeyManagerSecretsStatus;
     /**
-     * Policy is the key manager policy.
+     * Churp is the CHURP status.
      */
-    policy: KeyManagerSignedPolicySGX;
-    /**
-     * PolicyChecksum is the checksum of the key manager policy.
-     */
-    policy_checksum: Uint8Array;
-    /**
-     * MasterSecrets are the master secret generation and replication stats.
-     */
-    master_secrets: WorkerKeyManagerMasterSecretStats;
-    /**
-     * EphemeralSecrets are the ephemeral secret generation and replication stats.
-     */
-    ephemeral_secrets: WorkerKeyManagerEphemeralSecretStats;
+    churp: WorkerKeyManagerChurpStatus;
 }
 
 /**

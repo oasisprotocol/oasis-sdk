@@ -18,5 +18,7 @@ export const MODULE_NAME = 'keymanager';
 export const ERR_NO_SUCH_STATUS_CODE = 1;
 
 export function updatePolicyWrapper() {
-    return new consensus.TransactionWrapper<types.KeyManagerSignedPolicySGX>(METHOD_UPDATE_POLICY);
+    return new consensus.TransactionWrapper<types.KeyManagerSecretsSignedPolicySGX>(
+        METHOD_UPDATE_POLICY,
+    );
 }

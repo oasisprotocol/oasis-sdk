@@ -17,14 +17,15 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/sgx/sigstruct"
 	"github.com/oasisprotocol/oasis-core/go/common/version"
 	"github.com/oasisprotocol/oasis-core/go/runtime/bundle"
+	"github.com/oasisprotocol/oasis-core/go/runtime/bundle/component"
 )
 
 const (
 	cargoTomlName = "Cargo.toml"
 
-	execName    = "runtime.elf"
-	sgxExecName = "runtime.sgx"
-	sgxSigName  = "runtime.sgx.sig"
+	execNameFmt    = "%s.elf"
+	sgxExecNameFmt = "%s.sgx"
+	sgxSigNameFmt  = "%s.sgx.sig"
 )
 
 var (
@@ -33,6 +34,7 @@ var (
 	sgxSignatureFn    string
 	bundleFn          string
 	overrideRuntimeID string
+	componentId       string
 
 	// SIGSTRUCT flags.
 	dateStr                 string
@@ -48,19 +50,15 @@ var (
 	rootCmd = &cobra.Command{
 		Use:     "orc",
 		Short:   "Utility for manipulating Oasis Runtime Containers",
-		Version: "0.1.0",
+		Version: "0.3.0",
 	}
 
 	initCmd = &cobra.Command{
 		Use:   "init <ELF-executable> [--sgx-executable SGXS] [--sgx-signature SIG]",
-		Short: "create a runtime bundle",
+		Short: "create a runtime bundle with a RONL component",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			executablePath := args[0]
-
-			manifest := &bundle.Manifest{
-				Executable: execName,
-			}
 
 			// Parse Cargo manifest to get name and version.
 			data, err := os.ReadFile(cargoTomlName)
@@ -89,6 +87,7 @@ var (
 				cobra.CheckErr(fmt.Errorf("malformed Cargo manifest: %w", err))
 			}
 
+			var manifest bundle.Manifest
 			manifest.Name = cm.Package.Name
 			manifest.Version, err = version.FromString(cm.Package.Version)
 			if err != nil {
@@ -126,69 +125,25 @@ var (
 
 			fmt.Printf("Using %s runtime identifier: %s\n", strings.ToUpper(kind), manifest.ID)
 
-			// Collect all assets for the bundle.
-			type runtimeFile struct {
-				fn, descr, dst string
-			}
-			wantFiles := []runtimeFile{
-				{
-					fn:    executablePath,
-					descr: "runtime ELF binary",
-					dst:   execName,
-				},
-			}
-			if sgxExecutableFn != "" {
-				wantFiles = append(wantFiles, runtimeFile{
-					fn:    sgxExecutableFn,
-					descr: "runtime SGX binary",
-					dst:   sgxExecName,
-				})
-				manifest.SGX = &bundle.SGXMetadata{
-					Executable: sgxExecName,
-				}
-
-				if sgxSignatureFn != "" {
-					wantFiles = append(wantFiles, runtimeFile{
-						fn:    sgxSignatureFn,
-						descr: "runtime SGX signature",
-						dst:   sgxSigName,
-					})
-					manifest.SGX.Signature = sgxSigName
-				}
-			}
-
-			// Build the bundle.
 			bnd := &bundle.Bundle{
-				Manifest: manifest,
-			}
-			for _, v := range wantFiles {
-				if v.fn == "" {
-					cobra.CheckErr(fmt.Errorf("missing runtime asset '%s'", v.descr))
-				}
-				var b []byte
-				if b, err = os.ReadFile(v.fn); err != nil {
-					cobra.CheckErr(fmt.Errorf("failed to load runtime asset '%s': %w", v.descr, err))
-				}
-				_ = bnd.Add(v.dst, b)
+				Manifest: &manifest,
 			}
 
-			// Write the bundle out.
-			outFn := fmt.Sprintf("%s.orc", manifest.Name)
-			if bundleFn != "" {
-				outFn = bundleFn
-			}
-			if err = bnd.Write(outFn); err != nil {
-				cobra.CheckErr(fmt.Errorf("failed to write output bundle: %w", err))
-			}
+			addComponent(bnd, component.ID_RONL, executablePath)
+			writeBundle(bnd)
 		},
 	}
 
-	sgxGetSignDataCmd = &cobra.Command{
-		Use:   "sgx-gen-sign-data <bundle.orc>",
-		Short: "outputs the SIGSTRUCT hash that is to be signed in an offline signing process",
-		Args:  cobra.ExactArgs(1),
+	compAddCmd = &cobra.Command{
+		Use:   "component-add <bundle.orc> COMP-ID <ELF-executable> [--sgx-executable SGXS] [--sgx-signature SIG]",
+		Short: "adds a new component to an existing runtime bundle",
+		Args:  cobra.ExactArgs(3),
 		Run: func(cmd *cobra.Command, args []string) {
-			bundlePath := args[0]
+			bundlePath, rawId, executablePath := args[0], args[1], args[2]
+
+			var compId component.ID
+			err := compId.UnmarshalText([]byte(rawId))
+			cobra.CheckErr(err)
 
 			// Load bundle.
 			bnd, err := bundle.Open(bundlePath)
@@ -196,16 +151,40 @@ var (
 				cobra.CheckErr(fmt.Errorf("failed to open bundle: %w", err))
 			}
 
-			sigstruct := constructSigstruct(bnd)
+			addComponent(bnd, compId, executablePath)
+			writeBundle(bnd)
+		},
+	}
+
+	sgxGetSignDataCmd = &cobra.Command{
+		Use:   "sgx-gen-sign-data [--component ID] <bundle.orc>",
+		Short: "outputs the SIGSTRUCT hash that is to be signed in an offline signing process",
+		Args:  cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			bundlePath := args[0]
+			compId := getComponentID()
+
+			// Load bundle.
+			bnd, err := bundle.Open(bundlePath)
+			if err != nil {
+				cobra.CheckErr(fmt.Errorf("failed to open bundle: %w", err))
+			}
+
+			sigstruct := constructSigstruct(bnd, compId)
 			fmt.Printf("%s", sigstruct.HashForSignature())
 		},
 	}
+
 	sgxSetSigCmd = &cobra.Command{
-		Use:   "sgx-set-sig <bundle.orc> <signature.sig> <public_key.pub>",
+		Use:   "sgx-set-sig [--component ID] <bundle.orc> <signature.sig> <public_key.pub>",
 		Short: "add or overwrite an SGXS signature to an existing runtime bundle",
 		Args:  cobra.ExactArgs(3),
 		Run: func(cmd *cobra.Command, args []string) {
 			bundlePath, sigPath, publicKey := args[0], args[1], args[2]
+			compId := getComponentID()
+
+			rawCompId, _ := compId.MarshalText()
+			sgxSigName := fmt.Sprintf(sgxSigNameFmt, string(rawCompId))
 
 			// Load public key.
 			rawPub, err := os.ReadFile(publicKey)
@@ -238,7 +217,7 @@ var (
 			}
 
 			// Construct sigstruct from provided arguments.
-			sigstruct := constructSigstruct(bnd)
+			sigstruct := constructSigstruct(bnd, compId)
 			signed, err := sigstruct.WithSignature(rawSig, pubKey)
 			if err != nil {
 				cobra.CheckErr(fmt.Errorf("failed to append signature: %w", err))
@@ -275,57 +254,15 @@ var (
 			fmt.Printf("Name:           %s\n", bnd.Manifest.Name)
 			fmt.Printf("Runtime ID:     %s\n", bnd.Manifest.ID)
 			fmt.Printf("Version:        %s\n", bnd.Manifest.Version)
-			fmt.Printf("Executable:     %s\n", bnd.Manifest.Executable)
 
-			if bnd.Manifest.SGX != nil {
-				fmt.Printf("SGXS:           %s\n", bnd.Manifest.SGX.Executable)
+			fmt.Printf("Components:\n")
+			if bnd.Manifest.Executable != "" {
+				legacyRonlComp := bnd.Manifest.GetComponentByID(component.ID_RONL)
+				showComponent(bnd, legacyRonlComp, true)
+			}
 
-				mrEnclave, err := bnd.MrEnclave()
-				if err != nil {
-					cobra.CheckErr(fmt.Errorf("failed to compute MRENCLAVE: %w", err))
-				}
-				fmt.Printf("SGXS MRENCLAVE: %s\n", mrEnclave)
-
-				if bnd.Manifest.SGX.Signature != "" {
-					fmt.Printf("SGXS signature: %s\n", bnd.Manifest.SGX.Signature)
-
-					sigPk, sigStruct, err := sigstruct.Verify(bnd.Data[bnd.Manifest.SGX.Signature])
-					cobra.CheckErr(err) // Already checked during Open so it should never fail.
-
-					var mrSigner sgx.MrSigner
-					err = mrSigner.FromPublicKey(sigPk)
-					cobra.CheckErr(err)
-
-					fmt.Printf("SGXS SIGSTRUCT:\n")
-					fmt.Printf("  Build date:       %s\n", sigStruct.BuildDate)
-					fmt.Printf("  MiscSelect:       %08X\n", sigStruct.MiscSelect)
-					fmt.Printf("  MiscSelect mask:  %08X\n", sigStruct.MiscSelectMask)
-					fmt.Printf("  Attributes flags: %016X\n", sigStruct.Attributes.Flags)
-
-					for _, fm := range []struct {
-						flag sgx.AttributesFlags
-						name string
-					}{
-						{sgx.AttributeInit, "init"},
-						{sgx.AttributeDebug, "DEBUG"},
-						{sgx.AttributeMode64Bit, "64-bit mode"},
-						{sgx.AttributeProvisionKey, "provision key"},
-						{sgx.AttributeEInitTokenKey, "enclave init token key"},
-					} {
-						if sigStruct.Attributes.Flags.Contains(fm.flag) {
-							fmt.Printf("    - %s\n", fm.name)
-						}
-					}
-
-					fmt.Printf("  Attributes XFRM:  %016X\n", sigStruct.Attributes.Xfrm)
-					fmt.Printf("  Attributes mask:  %016X %016X\n", sigStruct.AttributesMask[0], sigStruct.AttributesMask[1])
-					fmt.Printf("  MRENCLAVE:        %s\n", sigStruct.EnclaveHash)
-					fmt.Printf("  MRSIGNER:         %s\n", mrSigner)
-					fmt.Printf("  ISV product ID:   %d\n", sigStruct.ISVProdID)
-					fmt.Printf("  ISV SVN:          %d\n", sigStruct.ISVSVN)
-				} else {
-					fmt.Printf("SGXS signature: [UNSIGNED]\n")
-				}
+			for _, comp := range bnd.Manifest.Components {
+				showComponent(bnd, comp, false)
 			}
 
 			fmt.Printf("Digests:\n")
@@ -336,18 +273,172 @@ var (
 	}
 )
 
+func getComponentID() (id component.ID) {
+	err := id.UnmarshalText([]byte(componentId))
+	cobra.CheckErr(err)
+	return
+}
+
+func addComponent(bnd *bundle.Bundle, id component.ID, elfExecutableFn string) {
+	rawCompId, _ := id.MarshalText()
+	execName := fmt.Sprintf(execNameFmt, string(rawCompId))
+
+	comp := bundle.Component{
+		Kind:       id.Kind,
+		Name:       id.Name,
+		Executable: execName,
+	}
+
+	// Collect all assets for the bundle.
+	type runtimeFile struct {
+		fn, descr, dst string
+	}
+	wantFiles := []runtimeFile{
+		{
+			fn:    elfExecutableFn,
+			descr: fmt.Sprintf("%s: ELF binary", string(rawCompId)),
+			dst:   execName,
+		},
+	}
+	if sgxExecutableFn != "" {
+		sgxExecName := fmt.Sprintf(sgxExecNameFmt, string(rawCompId))
+		wantFiles = append(wantFiles, runtimeFile{
+			fn:    sgxExecutableFn,
+			descr: fmt.Sprintf("%s: SGX binary", string(rawCompId)),
+			dst:   sgxExecName,
+		})
+		comp.SGX = &bundle.SGXMetadata{
+			Executable: sgxExecName,
+		}
+
+		if sgxSignatureFn != "" {
+			sgxSigName := fmt.Sprintf(sgxSigNameFmt, string(rawCompId))
+			wantFiles = append(wantFiles, runtimeFile{
+				fn:    sgxSignatureFn,
+				descr: fmt.Sprintf("%s: SGX signature", string(rawCompId)),
+				dst:   sgxSigName,
+			})
+			comp.SGX.Signature = sgxSigName
+		}
+	}
+
+	bnd.Manifest.Components = append(bnd.Manifest.Components, &comp)
+
+	err := bnd.Manifest.Validate()
+	if err != nil {
+		cobra.CheckErr(fmt.Errorf("failed to validate manifest: %w", err))
+	}
+
+	for _, v := range wantFiles {
+		if v.fn == "" {
+			cobra.CheckErr(fmt.Errorf("missing runtime asset '%s'", v.descr))
+		}
+		var b []byte
+		if b, err = os.ReadFile(v.fn); err != nil {
+			cobra.CheckErr(fmt.Errorf("failed to load runtime asset '%s': %w", v.descr, err))
+		}
+		_ = bnd.Add(v.dst, b)
+	}
+
+	bnd.ResetManifest()
+}
+
+func writeBundle(bnd *bundle.Bundle) {
+	// Write the bundle out.
+	outFn := fmt.Sprintf("%s.orc", bnd.Manifest.Name)
+	if bundleFn != "" {
+		outFn = bundleFn
+	}
+	if err := bnd.Write(outFn); err != nil {
+		cobra.CheckErr(fmt.Errorf("failed to write output bundle: %w", err))
+	}
+}
+
+func showComponent(bnd *bundle.Bundle, comp *bundle.Component, legacy bool) {
+	fmt.Printf("- %s", comp.ID())
+	if legacy {
+		fmt.Printf(" [legacy]")
+	}
+	fmt.Println()
+	indent := "  "
+
+	fmt.Printf("%sExecutable:     %s\n", indent, comp.Executable)
+
+	// SGX components.
+	if comp.SGX == nil {
+		return
+	}
+	fmt.Printf("%sSGXS:           %s\n", indent, comp.SGX.Executable)
+
+	mrEnclave, err := bnd.MrEnclave(comp.ID())
+	if err != nil {
+		cobra.CheckErr(fmt.Errorf("failed to compute MRENCLAVE: %w", err))
+	}
+	fmt.Printf("%sSGXS MRENCLAVE: %s\n", indent, mrEnclave)
+
+	if comp.SGX.Signature != "" {
+		fmt.Printf("%sSGXS signature: %s\n", indent, comp.SGX.Signature)
+
+		sigPk, sigStruct, err := sigstruct.Verify(bnd.Data[bnd.Manifest.SGX.Signature])
+		cobra.CheckErr(err) // Already checked during Open so it should never fail.
+
+		var mrSigner sgx.MrSigner
+		err = mrSigner.FromPublicKey(sigPk)
+		cobra.CheckErr(err)
+
+		fmt.Printf("%sSGXS SIGSTRUCT:\n", indent)
+		fmt.Printf("%s  Build date:       %s\n", indent, sigStruct.BuildDate)
+		fmt.Printf("%s  MiscSelect:       %08X\n", indent, sigStruct.MiscSelect)
+		fmt.Printf("%s  MiscSelect mask:  %08X\n", indent, sigStruct.MiscSelectMask)
+		fmt.Printf("%s  Attributes flags: %016X\n", indent, sigStruct.Attributes.Flags)
+
+		for _, fm := range []struct {
+			flag sgx.AttributesFlags
+			name string
+		}{
+			{sgx.AttributeInit, "init"},
+			{sgx.AttributeDebug, "DEBUG"},
+			{sgx.AttributeMode64Bit, "64-bit mode"},
+			{sgx.AttributeProvisionKey, "provision key"},
+			{sgx.AttributeEInitTokenKey, "enclave init token key"},
+		} {
+			if sigStruct.Attributes.Flags.Contains(fm.flag) {
+				fmt.Printf("%s    - %s\n", indent, fm.name)
+			}
+		}
+
+		fmt.Printf("%s  Attributes XFRM:  %016X\n", indent, sigStruct.Attributes.Xfrm)
+		fmt.Printf("%s  Attributes mask:  %016X %016X\n", indent, sigStruct.AttributesMask[0], sigStruct.AttributesMask[1])
+		fmt.Printf("%s  MRENCLAVE:        %s\n", indent, sigStruct.EnclaveHash)
+		fmt.Printf("%s  MRSIGNER:         %s\n", indent, mrSigner)
+		fmt.Printf("%s  ISV product ID:   %d\n", indent, sigStruct.ISVProdID)
+		fmt.Printf("%s  ISV SVN:          %d\n", indent, sigStruct.ISVSVN)
+	} else {
+		fmt.Printf("%sSGXS signature: [UNSIGNED]\n", indent)
+	}
+}
+
 func main() {
 	_ = rootCmd.Execute()
 }
 
 func init() {
+	// SGX flags.
+	sgxFlags := flag.NewFlagSet("", flag.ContinueOnError)
+	sgxFlags.StringVar(&sgxExecutableFn, "sgx-executable", "", "SGXS executable for runtimes with TEE support")
+	sgxFlags.StringVar(&sgxSignatureFn, "sgx-signature", "", "detached SGXS signature for runtimes with TEE support")
+	compAddCmd.Flags().AddFlagSet(sgxFlags)
+
 	// Init cmd.
 	initFlags := flag.NewFlagSet("", flag.ContinueOnError)
-	initFlags.StringVar(&sgxExecutableFn, "sgx-executable", "", "SGXS executable for runtimes with TEE support")
-	initFlags.StringVar(&sgxSignatureFn, "sgx-signature", "", "detached SGXS signature for runtimes with TEE support")
 	initFlags.StringVar(&bundleFn, "output", "", "output bundle filename")
 	initFlags.StringVar(&overrideRuntimeID, "runtime-id", "", "override autodetected runtime ID")
 	initCmd.Flags().AddFlagSet(initFlags)
+	initCmd.Flags().AddFlagSet(sgxFlags)
+
+	// Component flags.
+	compFlags := flag.NewFlagSet("", flag.ContinueOnError)
+	compFlags.StringVar(&componentId, "component", "ronl", "component kind.name (default: ronl)")
 
 	// SGX singing cmds.
 	signFlags := flag.NewFlagSet("", flag.ContinueOnError)
@@ -362,9 +453,12 @@ func init() {
 	signFlags.BoolVarP(&debug, "debug", "d", false, "Sets the DEBUG bit in the ATTRIBUTES field, unsets the DEBUG bit in the ATTRIBUTEMASK field")
 
 	sgxGetSignDataCmd.Flags().AddFlagSet(signFlags)
+	sgxGetSignDataCmd.Flags().AddFlagSet(compFlags)
 	sgxSetSigCmd.Flags().AddFlagSet(signFlags)
+	sgxSetSigCmd.Flags().AddFlagSet(compFlags)
 
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(compAddCmd)
 	rootCmd.AddCommand(sgxGetSignDataCmd)
 	rootCmd.AddCommand(sgxSetSigCmd)
 	rootCmd.AddCommand(showCmd)

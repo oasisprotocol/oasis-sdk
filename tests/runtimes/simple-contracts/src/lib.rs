@@ -2,8 +2,7 @@
 use std::collections::BTreeMap;
 
 use oasis_runtime_sdk::{
-    self as sdk, config, keymanager::TrustedPolicySigners, modules, types::token::Denomination,
-    Version,
+    self as sdk, config, keymanager::TrustedSigners, modules, types::token::Denomination, Version,
 };
 use oasis_runtime_sdk_contracts as contracts;
 
@@ -38,8 +37,8 @@ impl sdk::Runtime for Runtime {
         contracts::Module<Config>,
     );
 
-    fn trusted_policy_signers() -> Option<TrustedPolicySigners> {
-        Some(TrustedPolicySigners::default())
+    fn trusted_signers() -> Option<TrustedSigners> {
+        Some(TrustedSigners::default())
     }
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {

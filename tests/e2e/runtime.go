@@ -18,7 +18,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/node"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/common/version"
-	keymanager "github.com/oasisprotocol/oasis-core/go/keymanager/api"
+	"github.com/oasisprotocol/oasis-core/go/keymanager/secrets"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/env"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/log"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
@@ -26,6 +26,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/scenario/e2e"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
 	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
+	"github.com/oasisprotocol/oasis-core/go/runtime/bundle/component"
 	runtimeCfg "github.com/oasisprotocol/oasis-core/go/runtime/config"
 	scheduler "github.com/oasisprotocol/oasis-core/go/scheduler/api"
 	"github.com/oasisprotocol/oasis-core/go/staking/api"
@@ -210,8 +211,13 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				GovernanceModel: registry.GovernanceEntity,
 				Deployments: []oasis.DeploymentCfg{
 					{
-						Binaries: map[node.TEEHardware]string{
-							node.TEEHardwareInvalid: keymanagerPath,
+						Components: []oasis.ComponentCfg{
+							{
+								Kind: component.RONL,
+								Binaries: map[node.TEEHardware]string{
+									node.TEEHardwareInvalid: keymanagerPath,
+								},
+							},
 						},
 					},
 				},
@@ -254,8 +260,13 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				GovernanceModel: registry.GovernanceEntity,
 				Deployments: []oasis.DeploymentCfg{
 					{
-						Version:  version.Version{Major: 0, Minor: 1, Patch: 0},
-						Binaries: sc.resolveRuntimeBinaries(runtimeBinary),
+						Version: version.Version{Major: 0, Minor: 1, Patch: 0},
+						Components: []oasis.ComponentCfg{
+							{
+								Kind:     component.RONL,
+								Binaries: sc.resolveRuntimeBinaries(runtimeBinary),
+							},
+						},
 					},
 				},
 			},
@@ -375,22 +386,22 @@ func (sc *RuntimeScenario) CheckInvariants(ctx context.Context) error {
 }
 
 // WaitMasterSecret waits until the specified generation of the master secret is generated.
-func (sc *RuntimeScenario) WaitMasterSecret(ctx context.Context, generation uint64) (*keymanager.Status, error) {
+func (sc *RuntimeScenario) WaitMasterSecret(ctx context.Context, generation uint64) (*secrets.Status, error) {
 	sc.Logger.Info("waiting for master secret", "generation", generation)
 
-	mstCh, mstSub, err := sc.Net.Controller().Keymanager.WatchMasterSecrets(ctx)
+	mstCh, mstSub, err := sc.Net.Controller().Keymanager.Secrets().WatchMasterSecrets(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer mstSub.Close()
 
-	stCh, stSub, err := sc.Net.Controller().Keymanager.WatchStatuses(ctx)
+	stCh, stSub, err := sc.Net.Controller().Keymanager.Secrets().WatchStatuses(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer stSub.Close()
 
-	var last *keymanager.Status
+	var last *secrets.Status
 	for {
 		select {
 		case <-ctx.Done():

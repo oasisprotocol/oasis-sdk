@@ -17,6 +17,7 @@ import (
 	cmdCommon "github.com/oasisprotocol/oasis-core/go/oasis-node/cmd/common"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
+	"github.com/oasisprotocol/oasis-core/go/runtime/bundle/component"
 	"github.com/oasisprotocol/oasis-core/go/runtime/config"
 )
 
@@ -105,8 +106,13 @@ func fixture() *oasis.NetworkFixture {
 				Deployments: []oasis.DeploymentCfg{
 					{
 						Version: version.Version{Major: 0, Minor: 1, Patch: 0},
-						Binaries: map[node.TEEHardware]string{
-							node.TEEHardwareInvalid: viper.GetString(cfgRuntimeBinary),
+						Components: []oasis.ComponentCfg{
+							{
+								Kind: component.RONL,
+								Binaries: map[node.TEEHardware]string{
+									node.TEEHardwareInvalid: viper.GetString(cfgRuntimeBinary),
+								},
+							},
 						},
 					},
 				},
