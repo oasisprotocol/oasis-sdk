@@ -407,6 +407,14 @@ const methodDescriptorRootHashGetLatestBlock = createMethodDescriptorUnary<
     types.RootHashRuntimeRequest,
     types.RootHashBlock
 >('RootHash', 'GetLatestBlock');
+const methodDescriptorRootHashGetPastRoundRoots = createMethodDescriptorUnary<
+    types.RootHashRuntimeRequest,
+    Map<types.longnum, types.RootHashRoundRoots>
+>('RootHash', 'GetPastRoundRoots');
+const methodDescriptorRootHashGetRoundRoots = createMethodDescriptorUnary<
+    types.RootHashRoundRootsRequest,
+    types.RootHashRoundRoots
+>('RootHash', 'GetRoundRoots');
 const methodDescriptorRootHashGetRuntimeState = createMethodDescriptorUnary<
     types.RootHashRuntimeRequest,
     types.RootHashRuntimeState
@@ -424,7 +432,7 @@ const methodDescriptorRootHashWatchEvents = createMethodDescriptorServerStreamin
     types.RootHashEvent
 >('RootHash', 'WatchEvents');
 const methodDescriptorRootHashWatchExecutorCommitments = createMethodDescriptorServerStreaming<
-    void,
+    Uint8Array,
     types.RootHashExecutorCommitment
 >('RootHash', 'WatchExecutorCommitments');
 
@@ -1215,6 +1223,20 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * GetPastRoundRoots returns the stored past state and I/O roots for the given runtime.
+     */
+    rootHashGetPastRoundRoots(request: types.RootHashRuntimeRequest) {
+        return this.callUnary(methodDescriptorRootHashGetPastRoundRoots, request);
+    }
+
+    /**
+     * GetPastRoundRoots returns the stored state and I/O roots for the given runtime and round.
+     */
+    rootHashGetRoundRoots(request: types.RootHashRoundRootsRequest) {
+        return this.callUnary(methodDescriptorRootHashGetRoundRoots, request);
+    }
+
+    /**
      * GetRuntimeState returns the given runtime's state.
      */
     rootHashGetRuntimeState(request: types.RootHashRuntimeRequest) {
@@ -1254,10 +1276,10 @@ export class NodeInternal extends GRPCWrapper {
      * Note that these commitments may not have been processed by consensus, commitments may be
      * received in any order and duplicates are possible.
      */
-    rootHashWatchExecutorCommitments() {
+    rootHashWatchExecutorCommitments(runtimeID: Uint8Array) {
         return this.callServerStreaming(
             methodDescriptorRootHashWatchExecutorCommitments,
-            undefined,
+            runtimeID,
         );
     }
 
