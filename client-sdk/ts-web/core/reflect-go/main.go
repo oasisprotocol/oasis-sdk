@@ -566,7 +566,7 @@ var skipMethods = map[string]bool{
 }
 var skipMethodsConsulted = map[string]bool{}
 
-func visitClientWithPrefix(client *clientCode, t reflect.Type, prefix string) {
+func visitClientWithService(client *clientCode, t reflect.Type, service string, methodPrefix string) {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting client %v\n", t)
 	for i := 0; i < t.NumMethod(); i++ {
 		m := t.Method(i)
@@ -650,9 +650,9 @@ func visitClientWithPrefix(client *clientCode, t reflect.Type, prefix string) {
 			outRef = "void"
 		}
 		methodDoc := renderDocComment(getMethodDoc(t, m.Name), "    ")
-		lowerPrefix := strings.ToLower(prefix[:1]) + prefix[1:]
-		client.methodDescriptors += fmt.Sprintf("const methodDescriptor%s%s = createMethodDescriptor%s<%s, %s>('%s', '%s');\n", prefix, m.Name, descriptorKind, inRef, outRef, prefix, m.Name)
-		client.methods += fmt.Sprintf("%s    %s%s(%s) { return this.call%s(methodDescriptor%s%s, %s); }\n", methodDoc, lowerPrefix, m.Name, inParam, descriptorKind, prefix, m.Name, inArg)
+		lowerService := strings.ToLower(service[:1]) + service[1:]
+		client.methodDescriptors += fmt.Sprintf("const methodDescriptor%s%s%s = createMethodDescriptor%s<%s, %s>('%s', '%s%s');\n", service, methodPrefix, m.Name, descriptorKind, inRef, outRef, service, methodPrefix, m.Name)
+		client.methods += fmt.Sprintf("%s    %s%s%s(%s) { return this.call%s(methodDescriptor%s%s%s, %s); }\n", methodDoc, lowerService, methodPrefix, m.Name, inParam, descriptorKind, service, methodPrefix, m.Name, inArg)
 		client.methods += "\n"
 	}
 	client.methodDescriptors += "\n"
@@ -660,7 +660,7 @@ func visitClientWithPrefix(client *clientCode, t reflect.Type, prefix string) {
 
 func visitClient(client *clientCode, t reflect.Type) {
 	prefix := getPrefix(t)
-	visitClientWithPrefix(client, t, prefix)
+	visitClientWithService(client, t, prefix, "")
 }
 
 func write() {
@@ -695,12 +695,12 @@ func main() {
 	visitClient(&internal, reflect.TypeOf((*roothash.Backend)(nil)).Elem())
 	visitClient(&internal, reflect.TypeOf((*governance.Backend)(nil)).Elem())
 	visitClient(&internal, reflect.TypeOf((*storage.Backend)(nil)).Elem())
-	visitClientWithPrefix(&internal, reflect.TypeOf((*workerStorage.StorageWorker)(nil)).Elem(), "StorageWorker")
+	visitClientWithService(&internal, reflect.TypeOf((*workerStorage.StorageWorker)(nil)).Elem(), "StorageWorker", "")
 	visitClient(&internal, reflect.TypeOf((*runtimeClient.RuntimeClient)(nil)).Elem())
 	visitClient(&internal, reflect.TypeOf((*consensus.ClientBackend)(nil)).Elem())
-	visitClientWithPrefix(&internal, reflect.TypeOf((*syncer.ReadSyncer)(nil)).Elem(), "ConsensusState") // this doesn't work right
-	visitClientWithPrefix(&internal, reflect.TypeOf((*control.NodeController)(nil)).Elem(), "NodeController")
-	visitClientWithPrefix(&internal, reflect.TypeOf((*control.DebugController)(nil)).Elem(), "DebugController")
+	visitClientWithService(&internal, reflect.TypeOf((*syncer.ReadSyncer)(nil)).Elem(), "Consensus", "State")
+	visitClientWithService(&internal, reflect.TypeOf((*control.NodeController)(nil)).Elem(), "NodeController", "")
+	visitClientWithService(&internal, reflect.TypeOf((*control.DebugController)(nil)).Elem(), "DebugController", "")
 
 	_, _ = fmt.Fprintf(os.Stderr, "visiting transaction body types\n")
 	registeredMethods.Range(func(name, bodyType interface{}) bool {
