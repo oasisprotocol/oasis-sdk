@@ -2208,6 +2208,10 @@ export interface RootHashEvidence {
  */
 export interface RootHashExecutionDiscrepancyDetectedEvent {
     /**
+     * Round is the round in which the discrepancy was detected.
+     */
+    round: longnum;
+    /**
      * Rank is the rank of the transaction scheduler.
      */
     rank: longnum;
@@ -2468,7 +2472,7 @@ export interface RootHashLivenessStatistics {
     good_rounds: longnum[];
     /**
      * FinalizedProposals is a list that records the number of finalized rounds when a node
-     * acted as a proposer.
+     * acted as a proposer with the highest rank.
      *
      * The list is ordered according to the committee arrangement (i.e., the counter at index i
      * holds the value for the node at index i in the committee).
@@ -2476,7 +2480,7 @@ export interface RootHashLivenessStatistics {
     finalized_proposals: longnum[];
     /**
      * MissedProposals is a list that records the number of failed rounds when a node
-     * acted as a proposer.
+     * acted as a proposer with the highest rank.
      *
      * The list is ordered according to the committee arrangement (i.e., the counter at index i
      * holds the value for the node at index i in the committee).
@@ -2597,6 +2601,21 @@ export interface RootHashRoundResults {
      * negatively contributed to the round by causing discrepancies.
      */
     bad_compute_entities?: Uint8Array[];
+}
+
+/**
+ * RoundRoots holds the per-round state and I/O roots that are stored in
+ * consensus state.
+ */
+export type RootHashRoundRoots = [StateRoot: Uint8Array, IORoot: Uint8Array];
+
+/**
+ * RoundRootsRequest is a request for a specific runtime and round's state and I/O roots.
+ */
+export interface RootHashRoundRootsRequest {
+    runtime_id: Uint8Array;
+    height: longnum;
+    round: longnum;
 }
 
 /**
@@ -3788,6 +3807,16 @@ export interface WorkerCommonLivenessStatus {
      * LiveRounds is the number of rounds in which the node positively contributed.
      */
     live_rounds: longnum;
+    /**
+     * FinalizedProposals is the number of finalized rounds when a node acted as a proposer
+     * with the highest rank.
+     */
+    finalized_proposals: longnum;
+    /**
+     * MissedProposals is the number of failed rounds when a node acted as a proposer
+     * with the highest rank.
+     */
+    missed_proposals: longnum;
 }
 
 /**
