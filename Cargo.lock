@@ -54,17 +54,6 @@ dependencies = [
 
 [[package]]
 name = "ahash"
-version = "0.7.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "891477e0c6a8957309ee5c45a6368af3ae14bb510732d2684ffa19af310920f9"
-dependencies = [
- "getrandom 0.2.12",
- "once_cell",
- "version_check",
-]
-
-[[package]]
-name = "ahash"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e89da841a80418a9b391ebaea17f5c112ffaaa96f621d2c285b5174da76b9011"
@@ -1604,20 +1593,11 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.12.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
-dependencies = [
- "ahash 0.7.8",
-]
-
-[[package]]
-name = "hashbrown"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43a3c133739dddd0d2990f9a4bdf8eb4b21ef50e4851ca85ab661199821d510e"
 dependencies = [
- "ahash 0.8.11",
+ "ahash",
 ]
 
 [[package]]
@@ -1951,15 +1931,6 @@ name = "log"
 version = "0.4.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
-
-[[package]]
-name = "lru"
-version = "0.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6e8aaa3f231bb4bd57b84b2d5dc3ae7f350265df8aa96492e0bc394a1571909"
-dependencies = [
- "hashbrown 0.12.3",
-]
 
 [[package]]
 name = "lru"
@@ -2410,7 +2381,7 @@ dependencies = [
  "base64",
  "futures",
  "lazy_static",
- "lru 0.9.0",
+ "lru",
  "oasis-cbor",
  "oasis-core-runtime",
  "rand 0.8.5",
@@ -2450,7 +2421,7 @@ dependencies = [
  "intrusive-collections",
  "lazy_static",
  "log",
- "lru 0.9.0",
+ "lru",
  "mbedtls 0.8.4",
  "num-bigint 0.4.4",
  "num-traits",
@@ -2499,7 +2470,7 @@ dependencies = [
  "hmac",
  "impl-trait-for-tuples",
  "k256",
- "lru 0.8.1",
+ "lru",
  "merlin",
  "num-traits",
  "oasis-cbor",
@@ -2530,7 +2501,7 @@ dependencies = [
  "blake3",
  "hex",
  "k256",
- "lru 0.8.1",
+ "lru",
  "num-traits",
  "oasis-cbor",
  "oasis-contract-sdk-crypto",
