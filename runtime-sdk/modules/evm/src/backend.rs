@@ -525,7 +525,7 @@ impl<'ctx, 'backend, 'config, C: Context, Cfg: Config> StackState<'config>
         let amount = transfer.value.as_u128();
         let amount = token::BaseUnits::new(amount, Cfg::TOKEN_DENOMINATION);
 
-        Cfg::Accounts::transfer_silent(from, to, &amount).map_err(|_| ExitError::OutOfFund)
+        Cfg::Accounts::transfer(from, to, &amount).map_err(|_| ExitError::OutOfFund)
     }
 
     fn reset_balance(&mut self, _address: H160) {
