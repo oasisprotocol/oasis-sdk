@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
@@ -52,6 +53,11 @@ func NewSignedCallDataPack(signer RSVSigner, chainID uint64, caller, callee []by
 }
 
 func makeSignableCall(chainID uint64, caller, callee []byte, gasLimit uint64, gasPrice *big.Int, value *big.Int, data []byte, leash Leash) apitypes.TypedData {
+	if callee == nil {
+		var zeroAddress ethCommon.Address
+		callee = zeroAddress.Bytes()
+	}
+
 	if value == nil {
 		value = big.NewInt(0)
 	}

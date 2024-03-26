@@ -78,7 +78,7 @@ impl EvmSigner {
     }
 
     /// Dispatch a query to the given EVM contract method.
-    pub fn query_evm<C>(
+    pub fn query_evm_call<C>(
         &self,
         ctx: &C,
         address: H160,
@@ -89,11 +89,11 @@ impl EvmSigner {
     where
         C: Context,
     {
-        self.query_evm_opts(ctx, address, name, param_types, params, Default::default())
+        self.query_evm_call_opts(ctx, address, name, param_types, params, Default::default())
     }
 
     /// Dispatch a query to the given EVM contract method.
-    pub fn query_evm_opts<C>(
+    pub fn query_evm_call_opts<C>(
         &self,
         ctx: &C,
         address: H160,
@@ -105,12 +105,47 @@ impl EvmSigner {
     where
         C: Context,
     {
-        let mut data = [
+        let data = [
             ethabi::short_signature(name, param_types).to_vec(),
             ethabi::encode(params),
         ]
         .concat();
 
+        self.query_evm_opts(ctx, Some(address), data, opts)
+    }
+
+    /// Dispatch a query to simulate EVM contract creation.
+    pub fn query_evm_create<C>(&self, ctx: &C, init_code: Vec<u8>) -> Result<Vec<u8>, RuntimeError>
+    where
+        C: Context,
+    {
+        self.query_evm_opts(ctx, None, init_code, Default::default())
+    }
+
+    /// Dispatch a query to simulate EVM contract creation.
+    pub fn query_evm_create_opts<C>(
+        &self,
+        ctx: &C,
+        init_code: Vec<u8>,
+        opts: QueryOptions,
+    ) -> Result<Vec<u8>, RuntimeError>
+    where
+        C: Context,
+    {
+        self.query_evm_opts(ctx, None, init_code, opts)
+    }
+
+    /// Dispatch a query to the EVM.
+    pub fn query_evm_opts<C>(
+        &self,
+        ctx: &C,
+        address: Option<H160>,
+        mut data: Vec<u8>,
+        opts: QueryOptions,
+    ) -> Result<Vec<u8>, RuntimeError>
+    where
+        C: Context,
+    {
         // Handle optional encryption.
         let client_keypair = deoxysii::generate_key_pair();
         if opts.encrypt {

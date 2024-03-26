@@ -817,6 +817,26 @@ fn test_c10l_queries() {
     static QUERY_CONTRACT_CODE_HEX: &str =
         include_str!("../../../../tests/e2e/contracts/query/query.hex");
 
+    // Simulate contract creation.
+    let result = signer
+        .query_evm_create(&ctx, load_contract_bytecode(QUERY_CONTRACT_CODE_HEX))
+        .expect("query should succeed");
+    let contract_address1 = H160::from_slice(&result);
+
+    let result = signer
+        .query_evm_create_opts(
+            &ctx,
+            load_contract_bytecode(QUERY_CONTRACT_CODE_HEX),
+            QueryOptions {
+                encrypt: true,
+                ..Default::default()
+            },
+        )
+        .expect("query should succeed");
+    let contract_address2 = H160::from_slice(&result);
+
+    assert_eq!(contract_address1, contract_address2);
+
     // Create contract.
     let dispatch_result = signer.call(
         &ctx,
@@ -830,11 +850,9 @@ fn test_c10l_queries() {
     let result: Vec<u8> = cbor::from_value(result).unwrap();
     let contract_address = H160::from_slice(&result);
 
-    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(true);
-
     // Call the `test` method on the contract via a query.
     let result = signer
-        .query_evm(&ctx, contract_address, "test", &[], &[])
+        .query_evm_call(&ctx, contract_address, "test", &[], &[])
         .expect("query should succeed");
 
     let mut result =
@@ -845,7 +863,7 @@ fn test_c10l_queries() {
 
     // Test call with confidential envelope.
     let result = signer
-        .query_evm_opts(
+        .query_evm_call_opts(
             &ctx,
             contract_address,
             "test",
@@ -1170,7 +1188,7 @@ fn test_return_value_limits() {
     let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
 
     let result = signer
-        .query_evm_opts(
+        .query_evm_call_opts(
             &ctx,
             contract_address,
             "testSuccess",

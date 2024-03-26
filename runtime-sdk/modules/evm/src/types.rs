@@ -41,7 +41,8 @@ pub struct SimulateCallQuery {
     pub gas_price: U256,
     pub gas_limit: u64,
     pub caller: H160,
-    pub address: H160,
+    #[cbor(optional)]
+    pub address: Option<H160>,
     pub value: U256,
     pub data: Vec<u8>,
 }

@@ -114,7 +114,7 @@ fn hash_call(query: &SimulateCallQuery, leash: &Leash) -> [u8; 32] {
     hash_encoded(&[
         encode_bytes(CALL_TYPE_STR),
         Token::Address(query.caller.0.into()),
-        Token::Address(query.address.0.into()),
+        Token::Address(query.address.unwrap_or_default().0.into()),
         Token::Uint(query.gas_limit.into()),
         Token::Uint(ethabi::ethereum_types::U256(query.gas_price.0)),
         Token::Uint(ethabi::ethereum_types::U256(query.value.0)),
@@ -180,9 +180,11 @@ mod test {
                 caller: "0x11e244400Cf165ade687077984F09c3A037b868F"
                     .parse()
                     .unwrap(),
-                address: "0xb5ed90452AAC09f294a0BE877CBf2Dc4D55e096f"
-                    .parse()
-                    .unwrap(),
+                address: Some(
+                    "0xb5ed90452AAC09f294a0BE877CBf2Dc4D55e096f"
+                        .parse()
+                        .unwrap(),
+                ),
                 value: 42u64.into(),
                 data: cbor::from_value(data_pack.data.body.clone()).unwrap(),
             },

@@ -316,27 +316,12 @@ impl<Cfg: Config> API for Module<Cfg> {
             Self::decode_call_data(ctx, init_code, tx_call_format, tx_index, true)?
                 .expect("processing always proceeds");
 
-        Self::do_evm(
-            caller,
-            ctx,
-            |exec, gas_limit| {
-                let address = exec.create_address(evm::CreateScheme::Legacy {
-                    caller: caller.into(),
-                });
-                let (exit_reason, exit_value) =
-                    exec.transact_create(caller.into(), value.into(), init_code, gas_limit, vec![]);
-                if exit_reason.is_succeed() {
-                    // If successful return the contract deployed address.
-                    (exit_reason, address.as_bytes().to_vec())
-                } else {
-                    // Otherwise propagate the exit value.
-                    (exit_reason, exit_value)
-                }
-            },
-            // If in simulation, this must be EstimateGas query.
-            // Use estimate mode if not doing binary search for exact gas costs.
-            is_simulation && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
-        )
+        // If in simulation, this must be EstimateGas query.
+        // Use estimate mode if not doing binary search for exact gas costs.
+        let estimate_gas =
+            is_simulation && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0;
+
+        Self::evm_create(ctx, caller, value, init_code, estimate_gas)
     }
 
     fn call<C: Context>(
@@ -360,23 +345,12 @@ impl<Cfg: Config> API for Module<Cfg> {
             Self::decode_call_data(ctx, data, tx_call_format, tx_index, true)?
                 .expect("processing always proceeds");
 
-        let evm_result = Self::do_evm(
-            caller,
-            ctx,
-            |exec, gas_limit| {
-                exec.transact_call(
-                    caller.into(),
-                    address.into(),
-                    value.into(),
-                    data,
-                    gas_limit,
-                    vec![],
-                )
-            },
-            // If in simulation, this must be EstimateGas query.
-            // Use estimate mode if not doing binary search for exact gas costs.
-            is_simulation && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0,
-        );
+        // If in simulation, this must be EstimateGas query.
+        // Use estimate mode if not doing binary search for exact gas costs.
+        let estimate_gas =
+            is_simulation && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0;
+
+        let evm_result = Self::evm_call(ctx, caller, address, value, data, estimate_gas);
         Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 
@@ -415,20 +389,46 @@ impl<Cfg: Config> API for Module<Cfg> {
             tx_metadata,
         ) = Self::decode_simulate_call_query(ctx, call)?;
 
-        let call_tx = transaction::Transaction {
+        let (method, body, exec): (_, _, Box<dyn FnOnce() -> Result<_, _>>) = match address {
+            Some(address) => {
+                // Address is set, this is a simulated `evm.Call`.
+                (
+                    "evm.Call",
+                    cbor::to_value(types::Call {
+                        address,
+                        value,
+                        data: data.clone(),
+                    }),
+                    Box::new(move || Self::evm_call(ctx, caller, address, value, data, false)),
+                )
+            }
+            None => {
+                // Address is not set, this is a simulated `evm.Create`.
+                (
+                    "evm.Create",
+                    cbor::to_value(types::Create {
+                        value,
+                        init_code: data.clone(),
+                    }),
+                    Box::new(|| Self::evm_create(ctx, caller, value, data, false)),
+                )
+            }
+        };
+        let tx = transaction::Transaction {
             version: 1,
             call: transaction::Call {
                 format: transaction::CallFormat::Plain,
-                method: "evm.Call".to_owned(),
-                body: cbor::to_value(types::Call {
-                    address,
-                    value,
-                    data: data.clone(),
-                }),
+                method: method.to_owned(),
+                body,
                 ..Default::default()
             },
             auth_info: transaction::AuthInfo {
-                signer_info: vec![],
+                signer_info: vec![transaction::SignerInfo {
+                    address_spec: transaction::AddressSpec::Internal(
+                        transaction::CallerAddress::EthAddress(caller.into()),
+                    ),
+                    nonce: 0,
+                }],
                 fee: transaction::Fee {
                     amount: token::BaseUnits::new(
                         gas_price
@@ -443,38 +443,76 @@ impl<Cfg: Config> API for Module<Cfg> {
                 ..Default::default()
             },
         };
+
         let evm_result = CurrentState::with_transaction_opts(
             Options::new()
-                .with_tx(TransactionWithMeta::internal(call_tx))
+                .with_tx(TransactionWithMeta::internal(tx))
                 .with_mode(Mode::Simulate),
-            || {
-                let result = Self::do_evm(
-                    caller,
-                    ctx,
-                    |exec, gas_limit| {
-                        exec.transact_call(
-                            caller.into(),
-                            address.into(),
-                            value.into(),
-                            data,
-                            gas_limit,
-                            vec![],
-                        )
-                    },
-                    // Simulate call is never called from EstimateGas.
-                    false,
-                );
-
-                TransactionResult::Rollback(result)
-            },
+            || TransactionResult::Rollback(exec()),
         );
         Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 }
 
 impl<Cfg: Config> Module<Cfg> {
-    fn do_evm<C, F>(source: H160, ctx: &C, f: F, estimate_gas: bool) -> Result<Vec<u8>, Error>
+    fn evm_call<C: Context>(
+        ctx: &C,
+        caller: H160,
+        address: H160,
+        value: U256,
+        data: Vec<u8>,
+        estimate_gas: bool,
+    ) -> Result<Vec<u8>, Error> {
+        Self::evm_execute(
+            ctx,
+            caller,
+            |exec, gas_limit| {
+                exec.transact_call(
+                    caller.into(),
+                    address.into(),
+                    value.into(),
+                    data,
+                    gas_limit,
+                    vec![],
+                )
+            },
+            estimate_gas,
+        )
+    }
+
+    fn evm_create<C: Context>(
+        ctx: &C,
+        caller: H160,
+        value: U256,
+        init_code: Vec<u8>,
+        estimate_gas: bool,
+    ) -> Result<Vec<u8>, Error> {
+        Self::evm_execute(
+            ctx,
+            caller,
+            |exec, gas_limit| {
+                // Precompute the address as execution can modify state such that the subsequent
+                // address derivation would be incorrect (e.g. due to nonce increments).
+                let address = exec.create_address(evm::CreateScheme::Legacy {
+                    caller: caller.into(),
+                });
+                let (exit_reason, exit_value) =
+                    exec.transact_create(caller.into(), value.into(), init_code, gas_limit, vec![]);
+                if exit_reason.is_succeed() {
+                    // If successful return the contract deployed address.
+                    (exit_reason, address.as_bytes().to_vec())
+                } else {
+                    // Otherwise propagate the exit value.
+                    (exit_reason, exit_value)
+                }
+            },
+            estimate_gas,
+        )
+    }
+
+    fn evm_execute<C, F>(ctx: &C, source: H160, f: F, estimate_gas: bool) -> Result<Vec<u8>, Error>
     where
+        C: Context,
         F: FnOnce(
             &mut StackExecutor<
                 'static,
@@ -484,7 +522,6 @@ impl<Cfg: Config> Module<Cfg> {
             >,
             u64,
         ) -> (evm::ExitReason, Vec<u8>),
-        C: Context,
     {
         let is_query = CurrentState::with_env(|env| !env.is_execute());
         let cfg = Cfg::evm_config(estimate_gas);
