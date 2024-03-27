@@ -37,7 +37,7 @@ type SimulateCallQuery struct {
 	GasPrice []byte `json:"gas_price"`
 	GasLimit uint64 `json:"gas_limit"`
 	Caller   []byte `json:"caller"`
-	Address  []byte `json:"address"`
+	Address  []byte `json:"address,omitempty"`
 	Value    []byte `json:"value"`
 	Data     []byte `json:"data"`
 }
