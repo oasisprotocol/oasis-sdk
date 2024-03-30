@@ -54,6 +54,7 @@ var (
 		DelegationReceiptsTest,
 		EVMParametersTest,
 		SubcallRoundRootTest,
+		EthereumTxTest,
 	}, WithCustomFixture(EVMRuntimeFixture))
 
 	// C10lEVMRuntime is the c10l-evm runtime test.
@@ -70,6 +71,7 @@ var (
 		C10lEVMRNGTest,
 		C10lEVMMessageSigningTest,
 		EVMParametersTest,
+		EthereumTxTest,
 	}, WithCustomFixture(EVMRuntimeFixture))
 
 	// SimpleContractsRuntime is the simple-contracts runtime test.

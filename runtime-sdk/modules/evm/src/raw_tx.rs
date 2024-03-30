@@ -30,6 +30,7 @@ pub fn recover_low(
 pub fn decode(
     body: &[u8],
     expected_chain_id: Option<u64>,
+    min_gas_price: u128,
 ) -> Result<transaction::Transaction, anyhow::Error> {
     let (
         chain_id,
@@ -99,9 +100,20 @@ pub fn decode(
             let sig_recid = k256::ecdsa::RecoveryId::new(eth_tx.odd_y_parity, false);
             let message = ethereum::EIP1559TransactionMessage::from(eth_tx);
 
-            // Base fee is zero. Allocate only priority fee.
-            let resolved_gas_price =
-                std::cmp::min(message.max_fee_per_gas, message.max_priority_fee_per_gas);
+            if message.max_fee_per_gas < message.max_priority_fee_per_gas {
+                return Err(anyhow!("invalid gas price"));
+            }
+            let base_fee_per_gas = min_gas_price.into();
+            if message.max_fee_per_gas < base_fee_per_gas {
+                return Err(anyhow!("gas price too low"));
+            }
+
+            let priority_fee_per_gas = std::cmp::min(
+                message.max_priority_fee_per_gas,
+                message.max_fee_per_gas.saturating_sub(base_fee_per_gas),
+            );
+            let effective_gas_price = priority_fee_per_gas.saturating_add(base_fee_per_gas);
+
             (
                 Some(message.chain_id),
                 sig,
@@ -111,7 +123,7 @@ pub fn decode(
                 message.value,
                 message.input,
                 message.nonce,
-                resolved_gas_price,
+                effective_gas_price,
                 message.gas_limit,
             )
         }
@@ -207,8 +219,14 @@ mod test {
         expected_gas_price: u128,
         expected_from: &str,
         expected_nonce: u64,
+        min_gas_price: u128,
     ) {
-        let tx = decode(&Vec::from_hex(raw).unwrap(), expected_chain_id).unwrap();
+        let tx = decode(
+            &Vec::from_hex(raw).unwrap(),
+            expected_chain_id,
+            min_gas_price,
+        )
+        .unwrap();
         println!("{:?}", &tx);
         assert_eq!(tx.call.method, "evm.Call");
         let body: types::Call = cbor::from_value(tx.call.body).unwrap();
@@ -239,8 +257,14 @@ mod test {
         expected_gas_price: u128,
         expected_from: &str,
         expected_nonce: u64,
+        min_gas_price: u128,
     ) {
-        let tx = decode(&Vec::from_hex(raw).unwrap(), expected_chain_id).unwrap();
+        let tx = decode(
+            &Vec::from_hex(raw).unwrap(),
+            expected_chain_id,
+            min_gas_price,
+        )
+        .unwrap();
         println!("{:?}", &tx);
         assert_eq!(tx.call.method, "evm.Create");
         let body: types::Create = cbor::from_value(tx.call.body).unwrap();
@@ -261,7 +285,7 @@ mod test {
     }
 
     fn decode_expect_invalid(raw: &str, expected_chain_id: Option<u64>) {
-        let e = decode(&Vec::from_hex(raw).unwrap(), expected_chain_id).unwrap_err();
+        let e = decode(&Vec::from_hex(raw).unwrap(), expected_chain_id, 0).unwrap_err();
         eprintln!("Decoding error (expected): {:?}", e);
     }
 
@@ -270,7 +294,7 @@ mod test {
         expected_chain_id: Option<u64>,
         unexpected_from: &str,
     ) {
-        match decode(&Vec::from_hex(raw).unwrap(), expected_chain_id) {
+        match decode(&Vec::from_hex(raw).unwrap(), expected_chain_id, 0) {
             Ok(tx) => {
                 assert_ne!(
                     derive_caller::from_tx_auth_info(&tx.auth_info).unwrap(),
@@ -298,6 +322,7 @@ mod test {
             // "cow" test account
             "cd2a3d9f938e13cd947ec05abc7fe734df8dd826",
             0,
+            1_000,
         );
         decode_expect_create(
             // We're using a transaction normalized from the original (below) to have low `s`.
@@ -311,6 +336,7 @@ mod test {
             // "horse" test account
             "13978aee95f38490e9769c39b2773ed763d9cd5f",
             0,
+            1_000,
         );
     }
 
@@ -327,6 +353,8 @@ mod test {
     #[test]
     fn test_decode_types() {
         // https://github.com/ethereum/tests/blob/v10.0/BlockchainTests/ValidBlocks/bcEIP1559/transType.json
+
+        // Legacy.
         decode_expect_call(
             "f861018203e882c35094cccccccccccccccccccccccccccccccccccccccc80801ca021539ef96c70ab75350c594afb494458e211c8c722a7a0ffb7025c03b87ad584a01d5395fe48edb306f614f0cd682b8c2537537f5fd3e3275243c42e9deff8e93d",
             None,
@@ -337,7 +365,10 @@ mod test {
             1_000,
             "d02d72e067e77158444ef2020ff2d325f929b363",
             1,
+            1_000,
         );
+
+        // Legacy.
         decode_expect_call(
             "01f86301028203e882c35094cccccccccccccccccccccccccccccccccccccccc8080c080a0260f95e555a1282ef49912ff849b2007f023c44529dc8fb7ecca7693cccb64caa06252cf8af2a49f4cb76fd7172feaece05124edec02db242886b36963a30c2606",
             Some(1),
@@ -348,7 +379,12 @@ mod test {
             1_000,
             "d02d72e067e77158444ef2020ff2d325f929b363",
             2,
+            1_000,
         );
+
+        // EIP-1559
+        // maxFeePerGas = 1000
+        // maxPriorityFeePerGas = 100
         decode_expect_call(
             "02f8640103648203e882c35094cccccccccccccccccccccccccccccccccccccccc8080c001a08480e6848952a15ae06192b8051d213d689bdccdf8f14cf69f61725e44e5e80aa057c2af627175a2ac812dab661146dfc7b9886e885c257ad9c9175c3fcec2202e",
             Some(1),
@@ -356,9 +392,10 @@ mod test {
             0,
             "",
             50_000,
-            100,
+            500, // min(100, 1000 - 400) + 400
             "d02d72e067e77158444ef2020ff2d325f929b363",
             3,
+            400,
         );
     }
 
