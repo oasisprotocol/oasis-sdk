@@ -762,8 +762,13 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
                         .unwrap_or_default();
 
                 Ok(Some(
-                    raw_tx::decode(body, Some(Cfg::CHAIN_ID), min_gas_price)
-                        .map_err(CoreError::MalformedTransaction)?,
+                    raw_tx::decode(
+                        body,
+                        Some(Cfg::CHAIN_ID),
+                        min_gas_price,
+                        &Cfg::TOKEN_DENOMINATION,
+                    )
+                    .map_err(CoreError::MalformedTransaction)?,
                 ))
             }
             _ => Ok(None),

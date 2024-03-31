@@ -31,6 +31,7 @@ pub fn decode(
     body: &[u8],
     expected_chain_id: Option<u64>,
     min_gas_price: u128,
+    denom: &token::Denomination,
 ) -> Result<transaction::Transaction, anyhow::Error> {
     let (
         chain_id,
@@ -187,7 +188,7 @@ pub fn decode(
                 nonce,
             }],
             fee: transaction::Fee {
-                amount: token::BaseUnits(resolved_fee_amount, token::Denomination::NATIVE),
+                amount: token::BaseUnits::new(resolved_fee_amount, denom.clone()),
                 gas: gas_limit,
                 consensus_messages: 0, // Dynamic number of consensus messages, limited by gas.
             },
@@ -225,6 +226,7 @@ mod test {
             &Vec::from_hex(raw).unwrap(),
             expected_chain_id,
             min_gas_price,
+            &token::Denomination::NATIVE,
         )
         .unwrap();
         println!("{:?}", &tx);
@@ -263,6 +265,7 @@ mod test {
             &Vec::from_hex(raw).unwrap(),
             expected_chain_id,
             min_gas_price,
+            &token::Denomination::NATIVE,
         )
         .unwrap();
         println!("{:?}", &tx);
@@ -285,7 +288,13 @@ mod test {
     }
 
     fn decode_expect_invalid(raw: &str, expected_chain_id: Option<u64>) {
-        let e = decode(&Vec::from_hex(raw).unwrap(), expected_chain_id, 0).unwrap_err();
+        let e = decode(
+            &Vec::from_hex(raw).unwrap(),
+            expected_chain_id,
+            0,
+            &token::Denomination::NATIVE,
+        )
+        .unwrap_err();
         eprintln!("Decoding error (expected): {:?}", e);
     }
 
@@ -294,7 +303,12 @@ mod test {
         expected_chain_id: Option<u64>,
         unexpected_from: &str,
     ) {
-        match decode(&Vec::from_hex(raw).unwrap(), expected_chain_id, 0) {
+        match decode(
+            &Vec::from_hex(raw).unwrap(),
+            expected_chain_id,
+            0,
+            &token::Denomination::NATIVE,
+        ) {
             Ok(tx) => {
                 assert_ne!(
                     derive_caller::from_tx_auth_info(&tx.auth_info).unwrap(),
