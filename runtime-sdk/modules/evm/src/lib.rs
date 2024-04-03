@@ -751,15 +751,26 @@ impl<Cfg: Config> Module<Cfg> {
 
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
     fn decode_tx<C: Context>(
-        _ctx: &C,
+        ctx: &C,
         scheme: &str,
         body: &[u8],
     ) -> Result<Option<Transaction>, CoreError> {
         match scheme {
-            "evm.ethereum.v0" => Ok(Some(
-                raw_tx::decode(body, Some(Cfg::CHAIN_ID))
+            "evm.ethereum.v0" => {
+                let min_gas_price =
+                    <C::Runtime as Runtime>::Core::min_gas_price(ctx, &Cfg::TOKEN_DENOMINATION)
+                        .unwrap_or_default();
+
+                Ok(Some(
+                    raw_tx::decode(
+                        body,
+                        Some(Cfg::CHAIN_ID),
+                        min_gas_price,
+                        &Cfg::TOKEN_DENOMINATION,
+                    )
                     .map_err(CoreError::MalformedTransaction)?,
-            )),
+                ))
+            }
             _ => Ok(None),
         }
     }
