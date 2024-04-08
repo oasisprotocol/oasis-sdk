@@ -1068,7 +1068,10 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
         Ok(())
     }
 
-    fn authenticate_tx<C: Context>(ctx: &C, tx: &Transaction) -> Result<(), Error> {
+    fn authenticate_tx<C: Context>(
+        ctx: &C,
+        tx: &Transaction,
+    ) -> Result<module::AuthDecision, Error> {
         // Check whether the transaction is currently valid.
         let round = ctx.runtime_header().round;
         if let Some(not_before) = tx.auth_info.not_before {
@@ -1084,7 +1087,7 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
             }
         }
 
-        Ok(())
+        Ok(module::AuthDecision::Continue)
     }
 
     fn before_handle_call<C: Context>(ctx: &C, call: &Call) -> Result<(), Error> {
