@@ -884,6 +884,55 @@ fn test_approve_unverified_tx() {
 }
 
 #[test]
+fn test_transaction_expiry() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx();
+
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "test.Test".to_owned(),
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
+            fee: Default::default(),
+            not_before: Some(10),
+            not_after: Some(42),
+        },
+    };
+
+    // Authenticate transaction, should be expired.
+    let err = Core::authenticate_tx(&ctx, &tx).expect_err("tx should be expired (early)");
+    assert!(matches!(
+        err,
+        crate::modules::core::Error::ExpiredTransaction
+    ));
+
+    // Move the round forward.
+    mock.runtime_header.round = 15;
+
+    // Authenticate transaction, should succeed.
+    let ctx = mock.create_ctx();
+    Core::authenticate_tx(&ctx, &tx).expect("tx should be valid");
+
+    // Move the round forward again.
+    mock.runtime_header.round = 50;
+
+    // Authenticate transaction, should be expired.
+    let ctx = mock.create_ctx();
+    let err = Core::authenticate_tx(&ctx, &tx).expect_err("tx should be expired");
+    assert!(matches!(
+        err,
+        crate::modules::core::Error::ExpiredTransaction
+    ));
+}
+
+#[test]
 fn test_set_priority() {
     let _mock = mock::Mock::default();
 

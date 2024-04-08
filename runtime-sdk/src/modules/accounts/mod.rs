@@ -871,21 +871,6 @@ impl Module {
 
 impl module::TransactionHandler for Module {
     fn authenticate_tx<C: Context>(ctx: &C, tx: &Transaction) -> Result<(), modules::core::Error> {
-        // Check whether the transaction is currently valid.
-        let round = ctx.runtime_header().round;
-        if let Some(not_before) = tx.auth_info.not_before {
-            if round < not_before {
-                // Too early.
-                return Err(modules::core::Error::ExpiredTransaction);
-            }
-        }
-        if let Some(not_after) = tx.auth_info.not_after {
-            if round > not_after {
-                // Too late.
-                return Err(modules::core::Error::ExpiredTransaction);
-            }
-        }
-
         // Check nonces.
         let payer = Self::check_signer_nonces(ctx, &tx.auth_info)?;
 

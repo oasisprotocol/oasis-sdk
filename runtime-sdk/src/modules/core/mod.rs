@@ -26,7 +26,8 @@ use crate::{
     types::{
         token::{self, Denomination},
         transaction::{
-            self, AddressSpec, AuthProof, Call, CallFormat, CallerAddress, UnverifiedTransaction,
+            self, AddressSpec, AuthProof, Call, CallFormat, CallerAddress, Transaction,
+            UnverifiedTransaction,
         },
     },
     Runtime,
@@ -1064,6 +1065,25 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn authenticate_tx<C: Context>(ctx: &C, tx: &Transaction) -> Result<(), Error> {
+        // Check whether the transaction is currently valid.
+        let round = ctx.runtime_header().round;
+        if let Some(not_before) = tx.auth_info.not_before {
+            if round < not_before {
+                // Too early.
+                return Err(Error::ExpiredTransaction);
+            }
+        }
+        if let Some(not_after) = tx.auth_info.not_after {
+            if round > not_after {
+                // Too late.
+                return Err(Error::ExpiredTransaction);
+            }
+        }
+
         Ok(())
     }
 
