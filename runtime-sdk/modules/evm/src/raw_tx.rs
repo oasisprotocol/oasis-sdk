@@ -191,6 +191,7 @@ pub fn decode(
                 amount: token::BaseUnits::new(resolved_fee_amount, denom.clone()),
                 gas: gas_limit,
                 consensus_messages: 0, // Dynamic number of consensus messages, limited by gas.
+                proxy: None,
             },
             ..Default::default()
         },

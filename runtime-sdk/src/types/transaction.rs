@@ -179,6 +179,9 @@ pub struct Fee {
     /// number of per-batch messages can be emitted.
     #[cbor(optional)]
     pub consensus_messages: u32,
+    /// Proxy which has authorized the fees to be paid.
+    #[cbor(optional)]
+    pub proxy: Option<FeeProxy>,
 }
 
 impl Fee {
@@ -189,6 +192,15 @@ impl Fee {
             .checked_div(self.gas.into())
             .unwrap_or_default()
     }
+}
+
+/// Information about a fee proxy.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct FeeProxy {
+    /// Module that will handle the proxy payment.
+    pub module: String,
+    /// Module-specific identifier that will handle fee payments for the transaction signer.
+    pub id: Vec<u8>,
 }
 
 /// A caller address.
@@ -384,17 +396,12 @@ mod test {
 
     #[test]
     fn test_fee_gas_price() {
-        let fee = Fee {
-            amount: Default::default(),
-            gas: 0,
-            consensus_messages: 0,
-        };
+        let fee = Fee::default();
         assert_eq!(0, fee.gas_price(), "empty fee - gas price should be zero",);
 
         let fee = Fee {
-            amount: Default::default(),
             gas: 100,
-            consensus_messages: 0,
+            ..Default::default()
         };
         assert_eq!(
             0,
@@ -405,14 +412,14 @@ mod test {
         let fee = Fee {
             amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 0,
-            consensus_messages: 0,
+            ..Default::default()
         };
         assert_eq!(0, fee.gas_price(), "empty fee 0 - gas price should be zero",);
 
         let fee = Fee {
             amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 10_000,
-            consensus_messages: 0,
+            ..Default::default()
         };
         assert_eq!(
             0,
@@ -423,7 +430,7 @@ mod test {
         let fee = Fee {
             amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 500,
-            consensus_messages: 0,
+            ..Default::default()
         };
         assert_eq!(2, fee.gas_price(), "non empty fee - gas price should match");
     }

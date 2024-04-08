@@ -107,9 +107,9 @@ fn test_api_deposit_invalid_denomination() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -152,9 +152,9 @@ fn test_api_deposit_incompatible_signer() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -199,9 +199,9 @@ fn test_api_deposit() {
                 nonce,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -308,9 +308,9 @@ fn test_api_withdraw_invalid_denomination() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -353,9 +353,9 @@ fn test_api_withdraw_insufficient_balance() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -393,9 +393,9 @@ fn test_api_withdraw_incompatible_signer() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -438,9 +438,9 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
         auth_info: transaction::AuthInfo {
             signer_info: vec![transaction::SignerInfo::new_sigspec(signer_sigspec, nonce)],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -568,9 +568,9 @@ fn test_api_withdraw_handler_failure() {
                 nonce,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -718,9 +718,9 @@ fn perform_delegation<C: Context>(ctx: &C, success: bool) -> u64 {
                 nonce,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -889,9 +889,9 @@ fn test_api_delegate_insufficient_balance() {
                 123,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -965,9 +965,9 @@ fn test_api_delegate_receipt_not_internal() {
                 123,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1003,9 +1003,9 @@ fn perform_undelegation<C: Context>(ctx: &C, success: Option<bool>) -> (u64, Opt
                 nonce,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1274,9 +1274,9 @@ fn test_api_undelegate_insufficient_balance() {
                 123,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1345,9 +1345,9 @@ fn test_api_undelegate_receipt_not_internal() {
                 123,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
                 consensus_messages: 1,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1485,9 +1485,9 @@ fn test_prefetch() {
             0,
         )],
         fee: transaction::Fee {
-            amount: Default::default(),
             gas: 1000,
             consensus_messages: 1,
+            ..Default::default()
         },
         ..Default::default()
     };

@@ -440,6 +440,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                     ),
                     gas: gas_limit,
                     consensus_messages: 0,
+                    proxy: None,
                 },
                 ..Default::default()
             },

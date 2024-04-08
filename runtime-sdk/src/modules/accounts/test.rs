@@ -9,7 +9,10 @@ use anyhow::anyhow;
 use crate::{
     context::Context,
     handler,
-    module::{self, BlockHandler, InvariantHandler, MethodHandler, Module, TransactionHandler},
+    module::{
+        self, BlockHandler, FeeProxyHandler, InvariantHandler, MethodHandler, Module,
+        TransactionHandler,
+    },
     modules::{
         core,
         core::{Error as CoreError, Module as Core, API as _},
@@ -43,6 +46,8 @@ impl Runtime for TestRuntime {
 
     type Core = Core<CoreConfig>;
 
+    type FeeProxy = TestFeeProxyHandler;
+
     type Modules = (Core<CoreConfig>, Accounts, TestModule);
 
     fn genesis_state() -> <Self::Modules as module::MigrationHandler>::Genesis {
@@ -68,6 +73,31 @@ impl Runtime for TestRuntime {
             },
             (), // Test module has no genesis.
         )
+    }
+}
+
+/// A fee proxy handler.
+struct TestFeeProxyHandler;
+
+impl FeeProxyHandler for TestFeeProxyHandler {
+    fn resolve_payer<C: Context>(
+        _ctx: &C,
+        tx: &transaction::Transaction,
+    ) -> Result<Option<Address>, CoreError> {
+        let proxy = if let Some(ref proxy) = tx.auth_info.fee.proxy {
+            proxy
+        } else {
+            return Ok(None);
+        };
+
+        if proxy.module != "test" {
+            return Ok(None);
+        }
+        if proxy.id != b"pleasepaythisalicekthx" {
+            return Ok(None);
+        }
+
+        Ok(Some(keys::alice::address()))
     }
 }
 
@@ -305,9 +335,8 @@ fn test_api_tx_transfer_disabled() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -336,9 +365,8 @@ fn test_prefetch() {
             0,
         )],
         fee: transaction::Fee {
-            amount: Default::default(),
             gas: 1000,
-            consensus_messages: 0,
+            ..Default::default()
         },
         ..Default::default()
     };
@@ -490,7 +518,7 @@ fn test_authenticate_tx() {
             fee: transaction::Fee {
                 amount: BaseUnits::new(1_000, Denomination::NATIVE),
                 gas: 1000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -552,9 +580,8 @@ fn test_tx_transfer() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -630,7 +657,7 @@ fn test_fee_disbursement() {
                 // Use an amount that does not split nicely among the good compute entities.
                 amount: BaseUnits::new(1_001, Denomination::NATIVE),
                 gas: 1000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1400,6 +1427,89 @@ fn test_fee_refund_subcall() {
     let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].amount, 11_000);
+}
+
+#[test]
+fn test_fee_proxy() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
+    let mut signer = mock::Signer::new(0, keys::bob::sigspec());
+
+    TestRuntime::migrate(&ctx);
+
+    // Do a simple transfer. Note that ALICE is paying the fees.
+    let dispatch_result = signer.call_opts(
+        &ctx,
+        "accounts.Transfer",
+        Transfer {
+            to: keys::bob::address(),
+            amount: BaseUnits::new(0, Denomination::NATIVE), // Bob has no funds.
+        },
+        mock::CallOptions {
+            fee: transaction::Fee {
+                amount: BaseUnits::new(1_500, Denomination::NATIVE),
+                gas: 1_500,
+                proxy: Some(transaction::FeeProxy {
+                    module: "test".to_owned(),
+                    id: b"pleasepaythisalicekthx".to_vec(), // Magic words.
+                }),
+                ..Default::default()
+            },
+        },
+    );
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Make sure two events were emitted and are properly formatted.
+    let tags = &dispatch_result.tags;
+    assert_eq!(tags.len(), 2, "two events should have been emitted");
+    assert_eq!(tags[0].key, b"accounts\x00\x00\x00\x01"); // accounts.Transfer (code = 1) event
+    assert_eq!(tags[1].key, b"core\x00\x00\x00\x01"); // core.GasUsed (code = 1) event
+
+    #[derive(Debug, Default, cbor::Decode)]
+    struct TransferEvent {
+        from: Address,
+        to: Address,
+        amount: BaseUnits,
+    }
+
+    let events: Vec<TransferEvent> = cbor::from_slice(&tags[0].value).unwrap();
+    assert_eq!(events.len(), 1); // One event for fee payment as transfer was of zero tokens.
+    let event = &events[0];
+    assert_eq!(event.from, keys::alice::address()); // Alice is paying via proxy!
+    assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
+    assert_eq!(event.amount, BaseUnits::new(1_500, Denomination::NATIVE));
+
+    // Make sure only one gas used event was emitted.
+    #[derive(Debug, Default, cbor::Decode)]
+    struct GasUsedEvent {
+        amount: u64,
+    }
+
+    let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
+    assert_eq!(events.len(), 1); // Just one gas used event.
+    assert_eq!(events[0].amount, 1_000);
+
+    // Proxy payment should fail in case the id is incorrect.
+    let dispatch_result = signer.call_opts(
+        &ctx,
+        "accounts.Transfer",
+        Transfer {
+            to: keys::bob::address(),
+            amount: BaseUnits::new(0, Denomination::NATIVE), // Bob has no funds.
+        },
+        mock::CallOptions {
+            fee: transaction::Fee {
+                amount: BaseUnits::new(1_500, Denomination::NATIVE),
+                gas: 1_500,
+                proxy: Some(transaction::FeeProxy {
+                    module: "test".to_owned(),
+                    id: b"plzplzplz".to_vec(), // Incorrect id.
+                }),
+                ..Default::default()
+            },
+        },
+    );
+    assert!(!dispatch_result.result.is_success(), "call should fail");
 }
 
 #[test]

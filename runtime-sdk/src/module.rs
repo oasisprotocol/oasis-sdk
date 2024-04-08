@@ -17,6 +17,7 @@ use crate::{
     storage,
     storage::Prefix,
     types::{
+        address::Address,
         message::MessageResult,
         transaction::{self, AuthInfo, Call, Transaction, UnverifiedTransaction},
     },
@@ -463,6 +464,32 @@ impl TransactionHandler for Tuple {
 
     fn after_dispatch_tx<C: Context>(ctx: &C, tx_auth_info: &AuthInfo, result: &CallResult) {
         for_tuples!( #( Tuple::after_dispatch_tx(ctx, tx_auth_info, result); )* );
+    }
+}
+
+/// Fee proxy handler.
+pub trait FeeProxyHandler {
+    /// Resolve the proxy payer for the given transaction. If no payer could be resolved, `None`
+    /// should be returned.
+    fn resolve_payer<C: Context>(
+        ctx: &C,
+        tx: &Transaction,
+    ) -> Result<Option<Address>, modules::core::Error>;
+}
+
+#[impl_for_tuples(30)]
+impl FeeProxyHandler for Tuple {
+    fn resolve_payer<C: Context>(
+        ctx: &C,
+        tx: &Transaction,
+    ) -> Result<Option<Address>, modules::core::Error> {
+        for_tuples!( #(
+            if let Some(payer) = Tuple::resolve_payer(ctx, tx)? {
+                return Ok(Some(payer));
+            }
+        )* );
+
+        Ok(None)
     }
 }
 

@@ -16,8 +16,8 @@ use crate::{
     crypto, dispatcher,
     keymanager::{KeyManagerClient, TrustedSigners},
     module::{
-        BlockHandler, InvariantHandler, MethodHandler, MigrationHandler, ModuleInfoHandler,
-        TransactionHandler,
+        BlockHandler, FeeProxyHandler, InvariantHandler, MethodHandler, MigrationHandler,
+        ModuleInfoHandler, TransactionHandler,
     },
     modules,
     state::CurrentState,
@@ -39,6 +39,8 @@ pub trait Runtime {
 
     /// Module that provides the core API.
     type Core: modules::core::API;
+    /// Handler for proxy fee payments.
+    type FeeProxy: FeeProxyHandler = ();
 
     /// Supported modules.
     type Modules: TransactionHandler

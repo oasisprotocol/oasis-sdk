@@ -165,6 +165,7 @@ pub fn transaction() -> transaction::Transaction {
                 amount: Default::default(),
                 gas: 1_000_000,
                 consensus_messages: 32,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -185,6 +186,7 @@ impl Default for CallOptions {
                 amount: Default::default(),
                 gas: 1_000_000,
                 consensus_messages: 0,
+                ..Default::default()
             },
         }
     }

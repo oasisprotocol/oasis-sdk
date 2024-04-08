@@ -13,7 +13,7 @@ use crate::{
     context::Context,
     core::common::quantity::Quantity,
     handler, migration,
-    module::{self, Module as _, Parameters as _},
+    module::{self, FeeProxyHandler, Module as _, Parameters as _},
     modules,
     modules::core::{Error as CoreError, API as _},
     runtime::Runtime,
@@ -875,7 +875,11 @@ impl module::TransactionHandler for Module {
         tx: &Transaction,
     ) -> Result<module::AuthDecision, modules::core::Error> {
         // Check nonces.
-        let payer = Self::check_signer_nonces(ctx, &tx.auth_info)?;
+        let default_payer = Self::check_signer_nonces(ctx, &tx.auth_info)?;
+
+        // Attempt to resolve a proxy fee payer if set.
+        let payer =
+            <C::Runtime as Runtime>::FeeProxy::resolve_payer(ctx, tx)?.unwrap_or(default_payer);
 
         // Charge the specified amount of fees.
         if !tx.auth_info.fee.amount.amount().is_zero() {

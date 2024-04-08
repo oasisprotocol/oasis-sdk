@@ -440,7 +440,7 @@ fn test_reject_txs() {
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                 gas: u64::MAX,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -475,7 +475,7 @@ fn test_query_estimate_gas() {
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                 gas: u64::MAX,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1016,7 +1016,7 @@ fn test_min_gas_price() {
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                 gas: 100,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1304,7 +1304,7 @@ fn test_dynamic_min_gas_price() {
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(1_000_000_000, token::Denomination::NATIVE),
                 gas: 10_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1559,7 +1559,7 @@ fn test_message_gas() {
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                 gas: u64::MAX,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },

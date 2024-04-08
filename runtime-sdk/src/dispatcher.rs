@@ -1089,7 +1089,7 @@ mod test {
                 fee: transaction::Fee {
                     amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                     gas: 1000,
-                    consensus_messages: 0,
+                    ..Default::default()
                 },
                 ..Default::default()
             },
@@ -1144,7 +1144,7 @@ mod test {
                 fee: transaction::Fee {
                     amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                     gas: 1000,
-                    consensus_messages: 0,
+                    ..Default::default()
                 },
                 ..Default::default()
             },

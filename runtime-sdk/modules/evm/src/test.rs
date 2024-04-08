@@ -209,9 +209,8 @@ fn do_test_evm_calls<C: Config>(force_plain: bool) {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 1000000,
-                consensus_messages: 0,
+                gas: 1_000_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -250,9 +249,8 @@ fn do_test_evm_calls<C: Config>(force_plain: bool) {
                 1,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 25000,
-                consensus_messages: 0,
+                gas: 25_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -343,9 +341,8 @@ fn test_c10l_evm_balance_transfer() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 1000000,
-                consensus_messages: 0,
+                gas: 1_000_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -512,9 +509,8 @@ fn do_test_evm_runtime<C: Config>() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 1000000,
-                consensus_messages: 0,
+                gas: 1_000_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -561,9 +557,8 @@ fn do_test_evm_runtime<C: Config>() {
                 1,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 10, // Not enough gas.
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -621,9 +616,8 @@ fn do_test_evm_runtime<C: Config>() {
                 2,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 25000,
-                consensus_messages: 0,
+                gas: 25_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -703,9 +697,8 @@ fn do_test_evm_runtime<C: Config>() {
                 3,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 64000,
-                consensus_messages: 0,
+                gas: 64_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -755,9 +748,8 @@ fn do_test_evm_runtime<C: Config>() {
                 4,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 10, // Not enough gas.
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
