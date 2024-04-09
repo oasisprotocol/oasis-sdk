@@ -4,6 +4,8 @@ use std::convert::TryFrom;
 use digest::{typenum::Unsigned as _, Digest as _};
 use thiserror::Error;
 
+use crate::core::common::crypto::signature::PublicKey as CorePublicKey;
+
 pub mod context;
 mod digests;
 pub mod ed25519;
@@ -310,6 +312,15 @@ impl PublicKey {
 impl AsRef<[u8]> for PublicKey {
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
+    }
+}
+
+impl PartialEq<CorePublicKey> for PublicKey {
+    fn eq(&self, other: &CorePublicKey) -> bool {
+        match self {
+            PublicKey::Ed25519(pk) => pk.as_bytes() == other.as_ref(),
+            _ => false,
+        }
     }
 }
 
