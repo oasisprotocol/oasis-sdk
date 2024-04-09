@@ -5,7 +5,10 @@ use bech32::{Bech32, Hrp};
 use thiserror::Error;
 
 use oasis_core_runtime::{
-    common::{crypto::hash::Hash, namespace::Namespace},
+    common::{
+        crypto::{hash::Hash, signature::PublicKey as ConsensusPublicKey},
+        namespace::Namespace,
+    },
     consensus::address::Address as ConsensusAddress,
 };
 
@@ -170,6 +173,14 @@ impl Address {
             ADDRESS_V0_VERSION,
             eth_address,
         )
+    }
+
+    /// Creates a new address from a consensus-layer Ed25519 public key.
+    ///
+    /// This is a convenience wrapper and the same result can be obtained by going via the
+    /// `from_sigspec` method using the same Ed25519 public key.
+    pub fn from_consensus_pk(pk: &ConsensusPublicKey) -> Self {
+        Self::from_bytes(ConsensusAddress::from_pk(pk).as_ref()).unwrap()
     }
 
     /// Tries to create a new address from Bech32-encoded string.
@@ -388,6 +399,20 @@ mod test {
         assert_eq!(
             addr.to_bech32(),
             "oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt"
+        );
+    }
+
+    #[test]
+    fn test_address_from_consensus_pk() {
+        // Same test vector as in `test_address_ed25519`.
+        let pk: ConsensusPublicKey = base64::decode("utrdHlX///////////////////////////////////8=")
+            .unwrap()
+            .into();
+
+        let addr = Address::from_consensus_pk(&pk);
+        assert_eq!(
+            addr.to_bech32(),
+            "oasis1qryqqccycvckcxp453tflalujvlf78xymcdqw4vz"
         );
     }
 
