@@ -147,6 +147,17 @@ pub enum Error {
 }
 
 impl PublicKey {
+    /// Return the key type as string.
+    pub fn key_type(&self) -> &str {
+        match self {
+            Self::Ed25519(_) => "ed25519",
+            Self::Secp256k1(_) => "secp256k1",
+            Self::Secp256r1(_) => "secp256r1",
+            Self::Secp384r1(_) => "secp384r1",
+            Self::Sr25519(_) => "sr25519",
+        }
+    }
+
     /// Return a byte representation of this public key.
     pub fn as_bytes(&self) -> &[u8] {
         match self {
