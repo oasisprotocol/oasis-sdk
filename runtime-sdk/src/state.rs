@@ -11,7 +11,7 @@ use oasis_core_runtime::{common::crypto::hash::Hash, consensus::roothash, storag
 
 use crate::{
     context::Context,
-    crypto::random::RootRng,
+    crypto::{random::RootRng, signature::PublicKey},
     event::{Event, EventTag, EventTags},
     modules::core::Error,
     storage::{MKVSStore, NestedStore, OverlayStore, Store},
@@ -173,6 +173,22 @@ impl Environment {
             .first()
             .map(|si| si.address_spec.address())
             .unwrap_or_default()
+    }
+
+    /// Authenticated caller public key if available.
+    ///
+    /// In case there are multiple signers of a transaction, this will return the public key
+    /// corresponding to the first signer. If there are no signers or if the address specification
+    /// does not represent a single public key, it returns `None`.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if called outside a transaction environment.
+    pub fn tx_caller_public_key(&self) -> Option<PublicKey> {
+        self.tx_auth_info()
+            .signer_info
+            .first()
+            .and_then(|si| si.address_spec.public_key())
     }
 }
 

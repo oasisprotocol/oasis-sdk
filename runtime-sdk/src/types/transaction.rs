@@ -250,6 +250,14 @@ pub enum AddressSpec {
 }
 
 impl AddressSpec {
+    /// Returns the public key when the address spec represents a single public key.
+    pub fn public_key(&self) -> Option<PublicKey> {
+        match self {
+            AddressSpec::Signature(spec) => Some(spec.public_key()),
+            _ => None,
+        }
+    }
+
     /// Derives the address.
     pub fn address(&self) -> Address {
         match self {
