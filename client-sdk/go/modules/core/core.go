@@ -22,6 +22,8 @@ var (
 
 // V1 is the v1 core module interface.
 type V1 interface {
+	client.EventDecoder
+
 	// Parameters queries the core module parameters.
 	Parameters(ctx context.Context, round uint64) (*Parameters, error)
 
