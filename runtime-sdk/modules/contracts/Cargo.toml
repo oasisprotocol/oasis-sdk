@@ -13,7 +13,7 @@ oasis-contract-sdk-types = { path = "../../../contract-sdk/types", features = ["
 oasis-runtime-sdk = { path = "../.." }
 
 # Internal Wasm3 bindings.
-wasm3 = { git = "https://github.com/oasisprotocol/wasm3-rs", tag = "v0.3.2" }
+wasm3 = { git = "https://github.com/oasisprotocol/wasm3-rs", tag = "v0.3.3" }
 
 # Third party.
 anyhow = "1.0"
