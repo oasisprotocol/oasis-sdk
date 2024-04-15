@@ -324,6 +324,17 @@ impl PartialEq<CorePublicKey> for PublicKey {
     }
 }
 
+impl TryFrom<PublicKey> for CorePublicKey {
+    type Error = &'static str;
+
+    fn try_from(pk: PublicKey) -> Result<Self, Self::Error> {
+        match pk {
+            PublicKey::Ed25519(pk) => Ok(pk.into()),
+            _ => Err("not an Ed25519 public key"),
+        }
+    }
+}
+
 /// Variable-length opaque signature.
 #[derive(Clone, Debug, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 #[cbor(transparent)]
