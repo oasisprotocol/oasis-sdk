@@ -40,7 +40,7 @@ jobs:
             --package oasis-contract-sdk-storage
 
       - name: Deploy rust to api-reference branch
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: target/doc
@@ -94,7 +94,7 @@ jobs:
           mv signer-ledger/docs/api docs/client-signer-ledger
 
       - name: Deploy js to api-reference branch
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: client-sdk/ts-web/docs
