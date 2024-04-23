@@ -24,7 +24,7 @@
     "dependencies": {
         "@oasisprotocol/client": "^1.0.0",
         "@oasisprotocol/deoxysii": "^0.0.5",
-        "elliptic": "^6.5.3",
+        "elliptic": "^6.5.5",
         "js-sha512": "^0.9.0",
         "randombytes": "^2.0.1",
         "sha3": "^2.1.4",
