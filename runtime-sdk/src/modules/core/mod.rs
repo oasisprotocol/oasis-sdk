@@ -420,6 +420,11 @@ pub trait Config: 'static {
     ///
     /// Note that execution of such transactions is allowed to access confidential state.
     const ALLOW_INTERACTIVE_READ_ONLY_TRANSACTIONS: bool = false;
+
+    /// The gas cost of the internal call to retrieve the current calldata public key.
+    const GAS_COST_CALL_CALLDATA_PUBLIC_KEY: u64 = 20;
+    /// The gas cost of the internal call to retrieve the current epoch.
+    const GAS_COST_CALL_CURRENT_EPOCH: u64 = 10;
 }
 
 pub struct Module<Cfg: Config> {
@@ -833,11 +838,8 @@ impl<Cfg: Config> Module<Cfg> {
         <C::Runtime as Runtime>::Modules::check_invariants(ctx)
     }
 
-    /// Retrieve the public key for encrypting call data.
-    #[handler(query = "core.CallDataPublicKey")]
-    fn query_calldata_public_key<C: Context>(
+    fn calldata_public_key_common<C: Context>(
         ctx: &C,
-        _args: (),
     ) -> Result<types::CallDataPublicKeyQueryResponse, Error> {
         let key_manager = ctx
             .key_manager()
@@ -853,6 +855,32 @@ impl<Cfg: Config> Module<Cfg> {
             })?;
 
         Ok(types::CallDataPublicKeyQueryResponse { public_key, epoch })
+    }
+
+    /// Retrieve the public key for encrypting call data.
+    #[handler(query = "core.CallDataPublicKey")]
+    fn query_calldata_public_key<C: Context>(
+        ctx: &C,
+        _args: (),
+    ) -> Result<types::CallDataPublicKeyQueryResponse, Error> {
+        Self::calldata_public_key_common(ctx)
+    }
+
+    /// Retrieve the public key for encrypting call data (internally exposed call).
+    #[handler(call = "core.CallDataPublicKey", internal)]
+    fn internal_calldata_public_key<C: Context>(
+        ctx: &C,
+        _args: (),
+    ) -> Result<types::CallDataPublicKeyQueryResponse, Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_CALLDATA_PUBLIC_KEY)?;
+        Self::calldata_public_key_common(ctx)
+    }
+
+    /// Retrieve the current epoch.
+    #[handler(call = "core.CurrentEpoch", internal)]
+    fn internal_current_epoch<C: Context>(ctx: &C, _args: ()) -> Result<u64, Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_CURRENT_EPOCH)?;
+        Ok(ctx.epoch())
     }
 
     /// Query the minimum gas price.
