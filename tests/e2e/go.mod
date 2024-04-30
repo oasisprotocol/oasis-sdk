@@ -14,7 +14,7 @@ replace (
 )
 
 require (
-	github.com/btcsuite/btcd/btcec/v2 v2.3.2
+	github.com/btcsuite/btcd/btcec/v2 v2.3.3
 	github.com/ethereum/go-ethereum v1.13.12
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
@@ -45,7 +45,7 @@ require (
 	github.com/creachadair/taskgroup v0.3.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/dgraph-io/badger/v2 v2.2007.4 // indirect
 	github.com/dgraph-io/badger/v3 v3.2103.4 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
