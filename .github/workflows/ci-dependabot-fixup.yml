@@ -88,10 +88,14 @@ jobs:
     - name: Try extracting package name and version
       if: steps.check.outputs.skip != 'true'
       id: extract
+      env:
+        # There's no support for escaping this for use in a shell command.
+        # GitHub's recommendation is to pass it through the environment.
+        # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
+        TITLE: ${{ github.event.pull_request.title }}
       run: |
-        title="${{ github.event.pull_request.title }}"
-        repo=$(echo $title | awk '{print $3}')
-        version=$(echo $title | awk '{print $7}')
+        repo=$(echo "$TITLE" | awk '{print $3}')
+        version=$(echo $TITLE | awk '{print $7}')
 
         # Set the output variables for subsequent steps
         echo "repo=$repo" >> $GITHUB_OUTPUT
@@ -99,12 +103,15 @@ jobs:
 
     - name: Run gomod updater
       if: steps.check.outputs.skip != 'true'
+      env:
+        EXTRACT_REPO: ${{ steps.extract.outputs.repo }}
+        EXTRACT_VERSION: ${{ steps.extract.outputs.version }}
       run: |
         # Ensure client-sdk is updated first, as some other packages depend on it.
         client_sdk="./client-sdk/go/go.mod"
         file_list=$(echo $client_sdk | awk -vORS=, '{ print $1 }')
         file_list+=$(find . -type f -name 'go.mod' ! -path "$client_sdk" | awk -vORS=, '{ print $1 }' | sed 's/,$/\n/')
-        tools/gomod-updater/gomod-updater ${{ steps.extract.outputs.repo }} ${{ steps.extract.outputs.version }} --packages "$file_list"
+        tools/gomod-updater/gomod-updater "$EXTRACT_REPO" "$EXTRACT_VERSION" --packages "$file_list"
 
     - name: Commit and push all changed files
       if: steps.check.outputs.skip != 'true'
@@ -112,7 +119,7 @@ jobs:
         CI_COMMIT_MESSAGE: Dependabot dependencies fixup 👷
         CI_COMMIT_AUTHOR: oasisprotocol-bot
       run: |
-        git config --global user.name "${{ env.CI_COMMIT_AUTHOR }}"
+        git config --global user.name "$CI_COMMIT_AUTHOR"
         git config --global user.email "oasisprotocol-bot@users.noreply.github.com"
-        git commit -a -m "${{ env.CI_COMMIT_MESSAGE }}" || echo "No changes."
+        git commit -a -m "$CI_COMMIT_MESSAGE" || echo "No changes."
         git push
