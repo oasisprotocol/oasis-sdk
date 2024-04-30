@@ -15,7 +15,7 @@ oasis-contract-sdk-storage = { path = "../../../contract-sdk/storage" }
 oasis-contract-sdk-oas20 = { path = "../../../contract-sdk/specs/token/oas20" }
 
 # Third party.
-thiserror = "1.0.30"
+thiserror = "1.0.59"
 
 [profile.release]
 opt-level = 3
