@@ -82,7 +82,7 @@ jobs:
       run: go build
 
     # Dependabot titles are:
-    #      <prefix>: bump <dependancy name> from <frmo_version> to <to_version> in <path>
+    #      <prefix>: bump <dependency name> from <from_version> to <to_version> in <path>
     # e.g. client-sdk/go: bump github.com/ethereum/go-ethereum from 1.12.1 to 1.13.3 in /client-sdk/go
     # as long as the (configurable) <prefix> is without whitespace, the bellow parsing should work.
     - name: Try extracting package name and version
