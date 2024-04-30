@@ -27,4 +27,3 @@ tests/benchmark/benchmark
 client-sdk/ts-web/core/reflect-go/reflect-go
 tools/gen_runtime_vectors/gen_runtime_vectors
 tools/orc/orc
-tools/gomod-updater/gomod-updater

@@ -12,30 +12,27 @@ updates:
       - c:deps
       - c:testing
 
-  # Manage client-sdk/go package versions.
+  # Manage go package versions.
   - package-ecosystem: gomod
-    directory: client-sdk/go/
+    directories:
+      # Client SDK.
+      - client-sdk/go/
+      - client-sdk/go/ts-web/core/reflect-go/
+      # Tools.
+      - tools/orc/
+      - tools/gen_runtime_vectors/
+      # Tests.
+      - tests/e2e/
+      - tests/benchmark/
+      # Examples.
+      - examples/client-sdk/go/minimal-runtime-client/
     schedule:
       interval: daily
     commit-message:
-      prefix: "client-sdk/go:"
+      prefix: "go:"
     labels:
       - c:deps
-      - c:client-sdk/go
-    ignore:
-      # oasis-core is manually kept up to date.
-      - dependency-name: github.com/oasisprotocol/oasis-core/go
-
-  # Manage tests/e2e package versions.
-  - package-ecosystem: gomod
-    directory: tests/e2e
-    schedule:
-      interval: daily
-    commit-message:
-      prefix: "tests/e2e:"
-    labels:
-      - c:deps
-      - c:testing
+      - golang
     ignore:
       # oasis-core is manually kept up to date.
       - dependency-name: github.com/oasisprotocol/oasis-core/go
@@ -87,17 +84,3 @@ updates:
     labels:
       - c:deps
       - c:client-sdk/typescript
-
-  # Manage client-sdk/ts-web/core/reflect-go package versions.
-  - package-ecosystem: gomod
-    directory: client-sdk/ts-web/core/reflect-go/
-    schedule:
-      interval: daily
-    commit-message:
-      prefix: "client/reflect:"
-    labels:
-      - c:deps
-      - c:client-sdk/go
-    ignore:
-      # oasis-core is manually kept up to date.
-      - dependency-name: github.com/oasisprotocol/oasis-core/go
