@@ -2293,7 +2293,7 @@ dependencies = [
  "oasis-runtime-sdk",
  "sha2 0.10.8",
  "thiserror",
- "x25519-dalek 2.0.1",
+ "x25519-dalek",
 ]
 
 [[package]]
@@ -2347,7 +2347,7 @@ dependencies = [
  "thiserror",
  "tiny-keccak 2.0.2",
  "tokio",
- "x25519-dalek 2.0.1",
+ "x25519-dalek",
  "zeroize",
 ]
 
@@ -2404,7 +2404,7 @@ dependencies = [
  "thiserror",
  "tiny-keccak 2.0.2",
  "tokio",
- "x25519-dalek 2.0.1",
+ "x25519-dalek",
  "x509-parser",
  "yasna 0.5.2",
  "zeroize",
@@ -2445,7 +2445,7 @@ dependencies = [
  "tiny-keccak 2.0.2",
  "tokio",
  "tokio-retry",
- "x25519-dalek 2.0.1",
+ "x25519-dalek",
  "zeroize",
 ]
 
@@ -2506,7 +2506,7 @@ dependencies = [
  "substrate-bn",
  "thiserror",
  "uint",
- "x25519-dalek 1.1.1",
+ "x25519-dalek",
 ]
 
 [[package]]
@@ -4516,17 +4516,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05f360fc0b24296329c78fda852a1e9ae82de9cf7b27dae4b7f62f118f77b9ed"
 dependencies = [
  "tap",
-]
-
-[[package]]
-name = "x25519-dalek"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a0c105152107e3b96f6a00a65e86ce82d9b125230e1c4302940eca58ff71f4f"
-dependencies = [
- "curve25519-dalek 3.2.0",
- "rand_core 0.5.1",
- "zeroize",
 ]
 
 [[package]]
