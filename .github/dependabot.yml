@@ -17,7 +17,7 @@ updates:
     directories:
       # Client SDK.
       - client-sdk/go/
-      - client-sdk/go/ts-web/core/reflect-go/
+      - client-sdk/ts-web/core/reflect-go/
       # Tools.
       - tools/orc/
       - tools/gen_runtime_vectors/
