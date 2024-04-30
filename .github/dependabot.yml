@@ -44,17 +44,38 @@ updates:
 
   # Manage Rust package versions.
   - package-ecosystem: cargo
-    directory: /
+    directories:
+      - /
+      # Contract SDK specs.
+      - contract-sdk/specs/token/oas20/
+      - contract-sdk/specs/access/oas173/
+      # Test contracts.
+      - tests/contracts/hello/
+      - tests/contracts/bench/
     schedule:
       interval: daily
     commit-message:
       prefix: "runtime-sdk:"
+    groups:
+      # Update all other dependencies in a single PR.
+      rust:
+        # Update all dependencies, unless explicitly ignored.
+        patterns:
+          - "*"
+        # Excluded dependencies are updated in separate PRs.
+        # Commented out because it requires at least one entry to be valid.
+        # exclude-patterns: []
+    # Ignored depenednecies are ignored by dependabot.
+    ignore:
+      # oasis-core dependencies are manually kept up to date.
+      - dependency-name: oasis-core-runtime
+      - dependency-name: oasis-core-keymanager
+    labels:
+      - c:deps
+      - rust
     labels:
       - c:deps
       - c:runtime-sdk
-    ignore:
-      # oasis-core-runtime is manually kept up to date.
-      - dependency-name: oasis-core-runtime
 
   # Manage npm package versions.
   - package-ecosystem: npm
