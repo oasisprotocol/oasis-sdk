@@ -1,4 +1,5 @@
 //! Secp384r1 signatures.
+use base64::prelude::*;
 use digest::{consts::U48, core_api::BlockSizeUser, Digest, FixedOutput, FixedOutputReset};
 use p384::{
     self,
@@ -68,7 +69,7 @@ impl PublicKey {
 
 impl From<&'static str> for PublicKey {
     fn from(s: &'static str) -> PublicKey {
-        PublicKey::from_bytes(&base64::decode(s).unwrap()).unwrap()
+        PublicKey::from_bytes(&BASE64_STANDARD.decode(s).unwrap()).unwrap()
     }
 }
 

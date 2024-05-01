@@ -12,6 +12,7 @@ mod signed_call;
 pub mod state;
 pub mod types;
 
+use base64::prelude::*;
 use evm::{
     executor::stack::{StackExecutor, StackSubstateMetadata},
     Config as EVMConfig,
@@ -555,7 +556,9 @@ impl<Cfg: Config> Module<Cfg> {
             evm::ExitReason::Succeed(_) => exit_value,
             err => {
                 let err = match err {
-                    evm::ExitReason::Revert(_) => Error::Reverted(base64::encode(exit_value)),
+                    evm::ExitReason::Revert(_) => {
+                        Error::Reverted(BASE64_STANDARD.encode(exit_value))
+                    }
                     evm::ExitReason::Error(err) => err.into(),
                     evm::ExitReason::Fatal(err) => err.into(),
                     _ => unreachable!("already handled above"),

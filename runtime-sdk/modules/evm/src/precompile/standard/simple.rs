@@ -5,9 +5,9 @@ use evm::{
     ExitSucceed,
 };
 use k256::elliptic_curve::scalar::IsHigh;
-use ripemd160::{Digest as _, Ripemd160};
+use ripemd::{Digest as _, Ripemd160};
 use sha2::Sha256;
-use sha3::{Digest as _, Keccak256};
+use sha3::Keccak256;
 
 use crate::precompile::{read_input, record_linear_cost, PrecompileResult};
 

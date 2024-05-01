@@ -1,4 +1,5 @@
 //! Mock functionality for use during testing.
+use base64::prelude::*;
 use uint::hex::FromHex;
 
 use oasis_runtime_sdk::{
@@ -280,5 +281,5 @@ pub fn decode_reverted_raw(msg: &str) -> Option<Vec<u8>> {
     // Trim the optional reverted prefix.
     let msg = msg.trim_start_matches("reverted: ");
 
-    base64::decode(msg).ok()
+    BASE64_STANDARD.decode(msg).ok()
 }

@@ -1,4 +1,5 @@
 //! Secp256k1 signatures.
+use base64::prelude::*;
 use digest::{consts::U32, Digest, FixedOutput};
 use k256::{
     self,
@@ -83,7 +84,7 @@ impl PublicKey {
 
 impl From<&'static str> for PublicKey {
     fn from(s: &'static str) -> PublicKey {
-        PublicKey::from_bytes(&base64::decode(s).unwrap()).unwrap()
+        PublicKey::from_bytes(&BASE64_STANDARD.decode(s).unwrap()).unwrap()
     }
 }
 
