@@ -139,8 +139,10 @@
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Secp384r1 signatures.
-</span><span class="kw">use </span>digest::{consts::U48, core_api::BlockSizeUser, Digest, FixedOutput, FixedOutputReset};
+</span><span class="kw">use </span>base64::prelude::<span class="kw-2">*</span>;
+<span class="kw">use </span>digest::{consts::U48, core_api::BlockSizeUser, Digest, FixedOutput, FixedOutputReset};
 <span class="kw">use </span>p384::{
     <span class="self">self</span>,
     ecdsa::{
@@ -209,7 +211,7 @@
 
 <span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; <span class="kw">for </span>PublicKey {
     <span class="kw">fn </span>from(s: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; PublicKey {
-        PublicKey::from_bytes(<span class="kw-2">&amp;</span>base64::decode(s).unwrap()).unwrap()
+        PublicKey::from_bytes(<span class="kw-2">&amp;</span>BASE64_STANDARD.decode(s).unwrap()).unwrap()
     }
 }
 
