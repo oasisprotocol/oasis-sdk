@@ -1,6 +1,7 @@
 //! Ed25519 signatures.
 use std::convert::TryInto;
 
+use base64::prelude::*;
 use curve25519_dalek::{digest::consts::U64, edwards::CompressedEdwardsY};
 use ed25519_dalek::Signer as _;
 use sha2::{Digest as _, Sha512, Sha512_256};
@@ -34,7 +35,7 @@ impl PublicKey {
         // Note: This could do the small order public key check,
         // but just assume that signature verification will impose
         // whatever semantics it desires.
-        let a = CompressedEdwardsY::from_slice(bytes);
+        let a = CompressedEdwardsY::from_slice(bytes).unwrap(); // Length is checked above.
         let _a = match a.decompress() {
             Some(point) => point,
             None => return Err(Error::MalformedPublicKey),
@@ -94,7 +95,7 @@ impl PublicKey {
 
 impl From<&'static str> for PublicKey {
     fn from(s: &'static str) -> PublicKey {
-        PublicKey::from_bytes(&base64::decode(s).unwrap()).unwrap()
+        PublicKey::from_bytes(&BASE64_STANDARD.decode(s).unwrap()).unwrap()
     }
 }
 

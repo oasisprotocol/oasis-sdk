@@ -1,14 +1,14 @@
 //! A minimal representation of an Oasis Runtime SDK address.
 use std::convert::TryFrom;
 
-use bech32::{self, FromBase32, ToBase32, Variant};
+use bech32::{Bech32, Hrp};
 use thiserror::Error;
 
 const ADDRESS_VERSION_SIZE: usize = 1;
 const ADDRESS_DATA_SIZE: usize = 20;
 const ADDRESS_SIZE: usize = ADDRESS_VERSION_SIZE + ADDRESS_DATA_SIZE;
 
-const ADDRESS_BECH32_HRP: &str = "oasis";
+const ADDRESS_BECH32_HRP: Hrp = Hrp::parse_unchecked("oasis");
 
 /// Error.
 #[derive(Error, Debug)]
@@ -42,21 +42,17 @@ impl Address {
 
     /// Tries to create a new address from Bech32-encoded string.
     pub fn from_bech32(data: &str) -> Result<Self, Error> {
-        let (hrp, data, variant) = bech32::decode(data).map_err(|_| Error::MalformedAddress)?;
+        let (hrp, data) = bech32::decode(data).map_err(|_| Error::MalformedAddress)?;
         if hrp != ADDRESS_BECH32_HRP {
             return Err(Error::MalformedAddress);
         }
-        if variant != Variant::Bech32 {
-            return Err(Error::MalformedAddress);
-        }
-        let data: Vec<u8> = FromBase32::from_base32(&data).map_err(|_| Error::MalformedAddress)?;
 
         Address::from_bytes(&data)
     }
 
     /// Converts an address to Bech32 representation.
     pub fn to_bech32(self) -> String {
-        bech32::encode(ADDRESS_BECH32_HRP, self.0.to_base32(), Variant::Bech32).unwrap()
+        bech32::encode::<Bech32>(ADDRESS_BECH32_HRP, &self.0).unwrap()
     }
 }
 
@@ -90,6 +86,8 @@ impl From<Address> for oasis_runtime_sdk::types::address::Address {
 
 #[cfg(test)]
 mod test {
+    use bech32::Bech32m;
+
     use super::*;
 
     #[test]
@@ -113,21 +111,18 @@ mod test {
         ));
     }
 
-    #[test]
     fn test_address_from_bech32_invalid_variant() {
         let b = vec![42u8; ADDRESS_SIZE];
-        let bech32_addr =
-            bech32::encode(ADDRESS_BECH32_HRP, b.to_base32(), Variant::Bech32).unwrap();
-        let bech32m_addr =
-            bech32::encode(ADDRESS_BECH32_HRP, b.to_base32(), Variant::Bech32m).unwrap();
+        let bech32_addr = bech32::encode::<Bech32>(ADDRESS_BECH32_HRP, &b).unwrap();
+        let bech32m_addr = bech32::encode::<Bech32m>(ADDRESS_BECH32_HRP, &b).unwrap();
 
         assert!(
             Address::from_bech32(&bech32_addr).is_ok(),
             "bech32 address should be ok"
         );
-        assert!(matches!(
-            Address::from_bech32(&bech32m_addr).unwrap_err(),
-            Error::MalformedAddress,
-        ));
+        assert!(
+            Address::from_bech32(&bech32m_addr).is_ok(),
+            "bech32m address should be ok",
+        );
     }
 }

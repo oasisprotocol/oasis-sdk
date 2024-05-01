@@ -426,7 +426,7 @@ mod test {
     #[test]
     fn test_x25519_derive() {
         let mut rng = OsRng {};
-        let static_secret = x25519_dalek::StaticSecret::new(&mut rng);
+        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut rng);
         let public = x25519_dalek::PublicKey::from(&static_secret);
 
         let mut blob = [0u8; 64];
@@ -487,7 +487,7 @@ mod test {
     #[bench]
     fn bench_x25519_derive(b: &mut Bencher) {
         let mut rng = OsRng {};
-        let static_secret = x25519_dalek::StaticSecret::new(&mut rng);
+        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut rng);
         let public = x25519_dalek::PublicKey::from(&static_secret);
 
         let mut blob = [0u8; 64];
@@ -510,7 +510,7 @@ mod test {
     #[bench]
     fn bench_curve25519_compute_public(b: &mut Bencher) {
         let mut rng = OsRng {};
-        let static_secret = x25519_dalek::StaticSecret::new(&mut rng);
+        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut rng);
 
         let mut blob = [0u8; 32];
         blob[..32].copy_from_slice(&static_secret.to_bytes());

@@ -221,6 +221,8 @@ pub enum ReceiverRequest {
 
 #[cfg(test)]
 mod test {
+    use base64::prelude::*;
+
     use super::*;
 
     use oasis_contract_sdk_types::testing::addresses;
@@ -269,13 +271,13 @@ mod test {
         for (encoded_base64, tc) in tcs {
             let ser = cbor::to_vec(tc.clone());
             assert_eq!(
-                base64::encode(ser),
+                BASE64_STANDARD.encode(ser),
                 encoded_base64,
                 "serialization should match"
             );
 
             let dec: TokenInstantiation =
-                cbor::from_slice(&base64::decode(encoded_base64).unwrap())
+                cbor::from_slice(&BASE64_STANDARD.decode(encoded_base64).unwrap())
                     .expect("token instantiation should deserialize correctly");
             assert_eq!(dec, tc, "decoded account should match the expected value");
         }

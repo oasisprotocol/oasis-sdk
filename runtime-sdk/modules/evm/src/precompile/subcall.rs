@@ -117,6 +117,7 @@ pub(super) fn call_subcall<B: EVMBackendExt>(
 
 #[cfg(test)]
 mod test {
+    use base64::prelude::*;
     use ethabi::{ParamType, Token};
 
     use oasis_runtime_sdk::{
@@ -424,7 +425,7 @@ mod test {
             assert_eq!(code, 8);
 
             let message = message.strip_prefix("reverted: ").unwrap();
-            let data = base64::decode(message).unwrap();
+            let data = BASE64_STANDARD.decode(message).unwrap();
             let abi = ethabi::Contract::load(TEST_CONTRACT_ABI_JSON.as_bytes()).unwrap();
             let mut err = abi
                 .error("SubcallFailed")

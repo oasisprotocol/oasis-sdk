@@ -11,8 +11,8 @@ cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-runtime-sdk = { path = "../../runtime-sdk", optional = true }
 
 # Third party.
-bech32 = "0.9.0"
-thiserror = "1.0.30"
+bech32 = "0.11.0"
+thiserror = "1.0.59"
 
 [dev-dependencies]
 hex = "0.4.2"
