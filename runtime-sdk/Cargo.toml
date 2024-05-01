@@ -13,7 +13,7 @@ oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
 byteorder = "1.4.3"
-curve25519-dalek = "3.2.0"
+curve25519-dalek = "4.1.2"
 ed25519-dalek = { version = "2.0.0", features = ["digest", "hazmat"] }
 x25519-dalek = { version = "2.0.0", features = ["static_secrets"] }
 digest = "0.10.3"
