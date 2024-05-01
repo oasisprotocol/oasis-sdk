@@ -239,12 +239,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "base64"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
+
+[[package]]
 name = "base64-serde"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e964e3e0a930303c7c0bdb28ebf691dd98d9eee4b8b68019d2c995710b58a18"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "serde",
 ]
 
@@ -2334,7 +2340,7 @@ source = "git+https://github.com/oasisprotocol/oasis-core?tag=v23.0.10#96bb870bf
 dependencies = [
  "anyhow",
  "async-trait",
- "base64",
+ "base64 0.13.1",
  "futures",
  "lazy_static",
  "lru 0.9.0",
@@ -2359,7 +2365,7 @@ dependencies = [
  "anyhow",
  "arbitrary",
  "async-trait",
- "base64",
+ "base64 0.13.1",
  "base64-serde",
  "bech32",
  "bincode",
@@ -2415,7 +2421,7 @@ name = "oasis-runtime-sdk"
 version = "0.8.5"
 dependencies = [
  "anyhow",
- "base64",
+ "base64 0.22.1",
  "bech32",
  "blake3",
  "byteorder",
@@ -2479,7 +2485,7 @@ name = "oasis-runtime-sdk-evm"
 version = "0.5.0"
 dependencies = [
  "anyhow",
- "base64",
+ "base64 0.22.1",
  "blake3",
  "criterion",
  "ethabi",
