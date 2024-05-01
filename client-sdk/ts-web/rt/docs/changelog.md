@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.1.0
+
+Spotlight change:
+
+- Our dependency on js-sha512 is bumped to 0.9.0, which corrects a bug that
+  didn't affect our use of the library.
+  However, this may affect other parts of your codebase if you depended on,
+  for example, `"js-sha512": ">=0.8.0"`, and used it to hash strings.
+
 ## v1.0.0
 
 Spotlight change:
