@@ -124,8 +124,7 @@ func GetChainContext(ctx context.Context, rtc client.RuntimeClient) (signature.C
 	return info.ChainContext, nil
 }
 
-func sendTx(rtc client.RuntimeClient, signer signature.Signer, tx *types.Transaction) error {
-	ctx := context.Background()
+func sendTx(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, tx *types.Transaction) error {
 	chainCtx, err := GetChainContext(ctx, rtc)
 	if err != nil {
 		return err
@@ -169,7 +168,7 @@ func sendTx(rtc client.RuntimeClient, signer signature.Signer, tx *types.Transac
 }
 
 // kvInsert inserts given key-value pair into storage.
-func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key, value []byte) error {
+func kvInsert(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, key, value []byte) error {
 	tx := types.NewTransaction(&types.Fee{
 		Gas: 2 * defaultGasAmount,
 	}, "keyvalue.Insert", kvKeyValue{
@@ -177,32 +176,32 @@ func kvInsert(rtc client.RuntimeClient, signer signature.Signer, key, value []by
 		Value: value,
 	})
 
-	return sendTx(rtc, signer, tx)
+	return sendTx(ctx, rtc, signer, tx)
 }
 
 // kvRemove removes given key from storage.
-func kvRemove(rtc client.RuntimeClient, signer signature.Signer, key []byte) error {
+func kvRemove(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, key []byte) error {
 	tx := types.NewTransaction(&types.Fee{
 		Gas: defaultGasAmount,
 	}, "keyvalue.Remove", kvKey{
 		Key: key,
 	})
-	return sendTx(rtc, signer, tx)
+	return sendTx(ctx, rtc, signer, tx)
 }
 
 // kvGetCreateKey gets a key from the key manager.
-func kvGetCreateKey(rtc client.RuntimeClient, signer signature.Signer, key []byte) error {
+func kvGetCreateKey(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, key []byte) error {
 	tx := types.NewTransaction(&types.Fee{
 		Gas: defaultGasAmount,
 	}, "keyvalue.GetCreateKey", kvKey{
 		Key: key,
 	})
 
-	return sendTx(rtc, signer, tx)
+	return sendTx(ctx, rtc, signer, tx)
 }
 
 // kvConfidentialGet gets the given key from confidential storage.
-func kvConfidentialGet(rtc client.RuntimeClient, signer signature.Signer, keyID []byte, key []byte) ([]byte, error) {
+func kvConfidentialGet(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, keyID []byte, key []byte) ([]byte, error) {
 	tx := types.NewTransaction(&types.Fee{
 		Gas: defaultGasAmount,
 	}, "keyvalue.ConfidentialGet", kvConfidentialKey{
@@ -210,7 +209,6 @@ func kvConfidentialGet(rtc client.RuntimeClient, signer signature.Signer, keyID 
 		Key:   key,
 	})
 
-	ctx := context.Background()
 	chainCtx, err := GetChainContext(ctx, rtc)
 	if err != nil {
 		return nil, err
@@ -259,7 +257,7 @@ func kvConfidentialGet(rtc client.RuntimeClient, signer signature.Signer, keyID 
 }
 
 // kvConfidentialInsert inserts the given key into confidential storage.
-func kvConfidentialInsert(rtc client.RuntimeClient, signer signature.Signer, keyID []byte, key []byte, value []byte) error {
+func kvConfidentialInsert(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, keyID []byte, key []byte, value []byte) error {
 	tx := types.NewTransaction(&types.Fee{
 		Gas: 3 * defaultGasAmount,
 	}, "keyvalue.ConfidentialInsert", kvConfidentialKeyValue{
@@ -268,11 +266,11 @@ func kvConfidentialInsert(rtc client.RuntimeClient, signer signature.Signer, key
 		Value: value,
 	})
 
-	return sendTx(rtc, signer, tx)
+	return sendTx(ctx, rtc, signer, tx)
 }
 
 // kvConfidentialRemove remove the given key from confidential storage.
-func kvConfidentialRemove(rtc client.RuntimeClient, signer signature.Signer, keyID []byte, key []byte) error {
+func kvConfidentialRemove(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, keyID []byte, key []byte) error {
 	tx := types.NewTransaction(&types.Fee{
 		Gas: 2 * defaultGasAmount,
 	}, "keyvalue.ConfidentialRemove", kvConfidentialKey{
@@ -280,13 +278,11 @@ func kvConfidentialRemove(rtc client.RuntimeClient, signer signature.Signer, key
 		Key:   key,
 	})
 
-	return sendTx(rtc, signer, tx)
+	return sendTx(ctx, rtc, signer, tx)
 }
 
 // kvGet gets given key's value from storage.
-func kvGet(rtc client.RuntimeClient, key []byte) ([]byte, error) {
-	ctx := context.Background()
-
+func kvGet(ctx context.Context, rtc client.RuntimeClient, key []byte) ([]byte, error) {
 	var resp kvKeyValue
 	if err := rtc.Query(ctx, client.RoundLatest, "keyvalue.Get", kvKey{Key: key}, &resp); err != nil {
 		return nil, err
@@ -295,9 +291,7 @@ func kvGet(rtc client.RuntimeClient, key []byte) ([]byte, error) {
 }
 
 // kvInsertSpecialGreeting sends a transaction encoded in the keyvalue-special-greeting scheme.
-func kvInsertSpecialGreeting(rtc client.RuntimeClient, signer signature.Signer, greeting string) error {
-	ctx := context.Background()
-
+func kvInsertSpecialGreeting(ctx context.Context, rtc client.RuntimeClient, signer signature.Signer, greeting string) error {
 	ac := accounts.NewV1(rtc)
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(sigspecForSigner(signer)))
 	if err != nil {
@@ -330,19 +324,19 @@ func kvInsertSpecialGreeting(rtc client.RuntimeClient, signer signature.Signer, 
 }
 
 // SimpleKVTest does a simple key insert/fetch/remove test.
-func SimpleKVTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleKVTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("test_key")
 	testValue := []byte("test_value")
 
 	log.Info("inserting test key")
-	if err := kvInsert(rtc, signer, testKey, testValue); err != nil {
+	if err := kvInsert(ctx, rtc, signer, testKey, testValue); err != nil {
 		return err
 	}
 
 	log.Info("fetching test key")
-	val, err := kvGet(rtc, testKey)
+	val, err := kvGet(ctx, rtc, testKey)
 	if err != nil {
 		return err
 	}
@@ -351,24 +345,24 @@ func SimpleKVTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, r
 	}
 
 	log.Info("removing test key")
-	if err = kvRemove(rtc, signer, testKey); err != nil {
+	if err = kvRemove(ctx, rtc, signer, testKey); err != nil {
 		return err
 	}
 
 	log.Info("fetching removed key should fail")
-	_, err = kvGet(rtc, testKey)
+	_, err = kvGet(ctx, rtc, testKey)
 	if err == nil {
 		return fmt.Errorf("fetching removed key should fail")
 	}
 
 	log.Info("inserting special greeting")
 	greeting := "hi from simplekvtest"
-	if err = kvInsertSpecialGreeting(rtc, signer, greeting); err != nil {
+	if err = kvInsertSpecialGreeting(ctx, rtc, signer, greeting); err != nil {
 		return err
 	}
 
 	log.Info("fetching special greeting")
-	val, err = kvGet(rtc, []byte("greeting"))
+	val, err = kvGet(ctx, rtc, []byte("greeting"))
 	if err != nil {
 		return err
 	}
@@ -380,15 +374,14 @@ func SimpleKVTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, r
 }
 
 // ConfidentialTest tests functions that require a key manager.
-func ConfidentialTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func ConfidentialTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("test_key")
 	testValue := []byte("test_value")
 
 	log.Info("create new key in the keymanager")
-	err := kvGetCreateKey(rtc, signer, testKey)
+	err := kvGetCreateKey(ctx, rtc, signer, testKey)
 	if err != nil {
 		return err
 	}
@@ -418,12 +411,12 @@ func ConfidentialTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientCon
 	log.Info("test confidential storage")
 	keyID := []byte("test_key_id")
 	log.Info("inserting test key")
-	if err = kvConfidentialInsert(rtc, signer, keyID, testKey, testValue); err != nil {
+	if err = kvConfidentialInsert(ctx, rtc, signer, keyID, testKey, testValue); err != nil {
 		return err
 	}
 
 	log.Info("fetching test key")
-	val, err := kvConfidentialGet(rtc, signer, keyID, testKey)
+	val, err := kvConfidentialGet(ctx, rtc, signer, keyID, testKey)
 	if err != nil {
 		return err
 	}
@@ -432,12 +425,12 @@ func ConfidentialTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientCon
 	}
 
 	log.Info("removing test key")
-	if err = kvConfidentialRemove(rtc, signer, keyID, testKey); err != nil {
+	if err = kvConfidentialRemove(ctx, rtc, signer, keyID, testKey); err != nil {
 		return err
 	}
 
 	log.Info("fetching removed key should fail")
-	_, err = kvConfidentialGet(rtc, signer, keyID, testKey)
+	_, err = kvConfidentialGet(ctx, rtc, signer, keyID, testKey)
 	if err == nil {
 		return fmt.Errorf("fetching removed key should fail")
 	}
@@ -534,8 +527,7 @@ func ConfidentialTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientCon
 }
 
 // TransactionsQueryTest tests SubmitTx*Meta and GetTransactionsWithResults functions.
-func TransactionsQueryTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func TransactionsQueryTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("test_key")
@@ -590,9 +582,7 @@ func TransactionsQueryTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.Client
 }
 
 // BlockQueryTest tests block queries.
-func BlockQueryTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
-
+func BlockQueryTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	genBlk, err := rtc.GetGenesisBlock(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get genesis block: %w", err)
@@ -611,14 +601,13 @@ func BlockQueryTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, r
 }
 
 // KVEventTest tests key insert/remove events.
-func KVEventTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVEventTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("event_test_key")
 	testValue := []byte("event_test_value")
 
 	// Subscribe to blocks.
-	ctx := context.Background()
 	blkCh, blkSub, err := rtc.WatchBlocks(ctx)
 	if err != nil {
 		return err
@@ -626,7 +615,7 @@ func KVEventTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rt
 	defer blkSub.Close()
 
 	log.Info("inserting test key")
-	if err := kvInsert(rtc, signer, testKey, testValue); err != nil {
+	if err := kvInsert(ctx, rtc, signer, testKey, testValue); err != nil {
 		return err
 	}
 
@@ -683,7 +672,7 @@ WaitInsertLoop:
 	}
 
 	log.Info("removing test key")
-	if err := kvRemove(rtc, signer, testKey); err != nil {
+	if err := kvRemove(ctx, rtc, signer, testKey); err != nil {
 		return err
 	}
 
@@ -743,8 +732,7 @@ WaitRemoveLoop:
 }
 
 // KVBalanceTest checks test accounts' default balances.
-func KVBalanceTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func KVBalanceTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ac := accounts.NewV1(rtc)
 
 	log.Info("checking Alice's account balance")
@@ -803,8 +791,7 @@ func KVBalanceTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, 
 }
 
 // KVTransferTest does a transfer test and verifies balances.
-func KVTransferTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func KVTransferTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	core := core.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
 
@@ -920,8 +907,7 @@ func KVTransferTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn,
 }
 
 // KVTransferFailTest does a failing transfer test.
-func KVTransferFailTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func KVTransferFailTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	core := core.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
 
@@ -964,8 +950,7 @@ func KVTransferFailTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientC
 }
 
 // KVDaveTest does a tx signing test using the secp256k1 signer.
-func KVDaveTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func KVDaveTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ac := accounts.NewV1(rtc)
 
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Dave.Address)
@@ -1011,7 +996,7 @@ func KVDaveTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc
 	return nil
 }
 
-func KVMultisigTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVMultisigTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	signerA := testing.Alice.Signer
 	signerB := testing.Bob.Signer
 	config := types.MultisigConfig{
@@ -1023,7 +1008,6 @@ func KVMultisigTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, r
 	}
 	addr := types.NewAddressFromMultisig(&config)
 
-	ctx := context.Background()
 	ac := accounts.NewV1(rtc)
 
 	chainCtx, err := GetChainContext(ctx, rtc)
@@ -1073,8 +1057,7 @@ func KVMultisigTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, r
 	return nil
 }
 
-func KVRewardsTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func KVRewardsTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	rw := rewards.NewV1(rtc)
 
 	log.Info("querying rewards parameters")
@@ -1097,8 +1080,7 @@ func KVRewardsTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, 
 }
 
 // KVTxGenTest generates random transactions.
-func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func KVTxGenTest(ctx context.Context, sc *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ac := accounts.NewV1(rtc)
 
 	// Determine initial round.
@@ -1248,8 +1230,7 @@ func KVTxGenTest(sc *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, r
 }
 
 // ParametersTest tests parameters methods.
-func ParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func ParametersTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ac := accounts.NewV1(rtc)
 	core := core.NewV1(rtc)
 
@@ -1277,9 +1258,7 @@ func ParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, r
 	return nil
 }
 
-func IntrospectionTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
-
+func IntrospectionTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	log.Info("fetching runtime info")
 	info, err := core.NewV1(rtc).RuntimeInfo(ctx)
 	if err != nil {
@@ -1318,8 +1297,7 @@ func IntrospectionTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientCo
 }
 
 // TransactionCheckTest checks that nonce/fee are correctly taken into account during tx checks.
-func TransactionCheckTest(_ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func TransactionCheckTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ac := accounts.NewV1(rtc)
 
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)

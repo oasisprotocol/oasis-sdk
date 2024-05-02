@@ -247,8 +247,8 @@ func makeUndelegateDoneCheck(from, to types.Address, shares *types.Quantity, amo
 	}
 }
 
-func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+func ConsensusDepositWithdrawalTest(ctx context.Context, sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	cons := consensus.NewConsensusClient(conn)
@@ -464,8 +464,8 @@ func ConsensusDepositWithdrawalTest(sc *RuntimeScenario, log *logging.Logger, co
 	return nil
 }
 
-func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+func ConsensusDelegationTest(ctx context.Context, sc *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	cons := consensus.NewConsensusClient(conn)
@@ -668,8 +668,7 @@ func ConsensusDelegationTest(sc *RuntimeScenario, log *logging.Logger, conn *grp
 }
 
 // ConsensusAccountsParametersTest tests the parameters methods.
-func ConsensusAccountsParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func ConsensusAccountsParametersTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	cac := consensusAccounts.NewV1(rtc)
 
 	params, err := cac.Parameters(ctx, client.RoundLatest)

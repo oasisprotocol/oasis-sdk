@@ -98,6 +98,7 @@ printf "${CYAN}### Running end-to-end tests...${OFF}\n"
 	--e2e.runtime.binary_dir.default="${TEST_BASE_DIR}" \
 	--e2e.runtime.loader="${TEST_RUNTIME_LOADER}" \
 	--e2e.keymanager.binary="${TEST_KM_BINARY}" \
+	--scenario_timeout 30m \
 	"$@"
 
 cd "${TESTS_DIR}"

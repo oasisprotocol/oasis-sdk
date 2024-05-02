@@ -66,7 +66,7 @@ var (
 )
 
 // RunTestFunction is a test function.
-type RunTestFunction func(*RuntimeScenario, *logging.Logger, *grpc.ClientConn, client.RuntimeClient) error
+type RunTestFunction func(context.Context, *RuntimeScenario, *logging.Logger, *grpc.ClientConn, client.RuntimeClient) error
 
 // RuntimeScenario is a base class for e2e test scenarios involving runtimes.
 type RuntimeScenario struct {
@@ -339,9 +339,7 @@ func (sc *RuntimeScenario) resolveRuntimeBinary(runtimeBinary string) string {
 	return filepath.Join(path, runtimeBinary)
 }
 
-func (sc *RuntimeScenario) waitNodesSynced() error {
-	ctx := context.Background()
-
+func (sc *RuntimeScenario) waitNodesSynced(ctx context.Context) error {
 	checkSynced := func(n *oasis.Node) error {
 		c, err := oasis.NewController(n.SocketPath())
 		if err != nil {
@@ -448,7 +446,7 @@ func (sc *RuntimeScenario) Run(ctx context.Context, _ *env.Env) error {
 	}
 
 	// Wait for all nodes to sync.
-	if err := sc.waitNodesSynced(); err != nil {
+	if err := sc.waitNodesSynced(ctx); err != nil {
 		return err
 	}
 
@@ -497,7 +495,7 @@ func (sc *RuntimeScenario) Run(ctx context.Context, _ *env.Env) error {
 		testName := runtime.FuncForPC(reflect.ValueOf(test).Pointer()).Name()
 
 		sc.Logger.Info("running test", "test", testName)
-		if testErr := test(sc, sc.Logger, conn, rtc); testErr != nil {
+		if testErr := test(ctx, sc, sc.Logger, conn, rtc); testErr != nil {
 			sc.Logger.Error("test failed",
 				"test", testName,
 				"err", testErr,

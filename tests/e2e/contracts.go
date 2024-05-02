@@ -77,9 +77,7 @@ func newEd25519Signer(seed string) *voiEd25519Signer {
 }
 
 // ContractsTest does a simple upload/instantiate/call contract test.
-func ContractsTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
-	ctx := context.Background()
-
+func ContractsTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
 	counter := uint64(24)
 	ac := accounts.NewV1(rtc)
 	ct := contracts.NewV1(rtc)
@@ -750,8 +748,7 @@ OUTER:
 }
 
 // ContractsParametersTest tests the parameters methods.
-func ContractsParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
+func ContractsParametersTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
 	ct := contracts.NewV1(rtc)
 
 	params, err := ct.Parameters(ctx, client.RoundLatest)
