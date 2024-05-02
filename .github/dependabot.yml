@@ -90,6 +90,11 @@ updates:
       interval: daily
     commit-message:
       prefix: "client/ts-web:"
+    groups:
+      dev:
+        applies-to: version-updates
+        dependency-type: development
+        update-types: [minor, patch]
     labels:
       - c:deps
       - c:client-sdk/typescript
