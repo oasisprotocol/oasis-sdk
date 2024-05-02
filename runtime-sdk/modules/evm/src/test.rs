@@ -34,9 +34,9 @@ use crate::{
 
 /// Test contract code.
 static TEST_CONTRACT_CODE_HEX: &str =
-    include_str!("../../../../tests/e2e/contracts/evm_erc20_test_compiled.hex");
+    include_str!("../../../../tests/e2e/evm/contracts/evm_erc20_test_compiled.hex");
 static FAUCET_CONTRACT_CODE_HEX: &str =
-    include_str!("../../../../tests/e2e/contracts/faucet/faucet.hex");
+    include_str!("../../../../tests/e2e/evm/contracts/faucet/faucet.hex");
 
 pub(crate) struct EVMConfig;
 
@@ -815,7 +815,7 @@ fn test_c10l_queries() {
     EVMRuntime::<ConfidentialEVMConfig>::migrate(&ctx);
 
     static QUERY_CONTRACT_CODE_HEX: &str =
-        include_str!("../../../../tests/e2e/contracts/query/query.hex");
+        include_str!("../../../../tests/e2e/evm/contracts/query/query.hex");
 
     // Simulate contract creation.
     let result = signer
@@ -1117,7 +1117,7 @@ fn test_return_value_limits() {
     .unwrap();
 
     static RETVAL_CONTRACT_CODE_HEX: &str =
-        include_str!("../../../../tests/e2e/contracts/retval/retval.hex");
+        include_str!("../../../../tests/e2e/evm/contracts/retval/retval.hex");
 
     // Create contract.
     let dispatch_result = signer.call(

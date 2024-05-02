@@ -79,20 +79,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install libseccomp-dev
 
-      - name: Set up Rust
-        run: rustup show
-
-      - name: Build test contracts
-        working-directory: tests/contracts/hello
+      - name: Create mock contract files for lint
         run: |
-          cargo build --target wasm32-unknown-unknown --release
-          mv target/wasm32-unknown-unknown/release/hello.wasm ../../e2e/contracts/hello.wasm
-
-      - name: Build oas20 contract
-        working-directory: contract-sdk/specs/token/oas20
-        run: |
-          cargo build --target wasm32-unknown-unknown --release
-          mv target/wasm32-unknown-unknown/release/oas20.wasm ../../../../tests/e2e/contracts/oas20.wasm
+          touch tests/e2e/contracts/build/hello.wasm
+          touch tests/e2e/contracts/build/oas20.wasm
 
       - name: Setup Go
         uses: actions/setup-go@v5

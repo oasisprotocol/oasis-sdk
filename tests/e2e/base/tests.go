@@ -1,4 +1,4 @@
-package main
+package base
 
 import (
 	"bytes"
@@ -10,8 +10,6 @@ import (
 	"sort"
 	"time"
 
-	"google.golang.org/grpc"
-
 	"github.com/oasisprotocol/curve25519-voi/primitives/x25519"
 	"github.com/oasisprotocol/deoxysii"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
@@ -19,7 +17,6 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/mathrand"
 	mraeDeoxysii "github.com/oasisprotocol/oasis-core/go/common/crypto/mrae/deoxysii"
 	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
-	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -29,6 +26,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
+	"github.com/oasisprotocol/oasis-sdk/tests/e2e/scenario"
 	"github.com/oasisprotocol/oasis-sdk/tests/e2e/txgen"
 )
 
@@ -324,19 +322,19 @@ func kvInsertSpecialGreeting(ctx context.Context, rtc client.RuntimeClient, sign
 }
 
 // SimpleKVTest does a simple key insert/fetch/remove test.
-func SimpleKVTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
+func SimpleKVTest(ctx context.Context, env *scenario.Env) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("test_key")
 	testValue := []byte("test_value")
 
-	log.Info("inserting test key")
-	if err := kvInsert(ctx, rtc, signer, testKey, testValue); err != nil {
+	env.Logger.Info("inserting test key")
+	if err := kvInsert(ctx, env.Client, signer, testKey, testValue); err != nil {
 		return err
 	}
 
-	log.Info("fetching test key")
-	val, err := kvGet(ctx, rtc, testKey)
+	env.Logger.Info("fetching test key")
+	val, err := kvGet(ctx, env.Client, testKey)
 	if err != nil {
 		return err
 	}
@@ -344,25 +342,25 @@ func SimpleKVTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, 
 		return fmt.Errorf("fetched value does not match inserted value")
 	}
 
-	log.Info("removing test key")
-	if err = kvRemove(ctx, rtc, signer, testKey); err != nil {
+	env.Logger.Info("removing test key")
+	if err = kvRemove(ctx, env.Client, signer, testKey); err != nil {
 		return err
 	}
 
-	log.Info("fetching removed key should fail")
-	_, err = kvGet(ctx, rtc, testKey)
+	env.Logger.Info("fetching removed key should fail")
+	_, err = kvGet(ctx, env.Client, testKey)
 	if err == nil {
 		return fmt.Errorf("fetching removed key should fail")
 	}
 
-	log.Info("inserting special greeting")
+	env.Logger.Info("inserting special greeting")
 	greeting := "hi from simplekvtest"
-	if err = kvInsertSpecialGreeting(ctx, rtc, signer, greeting); err != nil {
+	if err = kvInsertSpecialGreeting(ctx, env.Client, signer, greeting); err != nil {
 		return err
 	}
 
-	log.Info("fetching special greeting")
-	val, err = kvGet(ctx, rtc, []byte("greeting"))
+	env.Logger.Info("fetching special greeting")
+	val, err = kvGet(ctx, env.Client, []byte("greeting"))
 	if err != nil {
 		return err
 	}
@@ -374,27 +372,27 @@ func SimpleKVTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, 
 }
 
 // ConfidentialTest tests functions that require a key manager.
-func ConfidentialTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
+func ConfidentialTest(ctx context.Context, env *scenario.Env) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("test_key")
 	testValue := []byte("test_value")
 
-	log.Info("create new key in the keymanager")
-	err := kvGetCreateKey(ctx, rtc, signer, testKey)
+	env.Logger.Info("create new key in the keymanager")
+	err := kvGetCreateKey(ctx, env.Client, signer, testKey)
 	if err != nil {
 		return err
 	}
 
-	log.Info("test 'confidential' insert")
+	env.Logger.Info("test 'confidential' insert")
 
-	ac := accounts.NewV1(rtc)
+	ac := accounts.NewV1(env.Client)
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(sigspecForSigner(signer)))
 	if err != nil {
 		return fmt.Errorf("failed to query nonce: %w", err)
 	}
 
-	tb := client.NewTransactionBuilder(rtc, "keyvalue.Insert", kvKeyValue{
+	tb := client.NewTransactionBuilder(env.Client, "keyvalue.Insert", kvKeyValue{
 		Key:   testKey,
 		Value: testValue,
 	})
@@ -408,15 +406,15 @@ func ConfidentialTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logg
 		return fmt.Errorf("failed to submit transaction: %w", err)
 	}
 
-	log.Info("test confidential storage")
+	env.Logger.Info("test confidential storage")
 	keyID := []byte("test_key_id")
-	log.Info("inserting test key")
-	if err = kvConfidentialInsert(ctx, rtc, signer, keyID, testKey, testValue); err != nil {
+	env.Logger.Info("inserting test key")
+	if err = kvConfidentialInsert(ctx, env.Client, signer, keyID, testKey, testValue); err != nil {
 		return err
 	}
 
-	log.Info("fetching test key")
-	val, err := kvConfidentialGet(ctx, rtc, signer, keyID, testKey)
+	env.Logger.Info("fetching test key")
+	val, err := kvConfidentialGet(ctx, env.Client, signer, keyID, testKey)
 	if err != nil {
 		return err
 	}
@@ -424,13 +422,13 @@ func ConfidentialTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logg
 		return fmt.Errorf("fetched value does not match inserted value")
 	}
 
-	log.Info("removing test key")
-	if err = kvConfidentialRemove(ctx, rtc, signer, keyID, testKey); err != nil {
+	env.Logger.Info("removing test key")
+	if err = kvConfidentialRemove(ctx, env.Client, signer, keyID, testKey); err != nil {
 		return err
 	}
 
-	log.Info("fetching removed key should fail")
-	_, err = kvConfidentialGet(ctx, rtc, signer, keyID, testKey)
+	env.Logger.Info("fetching removed key should fail")
+	_, err = kvConfidentialGet(ctx, env.Client, signer, keyID, testKey)
 	if err == nil {
 		return fmt.Errorf("fetching removed key should fail")
 	}
@@ -438,13 +436,13 @@ func ConfidentialTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logg
 	// Following tests a specific runtime SDK case where transaction fails in the `before_handle_call` hook.
 	// This test ensures that `after_handle_call` hooks are called, even when the call fails in the `before_handle_call` hook.
 	// This tests a bugfix fixed in: #1380, where gas used events were not emitted in such scenarios.
-	log.Info("test transaction execution failure")
+	env.Logger.Info("test transaction execution failure")
 
 	// Makes the call invalid by negating the encoded read-only flag. This makes the call pass
 	// check transaction, but fail in execution after decryption, with: "invalid call format: read-only flag mismatch".
 	invalidCall := func(tx *types.Transaction) (*types.Call, error) {
 		var rsp *core.CallDataPublicKeyResponse
-		rsp, err = core.NewV1(rtc).CallDataPublicKey(ctx)
+		rsp, err = core.NewV1(env.Client).CallDataPublicKey(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query calldata X25519 public key: %w", err)
 		}
@@ -493,7 +491,7 @@ func ConfidentialTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logg
 	tx.Call = *call
 	tx.AppendAuthSignature(sigspecForSigner(signer), nonce)
 	ts := tx.PrepareForSigning()
-	rtInfo, err := rtc.GetInfo(ctx)
+	rtInfo, err := env.Client.GetInfo(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve runtime info: %w", err)
 	}
@@ -501,7 +499,7 @@ func ConfidentialTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logg
 		return err
 	}
 	// Ensure that the transaction failed during execution.
-	meta, err := rtc.SubmitTxMeta(ctx, ts.UnverifiedTransaction())
+	meta, err := env.Client.SubmitTxMeta(ctx, ts.UnverifiedTransaction())
 	if err == nil {
 		return fmt.Errorf("invalid transaction should have failed")
 	}
@@ -512,7 +510,7 @@ func ConfidentialTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logg
 		return fmt.Errorf("transaction should not fail during check transaction: %v", meta.CheckTxError)
 	}
 	// Ensure that the expected gas used event was emitted.
-	cevs, err := core.NewV1(rtc).GetEvents(ctx, meta.Round)
+	cevs, err := core.NewV1(env.Client).GetEvents(ctx, meta.Round)
 	if err != nil {
 		return err
 	}
@@ -527,19 +525,19 @@ func ConfidentialTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logg
 }
 
 // TransactionsQueryTest tests SubmitTx*Meta and GetTransactionsWithResults functions.
-func TransactionsQueryTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
+func TransactionsQueryTest(ctx context.Context, env *scenario.Env) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("test_key")
 	testValue := []byte("test_value")
 
-	ac := accounts.NewV1(rtc)
+	ac := accounts.NewV1(env.Client)
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, types.NewAddress(sigspecForSigner(signer)))
 	if err != nil {
 		return fmt.Errorf("failed to query nonce: %w", err)
 	}
 
-	tb := client.NewTransactionBuilder(rtc, "keyvalue.Insert", kvKeyValue{
+	tb := client.NewTransactionBuilder(env.Client, "keyvalue.Insert", kvKeyValue{
 		Key:   testKey,
 		Value: testValue,
 	})
@@ -555,7 +553,7 @@ func TransactionsQueryTest(ctx context.Context, _ *RuntimeScenario, _ *logging.L
 	}
 
 	// Query transactions for the round in which the transaction was executed.
-	txs, err := rtc.GetTransactionsWithResults(ctx, meta.Round)
+	txs, err := env.Client.GetTransactionsWithResults(ctx, meta.Round)
 	if err != nil {
 		return fmt.Errorf("failed to get transactions with results: %w", err)
 	}
@@ -582,44 +580,45 @@ func TransactionsQueryTest(ctx context.Context, _ *RuntimeScenario, _ *logging.L
 }
 
 // BlockQueryTest tests block queries.
-func BlockQueryTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	genBlk, err := rtc.GetGenesisBlock(ctx)
+func BlockQueryTest(ctx context.Context, env *scenario.Env) error {
+	genBlk, err := env.Client.GetGenesisBlock(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get genesis block: %w", err)
 	}
 
-	lrBlk, err := rtc.GetLastRetainedBlock(ctx)
+	lrBlk, err := env.Client.GetLastRetainedBlock(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get last retained block: %w", err)
 	}
 
 	if genBlk.Header.Round != lrBlk.Header.Round {
-		return fmt.Errorf("expected genesis block round (%d) to equal last retained block round (%d)", genBlk.Header.Round, lrBlk.Header.Round)
+		return fmt.Errorf("expected genesis block round (%d) to equal last retained block round (%d)",
+			genBlk.Header.Round, lrBlk.Header.Round)
 	}
 
 	return nil
 }
 
 // KVEventTest tests key insert/remove events.
-func KVEventTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVEventTest(ctx context.Context, env *scenario.Env) error {
 	signer := testing.Alice.Signer
 
 	testKey := []byte("event_test_key")
 	testValue := []byte("event_test_value")
 
 	// Subscribe to blocks.
-	blkCh, blkSub, err := rtc.WatchBlocks(ctx)
+	blkCh, blkSub, err := env.Client.WatchBlocks(ctx)
 	if err != nil {
 		return err
 	}
 	defer blkSub.Close()
 
-	log.Info("inserting test key")
-	if err := kvInsert(ctx, rtc, signer, testKey, testValue); err != nil {
+	env.Logger.Info("inserting test key")
+	if err := kvInsert(ctx, env.Client, signer, testKey, testValue); err != nil {
 		return err
 	}
 
-	log.Info("waiting for insert event")
+	env.Logger.Info("waiting for insert event")
 	var gotEvent bool
 WaitInsertLoop:
 	for {
@@ -633,9 +632,9 @@ WaitInsertLoop:
 				return fmt.Errorf("failed to get block from channel")
 			}
 
-			events, err := rtc.GetEventsRaw(ctx, blk.Block.Header.Round)
+			events, err := env.Client.GetEventsRaw(ctx, blk.Block.Header.Round)
 			if err != nil {
-				log.Error("failed to get events",
+				env.Logger.Error("failed to get events",
 					"err", err,
 					"round", blk.Block.Header.Round,
 				)
@@ -647,19 +646,19 @@ WaitInsertLoop:
 				case kvInsertEventKey.IsEqual(ev.Key()):
 					var ies []*kvInsertEvent
 					if err = cbor.Unmarshal(ev.Value, &ies); err != nil {
-						log.Error("failed to unmarshal insert event",
+						env.Logger.Error("failed to unmarshal insert event",
 							"err", err,
 						)
 						continue
 					}
 					if len(ies) != 1 {
-						log.Error("unexpected number of insert events")
+						env.Logger.Error("unexpected number of insert events")
 						continue
 					}
 
 					if bytes.Equal(ies[0].KV.Key, testKey) && bytes.Equal(ies[0].KV.Value, testValue) {
 						gotEvent = true
-						log.Info("got our insert event")
+						env.Logger.Info("got our insert event")
 						break WaitInsertLoop
 					}
 				default:
@@ -671,12 +670,12 @@ WaitInsertLoop:
 		return fmt.Errorf("didn't get insert event")
 	}
 
-	log.Info("removing test key")
-	if err := kvRemove(ctx, rtc, signer, testKey); err != nil {
+	env.Logger.Info("removing test key")
+	if err := kvRemove(ctx, env.Client, signer, testKey); err != nil {
 		return err
 	}
 
-	log.Info("waiting for remove event")
+	env.Logger.Info("waiting for remove event")
 	gotEvent = false
 WaitRemoveLoop:
 	for {
@@ -690,9 +689,9 @@ WaitRemoveLoop:
 				return fmt.Errorf("failed to get block from channel")
 			}
 
-			events, err := rtc.GetEventsRaw(ctx, blk.Block.Header.Round)
+			events, err := env.Client.GetEventsRaw(ctx, blk.Block.Header.Round)
 			if err != nil {
-				log.Error("failed to get events",
+				env.Logger.Error("failed to get events",
 					"err", err,
 					"round", blk.Block.Header.Round,
 				)
@@ -704,19 +703,19 @@ WaitRemoveLoop:
 				case kvRemoveEventKey.IsEqual(ev.Key()):
 					var res []*kvRemoveEvent
 					if err = cbor.Unmarshal(ev.Value, &res); err != nil {
-						log.Error("failed to unmarshal remove event",
+						env.Logger.Error("failed to unmarshal remove event",
 							"err", err,
 						)
 						continue
 					}
 					if len(res) != 1 {
-						log.Error("unexpected number of remove events")
+						env.Logger.Error("unexpected number of remove events")
 						continue
 					}
 
 					if bytes.Equal(res[0].Key.Key, testKey) {
 						gotEvent = true
-						log.Info("got our remove event")
+						env.Logger.Info("got our remove event")
 						break WaitRemoveLoop
 					}
 				default:
@@ -732,10 +731,10 @@ WaitRemoveLoop:
 }
 
 // KVBalanceTest checks test accounts' default balances.
-func KVBalanceTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ac := accounts.NewV1(rtc)
+func KVBalanceTest(ctx context.Context, env *scenario.Env) error {
+	ac := accounts.NewV1(env.Client)
 
-	log.Info("checking Alice's account balance")
+	env.Logger.Info("checking Alice's account balance")
 	ab, err := ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
 		return err
@@ -748,7 +747,7 @@ func KVBalanceTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger,
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("checking Bob's account balance")
+	env.Logger.Info("checking Bob's account balance")
 	bb, err := ac.Balances(ctx, client.RoundLatest, testing.Bob.Address)
 	if err != nil {
 		return err
@@ -761,7 +760,7 @@ func KVBalanceTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger,
 		return fmt.Errorf("Bob's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("checking Charlie's account balance")
+	env.Logger.Info("checking Charlie's account balance")
 	cb, err := ac.Balances(ctx, client.RoundLatest, testing.Charlie.Address)
 	if err != nil {
 		return err
@@ -774,7 +773,7 @@ func KVBalanceTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger,
 		return fmt.Errorf("Charlie's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("checking Dave's account balance")
+	env.Logger.Info("checking Dave's account balance")
 	db, err := ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
 	if err != nil {
 		return err
@@ -791,16 +790,16 @@ func KVBalanceTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger,
 }
 
 // KVTransferTest does a transfer test and verifies balances.
-func KVTransferTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	core := core.NewV1(rtc)
-	ac := accounts.NewV1(rtc)
+func KVTransferTest(ctx context.Context, env *scenario.Env) error {
+	core := core.NewV1(env.Client)
+	ac := accounts.NewV1(env.Client)
 
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
 		return err
 	}
 
-	log.Info("transferring 100 units from Alice to Bob")
+	env.Logger.Info("transferring 100 units from Alice to Bob")
 	tb := ac.Transfer(testing.Bob.Address, types.NewBaseUnits(*quantity.NewFromUint64(100), types.NativeDenomination)).
 		SetFeeGas(defaultGasAmount).
 		SetFeeAmount(types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)).
@@ -866,7 +865,7 @@ func KVTransferTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger
 		return fmt.Errorf("did not receive the expected transfer event for fee payment")
 	}
 
-	log.Info("checking Alice's account balance")
+	env.Logger.Info("checking Alice's account balance")
 	ab, err := ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
 		return err
@@ -879,7 +878,7 @@ func KVTransferTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("checking Bob's account balance")
+	env.Logger.Info("checking Bob's account balance")
 	bb, err := ac.Balances(ctx, client.RoundLatest, testing.Bob.Address)
 	if err != nil {
 		return err
@@ -892,7 +891,7 @@ func KVTransferTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger
 		return fmt.Errorf("Bob's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("query addresses")
+	env.Logger.Info("query addresses")
 	addrs, err := ac.Addresses(ctx, client.RoundLatest, types.NativeDenomination)
 	if err != nil {
 		return err
@@ -907,16 +906,16 @@ func KVTransferTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger
 }
 
 // KVTransferFailTest does a failing transfer test.
-func KVTransferFailTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	core := core.NewV1(rtc)
-	ac := accounts.NewV1(rtc)
+func KVTransferFailTest(ctx context.Context, env *scenario.Env) error {
+	core := core.NewV1(env.Client)
+	ac := accounts.NewV1(env.Client)
 
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
 		return err
 	}
 
-	log.Info("transferring 900,000,000 units from Alice to Bob (expecting failure)")
+	env.Logger.Info("transferring 900,000,000 units from Alice to Bob (expecting failure)")
 	tb := ac.Transfer(testing.Bob.Address, types.NewBaseUnits(*quantity.NewFromUint64(900_000_000), types.NativeDenomination)).
 		SetFeeGas(defaultGasAmount).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce)
@@ -950,15 +949,15 @@ func KVTransferFailTest(ctx context.Context, _ *RuntimeScenario, log *logging.Lo
 }
 
 // KVDaveTest does a tx signing test using the secp256k1 signer.
-func KVDaveTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ac := accounts.NewV1(rtc)
+func KVDaveTest(ctx context.Context, env *scenario.Env) error {
+	ac := accounts.NewV1(env.Client)
 
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Dave.Address)
 	if err != nil {
 		return err
 	}
 
-	log.Info("transferring 10 units from Dave to Alice")
+	env.Logger.Info("transferring 10 units from Dave to Alice")
 	tb := ac.Transfer(testing.Alice.Address, types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination)).
 		SetFeeGas(defaultGasAmount).
 		AppendAuthSignature(testing.Dave.SigSpec, nonce)
@@ -967,7 +966,7 @@ func KVDaveTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ 
 		return err
 	}
 
-	log.Info("checking Dave's account balance")
+	env.Logger.Info("checking Dave's account balance")
 	db, err := ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
 	if err != nil {
 		return err
@@ -980,7 +979,7 @@ func KVDaveTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ 
 		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("checking Alice's account balance")
+	env.Logger.Info("checking Alice's account balance")
 	ab, err := ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
 		return err
@@ -996,7 +995,7 @@ func KVDaveTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ 
 	return nil
 }
 
-func KVMultisigTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
+func KVMultisigTest(ctx context.Context, env *scenario.Env) error {
 	signerA := testing.Alice.Signer
 	signerB := testing.Bob.Signer
 	config := types.MultisigConfig{
@@ -1008,9 +1007,9 @@ func KVMultisigTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, 
 	}
 	addr := types.NewAddressFromMultisig(&config)
 
-	ac := accounts.NewV1(rtc)
+	ac := accounts.NewV1(env.Client)
 
-	chainCtx, err := GetChainContext(ctx, rtc)
+	chainCtx, err := GetChainContext(ctx, env.Client)
 	if err != nil {
 		return err
 	}
@@ -1028,7 +1027,7 @@ func KVMultisigTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, 
 	})
 	tx.AppendAuthMultisig(&config, nonce1)
 
-	gas, err := core.NewV1(rtc).EstimateGas(ctx, client.RoundLatest, tx, false)
+	gas, err := core.NewV1(env.Client).EstimateGas(ctx, client.RoundLatest, tx, false)
 	if err != nil {
 		return err
 	}
@@ -1041,7 +1040,7 @@ func KVMultisigTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, 
 	if err = stx.AppendSign(chainCtx, signerB); err != nil {
 		return err
 	}
-	_, err = rtc.SubmitTx(ctx, stx.UnverifiedTransaction())
+	_, err = env.Client.SubmitTx(ctx, stx.UnverifiedTransaction())
 	if err != nil {
 		return err
 	}
@@ -1057,10 +1056,10 @@ func KVMultisigTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, 
 	return nil
 }
 
-func KVRewardsTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	rw := rewards.NewV1(rtc)
+func KVRewardsTest(ctx context.Context, env *scenario.Env) error {
+	rw := rewards.NewV1(env.Client)
 
-	log.Info("querying rewards parameters")
+	env.Logger.Info("querying rewards parameters")
 	params, err := rw.Parameters(ctx, client.RoundLatest)
 	if err != nil {
 		return err
@@ -1080,18 +1079,18 @@ func KVRewardsTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger,
 }
 
 // KVTxGenTest generates random transactions.
-func KVTxGenTest(ctx context.Context, sc *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ac := accounts.NewV1(rtc)
+func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
+	ac := accounts.NewV1(env.Client)
 
 	// Determine initial round.
-	blk, err := rtc.GetBlock(ctx, client.RoundLatest)
+	blk, err := env.Client.GetBlock(ctx, client.RoundLatest)
 	if err != nil {
 		return fmt.Errorf("failed to fetch latest block: %w", err)
 	}
 	initialRound := blk.Header.Round
-	log.Info("determined initial round", "round", initialRound)
+	env.Logger.Info("determined initial round", "round", initialRound)
 
-	log.Info("getting Alice's account balance")
+	env.Logger.Info("getting Alice's account balance")
 	ab, err := ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
 		return err
@@ -1104,20 +1103,20 @@ func KVTxGenTest(ctx context.Context, sc *RuntimeScenario, log *logging.Logger, 
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	testDuration, err := sc.Flags.GetDuration(CfgTxGenDuration)
+	testDuration, err := env.Scenario.Flags.GetDuration(cfgTxGenDuration)
 	if err != nil {
-		log.Error("malformed CfgTxGenDuration flag, using default")
+		env.Logger.Error("malformed CfgTxGenDuration flag, using default")
 		testDuration = 60 * time.Second
 	}
 
-	numAccounts, err := sc.Flags.GetInt(CfgTxGenNumAccounts)
+	numAccounts, err := env.Scenario.Flags.GetInt(cfgTxGenNumAccounts)
 	if err != nil {
-		log.Error("malformed CfgTxGenNumAccounts flag, using default")
+		env.Logger.Error("malformed CfgTxGenNumAccounts flag, using default")
 		numAccounts = 10
 	}
-	coinsPerAccount, err := sc.Flags.GetUint64(CfgTxGenCoinsPerAcct)
+	coinsPerAccount, err := env.Scenario.Flags.GetUint64(cfgTxGenCoinsPerAcct)
 	if err != nil {
-		log.Error("malformed CfgTxGenCoinsPerAcct flag, using default")
+		env.Logger.Error("malformed CfgTxGenCoinsPerAcct flag, using default")
 		coinsPerAccount = uint64(1_000_000)
 	}
 
@@ -1135,31 +1134,31 @@ func KVTxGenTest(ctx context.Context, sc *RuntimeScenario, log *logging.Logger, 
 	rng := mathRand.New(mathrand.New(rngSrc)) //nolint:gosec
 
 	// Generate accounts.
-	log.Info("generating accounts", "num_accounts", numAccounts, "coins_per_account", coinsPerAccount, "rng_seed", seed)
+	env.Logger.Info("generating accounts", "num_accounts", numAccounts, "coins_per_account", coinsPerAccount, "rng_seed", seed)
 	var accts []signature.Signer
 	numT := make(map[string]uint64)
 	for i := 0; i < numAccounts; i++ {
 		// Create account.
 		at := txgen.AccountType(uint8(rng.Intn(int(txgen.AccountTypeMax) + 1)))
 		numT[at.String()]++
-		sig, grr := txgen.CreateAndFundAccount(ctx, rtc, testing.Alice.Signer, i, at, coinsPerAccount)
+		sig, grr := txgen.CreateAndFundAccount(ctx, env.Client, testing.Alice.Signer, i, at, coinsPerAccount)
 		if grr != nil {
 			return grr
 		}
 
 		accts = append(accts, sig)
 	}
-	log.Info("accounts generated", "num_accts_per_type", numT)
+	env.Logger.Info("accounts generated", "num_accts_per_type", numT)
 
 	// Generate random transactions for the specified amount of time.
-	log.Info("generating transactions", "duration", testDuration)
+	env.Logger.Info("generating transactions", "duration", testDuration)
 	txgenCtx, cancel := context.WithTimeout(ctx, testDuration)
 	defer cancel()
 
 	// Generate a new random tx every 250ms until txgenCtx timeouts.
 	gens := append([]txgen.GenerateTx{}, txgen.DefaultTxGenerators...)
 	gens = append(gens, DefaultKVTxGenerators...)
-	genErrs, subErrs, ok, err := txgen.Generate(txgenCtx, rtc, rng, accts, gens, 250*time.Millisecond)
+	genErrs, subErrs, ok, err := txgen.Generate(txgenCtx, env.Client, rng, accts, gens, 250*time.Millisecond)
 	if err != nil {
 		return err
 	}
@@ -1169,17 +1168,17 @@ func KVTxGenTest(ctx context.Context, sc *RuntimeScenario, log *logging.Logger, 
 	}
 
 	// Inspect blocks to make sure that transactions were ordered correctly.
-	blk, err = rtc.GetBlock(ctx, client.RoundLatest)
+	blk, err = env.Client.GetBlock(ctx, client.RoundLatest)
 	if err != nil {
 		return fmt.Errorf("failed to fetch latest block: %w", err)
 	}
 
-	log.Info("verifying transaction priority order",
+	env.Logger.Info("verifying transaction priority order",
 		"round_start", initialRound,
 		"round_end", blk.Header.Round,
 	)
 	for round := initialRound; round <= blk.Header.Round; round++ {
-		txs, err := rtc.GetTransactionsWithResults(ctx, round)
+		txs, err := env.Client.GetTransactionsWithResults(ctx, round)
 		if err != nil {
 			return fmt.Errorf("failed to fetch transactions for round %d: %w", round, err)
 		}
@@ -1204,7 +1203,7 @@ func KVTxGenTest(ctx context.Context, sc *RuntimeScenario, log *logging.Logger, 
 			results = append(results, rtx.Result.IsSuccess())
 		}
 
-		log.Info("got batch gas information",
+		env.Logger.Info("got batch gas information",
 			"round", round,
 			"prices", gasPrices,
 			"limits", gasLimits,
@@ -1225,14 +1224,14 @@ func KVTxGenTest(ctx context.Context, sc *RuntimeScenario, log *logging.Logger, 
 	// invalid nonce errors a lot, because the txs are generated in parallel.
 	// Transaction generation errors are also fine, since queries can fail
 	// due to yet nonexisting keys in the keyvalue storage, etc.
-	log.Info("finished", "num_ok_submitted_txs", ok, "num_gen_errs", genErrs, "num_sub_errs", subErrs)
+	env.Logger.Info("finished", "num_ok_submitted_txs", ok, "num_gen_errs", genErrs, "num_sub_errs", subErrs)
 	return nil
 }
 
 // ParametersTest tests parameters methods.
-func ParametersTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ac := accounts.NewV1(rtc)
-	core := core.NewV1(rtc)
+func ParametersTest(ctx context.Context, env *scenario.Env) error {
+	ac := accounts.NewV1(env.Client)
+	core := core.NewV1(env.Client)
 
 	accParams, err := ac.Parameters(ctx, client.RoundLatest)
 	if err != nil {
@@ -1258,13 +1257,13 @@ func ParametersTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, 
 	return nil
 }
 
-func IntrospectionTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	log.Info("fetching runtime info")
-	info, err := core.NewV1(rtc).RuntimeInfo(ctx)
+func IntrospectionTest(ctx context.Context, env *scenario.Env) error {
+	env.Logger.Info("fetching runtime info")
+	info, err := core.NewV1(env.Client).RuntimeInfo(ctx)
 	if err != nil {
 		return err
 	}
-	log.Info("received runtime info: %+v", info)
+	env.Logger.Info("received runtime info: %+v", info)
 
 	if info.RuntimeVersion.Major == 0 && info.RuntimeVersion.Minor == 0 && info.RuntimeVersion.Patch == 0 {
 		return fmt.Errorf("runtime version is %d.%d.%d, expected >0.0.0",
@@ -1297,15 +1296,15 @@ func IntrospectionTest(ctx context.Context, _ *RuntimeScenario, log *logging.Log
 }
 
 // TransactionCheckTest checks that nonce/fee are correctly taken into account during tx checks.
-func TransactionCheckTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ac := accounts.NewV1(rtc)
+func TransactionCheckTest(ctx context.Context, env *scenario.Env) error {
+	ac := accounts.NewV1(env.Client)
 
 	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
 		return err
 	}
 
-	log.Info("generating transfer transaction with not enough gas")
+	env.Logger.Info("generating transfer transaction with not enough gas")
 	tb := ac.Transfer(testing.Bob.Address, types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)).
 		SetFeeGas(100).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce)
@@ -1318,7 +1317,7 @@ func TransactionCheckTest(ctx context.Context, _ *RuntimeScenario, log *logging.
 		return fmt.Errorf("expected an error during check tx, got nil")
 	}
 
-	log.Info("generating transfer transaction with the same nonce")
+	env.Logger.Info("generating transfer transaction with the same nonce")
 	tb = ac.Transfer(testing.Bob.Address, types.NewBaseUnits(*quantity.NewFromUint64(1), types.NativeDenomination)).
 		SetFeeGas(defaultGasAmount).
 		AppendAuthSignature(testing.Alice.SigSpec, nonce)

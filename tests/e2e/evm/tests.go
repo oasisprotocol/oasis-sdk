@@ -1,93 +1,32 @@
-package main
+package evm
 
 import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	_ "embed"
 	"encoding/hex"
 	"fmt"
-	"math/big"
 	"strings"
-	"sync"
-	"time"
 
 	ethMath "github.com/ethereum/go-ethereum/common/math"
-	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"google.golang.org/grpc"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
-	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
-	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
-	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
-	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/callformat"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
-	consensusAccounts "github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/consensusaccounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
-	contractDelegation "github.com/oasisprotocol/oasis-sdk/tests/e2e/contracts/delegation"
-	contractRng "github.com/oasisprotocol/oasis-sdk/tests/e2e/contracts/rng"
-	contractSubcall "github.com/oasisprotocol/oasis-sdk/tests/e2e/contracts/subcall"
+	"github.com/oasisprotocol/oasis-sdk/tests/e2e/scenario"
 	"github.com/oasisprotocol/oasis-sdk/tests/e2e/txgen"
 )
-
-// We store the compiled EVM bytecode for the SimpleSolEVMTest in a separate
-// file (in hex) to preserve readability of this file.
-//
-//go:embed contracts/evm_sol_test_compiled.hex
-var evmSolTestCompiledHex string
-
-// We store the compiled EVM bytecode for the SimpleSolEVMTestCreateMulti in a separate
-// file (in hex) to preserve readability of this file.
-//
-//go:embed contracts/evm_create_multi.hex
-var evmSolCreateMultiCompiledHex string
-
-// We store the compiled EVM bytecode for the SimpleERC20EVMTest in a separate
-// file (in hex) to preserve readability of this file.
-//
-//go:embed contracts/evm_erc20_test_compiled.hex
-var evmERC20TestCompiledHex string
-
-// We store the compiled EVM bytecode for the SimpleEVMSuicideTest in a separate
-// file (in hex) to preserve readability of this file.
-//
-//go:embed contracts/evm_suicide_test_compiled.hex
-var evmSuicideTestCompiledHex string
-
-// We store the compiled EVM bytecode for the SimpleEVMCallSuicideTest in a separate
-// file (in hex) to preserve readability of this file.
-//
-//go:embed contracts/evm_call_suicide_test_compiled.hex
-var evmCallSuicideTestCompiledHex string
-
-// We store the compiled EVM bytecode for the C10lEVMEncryptionTest in a separate
-// file (in hex) to preserve readability of this file.
-//
-//go:embed contracts/evm_encryption_compiled.hex
-var evmEncryptionCompiledHex string
-
-// We store the compiled EVM bytecode for the C10lEVMKeyDerivationTest in a separate
-// file (in hex) to preserve readability of this file.
-//
-//go:embed contracts/evm_key_derivation_compiled.hex
-var evmKeyDerivationCompiledHex string
-
-// We store the compiled EVM bytecode for the C10lEVMMessageSigningTest in a separate
-// file (in hex) to preserve readability of this file.
-//
-//go:embed contracts/evm_message_signing_compiled.hex
-var evmMessageSigningCompiledHex string
 
 type c10lity bool
 
@@ -309,17 +248,17 @@ func evmPack(bytecode []byte) []byte {
 	return packedBytecode
 }
 
-// SimpleEVMDepositWithdrawTest tests deposits and withdrawals.
-func SimpleEVMDepositWithdrawTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	e := evm.NewV1(rtc)
-	ac := accounts.NewV1(rtc)
+// DepositWithdrawTest tests deposits and withdrawals.
+func DepositWithdrawTest(ctx context.Context, env *scenario.Env) error {
+	e := evm.NewV1(env.Client)
+	ac := accounts.NewV1(env.Client)
 
 	daveEVMAddr, err := hex.DecodeString("dce075e1c39b1ae0b75d554558b6451a226ffe00")
 	if err != nil {
 		return err
 	}
 
-	log.Info("checking Dave's account balance")
+	env.Logger.Info("checking Dave's account balance")
 	b, err := ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
 	if err != nil {
 		return err
@@ -332,7 +271,7 @@ func SimpleEVMDepositWithdrawTest(ctx context.Context, _ *RuntimeScenario, log *
 		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("checking Dave's EVM account balance")
+	env.Logger.Info("checking Dave's EVM account balance")
 	evmBal, err := e.Balance(ctx, client.RoundLatest, daveEVMAddr)
 	if err != nil {
 		return err
@@ -341,7 +280,7 @@ func SimpleEVMDepositWithdrawTest(ctx context.Context, _ *RuntimeScenario, log *
 		return fmt.Errorf("Dave's EVM account balance is wrong (expected 100000000, got %s)", evmBal) //nolint: stylecheck
 	}
 
-	log.Info("checking Alice's account balance")
+	env.Logger.Info("checking Alice's account balance")
 	b, err = ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
 		return err
@@ -354,17 +293,17 @@ func SimpleEVMDepositWithdrawTest(ctx context.Context, _ *RuntimeScenario, log *
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("transferring 10 tokens into Dave's account from Alice's account")
+	env.Logger.Info("transferring 10 tokens into Dave's account from Alice's account")
 	tx := ac.Transfer(
 		testing.Dave.Address,
 		types.NewBaseUnits(*quantity.NewFromUint64(10), types.NativeDenomination),
 	)
-	_, err = txgen.SignAndSubmitTxRaw(ctx, rtc, testing.Alice.Signer, *tx.GetTransaction(), 0)
+	_, err = txgen.SignAndSubmitTxRaw(ctx, env.Client, testing.Alice.Signer, *tx.GetTransaction(), 0)
 	if err != nil {
 		return fmt.Errorf("failed to transfer from alice to dave: %w", err)
 	}
 
-	log.Info("re-checking Alice's account balance")
+	env.Logger.Info("re-checking Alice's account balance")
 	b, err = ac.Balances(ctx, client.RoundLatest, testing.Alice.Address)
 	if err != nil {
 		return err
@@ -377,7 +316,7 @@ func SimpleEVMDepositWithdrawTest(ctx context.Context, _ *RuntimeScenario, log *
 		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("re-checking Dave's account balance")
+	env.Logger.Info("re-checking Dave's account balance")
 	b, err = ac.Balances(ctx, client.RoundLatest, testing.Dave.Address)
 	if err != nil {
 		return err
@@ -390,7 +329,7 @@ func SimpleEVMDepositWithdrawTest(ctx context.Context, _ *RuntimeScenario, log *
 		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
 	}
 
-	log.Info("re-checking Dave's EVM account balance")
+	env.Logger.Info("re-checking Dave's EVM account balance")
 	evmBal, err = e.Balance(ctx, client.RoundLatest, daveEVMAddr)
 	if err != nil {
 		return err
@@ -557,14 +496,14 @@ func evmTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeClient,
 	return nil
 }
 
-// SimpleEVMTest does a simple EVM test.
-func SimpleEVMTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return evmTest(ctx, log, rtc, nonc10l)
+// BasicTest does a simple EVM test.
+func BasicTest(ctx context.Context, env *scenario.Env) error {
+	return evmTest(ctx, env.Logger, env.Client, nonc10l)
 }
 
-// C10lEVMTest does a simple EVM test.
-func C10lEVMTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return evmTest(ctx, log, rtc, c10l)
+// C10lBasicTest does a simple EVM test.
+func C10lBasicTest(ctx context.Context, env *scenario.Env) error {
+	return evmTest(ctx, env.Logger, env.Client, c10l)
 }
 
 // simpleEVMCallTest performs a test by calling a single method from the provided contract.
@@ -648,14 +587,14 @@ func solEVMTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeClie
 	return nil
 }
 
-// SimpleSolEVMTest does a simple Solidity contract test.
-func SimpleSolEVMTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return solEVMTest(ctx, log, rtc, nonc10l)
+// BasicSolTest does a simple Solidity contract test.
+func BasicSolTest(ctx context.Context, env *scenario.Env) error {
+	return solEVMTest(ctx, env.Logger, env.Client, nonc10l)
 }
 
-// C10lSolEVMTest does a simple Solidity contract test.
-func C10lSolEVMTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return solEVMTest(ctx, log, rtc, c10l)
+// C10lSolTest does a simple Solidity contract test.
+func C10lBasicSolTest(ctx context.Context, env *scenario.Env) error {
+	return solEVMTest(ctx, env.Logger, env.Client, c10l)
 }
 
 // solEVMTestCreateMulti does a test of a contract that creates two contracts.
@@ -710,14 +649,14 @@ func solEVMTestCreateMulti(ctx context.Context, log *logging.Logger, rtc client.
 	return nil
 }
 
-// SimpleSolEVMTestCreateMulti does a test of a contract that creates two contracts.
-func SimpleSolEVMTestCreateMulti(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return solEVMTestCreateMulti(ctx, log, rtc, nonc10l)
+// BasicSolTestCreateMulti does a test of a contract that creates two contracts.
+func BasicSolTestCreateMulti(ctx context.Context, env *scenario.Env) error {
+	return solEVMTestCreateMulti(ctx, env.Logger, env.Client, nonc10l)
 }
 
-// C10lSolEVMTestCreateMulti does a test of a contract that creates two contracts.
-func C10lSolEVMTestCreateMulti(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return solEVMTestCreateMulti(ctx, log, rtc, c10l)
+// C10lSolTestCreateMulti does a test of a contract that creates two contracts.
+func C10lBasicSolTestCreateMulti(ctx context.Context, env *scenario.Env) error {
+	return solEVMTestCreateMulti(ctx, env.Logger, env.Client, c10l)
 }
 
 // erc20EVMTest does a simple ERC20 contract test.
@@ -867,14 +806,14 @@ func erc20EVMTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeCl
 	return nil
 }
 
-// SimpleERC20EVMTest does a simple ERC20 contract test.
-func SimpleERC20EVMTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return erc20EVMTest(ctx, log, rtc, nonc10l)
+// BasicERC20Test does a simple ERC20 contract test.
+func BasicERC20Test(ctx context.Context, env *scenario.Env) error {
+	return erc20EVMTest(ctx, env.Logger, env.Client, nonc10l)
 }
 
-// C10lERC20EVMTest does a simple ERC20 contract test.
-func C10lERC20EVMTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return erc20EVMTest(ctx, log, rtc, c10l)
+// C10lBasicERC20Test does a simple ERC20 contract test.
+func C10lBasicERC20Test(ctx context.Context, env *scenario.Env) error {
+	return erc20EVMTest(ctx, env.Logger, env.Client, c10l)
 }
 
 // evmSuicideTest does a simple suicide contract test.
@@ -943,14 +882,14 @@ func evmSuicideTest(ctx context.Context, log *logging.Logger, rtc client.Runtime
 	return nil
 }
 
-// SimpleEVMSuicideTest does a simple suicide contract test.
-func SimpleEVMSuicideTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return evmSuicideTest(ctx, log, rtc, nonc10l)
+// SuicideTest does a simple suicide contract test.
+func SuicideTest(ctx context.Context, env *scenario.Env) error {
+	return evmSuicideTest(ctx, env.Logger, env.Client, nonc10l)
 }
 
-// C10lEVMSuicideTest does a simple suicide contract test.
-func C10lEVMSuicideTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return evmSuicideTest(ctx, log, rtc, c10l)
+// C10lSuicideTest does a simple suicide contract test.
+func C10lSuicideTest(ctx context.Context, env *scenario.Env) error {
+	return evmSuicideTest(ctx, env.Logger, env.Client, c10l)
 }
 
 // evmCallSuicideTest does a simple call suicide contract test.
@@ -1057,44 +996,36 @@ func evmCallSuicideTest(ctx context.Context, log *logging.Logger, rtc client.Run
 	return nil
 }
 
-// SimpleEVMCallSuicideTest does a simple call suicide contract test.
-func SimpleEVMCallSuicideTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return evmCallSuicideTest(ctx, log, rtc, nonc10l)
+// CallSuicideTest does a simple call suicide contract test.
+func CallSuicideTest(ctx context.Context, env *scenario.Env) error {
+	return evmCallSuicideTest(ctx, env.Logger, env.Client, nonc10l)
 }
 
-// C10lEVMCallSuicideTest does a simple call suicide contract test.
-func C10lEVMCallSuicideTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return evmCallSuicideTest(ctx, log, rtc, c10l)
+// C10lCallSuicideTest does a simple call suicide contract test.
+func C10lCallSuicideTest(ctx context.Context, env *scenario.Env) error {
+	return evmCallSuicideTest(ctx, env.Logger, env.Client, c10l)
 }
 
-// encryptionEVMTest does a simple evm encryption precompile test.
+// EncryptionTest does a simple evm encryption precompile test.
 //
-// Note that this test will only work with a confidential runtime because
-// it needs the confidential precompiles.
-func encryptionEVMTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
+// Note that this test will only work with a confidential runtime because it needs the confidential
+// precompiles.
+func EncryptionTest(ctx context.Context, env *scenario.Env) error {
 	// To generate the contract bytecode, use https://remix.ethereum.org/
 	// with the following settings:
 	//     Compiler: 0.8.17+commit.8df45f5f.Darwin.appleclang
 	//     EVM version: london
 	//     Enable optimization: yes, 1, via-ir
 	// on the source in evm_encryption.sol next to the hex file.
-	_, err := simpleEVMCallTest(ctx, log, rtc, c10l, evmEncryptionCompiledHex, "test", "f8a8fd6d", "")
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := simpleEVMCallTest(ctx, env.Logger, env.Client, c10l, evmEncryptionCompiledHex, "test", "f8a8fd6d", "")
+	return err
 }
 
-// C10lEVMEncryptionTest does a simple encryption contract test.
-func C10lEVMEncryptionTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return encryptionEVMTest(ctx, log, rtc, c10l)
-}
-
-// keyDerivationEVMTest does a simple evm x25519 key derivation precompile test.
+// KeyDerivationTest does a simple evm x25519 key derivation precompile test.
 //
-// Note that this test will only work with a confidential runtime because
-// it needs the confidential precompiles.
-func keyDerivationEVMTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
+// Note that this test will only work with a confidential runtime because it needs the confidential
+// precompiles.
+func KeyDerivationTest(ctx context.Context, env *scenario.Env) error {
 	// To generate the contract bytecode, use https://remix.ethereum.org/
 	// with the following settings:
 	//     Compiler: 0.8.17+commit.8df45f5f.Darwin.appleclang
@@ -1106,138 +1037,15 @@ func keyDerivationEVMTest(ctx context.Context, log *logging.Logger, rtc client.R
 	publicKey := "3046db3fa70ce605457dc47c48837ebd8bd0a26abfde5994d033e1ced68e2576"  //nolint: gosec
 	privateKey := "c07b151fbc1e7a11dff926111188f8d872f62eba0396da97c0a24adb75161750" //nolint: gosec
 	expected := "e69ac21066a8c2284e8fdc690e579af4513547b9b31dd144792c1904b45cf586"   //nolint: gosec
-	_, err := simpleEVMCallTest(ctx, log, rtc, c10l, evmKeyDerivationCompiledHex, "test", "92e2a69c", publicKey+privateKey+expected)
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := simpleEVMCallTest(ctx, env.Logger, env.Client, c10l, evmKeyDerivationCompiledHex, "test", "92e2a69c", publicKey+privateKey+expected)
+	return err
 }
 
-// rngEVMTest exercises the RNG precompile.
+// MessageSigningTest does a simple evm key generation and signing precompile test.
 //
-// Note that this test will only work with a confidential runtime because
-// it needs the confidential precompiles.
-func rngEVMTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
-	ev := evm.NewV1(rtc)
-	gasPrice := uint64(2)
-	value := big.NewInt(0).Bytes() // Don't send any tokens with the calls.
-
-	// Deploy the contract.
-	contractAddr, err := evmCreate(ctx, rtc, ev, testing.Dave.Signer, value, contractRng.Compiled, gasPrice, c10l)
-	if err != nil {
-		return fmt.Errorf("failed to deploy contract: %w", err)
-	}
-
-	// Call the basic test method.
-	data, err := contractRng.ABI.Pack("test")
-	if err != nil {
-		return fmt.Errorf("failed to pack arguments: %w", err)
-	}
-	_, err = evmCall(ctx, rtc, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, c10l)
-	if err != nil {
-		return fmt.Errorf("failed to call contract: %w", err)
-	}
-
-	// Create some accounts so we will be able to run test in parallel.
-	numAccounts := 5
-	log.Info("creating secp256k1 accounts", "num_accounts", numAccounts)
-
-	var signers []signature.Signer
-	for i := 0; i < numAccounts; i++ {
-		var signer signature.Signer
-		signer, err = txgen.CreateAndFundAccount(ctx, rtc, testing.Dave.Signer, i, txgen.AccountSecp256k1, 10_000_000)
-		if err != nil {
-			return err
-		}
-
-		signers = append(signers, signer)
-	}
-
-	// Repeatedly invoke the RNG from multiple signers in parallel.
-	reqLen := 32
-	pers := []byte("")
-	iterations := 10
-
-	data, err = contractRng.ABI.Pack("testGenerate", big.NewInt(int64(reqLen)), pers)
-	if err != nil {
-		return fmt.Errorf("failed to pack arguments: %w", err)
-	}
-
-	var wg sync.WaitGroup
-	resultCh := make(chan interface{}, len(signers)*iterations)
-	callFn := func(startCh chan struct{}, signer signature.Signer) {
-		defer wg.Done()
-
-		// Synchronize calls among all goroutines as we want to increase the chances of transactions
-		// landing in the same block.
-		<-startCh
-
-		rawResult, err := evmCall(ctx, rtc, ev, signer, contractAddr, value, data, gasPrice, c10l)
-		if err != nil {
-			resultCh <- fmt.Errorf("failed to call contract: %w", err)
-			return
-		}
-		result, err := contractRng.ABI.Unpack("testGenerate", rawResult)
-		if err != nil {
-			resultCh <- fmt.Errorf("failed to unpack result: %w", err)
-			return
-		}
-		resultCh <- result[0].([]byte)
-	}
-
-	log.Info("executing EVM calls to RNG")
-
-	for i := 0; i < iterations; i++ {
-		startCh := make(chan struct{})
-		for _, signer := range signers {
-			wg.Add(1)
-			go callFn(startCh, signer)
-		}
-		close(startCh)
-		wg.Wait()
-	}
-
-	close(resultCh)
-
-	// Do basic checks on all received outputs from the RNG.
-	seen := make(map[string]struct{})
-	for result := range resultCh {
-		var randomBytes []byte
-		switch r := result.(type) {
-		case error:
-			return r
-		case []byte:
-			randomBytes = r
-		}
-
-		if resLen := len(randomBytes); resLen != reqLen {
-			return fmt.Errorf("result has incorrect length (expected: %d got: %d)", reqLen, resLen)
-		}
-
-		if _, ok := seen[string(randomBytes)]; ok {
-			return fmt.Errorf("got duplicate value: %X", randomBytes)
-		}
-		seen[string(randomBytes)] = struct{}{}
-	}
-
-	return nil
-}
-
-// C10lEVMRNGTest does a simple key derivation contract test.
-func C10lEVMRNGTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return rngEVMTest(ctx, log, rtc, c10l)
-}
-
-// C10lEVMKeyDerivationTest does a simple key derivation contract test.
-func C10lEVMKeyDerivationTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return keyDerivationEVMTest(ctx, log, rtc, c10l)
-}
-
-// messageSigningEVMTest does a simple evm key generation and signing precompile test.
-//
-// Note that this test will only work with a confidential runtime because
-// it needs the confidential precompiles.
-func messageSigningEVMTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeClient, c10l c10lity) error {
+// Note that this test will only work with a confidential runtime because it needs the confidential
+// precompiles.
+func MessageSigningTest(ctx context.Context, env *scenario.Env) error {
 	// To generate the contract bytecode, use https://remix.ethereum.org/
 	// with the following settings:
 	//     Compiler: 0.8.7+commit.e28d00a7
@@ -1245,296 +1053,19 @@ func messageSigningEVMTest(ctx context.Context, log *logging.Logger, rtc client.
 	//     Enable optimization: yes, 200
 	// on the source in evm_message_signing.sol next to the hex file.
 
-	res, err := simpleEVMCallTest(ctx, log, rtc, c10l, evmMessageSigningCompiledHex, "test", "f8a8fd6d", "")
+	res, err := simpleEVMCallTest(ctx, env.Logger, env.Client, c10l, evmMessageSigningCompiledHex, "test", "f8a8fd6d", "")
 	if err != nil {
 		return err
 	}
 	if !strings.Contains(res, "6f6b") {
 		return fmt.Errorf("returned value does not contain 'ok': %v", res)
 	}
-
 	return nil
 }
 
-// C10lEVMMessageSigningTest does a simple key derivation contract test.
-func C10lEVMMessageSigningTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	return messageSigningEVMTest(ctx, log, rtc, c10l)
-}
-
-// SubcallDelegationTest performs a delegation from the EVM by using the subcall precompile.
-func SubcallDelegationTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ev := evm.NewV1(rtc)
-	consAccounts := consensusAccounts.NewV1(rtc)
-	gasPrice := uint64(2)
-
-	// Deploy the contract.
-	value := big.NewInt(0).Bytes() // Don't send any tokens.
-	contractAddr, err := evmCreate(ctx, rtc, ev, testing.Dave.Signer, value, contractSubcall.Compiled, gasPrice, nonc10l)
-	if err != nil {
-		return fmt.Errorf("failed to deploy contract: %w", err)
-	}
-
-	// Start watching consensus and runtime events.
-	cons := consensus.NewConsensusClient(conn)
-	stakingClient := cons.Staking()
-	ch, sub, err := stakingClient.WatchEvents(ctx)
-	if err != nil {
-		return err
-	}
-	defer sub.Close()
-	acCh, err := rtc.WatchEvents(ctx, []client.EventDecoder{consAccounts}, false)
-	if err != nil {
-		return err
-	}
-
-	// Call the method.
-	amount := types.NewBaseUnits(*quantity.NewFromUint64(10_000), types.NativeDenomination)
-	consensusAmount := quantity.NewFromUint64(10) // Consensus amount is scaled.
-	data, err := contractSubcall.ABI.Pack("test", []byte("consensus.Delegate"), cbor.Marshal(consensusAccounts.Delegate{
-		To:     testing.Alice.Address,
-		Amount: amount,
-	}))
-	if err != nil {
-		return fmt.Errorf("failed to pack arguments: %w", err)
-	}
-
-	value = big.NewInt(10_000).Bytes() // Send tokens to contract so it has something to delegate.
-	_, err = evmCall(ctx, rtc, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, nonc10l)
-	if err != nil {
-		return fmt.Errorf("failed to call contract: %w", err)
-	}
-
-	// Verify that delegation succeeded.
-	runtimeAddr := staking.NewRuntimeAddress(runtimeID)
-	contractSdkAddress := types.NewAddressFromEth(contractAddr)
-	if err = ensureStakingEvent(log, ch, makeAddEscrowCheck(runtimeAddr, staking.Address(testing.Alice.Address), consensusAmount)); err != nil {
-		return fmt.Errorf("ensuring runtime->alice add escrow consensus event: %w", err)
-	}
-	if _, err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(contractSdkAddress, 0, testing.Alice.Address, amount)); err != nil {
-		return fmt.Errorf("ensuring contract delegate runtime event: %w", err)
-	}
-
-	return nil
-}
-
-func DelegationReceiptsTest(ctx context.Context, _ *RuntimeScenario, log *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx, cancelFn := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancelFn()
-
-	ev := evm.NewV1(rtc)
-	consAccounts := consensusAccounts.NewV1(rtc)
-	gasPrice := uint64(2)
-
-	// Deploy the contract.
-	value := big.NewInt(0).Bytes() // Don't send any tokens.
-	contractAddr, err := evmCreate(ctx, rtc, ev, testing.Dave.Signer, value, contractDelegation.Compiled, gasPrice, nonc10l)
-	if err != nil {
-		return fmt.Errorf("failed to deploy contract: %w", err)
-	}
-
-	// Start watching consensus and runtime events.
-	cons := consensus.NewConsensusClient(conn)
-	stakingClient := cons.Staking()
-	ch, sub, err := stakingClient.WatchEvents(ctx)
-	if err != nil {
-		return err
-	}
-	defer sub.Close()
-	acCh, err := rtc.WatchEvents(ctx, []client.EventDecoder{consAccounts}, false)
-	if err != nil {
-		return err
-	}
-
-	// Fetch initial Dave's balance.
-	initialBalance, err := ev.Balance(ctx, client.RoundLatest, testing.Dave.EthAddress.Bytes())
-	if err != nil {
-		return fmt.Errorf("failed to fetch initial balance: %w", err)
-	}
-
-	// Call the method.
-	log.Info("calling delegate")
-	consensusAmount := quantity.NewFromUint64(10) // Consensus amount is scaled.
-	rawAddress, _ := testing.Alice.Address.MarshalBinary()
-	data, err := contractDelegation.ABI.Pack("delegate", rawAddress)
-	if err != nil {
-		return fmt.Errorf("failed to pack arguments: %w", err)
-	}
-
-	value = big.NewInt(10_000).Bytes() // Any amount sent to `delegate` is delegated.
-	result, err := evmCall(ctx, rtc, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, nonc10l)
-	if err != nil {
-		return fmt.Errorf("failed to call contract: %w", err)
-	}
-
-	// Decode the result receipt id.
-	results, err := contractDelegation.ABI.Unpack("delegate", result)
-	if err != nil {
-		return fmt.Errorf("failed to unpack result: %w", err)
-	}
-	receiptID := results[0].(uint64)
-
-	// Verify that delegation succeeded.
-	sdkAmount := types.NewBaseUnits(*quantity.NewFromUint64(10_000), types.NativeDenomination)
-	runtimeAddr := staking.NewRuntimeAddress(runtimeID)
-	contractSdkAddress := types.NewAddressFromEth(contractAddr)
-	if err = ensureStakingEvent(log, ch, makeAddEscrowCheck(runtimeAddr, staking.Address(testing.Alice.Address), consensusAmount)); err != nil {
-		return fmt.Errorf("ensuring runtime->alice add escrow consensus event: %w", err)
-	}
-	if _, err = ensureRuntimeEvent(log, acCh, makeDelegateCheck(contractSdkAddress, receiptID, testing.Alice.Address, sdkAmount)); err != nil {
-		return fmt.Errorf("ensuring contract->alice delegate runtime event: %w", err)
-	}
-
-	// Call the delegate done.
-	log.Info("calling delegateDone")
-	data, err = contractDelegation.ABI.Pack("delegateDone", uint8(receiptID)) // uint8 to simplify CBOR encoding.
-	if err != nil {
-		return fmt.Errorf("failed to pack arguments: %w", err)
-	}
-
-	value = big.NewInt(0).Bytes() // Don't send any tokens.
-	result, err = evmCall(ctx, rtc, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, nonc10l)
-	if err != nil {
-		return fmt.Errorf("failed to call contract: %w", err)
-	}
-
-	// Decode the number of received shares.
-	results, err = contractDelegation.ABI.Unpack("delegateDone", result)
-	if err != nil {
-		return fmt.Errorf("failed to unpack result: %w", err)
-	}
-	shares := results[0].(*big.Int).Uint64() // We know the actual value is less than uint128.
-
-	if expectedShares := uint64(10); shares != expectedShares {
-		return fmt.Errorf("received unexpected number of shares (expected: %d got: %d)", expectedShares, shares)
-	}
-
-	// Now trigger undelegation for half the shares.
-	consensusShares := quantity.NewFromUint64(5)
-	consensusAmount = quantity.NewFromUint64(5) // Expected amount of tokens to receive.
-	sdkAmount = types.NewBaseUnits(*quantity.NewFromUint64(5_000), types.NativeDenomination)
-	data, err = contractDelegation.ABI.Pack("undelegate", rawAddress, big.NewInt(5))
-	if err != nil {
-		return fmt.Errorf("failed to pack arguments: %w", err)
-	}
-
-	value = big.NewInt(0).Bytes() // Don't send any tokens.
-	result, err = evmCall(ctx, rtc, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, nonc10l)
-	if err != nil {
-		return fmt.Errorf("failed to call contract: %w", err)
-	}
-
-	// Decode the result receipt id.
-	results, err = contractDelegation.ABI.Unpack("undelegate", result)
-	if err != nil {
-		return fmt.Errorf("failed to unpack result: %w", err)
-	}
-	receiptID = results[0].(uint64)
-
-	// Verify that undelegation started.
-	if _, err = ensureRuntimeEvent(log, acCh, makeUndelegateStartCheck(testing.Alice.Address, receiptID, contractSdkAddress, consensusShares)); err != nil {
-		return fmt.Errorf("ensuring alice->contract undelegate start runtime event: %w", err)
-	}
-
-	// Call the undelegate start method.
-	data, err = contractDelegation.ABI.Pack("undelegateStart", uint8(receiptID)) // uint8 to simplify CBOR encoding.
-	if err != nil {
-		return fmt.Errorf("failed to pack arguments: %w", err)
-	}
-
-	value = big.NewInt(0).Bytes() // Don't send any tokens.
-	_, err = evmCall(ctx, rtc, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, nonc10l)
-	if err != nil {
-		return fmt.Errorf("failed to call contract: %w", err)
-	}
-
-	// Verify that undelegation completed.
-	if err = ensureStakingEvent(log, ch, makeReclaimEscrowCheck(testing.Alice.Address.ConsensusAddress(), runtimeAddr, consensusAmount)); err != nil {
-		return fmt.Errorf("ensuring alice->runtime reclaim escrow consensus event: %w", err)
-	}
-
-	if _, err = ensureRuntimeEvent(log, acCh, makeUndelegateDoneCheck(testing.Alice.Address, contractSdkAddress, consensusShares, sdkAmount)); err != nil {
-		return fmt.Errorf("ensuring alice->contract undelegate done runtime event: %w", err)
-	}
-
-	// Call the undelegate done method.
-	log.Info("calling undelegateDone")
-	data, err = contractDelegation.ABI.Pack("undelegateDone", uint8(receiptID)) // uint8 to simplify CBOR encoding.
-	if err != nil {
-		return fmt.Errorf("failed to pack arguments: %w", err)
-	}
-
-	value = big.NewInt(0).Bytes() // Don't send any tokens.
-	_, err = evmCall(ctx, rtc, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, nonc10l)
-	if err != nil {
-		return fmt.Errorf("failed to call contract: %w", err)
-	}
-
-	// Check balance.
-	balance, err := ev.Balance(ctx, client.RoundLatest, testing.Dave.EthAddress.Bytes())
-	if err != nil {
-		return fmt.Errorf("failed to check balance: %w", err)
-	}
-
-	// We delegated 10_000 then undelegated 5_000. All gas fees were zero.
-	expectedBalance := initialBalance.ToBigInt().Uint64() - 5_000
-	if balance.ToBigInt().Uint64() != expectedBalance {
-		return fmt.Errorf("unexpected dave balance (expected: %d got: %s)", expectedBalance, balance)
-	}
-
-	return nil
-}
-
-// SubcallRoundRootTest performs a runtime round root query from the EVM by using the subcall precompile.
-func SubcallRoundRootTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, conn *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ev := evm.NewV1(rtc)
-	gasPrice := uint64(2)
-
-	// Deploy the contract.
-	value := big.NewInt(0).Bytes() // Don't send any tokens.
-	contractAddr, err := evmCreate(ctx, rtc, ev, testing.Dave.Signer, value, contractSubcall.Compiled, gasPrice, nonc10l)
-	if err != nil {
-		return fmt.Errorf("failed to deploy contract: %w", err)
-	}
-
-	// Call the method.
-	data, err := contractSubcall.ABI.Pack("test_consensus_round_root")
-	if err != nil {
-		return fmt.Errorf("failed to pack arguments: %w", err)
-	}
-	result, err := evmCall(ctx, rtc, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, nonc10l)
-	if err != nil {
-		return fmt.Errorf("failed to call test_consensus_round_root: %w", err)
-	}
-	// Decode the result hash.
-	results, err := contractSubcall.ABI.Unpack("test_consensus_round_root", result)
-	if err != nil {
-		return fmt.Errorf("failed to unpack test_consensus_round_root result: %w", err)
-	}
-	stateHash := results[0].([]byte)
-	if len(stateHash) != 34 { // 2 bytes CBOR header + 32 bytes hash.
-		return fmt.Errorf("invalid test_consensus_round_root response, expected state hash, got: %v", stateHash)
-	}
-
-	// Query the consensus layer for the round root.
-	cons := consensus.NewConsensusClient(conn)
-	st, err := cons.RootHash().GetRoundRoots(ctx, &roothash.RoundRootsRequest{
-		RuntimeID: runtimeID,
-		Height:    consensus.HeightLatest,
-		Round:     2, // The height used in the test contract.
-	})
-	if err != nil {
-		return fmt.Errorf("failed to fetch consensus runtime state: %w", err)
-	}
-	if !bytes.Equal(st.StateRoot[:], stateHash[2:]) {
-		return fmt.Errorf("test_consensus_round_root returned invalid state hash, expected: %v, got: %v", st.StateRoot, stateHash[2:])
-	}
-
-	return nil
-}
-
-// EVMParametersTest tests parameters methods.
-func EVMParametersTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	evm := evm.NewV1(rtc)
+// ParametersTest tests parameters methods.
+func ParametersTest(ctx context.Context, env *scenario.Env) error {
+	evm := evm.NewV1(env.Client)
 
 	_, err := evm.Parameters(ctx, client.RoundLatest)
 	if err != nil {
@@ -1542,115 +1073,4 @@ func EVMParametersTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logge
 	}
 
 	return nil
-}
-
-func submitEthereumTx(ctx context.Context, rtc client.RuntimeClient, txData ethTypes.TxData) (cbor.RawMessage, error) {
-	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cancel()
-
-	c := core.NewV1(rtc)
-	ac := accounts.NewV1(rtc)
-
-	mgp, err := c.MinGasPrice(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get min gas price: %w", err)
-	}
-	gasPrice := mgp[types.NativeDenomination]
-
-	nonce, err := ac.Nonce(ctx, client.RoundLatest, testing.Dave.Address)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get nonce: %w", err)
-	}
-
-	switch txData := txData.(type) {
-	case *ethTypes.LegacyTx:
-		txData.Nonce = nonce
-		txData.GasPrice = gasPrice.ToBigInt()
-	case *ethTypes.AccessListTx:
-		txData.Nonce = nonce
-		txData.GasPrice = gasPrice.ToBigInt()
-	case *ethTypes.DynamicFeeTx:
-		txData.Nonce = nonce
-		txData.GasFeeCap = gasPrice.ToBigInt()
-	default:
-		return nil, fmt.Errorf("unsupported tx type: %T", txData)
-	}
-
-	tx := ethTypes.NewTx(txData)
-
-	sk, err := crypto.ToECDSA(testing.Dave.SecretKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare signer key: %w", err)
-	}
-	signer := ethTypes.LatestSignerForChainID(big.NewInt(0xa515))
-	signature, err := crypto.Sign(signer.Hash(tx).Bytes(), sk)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sign ethereum tx: %w", err)
-	}
-
-	signedTx, err := tx.WithSignature(signer, signature)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compose tx: %w", err)
-	}
-	rawTx, err := signedTx.MarshalBinary()
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal tx: %w", err)
-	}
-
-	sdkTx := &types.UnverifiedTransaction{
-		Body: rawTx,
-		AuthProofs: []types.AuthProof{
-			{Module: "evm.ethereum.v0"},
-		},
-	}
-
-	return rtc.SubmitTx(ctx, sdkTx)
-}
-
-// EthereumTxTest tests Ethereum-encoded transaction support.
-func EthereumTxTest(ctx context.Context, _ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	for i, txData := range []ethTypes.TxData{
-		&ethTypes.LegacyTx{
-			To:    testing.Dave.EthAddress,
-			Value: big.NewInt(0),
-			Gas:   100_000,
-			Data:  nil,
-		},
-		&ethTypes.AccessListTx{
-			To:    testing.Dave.EthAddress,
-			Value: big.NewInt(0),
-			Gas:   100_000,
-			Data:  nil,
-		},
-		&ethTypes.DynamicFeeTx{
-			To:    testing.Dave.EthAddress,
-			Value: big.NewInt(0),
-			Gas:   100_000,
-			Data:  nil,
-		},
-	} {
-		_, err := submitEthereumTx(ctx, rtc, txData)
-		if err != nil {
-			return fmt.Errorf("transaction %d: %w", i, err)
-		}
-	}
-	return nil
-}
-
-// EVMRuntimeFixture prepares the runtime fixture for the EVM tests.
-func EVMRuntimeFixture(ff *oasis.NetworkFixture) {
-	// The EVM runtime has 110_000 TEST tokens already minted internally. Since we connect it to the
-	// consensus layer (via the consensus module), we should make sure that the runtime's account in
-	// the consensus layer also has a similar amount as otherwise the delegation tests will fail.
-	runtimeAddress := staking.NewRuntimeAddress(ff.Runtimes[1].ID)
-	_ = ff.Network.StakingGenesis.TotalSupply.Add(quantity.NewFromUint64(110_000))
-	ff.Network.StakingGenesis.Ledger[runtimeAddress] = &staking.Account{
-		General: staking.GeneralAccount{
-			Balance: *quantity.NewFromUint64(110_000),
-		},
-	}
-
-	// Make sure debonding period is at least 2 epochs as otherwise the undelegation can start and
-	// complete in the same epoch, making the test miss some events.
-	ff.Network.StakingGenesis.Parameters.DebondingInterval = 2
 }
