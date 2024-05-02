@@ -74,6 +74,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "allocator-api2"
+version = "0.2.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c6cb57a04249c6480766f7f7cef5467412af1490f8d1e243141daddada3264f"
+
+[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1585,6 +1591,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 dependencies = [
  "ahash",
+ "allocator-api2",
 ]
 
 [[package]]
@@ -1924,6 +1931,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71e7d46de488603ffdd5f30afbc64fbba2378214a2c3a2fb83abf3d33126df17"
 dependencies = [
  "hashbrown 0.13.2",
+]
+
+[[package]]
+name = "lru"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3262e75e648fce39813cb56ac41f3c3e3f65217ebf3844d818d1f9398cfb0dc"
+dependencies = [
+ "hashbrown 0.14.3",
 ]
 
 [[package]]
@@ -2356,7 +2372,7 @@ dependencies = [
  "base64 0.13.1",
  "futures",
  "lazy_static",
- "lru",
+ "lru 0.9.0",
  "oasis-cbor",
  "oasis-core-runtime",
  "rand",
@@ -2396,7 +2412,7 @@ dependencies = [
  "intrusive-collections",
  "lazy_static",
  "log",
- "lru",
+ "lru 0.9.0",
  "mbedtls 0.8.4",
  "num-bigint 0.4.4",
  "num-traits",
@@ -2445,7 +2461,7 @@ dependencies = [
  "hmac",
  "impl-trait-for-tuples",
  "k256",
- "lru",
+ "lru 0.12.3",
  "merlin",
  "num-traits",
  "oasis-cbor",
@@ -2476,7 +2492,7 @@ dependencies = [
  "blake3",
  "hex",
  "k256",
- "lru",
+ "lru 0.12.3",
  "num-traits",
  "oasis-cbor",
  "oasis-contract-sdk-crypto",
