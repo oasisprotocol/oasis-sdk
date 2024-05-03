@@ -1,6 +1,6 @@
+import {secp256k1} from '@noble/curves/secp256k1';
+import {keccak_256} from '@noble/hashes/sha3';
 import * as oasis from '@oasisprotocol/client';
-import * as elliptic from 'elliptic';
-import {Keccak} from 'sha3';
 
 import * as types from './types';
 
@@ -9,20 +9,16 @@ export const V0_SECP256K1ETH_CONTEXT_VERSION = 0;
 export const V0_MULTISIG_CONTEXT_IDENTIFIER = 'oasis-runtime-sdk/address: multisig';
 export const V0_MULTISIG_CONTEXT_VERSION = 0;
 
-const SECP256K1 = new elliptic.ec('secp256k1');
-
 export async function fromSigspec(spec: types.SignatureAddressSpec) {
     if (spec.ed25519) {
         return await oasis.staking.addressFromPublicKey(spec.ed25519);
     } else if (spec.secp256k1eth) {
         // Use a scheme such that we can compute Secp256k1 addresses from Ethereum
         // addresses as this makes things more interoperable.
-        const untaggedPk = SECP256K1.keyFromPublic(spec.secp256k1eth)
-            .getPublic(false, 'array')
+        const untaggedPk = secp256k1.ProjectivePoint.fromHex(spec.secp256k1eth)
+            .toRawBytes(false)
             .slice(1);
-        const hash = new Keccak(256);
-        hash.update(Buffer.from(untaggedPk));
-        const pkData = hash.digest().slice(32 - 20);
+        const pkData = keccak_256(new Uint8Array(untaggedPk)).slice(32 - 20);
         return await oasis.address.fromData(
             V0_SECP256K1ETH_CONTEXT_IDENTIFIER,
             V0_SECP256K1ETH_CONTEXT_VERSION,

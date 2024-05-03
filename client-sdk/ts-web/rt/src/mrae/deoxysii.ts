@@ -1,5 +1,6 @@
+import {hmac} from '@noble/hashes/hmac';
+import {sha512_256} from '@noble/hashes/sha512';
 import * as deoxysii from '@oasisprotocol/deoxysii';
-import {sha512_256} from 'js-sha512';
 import * as nacl from 'tweetnacl';
 
 const BOX_KDF_TWEAK = 'MRAE_Box_Deoxys-II-256-128';
@@ -11,9 +12,7 @@ const BOX_KDF_TWEAK = 'MRAE_Box_Deoxys-II-256-128';
 
 export function deriveSymmetricKey(publicKey: Uint8Array, privateKey: Uint8Array): Uint8Array {
     const pmk = nacl.scalarMult(privateKey, publicKey);
-    var kdf = sha512_256.hmac.create(BOX_KDF_TWEAK);
-    kdf.update(pmk);
-    return new Uint8Array(kdf.arrayBuffer());
+    return hmac(sha512_256, BOX_KDF_TWEAK, pmk);
 }
 
 /**

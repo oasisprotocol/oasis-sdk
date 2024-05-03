@@ -1,4 +1,5 @@
-import {sha512} from 'js-sha512';
+import {hmac} from '@noble/hashes/hmac';
+import {sha512} from '@noble/hashes/sha512';
 import {SignKeyPair, sign} from 'tweetnacl';
 import {generateMnemonic, mnemonicToSeed, validateMnemonic} from 'bip39';
 import {concat} from './misc';
@@ -91,8 +92,7 @@ export class HDKey {
     }
 
     private static makeHDKey(hmacKey: string | Uint8Array, data: Uint8Array): HDKey {
-        //@ts-ignore The types of js-sha512 are outdated
-        const hash = sha512.hmac.arrayBuffer(hmacKey, data);
+        const hash = hmac(sha512, hmacKey, data);
 
         const I = new Uint8Array(hash);
         const IL = I.slice(0, 32);

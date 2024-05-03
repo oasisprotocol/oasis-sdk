@@ -1,5 +1,11 @@
 import * as oasisRT from './../src';
 import * as nacl from 'tweetnacl';
+import {webcrypto} from 'crypto';
+
+if (typeof crypto === 'undefined') {
+    // @ts-expect-error there are some inconsequential type differences
+    globalThis.crypto = webcrypto;
+}
 
 describe('callformat', () => {
     describe('encodeCall/DecodeResult', () => {
