@@ -8,3 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 oasis-runtime-sdk = { path = "../../../runtime-sdk" }
 cbor = { version = "0.5.1", package = "oasis-cbor" }
+
+[features]
+# Enables mock SGX in non-SGX builds.
+debug-mock-sgx = ["oasis-runtime-sdk/debug-mock-sgx"]

@@ -10,6 +10,7 @@ FIXTURE_FILE="/tmp/oasis-net-runner-sdk-rt/fixture.json"
 
 "$TEST_NET_RUNNER" \
     dump-fixture \
+    --fixture.default.tee_hardware intel-sgx \
     --fixture.default.node.binary "$TEST_NODE_BINARY" \
     --fixture.default.runtime.id "8000000000000000000000000000000000000000000000000000000000000000" \
     --fixture.default.runtime.binary ../../../../target/debug/test-runtime-simple-keyvalue \
@@ -21,6 +22,14 @@ FIXTURE_FILE="/tmp/oasis-net-runner-sdk-rt/fixture.json"
     --fixture.default.runtime.version 0.1.0 \
     --fixture.default.runtime.version 0.1.0 \
     --fixture.default.staking_genesis ./staking.json >"$FIXTURE_FILE"
+
+# Use mock SGX.
+jq '
+  .runtimes[0].deployments[0].components[0].binaries."0" = "'${TEST_KM_BINARY}'" |
+  .runtimes[1].deployments[0].components[0].binaries."0" = "../../../../target/debug/test-runtime-simple-keyvalue" |
+  .runtimes[2].deployments[0].components[0].binaries."0" = "../../../../target/debug/test-runtime-simple-consensus"
+' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
+mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
 # Allow expensive gas estimation and expensive queries.
 jq '

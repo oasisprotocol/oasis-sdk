@@ -17,6 +17,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/node"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+	"github.com/oasisprotocol/oasis-core/go/common/sgx"
 	"github.com/oasisprotocol/oasis-core/go/common/version"
 	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
 	"github.com/oasisprotocol/oasis-core/go/keymanager/secrets"
@@ -41,9 +42,9 @@ const (
 	cfgRuntimeBinaryDirDefault = "runtime.binary_dir.default"
 	cfgRuntimeLoader           = "runtime.loader"
 	cfgRuntimeProvisioner      = "runtime.provisioner"
-	cfgIasMock                 = "ias.mock"
 
-	cfgKeymanagerBinary = "keymanager.binary"
+	// keymanagerBinary is the name of the key manager runtime binary.
+	keymanagerBinary = "simple-keymanager"
 )
 
 var (
@@ -115,8 +116,6 @@ func NewRuntimeScenario(runtimeName string, tests []RunTestFunction, opts ...Opt
 
 	sc.Flags.String(cfgRuntimeBinaryDirDefault, "../../target/debug", "path to the runtime binaries directory")
 	sc.Flags.String(cfgRuntimeLoader, "../../../oasis-core/target/default/debug/oasis-core-runtime-loader", "path to the runtime loader")
-	sc.Flags.String(cfgKeymanagerBinary, "", "path to the keymanager binary")
-	sc.Flags.Bool(cfgIasMock, true, "if mock IAS service should be used")
 	sc.Flags.String(cfgRuntimeProvisioner, "sandboxed", "the runtime provisioner: mock, unconfined, or sandboxed")
 
 	for _, opt := range opts {
@@ -147,20 +146,16 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 
 	runtimeBinary := sc.RuntimeName
 	runtimeLoader, _ := sc.Flags.GetString(cfgRuntimeLoader)
-	iasMock, _ := sc.Flags.GetBool(cfgIasMock)
 	runtimeProvisionerRaw, _ := sc.Flags.GetString(cfgRuntimeProvisioner)
 	var runtimeProvisioner runtimeCfg.RuntimeProvisioner
 	if err = runtimeProvisioner.UnmarshalText([]byte(runtimeProvisionerRaw)); err != nil {
 		return nil, err
 	}
 
-	keymanagerPath, _ := sc.Flags.GetString(cfgKeymanagerBinary)
-	usingKeymanager := len(keymanagerPath) > 0
-
 	ff := &oasis.NetworkFixture{
 		TEE: oasis.TEEFixture{
-			Hardware: node.TEEHardwareInvalid,
-			MrSigner: nil,
+			Hardware: node.TEEHardwareIntelSGX, // Using mock SGX.
+			MrSigner: &sgx.FortanixDummyMrSigner,
 		},
 		Network: oasis.NetworkCfg{
 			NodeBinary:                        f.Network.NodeBinary,
@@ -170,9 +165,6 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			DeterministicIdentities:           true, // For allowlisting the client node on the key manager.
 			Beacon: beacon.ConsensusParameters{
 				Backend: beacon.BackendInsecure,
-			},
-			IAS: oasis.IASCfg{
-				Mock: iasMock,
 			},
 			StakingGenesis: &api.Genesis{
 				Parameters: api.ConsensusParameters{
@@ -222,10 +214,8 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 					{
 						Components: []oasis.ComponentCfg{
 							{
-								Kind: component.RONL,
-								Binaries: map[node.TEEHardware]string{
-									node.TEEHardwareInvalid: keymanagerPath,
-								},
+								Kind:     component.RONL,
+								Binaries: sc.resolveRuntimeBinaries(keymanagerBinary),
 							},
 						},
 					},
@@ -236,7 +226,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				ID:         RuntimeID,
 				Kind:       registry.KindCompute,
 				Entity:     0,
-				Keymanager: -1,
+				Keymanager: 0,
 				Executor: registry.ExecutorParameters{
 					GroupSize:       2,
 					GroupBackupSize: 1,
@@ -280,6 +270,19 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				},
 			},
 		},
+		KeymanagerPolicies: []oasis.KeymanagerPolicyFixture{
+			{Runtime: 0, Serial: 1, MasterSecretRotationInterval: 0},
+		},
+		Keymanagers: []oasis.KeymanagerFixture{
+			{
+				RuntimeProvisioner: runtimeProvisioner,
+				Runtime:            0,
+				Entity:             1,
+				Policy:             0,
+				SkipPolicy:         false,
+				PrivatePeerPubKeys: []string{"pr+KLREDcBxpWgQ/80yUrHXbyhDuBDcnxzo3td4JiIo="}, // The deterministic client node pub key.
+			},
+		},
 		Validators: []oasis.ValidatorFixture{
 			{Entity: 1, Consensus: oasis.ConsensusFixture{SupplementarySanityInterval: 1}},
 			{Entity: 1, Consensus: oasis.ConsensusFixture{}},
@@ -302,28 +305,6 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 		},
 	}
 
-	if usingKeymanager {
-		for i := range ff.Runtimes {
-			if ff.Runtimes[i].Kind == registry.KindKeyManager {
-				continue
-			}
-			ff.Runtimes[i].Keymanager = 0
-		}
-		ff.KeymanagerPolicies = []oasis.KeymanagerPolicyFixture{
-			{Runtime: 0, Serial: 1, MasterSecretRotationInterval: 0},
-		}
-		ff.Keymanagers = []oasis.KeymanagerFixture{
-			{
-				RuntimeProvisioner: runtimeProvisioner,
-				Runtime:            0,
-				Entity:             1,
-				Policy:             0,
-				SkipPolicy:         true,
-				PrivatePeerPubKeys: []string{"pr+KLREDcBxpWgQ/80yUrHXbyhDuBDcnxzo3td4JiIo="}, // The deterministic client node pub key.
-			},
-		}
-	}
-
 	// Apply fixture modifier function when configured.
 	if sc.fixtureModifier != nil {
 		sc.fixtureModifier(ff)
@@ -338,14 +319,22 @@ func (sc *RuntimeScenario) resolveRuntimeBinaries(baseRuntimeBinary string) map[
 		node.TEEHardwareInvalid,
 		node.TEEHardwareIntelSGX,
 	} {
-		binaries[tee] = sc.resolveRuntimeBinary(baseRuntimeBinary)
+		binaries[tee] = sc.resolveRuntimeBinary(baseRuntimeBinary, tee)
 	}
 	return binaries
 }
 
-func (sc *RuntimeScenario) resolveRuntimeBinary(runtimeBinary string) string {
+func (sc *RuntimeScenario) resolveRuntimeBinary(runtimeBinary string, tee node.TEEHardware) string {
+	var runtimeExt string
+	switch tee {
+	case node.TEEHardwareInvalid:
+		runtimeExt = ""
+	case node.TEEHardwareIntelSGX:
+		runtimeExt = ".sgxs"
+	}
+
 	path, _ := sc.Flags.GetString(cfgRuntimeBinaryDirDefault)
-	return filepath.Join(path, runtimeBinary)
+	return filepath.Join(path, runtimeBinary+runtimeExt)
 }
 
 func (sc *RuntimeScenario) waitNodesSynced(ctx context.Context) error {
