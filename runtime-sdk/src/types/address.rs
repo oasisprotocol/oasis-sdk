@@ -274,6 +274,17 @@ impl cbor::Decode for Address {
     }
 }
 
+impl slog::Value for Address {
+    fn serialize(
+        &self,
+        _record: &slog::Record<'_>,
+        key: slog::Key,
+        serializer: &mut dyn slog::Serializer,
+    ) -> slog::Result {
+        serializer.emit_str(key, &self.to_bech32())
+    }
+}
+
 impl From<Address> for ConsensusAddress {
     fn from(addr: Address) -> ConsensusAddress {
         ConsensusAddress::from(&addr.0)
@@ -282,6 +293,7 @@ impl From<Address> for ConsensusAddress {
 
 #[cfg(test)]
 mod test {
+    use base64::prelude::*;
     use bech32::Bech32m;
 
     use super::*;
@@ -416,7 +428,8 @@ mod test {
     #[test]
     fn test_address_from_consensus_pk() {
         // Same test vector as in `test_address_ed25519`.
-        let pk: ConsensusPublicKey = base64::decode("utrdHlX///////////////////////////////////8=")
+        let pk: ConsensusPublicKey = BASE64_STANDARD
+            .decode("utrdHlX///////////////////////////////////8=")
             .unwrap()
             .into();
 

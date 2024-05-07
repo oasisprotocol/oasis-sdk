@@ -8,6 +8,7 @@ pub mod config;
 pub mod context;
 pub mod crypto;
 pub mod dispatcher;
+pub mod enclave_rpc;
 pub mod error;
 pub mod event;
 pub mod history;

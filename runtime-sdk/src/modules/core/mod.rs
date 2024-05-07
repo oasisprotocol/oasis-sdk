@@ -298,6 +298,7 @@ impl module::Parameters for Parameters {
     }
 }
 
+/// Interface that can be called from other modules.
 pub trait API {
     /// Module configuration.
     type Config: Config;

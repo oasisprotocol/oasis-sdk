@@ -87,6 +87,15 @@ impl CallResult {
             Self::Aborted(e) => panic!("tx aborted with error: {e}"),
         }
     }
+
+    #[cfg(any(test, feature = "test"))]
+    pub fn unwrap_failed(self) -> (String, u32) {
+        match self {
+            Self::Ok(_) => panic!("call result indicates success"),
+            Self::Failed { module, code, .. } => (module, code),
+            Self::Aborted(e) => panic!("tx aborted with error: {e}"),
+        }
+    }
 }
 
 impl From<CallResult> for transaction::CallResult {

@@ -85,7 +85,9 @@ function build_runtime() {
 		# omitting the conversion avoids a dependency on oasis-core-tools.
 
 		cp "${TESTS_DIR}"/../target/debug/test-runtime-${name} "${TEST_BASE_DIR}"/test-runtime-${output}
-		cp "${TESTS_DIR}"/../target/debug/test-runtime-${name} "${TEST_BASE_DIR}"/test-runtime-${output}.sgxs
+		echo -n ${name} > "${TEST_BASE_DIR}"/test-runtime-${output}.sgxs
+		# Output deterministic MRENCLAVE.
+		echo "[${name}] MRENCLAVE: $(echo -n ${name} | sha256sum | cut -d ' ' -f 1)"
 	popd
 }
 
@@ -103,6 +105,11 @@ build_runtime simple-evm --output c10l-evm --features confidential
 
 printf "${CYAN}### Building test simple-contracts runtime...${OFF}\n"
 build_runtime simple-contracts
+
+printf "${CYAN}### Building test components-ronl runtime...${OFF}\n"
+build_runtime components-ronl
+printf "${CYAN}### Building test components-rofl runtime...${OFF}\n"
+build_runtime components-rofl
 
 # Test WASM contracts.
 printf "${CYAN}### Building test hello contract...${OFF}\n"

@@ -8,15 +8,17 @@ use crate::{
     storage::{self, Store},
 };
 
-use super::{types, Error, MODULE_NAME};
+use super::{app_id::AppId, types, Error, MODULE_NAME};
 
-/// Map of H(RAK)s to their registrations.
-const REGISTRATIONS: &[u8] = &[0x01];
+/// Map of application identifiers to their configs.
+const APPS: &[u8] = &[0x01];
+/// Map of (application identifier, H(RAK)) tuples to their registrations.
+const REGISTRATIONS: &[u8] = &[0x02];
 /// Map of H(pk)s to KeyEndorsementInfos. This is used when just the public key is needed to avoid
 /// fetching entire registrations from storage.
-const ENDORSERS: &[u8] = &[0x02];
+const ENDORSERS: &[u8] = &[0x03];
 /// A queue of registration expirations.
-const EXPIRATION_QUEUE: &[u8] = &[0x03];
+const EXPIRATION_QUEUE: &[u8] = &[0x04];
 
 /// Information about an endorsed key.
 #[derive(Clone, Debug, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
@@ -46,20 +48,47 @@ impl KeyEndorsementInfo {
     }
 }
 
+/// Retrieves an application configuration.
+pub fn get_app(app_id: AppId) -> Option<types::AppConfig> {
+    CurrentState::with_store(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let apps = storage::TypedStore::new(storage::PrefixStore::new(store, &APPS));
+        apps.get(app_id)
+    })
+}
+
+/// Updates an application configuration.
+pub fn set_app(cfg: types::AppConfig) {
+    CurrentState::with_store(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let mut apps = storage::TypedStore::new(storage::PrefixStore::new(store, &APPS));
+        apps.insert(cfg.id, cfg);
+    })
+}
+
+/// Removes an application configuration.
+pub fn remove_app(app_id: AppId) {
+    CurrentState::with_store(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let mut apps = storage::TypedStore::new(storage::PrefixStore::new(store, &APPS));
+        apps.remove(app_id);
+    })
+}
+
 /// Updates registration of the given ROFL enclave.
 pub fn update_registration(registration: types::Registration) -> Result<(), Error> {
     let hrak = hash_rak(&registration.rak);
 
     // Update expiration queue.
-    if let Some(existing) = get_registration(&registration.rak) {
+    if let Some(existing) = get_registration_hrak(registration.app, hrak) {
         // Disallow modification of extra keys.
         if existing.extra_keys != registration.extra_keys {
             return Err(Error::ExtraKeyUpdateNotAllowed);
         }
 
-        remove_expiration_queue(existing.expiration, hrak);
+        remove_expiration_queue(existing.expiration, registration.app, hrak);
     }
-    insert_expiration_queue(registration.expiration, hrak, registration.rak);
+    insert_expiration_queue(registration.expiration, registration.app, hrak);
 
     // Update registration.
     CurrentState::with_store(|mut root_store| {
@@ -74,27 +103,26 @@ pub fn update_registration(registration: types::Registration) -> Result<(), Erro
             );
         }
 
+        let app_id = registration.app;
         let store = storage::PrefixStore::new(&mut root_store, &MODULE_NAME);
-        let mut registrations =
-            storage::TypedStore::new(storage::PrefixStore::new(store, &REGISTRATIONS));
-        registrations.insert(hrak, registration);
+        let registrations = storage::PrefixStore::new(store, &REGISTRATIONS);
+        let mut app = storage::TypedStore::new(storage::PrefixStore::new(registrations, app_id));
+        app.insert(hrak, registration);
     });
 
     Ok(())
 }
 
-/// Removes an existing registration of the given ROFL enclave.
-pub fn remove_registration(rak: &CorePublicKey) {
-    let registration = match get_registration(rak) {
+fn remove_registration_hrak(app_id: AppId, hrak: Hash) {
+    let registration = match get_registration_hrak(app_id, hrak) {
         Some(registration) => registration,
         None => return,
     };
 
-    let hrak = hash_rak(rak);
     // Remove from expiration queue if present.
-    remove_expiration_queue(registration.expiration, hrak);
+    remove_expiration_queue(registration.expiration, registration.app, hrak);
 
-    // Update registration.
+    // Remove registration.
     CurrentState::with_store(|mut root_store| {
         let store = storage::PrefixStore::new(&mut root_store, &MODULE_NAME);
         let mut endorsers = storage::TypedStore::new(storage::PrefixStore::new(store, &ENDORSERS));
@@ -105,22 +133,42 @@ pub fn remove_registration(rak: &CorePublicKey) {
         }
 
         let store = storage::PrefixStore::new(&mut root_store, &MODULE_NAME);
-        let mut registrations =
-            storage::TypedStore::new(storage::PrefixStore::new(store, &REGISTRATIONS));
-        registrations.remove(hrak);
+        let registrations = storage::PrefixStore::new(store, &REGISTRATIONS);
+        let mut app = storage::TypedStore::new(storage::PrefixStore::new(registrations, app_id));
+        app.remove(hrak);
     });
+}
+
+/// Removes an existing registration of the given ROFL enclave.
+pub fn remove_registration(app_id: AppId, rak: &CorePublicKey) {
+    remove_registration_hrak(app_id, hash_rak(rak))
+}
+
+fn get_registration_hrak(app_id: AppId, hrak: Hash) -> Option<types::Registration> {
+    CurrentState::with_store(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let registrations = storage::PrefixStore::new(store, &REGISTRATIONS);
+        let app = storage::TypedStore::new(storage::PrefixStore::new(registrations, app_id));
+        app.get(hrak)
+    })
 }
 
 /// Retrieves registration of the given ROFL enclave. In case enclave is not registered, returns
 /// `None`.
-pub fn get_registration(rak: &CorePublicKey) -> Option<types::Registration> {
-    let hrak = hash_rak(rak);
+pub fn get_registration(app_id: AppId, rak: &CorePublicKey) -> Option<types::Registration> {
+    get_registration_hrak(app_id, hash_rak(rak))
+}
 
-    CurrentState::with_store(|store| {
-        let store = storage::PrefixStore::new(store, &MODULE_NAME);
-        let registrations =
-            storage::TypedStore::new(storage::PrefixStore::new(store, &REGISTRATIONS));
-        registrations.get(hrak)
+/// Retrieves all registrations for the given ROFL application.
+pub fn get_registrations_for_app(app_id: AppId) -> Vec<types::Registration> {
+    CurrentState::with_store(|mut root_store| {
+        let store = storage::PrefixStore::new(&mut root_store, &MODULE_NAME);
+        let registrations = storage::PrefixStore::new(store, &REGISTRATIONS);
+        let app = storage::TypedStore::new(storage::PrefixStore::new(registrations, app_id));
+
+        app.iter()
+            .map(|(_, registration): (Hash, types::Registration)| registration)
+            .collect()
     })
 }
 
@@ -143,30 +191,30 @@ fn hash_pk(pk: &PublicKey) -> Hash {
     Hash::digest_bytes_list(&[pk.key_type().as_bytes(), pk.as_ref()])
 }
 
-fn queue_entry_key(epoch: EpochTime, hrak: Hash) -> Vec<u8> {
-    [&epoch.to_be_bytes(), hrak.as_ref()].concat()
+fn queue_entry_key(epoch: EpochTime, app_id: AppId, hrak: Hash) -> Vec<u8> {
+    [&epoch.to_be_bytes(), app_id.as_ref(), hrak.as_ref()].concat()
 }
 
-fn insert_expiration_queue(epoch: EpochTime, hrak: Hash, rak: CorePublicKey) {
-    CurrentState::with_store(|store| {
-        let store = storage::PrefixStore::new(store, &MODULE_NAME);
-        let mut queue =
-            storage::TypedStore::new(storage::PrefixStore::new(store, &EXPIRATION_QUEUE));
-        queue.insert(&queue_entry_key(epoch, hrak), rak);
-    })
-}
-
-fn remove_expiration_queue(epoch: EpochTime, hrak: Hash) {
+fn insert_expiration_queue(epoch: EpochTime, app_id: AppId, hrak: Hash) {
     CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let mut queue = storage::PrefixStore::new(store, &EXPIRATION_QUEUE);
-        queue.remove(&queue_entry_key(epoch, hrak));
+        queue.insert(&queue_entry_key(epoch, app_id, hrak), &[]);
+    })
+}
+
+fn remove_expiration_queue(epoch: EpochTime, app_id: AppId, hrak: Hash) {
+    CurrentState::with_store(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let mut queue = storage::PrefixStore::new(store, &EXPIRATION_QUEUE);
+        queue.remove(&queue_entry_key(epoch, app_id, hrak));
     })
 }
 
 struct ExpirationQueueEntry {
     epoch: EpochTime,
-    // hrak is currently not used, so it is not decoded.
+    app_id: AppId,
+    hrak: Hash,
 }
 
 impl<'a> TryFrom<&'a [u8]> for ExpirationQueueEntry {
@@ -174,20 +222,21 @@ impl<'a> TryFrom<&'a [u8]> for ExpirationQueueEntry {
 
     fn try_from(value: &'a [u8]) -> Result<Self, Self::Error> {
         // Decode a storage key of the format (epoch, hrak).
-        if value.len() != Hash::len() + 8 {
+        if value.len() != 8 + AppId::SIZE + Hash::len() {
             anyhow::bail!("incorrect expiration queue key size");
         }
 
         Ok(Self {
             epoch: EpochTime::from_be_bytes(value[..8].try_into()?),
-            // hrak is currently not used, so it is not decoded.
+            app_id: value[8..8 + AppId::SIZE].try_into()?,
+            hrak: value[8 + AppId::SIZE..].into(),
         })
     }
 }
 
 /// Removes all expired registrations, e.g. those that expire in epochs earlier than or equal to the
 /// passed epoch.
-pub fn expire_registrations(epoch: EpochTime) {
+pub fn expire_registrations(epoch: EpochTime, limit: usize) {
     let expired: Vec<_> = CurrentState::with_store(|store| {
         let store = storage::PrefixStore::new(store, &MODULE_NAME);
         let queue = storage::TypedStore::new(storage::PrefixStore::new(store, &EXPIRATION_QUEUE));
@@ -195,12 +244,13 @@ pub fn expire_registrations(epoch: EpochTime) {
         queue
             .iter()
             .take_while(|(e, _): &(ExpirationQueueEntry, CorePublicKey)| e.epoch <= epoch)
-            .map(|(_, rak)| rak)
+            .map(|(e, _)| (e.app_id, e.hrak))
+            .take(limit)
             .collect()
     });
 
-    for rak in expired {
-        remove_registration(&rak);
+    for (app_id, hrak) in expired {
+        remove_registration_hrak(app_id, hrak);
     }
 }
 
@@ -210,12 +260,41 @@ mod test {
     use crate::testing::{keys, mock};
 
     #[test]
+    fn test_app_cfg() {
+        let _mock = mock::Mock::default();
+
+        let app_id = AppId::from_creator_round_index(keys::alice::address(), 0, 0);
+        let app = get_app(app_id);
+        assert!(app.is_none());
+
+        let cfg = types::AppConfig {
+            id: app_id,
+            policy: Default::default(),
+            admin: Some(keys::alice::address()),
+            stake: Default::default(),
+        };
+        set_app(cfg.clone());
+        let app = get_app(app_id).expect("application config should be created");
+        assert_eq!(app, cfg);
+
+        let cfg = types::AppConfig { admin: None, ..cfg };
+        set_app(cfg.clone());
+        let app = get_app(app_id).expect("application config should be updated");
+        assert_eq!(app, cfg);
+
+        remove_app(app_id);
+        let app = get_app(app_id);
+        assert!(app.is_none(), "application should have been removed");
+    }
+
+    #[test]
     fn test_registration() {
         let _mock = mock::Mock::default();
+        let app_id = Default::default();
         let rak = keys::alice::pk().try_into().unwrap(); // Fake RAK.
         let rak_pk = keys::alice::pk();
 
-        let registration = get_registration(&rak);
+        let registration = get_registration(app_id, &rak);
         assert!(registration.is_none());
         let endorser = get_endorser(&rak_pk);
         assert!(endorser.is_none());
@@ -223,6 +302,7 @@ mod test {
         assert!(endorser.is_none());
 
         let new_registration = types::Registration {
+            app: app_id,
             rak,
             expiration: 42,
             extra_keys: vec![
@@ -234,13 +314,14 @@ mod test {
 
         // Ensure extra endorsed keys cannot be updated later.
         let bad_registration = types::Registration {
+            app: app_id,
             extra_keys: vec![],
             ..new_registration.clone()
         };
         update_registration(bad_registration.clone())
             .expect_err("extra endorsed key update should not be allowed");
 
-        let registration = get_registration(&rak).expect("registration should be present");
+        let registration = get_registration(app_id, &rak).expect("registration should be present");
         assert_eq!(registration, new_registration);
         let endorser = get_endorser(&rak_pk).expect("endorser should be present");
         assert_eq!(endorser.node_id, new_registration.node_id);
@@ -248,14 +329,18 @@ mod test {
         let endorser = get_endorser(&keys::dave::pk()).expect("extra keys should be endorsed");
         assert_eq!(endorser.node_id, new_registration.node_id);
         assert_eq!(endorser.rak, Some(rak));
+        let registrations = get_registrations_for_app(new_registration.app);
+        assert_eq!(registrations.len(), 1);
 
-        expire_registrations(42);
+        expire_registrations(42, 128);
 
-        let registration = get_registration(&rak);
+        let registration = get_registration(app_id, &rak);
         assert!(registration.is_none());
         let endorser = get_endorser(&rak_pk);
         assert!(endorser.is_none());
         let endorser = get_endorser(&keys::dave::pk());
         assert!(endorser.is_none());
+        let registrations = get_registrations_for_app(new_registration.app);
+        assert_eq!(registrations.len(), 0);
     }
 }

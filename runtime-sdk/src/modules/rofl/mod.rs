@@ -1,91 +1,47 @@
 //! On-chain coordination for ROFL components.
+use std::collections::BTreeSet;
+
+use once_cell::sync::Lazy;
+
 use crate::{
     context::Context,
     core::consensus::{
-        registry::{RolesMask, VerifiedEndorsedCapabilityTEE},
+        registry::{Node, RolesMask, VerifiedEndorsedCapabilityTEE},
         state::registry::ImmutableState as RegistryImmutableState,
     },
+    crypto::signature::PublicKey,
     handler, migration,
     module::{self, Module as _, Parameters as _},
-    modules::{self, core::API as _},
+    modules::{self, accounts::API as _, core::API as _},
     sdk_derive,
     state::CurrentState,
     types::{address::Address, transaction::Transaction},
     Runtime,
 };
 
+pub mod app;
+pub mod app_id;
+mod config;
+mod error;
+mod event;
 pub mod policy;
 pub mod state;
+#[cfg(test)]
+mod test;
 pub mod types;
 
 /// Unique module name.
 const MODULE_NAME: &str = "rofl";
 
-/// Module configuration.
-pub trait Config: 'static {
-    /// Module that is used for accessing accounts.
-    type Accounts: modules::accounts::API;
-
-    /// ROFL enclave authorization policy.
-    fn auth_policy() -> policy::AuthPolicy {
-        Default::default() // Default policy does not allow anything.
-    }
-}
-
-/// Errors emitted by the module.
-#[derive(thiserror::Error, Debug, oasis_runtime_sdk_macros::Error)]
-pub enum Error {
-    #[error("invalid argument")]
-    #[sdk_error(code = 1)]
-    InvalidArgument,
-
-    #[error("unknown application")]
-    #[sdk_error(code = 2)]
-    UnknownApp,
-
-    #[error("tx not signed by RAK")]
-    #[sdk_error(code = 3)]
-    NotSignedByRAK,
-
-    #[error("unknown enclave")]
-    #[sdk_error(code = 4)]
-    UnknownEnclave,
-
-    #[error("unknown node")]
-    #[sdk_error(code = 5)]
-    UnknownNode,
-
-    #[error("endorsement from given node not allowed")]
-    #[sdk_error(code = 6)]
-    NodeNotAllowed,
-
-    #[error("registration expired")]
-    #[sdk_error(code = 7)]
-    RegistrationExpired,
-
-    #[error("extra key update not allowed")]
-    #[sdk_error(code = 8)]
-    ExtraKeyUpdateNotAllowed,
-
-    #[error("core: {0}")]
-    #[sdk_error(transparent)]
-    Core(#[from] modules::core::Error),
-}
-
-/// Gas costs.
-#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-pub struct GasCosts {
-    pub tx_register: u64,
-    pub internal_is_authorized_origin: u64,
-}
+pub use config::Config;
+pub use error::Error;
+pub use event::Event;
 
 /// Parameters for the module.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-pub struct Parameters {
-    pub gas_costs: GasCosts,
-}
+pub struct Parameters {}
 
-/// Errors emitted during rewards parameter validation.
+/// Errors emitted during parameter validation.
 #[derive(thiserror::Error, Debug)]
 pub enum ParameterValidationError {}
 
@@ -97,21 +53,75 @@ impl module::Parameters for Parameters {
     }
 }
 
-/// Genesis state for the rewards module.
+/// Genesis state for the module.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct Genesis {
     pub parameters: Parameters,
+
+    /// Application configurations.
+    pub apps: Vec<types::AppConfig>,
 }
+
+/// Interface that can be called from other modules.
+pub trait API {
+    /// Verify whether the origin transaction is signed by an authorized ROFL instance for the given
+    /// application.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if called outside a transaction environment.
+    fn is_authorized_origin(app: app_id::AppId) -> Result<bool, Error>;
+
+    /// Get an application's configuration.
+    fn get_app(id: app_id::AppId) -> Result<types::AppConfig, Error>;
+
+    /// Get all registered instances for an application.
+    fn get_instances(id: app_id::AppId) -> Result<Vec<types::Registration>, Error>;
+}
+
+/// Module's address that has the application stake pool.
+///
+/// oasis1qza6sddnalgzexk3ct30gqfvntgth5m4hsyywmff
+pub static ADDRESS_APP_STAKE_POOL: Lazy<Address> =
+    Lazy::new(|| Address::from_module(MODULE_NAME, "app-stake-pool"));
 
 pub struct Module<Cfg: Config> {
     _cfg: std::marker::PhantomData<Cfg>,
+}
+
+impl<Cfg: Config> API for Module<Cfg> {
+    fn is_authorized_origin(app: app_id::AppId) -> Result<bool, Error> {
+        let caller_pk = CurrentState::with_env_origin(|env| env.tx_caller_public_key())
+            .ok_or(Error::InvalidArgument)?;
+
+        // Resolve RAK as the call may be made by an extra key.
+        let rak = match state::get_endorser(&caller_pk) {
+            // It may point to a RAK.
+            Some(state::KeyEndorsementInfo { rak: Some(rak), .. }) => rak,
+            // Or it points to itself.
+            Some(_) => caller_pk.try_into().map_err(|_| Error::InvalidArgument)?,
+            // Or is unknown.
+            None => return Ok(false),
+        };
+
+        // Check whether the the endorsement is for the right application.
+        Ok(state::get_registration(app, &rak).is_some())
+    }
+
+    fn get_app(id: app_id::AppId) -> Result<types::AppConfig, Error> {
+        state::get_app(id).ok_or(Error::UnknownApp)
+    }
+
+    fn get_instances(id: app_id::AppId) -> Result<Vec<types::Registration>, Error> {
+        Ok(state::get_registrations_for_app(id))
+    }
 }
 
 #[sdk_derive(Module)]
 impl<Cfg: Config> Module<Cfg> {
     const NAME: &'static str = MODULE_NAME;
     type Error = Error;
-    type Event = ();
+    type Event = Event;
     type Parameters = Parameters;
     type Genesis = Genesis;
 
@@ -124,30 +134,157 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Set genesis parameters.
         Self::set_params(genesis.parameters);
+
+        // Insert all applications.
+        for cfg in genesis.apps {
+            if state::get_app(cfg.id).is_some() {
+                panic!("duplicate application in genesis: {:?}", cfg.id);
+            }
+
+            state::set_app(cfg);
+        }
+    }
+
+    /// Create a new ROFL application.
+    #[handler(call = "rofl.Create")]
+    fn tx_create<C: Context>(ctx: &C, body: types::Create) -> Result<app_id::AppId, Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_CREATE)?;
+
+        if CurrentState::with_env(|env| env.is_check_only()) {
+            return Ok(Default::default());
+        }
+
+        let (creator, tx_index) =
+            CurrentState::with_env(|env| (env.tx_caller_address(), env.tx_index()));
+        let app_id = app_id::AppId::from_creator_round_index(
+            creator,
+            ctx.runtime_header().round,
+            tx_index.try_into().map_err(|_| Error::InvalidArgument)?,
+        );
+
+        // Sanity check that the application doesn't already exist.
+        if state::get_app(app_id).is_some() {
+            return Err(Error::AppAlreadyExists);
+        }
+
+        // Transfer stake.
+        <C::Runtime as Runtime>::Accounts::transfer(
+            creator,
+            *ADDRESS_APP_STAKE_POOL,
+            &Cfg::STAKE_APP_CREATE,
+        )?;
+
+        // Register the application.
+        let cfg = types::AppConfig {
+            id: app_id,
+            policy: body.policy,
+            admin: Some(creator),
+            stake: Cfg::STAKE_APP_CREATE,
+        };
+        state::set_app(cfg);
+
+        CurrentState::with(|state| state.emit_event(Event::AppCreated { id: app_id }));
+
+        Ok(app_id)
+    }
+
+    /// Ensure caller is the current administrator, return an error otherwise.
+    fn ensure_caller_is_admin(cfg: &types::AppConfig) -> Result<(), Error> {
+        let caller = CurrentState::with_env(|env| env.tx_caller_address());
+        if cfg.admin != Some(caller) {
+            return Err(Error::Forbidden);
+        }
+        Ok(())
+    }
+
+    /// Update a ROFL application.
+    #[handler(call = "rofl.Update")]
+    fn tx_update<C: Context>(ctx: &C, body: types::Update) -> Result<(), Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_UPDATE)?;
+
+        let mut cfg = state::get_app(body.id).ok_or(Error::UnknownApp)?;
+
+        // Ensure caller is the admin and is allowed to update the configuration.
+        Self::ensure_caller_is_admin(&cfg)?;
+
+        if CurrentState::with_env(|env| env.is_check_only()) {
+            return Ok(());
+        }
+
+        // Return early if nothing has actually changed.
+        if cfg.policy == body.policy && cfg.admin == body.admin {
+            return Ok(());
+        }
+
+        cfg.policy = body.policy;
+        cfg.admin = body.admin;
+        state::set_app(cfg);
+
+        CurrentState::with(|state| state.emit_event(Event::AppUpdated { id: body.id }));
+
+        Ok(())
+    }
+
+    /// Remove a ROFL application.
+    #[handler(call = "rofl.Remove")]
+    fn tx_remove<C: Context>(ctx: &C, body: types::Remove) -> Result<(), Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_REMOVE)?;
+
+        let cfg = state::get_app(body.id).ok_or(Error::UnknownApp)?;
+
+        // Ensure caller is the admin and is allowed to update the configuration.
+        Self::ensure_caller_is_admin(&cfg)?;
+
+        if CurrentState::with_env(|env| env.is_check_only()) {
+            return Ok(());
+        }
+
+        state::remove_app(body.id);
+
+        // Return stake to the administrator account.
+        if let Some(admin) = cfg.admin {
+            <C::Runtime as Runtime>::Accounts::transfer(
+                *ADDRESS_APP_STAKE_POOL,
+                admin,
+                &cfg.stake,
+            )?;
+        }
+
+        CurrentState::with(|state| state.emit_event(Event::AppRemoved { id: body.id }));
+
+        Ok(())
     }
 
     /// Register a new ROFL instance.
     #[handler(call = "rofl.Register")]
     fn tx_register<C: Context>(ctx: &C, body: types::Register) -> Result<(), Error> {
-        let params = Self::params();
-        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.tx_register)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_REGISTER)?;
 
         if body.expiration <= ctx.epoch() {
             return Err(Error::RegistrationExpired);
         }
 
-        let policy = Cfg::auth_policy();
-        let app_policy = policy.apps.get(&body.app).ok_or(Error::UnknownApp)?;
+        let cfg = state::get_app(body.app).ok_or(Error::UnknownApp)?;
 
-        if body.expiration - ctx.epoch() > app_policy.max_expiration {
+        if body.expiration - ctx.epoch() > cfg.policy.max_expiration {
             return Err(Error::InvalidArgument);
         }
 
-        // Ensure that the transaction is signed by RAK.
-        let caller_pk = CurrentState::with_env(|env| env.tx_caller_public_key())
-            .ok_or(Error::NotSignedByRAK)?;
-        if caller_pk != body.ect.capability_tee.rak {
+        // Ensure that the transaction is signed by RAK (and co-signed by extra keys).
+        let signer_pks: BTreeSet<PublicKey> = CurrentState::with_env(|env| {
+            env.tx_auth_info()
+                .signer_info
+                .iter()
+                .filter_map(|si| si.address_spec.public_key())
+                .collect()
+        });
+        if !signer_pks.contains(&body.ect.capability_tee.rak.into()) {
             return Err(Error::NotSignedByRAK);
+        }
+        for extra_pk in &body.extra_keys {
+            if !signer_pks.contains(extra_pk) {
+                return Err(Error::NotSignedByExtraKey);
+            }
         }
 
         if CurrentState::with_env(|env| env.is_check_only()) {
@@ -157,19 +294,20 @@ impl<Cfg: Config> Module<Cfg> {
         // Verify policy.
         let verified_ect = body
             .ect
-            .verify(&app_policy.quotes)
+            .verify(&cfg.policy.quotes)
             .map_err(|_| Error::InvalidArgument)?;
 
         // Verify enclave identity.
-        if !app_policy
+        if !cfg
+            .policy
             .enclaves
-            .contains(&verified_ect.verified_quote.identity)
+            .contains(&verified_ect.verified_attestation.quote.identity)
         {
             return Err(Error::UnknownEnclave);
         }
 
         // Verify allowed endorsement.
-        Self::verify_endorsement(ctx, app_policy, &verified_ect)?;
+        Self::verify_endorsement(ctx, &cfg.policy, &verified_ect)?;
 
         // Update registration.
         let registration = types::Registration {
@@ -193,42 +331,63 @@ impl<Cfg: Config> Module<Cfg> {
     ) -> Result<(), Error> {
         use policy::AllowedEndorsement;
 
-        // In all cases, we need to resolve the node that endorsed the enclave.
-        let registry = RegistryImmutableState::new(ctx.consensus_state());
-        let node = registry
-            .node(&ect.node_id.ok_or(Error::UnknownNode)?)
-            .map_err(|_| Error::UnknownNode)?
-            .ok_or(Error::UnknownNode)?;
-        // Ensure node is not expired.
-        if node.expiration < ctx.epoch() {
-            return Err(Error::UnknownNode);
-        }
-        // Ensure node is registered for this runtime.
-        let version = &<C::Runtime as Runtime>::VERSION;
-        node.get_runtime(ctx.runtime_id(), version)
-            .ok_or(Error::NodeNotAllowed)?;
+        let endorsing_node_id = ect.node_id.ok_or(Error::UnknownNode)?;
 
-        for allowed in &app_policy.endorsement {
-            match allowed {
-                AllowedEndorsement::Any => {
-                    // As long as the node is registered (checked above), it is allowed.
+        // Attempt to resolve the node that endorsed the enclave. It may be that the node is not
+        // even registered in the consensus layer which may be acceptable for some policies.
+        //
+        // But if the node is registered, it must be registered for this runtime, otherwise it is
+        // treated as if it is not registered.
+        let node = || -> Result<Option<Node>, Error> {
+            let registry = RegistryImmutableState::new(ctx.consensus_state());
+            let node = registry
+                .node(&endorsing_node_id)
+                .map_err(|_| Error::UnknownNode)?;
+            let node = if let Some(node) = node {
+                node
+            } else {
+                return Ok(None);
+            };
+            // Ensure node is not expired.
+            if node.expiration < ctx.epoch() {
+                return Ok(None);
+            }
+            // Ensure node is registered for this runtime.
+            let version = &<C::Runtime as Runtime>::VERSION;
+            if node.get_runtime(ctx.runtime_id(), version).is_none() {
+                return Ok(None);
+            }
+
+            Ok(Some(node))
+        }()?;
+
+        for allowed in &app_policy.endorsements {
+            match (allowed, &node) {
+                (AllowedEndorsement::Any, _) => {
+                    // Any node is allowed.
                     return Ok(());
                 }
-                AllowedEndorsement::ComputeRole => {
+                (AllowedEndorsement::ComputeRole, Some(node)) => {
                     if node.has_roles(RolesMask::ROLE_COMPUTE_WORKER) {
                         return Ok(());
                     }
                 }
-                AllowedEndorsement::ObserverRole => {
+                (AllowedEndorsement::ObserverRole, Some(node)) => {
                     if node.has_roles(RolesMask::ROLE_OBSERVER) {
                         return Ok(());
                     }
                 }
-                AllowedEndorsement::Entity(entity_id) => {
+                (AllowedEndorsement::Entity(entity_id), Some(node)) => {
                     if &node.entity_id == entity_id {
                         return Ok(());
                     }
                 }
+                (AllowedEndorsement::Node(node_id), _) => {
+                    if endorsing_node_id == *node_id {
+                        return Ok(());
+                    }
+                }
+                _ => continue,
             }
         }
 
@@ -236,38 +395,31 @@ impl<Cfg: Config> Module<Cfg> {
         Err(Error::NodeNotAllowed)
     }
 
-    /// Verify whether the origin transaction is signed is an authorized ROFL instance for the given
+    /// Verify whether the origin transaction is signed by an authorized ROFL instance for the given
     /// application.
     #[handler(call = "rofl.IsAuthorizedOrigin", internal)]
-    fn internal_is_authorized_origin<C: Context>(ctx: &C, app: String) -> Result<bool, Error> {
-        let params = Self::params();
-        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.internal_is_authorized_origin)?;
+    fn internal_is_authorized_origin<C: Context>(
+        _ctx: &C,
+        app: app_id::AppId,
+    ) -> Result<bool, Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_IS_AUTHORIZED_ORIGIN)?;
 
-        let caller_pk = CurrentState::with_env_origin(|env| env.tx_caller_public_key())
-            .ok_or(Error::InvalidArgument)?;
+        Self::is_authorized_origin(app)
+    }
 
-        // Resolve RAK as the call may be made by an extra key.
-        let rak = match state::get_endorser(&caller_pk) {
-            // It may point to a RAK.
-            Some(state::KeyEndorsementInfo { rak: Some(rak), .. }) => rak,
-            // Or it points to itself.
-            Some(_) => caller_pk.try_into().map_err(|_| Error::InvalidArgument)?,
-            // Or is unknown.
-            None => return Ok(false),
-        };
+    /// Returns the configuration for the given ROFL application.
+    #[handler(query = "rofl.App")]
+    fn query_app<C: Context>(_ctx: &C, args: types::AppQuery) -> Result<types::AppConfig, Error> {
+        Self::get_app(args.id)
+    }
 
-        // We need to also fetch the registration to ensure it is registered for the right app.
-        let registration = match state::get_registration(&rak) {
-            Some(registration) => registration,
-            None => return Ok(false),
-        };
-
-        // Ensure enclave is registered for the correct app.
-        if registration.app != app {
-            return Ok(false);
-        }
-
-        Ok(true)
+    /// Returns a list of all registered instances for the given ROFL application.
+    #[handler(query = "rofl.AppInstances", expensive)]
+    fn query_app_instances<C: Context>(
+        _ctx: &C,
+        args: types::AppQuery,
+    ) -> Result<Vec<types::Registration>, Error> {
+        Self::get_instances(args.id)
     }
 
     fn resolve_payer_from_tx<C: Context>(
@@ -275,6 +427,12 @@ impl<Cfg: Config> Module<Cfg> {
         tx: &Transaction,
         app_policy: &policy::AppAuthPolicy,
     ) -> Result<Option<Address>, anyhow::Error> {
+        let caller_pk = tx
+            .auth_info
+            .signer_info
+            .first()
+            .and_then(|si| si.address_spec.public_key());
+
         match tx.call.method.as_str() {
             "rofl.Register" => {
                 // For registration transactions, extract endorsing node.
@@ -284,8 +442,7 @@ impl<Cfg: Config> Module<Cfg> {
                 }
 
                 // Ensure that the transaction is signed by RAK.
-                let caller_pk = CurrentState::with_env(|env| env.tx_caller_public_key())
-                    .ok_or(Error::NotSignedByRAK)?;
+                let caller_pk = caller_pk.ok_or(Error::NotSignedByRAK)?;
                 if caller_pk != body.ect.capability_tee.rak {
                     return Err(Error::NotSignedByRAK.into());
                 }
@@ -303,9 +460,9 @@ impl<Cfg: Config> Module<Cfg> {
             }
             _ => {
                 // For others, check if caller is one of the endorsed keys.
-                let caller_pk = match CurrentState::with_env(|env| env.tx_caller_public_key()) {
+                let caller_pk = match caller_pk {
                     Some(pk) => pk,
-                    _ => return Ok(None),
+                    None => return Ok(None),
                 };
 
                 Ok(state::get_endorser(&caller_pk)
@@ -333,26 +490,24 @@ impl<Cfg: Config> module::FeeProxyHandler for Module<Cfg> {
         }
 
         // Look up the per-ROFL app policy.
-        let policy = Cfg::auth_policy();
-        let app_id = String::from_utf8_lossy(&proxy.id);
-        let app_policy = if let Some(app_policy) = policy.apps.get(app_id.as_ref()) {
-            app_policy
-        } else {
-            return Ok(None);
-        };
+        let app_id = app_id::AppId::try_from(proxy.id.as_slice())
+            .map_err(|err| modules::core::Error::InvalidArgument(err.into()))?;
+        let app_policy = state::get_app(app_id).map(|cfg| cfg.policy).ok_or(
+            modules::core::Error::InvalidArgument(Error::UnknownApp.into()),
+        )?;
 
         match app_policy.fees {
             FeePolicy::AppPays => {
                 // Application needs to figure out a way to pay, defer to regular handler.
                 Ok(None)
             }
-            FeePolicy::EndorsingNodePays | FeePolicy::EndorsingNodePaysWithReimbursement => {
-                Self::resolve_payer_from_tx(ctx, tx, app_policy)
-                    .map_err(modules::core::Error::InvalidArgument)
-            }
+            FeePolicy::EndorsingNodePays => Self::resolve_payer_from_tx(ctx, tx, &app_policy)
+                .map_err(modules::core::Error::InvalidArgument),
         }
     }
 }
+
+impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {}
 
 impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
     fn end_block<C: Context>(ctx: &C) {
@@ -362,7 +517,8 @@ impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
         }
 
         // Process enclave expirations.
-        state::expire_registrations(ctx.epoch());
+        // TODO: Consider processing unprocessed in the next block(s) if there are too many.
+        state::expire_registrations(ctx.epoch(), 128);
     }
 }
 

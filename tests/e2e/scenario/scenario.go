@@ -96,7 +96,7 @@ type RuntimeScenario struct {
 type Option func(*RuntimeScenario)
 
 // FixtureModifierFunc is a function that performs arbitrary modifications to a given fixture.
-type FixtureModifierFunc func(*oasis.NetworkFixture)
+type FixtureModifierFunc func(*RuntimeScenario, *oasis.NetworkFixture)
 
 // WithCustomFixture applies the given fixture modifier function to the runtime scenario fixture.
 func WithCustomFixture(fm FixtureModifierFunc) Option {
@@ -215,7 +215,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 						Components: []oasis.ComponentCfg{
 							{
 								Kind:     component.RONL,
-								Binaries: sc.resolveRuntimeBinaries(keymanagerBinary),
+								Binaries: sc.ResolveRuntimeBinaries(keymanagerBinary),
 							},
 						},
 					},
@@ -263,7 +263,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 						Components: []oasis.ComponentCfg{
 							{
 								Kind:     component.RONL,
-								Binaries: sc.resolveRuntimeBinaries(runtimeBinary),
+								Binaries: sc.ResolveRuntimeBinaries(runtimeBinary),
 							},
 						},
 					},
@@ -307,13 +307,14 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 
 	// Apply fixture modifier function when configured.
 	if sc.fixtureModifier != nil {
-		sc.fixtureModifier(ff)
+		sc.fixtureModifier(sc, ff)
 	}
 
 	return ff, nil
 }
 
-func (sc *RuntimeScenario) resolveRuntimeBinaries(baseRuntimeBinary string) map[node.TEEHardware]string {
+// ResolveRuntimeBinaries expands the given base binary name into per-TEE binary map.
+func (sc *RuntimeScenario) ResolveRuntimeBinaries(baseRuntimeBinary string) map[node.TEEHardware]string {
 	binaries := make(map[node.TEEHardware]string)
 	for _, tee := range []node.TEEHardware{
 		node.TEEHardwareInvalid,
@@ -331,6 +332,8 @@ func (sc *RuntimeScenario) resolveRuntimeBinary(runtimeBinary string, tee node.T
 		runtimeExt = ""
 	case node.TEEHardwareIntelSGX:
 		runtimeExt = ".sgxs"
+	default:
+		panic(fmt.Errorf("unsupported TEE hardware kind: %s", tee))
 	}
 
 	path, _ := sc.Flags.GetString(cfgRuntimeBinaryDirDefault)

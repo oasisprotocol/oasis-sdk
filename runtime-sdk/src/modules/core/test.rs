@@ -1335,7 +1335,6 @@ fn test_dynamic_min_gas_price() {
         });
     }
 
-    let ctx = mock.create_ctx();
     assert_eq!(
         Core::min_gas_price(&token::Denomination::NATIVE),
         Some(3598) // Gas price should increase.
@@ -1351,7 +1350,6 @@ fn test_dynamic_min_gas_price() {
         Core::end_block(&ctx);
     }
 
-    let ctx = mock.create_ctx();
     assert_eq!(
         Core::min_gas_price(&token::Denomination::NATIVE),
         Some(1000) // Gas price should decrease to the configured min gas price.

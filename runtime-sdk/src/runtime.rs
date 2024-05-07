@@ -178,13 +178,14 @@ pub trait Runtime {
                 ))
             });
 
-            // Register runtime's methods.
+            // Create the transaction dispatcher.
             let dispatcher = dispatcher::Dispatcher::<Self>::new(
-                hi,
+                state.protocol.clone(),
                 key_manager,
                 state.consensus_verifier.clone(),
-                state.protocol.clone(),
             );
+            // Register EnclaveRPC methods.
+            dispatcher.register_enclaverpc(state.rpc_dispatcher);
 
             PostInitState {
                 txn_dispatcher: Some(Box::new(dispatcher)),

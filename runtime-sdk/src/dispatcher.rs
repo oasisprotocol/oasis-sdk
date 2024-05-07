@@ -14,8 +14,9 @@ use oasis_core_runtime::{
     self,
     common::crypto::hash::Hash,
     consensus::{roothash, verifier::Verifier},
+    enclave_rpc::dispatcher::Dispatcher as RpcDispatcher,
     future::block_on,
-    protocol::HostInfo,
+    protocol::{HostInfo, Protocol},
     transaction::{
         self,
         dispatcher::{ExecuteBatchResult, ExecuteTxResult},
@@ -28,6 +29,7 @@ use oasis_core_runtime::{
 use crate::{
     callformat,
     context::{Context, RuntimeBatchContext},
+    enclave_rpc,
     error::{Error as _, RuntimeError},
     event::IntoTags,
     keymanager::{KeyManagerClient, KeyManagerError},
@@ -127,6 +129,7 @@ pub struct DispatchOptions<'a> {
 /// The runtime dispatcher.
 pub struct Dispatcher<R: Runtime> {
     host_info: HostInfo,
+    host: Arc<Protocol>,
     key_manager: Option<Arc<KeyManagerClient>>,
     consensus_verifier: Arc<dyn Verifier>,
     schedule_control_host: Arc<dyn ScheduleControlHost>,
@@ -139,16 +142,16 @@ impl<R: Runtime> Dispatcher<R> {
     /// Note that the dispatcher is fully static and the constructor is only needed so that the
     /// instance can be used directly with the dispatcher system provided by Oasis Core.
     pub(super) fn new(
-        host_info: HostInfo,
+        host: Arc<Protocol>,
         key_manager: Option<Arc<KeyManagerClient>>,
         consensus_verifier: Arc<dyn Verifier>,
-        schedule_control_host: Arc<dyn ScheduleControlHost>,
     ) -> Self {
         Self {
-            host_info,
+            host_info: host.get_host_info(),
             key_manager,
             consensus_verifier,
-            schedule_control_host,
+            schedule_control_host: host.clone(),
+            host,
             _runtime: PhantomData,
         }
     }
@@ -585,6 +588,20 @@ impl<R: Runtime> Dispatcher<R> {
                 in_msgs_count: 0, // TODO: Support processing incoming messages.
             })
         })
+    }
+
+    /// Register EnclaveRPC methods.
+    pub fn register_enclaverpc(&self, rpc: &mut RpcDispatcher)
+    where
+        R: Runtime + Send + Sync + 'static,
+    {
+        enclave_rpc::Wrapper::<R>::wrap(
+            rpc,
+            self.host.clone(),
+            self.host_info.clone(),
+            self.key_manager.clone(),
+            self.consensus_verifier.clone(),
+        );
     }
 }
 
