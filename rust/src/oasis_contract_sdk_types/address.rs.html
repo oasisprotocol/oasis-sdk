@@ -128,6 +128,7 @@
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! A minimal representation of an Oasis Runtime SDK address.
 </span><span class="kw">use </span>std::convert::TryFrom;
 
@@ -241,7 +242,8 @@
         ));
     }
 
-    <span class="kw">fn </span>test_address_from_bech32_invalid_variant() {
+    <span class="attr">#[test]
+    </span><span class="kw">fn </span>test_address_from_bech32_invalid_variant() {
         <span class="kw">let </span>b = <span class="macro">vec!</span>[<span class="number">42u8</span>; ADDRESS_SIZE];
         <span class="kw">let </span>bech32_addr = bech32::encode::&lt;Bech32&gt;(ADDRESS_BECH32_HRP, <span class="kw-2">&amp;</span>b).unwrap();
         <span class="kw">let </span>bech32m_addr = bech32::encode::&lt;Bech32m&gt;(ADDRESS_BECH32_HRP, <span class="kw-2">&amp;</span>b).unwrap();
