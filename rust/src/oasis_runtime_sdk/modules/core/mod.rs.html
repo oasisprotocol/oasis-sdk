@@ -1270,6 +1270,34 @@
 <a href="#1268" id="1268">1268</a>
 <a href="#1269" id="1269">1269</a>
 <a href="#1270" id="1270">1270</a>
+<a href="#1271" id="1271">1271</a>
+<a href="#1272" id="1272">1272</a>
+<a href="#1273" id="1273">1273</a>
+<a href="#1274" id="1274">1274</a>
+<a href="#1275" id="1275">1275</a>
+<a href="#1276" id="1276">1276</a>
+<a href="#1277" id="1277">1277</a>
+<a href="#1278" id="1278">1278</a>
+<a href="#1279" id="1279">1279</a>
+<a href="#1280" id="1280">1280</a>
+<a href="#1281" id="1281">1281</a>
+<a href="#1282" id="1282">1282</a>
+<a href="#1283" id="1283">1283</a>
+<a href="#1284" id="1284">1284</a>
+<a href="#1285" id="1285">1285</a>
+<a href="#1286" id="1286">1286</a>
+<a href="#1287" id="1287">1287</a>
+<a href="#1288" id="1288">1288</a>
+<a href="#1289" id="1289">1289</a>
+<a href="#1290" id="1290">1290</a>
+<a href="#1291" id="1291">1291</a>
+<a href="#1292" id="1292">1292</a>
+<a href="#1293" id="1293">1293</a>
+<a href="#1294" id="1294">1294</a>
+<a href="#1295" id="1295">1295</a>
+<a href="#1296" id="1296">1296</a>
+<a href="#1297" id="1297">1297</a>
+<a href="#1298" id="1298">1298</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Core definitions module.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
@@ -1692,6 +1720,11 @@
     ///
     /// Note that execution of such transactions is allowed to access confidential state.
     </span><span class="kw">const </span>ALLOW_INTERACTIVE_READ_ONLY_TRANSACTIONS: bool = <span class="bool-val">false</span>;
+
+    <span class="doccomment">/// The gas cost of the internal call to retrieve the current calldata public key.
+    </span><span class="kw">const </span>GAS_COST_CALL_CALLDATA_PUBLIC_KEY: u64 = <span class="number">20</span>;
+    <span class="doccomment">/// The gas cost of the internal call to retrieve the current epoch.
+    </span><span class="kw">const </span>GAS_COST_CALL_CURRENT_EPOCH: u64 = <span class="number">10</span>;
 }
 
 <span class="kw">pub struct </span>Module&lt;Cfg: Config&gt; {
@@ -2105,11 +2138,8 @@
         &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Modules::check_invariants(ctx)
     }
 
-    <span class="doccomment">/// Retrieve the public key for encrypting call data.
-    </span><span class="attr">#[handler(query = <span class="string">"core.CallDataPublicKey"</span>)]
-    </span><span class="kw">fn </span>query_calldata_public_key&lt;C: Context&gt;(
+    <span class="kw">fn </span>calldata_public_key_common&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
-        _args: (),
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::CallDataPublicKeyQueryResponse, Error&gt; {
         <span class="kw">let </span>key_manager = ctx
             .key_manager()
@@ -2125,6 +2155,32 @@
             })<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(types::CallDataPublicKeyQueryResponse { public_key, epoch })
+    }
+
+    <span class="doccomment">/// Retrieve the public key for encrypting call data.
+    </span><span class="attr">#[handler(query = <span class="string">"core.CallDataPublicKey"</span>)]
+    </span><span class="kw">fn </span>query_calldata_public_key&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
+        _args: (),
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;types::CallDataPublicKeyQueryResponse, Error&gt; {
+        <span class="self">Self</span>::calldata_public_key_common(ctx)
+    }
+
+    <span class="doccomment">/// Retrieve the public key for encrypting call data (internally exposed call).
+    </span><span class="attr">#[handler(call = <span class="string">"core.CallDataPublicKey"</span>, internal)]
+    </span><span class="kw">fn </span>internal_calldata_public_key&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
+        _args: (),
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;types::CallDataPublicKeyQueryResponse, Error&gt; {
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(Cfg::GAS_COST_CALL_CALLDATA_PUBLIC_KEY)<span class="question-mark">?</span>;
+        <span class="self">Self</span>::calldata_public_key_common(ctx)
+    }
+
+    <span class="doccomment">/// Retrieve the current epoch.
+    </span><span class="attr">#[handler(call = <span class="string">"core.CurrentEpoch"</span>, internal)]
+    </span><span class="kw">fn </span>internal_current_epoch&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, _args: ()) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(Cfg::GAS_COST_CALL_CURRENT_EPOCH)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(ctx.epoch())
     }
 
     <span class="doccomment">/// Query the minimum gas price.
