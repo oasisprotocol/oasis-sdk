@@ -1134,6 +1134,8 @@ fn test_module_info() {
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.EstimateGas".to_string() },
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.CheckInvariants".to_string() },
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.CallDataPublicKey".to_string() },
+                            MethodHandlerInfo { kind: MethodHandlerKind::Call, name: "core.CallDataPublicKey".to_string() },
+                            MethodHandlerInfo { kind: MethodHandlerKind::Call, name: "core.CurrentEpoch".to_string() },
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.MinGasPrice".to_string() },
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.RuntimeInfo".to_string() },
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.ExecuteReadOnlyTx".to_string() },
