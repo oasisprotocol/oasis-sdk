@@ -111,6 +111,7 @@ mod test {
         ));
     }
 
+    #[test]
     fn test_address_from_bech32_invalid_variant() {
         let b = vec![42u8; ADDRESS_SIZE];
         let bech32_addr = bech32::encode::<Bech32>(ADDRESS_BECH32_HRP, &b).unwrap();
