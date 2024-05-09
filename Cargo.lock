@@ -2091,9 +2091,9 @@ dependencies = [
 
 [[package]]
 name = "num"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3135b08af27d103b0a51f2ae0f8632117b7b185ccf931445affa8df530576a41"
+checksum = "35bd024e8b2ff75562e5f34e7f4905839deb4b22955ef5e73d2fea1b9813cb23"
 dependencies = [
  "num-bigint 0.4.5",
  "num-complex 0.4.6",
@@ -2508,7 +2508,7 @@ dependencies = [
  "hmac",
  "honggfuzz",
  "k256",
- "num 0.4.2",
+ "num 0.4.3",
  "oasis-cbor",
  "oasis-runtime-sdk",
  "once_cell",
