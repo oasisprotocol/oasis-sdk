@@ -39,7 +39,7 @@ tiny-keccak = { version = "2.0", features = ["tuple_hash"] }
 tokio = { version = "1.29.1", features = ["rt"] }
 tokio-retry = "0.3.0"
 zeroize = "1.4"
-lru = "0.9.0"
+lru = "0.12.3"
 
 [dev-dependencies]
 blake3 = { version = "1.5.1", features = ["traits-preview"] }
