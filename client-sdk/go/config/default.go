@@ -102,10 +102,28 @@ var DefaultNetworks = Networks{
 						ConsensusDenomination: NativeDenominationKey,
 					},
 
-					// Pontus-X on Testnet.
-					"pontusx": {
-						Description: "Pontus-X Testnet",
+					// Pontus-X Devnet on Testnet.
+					"pontusx_dev": {
+						Description: "Pontus-X Devnet",
 						ID:          "0000000000000000000000000000000000000000000000004febe52eb412b421",
+						Denominations: map[string]*DenominationInfo{
+							NativeDenominationKey: {
+								Symbol:   "EUROe",
+								Decimals: 18,
+							},
+							// The consensus layer denomination when deposited into the runtime.
+							"TEST": {
+								Symbol:   "TEST",
+								Decimals: 18,
+							},
+						},
+						ConsensusDenomination: "TEST",
+					},
+
+					// Pontus-X Testnet on Testnet.
+					"pontusx_test": {
+						Description: "Pontus-X Testnet",
+						ID:          "00000000000000000000000000000000000000000000000004a6f9071c007069",
 						Denominations: map[string]*DenominationInfo{
 							NativeDenominationKey: {
 								Symbol:   "EUROe",
