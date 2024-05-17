@@ -12,8 +12,8 @@ proc-macro = true
 darling = "0.20.3"
 proc-macro2 = "1.0.81"
 quote = "1.0.10"
-syn = "2.0.60"
+syn = "2.0.64"
 
 [dev-dependencies]
 difference = "2.0.0"
-syn = { version = "2.0.60", features = ["extra-traits"] }
+syn = { version = "2.0.64", features = ["extra-traits"] }
