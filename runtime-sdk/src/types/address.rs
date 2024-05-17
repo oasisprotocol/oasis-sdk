@@ -61,6 +61,17 @@ pub enum SignatureAddressSpec {
 }
 
 impl SignatureAddressSpec {
+    /// Try to construct an authentication/address derivation specification from the given public
+    /// key. In case the given scheme is not supported, it returns `None`.
+    pub fn try_from_pk(pk: &PublicKey) -> Option<Self> {
+        match pk {
+            PublicKey::Ed25519(pk) => Some(Self::Ed25519(pk.clone())),
+            PublicKey::Secp256k1(pk) => Some(Self::Secp256k1Eth(pk.clone())),
+            PublicKey::Sr25519(pk) => Some(Self::Sr25519(pk.clone())),
+            _ => None,
+        }
+    }
+
     /// Public key of the authentication/address derivation specification.
     pub fn public_key(&self) -> PublicKey {
         match self {
