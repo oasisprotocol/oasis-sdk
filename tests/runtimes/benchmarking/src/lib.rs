@@ -27,6 +27,7 @@ impl sdk::Runtime for Runtime {
     const VERSION: Version = sdk::version_from_cargo!();
 
     type Core = modules::core::Module<Config>;
+    type Accounts = modules::accounts::Module;
 
     #[allow(clippy::type_complexity)]
     type Modules = (

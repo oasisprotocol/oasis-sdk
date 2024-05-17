@@ -36,6 +36,8 @@ impl Runtime for EmptyRuntime {
 
     type Core = modules::core::Module<Config>;
 
+    type Accounts = modules::accounts::Module;
+
     type Modules = modules::core::Module<Config>;
 
     fn genesis_state() -> <Self::Modules as MigrationHandler>::Genesis {

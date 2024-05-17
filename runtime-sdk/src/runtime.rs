@@ -39,6 +39,8 @@ pub trait Runtime {
 
     /// Module that provides the core API.
     type Core: modules::core::API;
+    /// Module that provides the accounts API.
+    type Accounts: modules::accounts::API;
     /// Handler for proxy fee payments.
     type FeeProxy: FeeProxyHandler = ();
 
