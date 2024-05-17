@@ -42,7 +42,7 @@ impl sdk::Runtime for Runtime {
     type Modules = (
         keyvalue::Module,
         modules::accounts::Module,
-        modules::rewards::Module<modules::accounts::Module>,
+        modules::rewards::Module,
         modules::core::Module<Config>,
     );
 
@@ -150,7 +150,7 @@ impl sdk::Runtime for Runtime {
 
     fn migrate_state<C: sdk::Context>(_ctx: &C) {
         // Fetch current parameters.
-        type Rewards = modules::rewards::Module<modules::accounts::Module>;
+        type Rewards = modules::rewards::Module;
         let mut params = Rewards::params();
 
         // Update the participation threshold (one of the E2E tests checks this and would fail

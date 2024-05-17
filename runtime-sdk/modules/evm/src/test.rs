@@ -41,8 +41,6 @@ static FAUCET_CONTRACT_CODE_HEX: &str =
 pub(crate) struct EVMConfig;
 
 impl Config for EVMConfig {
-    type Accounts = Accounts;
-
     type AdditionalPrecompileSet = ();
 
     const CHAIN_ID: u64 = 0xa515;
@@ -53,8 +51,6 @@ impl Config for EVMConfig {
 pub(crate) struct ConfidentialEVMConfig;
 
 impl Config for ConfidentialEVMConfig {
-    type Accounts = Accounts;
-
     type AdditionalPrecompileSet = ();
 
     const CHAIN_ID: u64 = 0x5afe;
@@ -398,6 +394,7 @@ impl<C: Config> Runtime for EVMRuntime<C> {
     const VERSION: Version = Version::new(0, 0, 0);
 
     type Core = Core<CoreConfig>;
+    type Accounts = Accounts;
 
     type Modules = (Core<CoreConfig>, Accounts, EVMModule<C>);
 

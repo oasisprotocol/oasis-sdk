@@ -14,8 +14,6 @@ pub struct Runtime;
 impl modules::core::Config for Config {}
 
 impl oasis_runtime_sdk_evm::Config for Config {
-    type Accounts = modules::accounts::Module;
-
     type AdditionalPrecompileSet = ();
 
     const CHAIN_ID: u64 = 123456;
@@ -38,7 +36,7 @@ impl sdk::Runtime for Runtime {
         // Consensus layer interface.
         modules::consensus::Module,
         // Consensus layer accounts.
-        modules::consensus_accounts::Module<modules::accounts::Module, modules::consensus::Module>,
+        modules::consensus_accounts::Module<modules::consensus::Module>,
         // EVM.
         oasis_runtime_sdk_evm::Module<Config>,
         // Benchmarks.

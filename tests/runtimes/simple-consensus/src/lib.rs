@@ -26,7 +26,7 @@ impl sdk::Runtime for Runtime {
     type Modules = (
         modules::accounts::Module,
         modules::consensus::Module,
-        modules::consensus_accounts::Module<modules::accounts::Module, modules::consensus::Module>,
+        modules::consensus_accounts::Module<modules::consensus::Module>,
         modules::core::Module<Config>,
     );
 

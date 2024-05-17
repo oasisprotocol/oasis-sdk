@@ -18,7 +18,7 @@ use crate::{
 
 use super::{types, Genesis, Parameters, ADDRESS_REWARD_POOL};
 
-type Rewards = super::Module<Accounts>;
+type Rewards = super::Module;
 
 fn init_accounts<C: Context>(ctx: &mut C) {
     Accounts::init_or_migrate(

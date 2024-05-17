@@ -917,7 +917,7 @@ mod test {
     use crate::{
         handler,
         module::Module,
-        modules::core,
+        modules::{accounts, core},
         sdk_derive,
         state::{CurrentState, Options},
         storage::Store,
@@ -930,6 +930,7 @@ mod test {
     struct CoreConfig;
     impl core::Config for CoreConfig {}
     type Core = core::Module<CoreConfig>;
+    type Accounts = accounts::Module;
 
     #[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
     enum AlphabetError {
@@ -993,6 +994,7 @@ mod test {
     impl Runtime for AlphabetRuntime {
         const VERSION: Version = Version::new(0, 0, 0);
         type Core = Core;
+        type Accounts = Accounts;
         type Modules = (Core, AlphabetModule);
 
         fn genesis_state() -> <Self::Modules as module::MigrationHandler>::Genesis {

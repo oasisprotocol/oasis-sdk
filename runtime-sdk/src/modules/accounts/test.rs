@@ -45,7 +45,7 @@ impl Runtime for TestRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
 
     type Core = Core<CoreConfig>;
-
+    type Accounts = Accounts;
     type FeeProxy = TestFeeProxyHandler;
 
     type Modules = (Core<CoreConfig>, Accounts, TestModule);

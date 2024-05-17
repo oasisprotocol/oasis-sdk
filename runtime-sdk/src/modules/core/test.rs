@@ -376,6 +376,7 @@ impl Runtime for GasWasterRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
 
     type Core = Core;
+    type Accounts = crate::modules::accounts::Module;
 
     type Modules = (Core, GasWasterModule);
 

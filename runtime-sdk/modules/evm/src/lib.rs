@@ -26,7 +26,6 @@ use oasis_runtime_sdk::{
     handler, migration,
     module::{self, Module as _},
     modules::{
-        self,
         accounts::API as _,
         core::{Error as CoreError, API as _},
     },
@@ -52,9 +51,6 @@ const MODULE_NAME: &str = "evm";
 
 /// Module configuration.
 pub trait Config: 'static {
-    /// Module that is used for accessing accounts.
-    type Accounts: modules::accounts::API;
-
     /// AdditionalPrecompileSet is the type used for the additional precompiles.
     /// Use `()` if unused.
     type AdditionalPrecompileSet: evm::executor::stack::PrecompileSet;
@@ -371,7 +367,10 @@ impl<Cfg: Config> API for Module<Cfg> {
 
     fn get_balance<C: Context>(_ctx: &C, address: H160) -> Result<u128, Error> {
         let address = Cfg::map_address(address.into());
-        Ok(Cfg::Accounts::get_balance(address, Cfg::TOKEN_DENOMINATION).unwrap_or_default())
+        Ok(
+            <C::Runtime as Runtime>::Accounts::get_balance(address, Cfg::TOKEN_DENOMINATION)
+                .unwrap_or_default(),
+        )
     }
 
     fn simulate_call<C: Context>(
@@ -566,7 +565,7 @@ impl<Cfg: Config> Module<Cfg> {
                 };
 
                 <C::Runtime as Runtime>::Core::use_tx_gas(gas_used)?;
-                Cfg::Accounts::set_refund_unused_tx_fee(Cfg::REFUND_UNUSED_FEE);
+                <C::Runtime as Runtime>::Accounts::set_refund_unused_tx_fee(Cfg::REFUND_UNUSED_FEE);
                 return Err(err);
             }
         };
@@ -578,7 +577,7 @@ impl<Cfg: Config> Module<Cfg> {
         };
 
         <C::Runtime as Runtime>::Core::use_tx_gas(gas_used)?;
-        Cfg::Accounts::set_refund_unused_tx_fee(Cfg::REFUND_UNUSED_FEE);
+        <C::Runtime as Runtime>::Accounts::set_refund_unused_tx_fee(Cfg::REFUND_UNUSED_FEE);
 
         Ok(exit_value)
     }

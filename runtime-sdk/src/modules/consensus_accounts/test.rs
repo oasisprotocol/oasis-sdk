@@ -68,7 +68,7 @@ fn init_accounts_ex<C: Context>(ctx: &C, address: Address) {
             ..Default::default()
         },
     );
-    Module::<Accounts, Consensus>::init_or_migrate(ctx, &mut meta, genesis);
+    Module::<Consensus>::init_or_migrate(ctx, &mut meta, genesis);
 }
 
 fn init_accounts<C: Context>(ctx: &C) {
@@ -117,9 +117,8 @@ fn test_api_deposit_invalid_denomination() {
 
     let call = tx.call.clone();
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        let result =
-            Module::<Accounts, Consensus>::tx_deposit(&ctx, cbor::from_value(call.body).unwrap())
-                .unwrap_err();
+        let result = Module::<Consensus>::tx_deposit(&ctx, cbor::from_value(call.body).unwrap())
+            .unwrap_err();
         assert!(matches!(
             result,
             Error::Consensus(ConsensusError::InvalidDenomination)
@@ -162,9 +161,8 @@ fn test_api_deposit_incompatible_signer() {
     let call = tx.call.clone();
 
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        let result =
-            Module::<Accounts, Consensus>::tx_deposit(&ctx, cbor::from_value(call.body).unwrap())
-                .unwrap_err();
+        let result = Module::<Consensus>::tx_deposit(&ctx, cbor::from_value(call.body).unwrap())
+            .unwrap_err();
         assert!(matches!(
             result,
             Error::Consensus(ConsensusError::ConsensusIncompatibleSigner)
@@ -209,7 +207,7 @@ fn test_api_deposit() {
     let call = tx.call.clone();
 
     let hook = CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        Module::<Accounts, Consensus>::tx_deposit(&ctx, cbor::from_value(call.body).unwrap())
+        Module::<Consensus>::tx_deposit(&ctx, cbor::from_value(call.body).unwrap())
             .expect("deposit tx should succeed");
 
         let mut messages = CurrentState::with(|state| state.take_messages());
@@ -239,11 +237,7 @@ fn test_api_deposit() {
 
     // Simulate the message being processed and make sure withdrawal is successfully completed.
     let me = Default::default();
-    Module::<Accounts, Consensus>::message_result_withdraw(
-        &ctx,
-        me,
-        cbor::from_value(hook.payload).unwrap(),
-    );
+    Module::<Consensus>::message_result_withdraw(&ctx, me, cbor::from_value(hook.payload).unwrap());
 
     // Ensure runtime balance is updated.
     let balance = Accounts::get_balance(test::keys::bob::address(), denom.clone()).unwrap();
@@ -318,9 +312,8 @@ fn test_api_withdraw_invalid_denomination() {
     let call = tx.call.clone();
 
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        let result =
-            Module::<Accounts, Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
-                .unwrap_err();
+        let result = Module::<Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
+            .unwrap_err();
         assert!(matches!(
             result,
             Error::Consensus(ConsensusError::InvalidDenomination)
@@ -363,9 +356,8 @@ fn test_api_withdraw_insufficient_balance() {
     let call = tx.call.clone();
 
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        let result =
-            Module::<Accounts, Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
-                .unwrap_err();
+        let result = Module::<Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
+            .unwrap_err();
         assert!(matches!(result, Error::InsufficientBalance));
     });
 }
@@ -403,9 +395,8 @@ fn test_api_withdraw_incompatible_signer() {
     let call = tx.call.clone();
 
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        let result =
-            Module::<Accounts, Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
-                .unwrap_err();
+        let result = Module::<Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
+            .unwrap_err();
         assert!(matches!(
             result,
             Error::Consensus(ConsensusError::ConsensusIncompatibleSigner)
@@ -448,7 +439,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
     let call = tx.call.clone();
 
     let hook = CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        Module::<Accounts, Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
+        Module::<Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
             .expect("withdraw tx should succeed");
 
         CurrentState::with(|state| state.take_all_events()); // Clear events.
@@ -486,11 +477,7 @@ fn test_api_withdraw(signer_sigspec: SignatureAddressSpec) {
 
     // Simulate the message being processed and make sure withdrawal is successfully completed.
     let me = Default::default();
-    Module::<Accounts, Consensus>::message_result_transfer(
-        &ctx,
-        me,
-        cbor::from_value(hook.payload).unwrap(),
-    );
+    Module::<Consensus>::message_result_transfer(&ctx, me, cbor::from_value(hook.payload).unwrap());
 
     // Ensure runtime balance is updated.
     let balance = Accounts::get_balance(*ADDRESS_PENDING_WITHDRAWAL, denom.clone()).unwrap();
@@ -578,7 +565,7 @@ fn test_api_withdraw_handler_failure() {
     let call = tx.call.clone();
 
     let hook = CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        Module::<Accounts, Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
+        Module::<Consensus>::tx_withdraw(&ctx, cbor::from_value(call.body).unwrap())
             .expect("withdraw tx should succeed");
 
         let mut messages = CurrentState::with(|state| state.take_messages());
@@ -620,11 +607,7 @@ fn test_api_withdraw_handler_failure() {
         index: 0,
         result: None,
     };
-    Module::<Accounts, Consensus>::message_result_transfer(
-        &ctx,
-        me,
-        cbor::from_value(hook.payload).unwrap(),
-    );
+    Module::<Consensus>::message_result_transfer(&ctx, me, cbor::from_value(hook.payload).unwrap());
 
     // Ensure amount is refunded.
     let balance = Accounts::get_balance(*ADDRESS_PENDING_WITHDRAWAL, denom.clone()).unwrap();
@@ -690,7 +673,7 @@ fn test_consensus_withdraw_handler() {
         address: keys::alice::address(),
         amount: BaseUnits::new(1, denom.clone()),
     };
-    Module::<Accounts, Consensus>::message_result_withdraw(&ctx, me, h_ctx);
+    Module::<Consensus>::message_result_withdraw(&ctx, me, h_ctx);
 
     // Ensure runtime balance is updated.
     let bals = Accounts::get_balances(keys::alice::address()).unwrap();
@@ -728,7 +711,7 @@ fn perform_delegation<C: Context>(ctx: &C, success: bool) -> u64 {
     let call = tx.call.clone();
 
     let hook = CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        Module::<Accounts, Consensus>::tx_delegate(ctx, cbor::from_value(call.body).unwrap())
+        Module::<Consensus>::tx_delegate(ctx, cbor::from_value(call.body).unwrap())
             .expect("delegate tx should succeed");
 
         CurrentState::with(|state| state.take_all_events()); // Clear events.
@@ -785,11 +768,7 @@ fn perform_delegation<C: Context>(ctx: &C, success: bool) -> u64 {
             result: None,
         }
     };
-    Module::<Accounts, Consensus>::message_result_delegate(
-        ctx,
-        me,
-        cbor::from_value(hook.payload).unwrap(),
-    );
+    Module::<Consensus>::message_result_delegate(ctx, me, cbor::from_value(hook.payload).unwrap());
 
     nonce
 }
@@ -843,7 +822,7 @@ fn test_api_delegate() {
 
     // Test delegation queries.
     let ctx = mock.create_ctx();
-    let di = Module::<Accounts, Consensus>::query_delegation(
+    let di = Module::<Consensus>::query_delegation(
         &ctx,
         types::DelegationQuery {
             from: keys::alice::address(),
@@ -853,7 +832,7 @@ fn test_api_delegate() {
     .expect("delegation query should succeed");
     assert_eq!(di.shares, 1_000);
 
-    let dis = Module::<Accounts, Consensus>::query_delegations(
+    let dis = Module::<Consensus>::query_delegations(
         &ctx,
         types::DelegationsQuery {
             from: keys::alice::address(),
@@ -899,9 +878,8 @@ fn test_api_delegate_insufficient_balance() {
     let call = tx.call.clone();
 
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        let result =
-            Module::<Accounts, Consensus>::tx_delegate(&ctx, cbor::from_value(call.body).unwrap())
-                .unwrap_err();
+        let result = Module::<Consensus>::tx_delegate(&ctx, cbor::from_value(call.body).unwrap())
+            .unwrap_err();
         assert!(matches!(result, Error::InsufficientBalance));
     });
 }
@@ -975,9 +953,8 @@ fn test_api_delegate_receipt_not_internal() {
     let call = tx.call.clone();
 
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        let result =
-            Module::<Accounts, Consensus>::tx_delegate(&ctx, cbor::from_value(call.body).unwrap())
-                .unwrap_err();
+        let result = Module::<Consensus>::tx_delegate(&ctx, cbor::from_value(call.body).unwrap())
+            .unwrap_err();
         assert!(matches!(result, Error::InvalidArgument));
     });
 }
@@ -1013,7 +990,7 @@ fn perform_undelegation<C: Context>(ctx: &C, success: Option<bool>) -> (u64, Opt
     let call = tx.call.clone();
 
     let hook = CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        Module::<Accounts, Consensus>::tx_undelegate(ctx, cbor::from_value(call.body).unwrap())
+        Module::<Consensus>::tx_undelegate(ctx, cbor::from_value(call.body).unwrap())
             .expect("undelegate tx should succeed");
 
         CurrentState::with(|state| state.take_all_events()); // Clear events.
@@ -1043,7 +1020,7 @@ fn perform_undelegation<C: Context>(ctx: &C, success: Option<bool>) -> (u64, Opt
     });
 
     // Make sure the delegation was updated to remove shares.
-    let di = Module::<Accounts, Consensus>::query_delegation(
+    let di = Module::<Consensus>::query_delegation(
         ctx,
         types::DelegationQuery {
             from: keys::alice::address(),
@@ -1079,7 +1056,7 @@ fn perform_undelegation<C: Context>(ctx: &C, success: Option<bool>) -> (u64, Opt
             result: None,
         },
     };
-    Module::<Accounts, Consensus>::message_result_undelegate(
+    Module::<Consensus>::message_result_undelegate(
         ctx,
         me,
         cbor::from_value(hook.payload).unwrap(),
@@ -1194,7 +1171,7 @@ fn test_api_undelegate() {
 
         let ctx = mock.create_ctx();
         <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
-        Module::<Accounts, Consensus>::end_block(&ctx);
+        Module::<Consensus>::end_block(&ctx);
 
         // Make sure nothing changes.
         let tags = CurrentState::with(|state| state.take_events().into_tags());
@@ -1217,7 +1194,7 @@ fn test_api_undelegate() {
 
     let ctx = mock.create_ctx();
     <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
-    Module::<Accounts, Consensus>::end_block(&ctx);
+    Module::<Consensus>::end_block(&ctx);
 
     // Make sure events were emitted.
     let tags = CurrentState::with(|state| state.take_events().into_tags());
@@ -1284,11 +1261,8 @@ fn test_api_undelegate_insufficient_balance() {
     let call = tx.call.clone();
 
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        let result = Module::<Accounts, Consensus>::tx_undelegate(
-            &ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .unwrap_err();
+        let result = Module::<Consensus>::tx_undelegate(&ctx, cbor::from_value(call.body).unwrap())
+            .unwrap_err();
         assert!(matches!(result, Error::InsufficientBalance));
     });
 }
@@ -1355,11 +1329,8 @@ fn test_api_undelegate_receipt_not_internal() {
     let call = tx.call.clone();
 
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
-        let result = Module::<Accounts, Consensus>::tx_undelegate(
-            &ctx,
-            cbor::from_value(call.body).unwrap(),
-        )
-        .unwrap_err();
+        let result = Module::<Consensus>::tx_undelegate(&ctx, cbor::from_value(call.body).unwrap())
+            .unwrap_err();
         assert!(matches!(result, Error::InvalidArgument));
     });
 }
@@ -1422,7 +1393,7 @@ fn test_api_undelegate_suspension() {
             debond_end_time: 14,
         })),
     };
-    Module::<Accounts, Consensus>::message_result_undelegate(
+    Module::<Consensus>::message_result_undelegate(
         &ctx,
         me,
         cbor::from_value(hook_payload.unwrap()).unwrap(),
@@ -1430,7 +1401,7 @@ fn test_api_undelegate_suspension() {
 
     // Process block.
     <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
-    Module::<Accounts, Consensus>::end_block(&ctx);
+    Module::<Consensus>::end_block(&ctx);
 
     // Make sure events were emitted.
     let tags = CurrentState::with(|state| state.take_events().into_tags());
@@ -1512,14 +1483,10 @@ fn test_prefetch() {
     // Withdraw should result in one prefix getting prefetched.
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
         let mut prefixes = BTreeSet::new();
-        let result = Module::<Accounts, Consensus>::prefetch(
-            &mut prefixes,
-            &call.method,
-            call.body,
-            &auth_info,
-        )
-        .ok_or(anyhow!("dispatch failure"))
-        .expect("prefetch should succeed");
+        let result =
+            Module::<Consensus>::prefetch(&mut prefixes, &call.method, call.body, &auth_info)
+                .ok_or(anyhow!("dispatch failure"))
+                .expect("prefetch should succeed");
 
         assert!(matches!(result, Ok(())));
         assert_eq!(prefixes.len(), 1, "there should be 1 prefix to be fetched");
@@ -1545,14 +1512,10 @@ fn test_prefetch() {
     // Deposit should result in zero prefixes.
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.into()), || {
         let mut prefixes = BTreeSet::new();
-        let result = Module::<Accounts, Consensus>::prefetch(
-            &mut prefixes,
-            &call.method,
-            call.body,
-            &auth_info,
-        )
-        .ok_or(anyhow!("dispatch failure"))
-        .expect("prefetch should succeed");
+        let result =
+            Module::<Consensus>::prefetch(&mut prefixes, &call.method, call.body, &auth_info)
+                .ok_or(anyhow!("dispatch failure"))
+                .expect("prefetch should succeed");
 
         assert!(matches!(result, Ok(())));
         assert_eq!(

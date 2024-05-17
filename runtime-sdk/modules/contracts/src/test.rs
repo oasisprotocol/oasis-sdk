@@ -27,9 +27,7 @@ static HELLO_CONTRACT_CODE: &[u8] = include_bytes!(
 
 struct ContractsConfig;
 
-impl Config for ContractsConfig {
-    type Accounts = Accounts;
-}
+impl Config for ContractsConfig {}
 
 type Contracts = crate::Module<ContractsConfig>;
 
@@ -671,6 +669,7 @@ impl Runtime for ContractRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
 
     type Core = Core<CoreConfig>;
+    type Accounts = Accounts;
 
     type Modules = (Core<CoreConfig>, Accounts, Contracts);
 
