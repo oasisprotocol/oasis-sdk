@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error"],"trait":["Host"]};
+window.SIDEBAR_ITEMS = {"enum":["Error"],"struct":["RegisterNotifyOpts","SubmitTxOpts","TxResult"],"trait":["Host"]};

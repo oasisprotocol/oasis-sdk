@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/8b45ece/runtime/src/attestation.rs`."><title>attestation.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/fb49717/runtime/src/attestation.rs`."><title>attestation.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -135,44 +135,39 @@
 <a href="#133" id="133">133</a>
 <a href="#134" id="134">134</a>
 <a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Functionality related to the enclave attestation flow.
 </span><span class="kw">use </span>std::sync::Arc;
 
-<span class="attr">#[cfg(target_env = <span class="string">"sgx"</span>)]
-</span><span class="kw">use </span>anyhow::{bail, <span class="prelude-ty">Result</span>};
-<span class="attr">#[cfg(target_env = <span class="string">"sgx"</span>)]
-</span><span class="kw">use </span>slog::info;
-<span class="kw">use </span>slog::Logger;
+<span class="kw">use </span>anyhow::{bail, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>slog::{info, Logger};
 
-<span class="attr">#[cfg(target_env = <span class="string">"sgx"</span>)]
-</span><span class="kw">use crate</span>::{
-    common::{crypto::signature::Signer, sgx::Quote},
-    consensus::registry::{SGXAttestation, ATTESTATION_SIGNATURE_CONTEXT},
-    policy::PolicyVerifier,
-    types::Body,
-};
 <span class="kw">use crate</span>::{
-    common::{logger::get_logger, namespace::Namespace, version::Version},
-    consensus::verifier::Verifier,
+    common::{
+        crypto::signature::Signer, logger::get_logger, namespace::Namespace, sgx::Quote,
+        version::Version,
+    },
+    consensus::{
+        registry::{EndorsedCapabilityTEE, SGXAttestation, ATTESTATION_SIGNATURE_CONTEXT},
+        verifier::Verifier,
+    },
     host::Host,
     identity::Identity,
+    policy::PolicyVerifier,
+    types::Body,
 };
 
 <span class="doccomment">/// Attestation flow handler.
 </span><span class="attr">#[derive(Clone)]
 </span><span class="kw">pub struct </span>Handler {
-    <span class="attr">#[cfg_attr(not(target_env = <span class="string">"sgx"</span>), allow(unused))]
-    </span>identity: Arc&lt;Identity&gt;,
-    <span class="attr">#[cfg_attr(not(target_env = <span class="string">"sgx"</span>), allow(unused))]
-    </span>host: Arc&lt;<span class="kw">dyn </span>Host&gt;,
-    <span class="attr">#[cfg_attr(not(target_env = <span class="string">"sgx"</span>), allow(unused))]
-    </span>consensus_verifier: Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
-    <span class="attr">#[cfg_attr(not(target_env = <span class="string">"sgx"</span>), allow(unused))]
-    </span>runtime_id: Namespace,
-    <span class="attr">#[cfg_attr(not(target_env = <span class="string">"sgx"</span>), allow(unused))]
-    </span>version: Version,
-    <span class="attr">#[cfg_attr(not(target_env = <span class="string">"sgx"</span>), allow(unused))]
-    </span>logger: Logger,
+    identity: Arc&lt;Identity&gt;,
+    host: Arc&lt;<span class="kw">dyn </span>Host&gt;,
+    consensus_verifier: Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
+    runtime_id: Namespace,
+    version: Version,
+    logger: Logger,
 }
 
 <span class="kw">impl </span>Handler {
@@ -195,8 +190,7 @@
     }
 }
 
-<span class="attr">#[cfg(target_env = <span class="string">"sgx"</span>)]
-</span><span class="kw">impl </span>Handler {
+<span class="kw">impl </span>Handler {
     <span class="doccomment">/// Handle an attestation flow request.
     </span><span class="kw">pub async fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, request: Body) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
         <span class="kw">match </span>request {
@@ -209,6 +203,9 @@
                 </span><span class="self">self</span>.set_quote(Quote::Ias(avr)).<span class="kw">await
             </span>}
             Body::RuntimeCapabilityTEERakQuoteRequest { quote } =&gt; <span class="self">self</span>.set_quote(quote).<span class="kw">await</span>,
+            Body::RuntimeCapabilityTEEUpdateEndorsementRequest { ect } =&gt; {
+                <span class="self">self</span>.update_endorsement(ect).<span class="kw">await
+            </span>}
 
             <span class="kw">_ </span>=&gt; <span class="macro">bail!</span>(<span class="string">"unsupported attestation request"</span>),
         }
@@ -257,17 +254,26 @@
         </span>);
 
         <span class="comment">// Configure the quote and policy on the identity.
-        </span><span class="kw">let </span>verified_quote = <span class="self">self</span>.identity.set_quote(quote)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>node_id = <span class="self">self</span>.host.identity().<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let </span>verified_quote = <span class="self">self</span>.identity.set_quote(node_id, quote)<span class="question-mark">?</span>;
 
         <span class="comment">// Sign the report data, latest verified consensus height, REK and host node ID.
         </span><span class="kw">let </span>consensus_state = <span class="self">self</span>.consensus_verifier.latest_state().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>height = consensus_state.height();
-        <span class="kw">let </span>node_id = <span class="self">self</span>.host.identity().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>rek = <span class="self">self</span>.identity.public_rek();
-        <span class="kw">let </span>h = SGXAttestation::hash(<span class="kw-2">&amp;</span>verified_quote.report_data, node_id, height, rek);
+        <span class="kw">let </span>h = SGXAttestation::hash(<span class="kw-2">&amp;</span>verified_quote.report_data, <span class="kw-2">&amp;</span>node_id, height, <span class="kw-2">&amp;</span>rek);
         <span class="kw">let </span>signature = <span class="self">self</span>.identity.sign(ATTESTATION_SIGNATURE_CONTEXT, <span class="kw-2">&amp;</span>h)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(Body::RuntimeCapabilityTEERakQuoteResponse { height, signature })
+    }
+
+    <span class="kw">async fn </span>update_endorsement(<span class="kw-2">&amp;</span><span class="self">self</span>, ect: EndorsedCapabilityTEE) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
+        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Updating endorsed TEE capability"</span>);
+
+        <span class="comment">// Update the endorsed TEE capability. This also performs the necessary verification.
+        </span><span class="self">self</span>.identity.set_endorsed_capability_tee(ect)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(Body::RuntimeCapabilityTEEUpdateEndorsementResponse {})
     }
 }
 </code></pre></div></section></main></body></html>

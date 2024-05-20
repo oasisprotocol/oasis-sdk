@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/8b45ece/runtime/src/enclave_rpc/session.rs`."><title>session.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/fb49717/runtime/src/enclave_rpc/session.rs`."><title>session.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -543,11 +543,66 @@
 <a href="#541" id="541">541</a>
 <a href="#542" id="542">542</a>
 <a href="#543" id="543">543</a>
+<a href="#544" id="544">544</a>
+<a href="#545" id="545">545</a>
+<a href="#546" id="546">546</a>
+<a href="#547" id="547">547</a>
+<a href="#548" id="548">548</a>
+<a href="#549" id="549">549</a>
+<a href="#550" id="550">550</a>
+<a href="#551" id="551">551</a>
+<a href="#552" id="552">552</a>
+<a href="#553" id="553">553</a>
+<a href="#554" id="554">554</a>
+<a href="#555" id="555">555</a>
+<a href="#556" id="556">556</a>
+<a href="#557" id="557">557</a>
+<a href="#558" id="558">558</a>
+<a href="#559" id="559">559</a>
+<a href="#560" id="560">560</a>
+<a href="#561" id="561">561</a>
+<a href="#562" id="562">562</a>
+<a href="#563" id="563">563</a>
+<a href="#564" id="564">564</a>
+<a href="#565" id="565">565</a>
+<a href="#566" id="566">566</a>
+<a href="#567" id="567">567</a>
+<a href="#568" id="568">568</a>
+<a href="#569" id="569">569</a>
+<a href="#570" id="570">570</a>
+<a href="#571" id="571">571</a>
+<a href="#572" id="572">572</a>
+<a href="#573" id="573">573</a>
+<a href="#574" id="574">574</a>
+<a href="#575" id="575">575</a>
+<a href="#576" id="576">576</a>
+<a href="#577" id="577">577</a>
+<a href="#578" id="578">578</a>
+<a href="#579" id="579">579</a>
+<a href="#580" id="580">580</a>
+<a href="#581" id="581">581</a>
+<a href="#582" id="582">582</a>
+<a href="#583" id="583">583</a>
+<a href="#584" id="584">584</a>
+<a href="#585" id="585">585</a>
+<a href="#586" id="586">586</a>
+<a href="#587" id="587">587</a>
+<a href="#588" id="588">588</a>
+<a href="#589" id="589">589</a>
+<a href="#590" id="590">590</a>
+<a href="#591" id="591">591</a>
+<a href="#592" id="592">592</a>
+<a href="#593" id="593">593</a>
+<a href="#594" id="594">594</a>
+<a href="#595" id="595">595</a>
+<a href="#596" id="596">596</a>
+<a href="#597" id="597">597</a>
+<a href="#598" id="598">598</a>
+<a href="#599" id="599">599</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Secure channel session.
 </span><span class="kw">use </span>std::{collections::HashSet, io::Write, mem, sync::Arc};
 
 <span class="kw">use </span>anyhow::Result;
-<span class="kw">use </span>snow;
 <span class="kw">use </span>thiserror::Error;
 
 <span class="kw">use </span><span class="kw">super</span>::types::Message;
@@ -557,7 +612,11 @@
         namespace::Namespace,
         sgx::{ias, EnclaveIdentity, Quote, QuotePolicy, VerifiedQuote},
     },
-    consensus::{state::registry::ImmutableState <span class="kw">as </span>RegistryState, verifier::Verifier},
+    consensus::{
+        registry::{EndorsedCapabilityTEE, VerifiedEndorsedCapabilityTEE},
+        state::registry::ImmutableState <span class="kw">as </span>RegistryState,
+        verifier::Verifier,
+    },
     identity::Identity,
 };
 
@@ -593,14 +652,19 @@
 
 <span class="doccomment">/// Information about a session.
 </span><span class="kw">pub struct </span>SessionInfo {
-    <span class="kw">pub </span>rak_binding: RAKBinding,
-    <span class="kw">pub </span>verified_quote: VerifiedQuote,
+    <span class="doccomment">/// RAK binding.
+    </span><span class="kw">pub </span>rak_binding: RAKBinding,
+    <span class="doccomment">/// Verified TEE quote.
+    </span><span class="kw">pub </span>verified_quote: VerifiedQuote,
+    <span class="doccomment">/// Identifier of the node that endorsed the TEE.
+    </span><span class="kw">pub </span>endorsed_by: <span class="prelude-ty">Option</span>&lt;PublicKey&gt;,
 }
 
 <span class="kw">enum </span>State {
     Handshake1(snow::HandshakeState),
     Handshake2(snow::HandshakeState),
     Transport(snow::TransportState),
+    UnauthenticatedTransport(snow::TransportState),
     Closed,
 }
 
@@ -613,13 +677,15 @@
     remote_node: <span class="prelude-ty">Option</span>&lt;signature::PublicKey&gt;,
     remote_runtime_id: <span class="prelude-ty">Option</span>&lt;Namespace&gt;,
     policy: <span class="prelude-ty">Option</span>&lt;Arc&lt;QuotePolicy&gt;&gt;,
+    use_endorsement: bool,
     info: <span class="prelude-ty">Option</span>&lt;Arc&lt;SessionInfo&gt;&gt;,
     state: State,
     buf: Vec&lt;u8&gt;,
 }
 
 <span class="kw">impl </span>Session {
-    <span class="kw">fn </span>new(
+    <span class="attr">#[allow(clippy::too_many_arguments)]
+    </span><span class="kw">fn </span>new(
         consensus_verifier: <span class="prelude-ty">Option</span>&lt;Arc&lt;<span class="kw">dyn </span>Verifier&gt;&gt;,
         handshake_state: snow::HandshakeState,
         local_static_pub: Vec&lt;u8&gt;,
@@ -627,6 +693,7 @@
         remote_enclaves: <span class="prelude-ty">Option</span>&lt;HashSet&lt;EnclaveIdentity&gt;&gt;,
         remote_runtime_id: <span class="prelude-ty">Option</span>&lt;Namespace&gt;,
         policy: <span class="prelude-ty">Option</span>&lt;Arc&lt;QuotePolicy&gt;&gt;,
+        use_endorsement: bool,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             consensus_verifier,
@@ -636,6 +703,7 @@
             remote_node: <span class="prelude-val">None</span>,
             remote_runtime_id,
             policy,
+            use_endorsement,
             info: <span class="prelude-val">None</span>,
             state: State::Handshake1(handshake_state),
             buf: <span class="macro">vec!</span>[<span class="number">0u8</span>; <span class="number">65535</span>],
@@ -677,32 +745,37 @@
                 <span class="self">self</span>.state = State::Handshake2(state);
             }
             State::Handshake2(<span class="kw-2">mut </span>state) =&gt; {
-                <span class="kw">if </span>state.is_initiator() {
-                    <span class="comment">// &lt;- e, ee, s, es
-                    </span><span class="kw">let </span>len = state.read_message(<span class="kw-2">&amp;</span>data, <span class="kw-2">&amp;mut </span><span class="self">self</span>.buf)<span class="question-mark">?</span>;
-                    <span class="kw">let </span>remote_static = state
-                        .get_remote_static()
-                        .expect(<span class="string">"dh exchange just happened"</span>);
-                    <span class="self">self</span>.info = <span class="self">self
-                        </span>.verify_rak_binding(<span class="kw-2">&amp;</span><span class="self">self</span>.buf[..len], remote_static)
-                        .<span class="kw">await</span><span class="question-mark">?</span>;
+                <span class="comment">// Process data sent during Handshake1 phase.
+                </span><span class="kw">let </span>len = state.read_message(<span class="kw-2">&amp;</span>data, <span class="kw-2">&amp;mut </span><span class="self">self</span>.buf)<span class="question-mark">?</span>;
+                <span class="kw">let </span>remote_static = state
+                    .get_remote_static()
+                    .expect(<span class="string">"dh exchange just happened"</span>);
+                <span class="kw">let </span>auth_info = <span class="self">self
+                    </span>.verify_rak_binding(<span class="kw-2">&amp;</span><span class="self">self</span>.buf[..len], remote_static)
+                    .<span class="kw">await</span>;
 
+                <span class="kw">if </span>state.is_initiator() {
                     <span class="comment">// -&gt; s, se
                     </span><span class="kw">let </span>len = state.write_message(<span class="kw-2">&amp;</span><span class="self">self</span>.get_rak_binding(), <span class="kw-2">&amp;mut </span><span class="self">self</span>.buf)<span class="question-mark">?</span>;
                     writer.write_all(<span class="kw-2">&amp;</span><span class="self">self</span>.buf[..len])<span class="question-mark">?</span>;
-                } <span class="kw">else </span>{
-                    <span class="comment">// &lt;- s, se
-                    </span><span class="kw">let </span>len = state.read_message(<span class="kw-2">&amp;</span>data, <span class="kw-2">&amp;mut </span><span class="self">self</span>.buf)<span class="question-mark">?</span>;
-                    <span class="kw">let </span>remote_static = state
-                        .get_remote_static()
-                        .expect(<span class="string">"dh exchange just happened"</span>);
-                    <span class="self">self</span>.info = <span class="self">self
-                        </span>.verify_rak_binding(<span class="kw-2">&amp;</span><span class="self">self</span>.buf[..len], remote_static)
-                        .<span class="kw">await</span><span class="question-mark">?</span>;
                 }
 
-                <span class="comment">// Move into transport mode.
-                </span><span class="self">self</span>.state = State::Transport(state.into_transport_mode()<span class="question-mark">?</span>);
+                <span class="kw">match </span>auth_info {
+                    <span class="prelude-val">Ok</span>(auth_info) =&gt; {
+                        <span class="self">self</span>.info = auth_info;
+                        <span class="self">self</span>.state = State::Transport(state.into_transport_mode()<span class="question-mark">?</span>);
+                    }
+                    <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="kw">if </span>state.is_initiator() =&gt; {
+                        <span class="comment">// There was an error authenticating the session and we are the initiator.
+                        // Transition into unauthenticated transport state so we can notify the
+                        // other side of the close.
+                        </span><span class="self">self</span>.state = State::UnauthenticatedTransport(state.into_transport_mode()<span class="question-mark">?</span>);
+                    }
+                    <span class="prelude-val">Err</span>(err) =&gt; {
+                        <span class="comment">// There was an authentication error and we are not the initiator, abort.
+                        </span><span class="kw">return </span><span class="prelude-val">Err</span>(err);
+                    }
+                }
             }
             State::Transport(<span class="kw-2">mut </span>state) =&gt; {
                 <span class="comment">// TODO: Restore session in case of errors.
@@ -712,7 +785,7 @@
                 <span class="self">self</span>.state = State::Transport(state);
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(msg));
             }
-            State::Closed =&gt; {
+            State::Closed | State::UnauthenticatedTransport(<span class="kw">_</span>) =&gt; {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(SessionError::Closed.into());
             }
         }
@@ -725,15 +798,18 @@
     /// The `writer` will be used for protocol message output which should
     /// be transmitted to the remote session counterpart.
     </span><span class="kw">pub fn </span>write_message&lt;W: Write&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, msg: Message, <span class="kw-2">mut </span>writer: W) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">if let </span>State::Transport(<span class="kw-2">ref mut </span>state) = <span class="self">self</span>.state {
-            <span class="kw">let </span>msg = cbor::to_vec(msg);
-            <span class="kw">let </span>len = state.write_message(<span class="kw-2">&amp;</span>msg, <span class="kw-2">&amp;mut </span><span class="self">self</span>.buf)<span class="question-mark">?</span>;
-            writer.write_all(<span class="kw-2">&amp;</span><span class="self">self</span>.buf[..len])<span class="question-mark">?</span>;
+        <span class="kw">let </span>state = <span class="kw">match </span><span class="self">self</span>.state {
+            State::Transport(<span class="kw-2">ref mut </span>state) =&gt; state,
+            State::UnauthenticatedTransport(<span class="kw-2">ref mut </span>state) <span class="kw">if </span><span class="macro">matches!</span>(msg, Message::Close) =&gt; {
+                state
+            }
+            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(SessionError::InvalidState.into()),
+        };
 
-            <span class="prelude-val">Ok</span>(())
-        } <span class="kw">else </span>{
-            <span class="prelude-val">Err</span>(SessionError::InvalidState.into())
-        }
+        <span class="kw">let </span>len = state.write_message(<span class="kw-2">&amp;</span>cbor::to_vec(msg), <span class="kw-2">&amp;mut </span><span class="self">self</span>.buf)<span class="question-mark">?</span>;
+        writer.write_all(<span class="kw-2">&amp;</span><span class="self">self</span>.buf[..len])<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="doccomment">/// Mark the session as closed.
@@ -751,28 +827,26 @@
                     <span class="kw">return </span><span class="macro">vec!</span>[];
                 }
 
-                <span class="kw">let </span>rak_pub = identity.public_rak();
-                <span class="kw">let </span>quote = identity.quote().expect(<span class="string">"quote is configured"</span>);
                 <span class="kw">let </span>binding = identity
                     .sign(<span class="kw-2">&amp;</span>RAK_SESSION_BINDING_CONTEXT, <span class="kw-2">&amp;</span><span class="self">self</span>.local_static_pub)
                     .unwrap();
 
-                <span class="comment">// TODO: Change this once all runtimes have migrated to the new scheme.
-                </span><span class="kw">let </span>rak_binding = <span class="kw">if let </span>Quote::Ias(<span class="kw-2">ref </span>avr) = <span class="kw-2">*</span>quote {
-                    RAKBinding::V0 {
-                        rak_pub,
-                        binding,
-                        avr: avr.clone(),
+                <span class="kw">if </span><span class="self">self</span>.use_endorsement {
+                    <span class="comment">// Use endorsed TEE capability when available.
+                    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(ect) = identity.endorsed_capability_tee() {
+                        <span class="kw">return </span>cbor::to_vec(RAKBinding::V2 { ect, binding });
                     }
-                } <span class="kw">else </span>{
-                    RAKBinding::V1 {
-                        rak_pub,
-                        binding,
-                        quote: (<span class="kw-2">*</span>quote).clone(),
-                    }
-                };
+                }
 
-                cbor::to_vec(rak_binding)
+                <span class="comment">// Use the local RAK and quote.
+                </span><span class="kw">let </span>rak_pub = identity.public_rak();
+                <span class="kw">let </span>quote = identity.quote().expect(<span class="string">"quote is configured"</span>);
+
+                cbor::to_vec(RAKBinding::V1 {
+                    rak_pub,
+                    binding,
+                    quote: (<span class="kw-2">*</span>quote).clone(),
+                })
             }
             <span class="prelude-val">None </span>=&gt; <span class="macro">vec!</span>[],
         }
@@ -798,7 +872,7 @@
             .ok_or(SessionError::MissingQuotePolicy)<span class="question-mark">?</span>;
 
         <span class="kw">let </span>rak_binding: RAKBinding = cbor::from_slice(rak_binding)<span class="question-mark">?</span>;
-        <span class="kw">let </span>verified_quote = rak_binding.verify(remote_static, <span class="kw-2">&amp;</span><span class="self">self</span>.remote_enclaves, policy)<span class="question-mark">?</span>;
+        <span class="kw">let </span>vect = rak_binding.verify(remote_static, <span class="kw-2">&amp;</span><span class="self">self</span>.remote_enclaves, policy)<span class="question-mark">?</span>;
 
         <span class="comment">// Verify node identity if verification is enabled.
         </span><span class="kw">if </span><span class="self">self</span>.consensus_verifier.is_some() {
@@ -808,7 +882,8 @@
 
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Arc::new(SessionInfo {
             rak_binding,
-            verified_quote,
+            verified_quote: vect.verified_quote,
+            endorsed_by: vect.node_id,
         })))
     }
 
@@ -831,6 +906,12 @@
     <span class="doccomment">/// Whether the session is in closed state.
     </span><span class="kw">pub fn </span>is_closed(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="macro">matches!</span>(<span class="self">self</span>.state, State::Closed)
+    }
+
+    <span class="doccomment">/// Whether the session is in unauthenticated transport state. In this state the session can
+    /// only be used to transmit a close notification.
+    </span><span class="kw">pub fn </span>is_unauthenticated(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="macro">matches!</span>(<span class="self">self</span>.state, State::UnauthenticatedTransport(<span class="kw">_</span>))
     }
 
     <span class="doccomment">/// Return remote node identifier.
@@ -909,6 +990,13 @@
         binding: Signature,
         quote: Quote,
     },
+
+    <span class="doccomment">/// V2 format which supports endorsed CapabilityTEE structures.
+    </span><span class="attr">#[cbor(rename = <span class="number">2</span>)]
+    </span>V2 {
+        ect: EndorsedCapabilityTEE,
+        binding: Signature,
+    },
 }
 
 <span class="kw">impl </span>RAKBinding {
@@ -917,14 +1005,16 @@
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::V0 { rak_pub, .. } =&gt; <span class="kw-2">*</span>rak_pub,
             <span class="self">Self</span>::V1 { rak_pub, .. } =&gt; <span class="kw-2">*</span>rak_pub,
+            <span class="self">Self</span>::V2 { ect, .. } =&gt; ect.capability_tee.rak,
         }
     }
 
     <span class="doccomment">/// Signature from RAK, binding the session's static public key to RAK.
-    </span><span class="kw">pub fn </span>binding(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Signature {
+    </span><span class="kw">fn </span>binding(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Signature {
         <span class="kw">match </span><span class="self">self </span>{
             <span class="self">Self</span>::V0 { binding, .. } =&gt; <span class="kw-2">*</span>binding,
             <span class="self">Self</span>::V1 { binding, .. } =&gt; <span class="kw-2">*</span>binding,
+            <span class="self">Self</span>::V2 { binding, .. } =&gt; <span class="kw-2">*</span>binding,
         }
     }
 
@@ -934,31 +1024,34 @@
         remote_static: <span class="kw-2">&amp;</span>[u8],
         remote_enclaves: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;HashSet&lt;EnclaveIdentity&gt;&gt;,
         policy: <span class="kw-2">&amp;</span>QuotePolicy,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;VerifiedQuote&gt; {
-        <span class="kw">let </span>verified_quote = <span class="self">self</span>.verify_quote(policy)<span class="question-mark">?</span>;
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;VerifiedEndorsedCapabilityTEE&gt; {
+        <span class="kw">let </span>vect = <span class="self">self</span>.verify_inner(policy)<span class="question-mark">?</span>;
+
+        <span class="comment">// Ensure that the report data includes the hash of the node's RAK.
+        // NOTE: For V2 this check is part of verify_inner so it is not really needed.
+        </span>Identity::verify_binding(<span class="kw-2">&amp;</span>vect.verified_quote, <span class="kw-2">&amp;</span><span class="self">self</span>.rak_pub())<span class="question-mark">?</span>;
 
         <span class="comment">// Verify MRENCLAVE/MRSIGNER.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>remote_enclaves) = remote_enclaves {
-            <span class="kw">if </span>!remote_enclaves.contains(<span class="kw-2">&amp;</span>verified_quote.identity) {
+            <span class="kw">if </span>!remote_enclaves.contains(<span class="kw-2">&amp;</span>vect.verified_quote.identity) {
                 <span class="kw">return </span><span class="prelude-val">Err</span>(SessionError::MismatchedEnclaveIdentity.into());
             }
         }
-
-        <span class="comment">// Verify RAK binding.
-        </span>Identity::verify_binding(<span class="kw-2">&amp;</span>verified_quote, <span class="kw-2">&amp;</span><span class="self">self</span>.rak_pub())<span class="question-mark">?</span>;
 
         <span class="comment">// Verify remote static key binding.
         </span><span class="self">self</span>.binding()
             .verify(<span class="kw-2">&amp;</span><span class="self">self</span>.rak_pub(), <span class="kw-2">&amp;</span>RAK_SESSION_BINDING_CONTEXT, remote_static)<span class="question-mark">?</span>;
 
-        <span class="prelude-val">Ok</span>(verified_quote)
+        <span class="prelude-val">Ok</span>(vect)
     }
 
-    <span class="doccomment">/// Verify the quote that is part of the RAK binding.
-    </span><span class="kw">pub fn </span>verify_quote(<span class="kw-2">&amp;</span><span class="self">self</span>, policy: <span class="kw-2">&amp;</span>QuotePolicy) -&gt; <span class="prelude-ty">Result</span>&lt;VerifiedQuote&gt; {
+    <span class="kw">fn </span>verify_inner(<span class="kw-2">&amp;</span><span class="self">self</span>, policy: <span class="kw-2">&amp;</span>QuotePolicy) -&gt; <span class="prelude-ty">Result</span>&lt;VerifiedEndorsedCapabilityTEE&gt; {
         <span class="kw">match </span><span class="self">self </span>{
-            <span class="self">Self</span>::V0 { <span class="kw-2">ref </span>avr, .. } =&gt; ias::verify(avr, <span class="kw-2">&amp;</span>policy.ias.clone().unwrap_or_default()),
-            <span class="self">Self</span>::V1 { <span class="kw-2">ref </span>quote, .. } =&gt; quote.verify(policy),
+            <span class="self">Self</span>::V0 { <span class="kw-2">ref </span>avr, .. } =&gt; {
+                ias::verify(avr, <span class="kw-2">&amp;</span>policy.ias.clone().unwrap_or_default()).map(|vq| vq.into())
+            }
+            <span class="self">Self</span>::V1 { <span class="kw-2">ref </span>quote, .. } =&gt; quote.verify(policy).map(|vq| vq.into()),
+            <span class="self">Self</span>::V2 { <span class="kw-2">ref </span>ect, .. } =&gt; ect.verify(policy),
         }
     }
 }
@@ -970,6 +1063,7 @@
     identity: <span class="prelude-ty">Option</span>&lt;Arc&lt;Identity&gt;&gt;,
     remote_enclaves: <span class="prelude-ty">Option</span>&lt;HashSet&lt;EnclaveIdentity&gt;&gt;,
     remote_runtime_id: <span class="prelude-ty">Option</span>&lt;Namespace&gt;,
+    use_endorsement: bool,
     policy: <span class="prelude-ty">Option</span>&lt;Arc&lt;QuotePolicy&gt;&gt;,
 }
 
@@ -1013,6 +1107,17 @@
         <span class="self">self
     </span>}
 
+    <span class="doccomment">/// Use endorsement from host node when establishing sessions.
+    </span><span class="kw">pub fn </span>use_endorsement(<span class="kw-2">mut </span><span class="self">self</span>, use_endorsement: bool) -&gt; <span class="self">Self </span>{
+        <span class="self">self</span>.use_endorsement = use_endorsement;
+        <span class="self">self
+    </span>}
+
+    <span class="doccomment">/// Return the local identity if configured in the builder.
+    </span><span class="kw">pub fn </span>get_local_identity(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Arc&lt;Identity&gt;&gt; {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.identity
+    }
+
     <span class="doccomment">/// Enable RAK binding.
     </span><span class="kw">pub fn </span>local_identity(<span class="kw-2">mut </span><span class="self">self</span>, identity: Arc&lt;Identity&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">self</span>.identity = <span class="prelude-val">Some</span>(identity);
@@ -1030,6 +1135,7 @@
         <span class="prelude-ty">Option</span>&lt;Arc&lt;Identity&gt;&gt;,
         <span class="prelude-ty">Option</span>&lt;HashSet&lt;EnclaveIdentity&gt;&gt;,
         <span class="prelude-ty">Option</span>&lt;Arc&lt;QuotePolicy&gt;&gt;,
+        bool,
     ) {
         <span class="kw">let </span>noise_builder = snow::Builder::new(NOISE_PATTERN.parse().unwrap());
         <span class="kw">let </span>verifier = <span class="self">self</span>.consensus_verifier.take();
@@ -1037,6 +1143,7 @@
         <span class="kw">let </span>remote_enclaves = <span class="self">self</span>.remote_enclaves.take();
         <span class="kw">let </span>remote_runtime_id = <span class="self">self</span>.remote_runtime_id.take();
         <span class="kw">let </span>quote_policy = <span class="self">self</span>.policy.take();
+        <span class="kw">let </span>use_endorsement = <span class="self">self</span>.use_endorsement;
         <span class="kw">let </span>keypair = noise_builder.generate_keypair().unwrap();
 
         (
@@ -1047,12 +1154,14 @@
             identity,
             remote_enclaves,
             quote_policy,
+            use_endorsement,
         )
     }
 
     <span class="doccomment">/// Build initiator session.
     </span><span class="kw">pub fn </span>build_initiator(<span class="self">self</span>) -&gt; Session {
-        <span class="kw">let </span>(builder, keypair, runtime_id, verifier, identity, enclaves, policy) = <span class="self">self</span>.build();
+        <span class="kw">let </span>(builder, keypair, runtime_id, verifier, identity, enclaves, policy, use_endorsement) =
+            <span class="self">self</span>.build();
         <span class="kw">let </span>session = builder
             .local_private_key(<span class="kw-2">&amp;</span>keypair.private)
             .build_initiator()
@@ -1065,12 +1174,14 @@
             enclaves,
             runtime_id,
             policy,
+            use_endorsement,
         )
     }
 
     <span class="doccomment">/// Build responder session.
     </span><span class="kw">pub fn </span>build_responder(<span class="self">self</span>) -&gt; Session {
-        <span class="kw">let </span>(builder, keypair, runtime_id, verifier, identity, enclaves, policy) = <span class="self">self</span>.build();
+        <span class="kw">let </span>(builder, keypair, runtime_id, verifier, identity, enclaves, policy, use_endorsement) =
+            <span class="self">self</span>.build();
         <span class="kw">let </span>session = builder
             .local_private_key(<span class="kw-2">&amp;</span>keypair.private)
             .build_responder()
@@ -1083,6 +1194,7 @@
             enclaves,
             runtime_id,
             policy,
+            use_endorsement,
         )
     }
 }

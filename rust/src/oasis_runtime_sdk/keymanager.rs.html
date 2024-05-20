@@ -324,7 +324,7 @@
 <span class="kw">pub use </span>oasis_core_keymanager::{
     api::KeyManagerError,
     crypto::{KeyPair, KeyPairId, SignedPublicKey, StateKey},
-    policy::TrustedPolicySigners,
+    policy::TrustedSigners,
 };
 <span class="kw">use </span>oasis_core_runtime::{
     common::namespace::Namespace,
@@ -350,7 +350,7 @@
         identity: Arc&lt;Identity&gt;,
         rpc: <span class="kw-2">&amp;mut </span>RpcDispatcher,
         key_cache_sizes: usize,
-        signers: TrustedPolicySigners,
+        signers: TrustedSigners,
     ) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>remote_client = Arc::new(RemoteClient::new_runtime(
             runtime_id,

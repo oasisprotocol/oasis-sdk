@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["ImmutableState","Status"]};
+window.SIDEBAR_ITEMS = {"mod":["churp"],"struct":["ImmutableState","Status"]};

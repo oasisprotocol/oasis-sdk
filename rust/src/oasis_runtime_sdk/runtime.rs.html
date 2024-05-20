@@ -227,7 +227,7 @@
     config,
     context::Context,
     crypto, dispatcher,
-    keymanager::{KeyManagerClient, TrustedPolicySigners},
+    keymanager::{KeyManagerClient, TrustedSigners},
     module::{
         BlockHandler, InvariantHandler, MethodHandler, MigrationHandler, ModuleInfoHandler,
         TransactionHandler,
@@ -261,9 +261,9 @@
         + InvariantHandler
         + ModuleInfoHandler;
 
-    <span class="doccomment">/// Return the trusted policy signers for this runtime; if `None`, a key manager connection will
-    /// not be established on startup.
-    </span><span class="kw">fn </span>trusted_policy_signers() -&gt; <span class="prelude-ty">Option</span>&lt;TrustedPolicySigners&gt; {
+    <span class="doccomment">/// Return the trusted signers for this runtime; if `None`, a key manager connection will not be
+    /// established on startup.
+    </span><span class="kw">fn </span>trusted_signers() -&gt; <span class="prelude-ty">Option</span>&lt;TrustedSigners&gt; {
         <span class="prelude-val">None
     </span>}
 
@@ -375,7 +375,7 @@
             );
 
             <span class="comment">// Cobble together a keymanager client.
-            </span><span class="kw">let </span>key_manager = <span class="self">Self</span>::trusted_policy_signers().map(|signers| {
+            </span><span class="kw">let </span>key_manager = <span class="self">Self</span>::trusted_signers().map(|signers| {
                 Arc::new(KeyManagerClient::new(
                     hi.runtime_id,
                     state.protocol.clone(),
@@ -397,6 +397,7 @@
 
             PostInitState {
                 txn_dispatcher: <span class="prelude-val">Some</span>(Box::new(dispatcher)),
+                app: <span class="prelude-val">None</span>,
             }
         };
 
@@ -414,9 +415,8 @@
             Config {
                 version: <span class="self">Self</span>::VERSION,
                 trust_root: <span class="self">Self</span>::consensus_trust_root(),
-                features: <span class="prelude-val">Some</span>(features),
+                features,
                 persist_check_tx_state: <span class="bool-val">false</span>,
-                freshness_proofs: <span class="bool-val">true</span>,
                 ..Default::default()
             },
         );

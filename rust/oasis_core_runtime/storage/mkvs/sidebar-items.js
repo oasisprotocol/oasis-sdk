@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["LogEntryKind","NodeBox","RootType"],"mod":["marshal","sync"],"struct":["LogEntry","OverlayTree","Prefix","Root","Tree"],"trait":["FallibleMKVS","ImmutableMKVS","Iterator","MKVS"],"type":["Depth","Key","WriteLog"]};
+window.SIDEBAR_ITEMS = {"enum":["LogEntryKind","NodeBox","RootType"],"mod":["marshal","sync"],"struct":["LogEntry","NodePointer","OverlayTree","Prefix","Root","Tree"],"trait":["FallibleMKVS","ImmutableMKVS","Iterator","MKVS"],"type":["Depth","Key","NodePtrRef","WriteLog"]};

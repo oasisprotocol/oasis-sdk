@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/8b45ece/runtime/src/consensus/tendermint/verifier/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/fb49717/runtime/src/consensus/tendermint/verifier/mod.rs`."><title>mod.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -919,6 +919,12 @@
 <a href="#917" id="917">917</a>
 <a href="#918" id="918">918</a>
 <a href="#919" id="919">919</a>
+<a href="#920" id="920">920</a>
+<a href="#921" id="921">921</a>
+<a href="#922" id="922">922</a>
+<a href="#923" id="923">923</a>
+<a href="#924" id="924">924</a>
+<a href="#925" id="925">925</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Tendermint consensus layer verification logic.
 </span><span class="kw">use </span>std::{convert::TryInto, str::FromStr, sync::Arc, time::Duration};
 
@@ -931,10 +937,10 @@
 <span class="kw">use </span>tendermint_light_client::{
     builder::LightClientBuilder,
     components::{<span class="self">self</span>, io::AtHeight, verifier::PredicateVerifier},
+    instance::Instance,
     light_client,
     operations::{ProdCommitValidator, ProvidedVotingPowerCalculator},
     store::LightStore,
-    supervisor::Instance,
     types::{
         Hash <span class="kw">as </span>TMHash, LightBlock <span class="kw">as </span>TMLightBlock, PeerId, Status, Time, TrustThreshold,
         TrustedBlockState,
@@ -1568,9 +1574,17 @@
         <span class="comment">// Build a light client using the embedded trust root or trust root
         // stored in the local store.
         </span><span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Loading trusted state"</span>);
-        <span class="kw">let </span>trusted_state: TrustedState = <span class="self">self
+        <span class="kw">let </span>trusted_state = <span class="self">self
             </span>.trusted_state_store
-            .load(<span class="self">self</span>.runtime_version, <span class="kw-2">&amp;</span><span class="self">self</span>.trust_root)<span class="question-mark">?</span>;
+            .load(<span class="self">self</span>.runtime_version, <span class="kw-2">&amp;</span><span class="self">self</span>.trust_root);
+
+        <span class="kw">let </span>trusted_state: TrustedState = <span class="kw">match </span>trusted_state {
+            <span class="prelude-val">Ok</span>(state) =&gt; state,
+            <span class="prelude-val">Err</span>(err) =&gt; {
+                <span class="macro">error!</span>(<span class="self">self</span>.logger, <span class="string">"failed to load trusted state (if running in SGX mode, check if the CPU had changed; if yes, wipe 'worker-local-storage.badger.db' and restart the node)"</span>);
+                <span class="kw">return </span><span class="prelude-val">Err</span>(err);
+            }
+        };
 
         <span class="comment">// Verify if we can trust light blocks from a new chain if the consensus
         // chain context changes.
@@ -1640,9 +1654,7 @@
         <span class="comment">// Verify state freshness with freshness proof. This step is required only for clients
         // as executors and key managers verify freshness regularly using node registration
         // (RAK with random nonces).
-        </span><span class="kw">if </span><span class="self">self</span>.protocol.get_config().freshness_proofs {
-            <span class="self">self</span>.verify_freshness_with_proof(<span class="kw-2">&amp;mut </span>instance, <span class="kw-2">&amp;mut </span>cache)<span class="question-mark">?</span>;
-        };
+        </span><span class="self">self</span>.verify_freshness_with_proof(<span class="kw-2">&amp;mut </span>instance, <span class="kw-2">&amp;mut </span>cache)<span class="question-mark">?</span>;
 
         <span class="comment">// Start the command processing loop.
         </span><span class="kw">loop </span>{
@@ -1794,7 +1806,7 @@
         };
         <span class="kw">let </span>now = clock.now();
 
-        <span class="kw">let </span>verdict = verifier.verify(untrusted, trusted, <span class="kw-2">&amp;</span>options, now);
+        <span class="kw">let </span>verdict = verifier.verify_update_header(untrusted, trusted, <span class="kw-2">&amp;</span>options, now);
 
         <span class="kw">match </span>verdict {
             Verdict::Success =&gt; (),

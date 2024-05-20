@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error"],"struct":["EnclavePolicySGX","EncryptedEphemeralSecret","EncryptedMasterSecret","EncryptedSecret","PolicySGX","SignedEncryptedEphemeralSecret","SignedEncryptedMasterSecret","SignedPolicySGX"]};
+window.SIDEBAR_ITEMS = {"enum":["Error"],"mod":["churp"],"struct":["EnclavePolicySGX","EncryptedEphemeralSecret","EncryptedMasterSecret","EncryptedSecret","PolicySGX","SignedEncryptedEphemeralSecret","SignedEncryptedMasterSecret","SignedPolicySGX"]};

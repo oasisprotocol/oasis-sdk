@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["MAX_QUOTE_AGE"],"enum":["Quote"],"mod":["egetkey","ias","pcs","seal"],"struct":["EnclaveIdentity","MrEnclave","MrSigner","QuotePolicy","VerifiedQuote"]};
+window.SIDEBAR_ITEMS = {"constant":["MAX_QUOTE_AGE"],"enum":["Quote"],"fn":["report_for"],"mod":["egetkey","ias","pcs","seal"],"struct":["EnclaveIdentity","MrEnclave","MrSigner","QuotePolicy","VerifiedQuote"]};

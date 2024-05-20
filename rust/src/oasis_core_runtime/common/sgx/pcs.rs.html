@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/8b45ece/runtime/src/common/sgx/pcs.rs`."><title>pcs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/fb49717/runtime/src/common/sgx/pcs.rs`."><title>pcs.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -988,6 +988,37 @@
 <a href="#986" id="986">986</a>
 <a href="#987" id="987">987</a>
 <a href="#988" id="988">988</a>
+<a href="#989" id="989">989</a>
+<a href="#990" id="990">990</a>
+<a href="#991" id="991">991</a>
+<a href="#992" id="992">992</a>
+<a href="#993" id="993">993</a>
+<a href="#994" id="994">994</a>
+<a href="#995" id="995">995</a>
+<a href="#996" id="996">996</a>
+<a href="#997" id="997">997</a>
+<a href="#998" id="998">998</a>
+<a href="#999" id="999">999</a>
+<a href="#1000" id="1000">1000</a>
+<a href="#1001" id="1001">1001</a>
+<a href="#1002" id="1002">1002</a>
+<a href="#1003" id="1003">1003</a>
+<a href="#1004" id="1004">1004</a>
+<a href="#1005" id="1005">1005</a>
+<a href="#1006" id="1006">1006</a>
+<a href="#1007" id="1007">1007</a>
+<a href="#1008" id="1008">1008</a>
+<a href="#1009" id="1009">1009</a>
+<a href="#1010" id="1010">1010</a>
+<a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
+<a href="#1013" id="1013">1013</a>
+<a href="#1014" id="1014">1014</a>
+<a href="#1015" id="1015">1015</a>
+<a href="#1016" id="1016">1016</a>
+<a href="#1017" id="1017">1017</a>
+<a href="#1018" id="1018">1018</a>
+<a href="#1019" id="1019">1019</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Intel Provisioning Certification Services (PCS) quote handling.
 </span><span class="kw">use </span>std::ffi::CString;
 
@@ -1009,9 +1040,11 @@
 <span class="kw">const </span>REQUIRED_TCB_INFO_VERSION: u32 = <span class="number">3</span>;
 <span class="kw">const </span>REQUIRED_QE_ID: <span class="kw-2">&amp;</span>str = <span class="string">"QE"</span>;
 <span class="kw">const </span>REQUIRED_QE_IDENTITY_VERSION: u32 = <span class="number">2</span>;
-<span class="kw">const </span>DEFAULT_MIN_TCB_EVALUATION_DATA_NUMBER: u32 = <span class="number">12</span>; <span class="comment">// As of 2022-08-01.
 
-// Intel's PCS signing root certificate.
+<span class="kw">const </span>DEFAULT_MIN_TCB_EVALUATION_DATA_NUMBER: u32 = <span class="number">12</span>; <span class="comment">// As of 2022-08-01.
+</span><span class="kw">const </span>DEFAULT_TCB_VALIDITY_PERIOD: Duration = Duration::try_days(<span class="number">30</span>).unwrap();
+
+<span class="comment">// Intel's PCS signing root certificate.
 </span><span class="kw">const </span>PCS_TRUST_ROOT_CERT: <span class="kw-2">&amp;</span>str = <span class="string">r#"-----BEGIN CERTIFICATE-----
 MIICjzCCAjSgAwIBAgIUImUM1lqdNInzg7SVUr9QGzknBqwwCgYIKoZIzj0EAwIw
 aDEaMBgGA1UEAwwRSW50ZWwgU0dYIFJvb3QgQ0ExGjAYBgNVBAoMEUludGVsIENv
@@ -1148,6 +1181,11 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::Disabled);
         }
 
+        <span class="comment">// XXX: We reuse the IAS specific variables to avoid having additional environment
+        // variables. Rename these variables when IAS support is removed.
+        </span><span class="kw">let </span>unsafe_skip_quote_verification = <span class="macro">option_env!</span>(<span class="string">"OASIS_UNSAFE_SKIP_AVR_VERIFY"</span>).is_some();
+        <span class="kw">let </span>unsafe_lax_quote_verification = <span class="macro">option_env!</span>(<span class="string">"OASIS_UNSAFE_LAX_AVR_VERIFY"</span>).is_some();
+
         <span class="comment">// Parse the quote.
         </span><span class="kw">let </span>quote = quote::Quote::parse(<span class="kw-2">&amp;</span><span class="self">self</span>.quote)
             .map_err(|err| Error::QuoteParseError(err.to_string()))<span class="question-mark">?</span>;
@@ -1179,35 +1217,30 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
             .open(ts, policy, tcb_cert.public_key_mut())<span class="question-mark">?</span>;
 
         <span class="comment">// We use the TCB info issue date as the timestamp.
-        </span><span class="kw">let </span>timestamp = Utc
-            .datetime_from_str(<span class="kw-2">&amp;</span>tcb_info.issue_date, PCS_TS_FMT)
+        </span><span class="kw">let </span>timestamp = NaiveDateTime::parse_from_str(<span class="kw-2">&amp;</span>tcb_info.issue_date, PCS_TS_FMT)
             .map_err(|err| Error::TCBParseError(err.into()))<span class="question-mark">?
-            </span>.timestamp();
+            </span>.and_utc()
+            .timestamp();
 
         <span class="comment">// Perform quote verification.
-        </span><span class="kw">let </span><span class="kw-2">mut </span>verifier = Verifier {
-            tcb_info,
-            qe_identity,
-            tcb_level: <span class="prelude-val">None</span>,
-        };
-        <span class="kw">let </span>sig = quote
-            .signature::&lt;quote::Quote3SignatureEcdsaP256&gt;()
-            .map_err(|err| Error::QuoteParseError(err.to_string()))<span class="question-mark">?</span>;
-        sig.verify(<span class="kw-2">&amp;</span><span class="self">self</span>.quote, <span class="kw-2">&amp;mut </span>verifier)
-            .map_err(|err| Error::VerificationFailed(err.to_string()))<span class="question-mark">?</span>;
+        </span><span class="kw">if </span>!unsafe_skip_quote_verification {
+            <span class="kw">let </span><span class="kw-2">mut </span>verifier: QeEcdsaP256Verifier = QeEcdsaP256Verifier::new(tcb_info, qe_identity);
+            <span class="kw">let </span>sig = quote
+                .signature::&lt;quote::Quote3SignatureEcdsaP256&gt;()
+                .map_err(|err| Error::QuoteParseError(err.to_string()))<span class="question-mark">?</span>;
+            sig.verify(<span class="kw-2">&amp;</span><span class="self">self</span>.quote, <span class="kw-2">&amp;mut </span>verifier)
+                .map_err(|err| Error::VerificationFailed(err.to_string()))<span class="question-mark">?</span>;
 
-        <span class="comment">// Validate TCB level.
-        // XXX: We reuse the IAS specific variable (OASIS_UNSAFE_LAX_AVR_VERIFY) to avoid having
-        // an additional environment variable. Rename the variable when IAS support is removed.
-        </span><span class="kw">let </span>tcb_lax_verify = <span class="macro">option_env!</span>(<span class="string">"OASIS_UNSAFE_LAX_AVR_VERIFY"</span>).is_some();
-        <span class="kw">match </span>verifier.tcb_level.ok_or(Error::TCBMismatch)<span class="question-mark">?</span>.status {
-            TCBStatus::UpToDate | TCBStatus::SWHardeningNeeded =&gt; {}
-            TCBStatus::OutOfDate
-            | TCBStatus::ConfigurationNeeded
-            | TCBStatus::OutOfDateConfigurationNeeded
-                <span class="kw">if </span>tcb_lax_verify =&gt; {}
-            <span class="kw">_ </span>=&gt; {
-                <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBOutOfDate);
+            <span class="comment">// Validate TCB level.
+            </span><span class="kw">match </span>verifier.tcb_level.ok_or(Error::TCBMismatch)<span class="question-mark">?</span>.status {
+                TCBStatus::UpToDate | TCBStatus::SWHardeningNeeded =&gt; {}
+                TCBStatus::OutOfDate
+                | TCBStatus::ConfigurationNeeded
+                | TCBStatus::OutOfDateConfigurationNeeded
+                    <span class="kw">if </span>unsafe_lax_quote_verification =&gt; {}
+                <span class="kw">_ </span>=&gt; {
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBOutOfDate);
+                }
             }
         }
 
@@ -1241,13 +1274,31 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
     }
 }
 
-<span class="kw">struct </span>Verifier {
+<span class="doccomment">/// Quoting Enclave ECDSA P-256 verifier.
+</span><span class="kw">pub struct </span>QeEcdsaP256Verifier {
     tcb_info: TCBInfo,
     qe_identity: QEIdentity,
     tcb_level: <span class="prelude-ty">Option</span>&lt;TCBLevel&gt;,
 }
 
-<span class="kw">impl </span>quote::Quote3SignatureEcdsaP256Verifier <span class="kw">for </span>Verifier {
+<span class="kw">impl </span>QeEcdsaP256Verifier {
+    <span class="doccomment">/// Create a new verifier.
+    </span><span class="kw">pub fn </span>new(tcb_info: TCBInfo, qe_identity: QEIdentity) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
+            tcb_info,
+            qe_identity,
+            tcb_level: <span class="prelude-val">None</span>,
+        }
+    }
+
+    <span class="doccomment">/// Get the TCB level.
+    /// This will return `None` if the quote has not been verified yet.
+    </span><span class="kw">pub fn </span>tcb_level(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;TCBLevel&gt; {
+        <span class="self">self</span>.tcb_level.clone()
+    }
+}
+
+<span class="kw">impl </span>quote::Quote3SignatureEcdsaP256Verifier <span class="kw">for </span>QeEcdsaP256Verifier {
     <span class="kw">fn </span>verify_certification_data(
         <span class="kw-2">&amp;mut </span><span class="self">self</span>,
         quote3signature: <span class="kw-2">&amp;</span>quote::Quote3SignatureEcdsaP256,
@@ -1268,7 +1319,7 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
             cert_chain.push(cert);
         }
         <span class="comment">// TODO: Specify current timestamp.
-        </span>Certificate::verify(<span class="kw-2">&amp;</span>cert_chain, <span class="kw-2">&amp;</span>PCS_TRUST_ROOT, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+        </span>Certificate::verify(<span class="kw-2">&amp;</span>cert_chain, <span class="kw-2">&amp;</span>PCS_TRUST_ROOT, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Extract TCB parameters from the PCK certificate.
         </span><span class="kw">let </span><span class="kw-2">mut </span>pck_cert = cert_chain.pop_front().unwrap();
@@ -1376,7 +1427,7 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
         }
 
         <span class="comment">// TODO: Specify current timestamp.
-        </span>Certificate::verify(<span class="kw-2">&amp;</span>cert_chain, <span class="kw-2">&amp;</span>PCS_TRUST_ROOT, <span class="prelude-val">None</span>)
+        </span>Certificate::verify(<span class="kw-2">&amp;</span>cert_chain, <span class="kw-2">&amp;</span>PCS_TRUST_ROOT, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)
             .map_err(|<span class="kw">_</span>| Error::TCBVerificationFailed)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(cert_chain.pop_front().unwrap())
@@ -1501,7 +1552,8 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
 }
 
 <span class="kw">impl </span>TCBInfo {
-    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>, ts: DateTime&lt;Utc&gt;, policy: <span class="kw-2">&amp;</span>QuotePolicy) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    <span class="doccomment">/// Validate the TCB info against the quote policy.
+    </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>, ts: DateTime&lt;Utc&gt;, policy: <span class="kw-2">&amp;</span>QuotePolicy) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">if </span><span class="self">self</span>.id != REQUIRED_TCB_INFO_ID {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBParseError(<span class="macro">anyhow::anyhow!</span>(
                 <span class="string">"unexpected TCB info identifier"
@@ -1515,16 +1567,19 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
         }
 
         <span class="comment">// Validate TCB info is not expired/not yet valid based on current time.
-        </span><span class="kw">let </span>issue_date = Utc
-            .datetime_from_str(<span class="kw-2">&amp;</span><span class="self">self</span>.issue_date, PCS_TS_FMT)
-            .map_err(|err| Error::TCBParseError(err.into()))<span class="question-mark">?</span>;
-        <span class="kw">let </span>_next_update = Utc
-            .datetime_from_str(<span class="kw-2">&amp;</span><span class="self">self</span>.next_update, PCS_TS_FMT)
-            .map_err(|err| Error::TCBParseError(err.into()))<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>issue_date = NaiveDateTime::parse_from_str(<span class="kw-2">&amp;</span><span class="self">self</span>.issue_date, PCS_TS_FMT)
+            .map_err(|err| Error::TCBParseError(err.into()))<span class="question-mark">?
+            </span>.and_utc();
+        <span class="kw">let </span>_next_update = NaiveDateTime::parse_from_str(<span class="kw-2">&amp;</span><span class="self">self</span>.next_update, PCS_TS_FMT)
+            .map_err(|err| Error::TCBParseError(err.into()))<span class="question-mark">?
+            </span>.and_utc();
         <span class="kw">if </span>issue_date &gt; ts {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBExpired);
         }
-        <span class="kw">if </span>ts - issue_date &gt; Duration::days(policy.tcb_validity_period.into()) {
+        <span class="kw">if </span>ts - issue_date
+            &gt; Duration::try_days(policy.tcb_validity_period.into())
+                .unwrap_or(DEFAULT_TCB_VALIDITY_PERIOD)
+        {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBExpired);
         }
 
@@ -1544,7 +1599,8 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>verify(
+    <span class="doccomment">/// Verify and return the TCB level matching the given TCB components and PCESVN.
+    </span><span class="kw">pub fn </span>verify(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         fmspc: <span class="kw-2">&amp;</span>[u8],
         tcb_comp_svn: [u32; <span class="number">16</span>],
@@ -1601,7 +1657,8 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
 }
 
 <span class="kw">impl </span>TCBLevel {
-    <span class="kw">fn </span>matches(<span class="kw-2">&amp;</span><span class="self">self</span>, tcb_comp_svn: <span class="kw-2">&amp;</span>[u32], pcesvn: u32) -&gt; bool {
+    <span class="doccomment">/// Whether the TCB level matches the given TCB components and PCESVN.
+    </span><span class="kw">pub fn </span>matches(<span class="kw-2">&amp;</span><span class="self">self</span>, tcb_comp_svn: <span class="kw-2">&amp;</span>[u32], pcesvn: u32) -&gt; bool {
         <span class="comment">// a) Compare all of the SGX TCB Comp SVNs retrieved from the SGX PCK Certificate (from 01 to
         //    16) with the corresponding values in the TCB Level. If all SGX TCB Comp SVNs in the
         //    certificate are greater or equal to the corresponding values in TCB Level, go to b,
@@ -1754,7 +1811,8 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
 }
 
 <span class="kw">impl </span>QEIdentity {
-    <span class="kw">fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>, ts: DateTime&lt;Utc&gt;, policy: <span class="kw-2">&amp;</span>QuotePolicy) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    <span class="doccomment">/// Validate the QE identity against the quote policy.
+    </span><span class="kw">pub fn </span>validate(<span class="kw-2">&amp;</span><span class="self">self</span>, ts: DateTime&lt;Utc&gt;, policy: <span class="kw-2">&amp;</span>QuotePolicy) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">if </span><span class="self">self</span>.id != REQUIRED_QE_ID {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBParseError(<span class="macro">anyhow::anyhow!</span>(<span class="string">"unexpected QE ID"</span>)));
         }
@@ -1765,16 +1823,19 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
         }
 
         <span class="comment">// Validate QE identity is not expired/not yet valid based on current time.
-        </span><span class="kw">let </span>issue_date = Utc
-            .datetime_from_str(<span class="kw-2">&amp;</span><span class="self">self</span>.issue_date, PCS_TS_FMT)
-            .map_err(|err| Error::TCBParseError(err.into()))<span class="question-mark">?</span>;
-        <span class="kw">let </span>_next_update = Utc
-            .datetime_from_str(<span class="kw-2">&amp;</span><span class="self">self</span>.next_update, PCS_TS_FMT)
-            .map_err(|err| Error::TCBParseError(err.into()))<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>issue_date = NaiveDateTime::parse_from_str(<span class="kw-2">&amp;</span><span class="self">self</span>.issue_date, PCS_TS_FMT)
+            .map_err(|err| Error::TCBParseError(err.into()))<span class="question-mark">?
+            </span>.and_utc();
+        <span class="kw">let </span>_next_update = NaiveDateTime::parse_from_str(<span class="kw-2">&amp;</span><span class="self">self</span>.next_update, PCS_TS_FMT)
+            .map_err(|err| Error::TCBParseError(err.into()))<span class="question-mark">?
+            </span>.and_utc();
         <span class="kw">if </span>issue_date &gt; ts {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBExpired);
         }
-        <span class="kw">if </span>ts - issue_date &gt; Duration::days(policy.tcb_validity_period.into()) {
+        <span class="kw">if </span>ts - issue_date
+            &gt; Duration::try_days(policy.tcb_validity_period.into())
+                .unwrap_or(DEFAULT_TCB_VALIDITY_PERIOD)
+        {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBExpired);
         }
 
@@ -1785,7 +1846,8 @@ AiEA4J0lrHoMs+Xo5o/sX6O9QWxHRAvZUGOdRQ7cvqRXaqI=
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, report: <span class="kw-2">&amp;</span>Report) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+    <span class="doccomment">/// Verify the QE report against the QE identity.
+    </span><span class="kw">pub fn </span>verify(<span class="kw-2">&amp;</span><span class="self">self</span>, report: <span class="kw-2">&amp;</span>Report) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="comment">// Verify if MRSIGNER field retrieved from SGX Enclave Report is equal to the value of
         // mrsigner field in QE Identity.
         </span><span class="kw">let </span>expected_mr_signer: Vec&lt;u8&gt; = <span class="self">self

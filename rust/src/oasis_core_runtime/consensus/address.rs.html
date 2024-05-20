@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/8b45ece/runtime/src/consensus/address.rs`."><title>address.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/fb49717/runtime/src/consensus/address.rs`."><title>address.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -208,15 +208,11 @@
 <a href="#206" id="206">206</a>
 <a href="#207" id="207">207</a>
 <a href="#208" id="208">208</a>
-<a href="#209" id="209">209</a>
-<a href="#210" id="210">210</a>
-<a href="#211" id="211">211</a>
-<a href="#212" id="212">212</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Consensus account address structures.
 </span><span class="kw">use </span>std::{convert::TryInto, fmt};
 
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
-<span class="kw">use </span>bech32::{<span class="self">self</span>, FromBase32, ToBase32, Variant};
+<span class="kw">use </span>bech32::{Bech32, Hrp};
 <span class="kw">use </span>lazy_static::lazy_static;
 
 <span class="kw">use </span><span class="kw">crate</span>::common::{
@@ -248,7 +244,7 @@
 </span><span class="kw">const </span>ADDRESS_RUNTIME_V0_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"oasis-core/address: runtime"</span>;
 <span class="kw">const </span>ADDRESS_RUNTIME_V0_VERSION: u8 = <span class="number">0</span>;
 
-<span class="kw">const </span>ADDRESS_BECH32_HRP: <span class="kw-2">&amp;</span>str = <span class="string">"oasis"</span>;
+<span class="kw">const </span>ADDRESS_BECH32_HRP: Hrp = Hrp::parse_unchecked(<span class="string">"oasis"</span>);
 
 <span class="doccomment">/// A staking account address.
 </span><span class="attr">#[derive(Clone, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -282,23 +278,19 @@
 
     <span class="doccomment">/// Tries to create a new address from Bech32-encoded string.
     </span><span class="kw">pub fn </span>from_bech32(data: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-        <span class="kw">let </span>(hrp, data, variant) =
-            bech32::decode(data).map_err(|<span class="kw">_</span>| <span class="macro">anyhow!</span>(<span class="string">"malformed address"</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>(hrp, data) = bech32::decode(data).map_err(|<span class="kw">_</span>| <span class="macro">anyhow!</span>(<span class="string">"malformed address"</span>))<span class="question-mark">?</span>;
 
-        <span class="kw">if </span>variant != Variant::Bech32 || hrp != ADDRESS_BECH32_HRP {
+        <span class="kw">if </span>hrp != ADDRESS_BECH32_HRP {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"malformed address"</span>));
         }
 
-        <span class="kw">let </span>data: Vec&lt;u8&gt; =
-            FromBase32::from_base32(<span class="kw-2">&amp;</span>data).map_err(|<span class="kw">_</span>| <span class="macro">anyhow!</span>(<span class="string">"malformed address"</span>))<span class="question-mark">?</span>;
         <span class="kw">let </span>sized: <span class="kw-2">&amp;</span>[u8; ADDRESS_SIZE] = <span class="kw-2">&amp;</span>data.as_slice().try_into()<span class="question-mark">?</span>;
-
         <span class="prelude-val">Ok</span>(sized.into())
     }
 
     <span class="doccomment">/// Converts an address to Bech32 representation.
     </span><span class="kw">pub fn </span>to_bech32(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        bech32::encode(ADDRESS_BECH32_HRP, <span class="self">self</span>.<span class="number">0</span>.to_base32(), Variant::Bech32).unwrap()
+        bech32::encode::&lt;Bech32&gt;(ADDRESS_BECH32_HRP, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>).unwrap()
     }
 }
 

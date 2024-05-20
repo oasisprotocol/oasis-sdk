@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/8b45ece/runtime/src/consensus/staking.rs`."><title>staking.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/fb49717/runtime/src/consensus/staking.rs`."><title>staking.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -720,6 +720,12 @@
 <a href="#718" id="718">718</a>
 <a href="#719" id="719">719</a>
 <a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
+<a href="#725" id="725">725</a>
+<a href="#726" id="726">726</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Consensus staking structures.
 //!
 //! # Note
@@ -1045,6 +1051,8 @@
 
 <span class="attr">#[cfg(test)]
 </span><span class="kw">mod </span>tests {
+    <span class="kw">use </span>base64::prelude::<span class="kw-2">*</span>;
+
     <span class="kw">use super</span>::<span class="kw-2">*</span>;
     <span class="kw">use crate</span>::{
         common::crypto::signature::PublicKey,
@@ -1121,7 +1129,7 @@
         )
     ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
-            <span class="kw">let </span>dec: Account = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
+            <span class="kw">let </span>dec: Account = cbor::from_slice(<span class="kw-2">&amp;</span>BASE64_STANDARD.decode(encoded_base64).unwrap())
                 .expect(<span class="string">"account should deserialize correctly"</span>);
             <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded account should match the expected value"</span>);
         }
@@ -1139,8 +1147,9 @@
             ),
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
-            <span class="kw">let </span>dec: Delegation = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">"delegation should deserialize correctly"</span>);
+            <span class="kw">let </span>dec: Delegation =
+                cbor::from_slice(<span class="kw-2">&amp;</span>BASE64_STANDARD.decode(encoded_base64).unwrap())
+                    .expect(<span class="string">"delegation should deserialize correctly"</span>);
             <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded account should match the expected value"</span>);
         }
     }
@@ -1162,7 +1171,7 @@
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: DebondingDelegation =
-                cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
+                cbor::from_slice(<span class="kw-2">&amp;</span>BASE64_STANDARD.decode(encoded_base64).unwrap())
                     .expect(<span class="string">"debonding delegation should deserialize correctly"</span>);
             <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded account should match the expected value"</span>);
         }
@@ -1189,8 +1198,9 @@
             ),
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
-            <span class="kw">let </span>dec: TransferResult = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">"transfer result should deserialize correctly"</span>);
+            <span class="kw">let </span>dec: TransferResult =
+                cbor::from_slice(<span class="kw-2">&amp;</span>BASE64_STANDARD.decode(encoded_base64).unwrap())
+                    .expect(<span class="string">"transfer result should deserialize correctly"</span>);
             <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded result should match the expected value"</span>);
         }
     }
@@ -1217,8 +1227,9 @@
             ),
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
-            <span class="kw">let </span>dec: WithdrawResult = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">"withdraw result should deserialize correctly"</span>);
+            <span class="kw">let </span>dec: WithdrawResult =
+                cbor::from_slice(<span class="kw-2">&amp;</span>BASE64_STANDARD.decode(encoded_base64).unwrap())
+                    .expect(<span class="string">"withdraw result should deserialize correctly"</span>);
             <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded result should match the expected value"</span>);
         }
     }
@@ -1245,8 +1256,9 @@
             ),
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
-            <span class="kw">let </span>dec: AddEscrowResult = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
-                .expect(<span class="string">"add escrow result should deserialize correctly"</span>);
+            <span class="kw">let </span>dec: AddEscrowResult =
+                cbor::from_slice(<span class="kw-2">&amp;</span>BASE64_STANDARD.decode(encoded_base64).unwrap())
+                    .expect(<span class="string">"add escrow result should deserialize correctly"</span>);
             <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded result should match the expected value"</span>);
         }
     }
@@ -1276,7 +1288,7 @@
         ];
         <span class="kw">for </span>(encoded_base64, rr) <span class="kw">in </span>tcs {
             <span class="kw">let </span>dec: ReclaimEscrowResult =
-                cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
+                cbor::from_slice(<span class="kw-2">&amp;</span>BASE64_STANDARD.decode(encoded_base64).unwrap())
                     .expect(<span class="string">"reclaim escrow result should deserialize correctly"</span>);
             <span class="macro">assert_eq!</span>(dec, rr, <span class="string">"decoded result should match the expected value"</span>);
         }
@@ -1434,7 +1446,7 @@
             ),
         ];
         <span class="kw">for </span>(encoded_base64, ev) <span class="kw">in </span>tcs {
-            <span class="kw">let </span>dec: Event = cbor::from_slice(<span class="kw-2">&amp;</span>base64::decode(encoded_base64).unwrap())
+            <span class="kw">let </span>dec: Event = cbor::from_slice(<span class="kw-2">&amp;</span>BASE64_STANDARD.decode(encoded_base64).unwrap())
                 .expect(<span class="string">"event should deserialize correctly"</span>);
             <span class="macro">assert_eq!</span>(dec, ev, <span class="string">"decoded event should match the expected value"</span>);
         }

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/8b45ece/runtime/src/storage/mkvs/tree/lookup.rs`."><title>lookup.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/fb49717/runtime/src/storage/mkvs/tree/lookup.rs`."><title>lookup.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-5bc39a1768837dd0.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.78.0-nightly (a84bb95a1 2024-02-13)" data-channel="nightly" data-search-js="search-dd67cee4cfa65049.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../../../static.files/storage-4c98445ec4002617.js"></script><script defer src="../../../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-48f368f3872407c8.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-04d5337699b92874.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-16x16-8b506e7a72182f1c.png"><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title">
             <h2>Files</h2></div></nav><div class="sidebar-resizer"></div>
     <main><nav class="sub"><form class="search-form"><span></span><div id="sidebar-button" tabindex="-1"><a href="../../../../../oasis_core_runtime/all.html" title="show sidebar"></a></div><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" tabindex="-1"><a href="../../../../../help.html" title="help">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
@@ -129,9 +129,42 @@
 <a href="#127" id="127">127</a>
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
 
-<span class="kw">use </span><span class="kw">crate</span>::storage::mkvs::{cache::<span class="kw-2">*</span>, sync::<span class="kw-2">*</span>, tree::<span class="kw-2">*</span>};
+<span class="kw">use </span><span class="kw">crate</span>::storage::mkvs::{
+    cache::{Cache, ReadSyncFetcher},
+    sync::{GetRequest, Proof, ProofBuilder, ReadSync, TreeID},
+    tree::{Depth, Key, KeyTrait, NodeBox, NodeKind, NodePtrRef, Root, Tree, Value},
+};
 
 <span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>FetcherSyncGet&lt;<span class="lifetime">'a</span>&gt; {
     key: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Key,
@@ -167,6 +200,22 @@
         <span class="self">self</span>._get_top(key, <span class="bool-val">false</span>)
     }
 
+    <span class="kw">pub fn </span>get_proof(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Proof&gt;&gt; {
+        <span class="kw">let </span>boxed_key = key.to_vec();
+        <span class="kw">let </span>pending_root = <span class="self">self</span>.cache.borrow().get_pending_root();
+
+        <span class="comment">// Remember where the path from root to target node ends (will end).
+        </span><span class="self">self</span>.cache.borrow_mut().mark_position();
+
+        <span class="kw">let </span><span class="kw-2">mut </span>proof_builder = ProofBuilder::new(pending_root.as_ref().borrow().hash);
+
+        <span class="kw">let </span>result = <span class="self">self</span>._get(pending_root, <span class="number">0</span>, <span class="kw-2">&amp;</span>boxed_key, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>proof_builder))<span class="question-mark">?</span>;
+        <span class="kw">match </span>result {
+            <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(proof_builder.build())),
+            <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
+        }
+    }
+
     <span class="doccomment">/// Check if the key exists in the local cache.
     </span><span class="kw">pub fn </span>cache_contains_key(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>[u8]) -&gt; bool {
         <span class="kw">match </span><span class="self">self</span>._get_top(key, <span class="bool-val">true</span>) {
@@ -183,7 +232,7 @@
         <span class="comment">// Remember where the path from root to target node ends (will end).
         </span><span class="self">self</span>.cache.borrow_mut().mark_position();
 
-        <span class="self">self</span>._get(pending_root, <span class="number">0</span>, <span class="kw-2">&amp;</span>boxed_key, check_only)
+        <span class="self">self</span>._get(pending_root, <span class="number">0</span>, <span class="kw-2">&amp;</span>boxed_key, check_only, <span class="prelude-val">None</span>)
     }
 
     <span class="kw">fn </span>_get(
@@ -192,6 +241,7 @@
         bit_depth: Depth,
         key: <span class="kw-2">&amp;</span>Key,
         check_only: bool,
+        <span class="kw-2">mut </span>proof_builder: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>ProofBuilder&gt;,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Value&gt;&gt; {
         <span class="kw">let </span>node_ref = <span class="self">self</span>.cache.borrow_mut().deref_node_ptr(
             ptr,
@@ -201,6 +251,11 @@
                 <span class="prelude-val">Some</span>(FetcherSyncGet::new(key, <span class="bool-val">false</span>))
             },
         )<span class="question-mark">?</span>;
+
+        <span class="comment">// Include nodes in proof if we have a proof builder.
+        </span><span class="kw">if let </span>(<span class="prelude-val">Some</span>(pb), <span class="prelude-val">Some</span>(node_ref)) = (proof_builder.as_mut(), <span class="kw-2">&amp;</span>node_ref) {
+            pb.include(<span class="kw-2">&amp;</span>node_ref.borrow());
+        }
 
         <span class="kw">match </span><span class="macro">classify_noderef!</span>(<span class="question-mark">?</span>node_ref) {
             NodeKind::None =&gt; {
@@ -218,6 +273,7 @@
                             bit_depth + n.label_bit_length,
                             key,
                             check_only,
+                            proof_builder,
                         );
                     }
 
@@ -233,6 +289,7 @@
                             bit_depth + n.label_bit_length,
                             key,
                             check_only,
+                            proof_builder,
                         );
                     } <span class="kw">else </span>{
                         <span class="kw">return </span><span class="self">self</span>._get(
@@ -240,6 +297,7 @@
                             bit_depth + n.label_bit_length,
                             key,
                             check_only,
+                            proof_builder,
                         );
                     }
                 }

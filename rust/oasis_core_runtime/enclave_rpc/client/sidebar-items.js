@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["RpcClientError"],"struct":["RpcClient"]};
+window.SIDEBAR_ITEMS = {"enum":["RpcClientError"],"struct":["Response","RpcClient"]};

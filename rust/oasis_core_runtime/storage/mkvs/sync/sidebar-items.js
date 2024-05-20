@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["SyncerError"],"fn":["merge_verified_subtree"],"struct":["GetPrefixesRequest","GetRequest","HostReadSyncer","IterateRequest","NoopReadSyncer","Proof","ProofResponse","ProofVerifier","RawProofEntry","StatsCollector","TreeID"],"trait":["ReadSync"]};
+window.SIDEBAR_ITEMS = {"enum":["SyncerError"],"fn":["merge_verified_subtree"],"struct":["GetPrefixesRequest","GetRequest","HostReadSyncer","IterateRequest","NoopReadSyncer","Proof","ProofBuilder","ProofResponse","ProofVerifier","RawProofEntry","StatsCollector","TreeID"],"trait":["ReadSync"]};

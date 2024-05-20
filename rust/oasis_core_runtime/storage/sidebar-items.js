@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["mkvs"],"trait":["KeyValue"]};
+window.SIDEBAR_ITEMS = {"mod":["mkvs"],"struct":["UntrustedInMemoryStorage"],"trait":["KeyValue"]};
