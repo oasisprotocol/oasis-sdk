@@ -12,10 +12,11 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/sgx"
 	"github.com/oasisprotocol/oasis-core/go/common/sgx/sigstruct"
 	"github.com/oasisprotocol/oasis-core/go/runtime/bundle"
+	"github.com/oasisprotocol/oasis-core/go/runtime/bundle/component"
 )
 
 // constructSigstruct constructs SIGSTRUCTS from provided arguments.
-func constructSigstruct(bnd *bundle.Bundle) *sigstruct.Sigstruct {
+func constructSigstruct(bnd *bundle.Bundle, componentId component.ID) *sigstruct.Sigstruct {
 	// Load SIGSTRUCT fields.
 	var date time.Time
 	switch {
@@ -53,7 +54,7 @@ func constructSigstruct(bnd *bundle.Bundle) *sigstruct.Sigstruct {
 		attributesMask &= ^uint64(sgx.AttributeDebug)
 	}
 
-	mrEnclave, err := bnd.MrEnclave()
+	mrEnclave, err := bnd.MrEnclave(componentId)
 	if err != nil {
 		cobra.CheckErr(fmt.Errorf("failed to get MRENCLAVE from bundle: %w", err))
 	}

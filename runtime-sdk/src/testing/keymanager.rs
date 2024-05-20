@@ -3,7 +3,7 @@
 use std::{collections::HashMap, sync::Mutex};
 
 pub use crate::keymanager::{
-    KeyManagerError, KeyPair, KeyPairId, SignedPublicKey, StateKey, TrustedPolicySigners,
+    KeyManagerError, KeyPair, KeyPairId, SignedPublicKey, StateKey, TrustedSigners,
 };
 use crate::{core::consensus::beacon::EpochTime, keymanager::KeyManager};
 

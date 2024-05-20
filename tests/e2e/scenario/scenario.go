@@ -1,4 +1,5 @@
-package main
+// Package scenario implements the Oasis SDK E2E runtime scenario.
+package scenario
 
 import (
 	"context"
@@ -12,13 +13,13 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
-	"github.com/oasisprotocol/oasis-core/go/common"
 	cmnGrpc "github.com/oasisprotocol/oasis-core/go/common/grpc"
 	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/node"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/common/version"
-	keymanager "github.com/oasisprotocol/oasis-core/go/keymanager/api"
+	consensus "github.com/oasisprotocol/oasis-core/go/consensus/api"
+	"github.com/oasisprotocol/oasis-core/go/keymanager/secrets"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/env"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/log"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
@@ -26,6 +27,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/scenario/e2e"
 	registry "github.com/oasisprotocol/oasis-core/go/registry/api"
 	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
+	"github.com/oasisprotocol/oasis-core/go/runtime/bundle/component"
 	runtimeCfg "github.com/oasisprotocol/oasis-core/go/runtime/config"
 	scheduler "github.com/oasisprotocol/oasis-core/go/scheduler/api"
 	"github.com/oasisprotocol/oasis-core/go/staking/api"
@@ -56,16 +58,24 @@ var (
 		oasis.LogAssertNoRoundFailures(),
 		oasis.LogAssertNoExecutionDiscrepancyDetected(),
 	}
-
-	runtimeID common.Namespace
-	_         = runtimeID.UnmarshalHex("8000000000000000000000000000000000000000000000000000000000000000")
-
-	keymanagerID common.Namespace
-	_            = keymanagerID.UnmarshalHex("c000000000000000ffffffffffffffffffffffffffffffffffffffffffffffff")
 )
 
+// Env is the test environment.
+type Env struct {
+	// Scenario is the E2E test scenario currently running.
+	Scenario *RuntimeScenario
+	// Logger is the logger that can be used by tests.
+	Logger *logging.Logger
+	// Connection is the gRPC connection to the client node.
+	Connection *grpc.ClientConn
+	// Consensus is the consensus client instance connected to the client node.
+	Consensus consensus.ClientBackend
+	// Client is the runtime client instance connected to the client node.
+	Client client.RuntimeClient
+}
+
 // RunTestFunction is a test function.
-type RunTestFunction func(*RuntimeScenario, *logging.Logger, *grpc.ClientConn, client.RuntimeClient) error
+type RunTestFunction func(context.Context, *Env) error
 
 // RuntimeScenario is a base class for e2e test scenarios involving runtimes.
 type RuntimeScenario struct {
@@ -81,14 +91,14 @@ type RuntimeScenario struct {
 	fixtureModifier FixtureModifierFunc
 }
 
-// ScenarioOption is an option that can be specified to modify an aspect of the scenario.
-type ScenarioOption func(*RuntimeScenario)
+// Option is an option that can be specified to modify an aspect of the scenario.
+type Option func(*RuntimeScenario)
 
 // FixtureModifierFunc is a function that performs arbitrary modifications to a given fixture.
 type FixtureModifierFunc func(*oasis.NetworkFixture)
 
 // WithCustomFixture applies the given fixture modifier function to the runtime scenario fixture.
-func WithCustomFixture(fm FixtureModifierFunc) ScenarioOption {
+func WithCustomFixture(fm FixtureModifierFunc) Option {
 	return func(sc *RuntimeScenario) {
 		sc.fixtureModifier = fm
 	}
@@ -96,7 +106,7 @@ func WithCustomFixture(fm FixtureModifierFunc) ScenarioOption {
 
 // NewRuntimeScenario creates a new runtime test scenario using the given
 // runtime and test functions.
-func NewRuntimeScenario(runtimeName string, tests []RunTestFunction, opts ...ScenarioOption) *RuntimeScenario {
+func NewRuntimeScenario(runtimeName string, tests []RunTestFunction, opts ...Option) *RuntimeScenario {
 	sc := &RuntimeScenario{
 		Scenario:    *e2e.NewScenario(runtimeName),
 		RuntimeName: runtimeName,
@@ -157,7 +167,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 			RuntimeSGXLoaderBinary:            runtimeLoader,
 			DefaultLogWatcherHandlerFactories: DefaultRuntimeLogWatcherHandlerFactories,
 			Consensus:                         f.Network.Consensus,
-			DeterministicIdentities:           true, // for allowlisting the client node on the km
+			DeterministicIdentities:           true, // For allowlisting the client node on the key manager.
 			Beacon: beacon.ConsensusParameters{
 				Backend: beacon.BackendInsecure,
 			},
@@ -175,7 +185,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 						General: api.GeneralAccount{
 							Balance: *quantity.NewFromUint64(100),
 							Allowances: map[api.Address]quantity.Quantity{
-								api.NewRuntimeAddress(runtimeID): *quantity.NewFromUint64(100),
+								RuntimeAddress: *quantity.NewFromUint64(100),
 							},
 						},
 					},
@@ -183,7 +193,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 						General: api.GeneralAccount{
 							Balance: *quantity.NewFromUint64(100),
 							Allowances: map[api.Address]quantity.Quantity{
-								api.NewRuntimeAddress(runtimeID): *quantity.NewFromUint64(100),
+								RuntimeAddress: *quantity.NewFromUint64(100),
 							},
 						},
 					},
@@ -200,7 +210,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 		Runtimes: []oasis.RuntimeFixture{
 			// Key manager runtime.
 			{
-				ID:         keymanagerID,
+				ID:         KeymanagerID,
 				Kind:       registry.KindKeyManager,
 				Entity:     0,
 				Keymanager: -1,
@@ -210,15 +220,20 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				GovernanceModel: registry.GovernanceEntity,
 				Deployments: []oasis.DeploymentCfg{
 					{
-						Binaries: map[node.TEEHardware]string{
-							node.TEEHardwareInvalid: keymanagerPath,
+						Components: []oasis.ComponentCfg{
+							{
+								Kind: component.RONL,
+								Binaries: map[node.TEEHardware]string{
+									node.TEEHardwareInvalid: keymanagerPath,
+								},
+							},
 						},
 					},
 				},
 			},
 			// Compute runtime.
 			{
-				ID:         runtimeID,
+				ID:         RuntimeID,
 				Kind:       registry.KindCompute,
 				Entity:     0,
 				Keymanager: -1,
@@ -254,8 +269,13 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				GovernanceModel: registry.GovernanceEntity,
 				Deployments: []oasis.DeploymentCfg{
 					{
-						Version:  version.Version{Major: 0, Minor: 1, Patch: 0},
-						Binaries: sc.resolveRuntimeBinaries(runtimeBinary),
+						Version: version.Version{Major: 0, Minor: 1, Patch: 0},
+						Components: []oasis.ComponentCfg{
+							{
+								Kind:     component.RONL,
+								Binaries: sc.resolveRuntimeBinaries(runtimeBinary),
+							},
+						},
 					},
 				},
 			},
@@ -328,9 +348,7 @@ func (sc *RuntimeScenario) resolveRuntimeBinary(runtimeBinary string) string {
 	return filepath.Join(path, runtimeBinary)
 }
 
-func (sc *RuntimeScenario) waitNodesSynced() error {
-	ctx := context.Background()
-
+func (sc *RuntimeScenario) waitNodesSynced(ctx context.Context) error {
 	checkSynced := func(n *oasis.Node) error {
 		c, err := oasis.NewController(n.SocketPath())
 		if err != nil {
@@ -375,28 +393,28 @@ func (sc *RuntimeScenario) CheckInvariants(ctx context.Context) error {
 }
 
 // WaitMasterSecret waits until the specified generation of the master secret is generated.
-func (sc *RuntimeScenario) WaitMasterSecret(ctx context.Context, generation uint64) (*keymanager.Status, error) {
+func (sc *RuntimeScenario) WaitMasterSecret(ctx context.Context, generation uint64) (*secrets.Status, error) {
 	sc.Logger.Info("waiting for master secret", "generation", generation)
 
-	mstCh, mstSub, err := sc.Net.Controller().Keymanager.WatchMasterSecrets(ctx)
+	mstCh, mstSub, err := sc.Net.Controller().Keymanager.Secrets().WatchMasterSecrets(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer mstSub.Close()
 
-	stCh, stSub, err := sc.Net.Controller().Keymanager.WatchStatuses(ctx)
+	stCh, stSub, err := sc.Net.Controller().Keymanager.Secrets().WatchStatuses(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer stSub.Close()
 
-	var last *keymanager.Status
+	var last *secrets.Status
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case secret := <-mstCh:
-			if !secret.Secret.ID.Equal(&keymanagerID) {
+			if !secret.Secret.ID.Equal(&KeymanagerID) {
 				continue
 			}
 
@@ -406,7 +424,7 @@ func (sc *RuntimeScenario) WaitMasterSecret(ctx context.Context, generation uint
 				"num_ciphertexts", len(secret.Secret.Secret.Ciphertexts),
 			)
 		case status := <-stCh:
-			if !status.ID.Equal(&keymanagerID) {
+			if !status.ID.Equal(&KeymanagerID) {
 				continue
 			}
 			if status.NextGeneration() == 0 {
@@ -437,7 +455,7 @@ func (sc *RuntimeScenario) Run(ctx context.Context, _ *env.Env) error {
 	}
 
 	// Wait for all nodes to sync.
-	if err := sc.waitNodesSynced(); err != nil {
+	if err := sc.waitNodesSynced(ctx); err != nil {
 		return err
 	}
 
@@ -465,7 +483,7 @@ func (sc *RuntimeScenario) Run(ctx context.Context, _ *env.Env) error {
 	if err != nil {
 		return err
 	}
-	rtc := client.New(conn, runtimeID)
+	rtc := client.New(conn, RuntimeID)
 	sc.client = rtc
 	defer func() {
 		sc.client = nil
@@ -481,12 +499,20 @@ func (sc *RuntimeScenario) Run(ctx context.Context, _ *env.Env) error {
 		return err
 	}
 
+	env := Env{
+		Scenario:   sc,
+		Logger:     sc.Logger,
+		Connection: conn,
+		Consensus:  consensus.NewConsensusClient(conn),
+		Client:     rtc,
+	}
+
 	// Run the given tests for this runtime.
 	for _, test := range sc.RunTest {
 		testName := runtime.FuncForPC(reflect.ValueOf(test).Pointer()).Name()
 
 		sc.Logger.Info("running test", "test", testName)
-		if testErr := test(sc, sc.Logger, conn, rtc); testErr != nil {
+		if testErr := test(ctx, &env); testErr != nil {
 			sc.Logger.Error("test failed",
 				"test", testName,
 				"err", testErr,

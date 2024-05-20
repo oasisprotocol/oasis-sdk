@@ -2,7 +2,7 @@
 use std::collections::BTreeMap;
 
 #[cfg(feature = "confidential")]
-use oasis_runtime_sdk::keymanager::TrustedPolicySigners;
+use oasis_runtime_sdk::keymanager::TrustedSigners;
 use oasis_runtime_sdk::{self as sdk, config, modules, types::token::Denomination, Version};
 use oasis_runtime_sdk_evm as evm;
 
@@ -47,8 +47,8 @@ impl sdk::Runtime for Runtime {
     );
 
     #[cfg(feature = "confidential")]
-    fn trusted_policy_signers() -> Option<TrustedPolicySigners> {
-        Some(TrustedPolicySigners::default())
+    fn trusted_signers() -> Option<TrustedSigners> {
+        Some(TrustedSigners::default())
     }
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {

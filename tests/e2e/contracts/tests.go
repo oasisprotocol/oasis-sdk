@@ -1,22 +1,19 @@
-package main
+package contracts
 
 import (
 	"bytes"
 	"context"
-	_ "embed"
 	"encoding/hex"
 	"fmt"
 	"time"
 
 	"github.com/btcsuite/btcd/btcec/v2"
-	"google.golang.org/grpc"
 
 	voiEd "github.com/oasisprotocol/curve25519-voi/primitives/ed25519"
 	voiSr "github.com/oasisprotocol/curve25519-voi/primitives/sr25519"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
-	"github.com/oasisprotocol/oasis-core/go/common/logging"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
@@ -30,13 +27,8 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/core"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
+	"github.com/oasisprotocol/oasis-sdk/tests/e2e/scenario"
 )
-
-//go:embed contracts/hello.wasm
-var helloContractCode []byte
-
-//go:embed contracts/oas20.wasm
-var oas20ContractCode []byte
 
 type HelloInitiate struct {
 	InitialCounter uint64 `json:"initial_counter"`
@@ -76,14 +68,12 @@ func newEd25519Signer(seed string) *voiEd25519Signer {
 	}
 }
 
-// ContractsTest does a simple upload/instantiate/call contract test.
-func ContractsTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error { //nolint: gocyclo
-	ctx := context.Background()
-
+// BasicTest does a simple upload/instantiate/call contract test.
+func BasicTest(ctx context.Context, env *scenario.Env) error { //nolint: gocyclo
 	counter := uint64(24)
-	ac := accounts.NewV1(rtc)
-	ct := contracts.NewV1(rtc)
-	cr := core.NewV1(rtc)
+	ac := accounts.NewV1(env.Client)
+	ct := contracts.NewV1(env.Client)
+	cr := core.NewV1(env.Client)
 	signer := testing.Alice.Signer
 
 	// Upload hello contract code.
@@ -188,7 +178,7 @@ func ContractsTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rt
 	}
 
 	// Ensure oas20 instantiated event got emitted.
-	events, err := rtc.GetEvents(ctx, meta.Round, []client.EventDecoder{oas20.EventDecoder(uploadOas20.ID, instanceOas20.ID)}, false)
+	events, err := env.Client.GetEvents(ctx, meta.Round, []client.EventDecoder{oas20.EventDecoder(uploadOas20.ID, instanceOas20.ID)}, false)
 	if err != nil {
 		return fmt.Errorf("failed to fetch OAS20 events: %w", err)
 	}
@@ -209,7 +199,7 @@ func ContractsTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rt
 	}
 
 	// Watch events.
-	eventsCh, err := rtc.WatchEvents(ctx, []client.EventDecoder{oas20.EventDecoder(uploadOas20.ID, instanceOas20.ID)}, false)
+	eventsCh, err := env.Client.WatchEvents(ctx, []client.EventDecoder{oas20.EventDecoder(uploadOas20.ID, instanceOas20.ID)}, false)
 	if err != nil {
 		return fmt.Errorf("failed to watch events: %w", err)
 	}
@@ -749,10 +739,9 @@ OUTER:
 	return nil
 }
 
-// ContractsParametersTest tests the parameters methods.
-func ContractsParametersTest(_ *RuntimeScenario, _ *logging.Logger, _ *grpc.ClientConn, rtc client.RuntimeClient) error {
-	ctx := context.Background()
-	ct := contracts.NewV1(rtc)
+// ParametersTest tests the parameters methods.
+func ParametersTest(ctx context.Context, env *scenario.Env) error {
+	ct := contracts.NewV1(env.Client)
 
 	params, err := ct.Parameters(ctx, client.RoundLatest)
 	if err != nil {

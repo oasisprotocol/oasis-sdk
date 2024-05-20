@@ -73,12 +73,12 @@ cp "${TESTS_DIR}"/../target/debug/test-runtime-simple-contracts "${TEST_BASE_DIR
 printf "${CYAN}### Building test hello contract...${OFF}\n"
 cd "${TESTS_DIR}"/contracts/hello
 cargo build --target wasm32-unknown-unknown --release
-cp "${TESTS_DIR}"/contracts/hello/target/wasm32-unknown-unknown/release/hello.wasm "${TESTS_DIR}"/e2e/contracts/
+cp "${TESTS_DIR}"/contracts/hello/target/wasm32-unknown-unknown/release/hello.wasm "${TESTS_DIR}"/e2e/contracts/build/
 
 printf "${CYAN}### Building oas20 contract...${OFF}\n"
 cd "${TESTS_DIR}"/../contract-sdk/specs/token/oas20
 cargo build --target wasm32-unknown-unknown --release
-cp "${TESTS_DIR}"/../contract-sdk/specs/token/oas20/target/wasm32-unknown-unknown/release/oas20.wasm "${TESTS_DIR}"/e2e/contracts/
+cp "${TESTS_DIR}"/../contract-sdk/specs/token/oas20/target/wasm32-unknown-unknown/release/oas20.wasm "${TESTS_DIR}"/e2e/contracts/build/
 
 printf "${CYAN}### Building e2e test harness...${OFF}\n"
 cd "${TESTS_DIR}"/e2e
@@ -98,6 +98,7 @@ printf "${CYAN}### Running end-to-end tests...${OFF}\n"
 	--e2e.runtime.binary_dir.default="${TEST_BASE_DIR}" \
 	--e2e.runtime.loader="${TEST_RUNTIME_LOADER}" \
 	--e2e.keymanager.binary="${TEST_KM_BINARY}" \
+	--scenario_timeout 30m \
 	"$@"
 
 cd "${TESTS_DIR}"

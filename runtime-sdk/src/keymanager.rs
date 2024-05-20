@@ -7,7 +7,7 @@ use oasis_core_keymanager::client::{KeyManagerClient as CoreKeyManagerClient, Re
 pub use oasis_core_keymanager::{
     api::KeyManagerError,
     crypto::{KeyPair, KeyPairId, SignedPublicKey, StateKey},
-    policy::TrustedPolicySigners,
+    policy::TrustedSigners,
 };
 use oasis_core_runtime::{
     common::namespace::Namespace,
@@ -33,7 +33,7 @@ impl KeyManagerClient {
         identity: Arc<Identity>,
         rpc: &mut RpcDispatcher,
         key_cache_sizes: usize,
-        signers: TrustedPolicySigners,
+        signers: TrustedSigners,
     ) -> Self {
         let remote_client = Arc::new(RemoteClient::new_runtime(
             runtime_id,

@@ -70,7 +70,7 @@ mod test {
 
     /// Test contract code.
     static TEST_CONTRACT_CODE_HEX: &str =
-        include_str!("../../../../../tests/e2e/contracts/use_gas/evm_use_gas.hex");
+        include_str!("../../../../../tests/e2e/evm/contracts/use_gas/evm_use_gas.hex");
 
     #[test]
     fn test_call_gas_used() {

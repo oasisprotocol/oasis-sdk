@@ -143,10 +143,10 @@ mod test {
 
     /// Test contract code.
     static TEST_CONTRACT_CODE_HEX: &str =
-        include_str!("../../../../../tests/e2e/contracts/subcall/evm_subcall.hex");
+        include_str!("../../../../../tests/e2e/evm/contracts/subcall/evm_subcall.hex");
     /// Test contract ABI.
     static TEST_CONTRACT_ABI_JSON: &str =
-        include_str!("../../../../../tests/e2e/contracts/subcall/evm_subcall.abi");
+        include_str!("../../../../../tests/e2e/evm/contracts/subcall/evm_subcall.abi");
 
     #[test]
     fn test_subcall_dispatch() {
