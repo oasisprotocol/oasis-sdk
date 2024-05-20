@@ -754,14 +754,14 @@ impl<Cfg: Config> Module<Cfg> {
 
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
     fn decode_tx<C: Context>(
-        ctx: &C,
+        _ctx: &C,
         scheme: &str,
         body: &[u8],
     ) -> Result<Option<Transaction>, CoreError> {
         match scheme {
             "evm.ethereum.v0" => {
                 let min_gas_price =
-                    <C::Runtime as Runtime>::Core::min_gas_price(ctx, &Cfg::TOKEN_DENOMINATION)
+                    <C::Runtime as Runtime>::Core::min_gas_price(&Cfg::TOKEN_DENOMINATION)
                         .unwrap_or_default();
 
                 Ok(Some(

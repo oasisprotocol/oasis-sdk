@@ -328,7 +328,7 @@ pub trait API {
     fn max_batch_gas() -> u64;
 
     /// Configured minimum gas price.
-    fn min_gas_price<C: Context>(ctx: &C, denom: &token::Denomination) -> Option<u128>;
+    fn min_gas_price(denom: &token::Denomination) -> Option<u128>;
 
     /// Sets the transaction priority to the provided amount.
     fn set_priority(priority: u64);
@@ -526,8 +526,8 @@ impl<Cfg: Config> API for Module<Cfg> {
         Self::params().max_batch_gas
     }
 
-    fn min_gas_price<C: Context>(ctx: &C, denom: &token::Denomination) -> Option<u128> {
-        Self::min_gas_prices(ctx).get(denom).copied()
+    fn min_gas_price(denom: &token::Denomination) -> Option<u128> {
+        Self::min_gas_prices().get(denom).copied()
     }
 
     fn set_priority(priority: u64) {
@@ -890,7 +890,7 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &C,
         _args: (),
     ) -> Result<BTreeMap<token::Denomination, u128>, Error> {
-        let mut mgp = Self::min_gas_prices(ctx);
+        let mut mgp = Self::min_gas_prices();
 
         // Generate a combined view with local overrides.
         for (denom, price) in mgp.iter_mut() {
@@ -974,7 +974,7 @@ impl<Cfg: Config> Module<Cfg> {
 }
 
 impl<Cfg: Config> Module<Cfg> {
-    fn min_gas_prices<C: Context>(_ctx: &C) -> BTreeMap<Denomination, u128> {
+    fn min_gas_prices() -> BTreeMap<Denomination, u128> {
         let params = Self::params();
         if params.dynamic_min_gas_price.enabled {
             CurrentState::with_store(|store| {
@@ -1016,7 +1016,7 @@ impl<Cfg: Config> Module<Cfg> {
         let fee = CurrentState::with_env(|env| env.tx_auth_info().fee.clone());
         let denom = fee.amount.denomination();
 
-        match Self::min_gas_price(ctx, denom) {
+        match Self::min_gas_price(denom) {
             // If the denomination is not among the global set, reject.
             None => return Err(Error::GasPriceTooLow),
 
@@ -1270,7 +1270,7 @@ impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
         });
     }
 
-    fn end_block<C: Context>(ctx: &C) {
+    fn end_block<C: Context>(_ctx: &C) {
         let params = Self::params();
         if !params.dynamic_min_gas_price.enabled {
             return;
@@ -1289,7 +1289,7 @@ impl<Cfg: Config> module::BlockHandler for Module<Cfg> {
         ) / 100;
 
         // Compute new prices.
-        let mut mgp = Self::min_gas_prices(ctx);
+        let mut mgp = Self::min_gas_prices();
         mgp.iter_mut().for_each(|(d, price)| {
             let mut new_min_price = min_gas_price_update(
                 gas_used,

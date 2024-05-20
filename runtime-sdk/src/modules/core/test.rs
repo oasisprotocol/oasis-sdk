@@ -142,14 +142,8 @@ fn test_query_min_gas_price() {
         dynamic_min_gas_price: Default::default(),
     });
 
-    assert_eq!(
-        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
-        Some(123)
-    );
-    assert_eq!(
-        Core::min_gas_price(&ctx, &"SMALLER".parse().unwrap()),
-        Some(1000)
-    );
+    assert_eq!(Core::min_gas_price(&token::Denomination::NATIVE), Some(123));
+    assert_eq!(Core::min_gas_price(&"SMALLER".parse().unwrap()), Some(1000));
 
     let mgp = Core::query_min_gas_price(&ctx, ()).expect("query_min_gas_price should succeed");
     assert!(mgp.len() == 2);
@@ -174,11 +168,11 @@ fn test_query_min_gas_price() {
     }
 
     assert_eq!(
-        super::Module::<MinGasPriceOverride>::min_gas_price(&ctx, &token::Denomination::NATIVE),
+        super::Module::<MinGasPriceOverride>::min_gas_price(&token::Denomination::NATIVE),
         Some(123)
     );
     assert_eq!(
-        super::Module::<MinGasPriceOverride>::min_gas_price(&ctx, &"SMALLER".parse().unwrap()),
+        super::Module::<MinGasPriceOverride>::min_gas_price(&"SMALLER".parse().unwrap()),
         Some(1000)
     );
 
@@ -1253,7 +1247,6 @@ fn test_min_gas_price_update() {
 #[test]
 fn test_dynamic_min_gas_price() {
     let mut mock = mock::Mock::default();
-    let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
 
     let denom: token::Denomination = "SMALLER".parse().unwrap();
     Core::set_params(Parameters {
@@ -1312,10 +1305,10 @@ fn test_dynamic_min_gas_price() {
     };
     let call = tx.call.clone();
     assert_eq!(
-        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
+        Core::min_gas_price(&token::Denomination::NATIVE),
         Some(1000)
     );
-    assert_eq!(Core::min_gas_price(&ctx, &denom), Some(100));
+    assert_eq!(Core::min_gas_price(&denom), Some(100));
 
     // Simulate some full blocks (with max gas usage).
     for round in 0..=10 {
@@ -1344,10 +1337,10 @@ fn test_dynamic_min_gas_price() {
 
     let ctx = mock.create_ctx();
     assert_eq!(
-        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
+        Core::min_gas_price(&token::Denomination::NATIVE),
         Some(3598) // Gas price should increase.
     );
-    assert_eq!(Core::min_gas_price(&ctx, &denom), Some(350));
+    assert_eq!(Core::min_gas_price(&denom), Some(350));
 
     // Simulate some empty blocks.
     for round in 10..=100 {
@@ -1360,10 +1353,10 @@ fn test_dynamic_min_gas_price() {
 
     let ctx = mock.create_ctx();
     assert_eq!(
-        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
+        Core::min_gas_price(&token::Denomination::NATIVE),
         Some(1000) // Gas price should decrease to the configured min gas price.
     );
-    assert_eq!(Core::min_gas_price(&ctx, &denom), Some(100));
+    assert_eq!(Core::min_gas_price(&denom), Some(100));
 }
 
 #[test]
