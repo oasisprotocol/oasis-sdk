@@ -37,7 +37,7 @@ rlp = "0.5.2"
 uint = "0.9.1"
 
 # Fuzzing.
-honggfuzz = "0.5.55"
+honggfuzz = "0.5.56"
 serde = { version = "1.0.199", features = ["derive"], optional = true }
 serde_json = { version = "1.0.116", features = ["raw_value"], optional = true }
 
