@@ -58,7 +58,7 @@ pub fn decode(
             let message = ethereum::LegacyTransactionMessage::from(eth_tx);
 
             (
-                message.chain_id,
+                message.chain_id.or(expected_chain_id),
                 sig,
                 sig_recid,
                 message.hash(),
@@ -325,9 +325,23 @@ mod test {
     #[test]
     fn test_decode_basic() {
         // https://github.com/ethereum/tests/blob/v10.0/BasicTests/txtest.json
+        let legacy_tx = "f86b8085e8d4a510008227109413978aee95f38490e9769c39b2773ed763d9cd5f872386f26fc10000801ba0eab47c1a49bf2fe5d40e01d313900e19ca485867d462fe06e139e3a536c6d4f4a014a569d327dcda4b29f74f93c0e9729d2f49ad726e703f9cd90dbb0fbf6649f1";
         decode_expect_call(
-            "f86b8085e8d4a510008227109413978aee95f38490e9769c39b2773ed763d9cd5f872386f26fc10000801ba0eab47c1a49bf2fe5d40e01d313900e19ca485867d462fe06e139e3a536c6d4f4a014a569d327dcda4b29f74f93c0e9729d2f49ad726e703f9cd90dbb0fbf6649f1",
+            legacy_tx,
             None,
+            "13978aee95f38490e9769c39b2773ed763d9cd5f",
+            10_000_000_000_000_000,
+            "",
+            10_000,
+            1_000_000_000_000,
+            // "cow" test account
+            "cd2a3d9f938e13cd947ec05abc7fe734df8dd826",
+            0,
+            1_000,
+        );
+        decode_expect_call(
+            legacy_tx,
+            Some(1), // Legacy pre-EIP-155 transaction should work with any chain ID.
             "13978aee95f38490e9769c39b2773ed763d9cd5f",
             10_000_000_000_000_000,
             "",
@@ -358,8 +372,8 @@ mod test {
     fn test_decode_chain_id() {
         // Test with mismatching expect_chain_id to exercise our check.
         decode_expect_invalid(
-            // Taken from test_decode_basic.
-            "f86b8085e8d4a510008227109413978aee95f38490e9769c39b2773ed763d9cd5f872386f26fc10000801ba0eab47c1a49bf2fe5d40e01d313900e19ca485867d462fe06e139e3a536c6d4f4a014a569d327dcda4b29f74f93c0e9729d2f49ad726e703f9cd90dbb0fbf6649f1",
+            // Taken from test_decode_types with chain ID of 1.
+            "01f86301028203e882c35094cccccccccccccccccccccccccccccccccccccccc8080c080a0260f95e555a1282ef49912ff849b2007f023c44529dc8fb7ecca7693cccb64caa06252cf8af2a49f4cb76fd7172feaece05124edec02db242886b36963a30c2606",
             Some(5),
         );
     }
