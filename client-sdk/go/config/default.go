@@ -120,8 +120,8 @@ var DefaultNetworks = Networks{
 						ConsensusDenomination: "TEST",
 					},
 
-					// Pontus-X Testnet on Testnet.
-					"pontusx_test": {
+					// Pontus-X on Testnet.
+					"pontusx": {
 						Description: "Pontus-X Testnet",
 						ID:          "00000000000000000000000000000000000000000000000004a6f9071c007069",
 						Denominations: map[string]*DenominationInfo{
