@@ -13,12 +13,12 @@ replace (
 
 require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.3
-	github.com/ethereum/go-ethereum v1.14.0
+	github.com/ethereum/go-ethereum v1.14.3
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
 	github.com/oasisprotocol/oasis-core/go v0.2400.0
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
-	google.golang.org/grpc v1.63.2
+	google.golang.org/grpc v1.64.0
 )
 
 require (
@@ -144,7 +144,7 @@ require (
 	github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus/client_golang v1.19.0 // indirect
+	github.com/prometheus/client_golang v1.19.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.52.2 // indirect
 	github.com/prometheus/procfs v0.13.0 // indirect
@@ -187,7 +187,7 @@ require (
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.20.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20221004221323-12db695f1648 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect

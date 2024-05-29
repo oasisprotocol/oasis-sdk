@@ -14,11 +14,11 @@ replace (
 require (
 	github.com/oasisprotocol/oasis-core/go v0.2400.0
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
-	github.com/prometheus/client_golang v1.19.0
+	github.com/prometheus/client_golang v1.19.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.18.2
-	google.golang.org/grpc v1.63.2
+	google.golang.org/grpc v1.64.0
 )
 
 require (
@@ -49,7 +49,7 @@ require (
 	github.com/eapache/channels v1.1.0 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/elastic/gosigar v0.14.3 // indirect
-	github.com/ethereum/go-ethereum v1.14.0 // indirect
+	github.com/ethereum/go-ethereum v1.14.3 // indirect
 	github.com/fatih/color v1.14.1 // indirect
 	github.com/flynn/noise v1.1.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
@@ -177,7 +177,7 @@ require (
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.20.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20221004221323-12db695f1648 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/fsnotify.v1 v1.4.7 // indirect
