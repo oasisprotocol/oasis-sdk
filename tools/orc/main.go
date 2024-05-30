@@ -224,7 +224,21 @@ var (
 			}
 			err = bnd.Add(sgxSigName, signed)
 			cobra.CheckErr(err)
-			bnd.Manifest.SGX.Signature = sgxSigName
+
+			switch compId {
+			case component.ID_RONL:
+				// We need to support legacy manifests, so check where the SGXS is defined.
+				if bnd.Manifest.SGX != nil {
+					bnd.Manifest.SGX.Signature = sgxSigName
+					break
+				}
+
+				fallthrough
+			default:
+				// Configure SGX signature for the right component.
+				comp := bnd.Manifest.GetComponentByID(compId)
+				comp.SGX.Signature = sgxSigName
+			}
 
 			// Remove previous serialized manifest.
 			bnd.ResetManifest()
