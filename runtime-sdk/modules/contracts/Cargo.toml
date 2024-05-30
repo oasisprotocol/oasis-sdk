@@ -27,7 +27,7 @@ thiserror = "1.0"
 walrus = "0.20.3"
 
 [dev-dependencies]
-wat = "1.206"
+wat = "1.209"
 k256 = "0.13.1"
 hex = "0.4.2"
 wasmprinter = "0.206.0"
