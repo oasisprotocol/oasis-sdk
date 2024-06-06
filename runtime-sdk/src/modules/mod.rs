@@ -1,5 +1,6 @@
 //! Runtime modules included with the SDK.
 
+pub mod access;
 pub mod accounts;
 pub mod consensus;
 pub mod consensus_accounts;
