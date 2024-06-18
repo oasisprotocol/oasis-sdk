@@ -21,6 +21,11 @@ impl sdk::Runtime for Runtime {
     // Use the crate version from Cargo.toml as the runtime version.
     const VERSION: Version = sdk::version_from_cargo!();
 
+    // Module that provides the core API.
+    type Core = modules::core::Module;
+    // Module that provides the accounts API.
+    type Accounts = modules::accounts::Module;
+
     // Define the modules that the runtime will be composed of.
     type Modules = (modules::core::Module, modules::accounts::Module);
 
