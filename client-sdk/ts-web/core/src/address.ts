@@ -3,18 +3,11 @@ import {bech32} from 'bech32';
 import * as hash from './hash';
 import * as misc from './misc';
 
-export async function fromData(
-    contextIdentifier: string,
-    contextVersion: number,
-    data: Uint8Array,
-) {
+export function fromData(contextIdentifier: string, contextVersion: number, data: Uint8Array) {
     const versionU8 = new Uint8Array([contextVersion]);
     return misc.concat(
         versionU8,
-        (await hash.hash(misc.concat(misc.fromString(contextIdentifier), versionU8, data))).slice(
-            0,
-            20,
-        ),
+        hash.hash(misc.concat(misc.fromString(contextIdentifier), versionU8, data)).slice(0, 20),
     );
 }
 
