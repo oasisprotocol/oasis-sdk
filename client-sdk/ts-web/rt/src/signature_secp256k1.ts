@@ -11,13 +11,13 @@ export interface ContextSigner {
     sign(context: string, message: Uint8Array): Promise<Uint8Array>;
 }
 
-export async function verify(
+export function verify(
     context: string,
     message: Uint8Array,
     signature: Uint8Array,
     publicKey: Uint8Array,
 ) {
-    const signerMessage = await oasis.signature.prepareSignerMessage(context, message);
+    const signerMessage = oasis.signature.prepareSignerMessage(context, message);
     return secp256k1.verify(signature, signerMessage, publicKey);
 }
 
@@ -33,7 +33,7 @@ export class BlindContextSigner implements ContextSigner {
     }
 
     async sign(context: string, message: Uint8Array): Promise<Uint8Array> {
-        const signerMessage = await oasis.signature.prepareSignerMessage(context, message);
+        const signerMessage = oasis.signature.prepareSignerMessage(context, message);
         return await this.signer.sign(signerMessage);
     }
 }
