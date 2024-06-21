@@ -45,11 +45,9 @@ export type MultisigSignerSet = AnySigner[];
  */
 export type ProofProvider = AnySigner | MultisigSignerSet;
 
-export async function deriveChainContext(runtimeID: Uint8Array, consensusChainContext: string) {
+export function deriveChainContext(runtimeID: Uint8Array, consensusChainContext: string) {
     return oasis.misc.toHex(
-        await oasis.hash.hash(
-            oasis.misc.concat(runtimeID, oasis.misc.fromString(consensusChainContext)),
-        ),
+        oasis.hash.hash(oasis.misc.concat(runtimeID, oasis.misc.fromString(consensusChainContext))),
     );
 }
 
@@ -140,7 +138,7 @@ export async function signUnverifiedTransaction(
     consensusChainContext: string,
     transaction: types.Transaction,
 ) {
-    const chainContext = await deriveChainContext(runtimeID, consensusChainContext);
+    const chainContext = deriveChainContext(runtimeID, consensusChainContext);
     const context = oasis.signature.combineChainContext(SIGNATURE_CONTEXT_BASE, chainContext);
     const body = oasis.misc.toCBOR(transaction);
     const authProofs = new Array(transaction.ai.si.length) as types.AuthProof[];

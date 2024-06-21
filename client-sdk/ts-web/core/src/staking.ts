@@ -195,12 +195,12 @@ export const TOKEN_MODULE_NAME = 'staking/token';
  */
 export const TOKEN_ERR_INVALID_TOKEN_VALUE_EXPONENT_CODE = 1;
 
-export async function addressFromPublicKey(pk: Uint8Array) {
-    return await address.fromData(ADDRESS_V0_CONTEXT_IDENTIFIER, ADDRESS_V0_CONTEXT_VERSION, pk);
+export function addressFromPublicKey(pk: Uint8Array) {
+    return address.fromData(ADDRESS_V0_CONTEXT_IDENTIFIER, ADDRESS_V0_CONTEXT_VERSION, pk);
 }
 
-export async function addressFromRuntimeID(id: Uint8Array) {
-    return await address.fromData(
+export function addressFromRuntimeID(id: Uint8Array) {
+    return address.fromData(
         ADDRESS_RUNTIME_V0_CONTEXT_IDENTIFIER,
         ADDRESS_RUNTIME_V0_CONTEXT_VERSION,
         id,
@@ -219,8 +219,8 @@ export function addressFromBech32(str: string) {
  * CommonPoolAddress is the common pool address.
  * The address is reserved to prevent it being accidentally used in the actual ledger.
  */
-export async function commonPoolAddress() {
-    return await addressFromPublicKey(
+export function commonPoolAddress() {
+    return addressFromPublicKey(
         misc.fromHex('1abe11edc001ffffffffffffffffffffffffffffffffffffffffffffffffffff'),
     );
 }
@@ -230,8 +230,8 @@ export async function commonPoolAddress() {
  * It holds all fees from txs in a block which are later disbursed to validators appropriately.
  * The address is reserved to prevent it being accidentally used in the actual ledger.
  */
-export async function feeAccumulatorAddress() {
-    return await addressFromPublicKey(
+export function feeAccumulatorAddress() {
+    return addressFromPublicKey(
         misc.fromHex('1abe11edfeeaccffffffffffffffffffffffffffffffffffffffffffffffffff'),
     );
 }
@@ -240,8 +240,8 @@ export async function feeAccumulatorAddress() {
  * GovernanceDepositsAddress is the governance deposits address.
  * This address is reserved to prevent it from being accidentally used in the actual ledger.
  */
-export async function governanceDepositsAddress() {
-    return await addressFromPublicKey(
+export function governanceDepositsAddress() {
+    return addressFromPublicKey(
         misc.fromHex('1abe11eddeaccfffffffffffffffffffffffffffffffffffffffffffffffffff'),
     );
 }

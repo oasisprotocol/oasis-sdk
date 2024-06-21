@@ -120,11 +120,11 @@ export const playground = (async function () {
         });
 
         const alice = oasis.signature.NaclSigner.fromSeed(
-            await oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')),
+            oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')),
             'this key is not important',
         );
         const csAlice = new oasis.signature.BlindContextSigner(alice);
-        const aliceAddr = await oasis.staking.addressFromPublicKey(alice.public());
+        const aliceAddr = oasis.staking.addressFromPublicKey(alice.public());
 
         // Suppose this were the private key pasted in from a Metamask export.
         // (This is the "dave" test account.)
@@ -132,7 +132,7 @@ export const playground = (async function () {
         const davePriv = oasis.misc.fromHex(davePrivHex);
 
         // Make sure this private key is in sync with the Rust and Go codebases.
-        const davePrivExpected = await oasis.hash.hash(
+        const davePrivExpected = oasis.hash.hash(
             oasis.misc.fromString('oasis-runtime-sdk/test-keys: dave'),
         );
         if (davePrivHex !== oasis.misc.toHex(davePrivExpected)) {
@@ -149,7 +149,7 @@ export const playground = (async function () {
         // Check address derivation from Ethereum address.
         const daveEthAddr = '0xDce075E1C39b1ae0b75D554558b6451A226ffe00';
         const daveEthAddrU8 = oasis.misc.fromHex(daveEthAddr.slice(2));
-        const daveAddr = await oasis.address.fromData(
+        const daveAddr = oasis.address.fromData(
             oasisRT.address.V0_SECP256K1ETH_CONTEXT_IDENTIFIER,
             oasisRT.address.V0_SECP256K1ETH_CONTEXT_VERSION,
             daveEthAddrU8,
@@ -160,7 +160,7 @@ export const playground = (async function () {
         }
 
         // Make sure derivation from sigspec is consistent.
-        const daveAddrFromSigspec = await oasisRT.address.fromSigspec({
+        const daveAddrFromSigspec = oasisRT.address.fromSigspec({
             secp256k1eth: csDave.public(),
         });
         if (oasis.staking.addressToBech32(daveAddrFromSigspec) !== addrDaveBech32) {

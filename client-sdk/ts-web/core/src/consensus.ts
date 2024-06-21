@@ -91,9 +91,9 @@ export const TRANSACTION_ERR_GAS_PRICE_TOO_LOW_CODE = 3;
  */
 export const TRANSACTION_ERR_UPGRADE_PENDING = 4;
 
-export async function openSignedTransaction(chainContext: string, signed: types.SignatureSigned) {
+export function openSignedTransaction(chainContext: string, signed: types.SignatureSigned) {
     const context = signature.combineChainContext(TRANSACTION_SIGNATURE_CONTEXT, chainContext);
-    return misc.fromCBOR(await signature.openSigned(context, signed)) as types.ConsensusTransaction;
+    return misc.fromCBOR(signature.openSigned(context, signed)) as types.ConsensusTransaction;
 }
 
 export async function signSignedTransaction(
@@ -109,8 +109,8 @@ export async function signSignedTransaction(
  * This special hex-hash-of-the-CBOR-encoded signed transaction is useful for interoperability
  * with block explorers, so here's a special function for doing it.
  */
-export async function hashSignedTransaction(signed: types.SignatureSigned) {
-    return misc.toHex(await hash.hash(misc.toCBOR(signed)));
+export function hashSignedTransaction(signed: types.SignatureSigned) {
+    return misc.toHex(hash.hash(misc.toCBOR(signed)));
 }
 
 export class TransactionWrapper<BODY> {
@@ -164,8 +164,8 @@ export class TransactionWrapper<BODY> {
         );
     }
 
-    async hash() {
-        return await hashSignedTransaction(this.signedTransaction);
+    hash() {
+        return hashSignedTransaction(this.signedTransaction);
     }
 
     async submit(nic: client.NodeInternal) {

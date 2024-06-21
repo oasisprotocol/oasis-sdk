@@ -32,14 +32,14 @@ export interface MetaEncryptedX25519DeoxysII {
  * encodeCallWithNonceAndKeys encodes a call based on its configured call format.
  * It returns the encoded call and any metadata needed to successfully decode the result.
  */
-export async function encodeCallWithNonceAndKeys(
+export function encodeCallWithNonceAndKeys(
     nonce: Uint8Array,
     sk: Uint8Array,
     pk: Uint8Array,
     call: types.Call,
     format: types.CallFormat,
     config?: EncodeConfig,
-): Promise<[types.Call, unknown]> {
+): [types.Call, unknown] {
     switch (format) {
         case transaction.CALLFORMAT_PLAIN:
             return [call, undefined];
@@ -80,15 +80,15 @@ export async function encodeCallWithNonceAndKeys(
  * encodeCall randomly generates nonce and keyPair and then call encodeCallWithNonceAndKeys
  * It returns the encoded call and any metadata needed to successfully decode the result.
  */
-export async function encodeCall(
+export function encodeCall(
     call: types.Call,
     format: types.CallFormat,
     config?: EncodeConfig,
-): Promise<[types.Call, unknown]> {
+): [types.Call, unknown] {
     const nonce = new Uint8Array(deoxysii.NonceSize);
     crypto.getRandomValues(nonce);
     const keyPair = nacl.box.keyPair();
-    return await encodeCallWithNonceAndKeys(
+    return encodeCallWithNonceAndKeys(
         nonce,
         keyPair.secretKey,
         keyPair.publicKey,
@@ -101,11 +101,11 @@ export async function encodeCall(
 /**
  * decodeResult performs result decoding based on the specified call format metadata.
  */
-export async function decodeResult(
+export function decodeResult(
     result: types.CallResult,
     format: types.CallFormat,
     meta?: MetaEncryptedX25519DeoxysII,
-): Promise<types.CallResult> {
+): types.CallResult {
     switch (format) {
         case transaction.CALLFORMAT_PLAIN:
             // In case of plain-text data format, we simply pass on the result unchanged.

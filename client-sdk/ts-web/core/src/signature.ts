@@ -10,8 +10,8 @@ export function combineChainContext(context: string, chainContext: string) {
     return `${context}${CHAIN_CONTEXT_SEPARATOR}${chainContext}`;
 }
 
-export async function prepareSignerMessage(context: string, message: Uint8Array) {
-    return await hash.hash(misc.concat(misc.fromString(context), message));
+export function prepareSignerMessage(context: string, message: Uint8Array) {
+    return hash.hash(misc.concat(misc.fromString(context), message));
 }
 
 export interface Signer {
@@ -24,20 +24,20 @@ export interface ContextSigner {
     sign(context: string, message: Uint8Array): Promise<Uint8Array>;
 }
 
-export async function verify(
+export function verify(
     publicKey: Uint8Array,
     context: string,
     message: Uint8Array,
     signature: Uint8Array,
 ) {
-    const signerMessage = await prepareSignerMessage(context, message);
+    const signerMessage = prepareSignerMessage(context, message);
     const sigOk = nacl.sign.detached.verify(signerMessage, signature, publicKey);
 
     return sigOk;
 }
 
-export async function openSigned(context: string, signed: types.SignatureSigned) {
-    const sigOk = await verify(
+export function openSigned(context: string, signed: types.SignatureSigned) {
+    const sigOk = verify(
         signed.signature.public_key,
         context,
         signed.untrusted_raw_value,
@@ -57,8 +57,8 @@ export async function signSigned(signer: ContextSigner, context: string, rawValu
     } as types.SignatureSigned;
 }
 
-export async function openMultiSigned(context: string, multiSigned: types.SignatureMultiSigned) {
-    const signerMessage = await prepareSignerMessage(context, multiSigned.untrusted_raw_value);
+export function openMultiSigned(context: string, multiSigned: types.SignatureMultiSigned) {
+    const signerMessage = prepareSignerMessage(context, multiSigned.untrusted_raw_value);
     for (const signature of multiSigned.signatures) {
         const sigOk = nacl.sign.detached.verify(
             signerMessage,
@@ -100,7 +100,7 @@ export class BlindContextSigner implements ContextSigner {
     }
 
     async sign(context: string, message: Uint8Array): Promise<Uint8Array> {
-        const signerMessage = await prepareSignerMessage(context, message);
+        const signerMessage = prepareSignerMessage(context, message);
         return await this.signer.sign(signerMessage);
     }
 }
