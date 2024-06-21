@@ -105,7 +105,7 @@ impl Address {
         a[..ADDRESS_VERSION_SIZE].copy_from_slice(&[version]);
         a[ADDRESS_VERSION_SIZE..].copy_from_slice(h.truncated(ADDRESS_DATA_SIZE));
 
-        Address(a)
+        Self(a)
     }
 
     /// Tries to create a new address from raw bytes.
@@ -117,7 +117,7 @@ impl Address {
         let mut a = [0; ADDRESS_SIZE];
         a.copy_from_slice(data);
 
-        Ok(Address(a))
+        Ok(Self(a))
     }
 
     /// Convert the address into raw bytes.
@@ -127,12 +127,12 @@ impl Address {
 
     /// Creates a new address for a specific module and kind.
     pub fn from_module(module: &str, kind: &str) -> Self {
-        Address::from_module_raw(module, kind.as_bytes())
+        Self::from_module_raw(module, kind.as_bytes())
     }
 
     /// Creates a new address for a specific module and raw kind.
     pub fn from_module_raw(module: &str, kind: &[u8]) -> Self {
-        Address::new(
+        Self::new(
             ADDRESS_V0_MODULE_CONTEXT,
             ADDRESS_V0_VERSION,
             &[module.as_bytes(), b".", kind].concat(),
@@ -141,7 +141,7 @@ impl Address {
 
     /// Creates a new runtime address.
     pub fn from_runtime_id(id: &Namespace) -> Self {
-        Address::new(
+        Self::new(
             ADDRESS_RUNTIME_V0_CONTEXT,
             ADDRESS_RUNTIME_V0_VERSION,
             id.as_ref(),
@@ -151,19 +151,19 @@ impl Address {
     /// Creates a new address from a public key.
     pub fn from_sigspec(spec: &SignatureAddressSpec) -> Self {
         match spec {
-            SignatureAddressSpec::Ed25519(pk) => Address::new(
+            SignatureAddressSpec::Ed25519(pk) => Self::new(
                 ADDRESS_V0_ED25519_CONTEXT,
                 ADDRESS_V0_VERSION,
                 pk.as_bytes(),
             ),
-            SignatureAddressSpec::Secp256k1Eth(pk) => Address::new(
+            SignatureAddressSpec::Secp256k1Eth(pk) => Self::new(
                 ADDRESS_V0_SECP256K1ETH_CONTEXT,
                 ADDRESS_V0_VERSION,
                 // Use a scheme such that we can compute Secp256k1 addresses from Ethereum
                 // addresses as this makes things more interoperable.
                 &pk.to_eth_address(),
             ),
-            SignatureAddressSpec::Sr25519(pk) => Address::new(
+            SignatureAddressSpec::Sr25519(pk) => Self::new(
                 ADDRESS_V0_SR25519_CONTEXT,
                 ADDRESS_V0_VERSION,
                 pk.as_bytes(),
@@ -174,12 +174,12 @@ impl Address {
     /// Creates a new address from a multisig configuration.
     pub fn from_multisig(config: multisig::Config) -> Self {
         let config_vec = cbor::to_vec(config);
-        Address::new(ADDRESS_V0_MULTISIG_CONTEXT, ADDRESS_V0_VERSION, &config_vec)
+        Self::new(ADDRESS_V0_MULTISIG_CONTEXT, ADDRESS_V0_VERSION, &config_vec)
     }
 
     /// Creates a new address from an Ethereum-compatible address.
     pub fn from_eth(eth_address: &[u8]) -> Self {
-        Address::new(
+        Self::new(
             ADDRESS_V0_SECP256K1ETH_CONTEXT,
             ADDRESS_V0_VERSION,
             eth_address,
@@ -201,7 +201,7 @@ impl Address {
             return Err(Error::MalformedAddress);
         }
 
-        Address::from_bytes(&data)
+        Self::from_bytes(&data)
     }
 
     /// Converts an address to Bech32 representation.
@@ -225,8 +225,8 @@ impl TryFrom<&[u8]> for Address {
 }
 
 impl From<&'static str> for Address {
-    fn from(s: &'static str) -> Address {
-        Address::from_bech32(s).unwrap()
+    fn from(s: &'static str) -> Self {
+        Self::from_bech32(s).unwrap()
     }
 }
 
