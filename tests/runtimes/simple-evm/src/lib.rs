@@ -15,8 +15,6 @@ pub struct Config;
 impl modules::core::Config for Config {}
 
 impl evm::Config for Config {
-    type Accounts = modules::accounts::Module;
-
     type AdditionalPrecompileSet = ();
 
     const CHAIN_ID: u64 = 0xa515;
@@ -37,11 +35,12 @@ impl sdk::Runtime for Runtime {
     };
 
     type Core = modules::core::Module<Config>;
+    type Accounts = modules::accounts::Module;
 
     type Modules = (
         modules::accounts::Module,
         modules::consensus::Module,
-        modules::consensus_accounts::Module<modules::accounts::Module, modules::consensus::Module>,
+        modules::consensus_accounts::Module<modules::consensus::Module>,
         modules::core::Module<Config>,
         evm::Module<Config>,
     );

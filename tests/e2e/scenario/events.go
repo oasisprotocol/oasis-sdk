@@ -1,6 +1,7 @@
 package scenario
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -14,6 +15,47 @@ import (
 )
 
 const timeout = 2 * time.Minute
+
+// WaitForNextRuntimeEvent waits for the next event of the given kind and returns it.
+//
+// All of the other events are discarded.
+func WaitForNextRuntimeEvent[T client.DecodedEvent](ctx context.Context, ch <-chan *client.BlockEvents) (T, error) {
+	return WaitForRuntimeEventUntil[T](ctx, ch, func(T) bool { return true })
+}
+
+// WaitForRuntimeEventUntil waits for the event of the given kind to satistfy the given condition
+// and then returns the event.
+//
+// All of the other events are discarded.
+func WaitForRuntimeEventUntil[T client.DecodedEvent](
+	ctx context.Context,
+	ch <-chan *client.BlockEvents,
+	condFn func(T) bool,
+) (T, error) {
+	var empty T
+	for {
+		select {
+		case <-ctx.Done():
+			return empty, ctx.Err()
+		case bev := <-ch:
+			if bev == nil {
+				return empty, fmt.Errorf("event channel closed")
+			}
+
+			for _, ev := range bev.Events {
+				re, ok := ev.(T)
+				if !ok {
+					continue
+				}
+
+				if !condFn(re) {
+					continue
+				}
+				return re, nil
+			}
+		}
+	}
+}
 
 func EnsureStakingEvent(log *logging.Logger, ch <-chan *staking.Event, check func(*staking.Event) bool) error {
 	log.Info("waiting for expected staking event...")

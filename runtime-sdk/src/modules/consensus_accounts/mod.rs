@@ -22,7 +22,10 @@ use crate::{
     error, migration, module,
     module::Module as _,
     modules,
-    modules::core::{Error as CoreError, API as _},
+    modules::{
+        accounts::API as _,
+        core::{Error as CoreError, API as _},
+    },
     runtime::Runtime,
     state::CurrentState,
     storage::Prefix,
@@ -224,8 +227,7 @@ pub trait API {
     ) -> Result<(), Error>;
 }
 
-pub struct Module<Accounts: modules::accounts::API, Consensus: modules::consensus::API> {
-    _accounts: std::marker::PhantomData<Accounts>,
+pub struct Module<Consensus: modules::consensus::API> {
     _consensus: std::marker::PhantomData<Consensus>,
 }
 
@@ -246,9 +248,7 @@ const CONSENSUS_WITHDRAW_HANDLER: &str = "consensus.WithdrawIntoRuntime";
 const CONSENSUS_DELEGATE_HANDLER: &str = "consensus.Delegate";
 const CONSENSUS_UNDELEGATE_HANDLER: &str = "consensus.Undelegate";
 
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
-    for Module<Accounts, Consensus>
-{
+impl<Consensus: modules::consensus::API> API for Module<Consensus> {
     fn deposit<C: Context>(
         ctx: &C,
         from: Address,
@@ -309,7 +309,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
 
         // Transfer the given amount to the module's withdrawal account to make sure the tokens
         // remain available until actually withdrawn.
-        Accounts::transfer(from, *ADDRESS_PENDING_WITHDRAWAL, &amount)
+        <C::Runtime as Runtime>::Accounts::transfer(from, *ADDRESS_PENDING_WITHDRAWAL, &amount)
             .map_err(|_| Error::InsufficientBalance)?;
 
         Ok(())
@@ -345,7 +345,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
 
         // Transfer the given amount to the module's delegation account to make sure the tokens
         // remain available until actually delegated.
-        Accounts::transfer(from, *ADDRESS_PENDING_DELEGATION, &amount)
+        <C::Runtime as Runtime>::Accounts::transfer(from, *ADDRESS_PENDING_DELEGATION, &amount)
             .map_err(|_| Error::InsufficientBalance)?;
 
         Ok(())
@@ -383,9 +383,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> API
 }
 
 #[sdk_derive(Module)]
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
-    Module<Accounts, Consensus>
-{
+impl<Consensus: modules::consensus::API> Module<Consensus> {
     const NAME: &'static str = MODULE_NAME;
     const VERSION: u32 = 1;
     type Error = Error;
@@ -545,7 +543,8 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         args: types::BalanceQuery,
     ) -> Result<types::AccountBalance, Error> {
         let denomination = Consensus::consensus_denomination()?;
-        let balances = Accounts::get_balances(args.address).map_err(|_| Error::InvalidArgument)?;
+        let balances = <C::Runtime as Runtime>::Accounts::get_balances(args.address)
+            .map_err(|_| Error::InvalidArgument)?;
         let balance = balances
             .balances
             .get(&denomination)
@@ -594,7 +593,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     ) {
         if !me.is_success() {
             // Transfer out failed, refund the balance.
-            Accounts::transfer(
+            <C::Runtime as Runtime>::Accounts::transfer(
                 *ADDRESS_PENDING_WITHDRAWAL,
                 context.address,
                 &context.amount,
@@ -615,7 +614,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         }
 
         // Burn the withdrawn tokens.
-        Accounts::burn(*ADDRESS_PENDING_WITHDRAWAL, &context.amount)
+        <C::Runtime as Runtime>::Accounts::burn(*ADDRESS_PENDING_WITHDRAWAL, &context.amount)
             .expect("should have enough balance");
 
         // Emit withdraw successful event.
@@ -651,7 +650,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         }
 
         // Update runtime state.
-        Accounts::mint(context.address, &context.amount).unwrap();
+        <C::Runtime as Runtime>::Accounts::mint(context.address, &context.amount).unwrap();
 
         // Emit deposit successful event.
         CurrentState::with(|state| {
@@ -673,8 +672,12 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     ) {
         if !me.is_success() {
             // Delegation failed, refund the balance.
-            Accounts::transfer(*ADDRESS_PENDING_DELEGATION, context.from, &context.amount)
-                .expect("should have enough balance");
+            <C::Runtime as Runtime>::Accounts::transfer(
+                *ADDRESS_PENDING_DELEGATION,
+                context.from,
+                &context.amount,
+            )
+            .expect("should have enough balance");
 
             // Store receipt if requested.
             if context.receipt {
@@ -703,7 +706,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
         }
 
         // Burn the delegated tokens.
-        Accounts::burn(*ADDRESS_PENDING_DELEGATION, &context.amount)
+        <C::Runtime as Runtime>::Accounts::burn(*ADDRESS_PENDING_DELEGATION, &context.amount)
             .expect("should have enough balance");
 
         // Record delegation.
@@ -828,14 +831,9 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
     }
 }
 
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API>
-    module::TransactionHandler for Module<Accounts, Consensus>
-{
-}
+impl<Consensus: modules::consensus::API> module::TransactionHandler for Module<Consensus> {}
 
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::BlockHandler
-    for Module<Accounts, Consensus>
-{
+impl<Consensus: modules::consensus::API> module::BlockHandler for Module<Consensus> {
     fn end_block<C: Context>(ctx: &C) {
         // Only do work in case the epoch has changed since the last processed block.
         if !<C::Runtime as Runtime>::Core::has_epoch_changed() {
@@ -914,7 +912,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
             let amount = token::BaseUnits::new(raw_amount, denomination.clone());
 
             // Mint the given number of tokens.
-            Accounts::mint(ud.to, &amount).unwrap();
+            <C::Runtime as Runtime>::Accounts::mint(ud.to, &amount).unwrap();
 
             // Store receipt if requested.
             if udi.receipt > 0 {
@@ -942,9 +940,7 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
     }
 }
 
-impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> module::InvariantHandler
-    for Module<Accounts, Consensus>
-{
+impl<Consensus: modules::consensus::API> module::InvariantHandler for Module<Consensus> {
     /// Check invariants.
     fn check_invariants<C: Context>(ctx: &C) -> Result<(), CoreError> {
         // Total supply of the designated consensus layer token denomination
@@ -953,9 +949,9 @@ impl<Accounts: modules::accounts::API, Consensus: modules::consensus::API> modul
 
         let den = Consensus::consensus_denomination().unwrap();
         #[allow(clippy::or_fun_call)]
-        let ts = Accounts::get_total_supplies().or(Err(CoreError::InvariantViolation(
-            "unable to get total supplies".to_string(),
-        )))?;
+        let ts = <C::Runtime as Runtime>::Accounts::get_total_supplies().or(Err(
+            CoreError::InvariantViolation("unable to get total supplies".to_string()),
+        ))?;
 
         let rt_addr = Address::from_runtime_id(ctx.runtime_id());
         let rt_acct = Consensus::account(ctx, rt_addr).unwrap_or_default();

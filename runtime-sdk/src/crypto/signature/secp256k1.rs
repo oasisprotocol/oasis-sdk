@@ -10,11 +10,12 @@ use k256::{
     elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint},
     sha2::Sha512_256,
 };
+use rand_core::RngCore;
 
 use crate::crypto::signature::{Error, Signature};
 
 /// A Secp256k1 public key (in compressed form).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PublicKey(k256::EncodedPoint);
 
 impl PublicKey {
@@ -121,6 +122,12 @@ impl MemorySigner {
 }
 
 impl super::Signer for MemorySigner {
+    fn random(rng: &mut impl RngCore) -> Result<Self, Error> {
+        let mut seed = [0u8; 32];
+        rng.fill_bytes(&mut seed);
+        Self::new_from_seed(&seed)
+    }
+
     fn new_from_seed(seed: &[u8]) -> Result<Self, Error> {
         let sk = ecdsa::SigningKey::from_slice(seed).map_err(|_| Error::InvalidArgument)?;
         Ok(Self { sk })

@@ -15,3 +15,5 @@ thiserror = "1.0"
 
 [features]
 confidential = []
+# Enables mock SGX in non-SGX builds.
+debug-mock-sgx = ["oasis-runtime-sdk/debug-mock-sgx"]

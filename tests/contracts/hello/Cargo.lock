@@ -1808,6 +1808,7 @@ name = "oasis-runtime-sdk"
 version = "0.9.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "base64 0.22.1",
  "bech32",
  "byteorder",
@@ -1828,6 +1829,7 @@ dependencies = [
  "once_cell",
  "p256",
  "p384",
+ "rand",
  "rand_core",
  "schnorrkel",
  "sha2 0.10.8",

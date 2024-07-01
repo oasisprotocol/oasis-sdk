@@ -8,6 +8,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/tests/e2e/consensusaccounts"
 	"github.com/oasisprotocol/oasis-sdk/tests/e2e/contracts"
 	"github.com/oasisprotocol/oasis-sdk/tests/e2e/evm"
+	"github.com/oasisprotocol/oasis-sdk/tests/e2e/rofl"
 	sdkScenario "github.com/oasisprotocol/oasis-sdk/tests/e2e/scenario"
 )
 
@@ -22,6 +23,7 @@ func RegisterScenarios() error {
 		evm.PlainRuntime,
 		evm.C10lRuntime,
 		contracts.Runtime,
+		rofl.Runtime,
 	} {
 		if err := cmd.Register(s); err != nil {
 			return err

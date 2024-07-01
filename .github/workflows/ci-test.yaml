@@ -300,6 +300,11 @@ jobs:
     # NOTE: This name appears in GitHub's Checks API.
     name: e2e-ts-web-rt
     runs-on: ubuntu-latest
+    env:
+      # Run all E2E tests in mock SGX.
+      OASIS_UNSAFE_SKIP_AVR_VERIFY: 1
+      OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES: 1
+      OASIS_UNSAFE_MOCK_SGX: 1
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -154,6 +154,7 @@ pub fn call<C: Context, V: Validator + 'static>(
                 gas: info.max_gas,
                 // Propagate consensus message limit.
                 consensus_messages: CurrentState::with(|state| state.emitted_messages_max(ctx)),
+                proxy: None,
             },
             ..Default::default()
         },

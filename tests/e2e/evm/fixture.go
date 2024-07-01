@@ -4,10 +4,12 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 	"github.com/oasisprotocol/oasis-core/go/oasis-test-runner/oasis"
 	staking "github.com/oasisprotocol/oasis-core/go/staking/api"
+
+	"github.com/oasisprotocol/oasis-sdk/tests/e2e/scenario"
 )
 
 // RuntimeFixture prepares the runtime fixture for the EVM tests.
-func RuntimeFixture(ff *oasis.NetworkFixture) {
+func RuntimeFixture(_ *scenario.RuntimeScenario, ff *oasis.NetworkFixture) {
 	// The EVM runtime has 110_000 TEST tokens already minted internally. Since we connect it to the
 	// consensus layer (via the consensus module), we should make sure that the runtime's account in
 	// the consensus layer also has a similar amount as otherwise the delegation tests will fail.

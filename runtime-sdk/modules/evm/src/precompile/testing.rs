@@ -7,7 +7,7 @@ pub use primitive_types::{H160, H256};
 use oasis_runtime_sdk::{
     context,
     module::{self},
-    modules::{accounts, accounts::Module, core, core::Error},
+    modules::{accounts, core, core::Error},
     subcall,
     testing::keys,
     types::token::{self, Denomination},
@@ -25,8 +25,6 @@ use std::collections::BTreeMap;
 pub(crate) struct TestConfig;
 
 impl crate::Config for TestConfig {
-    type Accounts = Module;
-
     type AdditionalPrecompileSet = ();
 
     const CHAIN_ID: u64 = 0;
@@ -210,6 +208,7 @@ pub(crate) struct TestRuntime;
 impl Runtime for TestRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
     type Core = Core;
+    type Accounts = Accounts;
     type Modules = (Core, Accounts, Evm);
 
     fn genesis_state() -> <Self::Modules as module::MigrationHandler>::Genesis {

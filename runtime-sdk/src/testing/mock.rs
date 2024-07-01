@@ -36,6 +36,8 @@ impl Runtime for EmptyRuntime {
 
     type Core = modules::core::Module<Config>;
 
+    type Accounts = modules::accounts::Module;
+
     type Modules = modules::core::Module<Config>;
 
     fn genesis_state() -> <Self::Modules as MigrationHandler>::Genesis {
@@ -165,6 +167,7 @@ pub fn transaction() -> transaction::Transaction {
                 amount: Default::default(),
                 gas: 1_000_000,
                 consensus_messages: 32,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -185,6 +188,7 @@ impl Default for CallOptions {
                 amount: Default::default(),
                 gas: 1_000_000,
                 consensus_messages: 0,
+                ..Default::default()
             },
         }
     }

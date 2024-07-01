@@ -12,3 +12,7 @@ oasis-runtime-sdk-contracts = { path = "../../../runtime-sdk/modules/contracts" 
 
 # Third party.
 thiserror = "1.0"
+
+[features]
+# Enables mock SGX in non-SGX builds.
+debug-mock-sgx = ["oasis-runtime-sdk/debug-mock-sgx"]

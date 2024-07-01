@@ -19,4 +19,5 @@ if [ -n "${BUILD_NUMBER:-}" ]; then
     : "${TEST_NET_RUNNER=$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER/oasis-net-runner}"
     : "${TEST_RUNTIME_LOADER=$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER/oasis-core-runtime-loader}"
     : "${TEST_KM_BINARY=$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER/simple-keymanager}"
+    : "${TEST_KM_SGXS_BINARY=$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER/simple-keymanager.sgxs}"
 fi

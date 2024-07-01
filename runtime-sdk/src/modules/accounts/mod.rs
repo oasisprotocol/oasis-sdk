@@ -12,8 +12,8 @@ use thiserror::Error;
 use crate::{
     context::Context,
     core::common::quantity::Quantity,
-    handler, migration, module,
-    module::{Module as _, Parameters as _},
+    handler, migration,
+    module::{self, FeeProxyHandler, Module as _, Parameters as _},
     modules,
     modules::core::{Error as CoreError, API as _},
     runtime::Runtime,
@@ -870,24 +870,16 @@ impl Module {
 }
 
 impl module::TransactionHandler for Module {
-    fn authenticate_tx<C: Context>(ctx: &C, tx: &Transaction) -> Result<(), modules::core::Error> {
-        // Check whether the transaction is currently valid.
-        let round = ctx.runtime_header().round;
-        if let Some(not_before) = tx.auth_info.not_before {
-            if round < not_before {
-                // Too early.
-                return Err(modules::core::Error::ExpiredTransaction);
-            }
-        }
-        if let Some(not_after) = tx.auth_info.not_after {
-            if round > not_after {
-                // Too late.
-                return Err(modules::core::Error::ExpiredTransaction);
-            }
-        }
-
+    fn authenticate_tx<C: Context>(
+        ctx: &C,
+        tx: &Transaction,
+    ) -> Result<module::AuthDecision, modules::core::Error> {
         // Check nonces.
-        let payer = Self::check_signer_nonces(ctx, &tx.auth_info)?;
+        let default_payer = Self::check_signer_nonces(ctx, &tx.auth_info)?;
+
+        // Attempt to resolve a proxy fee payer if set.
+        let payer =
+            <C::Runtime as Runtime>::FeeProxy::resolve_payer(ctx, tx)?.unwrap_or(default_payer);
 
         // Charge the specified amount of fees.
         if !tx.auth_info.fee.amount.amount().is_zero() {
@@ -914,7 +906,7 @@ impl module::TransactionHandler for Module {
             Self::update_signer_nonces(ctx, &tx.auth_info)?;
         }
 
-        Ok(())
+        Ok(module::AuthDecision::Continue)
     }
 
     fn after_handle_call<C: Context>(

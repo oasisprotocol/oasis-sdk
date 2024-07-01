@@ -5,7 +5,10 @@ use bech32::{Bech32, Hrp};
 use thiserror::Error;
 
 use oasis_core_runtime::{
-    common::{crypto::hash::Hash, namespace::Namespace},
+    common::{
+        crypto::{hash::Hash, signature::PublicKey as ConsensusPublicKey},
+        namespace::Namespace,
+    },
     consensus::address::Address as ConsensusAddress,
 };
 
@@ -58,6 +61,17 @@ pub enum SignatureAddressSpec {
 }
 
 impl SignatureAddressSpec {
+    /// Try to construct an authentication/address derivation specification from the given public
+    /// key. In case the given scheme is not supported, it returns `None`.
+    pub fn try_from_pk(pk: &PublicKey) -> Option<Self> {
+        match pk {
+            PublicKey::Ed25519(pk) => Some(Self::Ed25519(pk.clone())),
+            PublicKey::Secp256k1(pk) => Some(Self::Secp256k1Eth(pk.clone())),
+            PublicKey::Sr25519(pk) => Some(Self::Sr25519(pk.clone())),
+            _ => None,
+        }
+    }
+
     /// Public key of the authentication/address derivation specification.
     pub fn public_key(&self) -> PublicKey {
         match self {
@@ -91,7 +105,7 @@ impl Address {
         a[..ADDRESS_VERSION_SIZE].copy_from_slice(&[version]);
         a[ADDRESS_VERSION_SIZE..].copy_from_slice(h.truncated(ADDRESS_DATA_SIZE));
 
-        Address(a)
+        Self(a)
     }
 
     /// Tries to create a new address from raw bytes.
@@ -103,7 +117,7 @@ impl Address {
         let mut a = [0; ADDRESS_SIZE];
         a.copy_from_slice(data);
 
-        Ok(Address(a))
+        Ok(Self(a))
     }
 
     /// Convert the address into raw bytes.
@@ -113,12 +127,12 @@ impl Address {
 
     /// Creates a new address for a specific module and kind.
     pub fn from_module(module: &str, kind: &str) -> Self {
-        Address::from_module_raw(module, kind.as_bytes())
+        Self::from_module_raw(module, kind.as_bytes())
     }
 
     /// Creates a new address for a specific module and raw kind.
     pub fn from_module_raw(module: &str, kind: &[u8]) -> Self {
-        Address::new(
+        Self::new(
             ADDRESS_V0_MODULE_CONTEXT,
             ADDRESS_V0_VERSION,
             &[module.as_bytes(), b".", kind].concat(),
@@ -127,7 +141,7 @@ impl Address {
 
     /// Creates a new runtime address.
     pub fn from_runtime_id(id: &Namespace) -> Self {
-        Address::new(
+        Self::new(
             ADDRESS_RUNTIME_V0_CONTEXT,
             ADDRESS_RUNTIME_V0_VERSION,
             id.as_ref(),
@@ -137,19 +151,19 @@ impl Address {
     /// Creates a new address from a public key.
     pub fn from_sigspec(spec: &SignatureAddressSpec) -> Self {
         match spec {
-            SignatureAddressSpec::Ed25519(pk) => Address::new(
+            SignatureAddressSpec::Ed25519(pk) => Self::new(
                 ADDRESS_V0_ED25519_CONTEXT,
                 ADDRESS_V0_VERSION,
                 pk.as_bytes(),
             ),
-            SignatureAddressSpec::Secp256k1Eth(pk) => Address::new(
+            SignatureAddressSpec::Secp256k1Eth(pk) => Self::new(
                 ADDRESS_V0_SECP256K1ETH_CONTEXT,
                 ADDRESS_V0_VERSION,
                 // Use a scheme such that we can compute Secp256k1 addresses from Ethereum
                 // addresses as this makes things more interoperable.
                 &pk.to_eth_address(),
             ),
-            SignatureAddressSpec::Sr25519(pk) => Address::new(
+            SignatureAddressSpec::Sr25519(pk) => Self::new(
                 ADDRESS_V0_SR25519_CONTEXT,
                 ADDRESS_V0_VERSION,
                 pk.as_bytes(),
@@ -160,16 +174,24 @@ impl Address {
     /// Creates a new address from a multisig configuration.
     pub fn from_multisig(config: multisig::Config) -> Self {
         let config_vec = cbor::to_vec(config);
-        Address::new(ADDRESS_V0_MULTISIG_CONTEXT, ADDRESS_V0_VERSION, &config_vec)
+        Self::new(ADDRESS_V0_MULTISIG_CONTEXT, ADDRESS_V0_VERSION, &config_vec)
     }
 
     /// Creates a new address from an Ethereum-compatible address.
     pub fn from_eth(eth_address: &[u8]) -> Self {
-        Address::new(
+        Self::new(
             ADDRESS_V0_SECP256K1ETH_CONTEXT,
             ADDRESS_V0_VERSION,
             eth_address,
         )
+    }
+
+    /// Creates a new address from a consensus-layer Ed25519 public key.
+    ///
+    /// This is a convenience wrapper and the same result can be obtained by going via the
+    /// `from_sigspec` method using the same Ed25519 public key.
+    pub fn from_consensus_pk(pk: &ConsensusPublicKey) -> Self {
+        Self::from_bytes(ConsensusAddress::from_pk(pk).as_ref()).unwrap()
     }
 
     /// Tries to create a new address from Bech32-encoded string.
@@ -179,7 +201,7 @@ impl Address {
             return Err(Error::MalformedAddress);
         }
 
-        Address::from_bytes(&data)
+        Self::from_bytes(&data)
     }
 
     /// Converts an address to Bech32 representation.
@@ -203,8 +225,8 @@ impl TryFrom<&[u8]> for Address {
 }
 
 impl From<&'static str> for Address {
-    fn from(s: &'static str) -> Address {
-        Address::from_bech32(s).unwrap()
+    fn from(s: &'static str) -> Self {
+        Self::from_bech32(s).unwrap()
     }
 }
 
@@ -252,6 +274,17 @@ impl cbor::Decode for Address {
     }
 }
 
+impl slog::Value for Address {
+    fn serialize(
+        &self,
+        _record: &slog::Record<'_>,
+        key: slog::Key,
+        serializer: &mut dyn slog::Serializer,
+    ) -> slog::Result {
+        serializer.emit_str(key, &self.to_bech32())
+    }
+}
+
 impl From<Address> for ConsensusAddress {
     fn from(addr: Address) -> ConsensusAddress {
         ConsensusAddress::from(&addr.0)
@@ -260,6 +293,7 @@ impl From<Address> for ConsensusAddress {
 
 #[cfg(test)]
 mod test {
+    use base64::prelude::*;
     use bech32::Bech32m;
 
     use super::*;
@@ -388,6 +422,21 @@ mod test {
         assert_eq!(
             addr.to_bech32(),
             "oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt"
+        );
+    }
+
+    #[test]
+    fn test_address_from_consensus_pk() {
+        // Same test vector as in `test_address_ed25519`.
+        let pk: ConsensusPublicKey = BASE64_STANDARD
+            .decode("utrdHlX///////////////////////////////////8=")
+            .unwrap()
+            .into();
+
+        let addr = Address::from_consensus_pk(&pk);
+        assert_eq!(
+            addr.to_bech32(),
+            "oasis1qryqqccycvckcxp453tflalujvlf78xymcdqw4vz"
         );
     }
 

@@ -12,7 +12,7 @@ use oasis_runtime_sdk::{
 use crate::{
     state,
     types::{Leash, SimulateCallQuery},
-    Config, Error,
+    Config, Error, Runtime,
 };
 
 /// Verifies the signature on signed query and whether it is appropriately leashed.
@@ -44,7 +44,7 @@ pub(crate) fn verify<C: Context, Cfg: Config>(
     // Next, verify the leash.
     let current_block = ctx.runtime_header().round;
     let sdk_address = Cfg::map_address(query.caller.into());
-    let nonce = Cfg::Accounts::get_nonce(sdk_address).unwrap();
+    let nonce = <C::Runtime as Runtime>::Accounts::get_nonce(sdk_address).unwrap();
     if nonce > leash.nonce {
         return Err(Error::InvalidSignedSimulateCall("stale nonce"));
     }
@@ -158,13 +158,15 @@ fn hash_encoded(tokens: &[Token]) -> [u8; 32] {
 mod test {
     use super::*;
 
-    use oasis_runtime_sdk::testing::mock;
+    use oasis_runtime_sdk::{modules::accounts, testing::mock};
 
     use crate::{
         test::{ConfidentialEVMConfig as C10lCfg, EVMConfig as Cfg},
         types::{SignedCallDataPack, SimulateCallQuery, H160},
         Module as EVMModule,
     };
+
+    type Accounts = accounts::Module;
 
     /// This was generated using the `@oasislabs/sapphire-paratime` JS lib.
     const SIGNED_CALL_DATA_PACK: &str =
@@ -194,12 +196,12 @@ mod test {
 
     fn setup_nonce(caller: &H160, leash: &Leash) {
         let sdk_address = C10lCfg::map_address((*caller).into());
-        <C10lCfg as Config>::Accounts::set_nonce(sdk_address, leash.nonce);
+        Accounts::set_nonce(sdk_address, leash.nonce);
     }
 
     fn setup_stale_nonce(caller: &H160, leash: &Leash) {
         let sdk_address = C10lCfg::map_address((*caller).into());
-        <C10lCfg as Config>::Accounts::set_nonce(sdk_address, leash.nonce + 1);
+        Accounts::set_nonce(sdk_address, leash.nonce + 1);
     }
 
     fn setup_block(leash: &Leash) {

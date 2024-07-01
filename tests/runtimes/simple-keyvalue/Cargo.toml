@@ -13,3 +13,7 @@ cbor = { version = "0.5.1", package = "oasis-cbor" }
 anyhow = "1.0.86"
 thiserror = "1.0"
 futures = "0.3.18"
+
+[features]
+# Enables mock SGX in non-SGX builds.
+debug-mock-sgx = ["oasis-runtime-sdk/debug-mock-sgx"]

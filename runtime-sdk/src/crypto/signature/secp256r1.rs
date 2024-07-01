@@ -9,11 +9,12 @@ use p256::{
         signature::{DigestSigner as _, DigestVerifier, Signer as _, Verifier as _},
     },
 };
+use rand_core::RngCore;
 
 use crate::crypto::signature::{Error, Signature};
 
 /// A Secp256r1 public key (in compressed form).
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PublicKey(p256::EncodedPoint);
 
 impl PublicKey {
@@ -107,6 +108,12 @@ impl MemorySigner {
 }
 
 impl super::Signer for MemorySigner {
+    fn random(rng: &mut impl RngCore) -> Result<Self, Error> {
+        let mut seed = [0u8; 32];
+        rng.fill_bytes(&mut seed);
+        Self::new_from_seed(&seed)
+    }
+
     fn new_from_seed(seed: &[u8]) -> Result<Self, Error> {
         let sk = ecdsa::SigningKey::from_slice(seed).map_err(|_| Error::InvalidArgument)?;
         Ok(Self { sk })

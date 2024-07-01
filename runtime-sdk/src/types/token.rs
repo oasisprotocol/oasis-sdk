@@ -91,7 +91,7 @@ pub struct BaseUnits(pub u128, pub Denomination);
 
 impl BaseUnits {
     /// Creates a new token amount of the given denomination.
-    pub fn new(amount: u128, denomination: Denomination) -> Self {
+    pub const fn new(amount: u128, denomination: Denomination) -> Self {
         BaseUnits(amount, denomination)
     }
 

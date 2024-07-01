@@ -91,11 +91,13 @@ if [ -n "$BUILD_NUMBER" ]; then
             cd "$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER"
             KEY_MANAGER_RUNTIME_JOB_ID=$(jq <"$BUILD_NUMBER.json" -r '.jobs[] | select(.name == "Build runtimes") | .id')
             KEY_MANAGER_RUNTIME_ARTIFACTS_JSON=$(curl -sf "https://buildkite.com/organizations/$ORGANIZATION/pipelines/$PIPELINE/builds/$BUILD_NUMBER/jobs/$KEY_MANAGER_RUNTIME_JOB_ID/artifacts")
-            SIMPLE_KEYMANAGER_URL=$(printf '%s' "$KEY_MANAGER_RUNTIME_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "simple-keymanager") | .url')
+            SIMPLE_KEYMANAGER_URL=$(printf '%s' "$KEY_MANAGER_RUNTIME_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "simple-keymanager.mocksgx") | .url')
+            SIMPLE_KEYMANAGER_SGXS_URL=$(printf '%s' "$KEY_MANAGER_RUNTIME_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "simple-keymanager.sgxs") | .url')
 
             echo "### Downloading simple-keymanager from Buildkite build $BUILD_NUMBER..."
             curl -fLo simple-keymanager "https://buildkite.com$SIMPLE_KEYMANAGER_URL"
             chmod +x simple-keymanager
+            curl -fLo simple-keymanager.sgxs "https://buildkite.com$SIMPLE_KEYMANAGER_SGXS_URL"
         )
     fi
 fi

@@ -6,7 +6,7 @@ use sha2::{Digest, Sha512_256};
 use crate::crypto::signature::{Error, Signature};
 
 /// A Sr25519 public key.
-#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, cbor::Encode, cbor::Decode)]
 #[cbor(transparent, no_default)]
 pub struct PublicKey(Vec<u8>);
 

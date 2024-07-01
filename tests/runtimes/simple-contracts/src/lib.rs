@@ -15,9 +15,7 @@ impl modules::core::Config for Config {
     const ALLOW_INTERACTIVE_READ_ONLY_TRANSACTIONS: bool = true;
 }
 
-impl contracts::Config for Config {
-    type Accounts = modules::accounts::Module;
-}
+impl contracts::Config for Config {}
 
 impl sdk::Runtime for Runtime {
     const VERSION: Version = sdk::version_from_cargo!();
@@ -30,6 +28,7 @@ impl sdk::Runtime for Runtime {
     };
 
     type Core = modules::core::Module<Config>;
+    type Accounts = modules::accounts::Module;
 
     type Modules = (
         modules::accounts::Module,

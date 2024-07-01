@@ -1,0 +1,18 @@
+[package]
+name = "test-runtime-components-ronl"
+version = "0.1.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+cbor = { version = "0.5.1", package = "oasis-cbor" }
+oasis-runtime-sdk = { path = "../../../runtime-sdk" }
+
+# Third party.
+once_cell = "1.8.0"
+thiserror = "1.0"
+
+[features]
+# Enables mock SGX in non-SGX builds.
+debug-mock-sgx = ["oasis-runtime-sdk/debug-mock-sgx"]

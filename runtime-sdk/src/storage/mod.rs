@@ -3,6 +3,7 @@ use oasis_core_runtime::storage::mkvs::Iterator;
 
 pub mod confidential;
 mod hashed;
+mod host;
 mod mkvs;
 mod overlay;
 mod prefix;
@@ -92,6 +93,7 @@ impl<S: Store + ?Sized> Store for Box<S> {
 
 pub use confidential::{ConfidentialStore, Error as ConfidentialStoreError};
 pub use hashed::HashedStore;
+pub use host::HostStore;
 pub use mkvs::MKVSStore;
 pub use overlay::OverlayStore;
 pub use prefix::PrefixStore;

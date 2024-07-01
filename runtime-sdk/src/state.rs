@@ -11,7 +11,7 @@ use oasis_core_runtime::{common::crypto::hash::Hash, consensus::roothash, storag
 
 use crate::{
     context::Context,
-    crypto::random::RootRng,
+    crypto::{random::RootRng, signature::PublicKey},
     event::{Event, EventTag, EventTags},
     modules::core::Error,
     storage::{MKVSStore, NestedStore, OverlayStore, Store},
@@ -173,6 +173,22 @@ impl Environment {
             .first()
             .map(|si| si.address_spec.address())
             .unwrap_or_default()
+    }
+
+    /// Authenticated caller public key if available.
+    ///
+    /// In case there are multiple signers of a transaction, this will return the public key
+    /// corresponding to the first signer. If there are no signers or if the address specification
+    /// does not represent a single public key, it returns `None`.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if called outside a transaction environment.
+    pub fn tx_caller_public_key(&self) -> Option<PublicKey> {
+        self.tx_auth_info()
+            .signer_info
+            .first()
+            .and_then(|si| si.address_spec.public_key())
     }
 }
 
@@ -627,6 +643,16 @@ impl State {
         &self.env
     }
 
+    /// Origin environment information.
+    ///
+    /// The origin environment is the first non-internal environment in the hierarchy.
+    pub fn env_origin(&self) -> &Environment {
+        match self.parent {
+            Some(ref parent) if self.env.internal => parent.env_origin(),
+            _ => &self.env,
+        }
+    }
+
     /// Returns the nesting level of the current state.
     pub fn level(&self) -> usize {
         if let Some(ref parent) = self.parent {
@@ -866,6 +892,19 @@ impl CurrentState {
         F: FnOnce(&Environment) -> R,
     {
         Self::with(|state| f(state.env()))
+    }
+
+    /// Run a closure with the origin environment of the currently active state.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if called outside `CurrentState::enter` or if any transaction methods
+    /// are called from the closure.
+    pub fn with_env_origin<F, R>(f: F) -> R
+    where
+        F: FnOnce(&Environment) -> R,
+    {
+        Self::with(|state| f(state.env_origin()))
     }
 
     /// Start a new transaction by opening a new child state.
@@ -1405,6 +1444,17 @@ mod test {
                     assert!(env.is_transaction(), "environment should be updated");
                     assert_eq!(env.tx_index(), 42, "environment should be updated");
                     assert_eq!(env.tx_size(), 888, "environment should be updated");
+                });
+
+                CurrentState::with_env_origin(|env_origin| {
+                    assert!(
+                        !env_origin.is_check_only(),
+                        "origin environment should be correct"
+                    );
+                    assert!(
+                        !env_origin.is_transaction(),
+                        "origin environment should be correct"
+                    );
                 });
 
                 CurrentState::with_transaction(|| {
