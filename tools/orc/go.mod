@@ -11,7 +11,7 @@ replace (
 
 require (
 	github.com/BurntSushi/toml v1.3.2
-	github.com/oasisprotocol/oasis-core/go v0.2400.0
+	github.com/oasisprotocol/oasis-core/go v0.2401.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 )
@@ -20,7 +20,7 @@ require (
 	github.com/a8m/envsubst v1.4.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/cometbft/cometbft v0.37.6 // indirect
+	github.com/cometbft/cometbft v0.37.7 // indirect
 	github.com/dgraph-io/badger/v4 v4.2.0 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
