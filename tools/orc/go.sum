@@ -108,8 +108,8 @@ github.com/oasisprotocol/cometbft v0.37.2-oasis1 h1:7yr/5f0vV1bQLKoZHFhs3mcHay3n
 github.com/oasisprotocol/cometbft v0.37.2-oasis1/go.mod h1:w7GZmT0jJ/i9Uz9ZWtzE3chuNZ3phUboSrFzPZIoYts=
 github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a h1:dlRvE5fWabOchtH7znfiFCcOvmIYgOeAS5ifBXBlh9Q=
 github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a/go.mod h1:hVoHR2EVESiICEMbg137etN/Lx+lSrHPTD39Z/uE+2s=
-github.com/oasisprotocol/oasis-core/go v0.2400.0 h1:pAYIz8bt0iLcTha9aLpMjM+8GfKA50pXDl3+Lj6FgFg=
-github.com/oasisprotocol/oasis-core/go v0.2400.0/go.mod h1:7Ub+/AHGXtmoguyLIfqBi0xIN0ZeoKmaib0A9BA0DyE=
+github.com/oasisprotocol/oasis-core/go v0.2401.0 h1:ggFn5e7sTZFzITL8hFv8WXLkCfVAfHoJPLLmReSGR00=
+github.com/oasisprotocol/oasis-core/go v0.2401.0/go.mod h1:1YqXr6AYJGv6CTaep/XIZ56cfq0820PFz6ALfvoyyq8=
 github.com/pelletier/go-toml/v2 v2.1.0 h1:FnwAJ4oYMvbT/34k9zzHuZNrhlz48GB3/s6at6/MHO4=
 github.com/pelletier/go-toml/v2 v2.1.0/go.mod h1:tJU2Z3ZkXwnxa4DPO899bsyIoywizdUvyaeZurnPPDc=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
