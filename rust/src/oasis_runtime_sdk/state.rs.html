@@ -1629,6 +1629,56 @@
 <a href="#1627" id="1627">1627</a>
 <a href="#1628" id="1628">1628</a>
 <a href="#1629" id="1629">1629</a>
+<a href="#1630" id="1630">1630</a>
+<a href="#1631" id="1631">1631</a>
+<a href="#1632" id="1632">1632</a>
+<a href="#1633" id="1633">1633</a>
+<a href="#1634" id="1634">1634</a>
+<a href="#1635" id="1635">1635</a>
+<a href="#1636" id="1636">1636</a>
+<a href="#1637" id="1637">1637</a>
+<a href="#1638" id="1638">1638</a>
+<a href="#1639" id="1639">1639</a>
+<a href="#1640" id="1640">1640</a>
+<a href="#1641" id="1641">1641</a>
+<a href="#1642" id="1642">1642</a>
+<a href="#1643" id="1643">1643</a>
+<a href="#1644" id="1644">1644</a>
+<a href="#1645" id="1645">1645</a>
+<a href="#1646" id="1646">1646</a>
+<a href="#1647" id="1647">1647</a>
+<a href="#1648" id="1648">1648</a>
+<a href="#1649" id="1649">1649</a>
+<a href="#1650" id="1650">1650</a>
+<a href="#1651" id="1651">1651</a>
+<a href="#1652" id="1652">1652</a>
+<a href="#1653" id="1653">1653</a>
+<a href="#1654" id="1654">1654</a>
+<a href="#1655" id="1655">1655</a>
+<a href="#1656" id="1656">1656</a>
+<a href="#1657" id="1657">1657</a>
+<a href="#1658" id="1658">1658</a>
+<a href="#1659" id="1659">1659</a>
+<a href="#1660" id="1660">1660</a>
+<a href="#1661" id="1661">1661</a>
+<a href="#1662" id="1662">1662</a>
+<a href="#1663" id="1663">1663</a>
+<a href="#1664" id="1664">1664</a>
+<a href="#1665" id="1665">1665</a>
+<a href="#1666" id="1666">1666</a>
+<a href="#1667" id="1667">1667</a>
+<a href="#1668" id="1668">1668</a>
+<a href="#1669" id="1669">1669</a>
+<a href="#1670" id="1670">1670</a>
+<a href="#1671" id="1671">1671</a>
+<a href="#1672" id="1672">1672</a>
+<a href="#1673" id="1673">1673</a>
+<a href="#1674" id="1674">1674</a>
+<a href="#1675" id="1675">1675</a>
+<a href="#1676" id="1676">1676</a>
+<a href="#1677" id="1677">1677</a>
+<a href="#1678" id="1678">1678</a>
+<a href="#1679" id="1679">1679</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     any::Any,
     cell::RefCell,
@@ -1642,7 +1692,7 @@
 
 <span class="kw">use crate</span>::{
     context::Context,
-    crypto::random::RootRng,
+    crypto::{random::RootRng, signature::PublicKey},
     event::{Event, EventTag, EventTags},
     modules::core::Error,
     storage::{MKVSStore, NestedStore, OverlayStore, Store},
@@ -1804,6 +1854,22 @@
             .first()
             .map(|si| si.address_spec.address())
             .unwrap_or_default()
+    }
+
+    <span class="doccomment">/// Authenticated caller public key if available.
+    ///
+    /// In case there are multiple signers of a transaction, this will return the public key
+    /// corresponding to the first signer. If there are no signers or if the address specification
+    /// does not represent a single public key, it returns `None`.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if called outside a transaction environment.
+    </span><span class="kw">pub fn </span>tx_caller_public_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PublicKey&gt; {
+        <span class="self">self</span>.tx_auth_info()
+            .signer_info
+            .first()
+            .and_then(|si| si.address_spec.public_key())
     }
 }
 
@@ -2258,6 +2324,16 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.env
     }
 
+    <span class="doccomment">/// Origin environment information.
+    ///
+    /// The origin environment is the first non-internal environment in the hierarchy.
+    </span><span class="kw">pub fn </span>env_origin(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Environment {
+        <span class="kw">match </span><span class="self">self</span>.parent {
+            <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>parent) <span class="kw">if </span><span class="self">self</span>.env.internal =&gt; parent.env_origin(),
+            <span class="kw">_ </span>=&gt; <span class="kw-2">&amp;</span><span class="self">self</span>.env,
+        }
+    }
+
     <span class="doccomment">/// Returns the nesting level of the current state.
     </span><span class="kw">pub fn </span>level(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>parent) = <span class="self">self</span>.parent {
@@ -2497,6 +2573,19 @@
         </span>F: FnOnce(<span class="kw-2">&amp;</span>Environment) -&gt; R,
     {
         <span class="self">Self</span>::with(|state| f(state.env()))
+    }
+
+    <span class="doccomment">/// Run a closure with the origin environment of the currently active state.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if called outside `CurrentState::enter` or if any transaction methods
+    /// are called from the closure.
+    </span><span class="kw">pub fn </span>with_env_origin&lt;F, R&gt;(f: F) -&gt; R
+    <span class="kw">where
+        </span>F: FnOnce(<span class="kw-2">&amp;</span>Environment) -&gt; R,
+    {
+        <span class="self">Self</span>::with(|state| f(state.env_origin()))
     }
 
     <span class="doccomment">/// Start a new transaction by opening a new child state.
@@ -3036,6 +3125,17 @@
                     <span class="macro">assert!</span>(env.is_transaction(), <span class="string">"environment should be updated"</span>);
                     <span class="macro">assert_eq!</span>(env.tx_index(), <span class="number">42</span>, <span class="string">"environment should be updated"</span>);
                     <span class="macro">assert_eq!</span>(env.tx_size(), <span class="number">888</span>, <span class="string">"environment should be updated"</span>);
+                });
+
+                CurrentState::with_env_origin(|env_origin| {
+                    <span class="macro">assert!</span>(
+                        !env_origin.is_check_only(),
+                        <span class="string">"origin environment should be correct"
+                    </span>);
+                    <span class="macro">assert!</span>(
+                        !env_origin.is_transaction(),
+                        <span class="string">"origin environment should be correct"
+                    </span>);
                 });
 
                 CurrentState::with_transaction(|| {

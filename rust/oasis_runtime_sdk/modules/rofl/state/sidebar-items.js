@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["expire_registrations","get_app","get_endorser","get_registration","get_registrations_for_app","remove_app","remove_registration","set_app","update_registration"],"struct":["KeyEndorsementInfo"]};

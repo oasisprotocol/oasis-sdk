@@ -140,6 +140,13 @@
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Secp384r1 signatures.
 </span><span class="kw">use </span>base64::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>digest::{consts::U48, core_api::BlockSizeUser, Digest, FixedOutput, FixedOutputReset};
@@ -150,11 +157,12 @@
         signature::{DigestSigner <span class="kw">as _</span>, DigestVerifier, Signer <span class="kw">as _</span>, Verifier <span class="kw">as _</span>},
     },
 };
+<span class="kw">use </span>rand_core::RngCore;
 
 <span class="kw">use </span><span class="kw">crate</span>::crypto::signature::{Error, Signature};
 
 <span class="doccomment">/// A Secp384r1 public key (in compressed form).
-</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq)]
+</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 </span><span class="kw">pub struct </span>PublicKey(p384::EncodedPoint);
 
 <span class="kw">impl </span>PublicKey {
@@ -248,6 +256,12 @@
 }
 
 <span class="kw">impl </span><span class="kw">super</span>::Signer <span class="kw">for </span>MemorySigner {
+    <span class="kw">fn </span>random(rng: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>RngCore) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>seed = [<span class="number">0u8</span>; <span class="number">48</span>];
+        rng.fill_bytes(<span class="kw-2">&amp;mut </span>seed);
+        <span class="self">Self</span>::new_from_seed(<span class="kw-2">&amp;</span>seed)
+    }
+
     <span class="kw">fn </span>new_from_seed(seed: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="kw">let </span>sk = ecdsa::SigningKey::from_slice(seed).map_err(|<span class="kw">_</span>| Error::InvalidArgument)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ sk })

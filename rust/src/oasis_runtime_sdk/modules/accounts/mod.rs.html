@@ -1145,14 +1145,6 @@
 <a href="#1143" id="1143">1143</a>
 <a href="#1144" id="1144">1144</a>
 <a href="#1145" id="1145">1145</a>
-<a href="#1146" id="1146">1146</a>
-<a href="#1147" id="1147">1147</a>
-<a href="#1148" id="1148">1148</a>
-<a href="#1149" id="1149">1149</a>
-<a href="#1150" id="1150">1150</a>
-<a href="#1151" id="1151">1151</a>
-<a href="#1152" id="1152">1152</a>
-<a href="#1153" id="1153">1153</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Accounts module.
 </span><span class="kw">use </span>std::{
     cmp::Ordering,
@@ -1167,8 +1159,8 @@
 <span class="kw">use crate</span>::{
     context::Context,
     core::common::quantity::Quantity,
-    handler, migration, module,
-    module::{Module <span class="kw">as _</span>, Parameters <span class="kw">as _</span>},
+    handler, migration,
+    module::{<span class="self">self</span>, FeeProxyHandler, Module <span class="kw">as _</span>, Parameters <span class="kw">as _</span>},
     modules,
     modules::core::{Error <span class="kw">as </span>CoreError, API <span class="kw">as _</span>},
     runtime::Runtime,
@@ -2025,24 +2017,16 @@
 }
 
 <span class="kw">impl </span>module::TransactionHandler <span class="kw">for </span>Module {
-    <span class="kw">fn </span>authenticate_tx&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C, tx: <span class="kw-2">&amp;</span>Transaction) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
-        <span class="comment">// Check whether the transaction is currently valid.
-        </span><span class="kw">let </span>round = ctx.runtime_header().round;
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(not_before) = tx.auth_info.not_before {
-            <span class="kw">if </span>round &lt; not_before {
-                <span class="comment">// Too early.
-                </span><span class="kw">return </span><span class="prelude-val">Err</span>(modules::core::Error::ExpiredTransaction);
-            }
-        }
-        <span class="kw">if let </span><span class="prelude-val">Some</span>(not_after) = tx.auth_info.not_after {
-            <span class="kw">if </span>round &gt; not_after {
-                <span class="comment">// Too late.
-                </span><span class="kw">return </span><span class="prelude-val">Err</span>(modules::core::Error::ExpiredTransaction);
-            }
-        }
-
+    <span class="kw">fn </span>authenticate_tx&lt;C: Context&gt;(
+        ctx: <span class="kw-2">&amp;</span>C,
+        tx: <span class="kw-2">&amp;</span>Transaction,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;module::AuthDecision, modules::core::Error&gt; {
         <span class="comment">// Check nonces.
-        </span><span class="kw">let </span>payer = <span class="self">Self</span>::check_signer_nonces(ctx, <span class="kw-2">&amp;</span>tx.auth_info)<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>default_payer = <span class="self">Self</span>::check_signer_nonces(ctx, <span class="kw-2">&amp;</span>tx.auth_info)<span class="question-mark">?</span>;
+
+        <span class="comment">// Attempt to resolve a proxy fee payer if set.
+        </span><span class="kw">let </span>payer =
+            &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::FeeProxy::resolve_payer(ctx, tx)<span class="question-mark">?</span>.unwrap_or(default_payer);
 
         <span class="comment">// Charge the specified amount of fees.
         </span><span class="kw">if </span>!tx.auth_info.fee.amount.amount().is_zero() {
@@ -2069,7 +2053,7 @@
             <span class="self">Self</span>::update_signer_nonces(ctx, <span class="kw-2">&amp;</span>tx.auth_info)<span class="question-mark">?</span>;
         }
 
-        <span class="prelude-val">Ok</span>(())
+        <span class="prelude-val">Ok</span>(module::AuthDecision::Continue)
     }
 
     <span class="kw">fn </span>after_handle_call&lt;C: Context&gt;(

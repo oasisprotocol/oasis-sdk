@@ -196,6 +196,7 @@
 <a href="#194" id="194">194</a>
 <a href="#195" id="195">195</a>
 <a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Subcall dispatch.
 </span><span class="kw">use </span>std::cell::RefCell;
 
@@ -352,6 +353,7 @@
                 </span>gas: info.max_gas,
                 <span class="comment">// Propagate consensus message limit.
                 </span>consensus_messages: CurrentState::with(|state| state.emitted_messages_max(ctx)),
+                proxy: <span class="prelude-val">None</span>,
             },
             ..Default::default()
         },

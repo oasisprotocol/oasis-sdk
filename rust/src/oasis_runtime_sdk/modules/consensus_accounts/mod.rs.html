@@ -999,10 +999,6 @@
 <a href="#997" id="997">997</a>
 <a href="#998" id="998">998</a>
 <a href="#999" id="999">999</a>
-<a href="#1000" id="1000">1000</a>
-<a href="#1001" id="1001">1001</a>
-<a href="#1002" id="1002">1002</a>
-<a href="#1003" id="1003">1003</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Consensus accounts module.
 //!
 //! This module allows consensus transfers in and out of the runtime account,
@@ -1027,7 +1023,10 @@
     error, migration, module,
     module::Module <span class="kw">as _</span>,
     modules,
-    modules::core::{Error <span class="kw">as </span>CoreError, API <span class="kw">as _</span>},
+    modules::{
+        accounts::API <span class="kw">as _</span>,
+        core::{Error <span class="kw">as </span>CoreError, API <span class="kw">as _</span>},
+    },
     runtime::Runtime,
     state::CurrentState,
     storage::Prefix,
@@ -1229,8 +1228,7 @@
     ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;;
 }
 
-<span class="kw">pub struct </span>Module&lt;Accounts: modules::accounts::API, Consensus: modules::consensus::API&gt; {
-    _accounts: std::marker::PhantomData&lt;Accounts&gt;,
+<span class="kw">pub struct </span>Module&lt;Consensus: modules::consensus::API&gt; {
     _consensus: std::marker::PhantomData&lt;Consensus&gt;,
 }
 
@@ -1251,9 +1249,7 @@
 <span class="kw">const </span>CONSENSUS_DELEGATE_HANDLER: <span class="kw-2">&amp;</span>str = <span class="string">"consensus.Delegate"</span>;
 <span class="kw">const </span>CONSENSUS_UNDELEGATE_HANDLER: <span class="kw-2">&amp;</span>str = <span class="string">"consensus.Undelegate"</span>;
 
-<span class="kw">impl</span>&lt;Accounts: modules::accounts::API, Consensus: modules::consensus::API&gt; API
-    <span class="kw">for </span>Module&lt;Accounts, Consensus&gt;
-{
+<span class="kw">impl</span>&lt;Consensus: modules::consensus::API&gt; API <span class="kw">for </span>Module&lt;Consensus&gt; {
     <span class="kw">fn </span>deposit&lt;C: Context&gt;(
         ctx: <span class="kw-2">&amp;</span>C,
         from: Address,
@@ -1314,7 +1310,7 @@
 
         <span class="comment">// Transfer the given amount to the module's withdrawal account to make sure the tokens
         // remain available until actually withdrawn.
-        </span>Accounts::transfer(from, <span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL, <span class="kw-2">&amp;</span>amount)
+        </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::transfer(from, <span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL, <span class="kw-2">&amp;</span>amount)
             .map_err(|<span class="kw">_</span>| Error::InsufficientBalance)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
@@ -1350,7 +1346,7 @@
 
         <span class="comment">// Transfer the given amount to the module's delegation account to make sure the tokens
         // remain available until actually delegated.
-        </span>Accounts::transfer(from, <span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, <span class="kw-2">&amp;</span>amount)
+        </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::transfer(from, <span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, <span class="kw-2">&amp;</span>amount)
             .map_err(|<span class="kw">_</span>| Error::InsufficientBalance)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(())
@@ -1388,9 +1384,7 @@
 }
 
 <span class="attr">#[sdk_derive(Module)]
-</span><span class="kw">impl</span>&lt;Accounts: modules::accounts::API, Consensus: modules::consensus::API&gt;
-    Module&lt;Accounts, Consensus&gt;
-{
+</span><span class="kw">impl</span>&lt;Consensus: modules::consensus::API&gt; Module&lt;Consensus&gt; {
     <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = MODULE_NAME;
     <span class="kw">const </span>VERSION: u32 = <span class="number">1</span>;
     <span class="kw">type </span>Error = Error;
@@ -1550,7 +1544,8 @@
         args: types::BalanceQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::AccountBalance, Error&gt; {
         <span class="kw">let </span>denomination = Consensus::consensus_denomination()<span class="question-mark">?</span>;
-        <span class="kw">let </span>balances = Accounts::get_balances(args.address).map_err(|<span class="kw">_</span>| Error::InvalidArgument)<span class="question-mark">?</span>;
+        <span class="kw">let </span>balances = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::get_balances(args.address)
+            .map_err(|<span class="kw">_</span>| Error::InvalidArgument)<span class="question-mark">?</span>;
         <span class="kw">let </span>balance = balances
             .balances
             .get(<span class="kw-2">&amp;</span>denomination)
@@ -1599,7 +1594,7 @@
     ) {
         <span class="kw">if </span>!me.is_success() {
             <span class="comment">// Transfer out failed, refund the balance.
-            </span>Accounts::transfer(
+            </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::transfer(
                 <span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL,
                 context.address,
                 <span class="kw-2">&amp;</span>context.amount,
@@ -1620,7 +1615,7 @@
         }
 
         <span class="comment">// Burn the withdrawn tokens.
-        </span>Accounts::burn(<span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL, <span class="kw-2">&amp;</span>context.amount)
+        </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::burn(<span class="kw-2">*</span>ADDRESS_PENDING_WITHDRAWAL, <span class="kw-2">&amp;</span>context.amount)
             .expect(<span class="string">"should have enough balance"</span>);
 
         <span class="comment">// Emit withdraw successful event.
@@ -1656,7 +1651,7 @@
         }
 
         <span class="comment">// Update runtime state.
-        </span>Accounts::mint(context.address, <span class="kw-2">&amp;</span>context.amount).unwrap();
+        </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::mint(context.address, <span class="kw-2">&amp;</span>context.amount).unwrap();
 
         <span class="comment">// Emit deposit successful event.
         </span>CurrentState::with(|state| {
@@ -1678,8 +1673,12 @@
     ) {
         <span class="kw">if </span>!me.is_success() {
             <span class="comment">// Delegation failed, refund the balance.
-            </span>Accounts::transfer(<span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, context.from, <span class="kw-2">&amp;</span>context.amount)
-                .expect(<span class="string">"should have enough balance"</span>);
+            </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::transfer(
+                <span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION,
+                context.from,
+                <span class="kw-2">&amp;</span>context.amount,
+            )
+            .expect(<span class="string">"should have enough balance"</span>);
 
             <span class="comment">// Store receipt if requested.
             </span><span class="kw">if </span>context.receipt {
@@ -1708,7 +1707,7 @@
         }
 
         <span class="comment">// Burn the delegated tokens.
-        </span>Accounts::burn(<span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, <span class="kw-2">&amp;</span>context.amount)
+        </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::burn(<span class="kw-2">*</span>ADDRESS_PENDING_DELEGATION, <span class="kw-2">&amp;</span>context.amount)
             .expect(<span class="string">"should have enough balance"</span>);
 
         <span class="comment">// Record delegation.
@@ -1833,14 +1832,9 @@
     }
 }
 
-<span class="kw">impl</span>&lt;Accounts: modules::accounts::API, Consensus: modules::consensus::API&gt;
-    module::TransactionHandler <span class="kw">for </span>Module&lt;Accounts, Consensus&gt;
-{
-}
+<span class="kw">impl</span>&lt;Consensus: modules::consensus::API&gt; module::TransactionHandler <span class="kw">for </span>Module&lt;Consensus&gt; {}
 
-<span class="kw">impl</span>&lt;Accounts: modules::accounts::API, Consensus: modules::consensus::API&gt; module::BlockHandler
-    <span class="kw">for </span>Module&lt;Accounts, Consensus&gt;
-{
+<span class="kw">impl</span>&lt;Consensus: modules::consensus::API&gt; module::BlockHandler <span class="kw">for </span>Module&lt;Consensus&gt; {
     <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) {
         <span class="comment">// Only do work in case the epoch has changed since the last processed block.
         </span><span class="kw">if </span>!&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::has_epoch_changed() {
@@ -1919,7 +1913,7 @@
             <span class="kw">let </span>amount = token::BaseUnits::new(raw_amount, denomination.clone());
 
             <span class="comment">// Mint the given number of tokens.
-            </span>Accounts::mint(ud.to, <span class="kw-2">&amp;</span>amount).unwrap();
+            </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::mint(ud.to, <span class="kw-2">&amp;</span>amount).unwrap();
 
             <span class="comment">// Store receipt if requested.
             </span><span class="kw">if </span>udi.receipt &gt; <span class="number">0 </span>{
@@ -1947,9 +1941,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;Accounts: modules::accounts::API, Consensus: modules::consensus::API&gt; module::InvariantHandler
-    <span class="kw">for </span>Module&lt;Accounts, Consensus&gt;
-{
+<span class="kw">impl</span>&lt;Consensus: modules::consensus::API&gt; module::InvariantHandler <span class="kw">for </span>Module&lt;Consensus&gt; {
     <span class="doccomment">/// Check invariants.
     </span><span class="kw">fn </span>check_invariants&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) -&gt; <span class="prelude-ty">Result</span>&lt;(), CoreError&gt; {
         <span class="comment">// Total supply of the designated consensus layer token denomination
@@ -1958,9 +1950,9 @@
 
         </span><span class="kw">let </span>den = Consensus::consensus_denomination().unwrap();
         <span class="attr">#[allow(clippy::or_fun_call)]
-        </span><span class="kw">let </span>ts = Accounts::get_total_supplies().or(<span class="prelude-val">Err</span>(CoreError::InvariantViolation(
-            <span class="string">"unable to get total supplies"</span>.to_string(),
-        )))<span class="question-mark">?</span>;
+        </span><span class="kw">let </span>ts = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::get_total_supplies().or(<span class="prelude-val">Err</span>(
+            CoreError::InvariantViolation(<span class="string">"unable to get total supplies"</span>.to_string()),
+        ))<span class="question-mark">?</span>;
 
         <span class="kw">let </span>rt_addr = Address::from_runtime_id(ctx.runtime_id());
         <span class="kw">let </span>rt_acct = Consensus::account(ctx, rt_addr).unwrap_or_default();

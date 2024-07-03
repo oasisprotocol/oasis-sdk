@@ -211,6 +211,11 @@
 <a href="#209" id="209">209</a>
 <a href="#210" id="210">210</a>
 <a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
+<a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Runtime.
 </span><span class="kw">use </span>std::sync::Arc;
 
@@ -229,8 +234,8 @@
     crypto, dispatcher,
     keymanager::{KeyManagerClient, TrustedSigners},
     module::{
-        BlockHandler, InvariantHandler, MethodHandler, MigrationHandler, ModuleInfoHandler,
-        TransactionHandler,
+        BlockHandler, FeeProxyHandler, InvariantHandler, MethodHandler, MigrationHandler,
+        ModuleInfoHandler, TransactionHandler,
     },
     modules,
     state::CurrentState,
@@ -252,6 +257,10 @@
 
     <span class="doccomment">/// Module that provides the core API.
     </span><span class="kw">type </span>Core: modules::core::API;
+    <span class="doccomment">/// Module that provides the accounts API.
+    </span><span class="kw">type </span>Accounts: modules::accounts::API;
+    <span class="doccomment">/// Handler for proxy fee payments.
+    </span><span class="kw">type </span>FeeProxy: FeeProxyHandler = ();
 
     <span class="doccomment">/// Supported modules.
     </span><span class="kw">type </span>Modules: TransactionHandler
@@ -387,13 +396,14 @@
                 ))
             });
 
-            <span class="comment">// Register runtime's methods.
+            <span class="comment">// Create the transaction dispatcher.
             </span><span class="kw">let </span>dispatcher = dispatcher::Dispatcher::&lt;<span class="self">Self</span>&gt;::new(
-                hi,
+                state.protocol.clone(),
                 key_manager,
                 state.consensus_verifier.clone(),
-                state.protocol.clone(),
             );
+            <span class="comment">// Register EnclaveRPC methods.
+            </span>dispatcher.register_enclaverpc(state.rpc_dispatcher);
 
             PostInitState {
                 txn_dispatcher: <span class="prelude-val">Some</span>(Box::new(dispatcher)),

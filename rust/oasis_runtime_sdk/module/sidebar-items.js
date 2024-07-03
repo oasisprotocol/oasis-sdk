@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["CallResult","DispatchResult"],"fn":["dispatch_call","dispatch_query"],"trait":["BlockHandler","InvariantHandler","MethodHandler","MigrationHandler","Module","ModuleInfoHandler","Parameters","TransactionHandler"]};
+window.SIDEBAR_ITEMS = {"enum":["AuthDecision","CallResult","DispatchResult"],"fn":["dispatch_call","dispatch_query"],"trait":["BlockHandler","FeeProxyHandler","InvariantHandler","MethodHandler","MigrationHandler","Module","ModuleInfoHandler","Parameters","TransactionHandler"]};

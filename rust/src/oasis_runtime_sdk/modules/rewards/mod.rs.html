@@ -233,6 +233,9 @@
 <a href="#231" id="231">231</a>
 <a href="#232" id="232">232</a>
 <a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Rewards module.
 </span><span class="kw">use </span>std::convert::{TryFrom, TryInto};
 
@@ -245,7 +248,7 @@
     core::consensus::beacon,
     migration,
     module::{<span class="self">self</span>, Module <span class="kw">as _</span>, Parameters <span class="kw">as _</span>},
-    modules::{<span class="self">self</span>, core::API <span class="kw">as _</span>},
+    modules::{<span class="self">self</span>, accounts::API <span class="kw">as _</span>, core::API <span class="kw">as _</span>},
     runtime::Runtime,
     sdk_derive,
     state::CurrentState,
@@ -318,9 +321,8 @@
     </span><span class="kw">pub const </span>REWARDS: <span class="kw-2">&amp;</span>[u8] = <span class="kw-2">&amp;</span>[<span class="number">0x02</span>];
 }
 
-<span class="kw">pub struct </span>Module&lt;Accounts: modules::accounts::API&gt; {
-    _accounts: std::marker::PhantomData&lt;Accounts&gt;,
-}
+<span class="doccomment">/// Rewards module.
+</span><span class="kw">pub struct </span>Module;
 
 <span class="doccomment">/// Module's address that has the reward pool.
 ///
@@ -329,7 +331,7 @@
     Lazy::new(|| Address::from_module(MODULE_NAME, <span class="string">"reward-pool"</span>));
 
 <span class="attr">#[sdk_derive(Module)]
-</span><span class="kw">impl</span>&lt;Accounts: modules::accounts::API&gt; Module&lt;Accounts&gt; {
+</span><span class="kw">impl </span>Module {
     <span class="kw">const </span>NAME: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str = MODULE_NAME;
     <span class="kw">const </span>VERSION: u32 = <span class="number">2</span>;
     <span class="kw">type </span>Error = Error;
@@ -358,9 +360,9 @@
     }
 }
 
-<span class="kw">impl</span>&lt;Accounts: modules::accounts::API&gt; module::TransactionHandler <span class="kw">for </span>Module&lt;Accounts&gt; {}
+<span class="kw">impl </span>module::TransactionHandler <span class="kw">for </span>Module {}
 
-<span class="kw">impl</span>&lt;Accounts: modules::accounts::API&gt; module::BlockHandler <span class="kw">for </span>Module&lt;Accounts&gt; {
+<span class="kw">impl </span>module::BlockHandler <span class="kw">for </span>Module {
     <span class="kw">fn </span>end_block&lt;C: Context&gt;(ctx: <span class="kw-2">&amp;</span>C) {
         <span class="kw">let </span>epoch = ctx.epoch();
 
@@ -417,7 +419,11 @@
                     params.participation_threshold_numerator,
                     params.participation_threshold_denominator,
                 ) {
-                    <span class="kw">match </span>Accounts::transfer(<span class="kw-2">*</span>ADDRESS_REWARD_POOL, address, <span class="kw-2">&amp;</span>reward) {
+                    <span class="kw">match </span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::transfer(
+                        <span class="kw-2">*</span>ADDRESS_REWARD_POOL,
+                        address,
+                        <span class="kw-2">&amp;</span>reward,
+                    ) {
                         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {}
                         <span class="prelude-val">Err</span>(modules::accounts::Error::InsufficientBalance) =&gt; {
                             <span class="comment">// Since rewards are the same for the whole epoch, if there is not
@@ -441,7 +447,7 @@
     }
 }
 
-<span class="kw">impl</span>&lt;Accounts: modules::accounts::API&gt; module::InvariantHandler <span class="kw">for </span>Module&lt;Accounts&gt; {}
+<span class="kw">impl </span>module::InvariantHandler <span class="kw">for </span>Module {}
 
 <span class="doccomment">/// A trait that exists solely to convert `beacon::EpochTime` to bytes for use as a storage key.
 </span><span class="kw">trait </span>ToStorageKey {

@@ -155,6 +155,13 @@
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
 <a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Secp256k1 signatures.
 </span><span class="kw">use </span>base64::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>digest::{consts::U32, Digest, FixedOutput};
@@ -167,11 +174,12 @@
     elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint},
     sha2::Sha512_256,
 };
+<span class="kw">use </span>rand_core::RngCore;
 
 <span class="kw">use </span><span class="kw">crate</span>::crypto::signature::{Error, Signature};
 
 <span class="doccomment">/// A Secp256k1 public key (in compressed form).
-</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq)]
+</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 </span><span class="kw">pub struct </span>PublicKey(k256::EncodedPoint);
 
 <span class="kw">impl </span>PublicKey {
@@ -278,6 +286,12 @@
 }
 
 <span class="kw">impl </span><span class="kw">super</span>::Signer <span class="kw">for </span>MemorySigner {
+    <span class="kw">fn </span>random(rng: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>RngCore) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>seed = [<span class="number">0u8</span>; <span class="number">32</span>];
+        rng.fill_bytes(<span class="kw-2">&amp;mut </span>seed);
+        <span class="self">Self</span>::new_from_seed(<span class="kw-2">&amp;</span>seed)
+    }
+
     <span class="kw">fn </span>new_from_seed(seed: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="kw">let </span>sk = ecdsa::SigningKey::from_slice(seed).map_err(|<span class="kw">_</span>| Error::InvalidArgument)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="self">Self </span>{ sk })

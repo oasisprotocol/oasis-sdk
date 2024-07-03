@@ -80,7 +80,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::crypto::signature::{Error, Signature};
 
 <span class="doccomment">/// A Sr25519 public key.
-</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
+</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, cbor::Encode, cbor::Decode)]
 #[cbor(transparent, no_default)]
 </span><span class="kw">pub struct </span>PublicKey(Vec&lt;u8&gt;);
 

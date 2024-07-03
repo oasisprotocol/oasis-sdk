@@ -41,8 +41,11 @@
 <a href="#39" id="39">39</a>
 <a href="#40" id="40">40</a>
 <a href="#41" id="41">41</a>
+<a href="#42" id="42">42</a>
+<a href="#43" id="43">43</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Oasis runtime SDK.
 </span><span class="attr">#![feature(test)]
+#![feature(associated_type_defaults)]
 #![deny(rust_2018_idioms, unreachable_pub)]
 
 </span><span class="kw">pub mod </span>callformat;
@@ -50,6 +53,7 @@
 <span class="kw">pub mod </span>context;
 <span class="kw">pub mod </span>crypto;
 <span class="kw">pub mod </span>dispatcher;
+<span class="kw">pub mod </span>enclave_rpc;
 <span class="kw">pub mod </span>error;
 <span class="kw">pub mod </span>event;
 <span class="kw">pub mod </span>history;

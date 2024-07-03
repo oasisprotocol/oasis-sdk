@@ -101,11 +101,14 @@
 <a href="#99" id="99">99</a>
 <a href="#100" id="100">100</a>
 <a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Storage.
 </span><span class="kw">use </span>oasis_core_runtime::storage::mkvs::Iterator;
 
 <span class="kw">pub mod </span>confidential;
 <span class="kw">mod </span>hashed;
+<span class="kw">mod </span>host;
 <span class="kw">mod </span>mkvs;
 <span class="kw">mod </span>overlay;
 <span class="kw">mod </span>prefix;
@@ -195,6 +198,7 @@
 
 <span class="kw">pub use </span>confidential::{ConfidentialStore, Error <span class="kw">as </span>ConfidentialStoreError};
 <span class="kw">pub use </span>hashed::HashedStore;
+<span class="kw">pub use </span>host::HostStore;
 <span class="kw">pub use </span>mkvs::MKVSStore;
 <span class="kw">pub use </span>overlay::OverlayStore;
 <span class="kw">pub use </span>prefix::PrefixStore;

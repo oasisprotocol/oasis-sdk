@@ -257,7 +257,7 @@
 
 <span class="kw">impl </span>BaseUnits {
     <span class="doccomment">/// Creates a new token amount of the given denomination.
-    </span><span class="kw">pub fn </span>new(amount: u128, denomination: Denomination) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub const fn </span>new(amount: u128, denomination: Denomination) -&gt; <span class="self">Self </span>{
         BaseUnits(amount, denomination)
     }
 

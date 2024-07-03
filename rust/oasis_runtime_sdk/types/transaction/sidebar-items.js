@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["LATEST_TRANSACTION_VERSION","SIGNATURE_CONTEXT_BASE"],"enum":["AddressSpec","AuthProof","CallFormat","CallResult","CallerAddress","Error"],"struct":["AuthInfo","Call","Fee","SignerInfo","Transaction","UnverifiedTransaction"]};
+window.SIDEBAR_ITEMS = {"constant":["LATEST_TRANSACTION_VERSION","SIGNATURE_CONTEXT_BASE"],"enum":["AddressSpec","AuthProof","CallFormat","CallResult","CallerAddress","Error"],"struct":["AuthInfo","Call","Fee","FeeProxy","SignerInfo","Transaction","TransactionSigner","UnverifiedTransaction"]};

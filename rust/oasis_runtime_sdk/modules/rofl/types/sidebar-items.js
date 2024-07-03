@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["AppConfig","AppQuery","Create","Register","Registration","Remove","Update"]};

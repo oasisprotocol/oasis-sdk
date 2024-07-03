@@ -303,12 +303,20 @@
 <a href="#301" id="301">301</a>
 <a href="#302" id="302">302</a>
 <a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+<a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Ed25519 signatures.
 </span><span class="kw">use </span>std::convert::TryInto;
 
 <span class="kw">use </span>base64::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>curve25519_dalek::{digest::consts::U64, edwards::CompressedEdwardsY};
 <span class="kw">use </span>ed25519_dalek::Signer <span class="kw">as _</span>;
+<span class="kw">use </span>rand_core::RngCore;
 <span class="kw">use </span>sha2::{Digest <span class="kw">as _</span>, Sha512, Sha512_256};
 
 <span class="kw">use </span>oasis_core_runtime::common::crypto::signature::{
@@ -318,7 +326,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::crypto::signature::{Error, Signature, Signer};
 
 <span class="doccomment">/// An Ed25519 public key.
-</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
+</span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, cbor::Encode, cbor::Decode)]
 #[cbor(transparent, no_default)]
 </span><span class="kw">pub struct </span>PublicKey(CorePublicKey);
 
@@ -521,6 +529,12 @@
 }
 
 <span class="kw">impl </span>Signer <span class="kw">for </span>MemorySigner {
+    <span class="kw">fn </span>random(rng: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>RngCore) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>seed = [<span class="number">0u8</span>; <span class="number">32</span>];
+        rng.fill_bytes(<span class="kw-2">&amp;mut </span>seed);
+        <span class="self">Self</span>::new_from_seed(<span class="kw-2">&amp;</span>seed)
+    }
+
     <span class="kw">fn </span>new_from_seed(seed: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="kw">if </span>seed.len() != <span class="number">32 </span>{
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::MalformedPublicKey);

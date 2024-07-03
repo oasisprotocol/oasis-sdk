@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["APP_ID_BECH32_HRP"],"enum":["Error"],"struct":["AppId"]};

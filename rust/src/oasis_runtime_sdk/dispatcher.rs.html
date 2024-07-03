@@ -1158,6 +1158,25 @@
 <a href="#1156" id="1156">1156</a>
 <a href="#1157" id="1157">1157</a>
 <a href="#1158" id="1158">1158</a>
+<a href="#1159" id="1159">1159</a>
+<a href="#1160" id="1160">1160</a>
+<a href="#1161" id="1161">1161</a>
+<a href="#1162" id="1162">1162</a>
+<a href="#1163" id="1163">1163</a>
+<a href="#1164" id="1164">1164</a>
+<a href="#1165" id="1165">1165</a>
+<a href="#1166" id="1166">1166</a>
+<a href="#1167" id="1167">1167</a>
+<a href="#1168" id="1168">1168</a>
+<a href="#1169" id="1169">1169</a>
+<a href="#1170" id="1170">1170</a>
+<a href="#1171" id="1171">1171</a>
+<a href="#1172" id="1172">1172</a>
+<a href="#1173" id="1173">1173</a>
+<a href="#1174" id="1174">1174</a>
+<a href="#1175" id="1175">1175</a>
+<a href="#1176" id="1176">1176</a>
+<a href="#1177" id="1177">1177</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Transaction dispatcher.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
@@ -1174,8 +1193,9 @@
     <span class="self">self</span>,
     common::crypto::hash::Hash,
     consensus::{roothash, verifier::Verifier},
+    enclave_rpc::dispatcher::Dispatcher <span class="kw">as </span>RpcDispatcher,
     future::block_on,
-    protocol::HostInfo,
+    protocol::{HostInfo, Protocol},
     transaction::{
         <span class="self">self</span>,
         dispatcher::{ExecuteBatchResult, ExecuteTxResult},
@@ -1188,6 +1208,7 @@
 <span class="kw">use crate</span>::{
     callformat,
     context::{Context, RuntimeBatchContext},
+    enclave_rpc,
     error::{Error <span class="kw">as _</span>, RuntimeError},
     event::IntoTags,
     keymanager::{KeyManagerClient, KeyManagerError},
@@ -1287,6 +1308,7 @@
 <span class="doccomment">/// The runtime dispatcher.
 </span><span class="kw">pub struct </span>Dispatcher&lt;R: Runtime&gt; {
     host_info: HostInfo,
+    host: Arc&lt;Protocol&gt;,
     key_manager: <span class="prelude-ty">Option</span>&lt;Arc&lt;KeyManagerClient&gt;&gt;,
     consensus_verifier: Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
     schedule_control_host: Arc&lt;<span class="kw">dyn </span>ScheduleControlHost&gt;,
@@ -1299,16 +1321,16 @@
     /// Note that the dispatcher is fully static and the constructor is only needed so that the
     /// instance can be used directly with the dispatcher system provided by Oasis Core.
     </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>new(
-        host_info: HostInfo,
+        host: Arc&lt;Protocol&gt;,
         key_manager: <span class="prelude-ty">Option</span>&lt;Arc&lt;KeyManagerClient&gt;&gt;,
         consensus_verifier: Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
-        schedule_control_host: Arc&lt;<span class="kw">dyn </span>ScheduleControlHost&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            host_info,
+            host_info: host.get_host_info(),
             key_manager,
             consensus_verifier,
-            schedule_control_host,
+            schedule_control_host: host.clone(),
+            host,
             _runtime: PhantomData,
         }
     }
@@ -1746,6 +1768,20 @@
             </span>})
         })
     }
+
+    <span class="doccomment">/// Register EnclaveRPC methods.
+    </span><span class="kw">pub fn </span>register_enclaverpc(<span class="kw-2">&amp;</span><span class="self">self</span>, rpc: <span class="kw-2">&amp;mut </span>RpcDispatcher)
+    <span class="kw">where
+        </span>R: Runtime + Send + Sync + <span class="lifetime">'static</span>,
+    {
+        enclave_rpc::Wrapper::&lt;R&gt;::wrap(
+            rpc,
+            <span class="self">self</span>.host.clone(),
+            <span class="self">self</span>.host_info.clone(),
+            <span class="self">self</span>.key_manager.clone(),
+            <span class="self">self</span>.consensus_verifier.clone(),
+        );
+    }
 }
 
 <span class="kw">impl</span>&lt;R: Runtime + Send + Sync&gt; transaction::dispatcher::Dispatcher <span class="kw">for </span>Dispatcher&lt;R&gt; {
@@ -2077,7 +2113,7 @@
     <span class="kw">use crate</span>::{
         handler,
         module::Module,
-        modules::core,
+        modules::{accounts, core},
         sdk_derive,
         state::{CurrentState, Options},
         storage::Store,
@@ -2090,6 +2126,7 @@
     <span class="kw">struct </span>CoreConfig;
     <span class="kw">impl </span>core::Config <span class="kw">for </span>CoreConfig {}
     <span class="kw">type </span>Core = core::Module&lt;CoreConfig&gt;;
+    <span class="kw">type </span>Accounts = accounts::Module;
 
     <span class="attr">#[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
     </span><span class="kw">enum </span>AlphabetError {
@@ -2153,6 +2190,7 @@
     <span class="kw">impl </span>Runtime <span class="kw">for </span>AlphabetRuntime {
         <span class="kw">const </span>VERSION: Version = Version::new(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>);
         <span class="kw">type </span>Core = Core;
+        <span class="kw">type </span>Accounts = Accounts;
         <span class="kw">type </span>Modules = (Core, AlphabetModule);
 
         <span class="kw">fn </span>genesis_state() -&gt; &lt;<span class="self">Self</span>::Modules <span class="kw">as </span>module::MigrationHandler&gt;::Genesis {
@@ -2249,7 +2287,7 @@
                 fee: transaction::Fee {
                     amount: token::BaseUnits::new(<span class="number">0</span>, token::Denomination::NATIVE),
                     gas: <span class="number">1000</span>,
-                    consensus_messages: <span class="number">0</span>,
+                    ..Default::default()
                 },
                 ..Default::default()
             },
@@ -2304,7 +2342,7 @@
                 fee: transaction::Fee {
                     amount: token::BaseUnits::new(<span class="number">0</span>, token::Denomination::NATIVE),
                     gas: <span class="number">1000</span>,
-                    consensus_messages: <span class="number">0</span>,
+                    ..Default::default()
                 },
                 ..Default::default()
             },
