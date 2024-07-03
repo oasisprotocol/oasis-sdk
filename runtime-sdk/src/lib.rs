@@ -1,5 +1,6 @@
 //! Oasis runtime SDK.
 #![feature(test)]
+#![feature(associated_type_defaults)]
 #![deny(rust_2018_idioms, unreachable_pub)]
 
 pub mod callformat;
@@ -7,6 +8,7 @@ pub mod config;
 pub mod context;
 pub mod crypto;
 pub mod dispatcher;
+pub mod enclave_rpc;
 pub mod error;
 pub mod event;
 pub mod history;

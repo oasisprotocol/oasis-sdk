@@ -10,7 +10,7 @@ use crate::{
     core::consensus::beacon,
     migration,
     module::{self, Module as _, Parameters as _},
-    modules::{self, core::API as _},
+    modules::{self, accounts::API as _, core::API as _},
     runtime::Runtime,
     sdk_derive,
     state::CurrentState,
@@ -83,9 +83,8 @@ pub mod state {
     pub const REWARDS: &[u8] = &[0x02];
 }
 
-pub struct Module<Accounts: modules::accounts::API> {
-    _accounts: std::marker::PhantomData<Accounts>,
-}
+/// Rewards module.
+pub struct Module;
 
 /// Module's address that has the reward pool.
 ///
@@ -94,7 +93,7 @@ pub static ADDRESS_REWARD_POOL: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "reward-pool"));
 
 #[sdk_derive(Module)]
-impl<Accounts: modules::accounts::API> Module<Accounts> {
+impl Module {
     const NAME: &'static str = MODULE_NAME;
     const VERSION: u32 = 2;
     type Error = Error;
@@ -123,9 +122,9 @@ impl<Accounts: modules::accounts::API> Module<Accounts> {
     }
 }
 
-impl<Accounts: modules::accounts::API> module::TransactionHandler for Module<Accounts> {}
+impl module::TransactionHandler for Module {}
 
-impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts> {
+impl module::BlockHandler for Module {
     fn end_block<C: Context>(ctx: &C) {
         let epoch = ctx.epoch();
 
@@ -182,7 +181,11 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
                     params.participation_threshold_numerator,
                     params.participation_threshold_denominator,
                 ) {
-                    match Accounts::transfer(*ADDRESS_REWARD_POOL, address, &reward) {
+                    match <C::Runtime as Runtime>::Accounts::transfer(
+                        *ADDRESS_REWARD_POOL,
+                        address,
+                        &reward,
+                    ) {
                         Ok(_) => {}
                         Err(modules::accounts::Error::InsufficientBalance) => {
                             // Since rewards are the same for the whole epoch, if there is not
@@ -206,7 +209,7 @@ impl<Accounts: modules::accounts::API> module::BlockHandler for Module<Accounts>
     }
 }
 
-impl<Accounts: modules::accounts::API> module::InvariantHandler for Module<Accounts> {}
+impl module::InvariantHandler for Module {}
 
 /// A trait that exists solely to convert `beacon::EpochTime` to bytes for use as a storage key.
 trait ToStorageKey {

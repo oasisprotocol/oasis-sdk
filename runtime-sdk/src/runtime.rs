@@ -16,8 +16,8 @@ use crate::{
     crypto, dispatcher,
     keymanager::{KeyManagerClient, TrustedSigners},
     module::{
-        BlockHandler, InvariantHandler, MethodHandler, MigrationHandler, ModuleInfoHandler,
-        TransactionHandler,
+        BlockHandler, FeeProxyHandler, InvariantHandler, MethodHandler, MigrationHandler,
+        ModuleInfoHandler, TransactionHandler,
     },
     modules,
     state::CurrentState,
@@ -39,6 +39,10 @@ pub trait Runtime {
 
     /// Module that provides the core API.
     type Core: modules::core::API;
+    /// Module that provides the accounts API.
+    type Accounts: modules::accounts::API;
+    /// Handler for proxy fee payments.
+    type FeeProxy: FeeProxyHandler = ();
 
     /// Supported modules.
     type Modules: TransactionHandler
@@ -174,13 +178,14 @@ pub trait Runtime {
                 ))
             });
 
-            // Register runtime's methods.
+            // Create the transaction dispatcher.
             let dispatcher = dispatcher::Dispatcher::<Self>::new(
-                hi,
+                state.protocol.clone(),
                 key_manager,
                 state.consensus_verifier.clone(),
-                state.protocol.clone(),
             );
+            // Register EnclaveRPC methods.
+            dispatcher.register_enclaverpc(state.rpc_dispatcher);
 
             PostInitState {
                 txn_dispatcher: Some(Box::new(dispatcher)),

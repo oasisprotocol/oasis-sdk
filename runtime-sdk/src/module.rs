@@ -17,6 +17,7 @@ use crate::{
     storage,
     storage::Prefix,
     types::{
+        address::Address,
         message::MessageResult,
         transaction::{self, AuthInfo, Call, Transaction, UnverifiedTransaction},
     },
@@ -83,6 +84,15 @@ impl CallResult {
                 code,
                 message,
             } => panic!("{module} reported failure with code {code}: {message}"),
+            Self::Aborted(e) => panic!("tx aborted with error: {e}"),
+        }
+    }
+
+    #[cfg(any(test, feature = "test"))]
+    pub fn unwrap_failed(self) -> (String, u32) {
+        match self {
+            Self::Ok(_) => panic!("call result indicates success"),
+            Self::Failed { module, code, .. } => (module, code),
             Self::Aborted(e) => panic!("tx aborted with error: {e}"),
         }
     }
@@ -322,6 +332,15 @@ impl MethodHandler for Tuple {
     }
 }
 
+/// An authentication decision for cases where multiple handlers are available.
+#[derive(Clone, Debug)]
+pub enum AuthDecision {
+    /// Authentication passed, continue with the next authentication handler.
+    Continue,
+    /// Authentication passed, no further authentication handlers should be called.
+    Stop,
+}
+
 /// Transaction handler.
 pub trait TransactionHandler {
     /// Judge if a raw transaction is good enough to undergo decoding.
@@ -363,9 +382,9 @@ pub trait TransactionHandler {
     fn authenticate_tx<C: Context>(
         _ctx: &C,
         _tx: &Transaction,
-    ) -> Result<(), modules::core::Error> {
+    ) -> Result<AuthDecision, modules::core::Error> {
         // Default implementation accepts all transactions.
-        Ok(())
+        Ok(AuthDecision::Continue)
     }
 
     /// Perform any action after authentication, within the transaction context.
@@ -423,9 +442,18 @@ impl TransactionHandler for Tuple {
         Ok(None)
     }
 
-    fn authenticate_tx<C: Context>(ctx: &C, tx: &Transaction) -> Result<(), modules::core::Error> {
-        for_tuples!( #( Tuple::authenticate_tx(ctx, tx)?; )* );
-        Ok(())
+    fn authenticate_tx<C: Context>(
+        ctx: &C,
+        tx: &Transaction,
+    ) -> Result<AuthDecision, modules::core::Error> {
+        for_tuples!( #(
+            match Tuple::authenticate_tx(ctx, tx)? {
+                AuthDecision::Stop => return Ok(AuthDecision::Stop),
+                AuthDecision::Continue => {},
+            }
+        )* );
+
+        Ok(AuthDecision::Continue)
     }
 
     fn before_handle_call<C: Context>(ctx: &C, call: &Call) -> Result<(), modules::core::Error> {
@@ -445,6 +473,32 @@ impl TransactionHandler for Tuple {
 
     fn after_dispatch_tx<C: Context>(ctx: &C, tx_auth_info: &AuthInfo, result: &CallResult) {
         for_tuples!( #( Tuple::after_dispatch_tx(ctx, tx_auth_info, result); )* );
+    }
+}
+
+/// Fee proxy handler.
+pub trait FeeProxyHandler {
+    /// Resolve the proxy payer for the given transaction. If no payer could be resolved, `None`
+    /// should be returned.
+    fn resolve_payer<C: Context>(
+        ctx: &C,
+        tx: &Transaction,
+    ) -> Result<Option<Address>, modules::core::Error>;
+}
+
+#[impl_for_tuples(30)]
+impl FeeProxyHandler for Tuple {
+    fn resolve_payer<C: Context>(
+        ctx: &C,
+        tx: &Transaction,
+    ) -> Result<Option<Address>, modules::core::Error> {
+        for_tuples!( #(
+            if let Some(payer) = Tuple::resolve_payer(ctx, tx)? {
+                return Ok(Some(payer));
+            }
+        )* );
+
+        Ok(None)
     }
 }
 
@@ -614,4 +668,77 @@ pub trait Parameters: Debug + Default + cbor::Encode + cbor::Decode {
 
 impl Parameters for () {
     type Error = std::convert::Infallible;
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::testing::mock;
+
+    /// An authentication handler that always continues.
+    struct TestAuthContinue;
+    /// An authentication handler that always stops.
+    struct TestAuthStop;
+    /// An authentication handler that always fails.
+    struct TestAuthFail;
+
+    impl super::TransactionHandler for TestAuthContinue {
+        fn authenticate_tx<C: Context>(
+            _ctx: &C,
+            _tx: &Transaction,
+        ) -> Result<AuthDecision, modules::core::Error> {
+            Ok(AuthDecision::Continue)
+        }
+    }
+
+    impl super::TransactionHandler for TestAuthStop {
+        fn authenticate_tx<C: Context>(
+            _ctx: &C,
+            _tx: &Transaction,
+        ) -> Result<AuthDecision, modules::core::Error> {
+            Ok(AuthDecision::Stop)
+        }
+    }
+
+    impl super::TransactionHandler for TestAuthFail {
+        fn authenticate_tx<C: Context>(
+            _ctx: &C,
+            _tx: &Transaction,
+        ) -> Result<AuthDecision, modules::core::Error> {
+            Err(modules::core::Error::NotAuthenticated)
+        }
+    }
+
+    #[test]
+    fn test_authenticate_tx() {
+        let mut mock = mock::Mock::default();
+        let ctx = mock.create_ctx();
+        let tx = mock::transaction();
+
+        // Make sure mock authentication handlers behave as expected.
+        let result = TestAuthContinue::authenticate_tx(&ctx, &tx).unwrap();
+        assert!(matches!(result, AuthDecision::Continue));
+        let result = TestAuthStop::authenticate_tx(&ctx, &tx).unwrap();
+        assert!(matches!(result, AuthDecision::Stop));
+        let _ = TestAuthFail::authenticate_tx(&ctx, &tx).unwrap_err();
+
+        // Make sure that composed variants behave as expected.
+        type Composed1 = (TestAuthContinue, TestAuthContinue, TestAuthContinue);
+        let result = Composed1::authenticate_tx(&ctx, &tx).unwrap();
+        assert!(matches!(result, AuthDecision::Continue));
+
+        type Composed2 = (TestAuthContinue, TestAuthStop, TestAuthContinue);
+        let result = Composed2::authenticate_tx(&ctx, &tx).unwrap();
+        assert!(matches!(result, AuthDecision::Stop));
+
+        type Composed3 = (TestAuthContinue, TestAuthStop, TestAuthFail);
+        let result = Composed3::authenticate_tx(&ctx, &tx).unwrap();
+        assert!(matches!(result, AuthDecision::Stop));
+
+        type Composed4 = (TestAuthFail, TestAuthStop, TestAuthContinue);
+        let _ = Composed4::authenticate_tx(&ctx, &tx).unwrap_err();
+
+        type Composed5 = (TestAuthContinue, TestAuthContinue, TestAuthFail);
+        let _ = Composed5::authenticate_tx(&ctx, &tx).unwrap_err();
+    }
 }

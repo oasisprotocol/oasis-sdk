@@ -30,11 +30,14 @@ const (
 
 var (
 	// Init flags.
-	sgxExecutableFn   string
-	sgxSignatureFn    string
-	bundleFn          string
-	overrideRuntimeID string
-	componentId       string
+	noAutodetection        bool
+	sgxExecutableFn        string
+	sgxSignatureFn         string
+	bundleFn               string
+	overrideRuntimeName    string
+	overrideRuntimeID      string
+	overrideRuntimeVersion string
+	componentId            string
 
 	// SIGSTRUCT flags.
 	dateStr                 string
@@ -54,82 +57,24 @@ var (
 	}
 
 	initCmd = &cobra.Command{
-		Use:   "init <ELF-executable> [--sgx-executable SGXS] [--sgx-signature SIG]",
-		Short: "create a runtime bundle with a RONL component",
-		Args:  cobra.ExactArgs(1),
+		Use:   "init [<ELF-executable>] [--sgx-executable SGXS] [--sgx-signature SIG]",
+		Short: "create a runtime bundle (optionally with a RONL component)",
+		Args:  cobra.MaximumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			executablePath := args[0]
-
-			// Parse Cargo manifest to get name and version.
-			data, err := os.ReadFile(cargoTomlName)
-			if err != nil {
-				cobra.CheckErr(fmt.Errorf("failed to read Cargo manifest: %w", err))
+			var executablePath string
+			if len(args) >= 1 {
+				executablePath = args[0]
 			}
 
-			type deploymentManifest struct {
-				RuntimeID common.Namespace `toml:"runtime-id"`
-			}
-			type cargoManifest struct {
-				Package struct {
-					Name     string `toml:"name"`
-					Version  string `toml:"version"`
-					Metadata struct {
-						ORC struct {
-							Release *deploymentManifest `toml:"release"`
-							Test    *deploymentManifest `toml:"test"`
-						} `toml:"orc"`
-					} `toml:"metadata"`
-				} `toml:"package"`
-			}
-			var cm cargoManifest
-			err = toml.Unmarshal(data, &cm)
-			if err != nil {
-				cobra.CheckErr(fmt.Errorf("malformed Cargo manifest: %w", err))
-			}
-
-			var manifest bundle.Manifest
-			manifest.Name = cm.Package.Name
-			manifest.Version, err = version.FromString(cm.Package.Version)
-			if err != nil {
-				cobra.CheckErr(fmt.Errorf("malformed runtime version: %w", err))
-			}
-
-			var kind string
-			switch overrideRuntimeID {
-			case "":
-				// Automatic runtime ID determination based on the version string.
-				var dm *deploymentManifest
-				switch isRelease := (manifest.Version.String() == cm.Package.Version); isRelease {
-				case true:
-					// Release build.
-					dm = cm.Package.Metadata.ORC.Release
-					kind = "release"
-				case false:
-					// Test build.
-					dm = cm.Package.Metadata.ORC.Test
-					kind = "test"
-				}
-				if dm == nil {
-					cobra.CheckErr(fmt.Errorf("missing ORC metadata for %s build", kind))
-				}
-
-				manifest.ID = dm.RuntimeID
-			default:
-				// Manually configured runtime ID.
-				kind = "manually overriden"
-				err = manifest.ID.UnmarshalText([]byte(overrideRuntimeID))
-				if err != nil {
-					cobra.CheckErr(fmt.Errorf("malformed runtime identifier: %w", err))
-				}
-			}
-
-			fmt.Printf("Using %s runtime identifier: %s\n", strings.ToUpper(kind), manifest.ID)
+			manifest := autodetectRuntime()
 
 			bnd := &bundle.Bundle{
-				Manifest: &manifest,
+				Manifest: manifest,
 			}
 
-			addComponent(bnd, component.ID_RONL, executablePath)
+			if executablePath != "" {
+				addComponent(bnd, component.ID_RONL, executablePath)
+			}
 			writeBundle(bnd)
 		},
 	}
@@ -224,7 +169,21 @@ var (
 			}
 			err = bnd.Add(sgxSigName, signed)
 			cobra.CheckErr(err)
-			bnd.Manifest.SGX.Signature = sgxSigName
+
+			switch compId {
+			case component.ID_RONL:
+				// We need to support legacy manifests, so check where the SGXS is defined.
+				if bnd.Manifest.SGX != nil {
+					bnd.Manifest.SGX.Signature = sgxSigName
+					break
+				}
+
+				fallthrough
+			default:
+				// Configure SGX signature for the right component.
+				comp := bnd.Manifest.GetComponentByID(compId)
+				comp.SGX.Signature = sgxSigName
+			}
 
 			// Remove previous serialized manifest.
 			bnd.ResetManifest()
@@ -272,6 +231,115 @@ var (
 		},
 	}
 )
+
+func autodetectRuntime() *bundle.Manifest {
+	type deploymentManifest struct {
+		RuntimeID common.Namespace `toml:"runtime-id"`
+	}
+	type cargoManifest struct {
+		Package struct {
+			Name     string `toml:"name"`
+			Version  string `toml:"version"`
+			Metadata struct {
+				ORC struct {
+					Release *deploymentManifest `toml:"release"`
+					Test    *deploymentManifest `toml:"test"`
+				} `toml:"orc"`
+			} `toml:"metadata"`
+		} `toml:"package"`
+	}
+
+	var cm cargoManifest
+	switch noAutodetection {
+	case true:
+		// Manual, ensure all overrides are set.
+		if overrideRuntimeName == "" {
+			cobra.CheckErr(fmt.Errorf("manual configuration requires --runtime-name"))
+		}
+		if overrideRuntimeID == "" {
+			cobra.CheckErr(fmt.Errorf("manual configuration requires --runtime-id"))
+		}
+		if overrideRuntimeVersion == "" {
+			cobra.CheckErr(fmt.Errorf("manual configuration requires --runtime-version"))
+		}
+	default:
+		// Autodetection via Cargo manifest.
+		fmt.Printf("Attempting to autodetect runtime metadata from '%s'...\n", cargoTomlName)
+
+		data, err := os.ReadFile(cargoTomlName)
+		if err != nil {
+			cobra.CheckErr(fmt.Errorf("failed to read Cargo manifest: %w", err))
+		}
+
+		err = toml.Unmarshal(data, &cm)
+		if err != nil {
+			cobra.CheckErr(fmt.Errorf("malformed Cargo manifest: %w", err))
+		}
+	}
+
+	var manifest bundle.Manifest
+	switch overrideRuntimeName {
+	case "":
+		// Automatic name determination based on the cargo manifest.
+		manifest.Name = cm.Package.Name
+	default:
+		// Manually configured runtime name.
+		manifest.Name = overrideRuntimeName
+	}
+
+	fmt.Printf("Using runtime name: %s\n", manifest.Name)
+
+	var versionStr string
+	switch overrideRuntimeVersion {
+	case "":
+		// Automatic version determination based on the cargo manifest.
+		versionStr = cm.Package.Version
+	default:
+		// Manually configured runtime version.
+		versionStr = overrideRuntimeVersion
+	}
+
+	var err error
+	manifest.Version, err = version.FromString(versionStr)
+	if err != nil {
+		cobra.CheckErr(fmt.Errorf("malformed runtime version: %w", err))
+	}
+
+	fmt.Printf("Using runtime version: %s\n", manifest.Version)
+
+	var kind string
+	switch overrideRuntimeID {
+	case "":
+		// Automatic runtime ID determination based on the version string.
+		var dm *deploymentManifest
+		switch isRelease := (manifest.Version.String() == cm.Package.Version); isRelease {
+		case true:
+			// Release build.
+			dm = cm.Package.Metadata.ORC.Release
+			kind = "release"
+		case false:
+			// Test build.
+			dm = cm.Package.Metadata.ORC.Test
+			kind = "test"
+		}
+		if dm == nil {
+			cobra.CheckErr(fmt.Errorf("missing ORC metadata for %s build", kind))
+		}
+
+		manifest.ID = dm.RuntimeID
+	default:
+		// Manually configured runtime ID.
+		kind = "manually overriden"
+		err = manifest.ID.UnmarshalText([]byte(overrideRuntimeID))
+		if err != nil {
+			cobra.CheckErr(fmt.Errorf("malformed runtime identifier: %w", err))
+		}
+	}
+
+	fmt.Printf("Using %s runtime identifier: %s\n", strings.ToUpper(kind), manifest.ID)
+
+	return &manifest
+}
 
 func getComponentID() (id component.ID) {
 	err := id.UnmarshalText([]byte(componentId))
@@ -431,8 +499,11 @@ func init() {
 
 	// Init cmd.
 	initFlags := flag.NewFlagSet("", flag.ContinueOnError)
+	initFlags.BoolVar(&noAutodetection, "custom", false, "disable autodetection")
 	initFlags.StringVar(&bundleFn, "output", "", "output bundle filename")
-	initFlags.StringVar(&overrideRuntimeID, "runtime-id", "", "override autodetected runtime ID")
+	initFlags.StringVar(&overrideRuntimeName, "runtime-name", "", "override runtime name")
+	initFlags.StringVar(&overrideRuntimeVersion, "runtime-version", "", "override runtime version")
+	initFlags.StringVar(&overrideRuntimeID, "runtime-id", "", "override runtime ID")
 	initCmd.Flags().AddFlagSet(initFlags)
 	initCmd.Flags().AddFlagSet(sgxFlags)
 

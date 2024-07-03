@@ -327,7 +327,7 @@ impl<'ctx, 'backend, 'config, C: Context, Cfg: Config> Backend
     }
 
     fn block_base_fee_per_gas(&self) -> U256 {
-        <C::Runtime as Runtime>::Core::min_gas_price(self.backend.ctx, &Cfg::TOKEN_DENOMINATION)
+        <C::Runtime as Runtime>::Core::min_gas_price(&Cfg::TOKEN_DENOMINATION)
             .unwrap_or_default()
             .into()
     }
@@ -346,8 +346,10 @@ impl<'ctx, 'backend, 'config, C: Context, Cfg: Config> Backend
         // Derive SDK account address from the Ethereum address.
         let sdk_address = Cfg::map_address(address);
         // Fetch balance and nonce from SDK accounts. Note that these can never fail.
-        let balance = Cfg::Accounts::get_balance(sdk_address, Cfg::TOKEN_DENOMINATION).unwrap();
-        let mut nonce = Cfg::Accounts::get_nonce(sdk_address).unwrap();
+        let balance =
+            <C::Runtime as Runtime>::Accounts::get_balance(sdk_address, Cfg::TOKEN_DENOMINATION)
+                .unwrap();
+        let mut nonce = <C::Runtime as Runtime>::Accounts::get_nonce(sdk_address).unwrap();
 
         // If this is the caller's address, the caller nonce has not yet been incremented based on
         // the EVM semantics and this is not a simulation context, return the nonce decremented by
@@ -465,7 +467,7 @@ impl<'ctx, 'backend, 'config, C: Context, Cfg: Config> StackState<'config>
         }
 
         let address = Cfg::map_address(address);
-        Cfg::Accounts::inc_nonce(address);
+        <C::Runtime as Runtime>::Accounts::inc_nonce(address);
         Ok(())
     }
 
@@ -525,7 +527,8 @@ impl<'ctx, 'backend, 'config, C: Context, Cfg: Config> StackState<'config>
         let amount = transfer.value.as_u128();
         let amount = token::BaseUnits::new(amount, Cfg::TOKEN_DENOMINATION);
 
-        Cfg::Accounts::transfer(from, to, &amount).map_err(|_| ExitError::OutOfFund)
+        <C::Runtime as Runtime>::Accounts::transfer(from, to, &amount)
+            .map_err(|_| ExitError::OutOfFund)
     }
 
     fn reset_balance(&mut self, _address: H160) {

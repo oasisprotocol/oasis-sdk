@@ -41,8 +41,6 @@ static FAUCET_CONTRACT_CODE_HEX: &str =
 pub(crate) struct EVMConfig;
 
 impl Config for EVMConfig {
-    type Accounts = Accounts;
-
     type AdditionalPrecompileSet = ();
 
     const CHAIN_ID: u64 = 0xa515;
@@ -53,8 +51,6 @@ impl Config for EVMConfig {
 pub(crate) struct ConfidentialEVMConfig;
 
 impl Config for ConfidentialEVMConfig {
-    type Accounts = Accounts;
-
     type AdditionalPrecompileSet = ();
 
     const CHAIN_ID: u64 = 0x5afe;
@@ -209,9 +205,8 @@ fn do_test_evm_calls<C: Config>(force_plain: bool) {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 1000000,
-                consensus_messages: 0,
+                gas: 1_000_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -250,9 +245,8 @@ fn do_test_evm_calls<C: Config>(force_plain: bool) {
                 1,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 25000,
-                consensus_messages: 0,
+                gas: 25_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -343,9 +337,8 @@ fn test_c10l_evm_balance_transfer() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 1000000,
-                consensus_messages: 0,
+                gas: 1_000_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -401,6 +394,7 @@ impl<C: Config> Runtime for EVMRuntime<C> {
     const VERSION: Version = Version::new(0, 0, 0);
 
     type Core = Core<CoreConfig>;
+    type Accounts = Accounts;
 
     type Modules = (Core<CoreConfig>, Accounts, EVMModule<C>);
 
@@ -512,9 +506,8 @@ fn do_test_evm_runtime<C: Config>() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 1000000,
-                consensus_messages: 0,
+                gas: 1_000_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -561,9 +554,8 @@ fn do_test_evm_runtime<C: Config>() {
                 1,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 10, // Not enough gas.
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -621,9 +613,8 @@ fn do_test_evm_runtime<C: Config>() {
                 2,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 25000,
-                consensus_messages: 0,
+                gas: 25_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -703,9 +694,8 @@ fn do_test_evm_runtime<C: Config>() {
                 3,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
-                gas: 64000,
-                consensus_messages: 0,
+                gas: 64_000,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -755,9 +745,8 @@ fn do_test_evm_runtime<C: Config>() {
                 4,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 10, // Not enough gas.
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },

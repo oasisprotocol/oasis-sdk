@@ -112,9 +112,6 @@ func (a *v1) GetEvents(ctx context.Context, round uint64) ([]*Event, error) {
 		if err != nil {
 			return nil, err
 		}
-		if ev == nil {
-			continue
-		}
 		for _, e := range ev {
 			evs = append(evs, e.(*Event))
 		}

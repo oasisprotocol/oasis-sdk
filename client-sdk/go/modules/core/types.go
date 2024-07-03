@@ -19,7 +19,7 @@ type EstimateGasQuery struct {
 	PropagateFailures bool `json:"propagate_failures,omitempty"`
 }
 
-// GasCosts are the consensus accounts module gas costs.
+// GasCosts are the core module gas costs.
 type GasCosts struct {
 	TxByte                   uint64 `json:"tx_byte"`
 	AuthSignature            uint64 `json:"auth_signature"`
@@ -27,7 +27,7 @@ type GasCosts struct {
 	CallformatX25519Deoxysii uint64 `json:"callformat_x25519_deoxysii"`
 }
 
-// Parameters are the parameters for the consensus accounts module.
+// Parameters are the parameters for the core module.
 type Parameters struct {
 	MaxBatchGas        uint64                                   `json:"max_batch_gas"`
 	MaxTxSigners       uint32                                   `json:"max_tx_signers"`

@@ -4,6 +4,7 @@ use std::convert::TryInto;
 use base64::prelude::*;
 use curve25519_dalek::{digest::consts::U64, edwards::CompressedEdwardsY};
 use ed25519_dalek::Signer as _;
+use rand_core::RngCore;
 use sha2::{Digest as _, Sha512, Sha512_256};
 
 use oasis_core_runtime::common::crypto::signature::{
@@ -13,7 +14,7 @@ use oasis_core_runtime::common::crypto::signature::{
 use crate::crypto::signature::{Error, Signature, Signer};
 
 /// An Ed25519 public key.
-#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, cbor::Encode, cbor::Decode)]
 #[cbor(transparent, no_default)]
 pub struct PublicKey(CorePublicKey);
 
@@ -216,6 +217,12 @@ impl MemorySigner {
 }
 
 impl Signer for MemorySigner {
+    fn random(rng: &mut impl RngCore) -> Result<Self, Error> {
+        let mut seed = [0u8; 32];
+        rng.fill_bytes(&mut seed);
+        Self::new_from_seed(&seed)
+    }
+
     fn new_from_seed(seed: &[u8]) -> Result<Self, Error> {
         if seed.len() != 32 {
             return Err(Error::MalformedPublicKey);

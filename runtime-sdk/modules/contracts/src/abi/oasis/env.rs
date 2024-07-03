@@ -3,7 +3,7 @@ use oasis_contract_sdk_types::{
     env::{AccountsQuery, AccountsResponse, QueryRequest, QueryResponse},
     InstanceId,
 };
-use oasis_runtime_sdk::{context::Context, modules::accounts::API as _};
+use oasis_runtime_sdk::{context::Context, modules::accounts::API as _, Runtime};
 
 use super::{memory::Region, OasisV1};
 use crate::{
@@ -42,7 +42,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                 )??;
 
                 // Dispatch query.
-                let result = dispatch_query::<Cfg, C>(ec.tx_context, request);
+                let result = dispatch_query::<C>(ec.tx_context, request);
 
                 // Create new region by calling `allocate`.
                 //
@@ -102,7 +102,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
 }
 
 /// Perform environment query dispatch.
-fn dispatch_query<Cfg: Config, C: Context>(ctx: &C, query: QueryRequest) -> QueryResponse {
+fn dispatch_query<C: Context>(ctx: &C, query: QueryRequest) -> QueryResponse {
     match query {
         // Information about the current runtime block.
         QueryRequest::BlockInfo => QueryResponse::BlockInfo {
@@ -112,7 +112,7 @@ fn dispatch_query<Cfg: Config, C: Context>(ctx: &C, query: QueryRequest) -> Quer
         },
 
         // Accounts API queries.
-        QueryRequest::Accounts(query) => dispatch_accounts_query::<Cfg, C>(ctx, query),
+        QueryRequest::Accounts(query) => dispatch_accounts_query::<C>(ctx, query),
 
         _ => QueryResponse::Error {
             module: "".to_string(),
@@ -123,17 +123,15 @@ fn dispatch_query<Cfg: Config, C: Context>(ctx: &C, query: QueryRequest) -> Quer
 }
 
 /// Perform accounts API query dispatch.
-fn dispatch_accounts_query<Cfg: Config, C: Context>(
-    _ctx: &C,
-    query: AccountsQuery,
-) -> QueryResponse {
+fn dispatch_accounts_query<C: Context>(_ctx: &C, query: AccountsQuery) -> QueryResponse {
     match query {
         AccountsQuery::Balance {
             address,
             denomination,
         } => {
             let balance =
-                Cfg::Accounts::get_balance(address.into(), denomination.into()).unwrap_or_default();
+                <C::Runtime as Runtime>::Accounts::get_balance(address.into(), denomination.into())
+                    .unwrap_or_default();
 
             AccountsResponse::Balance { balance }.into()
         }

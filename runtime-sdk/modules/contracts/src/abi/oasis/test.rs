@@ -3,7 +3,6 @@ use oasis_runtime_sdk::{
     context::Context,
     core::common::crypto::hash::Hash,
     error::Error as _,
-    modules,
     modules::core,
     testing::mock,
     types::{address::Address, transaction::CallFormat},
@@ -18,9 +17,7 @@ const HELLO_CONTRACT_CODE: &[u8] = include_bytes!(
 
 struct ContractsConfig;
 
-impl Config for ContractsConfig {
-    type Accounts = modules::accounts::Module;
-}
+impl Config for ContractsConfig {}
 
 struct CoreConfig;
 

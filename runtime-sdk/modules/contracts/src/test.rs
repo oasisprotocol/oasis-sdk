@@ -27,9 +27,7 @@ static HELLO_CONTRACT_CODE: &[u8] = include_bytes!(
 
 struct ContractsConfig;
 
-impl Config for ContractsConfig {
-    type Accounts = Accounts;
-}
+impl Config for ContractsConfig {}
 
 type Contracts = crate::Module<ContractsConfig>;
 
@@ -58,9 +56,8 @@ fn upload_hello_contract<C: Context>(ctx: &C) -> types::CodeId {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 160_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -104,9 +101,8 @@ fn deploy_hello_contract<C: Context>(ctx: &C, tokens: Vec<BaseUnits>) -> types::
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -210,9 +206,8 @@ fn test_hello_contract_call() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -305,9 +300,8 @@ fn test_hello_contract_call() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -457,9 +451,8 @@ fn test_hello_contract_call() {
                     0,
                 )],
                 fee: transaction::Fee {
-                    amount: Default::default(),
                     gas: 1_000_000,
-                    consensus_messages: 0,
+                    ..Default::default()
                 },
                 ..Default::default()
             },
@@ -544,9 +537,8 @@ fn test_hello_contract_call() {
                     0,
                 )],
                 fee: transaction::Fee {
-                    amount: Default::default(),
                     gas: 1_000_000,
-                    consensus_messages: 0,
+                    ..Default::default()
                 },
                 ..Default::default()
             },
@@ -642,9 +634,8 @@ fn test_hello_contract_call() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -678,6 +669,7 @@ impl Runtime for ContractRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
 
     type Core = Core<CoreConfig>;
+    type Accounts = Accounts;
 
     type Modules = (Core<CoreConfig>, Accounts, Contracts);
 
@@ -749,9 +741,8 @@ fn test_hello_contract_subcalls_overflow() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 3_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -806,7 +797,7 @@ fn test_hello_contract_subcalls() {
             fee: transaction::Fee {
                 amount: BaseUnits::new(2_000_000, Denomination::NATIVE),
                 gas: 2_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -872,9 +863,8 @@ fn test_hello_contract_query() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -915,9 +905,8 @@ fn test_hello_contract_query() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -958,9 +947,8 @@ fn test_hello_contract_query() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 1_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1013,9 +1001,8 @@ fn test_hello_contract_upgrade() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 2_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1057,9 +1044,8 @@ fn test_hello_contract_upgrade_fail_policy() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 2_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1105,9 +1091,8 @@ fn test_hello_contract_upgrade_fail_pre() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 2_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1156,9 +1141,8 @@ fn test_hello_contract_upgrade_fail_post() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 2_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1204,9 +1188,8 @@ fn test_hello_contract_change_upgrade_policy() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 2_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1245,9 +1228,8 @@ fn test_hello_contract_change_upgrade_policy_fail() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: Default::default(),
                 gas: 2_000_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },

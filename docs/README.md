@@ -24,6 +24,20 @@ The Runtime SDK handles the _backend_ part, namely the runtime itself. It
 allows you to build the logic that will be replicated when running alongside an
 Oasis Core node in Rust.
 
+#### ROFL Applications
+
+Runtime OFf-chain Logic (ROFL) applications are a mechanism to augment the
+deterministic on-chain backend with verifiable off-chain applications. These
+applications are stateless, have access to the network and can perform expensive
+and/or non-deterministic computation. Consider them the _off-chain backend_
+part.
+
+ROFL applications run in Trusted Execution Environments (TEEs), similar to the
+on-chain confidential runtimes. This enables them to securely authenticate to
+the on-chain backend which is handled transparently by the framework. Together
+they allow one to implement secure decentralized oracles, bridges, AI agents and
+more.
+
 ### Contract SDK
 
 The Contract SDK handles the _higher level backend_ part and allows you to

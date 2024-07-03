@@ -354,10 +354,7 @@ pub mod state {
 }
 
 /// Module configuration.
-pub trait Config: 'static {
-    /// Module that is used for accessing accounts.
-    type Accounts: modules::accounts::API;
-}
+pub trait Config: 'static {}
 
 pub struct Module<Cfg: Config> {
     _cfg: std::marker::PhantomData<Cfg>,
@@ -570,7 +567,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Transfer any attached tokens.
         for tokens in &body.tokens {
-            Cfg::Accounts::transfer(creator, instance_info.address(), tokens)
+            <C::Runtime as Runtime>::Accounts::transfer(creator, instance_info.address(), tokens)
                 .map_err(|_| Error::InsufficientCallerBalance)?
         }
         // Run instantiation function.
@@ -615,7 +612,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Transfer any attached tokens.
         for tokens in &body.tokens {
-            Cfg::Accounts::transfer(caller, instance_info.address(), tokens)
+            <C::Runtime as Runtime>::Accounts::transfer(caller, instance_info.address(), tokens)
                 .map_err(|_| Error::InsufficientCallerBalance)?
         }
         // Run call function.
@@ -689,7 +686,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Transfer any attached tokens.
         for tokens in &body.tokens {
-            Cfg::Accounts::transfer(caller, instance_info.address(), tokens)
+            <C::Runtime as Runtime>::Accounts::transfer(caller, instance_info.address(), tokens)
                 .map_err(|_| Error::InsufficientCallerBalance)?
         }
         // Run pre-upgrade function on the previous contract.

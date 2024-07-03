@@ -142,14 +142,8 @@ fn test_query_min_gas_price() {
         dynamic_min_gas_price: Default::default(),
     });
 
-    assert_eq!(
-        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
-        Some(123)
-    );
-    assert_eq!(
-        Core::min_gas_price(&ctx, &"SMALLER".parse().unwrap()),
-        Some(1000)
-    );
+    assert_eq!(Core::min_gas_price(&token::Denomination::NATIVE), Some(123));
+    assert_eq!(Core::min_gas_price(&"SMALLER".parse().unwrap()), Some(1000));
 
     let mgp = Core::query_min_gas_price(&ctx, ()).expect("query_min_gas_price should succeed");
     assert!(mgp.len() == 2);
@@ -174,11 +168,11 @@ fn test_query_min_gas_price() {
     }
 
     assert_eq!(
-        super::Module::<MinGasPriceOverride>::min_gas_price(&ctx, &token::Denomination::NATIVE),
+        super::Module::<MinGasPriceOverride>::min_gas_price(&token::Denomination::NATIVE),
         Some(123)
     );
     assert_eq!(
-        super::Module::<MinGasPriceOverride>::min_gas_price(&ctx, &"SMALLER".parse().unwrap()),
+        super::Module::<MinGasPriceOverride>::min_gas_price(&"SMALLER".parse().unwrap()),
         Some(1000)
     );
 
@@ -376,6 +370,7 @@ impl Runtime for GasWasterRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
 
     type Core = Core;
+    type Accounts = crate::modules::accounts::Module;
 
     type Modules = (Core, GasWasterModule);
 
@@ -440,7 +435,7 @@ fn test_reject_txs() {
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                 gas: u64::MAX,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -475,7 +470,7 @@ fn test_query_estimate_gas() {
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                 gas: u64::MAX,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -884,6 +879,55 @@ fn test_approve_unverified_tx() {
 }
 
 #[test]
+fn test_transaction_expiry() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx();
+
+    let tx = transaction::Transaction {
+        version: 1,
+        call: transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: "test.Test".to_owned(),
+            ..Default::default()
+        },
+        auth_info: transaction::AuthInfo {
+            signer_info: vec![transaction::SignerInfo::new_sigspec(
+                keys::alice::sigspec(),
+                0,
+            )],
+            fee: Default::default(),
+            not_before: Some(10),
+            not_after: Some(42),
+        },
+    };
+
+    // Authenticate transaction, should be expired.
+    let err = Core::authenticate_tx(&ctx, &tx).expect_err("tx should be expired (early)");
+    assert!(matches!(
+        err,
+        crate::modules::core::Error::ExpiredTransaction
+    ));
+
+    // Move the round forward.
+    mock.runtime_header.round = 15;
+
+    // Authenticate transaction, should succeed.
+    let ctx = mock.create_ctx();
+    Core::authenticate_tx(&ctx, &tx).expect("tx should be valid");
+
+    // Move the round forward again.
+    mock.runtime_header.round = 50;
+
+    // Authenticate transaction, should be expired.
+    let ctx = mock.create_ctx();
+    let err = Core::authenticate_tx(&ctx, &tx).expect_err("tx should be expired");
+    assert!(matches!(
+        err,
+        crate::modules::core::Error::ExpiredTransaction
+    ));
+}
+
+#[test]
 fn test_set_priority() {
     let _mock = mock::Mock::default();
 
@@ -967,7 +1011,7 @@ fn test_min_gas_price() {
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                 gas: 100,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
@@ -1203,7 +1247,6 @@ fn test_min_gas_price_update() {
 #[test]
 fn test_dynamic_min_gas_price() {
     let mut mock = mock::Mock::default();
-    let ctx = mock.create_ctx_for_runtime::<GasWasterRuntime>(false);
 
     let denom: token::Denomination = "SMALLER".parse().unwrap();
     Core::set_params(Parameters {
@@ -1255,17 +1298,17 @@ fn test_dynamic_min_gas_price() {
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(1_000_000_000, token::Denomination::NATIVE),
                 gas: 10_000,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },
     };
     let call = tx.call.clone();
     assert_eq!(
-        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
+        Core::min_gas_price(&token::Denomination::NATIVE),
         Some(1000)
     );
-    assert_eq!(Core::min_gas_price(&ctx, &denom), Some(100));
+    assert_eq!(Core::min_gas_price(&denom), Some(100));
 
     // Simulate some full blocks (with max gas usage).
     for round in 0..=10 {
@@ -1292,12 +1335,11 @@ fn test_dynamic_min_gas_price() {
         });
     }
 
-    let ctx = mock.create_ctx();
     assert_eq!(
-        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
+        Core::min_gas_price(&token::Denomination::NATIVE),
         Some(3598) // Gas price should increase.
     );
-    assert_eq!(Core::min_gas_price(&ctx, &denom), Some(350));
+    assert_eq!(Core::min_gas_price(&denom), Some(350));
 
     // Simulate some empty blocks.
     for round in 10..=100 {
@@ -1308,12 +1350,11 @@ fn test_dynamic_min_gas_price() {
         Core::end_block(&ctx);
     }
 
-    let ctx = mock.create_ctx();
     assert_eq!(
-        Core::min_gas_price(&ctx, &token::Denomination::NATIVE),
+        Core::min_gas_price(&token::Denomination::NATIVE),
         Some(1000) // Gas price should decrease to the configured min gas price.
     );
-    assert_eq!(Core::min_gas_price(&ctx, &denom), Some(100));
+    assert_eq!(Core::min_gas_price(&denom), Some(100));
 }
 
 #[test]
@@ -1510,7 +1551,7 @@ fn test_message_gas() {
             fee: transaction::Fee {
                 amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
                 gas: u64::MAX,
-                consensus_messages: 0,
+                ..Default::default()
             },
             ..Default::default()
         },

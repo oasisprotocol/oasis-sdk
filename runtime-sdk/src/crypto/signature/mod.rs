@@ -2,7 +2,10 @@
 use std::convert::TryFrom;
 
 use digest::{typenum::Unsigned as _, Digest as _};
+use rand_core::RngCore;
 use thiserror::Error;
+
+use crate::core::common::crypto::signature::{PublicKey as CorePublicKey, Signer as CoreSigner};
 
 pub mod context;
 mod digests;
@@ -107,7 +110,7 @@ impl TryFrom<u8> for SignatureType {
 }
 
 /// A public key used for signing.
-#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, cbor::Encode, cbor::Decode)]
 pub enum PublicKey {
     #[cbor(rename = "ed25519")]
     Ed25519(ed25519::PublicKey),
@@ -145,6 +148,17 @@ pub enum Error {
 }
 
 impl PublicKey {
+    /// Return the key type as string.
+    pub fn key_type(&self) -> &str {
+        match self {
+            Self::Ed25519(_) => "ed25519",
+            Self::Secp256k1(_) => "secp256k1",
+            Self::Secp256r1(_) => "secp256r1",
+            Self::Secp384r1(_) => "secp384r1",
+            Self::Sr25519(_) => "sr25519",
+        }
+    }
+
     /// Return a byte representation of this public key.
     pub fn as_bytes(&self) -> &[u8] {
         match self {
@@ -313,6 +327,32 @@ impl AsRef<[u8]> for PublicKey {
     }
 }
 
+impl PartialEq<CorePublicKey> for PublicKey {
+    fn eq(&self, other: &CorePublicKey) -> bool {
+        match self {
+            PublicKey::Ed25519(pk) => pk.as_bytes() == other.as_ref(),
+            _ => false,
+        }
+    }
+}
+
+impl TryFrom<PublicKey> for CorePublicKey {
+    type Error = &'static str;
+
+    fn try_from(pk: PublicKey) -> Result<Self, Self::Error> {
+        match pk {
+            PublicKey::Ed25519(pk) => Ok(pk.into()),
+            _ => Err("not an Ed25519 public key"),
+        }
+    }
+}
+
+impl From<CorePublicKey> for PublicKey {
+    fn from(pk: CorePublicKey) -> Self {
+        Self::Ed25519(pk.into())
+    }
+}
+
 /// Variable-length opaque signature.
 #[derive(Clone, Debug, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 #[cbor(transparent)]
@@ -337,23 +377,73 @@ impl From<Signature> for Vec<u8> {
 }
 
 /// Common trait for memory signers.
-trait Signer {
+pub trait Signer: Send + Sync {
+    /// Create a new random signer.
+    fn random(rng: &mut impl RngCore) -> Result<Self, Error>
+    where
+        Self: Sized;
+
     /// Create a new signer from the given seed.
     fn new_from_seed(seed: &[u8]) -> Result<Self, Error>
     where
         Self: Sized;
+
     /// Recreate signer from a byte serialization.
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error>
     where
         Self: Sized;
+
     /// Serialize the signer into bytes.
     fn to_bytes(&self) -> Vec<u8>;
+
     /// Return the public key counterpart to the signer's secret key.
     fn public_key(&self) -> PublicKey;
+
     /// Generate a signature over the context and message.
     fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error>;
+
     /// Generate a signature over the message.
     fn sign_raw(&self, message: &[u8]) -> Result<Signature, Error>;
+}
+
+impl<T: CoreSigner> Signer for &T {
+    fn random(_rng: &mut impl RngCore) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        Err(Error::InvalidArgument)
+    }
+
+    fn new_from_seed(_seed: &[u8]) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        Err(Error::InvalidArgument)
+    }
+
+    fn from_bytes(_bytes: &[u8]) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        Err(Error::InvalidArgument)
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        vec![]
+    }
+
+    fn public_key(&self) -> PublicKey {
+        PublicKey::Ed25519(self.public().into())
+    }
+
+    fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
+        let raw_sig = CoreSigner::sign(*self, context, message).map_err(|_| Error::SigningError)?;
+        Ok(Signature(raw_sig.as_ref().into()))
+    }
+
+    fn sign_raw(&self, _message: &[u8]) -> Result<Signature, Error> {
+        Err(Error::InvalidArgument)
+    }
 }
 
 /// A memory-backed signer.

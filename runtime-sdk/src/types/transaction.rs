@@ -5,7 +5,7 @@ use thiserror::Error;
 use crate::{
     crypto::{
         multisig,
-        signature::{self, PublicKey, Signature},
+        signature::{self, PublicKey, Signature, Signer},
     },
     types::{
         address,
@@ -26,10 +26,14 @@ pub enum Error {
     UnsupportedVersion,
     #[error("malformed transaction: {0}")]
     MalformedTransaction(anyhow::Error),
+    #[error("signer not found in transaction")]
+    SignerNotFound,
+    #[error("failed to sign: {0}")]
+    FailedToSign(#[from] signature::Error),
 }
 
 /// A container for data that authenticates a transaction.
-#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Default, Debug, cbor::Encode, cbor::Decode)]
 pub enum AuthProof {
     /// For _signature_ authentication.
     #[cbor(rename = "signature")]
@@ -41,6 +45,11 @@ pub enum AuthProof {
     /// module must handle. The scheme name must not be empty.
     #[cbor(rename = "module")]
     Module(String),
+
+    /// A non-serializable placeholder value.
+    #[cbor(skip)]
+    #[default]
+    Invalid,
 }
 
 /// An unverified signed transaction.
@@ -81,6 +90,96 @@ impl UnverifiedTransaction {
     }
 }
 
+/// Transaction signer.
+pub struct TransactionSigner {
+    auth_info: AuthInfo,
+    ut: UnverifiedTransaction,
+}
+
+impl TransactionSigner {
+    /// Construct a new transaction signer for the given transaction.
+    pub fn new(tx: Transaction) -> Self {
+        let mut ts = Self {
+            auth_info: tx.auth_info.clone(),
+            ut: UnverifiedTransaction(cbor::to_vec(tx), vec![]),
+        };
+        ts.allocate_proofs();
+
+        ts
+    }
+
+    /// Allocate proof structures based on the specified authentication info in the transaction.
+    fn allocate_proofs(&mut self) {
+        if !self.ut.1.is_empty() {
+            return;
+        }
+
+        // Allocate proof slots.
+        self.ut
+            .1
+            .resize_with(self.auth_info.signer_info.len(), Default::default);
+
+        for (si, ap) in self.auth_info.signer_info.iter().zip(self.ut.1.iter_mut()) {
+            match (&si.address_spec, ap) {
+                (AddressSpec::Multisig(cfg), ap) => {
+                    // Allocate multisig slots.
+                    *ap = AuthProof::Multisig(vec![None; cfg.signers.len()]);
+                }
+                _ => continue,
+            }
+        }
+    }
+
+    /// Sign the transaction and append the signature.
+    ///
+    /// The signer must be specified in the `auth_info` field.
+    pub fn append_sign<S>(&mut self, signer: &S) -> Result<(), Error>
+    where
+        S: Signer + ?Sized,
+    {
+        let ctx = signature::context::get_chain_context_for(SIGNATURE_CONTEXT_BASE);
+        let signature = signer.sign(&ctx, &self.ut.0)?;
+
+        let mut matched = false;
+        for (si, ap) in self.auth_info.signer_info.iter().zip(self.ut.1.iter_mut()) {
+            match (&si.address_spec, ap) {
+                (AddressSpec::Signature(spec), ap) => {
+                    if spec.public_key() != signer.public_key() {
+                        continue;
+                    }
+
+                    matched = true;
+                    *ap = AuthProof::Signature(signature.clone());
+                }
+                (AddressSpec::Multisig(cfg), AuthProof::Multisig(ref mut sigs)) => {
+                    for (i, mss) in cfg.signers.iter().enumerate() {
+                        if mss.public_key != signer.public_key() {
+                            continue;
+                        }
+
+                        matched = true;
+                        sigs[i] = Some(signature.clone());
+                    }
+                }
+                _ => {
+                    return Err(Error::MalformedTransaction(anyhow!(
+                        "malformed address_spec"
+                    )))
+                }
+            }
+        }
+        if !matched {
+            return Err(Error::SignerNotFound);
+        }
+        Ok(())
+    }
+
+    /// Finalize the signing process and return the (signed) unverified transaction.
+    pub fn finalize(self) -> UnverifiedTransaction {
+        self.ut
+    }
+}
+
 /// Transaction.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 #[cbor(no_default)]
@@ -95,6 +194,76 @@ pub struct Transaction {
 }
 
 impl Transaction {
+    /// Create a new (unsigned) transaction.
+    pub fn new<B>(method: &str, body: B) -> Self
+    where
+        B: cbor::Encode,
+    {
+        Self {
+            version: LATEST_TRANSACTION_VERSION,
+            call: Call {
+                format: CallFormat::Plain,
+                method: method.to_string(),
+                body: cbor::to_value(body),
+                ..Default::default()
+            },
+            auth_info: Default::default(),
+        }
+    }
+
+    /// Prepare this transaction for signing.
+    pub fn prepare_for_signing(self) -> TransactionSigner {
+        TransactionSigner::new(self)
+    }
+
+    /// Maximum amount of gas that the transaction can use.
+    pub fn fee_gas(&self) -> u64 {
+        self.auth_info.fee.gas
+    }
+
+    /// Set maximum amount of gas that the transaction can use.
+    pub fn set_fee_gas(&mut self, gas: u64) {
+        self.auth_info.fee.gas = gas;
+    }
+
+    /// Amount of fee to pay for transaction execution.
+    pub fn fee_amount(&self) -> &token::BaseUnits {
+        &self.auth_info.fee.amount
+    }
+
+    /// Set amount of fee to pay for transaction execution.
+    pub fn set_fee_amount(&mut self, amount: token::BaseUnits) {
+        self.auth_info.fee.amount = amount;
+    }
+
+    /// Set a proxy for paying the transaction fee.
+    pub fn set_fee_proxy(&mut self, module: &str, id: &[u8]) {
+        self.auth_info.fee.proxy = Some(FeeProxy {
+            module: module.to_string(),
+            id: id.to_vec(),
+        });
+    }
+
+    /// Append a new transaction signer information to the transaction.
+    pub fn append_signer_info(&mut self, address_spec: AddressSpec, nonce: u64) {
+        self.auth_info.signer_info.push(SignerInfo {
+            address_spec,
+            nonce,
+        })
+    }
+
+    /// Append a new transaction signer information with a signature address specification to the
+    /// transaction.
+    pub fn append_auth_signature(&mut self, spec: SignatureAddressSpec, nonce: u64) {
+        self.append_signer_info(AddressSpec::Signature(spec), nonce);
+    }
+
+    /// Append a new transaction signer information with a multisig address specification to the
+    /// transaction.
+    pub fn append_auth_multisig(&mut self, cfg: multisig::Config, nonce: u64) {
+        self.append_signer_info(AddressSpec::Multisig(cfg), nonce);
+    }
+
     /// Perform basic validation on the transaction.
     pub fn validate_basic(&self) -> Result<(), Error> {
         if self.version != LATEST_TRANSACTION_VERSION {
@@ -179,6 +348,9 @@ pub struct Fee {
     /// number of per-batch messages can be emitted.
     #[cbor(optional)]
     pub consensus_messages: u32,
+    /// Proxy which has authorized the fees to be paid.
+    #[cbor(optional)]
+    pub proxy: Option<FeeProxy>,
 }
 
 impl Fee {
@@ -189,6 +361,15 @@ impl Fee {
             .checked_div(self.gas.into())
             .unwrap_or_default()
     }
+}
+
+/// Information about a fee proxy.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct FeeProxy {
+    /// Module that will handle the proxy payment.
+    pub module: String,
+    /// Module-specific identifier that will handle fee payments for the transaction signer.
+    pub id: Vec<u8>,
 }
 
 /// A caller address.
@@ -238,6 +419,14 @@ pub enum AddressSpec {
 }
 
 impl AddressSpec {
+    /// Returns the public key when the address spec represents a single public key.
+    pub fn public_key(&self) -> Option<PublicKey> {
+        match self {
+            AddressSpec::Signature(spec) => Some(spec.public_key()),
+            _ => None,
+        }
+    }
+
     /// Derives the address.
     pub fn address(&self) -> Address {
         match self {
@@ -283,6 +472,9 @@ impl AddressSpec {
             ))),
             (_, AuthProof::Module(_)) => Err(Error::MalformedTransaction(anyhow!(
                 "module-controlled decoding flag in auth proof list"
+            ))),
+            (_, AuthProof::Invalid) => Err(Error::MalformedTransaction(anyhow!(
+                "invalid auth proof in list"
             ))),
         }
     }
@@ -344,6 +536,21 @@ impl CallResult {
     pub fn is_success(&self) -> bool {
         !matches!(self, CallResult::Failed { .. })
     }
+
+    /// Transforms `CallResult` into `anyhow::Result<cbor::Value>`, mapping `Ok(v)` and `Unknown(v)`
+    /// to `Ok(v)` and `Failed` to `Err`.
+    pub fn ok(self) -> anyhow::Result<cbor::Value> {
+        match self {
+            Self::Ok(v) | Self::Unknown(v) => Ok(v),
+            Self::Failed {
+                module,
+                code,
+                message,
+            } => Err(anyhow!(
+                "call failed: module={module} code={code}: {message}"
+            )),
+        }
+    }
 }
 
 #[cfg(any(test, feature = "test"))]
@@ -356,6 +563,13 @@ impl CallResult {
                 code,
                 message,
             } => panic!("{module} reported failure with code {code}: {message}"),
+        }
+    }
+
+    pub fn unwrap_failed(self) -> (String, u32) {
+        match self {
+            Self::Ok(_) | Self::Unknown(_) => panic!("call result indicates success"),
+            Self::Failed { module, code, .. } => (module, code),
         }
     }
 
@@ -384,17 +598,12 @@ mod test {
 
     #[test]
     fn test_fee_gas_price() {
-        let fee = Fee {
-            amount: Default::default(),
-            gas: 0,
-            consensus_messages: 0,
-        };
+        let fee = Fee::default();
         assert_eq!(0, fee.gas_price(), "empty fee - gas price should be zero",);
 
         let fee = Fee {
-            amount: Default::default(),
             gas: 100,
-            consensus_messages: 0,
+            ..Default::default()
         };
         assert_eq!(
             0,
@@ -405,14 +614,14 @@ mod test {
         let fee = Fee {
             amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 0,
-            consensus_messages: 0,
+            ..Default::default()
         };
         assert_eq!(0, fee.gas_price(), "empty fee 0 - gas price should be zero",);
 
         let fee = Fee {
             amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 10_000,
-            consensus_messages: 0,
+            ..Default::default()
         };
         assert_eq!(
             0,
@@ -423,7 +632,7 @@ mod test {
         let fee = Fee {
             amount: BaseUnits::new(1_000, Denomination::NATIVE),
             gas: 500,
-            consensus_messages: 0,
+            ..Default::default()
         };
         assert_eq!(2, fee.gas_price(), "non empty fee - gas price should match");
     }
