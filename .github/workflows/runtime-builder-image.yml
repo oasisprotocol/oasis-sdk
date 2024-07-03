@@ -65,7 +65,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Rebuild oasisprotocol/runtime-builder:${{ steps.determine-tag.outputs.tag }}"
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: docker/runtime-builder
           file: docker/runtime-builder/Dockerfile

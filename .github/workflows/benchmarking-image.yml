@@ -70,7 +70,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Rebuild ghcri.io/oasisprotocol/oasis-sdk-benchmark:${{ steps.determine_tag.outputs.tag }}"
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: tests/benchmark/Dockerfile
