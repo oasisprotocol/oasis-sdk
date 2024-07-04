@@ -2,13 +2,6 @@ module github.com/oasisprotocol/oasis-sdk/tools/orc
 
 go 1.22.2
 
-// Should be synced with Oasis Core as replace directives are not propagated.
-replace (
-	github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.2-oasis1
-	golang.org/x/crypto/curve25519 => github.com/oasisprotocol/curve25519-voi/primitives/x25519 v0.0.0-20210505121811-294cf0fbfb43
-	golang.org/x/crypto/ed25519 => github.com/oasisprotocol/curve25519-voi/primitives/ed25519 v0.0.0-20210505121811-294cf0fbfb43
-)
-
 require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/oasisprotocol/oasis-core/go v0.2401.0
