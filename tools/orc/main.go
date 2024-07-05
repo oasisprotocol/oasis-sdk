@@ -447,7 +447,7 @@ func showComponent(bnd *bundle.Bundle, comp *bundle.Component, legacy bool) {
 	if comp.SGX.Signature != "" {
 		fmt.Printf("%sSGXS signature: %s\n", indent, comp.SGX.Signature)
 
-		sigPk, sigStruct, err := sigstruct.Verify(bnd.Data[bnd.Manifest.SGX.Signature])
+		sigPk, sigStruct, err := sigstruct.Verify(bnd.Data[comp.SGX.Signature])
 		cobra.CheckErr(err) // Already checked during Open so it should never fail.
 
 		var mrSigner sgx.MrSigner
