@@ -38,15 +38,15 @@ uint = "0.9.1"
 
 # Fuzzing.
 honggfuzz = "0.5.56"
-serde = { version = "1.0.203", features = ["derive"], optional = true }
-serde_json = { version = "1.0.116", features = ["raw_value"], optional = true }
+serde = { version = "1.0.204", features = ["derive"], optional = true }
+serde_json = { version = "1.0.120", features = ["raw_value"], optional = true }
 
 [dev-dependencies]
 criterion = "0.5.1"
 oasis-runtime-sdk = { path = "../..", features = ["test"] }
 rand = "0.8.5"
-serde = { version = "1.0.203", features = ["derive"] }
-serde_json = { version = "1.0.116", features = ["raw_value"] }
+serde = { version = "1.0.204", features = ["derive"] }
+serde_json = { version = "1.0.120", features = ["raw_value"] }
 ethabi = { version = "18.0.0", default-features = false, features = ["std", "full-serde"] }
 
 [features]
