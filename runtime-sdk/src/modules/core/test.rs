@@ -1391,6 +1391,7 @@ fn test_storage_gas() {
                 gas: 10_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -1419,6 +1420,7 @@ fn test_storage_gas() {
                 gas: 10_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -1439,6 +1441,7 @@ fn test_storage_gas() {
                 gas: 10_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -1484,6 +1487,7 @@ fn test_message_gas() {
                 gas: 10_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -1516,6 +1520,7 @@ fn test_message_gas() {
                 gas: 10_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");

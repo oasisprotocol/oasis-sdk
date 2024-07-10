@@ -913,6 +913,7 @@ fn test_fee_refunds() {
                 gas: 100_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -965,6 +966,7 @@ fn test_fee_refunds() {
                 gas: 100_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     if let module::CallResult::Failed {
@@ -1046,6 +1048,7 @@ fn test_transfer_event() {
                 gas: 100_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -1134,6 +1137,7 @@ fn test_return_value_limits() {
                 gas: 100_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     let result: Vec<u8> = cbor::from_value(dispatch_result.result.unwrap()).unwrap();
@@ -1155,6 +1159,7 @@ fn test_return_value_limits() {
                 gas: 100_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     if let module::CallResult::Failed {

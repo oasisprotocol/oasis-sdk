@@ -215,6 +215,7 @@ mod test {
                     gas: 1_000_000,
                     ..Default::default()
                 },
+                ..Default::default()
             },
         );
         assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -384,6 +385,7 @@ mod test {
                     gas: 130_000,
                     ..Default::default()
                 },
+                ..Default::default()
             },
         );
         assert!(
@@ -413,6 +415,7 @@ mod test {
                     gas: 120_000,
                     ..Default::default()
                 },
+                ..Default::default()
             },
         );
         if let module::CallResult::Failed {
@@ -464,6 +467,7 @@ mod test {
                     gas: 127_710,
                     ..Default::default()
                 },
+                ..Default::default()
             },
         );
         if let module::CallResult::Failed {

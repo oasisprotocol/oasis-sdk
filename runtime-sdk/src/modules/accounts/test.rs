@@ -1277,6 +1277,7 @@ fn test_fee_disbursement_2() {
                 gas: 1_500,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -1336,6 +1337,7 @@ fn test_fee_refund() {
                     gas: 100_000,
                     ..Default::default()
                 },
+                ..Default::default()
             },
         );
 
@@ -1391,6 +1393,7 @@ fn test_fee_refund_subcall() {
                 gas: 100_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -1455,6 +1458,7 @@ fn test_fee_proxy() {
                 }),
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -1507,6 +1511,7 @@ fn test_fee_proxy() {
                 }),
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(!dispatch_result.result.is_success(), "call should fail");
