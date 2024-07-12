@@ -11,7 +11,7 @@ oasis-runtime-sdk = { path = "../../../runtime-sdk" }
 components-ronl = { package = "test-runtime-components-ronl", path = "../components-ronl" }
 
 anyhow = "1.0"
-async-trait = "0.1.77"
+async-trait = "0.1.81"
 
 [features]
 # Enables mock SGX in non-SGX builds.
