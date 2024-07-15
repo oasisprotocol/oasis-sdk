@@ -759,7 +759,9 @@ impl CurrentState {
             // SAFETY: Keeping the root store is safe as it can only be accessed from the current
             // thread while we are running inside `CurrentState::enter` where we are holding a
             // mutable reference on it.
-            std::mem::transmute::<_, &mut (dyn Store + 'static)>(&mut root as &mut dyn Store)
+            std::mem::transmute::<&mut dyn Store, &mut (dyn Store + 'static)>(
+                &mut root as &mut dyn Store,
+            )
         };
         // Initialize the root state.
         let mode = opts

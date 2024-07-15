@@ -87,7 +87,7 @@ pub(super) fn call_random_bytes<B: EVMBackendExt>(
     let num_bytes_big = call_args.pop().unwrap().into_uint().unwrap();
     let num_bytes = num_bytes_big
         .try_into()
-        .unwrap_or(u64::max_value())
+        .unwrap_or(u64::MAX)
         .min(RNG_MAX_BYTES);
     // This operation shouldn't be too cheap to start since it invokes a key manager.
     // Each byte is generated using hashing, so it's neither expensive nor cheap.
