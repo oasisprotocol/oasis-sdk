@@ -12,7 +12,7 @@ oasis-core-keymanager = { git = "https://github.com/oasisprotocol/oasis-core", t
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
-async-trait = "0.1.77"
+async-trait = "0.1.81"
 byteorder = "1.4.3"
 curve25519-dalek = "4.1.3"
 ed25519-dalek = { version = "2.0.0", features = ["digest", "hazmat"] }
@@ -26,7 +26,7 @@ p256 = "0.13.2"
 p384 = { version = "0.13.0", default-features = false, features = ["std", "ecdsa"] }
 schnorrkel = "0.11.2"
 merlin = "3.0.0"
-thiserror = "1.0.61"
+thiserror = "1.0.62"
 hex = "0.4.2"
 anyhow = "1.0.86"
 bech32 = "0.11.0"
@@ -44,7 +44,7 @@ zeroize = "1.8"
 lru = "0.12.3"
 
 [dev-dependencies]
-blake3 = { version = "1.5.1", features = ["traits-preview"] }
+blake3 = { version = "1.5.2", features = ["traits-preview"] }
 
 [features]
 default = ["oasis-runtime-sdk-macros"]
