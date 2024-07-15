@@ -30,7 +30,7 @@ pub(super) fn call_pad_gas(handle: &mut impl PrecompileHandle) -> PrecompileResu
         }
     })?;
     let gas_amount_big = call_args.pop().unwrap().into_uint().unwrap();
-    let gas_amount = gas_amount_big.try_into().unwrap_or(u64::max_value());
+    let gas_amount = gas_amount_big.try_into().unwrap_or(u64::MAX);
 
     // Obtain total used gas so far.
     let used_gas = handle.used_gas();

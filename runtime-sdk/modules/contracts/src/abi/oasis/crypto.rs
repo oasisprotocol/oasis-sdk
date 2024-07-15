@@ -94,9 +94,8 @@ impl<Cfg: Config> OasisV1<Cfg> {
 
                 let rt = ctx.instance.runtime();
                 rt.try_with_memory(|memory| -> Result<_, wasm3::Trap> {
-                    let key = get_key(kind, key, &memory).map_err(|err| {
+                    let key = get_key(kind, key, &memory).inspect_err(|_| {
                         ec.aborted = Some(Error::CryptoMalformedPublicKey);
-                        err
                     })?;
                     let message = Region::from_arg(message)
                         .as_slice(&memory)
@@ -137,7 +136,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     .wasm_crypto_random_bytes_byte
                     .checked_mul(num_bytes as u64 + pers_len as u64)
                     .and_then(|g| g.checked_add(ec.params.gas_costs.wasm_crypto_random_bytes_base))
-                    .unwrap_or(u64::max_value()); // This will certainly exhaust the gas limit.
+                    .unwrap_or(u64::MAX); // This will certainly exhaust the gas limit.
                 gas::use_gas(ctx.instance, cost)?;
 
                 let rt = ctx.instance.runtime();
