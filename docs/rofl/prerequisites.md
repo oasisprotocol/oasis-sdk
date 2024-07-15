@@ -1,16 +1,16 @@
 ---
-description: How to build your first runtime
+description: How to build your first ROFL app
 ---
 
 # Prerequisites
 
 This chapter will show you how to install the software required for developing
-a runtime and client using the Oasis SDK. After successfully completing all the
-described steps you will be able to start building your first runtime!
+a ROFL app using the Oasis SDK. After successfully completing all the described
+steps you will be able to start building your first ROFL app!
 
 If you already have everything set up, feel free to skip to the [next chapter].
 
-[next chapter]: minimal-runtime.md
+[next chapter]: app.md
 
 ## Environment Setup
 
@@ -86,57 +86,36 @@ rustc 1.65.0-nightly (c0941dfb5 2022-08-21)
 [rust-toolchain-precedence]: https://github.com/rust-lang/rustup/blob/master/README.md#override-precedence
 <!-- markdownlint-enable line-length -->
 
-### (OPTIONAL) [Go]
+## SGXS Utilities
 
-_Required if you want to use the Go Client SDK._
+In order to generate binaries suitable for use with Intel SGX, you also need to
+install the relevant utilities. You can do so as follows:
 
-At least version **1.22.5** is required. If your distribution provides a
-new-enough version of Go, just use that.
-
-Otherwise:
-
-* install the Go version provided by your distribution,
-* [ensure `$GOPATH/bin` is in your `PATH`],
-* [install the desired version of Go], e.g. 1.22.5, with:
-
-  ```
-  go get golang.org/dl/go1.22.5
-  go1.22.5 download
-    ```
-
-<!-- markdownlint-disable line-length -->
-[Go]: https://golang.org
-[ensure `$GOPATH/bin` is in your `PATH`]: https://tip.golang.org/doc/code.html#GOPATH
-[install the desired version of Go]: https://golang.org/doc/install#extra_versions
-<!-- markdownlint-enable line-length -->
-
-## Oasis Core Installation
-
-The SDK requires utilities provided by [Oasis Core] in order to be able to run
-a local test network for development purposes.
-
-The recommended way is to download a pre-built release (at least version
-24.2) from the [Oasis Core releases] page. After downloading the binary
-release (e.g. into `~/Downloads/oasis_core_24.2_linux_amd64.tar.gz`), unpack
-it as follows:
-
-```bash
-cd ~/Downloads
-tar xf ~/Downloads/oasis_core_24.2_linux_amd64.tar.gz --strip-components=1
-
-# This environment variable will be used throughout this guide.
-export OASIS_CORE_PATH=~/Downloads/oasis_core_24.2_linux_amd64
 ```
-
-[Oasis Core]: https://github.com/oasisprotocol/oasis-core
-[Oasis Core releases]: https://github.com/oasisprotocol/oasis-core/releases
+cargo install fortanix-sgx-tools
+cargo install sgxs-tools
+```
 
 ## Oasis CLI Installation
 
 The rest of the guide uses the Oasis CLI as an easy way to interact with the
-ParaTime. You can use [one of the binary releases] or [compile it yourself].
+ParaTimes. You can use [one of the binary releases] or [compile it yourself].
 
 <!-- markdownlint-disable line-length -->
 [one of the binary releases]: https://github.com/oasisprotocol/cli/releases
 [compile it yourself]: https://github.com/oasisprotocol/cli/blob/master/README.md
+<!-- markdownlint-enable line-length -->
+
+## TEE-enabled Hardware for Deployment
+
+While ROFL app development and testing can be performed on any machine that has
+the appropriate tools, for actually running the apps, at least one machine with
+appropriate TEE-enabled hardware is required.
+
+Please look at the [Set up Trusted Execution Environment (TEE)] chapter for
+instructions. The deployment part of the guide assumes you have an appropriate
+machine ready to use.
+
+<!-- markdownlint-disable line-length -->
+[Set up Trusted Execution Environment (TEE)]: https://github.com/oasisprotocol/docs/blob/main/docs/node/run-your-node/prerequisites/set-up-trusted-execution-environment-tee.md
 <!-- markdownlint-enable line-length -->
