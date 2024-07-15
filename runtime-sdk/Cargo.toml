@@ -44,7 +44,7 @@ zeroize = "1.8"
 lru = "0.12.3"
 
 [dev-dependencies]
-blake3 = { version = "1.5.1", features = ["traits-preview"] }
+blake3 = { version = "1.5.2", features = ["traits-preview"] }
 
 [features]
 default = ["oasis-runtime-sdk-macros"]
