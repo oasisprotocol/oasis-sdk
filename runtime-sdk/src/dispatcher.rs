@@ -250,6 +250,10 @@ impl<R: Runtime> Dispatcher<R> {
             }
         }
 
+        if let Err(e) = R::Modules::before_authorized_call_dispatch(ctx, &call) {
+            return (e.into_call_result(), call_format_metadata);
+        }
+
         let result = match R::Modules::dispatch_call(ctx, &call.method, call.body) {
             module::DispatchResult::Handled(result) => result,
             module::DispatchResult::Unhandled(_) => {
