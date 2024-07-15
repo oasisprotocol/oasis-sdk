@@ -1,0 +1,16 @@
+[package]
+name = "rofl-oracle"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Oasis SDK.
+oasis-runtime-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "runtime-sdk/v0.9.4" }
+
+# Third-party dependencies.
+anyhow = "1.0"
+async-trait = "0.1.77"
+
+[features]
+# Enables mock SGX in non-SGX builds.
+debug-mock-sgx = ["oasis-runtime-sdk/debug-mock-sgx"]

@@ -55,6 +55,7 @@ transactions, look up emitted events and query the runtime.
 
 * [Build a Smart Contract](contract/prerequisites.md)
 * [Build a Runtime](runtime/prerequisites.md)
+* [Build a ROFL Application](rofl/prerequisites.md)
 
 <!-- markdownlint-disable line-length -->
 [Oasis Core Runtime Layer]:
