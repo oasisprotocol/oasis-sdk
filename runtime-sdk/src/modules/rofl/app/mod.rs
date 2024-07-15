@@ -7,14 +7,14 @@ use tokio::sync::mpsc;
 
 use crate::{
     core::{
+        common::version,
         config::Config,
-        consensus::roothash,
+        consensus::{roothash, verifier::TrustRoot},
         dispatcher::{PostInitState, PreInitState},
         rofl, start_runtime,
     },
     crypto,
     types::transaction,
-    Runtime,
 };
 
 mod client;
@@ -31,13 +31,17 @@ pub use env::Environment;
 #[allow(unused_variables)]
 #[async_trait]
 pub trait App: Send + Sync + 'static {
-    /// Runtime to attach the application to.
-    ///
-    /// The runtime must have the ROFL module enabled so that the application can register to it.
-    type AttachTo: Runtime;
+    /// ROFL application version.
+    const VERSION: version::Version;
 
     /// Identifier of the application (used for registrations).
     fn id() -> AppId;
+
+    /// Return the consensus layer trust root for this runtime; if `None`, consensus layer integrity
+    /// verification will not be performed.
+    fn consensus_trust_root() -> Option<TrustRoot> {
+        None
+    }
 
     /// Create a new unsigned transaction.
     fn new_transaction<B>(&self, method: &str, body: B) -> transaction::Transaction
@@ -86,10 +90,8 @@ pub trait App: Send + Sync + 'static {
                 }
             }),
             Config {
-                // Use the same version as the runtime we are attaching to.
-                version: Self::AttachTo::VERSION,
-                // Use the same trust root as the runtime we are attaching to.
-                trust_root: Self::AttachTo::consensus_trust_root(),
+                version: Self::VERSION,
+                trust_root: Self::consensus_trust_root(),
                 ..Default::default()
             },
         );
