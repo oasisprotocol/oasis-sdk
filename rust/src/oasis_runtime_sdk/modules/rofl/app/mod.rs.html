@@ -128,6 +128,8 @@
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Wrapper to make development of ROFL components easier.
 </span><span class="kw">use </span>std::sync::Arc;
 
@@ -137,14 +139,14 @@
 
 <span class="kw">use crate</span>::{
     core::{
+        common::version,
         config::Config,
-        consensus::roothash,
+        consensus::{roothash, verifier::TrustRoot},
         dispatcher::{PostInitState, PreInitState},
         rofl, start_runtime,
     },
     crypto,
     types::transaction,
-    Runtime,
 };
 
 <span class="kw">mod </span>client;
@@ -161,13 +163,17 @@
 </span><span class="attr">#[allow(unused_variables)]
 #[async_trait]
 </span><span class="kw">pub trait </span>App: Send + Sync + <span class="lifetime">'static </span>{
-    <span class="doccomment">/// Runtime to attach the application to.
-    ///
-    /// The runtime must have the ROFL module enabled so that the application can register to it.
-    </span><span class="kw">type </span>AttachTo: Runtime;
+    <span class="doccomment">/// ROFL application version.
+    </span><span class="kw">const </span>VERSION: version::Version;
 
     <span class="doccomment">/// Identifier of the application (used for registrations).
     </span><span class="kw">fn </span>id() -&gt; AppId;
+
+    <span class="doccomment">/// Return the consensus layer trust root for this runtime; if `None`, consensus layer integrity
+    /// verification will not be performed.
+    </span><span class="kw">fn </span>consensus_trust_root() -&gt; <span class="prelude-ty">Option</span>&lt;TrustRoot&gt; {
+        <span class="prelude-val">None
+    </span>}
 
     <span class="doccomment">/// Create a new unsigned transaction.
     </span><span class="kw">fn </span>new_transaction&lt;B&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, method: <span class="kw-2">&amp;</span>str, body: B) -&gt; transaction::Transaction
@@ -216,10 +222,8 @@
                 }
             }),
             Config {
-                <span class="comment">// Use the same version as the runtime we are attaching to.
-                </span>version: <span class="self">Self</span>::AttachTo::VERSION,
-                <span class="comment">// Use the same trust root as the runtime we are attaching to.
-                </span>trust_root: <span class="self">Self</span>::AttachTo::consensus_trust_root(),
+                version: <span class="self">Self</span>::VERSION,
+                trust_root: <span class="self">Self</span>::consensus_trust_root(),
                 ..Default::default()
             },
         );

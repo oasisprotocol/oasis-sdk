@@ -261,10 +261,10 @@
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
-<a href="#264" id="264">264</a>
-<a href="#265" id="265">265</a>
-<a href="#266" id="266">266</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::{collections::HashSet, sync::Arc};
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::{
+    collections::{BTreeMap, HashSet},
+    sync::Arc,
+};
 
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>tokio::sync::{mpsc, oneshot};
@@ -282,10 +282,7 @@
     },
     crypto::signature::{PublicKey, Signer},
     enclave_rpc::{QueryRequest, METHOD_QUERY},
-    modules::{
-        accounts::API <span class="kw">as _</span>,
-        core::{types::EstimateGasQuery, API <span class="kw">as _</span>},
-    },
+    modules::{accounts::types::NonceQuery, core::types::EstimateGasQuery},
     state::CurrentState,
     storage::HostStore,
     types::{
@@ -293,7 +290,6 @@
         token,
         transaction::{<span class="self">self</span>, CallerAddress},
     },
-    Runtime,
 };
 
 <span class="kw">use super</span>::{processor, App};
@@ -332,20 +328,18 @@
 
     <span class="doccomment">/// Retrieve the nonce for the given account.
     </span><span class="kw">pub async fn </span>account_nonce(<span class="kw-2">&amp;</span><span class="self">self</span>, round: u64, address: Address) -&gt; <span class="prelude-ty">Result</span>&lt;u64&gt; {
-        <span class="self">self</span>.with_store_for_round(round, <span class="kw">move </span>|| {
-            <span class="prelude-val">Ok</span>(&lt;A::AttachTo <span class="kw">as </span>Runtime&gt;::Accounts::get_nonce(address)<span class="question-mark">?</span>)
-        })
-        .<span class="kw">await
+        <span class="self">self</span>.query(round, <span class="string">"accounts.Nonce"</span>, NonceQuery { address })
+            .<span class="kw">await
     </span>}
 
     <span class="doccomment">/// Retrieve the gas price in the given denomination.
-    </span><span class="kw">pub async fn </span>gas_price(<span class="kw-2">&amp;</span><span class="self">self</span>, round: u64, denom: token::Denomination) -&gt; <span class="prelude-ty">Result</span>&lt;u128&gt; {
-        <span class="self">self</span>.with_store_for_round(round, <span class="kw">move </span>|| {
-            &lt;A::AttachTo <span class="kw">as </span>Runtime&gt;::Core::min_gas_price(<span class="kw-2">&amp;</span>denom)
-                .ok_or(<span class="macro">anyhow!</span>(<span class="string">"denomination not supported"</span>))
-        })
-        .<span class="kw">await
-    </span>}
+    </span><span class="kw">pub async fn </span>gas_price(<span class="kw-2">&amp;</span><span class="self">self</span>, round: u64, denom: <span class="kw-2">&amp;</span>token::Denomination) -&gt; <span class="prelude-ty">Result</span>&lt;u128&gt; {
+        <span class="kw">let </span>mgp: BTreeMap&lt;token::Denomination, u128&gt; =
+            <span class="self">self</span>.query(round, <span class="string">"core.MinGasPrice"</span>, ()).<span class="kw">await</span><span class="question-mark">?</span>;
+        mgp.get(denom)
+            .ok_or(<span class="macro">anyhow!</span>(<span class="string">"denomination not supported"</span>))
+            .copied()
+    }
 
     <span class="doccomment">/// Securely query the on-chain runtime component.
     </span><span class="kw">pub async fn </span>query&lt;Rq, Rs&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, round: u64, method: <span class="kw-2">&amp;</span>str, args: Rq) -&gt; <span class="prelude-ty">Result</span>&lt;Rs&gt;
@@ -460,7 +454,7 @@
         }
 
         <span class="comment">// Determine gas price. Currently we always use the native denomination.
-        </span><span class="kw">let </span>mgp = <span class="self">self</span>.gas_price(round, token::Denomination::NATIVE).<span class="kw">await</span><span class="question-mark">?</span>;
+        </span><span class="kw">let </span>mgp = <span class="self">self</span>.gas_price(round, <span class="kw-2">&amp;</span>token::Denomination::NATIVE).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>fee = mgp.saturating_mul(tx.fee_gas().into());
         tx.set_fee_amount(token::BaseUnits::new(fee, token::Denomination::NATIVE));
 
@@ -497,7 +491,7 @@
     </span>}
 
     <span class="doccomment">/// Run a closure inside a `CurrentState` context with store for the given round.
-    </span><span class="kw">async fn </span>with_store_for_round&lt;F, R&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, round: u64, f: F) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;
+    </span><span class="kw">pub async fn </span>with_store_for_round&lt;F, R&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, round: u64, f: F) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;
     <span class="kw">where
         </span>F: FnOnce() -&gt; <span class="prelude-ty">Result</span>&lt;R&gt; + Send + <span class="lifetime">'static</span>,
         R: Send + <span class="lifetime">'static</span>,
@@ -508,7 +502,7 @@
     </span>}
 
     <span class="doccomment">/// Return a store corresponding to the given round.
-    </span><span class="kw">async fn </span>store_for_round(<span class="kw-2">&amp;</span><span class="self">self</span>, round: u64) -&gt; <span class="prelude-ty">Result</span>&lt;HostStore&gt; {
+    </span><span class="kw">pub async fn </span>store_for_round(<span class="kw-2">&amp;</span><span class="self">self</span>, round: u64) -&gt; <span class="prelude-ty">Result</span>&lt;HostStore&gt; {
         HostStore::new_for_round(
             <span class="self">self</span>.state.host.clone(),
             <span class="kw-2">&amp;</span><span class="self">self</span>.state.consensus_verifier,
