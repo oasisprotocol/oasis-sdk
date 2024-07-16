@@ -1,4 +1,7 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashSet},
+    sync::Arc,
+};
 
 use anyhow::{anyhow, Result};
 use tokio::sync::{mpsc, oneshot};
@@ -16,10 +19,7 @@ use crate::{
     },
     crypto::signature::{PublicKey, Signer},
     enclave_rpc::{QueryRequest, METHOD_QUERY},
-    modules::{
-        accounts::API as _,
-        core::{types::EstimateGasQuery, API as _},
-    },
+    modules::{accounts::types::NonceQuery, core::types::EstimateGasQuery},
     state::CurrentState,
     storage::HostStore,
     types::{
@@ -27,7 +27,6 @@ use crate::{
         token,
         transaction::{self, CallerAddress},
     },
-    Runtime,
 };
 
 use super::{processor, App};
@@ -66,19 +65,17 @@ where
 
     /// Retrieve the nonce for the given account.
     pub async fn account_nonce(&self, round: u64, address: Address) -> Result<u64> {
-        self.with_store_for_round(round, move || {
-            Ok(<A::AttachTo as Runtime>::Accounts::get_nonce(address)?)
-        })
-        .await
+        self.query(round, "accounts.Nonce", NonceQuery { address })
+            .await
     }
 
     /// Retrieve the gas price in the given denomination.
-    pub async fn gas_price(&self, round: u64, denom: token::Denomination) -> Result<u128> {
-        self.with_store_for_round(round, move || {
-            <A::AttachTo as Runtime>::Core::min_gas_price(&denom)
-                .ok_or(anyhow!("denomination not supported"))
-        })
-        .await
+    pub async fn gas_price(&self, round: u64, denom: &token::Denomination) -> Result<u128> {
+        let mgp: BTreeMap<token::Denomination, u128> =
+            self.query(round, "core.MinGasPrice", ()).await?;
+        mgp.get(denom)
+            .ok_or(anyhow!("denomination not supported"))
+            .copied()
     }
 
     /// Securely query the on-chain runtime component.
@@ -194,7 +191,7 @@ where
         }
 
         // Determine gas price. Currently we always use the native denomination.
-        let mgp = self.gas_price(round, token::Denomination::NATIVE).await?;
+        let mgp = self.gas_price(round, &token::Denomination::NATIVE).await?;
         let fee = mgp.saturating_mul(tx.fee_gas().into());
         tx.set_fee_amount(token::BaseUnits::new(fee, token::Denomination::NATIVE));
 
@@ -231,7 +228,7 @@ where
     }
 
     /// Run a closure inside a `CurrentState` context with store for the given round.
-    async fn with_store_for_round<F, R>(&self, round: u64, f: F) -> Result<R>
+    pub async fn with_store_for_round<F, R>(&self, round: u64, f: F) -> Result<R>
     where
         F: FnOnce() -> Result<R> + Send + 'static,
         R: Send + 'static,
@@ -242,7 +239,7 @@ where
     }
 
     /// Return a store corresponding to the given round.
-    async fn store_for_round(&self, round: u64) -> Result<HostStore> {
+    pub async fn store_for_round(&self, round: u64) -> Result<HostStore> {
         HostStore::new_for_round(
             self.state.host.clone(),
             &self.state.consensus_verifier,

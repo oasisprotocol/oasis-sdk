@@ -3,14 +3,18 @@ use std::sync::Arc;
 use anyhow::Result;
 use async_trait::async_trait;
 
-use oasis_runtime_sdk::modules::rofl::app::{App, AppId, Environment};
+use oasis_runtime_sdk::{
+    self as sdk,
+    modules::rofl::app::{App, AppId, Environment},
+    Version,
+};
 
 struct TestApp;
 
 #[async_trait]
 impl App for TestApp {
-    /// Runtime to attach the application to.
-    type AttachTo = components_ronl::Runtime;
+    /// Application version.
+    const VERSION: Version = sdk::version_from_cargo!();
 
     /// Identifier of the application (used for registrations).
     ///
