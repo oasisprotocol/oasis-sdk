@@ -128,8 +128,6 @@
 <a href="#128" id="128">128</a>
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
-<a href="#131" id="131">131</a>
-<a href="#132" id="132">132</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Wrapper to make development of ROFL components easier.
 </span><span class="kw">use </span>std::sync::Arc;
 
@@ -171,9 +169,7 @@
 
     <span class="doccomment">/// Return the consensus layer trust root for this runtime; if `None`, consensus layer integrity
     /// verification will not be performed.
-    </span><span class="kw">fn </span>consensus_trust_root() -&gt; <span class="prelude-ty">Option</span>&lt;TrustRoot&gt; {
-        <span class="prelude-val">None
-    </span>}
+    </span><span class="kw">fn </span>consensus_trust_root() -&gt; <span class="prelude-ty">Option</span>&lt;TrustRoot&gt;;
 
     <span class="doccomment">/// Create a new unsigned transaction.
     </span><span class="kw">fn </span>new_transaction&lt;B&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, method: <span class="kw-2">&amp;</span>str, body: B) -&gt; transaction::Transaction
