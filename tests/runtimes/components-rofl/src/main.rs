@@ -1,14 +1,4 @@
-use std::sync::Arc;
-
-use anyhow::Result;
-use async_trait::async_trait;
-
-use oasis_runtime_sdk::{
-    self as sdk,
-    core::consensus::verifier::TrustRoot,
-    modules::rofl::app::{App, AppId, Environment},
-    Version,
-};
+use oasis_runtime_sdk::modules::rofl::app::prelude::*;
 
 struct TestApp;
 
