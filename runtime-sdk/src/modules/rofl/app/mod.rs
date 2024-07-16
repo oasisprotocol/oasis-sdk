@@ -39,9 +39,7 @@ pub trait App: Send + Sync + 'static {
 
     /// Return the consensus layer trust root for this runtime; if `None`, consensus layer integrity
     /// verification will not be performed.
-    fn consensus_trust_root() -> Option<TrustRoot> {
-        None
-    }
+    fn consensus_trust_root() -> Option<TrustRoot>;
 
     /// Create a new unsigned transaction.
     fn new_transaction<B>(&self, method: &str, body: B) -> transaction::Transaction
