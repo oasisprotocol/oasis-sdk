@@ -5,6 +5,7 @@ use async_trait::async_trait;
 
 use oasis_runtime_sdk::{
     self as sdk,
+    core::consensus::verifier::TrustRoot,
     modules::rofl::app::{App, AppId, Environment},
     Version,
 };
@@ -23,6 +24,12 @@ impl App for TestApp {
     /// `rofl.Create` call.
     fn id() -> AppId {
         *components_ronl::EXAMPLE_APP_ID
+    }
+
+    /// Return the consensus layer trust root for this runtime; if `None`, consensus layer integrity
+    /// verification will not be performed.
+    fn consensus_trust_root() -> Option<TrustRoot> {
+        None // Production apps should never use `None` as this is unsafe.
     }
 
     async fn run(self: Arc<Self>, _env: Environment<Self>) {
