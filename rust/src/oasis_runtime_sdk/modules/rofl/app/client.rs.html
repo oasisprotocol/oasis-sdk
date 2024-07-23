@@ -261,6 +261,14 @@
 <a href="#261" id="261">261</a>
 <a href="#262" id="262">262</a>
 <a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     collections::{BTreeMap, HashSet},
     sync::Arc,
@@ -426,7 +434,8 @@
         <span class="kw">let </span>round = <span class="self">self</span>.latest_round().<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="comment">// Resolve account nonces.
-        </span><span class="kw">for </span>(idx, signer) <span class="kw">in </span>signers.iter().enumerate() {
+        </span><span class="kw">let </span><span class="kw-2">mut </span>first_signer_address = Default::default();
+        <span class="kw">for </span>(idx, signer) <span class="kw">in </span>signers.iter().enumerate() {
             <span class="kw">let </span>sigspec = SignatureAddressSpec::try_from_pk(<span class="kw-2">&amp;</span>signer.public_key())
                 .ok_or(<span class="macro">anyhow!</span>(<span class="string">"signature scheme not supported"</span>))<span class="question-mark">?</span>;
             <span class="kw">let </span>address = Address::from_sigspec(<span class="kw-2">&amp;</span>sigspec);
@@ -434,23 +443,30 @@
 
             tx.append_auth_signature(sigspec, nonce);
 
-            <span class="comment">// If gas is not set, perform estimation.
-            </span><span class="kw">if </span>idx == <span class="number">0 </span>&amp;&amp; tx.fee_gas() == <span class="number">0 </span>{
-                <span class="kw">let </span>gas = <span class="self">self
-                    </span>.estimate_gas(EstimateGasQuery {
-                        caller: <span class="kw">if let </span>PublicKey::Secp256k1(pk) = signer.public_key() {
-                            <span class="prelude-val">Some</span>(CallerAddress::EthAddress(
-                                pk.to_eth_address().try_into().unwrap(),
-                            ))
-                        } <span class="kw">else </span>{
-                            <span class="prelude-val">Some</span>(CallerAddress::Address(address))
-                        },
-                        tx: tx.clone(),
-                        propagate_failures: <span class="bool-val">false</span>,
-                    })
-                    .<span class="kw">await</span><span class="question-mark">?</span>;
-                tx.set_fee_gas(gas);
+            <span class="comment">// Store first signer address for gas estimation to avoid rederivation.
+            </span><span class="kw">if </span>idx == <span class="number">0 </span>{
+                first_signer_address = address;
             }
+        }
+
+        <span class="comment">// Perform gas estimation after all signer infos have been added as otherwise we may
+        // underestimate the amount of gas needed.
+        </span><span class="kw">if </span>tx.fee_gas() == <span class="number">0 </span>{
+            <span class="kw">let </span>signer = <span class="kw-2">&amp;</span>signers[<span class="number">0</span>]; <span class="comment">// Checked to have at least one signer above.
+            </span><span class="kw">let </span>gas = <span class="self">self
+                </span>.estimate_gas(EstimateGasQuery {
+                    caller: <span class="kw">if let </span>PublicKey::Secp256k1(pk) = signer.public_key() {
+                        <span class="prelude-val">Some</span>(CallerAddress::EthAddress(
+                            pk.to_eth_address().try_into().unwrap(),
+                        ))
+                    } <span class="kw">else </span>{
+                        <span class="prelude-val">Some</span>(CallerAddress::Address(first_signer_address))
+                    },
+                    tx: tx.clone(),
+                    propagate_failures: <span class="bool-val">false</span>,
+                })
+                .<span class="kw">await</span><span class="question-mark">?</span>;
+            tx.set_fee_gas(gas);
         }
 
         <span class="comment">// Determine gas price. Currently we always use the native denomination.
