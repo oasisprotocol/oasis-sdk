@@ -396,6 +396,18 @@ pub trait TransactionHandler {
         Ok(())
     }
 
+    /// Perform any action after authentication and decoding, within the transaction context.
+    ///
+    /// At this point, the call has been decoded according to the call format,
+    /// and method authorizers have run.
+    fn before_authorized_call_dispatch<C: Context>(
+        _ctx: &C,
+        _call: &Call,
+    ) -> Result<(), modules::core::Error> {
+        // Default implementation doesn't do anything.
+        Ok(())
+    }
+
     /// Perform any action after call, within the transaction context.
     ///
     /// If an error is returned the transaction call fails and updates are rolled back.
@@ -458,6 +470,14 @@ impl TransactionHandler for Tuple {
 
     fn before_handle_call<C: Context>(ctx: &C, call: &Call) -> Result<(), modules::core::Error> {
         for_tuples!( #( Tuple::before_handle_call(ctx, call)?; )* );
+        Ok(())
+    }
+
+    fn before_authorized_call_dispatch<C: Context>(
+        ctx: &C,
+        call: &Call,
+    ) -> Result<(), modules::core::Error> {
+        for_tuples!( #( Tuple::before_authorized_call_dispatch(ctx, call)?; )* );
         Ok(())
     }
 

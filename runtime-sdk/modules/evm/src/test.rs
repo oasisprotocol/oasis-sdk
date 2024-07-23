@@ -282,18 +282,21 @@ fn test_evm_calls() {
 
 #[test]
 fn test_c10l_evm_calls_enc() {
+    let _guard = crypto::signature::context::test_using_chain_context();
     crypto::signature::context::set_chain_context(Default::default(), "test");
     do_test_evm_calls::<ConfidentialEVMConfig>(false);
 }
 
 #[test]
 fn test_c10l_evm_calls_plain() {
+    let _guard = crypto::signature::context::test_using_chain_context();
     crypto::signature::context::set_chain_context(Default::default(), "test");
     do_test_evm_calls::<ConfidentialEVMConfig>(true /* force_plain */);
 }
 
 #[test]
 fn test_c10l_evm_balance_transfer() {
+    let _guard = crypto::signature::context::test_using_chain_context();
     crypto::signature::context::set_chain_context(Default::default(), "test");
     let mut mock = mock::Mock::default();
     let ctx = mock.create_ctx();
@@ -791,6 +794,7 @@ fn test_evm_runtime() {
 
 #[test]
 fn test_c10l_evm_runtime() {
+    let _guard = crypto::signature::context::test_using_chain_context();
     crypto::signature::context::set_chain_context(Default::default(), "test");
     do_test_evm_runtime::<ConfidentialEVMConfig>();
 }
@@ -913,6 +917,7 @@ fn test_fee_refunds() {
                 gas: 100_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -965,6 +970,7 @@ fn test_fee_refunds() {
                 gas: 100_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     if let module::CallResult::Failed {
@@ -1046,6 +1052,7 @@ fn test_transfer_event() {
                 gas: 100_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     assert!(dispatch_result.result.is_success(), "call should succeed");
@@ -1134,6 +1141,7 @@ fn test_return_value_limits() {
                 gas: 100_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     let result: Vec<u8> = cbor::from_value(dispatch_result.result.unwrap()).unwrap();
@@ -1155,6 +1163,7 @@ fn test_return_value_limits() {
                 gas: 100_000,
                 ..Default::default()
             },
+            ..Default::default()
         },
     );
     if let module::CallResult::Failed {

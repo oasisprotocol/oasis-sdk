@@ -2,7 +2,7 @@
 use std::collections::BTreeMap;
 
 use oasis_core_runtime::{
-    common::{namespace::Namespace, version::Version},
+    common::{crypto::mrae::deoxysii, namespace::Namespace, version::Version},
     consensus::{beacon, roothash, state::ConsensusState, Event},
     protocol::HostInfo,
     storage::mkvs,
@@ -10,6 +10,7 @@ use oasis_core_runtime::{
 };
 
 use crate::{
+    callformat,
     context::{Context, RuntimeBatchContext},
     dispatcher,
     error::RuntimeError,
@@ -21,7 +22,7 @@ use crate::{
     state::{self, CurrentState, TransactionResult},
     storage::MKVSStore,
     testing::{configmap, keymanager::MockKeyManagerClient},
-    types::{address::SignatureAddressSpec, transaction},
+    types::{self, address::SignatureAddressSpec, transaction},
 };
 
 pub struct Config;
@@ -179,6 +180,8 @@ pub fn transaction() -> transaction::Transaction {
 pub struct CallOptions {
     /// Transaction fee.
     pub fee: transaction::Fee,
+    /// Should the call be encrypted.
+    pub encrypted: bool,
 }
 
 impl Default for CallOptions {
@@ -190,6 +193,7 @@ impl Default for CallOptions {
                 consensus_messages: 0,
                 ..Default::default()
             },
+            encrypted: false,
         }
     }
 }
@@ -232,14 +236,43 @@ impl Signer {
         C: Context,
         B: cbor::Encode,
     {
+        let mut call = transaction::Call {
+            format: transaction::CallFormat::Plain,
+            method: method.to_owned(),
+            body: cbor::to_value(body),
+            ..Default::default()
+        };
+        if opts.encrypted {
+            let key_pair = deoxysii::generate_key_pair();
+            let nonce = [0u8; deoxysii::NONCE_SIZE];
+            let km = ctx.key_manager().unwrap();
+            let epoch = ctx.epoch();
+            let runtime_keypair = km
+                .get_or_create_ephemeral_keys(callformat::get_key_pair_id(epoch), epoch)
+                .unwrap();
+            let runtime_pk = runtime_keypair.input_keypair.pk;
+            call = transaction::Call {
+                format: transaction::CallFormat::EncryptedX25519DeoxysII,
+                method: "".to_owned(),
+                body: cbor::to_value(types::callformat::CallEnvelopeX25519DeoxysII {
+                    pk: key_pair.0.into(),
+                    nonce,
+                    epoch,
+                    data: deoxysii::box_seal(
+                        &nonce,
+                        cbor::to_vec(call),
+                        vec![],
+                        &runtime_pk.0,
+                        &key_pair.1,
+                    )
+                    .unwrap(),
+                }),
+                ..Default::default()
+            }
+        };
         let tx = transaction::Transaction {
             version: 1,
-            call: transaction::Call {
-                format: transaction::CallFormat::Plain,
-                method: method.to_owned(),
-                body: cbor::to_value(body),
-                ..Default::default()
-            },
+            call,
             auth_info: transaction::AuthInfo {
                 signer_info: vec![transaction::SignerInfo::new_sigspec(
                     self.sigspec.clone(),

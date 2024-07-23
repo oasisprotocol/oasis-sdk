@@ -69,20 +69,32 @@ pub fn set_chain_context(runtime_id: Namespace, consensus_chain_context: &str) {
     *guard = Some(ctx.into_bytes());
 }
 
+/// Test helper to serialize unit tests using the global chain context. The chain context is reset
+/// when this method is called.
+///
+/// # Example
+///
+/// ```rust
+/// # use oasis_runtime_sdk::crypto::signature::context::test_using_chain_context;
+/// let _guard = test_using_chain_context();
+/// // ... rest of the test code follows ...
+/// ```
+#[cfg(any(test, feature = "test"))]
+pub fn test_using_chain_context() -> std::sync::MutexGuard<'static, ()> {
+    static TEST_USING_CHAIN_CONTEXT: Lazy<Mutex<()>> = Lazy::new(Default::default);
+    let guard = TEST_USING_CHAIN_CONTEXT.lock().unwrap();
+    *CHAIN_CONTEXT.lock().unwrap() = None;
+
+    guard
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
 
-    static TEST_GUARD: Lazy<Mutex<()>> = Lazy::new(Default::default);
-
-    fn reset_chain_context() {
-        *CHAIN_CONTEXT.lock().unwrap() = None;
-    }
-
     #[test]
     fn test_chain_context() {
-        let _guard = TEST_GUARD.lock().unwrap();
-        reset_chain_context();
+        let _guard = test_using_chain_context();
         set_chain_context(
             "8000000000000000000000000000000000000000000000000000000000000000".into(),
             "643fb06848be7e970af3b5b2d772eb8cfb30499c8162bc18ac03df2f5e22520e",
@@ -94,8 +106,7 @@ mod test {
 
     #[test]
     fn test_chain_context_not_configured() {
-        let _guard = TEST_GUARD.lock().unwrap();
-        reset_chain_context();
+        let _guard = test_using_chain_context();
 
         let result = std::panic::catch_unwind(|| get_chain_context_for(b"test"));
         assert!(result.is_err());
@@ -103,8 +114,7 @@ mod test {
 
     #[test]
     fn test_chain_context_already_configured() {
-        let _guard = TEST_GUARD.lock().unwrap();
-        reset_chain_context();
+        let _guard = test_using_chain_context();
         set_chain_context(
             "8000000000000000000000000000000000000000000000000000000000000000".into(),
             "643fb06848be7e970af3b5b2d772eb8cfb30499c8162bc18ac03df2f5e22520e",
