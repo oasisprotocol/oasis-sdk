@@ -163,6 +163,7 @@ where
         let round = self.latest_round().await?;
 
         // Resolve account nonces.
+        let mut first_signer_address = Default::default();
         for (idx, signer) in signers.iter().enumerate() {
             let sigspec = SignatureAddressSpec::try_from_pk(&signer.public_key())
                 .ok_or(anyhow!("signature scheme not supported"))?;
@@ -171,23 +172,30 @@ where
 
             tx.append_auth_signature(sigspec, nonce);
 
-            // If gas is not set, perform estimation.
-            if idx == 0 && tx.fee_gas() == 0 {
-                let gas = self
-                    .estimate_gas(EstimateGasQuery {
-                        caller: if let PublicKey::Secp256k1(pk) = signer.public_key() {
-                            Some(CallerAddress::EthAddress(
-                                pk.to_eth_address().try_into().unwrap(),
-                            ))
-                        } else {
-                            Some(CallerAddress::Address(address))
-                        },
-                        tx: tx.clone(),
-                        propagate_failures: false,
-                    })
-                    .await?;
-                tx.set_fee_gas(gas);
+            // Store first signer address for gas estimation to avoid rederivation.
+            if idx == 0 {
+                first_signer_address = address;
             }
+        }
+
+        // Perform gas estimation after all signer infos have been added as otherwise we may
+        // underestimate the amount of gas needed.
+        if tx.fee_gas() == 0 {
+            let signer = &signers[0]; // Checked to have at least one signer above.
+            let gas = self
+                .estimate_gas(EstimateGasQuery {
+                    caller: if let PublicKey::Secp256k1(pk) = signer.public_key() {
+                        Some(CallerAddress::EthAddress(
+                            pk.to_eth_address().try_into().unwrap(),
+                        ))
+                    } else {
+                        Some(CallerAddress::Address(first_signer_address))
+                    },
+                    tx: tx.clone(),
+                    propagate_failures: false,
+                })
+                .await?;
+            tx.set_fee_gas(gas);
         }
 
         // Determine gas price. Currently we always use the native denomination.
