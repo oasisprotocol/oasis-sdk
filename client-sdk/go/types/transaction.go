@@ -380,6 +380,7 @@ type Fee struct {
 	Amount            BaseUnits `json:"amount"`
 	Gas               uint64    `json:"gas,omitempty"`
 	ConsensusMessages uint32    `json:"consensus_messages,omitempty"`
+	Proxy             *FeeProxy `json:"proxy,omitempty"`
 }
 
 // GasPrice returns the gas price implied by the amount and gas.
@@ -413,11 +414,25 @@ func (f *Fee) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
 	gp := NewBaseUnits(*f.GasPrice(), f.Amount.Denomination)
 	gp.PrettyPrint(ctx, prefix, w)
 	fmt.Fprintln(w, " per gas unit)")
+
+	if f.Proxy != nil {
+		fmt.Fprintf(w, "%sFee proxy:\n", prefix)
+		fmt.Fprintf(w, "%s  Module: %s\n", prefix, f.Proxy.Module)
+		fmt.Fprintf(w, "%s  ID:     %x\n", prefix, f.Proxy.ID)
+	}
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
 func (f *Fee) PrettyType() (interface{}, error) {
 	return f, nil
+}
+
+// FeeProxy contains information about a fee proxy.
+type FeeProxy struct {
+	// Module that will handle the proxy payment.
+	Module string `json:"module"`
+	// ID is a module-specific identifier that will handle fee payments for the transaction signer.
+	ID []byte `json:"id"`
 }
 
 // CallerAddress is a caller address.
