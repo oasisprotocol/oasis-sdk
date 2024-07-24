@@ -36,12 +36,18 @@ func (pk *PublicKey) marshal() (*serializedPublicKey, error) {
 	switch inner := pk.PublicKey.(type) {
 	case ed25519.PublicKey:
 		spk.Ed25519 = &inner
+	case *ed25519.PublicKey:
+		spk.Ed25519 = inner
 	case secp256k1.PublicKey:
 		spk.Secp256k1 = &inner
+	case *secp256k1.PublicKey:
+		spk.Secp256k1 = inner
 	case sr25519.PublicKey:
 		spk.Sr25519 = &inner
+	case *sr25519.PublicKey:
+		spk.Sr25519 = inner
 	default:
-		return nil, fmt.Errorf("unsupported public key type")
+		return nil, fmt.Errorf("unsupported public key type: %T", inner)
 	}
 	return &spk, nil
 }

@@ -5,6 +5,7 @@ import (
 
 	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
+	"github.com/oasisprotocol/oasis-core/go/common/node"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
@@ -29,6 +30,20 @@ type Update struct {
 type Remove struct {
 	// ID is the application identifier.
 	ID AppID `json:"id"`
+}
+
+// Register a ROFL application instance call.
+type Register struct {
+	// App is the application identifier of the app the caller is registering for.
+	App AppID `json:"app"`
+	// EndorsedCapability is the endorsed TEE capability.
+	EndorsedCapability node.EndorsedCapabilityTEE `json:"ect"` //nolint: misspell
+	// Expiration is the epoch when the ROFL registration expires if not renewed.
+	Expiration beacon.EpochTime `json:"expiration"`
+	// ExtraKeys are the extra public keys to endorse (e.g. secp256k1 keys).
+	//
+	// All of these keys need to co-sign the registration transaction to prove ownership.
+	ExtraKeys []types.PublicKey `json:"extra_keys"`
 }
 
 // AppQuery is an application-related query.

@@ -12,9 +12,10 @@ import (
 
 var (
 	// Callable methods.
-	methodCreate = types.NewMethodName("rofl.Create", Create{})
-	methodUpdate = types.NewMethodName("rofl.Update", Update{})
-	methodRemove = types.NewMethodName("rofl.Remove", Remove{})
+	methodCreate   = types.NewMethodName("rofl.Create", Create{})
+	methodUpdate   = types.NewMethodName("rofl.Update", Update{})
+	methodRemove   = types.NewMethodName("rofl.Remove", Remove{})
+	methodRegister = types.NewMethodName("rofl.Register", Register{})
 
 	// Queries.
 	methodApp          = types.NewMethodName("rofl.App", AppQuery{})
@@ -186,4 +187,9 @@ func NewUpdateTx(fee *types.Fee, body *Update) *types.Transaction {
 // NewRemoveTx generates a new rofl.Remove transaction.
 func NewRemoveTx(fee *types.Fee, body *Remove) *types.Transaction {
 	return types.NewTransaction(fee, methodRemove, body)
+}
+
+// NewRegisterTx generates a new rofl.Register transaction.
+func NewRegisterTx(fee *types.Fee, body *Register) *types.Transaction {
+	return types.NewTransaction(fee, methodRegister, body)
 }

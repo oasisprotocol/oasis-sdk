@@ -498,17 +498,17 @@ fn test_query_estimate_gas() {
     let tx_reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
         + GasWasterRuntime::AUTH_MULTISIG_GAS
         + GasWasterModule::CALL_GAS;
-    let tx_nomultisig_reference_gas =
-        GasWasterRuntime::AUTH_SIGNATURE_GAS + GasWasterModule::CALL_GAS;
     let tx_huge_reference_gas = GasWasterRuntime::AUTH_SIGNATURE_GAS
         + GasWasterRuntime::AUTH_MULTISIG_GAS
         + GasWasterModule::CALL_GAS_HUGE;
     let tx_specific_gas_reference_gas = GasWasterModule::CALL_GAS_SPECIFIC;
     let tx_specific_gas_huge_reference_gas = GasWasterModule::CALL_GAS_SPECIFIC_HUGE;
-    let tx_caller_gas_addr_zero =
-        GasWasterRuntime::AUTH_SIGNATURE_GAS + GasWasterModule::CALL_GAS_CALLER_ADDR_ZERO;
-    let tx_caller_gas_addr_ethzero =
-        GasWasterRuntime::AUTH_SIGNATURE_GAS + GasWasterModule::CALL_GAS_CALLER_ADDR_ETHZERO;
+    let tx_caller_gas_addr_zero = GasWasterRuntime::AUTH_SIGNATURE_GAS
+        + GasWasterRuntime::AUTH_MULTISIG_GAS
+        + GasWasterModule::CALL_GAS_CALLER_ADDR_ZERO;
+    let tx_caller_gas_addr_ethzero = GasWasterRuntime::AUTH_SIGNATURE_GAS
+        + GasWasterRuntime::AUTH_MULTISIG_GAS
+        + GasWasterModule::CALL_GAS_CALLER_ADDR_ETHZERO;
 
     CurrentState::init_local_fallback();
 
@@ -537,10 +537,7 @@ fn test_query_estimate_gas() {
             };
             let est =
                 Core::query_estimate_gas(&ctx, args).expect("query_estimate_gas should succeed");
-            assert_eq!(
-                est, tx_nomultisig_reference_gas,
-                "estimated gas should be correct"
-            );
+            assert_eq!(est, tx_reference_gas, "estimated gas should be correct");
         }
 
         // Test extra gas estimation.

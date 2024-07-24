@@ -363,7 +363,26 @@ impl<R: Runtime> Dispatcher<R> {
         tx_size: u32,
         tx: Transaction,
     ) -> Result<CheckTxResult, Error> {
-        let dispatch = Self::dispatch_tx(ctx, tx_size, tx, usize::MAX)?;
+        // In case of any panics, treat it as a failed check instead of crashing the runtime.
+        let catch_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            Self::dispatch_tx(ctx, tx_size, tx, usize::MAX)
+        }));
+        let dispatch = match catch_result {
+            Ok(dispatch) => dispatch?,
+            Err(panic_err) => {
+                // Convert panics into transaction check failures as it is clearly the fault of a
+                // specific transaction.
+                return Ok(CheckTxResult {
+                    error: RuntimeError {
+                        module: MODULE_NAME.to_string(),
+                        code: 1,
+                        message: format!("transaction check aborted: {panic_err:?}"),
+                    },
+                    meta: None,
+                });
+            }
+        };
+
         match dispatch.result {
             module::CallResult::Ok(_) => Ok(CheckTxResult {
                 error: Default::default(),
