@@ -1518,6 +1518,41 @@ fn test_fee_proxy() {
 }
 
 #[test]
+fn test_fee_proxy_check() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
+    let mut signer = mock::Signer::new(0, keys::bob::sigspec());
+
+    TestRuntime::migrate(&ctx);
+
+    let dispatch_result =
+        CurrentState::with_transaction_opts(Options::new().with_mode(state::Mode::Check), || {
+            // Do a simple transfer. Note that ALICE is paying the fees.
+            state::TransactionResult::Commit(signer.call_opts(
+                &ctx,
+                "accounts.Transfer",
+                Transfer {
+                    to: keys::bob::address(),
+                    amount: BaseUnits::new(0, Denomination::NATIVE), // Bob has no funds.
+                },
+                mock::CallOptions {
+                    fee: transaction::Fee {
+                        amount: BaseUnits::new(1_500, Denomination::NATIVE),
+                        gas: 1_500,
+                        proxy: Some(transaction::FeeProxy {
+                            module: "test".to_owned(),
+                            id: b"pleasepaythisalicekthx".to_vec(), // Magic words.
+                        }),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            ))
+        });
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+}
+
+#[test]
 fn test_pool_addresses() {
     assert_eq!(
         ADDRESS_COMMON_POOL.to_bech32(),

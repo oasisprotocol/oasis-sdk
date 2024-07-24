@@ -889,6 +889,14 @@ impl module::TransactionHandler for Module {
                 // transaction will not be possible.
                 Self::ensure_balance(payer, &tx.auth_info.fee.amount)
                     .map_err(|_| modules::core::Error::InsufficientFeeBalance)?;
+
+                // Make sure to record the payer during transaction checks.
+                CurrentState::with(|state| {
+                    state
+                        .block_value::<fee::FeeManager>(CONTEXT_KEY_FEE_MANAGER)
+                        .or_default()
+                        .record_fee(payer, &tx.auth_info.fee.amount);
+                });
             } else {
                 // Actually perform the move.
                 Self::charge_tx_fee(payer, &tx.auth_info.fee.amount)?;
@@ -971,9 +979,7 @@ impl module::TransactionHandler for Module {
         }
 
         // Update payer balance.
-        let payer = Self::check_signer_nonces(ctx, tx_auth_info).unwrap(); // Already checked.
-        let amount = &tx_auth_info.fee.amount;
-        Self::sub_amount(payer, amount).unwrap(); // Already checked.
+        Self::sub_amount(fee_updates.payer, &tx_auth_info.fee.amount).unwrap(); // Already checked.
 
         // Update nonces.
         Self::update_signer_nonces(ctx, tx_auth_info).unwrap();
