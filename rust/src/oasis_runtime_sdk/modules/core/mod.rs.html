@@ -1320,6 +1320,20 @@
 <a href="#1320" id="1320">1320</a>
 <a href="#1321" id="1321">1321</a>
 <a href="#1322" id="1322">1322</a>
+<a href="#1323" id="1323">1323</a>
+<a href="#1324" id="1324">1324</a>
+<a href="#1325" id="1325">1325</a>
+<a href="#1326" id="1326">1326</a>
+<a href="#1327" id="1327">1327</a>
+<a href="#1328" id="1328">1328</a>
+<a href="#1329" id="1329">1329</a>
+<a href="#1330" id="1330">1330</a>
+<a href="#1331" id="1331">1331</a>
+<a href="#1332" id="1332">1332</a>
+<a href="#1333" id="1333">1333</a>
+<a href="#1334" id="1334">1334</a>
+<a href="#1335" id="1335">1335</a>
+<a href="#1336" id="1336">1336</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Core definitions module.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
@@ -1348,7 +1362,7 @@
     types::{
         token::{<span class="self">self</span>, Denomination},
         transaction::{
-            <span class="self">self</span>, AddressSpec, AuthProof, Call, CallFormat, CallerAddress, Transaction,
+            <span class="self">self</span>, AddressSpec, AuthProof, Call, CallFormat, CallerAddress, SignerInfo, Transaction,
             UnverifiedTransaction,
         },
     },
@@ -1925,7 +1939,7 @@
         ctx: <span class="kw-2">&amp;</span>C,
         <span class="kw-2">mut </span>args: types::EstimateGasQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;u64, Error&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>extra_gas = <span class="number">0</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>extra_gas = <span class="number">0u64</span>;
         <span class="comment">// In case the runtime is confidential we are unable to authenticate the caller so we must
         // make sure to zeroize it to avoid leaking private information.
         </span><span class="kw">if </span>ctx.is_confidential() {
@@ -1993,6 +2007,16 @@
 
         <span class="comment">// Update the address used within the transaction when caller address is passed.
         </span><span class="kw">if let </span><span class="prelude-val">Some</span>(caller) = args.caller.clone() {
+            <span class="comment">// Include additional gas for each signature verification since we will be overwriting
+            // the signer infos below.
+            </span>extra_gas = extra_gas.saturating_add(
+                <span class="self">Self</span>::compute_signature_verification_cost(
+                    <span class="kw-2">&amp;</span><span class="self">Self</span>::params(),
+                    <span class="kw-2">&amp;</span>args.tx.auth_info.signer_info,
+                )
+                .unwrap_or_default(),
+            );
+
             args.tx.auth_info.signer_info = <span class="macro">vec!</span>[transaction::SignerInfo {
                 address_spec: transaction::AddressSpec::Internal(caller),
                 nonce: args
@@ -2003,10 +2027,6 @@
                     .map(|si| si.nonce)
                     .unwrap_or_default(),
             }];
-
-            <span class="comment">// When passing an address we don't know what scheme is used for authenticating the
-            // address so the estimate may be off. Assume a regular signature for now.
-            </span>extra_gas += <span class="self">Self</span>::params().gas_costs.auth_signature;
         }
 
         <span class="comment">// Determine if we need to add any extra gas for failing calls.
@@ -2362,6 +2382,33 @@
 
         <span class="prelude-val">Ok</span>(())
     }
+
+    <span class="kw">fn </span>compute_signature_verification_cost(
+        params: <span class="kw-2">&amp;</span>Parameters,
+        signer_info: <span class="kw-2">&amp;</span>[SignerInfo],
+    ) -&gt; <span class="prelude-ty">Option</span>&lt;u64&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>num_signature: u64 = <span class="number">0</span>;
+        <span class="kw">let </span><span class="kw-2">mut </span>num_multisig_signer: u64 = <span class="number">0</span>;
+        <span class="kw">for </span>si <span class="kw">in </span>signer_info {
+            <span class="kw">match </span><span class="kw-2">&amp;</span>si.address_spec {
+                AddressSpec::Signature(<span class="kw">_</span>) =&gt; {
+                    num_signature = num_signature.checked_add(<span class="number">1</span>)<span class="question-mark">?</span>;
+                }
+                AddressSpec::Multisig(config) =&gt; {
+                    num_multisig_signer =
+                        num_multisig_signer.checked_add(config.signers.len() <span class="kw">as </span>u64)<span class="question-mark">?</span>;
+                }
+                AddressSpec::Internal(<span class="kw">_</span>) =&gt; {}
+            }
+        }
+
+        <span class="kw">let </span>signature_cost = num_signature.checked_mul(params.gas_costs.auth_signature)<span class="question-mark">?</span>;
+        <span class="kw">let </span>multisig_signer_cost =
+            num_multisig_signer.checked_mul(params.gas_costs.auth_multisig_signer)<span class="question-mark">?</span>;
+        <span class="kw">let </span>sum = signature_cost.checked_add(multisig_signer_cost)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Some</span>(sum)
+    }
 }
 
 <span class="kw">impl</span>&lt;Cfg: Config&gt; module::TransactionHandler <span class="kw">for </span>Module&lt;Cfg&gt; {
@@ -2444,26 +2491,7 @@
 
         <span class="comment">// Charge gas for signature verification.
         </span><span class="kw">let </span>total = CurrentState::with_env(|env| {
-            <span class="kw">let </span><span class="kw-2">mut </span>num_signature: u64 = <span class="number">0</span>;
-            <span class="kw">let </span><span class="kw-2">mut </span>num_multisig_signer: u64 = <span class="number">0</span>;
-            <span class="kw">for </span>si <span class="kw">in </span><span class="kw-2">&amp;</span>env.tx_auth_info().signer_info {
-                <span class="kw">match </span><span class="kw-2">&amp;</span>si.address_spec {
-                    AddressSpec::Signature(<span class="kw">_</span>) =&gt; {
-                        num_signature = num_signature.checked_add(<span class="number">1</span>)<span class="question-mark">?</span>;
-                    }
-                    AddressSpec::Multisig(config) =&gt; {
-                        num_multisig_signer =
-                            num_multisig_signer.checked_add(config.signers.len() <span class="kw">as </span>u64)<span class="question-mark">?</span>;
-                    }
-                    AddressSpec::Internal(<span class="kw">_</span>) =&gt; {}
-                }
-            }
-
-            <span class="kw">let </span>signature_cost = num_signature.checked_mul(params.gas_costs.auth_signature)<span class="question-mark">?</span>;
-            <span class="kw">let </span>multisig_signer_cost =
-                num_multisig_signer.checked_mul(params.gas_costs.auth_multisig_signer)<span class="question-mark">?</span>;
-            <span class="kw">let </span>sum = signature_cost.checked_add(multisig_signer_cost)<span class="question-mark">?</span>;
-            <span class="prelude-val">Some</span>(sum)
+            <span class="self">Self</span>::compute_signature_verification_cost(<span class="kw-2">&amp;</span>params, <span class="kw-2">&amp;</span>env.tx_auth_info().signer_info)
         })
         .ok_or(Error::GasOverflow)<span class="question-mark">?</span>;
         <span class="self">Self</span>::use_tx_gas(total)<span class="question-mark">?</span>;

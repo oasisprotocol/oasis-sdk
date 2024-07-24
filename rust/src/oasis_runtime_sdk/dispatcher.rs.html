@@ -1179,6 +1179,25 @@
 <a href="#1179" id="1179">1179</a>
 <a href="#1180" id="1180">1180</a>
 <a href="#1181" id="1181">1181</a>
+<a href="#1182" id="1182">1182</a>
+<a href="#1183" id="1183">1183</a>
+<a href="#1184" id="1184">1184</a>
+<a href="#1185" id="1185">1185</a>
+<a href="#1186" id="1186">1186</a>
+<a href="#1187" id="1187">1187</a>
+<a href="#1188" id="1188">1188</a>
+<a href="#1189" id="1189">1189</a>
+<a href="#1190" id="1190">1190</a>
+<a href="#1191" id="1191">1191</a>
+<a href="#1192" id="1192">1192</a>
+<a href="#1193" id="1193">1193</a>
+<a href="#1194" id="1194">1194</a>
+<a href="#1195" id="1195">1195</a>
+<a href="#1196" id="1196">1196</a>
+<a href="#1197" id="1197">1197</a>
+<a href="#1198" id="1198">1198</a>
+<a href="#1199" id="1199">1199</a>
+<a href="#1200" id="1200">1200</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Transaction dispatcher.
 </span><span class="kw">use </span>std::{
     collections::{BTreeMap, BTreeSet},
@@ -1544,7 +1563,26 @@
         tx_size: u32,
         tx: Transaction,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;CheckTxResult, Error&gt; {
-        <span class="kw">let </span>dispatch = <span class="self">Self</span>::dispatch_tx(ctx, tx_size, tx, usize::MAX)<span class="question-mark">?</span>;
+        <span class="comment">// In case of any panics, treat it as a failed check instead of crashing the runtime.
+        </span><span class="kw">let </span>catch_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            <span class="self">Self</span>::dispatch_tx(ctx, tx_size, tx, usize::MAX)
+        }));
+        <span class="kw">let </span>dispatch = <span class="kw">match </span>catch_result {
+            <span class="prelude-val">Ok</span>(dispatch) =&gt; dispatch<span class="question-mark">?</span>,
+            <span class="prelude-val">Err</span>(panic_err) =&gt; {
+                <span class="comment">// Convert panics into transaction check failures as it is clearly the fault of a
+                // specific transaction.
+                </span><span class="kw">return </span><span class="prelude-val">Ok</span>(CheckTxResult {
+                    error: RuntimeError {
+                        module: MODULE_NAME.to_string(),
+                        code: <span class="number">1</span>,
+                        message: <span class="macro">format!</span>(<span class="string">"transaction check aborted: {panic_err:?}"</span>),
+                    },
+                    meta: <span class="prelude-val">None</span>,
+                });
+            }
+        };
+
         <span class="kw">match </span>dispatch.result {
             module::CallResult::Ok(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(CheckTxResult {
                 error: Default::default(),

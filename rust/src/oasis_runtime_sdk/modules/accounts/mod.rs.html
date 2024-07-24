@@ -1143,6 +1143,12 @@
 <a href="#1143" id="1143">1143</a>
 <a href="#1144" id="1144">1144</a>
 <a href="#1145" id="1145">1145</a>
+<a href="#1146" id="1146">1146</a>
+<a href="#1147" id="1147">1147</a>
+<a href="#1148" id="1148">1148</a>
+<a href="#1149" id="1149">1149</a>
+<a href="#1150" id="1150">1150</a>
+<a href="#1151" id="1151">1151</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Accounts module.
 </span><span class="kw">use </span>std::{
     cmp::Ordering,
@@ -2034,6 +2040,14 @@
                 // transaction will not be possible.
                 </span><span class="self">Self</span>::ensure_balance(payer, <span class="kw-2">&amp;</span>tx.auth_info.fee.amount)
                     .map_err(|<span class="kw">_</span>| modules::core::Error::InsufficientFeeBalance)<span class="question-mark">?</span>;
+
+                <span class="comment">// Make sure to record the payer during transaction checks.
+                </span>CurrentState::with(|state| {
+                    state
+                        .block_value::&lt;fee::FeeManager&gt;(CONTEXT_KEY_FEE_MANAGER)
+                        .or_default()
+                        .record_fee(payer, <span class="kw-2">&amp;</span>tx.auth_info.fee.amount);
+                });
             } <span class="kw">else </span>{
                 <span class="comment">// Actually perform the move.
                 </span><span class="self">Self</span>::charge_tx_fee(payer, <span class="kw-2">&amp;</span>tx.auth_info.fee.amount)<span class="question-mark">?</span>;
@@ -2116,9 +2130,7 @@
         }
 
         <span class="comment">// Update payer balance.
-        </span><span class="kw">let </span>payer = <span class="self">Self</span>::check_signer_nonces(ctx, tx_auth_info).unwrap(); <span class="comment">// Already checked.
-        </span><span class="kw">let </span>amount = <span class="kw-2">&amp;</span>tx_auth_info.fee.amount;
-        <span class="self">Self</span>::sub_amount(payer, amount).unwrap(); <span class="comment">// Already checked.
+        </span><span class="self">Self</span>::sub_amount(fee_updates.payer, <span class="kw-2">&amp;</span>tx_auth_info.fee.amount).unwrap(); <span class="comment">// Already checked.
 
         // Update nonces.
         </span><span class="self">Self</span>::update_signer_nonces(ctx, tx_auth_info).unwrap();

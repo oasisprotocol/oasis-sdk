@@ -269,6 +269,11 @@
 <a href="#269" id="269">269</a>
 <a href="#270" id="270">270</a>
 <a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     collections::{BTreeMap, HashSet},
     sync::Arc,
@@ -466,6 +471,11 @@
                     propagate_failures: <span class="bool-val">false</span>,
                 })
                 .<span class="kw">await</span><span class="question-mark">?</span>;
+
+            <span class="comment">// The estimate may be off due to current limitations in confidential gas estimation.
+            // Inflate the estimated gas by 20%.
+            </span><span class="kw">let </span>gas = gas.saturating_add(gas.saturating_mul(<span class="number">20</span>).saturating_div(<span class="number">100</span>));
+
             tx.set_fee_gas(gas);
         }
 
