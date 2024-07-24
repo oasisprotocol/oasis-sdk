@@ -195,6 +195,11 @@ where
                     propagate_failures: false,
                 })
                 .await?;
+
+            // The estimate may be off due to current limitations in confidential gas estimation.
+            // Inflate the estimated gas by 20%.
+            let gas = gas.saturating_add(gas.saturating_mul(20).saturating_div(100));
+
             tx.set_fee_gas(gas);
         }
 
