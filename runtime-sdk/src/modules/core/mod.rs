@@ -26,7 +26,7 @@ use crate::{
     types::{
         token::{self, Denomination},
         transaction::{
-            self, AddressSpec, AuthProof, Call, CallFormat, CallerAddress, Transaction,
+            self, AddressSpec, AuthProof, Call, CallFormat, CallerAddress, SignerInfo, Transaction,
             UnverifiedTransaction,
         },
     },
@@ -603,7 +603,7 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &C,
         mut args: types::EstimateGasQuery,
     ) -> Result<u64, Error> {
-        let mut extra_gas = 0;
+        let mut extra_gas = 0u64;
         // In case the runtime is confidential we are unable to authenticate the caller so we must
         // make sure to zeroize it to avoid leaking private information.
         if ctx.is_confidential() {
@@ -671,6 +671,16 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Update the address used within the transaction when caller address is passed.
         if let Some(caller) = args.caller.clone() {
+            // Include additional gas for each signature verification since we will be overwriting
+            // the signer infos below.
+            extra_gas = extra_gas.saturating_add(
+                Self::compute_signature_verification_cost(
+                    &Self::params(),
+                    &args.tx.auth_info.signer_info,
+                )
+                .unwrap_or_default(),
+            );
+
             args.tx.auth_info.signer_info = vec![transaction::SignerInfo {
                 address_spec: transaction::AddressSpec::Internal(caller),
                 nonce: args
@@ -681,10 +691,6 @@ impl<Cfg: Config> Module<Cfg> {
                     .map(|si| si.nonce)
                     .unwrap_or_default(),
             }];
-
-            // When passing an address we don't know what scheme is used for authenticating the
-            // address so the estimate may be off. Assume a regular signature for now.
-            extra_gas += Self::params().gas_costs.auth_signature;
         }
 
         // Determine if we need to add any extra gas for failing calls.
@@ -1040,6 +1046,33 @@ impl<Cfg: Config> Module<Cfg> {
 
         Ok(())
     }
+
+    fn compute_signature_verification_cost(
+        params: &Parameters,
+        signer_info: &[SignerInfo],
+    ) -> Option<u64> {
+        let mut num_signature: u64 = 0;
+        let mut num_multisig_signer: u64 = 0;
+        for si in signer_info {
+            match &si.address_spec {
+                AddressSpec::Signature(_) => {
+                    num_signature = num_signature.checked_add(1)?;
+                }
+                AddressSpec::Multisig(config) => {
+                    num_multisig_signer =
+                        num_multisig_signer.checked_add(config.signers.len() as u64)?;
+                }
+                AddressSpec::Internal(_) => {}
+            }
+        }
+
+        let signature_cost = num_signature.checked_mul(params.gas_costs.auth_signature)?;
+        let multisig_signer_cost =
+            num_multisig_signer.checked_mul(params.gas_costs.auth_multisig_signer)?;
+        let sum = signature_cost.checked_add(multisig_signer_cost)?;
+
+        Some(sum)
+    }
 }
 
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
@@ -1122,26 +1155,7 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
 
         // Charge gas for signature verification.
         let total = CurrentState::with_env(|env| {
-            let mut num_signature: u64 = 0;
-            let mut num_multisig_signer: u64 = 0;
-            for si in &env.tx_auth_info().signer_info {
-                match &si.address_spec {
-                    AddressSpec::Signature(_) => {
-                        num_signature = num_signature.checked_add(1)?;
-                    }
-                    AddressSpec::Multisig(config) => {
-                        num_multisig_signer =
-                            num_multisig_signer.checked_add(config.signers.len() as u64)?;
-                    }
-                    AddressSpec::Internal(_) => {}
-                }
-            }
-
-            let signature_cost = num_signature.checked_mul(params.gas_costs.auth_signature)?;
-            let multisig_signer_cost =
-                num_multisig_signer.checked_mul(params.gas_costs.auth_multisig_signer)?;
-            let sum = signature_cost.checked_add(multisig_signer_cost)?;
-            Some(sum)
+            Self::compute_signature_verification_cost(&params, &env.tx_auth_info().signer_info)
         })
         .ok_or(Error::GasOverflow)?;
         Self::use_tx_gas(total)?;
