@@ -10,29 +10,29 @@ import (
 // AppAuthPolicy is the per-application ROFL policy.
 type AppAuthPolicy struct {
 	// Quotes is a quote policy.
-	Quotes quote.Policy `json:"quotes"`
+	Quotes quote.Policy `json:"quotes" yaml:"quotes"`
 	// Enclaves is the set of allowed enclave identities.
-	Enclaves []sgx.EnclaveIdentity `json:"enclaves"`
+	Enclaves []sgx.EnclaveIdentity `json:"enclaves" yaml:"enclaves"`
 	// Endorsements is the set of allowed endorsements.
-	Endorsements []AllowedEndorsement `json:"endorsements"`
+	Endorsements []AllowedEndorsement `json:"endorsements" yaml:"endorsements"`
 	// Fees is the gas fee payment policy.
-	Fees FeePolicy `json:"fees"`
+	Fees FeePolicy `json:"fees" yaml:"fees"`
 	// MaxExpiration is the maximum number of future epochs for which one can register.
-	MaxExpiration beacon.EpochTime `json:"max_expiration"`
+	MaxExpiration beacon.EpochTime `json:"max_expiration" yaml:"max_expiration"`
 }
 
 // AllowedEndorsement is an allowed endorsement policy.
 type AllowedEndorsement struct {
 	// Any specifies that any node can endorse the enclave.
-	Any *struct{} `json:"any,omitempty"`
+	Any *struct{} `json:"any,omitempty" yaml:"any,omitempty"`
 	// ComputeRole specifies that a compute node can endorse the enclave.
-	ComputeRole *struct{} `json:"role_compute,omitempty"`
+	ComputeRole *struct{} `json:"role_compute,omitempty" yaml:"role_compute,omitempty"`
 	// ObserverRole specifies that an observer node can endorse the enclave.
-	ObserverRole *struct{} `json:"role_observer,omitempty"`
+	ObserverRole *struct{} `json:"role_observer,omitempty" yaml:"role_observer,omitempty"`
 	// Entity specifies that a registered node from a specific entity can endorse the enclave.
-	Entity *signature.PublicKey `json:"entity,omitempty"`
+	Entity *signature.PublicKey `json:"entity,omitempty" yaml:"entity,omitempty"`
 	// Node specifies that a specific node can endorse the enclave.
-	Node *signature.PublicKey `json:"node,omitempty"`
+	Node *signature.PublicKey `json:"node,omitempty" yaml:"node,omitempty"`
 }
 
 // FeePolicy is a gas fee payment policy.
