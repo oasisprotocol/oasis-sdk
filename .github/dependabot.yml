@@ -71,7 +71,7 @@ updates:
         # Excluded dependencies are updated in separate PRs.
         # Commented out because it requires at least one entry to be valid.
         # exclude-patterns: []
-    # Ignored depenednecies are ignored by dependabot.
+    # Ignored dependencies are ignored by dependabot.
     ignore:
       # oasis-core dependencies are manually kept up to date.
       - dependency-name: oasis-core-runtime
@@ -79,8 +79,6 @@ updates:
     labels:
       - c:deps
       - rust
-    labels:
-      - c:deps
       - c:runtime-sdk
 
   # Manage npm package versions.
