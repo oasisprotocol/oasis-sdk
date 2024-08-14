@@ -15,10 +15,11 @@ runs:
 
     - name: Unit tests with coverage
       shell: bash
-      run: cargo tarpaulin --out Xml --avoid-cfg-tarpaulin --manifest-path ${{ inputs.manifest_path }} -- --test-threads 1
+      run: cargo tarpaulin --out Xml --avoid-cfg-tarpaulin --manifest-path "$MANIFEST_PATH" -- --test-threads 1
       env:
         # Required as tarpaulin doesn't honor .cargo/config.
         RUSTFLAGS: -C target-feature=+aes,+ssse3
+        MANIFEST_PATH: ${{ inputs.manifest_path }}
 
     - name: Upload to codecov.io
       uses: codecov/codecov-action@v2.1.0

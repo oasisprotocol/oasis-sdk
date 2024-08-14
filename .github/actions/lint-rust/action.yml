@@ -13,11 +13,13 @@ runs:
   steps:
     - name: Clippy check
       shell: bash
+      env:
+        MANIFEST_PATH: ${{ inputs.manifest_path }}
       run: |
         cargo clippy \
           --all-features \
           --locked \
-          --manifest-path ${{ inputs.manifest_path }} \
+          --manifest-path "$MANIFEST_PATH" \
           -- \
           -D warnings \
           -D clippy::dbg_macro \
@@ -25,4 +27,6 @@ runs:
 
     - name: Formatting check
       shell: bash
-      run: cargo fmt --all --manifest-path ${{ inputs.manifest_path }} -- --check
+      env:
+        MANIFEST_PATH: ${{ inputs.manifest_path }}
+      run: cargo fmt --all --manifest-path "$MANIFEST_PATH" -- --check

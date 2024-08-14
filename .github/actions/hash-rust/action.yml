@@ -40,9 +40,12 @@ runs:
   steps:
     - shell: bash
       id: build
+      env:
+        INPUTS_DIR: ${{ inputs.dir }}
+        INPUTS_IMAGE: ${{ inputs.image }}
       run: |
         GITHUB_TEMP_DIR=$(dirname "$GITHUB_OUTPUT")
-        docker run --rm -i -e GITHUB_OUTPUT -v ${GITHUB_TEMP_DIR}:${GITHUB_TEMP_DIR} -v ${{ inputs.dir }}:/src ${{ inputs.image }} /bin/bash <<-'EOF'
+        docker run --rm -i -e GITHUB_OUTPUT -v "${GITHUB_TEMP_DIR}:${GITHUB_TEMP_DIR}" -v "$INPUTS_DIR:/src" "$INPUTS_IMAGE" /bin/bash <<-'EOF'
           set -e
           ${{ inputs.setup }}
           cd /src
