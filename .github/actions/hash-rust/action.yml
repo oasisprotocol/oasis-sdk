@@ -59,8 +59,8 @@ runs:
             export CC_x86_64_fortanix_unknown_sgx=clang-11
 
             for pkg in $PKG_DIRS; do
-              pushd ${pkg}
-              cargo build --release --locked --target $TARGET
+              pushd "${pkg}"
+              cargo build --release --locked --target "$TARGET"
               cargo elf2sgxs --release
               popd
             done
@@ -68,7 +68,7 @@ runs:
             export CARGO_TARGET_DIR="$CARGO_TARGET_ROOT/default"
 
             for pkg in $PKG_DIRS; do
-              pushd ${pkg}
+              pushd "${pkg}"
               cargo build --release --locked
               popd
             done
