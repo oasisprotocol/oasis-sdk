@@ -36,8 +36,8 @@ where
     }
 
     /// Transaction signer.
-    pub fn signer(&self) -> &dyn Signer {
-        self.signer.as_ref()
+    pub fn signer(&self) -> Arc<dyn Signer> {
+        self.signer.clone()
     }
 
     /// Send a command to the processor.

@@ -124,7 +124,7 @@ where
         let result = self
             .env
             .client()
-            .multi_sign_and_submit_tx(&[&self.state.identity.as_ref(), self.env.signer()], tx)
+            .multi_sign_and_submit_tx(&[self.state.identity.clone(), self.env.signer()], tx)
             .await?
             .ok()?;
 

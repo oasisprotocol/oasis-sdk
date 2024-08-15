@@ -406,6 +406,45 @@ pub trait Signer: Send + Sync {
     fn sign_raw(&self, message: &[u8]) -> Result<Signature, Error>;
 }
 
+impl<T: Signer + ?Sized> Signer for std::sync::Arc<T> {
+    fn random(_rng: &mut impl RngCore) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        Err(Error::InvalidArgument)
+    }
+
+    fn new_from_seed(_seed: &[u8]) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        Err(Error::InvalidArgument)
+    }
+
+    fn from_bytes(_bytes: &[u8]) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        Err(Error::InvalidArgument)
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        T::to_bytes(self)
+    }
+
+    fn public_key(&self) -> PublicKey {
+        T::public_key(self)
+    }
+
+    fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
+        T::sign(self, context, message)
+    }
+
+    fn sign_raw(&self, message: &[u8]) -> Result<Signature, Error> {
+        T::sign_raw(self, message)
+    }
+}
+
 impl<T: CoreSigner> Signer for &T {
     fn random(_rng: &mut impl RngCore) -> Result<Self, Error>
     where
@@ -438,6 +477,46 @@ impl<T: CoreSigner> Signer for &T {
 
     fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
         let raw_sig = CoreSigner::sign(*self, context, message).map_err(|_| Error::SigningError)?;
+        Ok(Signature(raw_sig.as_ref().into()))
+    }
+
+    fn sign_raw(&self, _message: &[u8]) -> Result<Signature, Error> {
+        Err(Error::InvalidArgument)
+    }
+}
+
+impl Signer for crate::core::identity::Identity {
+    fn random(_rng: &mut impl RngCore) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        Err(Error::InvalidArgument)
+    }
+
+    fn new_from_seed(_seed: &[u8]) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        Err(Error::InvalidArgument)
+    }
+
+    fn from_bytes(_bytes: &[u8]) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        Err(Error::InvalidArgument)
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        vec![]
+    }
+
+    fn public_key(&self) -> PublicKey {
+        PublicKey::Ed25519(self.public().into())
+    }
+
+    fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
+        let raw_sig = CoreSigner::sign(self, context, message).map_err(|_| Error::SigningError)?;
         Ok(Signature(raw_sig.as_ref().into()))
     }
 
