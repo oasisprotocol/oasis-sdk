@@ -38,6 +38,22 @@ const CMDQ_BACKLOG: usize = 16;
 /// EnclaveRPC endpoint for communicating with the RONL component.
 const ENCLAVE_RPC_ENDPOINT_RONL: &str = "ronl";
 
+/// Transaction submission options.
+#[derive(Clone, Debug)]
+pub struct SubmitTxOpts {
+    /// Optional timeout when submitting a transaction. Setting this to `None` means that the host
+    /// node timeout will be used.
+    pub timeout: Option<Duration>,
+}
+
+impl Default for SubmitTxOpts {
+    fn default() -> Self {
+        Self {
+            timeout: Some(Duration::from_millis(15_000)), // 15 seconds.
+        }
+    }
+}
+
 /// A runtime client meant for use within runtimes.
 pub struct Client<A: App> {
     imp: ClientImpl<A>,
@@ -100,8 +116,21 @@ where
         signers: &[Arc<dyn Signer>],
         tx: transaction::Transaction,
     ) -> Result<transaction::CallResult> {
+        self.multi_sign_and_submit_tx_opts(signers, tx, SubmitTxOpts::default())
+            .await
+    }
+
+    /// Sign a given transaction, submit it and wait for block inclusion.
+    ///
+    /// This method supports multiple transaction signers.
+    pub async fn multi_sign_and_submit_tx_opts(
+        &self,
+        signers: &[Arc<dyn Signer>],
+        tx: transaction::Transaction,
+        opts: SubmitTxOpts,
+    ) -> Result<transaction::CallResult> {
         self.submission_mgr
-            .multi_sign_and_submit_tx(signers, tx)
+            .multi_sign_and_submit_tx(signers, tx, opts)
             .await
     }
 
@@ -289,6 +318,7 @@ enum Cmd {
     SubmitTx(
         Vec<Arc<dyn Signer>>,
         transaction::Transaction,
+        SubmitTxOpts,
         oneshot::Sender<Result<transaction::CallResult>>,
     ),
 }
@@ -328,10 +358,11 @@ where
         &self,
         signers: &[Arc<dyn Signer>],
         tx: transaction::Transaction,
+        opts: SubmitTxOpts,
     ) -> Result<transaction::CallResult> {
         let (ch, rx) = oneshot::channel();
         self.cmdq_tx
-            .send(Cmd::SubmitTx(signers.to_vec(), tx, ch))
+            .send(Cmd::SubmitTx(signers.to_vec(), tx, opts, ch))
             .await?;
         rx.await?
     }
@@ -376,13 +407,13 @@ where
             let mut new_queue = Vec::with_capacity(queue.len());
             for cmd in queue {
                 match cmd {
-                    Cmd::SubmitTx(signers, tx, ch) => {
+                    Cmd::SubmitTx(signers, tx, opts, ch) => {
                         // Check if transaction can be executed (no conflicts with in-flight txs).
                         let signer_set =
                             HashSet::from_iter(signers.iter().map(|signer| signer.public_key()));
                         if !signer_set.is_disjoint(&pending) {
                             // Defer any non-executable commands.
-                            new_queue.push(Cmd::SubmitTx(signers, tx, ch));
+                            new_queue.push(Cmd::SubmitTx(signers, tx, opts, ch));
                             continue;
                         }
                         // Include all signers in the pending set.
@@ -393,7 +424,8 @@ where
                         let notify_tx = notify_tx.clone();
 
                         tokio::spawn(async move {
-                            let result = Self::multi_sign_and_submit_tx(client, &signers, tx).await;
+                            let result =
+                                Self::multi_sign_and_submit_tx(client, &signers, tx, opts).await;
                             let _ = ch.send(result);
 
                             // Notify the submission manager task that submission is done.
@@ -411,6 +443,7 @@ where
         client: ClientImpl<A>,
         signers: &[Arc<dyn Signer>],
         mut tx: transaction::Transaction,
+        opts: SubmitTxOpts,
     ) -> Result<transaction::CallResult> {
         if signers.is_empty() {
             return Err(anyhow!("no signers specified"));
@@ -475,18 +508,20 @@ where
         let tx = tx.finalize();
 
         // Submit the transaction.
-        let result = tokio::time::timeout(
-            Duration::from_millis(15_000), // Make sure we abort if transaction is not included.
-            client.state.host.submit_tx(
-                cbor::to_vec(tx),
-                host::SubmitTxOpts {
-                    wait: true,
-                    ..Default::default()
-                },
-            ),
-        )
-        .await??
-        .ok_or(anyhow!("missing result"))?;
+        let submit_tx_task = client.state.host.submit_tx(
+            cbor::to_vec(tx),
+            host::SubmitTxOpts {
+                wait: true,
+                ..Default::default()
+            },
+        );
+        let result = if let Some(timeout) = opts.timeout {
+            tokio::time::timeout(timeout, submit_tx_task).await?
+        } else {
+            submit_tx_task.await
+        };
+
+        let result = result?.ok_or(anyhow!("missing result"))?;
         cbor::from_slice(&result.output).map_err(|_| anyhow!("malformed result"))
     }
 }
