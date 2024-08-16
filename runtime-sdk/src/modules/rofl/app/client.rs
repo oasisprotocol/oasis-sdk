@@ -1,6 +1,9 @@
 use std::{
     collections::{BTreeMap, HashSet},
-    sync::Arc,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
     time::Duration,
 };
 
@@ -173,6 +176,7 @@ where
 struct ClientImpl<A: App> {
     state: Arc<processor::State<A>>,
     cmdq: mpsc::WeakSender<processor::Command>,
+    latest_round: Arc<AtomicU64>,
 }
 
 impl<A> ClientImpl<A>
@@ -180,7 +184,11 @@ where
     A: App,
 {
     fn new(state: Arc<processor::State<A>>, cmdq: mpsc::WeakSender<processor::Command>) -> Self {
-        Self { state, cmdq }
+        Self {
+            state,
+            cmdq,
+            latest_round: Arc::new(AtomicU64::new(0)),
+        }
     }
 
     /// Retrieve the latest known runtime round.
@@ -191,7 +199,11 @@ where
             .ok_or(anyhow!("processor has shut down"))?;
         let (tx, rx) = oneshot::channel();
         cmdq.send(processor::Command::GetLatestRound(tx)).await?;
-        Ok(rx.await?)
+        let round = rx.await?;
+        Ok(self
+            .latest_round
+            .fetch_max(round, Ordering::SeqCst)
+            .max(round))
     }
 
     /// Retrieve the nonce for the given account.
@@ -310,6 +322,7 @@ where
         Self {
             state: self.state.clone(),
             cmdq: self.cmdq.clone(),
+            latest_round: self.latest_round.clone(),
         }
     }
 }
@@ -520,8 +533,13 @@ where
         } else {
             submit_tx_task.await
         };
-
         let result = result?.ok_or(anyhow!("missing result"))?;
+
+        // Update latest known round.
+        client
+            .latest_round
+            .fetch_max(result.round, Ordering::SeqCst);
+
         cbor::from_slice(&result.output).map_err(|_| anyhow!("malformed result"))
     }
 }
