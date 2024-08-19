@@ -1,6 +1,10 @@
 use std::{
     collections::{BTreeMap, HashSet},
-    sync::Arc,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+    time::Duration,
 };
 
 use anyhow::{anyhow, Result};
@@ -31,13 +35,32 @@ use crate::{
 
 use super::{processor, App};
 
+/// Size of various command queues.
+const CMDQ_BACKLOG: usize = 16;
+
 /// EnclaveRPC endpoint for communicating with the RONL component.
 const ENCLAVE_RPC_ENDPOINT_RONL: &str = "ronl";
 
+/// Transaction submission options.
+#[derive(Clone, Debug)]
+pub struct SubmitTxOpts {
+    /// Optional timeout when submitting a transaction. Setting this to `None` means that the host
+    /// node timeout will be used.
+    pub timeout: Option<Duration>,
+}
+
+impl Default for SubmitTxOpts {
+    fn default() -> Self {
+        Self {
+            timeout: Some(Duration::from_millis(15_000)), // 15 seconds.
+        }
+    }
+}
+
 /// A runtime client meant for use within runtimes.
 pub struct Client<A: App> {
-    state: Arc<processor::State<A>>,
-    cmdq: mpsc::WeakSender<processor::Command>,
+    imp: ClientImpl<A>,
+    submission_mgr: Arc<SubmissionManager<A>>,
 }
 
 impl<A> Client<A>
@@ -49,28 +72,148 @@ where
         state: Arc<processor::State<A>>,
         cmdq: mpsc::WeakSender<processor::Command>,
     ) -> Self {
-        Self { state, cmdq }
+        let imp = ClientImpl::new(state, cmdq);
+        let mut submission_mgr = SubmissionManager::new(imp.clone());
+        submission_mgr.start();
+
+        Self {
+            imp,
+            submission_mgr: Arc::new(submission_mgr),
+        }
     }
 
     /// Retrieve the latest known runtime round.
     pub async fn latest_round(&self) -> Result<u64> {
+        self.imp.latest_round().await
+    }
+
+    /// Retrieve the nonce for the given account.
+    pub async fn account_nonce(&self, round: u64, address: Address) -> Result<u64> {
+        self.imp.account_nonce(round, address).await
+    }
+
+    /// Retrieve the gas price in the given denomination.
+    pub async fn gas_price(&self, round: u64, denom: &token::Denomination) -> Result<u128> {
+        self.imp.gas_price(round, denom).await
+    }
+
+    /// Securely query the on-chain runtime component.
+    pub async fn query<Rq, Rs>(&self, round: u64, method: &str, args: Rq) -> Result<Rs>
+    where
+        Rq: cbor::Encode,
+        Rs: cbor::Decode + Send + 'static,
+    {
+        self.imp.query(round, method, args).await
+    }
+
+    /// Securely perform gas estimation.
+    pub async fn estimate_gas(&self, req: EstimateGasQuery) -> Result<u64> {
+        self.imp.estimate_gas(req).await
+    }
+
+    /// Sign a given transaction, submit it and wait for block inclusion.
+    ///
+    /// This method supports multiple transaction signers.
+    pub async fn multi_sign_and_submit_tx(
+        &self,
+        signers: &[Arc<dyn Signer>],
+        tx: transaction::Transaction,
+    ) -> Result<transaction::CallResult> {
+        self.multi_sign_and_submit_tx_opts(signers, tx, SubmitTxOpts::default())
+            .await
+    }
+
+    /// Sign a given transaction, submit it and wait for block inclusion.
+    ///
+    /// This method supports multiple transaction signers.
+    pub async fn multi_sign_and_submit_tx_opts(
+        &self,
+        signers: &[Arc<dyn Signer>],
+        tx: transaction::Transaction,
+        opts: SubmitTxOpts,
+    ) -> Result<transaction::CallResult> {
+        self.submission_mgr
+            .multi_sign_and_submit_tx(signers, tx, opts)
+            .await
+    }
+
+    /// Sign a given transaction, submit it and wait for block inclusion.
+    pub async fn sign_and_submit_tx(
+        &self,
+        signer: Arc<dyn Signer>,
+        tx: transaction::Transaction,
+    ) -> Result<transaction::CallResult> {
+        self.multi_sign_and_submit_tx(&[signer], tx).await
+    }
+
+    /// Run a closure inside a `CurrentState` context with store for the given round.
+    pub async fn with_store_for_round<F, R>(&self, round: u64, f: F) -> Result<R>
+    where
+        F: FnOnce() -> Result<R> + Send + 'static,
+        R: Send + 'static,
+    {
+        self.imp.with_store_for_round(round, f).await
+    }
+
+    /// Return a store corresponding to the given round.
+    pub async fn store_for_round(&self, round: u64) -> Result<HostStore> {
+        self.imp.store_for_round(round).await
+    }
+}
+
+impl<A> Clone for Client<A>
+where
+    A: App,
+{
+    fn clone(&self) -> Self {
+        Self {
+            imp: self.imp.clone(),
+            submission_mgr: self.submission_mgr.clone(),
+        }
+    }
+}
+
+struct ClientImpl<A: App> {
+    state: Arc<processor::State<A>>,
+    cmdq: mpsc::WeakSender<processor::Command>,
+    latest_round: Arc<AtomicU64>,
+}
+
+impl<A> ClientImpl<A>
+where
+    A: App,
+{
+    fn new(state: Arc<processor::State<A>>, cmdq: mpsc::WeakSender<processor::Command>) -> Self {
+        Self {
+            state,
+            cmdq,
+            latest_round: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    /// Retrieve the latest known runtime round.
+    async fn latest_round(&self) -> Result<u64> {
         let cmdq = self
             .cmdq
             .upgrade()
             .ok_or(anyhow!("processor has shut down"))?;
         let (tx, rx) = oneshot::channel();
         cmdq.send(processor::Command::GetLatestRound(tx)).await?;
-        Ok(rx.await?)
+        let round = rx.await?;
+        Ok(self
+            .latest_round
+            .fetch_max(round, Ordering::SeqCst)
+            .max(round))
     }
 
     /// Retrieve the nonce for the given account.
-    pub async fn account_nonce(&self, round: u64, address: Address) -> Result<u64> {
+    async fn account_nonce(&self, round: u64, address: Address) -> Result<u64> {
         self.query(round, "accounts.Nonce", NonceQuery { address })
             .await
     }
 
     /// Retrieve the gas price in the given denomination.
-    pub async fn gas_price(&self, round: u64, denom: &token::Denomination) -> Result<u128> {
+    async fn gas_price(&self, round: u64, denom: &token::Denomination) -> Result<u128> {
         let mgp: BTreeMap<token::Denomination, u128> =
             self.query(round, "core.MinGasPrice", ()).await?;
         mgp.get(denom)
@@ -79,7 +222,7 @@ where
     }
 
     /// Securely query the on-chain runtime component.
-    pub async fn query<Rq, Rs>(&self, round: u64, method: &str, args: Rq) -> Result<Rs>
+    async fn query<Rq, Rs>(&self, round: u64, method: &str, args: Rq) -> Result<Rs>
     where
         Rq: cbor::Encode,
         Rs: cbor::Decode + Send + 'static,
@@ -143,53 +286,213 @@ where
     }
 
     /// Securely perform gas estimation.
-    pub async fn estimate_gas(&self, req: EstimateGasQuery) -> Result<u64> {
+    async fn estimate_gas(&self, req: EstimateGasQuery) -> Result<u64> {
         let round = self.latest_round().await?;
         self.query(round, "core.EstimateGas", req).await
     }
 
-    /// Sign a given transaction and submit it.
-    ///
-    /// This method supports multiple transaction signers.
-    pub async fn multi_sign_and_submit_tx(
+    /// Run a closure inside a `CurrentState` context with store for the given round.
+    async fn with_store_for_round<F, R>(&self, round: u64, f: F) -> Result<R>
+    where
+        F: FnOnce() -> Result<R> + Send + 'static,
+        R: Send + 'static,
+    {
+        let store = self.store_for_round(round).await?;
+
+        tokio::task::spawn_blocking(move || CurrentState::enter(store, f)).await?
+    }
+
+    /// Return a store corresponding to the given round.
+    async fn store_for_round(&self, round: u64) -> Result<HostStore> {
+        HostStore::new_for_round(
+            self.state.host.clone(),
+            &self.state.consensus_verifier,
+            self.state.host.get_runtime_id(),
+            round,
+        )
+        .await
+    }
+}
+
+impl<A> Clone for ClientImpl<A>
+where
+    A: App,
+{
+    fn clone(&self) -> Self {
+        Self {
+            state: self.state.clone(),
+            cmdq: self.cmdq.clone(),
+            latest_round: self.latest_round.clone(),
+        }
+    }
+}
+
+enum Cmd {
+    SubmitTx(
+        Vec<Arc<dyn Signer>>,
+        transaction::Transaction,
+        SubmitTxOpts,
+        oneshot::Sender<Result<transaction::CallResult>>,
+    ),
+}
+
+/// Transaction submission manager for avoiding nonce conflicts.
+struct SubmissionManager<A: App> {
+    imp: Option<SubmissionManagerImpl<A>>,
+    cmdq_tx: mpsc::Sender<Cmd>,
+}
+
+impl<A> SubmissionManager<A>
+where
+    A: App,
+{
+    /// Create a new submission manager.
+    fn new(client: ClientImpl<A>) -> Self {
+        let (tx, rx) = mpsc::channel(CMDQ_BACKLOG);
+
+        Self {
+            imp: Some(SubmissionManagerImpl {
+                client,
+                cmdq_rx: rx,
+            }),
+            cmdq_tx: tx,
+        }
+    }
+
+    /// Start the submission manager task.
+    fn start(&mut self) {
+        if let Some(imp) = self.imp.take() {
+            imp.start();
+        }
+    }
+
+    /// Sign a given transaction, submit it and wait for block inclusion.
+    async fn multi_sign_and_submit_tx(
         &self,
-        signers: &[&dyn Signer],
+        signers: &[Arc<dyn Signer>],
+        tx: transaction::Transaction,
+        opts: SubmitTxOpts,
+    ) -> Result<transaction::CallResult> {
+        let (ch, rx) = oneshot::channel();
+        self.cmdq_tx
+            .send(Cmd::SubmitTx(signers.to_vec(), tx, opts, ch))
+            .await?;
+        rx.await?
+    }
+}
+
+struct SubmissionManagerImpl<A: App> {
+    client: ClientImpl<A>,
+    cmdq_rx: mpsc::Receiver<Cmd>,
+}
+
+impl<A> SubmissionManagerImpl<A>
+where
+    A: App,
+{
+    /// Start the submission manager task.
+    fn start(self) {
+        tokio::task::spawn(self.run());
+    }
+
+    /// Run the submission manager task.
+    async fn run(mut self) {
+        let (notify_tx, mut notify_rx) = mpsc::channel::<HashSet<PublicKey>>(CMDQ_BACKLOG);
+        let mut queue: Vec<Cmd> = Vec::new();
+        let mut pending: HashSet<PublicKey> = HashSet::new();
+
+        loop {
+            tokio::select! {
+                // Process incoming commands.
+                Some(cmd) = self.cmdq_rx.recv() => queue.push(cmd),
+
+                // Process incoming completion notifications.
+                Some(signers) = notify_rx.recv() => {
+                    for pk in signers {
+                        pending.remove(&pk);
+                    }
+                },
+
+                else => break,
+            }
+
+            // Check if there is anything in the queue that can be executed without conflicts.
+            let mut new_queue = Vec::with_capacity(queue.len());
+            for cmd in queue {
+                match cmd {
+                    Cmd::SubmitTx(signers, tx, opts, ch) => {
+                        // Check if transaction can be executed (no conflicts with in-flight txs).
+                        let signer_set =
+                            HashSet::from_iter(signers.iter().map(|signer| signer.public_key()));
+                        if !signer_set.is_disjoint(&pending) {
+                            // Defer any non-executable commands.
+                            new_queue.push(Cmd::SubmitTx(signers, tx, opts, ch));
+                            continue;
+                        }
+                        // Include all signers in the pending set.
+                        pending.extend(signer_set.iter().cloned());
+
+                        // Execute in a separate task.
+                        let client = self.client.clone();
+                        let notify_tx = notify_tx.clone();
+
+                        tokio::spawn(async move {
+                            let result =
+                                Self::multi_sign_and_submit_tx(client, &signers, tx, opts).await;
+                            let _ = ch.send(result);
+
+                            // Notify the submission manager task that submission is done.
+                            let _ = notify_tx.send(signer_set).await;
+                        });
+                    }
+                }
+            }
+            queue = new_queue;
+        }
+    }
+
+    /// Sign a given transaction, submit it and wait for block inclusion.
+    async fn multi_sign_and_submit_tx(
+        client: ClientImpl<A>,
+        signers: &[Arc<dyn Signer>],
         mut tx: transaction::Transaction,
+        opts: SubmitTxOpts,
     ) -> Result<transaction::CallResult> {
         if signers.is_empty() {
             return Err(anyhow!("no signers specified"));
         }
 
-        let round = self.latest_round().await?;
+        // Resolve signer addresses.
+        let addresses = signers
+            .iter()
+            .map(|signer| -> Result<_> {
+                let sigspec = SignatureAddressSpec::try_from_pk(&signer.public_key())
+                    .ok_or(anyhow!("signature scheme not supported"))?;
+                Ok((Address::from_sigspec(&sigspec), sigspec))
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        let round = client.latest_round().await?;
 
         // Resolve account nonces.
-        let mut first_signer_address = Default::default();
-        for (idx, signer) in signers.iter().enumerate() {
-            let sigspec = SignatureAddressSpec::try_from_pk(&signer.public_key())
-                .ok_or(anyhow!("signature scheme not supported"))?;
-            let address = Address::from_sigspec(&sigspec);
-            let nonce = self.account_nonce(round, address).await?;
+        for (address, sigspec) in &addresses {
+            let nonce = client.account_nonce(round, *address).await?;
 
-            tx.append_auth_signature(sigspec, nonce);
-
-            // Store first signer address for gas estimation to avoid rederivation.
-            if idx == 0 {
-                first_signer_address = address;
-            }
+            tx.append_auth_signature(sigspec.clone(), nonce);
         }
 
         // Perform gas estimation after all signer infos have been added as otherwise we may
         // underestimate the amount of gas needed.
         if tx.fee_gas() == 0 {
             let signer = &signers[0]; // Checked to have at least one signer above.
-            let gas = self
+            let gas = client
                 .estimate_gas(EstimateGasQuery {
                     caller: if let PublicKey::Secp256k1(pk) = signer.public_key() {
                         Some(CallerAddress::EthAddress(
                             pk.to_eth_address().try_into().unwrap(),
                         ))
                     } else {
-                        Some(CallerAddress::Address(first_signer_address))
+                        Some(CallerAddress::Address(addresses[0].0)) // Checked above.
                     },
                     tx: tx.clone(),
                     propagate_failures: false,
@@ -204,73 +507,39 @@ where
         }
 
         // Determine gas price. Currently we always use the native denomination.
-        let mgp = self.gas_price(round, &token::Denomination::NATIVE).await?;
+        let mgp = client
+            .gas_price(round, &token::Denomination::NATIVE)
+            .await?;
         let fee = mgp.saturating_mul(tx.fee_gas().into());
         tx.set_fee_amount(token::BaseUnits::new(fee, token::Denomination::NATIVE));
 
         // Sign the transaction.
         let mut tx = tx.prepare_for_signing();
         for signer in signers {
-            tx.append_sign(*signer)?;
+            tx.append_sign(signer)?;
         }
         let tx = tx.finalize();
 
         // Submit the transaction.
-        let result = self
-            .state
-            .host
-            .submit_tx(
-                cbor::to_vec(tx),
-                host::SubmitTxOpts {
-                    wait: true,
-                    ..Default::default()
-                },
-            )
-            .await?
-            .ok_or(anyhow!("missing result"))?;
+        let submit_tx_task = client.state.host.submit_tx(
+            cbor::to_vec(tx),
+            host::SubmitTxOpts {
+                wait: true,
+                ..Default::default()
+            },
+        );
+        let result = if let Some(timeout) = opts.timeout {
+            tokio::time::timeout(timeout, submit_tx_task).await?
+        } else {
+            submit_tx_task.await
+        };
+        let result = result?.ok_or(anyhow!("missing result"))?;
+
+        // Update latest known round.
+        client
+            .latest_round
+            .fetch_max(result.round, Ordering::SeqCst);
+
         cbor::from_slice(&result.output).map_err(|_| anyhow!("malformed result"))
-    }
-
-    /// Sign a given transaction and submit it.
-    pub async fn sign_and_submit_tx(
-        &self,
-        signer: &dyn Signer,
-        tx: transaction::Transaction,
-    ) -> Result<transaction::CallResult> {
-        self.multi_sign_and_submit_tx(&[signer], tx).await
-    }
-
-    /// Run a closure inside a `CurrentState` context with store for the given round.
-    pub async fn with_store_for_round<F, R>(&self, round: u64, f: F) -> Result<R>
-    where
-        F: FnOnce() -> Result<R> + Send + 'static,
-        R: Send + 'static,
-    {
-        let store = self.store_for_round(round).await?;
-
-        tokio::task::spawn_blocking(move || CurrentState::enter(store, f)).await?
-    }
-
-    /// Return a store corresponding to the given round.
-    pub async fn store_for_round(&self, round: u64) -> Result<HostStore> {
-        HostStore::new_for_round(
-            self.state.host.clone(),
-            &self.state.consensus_verifier,
-            self.state.host.get_runtime_id(),
-            round,
-        )
-        .await
-    }
-}
-
-impl<A> Clone for Client<A>
-where
-    A: App,
-{
-    fn clone(&self) -> Self {
-        Self {
-            state: self.state.clone(),
-            cmdq: self.cmdq.clone(),
-        }
     }
 }
