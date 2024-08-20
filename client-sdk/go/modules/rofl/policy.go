@@ -1,6 +1,10 @@
 package rofl
 
 import (
+	"fmt"
+
+	"gopkg.in/yaml.v3"
+
 	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/sgx"
@@ -39,8 +43,31 @@ type AllowedEndorsement struct {
 type FeePolicy uint8
 
 const (
-	// FeePolicyAppPays is a fee policy where the application enclave pays the gas fees.
-	FeePolicyAppPays FeePolicy = 1
+	// FeePolicyInstancePays is a fee policy where the application enclave pays the gas fees.
+	FeePolicyInstancePays FeePolicy = 1
 	// FeePolicyEndorsingNodePays is a fee policy where the endorsing node pays the gas fees.
 	FeePolicyEndorsingNodePays FeePolicy = 2
 )
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (fp *FeePolicy) UnmarshalYAML(value *yaml.Node) error {
+	switch value.ShortTag() {
+	case "!!str":
+		var feePolicyStr string
+		if err := value.Decode(&feePolicyStr); err != nil {
+			return err
+		}
+
+		switch feePolicyStr {
+		case "instance":
+			*fp = FeePolicyInstancePays
+		case "endorsing_node":
+			*fp = FeePolicyEndorsingNodePays
+		default:
+			return fmt.Errorf("unsupported fee policy: '%s'", feePolicyStr)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported fee policy type")
+	}
+}
