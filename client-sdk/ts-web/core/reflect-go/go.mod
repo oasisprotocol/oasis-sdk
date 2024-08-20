@@ -4,7 +4,7 @@ go 1.22.2
 
 replace github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.2-oasis1
 
-require github.com/oasisprotocol/oasis-core/go v0.2401.0
+require github.com/oasisprotocol/oasis-core/go v0.2402.0
 
 require (
 	github.com/a8m/envsubst v1.4.2 // indirect
@@ -12,7 +12,7 @@ require (
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/cometbft/cometbft v0.37.7 // indirect
+	github.com/cometbft/cometbft v0.37.9 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/dgraph-io/badger/v4 v4.2.0 // indirect
 	github.com/dgraph-io/ristretto v0.1.1 // indirect
