@@ -77,3 +77,4 @@ linters-settings:
           - github.com/shopspring/decimal
           - github.com/golang/snappy
           - github.com/stretchr/testify
+          - gopkg.in/yaml.v3

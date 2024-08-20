@@ -497,7 +497,7 @@ impl<Cfg: Config> module::FeeProxyHandler for Module<Cfg> {
         )?;
 
         match app_policy.fees {
-            FeePolicy::AppPays => {
+            FeePolicy::InstancePays => {
                 // Application needs to figure out a way to pay, defer to regular handler.
                 Ok(None)
             }

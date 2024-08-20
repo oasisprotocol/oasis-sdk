@@ -47,7 +47,7 @@ pub enum AllowedEndorsement {
 #[repr(u8)]
 pub enum FeePolicy {
     /// Application enclave pays the gas fees.
-    AppPays = 1,
+    InstancePays = 1,
     /// Endorsing node pays the gas fees.
     #[default]
     EndorsingNodePays = 2,
