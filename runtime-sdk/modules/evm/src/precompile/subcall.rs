@@ -356,6 +356,20 @@ mod test {
         // Create contract.
         let contract_address = init_and_deploy_contract(&ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
+        // Transfer some tokens to the contract.
+        let dispatch_result = signer.call(
+            &ctx,
+            "accounts.Transfer",
+            accounts::types::Transfer {
+                to: TestConfig::map_address(contract_address.into()),
+                amount: BaseUnits::new(2_000, Denomination::NATIVE),
+            },
+        );
+        assert!(
+            dispatch_result.result.is_success(),
+            "transfer should succeed"
+        );
+
         // Make transfers more expensive so we can test an out-of-gas condition.
         accounts::Module::set_params(accounts::Parameters {
             gas_costs: accounts::GasCosts {

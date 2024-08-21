@@ -112,6 +112,12 @@ impl TestModule {
     type Parameters = ();
     type Genesis = ();
 
+    #[handler(call = "test.Nop")]
+    fn nop<C: Context>(_ctx: &C, _args: ()) -> Result<(), CoreError> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(1_000)?;
+        Ok(())
+    }
+
     #[handler(call = "test.RefundFee")]
     fn refund_fee<C: Context>(_ctx: &C, fail: bool) -> Result<(), CoreError> {
         // Use some gas.
@@ -489,6 +495,14 @@ fn test_api_transfer() {
             1,
             "there should only be one denomination"
         );
+
+        // Make sure that zero transfers of unknown denominations fail.
+        let result = Accounts::transfer(
+            keys::alice::address(),
+            keys::bob::address(),
+            &BaseUnits::new(0, "UNKNOWN".parse().unwrap()),
+        );
+        assert!(matches!(result, Err(Error::InsufficientBalance)));
     });
 }
 
@@ -1443,11 +1457,8 @@ fn test_fee_proxy() {
     // Do a simple transfer. Note that ALICE is paying the fees.
     let dispatch_result = signer.call_opts(
         &ctx,
-        "accounts.Transfer",
-        Transfer {
-            to: keys::bob::address(),
-            amount: BaseUnits::new(0, Denomination::NATIVE), // Bob has no funds.
-        },
+        "test.Nop",
+        (),
         mock::CallOptions {
             fee: transaction::Fee {
                 amount: BaseUnits::new(1_500, Denomination::NATIVE),
@@ -1496,11 +1507,8 @@ fn test_fee_proxy() {
     // Proxy payment should fail in case the id is incorrect.
     let dispatch_result = signer.call_opts(
         &ctx,
-        "accounts.Transfer",
-        Transfer {
-            to: keys::bob::address(),
-            amount: BaseUnits::new(0, Denomination::NATIVE), // Bob has no funds.
-        },
+        "test.Nop",
+        (),
         mock::CallOptions {
             fee: transaction::Fee {
                 amount: BaseUnits::new(1_500, Denomination::NATIVE),
@@ -1530,11 +1538,8 @@ fn test_fee_proxy_check() {
             // Do a simple transfer. Note that ALICE is paying the fees.
             state::TransactionResult::Commit(signer.call_opts(
                 &ctx,
-                "accounts.Transfer",
-                Transfer {
-                    to: keys::bob::address(),
-                    amount: BaseUnits::new(0, Denomination::NATIVE), // Bob has no funds.
-                },
+                "test.Nop",
+                (),
                 mock::CallOptions {
                     fee: transaction::Fee {
                         amount: BaseUnits::new(1_500, Denomination::NATIVE),

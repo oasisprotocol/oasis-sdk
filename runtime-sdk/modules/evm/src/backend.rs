@@ -527,6 +527,13 @@ impl<'ctx, 'backend, 'config, C: Context, Cfg: Config> StackState<'config>
         let amount = transfer.value.as_u128();
         let amount = token::BaseUnits::new(amount, Cfg::TOKEN_DENOMINATION);
 
+        // Zero-amount transfers of denominations that don't exist in a user's account may fail
+        // which would cause problems for the EVM backend. Short-circuit this behavior here as the
+        // token denomination used by the EVM should always be considered "known".
+        if amount.amount() == 0 {
+            return Ok(());
+        }
+
         <C::Runtime as Runtime>::Accounts::transfer(from, to, &amount)
             .map_err(|_| ExitError::OutOfFund)
     }

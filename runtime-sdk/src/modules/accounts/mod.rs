@@ -301,15 +301,19 @@ impl Module {
 
     /// Subtract given amount of tokens from the specified account's balance.
     fn sub_amount(addr: Address, amount: &token::BaseUnits) -> Result<(), Error> {
-        if amount.amount() == 0 {
-            return Ok(());
-        }
-
         CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
             let balances = storage::PrefixStore::new(store, &state::BALANCES);
             let mut account = storage::TypedStore::new(storage::PrefixStore::new(balances, &addr));
-            let mut value: u128 = account.get(amount.denomination()).unwrap_or_default();
+            let mut value: u128 = account
+                .get(amount.denomination())
+                .ok_or(Error::InsufficientBalance)?;
+
+            // Even when subtracting a zero amount, we still do the above checks so we can reject
+            // unknown denominations early instead of making the transactions succeed.
+            if amount.amount() == 0 {
+                return Ok(());
+            }
 
             value = value
                 .checked_sub(amount.amount())
@@ -404,11 +408,16 @@ const CONTEXT_KEY_FEE_MANAGER: &str = "accounts.FeeManager";
 
 impl API for Module {
     fn transfer(from: Address, to: Address, amount: &token::BaseUnits) -> Result<(), Error> {
-        if CurrentState::with_env(|env| env.is_check_only()) || amount.amount() == 0 {
+        if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(());
         }
 
         Self::transfer_silent(from, to, amount)?;
+
+        // Do not emit events if nothing was transferred.
+        if amount.amount() == 0 {
+            return Ok(());
+        }
 
         // Emit a transfer event.
         CurrentState::with(|state| {
@@ -979,7 +988,10 @@ impl module::TransactionHandler for Module {
         }
 
         // Update payer balance.
-        Self::sub_amount(fee_updates.payer, &tx_auth_info.fee.amount).unwrap(); // Already checked.
+        if tx_auth_info.fee.amount.amount() > 0 {
+            // Safe as it was already checked.
+            Self::sub_amount(fee_updates.payer, &tx_auth_info.fee.amount).unwrap();
+        }
 
         // Update nonces.
         Self::update_signer_nonces(ctx, tx_auth_info).unwrap();
