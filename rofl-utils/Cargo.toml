@@ -1,0 +1,16 @@
+[package]
+name = "rofl-utils"
+version = "0.1.0"
+authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+edition = "2021"
+license = "Apache-2.0"
+
+[dependencies]
+# Need a custom version of ureq that uses mbedtls instead of ring since
+# builds of ring fail on the SGX target.
+#
+# Replace once https://github.com/algesten/ureq/pull/791 is merged.
+ureq = { git = "https://github.com/oasisprotocol/ureq", branch = "mbedtls", default-features = false, features = ["rustls-mbedtls", "gzip", "brotli", "charset", "json"] }
+
+[dev-dependencies]
+mockito = "0.31.0"
