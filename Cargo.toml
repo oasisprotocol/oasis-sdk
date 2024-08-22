@@ -15,6 +15,9 @@ members = [
     "contract-sdk/storage",
     "contract-sdk-macros",
 
+    # ROFL.
+    "rofl-utils",
+
     # Test runtimes.
     "tests/runtimes/benchmarking",
     "tests/runtimes/simple-keyvalue",
