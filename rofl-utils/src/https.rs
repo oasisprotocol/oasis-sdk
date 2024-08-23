@@ -22,23 +22,20 @@ use ureq::{
 };
 
 /// An `ureq::Agent` that can be used to perform blocking HTTPS requests.
+///
+/// Note that this forbids non-HTTPS requests. If you need to perform plain HTTP requests consider
+/// using `agent_with_config` and pass a suitable config.
 pub fn agent() -> Agent {
-    // Production configuration.
-    #[cfg(not(test))]
     let cfg = AgentConfig {
-        https_only: true, // Not using HTTPS is unsafe.
+        https_only: true, // Not using HTTPS is unsafe unless careful.
         user_agent: "rofl-utils/0.1.0".to_string(),
         ..Default::default()
     };
+    agent_with_config(cfg)
+}
 
-    // Test configuration.
-    #[cfg(test)]
-    let cfg = AgentConfig {
-        https_only: false,
-        user_agent: "rofl-utils/0.1.0".to_string(),
-        ..Default::default()
-    };
-
+/// An `ureq::Agent` with given configuration that can be used to perform blocking HTTPS requests.
+pub fn agent_with_config(cfg: AgentConfig) -> Agent {
     Agent::with_parts(
         cfg,
         ChainedConnector::new([SgxConnector.boxed(), RustlsConnector::default().boxed()]),
@@ -162,7 +159,7 @@ impl Connector for RustlsConnector {
         }
 
         // Initialize the config on first run.
-        let config_ref = self.config.get_or_init(|| build_config());
+        let config_ref = self.config.get_or_init(build_config);
         let config = config_ref.clone();
 
         let name_borrowed: ServerName<'_> = details
@@ -268,7 +265,7 @@ impl fmt::Debug for RustlsTransport {
 mod test {
     use mockito::{mock, server_url};
 
-    use super::agent;
+    use super::{agent, agent_with_config};
 
     #[test]
     fn test_get_request() {
@@ -280,7 +277,7 @@ mod test {
             .create();
 
         // Create an agent
-        let agent = agent();
+        let agent = agent_with_config(Default::default());
 
         // Make a GET request to the mock server
         let url = format!("{}/test", server_url());
@@ -304,7 +301,7 @@ mod test {
             .create();
 
         // Create an agent
-        let agent = agent();
+        let agent = agent_with_config(Default::default());
 
         // Make a POST request to the mock server
         let url = format!("{}/submit", server_url());
