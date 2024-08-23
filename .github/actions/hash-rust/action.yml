@@ -28,6 +28,10 @@ inputs:
     description: Code to run before building
     default: ""
     required: false
+  features:
+    description: Extra cargo features passed during compilation
+    default: ""
+    required: false
 outputs:
   hashes:
     description: Comma-separated list of binary hashes
@@ -60,7 +64,7 @@ runs:
 
             for pkg in $PKG_DIRS; do
               pushd "${pkg}"
-              cargo build --release --locked --target "$TARGET"
+              cargo build --release --locked --features "${{ inputs.features }}" --target "$TARGET"
               cargo elf2sgxs --release
               popd
             done
@@ -69,7 +73,7 @@ runs:
 
             for pkg in $PKG_DIRS; do
               pushd "${pkg}"
-              cargo build --release --locked
+              cargo build --release --locked --features "${{ inputs.features }}"
               popd
             done
           fi
