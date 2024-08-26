@@ -6,35 +6,36 @@ use std::{
     fmt,
     io::{Read, Write},
     net::{Ipv4Addr, SocketAddr, SocketAddrV4, TcpStream},
+    sync::{Arc, OnceLock},
 };
 
+use rustls::{ClientConfig, ClientConnection, StreamOwned};
+use rustls_pki_types::ServerName;
 use ureq::{
     http::Uri,
     resolver::Resolver,
-    tls::RustlsConnector,
     transport::{
         time::NextTimeout, Buffers, ChainedConnector, ConnectionDetails, Connector, LazyBuffers,
-        Transport,
+        Transport, TransportAdapter,
     },
     Agent, AgentConfig,
 };
 
 /// An `ureq::Agent` that can be used to perform blocking HTTPS requests.
+///
+/// Note that this forbids non-HTTPS requests. If you need to perform plain HTTP requests consider
+/// using `agent_with_config` and pass a suitable config.
 pub fn agent() -> Agent {
-    // Production configuration.
-    #[cfg(not(test))]
     let cfg = AgentConfig {
-        https_only: true, // Not using HTTPS is unsafe.
+        https_only: true, // Not using HTTPS is unsafe unless careful.
+        user_agent: "rofl-utils/0.1.0".to_string(),
         ..Default::default()
     };
+    agent_with_config(cfg)
+}
 
-    // Test configuration.
-    #[cfg(test)]
-    let cfg = AgentConfig {
-        https_only: false,
-        ..Default::default()
-    };
-
+/// An `ureq::Agent` with given configuration that can be used to perform blocking HTTPS requests.
+pub fn agent_with_config(cfg: AgentConfig) -> Agent {
     Agent::with_parts(
         cfg,
         ChainedConnector::new([SgxConnector.boxed(), RustlsConnector::default().boxed()]),
@@ -136,11 +137,135 @@ impl Resolver for SgxResolver {
     }
 }
 
+#[derive(Default)]
+struct RustlsConnector {
+    config: OnceLock<Arc<ClientConfig>>,
+}
+
+impl Connector for RustlsConnector {
+    fn connect(
+        &self,
+        details: &ConnectionDetails,
+        chained: Option<Box<dyn Transport>>,
+    ) -> Result<Option<Box<dyn Transport>>, ureq::Error> {
+        let Some(transport) = chained else {
+            panic!("RustlsConnector requires a chained transport");
+        };
+
+        // Only add TLS if we are connecting via HTTPS and the transport isn't TLS
+        // already, otherwise use chained transport as is.
+        if !details.needs_tls() || transport.is_tls() {
+            return Ok(Some(transport));
+        }
+
+        // Initialize the config on first run.
+        let config_ref = self.config.get_or_init(build_config);
+        let config = config_ref.clone();
+
+        let name_borrowed: ServerName<'_> = details
+            .uri
+            .authority()
+            .ok_or(ureq::Error::HostNotFound)?
+            .host()
+            .try_into()
+            .map_err(|_| ureq::Error::HostNotFound)?;
+
+        let name = name_borrowed.to_owned();
+
+        let conn =
+            ClientConnection::new(config, name).map_err(|_| ureq::Error::ConnectionFailed)?;
+        let stream = StreamOwned {
+            conn,
+            sock: TransportAdapter::new(transport),
+        };
+
+        let buffers = LazyBuffers::new(
+            details.config.input_buffer_size,
+            details.config.output_buffer_size,
+        );
+
+        let transport = Box::new(RustlsTransport { buffers, stream });
+
+        Ok(Some(transport))
+    }
+}
+
+fn build_config() -> Arc<ClientConfig> {
+    let provider = Arc::new(rustls_mbedcrypto_provider::mbedtls_crypto_provider());
+
+    let builder = ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .unwrap();
+
+    let builder = builder
+        .dangerous()
+        .with_custom_certificate_verifier(Arc::new(
+            rustls_mbedpki_provider::MbedTlsServerCertVerifier::new(
+                webpki_root_certs::TLS_SERVER_ROOT_CERTS,
+            )
+            .unwrap(),
+        ));
+
+    let config = builder.with_no_client_auth();
+
+    Arc::new(config)
+}
+
+struct RustlsTransport {
+    buffers: LazyBuffers,
+    stream: StreamOwned<ClientConnection, TransportAdapter>,
+}
+
+impl Transport for RustlsTransport {
+    fn buffers(&mut self) -> &mut dyn Buffers {
+        &mut self.buffers
+    }
+
+    fn transmit_output(&mut self, amount: usize, _timeout: NextTimeout) -> Result<(), ureq::Error> {
+        let output = &self.buffers.output()[..amount];
+        self.stream.write_all(output)?;
+
+        Ok(())
+    }
+
+    fn await_input(&mut self, _timeout: NextTimeout) -> Result<bool, ureq::Error> {
+        if self.buffers.can_use_input() {
+            return Ok(true);
+        }
+
+        let input = self.buffers.input_mut();
+        let amount = self.stream.read(input)?;
+        self.buffers.add_filled(amount);
+
+        Ok(amount > 0)
+    }
+
+    fn is_open(&mut self) -> bool {
+        self.stream.get_mut().get_mut().is_open()
+    }
+
+    fn is_tls(&self) -> bool {
+        true
+    }
+}
+
+impl fmt::Debug for RustlsConnector {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RustlsConnector").finish()
+    }
+}
+
+impl fmt::Debug for RustlsTransport {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RustlsTransport").finish()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use mockito::{mock, server_url};
 
-    use super::agent;
+    use super::{agent, agent_with_config};
 
     #[test]
     fn test_get_request() {
@@ -152,7 +277,7 @@ mod test {
             .create();
 
         // Create an agent
-        let agent = agent();
+        let agent = agent_with_config(Default::default());
 
         // Make a GET request to the mock server
         let url = format!("{}/test", server_url());
@@ -176,7 +301,7 @@ mod test {
             .create();
 
         // Create an agent
-        let agent = agent();
+        let agent = agent_with_config(Default::default());
 
         // Make a POST request to the mock server
         let url = format!("{}/submit", server_url());
@@ -192,5 +317,23 @@ mod test {
             response.body_mut().read_to_string().unwrap(),
             r#"{"success":true}"#
         );
+    }
+
+    #[test]
+    fn test_get_remote_https() {
+        let response = agent().get("https://www.google.com/").call().unwrap();
+
+        // Verify the response
+        assert_eq!(
+            "text/html;charset=ISO-8859-1",
+            response
+                .headers()
+                .get("content-type")
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .replace("; ", ";")
+        );
+        assert_eq!(response.body().mime_type(), Some("text/html"));
     }
 }
