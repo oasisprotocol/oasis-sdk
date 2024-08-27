@@ -335,9 +335,6 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Attempt to resolve the node that endorsed the enclave. It may be that the node is not
         // even registered in the consensus layer which may be acceptable for some policies.
-        //
-        // But if the node is registered, it must be registered for this runtime, otherwise it is
-        // treated as if it is not registered.
         let node = || -> Result<Option<Node>, Error> {
             let registry = RegistryImmutableState::new(ctx.consensus_state());
             let node = registry
@@ -352,14 +349,15 @@ impl<Cfg: Config> Module<Cfg> {
             if node.expiration < ctx.epoch() {
                 return Ok(None);
             }
-            // Ensure node is registered for this runtime.
-            let version = &<C::Runtime as Runtime>::VERSION;
-            if node.get_runtime(ctx.runtime_id(), version).is_none() {
-                return Ok(None);
-            }
 
             Ok(Some(node))
         }()?;
+
+        // Ensure node is registered for this runtime.
+        let has_runtime = |node: &Node| -> bool {
+            let version = &<C::Runtime as Runtime>::VERSION;
+            node.get_runtime(ctx.runtime_id(), version).is_some()
+        };
 
         for allowed in &app_policy.endorsements {
             match (allowed, &node) {
@@ -368,16 +366,17 @@ impl<Cfg: Config> Module<Cfg> {
                     return Ok(());
                 }
                 (AllowedEndorsement::ComputeRole, Some(node)) => {
-                    if node.has_roles(RolesMask::ROLE_COMPUTE_WORKER) {
+                    if node.has_roles(RolesMask::ROLE_COMPUTE_WORKER) && has_runtime(node) {
                         return Ok(());
                     }
                 }
                 (AllowedEndorsement::ObserverRole, Some(node)) => {
-                    if node.has_roles(RolesMask::ROLE_OBSERVER) {
+                    if node.has_roles(RolesMask::ROLE_OBSERVER) && has_runtime(node) {
                         return Ok(());
                     }
                 }
                 (AllowedEndorsement::Entity(entity_id), Some(node)) => {
+                    // If a specific entity is required, it may be registered for any runtime.
                     if &node.entity_id == entity_id {
                         return Ok(());
                     }

@@ -28,10 +28,10 @@ pub enum AllowedEndorsement {
     /// Any node can endorse the enclave.
     #[cbor(rename = "any", as_struct)]
     Any,
-    /// Compute node can endorse the enclave.
+    /// Compute node for the current runtime can endorse the enclave.
     #[cbor(rename = "role_compute", as_struct)]
     ComputeRole,
-    /// Observer node can endorse the enclave.
+    /// Observer node for the current runtime can endorse the enclave.
     #[cbor(rename = "role_observer", as_struct)]
     ObserverRole,
     /// Registered node from a specific entity can endorse the enclave.
