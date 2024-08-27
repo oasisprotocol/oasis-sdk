@@ -62,6 +62,14 @@ type AppQuery struct {
 	ID AppID `json:"id"`
 }
 
+// AppInstanceQuery is an application instance query.
+type AppInstanceQuery struct {
+	// App is the application identifier.
+	App AppID `json:"app"`
+	// RAK is the Runtime Attestation Key.
+	RAK types.PublicKey `json:"rak"`
+}
+
 // AppConfig is a ROFL application configuration.
 type AppConfig struct {
 	// ID is the application identifier.
@@ -80,6 +88,8 @@ type Registration struct {
 	App AppID `json:"app"`
 	// NodeID is the identifier of the endorsing node.
 	NodeID signature.PublicKey `json:"node_id"`
+	// EntityID is the optional identifier of the endorsing entity.
+	EntityID *signature.PublicKey `json:"entity_id,omitempty"`
 	// RAK is the Runtime Attestation Key.
 	RAK signature.PublicKey `json:"rak"`
 	// REK is the Runtime Encryption Key.

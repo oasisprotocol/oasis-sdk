@@ -5,9 +5,12 @@ use once_cell::sync::Lazy;
 
 use crate::{
     context::Context,
-    core::consensus::{
-        registry::{Node, RolesMask, VerifiedEndorsedCapabilityTEE},
-        state::registry::ImmutableState as RegistryImmutableState,
+    core::{
+        common::crypto::signature::PublicKey as CorePublicKey,
+        consensus::{
+            registry::{Node, RolesMask, VerifiedEndorsedCapabilityTEE},
+            state::registry::ImmutableState as RegistryImmutableState,
+        },
     },
     crypto::signature::PublicKey,
     handler, migration,
@@ -64,13 +67,32 @@ pub struct Genesis {
 
 /// Interface that can be called from other modules.
 pub trait API {
+    /// Get the Runtime Attestation Key of the ROFL app instance in case the origin transaction is
+    /// signed by a ROFL instance. Otherwise `None` is returned.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if called outside a transaction environment.
+    fn get_origin_rak() -> Option<PublicKey>;
+
+    /// Get the registration descriptor of the ROFL app instance in case the origin transaction is
+    /// signed by a ROFL instance of the specified app. Otherwise `None` is returned.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if called outside a transaction environment.
+    fn get_origin_registration(app: app_id::AppId) -> Option<types::Registration>;
+
     /// Verify whether the origin transaction is signed by an authorized ROFL instance for the given
     /// application.
     ///
     /// # Panics
     ///
     /// This method will panic if called outside a transaction environment.
-    fn is_authorized_origin(app: app_id::AppId) -> Result<bool, Error>;
+    fn is_authorized_origin(app: app_id::AppId) -> bool;
+
+    /// Get a specific registered instance for an application.
+    fn get_registration(app: app_id::AppId, rak: PublicKey) -> Result<types::Registration, Error>;
 
     /// Get an application's configuration.
     fn get_app(id: app_id::AppId) -> Result<types::AppConfig, Error>;
@@ -90,22 +112,30 @@ pub struct Module<Cfg: Config> {
 }
 
 impl<Cfg: Config> API for Module<Cfg> {
-    fn is_authorized_origin(app: app_id::AppId) -> Result<bool, Error> {
-        let caller_pk = CurrentState::with_env_origin(|env| env.tx_caller_public_key())
-            .ok_or(Error::InvalidArgument)?;
+    fn get_origin_rak() -> Option<PublicKey> {
+        let caller_pk = CurrentState::with_env_origin(|env| env.tx_caller_public_key())?;
 
         // Resolve RAK as the call may be made by an extra key.
-        let rak = match state::get_endorser(&caller_pk) {
+        state::get_endorser(&caller_pk).map(|kei| match kei {
             // It may point to a RAK.
-            Some(state::KeyEndorsementInfo { rak: Some(rak), .. }) => rak,
+            state::KeyEndorsementInfo { rak: Some(rak), .. } => rak.into(),
             // Or it points to itself.
-            Some(_) => caller_pk.try_into().map_err(|_| Error::InvalidArgument)?,
-            // Or is unknown.
-            None => return Ok(false),
-        };
+            _ => caller_pk,
+        })
+    }
 
-        // Check whether the the endorsement is for the right application.
-        Ok(state::get_registration(app, &rak).is_some())
+    fn get_origin_registration(app: app_id::AppId) -> Option<types::Registration> {
+        Self::get_origin_rak()
+            .and_then(|rak| state::get_registration(app, &rak.try_into().unwrap()))
+    }
+
+    fn is_authorized_origin(app: app_id::AppId) -> bool {
+        Self::get_origin_registration(app).is_some()
+    }
+
+    fn get_registration(app: app_id::AppId, rak: PublicKey) -> Result<types::Registration, Error> {
+        state::get_registration(app, &rak.try_into().map_err(|_| Error::InvalidArgument)?)
+            .ok_or(Error::UnknownInstance)
     }
 
     fn get_app(id: app_id::AppId) -> Result<types::AppConfig, Error> {
@@ -314,12 +344,13 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Verify allowed endorsement.
-        Self::verify_endorsement(ctx, &cfg.policy, &verified_ect)?;
+        let node = Self::verify_endorsement(ctx, &cfg.policy, &verified_ect)?;
 
         // Update registration.
         let registration = types::Registration {
             app: body.app,
             node_id: verified_ect.node_id.unwrap(), // Verified above.
+            entity_id: node.map(|n| n.entity_id),
             rak: body.ect.capability_tee.rak,
             rek: body.ect.capability_tee.rek.ok_or(Error::InvalidArgument)?, // REK required.
             expiration: body.expiration,
@@ -331,18 +362,20 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     /// Verify whether the given endorsement is allowed by the application policy.
+    ///
+    /// Returns an optional endorsing node descriptor when available.
     fn verify_endorsement<C: Context>(
         ctx: &C,
         app_policy: &policy::AppAuthPolicy,
         ect: &VerifiedEndorsedCapabilityTEE,
-    ) -> Result<(), Error> {
+    ) -> Result<Option<Node>, Error> {
         use policy::AllowedEndorsement;
 
         let endorsing_node_id = ect.node_id.ok_or(Error::UnknownNode)?;
 
         // Attempt to resolve the node that endorsed the enclave. It may be that the node is not
         // even registered in the consensus layer which may be acceptable for some policies.
-        let node = || -> Result<Option<Node>, Error> {
+        let maybe_node = || -> Result<Option<Node>, Error> {
             let registry = RegistryImmutableState::new(ctx.consensus_state());
             let node = registry
                 .node(&endorsing_node_id)
@@ -367,30 +400,30 @@ impl<Cfg: Config> Module<Cfg> {
         };
 
         for allowed in &app_policy.endorsements {
-            match (allowed, &node) {
+            match (allowed, &maybe_node) {
                 (AllowedEndorsement::Any, _) => {
                     // Any node is allowed.
-                    return Ok(());
+                    return Ok(maybe_node);
                 }
                 (AllowedEndorsement::ComputeRole, Some(node)) => {
                     if node.has_roles(RolesMask::ROLE_COMPUTE_WORKER) && has_runtime(node) {
-                        return Ok(());
+                        return Ok(maybe_node);
                     }
                 }
                 (AllowedEndorsement::ObserverRole, Some(node)) => {
                     if node.has_roles(RolesMask::ROLE_OBSERVER) && has_runtime(node) {
-                        return Ok(());
+                        return Ok(maybe_node);
                     }
                 }
                 (AllowedEndorsement::Entity(entity_id), Some(node)) => {
                     // If a specific entity is required, it may be registered for any runtime.
                     if &node.entity_id == entity_id {
-                        return Ok(());
+                        return Ok(maybe_node);
                     }
                 }
                 (AllowedEndorsement::Node(node_id), _) => {
                     if endorsing_node_id == *node_id {
-                        return Ok(());
+                        return Ok(maybe_node);
                     }
                 }
                 _ => continue,
@@ -410,13 +443,44 @@ impl<Cfg: Config> Module<Cfg> {
     ) -> Result<bool, Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_IS_AUTHORIZED_ORIGIN)?;
 
-        Self::is_authorized_origin(app)
+        Ok(Self::is_authorized_origin(app))
+    }
+
+    #[handler(call = "rofl.AuthorizedOriginNode", internal)]
+    fn internal_authorized_origin_node<C: Context>(
+        _ctx: &C,
+        app: app_id::AppId,
+    ) -> Result<CorePublicKey, Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_AUTHORIZED_ORIGIN_NODE)?;
+
+        let registration = Self::get_origin_registration(app).ok_or(Error::UnknownInstance)?;
+        Ok(registration.node_id)
+    }
+
+    #[handler(call = "rofl.AuthorizedOriginEntity", internal)]
+    fn internal_authorized_origin_entity<C: Context>(
+        _ctx: &C,
+        app: app_id::AppId,
+    ) -> Result<Option<CorePublicKey>, Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_AUTHORIZED_ORIGIN_ENTITY)?;
+
+        let registration = Self::get_origin_registration(app).ok_or(Error::UnknownInstance)?;
+        Ok(registration.entity_id)
     }
 
     /// Returns the configuration for the given ROFL application.
     #[handler(query = "rofl.App")]
     fn query_app<C: Context>(_ctx: &C, args: types::AppQuery) -> Result<types::AppConfig, Error> {
         Self::get_app(args.id)
+    }
+
+    /// Returns a specific registered instance for the given ROFL application.
+    #[handler(query = "rofl.AppInstance")]
+    fn query_app_instance<C: Context>(
+        _ctx: &C,
+        args: types::AppInstanceQuery,
+    ) -> Result<types::Registration, Error> {
+        Self::get_registration(args.app, args.rak)
     }
 
     /// Returns a list of all registered instances for the given ROFL application.
