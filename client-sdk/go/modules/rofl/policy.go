@@ -29,9 +29,9 @@ type AppAuthPolicy struct {
 type AllowedEndorsement struct {
 	// Any specifies that any node can endorse the enclave.
 	Any *struct{} `json:"any,omitempty" yaml:"any,omitempty"`
-	// ComputeRole specifies that a compute node can endorse the enclave.
+	// ComputeRole specifies that a compute node for the current runtime can endorse the enclave.
 	ComputeRole *struct{} `json:"role_compute,omitempty" yaml:"role_compute,omitempty"`
-	// ObserverRole specifies that an observer node can endorse the enclave.
+	// ObserverRole specifies that an observer node for the current runtime can endorse the enclave.
 	ObserverRole *struct{} `json:"role_observer,omitempty" yaml:"role_observer,omitempty"`
 	// Entity specifies that a registered node from a specific entity can endorse the enclave.
 	Entity *signature.PublicKey `json:"entity,omitempty" yaml:"entity,omitempty"`
