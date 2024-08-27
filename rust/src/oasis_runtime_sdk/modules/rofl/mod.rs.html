@@ -522,7 +522,6 @@
 <a href="#522" id="522">522</a>
 <a href="#523" id="523">523</a>
 <a href="#524" id="524">524</a>
-<a href="#525" id="525">525</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! On-chain coordination for ROFL components.
 </span><span class="kw">use </span>std::collections::BTreeSet;
 
@@ -860,9 +859,6 @@
 
         <span class="comment">// Attempt to resolve the node that endorsed the enclave. It may be that the node is not
         // even registered in the consensus layer which may be acceptable for some policies.
-        //
-        // But if the node is registered, it must be registered for this runtime, otherwise it is
-        // treated as if it is not registered.
         </span><span class="kw">let </span>node = || -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Node&gt;, Error&gt; {
             <span class="kw">let </span>registry = RegistryImmutableState::new(ctx.consensus_state());
             <span class="kw">let </span>node = registry
@@ -877,14 +873,15 @@
             </span><span class="kw">if </span>node.expiration &lt; ctx.epoch() {
                 <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
             }
-            <span class="comment">// Ensure node is registered for this runtime.
-            </span><span class="kw">let </span>version = <span class="kw-2">&amp;</span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::VERSION;
-            <span class="kw">if </span>node.get_runtime(ctx.runtime_id(), version).is_none() {
-                <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
-            }
 
             <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(node))
         }()<span class="question-mark">?</span>;
+
+        <span class="comment">// Ensure node is registered for this runtime.
+        </span><span class="kw">let </span>has_runtime = |node: <span class="kw-2">&amp;</span>Node| -&gt; bool {
+            <span class="kw">let </span>version = <span class="kw-2">&amp;</span>&lt;C::Runtime <span class="kw">as </span>Runtime&gt;::VERSION;
+            node.get_runtime(ctx.runtime_id(), version).is_some()
+        };
 
         <span class="kw">for </span>allowed <span class="kw">in </span><span class="kw-2">&amp;</span>app_policy.endorsements {
             <span class="kw">match </span>(allowed, <span class="kw-2">&amp;</span>node) {
@@ -893,17 +890,18 @@
                     </span><span class="kw">return </span><span class="prelude-val">Ok</span>(());
                 }
                 (AllowedEndorsement::ComputeRole, <span class="prelude-val">Some</span>(node)) =&gt; {
-                    <span class="kw">if </span>node.has_roles(RolesMask::ROLE_COMPUTE_WORKER) {
+                    <span class="kw">if </span>node.has_roles(RolesMask::ROLE_COMPUTE_WORKER) &amp;&amp; has_runtime(node) {
                         <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                     }
                 }
                 (AllowedEndorsement::ObserverRole, <span class="prelude-val">Some</span>(node)) =&gt; {
-                    <span class="kw">if </span>node.has_roles(RolesMask::ROLE_OBSERVER) {
+                    <span class="kw">if </span>node.has_roles(RolesMask::ROLE_OBSERVER) &amp;&amp; has_runtime(node) {
                         <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                     }
                 }
                 (AllowedEndorsement::Entity(entity_id), <span class="prelude-val">Some</span>(node)) =&gt; {
-                    <span class="kw">if </span><span class="kw-2">&amp;</span>node.entity_id == entity_id {
+                    <span class="comment">// If a specific entity is required, it may be registered for any runtime.
+                    </span><span class="kw">if </span><span class="kw-2">&amp;</span>node.entity_id == entity_id {
                         <span class="kw">return </span><span class="prelude-val">Ok</span>(());
                     }
                 }
