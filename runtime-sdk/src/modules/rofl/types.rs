@@ -81,6 +81,8 @@ pub struct Registration {
     pub app: AppId,
     /// Identifier of the endorsing node.
     pub node_id: signature::PublicKey,
+    /// Optional identifier of the endorsing entity.
+    pub entity_id: Option<signature::PublicKey>,
     /// Runtime Attestation Key.
     pub rak: signature::PublicKey,
     /// Runtime Encryption Key.
@@ -96,4 +98,14 @@ pub struct Registration {
 pub struct AppQuery {
     /// ROFL application identifier.
     pub id: AppId,
+}
+
+/// Application instance query.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
+pub struct AppInstanceQuery {
+    /// ROFL application identifier.
+    pub app: AppId,
+    /// Runtime Attestation Key.
+    pub rak: PublicKey,
 }

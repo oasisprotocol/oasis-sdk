@@ -3,11 +3,14 @@ package rofl
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rofl"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 
 	"github.com/oasisprotocol/oasis-sdk/tests/e2e/scenario"
 )
@@ -125,9 +128,23 @@ func QueryTest(ctx context.Context, env *scenario.Env) error {
 		env.Logger.Info("retrieved application instance",
 			"app", ins.App,
 			"node_id", ins.NodeID,
+			"entity_id", ins.EntityID,
 			"rak", ins.RAK,
 			"expiration", ins.Expiration,
 		)
+
+		rak := types.PublicKey{
+			PublicKey: ed25519.PublicKey(ins.RAK),
+		}
+
+		// Query individual instance and ensure it is equal.
+		instance, err := rf.AppInstance(ctx, client.RoundLatest, exampleAppID, rak)
+		if err != nil {
+			return fmt.Errorf("failed to query instance '%s': %w", rak, err)
+		}
+		if !reflect.DeepEqual(ins, instance) {
+			return fmt.Errorf("instance mismatch")
+		}
 	}
 
 	// There should be 3 instances, one for each compute node.

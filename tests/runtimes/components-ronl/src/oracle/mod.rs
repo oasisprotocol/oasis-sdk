@@ -102,7 +102,7 @@ impl<Cfg: Config> Module<Cfg> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_OBSERVE)?;
 
         // Ensure that the observation was processed by the configured ROFL application.
-        if !Cfg::Rofl::is_authorized_origin(Cfg::rofl_app_id())? {
+        if !Cfg::Rofl::is_authorized_origin(Cfg::rofl_app_id()) {
             return Err(Error::NotAuthorized);
         }
 

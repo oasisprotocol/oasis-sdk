@@ -49,6 +49,10 @@ pub enum Error {
     #[sdk_error(code = 11)]
     Forbidden,
 
+    #[error("unknown instance")]
+    #[sdk_error(code = 12)]
+    UnknownInstance,
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),

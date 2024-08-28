@@ -19,6 +19,7 @@ var (
 
 	// Queries.
 	methodApp          = types.NewMethodName("rofl.App", AppQuery{})
+	methodAppInstance  = types.NewMethodName("rofl.AppInstance", AppInstanceQuery{})
 	methodAppInstances = types.NewMethodName("rofl.AppInstances", AppQuery{})
 	methodParameters   = types.NewMethodName("rofl.Parameters", nil)
 )
@@ -38,6 +39,9 @@ type V1 interface {
 
 	// App queries the given application configuration.
 	App(ctx context.Context, round uint64, id AppID) (*AppConfig, error)
+
+	// AppInstance queries a specific registered instance of the given application.
+	AppInstance(ctx context.Context, round uint64, id AppID, rak types.PublicKey) (*Registration, error)
 
 	// AppInstances queries the registered instances of the given application.
 	AppInstances(ctx context.Context, round uint64, id AppID) ([]*Registration, error)
@@ -84,6 +88,16 @@ func (a *v1) App(ctx context.Context, round uint64, id AppID) (*AppConfig, error
 		return nil, err
 	}
 	return &appCfg, nil
+}
+
+// Implements V1.
+func (a *v1) AppInstance(ctx context.Context, round uint64, id AppID, rak types.PublicKey) (*Registration, error) {
+	var instance Registration
+	err := a.rc.Query(ctx, round, methodAppInstance, AppInstanceQuery{App: id, RAK: rak}, &instance)
+	if err != nil {
+		return nil, err
+	}
+	return &instance, nil
 }
 
 // Implements V1.
