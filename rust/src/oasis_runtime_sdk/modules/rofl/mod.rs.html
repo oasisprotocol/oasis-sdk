@@ -522,6 +522,13 @@
 <a href="#522" id="522">522</a>
 <a href="#523" id="523">523</a>
 <a href="#524" id="524">524</a>
+<a href="#525" id="525">525</a>
+<a href="#526" id="526">526</a>
+<a href="#527" id="527">527</a>
+<a href="#528" id="528">528</a>
+<a href="#529" id="529">529</a>
+<a href="#530" id="530">530</a>
+<a href="#531" id="531">531</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! On-chain coordination for ROFL components.
 </span><span class="kw">use </span>std::collections::BTreeSet;
 
@@ -680,11 +687,18 @@
 
         <span class="kw">let </span>(creator, tx_index) =
             CurrentState::with_env(|env| (env.tx_caller_address(), env.tx_index()));
-        <span class="kw">let </span>app_id = app_id::AppId::from_creator_round_index(
-            creator,
-            ctx.runtime_header().round,
-            tx_index.try_into().map_err(|<span class="kw">_</span>| Error::InvalidArgument)<span class="question-mark">?</span>,
-        );
+        <span class="kw">let </span>app_id = <span class="kw">match </span>body.scheme {
+            types::IdentifierScheme::CreatorRoundIndex =&gt; app_id::AppId::from_creator_round_index(
+                creator,
+                ctx.runtime_header().round,
+                tx_index.try_into().map_err(|<span class="kw">_</span>| Error::InvalidArgument)<span class="question-mark">?</span>,
+            ),
+            types::IdentifierScheme::CreatorNonce =&gt; {
+                <span class="kw">let </span>nonce = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Accounts::get_nonce(creator)<span class="question-mark">?</span>;
+
+                app_id::AppId::from_creator_nonce(creator, nonce)
+            }
+        };
 
         <span class="comment">// Sanity check that the application doesn't already exist.
         </span><span class="kw">if </span>state::get_app(app_id).is_some() {
