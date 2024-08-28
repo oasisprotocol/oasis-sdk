@@ -14,7 +14,17 @@ import (
 type Create struct {
 	// Policy is the application authentication policy.
 	Policy AppAuthPolicy `json:"policy"`
+	// Scheme is the identifier generation scheme.
+	Scheme IdentifierScheme `json:"scheme"`
 }
+
+// IdentifierScheme is a ROFL application identifier generation scheme.
+type IdentifierScheme uint8
+
+const (
+	CreatorRoundIndex IdentifierScheme = 0
+	CreatorNonce      IdentifierScheme = 1
+)
 
 // Update an existing ROFL application call.
 type Update struct {

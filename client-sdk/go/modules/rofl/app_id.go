@@ -13,6 +13,8 @@ import (
 var (
 	// AppIDV0CRIContext is the unique context for v0 creator/round/index application identifiers.
 	AppIDV0CRIContext = address.NewContext("oasis-sdk/rofl: cri app id", 0)
+	// AppIDV0CNContext is the unique context for v0 creator/nonce application identifiers.
+	AppIDV0CNContext = address.NewContext("oasis-sdk/rofl: cn app id", 0)
 	// AppIDV0GlobalNameContext is the unique context for v0 global name application identifiers.
 	AppIDV0GlobalNameContext = address.NewContext("oasis-sdk/rofl: global name app id", 0)
 	// AppIDBech32HRP is the unique human readable part of Bech32 encoded application identifiers.
@@ -73,6 +75,18 @@ func NewAppIDCreatorRoundIndex(creator types.Address, round uint64, index uint32
 	binary.BigEndian.PutUint32(data[address.Size+8:], index)
 
 	return NewAppIDRaw(AppIDV0CRIContext, data)
+}
+
+// NewAppIDCreatorNonce creates a new application identifier from the given creator/nonce tuple.
+func NewAppIDCreatorNonce(creator types.Address, nonce uint64) AppID {
+	data := make([]byte, address.Size+8)
+
+	rawCreator, _ := creator.MarshalBinary()
+	copy(data[:address.Size], rawCreator)
+
+	binary.BigEndian.PutUint64(data[address.Size:], nonce)
+
+	return NewAppIDRaw(AppIDV0CNContext, data)
 }
 
 // NewAppIDGlobalName creates a new application identifier from the given global name.

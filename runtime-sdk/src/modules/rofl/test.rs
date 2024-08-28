@@ -78,6 +78,7 @@ fn test_management_ops() {
 
     let create = types::Create {
         policy: Default::default(),
+        scheme: Default::default(),
     };
 
     // Bob attempts to create a new ROFL application, but he doesn't have enough to stake.
@@ -205,4 +206,28 @@ fn test_management_ops() {
     assert_eq!(balance, 1_000); // Returned stake for one application.
     let balance = Accounts::get_balance(*ADDRESS_APP_STAKE_POOL, Denomination::NATIVE).unwrap();
     assert_eq!(balance, 1_000); // One application remains.
+}
+
+#[test]
+fn test_create_scheme() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
+
+    TestRuntime::migrate(&ctx);
+
+    let create = types::Create {
+        policy: Default::default(),
+        scheme: types::IdentifierScheme::CreatorNonce,
+    };
+
+    let mut signer_alice = mock::Signer::new(0, keys::alice::sigspec());
+    let dispatch_result = signer_alice.call(&ctx, "rofl.Create", create.clone());
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Ensure the correct application ID has been created.
+    let app_id: AppId = cbor::from_value(dispatch_result.result.unwrap()).unwrap();
+    assert_eq!(
+        app_id.to_bech32(),
+        "rofl1qqfuf7u556prwv0wkdt398prhrpat7r3rvr97khf"
+    );
 }

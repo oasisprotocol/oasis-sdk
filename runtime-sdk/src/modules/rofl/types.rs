@@ -14,6 +14,17 @@ use super::{app_id::AppId, policy::AppAuthPolicy};
 pub struct Create {
     /// Application authentication policy.
     pub policy: AppAuthPolicy,
+    /// Identifier generation scheme.
+    pub scheme: IdentifierScheme,
+}
+
+/// ROFL application identifier generation scheme.
+#[derive(Clone, Copy, Debug, Default, cbor::Encode, cbor::Decode)]
+#[repr(u8)]
+pub enum IdentifierScheme {
+    #[default]
+    CreatorRoundIndex = 0,
+    CreatorNonce = 1,
 }
 
 /// Update an existing ROFL application call.

@@ -13,6 +13,8 @@ const APP_ID_SIZE: usize = APP_ID_VERSION_SIZE + APP_ID_DATA_SIZE;
 const APP_ID_V0_VERSION: u8 = 0;
 /// Creator/round/index identifier context.
 const APP_ID_CRI_CONTEXT: &[u8] = b"oasis-sdk/rofl: cri app id";
+/// Creator/nonce identifier context.
+const APP_ID_CN_CONTEXT: &[u8] = b"oasis-sdk/rofl: cn app id";
 /// Global name identifier context.
 const APP_ID_GLOBAL_NAME_CONTEXT: &[u8] = b"oasis-sdk/rofl: global name app id";
 
@@ -63,6 +65,15 @@ impl AppId {
             APP_ID_CRI_CONTEXT,
             APP_ID_V0_VERSION,
             &[creator.as_ref(), &round.to_be_bytes(), &index.to_be_bytes()].concat(),
+        )
+    }
+
+    /// Creates a new v0 application identifier from creator/nonce tuple.
+    pub fn from_creator_nonce(creator: Address, nonce: u64) -> Self {
+        Self::new(
+            APP_ID_CN_CONTEXT,
+            APP_ID_V0_VERSION,
+            &[creator.as_ref(), &nonce.to_be_bytes()].concat(),
         )
     }
 
@@ -211,6 +222,38 @@ mod test {
         assert_eq!(
             app_id.to_bech32(),
             "rofl1qzmh56f52yd0tcqh757fahzc7ec49s8kaguyylvu"
+        );
+
+        let creator = keys::alice::address();
+        let app_id = AppId::from_creator_nonce(creator, 0);
+
+        assert_eq!(
+            app_id.to_bech32(),
+            "rofl1qqxxv77j6qy3rh50ah9kxehsh26e2hf7p5r6kwsq"
+        );
+
+        let creator = keys::alice::address();
+        let app_id = AppId::from_creator_nonce(creator, 1);
+
+        assert_eq!(
+            app_id.to_bech32(),
+            "rofl1qqfuf7u556prwv0wkdt398prhrpat7r3rvr97khf"
+        );
+
+        let creator = keys::alice::address();
+        let app_id = AppId::from_creator_nonce(creator, 42);
+
+        assert_eq!(
+            app_id.to_bech32(),
+            "rofl1qr90w0m8j7h34c2hhpfmg2wgqmtu0q82vyaxv6e0"
+        );
+
+        let creator = keys::bob::address();
+        let app_id = AppId::from_creator_nonce(creator, 0);
+
+        assert_eq!(
+            app_id.to_bech32(),
+            "rofl1qqzuxsh8fkga366kxrze8vpltdjge3rc7qg6tlrg"
         );
 
         let app_id = AppId::from_global_name("test global app");

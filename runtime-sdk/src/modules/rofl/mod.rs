@@ -156,11 +156,18 @@ impl<Cfg: Config> Module<Cfg> {
 
         let (creator, tx_index) =
             CurrentState::with_env(|env| (env.tx_caller_address(), env.tx_index()));
-        let app_id = app_id::AppId::from_creator_round_index(
-            creator,
-            ctx.runtime_header().round,
-            tx_index.try_into().map_err(|_| Error::InvalidArgument)?,
-        );
+        let app_id = match body.scheme {
+            types::IdentifierScheme::CreatorRoundIndex => app_id::AppId::from_creator_round_index(
+                creator,
+                ctx.runtime_header().round,
+                tx_index.try_into().map_err(|_| Error::InvalidArgument)?,
+            ),
+            types::IdentifierScheme::CreatorNonce => {
+                let nonce = <C::Runtime as Runtime>::Accounts::get_nonce(creator)?;
+
+                app_id::AppId::from_creator_nonce(creator, nonce)
+            }
+        };
 
         // Sanity check that the application doesn't already exist.
         if state::get_app(app_id).is_some() {
