@@ -97,6 +97,18 @@
 <a href="#97" id="97">97</a>
 <a href="#98" id="98">98</a>
 <a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     core::{
         common::crypto::{signature, x25519},
@@ -180,6 +192,8 @@
     </span><span class="kw">pub </span>app: AppId,
     <span class="doccomment">/// Identifier of the endorsing node.
     </span><span class="kw">pub </span>node_id: signature::PublicKey,
+    <span class="doccomment">/// Optional identifier of the endorsing entity.
+    </span><span class="kw">pub </span>entity_id: <span class="prelude-ty">Option</span>&lt;signature::PublicKey&gt;,
     <span class="doccomment">/// Runtime Attestation Key.
     </span><span class="kw">pub </span>rak: signature::PublicKey,
     <span class="doccomment">/// Runtime Encryption Key.
@@ -195,5 +209,15 @@
 </span><span class="kw">pub struct </span>AppQuery {
     <span class="doccomment">/// ROFL application identifier.
     </span><span class="kw">pub </span>id: AppId,
+}
+
+<span class="doccomment">/// Application instance query.
+</span><span class="attr">#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+#[cbor(no_default)]
+</span><span class="kw">pub struct </span>AppInstanceQuery {
+    <span class="doccomment">/// ROFL application identifier.
+    </span><span class="kw">pub </span>app: AppId,
+    <span class="doccomment">/// Runtime Attestation Key.
+    </span><span class="kw">pub </span>rak: PublicKey,
 }
 </code></pre></div></section></main></body></html>

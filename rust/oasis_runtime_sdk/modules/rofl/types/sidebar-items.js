@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["IdentifierScheme"],"struct":["AppConfig","AppQuery","Create","Register","Registration","Remove","Update"]};
+window.SIDEBAR_ITEMS = {"enum":["IdentifierScheme"],"struct":["AppConfig","AppInstanceQuery","AppQuery","Create","Register","Registration","Remove","Update"]};

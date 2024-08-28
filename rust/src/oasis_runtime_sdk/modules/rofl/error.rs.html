@@ -57,6 +57,10 @@
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::modules;
 
 <span class="kw">use </span><span class="kw">super</span>::MODULE_NAME;
@@ -107,6 +111,10 @@
     <span class="attr">#[error(<span class="string">"forbidden"</span>)]
     #[sdk_error(code = <span class="number">11</span>)]
     </span>Forbidden,
+
+    <span class="attr">#[error(<span class="string">"unknown instance"</span>)]
+    #[sdk_error(code = <span class="number">12</span>)]
+    </span>UnknownInstance,
 
     <span class="attr">#[error(<span class="string">"core: {0}"</span>)]
     #[sdk_error(transparent)]

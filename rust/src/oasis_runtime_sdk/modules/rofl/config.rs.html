@@ -20,6 +20,10 @@
 <a href="#20" id="20">20</a>
 <a href="#21" id="21">21</a>
 <a href="#22" id="22">22</a>
+<a href="#23" id="23">23</a>
+<a href="#24" id="24">24</a>
+<a href="#25" id="25">25</a>
+<a href="#26" id="26">26</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::types::token;
 
 <span class="doccomment">/// Module configuration.
@@ -34,6 +38,10 @@
     </span><span class="kw">const </span>GAS_COST_CALL_REGISTER: u64 = <span class="number">100_000</span>;
     <span class="doccomment">/// Gas cost of rofl.IsAuthorizedOrigin call.
     </span><span class="kw">const </span>GAS_COST_CALL_IS_AUTHORIZED_ORIGIN: u64 = <span class="number">1000</span>;
+    <span class="doccomment">/// Gas cost of rofl.AuthorizedOriginNode call.
+    </span><span class="kw">const </span>GAS_COST_CALL_AUTHORIZED_ORIGIN_NODE: u64 = <span class="number">2000</span>;
+    <span class="doccomment">/// Gas cost of rofl.AuthorizedOriginEntity call.
+    </span><span class="kw">const </span>GAS_COST_CALL_AUTHORIZED_ORIGIN_ENTITY: u64 = <span class="number">2000</span>;
 
     <span class="doccomment">/// Amount of stake required for maintaining an application.
     ///
