@@ -23,6 +23,15 @@ func TestIdentifierV0(t *testing.T) {
 	appID = NewAppIDCreatorRoundIndex(sdkTesting.Bob.Address, 42, 1)
 	require.Equal("rofl1qzmh56f52yd0tcqh757fahzc7ec49s8kaguyylvu", appID.String())
 
+	appID = NewAppIDCreatorNonce(sdkTesting.Alice.Address, 0)
+	require.Equal("rofl1qqxxv77j6qy3rh50ah9kxehsh26e2hf7p5r6kwsq", appID.String())
+
+	appID = NewAppIDCreatorNonce(sdkTesting.Alice.Address, 42)
+	require.Equal("rofl1qr90w0m8j7h34c2hhpfmg2wgqmtu0q82vyaxv6e0", appID.String())
+
+	appID = NewAppIDCreatorNonce(sdkTesting.Bob.Address, 0)
+	require.Equal("rofl1qqzuxsh8fkga366kxrze8vpltdjge3rc7qg6tlrg", appID.String())
+
 	appID = NewAppIDGlobalName("test global app")
 	require.Equal("rofl1qrev5wq76npkmcv5wxkdxxcu4dhmu704yyl30h43", appID.String())
 }
