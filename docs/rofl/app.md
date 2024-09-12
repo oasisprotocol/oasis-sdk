@@ -29,11 +29,6 @@ through (properly authenticated) network connections. Connections can be
 authenticated via HTTPS/TLS or use other methods (e.g. light clients for other
 chains).
 
-As a first step we need to decide which ParaTime the ROFL app will authenticate
-to. This can be any ParaTime which has the ROFL module installed. For the rest
-of this chapter we will be using [Sapphire Testnet] which has all of the
-required functionality.
-
 [Sapphire runtime]: https://github.com/oasisprotocol/docs/blob/main/docs/dapp/sapphire/README.mdx
 [Sapphire Testnet]: https://github.com/oasisprotocol/docs/blob/main/docs/node/testnet/README.md#sapphire
 
@@ -41,7 +36,7 @@ required functionality.
 
 :::info
 
-You can find the entire project insite the Oasis SDK repository under
+You can find the entire project inside the Oasis SDK repository under
 [`examples/runtime-sdk/rofl-oracle`].
 
 <!-- markdownlint-disable line-length -->
@@ -109,13 +104,6 @@ following:
 
 ![code toml](../../examples/runtime-sdk/rofl-oracle/Cargo.toml "Cargo.toml")
 
-:::info
-
-We are using the Git repository directly instead of releasing Rust packages on
-crates.io.
-
-:::
-
 After you have declared the required dependencies the next thing is to define
 the ROFL app. To do this, create `src/main.rs` with the following content:
 
@@ -123,10 +111,131 @@ the ROFL app. To do this, create `src/main.rs` with the following content:
 ![code rust](../../examples/runtime-sdk/rofl-oracle/src/main.rs "src/main.rs")
 <!-- markdownlint-enable line-length -->
 
-## Register the App
+## Testing it on Sapphire Localnet
+
+The simplest way to test and debug your ROFL is locally.
+
+1. Disable trust root verification in [`src/main.rs`]. Replace:
+
+![code rust](../../examples/runtime-sdk/rofl-oracle/src/main.rs#consensus-trust-root)
+
+   with an empty root:
+
+   ```rust
+    fn consensus_trust_root() -> Option<TrustRoot> {
+        // DO NOT USE IN PRODUCTION!
+        None
+    }
+   ```
+
+2. Compile ROFL in the *unsafe* mode:
+
+   ```shell
+   oasis rofl build sgx --mode unsafe
+   ```
+
+3. Spin up the Sapphire Localnet docker container and mount your `rofl-oracle`
+   folder to `/rofls` inside the docker image:
+
+   ```shell
+   docker run -it -p8545:8545 -p8546:8546 -v rofl-oracle:/rofls ghcr.io/oasisprotocol/sapphire-localnet
+   ```
+
+In a few moments, the Sapphire Localnet will spin up and automatically launch
+your ROFL inside the compute node.
+
+```
+sapphire-localnet 2024-09-19-git2332dba (oasis-core: 24.2, sapphire-paratime: 0.8.2, oasis-web3-gateway: 5.1.0)
+
+ * Detected ROFL bundle: /rofls/rofl-oracle.orc
+ * Starting oasis-net-runner with sapphire...
+ * Waiting for Postgres to start....
+ * Waiting for Oasis node to start.....
+ * Starting oasis-web3-gateway...
+ * Bootstrapping network (this might take a minute)...
+ * Waiting for key manager......
+ * Populating accounts...
+
+Available Accounts
+==================
+(0) 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000 TEST)
+(1) 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 (10000 TEST)
+(2) 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC (10000 TEST)
+(3) 0x90F79bf6EB2c4f870365E785982E1f101E93b906 (10000 TEST)
+(4) 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65 (10000 TEST)
+
+Private Keys
+==================
+(0) 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+(1) 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+(2) 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
+(3) 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6
+(4) 0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a
+
+HD Wallet
+==================
+Mnemonic:       test test test test test test test test test test test junk
+Base HD Path:   m/44'/60'/0'/0/%d
+
+ * Configuring ROFL /rofls/rofl-oracle.orc:
+   Enclave ID: 0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLea/8+uR7hI7CyvHEm0soNTHhzEJfk1grNoBuUqQ9eNGg==
+   ROFL admin test:bob funded 10001 TEST
+   Compute node oasis1qp6tl30ljsrrqnw2awxxu2mtxk0qxyy2nymtsy90 funded 1000 TEST
+   App ID: rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
+
+WARNING: The chain is running in ephemeral mode. State will be lost after restart!
+
+ * Listening on http://localhost:8545 and ws://localhost:8546. Chain ID: 0x5afd
+ * Container start-up took 65 seconds, node log level is set to warn.
+```
+
+:::info
+
+Sapphire Localnet will always assign constant
+`0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLea/8+uR7hI7CyvHEm0soNTHhzEJfk1grNoBuUqQ9eNGg==`
+enclave cryptographic identity regardless of your ROFL binary.
+
+Sapphire Localnet will derive your ROFL app ID in deterministic order based on
+the ROFL admin account nonce. By default the app ID of the first registered ROFL
+will be `rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf` for ROFL admin account
+[`test:bob`].
+
+:::
+
+:::tip Debugging
+
+Any `println!` calls you use in your Rust code will be logged inside the
+`/serverdir/node/net-runner/network/compute-0/node.log` file.
+
+:::
+
+[`src/main.rs`]: #app-definition
+[`test:bob`]: https://github.com/oasisprotocol/cli/blob/master/docs/wallet.md#test-accounts
+
+## Deploying on Testnet and Mainnet
+
+As a first step we need to decide which ParaTime the ROFL app will authenticate
+to. This can be any ParaTime which has the ROFL module installed. For the rest
+of this section we will be using [Sapphire Testnet] which has all of the
+required functionality.
+
+### Define the Root of Trust
+
+In the [`src/main.rs`] code above update `consensus_trust_root()` to check the
+most recent block of the desired network:
+
+![code rust](../../examples/runtime-sdk/rofl-oracle/src/main.rs#consensus-trust-root)
+
+This way, your ROFL client will sync more quickly and not want to start on any
+other network or ParaTime. Read the [Consensus Trust Root] chapter to learn more
+about obtaining a correct block for the root of trust. 
+
+[Consensus Trust Root]: trust-root.md
+
+### Register the App
 
 Before the ROFL app can authenticate it needs to be registered as an app on the
-Sapphire Testnet. Anyone with enough stake can register an app by using the CLI.
+network. Anyone with enough stake can register an app by using the CLI.
 
 :::tip
 
@@ -148,7 +257,7 @@ To create a ROFL app on Sapphire Testnet you need at least 10,000 TEST.
 Registering a ROFL app assigns it a unique app identifier in the form of:
 
 ```
-rofl1qr98wz5t6q4x8ng6a5l5v7rqlx90j3kcnun5dwht
+rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
 ```
 
 This identifier can be used by on-chain smart contracts to ensure that they are
@@ -169,24 +278,7 @@ Policies can specify various parameters, but for initial registration we will
 specify a very broad policy which allows anyone to run your ROFL apps. To create
 a simple policy, create a file `policy.yml` with the following content:
 
-```yaml
-# Acceptable remote attestation quotes.
-quotes:
-    # Intel SGX/TDX PCS (DCAP) quotes.
-    pcs:
-        # Maximum age (in days) of the acceptable TCB infos.
-        tcb_validity_period: 30
-        # Minimum acceptable TCB evaluation data number. This ensures that TCB information
-        # provided by the TEE vendor is recent enough and includes relevant TCB recoveries.
-        min_tcb_evaluation_data_number: 17
-# Acceptable nodes that can endorse the enclaves.
-endorsements:
-    - any: {} # Any node can endorse.
-# Who is paying the transaction fees on behalf of the enclaves.
-fees: endorsing_node # The endorsing node is paying via a fee proxy.
-# How often (in epochs) do the registrations need to be refreshed.
-max_expiration: 3
-```
+![code yaml](../../examples/runtime-sdk/rofl-oracle/policy.yml "policy.yml")
 
 To then register a new ROFL app run the CLI as follows:
 
@@ -199,23 +291,18 @@ cover the gas fees and stake required for registration, the CLI will output the
 newly assigned app identifier in the following form:
 
 ```
-Created ROFL application: rofl1qp55evqls4qg6cjw5fnlv4al9ptc0fsakvxvd9uw
+Created ROFL application: rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
 ```
 
-You should use this identifier and replace the placeholder in `src/main.rs` as
-follows:
+You should use this identifier and replace it here in [`src/main.rs`]:
 
-```rust
-fn id() -> AppId {
-    "rofl1qp55evqls4qg6cjw5fnlv4al9ptc0fsakvxvd9uw".into()
-}
-```
+![code rust](../../examples/runtime-sdk/rofl-oracle/src/main.rs#app-id)
 
 This is it. Before final deployment, after we have built the app binary, we will
 need to update the app's registration to specify the app's cryptographic
 identity.
 
-## Oracle Contract Definition
+### Oracle Contract Definition
 
 :::info
 
@@ -236,18 +323,19 @@ authenticated ROFL app instances, performs trivial aggregation and stores the
 final aggregated result. See the [Sapphire quickstart] chapter for more details
 on building and deploying Sapphire smart contracts.
 
-Configure the deployment private key and the ROFL app identifier (be sure to use
-the identifier that you received during registration), then deploy the contract
-by running:
+Configure the `PRIVATE_KEY` of the deployment account and the ROFL app
+identifier (be sure to use the identifier that you received during
+registration), then deploy the contract by running:
 
-```bash
-PRIVATE_KEY="0x..." ROFL_APP_ID="rofl1..." npx hardhat run scripts/deploy.ts --network sapphire-testnet
+```shell
+PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" \
+npx hardhat deploy rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf --network sapphire-testnet
 ```
 
 After successful deployment you will see a message like:
 
 ```
-Oracle for ROFL app rofl1qp55evqls4qg6cjw5fnlv4al9ptc0fsakvxvd9uw deployed to 0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20
+Oracle for ROFL app rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf deployed to 0x5FbDB2315678afecb367f032d93F642f64180aa3
 ```
 
 You can now proceed to building and deploying the ROFL app itself. Remember the
@@ -258,22 +346,19 @@ next step.
 [prepared example project]: https://github.com/oasisprotocol/oasis-sdk/tree/main/examples/runtime-sdk/rofl-oracle/oracle
 [Sapphire quickstart]: https://github.com/oasisprotocol/sapphire-paratime/blob/main/docs/quickstart.mdx
 
-## Configuring the Oracle Contract Address
+### Configuring the Oracle Contract Address
 
 Back in the definition of the ROFL app you will need to specify the address of
 the oracle contract you deployed in the previous step. To do this, simply update
 the value of the `ORACLE_CONTRACT_ADDRESS` constant defined at the top of
 `main.rs`:
 
-```rust
-/// Address where the oracle contract is deployed.
-const ORACLE_CONTRACT_ADDRESS: &str = "0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20";
-```
+![code rust](../../examples/runtime-sdk/rofl-oracle/src/main.rs#oracle-contract-address)
 
 Make sure to use the contract address as output by the deployment script in the
 previous step.
 
-## Building the ROFL App
+### Building the ROFL App
 
 In order to quickly build the ROFL app you can use the helpers provided by the
 Oasis CLI as follows:
@@ -297,7 +382,7 @@ is actually deployed. In order to support reproducible builds, please see the
 
 :::
 
-## Updating the ROFL App Policy
+### Updating the ROFL App Policy
 
 Now that the app binaries are available, we need to update the policy with the
 correct cryptographic identity of the app. To obtain the identity of the app
@@ -310,13 +395,15 @@ oasis rofl identity rofl-oracle.orc
 This should output something like the following:
 
 ```
-yg1zKYeLa4QjEj08dkMtNn4JnUmNrpuov4QwC3X9ZBUJFtTP3jZWjgVaV8WjTmoAr2gcg9ymZYoUFM2y9rp1Jw==
+0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLea/8+uR7hI7CyvHEm0soNTHhzEJfk1grNoBuUqQ9eNGg==
 ```
 
 This represents the cryptographic identity of the ROFL app. We now need to
 update the policy to ensure that only exact instances of the built app can
 successfully authenticate under our app ID. To do so, update the previously
 generated `policy.yml` as follows (using your own app identity):
+
+![code yaml {11-12}](../../examples/runtime-sdk/rofl-oracle/policy2.yml "policy.yml")
 
 ```yaml
 # Acceptable remote attestation quotes.
@@ -330,7 +417,7 @@ quotes:
         min_tcb_evaluation_data_number: 17
 # Acceptable enclave cryptographic identities.
 enclaves:
-    - "yg1zKYeLa4QjEj08dkMtNn4JnUmNrpuov4QwC3X9ZBUJFtTP3jZWjgVaV8WjTmoAr2gcg9ymZYoUFM2y9rp1Jw=="
+    - "0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLea/8+uR7hI7CyvHEm0soNTHhzEJfk1grNoBuUqQ9eNGg=="
 # Acceptable nodes that can endorse the enclaves.
 endorsements:
     - any: {} # Any node can endorse.
@@ -341,10 +428,10 @@ max_expiration: 3
 ```
 
 Then to update the on-chain policy, run (using _your own app identifier_ instead
-of the placeholder `rofl1qp55evqls4qg6cjw5fnlv4al9ptc0fsakvxvd9uw`):
+of the placeholder `rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf`):
 
-```bash
-oasis rofl update rofl1qp55evqls4qg6cjw5fnlv4al9ptc0fsakvxvd9uw \
+```shell
+oasis rofl update rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf \
   --policy policy.yml \
   --admin self \
   --network testnet \
@@ -360,7 +447,7 @@ a random signer key is generated during build and used to sign the enclave.
 
 :::
 
-## Deploying the ROFL App
+### Deploying the ROFL App
 
 ROFL apps are deployed through Oasis nodes running on systems that support the
 targeted TEE (e.g. Intel SGX). If you don't have a running node where you could
@@ -399,28 +486,28 @@ oasis-node identity show-address -a unix:/node/data/internal.sock
 This should output an address like the following:
 
 ```
-oasis1qp66ryj9caek77kewkxxvjvkzypljhsdgvm5q34d
+oasis1qp6tl30ljsrrqnw2awxxu2mtxk0qxyy2nymtsy90
 ```
 
 You can then [transfer some tokens] to this address on Sapphire Testnet to make
 sure it will have funds to pay for registration fees:
 
-```bash
-oasis account transfer 10 oasis1qp66ryj9caek77kewkxxvjvkzypljhsdgvm5q34d \
+```shell
+oasis account transfer 10 oasis1qp6tl30ljsrrqnw2awxxu2mtxk0qxyy2nymtsy90 \
   --network testnet --paratime sapphire
 ```
 
 [client node documentation]: https://github.com/oasisprotocol/docs/blob/main/docs/node/run-your-node/paratime-node.mdx
 [transfer some tokens]: https://github.com/oasisprotocol/cli/blob/master/docs/account.md#transfer
 
-## Checking That the ROFL App is Running
+### Checking That the ROFL App is Running
 
 In order to check that the ROFL app is running and has successfully registered
 on chain, you can use the following command (using _your own app identifier_
 instead of the placeholder `rofl1qp55evqls4qg6cjw5fnlv4al9ptc0fsakvxvd9uw`):
 
-```bash
-oasis rofl show rofl1qp55evqls4qg6cjw5fnlv4al9ptc0fsakvxvd9uw \
+```shell
+oasis rofl show rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf \
   --network testnet --paratime sapphire
 ```
 
@@ -428,19 +515,19 @@ This will output some information about the registered ROFL app, its policy and
 its currently live instances:
 
 ```
-App ID:        rofl1qp55evqls4qg6cjw5fnlv4al9ptc0fsakvxvd9uw
-Admin:         oasis1qpwaggvmhwq5uk40clase3knt655nn2tdy39nz2f
-Staked amount: 10000.0 TEST
+App ID:        rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
+Admin:         oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx
+Staked amount: 10000.0 
 Policy:
   {
     "quotes": {
       "pcs": {
         "tcb_validity_period": 30,
-        "min_tcb_evaluation_data_number": 17
+        "min_tcb_evaluation_data_number": 16
       }
     },
     "enclaves": [
-      "yg1zKYeLa4QjEj08dkMtNn4JnUmNrpuov4QwC3X9ZBUJFtTP3jZWjgVaV8WjTmoAr2gcg9ymZYoUFM2y9rp1Jw=="
+      "0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLea/8+uR7hI7CyvHEm0soNTHhzEJfk1grNoBuUqQ9eNGg=="
     ],
     "endorsements": [
       {
@@ -452,9 +539,9 @@ Policy:
   }
 
 === Instances ===
-- RAK:        IPu1O+rQihlydy+V4QmegV9s7debnD+Xr+lNQjofNNQ=
-  Node ID:    JmwDKc45CJ4sepNFszV/tDGFHBoB9XduO0IMOdts+Lk=
-  Expiration: 37408
+- RAK:        AQhV3X660/+bR8REaWYkZNR6eAysFShylhe+7Ph00PM=
+  Node ID:    DbeoxcRwDO4Wh8bwq5rAR7wzhiB+LeYn+y7lFSGAZ7I=
+  Expiration: 9
 ```
 
 Here you can see that a single instance of the ROFL app is running on the given
@@ -462,23 +549,23 @@ node, its public runtime attestation key (RAK) and the epoch at which its
 registration will expire if not refreshed. ROFL apps must periodically refresh
 their registrations to ensure they don't expire.
 
-## Checking That the Oracle is Getting Updated
+### Checking That the Oracle is Getting Updated
 
 In order to check that the oracle is working, you can use the prepared
 `oracle-query` task in the Hardhat project. Simply run:
 
-```bash
-PRIVATE_KEY="0x..." npx hardhat oracle-query 0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20 --network sapphire-testnet
+```shell
+npx hardhat oracle-query 0x5FbDB2315678afecb367f032d93F642f64180aa3 --network sapphire-testnet
 ```
 
 And you should get an output like the following:
 
 ```
-Using oracle contract deployed at 0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20
-ROFL app:  rofl1qp55evqls4qg6cjw5fnlv4al9ptc0fsakvxvd9uw
+Using oracle contract deployed at 0x5FbDB2315678afecb367f032d93F642f64180aa3
+ROFL app:  rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
 Threshold: 1
-Last observation: 62210
-Last update at:   7773504
+Last observation: 63990
+Last update at:   656
 ```
 
 That's it! Your first ROFL oracle is running!

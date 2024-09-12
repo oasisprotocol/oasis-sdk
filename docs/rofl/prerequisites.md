@@ -60,7 +60,7 @@ file to your project's top-level directory as well.
 To install the appropriate version of the Rust toolchain, make sure you are
 in the project directory and run:
 
-```
+```shell
 rustup show
 ```
 
@@ -77,6 +77,21 @@ nightly-2022-08-22-x86_64-unknown-linux-gnu (overridden by '/code/rust-toolchain
 rustc 1.65.0-nightly (c0941dfb5 2022-08-21)
 ```
 
+For testing ROFL binaries on Sapphire Localnet, the binaries should be compiled
+for [MUSL C standard library]. You will need to add the following target to your
+rust environment:
+
+```shell
+rustup target add x86_64-unknown-linux-musl
+```
+
+Additionally, you will need the MUSL wrapper for gcc. On Ubuntu/Debian systems,
+you can install it by running:
+
+```shell
+sudo apt install musl-tools
+```
+
 <!-- markdownlint-disable line-length -->
 [rustup]: https://rustup.rs/
 [rust-upstream-rustup]: https://www.rust-lang.org/tools/install
@@ -84,6 +99,7 @@ rustc 1.65.0-nightly (c0941dfb5 2022-08-21)
 [Rust]: https://www.rust-lang.org/
 [`rust-toolchain.toml`]: https://github.com/oasisprotocol/oasis-sdk/tree/main/rust-toolchain.toml
 [rust-toolchain-precedence]: https://github.com/rust-lang/rustup/blob/master/README.md#override-precedence
+[MUSL C standard library]: https://musl.libc.org/
 <!-- markdownlint-enable line-length -->
 
 ## SGXS Utilities
