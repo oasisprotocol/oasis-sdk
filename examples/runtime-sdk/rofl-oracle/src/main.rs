@@ -56,17 +56,17 @@ impl OracleApp {
         let observation = tokio::task::spawn_blocking(move || -> Result<_> {
             // Request some data from Coingecko API.
             let rsp: serde_json::Value = rofl_utils::https::agent()
-                .get("https://api.coingecko.com/api/v3/simple/price?ids=oasis-network&vs_currencies=USD")
+                .get("https://www.binance.com/api/v3/ticker/price?symbol=ROSEUSDT")
                 .call()?
                 .body_mut()
                 .read_json()?;
 
             // Extract price and convert to integer.
             let price = rsp
-                .pointer("/oasis-network/usd")
+                .pointer("/price")
                 .ok_or(anyhow::anyhow!("price not available"))?
-                .as_f64()
-                .ok_or(anyhow::anyhow!("price malformed"))?;
+                .as_str().unwrap()
+                .parse::<f64>()?;
             let price = (price * 1_000_000.0) as u128;
 
             Ok(price)
