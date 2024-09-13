@@ -1,8 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
-import '@oasisprotocol/sapphire-hardhat';
 import "@nomicfoundation/hardhat-toolbox";
 
-import "./tasks/query";
+import "./src/tasks";
 
 const config: HardhatUserConfig = {
   solidity: "0.8.19",

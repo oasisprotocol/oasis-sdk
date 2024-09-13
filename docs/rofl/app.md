@@ -48,7 +48,7 @@ You can find the entire project inside the Oasis SDK repository under
 First we create the basic directory structure for the minimal runtime using
 Rust's [`cargo`]:
 
-```bash
+```shell
 cargo init rofl-oracle
 ```
 
@@ -282,7 +282,7 @@ a simple policy, create a file `policy.yml` with the following content:
 
 To then register a new ROFL app run the CLI as follows:
 
-```bash
+```shell
 oasis rofl create policy.yml --network testnet --paratime sapphire
 ```
 
@@ -363,7 +363,7 @@ previous step.
 In order to quickly build the ROFL app you can use the helpers provided by the
 Oasis CLI as follows:
 
-```bash
+```shell
 oasis rofl build sgx --network testnet --paratime sapphire
 ```
 
@@ -388,7 +388,7 @@ Now that the app binaries are available, we need to update the policy with the
 correct cryptographic identity of the app. To obtain the identity of the app
 that was just built run:
 
-```bash
+```shell
 oasis rofl identity rofl-oracle.orc
 ```
 
