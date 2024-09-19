@@ -25,7 +25,8 @@ runs:
       uses: codecov/codecov-action@v2.1.0
 
     - name: Archive code coverage results
-      uses: actions/upload-artifact@v2.2.4
+      uses: actions/upload-artifact@v4
       with:
         name: code-coverage-report
         path: cobertura.xml
+        overwrite: true
