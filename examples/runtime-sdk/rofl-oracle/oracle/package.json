@@ -3,7 +3,6 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^4.0.0",
     "@oasisprotocol/sapphire-contracts": "^0.2.10",
-    "@oasisprotocol/sapphire-hardhat": "^2.19.4",
     "hardhat": "^2.22.8"
   },
   "dependencies": {

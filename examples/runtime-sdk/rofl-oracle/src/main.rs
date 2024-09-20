@@ -1,7 +1,9 @@
 use oasis_runtime_sdk::modules::rofl::app::prelude::*;
 
 /// Address where the oracle contract is deployed.
-const ORACLE_CONTRACT_ADDRESS: &str = "0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20"; // TODO: Replace with your contract address.
+// #region oracle-contract-address
+const ORACLE_CONTRACT_ADDRESS: &str = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // TODO: Replace with your contract address.
+// #endregion oracle-contract-address
 
 struct OracleApp;
 
@@ -11,12 +13,15 @@ impl App for OracleApp {
     const VERSION: Version = sdk::version_from_cargo!();
 
     /// Identifier of the application (used for registrations).
+    // #region app-id
     fn id() -> AppId {
-        "rofl1qp55evqls4qg6cjw5fnlv4al9ptc0fsakvxvd9uw".into() // TODO: Replace with your application ID.
+        "rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf".into() // TODO: Replace with your application ID.
     }
+    // #endregion app-id
 
     /// Return the consensus layer trust root for this runtime; if `None`, consensus layer integrity
-    /// verification will not be performed.
+    /// verification will not be performed (e.g. Localnet).
+    // #region consensus-trust-root
     fn consensus_trust_root() -> Option<TrustRoot> {
         // The trust root below is for Sapphire Testnet at consensus height 22110615.
         Some(TrustRoot {
@@ -27,6 +32,7 @@ impl App for OracleApp {
                 .to_string(),
         })
     }
+    // #endregion consensus-trust-root
 
     async fn run(self: Arc<Self>, _env: Environment<Self>) {
         // We are running now!
@@ -50,17 +56,17 @@ impl OracleApp {
         let observation = tokio::task::spawn_blocking(move || -> Result<_> {
             // Request some data from Coingecko API.
             let rsp: serde_json::Value = rofl_utils::https::agent()
-                .get("https://api.coingecko.com/api/v3/simple/price?ids=oasis-network&vs_currencies=USD")
+                .get("https://www.binance.com/api/v3/ticker/price?symbol=ROSEUSDT")
                 .call()?
                 .body_mut()
                 .read_json()?;
 
             // Extract price and convert to integer.
             let price = rsp
-                .pointer("/oasis-network/usd")
+                .pointer("/price")
                 .ok_or(anyhow::anyhow!("price not available"))?
-                .as_f64()
-                .ok_or(anyhow::anyhow!("price malformed"))?;
+                .as_str().unwrap()
+                .parse::<f64>()?;
             let price = (price * 1_000_000.0) as u128;
 
             Ok(price)
