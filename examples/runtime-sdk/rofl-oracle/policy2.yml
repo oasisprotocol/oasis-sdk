@@ -7,9 +7,12 @@ quotes:
     # Minimum acceptable TCB evaluation data number. This ensures that TCB information
     # provided by the TEE vendor is recent enough and includes relevant TCB recoveries.
     min_tcb_evaluation_data_number: 17
+# Acceptable enclave cryptographic identities.
+enclaves:
+  - "0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLea/8+uR7hI7CyvHEm0soNTHhzEJfk1grNoBuUqQ9eNGg=="
 # Acceptable nodes that can endorse the enclaves.
 endorsements:
-  - "0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLea/8+uR7hI7CyvHEm0soNTHhzEJfk1grNoBuUqQ9eNGg=="
+  - any: {} # Any node can endorse.
 # Who is paying the transaction fees on behalf of the enclaves.
 fees: endorsing_node # The endorsing node is paying via a fee proxy.
 # How often (in epochs) do the registrations need to be refreshed.

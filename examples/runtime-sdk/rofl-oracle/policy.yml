@@ -7,6 +7,8 @@ quotes:
     # Minimum acceptable TCB evaluation data number. This ensures that TCB information
     # provided by the TEE vendor is recent enough and includes relevant TCB recoveries.
     min_tcb_evaluation_data_number: 17
+# Acceptable enclave cryptographic identities.
+enclaves:
 # Acceptable nodes that can endorse the enclaves.
 endorsements:
   - any: {} # Any node can endorse.
