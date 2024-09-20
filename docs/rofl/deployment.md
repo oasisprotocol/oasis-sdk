@@ -196,7 +196,7 @@ successfully authenticate under our app ID. To do so, update the previously
 generated `policy.yml` as follows (using your own app identity):
 
 <!-- markdownlint-disable line-length -->
-![code yaml {11-12}](../../examples/runtime-sdk/rofl-oracle/policy2.yml "policy.yml")
+![code yaml {10-12}](../../examples/runtime-sdk/rofl-oracle/policy2.yml "policy.yml")
 <!-- markdownlint-enable line-length -->
 
 Then to update the on-chain policy, run (using _your own app identifier_ instead
