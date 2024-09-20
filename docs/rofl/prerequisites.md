@@ -85,11 +85,11 @@ rust environment:
 rustup target add x86_64-unknown-linux-musl
 ```
 
-Additionally, you will need the MUSL wrapper for gcc. On Ubuntu/Debian systems,
-you can install it by running:
+Additionally, you will need the MUSL wrapper for gcc and the multilib package.
+On Ubuntu/Debian systems, you can install it by running:
 
 ```shell
-sudo apt install musl-tools
+sudo apt install musl-tools gcc-multilib
 ```
 
 <!-- markdownlint-disable line-length -->
