@@ -230,7 +230,7 @@ where
         // TODO: Consider using PolicyVerifier when it has the needed methods (and is async).
         let state = self.state.consensus_verifier.latest_state().await?;
         let runtime_id = self.state.host.get_runtime_id();
-        let enclaves = tokio::task::spawn_blocking(move || -> Result<_> {
+        let tee = tokio::task::spawn_blocking(move || -> Result<_> {
             let beacon = BeaconState::new(&state);
             let epoch = beacon.epoch()?;
             let registry = RegistryState::new(&state);
@@ -242,9 +242,7 @@ where
                 .ok_or(anyhow!("active runtime deployment not available"))?;
 
             match runtime.tee_hardware {
-                TEEHardware::TEEHardwareIntelSGX => Ok(HashSet::from_iter(
-                    ad.try_decode_tee::<SGXConstraints>()?.enclaves().clone(),
-                )),
+                TEEHardware::TEEHardwareIntelSGX => Ok(ad.try_decode_tee::<SGXConstraints>()?),
                 _ => Err(anyhow!("unsupported TEE platform")),
             }
         })
@@ -256,18 +254,16 @@ where
             .get_identity()
             .ok_or(anyhow!("local identity not available"))?
             .clone();
-        let quote_policy = identity
-            .quote_policy()
-            .ok_or(anyhow!("quote policy not available"))?;
+        let enclaves = HashSet::from_iter(tee.enclaves().clone());
+        let quote_policy = tee.policy();
         let enclave_rpc = RpcClient::new_runtime(
             session::Builder::default()
                 .use_endorsement(true)
-                .quote_policy(Some(quote_policy))
+                .quote_policy(Some(quote_policy.into()))
                 .local_identity(identity)
                 .remote_enclaves(Some(enclaves)),
             self.state.host.clone(),
             ENCLAVE_RPC_ENDPOINT_RONL,
-            vec![],
         );
 
         let response: Vec<u8> = enclave_rpc
@@ -278,6 +274,7 @@ where
                     method: method.to_string(),
                     args: cbor::to_vec(args),
                 },
+                vec![],
             )
             .await
             .into_result()?;
