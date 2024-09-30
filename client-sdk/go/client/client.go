@@ -13,6 +13,7 @@ import (
 	roothash "github.com/oasisprotocol/oasis-core/go/roothash/api"
 	"github.com/oasisprotocol/oasis-core/go/roothash/api/block"
 	coreClient "github.com/oasisprotocol/oasis-core/go/runtime/client/api"
+	"github.com/oasisprotocol/oasis-core/go/storage/mkvs/syncer"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
@@ -88,6 +89,10 @@ type RuntimeClient interface {
 
 	// Query makes a runtime-specific query.
 	Query(ctx context.Context, round uint64, method types.MethodName, args, rsp interface{}) error
+
+	// State returns a MKVS read syncer that can be used to read runtime state from a remote node
+	// and verify it against the trusted local root.
+	State() syncer.ReadSyncer
 }
 
 // EventDecoder is an event decoder interface.
@@ -464,6 +469,11 @@ func (rc *runtimeClient) Query(ctx context.Context, round uint64, method types.M
 		}
 	}
 	return nil
+}
+
+// Implements RuntimeClient.
+func (rc *runtimeClient) State() syncer.ReadSyncer {
+	return rc.cc.State()
 }
 
 // New creates a new runtime client for the specified runtime.

@@ -1,10 +1,10 @@
 //! Simple keyvalue runtime.
 use std::collections::BTreeMap;
 
+#[cfg(feature = "debug-mock-sgx")]
+use oasis_runtime_sdk::keymanager::TrustedSigners;
 use oasis_runtime_sdk::{
-    self as sdk, config,
-    keymanager::TrustedSigners,
-    modules,
+    self as sdk, config, modules,
     types::token::{BaseUnits, Denomination},
     Module as _, Version,
 };
@@ -46,8 +46,9 @@ impl sdk::Runtime for Runtime {
         modules::core::Module<Config>,
     );
 
+    #[cfg(feature = "debug-mock-sgx")]
     fn trusted_signers() -> Option<TrustedSigners> {
-        Some(TrustedSigners::default())
+        Some(TrustedSigners::unsafe_mock())
     }
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {

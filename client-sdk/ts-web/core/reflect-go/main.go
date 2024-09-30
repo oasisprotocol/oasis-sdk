@@ -570,6 +570,7 @@ var skipMethods = map[string]bool{
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Vault":      true,
 	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Secrets":         true,
 	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Churp":           true,
+	"github.com/oasisprotocol/oasis-core/go/runtime/client/api.RuntimeClient.State": true,
 }
 var skipMethodsConsulted = map[string]bool{}
 

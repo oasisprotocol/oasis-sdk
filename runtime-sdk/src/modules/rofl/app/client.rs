@@ -177,6 +177,7 @@ struct ClientImpl<A: App> {
     state: Arc<processor::State<A>>,
     cmdq: mpsc::WeakSender<processor::Command>,
     latest_round: Arc<AtomicU64>,
+    rpc: Arc<RpcClient>,
 }
 
 impl<A> ClientImpl<A>
@@ -185,9 +186,21 @@ where
 {
     fn new(state: Arc<processor::State<A>>, cmdq: mpsc::WeakSender<processor::Command>) -> Self {
         Self {
-            state,
             cmdq,
             latest_round: Arc::new(AtomicU64::new(0)),
+            rpc: Arc::new(RpcClient::new_runtime(
+                state.host.clone(),
+                ENCLAVE_RPC_ENDPOINT_RONL,
+                session::Builder::default()
+                    .use_endorsement(true)
+                    .quote_policy(None) // Forbid all until configured.
+                    .local_identity(state.identity.clone())
+                    .remote_enclaves(Some(HashSet::new())), // Forbid all until configured.
+                2, // Maximum number of sessions (one extra for reserve).
+                1, // Maximum number of sessions per peer (we only communicate with RONL).
+                1, // Stale session timeout.
+            )),
+            state,
         }
     }
 
@@ -230,7 +243,7 @@ where
         // TODO: Consider using PolicyVerifier when it has the needed methods (and is async).
         let state = self.state.consensus_verifier.latest_state().await?;
         let runtime_id = self.state.host.get_runtime_id();
-        let enclaves = tokio::task::spawn_blocking(move || -> Result<_> {
+        let tee = tokio::task::spawn_blocking(move || -> Result<_> {
             let beacon = BeaconState::new(&state);
             let epoch = beacon.epoch()?;
             let registry = RegistryState::new(&state);
@@ -242,35 +255,19 @@ where
                 .ok_or(anyhow!("active runtime deployment not available"))?;
 
             match runtime.tee_hardware {
-                TEEHardware::TEEHardwareIntelSGX => Ok(HashSet::from_iter(
-                    ad.try_decode_tee::<SGXConstraints>()?.enclaves().clone(),
-                )),
+                TEEHardware::TEEHardwareIntelSGX => Ok(ad.try_decode_tee::<SGXConstraints>()?),
                 _ => Err(anyhow!("unsupported TEE platform")),
             }
         })
         .await??;
 
-        let identity = self
-            .state
-            .host
-            .get_identity()
-            .ok_or(anyhow!("local identity not available"))?
-            .clone();
-        let quote_policy = identity
-            .quote_policy()
-            .ok_or(anyhow!("quote policy not available"))?;
-        let enclave_rpc = RpcClient::new_runtime(
-            session::Builder::default()
-                .use_endorsement(true)
-                .quote_policy(Some(quote_policy))
-                .local_identity(identity)
-                .remote_enclaves(Some(enclaves)),
-            self.state.host.clone(),
-            ENCLAVE_RPC_ENDPOINT_RONL,
-            vec![],
-        );
+        let enclaves = HashSet::from_iter(tee.enclaves().clone());
+        let quote_policy = tee.policy();
+        self.rpc.update_enclaves(Some(enclaves)).await;
+        self.rpc.update_quote_policy(quote_policy).await;
 
-        let response: Vec<u8> = enclave_rpc
+        let response: Vec<u8> = self
+            .rpc
             .secure_call(
                 METHOD_QUERY,
                 QueryRequest {
@@ -278,6 +275,7 @@ where
                     method: method.to_string(),
                     args: cbor::to_vec(args),
                 },
+                vec![],
             )
             .await
             .into_result()?;
@@ -323,6 +321,7 @@ where
             state: self.state.clone(),
             cmdq: self.cmdq.clone(),
             latest_round: self.latest_round.clone(),
+            rpc: self.rpc.clone(),
         }
     }
 }

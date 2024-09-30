@@ -47,7 +47,7 @@ impl sdk::Runtime for Runtime {
 
     #[cfg(feature = "confidential")]
     fn trusted_signers() -> Option<TrustedSigners> {
-        Some(TrustedSigners::default())
+        Some(TrustedSigners::unsafe_mock())
     }
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {

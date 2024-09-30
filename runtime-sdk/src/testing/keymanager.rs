@@ -5,7 +5,13 @@ use std::{collections::HashMap, sync::Mutex};
 pub use crate::keymanager::{
     KeyManagerError, KeyPair, KeyPairId, SignedPublicKey, StateKey, TrustedSigners,
 };
-use crate::{core::consensus::beacon::EpochTime, keymanager::KeyManager};
+use crate::{
+    core::{
+        common::{crypto::signature::PublicKey, namespace::Namespace},
+        consensus::beacon::EpochTime,
+    },
+    keymanager::KeyManager,
+};
 
 #[derive(Default)]
 pub struct MockKeyManagerClient {
@@ -31,6 +37,14 @@ impl MockKeyManagerClient {
 }
 
 impl KeyManager for MockKeyManagerClient {
+    fn runtime_id(&self) -> Option<Namespace> {
+        None
+    }
+
+    fn runtime_signing_key(&self) -> Option<PublicKey> {
+        None
+    }
+
     fn clear_cache(&self) {
         // Nothing to do here, no cache.
     }
