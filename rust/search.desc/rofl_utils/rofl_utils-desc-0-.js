@@ -1,0 +1,1 @@
+searchState.loadedDescShard("rofl_utils", 0, "ROFL utilities.\nA very simple HTTPS client that can be used inside ROFL …\nAn <code>ureq::Agent</code> that can be used to perform blocking HTTPS …\nAn <code>ureq::Agent</code> with given configuration that can be used …")
