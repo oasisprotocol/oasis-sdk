@@ -37,7 +37,8 @@ jobs:
             --package oasis-runtime-sdk-contracts \
             --package oasis-contract-sdk \
             --package oasis-contract-sdk-types \
-            --package oasis-contract-sdk-storage
+            --package oasis-contract-sdk-storage \
+            --package rofl-utils
 
       - name: Deploy rust to api-reference branch
         uses: peaceiris/actions-gh-pages@v4
