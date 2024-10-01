@@ -1,14 +1,17 @@
 [package]
 name = "oasis-runtime-sdk"
-version = "0.9.6"
+version = "0.10.0"
 authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
 cbor = { version = "0.5.1", package = "oasis-cbor" }
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v24.2" }
-oasis-core-keymanager = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v24.2" }
+# XXX: Change to release tag once ready.
+#oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v24.3" }
+#oasis-core-keymanager = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v24.3" }
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", branch = "kostko/feature/tdx-provisioner" }
+oasis-core-keymanager = { git = "https://github.com/oasisprotocol/oasis-core", branch = "kostko/feature/tdx-provisioner" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
