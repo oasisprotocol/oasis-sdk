@@ -36,7 +36,7 @@ impl<'ctx, C: Context, Cfg: Config> OasisDB<'ctx, C, Cfg> {
 }
 
 impl<'ctx, C: Context, Cfg: Config> Database for OasisDB<'ctx, C, Cfg> {
-    type Error = Infallible;
+    type Error = String;
 
     /// Get basic account information.
     fn basic(&mut self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
@@ -76,8 +76,7 @@ impl<'ctx, C: Context, Cfg: Config> Database for OasisDB<'ctx, C, Cfg> {
 
     /// Get account code by its hash (unimplemented).
     fn code_by_hash(&mut self, _code_hash: B256) -> Result<Bytecode, Self::Error> {
-        // XXX: return an error here instead.
-        Ok(Bytecode::new())
+        Err("getting code by hash is not supported".to_string())
     }
 
     /// Get storage value of address at index.
