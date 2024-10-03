@@ -85,11 +85,12 @@ rust environment:
 rustup target add x86_64-unknown-linux-musl
 ```
 
-Additionally, you will need the MUSL wrapper for gcc and the multilib package.
-On Ubuntu/Debian systems, you can install it by running:
+Additionally, you will need the MUSL wrapper for gcc, the multilib package and
+clang for compiling the `mbedtls-sys-auto` dependency. On Ubuntu/Debian systems,
+you can install those by running:
 
 ```shell
-sudo apt install musl-tools gcc-multilib
+sudo apt install musl-tools gcc-multilib clang
 ```
 
 <!-- markdownlint-disable line-length -->
