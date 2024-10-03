@@ -9,6 +9,7 @@ mod signed_call;
 pub mod state;
 pub mod types;
 
+use base64::prelude::*;
 use revm::{
     primitives::{ExecutionResult, Output, TxKind},
     Evm,
@@ -291,10 +292,85 @@ impl<Cfg: Config> API for Module<Cfg> {
         ctx: &C,
         call: types::SimulateCallQuery,
     ) -> Result<Vec<u8>, Error> {
-        todo!()
+        let (
+            types::SimulateCallQuery {
+                gas_price,
+                gas_limit,
+                caller,
+                address,
+                value,
+                data,
+            },
+            tx_metadata,
+        ) = Self::decode_simulate_call_query(ctx, call)?;
+
+        let (method, body, exec): (_, _, Box<dyn FnOnce() -> Result<_, _>>) = match address {
+            Some(address) => {
+                // Address is set, this is a simulated `evm.Call`.
+                (
+                    "evm.Call",
+                    cbor::to_value(types::Call {
+                        address,
+                        value,
+                        data: data.clone(),
+                    }),
+                    Box::new(move || Self::evm_call(ctx, caller, address, value, data, false)),
+                )
+            }
+            None => {
+                // Address is not set, this is a simulated `evm.Create`.
+                (
+                    "evm.Create",
+                    cbor::to_value(types::Create {
+                        value,
+                        init_code: data.clone(),
+                    }),
+                    Box::new(|| Self::evm_create(ctx, caller, value, data, false)),
+                )
+            }
+        };
+        let tx = transaction::Transaction {
+            version: 1,
+            call: transaction::Call {
+                format: transaction::CallFormat::Plain,
+                method: method.to_owned(),
+                body,
+                ..Default::default()
+            },
+            auth_info: transaction::AuthInfo {
+                signer_info: vec![transaction::SignerInfo {
+                    address_spec: transaction::AddressSpec::Internal(
+                        transaction::CallerAddress::EthAddress(caller.into()),
+                    ),
+                    nonce: 0,
+                }],
+                fee: transaction::Fee {
+                    amount: token::BaseUnits::new(
+                        gas_price
+                            .checked_mul(U256::from(gas_limit))
+                            .ok_or(Error::FeeOverflow)?
+                            .as_u128(),
+                        Cfg::TOKEN_DENOMINATION,
+                    ),
+                    gas: gas_limit,
+                    consensus_messages: 0,
+                    proxy: None,
+                },
+                ..Default::default()
+            },
+        };
+
+        let evm_result = CurrentState::with_transaction_opts(
+            Options::new()
+                .with_tx(TransactionWithMeta::internal(tx))
+                .with_mode(Mode::Simulate),
+            || TransactionResult::Rollback(exec()),
+        );
+        Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 }
 
+// TODO: Most of evm_create and evm_call is the same, group the common code into one method as in the old implementation.
 impl<Cfg: Config> Module<Cfg> {
     fn evm_create<C: Context>(
         ctx: &C,
@@ -317,15 +393,25 @@ impl<Cfg: Config> Module<Cfg> {
 
         let tx = evm.transact().unwrap(); // XXX: transact_commit? + err checking
 
-        let ExecutionResult::Success {
-            output: Output::Create(_, Some(address)),
-            ..
-        } = tx.result
-        else {
-            return Err(todo!());
+        let ret = match tx.result {
+            ExecutionResult::Success {
+                reason,
+                gas_used,
+                gas_refunded,
+                logs,
+                output,
+            } => Ok(output.into_data().to_vec()),
+            ExecutionResult::Revert { gas_used, output } => {
+                Err(Error::Reverted(BASE64_STANDARD.encode(output.to_vec()))) // XXX: to_vec maybe not needed (check encoding)
+            }
+            ExecutionResult::Halt { reason, gas_used } => {
+                Err(crate::Error::ExecutionFailed(format!("{:?}", reason)))
+            }
         };
+        // TODO: logs? also clamp data.
+        // TODO: gas...
 
-        todo!()
+        ret
     }
 
     fn evm_call<C: Context>(
@@ -336,7 +422,39 @@ impl<Cfg: Config> Module<Cfg> {
         data: Vec<u8>,
         estimate_gas: bool,
     ) -> Result<Vec<u8>, Error> {
-        todo!()
+        let mut db = db::OasisDB::<'_, C, Cfg>::new(ctx);
+
+        let mut evm = Evm::builder()
+            .with_db(db)
+            .modify_tx_env(|tx| {
+                tx.transact_to = TxKind::Call(address.0.into());
+                tx.caller = caller.0.into();
+                tx.value = revm::primitives::U256::from_be_bytes(value.into()); // XXX: is BE ok?
+                tx.data = data.into();
+            })
+            .build();
+
+        let tx = evm.transact().unwrap(); // XXX: transact_commit? + err checking
+
+        let ret = match tx.result {
+            ExecutionResult::Success {
+                reason,
+                gas_used,
+                gas_refunded,
+                logs,
+                output,
+            } => Ok(output.into_data().to_vec()),
+            ExecutionResult::Revert { gas_used, output } => {
+                Err(Error::Reverted(BASE64_STANDARD.encode(output.to_vec()))) // XXX: to_vec maybe not needed (check encoding)
+            }
+            ExecutionResult::Halt { reason, gas_used } => {
+                Err(crate::Error::ExecutionFailed(format!("{:?}", reason)))
+            }
+        };
+        // TODO: logs? also clamp data.
+        // TODO: gas...
+
+        ret
     }
 
     fn derive_caller() -> Result<H160, Error> {
