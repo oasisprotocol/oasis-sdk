@@ -137,7 +137,7 @@ jobs:
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
         with:
-          node-version: "16.x"
+          node-version: "18.x"
           cache: npm
           cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
 
@@ -192,7 +192,7 @@ jobs:
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
         with:
-          node-version: "16.x"
+          node-version: "18.x"
           cache: npm
           cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
 
@@ -234,12 +234,7 @@ jobs:
         working-directory: client-sdk/ts-web/core
         run: npm run-script test-e2e-cy
 
-      - name: Set up Node.js 18
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18.x"
-
-      - name: Node.js 18 e2e run
+      - name: Node.js e2e run
         working-directory: client-sdk/ts-web/core
         run: npm run-script test-e2e-node
 
@@ -269,7 +264,7 @@ jobs:
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
         with:
-          node-version: "16.x"
+          node-version: "18.x"
           cache: npm
           cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
 
@@ -312,7 +307,7 @@ jobs:
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
         with:
-          node-version: "16.x"
+          node-version: "18.x"
           cache: npm
           cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
 
@@ -424,7 +419,7 @@ jobs:
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
         with:
-          node-version: "16.x"
+          node-version: "18.x"
           cache: npm
           cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
 
@@ -446,7 +441,7 @@ jobs:
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
         with:
-          node-version: "16.x"
+          node-version: "18.x"
           cache: npm
           cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
 
