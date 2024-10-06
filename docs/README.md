@@ -59,5 +59,5 @@ transactions, look up emitted events and query the runtime.
 
 <!-- markdownlint-disable line-length -->
 [Oasis Core Runtime Layer]:
-  https://github.com/oasisprotocol/oasis-core/blob/master/docs/runtime/index.md
+  https://github.com/oasisprotocol/oasis-core/blob/master/docs/runtime/README.md
 <!-- markdownlint-enable line-length -->
