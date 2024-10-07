@@ -105,7 +105,7 @@ func Connect(ctx context.Context, net *config.Network) (Connection, error) {
 // omitting the chain context check.
 func ConnectNoVerify(_ context.Context, net *config.Network) (Connection, error) {
 	var dialOpts []grpc.DialOption
-	switch net.IsLocalRPC() {
+	switch cmnGrpc.IsLocalAddress(net.RPC) {
 	case true:
 		// No TLS needed for local nodes.
 		dialOpts = append(dialOpts, grpc.WithTransportCredentials(insecure.NewCredentials()))

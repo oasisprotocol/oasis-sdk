@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 )
@@ -135,9 +134,4 @@ func (n *Network) Validate() error {
 	}
 
 	return nil
-}
-
-// IsLocalRPC checks whether the RPC endpoint points to a local UNIX socket.
-func (n *Network) IsLocalRPC() bool {
-	return strings.HasPrefix(n.RPC, "unix:")
 }
