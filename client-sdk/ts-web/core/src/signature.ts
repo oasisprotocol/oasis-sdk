@@ -24,7 +24,7 @@ export interface ContextSigner {
     sign(context: string, message: Uint8Array): Promise<Uint8Array>;
 }
 
-export function verify(
+export async function verify(
     publicKey: Uint8Array,
     context: string,
     message: Uint8Array,
@@ -36,8 +36,8 @@ export function verify(
     return sigOk;
 }
 
-export function openSigned(context: string, signed: types.SignatureSigned) {
-    const sigOk = verify(
+export async function openSigned(context: string, signed: types.SignatureSigned) {
+    const sigOk = await verify(
         signed.signature.public_key,
         context,
         signed.untrusted_raw_value,
@@ -57,7 +57,7 @@ export async function signSigned(signer: ContextSigner, context: string, rawValu
     } as types.SignatureSigned;
 }
 
-export function openMultiSigned(context: string, multiSigned: types.SignatureMultiSigned) {
+export async function openMultiSigned(context: string, multiSigned: types.SignatureMultiSigned) {
     const signerMessage = prepareSignerMessage(context, multiSigned.untrusted_raw_value);
     for (const signature of multiSigned.signatures) {
         const sigOk = nacl.sign.detached.verify(
