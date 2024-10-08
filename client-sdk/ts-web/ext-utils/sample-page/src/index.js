@@ -47,7 +47,7 @@ export const playground = (async function () {
         oasis.staking.addressToBech32(oasis.staking.addressFromPublicKey(publicKey)),
     );
 
-    const dst = oasis.signature.NaclSigner.fromRandom('this key is not important');
+    const dst = await oasis.signature.WebCryptoSigner.generate(false);
     const tw = oasis.staking
         .transferWrapper()
         .setNonce(101n)

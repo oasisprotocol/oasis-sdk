@@ -145,14 +145,12 @@ export const playground = (async function () {
         console.log(`ready ${waitEnd2 - waitStart2} ms`);
     }
 
-    const alice = oasis.signature.NaclSigner.fromSeed(
+    const alice = await oasis.signature.WebCryptoSigner.fromPrivateKey(
         oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')),
-        'this key is not important',
     );
     const csAlice = new oasis.signature.BlindContextSigner(alice);
-    const bob = oasis.signature.NaclSigner.fromSeed(
+    const bob = await oasis.signature.WebCryptoSigner.fromPrivateKey(
         oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: bob')),
-        'this key is not important',
     );
     const csBob = new oasis.signature.BlindContextSigner(bob);
 

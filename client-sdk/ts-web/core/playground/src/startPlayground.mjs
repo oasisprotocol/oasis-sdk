@@ -35,8 +35,8 @@ export async function startPlayground() {
 
     // Try sending a transaction.
     {
-        const src = oasis.signature.NaclSigner.fromRandom('this key is not important');
-        const dst = oasis.signature.NaclSigner.fromRandom('this key is not important');
+        const src = await oasis.signature.WebCryptoSigner.generate(false);
+        const dst = await oasis.signature.WebCryptoSigner.generate(false);
         console.log('src', src, 'dst', dst);
 
         const chainContext = await nic.consensusGetChainContext();
