@@ -24,6 +24,14 @@ export interface ContextSigner {
     sign(context: string, message: Uint8Array): Promise<Uint8Array>;
 }
 
+async function verifyPrepared(
+    publicKey: Uint8Array,
+    signerMessage: Uint8Array,
+    signature: Uint8Array,
+) {
+    return nacl.sign.detached.verify(signerMessage, signature, publicKey);
+}
+
 export async function verify(
     publicKey: Uint8Array,
     context: string,
@@ -31,7 +39,7 @@ export async function verify(
     signature: Uint8Array,
 ) {
     const signerMessage = prepareSignerMessage(context, message);
-    const sigOk = nacl.sign.detached.verify(signerMessage, signature, publicKey);
+    const sigOk = await verifyPrepared(publicKey, signerMessage, signature);
 
     return sigOk;
 }
@@ -60,10 +68,10 @@ export async function signSigned(signer: ContextSigner, context: string, rawValu
 export async function openMultiSigned(context: string, multiSigned: types.SignatureMultiSigned) {
     const signerMessage = prepareSignerMessage(context, multiSigned.untrusted_raw_value);
     for (const signature of multiSigned.signatures) {
-        const sigOk = nacl.sign.detached.verify(
+        const sigOk = await verifyPrepared(
+            signature.public_key,
             signerMessage,
             signature.signature,
-            signature.public_key,
         );
         if (!sigOk) throw new Error('signature verification failed');
     }
