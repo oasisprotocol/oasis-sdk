@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist/",
+        "noImplicitAny": true,
+        "strict": true,
+        "module": "CommonJS",
+        "target": "ES2020",
+        "declaration": true,
+        "esModuleInterop": true
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "typedocOptions": {
+        "entryPoints": ["src/index.ts"],
+        "out": "docs/api",
+        "excludeInternal": true,
+        "excludePrivate": true
+    }
+}
