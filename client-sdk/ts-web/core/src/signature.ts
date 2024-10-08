@@ -112,6 +112,68 @@ export class BlindContextSigner implements ContextSigner {
     }
 }
 
+export class WebCryptoSigner implements Signer {
+    privateKey: CryptoKey;
+    publicKey: Uint8Array;
+
+    constructor(privateKey: CryptoKey, publicKey: Uint8Array) {
+        this.privateKey = privateKey;
+        this.publicKey = publicKey;
+    }
+
+    /**
+     * Create an instance with a newly generated key.
+     */
+    static async generate(extractable: boolean) {
+        const keyPair = await crypto.subtle.generateKey('Ed25519', extractable, ['sign', 'verify']);
+        return await WebCryptoSigner.fromKeyPair(keyPair);
+    }
+
+    /**
+     * Create an instance from a CryptoKeyPair.
+     */
+    static async fromKeyPair(keyPair: CryptoKeyPair) {
+        const publicRaw = new Uint8Array(await crypto.subtle.exportKey('raw', keyPair.publicKey));
+        return new WebCryptoSigner(keyPair.privateKey, publicRaw);
+    }
+
+    /**
+     * Create an instance from a 32 bytes private key.
+     */
+    static async fromPrivateKey(privateKey: Uint8Array, extracable: boolean, publicKey: Uint8Array) {
+        const der = misc.concat(
+            new Uint8Array([
+                // PrivateKeyInfo
+                0x30, 0x2E,
+                // version 0
+                0x02, 0x01, 0x00,
+                // privateKeyAlgorithm 1.3.101.112
+                0x30, 0x05, 0x06, 0x03, 0x2B, 0x65, 0x70,
+                // privateKey
+                0x04, 0x22, 0x04, 0x20,
+            ]),
+            privateKey,
+        );
+        return await WebCryptoSigner.fromPKCS8(der, extracable, publicKey);
+    }
+
+    /**
+     * Create an instance from a PKCS #8 PrivateKeyInfo structure.
+     */
+    static async fromPKCS8(der: Uint8Array, extracable: boolean, publicKey: Uint8Array) {
+        const privateKey = await crypto.subtle.importKey('pkcs8', der, 'Ed25519', extracable, ['sign']);
+        return new WebCryptoSigner(privateKey, publicKey);
+    }
+
+    public(): Uint8Array {
+        return this.publicKey;
+    }
+
+    async sign(message: Uint8Array): Promise<Uint8Array> {
+        return new Uint8Array(await crypto.subtle.sign('Ed25519', this.privateKey, message));
+    }
+}
+
 export type MessageHandlerBare<PARSED> = (v: PARSED) => void;
 export type MessageHandlersBare = {[context: string]: MessageHandlerBare<never>};
 export type MessageHandlerWithChainContext<PARSED> = (chainContext: string, v: PARSED) => void;
