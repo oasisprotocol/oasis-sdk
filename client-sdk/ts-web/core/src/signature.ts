@@ -29,7 +29,8 @@ async function verifyPrepared(
     signerMessage: Uint8Array,
     signature: Uint8Array,
 ) {
-    return nacl.sign.detached.verify(signerMessage, signature, publicKey);
+    const publicKeyCK = await crypto.subtle.importKey('raw', publicKey, 'Ed25519', false, ['verify']);
+    return await crypto.subtle.verify('Ed25519', publicKeyCK, signature, signerMessage);
 }
 
 export async function verify(
