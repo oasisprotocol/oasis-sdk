@@ -101,6 +101,7 @@ sudo apt install musl-tools gcc-multilib clang
 [`rust-toolchain.toml`]: https://github.com/oasisprotocol/oasis-sdk/tree/main/rust-toolchain.toml
 [rust-toolchain-precedence]: https://github.com/rust-lang/rustup/blob/master/README.md#override-precedence
 [MUSL C standard library]: https://musl.libc.org/
+[localnet]: /dapps/tools/localnet
 <!-- markdownlint-enable line-length -->
 
 ## SGXS Utilities
