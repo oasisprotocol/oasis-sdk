@@ -13,7 +13,7 @@ export class NaclSigner implements oasis.signature.Signer {
     }
 
     /**
-     * Generate a keypair from a random seed
+     * Generates a keypair from a random seed.
      * @returns Instance of NaclSigner
      */
     static fromRandom() {
@@ -23,8 +23,8 @@ export class NaclSigner implements oasis.signature.Signer {
     }
 
     /**
-     * Instanciate from a given secret
-     * @param secret 64 bytes ed25519 secret (h) that will be used to sign messages
+     * Instantiates from a given 64-bite `nacl.sign` secret key.
+     * @param secret Secret key
      * @returns Instance of NaclSigner
      */
     static fromSecret(secret: Uint8Array) {
@@ -33,8 +33,8 @@ export class NaclSigner implements oasis.signature.Signer {
     }
 
     /**
-     * Instanciate from a given seed
-     * @param seed 32 bytes ed25519 seed (k) that will deterministically generate a private key
+     * Instantiates from a given 32-byte `nacl.sign` seed.
+     * @param seed Seed
      * @returns Instance of NaclSigner
      */
     static fromSeed(seed: Uint8Array) {
@@ -43,7 +43,7 @@ export class NaclSigner implements oasis.signature.Signer {
     }
 
     /**
-     * Returns the 32 bytes public key of this key pair
+     * Returns the 32-byte public key of this key pair.
      * @returns Public key
      */
     public(): Uint8Array {
@@ -51,7 +51,7 @@ export class NaclSigner implements oasis.signature.Signer {
     }
 
     /**
-     * Signs the given message
+     * Signs the given message.
      * @param message Bytes to sign
      * @returns Signed message
      */
