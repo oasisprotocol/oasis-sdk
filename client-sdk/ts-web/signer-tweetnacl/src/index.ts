@@ -3,47 +3,43 @@ import * as nacl from 'tweetnacl';
 import * as oasis from '@oasisprotocol/client';
 
 /**
- * An in-memory signer based on tweetnacl. We've included this for development.
+ * An in-memory signer based on tweetnacl.
  */
 export class NaclSigner implements oasis.signature.Signer {
     key: nacl.SignKeyPair;
 
-    constructor(key: nacl.SignKeyPair, note: string) {
-        if (note !== 'this key is not important') throw new Error('insecure signer implementation');
+    constructor(key: nacl.SignKeyPair) {
         this.key = key;
     }
 
     /**
      * Generate a keypair from a random seed
-     * @param note Set to 'this key is not important' to acknowledge the risks
      * @returns Instance of NaclSigner
      */
-    static fromRandom(note: string) {
+    static fromRandom() {
         const secret = new Uint8Array(32);
         crypto.getRandomValues(secret);
-        return NaclSigner.fromSeed(secret, note);
+        return NaclSigner.fromSeed(secret);
     }
 
     /**
      * Instanciate from a given secret
      * @param secret 64 bytes ed25519 secret (h) that will be used to sign messages
-     * @param note Set to 'this key is not important' to acknowledge the risks
      * @returns Instance of NaclSigner
      */
-    static fromSecret(secret: Uint8Array, note: string) {
+    static fromSecret(secret: Uint8Array) {
         const key = nacl.sign.keyPair.fromSecretKey(secret);
-        return new NaclSigner(key, note);
+        return new NaclSigner(key);
     }
 
     /**
      * Instanciate from a given seed
      * @param seed 32 bytes ed25519 seed (k) that will deterministically generate a private key
-     * @param note Set to 'this key is not important' to acknowledge the risks
      * @returns Instance of NaclSigner
      */
-    static fromSeed(seed: Uint8Array, note: string) {
+    static fromSeed(seed: Uint8Array) {
         const key = nacl.sign.keyPair.fromSeed(seed);
-        return new NaclSigner(key, note);
+        return new NaclSigner(key);
     }
 
     /**
