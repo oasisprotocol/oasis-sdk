@@ -1,7 +1,7 @@
 import {hmac} from '@noble/hashes/hmac';
 import {sha512} from '@noble/hashes/sha512';
 import {SignKeyPair, sign} from 'tweetnacl';
-import {generateMnemonic, mnemonicToSeed, validateMnemonic} from 'bip39';
+import {generateMnemonic, mnemonicToSeed} from 'bip39';
 import {concat} from './misc';
 
 const ED25519_CURVE = 'ed25519 seed';
