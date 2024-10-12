@@ -1,6 +1,5 @@
 import {hmac} from '@noble/hashes/hmac';
 import {sha512} from '@noble/hashes/sha512';
-import {SignKeyPair, sign} from 'tweetnacl';
 import {generateMnemonic, mnemonicToSeed} from 'bip39';
 import {concat} from './misc';
 
@@ -13,27 +12,25 @@ const pathRegex = new RegExp("^m(\\/[0-9]+')+$");
  * https://github.com/oasisprotocol/adrs/blob/main/0008-standard-account-key-generation.md
  */
 export class HDKey {
-    public readonly keypair: SignKeyPair;
-
     /**
      * Generates the keypair matching the supplied parameters
      * @param mnemonic BIP-0039 Mnemonic
      * @param index Account index
      * @param passphrase Optional BIP-0039 passphrase
-     * @returns SignKeyPair for these parameters
+     * @returns ed25519 private key for these parameters
      */
     public static async getAccountSigner(
         mnemonic: string,
         index: number = 0,
         passphrase?: string,
-    ): Promise<SignKeyPair> {
+    ): Promise<Uint8Array> {
         if (index < 0 || index > 0x7fffffff) {
             throw new Error('Account number must be >= 0 and <= 2147483647');
         }
 
         const seed = await mnemonicToSeed(mnemonic, passphrase);
         const key = HDKey.makeHDKey(ED25519_CURVE, seed);
-        return key.derivePath(`m/44'/474'/${index}'`).keypair;
+        return key.derivePath(`m/44'/474'/${index}'`).privateKey;
     }
 
     /**
@@ -48,9 +45,7 @@ export class HDKey {
     private constructor(
         private readonly privateKey: Uint8Array,
         private readonly chainCode: Uint8Array,
-    ) {
-        this.keypair = sign.keyPair.fromSeed(privateKey);
-    }
+    ) {}
 
     /**
      * Returns the HDKey for the given derivation path
