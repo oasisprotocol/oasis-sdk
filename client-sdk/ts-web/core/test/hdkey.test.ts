@@ -1,4 +1,6 @@
 import {HDKey} from '../src/hdkey';
+import {concat, toHex} from '../src/misc';
+import {WebCryptoSigner} from '../src/signature';
 import * as adr0008VectorsRaw from './adr-0008-vectors.json';
 
 interface Adr0008Vector {
@@ -15,8 +17,6 @@ interface Adr0008Vector {
 }
 
 const adr0008Vectors: Adr0008Vector[] = adr0008VectorsRaw;
-
-const uint2hex = (array: Uint8Array) => Buffer.from(array).toString('hex');
 
 describe('HDKey', () => {
     describe('getAccountSigner', () => {
@@ -41,17 +41,16 @@ describe('HDKey', () => {
                         ? vector.bip39_passphrase
                         : undefined;
 
+                const seed = await HDKey.seedFromMnemonic(vector.bip39_mnemonic, passphrase);
                 for (let account of vector.oasis_accounts) {
                     expect(account.bip32_path).toMatch(/^m\/44'\/474'\/[0-9]+'/);
                     const index = Number(account.bip32_path.split('/').pop()!.replace("'", ''));
-                    const keyPair = await HDKey.getAccountSigner(
-                        vector.bip39_mnemonic,
-                        index,
-                        passphrase,
-                    );
+                    const privateKey = HDKey.privateKeyFromSeed(seed, index);
+                    const signer = await WebCryptoSigner.fromPrivateKey(privateKey);
 
-                    expect(uint2hex(keyPair.secretKey)).toEqual(account.private_key);
-                    expect(uint2hex(keyPair.publicKey)).toEqual(account.public_key);
+                    const publicKey = signer.public();
+                    expect(toHex(concat(privateKey, publicKey))).toEqual(account.private_key);
+                    expect(toHex(publicKey)).toEqual(account.public_key);
                 }
             });
         });
