@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased changes
+
+New features:
+
+- Hashing and many related functions that internally need to compute a hash,
+  such as getting the address of a public key, are now declared as
+  synchronous.
+  We had implementations that used synchronous hashing libraries all along,
+  but this is us giving up on eventually using the Web Crypto API for
+  SHA-512/256.
+
+Little things:
+
+- We're switching lots of cryptography dependencies to noble cryptography
+  libraries.
+
 ## v1.1.0
 
 Spotlight change:
