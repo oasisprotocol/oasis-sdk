@@ -32,9 +32,9 @@ ethabi = { version = "18.0.0", default-features = false, features = ["std"] }
 ethereum = "0.15"
 evm = { git = "https://github.com/oasisprotocol/evm", tag = "v0.39.1-oasis" }
 fixed-hash = "0.8.0"
-primitive-types = { version = "0.12", default-features = false, features = ["rlp", "num-traits"] }
-rlp = "0.5.2"
-uint = "0.9.1"
+primitive-types = { version = "0.13", default-features = false, features = ["rlp", "num-traits"] }
+rlp = "0.6.1"
+uint = "0.10.0"
 
 # Fuzzing.
 honggfuzz = "0.5.56"
