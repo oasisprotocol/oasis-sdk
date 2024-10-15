@@ -1,7 +1,15 @@
+import {webcrypto} from 'crypto';
+
 import {HDKey} from '../src/hdkey';
 import {concat, toHex} from '../src/misc';
 import {WebCryptoSigner} from '../src/signature';
+
 import * as adr0008VectorsRaw from './adr-0008-vectors.json';
+
+if (typeof crypto === 'undefined') {
+    // @ts-expect-error there are some inconsequential type differences
+    globalThis.crypto = webcrypto;
+}
 
 interface Adr0008Vector {
     kind: string;
